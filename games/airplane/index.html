@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D flight simulator</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="../../src/games/airplane/main.ts?v=3"></script>
+</head>
+<body>
+    <a href="../../index.html" id="btn-hub" style="position: absolute; top: 20px; left: 20px; background: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-family: sans-serif; font-weight: bold; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.3); pointer-events: auto;">
+        &#8592; BACK TO HUB
+    </a>
+    
+    <!-- Intro Modals -->
+    <div id="intro-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">
+        <!-- Step 1: Platform Selection -->
+
+        <div id="intro-platform" style=" background: #2c3e50; padding: 30px; border-radius: 10px; border: 2px solid #3498db; text-align: center; color: white; max-width: 400px;">
+            <h2 style="margin-top: 0; color: #3498db;">Choose Platform</h2>
+            <p style="margin-bottom: 20px;">How are you playing this game?</p>
+            <button id="btn-intro-mobile" style="background: #e67e22; color: white; border: none; padding: 15px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 10px;">Tablet / Phone</button>
+            <button id="btn-intro-pc" style="background: #27ae60; color: white; border: none; padding: 15px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%;">Computer (Keyboard)</button>
+        </div>
+
+        <!-- Step 2a: Mobile Instructions -->
+        <div id="intro-mobile-ins" style="display: none; background: #2c3e50; padding: 30px; border-radius: 10px; border: 2px solid #e67e22; text-align: center; color: white; max-width: 450px;">
+            <h2 style="margin-top: 0; color: #e67e22;">Tablet / Phone Controls</h2>
+            <p style="line-height: 1.5; margin-bottom: 20px;">
+                Use the on-screen buttons:<br><br>
+                <strong>Up Arrow</strong> - pitches the plane up<br>
+                <strong>Down Arrow</strong> - pitches the plane down<br>
+                <strong>Left/Right Arrows</strong> - rolls the plane<br><br>
+                Next to the arrows are the <strong>Throttle</strong> buttons:<br>
+                <strong>+</strong> speeds up, <strong>-</strong> slows down.
+            </p>
+            <button id="btn-start-mobile" style="background: #e67e22; color: white; border: none; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer;">OK, Let's Fly!</button>
+        </div>
+
+        <!-- Step 2b: PC Instructions -->
+        <div id="intro-pc-ins" style="display: none; background: #2c3e50; padding: 30px; border-radius: 10px; border: 2px solid #27ae60; text-align: center; color: white; max-width: 450px;">
+            <h2 style="margin-top: 0; color: #27ae60;">Computer Controls</h2>
+            <p style="line-height: 1.5; margin-bottom: 20px;">
+                Press <strong>W</strong> to increase speed, <strong>S</strong> to decrease speed.<br><br>Use <strong>A / D</strong> to steer left/right, and <strong>Arrow Up / Down</strong> to tilt nose.
+            </p>
+            <button id="btn-start-pc" style="background: #27ae60; color: white; border: none; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer;">OK, Let's Fly!</button>
+        </div>
+
+    </div>
+
+    <!-- Mobile On-Screen Controls -->
+    <div id="mobile-controls" style="display: none; position: fixed; bottom: 200px; right: 20px; z-index: 1000; user-select: none;">
+        <!-- D-Pad -->
+        <div style="display: inline-block; position: relative; width: 150px; height: 150px; margin-right: 20px;">
+            <div id="mob-up" class="mob-btn" style="position: absolute; top: 0; left: 50px; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.5); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8593;</div>
+            <div id="mob-down" class="mob-btn" style="position: absolute; bottom: 0; left: 50px; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.5); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8595;</div>
+            <div id="mob-left" class="mob-btn" style="position: absolute; top: 50px; left: 0; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.5); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8592;</div>
+            <div id="mob-right" class="mob-btn" style="position: absolute; top: 50px; right: 0; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.5); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8594;</div>
+        </div>
+        <!-- Throttle -->
+        <div style="display: inline-block; position: relative; width: 50px; height: 150px; vertical-align: top;">
+            <div id="mob-throttle-up" class="mob-btn" style="position: absolute; top: 0; left: 0; width: 50px; height: 70px; background: rgba(46, 204, 113, 0.5); border: 2px solid #27ae60; border-radius: 8px; text-align: center; line-height: 66px; font-size: 32px; color: white; font-weight: bold; cursor: pointer;">+</div>
+            <div id="mob-throttle-down" class="mob-btn" style="position: absolute; bottom: 0; left: 0; width: 50px; height: 70px; background: rgba(231, 76, 60, 0.5); border: 2px solid #c0392b; border-radius: 8px; text-align: center; line-height: 66px; font-size: 32px; color: white; font-weight: bold; cursor: pointer;">-</div>
+        </div>
+    </div>
+    <div id="ui">
+        <h1>Flight Simulator 3D</h1>
+        <p>Controls: W/S for Throttle | A/D for Roll | UP/DOWN for Pitch | Mouse Wheel for Zoom</p>
+        <p>Press <strong>P</strong> to toggle Autopilot</p>
+        <div id="stats">
+            <div>Throttle: <span id="throttle-val">0</span>%</div>
+            <div>Speed: <span id="speed-val">0</span> knots</div>
+            <div>Altitude: <span id="alt-val">0</span> ft</div>
+            <div>V/Speed: <span id="vspeed-val">0</span> ft/m</div>
+            <div>Heading: <span id="heading-val">0</span>&deg;</div>
+            <div>Gear: <span id="gear-val">DOWN</span></div>
+            <div style="grid-column: span 2; color: #2980b9; font-weight: bold;" id="ap-status">Autopilot: OFF</div>
+            <div style="grid-column: span 2; font-size: 12px; color: #555; margin-top: 5px;">Press P: Autopilot | G: Toggle Gear</div>
+        </div>
+
+        <div id="autopilot-menu" style="display: none; margin-top: 15px; background: rgba(46, 204, 113, 0.2); padding: 10px; border-radius: 6px; pointer-events: auto;">
+            <label for="ap-alt" style="font-weight:bold; color: #27ae60;">Target Altitude (ft):</label>
+            <input type="number" id="ap-alt" value="2000" step="100" style="width: 80px; padding: 3px; border-radius: 4px; border: 1px solid #27ae60; margin-left: 10px; font-weight: bold;">
+        </div>
+
+        <div style="margin-top: 15px; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; pointer-events: auto;">
+            <label for="plane-select" style="font-weight:bold;">Aircraft:</label>
+            <select id="plane-select" onchange="if(window.onPlaneSelect) window.onPlaneSelect(event)" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; margin-left: 10px; font-weight: bold; cursor: pointer; pointer-events: auto;">
+                <optgroup label="Airplanes">
+                    <option value="cessna">Cessna (Light)</option>
+                    <option value="airliner">Airliner (Heavy)</option>
+                    <option value="a380">Airbus A380 (Superjumbo)</option>
+                    <option value="b747">Boeing 747 (Jumbo Jet)</option>
+                    <option value="concorde">Concorde (Supersonic)</option>
+                    <option value="c130">C-130 Hercules (Cargo Prop)</option>
+                    <option value="fighter">Fighter Jet (Fast)</option>
+                    <option value="f22">F-22 Raptor (Stealth)</option>
+                    <option value="sr71">SR-71 Blackbird (Mach 3+)</option>
+                    <option value="seaplane">Seaplane (Floats)</option>
+                    <option value="biplane">Biplane (Classic)</option>
+                    <option value="cargo">Cargo Plane (Huge)</option>
+                    <option value="glider">Motor Glider (Soaring)</option>
+                    <option value="ufo">UFO (Alien)</option>
+                </optgroup>
+                <optgroup label="Helicopters">
+                    <option value="helicopter_rescue">Rescue Helicopter</option>
+                    <option value="helicopter_police">Police Helicopter</option>
+                    <option value="helicopter_military">Military Helicopter</option>
+                    <option value="helicopter_news">News Helicopter</option>
+                    <option value="helicopter_private">Private Helicopter</option>
+                </optgroup>
+            </select>
+        </div>
+        <div id="emergency-menu" style="margin-top: 15px; background: rgba(231, 76, 60, 0.2); padding: 10px; border-radius: 6px; pointer-events: auto; border: 1px solid #e74c3c;">
+            <label for="emergency-select" style="font-weight:bold; color: #e74c3c;">Emergency:</label>
+            <select id="emergency-select" style="padding: 5px; border-radius: 4px; border: 1px solid #e74c3c; margin-left: 10px; font-weight: bold; cursor: pointer;">
+                <option value="none">-- Select --</option>
+                <option value="fire">Plane on Fire</option>
+                <option value="gears">Landing Gears Fail</option>
+                <option value="engine_explosion">Engine Explosion</option>
+                <option value="fuel_empty">Out of Fuel</option>
+                <option value="fog_turbulence">Fog & Turbulence</option>
+                <option value="wing_damage">Wing Damage</option>
+            </select>
+            <button id="btn-trigger-emergency" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px;">Trigger</button>
+            <button id="btn-random-emergency" style="background: #e67e22; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; width: 100%;">RANDOM EMERGENCY</button>
+        </div>
+
+        <div id="weather-menu" style="margin-top: 15px; background: rgba(52, 152, 219, 0.2); padding: 10px; border-radius: 6px; pointer-events: auto; border: 1px solid #3498db;">
+            <label for="weather-select" style="font-weight:bold; color: #3498db;">Weather:</label>
+            <select id="weather-select" style="padding: 5px; border-radius: 4px; border: 1px solid #3498db; margin-left: 10px; font-weight: bold; cursor: pointer;">
+                <option value="sun">Sun</option>
+                <option value="clouds">Clouds</option>
+                <option value="rain">Rain</option>
+                <option value="thunder">Thunderstorm</option>
+                <option value="wind">Strong Wind (2 min)</option>
+                <option value="snow">Snow (5 min)</option>
+                <option value="random">Random</option>
+            </select>
+            <button id="btn-set-weather" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px;">Select</button>
+        </div>
+
+        <div id="anti-ice-container" style="margin-top: 15px; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 6px; pointer-events: auto; text-align: center; border: 2px solid #555;">
+            <div style="color: white; font-weight: bold; margin-bottom: 5px;">Anti-Ice System</div>
+            <button id="btn-anti-ice" style="background: #e74c3c; color: white; border: 2px solid #c0392b; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%;">
+                Anti-Ice: OFF
+            </button>
+            <div style="font-size: 11px; color: #aaa; margin-top: 5px;">Press 'J' key to toggle</div>
+        </div>
+
+
+
+        <div id="message"></div>
+        <div id="rescue-mission-ui" style="display:none; margin-top: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; text-align: center; color: white;">
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">Rescue Mission</div>
+            <div id="rescue-counter" style="font-size: 24px; color: #2ecc71; font-weight: bold;">0 / 0</div>
+            <div style="font-size: 12px; color: #aaa; margin-top: 5px;">Ambulances are transporting patients to the hospital.</div>
+        </div>
+        <div id="hospital-choice" style="display:none; margin-top: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; pointer-events: auto; text-align: center;">
+            <p style="color: white; font-weight: bold; margin-bottom: 10px;">Do you want to go to the hospital?</p>
+            <button id="hospital-yes-btn" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; font-weight: bold;">YES (Call Ambulance)</button>
+            <button id="hospital-no-btn" style="background: #e74c3c; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; font-weight: bold;">NO (Stay Here)</button>
+        </div>
+        <div style="margin-top: 10px; text-align: center;">
+            <button id="restart-btn" style="display:none; background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; pointer-events: auto;">Restart Flight</button>
+            <button id="skip-amb-btn" style="display:none; margin-left: 10px; background: #9b59b6; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; pointer-events: auto;">Skip to Hospital</button>
+        </div>
+    </div>
+    
+    <div id="gyro-container" style="width: 150px; height: 150px; border-radius: 50%; overflow: hidden; border: 4px solid #2c3e50; position: fixed; bottom: 30px; right: 30px; background: #3498db; z-index: 1000; pointer-events: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+        <div id="gyro-horizon" style="width: 400%; height: 400%; position: absolute; left: -150%; top: -150%; background: linear-gradient(to bottom, #3498db 50%, #8b4513 50%); transform-origin: center;"></div>
+        <!-- Crosshair -->
+        <div style="position: absolute; width: 80px; height: 2px; background: #f1c40f; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 2px black;"></div>
+        <div style="position: absolute; width: 6px; height: 6px; border-radius: 50%; background: red; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+    </div>
+
+    <div id="alarms" style="position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-size: 48px; font-weight: bold; text-shadow: 2px 2px 0 #000; z-index: 20; pointer-events: none; font-family: sans-serif;">
+        <div id="pullup-text" style="display: none; color: red;">PULL UP</div>
+        <div id="stall-text" style="display: none; color: red;">STALL</div>
+        <div id="airspeed-text" style="display: none; color: orange;">AIR SPEED LOW</div>
+        <div id="gears-text" style="display: none; color: red;">GEARS</div>
+        <div id="survival-text" style="display: none; color: #2ecc71; text-shadow: 2px 2px 0 #000; font-size: 64px;">YOU SURVIVED!</div>
+    </div>
+    <div id="error-log" style="position: absolute; bottom: 10px; left: 10px; background: rgba(255,0,0,0.8); color: white; font-family: monospace; z-index: 9999; max-width: 80%; pointer-events: none;"></div>
+    <script>
+        window.addEventListener('error', function(e) {
+            document.getElementById('error-log').innerHTML += e.message + '<br>' + (e.error ? e.error.stack : '') + '<br>';
+        });
+    </script>
+
+
+    <!-- Airplane Status Display -->
+    <div id="plane-status-display" style="position: absolute; right: 20px; top: 20px; width: 150px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px; padding: 10px; pointer-events: none; z-index: 100; text-align: center;">
+        <h3 style="color: white; margin: 0 0 10px 0; font-size: 14px; font-family: sans-serif;">SYSTEM STATUS</h3>
+        <svg viewBox="0 0 100 120" style="width: 100%; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">
+            <!-- Left Wing -->
+            <path id="status-left-wing" d="M 50 50 L 10 70 L 10 80 L 50 60 Z" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part" />
+            <!-- Right Wing -->
+            <path id="status-right-wing" d="M 50 50 L 90 70 L 90 80 L 50 60 Z" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part" />
+            <!-- Left Engine -->
+            <rect id="status-left-engine" x="25" y="60" width="8" height="15" rx="3" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part" />
+            <!-- Right Engine -->
+            <rect id="status-right-engine" x="67" y="60" width="8" height="15" rx="3" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part" />
+            <!-- Tail -->
+            <path id="status-tail" d="M 45 95 L 30 110 L 70 110 L 55 95 Z" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part" />
+            <!-- Fuselage -->
+            <rect id="status-fuselage" x="42" y="10" width="16" height="90" rx="8" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part" />
+            <!-- Nose -->
+            <ellipse id="status-nose" cx="50" cy="15" rx="8" ry="10" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part" />
+            
+            <!-- Landing Gears (Indicators) -->
+            <circle id="status-gear-front" cx="50" cy="30" r="4" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part status-gear" />
+            <circle id="status-gear-left" cx="35" cy="70" r="4" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part status-gear" />
+            <circle id="status-gear-right" cx="65" cy="70" r="4" fill="#2ecc71" stroke="#fff" stroke-width="1" class="status-part status-gear" />
+            
+            <!-- Fire Icon (hidden by default) -->
+            <text id="status-fire-icon" x="50" y="50" font-size="20" text-anchor="middle" alignment-baseline="middle" style="display: none; animation: blink 0.5s infinite;">🔥</text>
+        </svg>
+        <style>
+            @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+            .status-red { fill: #e74c3c !important; animation: blink 1s infinite; }
+            #weather-alert {
+                position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
+                background: rgba(231, 76, 60, 0.8); color: white; padding: 10px 20px;
+                border-radius: 8px; font-family: sans-serif; font-weight: bold; font-size: 20px;
+                display: none; z-index: 50; border: 2px solid white; text-align: center;
+                pointer-events: none;
+            }
+        </style>
+    </div>
+    <div id="weather-alert">
+        <div id="weather-alert-title">Fog & Turbulence - 3 mins</div>
+        <div id="weather-alert-time" style="font-size: 16px; font-weight: normal; margin-top: 5px;">Time remaining: 3:00</div>
+    </div>
+
+    
+</body>
+</html>

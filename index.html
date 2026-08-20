@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Hub</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e272e;
+            color: #d2dae2;
+            margin: 0;
+            padding: 50px;
+            text-align: center;
+        }
+        h1 {
+            color: #0fbcf9;
+            font-size: 3em;
+            margin-bottom: 50px;
+        }
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .game-card {
+            background: #485460;
+            border-radius: 12px;
+            padding: 30px;
+            text-decoration: none;
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+            background: #575f6b;
+        }
+        .game-card h2 {
+            margin: 0 0 15px 0;
+            color: #0be881;
+        }
+        .game-card p {
+            color: #d2dae2;
+            margin: 0;
+        }
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Welcome to Game Hub</h1>
+
+    <div class="game-grid">
+        <a href="/games/airplane/index.html" class="game-card">
+            <h2>3D flight simulator</h2>
+            <p>Fly a Cessna or Boeing over a city, rescue passengers, and brave the weather!</p>
+        </a>
+
+        <a href="/games/racing/index.html" class="game-card">
+            <h2>Racing Simulator</h2>
+            <p>Race cars and motorcycles on diverse tracks!</p>
+        </a>
+
+        <a href="#" class="game-card disabled">
+            <h2>Space Explorer</h2>
+            <p>Coming soon...</p>
+        </a>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
