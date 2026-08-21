@@ -4,7 +4,20 @@ import { uiManager } from "./ui/UIManager";
 import { WeatherSystem } from "./world/WeatherSystem";
 let weatherSystem;
 import { inputManager, keys } from "./core/InputManager";
+import { yardService } from "../../shared/yardService";
 import * as THREE from 'three';
+
+function updateAirplaneYardUI() {
+    const icon = document.getElementById('airplane-yard-icon');
+    if (icon) icon.innerHTML = yardService.renderYardSvg(20);
+    const val = document.getElementById('airplane-yard-val');
+    if (val) val.innerText = yardService.getYards().toLocaleString();
+}
+setTimeout(() => {
+    updateAirplaneYardUI();
+    yardService.subscribe(() => updateAirplaneYardUI());
+}, 100);
+
 let wingSpanX = 0, wingOffsetZ = 0;
 let isMobileMode = false;
 let vehicleType = 'airplane';
@@ -2748,21 +2761,33 @@ function resetPlane() {
     if (explosionMat) {
         explosionMat.opacity = 0.8;
     }
-document.getElementById('message').innerText = '';
-    document.getElementById('restart-btn').style.display = 'none';
-    document.getElementById('hospital-choice').style.display = 'none';
-    document.getElementById('skip-amb-btn').style.display = 'none';
-    document.getElementById('rescue-mission-ui').style.display = 'none';
-    document.getElementById('plane-status-display').style.display = 'block';
+    const msgEl = document.getElementById('message');
+    if (msgEl) msgEl.innerText = '';
+    const restartBtn = document.getElementById('restart-btn');
+    if (restartBtn) restartBtn.style.display = 'none';
+    const hospChoice = document.getElementById('hospital-choice');
+    if (hospChoice) hospChoice.style.display = 'none';
+    const skipAmb = document.getElementById('skip-amb-btn');
+    if (skipAmb) skipAmb.style.display = 'none';
+    const rescueUi = document.getElementById('rescue-mission-ui');
+    if (rescueUi) rescueUi.style.display = 'none';
+    const statusDisp = document.getElementById('plane-status-display');
+    if (statusDisp) statusDisp.style.display = 'block';
+
+    const mobControls = document.getElementById('mobile-controls');
+    const antiIce = document.getElementById('anti-ice-container');
+    const weatherMenu = document.getElementById('weather-menu');
+    const emMenu = document.getElementById('emergency-menu');
+
     if (typeof isMobileMode !== 'undefined' && isMobileMode) {
-        document.getElementById('mobile-controls').style.display = 'block';
-        document.getElementById('anti-ice-container').style.display = 'none';
-        document.getElementById('emergency-menu').style.display = 'none';
-        document.getElementById('weather-menu').style.display = 'none';
+        if (mobControls) mobControls.style.display = 'block';
+        if (antiIce) antiIce.style.display = 'none';
+        if (emMenu) emMenu.style.display = 'none';
+        if (weatherMenu) weatherMenu.style.display = 'none';
     } else {
-        document.getElementById('anti-ice-container').style.display = 'block';
-        document.getElementById('emergency-menu').style.display = 'block';
-        document.getElementById('weather-menu').style.display = 'block';
+        if (antiIce) antiIce.style.display = 'block';
+        if (emMenu) emMenu.style.display = 'block';
+        if (weatherMenu) weatherMenu.style.display = 'block';
     }
     if (engineGain && audioCtx) engineGain.gain.setValueAtTime(0, audioCtx.currentTime);
     updateAlarms(false, false, false, false);
@@ -3189,9 +3214,10 @@ function updateWaterRescue() {
                 // If all rescued
                 if (rescuedPatients >= totalPatients) {
                     crashResponseState = 'water_rescue_complete';
+                    yardService.addYards(50, 'Flight Simulator Water Rescue Mission');
                     setTimeout(() => {
                         const messageEl = document.getElementById('message');
-                        messageEl.innerText = "All passengers successfully rescued from the water!";
+                        messageEl.innerText = "All passengers successfully rescued from the water! (+50 Yards)";
                         messageEl.style.color = "#2ecc71";
                         document.getElementById('restart-btn').style.display = 'block';
                     }, 2000);
@@ -5315,17 +5341,25 @@ function updateEmergencies() {
 }
 
 // UI Listeners
-document.getElementById('btn-trigger-emergency').addEventListener('click', () => {
-    let type = document.getElementById('emergency-select').value;
-    if (type !== 'none') triggerEmergency(type);
-});
+const btnTriggerEm = document.getElementById('btn-trigger-emergency');
+if (btnTriggerEm) {
+    btnTriggerEm.addEventListener('click', () => {
+        const sel = document.getElementById('emergency-select') as HTMLSelectElement | null;
+        let type = sel ? sel.value : 'none';
+        if (type !== 'none') triggerEmergency(type);
+    });
+}
 
-document.getElementById('btn-random-emergency').addEventListener('click', () => {
-    const types = ['fire', 'gears', 'engine_explosion', 'fuel_empty', 'fog_turbulence', 'wing_damage'];
-    let type = types[Math.floor(Math.random() * types.length)];
-    document.getElementById('emergency-select').value = type;
-    triggerEmergency(type);
-});
+const btnRandEm = document.getElementById('btn-random-emergency');
+if (btnRandEm) {
+    btnRandEm.addEventListener('click', () => {
+        const types = ['fire', 'gears', 'engine_explosion', 'fuel_empty', 'fog_turbulence', 'wing_damage'];
+        let type = types[Math.floor(Math.random() * types.length)];
+        const sel = document.getElementById('emergency-select') as HTMLSelectElement | null;
+        if (sel) sel.value = type;
+        triggerEmergency(type);
+    });
+}
 
 
 

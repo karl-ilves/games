@@ -12,6 +12,12 @@
         &#8592; BACK TO HUB
     </a>
     
+    <div id="airplane-yard-badge" style="position: absolute; top: 20px; right: 20px; background: rgba(19, 25, 32, 0.85); border: 1.5px solid rgba(0, 242, 254, 0.5); padding: 8px 16px; border-radius: 20px; display: flex; align-items: center; gap: 8px; color: white; font-family: sans-serif; font-weight: bold; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.4); pointer-events: auto;">
+        <span id="airplane-yard-icon"></span>
+        <span id="airplane-yard-val">0</span>
+        <span style="color: #00f2fe; font-size: 12px;">YARDS</span>
+    </div>
+    
     <!-- Intro Modals -->
     <div id="intro-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">
         <!-- Step 1: Platform Selection -->
@@ -111,21 +117,6 @@
                 </optgroup>
             </select>
         </div>
-        <div id="emergency-menu" style="margin-top: 15px; background: rgba(231, 76, 60, 0.2); padding: 10px; border-radius: 6px; pointer-events: auto; border: 1px solid #e74c3c;">
-            <label for="emergency-select" style="font-weight:bold; color: #e74c3c;">Emergency:</label>
-            <select id="emergency-select" style="padding: 5px; border-radius: 4px; border: 1px solid #e74c3c; margin-left: 10px; font-weight: bold; cursor: pointer;">
-                <option value="none">-- Select --</option>
-                <option value="fire">Plane on Fire</option>
-                <option value="gears">Landing Gears Fail</option>
-                <option value="engine_explosion">Engine Explosion</option>
-                <option value="fuel_empty">Out of Fuel</option>
-                <option value="fog_turbulence">Fog & Turbulence</option>
-                <option value="wing_damage">Wing Damage</option>
-            </select>
-            <button id="btn-trigger-emergency" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px;">Trigger</button>
-            <button id="btn-random-emergency" style="background: #e67e22; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; width: 100%;">RANDOM EMERGENCY</button>
-        </div>
-
         <div id="weather-menu" style="margin-top: 15px; background: rgba(52, 152, 219, 0.2); padding: 10px; border-radius: 6px; pointer-events: auto; border: 1px solid #3498db;">
             <label for="weather-select" style="font-weight:bold; color: #3498db;">Weather:</label>
             <select id="weather-select" style="padding: 5px; border-radius: 4px; border: 1px solid #3498db; margin-left: 10px; font-weight: bold; cursor: pointer;">
@@ -137,7 +128,7 @@
                 <option value="snow">Snow (5 min)</option>
                 <option value="random">Random</option>
             </select>
-            <button id="btn-set-weather" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px;">Select</button>
+            <button id="btn-set-weather" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px;">Apply</button>
         </div>
 
         <div id="anti-ice-container" style="margin-top: 15px; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 6px; pointer-events: auto; text-align: center; border: 2px solid #555;">
@@ -148,22 +139,9 @@
             <div style="font-size: 11px; color: #aaa; margin-top: 5px;">Press 'J' key to toggle</div>
         </div>
 
-
-
         <div id="message"></div>
-        <div id="rescue-mission-ui" style="display:none; margin-top: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; text-align: center; color: white;">
-            <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">Rescue Mission</div>
-            <div id="rescue-counter" style="font-size: 24px; color: #2ecc71; font-weight: bold;">0 / 0</div>
-            <div style="font-size: 12px; color: #aaa; margin-top: 5px;">Ambulances are transporting patients to the hospital.</div>
-        </div>
-        <div id="hospital-choice" style="display:none; margin-top: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; pointer-events: auto; text-align: center;">
-            <p style="color: white; font-weight: bold; margin-bottom: 10px;">Do you want to go to the hospital?</p>
-            <button id="hospital-yes-btn" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; font-weight: bold;">YES (Call Ambulance)</button>
-            <button id="hospital-no-btn" style="background: #e74c3c; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; font-weight: bold;">NO (Stay Here)</button>
-        </div>
         <div style="margin-top: 10px; text-align: center;">
             <button id="restart-btn" style="display:none; background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; pointer-events: auto;">Restart Flight</button>
-            <button id="skip-amb-btn" style="display:none; margin-left: 10px; background: #9b59b6; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; pointer-events: auto;">Skip to Hospital</button>
         </div>
     </div>
     

@@ -30,13 +30,13 @@ export async function initAuth() {
         loginBtn.addEventListener('click', async () => {
             const email = emailInput?.value;
             const password = passwordInput?.value;
-            if (!email || !password) return showMsg('Palun sisesta e-post ja parool.', 'error');
+            if (!email || !password) return showMsg('Please enter both email and password.', 'error');
             
-            showMsg('Sisselogimine...', 'info');
+            showMsg('Logging in...', 'info');
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) showMsg(error.message, 'error');
             else {
-                showMsg('Sisselogitud!', 'success');
+                showMsg('Successfully logged in!', 'success');
                 emailInput.value = '';
                 passwordInput.value = '';
             }
@@ -47,13 +47,13 @@ export async function initAuth() {
         registerBtn.addEventListener('click', async () => {
             const email = emailInput?.value;
             const password = passwordInput?.value;
-            if (!email || !password) return showMsg('Palun sisesta e-post ja parool.', 'error');
+            if (!email || !password) return showMsg('Please enter both email and password.', 'error');
             
-            showMsg('Registreerimine...', 'info');
+            showMsg('Creating account...', 'info');
             const { error } = await supabase.auth.signUp({ email, password });
             if (error) showMsg(error.message, 'error');
             else {
-                showMsg('Konto loodud! Oled sisse logitud.', 'success');
+                showMsg('Account created! You are now logged in.', 'success');
                 emailInput.value = '';
                 passwordInput.value = '';
             }
@@ -63,11 +63,11 @@ export async function initAuth() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             await supabase.auth.signOut();
-            // Wipe local storage so progress resets to 0 for guests
+            // Wipe local storage so guest session resets
             localStorage.removeItem('racingSave');
             localStorage.removeItem('wiped_once_v3');
             localStorage.removeItem('wiped_full_v10');
-            showMsg('Välja logitud. Mängu progress nulliti (kuni uuesti sisse logid).', 'info');
+            showMsg('Logged out. Game progress reset for guest mode.', 'info');
         });
     }
 }

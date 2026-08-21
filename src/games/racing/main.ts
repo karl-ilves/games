@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { yardService } from '../../shared/yardService';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -169,6 +170,7 @@ const VEHICLES: VehicleDef[] = [
     { id: 'car_9', name: 'Neon Hypercar', type: 'car', price: 20000, maxSpeed: 60, acceleration: 34, handling: 1.4, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 180 },
     { id: 'car_10', name: 'Stealth Racer', type: 'car', price: 35000, maxSpeed: 65, acceleration: 39, handling: 1.5, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 45 },
     { id: 'car_11', name: 'F1 Prototype', type: 'car', price: 50000, maxSpeed: 78, acceleration: 47, handling: 1.8, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: -90 },
+    { id: 'cyber_hypercar', name: '💎 Yard Cyber Hypercar', type: 'car', price: 0, maxSpeed: 88, acceleration: 52, handling: 1.85, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 160 },
 
     // --- MOTOS (11) ---
     { id: 'moto_1', name: 'Starter Bike', type: 'moto', price: 0, maxSpeed: 33, acceleration: 15, handling: 1.1, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 0 },
@@ -249,6 +251,9 @@ async function loadProgress() {
             vehicleType = 'car_1';
             vehicleUpgrades = {};
         }
+    }
+    if (yardService.hasItem('cyber_hypercar') && !unlockedVehicles.includes('cyber_hypercar')) {
+        unlockedVehicles.push('cyber_hypercar');
     }
 }
 
@@ -1300,7 +1305,16 @@ function updateGameLogic(dt: number) {
                 
                 money += prize;
                 saveProgress();
-                alert(`${pos}. place!\nTime: ${document.getElementById('time-val')!.innerText}\nYou won $${prize}!`);
+
+                let yardPrize = 0;
+                if (pos === 1) yardPrize = 3;
+                else if (pos === 2) yardPrize = 1;
+
+                if (yardPrize > 0) {
+                    yardService.addYards(yardPrize, `Racing Circuit ${pos}. Place`);
+                }
+
+                alert(`🏁 Race Finished: Place ${pos}!\n⏱️ Time: ${document.getElementById('time-val')!.innerText}\n💵 Won: $${prize}${yardPrize > 0 ? `\n💎 Yards: +${yardPrize}` : ''}`);
                 location.reload();
             }
             
@@ -1671,8 +1685,15 @@ function buyVehicle(id: string) {
 }
 
 function updateGarageUI() {
-    document.getElementById('money-val')!.innerText = money.toString();
-    document.getElementById('shop-money-val')!.innerText = money.toString();
+    const moneyVal = document.getElementById('money-val');
+    if (moneyVal) moneyVal.innerText = money.toString();
+    const shopMoneyVal = document.getElementById('shop-money-val');
+    if (shopMoneyVal) shopMoneyVal.innerText = money.toString();
+
+    const racingGarageYardIcon = document.getElementById('racing-garage-yard-icon');
+    if (racingGarageYardIcon) racingGarageYardIcon.innerHTML = yardService.renderYardSvg(20);
+    const racingYardVal = document.getElementById('racing-yard-val');
+    if (racingYardVal) racingYardVal.innerText = yardService.getYards().toLocaleString();
 
     // Update Level Selection UI
     const btnLevel1 = document.getElementById('btn-level-1');
