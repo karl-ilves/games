@@ -208,15 +208,38 @@ async function loadProgress() {
         }
     }
     
-    // 2. If not logged in, always start at 0
+    // 2. Fallback
     if (!loadedFromDB) {
-        money = 0;
-        selectedLevel = 1;
-        level2Unlocked = false;
-        level3Unlocked = false;
-        unlockedVehicles = ['car_1'];
-        vehicleType = 'car_1';
-        vehicleUpgrades = {};
+        let session = null;
+        if (supabase) {
+            const res = await supabase.auth.getSession();
+            session = res.data.session;
+        }
+        
+        let save = localStorage.getItem('racingSave');
+        if (session && save) {
+            // Logged in but DB failed (e.g. table missing or first time) -> load local fallback
+            let data = JSON.parse(save);
+            money = data.money || 0;
+            if (data.unlockedVehicles && !Array.isArray(data.unlockedVehicles)) {
+                unlockedVehicles = ['car_1'];
+                if (data.unlockedVehicles.moto) unlockedVehicles.push('moto_1');
+            } else if (data.unlockedVehicles) {
+                unlockedVehicles = data.unlockedVehicles;
+            }
+            if (data.vehicleUpgrades) vehicleUpgrades = data.vehicleUpgrades;
+            if (data.level2Unlocked) level2Unlocked = data.level2Unlocked;
+            if (data.level3Unlocked) level3Unlocked = data.level3Unlocked;
+        } else {
+            // Not logged in -> wipe!
+            money = 0;
+            selectedLevel = 1;
+            level2Unlocked = false;
+            level3Unlocked = false;
+            unlockedVehicles = ['car_1'];
+            vehicleType = 'car_1';
+            vehicleUpgrades = {};
+        }
     }
 }
 
