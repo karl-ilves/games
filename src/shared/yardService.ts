@@ -345,6 +345,47 @@ class YardService {
         window.dispatchEvent(new CustomEvent('playard_yards_updated', { detail: this.data }));
     }
 
+    public getFormattedCountdown() {
+        const info = this.getDailyStreakInfo();
+        if (info.canClaim) {
+            return {
+                canClaim: true,
+                hours: 0,
+                minutes: 0,
+                seconds: 0,
+                hmsString: 'READY TO CLAIM!',
+                badgeText: 'READY!',
+                timeRemainingMs: 0
+            };
+        }
+
+        const totalSec = Math.max(0, Math.floor(info.timeRemainingMs / 1000));
+        const hours = Math.floor(totalSec / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
+
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const hmsString = `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+        const badgeText = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+
+        return {
+            canClaim: false,
+            hours,
+            minutes,
+            seconds,
+            hmsString,
+            badgeText,
+            timeRemainingMs: info.timeRemainingMs
+        };
+    }
+
+    public resetStreakAndTimer() {
+        this.data.streak = 0;
+        this.data.lastClaimTimestamp = 0;
+        this.saveLocally(this.data);
+        this.saveToCloud();
+    }
+
     public renderYardSvg(size = 22, className = ''): string {
         return `
         <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; filter: drop-shadow(0 0 5px rgba(0, 242, 254, 0.6));">

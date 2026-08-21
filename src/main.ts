@@ -19,17 +19,45 @@ function setupIcons() {
     if (cardRacingYardIcon) cardRacingYardIcon.innerHTML = yardService.renderYardSvg(16);
 }
 
+// --- Live HMS Countdown Updater ---
+let wasCanClaim = false;
+
+function updateStreakTimerLive() {
+    const cd = yardService.getFormattedCountdown();
+    
+    // 1. Header Timer Badge
+    const headerTimer = document.getElementById('header-streak-timer');
+    if (headerTimer) {
+        headerTimer.innerText = cd.badgeText;
+        headerTimer.style.color = cd.canClaim ? '#2ecc71' : '#ffd32a';
+    }
+
+    // 2. Modal HMS Box
+    const modalHms = document.getElementById('streak-timer-hms');
+    if (modalHms) {
+        modalHms.innerText = cd.hmsString;
+        modalHms.style.color = cd.canClaim ? '#2ecc71' : '#ffd32a';
+    }
+
+    // 3. Notification Dot
+    const streakDot = document.getElementById('streak-notification-dot');
+    if (streakDot) {
+        streakDot.style.display = cd.canClaim ? 'inline-block' : 'none';
+    }
+
+    // Auto-refresh cards if state flipped from waiting to ready
+    if (cd.canClaim !== wasCanClaim) {
+        wasCanClaim = cd.canClaim;
+        renderStreakCards();
+    }
+}
+
 // --- Update UI with Current Yard Data ---
 function updateYardDisplay(data: YardData) {
     const headerVal = document.getElementById('header-yard-val');
     if (headerVal) headerVal.innerText = data.yards.toLocaleString();
 
-    const streakInfo = yardService.getDailyStreakInfo();
-    const streakDot = document.getElementById('streak-notification-dot');
-    if (streakDot) {
-        streakDot.style.display = streakInfo.canClaim ? 'inline-block' : 'none';
-    }
-
+    updateStreakTimerLive();
     renderStreakCards();
 }
 
@@ -64,7 +92,6 @@ function renderStreakCards() {
     });
 
     const claimBtn = document.getElementById('btn-claim-daily') as HTMLButtonElement | null;
-    const timerText = document.getElementById('streak-timer-text');
     const statusMsg = document.getElementById('streak-status-msg');
 
     if (claimBtn) {
@@ -80,29 +107,19 @@ function renderStreakCards() {
         }
     }
 
-    if (timerText) {
-        if (streakInfo.canClaim) {
-            timerText.innerText = '✨ Your daily reward is ready to claim!';
-            timerText.style.color = '#2ecc71';
-        } else {
-            const hours = Math.floor(streakInfo.timeRemainingMs / (1000 * 60 * 60));
-            const mins = Math.floor((streakInfo.timeRemainingMs % (1000 * 60 * 60)) / (1000 * 60));
-            timerText.innerText = `⏳ Next reward available in: ${hours}h ${mins}m`;
-            timerText.style.color = '#a4b0be';
-        }
-    }
-
     if (statusMsg && !statusMsg.dataset.custom) {
         if (streakInfo.canClaim) {
             statusMsg.innerText = streakInfo.nextDayIndex === 7
-                ? '🔥 Day 7 Jackpot ready: Claim 25 Yards now!'
-                : `Day ${streakInfo.nextDayIndex} Streak Reward Ready!`;
+                ? '🔥 Day 7 Jackpot ready: Claim 500 Yards now!'
+                : `🎁 Day ${streakInfo.nextDayIndex} Streak Reward Ready! (+${streakInfo.nextRewardAmount} Y)`;
             statusMsg.style.color = '#00f2fe';
         } else {
             statusMsg.innerText = `Current streak: ${streakInfo.currentStreak} / 7 Days.`;
             statusMsg.style.color = '#a4b0be';
         }
     }
+
+    updateStreakTimerLive();
 }
 
 // --- Setup Modal Event Listeners ---
@@ -115,6 +132,7 @@ function setupModals() {
         openStreakBtn.addEventListener('click', () => {
             modalStreak.style.display = 'flex';
             renderStreakCards();
+            updateStreakTimerLive();
         });
     }
     if (closeStreakBtn && modalStreak) {
@@ -139,6 +157,7 @@ function setupModals() {
                     renderStreakCards();
                 }, 4000);
             }
+            updateStreakTimerLive();
         });
     }
 
@@ -147,10 +166,25 @@ function setupModals() {
         debugBtn.addEventListener('click', () => {
             yardService.debugFastForward24Hours();
             renderStreakCards();
+            updateStreakTimerLive();
             const statusMsg = document.getElementById('streak-status-msg');
             if (statusMsg) {
                 statusMsg.innerText = '⚡ Simulated 24 hours passing! Next reward is ready.';
                 statusMsg.style.color = '#ffd32a';
+            }
+        });
+    }
+
+    const resetBtn = document.getElementById('btn-debug-reset');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            yardService.resetStreakAndTimer();
+            renderStreakCards();
+            updateStreakTimerLive();
+            const statusMsg = document.getElementById('streak-status-msg');
+            if (statusMsg) {
+                statusMsg.innerText = '🔄 Daily streak and timer have been reset to Day 1!';
+                statusMsg.style.color = '#e74c3c';
             }
         });
     }
@@ -160,3 +194,4 @@ function setupModals() {
 setupIcons();
 setupModals();
 yardService.subscribe(updateYardDisplay);
+setInterval(updateStreakTimerLive, 1000);

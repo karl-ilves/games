@@ -48,7 +48,7 @@ try {
         console.log("   Initial Yard Balance:", startYards);
 
         // Test 7-Day Daily Streak Rewards Modal (100 Y/day + 500 Y Jackpot)
-        console.log("2. Testing 7-Day Daily Streak Modal (100 Yards/day & 500 Yards Jackpot)...");
+        console.log("2. Testing 7-Day Daily Streak Modal & Live HMS Countdown...");
         await page.click('#btn-open-streak');
         await page.waitForSelector('#modal-streak', { visible: true, timeout: 3000 });
         
@@ -56,10 +56,17 @@ try {
         console.log(`   Found ${streakCardsCount} streak day cards (Expected: 7)`);
         if (streakCardsCount !== 7) throw new Error("Expected 7 streak cards in daily rewards!");
 
+        // Check HMS timer is present
+        const initialTimerText = await page.$eval('#streak-timer-hms', el => el.textContent);
+        console.log("   Initial Modal HMS Timer:", initialTimerText);
+
         // Claim Day 1 reward (+100 Yards)
         console.log("   Claiming Day 1 reward (+100 Yards)...");
         await page.click('#btn-claim-daily');
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 600));
+
+        const postClaimTimerText = await page.$eval('#streak-timer-hms', el => el.textContent);
+        console.log("   Post-Claim Live HMS Countdown (Expected: ~23h 59m):", postClaimTimerText);
         
         // Fast forward 24h & test all 7 days up to Jackpot (+500 Y)!
         console.log("   Simulating 7-Day Streak cycle with +24h Fast Forward...");
@@ -72,6 +79,13 @@ try {
 
         const yardsAfterStreak = await page.$eval('#header-yard-val', el => el.textContent);
         console.log("   Yard Balance after full 7-day streak cycle (Expected: 1,100):", yardsAfterStreak);
+
+        // Test Reset Streak and Timer Button
+        console.log("   Testing Reset Streak & Timer button...");
+        await page.click('#btn-debug-reset');
+        await new Promise(r => setTimeout(r, 500));
+        const resetTimerText = await page.$eval('#streak-timer-hms', el => el.textContent);
+        console.log("   Timer state after Reset button (Expected: READY TO CLAIM!):", resetTimerText);
 
         // Close Streak Modal
         await page.click('#btn-close-streak');

@@ -340,6 +340,7 @@
             <button id="btn-open-streak" class="nav-btn streak-btn">
                 <span>🎁</span>
                 <span>Daily Rewards</span>
+                <span id="header-streak-timer" style="font-size: 0.78rem; background: rgba(0,0,0,0.35); padding: 2px 7px; border-radius: 10px; font-variant-numeric: tabular-nums; font-weight: 700; color: #ffd32a;">READY!</span>
                 <span id="streak-notification-dot" class="badge-dot" style="display: none;"></span>
             </button>
         </div>
@@ -413,11 +414,19 @@
 
             <div id="streak-status-msg" style="font-weight: bold; font-size: 1.1rem; margin: 15px 0; color: #00f2fe;"></div>
 
+            <!-- Live HMS Countdown Box -->
+            <div id="streak-countdown-box" style="background: rgba(0,0,0,0.35); border: 1px solid rgba(0,242,254,0.3); padding: 10px 16px; border-radius: 10px; margin: 15px auto; display: flex; justify-content: center; align-items: center; gap: 10px; font-weight: bold; max-width: 380px;">
+                <span style="color: #a4b0be; font-size: 0.9rem;">⏳ Next +100 Y Reward:</span>
+                <span id="streak-timer-hms" style="color: #ffd32a; font-family: monospace; font-size: 1.2rem; letter-spacing: 1px;">00h 00m 00s</span>
+            </div>
+
             <button id="btn-claim-daily" class="btn-claim">CLAIM DAILY YARDS</button>
             
-            <div style="margin-top: 20px; font-size: 0.85rem; color: #718093; display: flex; justify-content: center; gap: 15px; align-items: center;">
-                <span id="streak-timer-text">Next claim available now</span>
-                <button id="btn-debug-fastforward" style="background: transparent; border: 1px dashed #718093; color: #a4b0be; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">
+            <div style="margin-top: 20px; font-size: 0.85rem; color: #718093; display: flex; justify-content: center; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button id="btn-debug-reset" style="background: transparent; border: 1px dashed #e74c3c; color: #e74c3c; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; font-weight: bold;">
+                    🔄 Reset Streak & Timer
+                </button>
+                <button id="btn-debug-fastforward" style="background: transparent; border: 1px dashed #00f2fe; color: #00f2fe; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; font-weight: bold;">
                     ⚡ Fast Forward +24h (Test)
                 </button>
             </div>
