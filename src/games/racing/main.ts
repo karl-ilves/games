@@ -191,7 +191,6 @@ let vehicleUpgrades: { [id: string]: { speedUpgrades: number } } = {};
 
 
 async function loadProgress() {
-    // 1. Try to load from Supabase if logged in
     let loadedFromDB = false;
     if (supabase) {
         const { data: { session } } = await supabase.auth.getSession();
@@ -209,42 +208,15 @@ async function loadProgress() {
         }
     }
     
-    // 2. Fallback to LocalStorage if not logged in or no DB data yet
+    // 2. If not logged in, always start at 0
     if (!loadedFromDB) {
-        if (!localStorage.getItem('wiped_once_v3')) {
-            localStorage.removeItem('racingSave');
-            localStorage.setItem('wiped_once_v3', 'true');
-            money = 0;
-            level2Unlocked = false;
-            level3Unlocked = false;
-        }
-        
-        if (!localStorage.getItem('wiped_full_v10')) {
-            localStorage.removeItem('racingSave');
-            localStorage.setItem('wiped_full_v10', 'true');
-            money = 0;
-            selectedLevel = 1;
-            level2Unlocked = false;
-            level3Unlocked = false;
-            unlockedVehicles = ['car_1'];
-            vehicleType = 'car_1';
-            vehicleUpgrades = {};
-        }
-
-        let save = localStorage.getItem('racingSave');
-        if (save) {
-            let data = JSON.parse(save);
-            money = data.money || 0;
-            if (data.unlockedVehicles && !Array.isArray(data.unlockedVehicles)) {
-                unlockedVehicles = ['car_1'];
-                if (data.unlockedVehicles.moto) unlockedVehicles.push('moto_1');
-            } else if (data.unlockedVehicles) {
-                unlockedVehicles = data.unlockedVehicles;
-            }
-            if (data.vehicleUpgrades) vehicleUpgrades = data.vehicleUpgrades;
-            if (data.level2Unlocked) level2Unlocked = data.level2Unlocked;
-            if (data.level3Unlocked) level3Unlocked = data.level3Unlocked;
-        }
+        money = 0;
+        selectedLevel = 1;
+        level2Unlocked = false;
+        level3Unlocked = false;
+        unlockedVehicles = ['car_1'];
+        vehicleType = 'car_1';
+        vehicleUpgrades = {};
     }
 }
 
