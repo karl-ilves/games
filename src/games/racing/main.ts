@@ -230,6 +230,15 @@ async function loadProgress() {
             if (data.vehicleUpgrades) vehicleUpgrades = data.vehicleUpgrades;
             if (data.level2Unlocked) level2Unlocked = data.level2Unlocked;
             if (data.level3Unlocked) level3Unlocked = data.level3Unlocked;
+        } else if (session && !save) {
+            // First time login! Give them 500
+            money = 500;
+            selectedLevel = 1;
+            level2Unlocked = false;
+            level3Unlocked = false;
+            unlockedVehicles = ['car_1'];
+            vehicleType = 'car_1';
+            vehicleUpgrades = {};
         } else {
             // Not logged in -> wipe!
             money = 0;
