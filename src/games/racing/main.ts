@@ -138,6 +138,8 @@ let uiHud: HTMLElement;
 
 // --- Progression / Economy ---
 let money = 0;
+let selectedLevel = 1;
+let level2Unlocked = false;
 
 interface VehicleDef {
     id: string;
@@ -186,6 +188,23 @@ let vehicleUpgrades: { [id: string]: { speedUpgrades: number } } = {};
 
 
 function loadProgress() {
+    if (!localStorage.getItem('wiped_once_v3')) {
+        localStorage.removeItem('racingSave');
+        localStorage.setItem('wiped_once_v3', 'true');
+        money = 0;
+        level2Unlocked = false;
+    }
+    
+    // FULL RESET
+    if (!localStorage.getItem('wiped_full_v1')) {
+        localStorage.removeItem('racingSave');
+        localStorage.setItem('wiped_full_v1', 'true');
+        money = 0;
+        level2Unlocked = false;
+        unlockedVehicles = ['car_1', 'moto_1'];
+        vehicleUpgrades = {};
+    }
+
     let save = localStorage.getItem('racingSave');
     if (save) {
         let data = JSON.parse(save);
@@ -201,14 +220,20 @@ function loadProgress() {
         if (data.vehicleUpgrades) {
             vehicleUpgrades = data.vehicleUpgrades;
         }
+        if (data.level2Unlocked) {
+            level2Unlocked = data.level2Unlocked;
+        }
     }
+    
+
 }
 
 function saveProgress() {
     localStorage.setItem('racingSave', JSON.stringify({
         money: money,
         unlockedVehicles: unlockedVehicles,
-        vehicleUpgrades: vehicleUpgrades
+        vehicleUpgrades: vehicleUpgrades,
+        level2Unlocked: level2Unlocked
     }));
 }
 
@@ -228,7 +253,7 @@ function createEnvironment() {
     }
     checkpointRings = [];
 
-    // Lighting (Sunny Day)
+    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -240,41 +265,59 @@ function createEnvironment() {
     dirLight.shadow.camera.bottom = -500;
     scene.add(dirLight);
 
-    scene.background = new THREE.Color(0x87CEEB);
-    scene.fog = new THREE.Fog(0x87CEEB, 100, 500);
+    if (selectedLevel === 1) {
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 100, 500);
+    } else {
+        scene.background = new THREE.Color(0x1a5276); // Darker blue sky for forest
+        scene.fog = new THREE.Fog(0x1a5276, 50, 400); // Thicker fog
+    }
     
     // Setup realistic environment reflections for cars
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
-    scene.environment = pmremGenerator.fromScene(new THREE.Scene()).texture; // Simple fallback env
-    // To make it reflect the sky and ground:
     const envScene = new THREE.Scene();
-    envScene.background = new THREE.Color(0x87CEEB);
-    envScene.add(new THREE.Mesh(new THREE.PlaneGeometry(100,100).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color: 0x222222})));
+    envScene.background = scene.background;
+    envScene.add(new THREE.Mesh(new THREE.PlaneGeometry(100,100).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color: selectedLevel === 1 ? 0x222222 : 0x2ecc71})));
     scene.environment = pmremGenerator.fromScene(envScene).texture;
-
 
     // Ground Plane
     const groundGeo = new THREE.PlaneGeometry(2000, 2000);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    const groundMat = new THREE.MeshLambertMaterial({ color: selectedLevel === 1 ? 0x333333 : 0x2ecc71 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Checkpoints for Large City Track
-    checkpoints = [
-        { x: 0, z: 0, radius: 40 },
-        { x: 0, z: -400, radius: 40 },
-        { x: -400, z: -400, radius: 40 },
-        { x: -400, z: -100, radius: 40 },
-        { x: -600, z: -100, radius: 40 },
-        { x: -600, z: 300, radius: 40 },
-        { x: -200, z: 300, radius: 40 },
-        { x: -200, z: 500, radius: 40 },
-        { x: 300, z: 500, radius: 40 },
-        { x: 300, z: 0, radius: 40 }
-    ];
+    // Track Layout based on Level
+    if (selectedLevel === 1) {
+        checkpoints = [
+            { x: 0, z: 0, radius: 40 },
+            { x: 0, z: -400, radius: 40 },
+            { x: -400, z: -400, radius: 40 },
+            { x: -400, z: -100, radius: 40 },
+            { x: -600, z: -100, radius: 40 },
+            { x: -600, z: 300, radius: 40 },
+            { x: -200, z: 300, radius: 40 },
+            { x: -200, z: 500, radius: 40 },
+            { x: 300, z: 500, radius: 40 },
+            { x: 300, z: 0, radius: 40 }
+        ];
+    } else {
+        // Level 2 (Forest) Track Layout
+        checkpoints = [
+            { x: 0, z: 0, radius: 45 },
+            { x: 0, z: -500, radius: 45 },
+            { x: 400, z: -700, radius: 45 },
+            { x: 700, z: -400, radius: 45 },
+            { x: 500, z: 0, radius: 45 },
+            { x: 500, z: 400, radius: 45 },
+            { x: 200, z: 600, radius: 45 },
+            { x: -300, z: 600, radius: 45 },
+            { x: -500, z: 300, radius: 45 },
+            { x: -300, z: 0, radius: 45 }
+        ];
+    }
 
     // Build visible rings
     const ringGeo = new THREE.TorusGeometry(35, 2, 8, 32);
@@ -283,7 +326,6 @@ function createEnvironment() {
         let ring = new THREE.Mesh(ringGeo, ringMat);
         ring.position.set(cp.x, 20, cp.z);
         
-        // Calculate incoming and outgoing directions to angle the ring smoothly in curves
         let prevCp = checkpoints[i === 0 ? checkpoints.length - 1 : i - 1];
         let nextCp = checkpoints[i === checkpoints.length - 1 ? 0 : i + 1];
         
@@ -294,64 +336,89 @@ function createEnvironment() {
         let dirIn = vThis.clone().sub(vPrev).normalize();
         let dirOut = vNext.clone().sub(vThis).normalize();
         
-        // Average the direction to bisect the angle of the curve
         let dir = dirIn.clone().add(dirOut).normalize();
+        if (dir.lengthSq() < 0.01) dir = dirIn;
         
-        if (dir.lengthSq() < 0.01) dir = dirIn; // fallback if turning 180 degrees
-        
-        // Torus faces Z by default. lookAt points Z towards target.
         ring.lookAt(ring.position.clone().add(dir));
-        
         scene.add(ring);
         checkpointRings.push(ring);
     });
 
-    // Build massive grid city
-    const buildingGeo = new THREE.BoxGeometry(40, 1, 40);
-    for(let x = -800; x <= 800; x += 60) {
-        for(let z = -800; z <= 800; z += 60) {
-            let onRoad = false;
-            for(let i=0; i<checkpoints.length; i++) {
-                let p1 = checkpoints[i];
-                let p2 = checkpoints[(i+1)%checkpoints.length];
-                let l2 = Math.pow(p1.x - p2.x, 2) + Math.pow(p1.z - p2.z, 2);
-                if (l2 === 0) continue;
-                let t = Math.max(0, Math.min(1, ((x - p1.x) * (p2.x - p1.x) + (z - p1.z) * (p2.z - p1.z)) / l2));
-                let projX = p1.x + t * (p2.x - p1.x);
-                let projZ = p1.z + t * (p2.z - p1.z);
-                let dist = Math.sqrt(Math.pow(x - projX, 2) + Math.pow(z - projZ, 2));
-                if (dist < 40) {
-                    onRoad = true;
-                    break;
+    // Generate Scenery
+    if (selectedLevel === 1) {
+        const buildingGeo = new THREE.BoxGeometry(40, 1, 40);
+        for(let x = -800; x <= 800; x += 60) {
+            for(let z = -800; z <= 800; z += 60) {
+                let onRoad = false;
+                for(let i=0; i<checkpoints.length; i++) {
+                    let p1 = checkpoints[i];
+                    let p2 = checkpoints[(i+1)%checkpoints.length];
+                    let l2 = Math.pow(p1.x - p2.x, 2) + Math.pow(p1.z - p2.z, 2);
+                    if (l2 === 0) continue;
+                    let t = Math.max(0, Math.min(1, ((x - p1.x) * (p2.x - p1.x) + (z - p1.z) * (p2.z - p1.z)) / l2));
+                    let projX = p1.x + t * (p2.x - p1.x);
+                    let projZ = p1.z + t * (p2.z - p1.z);
+                    let dist = Math.sqrt(Math.pow(x - projX, 2) + Math.pow(z - projZ, 2));
+                    if (dist < 45) { // Check slightly wider for buildings
+                        onRoad = true;
+                        break;
+                    }
+                }
+                if (!onRoad && Math.random() > 0.2) {
+                    let height = Math.random() > 0.9 ? 150 + Math.random()*150 : 30 + Math.random()*50;
+                    let b = new THREE.Mesh(buildingGeo, new THREE.MeshLambertMaterial({color: 0x555555 + Math.random()*0x333333}));
+                    b.scale.y = height;
+                    b.position.set(x + (Math.random()*20 - 10), height/2, z + (Math.random()*20 - 10));
+                    b.castShadow = true;
+                    b.receiveShadow = true;
+                    scene.add(b);
                 }
             }
-            if (!onRoad && Math.random() > 0.2) {
-                let height = Math.random() > 0.9 ? 150 + Math.random()*150 : 30 + Math.random()*50;
-                let c = new THREE.Color().setHSL(Math.random(), 0.2, 0.4 + Math.random()*0.4);
-                let mat = new THREE.MeshLambertMaterial({ color: c });
-                let b = new THREE.Mesh(buildingGeo, mat);
-                b.scale.y = height;
-                b.position.set(x, height/2, z);
-                b.castShadow = true;
-                b.receiveShadow = true;
-                scene.add(b);
+        }
+    } else if (selectedLevel === 2) {
+        const trunkGeo = new THREE.CylinderGeometry(2, 3, 15);
+        const trunkMat = new THREE.MeshLambertMaterial({color: 0x5c4033});
+        const leavesGeo = new THREE.SphereGeometry(15, 8, 8);
+        const leavesMat = new THREE.MeshLambertMaterial({color: 0x228b22});
+        
+        for(let x = -800; x <= 800; x += 40) {
+            for(let z = -800; z <= 800; z += 40) {
+                let onRoad = false;
+                for(let i=0; i<checkpoints.length; i++) {
+                    let p1 = checkpoints[i];
+                    let p2 = checkpoints[(i+1)%checkpoints.length];
+                    let l2 = Math.pow(p1.x - p2.x, 2) + Math.pow(p1.z - p2.z, 2);
+                    if (l2 === 0) continue;
+                    let t = Math.max(0, Math.min(1, ((x - p1.x) * (p2.x - p1.x) + (z - p1.z) * (p2.z - p1.z)) / l2));
+                    let projX = p1.x + t * (p2.x - p1.x);
+                    let projZ = p1.z + t * (p2.z - p1.z);
+                    let dist = Math.sqrt(Math.pow(x - projX, 2) + Math.pow(z - projZ, 2));
+                    if (dist < 45) { // Track width safe zone
+                        onRoad = true;
+                        break;
+                    }
+                }
+                // Randomize tree placement
+                if (!onRoad && Math.random() > 0.4) {
+                    let treeGroup = new THREE.Group();
+                    let trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                    trunk.position.y = 7.5;
+                    trunk.castShadow = true;
+                    trunk.receiveShadow = true;
+                    let leaves = new THREE.Mesh(leavesGeo, leavesMat);
+                    leaves.position.y = 18;
+                    leaves.scale.set(1 + Math.random()*0.5, 1 + Math.random()*0.5, 1 + Math.random()*0.5);
+                    leaves.castShadow = true;
+                    treeGroup.add(trunk);
+                    treeGroup.add(leaves);
+                    
+                    treeGroup.position.set(x + (Math.random()*20 - 10), 0, z + (Math.random()*20 - 10));
+                    scene.add(treeGroup);
+                }
             }
         }
     }
-
-    // Draw start line
-    const lineGeo = new THREE.PlaneGeometry(60, 5);
-    const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const line = new THREE.Mesh(lineGeo, lineMat);
-    line.rotation.x = -Math.PI / 2;
-    line.position.set(checkpoints[0].x, 0.1, checkpoints[0].z);
-    scene.add(line);
 }
-
-
-
-
-
 
 function buildEmergencyVehicle(type: 'ambulance' | 'towtruck'): THREE.Group {
     let group = new THREE.Group();
@@ -931,9 +998,25 @@ function spawnOpponents() {
     let dz = cpNext.z - cp.z;
     let angle = Math.atan2(dx, dz) + Math.PI;
 
-    for (let i = 0; i < 3; i++) {
+    let numOpponents = selectedLevel === 1 ? 3 : 9;
+
+    for (let i = 0; i < numOpponents; i++) {
         let group = new THREE.Group();
-        group.position.set(cp.x + (i*10 - 10), 0, cp.z + (i*10));
+        
+        // Staggered grid starting positions
+        // Row depends on index. 2 lanes.
+        let row = Math.floor((i + 1) / 2); // Player is at row 0, col 0. AI starts at i+1 essentially
+        let col = (i + 1) % 2 === 0 ? 1 : -1;
+        
+        // Offset from center. Z offsets by row, X offsets by lane.
+        // Needs to be rotated by track heading so they align with the track start!
+        let offsetX = col * 12; // 12 units apart horizontally
+        let offsetZ = row * 15; // 15 units apart vertically (behind)
+        
+        let startPos = new THREE.Vector3(offsetX, 0, offsetZ);
+        startPos.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+        
+        group.position.set(cp.x + startPos.x, 0, cp.z + startPos.z);
         
         let randomDef = VEHICLES[Math.floor(Math.random() * VEHICLES.length)];
         let color = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
@@ -941,7 +1024,7 @@ function spawnOpponents() {
         let buildRes = buildDetailedVehicle(randomDef, color);
         group.add(buildRes.group);
         
-        let aiArrow = createFloatingArrow(0x00ff00); // Green arrow for AI
+        let aiArrow = createFloatingArrow(0x00ff00);
         group.add(aiArrow);
         
         scene.add(group);
@@ -953,9 +1036,10 @@ function spawnOpponents() {
             heading: angle,
             targetCpIndex: 1,
             type: randomDef.type,
-            maxSpeed: 30 + Math.random() * (randomDef.maxSpeed * 0.8),
+            maxSpeed: selectedLevel === 1 ? (30 + Math.random() * (randomDef.maxSpeed * 0.8)) : (60 + Math.random() * (randomDef.maxSpeed * 1.2)),
             finished: false,
             finishOrder: 0,
+            acceleration: selectedLevel === 1 ? randomDef.acceleration : randomDef.acceleration * 1.5,
             crashed: false,
             crashTimer: 0
         });
@@ -1015,7 +1099,7 @@ function updateEngineSound() {
 function startRace() {
     initAudio();
     let vDef = VEHICLES.find(v => v.id === vehicleType) || VEHICLES[0];
-    MAX_SPEED = vDef.maxSpeed;
+    MAX_SPEED = getVehicleMaxSpeed(vDef);
     ACCELERATION = vDef.acceleration;
     TURN_SPEED = 1.5 * vDef.handling;
     
@@ -1196,7 +1280,7 @@ function updateGameLogic(dt: number) {
             
             ai.heading += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), 1.5 * dt);
             
-            ai.speed += 15 * dt;
+            ai.speed += (ai.acceleration || 20) * dt;
             if (ai.speed > ai.maxSpeed) ai.speed = ai.maxSpeed;
             
             ai.group.rotation.y = ai.heading;
@@ -1507,6 +1591,31 @@ function buyVehicle(id: string) {
 function updateGarageUI() {
     document.getElementById('money-val')!.innerText = money.toString();
     document.getElementById('shop-money-val')!.innerText = money.toString();
+
+    // Update Level Selection UI
+    const btnLevel1 = document.getElementById('btn-level-1');
+    const btnLevel2 = document.getElementById('btn-level-2');
+    const lblLevel2 = document.getElementById('lbl-level-2');
+    
+    if (btnLevel1 && btnLevel2 && lblLevel2) {
+        if (selectedLevel === 1) {
+            btnLevel1.style.border = '2px solid white';
+            btnLevel1.style.background = '#2ecc71';
+            btnLevel2.style.border = '2px solid transparent';
+            btnLevel2.style.background = level2Unlocked ? '#27ae60' : '#7f8c8d';
+        } else {
+            btnLevel1.style.border = '2px solid transparent';
+            btnLevel1.style.background = '#27ae60';
+            btnLevel2.style.border = '2px solid white';
+            btnLevel2.style.background = '#2ecc71';
+        }
+        
+        if (level2Unlocked) {
+            lblLevel2.innerText = '1st Prize: $1000 | 9 Opponents';
+        } else {
+            lblLevel2.innerText = 'Unlock: $1000 | 9 Opponents';
+        }
+    }
     
     // Show currently selected vehicle name
     let selVeh = VEHICLES.find(v => v.id === vehicleType);
@@ -1609,6 +1718,28 @@ function init() {
     uiHudBottom = document.getElementById('hud-bottom')!;
     uiSpeed = document.getElementById('speed-val')!;
     
+    document.getElementById('btn-level-1')?.addEventListener('click', () => {
+        selectedLevel = 1;
+        updateGarageUI();
+    });
+    
+    document.getElementById('btn-level-2')?.addEventListener('click', () => {
+        if (level2Unlocked) {
+            selectedLevel = 2;
+            updateGarageUI();
+        } else {
+            if (money >= 1000) {
+                money -= 1000;
+                level2Unlocked = true;
+                selectedLevel = 2;
+                saveProgress();
+                updateGarageUI();
+            } else {
+                alert('Not enough money to unlock Level 2! You need $1000.');
+            }
+        }
+    });
+
     document.getElementById('btn-open-shop')?.addEventListener('click', () => { document.getElementById('shop-screen')!.style.display = 'flex'; });
     document.getElementById('btn-show-owned')?.addEventListener('click', () => { 
         document.getElementById('shop-screen')!.style.display = 'none';
