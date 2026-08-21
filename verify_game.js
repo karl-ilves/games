@@ -109,20 +109,20 @@ try {
         const racingYards = await page.$eval('#racing-yard-val', el => el.textContent);
         console.log("   Racing Garage Yard Balance before purchases:", racingYards);
 
-        // Open Shop & Buy City Cruiser with Yards (15 Yards)
-        console.log("   Opening Shop to buy City Cruiser (15 Yards)...");
+        // Open Shop & Buy City Cruiser with Yards (30 Yards)
+        console.log("   Opening Shop to buy City Cruiser (30 Yards)...");
         await page.click('#btn-open-shop');
         await new Promise(r => setTimeout(r, 500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
         
         const buyYardButtons = await page.$$('.shop-buy-yard-btn');
         if (buyYardButtons.length > 0) {
-            await buyYardButtons[0].click(); // Buy City Cruiser with 15 Yards
+            await buyYardButtons[0].click(); // Buy City Cruiser with 30 Yards
             await new Promise(r => setTimeout(r, 500));
         }
 
-        // Return to Garage and unlock Level 2: Forest with Yards (25 Yards)
-        console.log("   Returning to Garage and unlocking Level 2 with 25 Yards...");
+        // Return to Garage and unlock Level 2: Forest with Yards (50 Yards)
+        console.log("   Returning to Garage and unlocking Level 2 with 50 Yards...");
         await page.click('#btn-close-shop');
         await new Promise(r => setTimeout(r, 500));
 
@@ -134,7 +134,7 @@ try {
         console.log("   Level 2: Forest Unlocked successfully with Yards:", isLevel2Active);
 
         const finalYards = await page.$eval('#racing-yard-val', el => el.textContent);
-        console.log("   Final Racing Yard Balance:", finalYards);
+        console.log("   Final Racing Yard Balance (Expected: 1,020):", finalYards);
 
     } catch(err) {
         console.error("Verification failed:", err);
