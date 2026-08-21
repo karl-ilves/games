@@ -379,6 +379,49 @@ class YardService {
         };
     }
 
+    public async resetAll() {
+        this.data = {
+            yards: 0,
+            streak: 0,
+            lastClaimTimestamp: 0,
+            inventory: [],
+            transactions: []
+        };
+        try {
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('playard_') || key.startsWith('racingSave')) {
+                    localStorage.removeItem(key);
+                }
+            });
+        } catch (e) {
+            console.warn(e);
+        }
+
+        this.saveLocally(this.data);
+        await this.saveToCloud();
+
+        if (supabase) {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user?.id) {
+                    await supabase.from('user_progress').upsert({
+                        user_id: session.user.id,
+                        money: 0,
+                        selected_level: 1,
+                        unlocked_vehicles: ['car_1'],
+                        vehicle_upgrades: {},
+                        level2_unlocked: false,
+                        level3_unlocked: false,
+                        yards: 0
+                    });
+                }
+            } catch (err) {
+                console.warn(err);
+            }
+        }
+        this.notifyListeners();
+    }
+
     public resetStreakAndTimer() {
         this.data.streak = 0;
         this.data.lastClaimTimestamp = 0;
