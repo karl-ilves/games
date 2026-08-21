@@ -151,18 +151,6 @@ try {
         const finalYards = await page.$eval('#racing-yard-val', el => el.textContent);
         console.log("   Final Racing Yard Balance (Expected: 1,020):", finalYards);
 
-        // 5. Test Global Reset All
-        console.log("5. Testing Global Reset All Data & Yards...");
-        await page.goto('http://localhost:4173/games/');
-        await new Promise(r => setTimeout(r, 1000));
-        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
-        await page.waitForSelector('#btn-reset-all-data', { visible: true, timeout: 5000 });
-        await page.click('#btn-reset-all-data');
-        await new Promise(r => setTimeout(r, 1000));
-
-        const resetYards = await page.$eval('#header-yard-val', el => el.textContent);
-        console.log("   Yard balance after Global Reset (Expected: 0):", resetYards);
-
     } catch(err) {
         console.error("Verification failed:", err);
         hasErrors = true;

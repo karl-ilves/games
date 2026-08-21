@@ -188,17 +188,6 @@ function setupModals() {
             }
         });
     }
-
-    const resetAllBtn = document.getElementById('btn-reset-all-data');
-    if (resetAllBtn) {
-        resetAllBtn.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to reset all Yards and game progress to 0?')) {
-                await yardService.resetAll();
-                alert('✅ All progress and Yards have been completely reset!');
-                location.reload();
-            }
-        });
-    }
 }
 
 // Initialise
