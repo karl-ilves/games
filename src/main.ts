@@ -1,8 +1,22 @@
+import { supabase } from './lib/supabase';
 import { initAuth } from './auth';
 import { yardService, YardData } from './shared/yardService';
 
 console.log("Playard Hub Loaded.");
 initAuth();
+
+const ADMIN_EMAIL = '1karl.ilves@gmail.com';
+
+function updateAdminControlsVisibility(userEmail?: string | null) {
+    const adminControls = document.getElementById('streak-admin-controls');
+    if (!adminControls) return;
+    
+    if (userEmail && userEmail.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        adminControls.style.display = 'flex';
+    } else {
+        adminControls.style.display = 'none';
+    }
+}
 
 // --- Setup UI Icons & Elements ---
 function setupIcons() {
@@ -195,3 +209,13 @@ setupIcons();
 setupModals();
 yardService.subscribe(updateYardDisplay);
 setInterval(updateStreakTimerLive, 1000);
+
+if (supabase) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        updateAdminControlsVisibility(session?.user?.email);
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+        updateAdminControlsVisibility(session?.user?.email);
+    });
+}

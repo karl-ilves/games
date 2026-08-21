@@ -83,8 +83,21 @@ try {
         await page.click('#btn-open-streak');
         await page.waitForSelector('#modal-streak', { visible: true, timeout: 3000 });
 
+        // Verify Admin Controls are hidden by default for non-admin/guest users
+        const adminControlsDisplay = await page.$eval('#streak-admin-controls', el => window.getComputedStyle(el).display);
+        console.log("   Admin Controls visibility for guest/non-admin (Expected: none):", adminControlsDisplay);
+        if (adminControlsDisplay !== 'none') {
+            throw new Error(`Security check failed! Admin buttons should be hidden for guest/non-admin users, got: ${adminControlsDisplay}`);
+        }
+
+        // Enable admin controls in test session to simulate 1karl.ilves@gmail.com
+        await page.evaluate(() => {
+            const el = document.getElementById('streak-admin-controls');
+            if (el) el.style.display = 'flex';
+        });
+
         // Fast forward 24h & test all 7 days up to Jackpot (+500 Y)!
-        console.log("   Simulating 7-Day Streak cycle with +24h Fast Forward...");
+        console.log("   Simulating 7-Day Streak cycle with +24h Fast Forward (Admin)...");
         for (let d = 2; d <= 7; d++) {
             await page.click('#btn-debug-fastforward');
             await new Promise(r => setTimeout(r, 300));
@@ -96,7 +109,7 @@ try {
         console.log("   Yard Balance after full 7-day streak cycle (Expected: 1,100):", yardsAfterStreak);
 
         // Test Reset Streak and Timer Button
-        console.log("   Testing Reset Streak & Timer button...");
+        console.log("   Testing Reset Streak & Timer button (Admin)...");
         await page.click('#btn-debug-reset');
         await new Promise(r => setTimeout(r, 500));
         const resetTimerText = await page.$eval('#streak-timer-hms', el => el.textContent);
