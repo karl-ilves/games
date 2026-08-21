@@ -157,30 +157,30 @@ interface VehicleDef {
 
 const VEHICLES: VehicleDef[] = [
     // --- CARS (11) ---
-    { id: 'car_1', name: 'Starter Car', type: 'car', price: 0, maxSpeed: 20, acceleration: 7, handling: 1.0, image: '/assets/shop_sports_car.jpg', hueRotate: 0 },
-    { id: 'car_2', name: 'City Cruiser', type: 'car', price: 500, maxSpeed: 22, acceleration: 9, handling: 1.1, image: '/assets/shop_sports_car.jpg', hueRotate: 45 },
-    { id: 'car_3', name: 'Offroader', type: 'car', price: 1200, maxSpeed: 21, acceleration: 6, handling: 0.8, image: '/assets/shop_suv.jpg', hueRotate: 0 },
-    { id: 'car_4', name: 'Street Tuner', type: 'car', price: 2000, maxSpeed: 26, acceleration: 11, handling: 1.2, image: '/assets/shop_sports_car.jpg', hueRotate: 120 },
-    { id: 'car_5', name: 'Desert Truck', type: 'car', price: 3500, maxSpeed: 25, acceleration: 7, handling: 0.9, image: '/assets/shop_suv.jpg', hueRotate: 90 },
-    { id: 'car_6', name: 'Muscle Car', type: 'car', price: 5000, maxSpeed: 29, acceleration: 14, handling: 0.9, image: '/assets/shop_sports_car.jpg', hueRotate: 200 },
-    { id: 'car_7', name: 'V8 Interceptor', type: 'car', price: 7500, maxSpeed: 31, acceleration: 16, handling: 1.0, image: '/assets/shop_sports_car.jpg', hueRotate: -50 },
-    { id: 'car_8', name: 'Supercar', type: 'car', price: 12000, maxSpeed: 35, acceleration: 19, handling: 1.3, image: '/assets/shop_hypercar.jpg', hueRotate: 0 },
-    { id: 'car_9', name: 'Neon Hypercar', type: 'car', price: 20000, maxSpeed: 39, acceleration: 22, handling: 1.4, image: '/assets/shop_hypercar.jpg', hueRotate: 180 },
-    { id: 'car_10', name: 'Stealth Racer', type: 'car', price: 35000, maxSpeed: 42, acceleration: 25, handling: 1.5, image: '/assets/shop_hypercar.jpg', hueRotate: 45 },
-    { id: 'car_11', name: 'F1 Prototype', type: 'car', price: 50000, maxSpeed: 50, acceleration: 30, handling: 1.8, image: '/assets/shop_hypercar.jpg', hueRotate: -90 },
+    { id: 'car_1', name: 'Starter Car', type: 'car', price: 0, maxSpeed: 25, acceleration: 8, handling: 1.0, image: '/assets/shop_sports_car.jpg', hueRotate: 0 },
+    { id: 'car_2', name: 'City Cruiser', type: 'car', price: 500, maxSpeed: 27, acceleration: 11, handling: 1.1, image: '/assets/shop_sports_car.jpg', hueRotate: 45 },
+    { id: 'car_3', name: 'Offroader', type: 'car', price: 1200, maxSpeed: 26, acceleration: 7, handling: 0.8, image: '/assets/shop_suv.jpg', hueRotate: 0 },
+    { id: 'car_4', name: 'Street Tuner', type: 'car', price: 2000, maxSpeed: 32, acceleration: 13, handling: 1.2, image: '/assets/shop_sports_car.jpg', hueRotate: 120 },
+    { id: 'car_5', name: 'Desert Truck', type: 'car', price: 3500, maxSpeed: 31, acceleration: 8, handling: 0.9, image: '/assets/shop_suv.jpg', hueRotate: 90 },
+    { id: 'car_6', name: 'Muscle Car', type: 'car', price: 5000, maxSpeed: 36, acceleration: 17, handling: 0.9, image: '/assets/shop_sports_car.jpg', hueRotate: 200 },
+    { id: 'car_7', name: 'V8 Interceptor', type: 'car', price: 7500, maxSpeed: 38, acceleration: 20, handling: 1.0, image: '/assets/shop_sports_car.jpg', hueRotate: -50 },
+    { id: 'car_8', name: 'Supercar', type: 'car', price: 12000, maxSpeed: 43, acceleration: 23, handling: 1.3, image: '/assets/shop_hypercar.jpg', hueRotate: 0 },
+    { id: 'car_9', name: 'Neon Hypercar', type: 'car', price: 20000, maxSpeed: 48, acceleration: 27, handling: 1.4, image: '/assets/shop_hypercar.jpg', hueRotate: 180 },
+    { id: 'car_10', name: 'Stealth Racer', type: 'car', price: 35000, maxSpeed: 52, acceleration: 31, handling: 1.5, image: '/assets/shop_hypercar.jpg', hueRotate: 45 },
+    { id: 'car_11', name: 'F1 Prototype', type: 'car', price: 50000, maxSpeed: 62, acceleration: 37, handling: 1.8, image: '/assets/shop_hypercar.jpg', hueRotate: -90 },
 
     // --- MOTOS (11) ---
-    { id: 'moto_1', name: 'Starter Bike', type: 'moto', price: 0, maxSpeed: 21, acceleration: 10, handling: 1.1, image: '/assets/shop_moto.jpg', hueRotate: 0 },
-    { id: 'moto_2', name: 'Scooter', type: 'moto', price: 400, maxSpeed: 19, acceleration: 7, handling: 1.2, image: '/assets/shop_moto.jpg', hueRotate: 150 },
-    { id: 'moto_3', name: 'Classic Chopper', type: 'moto', price: 1000, maxSpeed: 22, acceleration: 9, handling: 0.8, image: '/assets/shop_chopper.jpg', hueRotate: 0 },
-    { id: 'moto_4', name: 'Dirtbike', type: 'moto', price: 1800, maxSpeed: 24, acceleration: 12, handling: 1.4, image: '/assets/shop_moto.jpg', hueRotate: 90 },
-    { id: 'moto_5', name: 'Cruiser', type: 'moto', price: 3000, maxSpeed: 26, acceleration: 11, handling: 0.9, image: '/assets/shop_chopper.jpg', hueRotate: 60 },
-    { id: 'moto_6', name: 'Street Bike', type: 'moto', price: 4500, maxSpeed: 30, acceleration: 15, handling: 1.3, image: '/assets/shop_moto.jpg', hueRotate: 210 },
-    { id: 'moto_7', name: 'Heavy Chopper', type: 'moto', price: 6500, maxSpeed: 29, acceleration: 13, handling: 0.85, image: '/assets/shop_chopper.jpg', hueRotate: -40 },
-    { id: 'moto_8', name: 'Superbike', type: 'moto', price: 10000, maxSpeed: 37, acceleration: 20, handling: 1.4, image: '/assets/shop_moto.jpg', hueRotate: -90 },
-    { id: 'moto_9', name: 'Night Rider', type: 'moto', price: 18000, maxSpeed: 41, acceleration: 22, handling: 1.5, image: '/assets/shop_chopper.jpg', hueRotate: 180 },
-    { id: 'moto_10', name: 'Hyper Moto', type: 'moto', price: 30000, maxSpeed: 45, acceleration: 27, handling: 1.6, image: '/assets/shop_moto.jpg', hueRotate: 45 },
-    { id: 'moto_11', name: 'Tron Bike', type: 'moto', price: 50000, maxSpeed: 55, acceleration: 35, handling: 1.7, image: '/assets/shop_moto.jpg', hueRotate: 270 }
+    { id: 'moto_1', name: 'Starter Bike', type: 'moto', price: 0, maxSpeed: 26, acceleration: 12, handling: 1.1, image: '/assets/shop_moto.jpg', hueRotate: 0 },
+    { id: 'moto_2', name: 'Scooter', type: 'moto', price: 400, maxSpeed: 23, acceleration: 8, handling: 1.2, image: '/assets/shop_moto.jpg', hueRotate: 150 },
+    { id: 'moto_3', name: 'Classic Chopper', type: 'moto', price: 1000, maxSpeed: 27, acceleration: 11, handling: 0.8, image: '/assets/shop_chopper.jpg', hueRotate: 0 },
+    { id: 'moto_4', name: 'Dirtbike', type: 'moto', price: 1800, maxSpeed: 30, acceleration: 15, handling: 1.4, image: '/assets/shop_moto.jpg', hueRotate: 90 },
+    { id: 'moto_5', name: 'Cruiser', type: 'moto', price: 3000, maxSpeed: 32, acceleration: 13, handling: 0.9, image: '/assets/shop_chopper.jpg', hueRotate: 60 },
+    { id: 'moto_6', name: 'Street Bike', type: 'moto', price: 4500, maxSpeed: 37, acceleration: 18, handling: 1.3, image: '/assets/shop_moto.jpg', hueRotate: 210 },
+    { id: 'moto_7', name: 'Heavy Chopper', type: 'moto', price: 6500, maxSpeed: 36, acceleration: 16, handling: 0.85, image: '/assets/shop_chopper.jpg', hueRotate: -40 },
+    { id: 'moto_8', name: 'Superbike', type: 'moto', price: 10000, maxSpeed: 46, acceleration: 25, handling: 1.4, image: '/assets/shop_moto.jpg', hueRotate: -90 },
+    { id: 'moto_9', name: 'Night Rider', type: 'moto', price: 18000, maxSpeed: 51, acceleration: 27, handling: 1.5, image: '/assets/shop_chopper.jpg', hueRotate: 180 },
+    { id: 'moto_10', name: 'Hyper Moto', type: 'moto', price: 30000, maxSpeed: 56, acceleration: 33, handling: 1.6, image: '/assets/shop_moto.jpg', hueRotate: 45 },
+    { id: 'moto_11', name: 'Tron Bike', type: 'moto', price: 50000, maxSpeed: 68, acceleration: 43, handling: 1.7, image: '/assets/shop_moto.jpg', hueRotate: 270 }
 ];
 
 let unlockedVehicles: string[] = ['car_1'];
