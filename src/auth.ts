@@ -50,10 +50,22 @@ export async function initAuth() {
             if (!email || !password) return showMsg('Please enter both email and password.', 'error');
             
             showMsg('Creating account...', 'info');
-            const { error } = await supabase.auth.signUp({ email, password });
-            if (error) showMsg(error.message, 'error');
-            else {
+            const redirectUrl = window.location.origin + window.location.pathname;
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    emailRedirectTo: redirectUrl
+                }
+            });
+            if (error) {
+                showMsg(error.message, 'error');
+            } else if (data?.session) {
                 showMsg('Account created! You are now logged in.', 'success');
+                emailInput.value = '';
+                passwordInput.value = '';
+            } else {
+                showMsg('Registration successful! Please check your email to confirm your account.', 'success');
                 emailInput.value = '';
                 passwordInput.value = '';
             }
