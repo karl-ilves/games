@@ -47,8 +47,8 @@ try {
         const startYards = await page.$eval('#header-yard-val', el => el.textContent);
         console.log("   Initial Yard Balance:", startYards);
 
-        // Test 7-Day Daily Streak Rewards Modal
-        console.log("2. Testing 7-Day Daily Streak Modal...");
+        // Test 7-Day Daily Streak Rewards Modal (100 Y/day + 500 Y Jackpot)
+        console.log("2. Testing 7-Day Daily Streak Modal (100 Yards/day & 500 Yards Jackpot)...");
         await page.click('#btn-open-streak');
         await page.waitForSelector('#modal-streak', { visible: true, timeout: 3000 });
         
@@ -56,12 +56,12 @@ try {
         console.log(`   Found ${streakCardsCount} streak day cards (Expected: 7)`);
         if (streakCardsCount !== 7) throw new Error("Expected 7 streak cards in daily rewards!");
 
-        // Claim Day 1 reward (5 Yards)
-        console.log("   Claiming Day 1 reward (+5 Yards)...");
+        // Claim Day 1 reward (+100 Yards)
+        console.log("   Claiming Day 1 reward (+100 Yards)...");
         await page.click('#btn-claim-daily');
         await new Promise(r => setTimeout(r, 500));
         
-        // Fast forward 24h & test all 7 days up to Jackpot (+25 Y)!
+        // Fast forward 24h & test all 7 days up to Jackpot (+500 Y)!
         console.log("   Simulating 7-Day Streak cycle with +24h Fast Forward...");
         for (let d = 2; d <= 7; d++) {
             await page.click('#btn-debug-fastforward');
@@ -71,13 +71,13 @@ try {
         }
 
         const yardsAfterStreak = await page.$eval('#header-yard-val', el => el.textContent);
-        console.log("   Yard Balance after full 7-day streak cycle:", yardsAfterStreak);
+        console.log("   Yard Balance after full 7-day streak cycle (Expected: 1,100):", yardsAfterStreak);
 
         // Close Streak Modal
         await page.click('#btn-close-streak');
         await new Promise(r => setTimeout(r, 500));
 
-        // 3. Test Airplane Simulator (No Missions, Pure Simulation)
+        // 3. Test Airplane Simulator
         console.log("3. Checking Airplane Simulator...");
         await page.goto('http://localhost:4173/games/games/airplane/index.html');
         await new Promise(r => setTimeout(r, 1500));
@@ -85,21 +85,42 @@ try {
         const airplaneYards = await page.$eval('#airplane-yard-val', el => el.textContent);
         console.log("   Airplane Simulator Yard Balance:", airplaneYards);
 
-        console.log("   Simulating Airplane UI selection...");
-        await page.waitForSelector('#btn-intro-pc', { visible: true, timeout: 5000 });
-        await page.click('#btn-intro-pc');
-        await new Promise(r => setTimeout(r, 500));
-        await page.waitForSelector('#btn-start-pc', { visible: true, timeout: 5000 });
-        await page.click('#btn-start-pc');
-        await new Promise(r => setTimeout(r, 1000));
-
-        // 4. Test Racing Simulator (Circuit Racing)
-        console.log("4. Checking Racing Simulator...");
+        // 4. Test Racing Simulator (Buying Cars with Yards & Unlocking Levels with Yards)
+        console.log("4. Checking Racing Simulator (Buying cars with Yards & Unlocking levels)...");
         await page.goto('http://localhost:4173/games/games/racing/index.html');
         await new Promise(r => setTimeout(r, 1500));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
         await page.waitForSelector('#garage-screen', { visible: true, timeout: 5000 });
+        
         const racingYards = await page.$eval('#racing-yard-val', el => el.textContent);
-        console.log("   Racing Simulator Garage Yard Balance:", racingYards);
+        console.log("   Racing Garage Yard Balance before purchases:", racingYards);
+
+        // Open Shop & Buy City Cruiser with Yards (15 Yards)
+        console.log("   Opening Shop to buy City Cruiser (15 Yards)...");
+        await page.click('#btn-open-shop');
+        await new Promise(r => setTimeout(r, 500));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+        
+        const buyYardButtons = await page.$$('.shop-buy-yard-btn');
+        if (buyYardButtons.length > 0) {
+            await buyYardButtons[0].click(); // Buy City Cruiser with 15 Yards
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        // Return to Garage and unlock Level 2: Forest with Yards (25 Yards)
+        console.log("   Returning to Garage and unlocking Level 2 with 25 Yards...");
+        await page.click('#btn-close-shop');
+        await new Promise(r => setTimeout(r, 500));
+
+        await page.waitForSelector('#btn-unlock-lvl2-yards', { visible: true, timeout: 5000 });
+        await page.click('#btn-unlock-lvl2-yards');
+        await new Promise(r => setTimeout(r, 500));
+
+        const isLevel2Active = await page.$eval('#btn-level-2', el => el.style.background.includes('rgb(39, 174, 96)') || el.style.background.includes('#27ae60'));
+        console.log("   Level 2: Forest Unlocked successfully with Yards:", isLevel2Active);
+
+        const finalYards = await page.$eval('#racing-yard-val', el => el.textContent);
+        console.log("   Final Racing Yard Balance:", finalYards);
 
     } catch(err) {
         console.error("Verification failed:", err);

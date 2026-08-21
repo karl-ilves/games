@@ -1109,9 +1109,12 @@ let waterRescuePatients = 0;
 let rescuedWaterPatients = 0;
 
 function startWaterRescueMission(totalCount) {
-    document.getElementById('hospital-choice').style.display = 'none';
-    document.getElementById('restart-btn').style.display = 'none';
-    document.getElementById('rescue-mission-ui').style.display = 'block';
+    const hosp = document.getElementById('hospital-choice');
+    if (hosp) hosp.style.display = 'none';
+    const rBtn = document.getElementById('restart-btn');
+    if (rBtn) rBtn.style.display = 'none';
+    const rUi = document.getElementById('rescue-mission-ui');
+    if (rUi) rUi.style.display = 'block';
     
     playerMode = true;
     playerMesh.visible = true; 
@@ -1119,7 +1122,8 @@ function startWaterRescueMission(totalCount) {
     
     totalPatients = totalCount;
     rescuedPatients = 0;
-    document.getElementById('rescue-counter').innerText = rescuedPatients + ' / ' + totalPatients;
+    const rCount = document.getElementById('rescue-counter');
+    if (rCount) rCount.innerText = rescuedPatients + ' / ' + totalPatients;
 }
  // 'none', 'firefighting', 'investigating'
 let firetrucks = [];
@@ -2948,15 +2952,19 @@ window.addEventListener('wheel', (e) => {
     if (cameraZoomDist > 200) cameraZoomDist = 200;
 });
 
-document.getElementById('restart-btn').addEventListener('click', resetPlane);
+const rstBtn = document.getElementById('restart-btn');
+if (rstBtn) rstBtn.addEventListener('click', resetPlane);
 
 // Hospital Logic
 function startRescueMission() {
-    document.getElementById('hospital-choice').style.display = 'none';
-    document.getElementById('restart-btn').style.display = 'none';
+    const hosp = document.getElementById('hospital-choice');
+    if (hosp) hosp.style.display = 'none';
+    const rBtn = document.getElementById('restart-btn');
+    if (rBtn) rBtn.style.display = 'none';
     
     // Show Rescue Mission UI
-    document.getElementById('rescue-mission-ui').style.display = 'block';
+    const rUi = document.getElementById('rescue-mission-ui');
+    if (rUi) rUi.style.display = 'block';
     
     crashResponseState = 'ambulance_rescue';
     
@@ -4726,16 +4734,24 @@ function triggerCrash(msg) {
     }
     
     const messageEl = document.getElementById('message');
-    messageEl.innerText = '';
-    document.getElementById('restart-btn').style.display = 'none';
-    document.getElementById('skip-amb-btn').style.display = 'none';
-    document.getElementById('hospital-choice').style.display = 'none';
+    if (messageEl) messageEl.innerText = '';
+    const rstBtn2 = document.getElementById('restart-btn');
+    if (rstBtn2) rstBtn2.style.display = 'none';
+    const skipAmb = document.getElementById('skip-amb-btn');
+    if (skipAmb) skipAmb.style.display = 'none';
+    const hosp = document.getElementById('hospital-choice');
+    if (hosp) hosp.style.display = 'none';
     
-    document.getElementById('anti-ice-container').style.display = 'none';
-    document.getElementById('emergency-menu').style.display = 'none';
-    document.getElementById('weather-menu').style.display = 'none';
-    document.getElementById('plane-status-display').style.display = 'none';
-    document.getElementById('mobile-controls').style.display = 'none';
+    const antiIce = document.getElementById('anti-ice-container');
+    if (antiIce) antiIce.style.display = 'none';
+    const emMenu = document.getElementById('emergency-menu');
+    if (emMenu) emMenu.style.display = 'none';
+    const wMenu = document.getElementById('weather-menu');
+    if (wMenu) wMenu.style.display = 'none';
+    const pStatus = document.getElementById('plane-status-display');
+    if (pStatus) pStatus.style.display = 'none';
+    const mobCtrl = document.getElementById('mobile-controls');
+    if (mobCtrl) mobCtrl.style.display = 'none';
     
     playCrashSound();
     

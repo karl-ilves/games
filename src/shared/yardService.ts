@@ -18,8 +18,8 @@ const STORAGE_PREFIX = 'playard_yards_';
 const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_IN_48_HOURS = 48 * 60 * 60 * 1000;
 
-const DAILY_STREAK_REWARD = 5;
-const DAY_7_JACKPOT_REWARD = 25;
+const DAILY_STREAK_REWARD = 100;
+const DAY_7_JACKPOT_REWARD = 500;
 
 class YardService {
     private data: YardData;

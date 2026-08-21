@@ -150,6 +150,7 @@ interface VehicleDef {
     name: string;
     type: 'car' | 'moto';
     price: number;
+    yardPrice: number;
     maxSpeed: number;
     acceleration: number;
     handling: number; // turn speed multiplier
@@ -158,32 +159,32 @@ interface VehicleDef {
 }
 
 const VEHICLES: VehicleDef[] = [
-    // --- CARS (11) ---
-    { id: 'car_1', name: 'Starter Car', type: 'car', price: 0, maxSpeed: 32, acceleration: 10, handling: 1.0, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: 0 },
-    { id: 'car_2', name: 'City Cruiser', type: 'car', price: 500, maxSpeed: 34, acceleration: 14, handling: 1.1, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: 45 },
-    { id: 'car_3', name: 'Offroader', type: 'car', price: 1200, maxSpeed: 33, acceleration: 9, handling: 0.8, image: import.meta.env.BASE_URL + 'assets/shop_suv.jpg', hueRotate: 0 },
-    { id: 'car_4', name: 'Street Tuner', type: 'car', price: 2000, maxSpeed: 40, acceleration: 17, handling: 1.2, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: 120 },
-    { id: 'car_5', name: 'Desert Truck', type: 'car', price: 3500, maxSpeed: 39, acceleration: 10, handling: 0.9, image: import.meta.env.BASE_URL + 'assets/shop_suv.jpg', hueRotate: 90 },
-    { id: 'car_6', name: 'Muscle Car', type: 'car', price: 5000, maxSpeed: 45, acceleration: 22, handling: 0.9, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: 200 },
-    { id: 'car_7', name: 'V8 Interceptor', type: 'car', price: 7500, maxSpeed: 48, acceleration: 25, handling: 1.0, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: -50 },
-    { id: 'car_8', name: 'Supercar', type: 'car', price: 12000, maxSpeed: 54, acceleration: 29, handling: 1.3, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 0 },
-    { id: 'car_9', name: 'Neon Hypercar', type: 'car', price: 20000, maxSpeed: 60, acceleration: 34, handling: 1.4, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 180 },
-    { id: 'car_10', name: 'Stealth Racer', type: 'car', price: 35000, maxSpeed: 65, acceleration: 39, handling: 1.5, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 45 },
-    { id: 'car_11', name: 'F1 Prototype', type: 'car', price: 50000, maxSpeed: 78, acceleration: 47, handling: 1.8, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: -90 },
-    { id: 'cyber_hypercar', name: '💎 Yard Cyber Hypercar', type: 'car', price: 0, maxSpeed: 88, acceleration: 52, handling: 1.85, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 160 },
+    // --- CARS (12) ---
+    { id: 'car_1', name: 'Starter Car', type: 'car', price: 0, yardPrice: 0, maxSpeed: 32, acceleration: 10, handling: 1.0, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: 0 },
+    { id: 'car_2', name: 'City Cruiser', type: 'car', price: 500, yardPrice: 15, maxSpeed: 34, acceleration: 14, handling: 1.1, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: 45 },
+    { id: 'car_3', name: 'Offroader', type: 'car', price: 1200, yardPrice: 30, maxSpeed: 33, acceleration: 9, handling: 0.8, image: import.meta.env.BASE_URL + 'assets/shop_suv.jpg', hueRotate: 0 },
+    { id: 'car_4', name: 'Street Tuner', type: 'car', price: 2000, yardPrice: 50, maxSpeed: 40, acceleration: 17, handling: 1.2, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: 120 },
+    { id: 'car_5', name: 'Desert Truck', type: 'car', price: 3500, yardPrice: 80, maxSpeed: 39, acceleration: 10, handling: 0.9, image: import.meta.env.BASE_URL + 'assets/shop_suv.jpg', hueRotate: 90 },
+    { id: 'car_6', name: 'Muscle Car', type: 'car', price: 5000, yardPrice: 120, maxSpeed: 45, acceleration: 22, handling: 0.9, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: 200 },
+    { id: 'car_7', name: 'V8 Interceptor', type: 'car', price: 7500, yardPrice: 180, maxSpeed: 48, acceleration: 25, handling: 1.0, image: import.meta.env.BASE_URL + 'assets/shop_sports_car.jpg', hueRotate: -50 },
+    { id: 'car_8', name: 'Supercar', type: 'car', price: 12000, yardPrice: 250, maxSpeed: 54, acceleration: 29, handling: 1.3, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 0 },
+    { id: 'car_9', name: 'Neon Hypercar', type: 'car', price: 20000, yardPrice: 400, maxSpeed: 60, acceleration: 34, handling: 1.4, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 180 },
+    { id: 'car_10', name: 'Stealth Racer', type: 'car', price: 35000, yardPrice: 600, maxSpeed: 65, acceleration: 39, handling: 1.5, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 45 },
+    { id: 'car_11', name: 'F1 Prototype', type: 'car', price: 50000, yardPrice: 800, maxSpeed: 78, acceleration: 47, handling: 1.8, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: -90 },
+    { id: 'cyber_hypercar', name: '💎 Yard Cyber Hypercar', type: 'car', price: 75000, yardPrice: 1000, maxSpeed: 88, acceleration: 52, handling: 1.85, image: import.meta.env.BASE_URL + 'assets/shop_hypercar.jpg', hueRotate: 160 },
 
     // --- MOTOS (11) ---
-    { id: 'moto_1', name: 'Starter Bike', type: 'moto', price: 0, maxSpeed: 33, acceleration: 15, handling: 1.1, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 0 },
-    { id: 'moto_2', name: 'Scooter', type: 'moto', price: 400, maxSpeed: 29, acceleration: 10, handling: 1.2, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 150 },
-    { id: 'moto_3', name: 'Classic Chopper', type: 'moto', price: 1000, maxSpeed: 34, acceleration: 14, handling: 0.8, image: import.meta.env.BASE_URL + 'assets/shop_chopper.jpg', hueRotate: 0 },
-    { id: 'moto_4', name: 'Dirtbike', type: 'moto', price: 1800, maxSpeed: 38, acceleration: 19, handling: 1.4, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 90 },
-    { id: 'moto_5', name: 'Cruiser', type: 'moto', price: 3000, maxSpeed: 40, acceleration: 17, handling: 0.9, image: import.meta.env.BASE_URL + 'assets/shop_chopper.jpg', hueRotate: 60 },
-    { id: 'moto_6', name: 'Street Bike', type: 'moto', price: 4500, maxSpeed: 47, acceleration: 23, handling: 1.3, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 210 },
-    { id: 'moto_7', name: 'Heavy Chopper', type: 'moto', price: 6500, maxSpeed: 45, acceleration: 20, handling: 0.85, image: import.meta.env.BASE_URL + 'assets/shop_chopper.jpg', hueRotate: -40 },
-    { id: 'moto_8', name: 'Superbike', type: 'moto', price: 10000, maxSpeed: 58, acceleration: 32, handling: 1.4, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: -90 },
-    { id: 'moto_9', name: 'Night Rider', type: 'moto', price: 18000, maxSpeed: 64, acceleration: 34, handling: 1.5, image: import.meta.env.BASE_URL + 'assets/shop_chopper.jpg', hueRotate: 180 },
-    { id: 'moto_10', name: 'Hyper Moto', type: 'moto', price: 30000, maxSpeed: 70, acceleration: 42, handling: 1.6, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 45 },
-    { id: 'moto_11', name: 'Tron Bike', type: 'moto', price: 50000, maxSpeed: 85, acceleration: 54, handling: 1.7, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 270 }
+    { id: 'moto_1', name: 'Starter Bike', type: 'moto', price: 0, yardPrice: 0, maxSpeed: 33, acceleration: 15, handling: 1.1, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 0 },
+    { id: 'moto_2', name: 'Scooter', type: 'moto', price: 400, yardPrice: 10, maxSpeed: 29, acceleration: 10, handling: 1.2, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 150 },
+    { id: 'moto_3', name: 'Classic Chopper', type: 'moto', price: 1000, yardPrice: 25, maxSpeed: 34, acceleration: 14, handling: 0.8, image: import.meta.env.BASE_URL + 'assets/shop_chopper.jpg', hueRotate: 0 },
+    { id: 'moto_4', name: 'Dirtbike', type: 'moto', price: 1800, yardPrice: 45, maxSpeed: 38, acceleration: 19, handling: 1.4, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 90 },
+    { id: 'moto_5', name: 'Cruiser', type: 'moto', price: 3000, yardPrice: 75, maxSpeed: 40, acceleration: 17, handling: 0.9, image: import.meta.env.BASE_URL + 'assets/shop_chopper.jpg', hueRotate: 60 },
+    { id: 'moto_6', name: 'Street Bike', type: 'moto', price: 4500, yardPrice: 110, maxSpeed: 47, acceleration: 23, handling: 1.3, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 210 },
+    { id: 'moto_7', name: 'Heavy Chopper', type: 'moto', price: 6500, yardPrice: 160, maxSpeed: 45, acceleration: 20, handling: 0.85, image: import.meta.env.BASE_URL + 'assets/shop_chopper.jpg', hueRotate: -40 },
+    { id: 'moto_8', name: 'Superbike', type: 'moto', price: 10000, yardPrice: 240, maxSpeed: 58, acceleration: 32, handling: 1.4, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: -90 },
+    { id: 'moto_9', name: 'Night Rider', type: 'moto', price: 18000, yardPrice: 380, maxSpeed: 64, acceleration: 34, handling: 1.5, image: import.meta.env.BASE_URL + 'assets/shop_chopper.jpg', hueRotate: 180 },
+    { id: 'moto_10', name: 'Hyper Moto', type: 'moto', price: 30000, yardPrice: 550, maxSpeed: 70, acceleration: 42, handling: 1.6, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 45 },
+    { id: 'moto_11', name: 'Tron Bike', type: 'moto', price: 50000, yardPrice: 800, maxSpeed: 85, acceleration: 54, handling: 1.7, image: import.meta.env.BASE_URL + 'assets/shop_moto.jpg', hueRotate: 270 }
 ];
 
 let unlockedVehicles: string[] = ['car_1'];
@@ -1668,12 +1669,11 @@ function getVehicleMaxSpeed(vDef: any) {
     return vDef.maxSpeed + (upgrades * 5);
 }
 
-function buyVehicle(id: string) {
+function buyVehicleWithCash(id: string) {
     let vDef = VEHICLES.find(v => v.id === id);
-    if (!vDef) return;
-    if (unlockedVehicles.includes(id)) return;
+    if (!vDef || unlockedVehicles.includes(id)) return;
     if (money < vDef.price) {
-        alert('Not enough money! You need $' + vDef.price);
+        alert('Not enough cash! You need $' + vDef.price.toLocaleString());
         return;
     }
     
@@ -1682,13 +1682,63 @@ function buyVehicle(id: string) {
     saveProgress();
     vehicleType = id;
     updateGarageUI();
+    alert(`🎉 Purchased ${vDef.name} for $${vDef.price.toLocaleString()}!`);
+}
+
+function buyVehicleWithYards(id: string) {
+    let vDef = VEHICLES.find(v => v.id === id);
+    if (!vDef || unlockedVehicles.includes(id)) return;
+    if (yardService.getYards() < vDef.yardPrice) {
+        alert(`Not enough Yards! You need ${vDef.yardPrice} Yards. (You have: ${yardService.getYards()} Y)`);
+        return;
+    }
+    
+    if (yardService.spendYards(vDef.yardPrice, vDef.id, vDef.name)) {
+        unlockedVehicles.push(id);
+        saveProgress();
+        vehicleType = id;
+        updateGarageUI();
+        alert(`💎 Unlocked ${vDef.name} for ${vDef.yardPrice} Yards!`);
+    }
+}
+
+function unlockLevel(level: number, method: 'cash' | 'yards') {
+    if (level === 2) {
+        if (level2Unlocked) return;
+        if (method === 'cash') {
+            if (money < 1000) return alert('Not enough cash! Level 2 costs $1,000.');
+            money -= 1000;
+        } else {
+            if (yardService.getYards() < 25) return alert('Not enough Yards! Level 2 costs 25 Yards.');
+            if (!yardService.spendYards(25, 'level_2_forest', 'Level 2: Forest Track')) return;
+        }
+        level2Unlocked = true;
+        selectedLevel = 2;
+        saveProgress();
+        updateGarageUI();
+        alert(`🌲 Level 2: Forest Track unlocked with ${method === 'cash' ? '$1,000 cash' : '25 Yards'}!`);
+    } else if (level === 3) {
+        if (level3Unlocked) return;
+        if (method === 'cash') {
+            if (money < 10000) return alert('Not enough cash! Level 3 costs $10,000.');
+            money -= 10000;
+        } else {
+            if (yardService.getYards() < 100) return alert('Not enough Yards! Level 3 costs 100 Yards.');
+            if (!yardService.spendYards(100, 'level_3_field', 'Level 3: Field Track')) return;
+        }
+        level3Unlocked = true;
+        selectedLevel = 3;
+        saveProgress();
+        updateGarageUI();
+        alert(`🌾 Level 3: Field Track unlocked with ${method === 'cash' ? '$10,000 cash' : '100 Yards'}!`);
+    }
 }
 
 function updateGarageUI() {
     const moneyVal = document.getElementById('money-val');
-    if (moneyVal) moneyVal.innerText = money.toString();
+    if (moneyVal) moneyVal.innerText = money.toLocaleString();
     const shopMoneyVal = document.getElementById('shop-money-val');
-    if (shopMoneyVal) shopMoneyVal.innerText = money.toString();
+    if (shopMoneyVal) shopMoneyVal.innerText = money.toLocaleString();
 
     const racingGarageYardIcon = document.getElementById('racing-garage-yard-icon');
     if (racingGarageYardIcon) racingGarageYardIcon.innerHTML = yardService.renderYardSvg(20);
@@ -1701,6 +1751,8 @@ function updateGarageUI() {
     const btnLevel3 = document.getElementById('btn-level-3');
     const lblLevel2 = document.getElementById('lbl-level-2');
     const lblLevel3 = document.getElementById('lbl-level-3');
+    const unlockBtnsLvl2 = document.getElementById('unlock-btns-lvl2');
+    const unlockBtnsLvl3 = document.getElementById('unlock-btns-lvl3');
     
     if (btnLevel1 && btnLevel2 && btnLevel3) {
         btnLevel1.style.border = selectedLevel === 1 ? '2px solid white' : '2px solid transparent';
@@ -1708,13 +1760,14 @@ function updateGarageUI() {
         btnLevel3.style.border = selectedLevel === 3 ? '2px solid white' : '2px solid transparent';
         
         btnLevel1.style.background = '#27ae60';
-        btnLevel2.style.background = level2Unlocked ? '#27ae60' : '#7f8c8d';
-        btnLevel3.style.background = level3Unlocked ? '#27ae60' : '#7f8c8d';
+        btnLevel2.style.background = level2Unlocked ? '#27ae60' : '#4b6584';
+        btnLevel3.style.background = level3Unlocked ? '#27ae60' : '#4b6584';
         
+        if (lblLevel2) lblLevel2.innerText = level2Unlocked ? '1st Prize: $1,000 | 9 Opponents' : 'Locked';
+        if (lblLevel3) lblLevel3.innerText = level3Unlocked ? '1st Prize: $3,000 | 19 Opponents' : 'Locked';
 
-        
-        if (lblLevel2) lblLevel2.innerText = level2Unlocked ? '1st Prize: $1000 | 9 Opponents' : 'Unlock: $1000 | 9 Opponents';
-        if (lblLevel3) lblLevel3.innerText = level3Unlocked ? '1st Prize: $3000 | 19 Opponents' : 'Unlock: $10,000 | 19 Opponents';
+        if (unlockBtnsLvl2) unlockBtnsLvl2.style.display = level2Unlocked ? 'none' : 'flex';
+        if (unlockBtnsLvl3) unlockBtnsLvl3.style.display = level3Unlocked ? 'none' : 'flex';
     }
 
     let selVeh = VEHICLES.find(v => v.id === vehicleType);
@@ -1727,7 +1780,7 @@ function updateGarageUI() {
         if (unlockedVehicles.includes(v.id)) {
             let isSelected = (vehicleType === v.id);
             let border = isSelected ? 'border: 3px solid #f1c40f;' : 'border: 3px solid transparent;';
-            let selectedLabel = isSelected ? '<div style="color: #f1c40f; font-size: 12px;">SELECTED</div>' : '';
+            let selectedLabel = isSelected ? '<div style="color: #f1c40f; font-size: 12px; font-weight: bold;">SELECTED</div>' : '';
             ownedHtml += `
                 <div class="veh-select-btn" data-id="${v.id}" style="background: #34495e; padding: 15px; border-radius: 10px; cursor: pointer; text-align: center; width: 200px; ${border}">
                     <img src="${v.image}" alt="${v.name}" style="width: 100%; border-radius: 5px; margin-bottom: 10px; filter: hue-rotate(${v.hueRotate}deg);">
@@ -1751,7 +1804,6 @@ function updateGarageUI() {
         tabCar.style.background = shopCategory === 'car' ? '#27ae60' : '#34495e';
         tabMoto.style.background = shopCategory === 'moto' ? '#e67e22' : '#34495e';
         
-        // Remove old listeners to prevent duplicates (simple way: clone)
         let newCar = tabCar.cloneNode(true);
         tabCar.parentNode?.replaceChild(newCar, tabCar);
         newCar.addEventListener('click', () => { shopCategory = 'car'; updateGarageUI(); });
@@ -1763,33 +1815,44 @@ function updateGarageUI() {
 
     // Generate Shop Vehicles based on category and Level 3 unlock
     let shopHtml = '';
-    // Determine the top 5 expensive ids for cars and motos
     let cars = VEHICLES.filter(v => v.type === 'car').sort((a,b) => a.price - b.price);
     let motos = VEHICLES.filter(v => v.type === 'moto').sort((a,b) => a.price - b.price);
     let topCars = cars.slice(-5).map(v => v.id);
     let topMotos = motos.slice(-5).map(v => v.id);
     
     VEHICLES.forEach(v => {
-        if (v.price === 0) return; // Skip starter
-        if (v.type !== shopCategory) return; // Only show current category
+        if (v.price === 0 && v.yardPrice === 0) return; // Skip starter
+        if (v.type !== shopCategory) return;
         
         let isTop5 = topCars.includes(v.id) || topMotos.includes(v.id);
-        
         let isLocked = isTop5 && !level3Unlocked;
         let isOwned = unlockedVehicles.includes(v.id);
-        let btnText = isLocked ? 'Unlocks at Level 3' : (isOwned ? 'OWNED' : `Buy ($${v.price})`);
-        let btnColor = isLocked ? '#e74c3c' : (isOwned ? '#7f8c8d' : (v.type === 'car' ? '#27ae60' : '#e67e22'));
-        let opacity = (isOwned || isLocked) ? '0.5' : '1.0';
-        let disabledAttr = isLocked ? 'disabled' : '';
+        let opacity = (isOwned || isLocked) ? '0.55' : '1.0';
+
+        let buttonsHtml = '';
+        if (isOwned) {
+            buttonsHtml = `<button class="btn" disabled style="background: #7f8c8d; width: 100%; font-size: 13px; padding: 8px; margin: 0;">OWNED</button>`;
+        } else if (isLocked) {
+            buttonsHtml = `<button class="btn" disabled style="background: #e74c3c; width: 100%; font-size: 12px; padding: 8px; margin: 0;">Unlocks at Level 3</button>`;
+        } else {
+            buttonsHtml = `
+                <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn shop-buy-cash-btn" data-id="${v.id}" style="background: #27ae60; flex: 1; min-width: 90px; font-size: 12px; padding: 8px 4px; margin: 0;">$${v.price.toLocaleString()}</button>
+                    <button class="btn shop-buy-yard-btn" data-id="${v.id}" style="background: #00f2fe; color: #111; flex: 1; min-width: 90px; font-size: 12px; padding: 8px 4px; margin: 0; font-weight: 800;">💎 ${v.yardPrice} Y</button>
+                </div>
+            `;
+        }
 
         shopHtml += `
-            <div style="background: #34495e; padding: 15px; border-radius: 10px; width: 200px; text-align: center; opacity: ${opacity};">
-                <img src="${v.image}" alt="${v.name}" style="width: 100%; border-radius: 5px; margin-bottom: 10px; filter: hue-rotate(${v.hueRotate}deg);">
-                <h3 style="margin: 0 0 5px 0; color: ${v.type==='car'?'#2ecc71':'#e67e22'}; font-size: 16px;">${v.name}</h3>
-                <div style="font-size: 12px; margin-bottom: 10px; color: #bdc3c7;">
-                    Spd: ${v.maxSpeed} | Acc: ${v.acceleration}
+            <div style="background: #34495e; padding: 15px; border-radius: 10px; width: 220px; text-align: center; opacity: ${opacity}; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <img src="${v.image}" alt="${v.name}" style="width: 100%; border-radius: 5px; margin-bottom: 8px; filter: hue-rotate(${v.hueRotate}deg);">
+                    <h3 style="margin: 0 0 5px 0; color: ${v.type==='car'?'#2ecc71':'#e67e22'}; font-size: 15px;">${v.name}</h3>
+                    <div style="font-size: 12px; margin-bottom: 10px; color: #bdc3c7;">
+                        Spd: ${v.maxSpeed} | Acc: ${v.acceleration}
+                    </div>
                 </div>
-                <button class="btn shop-buy-btn" data-id="${v.id}" data-locked="${isLocked}" ${disabledAttr} style="background: ${btnColor}; width: 100%; font-size: 14px; padding: 10px; margin: 0;">${btnText}</button>
+                ${buttonsHtml}
             </div>
         `;
     });
@@ -1817,16 +1880,23 @@ function updateGarageUI() {
         });
     });
 
-    // Bind shop buy buttons
-    document.querySelectorAll('.shop-buy-btn').forEach(btn => {
+    // Bind shop buy with cash buttons
+    document.querySelectorAll('.shop-buy-cash-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            let el = e.currentTarget as HTMLElement;
-            if (el.getAttribute('data-locked') === 'true') return;
-            let id = el.getAttribute('data-id');
-            if (id) buyVehicle(id);
+            let id = (e.currentTarget as HTMLElement).getAttribute('data-id');
+            if (id) buyVehicleWithCash(id);
+        });
+    });
+
+    // Bind shop buy with yards buttons
+    document.querySelectorAll('.shop-buy-yard-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            let id = (e.currentTarget as HTMLElement).getAttribute('data-id');
+            if (id) buyVehicleWithYards(id);
         });
     });
 }
+
 async function init() {
 
     // Setup Three.js
@@ -1843,7 +1913,6 @@ async function init() {
     await loadProgress();
     updateGarageUI();
 
-
     // Bind UI
     uiGarage = document.getElementById('garage-screen')!;
     uiHud = document.getElementById('hud')!;
@@ -1855,38 +1924,40 @@ async function init() {
         updateGarageUI();
     });
     
-    document.getElementById('btn-level-2')?.addEventListener('click', () => {
+    document.getElementById('btn-level-2')?.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).tagName === 'BUTTON') return;
         if (level2Unlocked) {
             selectedLevel = 2;
             updateGarageUI();
-        } else {
-            if (money >= 1000) {
-                money -= 1000;
-                level2Unlocked = true;
-                selectedLevel = 2;
-                saveProgress();
-                updateGarageUI();
-            } else {
-                alert('Not enough money to unlock Level 2! You need $1000.');
-            }
         }
     });
+
+    document.getElementById('btn-unlock-lvl2-cash')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        unlockLevel(2, 'cash');
+    });
+
+    document.getElementById('btn-unlock-lvl2-yards')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        unlockLevel(2, 'yards');
+    });
     
-    document.getElementById('btn-level-3')?.addEventListener('click', () => {
+    document.getElementById('btn-level-3')?.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).tagName === 'BUTTON') return;
         if (level3Unlocked) {
             selectedLevel = 3;
             updateGarageUI();
-        } else {
-            if (money >= 10000) {
-                money -= 10000;
-                level3Unlocked = true;
-                selectedLevel = 3;
-                saveProgress();
-                updateGarageUI();
-            } else {
-                alert('Not enough money to unlock Level 3! You need $10000.');
-            }
         }
+    });
+
+    document.getElementById('btn-unlock-lvl3-cash')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        unlockLevel(3, 'cash');
+    });
+
+    document.getElementById('btn-unlock-lvl3-yards')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        unlockLevel(3, 'yards');
     });
 
 

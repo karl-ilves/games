@@ -289,20 +289,27 @@
                 
                 <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
                     <h3 style="margin-top: 0; color: #3498db; text-align: center;">SELECT LEVEL</h3>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <div id="btn-level-1" style="background: #2ecc71; padding: 15px; border-radius: 8px; cursor: pointer; flex: 1; border: 2px solid white;">
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <div id="btn-level-1" style="background: #2ecc71; padding: 15px; border-radius: 8px; cursor: pointer; flex: 1; min-width: 160px; border: 2px solid white;">
                             <strong>Level 1: City</strong><br>
-                            <span style="font-size: 14px;">1st Prize: $200 | 3 Opponents</span>
+                            <span style="font-size: 13px;">1st Prize: $200 | 3 Opponents</span>
                         </div>
-                        <div id="btn-level-2" style="background: #7f8c8d; padding: 15px; border-radius: 8px; cursor: pointer; flex: 1; border: 2px solid transparent;">
+                        <div id="btn-level-2" style="background: #7f8c8d; padding: 15px; border-radius: 8px; cursor: pointer; flex: 1; min-width: 160px; border: 2px solid transparent;">
                             <strong>Level 2: Forest</strong><br>
-                            <span style="font-size: 14px;" id="lbl-level-2">Unlock: $1000 | 9 Opponents</span>
+                            <span style="font-size: 13px;" id="lbl-level-2">1st Prize: $1,000</span>
+                            <div id="unlock-btns-lvl2" style="display: flex; gap: 6px; margin-top: 8px; justify-content: center;">
+                                <button id="btn-unlock-lvl2-cash" class="btn" style="padding: 6px 10px; font-size: 12px; margin: 0; background: #27ae60;">$1,000</button>
+                                <button id="btn-unlock-lvl2-yards" class="btn" style="padding: 6px 10px; font-size: 12px; margin: 0; background: #00f2fe; color: #111;">25 Yards</button>
+                            </div>
                         </div>
-                        <div id="btn-level-3" style="background: #7f8c8d; padding: 15px; border-radius: 8px; cursor: pointer; flex: 1; border: 2px solid transparent;">
+                        <div id="btn-level-3" style="background: #7f8c8d; padding: 15px; border-radius: 8px; cursor: pointer; flex: 1; min-width: 160px; border: 2px solid transparent;">
                             <strong>Level 3: Field</strong><br>
-                            <span style="font-size: 14px;" id="lbl-level-3">Unlock: $10,000 | 19 Opponents</span>
+                            <span style="font-size: 13px;" id="lbl-level-3">1st Prize: $3,000</span>
+                            <div id="unlock-btns-lvl3" style="display: flex; gap: 6px; margin-top: 8px; justify-content: center;">
+                                <button id="btn-unlock-lvl3-cash" class="btn" style="padding: 6px 10px; font-size: 12px; margin: 0; background: #27ae60;">$10,000</button>
+                                <button id="btn-unlock-lvl3-yards" class="btn" style="padding: 6px 10px; font-size: 12px; margin: 0; background: #00f2fe; color: #111;">100 Yards</button>
+                            </div>
                         </div>
-
                     </div>
                 </div>
 <div style="text-align: center; margin-bottom: 15px; color: #2ecc71; font-size: 18px;">Selected: <span id="selected-vehicle-name" style="font-weight: bold;">Starter Car</span></div>
