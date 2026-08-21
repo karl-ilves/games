@@ -63,7 +63,11 @@ export async function initAuth() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             await supabase.auth.signOut();
-            showMsg('Välja logitud.', 'info');
+            // Wipe local storage so progress resets to 0 for guests
+            localStorage.removeItem('racingSave');
+            localStorage.removeItem('wiped_once_v3');
+            localStorage.removeItem('wiped_full_v10');
+            showMsg('Välja logitud. Mängu progress nulliti (kuni uuesti sisse logid).', 'info');
         });
     }
 }
