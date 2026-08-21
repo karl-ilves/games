@@ -199,10 +199,10 @@ function loadProgress() {
     }
     
     // FULL RESET
-    if (!localStorage.getItem('wiped_full_v9')) {
+        if (!localStorage.getItem('wiped_full_v10')) {
         localStorage.removeItem('racingSave');
-        localStorage.setItem('wiped_full_v9', 'true');
-        money = 1000000;
+        localStorage.setItem('wiped_full_v10', 'true');
+        money = 0;
         selectedLevel = 1;
         level2Unlocked = false;
         level3Unlocked = false;
@@ -216,7 +216,7 @@ function loadProgress() {
             vehicleUpgrades: vehicleUpgrades,
             level2Unlocked: level2Unlocked,
             level3Unlocked: level3Unlocked
-            };
+        };
         localStorage.setItem('racingSave', JSON.stringify(initialSave));
     }
 
