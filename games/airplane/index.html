@@ -49,18 +49,18 @@
     </div>
 
     <!-- Mobile On-Screen Controls -->
-    <div id="mobile-controls" style="display: none; position: fixed; bottom: 30px; right: 30px; z-index: 1000; user-select: none;">
-        <!-- D-Pad -->
-        <div style="display: inline-block; position: relative; width: 150px; height: 150px; margin-right: 20px;">
-            <div id="mob-up" class="mob-btn" style="position: absolute; top: 0; left: 50px; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.5); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8593;</div>
-            <div id="mob-down" class="mob-btn" style="position: absolute; bottom: 0; left: 50px; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.5); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8595;</div>
-            <div id="mob-left" class="mob-btn" style="position: absolute; top: 50px; left: 0; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.5); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8592;</div>
-            <div id="mob-right" class="mob-btn" style="position: absolute; top: 50px; right: 0; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.5); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8594;</div>
+    <div id="mobile-controls" style="display: none; user-select: none;">
+        <!-- D-Pad positioned exactly over the gyroscope (bottom: 30px, right: 30px) -->
+        <div style="position: fixed; bottom: 30px; right: 30px; width: 150px; height: 150px; z-index: 1001;">
+            <div id="mob-up" class="mob-btn" style="position: absolute; top: -10px; left: 50px; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.6); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8593;</div>
+            <div id="mob-down" class="mob-btn" style="position: absolute; bottom: -10px; left: 50px; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.6); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8595;</div>
+            <div id="mob-left" class="mob-btn" style="position: absolute; top: 50px; left: -10px; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.6); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8592;</div>
+            <div id="mob-right" class="mob-btn" style="position: absolute; top: 50px; right: -10px; width: 50px; height: 50px; background: rgba(52, 152, 219, 0.6); border: 2px solid #3498db; border-radius: 8px; text-align: center; line-height: 46px; font-size: 24px; color: white; font-weight: bold; cursor: pointer;">&#8594;</div>
         </div>
-        <!-- Throttle -->
-        <div style="display: inline-block; position: relative; width: 50px; height: 150px; vertical-align: top;">
-            <div id="mob-throttle-up" class="mob-btn" style="position: absolute; top: 0; left: 0; width: 50px; height: 70px; background: rgba(46, 204, 113, 0.5); border: 2px solid #27ae60; border-radius: 8px; text-align: center; line-height: 66px; font-size: 32px; color: white; font-weight: bold; cursor: pointer;">+</div>
-            <div id="mob-throttle-down" class="mob-btn" style="position: absolute; bottom: 0; left: 0; width: 50px; height: 70px; background: rgba(231, 76, 60, 0.5); border: 2px solid #c0392b; border-radius: 8px; text-align: center; line-height: 66px; font-size: 32px; color: white; font-weight: bold; cursor: pointer;">-</div>
+        <!-- Throttle positioned on the left side for the other thumb -->
+        <div style="position: fixed; bottom: 30px; left: 30px; width: 70px; height: 150px; z-index: 1001;">
+            <div id="mob-throttle-up" class="mob-btn" style="position: absolute; top: 0; left: 0; width: 70px; height: 70px; background: rgba(46, 204, 113, 0.6); border: 2px solid #27ae60; border-radius: 8px; text-align: center; line-height: 66px; font-size: 32px; color: white; font-weight: bold; cursor: pointer;">+</div>
+            <div id="mob-throttle-down" class="mob-btn" style="position: absolute; bottom: 0; left: 0; width: 70px; height: 70px; background: rgba(231, 76, 60, 0.6); border: 2px solid #c0392b; border-radius: 8px; text-align: center; line-height: 66px; font-size: 32px; color: white; font-weight: bold; cursor: pointer;">-</div>
         </div>
     </div>
     <div id="ui">

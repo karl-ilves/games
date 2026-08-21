@@ -5010,7 +5010,7 @@ function updateUI() {
     if (statsDiv) statsDiv.style.display = isCrashedOrWalking ? 'none' : 'grid';
     
     const gyroDiv = document.getElementById('gyro-container');
-    if (gyroDiv) gyroDiv.style.display = (isCrashedOrWalking || isMobileMode) ? 'none' : 'block';
+    if (gyroDiv) gyroDiv.style.display = isCrashedOrWalking ? 'none' : 'block';
     
     const apMenu = document.getElementById('autopilot-menu');
     if (apMenu) apMenu.style.display = (isCrashedOrWalking || !autopilot || isMobileMode) ? 'none' : 'block';
