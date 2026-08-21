@@ -258,6 +258,10 @@
             <div class="garage-panel" style="max-width: 800px; width: 95%;">
                 <h2 style="color: #9b59b6; margin-top: 0;">VEHICLE SHOP</h2>
                 <div style="font-size: 20px; color: #f1c40f; margin-bottom: 20px;">Your Money: $ <span id="shop-money-val">0</span></div>
+                <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px;">
+                    <div id="shop-tab-car" style="background: #27ae60; padding: 10px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; color: white;">Cars</div>
+                    <div id="shop-tab-moto" style="background: #34495e; padding: 10px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; color: white;">Motorcycles</div>
+                </div>
                 
                 <div id="shop-vehicles" style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; overflow-y: auto; max-height: 60vh; padding: 10px;"></div>
                 <button class="btn" id="btn-close-shop" style="background: #e74c3c; margin-top: 30px; width: 50%;">Close Shop</button>
@@ -288,6 +292,11 @@
                             <strong>Level 2: Forest</strong><br>
                             <span style="font-size: 14px;" id="lbl-level-2">Unlock: $1000 | 9 Opponents</span>
                         </div>
+                        <div id="btn-level-3" style="background: #7f8c8d; padding: 15px; border-radius: 8px; cursor: pointer; flex: 1; border: 2px solid transparent;">
+                            <strong>Level 3: Field</strong><br>
+                            <span style="font-size: 14px;" id="lbl-level-3">Unlock: $10,000 | 19 Opponents</span>
+                        </div>
+
                     </div>
                 </div>
 <div style="text-align: center; margin-bottom: 15px; color: #2ecc71; font-size: 18px;">Selected: <span id="selected-vehicle-name" style="font-weight: bold;">Starter Car</span></div>

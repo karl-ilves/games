@@ -140,6 +140,8 @@ let uiHud: HTMLElement;
 let money = 0;
 let selectedLevel = 1;
 let level2Unlocked = false;
+let level3Unlocked = false;
+let shopCategory: 'car' | 'moto' = 'car';
 
 interface VehicleDef {
     id: string;
@@ -155,33 +157,33 @@ interface VehicleDef {
 
 const VEHICLES: VehicleDef[] = [
     // --- CARS (11) ---
-    { id: 'car_1', name: 'Starter Car', type: 'car', price: 0, maxSpeed: 40, acceleration: 15, handling: 1.0, image: '/assets/shop_sports_car.jpg', hueRotate: 0 },
-    { id: 'car_2', name: 'City Cruiser', type: 'car', price: 500, maxSpeed: 45, acceleration: 18, handling: 1.1, image: '/assets/shop_sports_car.jpg', hueRotate: 45 },
-    { id: 'car_3', name: 'Offroader', type: 'car', price: 1200, maxSpeed: 42, acceleration: 12, handling: 0.8, image: '/assets/shop_suv.jpg', hueRotate: 0 },
-    { id: 'car_4', name: 'Street Tuner', type: 'car', price: 2000, maxSpeed: 52, acceleration: 22, handling: 1.2, image: '/assets/shop_sports_car.jpg', hueRotate: 120 },
-    { id: 'car_5', name: 'Desert Truck', type: 'car', price: 3500, maxSpeed: 50, acceleration: 15, handling: 0.9, image: '/assets/shop_suv.jpg', hueRotate: 90 },
-    { id: 'car_6', name: 'Muscle Car', type: 'car', price: 5000, maxSpeed: 58, acceleration: 28, handling: 0.9, image: '/assets/shop_sports_car.jpg', hueRotate: 200 },
-    { id: 'car_7', name: 'V8 Interceptor', type: 'car', price: 7500, maxSpeed: 62, acceleration: 32, handling: 1.0, image: '/assets/shop_sports_car.jpg', hueRotate: -50 },
-    { id: 'car_8', name: 'Supercar', type: 'car', price: 12000, maxSpeed: 70, acceleration: 38, handling: 1.3, image: '/assets/shop_hypercar.jpg', hueRotate: 0 },
-    { id: 'car_9', name: 'Neon Hypercar', type: 'car', price: 20000, maxSpeed: 78, acceleration: 45, handling: 1.4, image: '/assets/shop_hypercar.jpg', hueRotate: 180 },
-    { id: 'car_10', name: 'Stealth Racer', type: 'car', price: 35000, maxSpeed: 85, acceleration: 50, handling: 1.5, image: '/assets/shop_hypercar.jpg', hueRotate: 45 },
-    { id: 'car_11', name: 'F1 Prototype', type: 'car', price: 50000, maxSpeed: 100, acceleration: 60, handling: 1.8, image: '/assets/shop_hypercar.jpg', hueRotate: -90 },
+    { id: 'car_1', name: 'Starter Car', type: 'car', price: 0, maxSpeed: 20, acceleration: 7, handling: 1.0, image: '/assets/shop_sports_car.jpg', hueRotate: 0 },
+    { id: 'car_2', name: 'City Cruiser', type: 'car', price: 500, maxSpeed: 22, acceleration: 9, handling: 1.1, image: '/assets/shop_sports_car.jpg', hueRotate: 45 },
+    { id: 'car_3', name: 'Offroader', type: 'car', price: 1200, maxSpeed: 21, acceleration: 6, handling: 0.8, image: '/assets/shop_suv.jpg', hueRotate: 0 },
+    { id: 'car_4', name: 'Street Tuner', type: 'car', price: 2000, maxSpeed: 26, acceleration: 11, handling: 1.2, image: '/assets/shop_sports_car.jpg', hueRotate: 120 },
+    { id: 'car_5', name: 'Desert Truck', type: 'car', price: 3500, maxSpeed: 25, acceleration: 7, handling: 0.9, image: '/assets/shop_suv.jpg', hueRotate: 90 },
+    { id: 'car_6', name: 'Muscle Car', type: 'car', price: 5000, maxSpeed: 29, acceleration: 14, handling: 0.9, image: '/assets/shop_sports_car.jpg', hueRotate: 200 },
+    { id: 'car_7', name: 'V8 Interceptor', type: 'car', price: 7500, maxSpeed: 31, acceleration: 16, handling: 1.0, image: '/assets/shop_sports_car.jpg', hueRotate: -50 },
+    { id: 'car_8', name: 'Supercar', type: 'car', price: 12000, maxSpeed: 35, acceleration: 19, handling: 1.3, image: '/assets/shop_hypercar.jpg', hueRotate: 0 },
+    { id: 'car_9', name: 'Neon Hypercar', type: 'car', price: 20000, maxSpeed: 39, acceleration: 22, handling: 1.4, image: '/assets/shop_hypercar.jpg', hueRotate: 180 },
+    { id: 'car_10', name: 'Stealth Racer', type: 'car', price: 35000, maxSpeed: 42, acceleration: 25, handling: 1.5, image: '/assets/shop_hypercar.jpg', hueRotate: 45 },
+    { id: 'car_11', name: 'F1 Prototype', type: 'car', price: 50000, maxSpeed: 50, acceleration: 30, handling: 1.8, image: '/assets/shop_hypercar.jpg', hueRotate: -90 },
 
     // --- MOTOS (11) ---
-    { id: 'moto_1', name: 'Starter Bike', type: 'moto', price: 0, maxSpeed: 42, acceleration: 20, handling: 1.1, image: '/assets/shop_moto.jpg', hueRotate: 0 },
-    { id: 'moto_2', name: 'Scooter', type: 'moto', price: 400, maxSpeed: 38, acceleration: 15, handling: 1.2, image: '/assets/shop_moto.jpg', hueRotate: 150 },
-    { id: 'moto_3', name: 'Classic Chopper', type: 'moto', price: 1000, maxSpeed: 45, acceleration: 18, handling: 0.8, image: '/assets/shop_chopper.jpg', hueRotate: 0 },
-    { id: 'moto_4', name: 'Dirtbike', type: 'moto', price: 1800, maxSpeed: 48, acceleration: 25, handling: 1.4, image: '/assets/shop_moto.jpg', hueRotate: 90 },
-    { id: 'moto_5', name: 'Cruiser', type: 'moto', price: 3000, maxSpeed: 52, acceleration: 22, handling: 0.9, image: '/assets/shop_chopper.jpg', hueRotate: 60 },
-    { id: 'moto_6', name: 'Street Bike', type: 'moto', price: 4500, maxSpeed: 60, acceleration: 30, handling: 1.3, image: '/assets/shop_moto.jpg', hueRotate: 210 },
-    { id: 'moto_7', name: 'Heavy Chopper', type: 'moto', price: 6500, maxSpeed: 58, acceleration: 26, handling: 0.85, image: '/assets/shop_chopper.jpg', hueRotate: -40 },
-    { id: 'moto_8', name: 'Superbike', type: 'moto', price: 10000, maxSpeed: 75, acceleration: 40, handling: 1.4, image: '/assets/shop_moto.jpg', hueRotate: -90 },
-    { id: 'moto_9', name: 'Night Rider', type: 'moto', price: 18000, maxSpeed: 82, acceleration: 45, handling: 1.5, image: '/assets/shop_chopper.jpg', hueRotate: 180 },
-    { id: 'moto_10', name: 'Hyper Moto', type: 'moto', price: 30000, maxSpeed: 90, acceleration: 55, handling: 1.6, image: '/assets/shop_moto.jpg', hueRotate: 45 },
-    { id: 'moto_11', name: 'Tron Bike', type: 'moto', price: 50000, maxSpeed: 110, acceleration: 70, handling: 1.7, image: '/assets/shop_moto.jpg', hueRotate: 270 }
+    { id: 'moto_1', name: 'Starter Bike', type: 'moto', price: 0, maxSpeed: 21, acceleration: 10, handling: 1.1, image: '/assets/shop_moto.jpg', hueRotate: 0 },
+    { id: 'moto_2', name: 'Scooter', type: 'moto', price: 400, maxSpeed: 19, acceleration: 7, handling: 1.2, image: '/assets/shop_moto.jpg', hueRotate: 150 },
+    { id: 'moto_3', name: 'Classic Chopper', type: 'moto', price: 1000, maxSpeed: 22, acceleration: 9, handling: 0.8, image: '/assets/shop_chopper.jpg', hueRotate: 0 },
+    { id: 'moto_4', name: 'Dirtbike', type: 'moto', price: 1800, maxSpeed: 24, acceleration: 12, handling: 1.4, image: '/assets/shop_moto.jpg', hueRotate: 90 },
+    { id: 'moto_5', name: 'Cruiser', type: 'moto', price: 3000, maxSpeed: 26, acceleration: 11, handling: 0.9, image: '/assets/shop_chopper.jpg', hueRotate: 60 },
+    { id: 'moto_6', name: 'Street Bike', type: 'moto', price: 4500, maxSpeed: 30, acceleration: 15, handling: 1.3, image: '/assets/shop_moto.jpg', hueRotate: 210 },
+    { id: 'moto_7', name: 'Heavy Chopper', type: 'moto', price: 6500, maxSpeed: 29, acceleration: 13, handling: 0.85, image: '/assets/shop_chopper.jpg', hueRotate: -40 },
+    { id: 'moto_8', name: 'Superbike', type: 'moto', price: 10000, maxSpeed: 37, acceleration: 20, handling: 1.4, image: '/assets/shop_moto.jpg', hueRotate: -90 },
+    { id: 'moto_9', name: 'Night Rider', type: 'moto', price: 18000, maxSpeed: 41, acceleration: 22, handling: 1.5, image: '/assets/shop_chopper.jpg', hueRotate: 180 },
+    { id: 'moto_10', name: 'Hyper Moto', type: 'moto', price: 30000, maxSpeed: 45, acceleration: 27, handling: 1.6, image: '/assets/shop_moto.jpg', hueRotate: 45 },
+    { id: 'moto_11', name: 'Tron Bike', type: 'moto', price: 50000, maxSpeed: 55, acceleration: 35, handling: 1.7, image: '/assets/shop_moto.jpg', hueRotate: 270 }
 ];
 
-let unlockedVehicles: string[] = ['car_1', 'moto_1'];
+let unlockedVehicles: string[] = ['car_1'];
 let vehicleUpgrades: { [id: string]: { speedUpgrades: number } } = {};
 
 
@@ -193,16 +195,29 @@ function loadProgress() {
         localStorage.setItem('wiped_once_v3', 'true');
         money = 0;
         level2Unlocked = false;
+        level3Unlocked = false;
     }
     
     // FULL RESET
-    if (!localStorage.getItem('wiped_full_v1')) {
+    if (!localStorage.getItem('wiped_full_v9')) {
         localStorage.removeItem('racingSave');
-        localStorage.setItem('wiped_full_v1', 'true');
-        money = 0;
+        localStorage.setItem('wiped_full_v9', 'true');
+        money = 1000000;
+        selectedLevel = 1;
         level2Unlocked = false;
-        unlockedVehicles = ['car_1', 'moto_1'];
+        level3Unlocked = false;
+        unlockedVehicles = ['car_1'];
+        vehicleType = 'car_1';
         vehicleUpgrades = {};
+        
+        let initialSave = {
+            money: money,
+            unlockedVehicles: unlockedVehicles,
+            vehicleUpgrades: vehicleUpgrades,
+            level2Unlocked: level2Unlocked,
+            level3Unlocked: level3Unlocked
+            };
+        localStorage.setItem('racingSave', JSON.stringify(initialSave));
     }
 
     let save = localStorage.getItem('racingSave');
@@ -223,6 +238,9 @@ function loadProgress() {
         if (data.level2Unlocked) {
             level2Unlocked = data.level2Unlocked;
         }
+        if (data.level3Unlocked) {
+            level3Unlocked = data.level3Unlocked;
+        }
     }
     
 
@@ -233,7 +251,8 @@ function saveProgress() {
         money: money,
         unlockedVehicles: unlockedVehicles,
         vehicleUpgrades: vehicleUpgrades,
-        level2Unlocked: level2Unlocked
+        level2Unlocked: level2Unlocked,
+        level3Unlocked: level3Unlocked
     }));
 }
 
@@ -303,7 +322,7 @@ function createEnvironment() {
             { x: 300, z: 500, radius: 40 },
             { x: 300, z: 0, radius: 40 }
         ];
-    } else {
+    } else if (selectedLevel === 2) {
         // Level 2 (Forest) Track Layout
         checkpoints = [
             { x: 0, z: 0, radius: 45 },
@@ -316,6 +335,20 @@ function createEnvironment() {
             { x: -300, z: 600, radius: 45 },
             { x: -500, z: 300, radius: 45 },
             { x: -300, z: 0, radius: 45 }
+        ];
+    } else if (selectedLevel === 3) {
+        // Level 3 (Field) Track Layout (Super Long and Fast)
+        checkpoints = [
+            { x: 0, z: 0, radius: 50 },
+            { x: 0, z: -800, radius: 50 },
+            { x: -500, z: -1000, radius: 50 },
+            { x: -1000, z: -500, radius: 50 },
+            { x: -1000, z: 500, radius: 50 },
+            { x: -500, z: 1000, radius: 50 },
+            { x: 500, z: 1000, radius: 50 },
+            { x: 1000, z: 500, radius: 50 },
+            { x: 1000, z: -500, radius: 50 },
+            { x: 500, z: -800, radius: 50 }
         ];
     }
 
@@ -998,7 +1031,7 @@ function spawnOpponents() {
     let dz = cpNext.z - cp.z;
     let angle = Math.atan2(dx, dz) + Math.PI;
 
-    let numOpponents = selectedLevel === 1 ? 3 : 9;
+    let numOpponents = selectedLevel === 1 ? 3 : (selectedLevel === 2 ? 9 : 19);
 
     for (let i = 0; i < numOpponents; i++) {
         let group = new THREE.Group();
@@ -1036,10 +1069,10 @@ function spawnOpponents() {
             heading: angle,
             targetCpIndex: 1,
             type: randomDef.type,
-            maxSpeed: selectedLevel === 1 ? (30 + Math.random() * (randomDef.maxSpeed * 0.8)) : (60 + Math.random() * (randomDef.maxSpeed * 1.2)),
+            maxSpeed: selectedLevel === 1 ? (30 + Math.random() * (randomDef.maxSpeed * 0.6)) : (selectedLevel === 2 ? (40 + Math.random() * (randomDef.maxSpeed * 0.8)) : (50 + Math.random() * (randomDef.maxSpeed * 1.0))),
             finished: false,
             finishOrder: 0,
-            acceleration: selectedLevel === 1 ? randomDef.acceleration : randomDef.acceleration * 1.5,
+            acceleration: selectedLevel === 1 ? randomDef.acceleration * 0.8 : (selectedLevel === 2 ? randomDef.acceleration * 1.0 : randomDef.acceleration * 1.2),
             crashed: false,
             crashTimer: 0
         });
@@ -1219,9 +1252,26 @@ function updateGameLogic(dt: number) {
                 // Prize based on position: 1st=200€, 2nd=100€, 3rd=50€, 4th=50€
                 let pos = (window as any).currentPlayerPosition || 1;
                 let prize = 50;
-                if (pos === 1) prize = 200;
-                else if (pos === 2) prize = 100;
-                else prize = 50;
+                if (selectedLevel === 1) {
+                    if (pos === 1) prize = 200;
+                    else if (pos === 2) prize = 100;
+                    else prize = 50;
+                } else if (selectedLevel === 2) {
+                    if (pos === 1) prize = 1000;
+                    else if (pos === 2) prize = 500;
+                    else if (pos === 3) prize = 300;
+                    else if (pos === 4) prize = 250;
+                    else if (pos >= 5 && pos <= 10) prize = 200;
+                    else prize = 50;
+                } else if (selectedLevel === 3) {
+                    if (pos === 1) prize = 10000;
+                    else if (pos === 2) prize = 5000;
+                    else if (pos === 3) prize = 4000;
+                    else if (pos === 4) prize = 3000;
+                    else if (pos >= 5 && pos <= 9) prize = 2000;
+                    else if (pos >= 10 && pos <= 20) prize = 1000;
+                    else prize = 500;
+                                }
                 
                 money += prize;
                 saveProgress();
@@ -1555,12 +1605,19 @@ init();
 
 function upgradeSpeed(id: string) {
     let cost = 200; // Fixed cost for +10 km/h
+    if (!vehicleUpgrades[id]) vehicleUpgrades[id] = { speedUpgrades: 0 };
+    
+    if (vehicleUpgrades[id].speedUpgrades >= 5) {
+        alert('Maximum upgrades reached for this vehicle!');
+        return;
+    }
+    
     if (money < cost) {
         alert('Not enough money! You need $200 to upgrade speed.');
         return;
     }
+    
     money -= cost;
-    if (!vehicleUpgrades[id]) vehicleUpgrades[id] = { speedUpgrades: 0 };
     vehicleUpgrades[id].speedUpgrades += 1;
     saveProgress();
     updateGarageUI();
@@ -1569,7 +1626,7 @@ function upgradeSpeed(id: string) {
 // Helper to get max speed
 function getVehicleMaxSpeed(vDef: any) {
     let upgrades = vehicleUpgrades[vDef.id] ? vehicleUpgrades[vDef.id].speedUpgrades : 0;
-    return vDef.maxSpeed + (upgrades * 10);
+    return vDef.maxSpeed + (upgrades * 5);
 }
 
 function buyVehicle(id: string) {
@@ -1595,34 +1652,30 @@ function updateGarageUI() {
     // Update Level Selection UI
     const btnLevel1 = document.getElementById('btn-level-1');
     const btnLevel2 = document.getElementById('btn-level-2');
+    const btnLevel3 = document.getElementById('btn-level-3');
     const lblLevel2 = document.getElementById('lbl-level-2');
+    const lblLevel3 = document.getElementById('lbl-level-3');
     
-    if (btnLevel1 && btnLevel2 && lblLevel2) {
-        if (selectedLevel === 1) {
-            btnLevel1.style.border = '2px solid white';
-            btnLevel1.style.background = '#2ecc71';
-            btnLevel2.style.border = '2px solid transparent';
-            btnLevel2.style.background = level2Unlocked ? '#27ae60' : '#7f8c8d';
-        } else {
-            btnLevel1.style.border = '2px solid transparent';
-            btnLevel1.style.background = '#27ae60';
-            btnLevel2.style.border = '2px solid white';
-            btnLevel2.style.background = '#2ecc71';
-        }
+    if (btnLevel1 && btnLevel2 && btnLevel3) {
+        btnLevel1.style.border = selectedLevel === 1 ? '2px solid white' : '2px solid transparent';
+        btnLevel2.style.border = selectedLevel === 2 ? '2px solid white' : '2px solid transparent';
+        btnLevel3.style.border = selectedLevel === 3 ? '2px solid white' : '2px solid transparent';
         
-        if (level2Unlocked) {
-            lblLevel2.innerText = '1st Prize: $1000 | 9 Opponents';
-        } else {
-            lblLevel2.innerText = 'Unlock: $1000 | 9 Opponents';
-        }
+        btnLevel1.style.background = '#27ae60';
+        btnLevel2.style.background = level2Unlocked ? '#27ae60' : '#7f8c8d';
+        btnLevel3.style.background = level3Unlocked ? '#27ae60' : '#7f8c8d';
+        
+
+        
+        if (lblLevel2) lblLevel2.innerText = level2Unlocked ? '1st Prize: $1000 | 9 Opponents' : 'Unlock: $1000 | 9 Opponents';
+        if (lblLevel3) lblLevel3.innerText = level3Unlocked ? '1st Prize: $3000 | 19 Opponents' : 'Unlock: $10,000 | 19 Opponents';
     }
-    
-    // Show currently selected vehicle name
+
     let selVeh = VEHICLES.find(v => v.id === vehicleType);
     let selEl = document.getElementById('selected-vehicle-name');
     if (selEl && selVeh) selEl.innerText = selVeh.name;
 
-    // 1. Generate Owned Vehicles overlay
+    // Owned Vehicles
     let ownedHtml = '';
     VEHICLES.forEach(v => {
         if (unlockedVehicles.includes(v.id)) {
@@ -1634,9 +1687,9 @@ function updateGarageUI() {
                     <img src="${v.image}" alt="${v.name}" style="width: 100%; border-radius: 5px; margin-bottom: 10px; filter: hue-rotate(${v.hueRotate}deg);">
                     <h3 style="margin: 0 0 5px 0; color: ${v.type==='car'?'#2ecc71':'#e67e22'}; font-size: 16px;">${v.name}</h3>
                     <div style="font-size: 12px; margin-bottom: 5px; color: #bdc3c7;">
-                        Spd: ${getVehicleMaxSpeed(v)} (+${(vehicleUpgrades[v.id]?.speedUpgrades || 0)*10}) | Acc: ${v.acceleration} | Hnd: ${v.handling.toFixed(1)}
+                        Spd: ${getVehicleMaxSpeed(v)} (+${(vehicleUpgrades[v.id]?.speedUpgrades || 0)*10}) | Acc: ${v.acceleration}
                     </div>
-                    <button class="btn btn-upgrade" data-id="${v.id}" style="background: #3498db; width: 100%; font-size: 12px; padding: 5px; margin-bottom: 5px; border-radius: 5px;">+10 Speed ($200)</button>
+                    <button class="btn btn-upgrade" data-id="${v.id}" data-locked="${(vehicleUpgrades[v.id]?.speedUpgrades || 0) >= 5}" style="background: ${(vehicleUpgrades[v.id]?.speedUpgrades || 0) >= 5 ? '#95a5a6' : '#3498db'}; width: 100%; font-size: 12px; padding: 5px; margin-bottom: 5px; border-radius: 5px;">${(vehicleUpgrades[v.id]?.speedUpgrades || 0) >= 5 ? 'MAX SPEED' : '+10 Speed ($200)'}</button>
                     ${selectedLabel}
                 </div>
             `;
@@ -1645,10 +1698,63 @@ function updateGarageUI() {
     let ownedEl = document.getElementById('owned-vehicles');
     if (ownedEl) ownedEl.innerHTML = ownedHtml;
     
+    // Shop Tabs
+    let tabCar = document.getElementById('shop-tab-car');
+    let tabMoto = document.getElementById('shop-tab-moto');
+    if (tabCar && tabMoto) {
+        tabCar.style.background = shopCategory === 'car' ? '#27ae60' : '#34495e';
+        tabMoto.style.background = shopCategory === 'moto' ? '#e67e22' : '#34495e';
+        
+        // Remove old listeners to prevent duplicates (simple way: clone)
+        let newCar = tabCar.cloneNode(true);
+        tabCar.parentNode?.replaceChild(newCar, tabCar);
+        newCar.addEventListener('click', () => { shopCategory = 'car'; updateGarageUI(); });
+        
+        let newMoto = tabMoto.cloneNode(true);
+        tabMoto.parentNode?.replaceChild(newMoto, tabMoto);
+        newMoto.addEventListener('click', () => { shopCategory = 'moto'; updateGarageUI(); });
+    }
+
+    // Generate Shop Vehicles based on category and Level 3 unlock
+    let shopHtml = '';
+    // Determine the top 5 expensive ids for cars and motos
+    let cars = VEHICLES.filter(v => v.type === 'car').sort((a,b) => a.price - b.price);
+    let motos = VEHICLES.filter(v => v.type === 'moto').sort((a,b) => a.price - b.price);
+    let topCars = cars.slice(-5).map(v => v.id);
+    let topMotos = motos.slice(-5).map(v => v.id);
+    
+    VEHICLES.forEach(v => {
+        if (v.price === 0) return; // Skip starter
+        if (v.type !== shopCategory) return; // Only show current category
+        
+        let isTop5 = topCars.includes(v.id) || topMotos.includes(v.id);
+        
+        let isLocked = isTop5 && !level3Unlocked;
+        let isOwned = unlockedVehicles.includes(v.id);
+        let btnText = isLocked ? 'Unlocks at Level 3' : (isOwned ? 'OWNED' : `Buy ($${v.price})`);
+        let btnColor = isLocked ? '#e74c3c' : (isOwned ? '#7f8c8d' : (v.type === 'car' ? '#27ae60' : '#e67e22'));
+        let opacity = (isOwned || isLocked) ? '0.5' : '1.0';
+        let disabledAttr = isLocked ? 'disabled' : '';
+
+        shopHtml += `
+            <div style="background: #34495e; padding: 15px; border-radius: 10px; width: 200px; text-align: center; opacity: ${opacity};">
+                <img src="${v.image}" alt="${v.name}" style="width: 100%; border-radius: 5px; margin-bottom: 10px; filter: hue-rotate(${v.hueRotate}deg);">
+                <h3 style="margin: 0 0 5px 0; color: ${v.type==='car'?'#2ecc71':'#e67e22'}; font-size: 16px;">${v.name}</h3>
+                <div style="font-size: 12px; margin-bottom: 10px; color: #bdc3c7;">
+                    Spd: ${v.maxSpeed} | Acc: ${v.acceleration}
+                </div>
+                <button class="btn shop-buy-btn" data-id="${v.id}" data-locked="${isLocked}" ${disabledAttr} style="background: ${btnColor}; width: 100%; font-size: 14px; padding: 10px; margin: 0;">${btnText}</button>
+            </div>
+        `;
+    });
+    let shopEl = document.getElementById('shop-vehicles');
+    if (shopEl) shopEl.innerHTML = shopHtml;
+
     // Bind upgrade buttons
     document.querySelectorAll('.btn-upgrade').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Don't trigger the select button underneath
+            e.stopPropagation();
+            if ((e.currentTarget as HTMLElement).getAttribute('data-locked') === 'true') return;
             let id = (e.currentTarget as HTMLElement).getAttribute('data-id');
             if (id) upgradeSpeed(id);
         });
@@ -1665,32 +1771,12 @@ function updateGarageUI() {
         });
     });
 
-    // 2. Generate Shop Vehicles (skip free starters - they're already owned)
-    let shopHtml = '';
-    VEHICLES.forEach(v => {
-        if (v.price === 0) return; // Skip starter vehicles
-        let isOwned = unlockedVehicles.includes(v.id);
-        let btnText = isOwned ? 'OWNED' : `Buy ($${v.price})`;
-        let btnColor = isOwned ? '#7f8c8d' : (v.type === 'car' ? '#27ae60' : '#e67e22');
-        let opacity = isOwned ? '0.5' : '1.0';
-
-        shopHtml += `
-            <div style="background: #34495e; padding: 15px; border-radius: 10px; width: 200px; text-align: center; opacity: ${opacity};">
-                <img src="${v.image}" alt="${v.name}" style="width: 100%; border-radius: 5px; margin-bottom: 10px; filter: hue-rotate(${v.hueRotate}deg);">
-                <h3 style="margin: 0 0 5px 0; color: ${v.type==='car'?'#2ecc71':'#e67e22'}; font-size: 16px;">${v.name}</h3>
-                <div style="font-size: 12px; margin-bottom: 10px; color: #bdc3c7;">
-                    Spd: ${getVehicleMaxSpeed(v)} | Acc: ${v.acceleration} | Hnd: ${v.handling.toFixed(1)}
-                </div>
-                <button class="btn shop-buy-btn" data-id="${v.id}" style="background: ${btnColor}; width: 100%; font-size: 14px; padding: 10px; margin: 0;">${btnText}</button>
-            </div>
-        `;
-    });
-    document.getElementById('shop-vehicles')!.innerHTML = shopHtml;
-
     // Bind shop buy buttons
     document.querySelectorAll('.shop-buy-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            let id = (e.currentTarget as HTMLElement).getAttribute('data-id');
+            let el = e.currentTarget as HTMLElement;
+            if (el.getAttribute('data-locked') === 'true') return;
+            let id = el.getAttribute('data-id');
             if (id) buyVehicle(id);
         });
     });
@@ -1739,6 +1825,24 @@ function init() {
             }
         }
     });
+    
+    document.getElementById('btn-level-3')?.addEventListener('click', () => {
+        if (level3Unlocked) {
+            selectedLevel = 3;
+            updateGarageUI();
+        } else {
+            if (money >= 10000) {
+                money -= 10000;
+                level3Unlocked = true;
+                selectedLevel = 3;
+                saveProgress();
+                updateGarageUI();
+            } else {
+                alert('Not enough money to unlock Level 3! You need $10000.');
+            }
+        }
+    });
+
 
     document.getElementById('btn-open-shop')?.addEventListener('click', () => { document.getElementById('shop-screen')!.style.display = 'flex'; });
     document.getElementById('btn-show-owned')?.addEventListener('click', () => { 

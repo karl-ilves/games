@@ -2756,10 +2756,14 @@ document.getElementById('message').innerText = '';
     document.getElementById('plane-status-display').style.display = 'block';
     if (typeof isMobileMode !== 'undefined' && isMobileMode) {
         document.getElementById('mobile-controls').style.display = 'block';
+        document.getElementById('anti-ice-container').style.display = 'none';
+        document.getElementById('emergency-menu').style.display = 'none';
+        document.getElementById('weather-menu').style.display = 'none';
+    } else {
+        document.getElementById('anti-ice-container').style.display = 'block';
+        document.getElementById('emergency-menu').style.display = 'block';
+        document.getElementById('weather-menu').style.display = 'block';
     }
-    document.getElementById('anti-ice-container').style.display = 'block';
-    document.getElementById('emergency-menu').style.display = 'block';
-    document.getElementById('weather-menu').style.display = 'block';
     if (engineGain && audioCtx) engineGain.gain.setValueAtTime(0, audioCtx.currentTime);
     updateAlarms(false, false, false, false);
     stopFireSound();
@@ -5009,7 +5013,7 @@ function updateUI() {
     if (gyroDiv) gyroDiv.style.display = isCrashedOrWalking ? 'none' : 'block';
     
     const apMenu = document.getElementById('autopilot-menu');
-    if (apMenu) apMenu.style.display = (isCrashedOrWalking || !autopilot) ? 'none' : 'block';
+    if (apMenu) apMenu.style.display = (isCrashedOrWalking || !autopilot || isMobileMode) ? 'none' : 'block';
 
     throttleEl.innerText = Math.round(planeThrottle);
     let speed = planeVelocity.length();
@@ -5218,7 +5222,7 @@ function updateEmergencies() {
     const emMenu = document.getElementById('emergency-menu');
     if (emMenu) {
         let locked = (emergencyState.fireTimer > 0) || (emergencyState.fuelTimer > 0) || (emergencyState.fogTimer > 0);
-        emMenu.style.display = locked ? 'none' : 'block';
+        emMenu.style.display = (locked || isMobileMode) ? 'none' : 'block';
     }
 
     // 1. Fire logic
@@ -5345,6 +5349,44 @@ document.getElementById('btn-start-mobile').addEventListener('click', () => {
     document.getElementById('mobile-controls').style.display = 'block';
     isMobileMode = true;
     gameState = 'playing';
+    
+    // Clean up UI for mobile
+    let ui = document.getElementById('ui');
+    if (ui) {
+        ui.style.background = 'transparent';
+        ui.style.boxShadow = 'none';
+        ui.querySelectorAll('h1, p').forEach(el => (el as HTMLElement).style.display = 'none');
+    }
+    
+    let emMenu = document.getElementById('emergency-menu');
+    if (emMenu) emMenu.style.display = 'none';
+    
+    let wMenu = document.getElementById('weather-menu');
+    if (wMenu) wMenu.style.display = 'none';
+    
+    let apMenu = document.getElementById('autopilot-menu');
+    if (apMenu) apMenu.style.display = 'none';
+    
+    let iceMenu = document.getElementById('anti-ice-container');
+    if (iceMenu) iceMenu.style.display = 'none';
+    
+    let planeSel = document.getElementById('plane-select');
+    if (planeSel && planeSel.parentElement) planeSel.parentElement.style.display = 'none';
+    
+    let stats = document.getElementById('stats');
+    if (stats) {
+        // Force stats to single column for cleaner look on mobile
+        stats.style.gridTemplateColumns = '1fr';
+        Array.from(stats.children).forEach(child => {
+            let html = child.innerHTML.toLowerCase();
+            // Hide everything except Speed and Altitude
+            if (html.includes('throttle-val') || html.includes('vspeed-val') || 
+                html.includes('heading-val') || html.includes('gear-val') || 
+                html.includes('ap-status') || html.includes('autopilot |')) {
+                (child as HTMLElement).style.display = 'none';
+            }
+        });
+    }
 });
 
 document.getElementById('btn-start-pc').addEventListener('click', () => {
