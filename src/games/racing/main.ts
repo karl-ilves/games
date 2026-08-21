@@ -138,7 +138,7 @@ let uiHud: HTMLElement;
 
 
 // --- Progression / Economy ---
-let money = 500;
+let money = 0;
 let selectedLevel = 1;
 let level2Unlocked = false;
 let level3Unlocked = false;
@@ -197,7 +197,7 @@ async function loadProgress() {
         if (session) {
             const { data, error } = await supabase.from('user_progress').select('*').eq('user_id', session.user.id).single();
             if (data && !error) {
-                money = data.money !== undefined && data.money !== null ? data.money : 500;
+                money = data.money || 0;
                 selectedLevel = data.selected_level || 1;
                 unlockedVehicles = data.unlocked_vehicles || ['car_1'];
                 vehicleUpgrades = data.vehicle_upgrades || {};
@@ -220,7 +220,7 @@ async function loadProgress() {
         if (session && save) {
             // Logged in but DB failed (e.g. table missing or first time) -> load local fallback
             let data = JSON.parse(save);
-            money = data.money !== undefined && data.money !== null ? data.money : 500;
+            money = data.money || 0;
             if (data.unlockedVehicles && !Array.isArray(data.unlockedVehicles)) {
                 unlockedVehicles = ['car_1'];
                 if (data.unlockedVehicles.moto) unlockedVehicles.push('moto_1');
@@ -232,7 +232,7 @@ async function loadProgress() {
             if (data.level3Unlocked) level3Unlocked = data.level3Unlocked;
         } else {
             // Not logged in -> wipe!
-            money = 500;
+            money = 0;
             selectedLevel = 1;
             level2Unlocked = false;
             level3Unlocked = false;
