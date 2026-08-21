@@ -68,6 +68,21 @@ try {
         const postClaimTimerText = await page.$eval('#streak-timer-hms', el => el.textContent);
         console.log("   Post-Claim Live HMS Countdown (Expected: ~23h 59m):", postClaimTimerText);
         
+        // --- Test Local Storage Persistence on Page Refresh (Reload) ---
+        console.log("   Testing Persistence on Page Reload (Refresh)...");
+        await page.reload();
+        await new Promise(r => setTimeout(r, 1000));
+        await page.waitForSelector('#header-yard-val', { visible: true, timeout: 5000 });
+        const yardsAfterReload = await page.$eval('#header-yard-val', el => el.textContent);
+        console.log("   Yard Balance after Page Reload (Expected: 100):", yardsAfterReload);
+        if (yardsAfterReload !== '100') {
+            throw new Error(`Local storage persistence failed! Expected '100' Yards after refresh, got '${yardsAfterReload}'`);
+        }
+        
+        // Reopen streak modal after reload
+        await page.click('#btn-open-streak');
+        await page.waitForSelector('#modal-streak', { visible: true, timeout: 3000 });
+
         // Fast forward 24h & test all 7 days up to Jackpot (+500 Y)!
         console.log("   Simulating 7-Day Streak cycle with +24h Fast Forward...");
         for (let d = 2; d <= 7; d++) {

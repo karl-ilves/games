@@ -14,6 +14,7 @@ export interface YardData {
     }[];
 }
 
+const PRIMARY_STORAGE_KEY = 'playard_yards_data';
 const STORAGE_PREFIX = 'playard_yards_';
 const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_IN_48_HOURS = 48 * 60 * 60 * 1000;
@@ -28,17 +29,22 @@ class YardService {
 
     constructor() {
         this.data = this.loadLocalData();
+        this.initStorageListener();
         this.initAuthAndSync();
     }
 
-    private getStorageKey(): string {
-        return this.currentUserId ? `${STORAGE_PREFIX}user_${this.currentUserId}` : `${STORAGE_PREFIX}guest`;
+    private getUserStorageKey(): string {
+        return this.currentUserId ? `${STORAGE_PREFIX}user_${this.currentUserId}` : PRIMARY_STORAGE_KEY;
     }
 
     private loadLocalData(): YardData {
         try {
-            const key = this.getStorageKey();
-            const raw = localStorage.getItem(key);
+            // Check user-specific key first if logged in, otherwise primary key
+            const key = this.getUserStorageKey();
+            let raw = localStorage.getItem(key);
+            if (!raw) {
+                raw = localStorage.getItem(PRIMARY_STORAGE_KEY);
+            }
             if (raw) {
                 const parsed = JSON.parse(raw);
                 return {
@@ -64,9 +70,38 @@ class YardService {
 
     private saveLocally(data: YardData) {
         this.data = data;
-        const key = this.getStorageKey();
-        localStorage.setItem(key, JSON.stringify(data));
+        try {
+            const raw = JSON.stringify(data);
+            localStorage.setItem(PRIMARY_STORAGE_KEY, raw);
+            if (this.currentUserId) {
+                localStorage.setItem(this.getUserStorageKey(), raw);
+            }
+        } catch (e) {
+            console.warn('Could not save YardData locally:', e);
+        }
         this.notifyListeners();
+    }
+
+    private initStorageListener() {
+        window.addEventListener('storage', (e) => {
+            if (e.key === PRIMARY_STORAGE_KEY || (this.currentUserId && e.key === this.getUserStorageKey())) {
+                if (e.newValue) {
+                    try {
+                        const parsed = JSON.parse(e.newValue);
+                        this.data = {
+                            yards: typeof parsed.yards === 'number' ? parsed.yards : 0,
+                            streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
+                            lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
+                            inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
+                            transactions: Array.isArray(parsed.transactions) ? parsed.transactions : []
+                        };
+                        this.notifyListeners();
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            }
+        });
     }
 
     private async initAuthAndSync() {
@@ -76,7 +111,11 @@ class YardService {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
                 this.currentUserId = session.user.id;
-                this.data = this.loadLocalData();
+                // Merge/load user data
+                const userLocal = this.loadLocalData();
+                if (userLocal.yards > this.data.yards) {
+                    this.data = userLocal;
+                }
                 await this.syncWithCloud(session.user.id);
             }
 
@@ -84,7 +123,6 @@ class YardService {
             supabase.auth.onAuthStateChange(async (_event, newSession) => {
                 if (newSession?.user?.id) {
                     this.currentUserId = newSession.user.id;
-                    this.data = this.loadLocalData();
                     await this.syncWithCloud(newSession.user.id);
                 } else {
                     this.currentUserId = null;
@@ -108,13 +146,19 @@ class YardService {
                 .single();
 
             if (yardRecord && !yardErr && typeof yardRecord.yards === 'number') {
-                this.data.yards = yardRecord.yards;
-                this.data.streak = yardRecord.streak ?? this.data.streak;
-                this.data.lastClaimTimestamp = yardRecord.last_claim_timestamp ?? this.data.lastClaimTimestamp;
-                if (Array.isArray(yardRecord.inventory)) {
-                    this.data.inventory = yardRecord.inventory;
+                // If cloud has more or equal, adopt cloud state
+                if (yardRecord.yards >= this.data.yards) {
+                    this.data.yards = yardRecord.yards;
+                    this.data.streak = yardRecord.streak ?? this.data.streak;
+                    this.data.lastClaimTimestamp = yardRecord.last_claim_timestamp ?? this.data.lastClaimTimestamp;
+                    if (Array.isArray(yardRecord.inventory)) {
+                        this.data.inventory = yardRecord.inventory;
+                    }
+                    this.saveLocally(this.data);
+                } else {
+                    // Local has more (e.g. offline play), sync local to cloud
+                    await this.saveToCloud();
                 }
-                this.saveLocally(this.data);
             } else {
                 // If not found in user_yards, check user_progress table (fallback)
                 const { data: progRecord } = await supabase
@@ -124,8 +168,12 @@ class YardService {
                     .single();
 
                 if (progRecord && typeof progRecord.yards === 'number') {
-                    this.data.yards = progRecord.yards;
-                    this.saveLocally(this.data);
+                    if (progRecord.yards >= this.data.yards) {
+                        this.data.yards = progRecord.yards;
+                        this.saveLocally(this.data);
+                    } else {
+                        await this.saveToCloud();
+                    }
                 } else {
                     // First time save to cloud for this account
                     await this.saveToCloud();

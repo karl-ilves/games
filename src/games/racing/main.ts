@@ -1912,6 +1912,7 @@ async function init() {
 
     await loadProgress();
     updateGarageUI();
+    yardService.subscribe(() => updateGarageUI());
 
     // Bind UI
     uiGarage = document.getElementById('garage-screen')!;
