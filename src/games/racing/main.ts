@@ -1,3 +1,4 @@
+import { supabase } from '../../lib/supabase';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -189,64 +190,75 @@ let vehicleUpgrades: { [id: string]: { speedUpgrades: number } } = {};
 
 
 
-function loadProgress() {
-    if (!localStorage.getItem('wiped_once_v3')) {
-        localStorage.removeItem('racingSave');
-        localStorage.setItem('wiped_once_v3', 'true');
-        money = 0;
-        level2Unlocked = false;
-        level3Unlocked = false;
+async function loadProgress() {
+    // 1. Try to load from Supabase if logged in
+    let loadedFromDB = false;
+    if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            const { data, error } = await supabase.from('user_progress').select('*').eq('user_id', session.user.id).single();
+            if (data && !error) {
+                money = data.money || 0;
+                selectedLevel = data.selected_level || 1;
+                unlockedVehicles = data.unlocked_vehicles || ['car_1'];
+                vehicleUpgrades = data.vehicle_upgrades || {};
+                level2Unlocked = data.level2_unlocked || false;
+                level3Unlocked = data.level3_unlocked || false;
+                loadedFromDB = true;
+            }
+        }
     }
     
-    // FULL RESET
+    // 2. Fallback to LocalStorage if not logged in or no DB data yet
+    if (!loadedFromDB) {
+        if (!localStorage.getItem('wiped_once_v3')) {
+            localStorage.removeItem('racingSave');
+            localStorage.setItem('wiped_once_v3', 'true');
+            money = 0;
+            level2Unlocked = false;
+            level3Unlocked = false;
+        }
+        
         if (!localStorage.getItem('wiped_full_v10')) {
-        localStorage.removeItem('racingSave');
-        localStorage.setItem('wiped_full_v10', 'true');
-        money = 0;
-        selectedLevel = 1;
-        level2Unlocked = false;
-        level3Unlocked = false;
-        unlockedVehicles = ['car_1'];
-        vehicleType = 'car_1';
-        vehicleUpgrades = {};
-        
-        let initialSave = {
-            money: money,
-            unlockedVehicles: unlockedVehicles,
-            vehicleUpgrades: vehicleUpgrades,
-            level2Unlocked: level2Unlocked,
-            level3Unlocked: level3Unlocked
-        };
-        localStorage.setItem('racingSave', JSON.stringify(initialSave));
-    }
-
-    let save = localStorage.getItem('racingSave');
-    if (save) {
-        let data = JSON.parse(save);
-        money = data.money || 0;
-        
-        // Migration from old save format
-        if (data.unlockedVehicles && !Array.isArray(data.unlockedVehicles)) {
+            localStorage.removeItem('racingSave');
+            localStorage.setItem('wiped_full_v10', 'true');
+            money = 0;
+            selectedLevel = 1;
+            level2Unlocked = false;
+            level3Unlocked = false;
             unlockedVehicles = ['car_1'];
-            if (data.unlockedVehicles.moto) unlockedVehicles.push('moto_1');
-        } else if (data.unlockedVehicles) {
-            unlockedVehicles = data.unlockedVehicles;
+            vehicleType = 'car_1';
+            vehicleUpgrades = {};
         }
-        if (data.vehicleUpgrades) {
-            vehicleUpgrades = data.vehicleUpgrades;
-        }
-        if (data.level2Unlocked) {
-            level2Unlocked = data.level2Unlocked;
-        }
-        if (data.level3Unlocked) {
-            level3Unlocked = data.level3Unlocked;
+
+        let save = localStorage.getItem('racingSave');
+        if (save) {
+            let data = JSON.parse(save);
+            money = data.money || 0;
+            if (data.unlockedVehicles && !Array.isArray(data.unlockedVehicles)) {
+                unlockedVehicles = ['car_1'];
+                if (data.unlockedVehicles.moto) unlockedVehicles.push('moto_1');
+            } else if (data.unlockedVehicles) {
+                unlockedVehicles = data.unlockedVehicles;
+            }
+            if (data.vehicleUpgrades) vehicleUpgrades = data.vehicleUpgrades;
+            if (data.level2Unlocked) level2Unlocked = data.level2Unlocked;
+            if (data.level3Unlocked) level3Unlocked = data.level3Unlocked;
         }
     }
-    
-
 }
 
-function saveProgress() {
+async function saveProgress() {
+    const payload = {
+        money: money,
+        selected_level: selectedLevel,
+        unlocked_vehicles: unlockedVehicles,
+        vehicle_upgrades: vehicleUpgrades,
+        level2_unlocked: level2Unlocked,
+        level3_unlocked: level3Unlocked
+    };
+    
+    // Always save locally as fallback
     localStorage.setItem('racingSave', JSON.stringify({
         money: money,
         unlockedVehicles: unlockedVehicles,
@@ -254,6 +266,15 @@ function saveProgress() {
         level2Unlocked: level2Unlocked,
         level3Unlocked: level3Unlocked
     }));
+    
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+        await supabase.from('user_progress').upsert({
+            user_id: session.user.id,
+            ...payload
+        });
+    }
 }
 
 
@@ -1781,7 +1802,7 @@ function updateGarageUI() {
         });
     });
 }
-function init() {
+async function init() {
 
     // Setup Three.js
     scene = new THREE.Scene();
@@ -1794,7 +1815,7 @@ function init() {
 
     createEnvironment();
 
-    loadProgress();
+    await loadProgress();
     updateGarageUI();
 
 

@@ -39,11 +39,11 @@ try {
 
     try {
         console.log("Checking Homepage...");
-        await page.goto('http://localhost:4173/');
+        await page.goto('http://localhost:4173/games/');
         await new Promise(r => setTimeout(r, 1000));
         
         console.log("Checking Airplane Simulator...");
-        await page.goto('http://localhost:4173/games/airplane/index.html');
+        await page.goto('http://localhost:4173/games/games/airplane/index.html');
         await new Promise(r => setTimeout(r, 2000));
         
         console.log("Simulating UI Interaction: Selecting PC platform...");
