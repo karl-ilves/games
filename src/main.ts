@@ -291,6 +291,65 @@ function renderAdminYardLogs() {
     }).join('');
 }
 
+function renderAdminPromoStats() {
+    const stats = yardService.getCodeRedemptionStats();
+    
+    // Overview numbers
+    const totalClaimsEl = document.getElementById('admin-stat-total-claims');
+    const totalYardsEl = document.getElementById('admin-stat-total-yards');
+    const activeCodesEl = document.getElementById('admin-stat-active-codes');
+
+    if (totalClaimsEl) totalClaimsEl.innerText = stats.totalRedemptions.toString();
+    if (totalYardsEl) totalYardsEl.innerText = stats.totalYardsGiven.toLocaleString() + ' Y';
+    if (activeCodesEl) activeCodesEl.innerText = stats.codes.length.toString();
+
+    // Table of codes
+    const tableContainer = document.getElementById('admin-promo-codes-table');
+    if (tableContainer) {
+        tableContainer.innerHTML = stats.codes.map(c => {
+            const userNames = c.users.map(u => `@${u.username}`).slice(0, 3).join(', ');
+            const moreUsers = c.users.length > 3 ? ` ja veel ${c.users.length - 3}` : '';
+            const usersDisplay = c.users.length > 0 ? `${userNames}${moreUsers}` : 'Mitte keegi veel';
+            const lastTime = c.lastRedeemed ? new Date(c.lastRedeemed).toLocaleString() : '-';
+
+            return `
+                <div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <span style="font-family: monospace; font-size: 1.05rem; font-weight: 800; color: #00f2fe; background: rgba(0,242,254,0.1); padding: 3px 8px; border-radius: 5px;">
+                            ${c.code}
+                        </span>
+                        <span style="font-size: 0.85rem; color: #ffd32a; font-weight: bold; margin-left: 8px;">+${c.reward} Yards</span>
+                        <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">
+                            Sisestanud kasutajad: <strong style="color: #e2e8f0;">${usersDisplay}</strong>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.1rem; font-weight: 900; color: #2ecc71;">
+                            ${c.count} <span style="font-size: 0.8rem; font-weight: normal; color: #a4b0be;">inimest</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b;">Viimati: ${lastTime}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Recent Logs
+    const logsContainer = document.getElementById('admin-code-redemption-logs');
+    if (logsContainer) {
+        if (stats.recentLogs.length === 0) {
+            logsContainer.innerHTML = '<div style="color: #718093; text-align: center;">Ühtegi koodi pole veel sisestatud.</div>';
+        } else {
+            logsContainer.innerHTML = stats.recentLogs.map(l => {
+                const time = new Date(l.timestamp).toLocaleString();
+                return `<div style="margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 3px;">
+                    [${time}] Kasutaja <strong style="color: #00f2fe;">@${l.username}</strong> sisestas koodi <strong style="color: #ffd32a;">${l.code}</strong> ja sai <strong style="color: #2ecc71;">+${l.amount} Y</strong>
+                </div>`;
+            }).join('');
+        }
+    }
+}
+
 // --- Setup Modal & Button Event Listeners ---
 function setupModals() {
     // 1. Streak Modal
@@ -413,6 +472,7 @@ function setupModals() {
             modalAdmin.style.display = 'flex';
             renderAdminReviewGames();
             renderAdminYardLogs();
+            renderAdminPromoStats();
         });
     }
     if (closeAdminBtn && modalAdmin) {
@@ -422,26 +482,28 @@ function setupModals() {
     // Tab Switching
     const tabReview = document.getElementById('tab-btn-review-games');
     const tabGive = document.getElementById('tab-btn-give-yards');
+    const tabPromo = document.getElementById('tab-btn-promo-stats');
     const viewReview = document.getElementById('admin-tab-review-games');
     const viewGive = document.getElementById('admin-tab-give-yards');
+    const viewPromo = document.getElementById('admin-tab-promo-stats');
 
-    if (tabReview && tabGive && viewReview && viewGive) {
-        tabReview.addEventListener('click', () => {
-            tabReview.classList.add('active');
-            tabGive.classList.remove('active');
-            viewReview.style.display = 'block';
-            viewGive.style.display = 'none';
-            renderAdminReviewGames();
-        });
+    const switchAdminTab = (activeTab: 'review' | 'give' | 'promo') => {
+        tabReview?.classList.toggle('active', activeTab === 'review');
+        tabGive?.classList.toggle('active', activeTab === 'give');
+        tabPromo?.classList.toggle('active', activeTab === 'promo');
 
-        tabGive.addEventListener('click', () => {
-            tabGive.classList.add('active');
-            tabReview.classList.remove('active');
-            viewGive.style.display = 'block';
-            viewReview.style.display = 'none';
-            renderAdminYardLogs();
-        });
-    }
+        if (viewReview) viewReview.style.display = activeTab === 'review' ? 'block' : 'none';
+        if (viewGive) viewGive.style.display = activeTab === 'give' ? 'block' : 'none';
+        if (viewPromo) viewPromo.style.display = activeTab === 'promo' ? 'block' : 'none';
+
+        if (activeTab === 'review') renderAdminReviewGames();
+        if (activeTab === 'give') renderAdminYardLogs();
+        if (activeTab === 'promo') renderAdminPromoStats();
+    };
+
+    tabReview?.addEventListener('click', () => switchAdminTab('review'));
+    tabGive?.addEventListener('click', () => switchAdminTab('give'));
+    tabPromo?.addEventListener('click', () => switchAdminTab('promo'));
 
     // Give Yards Handler
     const giveYardsBtn = document.getElementById('btn-admin-give-yards');

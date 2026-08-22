@@ -24,6 +24,15 @@ export interface AdminYardLog {
     timestamp: number;
 }
 
+export interface CodeRedemptionEntry {
+    id: string;
+    code: string;
+    amount: number;
+    username: string;
+    email?: string;
+    timestamp: number;
+}
+
 export interface CreatedGame {
     id: string;
     userId?: string;
@@ -44,6 +53,7 @@ const PRIMARY_STORAGE_KEY = 'playard_yards_data';
 const STORAGE_PREFIX = 'playard_yards_';
 const ADMIN_LOGS_KEY = 'playard_admin_yard_logs';
 const GAMES_STORAGE_KEY = 'playard_user_created_games';
+const CODE_REDEMPTIONS_STORAGE_KEY = 'playard_code_redemptions_global';
 
 const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_IN_48_HOURS = 48 * 60 * 60 * 1000;
@@ -425,6 +435,14 @@ class YardService {
             timestamp: Date.now()
         });
 
+        // Record global code redemption for Admin stats
+        this.recordCodeRedemption(
+            code,
+            reward,
+            this.currentUserUsername || 'GuestPlayer',
+            this.currentUserEmail || undefined
+        );
+
         this.saveLocally(this.data);
         this.saveToCloud();
 
@@ -432,6 +450,97 @@ class YardService {
             success: true,
             amount: reward,
             message: `🎉 Success! Redeemed code '${code}' for +${reward} Yards!`
+        };
+    }
+
+    public recordCodeRedemption(code: string, amount: number, username: string, email?: string) {
+        const entry: CodeRedemptionEntry = {
+            id: 'redemption_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            code,
+            amount,
+            username: username || 'GuestPlayer',
+            email,
+            timestamp: Date.now()
+        };
+
+        const logs = this.getCodeRedemptions();
+        logs.unshift(entry);
+        try {
+            localStorage.setItem(CODE_REDEMPTIONS_STORAGE_KEY, JSON.stringify(logs));
+        } catch (e) {}
+
+        if (supabase) {
+            try {
+                supabase.from('admin_yard_logs').insert({
+                    id: entry.id,
+                    admin_email: 'PROMO_CODE',
+                    target_username: entry.username,
+                    amount: entry.amount,
+                    reason: `Code Redeemed: ${entry.code}`
+                }).then(() => {});
+            } catch (e) {}
+        }
+    }
+
+    public getCodeRedemptions(): CodeRedemptionEntry[] {
+        try {
+            const raw = localStorage.getItem(CODE_REDEMPTIONS_STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [];
+    }
+
+    public getCodeRedemptionStats() {
+        const logs = this.getCodeRedemptions();
+        const codeMap: Record<string, {
+            code: string;
+            reward: number;
+            count: number;
+            totalYards: number;
+            users: Array<{ username: string; email?: string; timestamp: number }>;
+            lastRedeemed: number | null;
+        }> = {};
+
+        // Pre-fill known promo codes
+        Object.entries(PROMO_CODES).forEach(([c, r]) => {
+            codeMap[c] = {
+                code: c,
+                reward: r,
+                count: 0,
+                totalYards: 0,
+                users: [],
+                lastRedeemed: null
+            };
+        });
+
+        logs.forEach(l => {
+            if (!codeMap[l.code]) {
+                codeMap[l.code] = {
+                    code: l.code,
+                    reward: l.amount,
+                    count: 0,
+                    totalYards: 0,
+                    users: [],
+                    lastRedeemed: null
+                };
+            }
+            codeMap[l.code].count++;
+            codeMap[l.code].totalYards += l.amount;
+            codeMap[l.code].users.push({
+                username: l.username,
+                email: l.email,
+                timestamp: l.timestamp
+            });
+            if (!codeMap[l.code].lastRedeemed || l.timestamp > codeMap[l.code].lastRedeemed!) {
+                codeMap[l.code].lastRedeemed = l.timestamp;
+            }
+        });
+
+        return {
+            totalRedemptions: logs.length,
+            totalYardsGiven: logs.reduce((sum, l) => sum + l.amount, 0),
+            codes: Object.values(codeMap),
+            recentLogs: logs.slice(0, 50)
         };
     }
 

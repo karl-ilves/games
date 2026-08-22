@@ -584,6 +584,7 @@
             <div class="admin-tabs">
                 <button id="tab-btn-review-games" class="admin-tab-btn active">🎮 Games to Review</button>
                 <button id="tab-btn-give-yards" class="admin-tab-btn">💎 Give Yards by Username</button>
+                <button id="tab-btn-promo-stats" class="admin-tab-btn">📊 Code Redemptions & Stats</button>
             </div>
 
             <!-- Tab 1: Games to Review -->
@@ -621,6 +622,40 @@
 
                 <h4 style="color: #a4b0be; margin: 0 0 8px 0;">Recent Yard Grant Logs:</h4>
                 <div id="admin-yard-logs-container" style="max-height: 180px; overflow-y: auto; background: #131920; border-radius: 8px; padding: 10px; border: 1px solid rgba(255,255,255,0.05); font-family: monospace; font-size: 0.8rem; color: #d2dae2;">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Tab 3: Code Redemptions & Stats -->
+            <div id="admin-tab-promo-stats" style="display: none;">
+                <h3 style="color: #00f2fe; margin-top: 0;">📊 Promo Code Redemptions & Usage Stats</h3>
+                <p style="font-size: 0.85rem; color: #a4b0be; margin-top: -5px;">Vaata, kui palju inimesi on milliseid koode sisestanud ja lunastanud.</p>
+                
+                <!-- Overview Stats Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                    <div style="background: #1a2430; border: 1px solid rgba(0,242,254,0.3); border-radius: 10px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.8rem; color: #94a3b8;">Total Code Claims</div>
+                        <div id="admin-stat-total-claims" style="font-size: 1.6rem; font-weight: 900; color: #00f2fe; margin-top: 4px;">0</div>
+                    </div>
+                    <div style="background: #1a2430; border: 1px solid rgba(255,211,42,0.3); border-radius: 10px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.8rem; color: #94a3b8;">Total Yards Claimed</div>
+                        <div id="admin-stat-total-yards" style="font-size: 1.6rem; font-weight: 900; color: #ffd32a; margin-top: 4px;">0 Y</div>
+                    </div>
+                    <div style="background: #1a2430; border: 1px solid rgba(46,204,113,0.3); border-radius: 10px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.8rem; color: #94a3b8;">Active Promo Codes</div>
+                        <div id="admin-stat-active-codes" style="font-size: 1.6rem; font-weight: 900; color: #2ecc71; margin-top: 4px;">7</div>
+                    </div>
+                </div>
+
+                <!-- Codes List Table -->
+                <h4 style="color: #ffd32a; margin: 15px 0 8px 0;">🎯 Promo Codes Usage Overview:</h4>
+                <div id="admin-promo-codes-table" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 16px;">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <!-- Live Redemption Logs -->
+                <h4 style="color: #a4b0be; margin: 0 0 8px 0;">📜 Recent Code Redemptions Log:</h4>
+                <div id="admin-code-redemption-logs" style="max-height: 160px; overflow-y: auto; background: #131920; border-radius: 8px; padding: 10px; border: 1px solid rgba(255,255,255,0.05); font-family: monospace; font-size: 0.8rem; color: #d2dae2;">
                     <!-- Dynamically populated -->
                 </div>
             </div>

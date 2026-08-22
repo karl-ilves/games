@@ -158,6 +158,18 @@ try {
         const grantStatus = await page.$eval('#admin-give-status', el => el.textContent);
         console.log("   Admin Yard Grant status:", grantStatus);
 
+        // Switch to Code Redemptions & Stats Tab
+        await page.click('#tab-btn-promo-stats');
+        await new Promise(r => setTimeout(r, 400));
+        const promoStatsVisible = await page.$eval('#admin-tab-promo-stats', el => window.getComputedStyle(el).display);
+        console.log("   Admin Code Stats Tab visibility:", promoStatsVisible);
+        if (promoStatsVisible !== 'block') {
+            throw new Error("Admin Code Stats tab failed to display!");
+        }
+
+        const totalClaims = await page.$eval('#admin-stat-total-claims', el => el.textContent);
+        console.log("   Admin Promo Code Total Claims:", totalClaims);
+
         await page.click('#btn-close-admin-panel');
         await new Promise(r => setTimeout(r, 500));
 
