@@ -193,7 +193,7 @@
             position: absolute;
             top: 70px;
             right: 20px;
-            width: 260px;
+            width: 270px;
             background: rgba(20, 27, 36, 0.92);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -201,6 +201,8 @@
             z-index: 100;
             padding: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
         }
         .inspector-panel h4 {
             margin: 0 0 10px 0;
@@ -226,6 +228,26 @@
             font-size: 0.8rem;
         }
 
+        .btn-ctrl {
+            background: #242f3d;
+            border: 1px solid #485460;
+            color: white;
+            border-radius: 6px;
+            padding: 8px 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .btn-ctrl:hover {
+            background: #00f2fe;
+            color: #111;
+            border-color: #00f2fe;
+            transform: scale(1.05);
+        }
+
         .btn-danger {
             background: #e74c3c;
             border: none;
@@ -246,14 +268,49 @@
             top: 70px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            border: 1px solid #2ecc71;
-            padding: 8px 20px;
+            background: rgba(0,0,0,0.75);
+            border: 1.5px solid #2ecc71;
+            padding: 8px 24px;
             border-radius: 30px;
             color: #2ecc71;
             font-weight: bold;
             z-index: 150;
             pointer-events: none;
+            box-shadow: 0 4px 20px rgba(46, 204, 113, 0.3);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        /* Play Test Controls Overlay (D-Pad & Jump) */
+        #play-test-controls {
+            display: none;
+            position: fixed;
+            bottom: 25px;
+            left: 25px;
+            right: 25px;
+            pointer-events: none;
+            z-index: 1000;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .touch-ctrl-btn {
+            background: rgba(45, 55, 72, 0.9);
+            border: 1.5px solid rgba(0, 242, 254, 0.6);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, background 0.1s;
+        }
+        .touch-ctrl-btn:active {
+            background: #00f2fe;
+            color: #111;
+            transform: scale(0.92);
         }
 
         /* Controls Help Tooltip */
@@ -262,14 +319,15 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(6px);
-            padding: 6px 16px;
+            padding: 8px 20px;
             border-radius: 20px;
-            font-size: 0.8rem;
-            color: #a4b0be;
+            font-size: 0.85rem;
+            color: #00f2fe;
             pointer-events: none;
             z-index: 90;
+            border: 1px solid rgba(0, 242, 254, 0.3);
         }
     </style>
 </head>
@@ -300,7 +358,31 @@
 
     <!-- Play Test Active HUD -->
     <div id="play-test-hud">
-        🎮 PLAY TEST MODE (WASD to Walk, SPACE to Jump, Click 'Exit Play Test' on top to edit)
+        🎮 <strong>PLAY TEST MODE:</strong> Use <strong>Arrow Keys / WASD</strong> to Move | <strong>SPACE</strong> to Jump
+    </div>
+
+    <!-- Play Test Easy On-Screen Controls -->
+    <div id="play-test-controls">
+        <!-- D-Pad -->
+        <div style="pointer-events: auto; display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 6px; background: rgba(20,27,36,0.9); padding: 8px; border-radius: 20px; border: 1.5px solid rgba(0,242,254,0.4); box-shadow: 0 10px 25px rgba(0,0,0,0.6);">
+            <div></div>
+            <button id="touch-btn-up" class="touch-ctrl-btn" title="Move Forward">⬆️</button>
+            <div></div>
+            <button id="touch-btn-left" class="touch-ctrl-btn" title="Move Left">⬅️</button>
+            <div></div>
+            <button id="touch-btn-right" class="touch-ctrl-btn" title="Move Right">➡️</button>
+            <div></div>
+            <button id="touch-btn-down" class="touch-ctrl-btn" title="Move Backward">⬇️</button>
+            <div></div>
+        </div>
+
+        <!-- Jump Button -->
+        <div style="pointer-events: auto;">
+            <button id="touch-btn-jump" style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #4facfe); border: 2px solid #fff; color: #111; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 8px 25px rgba(0,242,254,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <span>🚀</span>
+                <span style="font-size: 0.75rem; font-weight: 800;">JUMP</span>
+            </button>
+        </div>
     </div>
 
     <!-- Left Object Catalog (5000+ Objects Engine) -->
@@ -351,12 +433,16 @@
 
         <h4>🎯 Selected Object</h4>
         <div id="selected-object-info" style="color: #718093; font-size: 0.85rem; margin-bottom: 8px;">
-            Click on an object to select and transform.
+            Click on an object to select, drag, rotate (R), or move with arrows!
         </div>
         <div id="selected-object-props" style="display: none;">
             <div class="prop-row">
                 <label>Position X/Y/Z:</label>
-                <span id="obj-pos-val" style="font-size: 0.8rem; color: #00f2fe;">0, 0, 0</span>
+                <span id="obj-pos-val" style="font-size: 0.8rem; color: #00f2fe; font-weight: bold;">0, 0, 0</span>
+            </div>
+            <div class="prop-row">
+                <label>Rotation Y:</label>
+                <span id="obj-rot-val" style="font-size: 0.8rem; color: #ffd32a; font-weight: bold;">0°</span>
             </div>
             <div class="prop-row">
                 <label>Scale:</label>
@@ -366,7 +452,26 @@
                 <label>Color Tint:</label>
                 <input type="color" id="obj-color-input" value="#ffffff">
             </div>
-            <button id="btn-duplicate-obj" class="btn-studio" style="width: 100%; margin-top: 6px; justify-content: center;">
+
+            <!-- Visual Move & Rotate Controls -->
+            <div style="margin-top: 12px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; border: 1px solid rgba(0,242,254,0.2);">
+                <div style="font-size: 0.8rem; color: #ffd32a; font-weight: bold; margin-bottom: 8px; text-align: center;">🎮 Move & Rotate Object (Arrows / R)</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 170px; margin: 0 auto 6px auto;">
+                    <div></div>
+                    <button id="btn-move-fwd" class="btn-ctrl" title="Move Forward (ArrowUp / W)">⬆️</button>
+                    <button id="btn-move-up" class="btn-ctrl" title="Move Up (PageUp / Q)">🔼</button>
+
+                    <button id="btn-move-left" class="btn-ctrl" title="Move Left (ArrowLeft / A)">⬅️</button>
+                    <button id="btn-rotate-r" class="btn-ctrl" style="background: rgba(0,242,254,0.2); border-color: #00f2fe; color: #00f2fe; font-weight: bold;" title="Rotate 45° (R)">🔄 R</button>
+                    <button id="btn-move-right" class="btn-ctrl" title="Move Right (ArrowRight / D)">➡️</button>
+
+                    <div></div>
+                    <button id="btn-move-back" class="btn-ctrl" title="Move Backward (ArrowDown / S)">⬇️</button>
+                    <button id="btn-move-down" class="btn-ctrl" title="Move Down (PageDown / E)">🔽</button>
+                </div>
+            </div>
+
+            <button id="btn-duplicate-obj" class="btn-studio" style="width: 100%; margin-top: 10px; justify-content: center;">
                 📋 Duplicate Object
             </button>
             <button id="btn-delete-obj" class="btn-danger">
@@ -377,7 +482,7 @@
 
     <!-- Controls Tooltip -->
     <div class="controls-tooltip" id="controls-tooltip">
-        Left Click: Select/Place | Right Click + Drag: Rotate Camera | Scroll: Zoom | WASD: Move (Play Mode)
+        💡 <strong>Click Object</strong> to select & drag | <strong>Press R</strong> to Rotate | <strong>Arrow Keys</strong> to Move | <strong>Right Click + Drag</strong> to Orbit Camera
     </div>
 
     <script type="module" src="/src/games/creator/main.ts"></script>

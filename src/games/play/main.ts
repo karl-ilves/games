@@ -275,7 +275,7 @@ async function initPlayer() {
         });
     }
 
-    // Controls
+    // Controls & On-Screen Buttons
     window.addEventListener('keydown', e => { keys[e.code] = true; });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
     window.addEventListener('resize', () => {
@@ -284,6 +284,24 @@ async function initPlayer() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    const bindTouchBtn = (id: string, code: string) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const press = (e: Event) => { e.preventDefault(); keys[code] = true; };
+        const release = (e: Event) => { e.preventDefault(); keys[code] = false; };
+        btn.addEventListener('mousedown', press);
+        btn.addEventListener('mouseup', release);
+        btn.addEventListener('mouseleave', release);
+        btn.addEventListener('touchstart', press, { passive: false });
+        btn.addEventListener('touchend', release, { passive: false });
+    };
+
+    bindTouchBtn('touch-btn-up', 'ArrowUp');
+    bindTouchBtn('touch-btn-down', 'ArrowDown');
+    bindTouchBtn('touch-btn-left', 'ArrowLeft');
+    bindTouchBtn('touch-btn-right', 'ArrowRight');
+    bindTouchBtn('touch-btn-jump', 'Space');
+
     animate();
 }
 
@@ -291,7 +309,7 @@ function animate() {
     requestAnimationFrame(animate);
     const delta = Math.min(clock.getDelta(), 0.1);
 
-    const moveSpeed = 8;
+    const moveSpeed = 9;
     const moveDir = new THREE.Vector3();
 
     if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
@@ -302,19 +320,19 @@ function animate() {
     if (moveDir.lengthSq() > 0) {
         moveDir.normalize();
         characterYaw = Math.atan2(moveDir.x, moveDir.z);
-        humanCharacter.rotation.y = characterYaw;
+        humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
 
         humanCharacter.position.x += moveDir.x * moveSpeed * delta;
         humanCharacter.position.z += moveDir.z * moveSpeed * delta;
     }
 
     if (keys['Space'] && isGrounded) {
-        characterVelocity.y = 8;
+        characterVelocity.y = 9;
         isGrounded = false;
     }
 
     if (!isGrounded) {
-        characterVelocity.y -= 20 * delta;
+        characterVelocity.y -= 22 * delta;
         humanCharacter.position.y += characterVelocity.y * delta;
         if (humanCharacter.position.y <= 0) {
             humanCharacter.position.y = 0;
@@ -323,14 +341,14 @@ function animate() {
         }
     }
 
-    // Camera follow
+    // Smooth Camera follow
     const targetCamPos = new THREE.Vector3(
-        humanCharacter.position.x - Math.sin(characterYaw) * 6,
-        humanCharacter.position.y + 3.5,
-        humanCharacter.position.z - Math.cos(characterYaw) * 6
+        humanCharacter.position.x - Math.sin(characterYaw) * 7,
+        humanCharacter.position.y + 4,
+        humanCharacter.position.z - Math.cos(characterYaw) * 7
     );
     camera.position.lerp(targetCamPos, 0.1);
-    camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.5, humanCharacter.position.z);
+    camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.6, humanCharacter.position.z);
 
     renderer.render(scene, camera);
 }

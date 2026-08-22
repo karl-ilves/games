@@ -395,11 +395,47 @@ function spawnObjectIntoScene(catalogItem: CatalogItem) {
     selectObject(placed);
 }
 
+export function moveSelectedObject(dx: number, dy: number, dz: number) {
+    if (!selectedObject) return;
+    selectedObject.mesh.position.x += dx;
+    selectedObject.mesh.position.y = Math.max(0, selectedObject.mesh.position.y + dy);
+    selectedObject.mesh.position.z += dz;
+    selectedObject.position = {
+        x: selectedObject.mesh.position.x,
+        y: selectedObject.mesh.position.y,
+        z: selectedObject.mesh.position.z
+    };
+    updateInspectorDisplay();
+}
+
+export function rotateSelectedObject(rad = Math.PI / 4) {
+    if (!selectedObject) return;
+    selectedObject.mesh.rotation.y = (selectedObject.mesh.rotation.y + rad) % (Math.PI * 2);
+    selectedObject.rotation = {
+        x: selectedObject.mesh.rotation.x,
+        y: selectedObject.mesh.rotation.y,
+        z: selectedObject.mesh.rotation.z
+    };
+    updateInspectorDisplay();
+}
+
+function updateInspectorDisplay() {
+    if (!selectedObject) return;
+    const posVal = document.getElementById('obj-pos-val');
+    const rotVal = document.getElementById('obj-rot-val');
+    if (posVal) {
+        posVal.innerText = `${selectedObject.mesh.position.x.toFixed(1)}, ${selectedObject.mesh.position.y.toFixed(1)}, ${selectedObject.mesh.position.z.toFixed(1)}`;
+    }
+    if (rotVal) {
+        const deg = Math.round((selectedObject.mesh.rotation.y * 180) / Math.PI) % 360;
+        rotVal.innerText = `${(deg + 360) % 360}°`;
+    }
+}
+
 function selectObject(placed: PlacedObject | null) {
     selectedObject = placed;
     const info = document.getElementById('selected-object-info');
     const props = document.getElementById('selected-object-props');
-    const posVal = document.getElementById('obj-pos-val');
     const scaleInput = document.getElementById('obj-scale-input') as HTMLInputElement | null;
     const colorInput = document.getElementById('obj-color-input') as HTMLInputElement | null;
 
@@ -412,9 +448,8 @@ function selectObject(placed: PlacedObject | null) {
     if (info) info.style.display = 'none';
     if (props) props.style.display = 'block';
 
-    if (posVal) {
-        posVal.innerText = `${placed.mesh.position.x.toFixed(1)}, ${placed.mesh.position.y.toFixed(1)}, ${placed.mesh.position.z.toFixed(1)}`;
-    }
+    updateInspectorDisplay();
+
     if (scaleInput) {
         scaleInput.value = placed.mesh.scale.x.toString();
     }
@@ -532,9 +567,44 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+let isDraggingObject = false;
+const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
 // --- Event Handlers ---
 function setupStudioEvents() {
-    window.addEventListener('keydown', e => { keys[e.code] = true; });
+    window.addEventListener('keydown', e => {
+        keys[e.code] = true;
+
+        if (!isPlayTestMode && selectedObject) {
+            // R Key: Rotate 45 degrees
+            if (e.code === 'KeyR' || e.key.toLowerCase() === 'r') {
+                e.preventDefault();
+                rotateSelectedObject(Math.PI / 4);
+                return;
+            }
+            // Arrow Keys / WASD for Object Position
+            if (e.code === 'ArrowUp') {
+                e.preventDefault();
+                moveSelectedObject(0, 0, -0.5);
+            } else if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                moveSelectedObject(0, 0, 0.5);
+            } else if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                moveSelectedObject(-0.5, 0, 0);
+            } else if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                moveSelectedObject(0.5, 0, 0);
+            } else if (e.code === 'PageUp') {
+                e.preventDefault();
+                moveSelectedObject(0, 0.5, 0);
+            } else if (e.code === 'PageDown') {
+                e.preventDefault();
+                moveSelectedObject(0, -0.5, 0);
+            }
+        }
+    });
+
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
     const dom = renderer.domElement;
@@ -544,7 +614,6 @@ function setupStudioEvents() {
             isRightMouseDown = true;
             mousePos = { x: e.clientX, y: e.clientY };
         } else if (e.button === 0 && !isPlayTestMode) {
-            // Raycasting to select object in edit mode
             const rect = dom.getBoundingClientRect();
             const mouse = new THREE.Vector2(
                 ((e.clientX - rect.left) / rect.width) * 2 - 1,
@@ -560,12 +629,14 @@ function setupStudioEvents() {
 
             if (hitGroup) {
                 selectObject(hitGroup);
+                isDraggingObject = true;
             }
         }
     });
 
     window.addEventListener('mouseup', e => {
         if (e.button === 2) isRightMouseDown = false;
+        if (e.button === 0) isDraggingObject = false;
     });
 
     window.addEventListener('mousemove', e => {
@@ -577,6 +648,22 @@ function setupStudioEvents() {
             orbitTheta -= dx * 0.006;
             orbitPhi = Math.max(0.1, Math.min(Math.PI / 2.1, orbitPhi - dy * 0.006));
             updateOrbitCamera();
+        } else if (isDraggingObject && selectedObject && !isPlayTestMode) {
+            const rect = dom.getBoundingClientRect();
+            const mouse = new THREE.Vector2(
+                ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                -((e.clientY - rect.top) / rect.height) * 2 + 1
+            );
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const hitPoint = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
+                selectedObject.mesh.position.x = hitPoint.x;
+                selectedObject.mesh.position.z = hitPoint.z;
+                selectedObject.position.x = hitPoint.x;
+                selectedObject.position.z = hitPoint.z;
+                updateInspectorDisplay();
+            }
         }
     });
 
@@ -589,9 +676,10 @@ function setupStudioEvents() {
 
     dom.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Play Test Mode Toggle
+    // Play Test Mode Toggle & On-Screen Controls
     const playTestBtn = document.getElementById('btn-toggle-play-test');
     const playTestHud = document.getElementById('play-test-hud');
+    const playTestControls = document.getElementById('play-test-controls');
     const catalogPanel = document.getElementById('catalog-panel');
     const inspectorPanel = document.getElementById('inspector-panel');
 
@@ -599,21 +687,44 @@ function setupStudioEvents() {
         playTestBtn.addEventListener('click', () => {
             isPlayTestMode = !isPlayTestMode;
             if (isPlayTestMode) {
+                selectObject(null);
+                isDraggingObject = false;
                 playTestBtn.innerHTML = '<span>⏹️</span> <span>Exit Play Test</span>';
                 playTestBtn.style.background = '#e74c3c';
                 if (playTestHud) playTestHud.style.display = 'block';
+                if (playTestControls) playTestControls.style.display = 'flex';
                 if (catalogPanel) catalogPanel.style.display = 'none';
                 if (inspectorPanel) inspectorPanel.style.display = 'none';
             } else {
                 playTestBtn.innerHTML = '<span>▶️</span> <span>Play Test Mode</span>';
                 playTestBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
                 if (playTestHud) playTestHud.style.display = 'none';
+                if (playTestControls) playTestControls.style.display = 'none';
                 if (catalogPanel) catalogPanel.style.display = 'flex';
                 if (inspectorPanel) inspectorPanel.style.display = 'block';
                 updateOrbitCamera();
             }
         });
     }
+
+    // Touch / On-screen D-Pad and Jump Controls Setup
+    const bindTouchBtn = (id: string, code: string) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const press = (e: Event) => { e.preventDefault(); keys[code] = true; };
+        const release = (e: Event) => { e.preventDefault(); keys[code] = false; };
+        btn.addEventListener('mousedown', press);
+        btn.addEventListener('mouseup', release);
+        btn.addEventListener('mouseleave', release);
+        btn.addEventListener('touchstart', press, { passive: false });
+        btn.addEventListener('touchend', release, { passive: false });
+    };
+
+    bindTouchBtn('touch-btn-up', 'ArrowUp');
+    bindTouchBtn('touch-btn-down', 'ArrowDown');
+    bindTouchBtn('touch-btn-left', 'ArrowLeft');
+    bindTouchBtn('touch-btn-right', 'ArrowRight');
+    bindTouchBtn('touch-btn-jump', 'Space');
 
     // Submit for Review Button
     const submitBtn = document.getElementById('btn-submit-review');
@@ -705,6 +816,15 @@ function setupInspectorEvents() {
     const deleteBtn = document.getElementById('btn-delete-obj');
     const dupBtn = document.getElementById('btn-duplicate-obj');
 
+    // Visual Move & Rotate Buttons
+    document.getElementById('btn-move-fwd')?.addEventListener('click', () => moveSelectedObject(0, 0, -0.5));
+    document.getElementById('btn-move-back')?.addEventListener('click', () => moveSelectedObject(0, 0, 0.5));
+    document.getElementById('btn-move-left')?.addEventListener('click', () => moveSelectedObject(-0.5, 0, 0));
+    document.getElementById('btn-move-right')?.addEventListener('click', () => moveSelectedObject(0.5, 0, 0));
+    document.getElementById('btn-move-up')?.addEventListener('click', () => moveSelectedObject(0, 0.5, 0));
+    document.getElementById('btn-move-down')?.addEventListener('click', () => moveSelectedObject(0, -0.5, 0));
+    document.getElementById('btn-rotate-r')?.addEventListener('click', () => rotateSelectedObject(Math.PI / 4));
+
     if (scaleInput) {
         scaleInput.addEventListener('input', () => {
             if (selectedObject) {
@@ -762,7 +882,7 @@ function animate() {
 
     if (isPlayTestMode) {
         // Human Character Movement & 3rd Person Camera
-        const moveSpeed = 8;
+        const moveSpeed = 9;
         const moveDir = new THREE.Vector3();
 
         if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
@@ -773,7 +893,7 @@ function animate() {
         if (moveDir.lengthSq() > 0) {
             moveDir.normalize();
             characterYaw = Math.atan2(moveDir.x, moveDir.z);
-            humanCharacter.rotation.y = characterYaw;
+            humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
 
             humanCharacter.position.x += moveDir.x * moveSpeed * delta;
             humanCharacter.position.z += moveDir.z * moveSpeed * delta;
@@ -781,12 +901,12 @@ function animate() {
 
         // Jump & Gravity
         if (keys['Space'] && isGrounded) {
-            characterVelocity.y = 8;
+            characterVelocity.y = 9;
             isGrounded = false;
         }
 
         if (!isGrounded) {
-            characterVelocity.y -= 20 * delta;
+            characterVelocity.y -= 22 * delta;
             humanCharacter.position.y += characterVelocity.y * delta;
             if (humanCharacter.position.y <= 0) {
                 humanCharacter.position.y = 0;
@@ -795,14 +915,14 @@ function animate() {
             }
         }
 
-        // 3rd Person Camera Follow
+        // 3rd Person Smooth Camera Follow
         const targetCamPos = new THREE.Vector3(
-            humanCharacter.position.x - Math.sin(characterYaw) * 6,
-            humanCharacter.position.y + 3.5,
-            humanCharacter.position.z - Math.cos(characterYaw) * 6
+            humanCharacter.position.x - Math.sin(characterYaw) * 7,
+            humanCharacter.position.y + 4,
+            humanCharacter.position.z - Math.cos(characterYaw) * 7
         );
         camera.position.lerp(targetCamPos, 0.1);
-        camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.5, humanCharacter.position.z);
+        camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.6, humanCharacter.position.z);
     } else {
         // Idle breathing in edit mode
         if (humanCharacter) {

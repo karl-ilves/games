@@ -177,6 +177,34 @@ try {
             await firstObjCard.click();
             await new Promise(r => setTimeout(r, 500));
             console.log("   Successfully spawned object into 3D Creator scene!");
+
+            // Test Object Rotation with R key & Visual Buttons
+            await page.click('#btn-rotate-r');
+            const rotVal = await page.$eval('#obj-rot-val', el => el.textContent);
+            console.log("   Object Rotation after 'R' / Rotate button:", rotVal);
+
+            // Test Object Move with Arrow Keys / Buttons
+            await page.click('#btn-move-fwd');
+            const posVal = await page.$eval('#obj-pos-val', el => el.textContent);
+            console.log("   Object Position after Move button:", posVal);
+
+            // Test Play Test Mode & On-Screen Arrow Controls
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+            const playControlsVisible = await page.$eval('#play-test-controls', el => window.getComputedStyle(el).display);
+            console.log("   Play Test Mode on-screen controls visibility:", playControlsVisible);
+            if (playControlsVisible !== 'flex') {
+                throw new Error("Play test controls failed to display in Play Test mode!");
+            }
+
+            // Click Jump & Up buttons in Play Test
+            await page.click('#touch-btn-up');
+            await page.click('#touch-btn-jump');
+            await new Promise(r => setTimeout(r, 300));
+
+            // Exit Play Test
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
         }
 
         // Test Submit for Review

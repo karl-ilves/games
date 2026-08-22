@@ -105,9 +105,42 @@
             padding: 10px 16px;
             border-radius: 12px;
             font-size: 0.85rem;
-            color: #a4b0be;
+            color: #00f2fe;
             z-index: 90;
             pointer-events: none;
+            border: 1px solid rgba(0, 242, 254, 0.3);
+        }
+
+        /* On-Screen Easy D-Pad & Jump Controls */
+        #play-screen-controls {
+            position: fixed;
+            bottom: 25px;
+            left: 25px;
+            right: 25px;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .touch-ctrl-btn {
+            background: rgba(45, 55, 72, 0.9);
+            border: 1.5px solid rgba(0, 242, 254, 0.6);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, background 0.1s;
+        }
+        .touch-ctrl-btn:active {
+            background: #00f2fe;
+            color: #111;
+            transform: scale(0.92);
         }
     </style>
 </head>
@@ -135,7 +168,29 @@
 
     <!-- Controls Overlay -->
     <div class="controls-overlay">
-        🎮 <strong>Controls:</strong> WASD to Walk | SPACE to Jump | Mouse to Look
+        🎮 <strong>Controls:</strong> Arrow Keys / WASD to Move | SPACE to Jump
+    </div>
+
+    <!-- On-Screen Controls for easy movement -->
+    <div id="play-screen-controls">
+        <div style="pointer-events: auto; display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 6px; background: rgba(20,27,36,0.9); padding: 8px; border-radius: 20px; border: 1.5px solid rgba(0,242,254,0.4); box-shadow: 0 10px 25px rgba(0,0,0,0.6);">
+            <div></div>
+            <button id="touch-btn-up" class="touch-ctrl-btn" title="Move Forward">⬆️</button>
+            <div></div>
+            <button id="touch-btn-left" class="touch-ctrl-btn" title="Move Left">⬅️</button>
+            <div></div>
+            <button id="touch-btn-right" class="touch-ctrl-btn" title="Move Right">➡️</button>
+            <div></div>
+            <button id="touch-btn-down" class="touch-ctrl-btn" title="Move Backward">⬇️</button>
+            <div></div>
+        </div>
+
+        <div style="pointer-events: auto;">
+            <button id="touch-btn-jump" style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #4facfe); border: 2px solid #fff; color: #111; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 8px 25px rgba(0,242,254,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <span>🚀</span>
+                <span style="font-size: 0.75rem; font-weight: 800;">JUMP</span>
+            </button>
+        </div>
     </div>
 
     <!-- Admin Review Action Bar -->
