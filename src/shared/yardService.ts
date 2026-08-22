@@ -761,8 +761,7 @@ class YardService {
             }
         }
 
-        // Fallback to local
-        return this.getLocalCreatedGames().filter(g => g.status === 'pending_review');
+        return [];
     }
 
     public async getApprovedGames(): Promise<CreatedGame[]> {
@@ -796,8 +795,7 @@ class YardService {
             }
         }
 
-        // Fallback to local
-        return this.getLocalCreatedGames().filter(g => g.status === 'approved');
+        return [];
     }
 
     public async updateGameStatus(
@@ -989,12 +987,7 @@ class YardService {
             }
         }
 
-        // 2. Local fallback
-        return this.getLocalCreatedGames().filter(g => 
-            g.creatorUsername.toLowerCase() === cleanUser && 
-            g.status === 'changes_requested' && 
-            !!g.feedback
-        );
+        return [];
     }
 
     public getDailyStreakInfo() {

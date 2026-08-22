@@ -101,14 +101,24 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
+DECLARE
+  base_username text;
+  final_username text;
 BEGIN
+  base_username := COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1));
+  final_username := base_username;
+
+  WHILE EXISTS (SELECT 1 FROM public.profiles WHERE username = final_username) LOOP
+    final_username := base_username || '_' || floor(random() * 10000)::text;
+  END LOOP;
+
   INSERT INTO public.profiles (id, username, display_name, is_admin)
   VALUES (
     new.id,
-    COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
+    final_username,
     CASE 
       WHEN new.email = '1karl.ilves@gmail.com' THEN 'Admin✅' 
-      ELSE '@' || COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)) 
+      ELSE '@' || final_username
     END,
     CASE 
       WHEN new.email = '1karl.ilves@gmail.com' THEN true 
@@ -132,17 +142,29 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- Retroactively create profiles and progress for existing users
+WITH ranked_users AS (
+  SELECT 
+    id,
+    email,
+    raw_user_meta_data,
+    COALESCE(raw_user_meta_data->>'username', split_part(email, '@', 1)) as base_username,
+    ROW_NUMBER() OVER (PARTITION BY COALESCE(raw_user_meta_data->>'username', split_part(email, '@', 1)) ORDER BY created_at) as rn
+  FROM auth.users
+)
 INSERT INTO public.profiles (id, username, display_name, is_admin)
 SELECT 
   id,
-  COALESCE(raw_user_meta_data->>'username', split_part(email, '@', 1)),
+  CASE 
+    WHEN rn = 1 THEN base_username 
+    ELSE base_username || '_' || substr(id::text, 1, 5) 
+  END as username,
   CASE 
     WHEN email = '1karl.ilves@gmail.com' THEN 'Admin✅' 
-    ELSE '@' || COALESCE(raw_user_meta_data->>'username', split_part(email, '@', 1))
-  END,
-  CASE WHEN email = '1karl.ilves@gmail.com' THEN true ELSE false END
-FROM auth.users
-ON CONFLICT (id) DO NOTHING;
+    ELSE '@' || (CASE WHEN rn = 1 THEN base_username ELSE base_username || '_' || substr(id::text, 1, 5) END)
+  END as display_name,
+  CASE WHEN email = '1karl.ilves@gmail.com' THEN true ELSE false END as is_admin
+FROM ranked_users
+ON CONFLICT DO NOTHING;
 
 INSERT INTO public.user_progress (user_id, money, yards)
 SELECT id, 0, 0
