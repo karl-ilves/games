@@ -2983,7 +2983,8 @@ function startRescueMission() {
     
     totalPatients = allPatients.length;
     rescuedPatients = 0;
-    document.getElementById('rescue-counter').innerText = rescuedPatients + ' / ' + totalPatients;
+    const rescueCounterEl = document.getElementById('rescue-counter');
+    if (rescueCounterEl) rescueCounterEl.innerText = rescuedPatients + ' / ' + totalPatients;
     
     let ambIndex = 0;
     firetrucks.forEach(f => {
@@ -4008,14 +4009,16 @@ function updateWorld() {
                         if (t.waypoints.length === 0) {
                             t.state = 'arrived';
                             rescuedPatients += t.passengers.length;
-                            document.getElementById('rescue-counter').innerText = rescuedPatients + ' / ' + totalPatients;
+                            const rescueCounterEl = document.getElementById('rescue-counter');
+                            if (rescueCounterEl) rescueCounterEl.innerText = rescuedPatients + ' / ' + totalPatients;
                             
                             t.passengers = []; // Empty ambulance
                             
                             if (t.isPlayerAmbulance) {
-                                document.getElementById('survival-text').style.display = 'block';
+                                const survEl = document.getElementById('survival-text');
+                                if (survEl) survEl.style.display = 'block';
                                 setTimeout(() => {
-                                    document.getElementById('survival-text').style.display = 'none';
+                                    if (survEl) survEl.style.display = 'none';
                                     resetPlane();
                                 }, 2000);
                             }
@@ -5057,19 +5060,19 @@ function updateUI() {
     const apMenu = document.getElementById('autopilot-menu');
     if (apMenu) apMenu.style.display = (isCrashedOrWalking || !autopilot || isMobileMode) ? 'none' : 'block';
 
-    throttleEl.innerText = Math.round(planeThrottle);
+    if (throttleEl) throttleEl.innerText = Math.round(planeThrottle).toString();
     let speed = planeVelocity.length();
-    speedEl.innerText = Math.round(speed * 10);
+    if (speedEl) speedEl.innerText = Math.round(speed * 10).toString();
     let alt = planeGroup.position.y - 2;
-    altEl.innerText = Math.max(0, Math.round(alt));
+    if (altEl) altEl.innerText = Math.max(0, Math.round(alt)).toString();
     
     const vspeedEl = document.getElementById('vspeed-val');
-    if (vspeedEl) vspeedEl.innerText = Math.round(planeVelocity.y * 600);
+    if (vspeedEl) vspeedEl.innerText = Math.round(planeVelocity.y * 600).toString();
     
     let euler = new THREE.Euler().setFromQuaternion(planeGroup.quaternion, 'YXZ');
     let heading = (euler.y * 180 / Math.PI) % 360;
     if (heading < 0) heading += 360;
-    headingEl.innerText = Math.round(heading);
+    if (headingEl) headingEl.innerText = Math.round(heading).toString();
     
     const gearEl = document.getElementById('gear-val');
     if (gearEl) {
@@ -5077,8 +5080,10 @@ function updateUI() {
         gearEl.style.color = gearDown ? '#27ae60' : '#e74c3c';
     }
     
-    apStatusEl.innerText = `Autopilot: ${autopilot ? 'ON' : 'OFF'}`;
-    apStatusEl.style.color = autopilot ? '#2ecc71' : '#e74c3c';
+    if (apStatusEl) {
+        apStatusEl.innerText = `Autopilot: ${autopilot ? 'ON' : 'OFF'}`;
+        apStatusEl.style.color = autopilot ? '#2ecc71' : '#e74c3c';
+    }
     
     // Update Gyroscope
     const gyroHorizon = document.getElementById('gyro-horizon');

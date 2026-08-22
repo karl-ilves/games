@@ -572,8 +572,9 @@ class YardService {
             updatedAt: Date.now()
         };
 
-        // Save locally
-        const games = this.getLocalCreatedGames();
+        // Save locally: clear any previous changes_requested records for this title/creator
+        let games = this.getLocalCreatedGames();
+        games = games.filter(g => !(g.creatorUsername.toLowerCase() === game.creatorUsername.toLowerCase() && (g.title.toLowerCase() === game.title.toLowerCase() || g.status === 'changes_requested')));
         games.unshift(fullGame);
         localStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(games));
 
@@ -581,6 +582,13 @@ class YardService {
         if (supabase) {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
+                // Archive or update older changes_requested for this creator
+                await supabase
+                    .from('user_created_games')
+                    .update({ status: 'archived' })
+                    .ilike('creator_username', game.creatorUsername)
+                    .eq('status', 'changes_requested');
+
                 await supabase.from('user_created_games').insert({
                     id: gameId,
                     user_id: session?.user?.id ?? null,
@@ -696,6 +704,13 @@ class YardService {
             target.feedback = feedback;
             target.updatedAt = Date.now();
             localStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(games));
+
+            // If game is rejected or approved, clear any active changes_requested draft
+            if (status === 'rejected' || status === 'approved') {
+                if (target.creatorUsername) {
+                    this.clearDraftGame(target.creatorUsername);
+                }
+            }
         }
 
         // 2. Update in Supabase

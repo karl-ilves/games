@@ -1026,9 +1026,9 @@ async function restoreDraftOrFeedbackGame() {
     if (profile?.username) {
         try {
             const feedbackGames = await yardService.getFeedbackGamesForCreator(profile.username);
+            const banner = document.getElementById('admin-feedback-banner');
             if (feedbackGames.length > 0) {
                 const fbGame = feedbackGames[0];
-                const banner = document.getElementById('admin-feedback-banner');
                 const fbTitle = document.getElementById('feedback-banner-title');
                 const fbText = document.getElementById('feedback-banner-text');
 
@@ -1042,10 +1042,15 @@ async function restoreDraftOrFeedbackGame() {
                     loadSceneFromData(fbGame.sceneData);
                     hasRestored = true;
                 }
+            } else {
+                if (banner) banner.style.display = 'none';
             }
         } catch (e) {
             console.warn('Could not check feedback games:', e);
         }
+    } else {
+        const banner = document.getElementById('admin-feedback-banner');
+        if (banner) banner.style.display = 'none';
     }
 
     // 2. If no feedback game, restore local auto-saved draft

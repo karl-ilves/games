@@ -275,14 +275,44 @@ try {
             throw new Error("Admin Requested Changes banner failed to display in Creator Studio!");
         }
 
-        // Now re-submit the game and approve it
-        console.log("   Re-submitting game after changes...");
+        // Creator re-submits the game after changes
+        console.log("   Creator re-submitting game after changes...");
+        await page.click('#btn-submit-review');
+        await new Promise(r => setTimeout(r, 800));
+
+        // Test Reject Workflow: If admin rejects a game, Request Changes banner MUST NOT appear!
+        console.log("   Admin Rejecting game -> Request Changes banner MUST disappear...");
+        await page.goto('http://localhost:4173/games/');
+        await new Promise(r => setTimeout(r, 1000));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; window.prompt = () => "Rejected"; });
+        await page.waitForSelector('#btn-open-admin-panel', { visible: true, timeout: 5000 });
+        await page.click('#btn-open-admin-panel');
+        await page.waitForSelector('.btn-admin-reject', { visible: true, timeout: 4000 });
+        await page.click('.btn-admin-reject');
+        await new Promise(r => setTimeout(r, 1000));
+        await page.click('#btn-close-admin-panel');
+        await new Promise(r => setTimeout(r, 500));
+
+        // Open Creator Studio -> Banner MUST BE HIDDEN (none)
+        console.log("   Checking Creator Studio after Reject -> Banner MUST be 'none'...");
+        await page.goto('http://localhost:4173/games/games/creator/index.html');
+        await new Promise(r => setTimeout(r, 1500));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+        const bannerAfterReject = await page.$eval('#admin-feedback-banner', el => window.getComputedStyle(el).display);
+        console.log("   Admin Feedback Banner visibility after Reject (Expected: none):", bannerAfterReject);
+        if (bannerAfterReject !== 'none') {
+            throw new Error("Request Changes banner was displayed for a rejected game!");
+        }
+
+        // Now create a fresh game, submit and approve it
+        console.log("   Submitting new game for approval...");
         await page.click('#btn-submit-review');
         await new Promise(r => setTimeout(r, 800));
 
         // Return to Hub and Approve
         await page.goto('http://localhost:4173/games/');
         await new Promise(r => setTimeout(r, 1000));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
         await page.waitForSelector('#btn-open-admin-panel', { visible: true, timeout: 5000 });
         await page.click('#btn-open-admin-panel');
         await page.waitForSelector('.btn-admin-approve', { visible: true, timeout: 4000 });
