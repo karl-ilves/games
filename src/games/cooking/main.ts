@@ -41,7 +41,6 @@ const INGREDIENTS: Record<string, IngredientDef> = {
     'raw_cheese': { id: 'raw_cheese', nameEt: 'Juustuplokk', nameEn: 'Cheese Block', icon: '🧀', category: 'raw', chopResult: 'cheese_slice' },
     'raw_lettuce': { id: 'raw_lettuce', nameEt: 'Salatipea', nameEn: 'Lettuce Head', icon: '🥬', category: 'raw', chopResult: 'lettuce_chopped' },
     'raw_onion': { id: 'raw_onion', nameEt: 'Sibul', nameEn: 'Raw Onion', icon: '🧅', category: 'raw', chopResult: 'onion_chopped' },
-    'raw_potato': { id: 'raw_potato', nameEt: 'Kartul', nameEn: 'Raw Potato', icon: '🥔', category: 'raw', chopResult: 'potato_chopped' },
     'raw_mushrooms': { id: 'raw_mushrooms', nameEt: 'Seened', nameEn: 'Mushrooms', icon: '🍄', category: 'raw', chopResult: 'mushrooms_chopped' },
     'raw_pepperoni': { id: 'raw_pepperoni', nameEt: 'Pepperoni vorst', nameEn: 'Pepperoni Sausage', icon: '🍖', category: 'raw', chopResult: 'pepperoni_chopped' },
 
@@ -50,7 +49,6 @@ const INGREDIENTS: Record<string, IngredientDef> = {
     'cheese_slice': { id: 'cheese_slice', nameEt: 'Juustuviil', nameEn: 'Cheese Slice', icon: '🧀', category: 'chopped' },
     'lettuce_chopped': { id: 'lettuce_chopped', nameEt: 'Hakitud Salat', nameEn: 'Chopped Lettuce', icon: '🥗', category: 'chopped' },
     'onion_chopped': { id: 'onion_chopped', nameEt: 'Sibularõngad', nameEn: 'Onion Rings', icon: '🧅', category: 'chopped' },
-    'potato_chopped': { id: 'potato_chopped', nameEt: 'Friikartuliribad', nameEn: 'Potato Strips', icon: '🍟', category: 'chopped', cookResult: 'fried_crispy' },
     'mushrooms_chopped': { id: 'mushrooms_chopped', nameEt: 'Viilutatud Seened', nameEn: 'Sliced Mushrooms', icon: '🍄', category: 'chopped' },
     'pepperoni_chopped': { id: 'pepperoni_chopped', nameEt: 'Pepperoni Viilud', nameEn: 'Pepperoni Slices', icon: '🍕', category: 'chopped' },
 
@@ -63,7 +61,6 @@ const INGREDIENTS: Record<string, IngredientDef> = {
     'cooked_patty': { id: 'cooked_patty', nameEt: 'Praetud Pihv', nameEn: 'Grilled Patty', icon: '🍔', category: 'cooked' },
     'cooked_steak': { id: 'cooked_steak', nameEt: 'Mahlane Steak', nameEn: 'Juicy Steak', icon: '🥩', category: 'cooked' },
     'boiled_pasta': { id: 'boiled_pasta', nameEt: 'Keedetud Pasta', nameEn: 'Boiled Pasta', icon: '🍝', category: 'cooked' },
-    'fried_crispy': { id: 'fried_crispy', nameEt: 'Krõbedad Friikad', nameEn: 'Crispy Fries', icon: '🍟', category: 'cooked' },
     'baked_in_oven': { id: 'baked_in_oven', nameEt: 'Ahjus Küpsetatud', nameEn: 'Baked in Oven', icon: '🔥', category: 'cooked' },
 };
 
@@ -97,16 +94,6 @@ const RECIPES = [
         yardReward: 35,
         scoreReward: 350,
         patience: 100
-    },
-    {
-        key: 'fries',
-        title: 'Gourmet Friikartulid',
-        titleEn: 'Gourmet French Fries',
-        icon: '🍟',
-        ingredients: ['fried_crispy', 'salt_sauce'],
-        yardReward: 15,
-        scoreReward: 150,
-        patience: 70
     },
     {
         key: 'steak_deluxe',
@@ -160,7 +147,7 @@ class CookingGame {
         { id: 1, nameEt: 'Pann 2 (Grill)', nameEn: 'Pan 2 (Grill)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' },
         { id: 2, nameEt: 'Pann 3 (Grill)', nameEn: 'Pan 3 (Grill)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' },
         { id: 3, nameEt: 'Pott 1 (Keetmine)', nameEn: 'Pot 1 (Boiling)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' },
-        { id: 4, nameEt: 'Fritüür 1 (Krõbedad Friikad)', nameEn: 'Fryer 1 (Crispy Fries)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' }
+        { id: 4, nameEt: 'Pann 4 (Grill)', nameEn: 'Pan 4 (Grill)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' }
     ];
 
     // Oven state
@@ -907,11 +894,7 @@ class CookingGame {
             if (raw && raw.chopResult) {
                 this.addToPlate(raw.chopResult);
                 const resName = this.getName(raw.chopResult);
-                if (raw.chopResult === 'potato_chopped') {
-                    this.showScorePopup(this.isEt ? `🥔 Toored kartulid hakitud ja taldrikul! Nüüd mine pliidile ja friti need krõbedaks! 🔥` : `🥔 Raw potatoes chopped on plate! Now go to stove and fry them crispy! 🔥`);
-                } else {
-                    this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} viilutatud ja pandud otse taldrikule! 🔪✨` : `🍽️ +1 ${resName} sliced and added to plate! 🔪✨`);
-                }
+                this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} viilutatud ja pandud otse taldrikule! 🔪✨` : `🍽️ +1 ${resName} sliced and added to plate! 🔪✨`);
             }
             this.currentChoppingRaw = null;
             this.choppingClicks = 0;
@@ -942,9 +925,6 @@ class CookingGame {
                         </button>
                         <button class="btn-action btn-add-pan" onclick="window.cookingGame.putOnPan(${pan.id}, 'raw_pasta')" data-pan="${pan.id}" data-item="raw_pasta" style="background: linear-gradient(135deg, #2980b9, #3498db); border-color: #74b9ff; font-size: 0.8rem; padding: 7px 10px; font-weight: 800; cursor: pointer;">
                             🍝 ${isEt ? 'Keeda Pasta' : 'Boil Pasta'} (💧)
-                        </button>
-                        <button class="btn-action btn-add-pan" onclick="window.cookingGame.putOnPan(${pan.id}, 'potato_chopped')" data-pan="${pan.id}" data-item="potato_chopped" style="background: linear-gradient(135deg, #f1c40f, #f39c12); border-color: #ffeaa7; color: #2d3436; font-size: 0.8rem; padding: 7px 10px; font-weight: 900; cursor: pointer;">
-                            🍟 ${isEt ? 'Friti Friikad' : 'Fry Fries'} (🔥)
                         </button>
                     </div>
                 </div>
@@ -992,26 +972,6 @@ class CookingGame {
     public putOnPan(panId: number, rawId: string) {
         const pan = this.pans[panId];
         if (!pan || pan.holding) return;
-
-        // Kontroll: Friikartulite frittimiseks peab kartul olema enne lõikelaual hakitud!
-        if (rawId === 'potato_chopped') {
-            const hasChoppedPotato = this.currentPlate.includes('potato_chopped');
-            if (!hasChoppedPotato) {
-                kitchenAudio.playBurn();
-                this.showScorePopup(this.isEt ? '⚠️ Haki enne kartulid lõikelaual! 🔪🥔' : '⚠️ Chop potatoes on cutting board first! 🔪🥔');
-                this.switchToStation('cutting');
-                this.startChopping('potato');
-                return;
-            } else {
-                // Eemalda toored hakitud kartulid taldrikult, sest need lähevad nüüd fritüüri/pannile
-                const idx = this.currentPlate.indexOf('potato_chopped');
-                if (idx !== -1) {
-                    this.currentPlate.splice(idx, 1);
-                    this.renderPlateUI();
-                    this.update3DPlateModel();
-                }
-            }
-        }
 
         pan.holding = rawId;
         pan.progress = 0;
