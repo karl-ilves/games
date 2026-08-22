@@ -329,35 +329,46 @@ export async function initAuth() {
                     return;
                 }
 
-                // If Supabase gave "Email not confirmed", check username and allow login
-                if (error && error.message.toLowerCase().includes('not confirmed')) {
-                    const localProfiles = getLocalProfiles();
-                    const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
-                    if (matched && matched.username.toLowerCase() !== username.toLowerCase()) {
-                        return showMsg('This username does not exist!', 'error');
+                if (error) {
+                    // Ignore "Email not confirmed" if we want to allow login without confirmation
+                    if (error.message.toLowerCase().includes('not confirmed')) {
+                        const localProfiles = getLocalProfiles();
+                        const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
+                        if (matched && matched.username.toLowerCase() !== username.toLowerCase()) {
+                            return showMsg('This username does not exist!', 'error');
+                        }
+
+                        const profile: UserProfile = {
+                            id: matched?.id || 'confirmed_' + Date.now(),
+                            username: username,
+                            email: email,
+                            displayName: `@${username}`,
+                            isAdmin: false
+                        };
+                        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                        saveLocalProfile(profile);
+                        await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                        restoreUserGameProgress(profile);
+
+                        showMsg(`Welcome back, ${profile.displayName}!`, 'success');
+                        if (emailInput) emailInput.value = '';
+                        if (usernameInput) usernameInput.value = '';
+                        if (passwordInput) passwordInput.value = '';
+                        updateAuthDisplay(profile);
+                        return;
                     }
-
-                    const profile: UserProfile = {
-                        id: matched?.id || 'confirmed_' + Date.now(),
-                        username: username,
-                        email: email,
-                        displayName: `@${username}`,
-                        isAdmin: false
-                    };
-                    localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
-                    saveLocalProfile(profile);
-                    await yardService.onUserLogin(profile.id, profile.username, profile.email);
-                    restoreUserGameProgress(profile);
-
-                    showMsg(`Welcome back, ${profile.displayName}!`, 'success');
-                    if (emailInput) emailInput.value = '';
-                    if (usernameInput) usernameInput.value = '';
-                    if (passwordInput) passwordInput.value = '';
-                    updateAuthDisplay(profile);
-                    return;
+                    
+                    // If it is a network error, maybe fallback. But if it's invalid credentials, block immediately!
+                    if (error.message === 'Invalid login credentials') {
+                        return showMsg('Incorrect password or email!', 'error');
+                    }
+                    
+                    if (error.message !== 'Failed to fetch') {
+                        return showMsg(error.message, 'error');
+                    }
                 }
 
-                // Fallback login for locally registered profiles
+                // Fallback login for locally registered profiles ONLY if network error (Failed to fetch)
                 const localProfiles = getLocalProfiles();
                 const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
 
@@ -381,9 +392,9 @@ export async function initAuth() {
                 if (!usernameExistsAnywhere) {
                     return showMsg('This username does not exist!', 'error');
                 }
-
+                
                 if (error) {
-                    return showMsg(error.message === 'Invalid login credentials' ? 'Incorrect password or email!' : error.message, 'error');
+                    return showMsg(error.message, 'error');
                 }
             } else {
                 // Offline fallback
