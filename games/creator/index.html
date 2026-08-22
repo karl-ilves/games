@@ -345,11 +345,17 @@
 
         <div class="studio-actions">
             <span id="draft-status-indicator" style="font-size: 0.8rem; color: #2ecc71; font-weight: 600;"></span>
+            <button id="btn-open-my-games" class="btn-studio" style="background: rgba(0, 242, 254, 0.2); border-color: #00f2fe; color: #00f2fe;">
+                <span>📂</span> <span>My Games</span>
+            </button>
+            <button id="btn-new-game" class="btn-studio" style="background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71;">
+                <span>➕</span> <span>New</span>
+            </button>
             <button id="btn-toggle-ai" class="btn-studio" style="background: linear-gradient(135deg, #8e44ad, #9b59b6); border-color: #e056fd; color: white; box-shadow: 0 0 15px rgba(155, 89, 182, 0.4);">
                 <span>🤖</span> <span>AI Assistant</span>
             </button>
             <button id="btn-save-draft" class="btn-studio" style="background: rgba(0, 242, 254, 0.15); border-color: rgba(0, 242, 254, 0.4); color: #00f2fe;">
-                <span>💾</span> <span>Save Draft</span>
+                <span>💾</span> <span>Save Game</span>
             </button>
             <button id="btn-toggle-play-test" class="btn-studio btn-play-test">
                 <span>▶️</span> <span>Play Test Mode</span>
@@ -555,6 +561,32 @@
             <button id="btn-ai-submit" style="background: linear-gradient(135deg, #8e44ad, #a855f7); border: none; color: white; font-weight: bold; border-radius: 8px; padding: 8px 14px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                 <span>✨</span> Loo
             </button>
+        </div>
+    </div>
+
+    <!-- My Saved Games Modal -->
+    <div id="my-games-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 200; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #141b24; border: 2px solid #00f2fe; border-radius: 16px; width: 100%; max-width: 650px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.9);">
+            <!-- Header -->
+            <div style="padding: 16px 20px; background: #1a2330; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 1.2rem; color: #00f2fe; display: flex; align-items: center; gap: 8px;">
+                    <span>📂</span> <span>My Saved Games / Minu Mängud</span>
+                </div>
+                <button id="btn-close-my-games" style="background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;">✕</button>
+            </div>
+            <!-- Body List -->
+            <div id="my-games-list-container" style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; flex: 1;">
+                <!-- Populated dynamically -->
+            </div>
+            <!-- Footer -->
+            <div style="padding: 12px 20px; background: #1a2330; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <button id="btn-modal-new-game" class="btn-studio" style="background: #2ecc71; border-color: #27ae60; color: white;">
+                    <span>➕</span> <span>Start New Empty Game</span>
+                </button>
+                <button id="btn-modal-close-bottom" class="btn-studio" style="background: #34495e; color: white;">
+                    Close
+                </button>
+            </div>
         </div>
     </div>
 

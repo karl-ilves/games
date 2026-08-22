@@ -765,6 +765,68 @@ class YardService {
         return null;
     }
 
+    // --- Saved Games List per User ---
+    public getUserSavedGames(username?: string | null): any[] {
+        if (!username) {
+            try {
+                const raw = localStorage.getItem('playard_user_games_global');
+                if (raw) return JSON.parse(raw);
+            } catch (e) {}
+            return [];
+        }
+        try {
+            const raw = localStorage.getItem(`playard_user_games_${username.toLowerCase()}`);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [];
+    }
+
+    public saveUserGame(username: string | null, gameData: any) {
+        if (!gameData) return;
+        this.saveDraftGame(username, gameData);
+
+        const list = this.getUserSavedGames(username);
+        const gameTitle = gameData.title?.trim() || 'My 3D Game';
+        const idx = list.findIndex(g => g.title?.toLowerCase() === gameTitle.toLowerCase() || (gameData.id && g.id === gameData.id));
+        const savedEntry = {
+            id: gameData.id || 'game_saved_' + Date.now(),
+            title: gameTitle,
+            category: gameData.category || 'Adventure',
+            description: gameData.description || '',
+            objects: gameData.objects || [],
+            objectCount: gameData.objects?.length || 0,
+            updatedAt: Date.now()
+        };
+
+        if (idx >= 0) {
+            list[idx] = savedEntry;
+        } else {
+            list.unshift(savedEntry);
+        }
+
+        try {
+            const raw = JSON.stringify(list);
+            localStorage.setItem('playard_user_games_global', raw);
+            if (username) {
+                localStorage.setItem(`playard_user_games_${username.toLowerCase()}`, raw);
+            }
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    public deleteUserSavedGame(username: string | null, gameId: string) {
+        let list = this.getUserSavedGames(username);
+        list = list.filter(g => g.id !== gameId);
+        try {
+            const raw = JSON.stringify(list);
+            localStorage.setItem('playard_user_games_global', raw);
+            if (username) {
+                localStorage.setItem(`playard_user_games_${username.toLowerCase()}`, raw);
+            }
+        } catch (e) {}
+    }
+
     public clearDraftGame(username?: string | null) {
         try {
             localStorage.removeItem('playard_draft_game_global');

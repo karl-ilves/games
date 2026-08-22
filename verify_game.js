@@ -210,6 +210,20 @@ try {
             }
             await page.click('#btn-close-ai');
 
+            // Test Save Game Button & My Games Modal
+            await page.click('#btn-save-draft');
+            await new Promise(r => setTimeout(r, 400));
+            console.log("   Successfully clicked 'Save Game' button!");
+
+            await page.click('#btn-open-my-games');
+            await new Promise(r => setTimeout(r, 400));
+            const myGamesModalVisible = await page.$eval('#my-games-modal', el => window.getComputedStyle(el).display);
+            console.log("   My Games Modal visibility:", myGamesModalVisible);
+            if (myGamesModalVisible !== 'flex') {
+                throw new Error("My Games modal failed to open!");
+            }
+            await page.click('#btn-close-my-games');
+
             // Test Studio Camera View Navigation Buttons & Keyboard Pan (Edit Mode)
             await page.click('#cam-btn-fwd');
             await page.click('#cam-btn-zoom-in');

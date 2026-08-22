@@ -422,15 +422,31 @@ export function serializeCurrentScene() {
 export function autoSaveDraft() {
     const profile = getCurrentUserProfile();
     const sceneData = serializeCurrentScene();
-    yardService.saveDraftGame(profile?.username ?? null, sceneData);
+    yardService.saveUserGame(profile?.username ?? null, sceneData);
 
     const indicator = document.getElementById('draft-status-indicator');
     if (indicator) {
-        indicator.innerText = '💾 Draft Saved';
+        indicator.innerText = `💾 Saved: ${sceneData.title}`;
         indicator.style.opacity = '1';
         setTimeout(() => {
             if (indicator) indicator.style.opacity = '0.7';
         }, 2000);
+    }
+}
+
+export function saveCurrentGame(showAlert = true) {
+    const profile = getCurrentUserProfile();
+    const sceneData = serializeCurrentScene();
+    yardService.saveUserGame(profile?.username ?? null, sceneData);
+
+    const indicator = document.getElementById('draft-status-indicator');
+    if (indicator) {
+        indicator.innerText = `💾 Saved: ${sceneData.title}`;
+        indicator.style.opacity = '1';
+    }
+
+    if (showAlert) {
+        alert(`✅ Mäng "${sceneData.title}" on edukalt salvestatud! (${sceneData.objects.length} objekti)`);
     }
 }
 
@@ -791,10 +807,39 @@ function setupStudioEvents() {
         });
     }
 
-    // Save Draft Button
+    // Save Game Button
     document.getElementById('btn-save-draft')?.addEventListener('click', () => {
-        autoSaveDraft();
-        alert('💾 Game draft saved successfully!');
+        saveCurrentGame(true);
+    });
+
+    // My Games Modal Open/Close Buttons
+    document.getElementById('btn-open-my-games')?.addEventListener('click', () => {
+        const modal = document.getElementById('my-games-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            renderMySavedGamesModal();
+        }
+    });
+
+    document.getElementById('btn-close-my-games')?.addEventListener('click', () => {
+        const modal = document.getElementById('my-games-modal');
+        if (modal) modal.style.display = 'none';
+    });
+
+    document.getElementById('btn-modal-close-bottom')?.addEventListener('click', () => {
+        const modal = document.getElementById('my-games-modal');
+        if (modal) modal.style.display = 'none';
+    });
+
+    // New Game Buttons
+    document.getElementById('btn-new-game')?.addEventListener('click', () => {
+        startNewEmptyGame();
+    });
+
+    document.getElementById('btn-modal-new-game')?.addEventListener('click', () => {
+        const modal = document.getElementById('my-games-modal');
+        if (modal) modal.style.display = 'none';
+        startNewEmptyGame();
     });
 
     // Dismiss Feedback Banner Button
@@ -911,7 +956,7 @@ function setupStudioEvents() {
             (submitBtn as HTMLButtonElement).disabled = false;
 
             if (res.success) {
-                yardService.clearDraftGame(profile.username);
+                yardService.saveUserGame(profile.username, sceneData);
                 alert(`✅ ${res.message}`);
                 if (confirm('Would you like to return to the Hub?')) {
                     window.location.href = '../../index.html';
@@ -1016,6 +1061,88 @@ function setupInspectorEvents() {
             }
         });
     }
+}
+
+export function startNewEmptyGame() {
+    if (placedObjects.length > 0 && !confirm('Alustada uut tühja mängu? Pooleli olev mäng jääb alles "My Games" alla.')) {
+        return;
+    }
+    placedObjects.forEach(p => scene.remove(p.mesh));
+    placedObjects = [];
+    selectObject(null);
+
+    const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
+    const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
+    const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
+
+    if (titleInput) titleInput.value = 'My New 3D Adventure';
+    if (catSelect) catSelect.value = 'Adventure';
+    if (descInput) descInput.value = 'A brand new 3D world created in Playard!';
+
+    autoSaveDraft();
+    alert('✨ Uus tühi mäng loodud! Vali esemeid vasakult kataloogist või küsi AI Assistendilt abi!');
+}
+
+export function renderMySavedGamesModal() {
+    const profile = getCurrentUserProfile();
+    const listContainer = document.getElementById('my-games-list-container');
+    if (!listContainer) return;
+
+    const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
+
+    if (savedGames.length === 0) {
+        listContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; color: #a4b0be;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📦</div>
+                <h4 style="color: #fff; margin-bottom: 6px;">Sul pole veel salvestatud mänge</h4>
+                <p style="font-size: 0.85rem;">Ehita oma esimene mäng või kasuta AI assistenti ning vajuta "💾 Save Game"!</p>
+            </div>
+        `;
+        return;
+    }
+
+    listContainer.innerHTML = '';
+    savedGames.forEach((game: any) => {
+        const item = document.createElement('div');
+        item.style.cssText = 'background: #1e293b; border: 1.5px solid rgba(0,242,254,0.3); border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;';
+
+        const objCount = game.objects?.length || game.objectCount || 0;
+        const dateStr = game.updatedAt ? new Date(game.updatedAt).toLocaleString() : 'Recently';
+
+        item.innerHTML = `
+            <div>
+                <h4 style="margin: 0 0 4px 0; color: #00f2fe; font-size: 1.1rem;">🎮 ${game.title}</h4>
+                <div style="font-size: 0.85rem; color: #94a3b8;">
+                    Kategooria: <strong style="color: #ffd32a;">${game.category}</strong> | Objekte: <strong>${objCount} tk</strong> | ${dateStr}
+                </div>
+                <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">${game.description || 'Kirjeldus puudub'}</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-load-game" style="padding: 8px 14px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">
+                    📂 Laadi mäng
+                </button>
+                <button class="btn-delete-saved-game" style="padding: 8px 12px; background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">
+                    🗑️
+                </button>
+            </div>
+        `;
+
+        item.querySelector('.btn-load-game')?.addEventListener('click', () => {
+            loadSceneFromData(game);
+            const modal = document.getElementById('my-games-modal');
+            if (modal) modal.style.display = 'none';
+            alert(`✅ Mäng "${game.title}" on edukalt stseeni laaditud!`);
+        });
+
+        item.querySelector('.btn-delete-saved-game')?.addEventListener('click', () => {
+            if (confirm(`Kas soovid kindlasti mängu "${game.title}" kustutada?`)) {
+                yardService.deleteUserSavedGame(profile?.username ?? null, game.id);
+                renderMySavedGamesModal();
+            }
+        });
+
+        listContainer.appendChild(item);
+    });
 }
 
 async function restoreDraftOrFeedbackGame() {
