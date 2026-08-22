@@ -30,10 +30,8 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
     if (btnOpenStreak) {
         btnOpenStreak.style.display = isAdmin ? 'none' : 'flex';
     }
-    const cookingGameCard = document.getElementById('card-cooking-game');
-    if (cookingGameCard) {
-        cookingGameCard.style.display = isAdmin ? 'flex' : 'none';
-    }
+    // Kokkamise mängu kaart on nüüd alati avalehel nähtav!
+
 
     // Switch language: Estonian for admin 1karl.ilves@gmail.com, English for others!
     setLanguage(isAdmin ? 'et' : 'en');

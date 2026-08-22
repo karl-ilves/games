@@ -55,11 +55,11 @@ try {
         const startYards = await page.$eval('#header-yard-val', el => el.textContent);
         console.log("   Initial Guest Yard Balance (Expected: 0):", startYards);
 
-        // Check Cooking Game visibility for guest (Expected: none)
-        const guestCookingDisplay = await page.$eval('#card-cooking-game', el => window.getComputedStyle(el).display);
-        console.log("   Guest Cooking Game Card visibility (Expected: none):", guestCookingDisplay);
-        if (guestCookingDisplay !== 'none') {
-            throw new Error("Cooking game card should be hidden for guests!");
+        // Check Cooking Game visibility for guest (Expected: flex)
+        const cookingCardVisible = await page.$eval('#card-cooking-game', el => window.getComputedStyle(el).display);
+        console.log(`   Guest Cooking Game Card visibility (Expected: flex): ${cookingCardVisible}`);
+        if (cookingCardVisible !== 'flex') {
+            throw new Error("Cooking game card must be visible to everyone on Hub!");
         }
 
         // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 10,000 Objects)
