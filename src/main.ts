@@ -285,8 +285,9 @@ function renderAdminYardLogs() {
 
     logsContainer.innerHTML = logs.map(l => {
         const time = new Date(l.timestamp).toLocaleString();
+        const adminDisplay = (l.adminEmail === '1karl.ilves@gmail.com' || !l.adminEmail) ? 'Admin✅' : l.adminEmail;
         return `<div style="margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 3px;">
-            [${time}] <strong style="color: #ffd32a;">+${l.amount} Y</strong> granted to <strong style="color: #00f2fe;">@${l.targetUsername}</strong> (Reason: ${l.reason || 'N/A'}) by ${l.adminEmail}
+            [${time}] <strong style="color: #ffd32a;">+${l.amount} Y</strong> granted to <strong style="color: #00f2fe;">@${l.targetUsername}</strong> (Reason: ${l.reason || 'N/A'}) by ${adminDisplay}
         </div>`;
     }).join('');
 }

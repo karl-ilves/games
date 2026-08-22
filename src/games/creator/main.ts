@@ -1160,7 +1160,7 @@ async function restoreDraftOrFeedbackGame() {
                 const fbText = document.getElementById('feedback-banner-text');
 
                 if (banner && fbTitle && fbText) {
-                    fbTitle.innerText = `Admin (1karl.ilves@gmail.com) Requested Changes for "${fbGame.title}":`;
+                    fbTitle.innerText = `Admin✅ Requested Changes for "${fbGame.title}":`;
                     fbText.innerText = `"${fbGame.feedback}"`;
                     banner.style.display = 'flex';
                 }

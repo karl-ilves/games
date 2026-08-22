@@ -717,7 +717,7 @@ class YardService {
 
         return {
             success: true,
-            message: `Game "${game.title}" submitted for review! The admin (1karl.ilves@gmail.com) will review it soon.`,
+            message: `Game "${game.title}" submitted for review! Admin✅ will review it soon.`,
             gameId
         };
     }

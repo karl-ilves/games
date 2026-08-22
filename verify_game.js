@@ -293,12 +293,17 @@ try {
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
         const feedbackBannerVisible = await page.$eval('#admin-feedback-banner', el => window.getComputedStyle(el).display);
+        const feedbackTitle = await page.$eval('#feedback-banner-title', el => el.textContent);
         const feedbackText = await page.$eval('#feedback-banner-text', el => el.textContent);
         console.log("   Admin Feedback Banner visibility in Creator Studio:", feedbackBannerVisible);
+        console.log("   Admin Feedback Banner title:", feedbackTitle);
         console.log("   Admin Feedback message:", feedbackText);
 
         if (feedbackBannerVisible === 'none' || !feedbackText.includes('more trees and obstacles')) {
             throw new Error("Admin Requested Changes banner failed to display in Creator Studio!");
+        }
+        if (!feedbackTitle.includes('Admin✅') || feedbackTitle.includes('1karl.ilves@gmail.com')) {
+            throw new Error("Feedback banner title still contains email instead of Admin✅!");
         }
 
         // Creator re-submits the game after changes

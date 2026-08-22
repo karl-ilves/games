@@ -147,8 +147,8 @@ export function applyLocalization() {
 
     const adminPanelSub = document.querySelector('#modal-admin-panel > .modal-card > p');
     if (adminPanelSub) adminPanelSub.innerHTML = isEt
-        ? 'Sisse logitud kui <strong>Admin✅ (1karl.ilves@gmail.com)</strong>. Vaata üle kasutajate mänge ja jaga Jarde.'
-        : 'Logged in as <strong>Admin✅ (1karl.ilves@gmail.com)</strong>. Review creator games & grant Yards.';
+        ? 'Sisse logitud kui <strong>Admin✅</strong>. Vaata üle kasutajate mänge ja jaga Jarde.'
+        : 'Logged in as <strong>Admin✅</strong>. Review creator games & grant Yards.';
 
     const tabReview = document.getElementById('tab-btn-review-games');
     if (tabReview) tabReview.textContent = isEt ? '🎮 Ülevaatust ootavad mängud' : '🎮 Games to Review';
