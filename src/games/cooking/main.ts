@@ -140,6 +140,7 @@ class CookingGame {
 
     // Game state
     private score: number = 0;
+    private streakPoints: number = 0;
     private combo: number = 1;
     private completedOrders: number = 0;
     private currentPlate: string[] = [];
@@ -249,14 +250,14 @@ class CookingGame {
         const backHub = document.querySelector('#btn-back-hub span:last-child');
         if (backHub) backHub.textContent = isEt ? 'Pealeht / Hub' : 'Back to Hub';
 
-        const hudScoreLabel = document.querySelector('.hud-stat-box:nth-child(1) span:first-child');
+        const hudScoreLabel = document.getElementById('hud-score-label');
         if (hudScoreLabel) hudScoreLabel.textContent = isEt ? '⭐ Punktid:' : '⭐ Score:';
 
-        const hudComboLabel = document.querySelector('.hud-stat-box:nth-child(2) span:first-child');
-        if (hudComboLabel) hudComboLabel.textContent = isEt ? '🔥 Kombo:' : '🔥 Combo:';
+        const hudStreakLabel = document.getElementById('hud-streak-label');
+        if (hudStreakLabel) hudStreakLabel.textContent = isEt ? '🔥 Seeria (300p = +50 Y):' : '🔥 Streak (300pts = +50 Y):';
 
-        const hudOrdersLabel = document.querySelector('.hud-stat-box:nth-child(3) span:first-child');
-        if (hudOrdersLabel) hudOrdersLabel.textContent = isEt ? '📦 Täidetud tellimused:' : '📦 Orders Completed:';
+        const hudOrdersLabel = document.getElementById('hud-orders-label');
+        if (hudOrdersLabel) hudOrdersLabel.textContent = isEt ? '📦 Tellimused:' : '📦 Orders:';
 
         const hudYardEarnBadge = document.querySelector('.hud-right .hud-stat-box span:last-child');
         if (hudYardEarnBadge) hudYardEarnBadge.textContent = isEt ? '💎 TEENI JARDE SIIN!' : '💎 EARN YARDS HERE!';
@@ -627,7 +628,7 @@ class CookingGame {
                     <div style="background: #242f3d; padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <strong style="color: #ffd32a; font-size: 1.1rem;">${r.icon} ${title}</strong>
-                            <span style="color: #00f2fe; font-weight: bold;">+${r.yardReward} YARDS</span>
+                            <span style="color: #00f2fe; font-weight: bold;">⭐ +30 PUNKTI (300p ➔ +50 Y)</span>
                         </div>
                         <div style="font-size: 0.85rem; color: #a4b0be; line-height: 1.4;">
                             ${this.isEt ? 'Vajalikud toiduained (mistahes järjekorras):' : 'Required ingredients (any order):'} <strong style="color: #d2dae2;">${ingNames}</strong>
@@ -1185,11 +1186,12 @@ class CookingGame {
             order.currentPatience -= 1;
 
             if (order.currentPatience <= 0) {
-                // Order expired / failed
+                // Order expired / failed - Streak resets!
                 this.activeOrders.splice(i, 1);
                 this.combo = 1;
+                this.streakPoints = 0;
                 this.updateScoreDisplay();
-                this.showScorePopup(this.isEt ? `❌ Klient lahkus!` : `❌ Customer left!`);
+                this.showScorePopup(this.isEt ? `⚠️ Tellimuse aeg sai otsa! Punktiseeria katkes (0/300 p).` : `⚠️ Order expired! Streak reset (0/300 pts).`);
                 kitchenAudio.playBurn();
                 needsRender = true;
             }
@@ -1247,7 +1249,7 @@ class CookingGame {
                     </div>
                     <div style="margin: 4px 0 8px 0;">
                         <span style="background: linear-gradient(135deg, #00f2fe, #2ecc71); color: #111; font-weight: 900; font-size: 0.78rem; padding: 3px 8px; border-radius: 8px; box-shadow: 0 0 8px rgba(0,242,254,0.4); display: inline-flex; align-items: center; gap: 4px;">
-                            💎 ${isEt ? 'TEENID' : 'EARN'}: +${order.yardReward} YARDS
+                            ⭐ ${isEt ? 'TEENID: +30 PUNKTI (300p ➔ +50 Y)' : 'EARN: +30 PTS (300p ➔ +50 Y)'}
                         </span>
                     </div>
                     <ul class="ticket-recipe-list">
@@ -1294,22 +1296,31 @@ class CookingGame {
             const matchedOrder = this.activeOrders[matchIndex];
             this.activeOrders.splice(matchIndex, 1);
 
-            // Calculate score and yards with combo
-            const finalScore = matchedOrder.scoreReward * this.combo;
-            const finalYards = matchedOrder.yardReward + (this.combo > 1 ? 5 : 0);
-
-            this.score += finalScore;
+            // Exactly 30 points per served dish
+            const pointsEarned = 30;
+            this.score += pointsEarned;
+            this.streakPoints += pointsEarned;
             this.completedOrders++;
-            this.combo = Math.min(5, this.combo + 1);
-
-            // Award Yards to User Profile
-            yardService.addYards(finalYards, `Master Chef 3D: ${this.getRecipeTitle(matchedOrder)}`);
 
             kitchenAudio.playBell();
             kitchenAudio.playSuccess();
-            kitchenAudio.playCoin();
 
-            this.showScorePopup(`🎉 +${finalScore} Pts | +${finalYards} YARDS! (${this.isEt ? 'Kombo' : 'Combo'} x${this.combo})`);
+            // Kui 300 punkti tuleb järjest kokku -> saab 50 Yardi (50 Y)!
+            if (this.streakPoints >= 300) {
+                const bonusYards = 50;
+                yardService.addYards(bonusYards, 'Master Chef 3D: 300 Punkti Seeria Boonus (+50 Y)');
+                kitchenAudio.playCoin();
+                this.showScorePopup(this.isEt 
+                    ? `🎉🏆 VÕIMAS! 300 PUNKTI TÄIS! SAID +50 YARDI (50 Y)! ⭐✨` 
+                    : `🎉🏆 AMAZING! 300 POINTS STREAK! +50 YARDS (50 Y) AWARDED! ⭐✨`
+                );
+                this.streakPoints = 0; // Nulli seeria järgmise 300 punkti jaoks
+            } else {
+                this.showScorePopup(this.isEt 
+                    ? `🎉 +30 Punkti! (Seeria: ${this.streakPoints}/300 p ➔ +50 Y)` 
+                    : `🎉 +30 Points! (Streak: ${this.streakPoints}/300 pts ➔ +50 Y)`
+                );
+            }
 
             // Clear plate
             this.currentPlate = [];
@@ -1336,11 +1347,11 @@ class CookingGame {
 
     private updateScoreDisplay() {
         const scoreEl = document.getElementById('hud-score');
-        const comboEl = document.getElementById('hud-combo');
+        const streakEl = document.getElementById('hud-streak');
         const countEl = document.getElementById('hud-orders-count');
 
         if (scoreEl) scoreEl.innerText = this.score.toLocaleString();
-        if (comboEl) comboEl.innerText = `x${this.combo}`;
+        if (streakEl) streakEl.innerText = `${this.streakPoints}/300`;
         if (countEl) countEl.innerText = this.completedOrders.toString();
     }
 
