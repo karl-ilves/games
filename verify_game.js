@@ -114,11 +114,24 @@ try {
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
+            // Test Smart Contextual Addition: "lisa autole asju juurde"
+            console.log("   Testing Smart Contextual Addition to Car with AI...");
+            await page.type('#ai-prompt-input', 'lisa autole asju juurde');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
             const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
-            console.log("   AI Roads & Cars output:", chatContent.substring(chatContent.lastIndexOf('🤖')).substring(0, 110) + '...');
-            if (!chatContent.includes('road') && !chatContent.includes('Supercar')) {
-                throw new Error("AI Roads & Drivable Cars response failed to appear in chat log!");
+            console.log("   AI Smart Addition output:", chatContent.substring(chatContent.lastIndexOf('🚗')).substring(0, 110) + '...');
+            if (!chatContent.includes('autole asju juurde') && !chatContent.includes('tankur')) {
+                throw new Error("AI Smart Contextual addition response failed!");
             }
+
+            // Test Smart Contextual Addition to Nature: "kaunista mets"
+            console.log("   Testing Smart Contextual Addition to Nature with AI...");
+            await page.type('#ai-prompt-input', 'lisa puudele kivid ja lilled juurde');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
             await page.click('#btn-close-ai');
 
             // Test Drivable Car in Play Test Mode

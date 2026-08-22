@@ -645,30 +645,6 @@ function selectObject(placed: PlacedObject | null) {
     if (triggerInput) {
         triggerInput.value = placed.trigger?.message || '';
     }
-
-    // Populate Portal Target dropdown with user's saved games
-    const portalSelect = document.getElementById('obj-portal-target') as HTMLSelectElement | null;
-    const portalTargetInfo = document.getElementById('portal-target-info');
-    if (portalSelect) {
-        const profile = getCurrentUserProfile();
-        const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
-
-        portalSelect.innerHTML = `<option value="">-- Select Target World --</option>` +
-            savedGames.map((g: any) => `<option value="${g.id}">🎮 ${g.title}</option>`).join('');
-
-        const currentTargetId = placed.portalTargetId || placed.trigger?.targetWorldId || '';
-        portalSelect.value = currentTargetId;
-
-        if (portalTargetInfo) {
-            if (currentTargetId) {
-                const targetGame = savedGames.find((g: any) => g.id === currentTargetId);
-                portalTargetInfo.style.display = 'block';
-                portalTargetInfo.innerText = `👉 Viib maailma: "${targetGame?.title || currentTargetId}"`;
-            } else {
-                portalTargetInfo.style.display = 'none';
-            }
-        }
-    }
 }
 
 // --- Render Catalog UI ---
@@ -1287,46 +1263,6 @@ function setupInspectorEvents() {
                     };
                 } else if (selectedObject.trigger?.type === 'touch') {
                     delete selectedObject.trigger;
-                }
-                autoSaveDraft();
-            }
-        });
-    }
-
-    const portalSelect = document.getElementById('obj-portal-target') as HTMLSelectElement | null;
-    const portalTargetInfo = document.getElementById('portal-target-info');
-    if (portalSelect) {
-        portalSelect.addEventListener('change', () => {
-            if (selectedObject) {
-                const targetId = portalSelect.value;
-                const profile = getCurrentUserProfile();
-                const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
-                const targetGame = savedGames.find((g: any) => g.id === targetId);
-
-                if (targetId && targetGame) {
-                    selectedObject.portalTargetId = targetId;
-                    selectedObject.portalTargetTitle = targetGame.title;
-                    selectedObject.trigger = {
-                        type: 'portal',
-                        targetWorldId: targetId,
-                        targetWorldTitle: targetGame.title,
-                        message: `🌀 Teleporteerumine maailma "${targetGame.title}"...`,
-                        title: '🌀 Dimensiooni Portaal',
-                        radius: 3.8
-                    };
-                    if (portalTargetInfo) {
-                        portalTargetInfo.style.display = 'block';
-                        portalTargetInfo.innerText = `👉 Viib maailma: "${targetGame.title}"`;
-                    }
-                } else {
-                    delete selectedObject.portalTargetId;
-                    delete selectedObject.portalTargetTitle;
-                    if (selectedObject.trigger?.type === 'portal') {
-                        delete selectedObject.trigger;
-                    }
-                    if (portalTargetInfo) {
-                        portalTargetInfo.style.display = 'none';
-                    }
                 }
                 autoSaveDraft();
             }
