@@ -539,10 +539,10 @@
             <!-- Logic & Script Trigger Settings -->
             <div style="margin-top: 12px; background: rgba(0,0,0,0.35); padding: 10px; border-radius: 10px; border: 1px solid rgba(46,204,113,0.4);">
                 <div style="font-size: 0.8rem; color: #2ecc71; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                    <span>📜</span> <span>Mänguloogika / Tekst läbi kõndimisel</span>
+                    <span>📜</span> <span>Game Logic / Text on Walkthrough</span>
                 </div>
                 <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px;">
-                    Kui mängija kõnnib objektist läbi või lähedale, kuvatakse ekraanil:
+                    When player walks near the object, display:
                 </div>
                 <input type="text" id="obj-trigger-text" placeholder="nt: Leidsid võlumetsa saladuse!" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #0f172a; border: 1.5px solid #2ecc71; border-radius: 6px; color: #fff; font-size: 0.85rem;">
             </div>
@@ -599,7 +599,7 @@
         <!-- Chat / Response Body -->
         <div id="ai-chat-log" style="padding: 14px; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
             <div style="background: rgba(255,255,255,0.06); border-radius: 10px; padding: 10px; border-left: 3px solid #a855f7; color: #e2e8f0; line-height: 1.4;">
-                👋 <strong>Tere! Olen sinu AI Mänguassistent.</strong><br>
+                👋 <strong>Hello! I am your AI Game Assistant.</strong><br>
                 Kirjuta mulle, mida soovid ehitada või palu mul olemasolevatele asjadele detaile juurde lisada! 🚀
             </div>
         </div>
@@ -608,16 +608,16 @@
         <div style="padding: 8px 14px; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 6px; flex-wrap: wrap;">
             <button class="ai-quick-btn" data-prompt="Lisa autole autoteed, koonused ja tänavalambid juurde" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🚗 Lisa autole asju juurde</button>
             <button class="ai-quick-btn" data-prompt="Lisa puudele kivid, lilled ja metsarada juurde" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌲 Kaunista mets</button>
-            <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
-            <button class="ai-quick-btn" data-prompt="Loo suurlinn pilvelõhkujate ja autodega" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏙️ Suurlinn</button>
-            <button class="ai-quick-btn" data-prompt="Loo futuristlik kosmosebaas ja laevad" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🛸 Kosmos</button>
+            <button class="ai-quick-btn" data-prompt="Create an exciting parkour track with obstacles" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+            <button class="ai-quick-btn" data-prompt="Create a modern city with skyscrapers and cars" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏙️ City</button>
+            <button class="ai-quick-btn" data-prompt="Create a futuristic space base and ships" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🛸 Space</button>
         </div>
 
         <!-- Input Box -->
         <div style="padding: 10px 14px; background: rgba(10, 14, 20, 0.9); display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
             <input type="text" id="ai-prompt-input" placeholder="Kirjuta käsk (nt 'Lisa 5 autot ja 10 puud')..." style="flex: 1; background: #1a222d; border: 1px solid rgba(168, 85, 247, 0.5); border-radius: 8px; padding: 8px 12px; color: white; font-size: 0.85rem; outline: none;">
             <button id="btn-ai-submit" style="background: linear-gradient(135deg, #8e44ad, #a855f7); border: none; color: white; font-weight: bold; border-radius: 8px; padding: 8px 14px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                <span>✨</span> Loo
+                <span>✨</span> Create
             </button>
         </div>
     </div>
@@ -628,7 +628,7 @@
             <!-- Header -->
             <div style="padding: 16px 20px; background: #1a2330; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
                 <div style="font-weight: 800; font-size: 1.2rem; color: #00f2fe; display: flex; align-items: center; gap: 8px;">
-                    <span>📂</span> <span>My Saved Games / Minu Mängud</span>
+                    <span>📂</span> <span>My Saved Games</span>
                 </div>
                 <button id="btn-close-my-games" style="background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;">✕</button>
             </div>

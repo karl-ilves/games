@@ -844,7 +844,7 @@ export function openDimensionTravelModal() {
                     modal.style.display = 'none';
                     if (currentVehicle) exitVehicle();
                     loadSceneFromData(targetGame);
-                    alert(`🌀 Rändasid edukalt teise salvestatud maailma "${targetGame.title}"!`);
+                    alert(`🌀 Successfully traveled to another saved world "${targetGame.title}"!`);
                 }
             });
         });
