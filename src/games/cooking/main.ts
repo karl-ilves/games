@@ -147,9 +147,6 @@ class CookingGame {
     private maxConcurrentOrders: number = 3;
     private orderIdCounter: number = 1;
 
-    // Prepared stock storage (items chopped on board or fried on stove)
-    private preparedStock: Record<string, number> = {};
-
     // Chopping state
     private currentChoppingRaw: string | null = null;
     private choppingClicks: number = 0;
@@ -587,34 +584,17 @@ class CookingGame {
         const yardIcon = document.getElementById('cooking-yard-icon');
         if (yardIcon) yardIcon.innerHTML = yardService.renderYardSvg(20);
 
-        // Pantry Tray items - Initial render
+        // Pantry Tray items - Only direct pantry items (buns, dough, sauces)
         const pantryContainer = document.getElementById('pantry-items-grid');
         if (pantryContainer) {
             const isEt = this.isEt;
             pantryContainer.innerHTML = `
                 <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
-                    <!-- 1. Cooked & Baked Items (Ready to add to plate) -->
-                    <div style="background: rgba(255, 71, 87, 0.12); border: 1.5px solid rgba(255, 71, 87, 0.4); border-radius: 12px; padding: 10px 14px;">
-                        <div class="category-header" style="color: #ff6b81;">
-                            <span>🔥</span> <span>${isEt ? '1. PRAETUD & KÜPSETATUD TOIDUD (Prae jaos 🔥 Pliit või 🍕 Ahi, seejärel lisa siit taldrikule):' : '1. COOKED & BAKED ITEMS (Prepare in 🔥 Stove or 🍕 Oven, then add to plate here):'}</span>
+                    <div style="background: rgba(46, 213, 115, 0.12); border: 1.5px solid rgba(46, 213, 115, 0.4); border-radius: 12px; padding: 12px 16px;">
+                        <div class="category-header" style="color: #2ed573; font-size: 1rem; font-weight: 800; margin-bottom: 8px;">
+                            <span>🍞</span> <span>${isEt ? 'SAHVRI TOOTED & KASTMED (Klõpsa otse taldrikule lisamiseks):' : 'PANTRY BASES & SAUCES (Click to add directly to plate):'}</span>
                         </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-cooked"></div>
-                    </div>
-
-                    <!-- 2. Chopped & Sliced Ingredients (Ready to add to plate) -->
-                    <div style="background: rgba(87, 95, 207, 0.12); border: 1px solid rgba(87, 95, 207, 0.35); border-radius: 12px; padding: 10px 14px;">
-                        <div class="category-header" style="color: #70a1ff;">
-                            <span>🔪</span> <span>${isEt ? '2. HAKITUD & VIILUTATUD TOIDUAINED (Haki jaos 🔪 Lõikelaud, seejärel lisa siit taldrikule):' : '2. CHOPPED & SLICED INGREDIENTS (Chop in 🔪 Cutting Board, then add to plate here):'}</span>
-                        </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-chopped"></div>
-                    </div>
-
-                    <!-- 3. Base Pantry & Sauces (Ready to add to plate) -->
-                    <div style="background: rgba(46, 213, 115, 0.1); border: 1px solid rgba(46, 213, 115, 0.3); border-radius: 12px; padding: 10px 14px;">
-                        <div class="category-header" style="color: #2ed573;">
-                            <span>🍞</span> <span>${isEt ? '3. SAHVRI TOOTED & KASTMED (Piiramatu laovaru - klõpsa kohe taldrikule panekuks):' : '3. PANTRY ITEMS & SAUCES (Unlimited stock - click to add to plate directly):'}</span>
-                        </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-pantry"></div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="pantry-group-pantry"></div>
                     </div>
                 </div>
             `;
@@ -662,137 +642,25 @@ class CookingGame {
     }
 
     private renderPantryItems() {
-        const groupCooked = document.getElementById('pantry-group-cooked');
-        const groupChopped = document.getElementById('pantry-group-chopped');
         const groupPantry = document.getElementById('pantry-group-pantry');
+        if (!groupPantry) return;
 
-        if (!groupCooked || !groupChopped || !groupPantry) return;
-
-        groupCooked.innerHTML = '';
-        groupChopped.innerHTML = '';
         groupPantry.innerHTML = '';
-
         const isEt = this.isEt;
 
-        // Render Stock Quick Bars
-        const cookedStockList = Object.keys(this.preparedStock).filter(k => (this.preparedStock[k] || 0) > 0);
-        const stockHtml = cookedStockList.length === 0
-            ? `<div style="background: rgba(0,0,0,0.3); border: 1px dashed rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 12px; font-size: 0.8rem; color: #a4b0be; display: flex; justify-content: space-between; align-items: center;">
-                <span>📦 ${isEt ? 'Laovaru on tühi (Valmista toitu ja võta laovarusse või otse taldrikule)' : 'Stock is empty (Cook food and save to stock or directly to plate)'}</span>
-               </div>`
-            : `<div style="background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.35); border-radius: 8px; padding: 6px 12px; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                    <strong style="color: #00f2fe;">📦 ${isEt ? 'Sinu Valmis Toidud Laos:' : 'Your Prepared Stock:'}</strong>
-                    ${cookedStockList.map(id => {
-                        const ing = INGREDIENTS[id];
-                        return `<span style="background: #242f3d; padding: 3px 8px; border-radius: 5px; color: #ffd32a; font-weight: bold; border: 1px solid rgba(255,211,42,0.3);">${ing?.icon || '🥘'} ${this.getName(id)}: <strong style="color: #2ed573;">x${this.preparedStock[id]}</strong></span>`;
-                    }).join(' ')}
-                </div>
-                <button onclick="window.cookingGame.switchToStation('assembly')" style="padding: 4px 10px; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; border-radius: 5px; color: #111; font-weight: 800; cursor: pointer; font-size: 0.78rem;">
-                    🍽️ ${isEt ? 'Mine Taldrikule Lisama 👉' : 'Assemble on Plate 👉'}
-                </button>
-               </div>`;
-
-        const stoveStock = document.getElementById('stove-stock-bar');
-        if (stoveStock) stoveStock.innerHTML = stockHtml;
-        const cuttingStock = document.getElementById('cutting-stock-bar');
-        if (cuttingStock) cuttingStock.innerHTML = stockHtml;
-        const ovenStock = document.getElementById('oven-stock-bar');
-        if (ovenStock) ovenStock.innerHTML = stockHtml;
-
         Object.values(INGREDIENTS).forEach(ing => {
-            const ingName = this.getName(ing.id);
             if (ing.category === 'pantry' || ing.category === 'sauce') {
-                // Unlimited pantry items
+                const ingName = this.getName(ing.id);
                 const btn = document.createElement('button');
                 btn.className = 'ingredient-btn';
                 btn.setAttribute('data-id', ing.id);
                 btn.innerHTML = `
                     <span class="ingredient-icon">${ing.icon}</span>
                     <span class="ingredient-label">${ingName}</span>
-                    <span style="font-size: 0.65rem; color: #2ed573; font-weight: bold;">${isEt ? '∞ Sahvris' : '∞ In Pantry'}</span>
+                    <span style="font-size: 0.7rem; color: #2ed573; font-weight: bold;">${isEt ? '+ Lisa taldrikule' : '+ Add to plate'}</span>
                 `;
                 btn.addEventListener('click', () => this.addToPlate(ing.id));
                 groupPantry.appendChild(btn);
-            } else if (ing.category === 'chopped') {
-                // Chopped items stock
-                const count = this.preparedStock[ing.id] || 0;
-                const btn = document.createElement('button');
-                btn.className = 'ingredient-btn';
-                btn.setAttribute('data-id', ing.id);
-
-                if (count > 0) {
-                    btn.style.borderColor = '#575fcf';
-                    btn.style.background = 'rgba(87, 95, 207, 0.28)';
-                    btn.style.boxShadow = '0 0 12px rgba(87, 95, 207, 0.45)';
-                    btn.innerHTML = `
-                        <span class="ingredient-icon">${ing.icon}</span>
-                        <span class="ingredient-label">${ingName}</span>
-                        <span style="font-size: 0.72rem; color: #70a1ff; font-weight: 900; background: rgba(0,0,0,0.45); padding: 2px 7px; border-radius: 6px;">x${count} ${isEt ? 'VALMIS!' : 'READY!'}</span>
-                    `;
-                    btn.addEventListener('click', () => {
-                        if (this.preparedStock[ing.id] > 0) {
-                            this.preparedStock[ing.id]--;
-                            this.addToPlate(ing.id);
-                            this.renderPantryItems();
-                        }
-                    });
-                } else {
-                    btn.style.opacity = '0.65';
-                    btn.style.borderStyle = 'dashed';
-                    btn.innerHTML = `
-                        <span class="ingredient-icon" style="filter: grayscale(0.5);">${ing.icon}</span>
-                        <span class="ingredient-label">${ingName}</span>
-                        <span style="font-size: 0.62rem; color: #a4b0be;">${isEt ? '0 tk (Haki 🔪)' : '0 pcs (Chop 🔪)'}</span>
-                    `;
-                    btn.addEventListener('click', () => {
-                        this.switchToStation('cutting');
-                        const rawItem = Object.values(INGREDIENTS).find(r => r.chopResult === ing.id);
-                        if (rawItem) this.startChopping(rawItem.id);
-                    });
-                }
-                groupChopped.appendChild(btn);
-            } else if (ing.category === 'cooked') {
-                // Cooked items stock
-                const count = this.preparedStock[ing.id] || 0;
-                const btn = document.createElement('button');
-                btn.className = 'ingredient-btn';
-                btn.setAttribute('data-id', ing.id);
-
-                if (count > 0) {
-                    btn.style.borderColor = '#ff4757';
-                    btn.style.background = 'rgba(255, 71, 87, 0.28)';
-                    btn.style.boxShadow = '0 0 14px rgba(255, 71, 87, 0.55)';
-                    btn.innerHTML = `
-                        <span class="ingredient-icon">${ing.icon}</span>
-                        <span class="ingredient-label">${ingName}</span>
-                        <span style="font-size: 0.72rem; color: #ff6b81; font-weight: 900; background: rgba(0,0,0,0.45); padding: 2px 7px; border-radius: 6px;">x${count} ${isEt ? 'VALMIS! 🔥' : 'READY! 🔥'}</span>
-                    `;
-                    btn.addEventListener('click', () => {
-                        if (this.preparedStock[ing.id] > 0) {
-                            this.preparedStock[ing.id]--;
-                            this.addToPlate(ing.id);
-                            this.renderPantryItems();
-                        }
-                    });
-                } else {
-                    btn.style.opacity = '0.65';
-                    btn.style.borderStyle = 'dashed';
-                    let actionHint = isEt ? '0 tk (Prae 🔥)' : '0 pcs (Cook 🔥)';
-                    if (ing.id === 'baked_in_oven') {
-                        actionHint = isEt ? '0 tk (Ahi 🍕)' : '0 pcs (Oven 🍕)';
-                    }
-                    btn.innerHTML = `
-                        <span class="ingredient-icon" style="filter: grayscale(0.5);">${ing.icon}</span>
-                        <span class="ingredient-label">${ingName}</span>
-                        <span style="font-size: 0.62rem; color: #a4b0be;">${actionHint}</span>
-                    `;
-                    btn.addEventListener('click', () => {
-                        if (ing.id === 'baked_in_oven') this.switchToStation('oven');
-                        else this.switchToStation('stove');
-                    });
-                }
-                groupCooked.appendChild(btn);
             }
         });
     }
@@ -818,16 +686,11 @@ class CookingGame {
             const target = e.target as HTMLElement;
             if (!target) return;
 
-            // 1. Take from Pan Button (Plate or Stock)
+            // 1. Take from Pan Button (directly to plate)
             const takePanBtn = target.closest('.btn-take-pan') as HTMLElement;
             if (takePanBtn) {
                 const panId = parseInt(takePanBtn.getAttribute('data-pan') || '0', 10);
-                const action = takePanBtn.getAttribute('data-action');
-                if (action === 'plate') {
-                    this.takeToPlateFromPan(panId);
-                } else {
-                    this.takeFromPan(panId);
-                }
+                this.takeFromPan(panId);
                 return;
             }
 
@@ -848,13 +711,7 @@ class CookingGame {
                 return;
             }
 
-            // 4. Oven Take to Plate Button
-            if (target.closest('#btn-oven-take-plate')) {
-                this.takeToPlateFromOven();
-                return;
-            }
-
-            // 5. Oven Take to Stock Button
+            // 4. Oven Take Pizza to Plate Button
             if (target.closest('#btn-oven-take-pizza')) {
                 this.takeFromOven();
                 return;
@@ -1048,10 +905,8 @@ class CookingGame {
         if (this.choppingClicks >= this.requiredChoppingClicks) {
             if (raw && raw.chopResult) {
                 this.addToPlate(raw.chopResult);
-                this.preparedStock[raw.chopResult] = (this.preparedStock[raw.chopResult] || 0) + 1;
                 const resName = this.getName(raw.chopResult);
-                this.showScorePopup(this.isEt ? `+1 ${resName} viilutatud ja pandud taldrikule! 🔪✨` : `+1 ${resName} sliced and added to plate! 🔪✨`);
-                this.renderPantryItems();
+                this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} viilutatud ja pandud otse taldrikule! 🔪✨` : `🍽️ +1 ${resName} sliced and added to plate! 🔪✨`);
                 this.switchToStation('assembly');
             }
             this.currentChoppingRaw = null;
@@ -1102,14 +957,9 @@ class CookingGame {
                     const resultName = this.getName(resultId);
                     statusText = `<strong style="color: #2ed573; font-size: 1.05rem;">✨🔥 ${isEt ? 'VALMIS:' : 'READY:'} ${resultName}</strong>`;
                     btnAction = `
-                        <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
-                            <button class="btn-action btn-take-pan" data-action="plate" data-pan="${pan.id}" onclick="window.cookingGame.takeToPlateFromPan(${pan.id})" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.88rem; padding: 8px 12px; box-shadow: 0 0 12px #2ed573; cursor: pointer;">
-                                🍽️ ${isEt ? 'Taldrikule' : 'To Plate'}
-                            </button>
-                            <button class="btn-action btn-take-pan" data-action="stock" data-pan="${pan.id}" onclick="window.cookingGame.takeFromPan(${pan.id})" style="background: linear-gradient(135deg, #3498db, #2980b9); font-weight: 900; font-size: 0.88rem; padding: 8px 12px; box-shadow: 0 0 10px rgba(52, 152, 219, 0.5); cursor: pointer;">
-                                📦 ${isEt ? 'Laovarusse' : 'To Stock'}
-                            </button>
-                        </div>
+                        <button class="btn-action btn-take-pan" data-pan="${pan.id}" onclick="window.cookingGame.takeFromPan(${pan.id})" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.95rem; padding: 10px 20px; box-shadow: 0 0 15px #2ed573; cursor: pointer; border-radius: 8px;">
+                            🍽️ ${isEt ? 'VÕTA TALDRIKULE' : 'TAKE TO PLATE'}
+                        </button>
                     `;
                 } else if (pan.state === 'burned') {
                     statusText = `<strong style="color: #ff4757; font-size: 1.05rem;">🔥 ${isEt ? 'KÕRBENUD!' : 'BURNED!'}</strong>`;
@@ -1146,7 +996,7 @@ class CookingGame {
         this.renderStovePans();
     }
 
-    public takeToPlateFromPan(panId: number) {
+    public takeFromPan(panId: number) {
         const pan = this.pans[panId];
         if (!pan || !pan.holding) return;
 
@@ -1156,33 +1006,8 @@ class CookingGame {
             this.addToPlate(resultId);
             kitchenAudio.playServe();
             const resName = this.getName(resultId);
-            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} pandud otse taldrikule!` : `🍽️ +1 ${resName} added to plate!`);
-            this.renderPantryItems();
+            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} pandud otse taldrikule! ✨` : `🍽️ +1 ${resName} added to plate! ✨`);
             this.switchToStation('assembly');
-        }
-
-        pan.holding = null;
-        pan.progress = 0;
-        pan.state = 'empty';
-
-        const anyCooking = this.pans.some(p => p.state === 'cooking');
-        if (!anyCooking) kitchenAudio.playSizzle(false);
-
-        this.renderStovePans();
-    }
-
-    public takeFromPan(panId: number) {
-        const pan = this.pans[panId];
-        if (!pan || !pan.holding) return;
-
-        if (pan.state === 'done') {
-            const raw = INGREDIENTS[pan.holding];
-            const resultId = raw?.cookResult || pan.holding;
-            this.preparedStock[resultId] = (this.preparedStock[resultId] || 0) + 1;
-            kitchenAudio.playServe();
-            const resName = this.getName(resultId);
-            this.showScorePopup(this.isEt ? `📦 +1 ${resName} lisatud laovarusse!` : `📦 +1 ${resName} added to inventory!`);
-            this.renderPantryItems();
         } else if (pan.state === 'burned') {
             kitchenAudio.playBurn();
             this.showScorePopup(this.isEt ? `🔥 Kõrbenud toit visati minema!` : `🔥 Burned food was thrown away!`);
@@ -1230,16 +1055,11 @@ class CookingGame {
             box.innerHTML = `
                 <div style="font-size: 2.2rem;">✨🍕</div>
                 <div style="text-align: left;">
-                    <strong style="color: #2ed573;">${isEt ? 'Pitsa on valmis ja krõbe!' : 'Pizza is ready and crispy!'}</strong>
+                    <strong style="color: #2ed573; font-size: 1.05rem;">${isEt ? 'Pitsa on valmis ja krõbe!' : 'Pizza is ready and crispy!'}</strong>
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
-                    <button class="btn-action" id="btn-oven-take-plate" onclick="window.cookingGame.takeToPlateFromOven()" style="background: #2ed573; font-weight: bold; padding: 10px 16px; box-shadow: 0 0 15px #2ed573; cursor: pointer;">
-                        🍽️ ${isEt ? 'Taldrikule' : 'To Plate'}
-                    </button>
-                    <button class="btn-action" id="btn-oven-take-pizza" onclick="window.cookingGame.takeFromOven()" style="background: #3498db; font-weight: bold; padding: 10px 16px; box-shadow: 0 0 10px rgba(52,152,219,0.5); cursor: pointer;">
-                        📦 ${isEt ? 'Laovarusse' : 'To Stock'}
-                    </button>
-                </div>
+                <button class="btn-action" id="btn-oven-take-pizza" onclick="window.cookingGame.takeFromOven()" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.95rem; padding: 10px 20px; box-shadow: 0 0 15px #2ed573; cursor: pointer; border-radius: 8px;">
+                    🍽️ ${isEt ? 'VÕTA TALDRIKULE' : 'TAKE TO PLATE'}
+                </button>
             `;
         }
     }
@@ -1250,22 +1070,11 @@ class CookingGame {
         this.renderOvenStatus();
     }
 
-    public takeToPlateFromOven() {
+    public takeFromOven() {
         this.addToPlate('baked_in_oven');
         kitchenAudio.playServe();
-        this.showScorePopup(this.isEt ? '🍽️ +1 Küpsetatud Pitsa pandud otse taldrikule! 🍕' : '🍽️ +1 Baked Pizza added to plate! 🍕');
-        this.renderPantryItems();
+        this.showScorePopup(this.isEt ? '🍽️ +1 Küpsetatud Pitsa pandud otse taldrikule! 🍕✨' : '🍽️ +1 Baked Pizza added to plate! 🍕✨');
         this.switchToStation('assembly');
-        this.oven.state = 'empty';
-        this.oven.progress = 0;
-        this.renderOvenStatus();
-    }
-
-    public takeFromOven() {
-        this.preparedStock['baked_in_oven'] = (this.preparedStock['baked_in_oven'] || 0) + 1;
-        kitchenAudio.playServe();
-        this.showScorePopup(this.isEt ? '📦 +1 Küpsetatud Pitsa lisatud laovarusse! 🍕' : '📦 +1 Baked Pizza added to inventory! 🍕');
-        this.renderPantryItems();
         this.oven.state = 'empty';
         this.oven.progress = 0;
         this.renderOvenStatus();
