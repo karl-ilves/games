@@ -642,6 +642,7 @@ async function initStudio() {
     setupStudioEvents();
     setupCatalogEvents();
     setupInspectorEvents();
+    setupAiAssistantEvents();
 
     window.addEventListener('resize', onWindowResize);
 
@@ -1057,6 +1058,281 @@ async function restoreDraftOrFeedbackGame() {
                 indicator.innerText = '💾 Draft Restored';
             }
         }
+    }
+}
+
+// --- AI Game Builder Assistant ---
+export function setupAiAssistantEvents() {
+    const aiModal = document.getElementById('ai-assistant-modal');
+    const toggleBtn = document.getElementById('btn-toggle-ai');
+    const closeBtn = document.getElementById('btn-close-ai');
+    const submitBtn = document.getElementById('btn-ai-submit');
+    const inputField = document.getElementById('ai-prompt-input') as HTMLInputElement | null;
+    const quickBtns = document.querySelectorAll('.ai-quick-btn');
+
+    if (toggleBtn && aiModal) {
+        toggleBtn.addEventListener('click', () => {
+            const isShown = aiModal.style.display === 'flex';
+            aiModal.style.display = isShown ? 'none' : 'flex';
+            if (!isShown && inputField) {
+                inputField.focus();
+            }
+        });
+    }
+
+    if (closeBtn && aiModal) {
+        closeBtn.addEventListener('click', () => {
+            aiModal.style.display = 'none';
+        });
+    }
+
+    const handleSend = () => {
+        if (!inputField) return;
+        const promptText = inputField.value.trim();
+        if (!promptText) return;
+        inputField.value = '';
+        executeAiBuild(promptText);
+    };
+
+    submitBtn?.addEventListener('click', handleSend);
+    inputField?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+
+    quickBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const promptText = (e.currentTarget as HTMLElement).getAttribute('data-prompt') || '';
+            if (promptText) {
+                if (aiModal) aiModal.style.display = 'flex';
+                executeAiBuild(promptText);
+            }
+        });
+    });
+}
+
+export function executeAiBuild(promptText: string) {
+    const chatLog = document.getElementById('ai-chat-log');
+    const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
+    const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
+    const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
+
+    // Append User message to chat
+    if (chatLog) {
+        const userMsg = document.createElement('div');
+        userMsg.style.cssText = 'background: rgba(168, 85, 247, 0.2); border-radius: 8px; padding: 8px 12px; color: #fff; align-self: flex-end; max-width: 85%; font-weight: 600;';
+        userMsg.innerText = `👤 ${promptText}`;
+        chatLog.appendChild(userMsg);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    const p = promptText.toLowerCase();
+    let generatedObjectsCount = 0;
+    let aiResponse = '';
+
+    // 1. PARKOUR / OBSTACLES
+    if (p.includes('parkour') || p.includes('rada') || p.includes('hüp') || p.includes('jump') || p.includes('obstacle') || p.includes('takistus')) {
+        if (titleInput) titleInput.value = 'AI Parkour Challenge';
+        if (catSelect) catSelect.value = 'Platformer';
+        if (descInput) descInput.value = 'Exciting 3D Parkour course generated with Playard AI!';
+
+        const parkourItems = CATALOG_DATABASE.filter(c => c.category === 'gameplay' || c.name.includes('Platform') || c.name.includes('Crate') || c.name.includes('Obstacle'));
+        let currentHeight = 0.5;
+        let currentZ = 0;
+        let currentX = 0;
+
+        for (let i = 0; i < 9; i++) {
+            const item = parkourItems[i % parkourItems.length] || CATALOG_DATABASE[0];
+            const mesh = createObjectMesh(item);
+            mesh.position.set(currentX, currentHeight, currentZ);
+            mesh.scale.setScalar(item.baseScale * (1 + Math.random() * 0.3));
+            scene.add(mesh);
+
+            placedObjects.push({
+                id: 'placed_ai_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: item.id,
+                name: item.name,
+                category: item.category,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: item.color
+            });
+
+            currentHeight += 0.7;
+            currentZ -= 4.5;
+            currentX += (Math.random() - 0.5) * 3;
+            generatedObjectsCount++;
+        }
+
+        aiResponse = `🏃 Lõin sulle 9-astmelise parkuuriraja tõusvate platvormidega! Saad seda kohe nooltega ja tühikuga (Jump) testida!`;
+
+    // 2. METS / NATURE / FOREST
+    } else if (p.includes('mets') || p.includes('forest') || p.includes('puu') || p.includes('tree') || p.includes('nature') || p.includes('loodus')) {
+        if (titleInput) titleInput.value = 'AI Mystical Forest';
+        if (catSelect) catSelect.value = 'Adventure';
+        if (descInput) descInput.value = 'A lush natural 3D forest populated by Playard AI.';
+
+        const natureItems = CATALOG_DATABASE.filter(c => c.category === 'nature');
+        for (let i = 0; i < 14; i++) {
+            const item = natureItems[i % natureItems.length] || CATALOG_DATABASE[0];
+            const mesh = createObjectMesh(item);
+            const rX = (Math.random() - 0.5) * 35;
+            const rZ = (Math.random() - 0.5) * 35;
+            mesh.position.set(rX, 0, rZ);
+            mesh.scale.setScalar(item.baseScale * (0.8 + Math.random() * 0.6));
+            mesh.rotation.y = Math.random() * Math.PI * 2;
+            scene.add(mesh);
+
+            placedObjects.push({
+                id: 'placed_ai_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: item.id,
+                name: item.name,
+                category: item.category,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: mesh.rotation.y, z: 0 },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: item.color
+            });
+            generatedObjectsCount++;
+        }
+
+        aiResponse = `🌲 Istutasin stseeni ${generatedObjectsCount} puud, kändu ja kivimit! Looduslik metsamaailm on valmis.`;
+
+    // 3. LINN / CITY / BUILDINGS / AUTOD
+    } else if (p.includes('linn') || p.includes('city') || p.includes('maja') || p.includes('building') || p.includes('auto') || p.includes('car')) {
+        if (titleInput) titleInput.value = 'AI Cyber City 3D';
+        if (catSelect) catSelect.value = 'Adventure';
+        if (descInput) descInput.value = 'Futuristic city with skyscrapers and vehicles generated by AI.';
+
+        const cityItems = CATALOG_DATABASE.filter(c => c.category === 'city' || c.category === 'vehicles');
+        for (let i = 0; i < 10; i++) {
+            const item = cityItems[i % cityItems.length] || CATALOG_DATABASE[0];
+            const mesh = createObjectMesh(item);
+            const rX = ((i % 4) - 1.5) * 9;
+            const rZ = (Math.floor(i / 4) - 1) * 11;
+            mesh.position.set(rX, 0, rZ);
+            mesh.scale.setScalar(item.baseScale * (1 + Math.random() * 0.3));
+            scene.add(mesh);
+
+            placedObjects.push({
+                id: 'placed_ai_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: item.id,
+                name: item.name,
+                category: item.category,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: item.color
+            });
+            generatedObjectsCount++;
+        }
+
+        aiResponse = `🏙️ Ehitasin stseeni suurlinna tänavad, hooned ja paigutasin autod!`;
+
+    // 4. RACING / RALLIRADA
+    } else if (p.includes('ralli') || p.includes('racing') || p.includes('racetrack') || p.includes('sõit')) {
+        if (titleInput) titleInput.value = 'AI Speed Circuit';
+        if (catSelect) catSelect.value = 'Racing';
+        if (descInput) descInput.value = 'High speed racing track with jumps generated by AI.';
+
+        const raceItems = CATALOG_DATABASE.filter(c => c.category === 'vehicles' || c.category === 'gameplay');
+        for (let i = 0; i < 8; i++) {
+            const item = raceItems[i % raceItems.length] || CATALOG_DATABASE[0];
+            const mesh = createObjectMesh(item);
+            mesh.position.set(i * 3 - 10, 0, -i * 4);
+            mesh.scale.setScalar(item.baseScale);
+            scene.add(mesh);
+
+            placedObjects.push({
+                id: 'placed_ai_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: item.id,
+                name: item.name,
+                category: item.category,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: item.color
+            });
+            generatedObjectsCount++;
+        }
+
+        aiResponse = `🏎️ Lõin võidusõiduraja koos rampide ja autodega!`;
+
+    // 5. SCI-FI / KOSMOS / SPACE
+    } else if (p.includes('kosmos') || p.includes('space') || p.includes('sci-fi') || p.includes('alien') || p.includes('laev')) {
+        if (titleInput) titleInput.value = 'AI Cosmic Station';
+        if (catSelect) catSelect.value = 'Adventure';
+        if (descInput) descInput.value = 'Sci-Fi planetary base crafted by AI.';
+
+        const sciFiItems = CATALOG_DATABASE.filter(c => c.category === 'scifi');
+        for (let i = 0; i < 8; i++) {
+            const item = sciFiItems[i % sciFiItems.length] || CATALOG_DATABASE[0];
+            const mesh = createObjectMesh(item);
+            mesh.position.set((Math.random() - 0.5) * 25, Math.random() * 2, (Math.random() - 0.5) * 25);
+            mesh.scale.setScalar(item.baseScale * (1 + Math.random() * 0.4));
+            scene.add(mesh);
+
+            placedObjects.push({
+                id: 'placed_ai_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: item.id,
+                name: item.name,
+                category: item.category,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: item.color
+            });
+            generatedObjectsCount++;
+        }
+
+        aiResponse = `🛸 Lõin futuristliku kosmosebaasi tulnukakristallide ja baasidega!`;
+
+    // 6. DEFAULT / GENERAL SMART GENERATION
+    } else {
+        const matches = CATALOG_DATABASE.filter(c => p.includes(c.name.toLowerCase()) || p.includes(c.category));
+        const pool = matches.length > 0 ? matches : CATALOG_DATABASE;
+
+        for (let i = 0; i < 6; i++) {
+            const item = pool[Math.floor(Math.random() * pool.length)];
+            const mesh = createObjectMesh(item);
+            mesh.position.set((Math.random() - 0.5) * 20, 0, (Math.random() - 0.5) * 20);
+            mesh.scale.setScalar(item.baseScale);
+            scene.add(mesh);
+
+            placedObjects.push({
+                id: 'placed_ai_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: item.id,
+                name: item.name,
+                category: item.category,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: item.color
+            });
+            generatedObjectsCount++;
+        }
+
+        aiResponse = `✨ Analüüsisin sinu soovi ja lisasin stseeni ${generatedObjectsCount} sobivat 3D objekti!`;
+    }
+
+    autoSaveDraft();
+
+    // Append AI Response to chat
+    if (chatLog) {
+        const botMsg = document.createElement('div');
+        botMsg.style.cssText = 'background: rgba(255,255,255,0.08); border-left: 3px solid #00f2fe; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; line-height: 1.4;';
+        botMsg.innerHTML = `🤖 <strong>AI Builder:</strong><br>${aiResponse}`;
+        chatLog.appendChild(botMsg);
+        chatLog.scrollTop = chatLog.scrollHeight;
     }
 }
 

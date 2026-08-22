@@ -188,6 +188,28 @@ try {
             const posVal = await page.$eval('#obj-pos-val', el => el.textContent);
             console.log("   Object Position after Move button:", posVal);
 
+            // Test AI Game Assistant
+            await page.click('#btn-toggle-ai');
+            await new Promise(r => setTimeout(r, 400));
+            const aiModalVisible = await page.$eval('#ai-assistant-modal', el => window.getComputedStyle(el).display);
+            console.log("   AI Assistant Modal visibility:", aiModalVisible);
+            if (aiModalVisible !== 'flex') {
+                throw new Error("AI Assistant modal failed to open!");
+            }
+
+            // Click AI Quick Build (Parkour / Mets)
+            const aiQuickBtn = await page.$('.ai-quick-btn');
+            if (aiQuickBtn) {
+                await aiQuickBtn.click();
+                await new Promise(r => setTimeout(r, 600));
+                const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+                console.log("   AI Assistant Chat output:", chatContent.substring(0, 80) + '...');
+                if (!chatContent.includes('AI Builder:')) {
+                    throw new Error("AI Builder response failed to appear in AI Chat log!");
+                }
+            }
+            await page.click('#btn-close-ai');
+
             // Test Studio Camera View Navigation Buttons & Keyboard Pan (Edit Mode)
             await page.click('#cam-btn-fwd');
             await page.click('#cam-btn-zoom-in');
