@@ -161,6 +161,28 @@ try {
                 throw new Error("AI World Knowledge for largest airplanes failed!");
             }
 
+            // Test AI World Capitals Q&A: "What is the capital of France?"
+            console.log("   Testing World Capitals Q&A ('Capital of France')...");
+            await page.type('#ai-prompt-input', 'What is the capital of France?');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const capitalChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!capitalChat.includes('Paris')) {
+                throw new Error("World Capitals Q&A failed for France!");
+            }
+
+            // Test AI Largest Countries Q&A: "What is the largest country in the world?"
+            console.log("   Testing Largest Countries Q&A ('Largest country')...");
+            await page.type('#ai-prompt-input', 'What is the largest country in the world?');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const countryChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!countryChat.includes('Russia') && !countryChat.includes('Venemaa')) {
+                throw new Error("Largest Countries Q&A failed!");
+            }
+
             // Test AI Game Logic Programming: "Program a speed boost trigger"
             console.log("   Testing AI Game Logic Programming ('Program speed boost')...");
             await page.type('#ai-prompt-input', 'Program a speed boost trigger');
@@ -172,15 +194,26 @@ try {
                 throw new Error("AI Game Logic Programming failed!");
             }
 
-            // Test Custom Procedural 3D Entity (not in catalog): "Create a giant robot"
-            console.log("   Testing Custom Procedural 3D Entity Creation ('Create a giant robot')...");
-            await page.type('#ai-prompt-input', 'Create a giant robot');
+            // Test Realistic Rabbit 3D Creation: "Create a cute white bunny rabbit"
+            console.log("   Testing Realistic Rabbit 3D Creation ('Create a cute white bunny rabbit')...");
+            await page.type('#ai-prompt-input', 'Create a cute white bunny rabbit');
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
-            const customObjChat = await page.$eval('#ai-chat-log', el => el.textContent);
-            if (!customObjChat.includes('custom 3D model') && !customObjChat.includes('Robot')) {
-                throw new Error("Custom Procedural 3D Entity creation failed!");
+            const rabbitChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!rabbitChat.includes('custom 3D model') && !rabbitChat.includes('Bunny') && !rabbitChat.includes('Rabbit')) {
+                throw new Error("Realistic Rabbit 3D Model Creation failed!");
+            }
+
+            // Test Realistic Saturn with Rings 3D Creation: "Create planet Saturn with rings"
+            console.log("   Testing Realistic Saturn 3D Creation ('Create planet Saturn with rings')...");
+            await page.type('#ai-prompt-input', 'Create planet Saturn with rings');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const saturnChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!saturnChat.includes('custom 3D model') && !saturnChat.includes('Saturn')) {
+                throw new Error("Realistic Saturn 3D Model Creation failed!");
             }
 
             // Test Semantic 3D Understanding & Color Intent: "Paint gold"

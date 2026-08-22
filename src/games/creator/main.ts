@@ -1529,8 +1529,98 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
     const group = new THREE.Group();
     const p = (prompt + ' ' + name).toLowerCase();
 
-    // 1. DINOSAUR / DRAGON / MONSTER / CREATURE
-    if (p.includes('dino') || p.includes('t-rex') || p.includes('draakon') || p.includes('dragon') || p.includes('monster') || p.includes('koll') || p.includes('loom') || p.includes('creature')) {
+    // 1. RABBIT / JÄNES / BUNNY / HARE
+    if (p.includes('jänes') || p.includes('janes') || p.includes('rabbit') || p.includes('bunny') || p.includes('hare') || p.includes('janku')) {
+        const furMat = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.8 });
+        const earInnerMat = new THREE.MeshStandardMaterial({ color: 0xffb8b8, roughness: 0.5 });
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.2 });
+        const noseMat = new THREE.MeshStandardMaterial({ color: 0xff7675 });
+
+        // Fluffy Body
+        const body = new THREE.Mesh(new THREE.SphereGeometry(1.1, 16, 16), furMat);
+        body.scale.set(1.0, 1.2, 1.3);
+        body.position.set(0, 1.2, 0);
+        group.add(body);
+
+        // Head
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.75, 16, 16), furMat);
+        head.position.set(0, 2.2, 0.6);
+        group.add(head);
+
+        // Cute Pink Nose
+        const nose = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), noseMat);
+        nose.position.set(0, 2.15, 1.3);
+        group.add(nose);
+
+        // Eyes
+        [-0.35, 0.35].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeMat);
+            eye.position.set(x, 2.35, 1.15);
+            group.add(eye);
+        });
+
+        // Long Upright Ears with Pink Inner
+        [-0.3, 0.3].forEach(x => {
+            const earOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.22, 1.5, 8), furMat);
+            earOuter.position.set(x, 3.4, 0.5);
+            earOuter.rotation.z = (x < 0 ? 0.15 : -0.15);
+            group.add(earOuter);
+
+            const earInner = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.14, 1.2, 8), earInnerMat);
+            earInner.position.set(x, 3.4, 0.62);
+            earInner.rotation.z = (x < 0 ? 0.15 : -0.15);
+            group.add(earInner);
+        });
+
+        // Fluffy Round Tail
+        const tail = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), furMat);
+        tail.position.set(0, 1.0, -1.3);
+        group.add(tail);
+
+        // Paws
+        [-0.45, 0.45].forEach(x => {
+            const frontPaw = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), furMat);
+            frontPaw.scale.set(0.8, 0.6, 1.4);
+            frontPaw.position.set(x, 0.2, 0.6);
+            group.add(frontPaw);
+
+            const backPaw = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), furMat);
+            backPaw.scale.set(0.9, 0.7, 1.6);
+            backPaw.position.set(x, 0.25, -0.4);
+            group.add(backPaw);
+        });
+
+    // 2. SATURN (PLANET WITH ICONIC PLANETARY RINGS)
+    } else if (p.includes('saturn') || p.includes('planeet') || p.includes('planet') || p.includes('jupiter') || p.includes('mars') || p.includes('neptuun')) {
+        const saturnColor = p.includes('mars') ? 0xe74c3c : (p.includes('neptuun') ? 0x0984e3 : 0xf9ca24);
+        const planetMat = new THREE.MeshStandardMaterial({ color: saturnColor, roughness: 0.7, metalness: 0.1 });
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xf6e58d, side: THREE.DoubleSide, transparent: true, opacity: 0.85, roughness: 0.5 });
+        const ringOuterMat = new THREE.MeshStandardMaterial({ color: 0xdfb15b, side: THREE.DoubleSide, transparent: true, opacity: 0.7, roughness: 0.6 });
+
+        // Saturn Sphere Body
+        const planetSphere = new THREE.Mesh(new THREE.SphereGeometry(2.4, 32, 32), planetMat);
+        planetSphere.position.set(0, 3.5, 0);
+        group.add(planetSphere);
+
+        // Saturn Bands / Atmosphere rings
+        const bandMat = new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.6 });
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(2.42, 2.42, 0.6, 32), bandMat);
+        band.position.set(0, 3.5, 0);
+        group.add(band);
+
+        // Huge Majestic Planetary Rings (Tilted at 26.7 degrees like real Saturn)
+        const innerRing = new THREE.Mesh(new THREE.RingGeometry(3.2, 4.6, 64), ringMat);
+        innerRing.rotation.x = Math.PI / 2 + 0.45;
+        innerRing.position.set(0, 3.5, 0);
+        group.add(innerRing);
+
+        const outerRing = new THREE.Mesh(new THREE.RingGeometry(4.8, 5.8, 64), ringMat);
+        outerRing.rotation.x = Math.PI / 2 + 0.45;
+        outerRing.position.set(0, 3.5, 0);
+        group.add(outerRing);
+
+    // 3. DINOSAUR / DRAGON / MONSTER / CREATURE
+    } else if (p.includes('dino') || p.includes('t-rex') || p.includes('draakon') || p.includes('dragon') || p.includes('monster') || p.includes('koll') || p.includes('loom') || p.includes('creature')) {
         const bodyMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.6 });
         const bellyMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.6 });
         const eyeMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: 0xe74c3c, emissiveIntensity: 0.6 });
@@ -1564,7 +1654,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(leg);
         });
 
-    // 2. ROBOT / MECHA / CYBORG / ANDROID / MECH
+    // 4. ROBOT / MECHA / CYBORG / ANDROID / MECH
     } else if (p.includes('robot') || p.includes('mecha') || p.includes('cyborg') || p.includes('android') || p.includes('droid') || p.includes('mech')) {
         const metalMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, metalness: 0.8, roughness: 0.3 });
         const coreMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8 });
@@ -1602,7 +1692,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(leg);
         });
 
-    // 3. AIRPORT & AIRPLANE (Lennujaam & Lennuk)
+    // 5. AIRPORT & AIRPLANE (Lennujaam & Lennuk)
     } else if (p.includes('lennuväli') || p.includes('lennuvali') || p.includes('lennujaam') || p.includes('airport') || p.includes('runway') || p.includes('aerodrome')) {
         const tarmacMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.9 });
         const planeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3 });
@@ -1636,7 +1726,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
         tailFin.position.set(0, 2.2, 0.2);
         group.add(tailFin);
 
-    // 4. HOUSE WITH GARDEN & FENCES (Maja ja aed / Villa)
+    // 6. HOUSE WITH GARDEN & FENCES (Maja ja aed / Villa)
     } else if (p.includes('aed') || p.includes('garden') || p.includes('villa') || p.includes('mansion') || (p.includes('maja') && p.includes('aed'))) {
         const wallMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, roughness: 0.6 });
         const roofMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.4 });
@@ -1670,7 +1760,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(fence);
         });
 
-    // 5. TROPICAL BEACH / ISLAND / LAKE (Rand / Saar / Oaas)
+    // 7. TROPICAL BEACH / ISLAND / LAKE (Rand / Saar / Oaas)
     } else if (p.includes('rand') || p.includes('beach') || p.includes('saar') || p.includes('island') || p.includes('meri') || p.includes('lake') || p.includes('palm')) {
         const sandMat = new THREE.MeshStandardMaterial({ color: 0xf4d03f, roughness: 0.9 });
         const waterMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.1, metalness: 0.4 });
@@ -1702,7 +1792,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             }
         });
 
-    // 6. CASTLE / FORTRESS / TOWER / PYRAMID / TEMPLE
+    // 8. CASTLE / FORTRESS / TOWER / PYRAMID / TEMPLE
     } else if (p.includes('loss') || p.includes('castle') || p.includes('kindlus') || p.includes('fort') || p.includes('püramiid') || p.includes('pyramid') || p.includes('tempel') || p.includes('torn') || p.includes('palace')) {
         const stoneMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.9 });
         const roofMat = new THREE.MeshStandardMaterial({ color: 0x9b59b6, roughness: 0.5 });
@@ -1735,7 +1825,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(gate);
         }
 
-    // 7. SUBMARINE / SHIP / BOAT / HELICOPTER / PLANE
+    // 9. SUBMARINE / SHIP / BOAT / HELICOPTER / PLANE
     } else if (p.includes('allveelaev') || p.includes('submarine') || p.includes('laev') || p.includes('ship') || p.includes('boat') || p.includes('paat') || p.includes('kopter') || p.includes('copter')) {
         const hullMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.5 });
         const yellowMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
@@ -1758,7 +1848,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
         periscope.position.set(0, 3.6, 0.5);
         group.add(periscope);
 
-    // 8. TROPHY / KARIKAS / PIANO / CUSTOM OBJECT
+    // 10. TROPHY / KARIKAS / PIANO / CUSTOM OBJECT
     } else if (p.includes('karikas') || p.includes('trophy') || p.includes('cup') || p.includes('kuld')) {
         const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.85, roughness: 0.2, emissive: 0xffd32a, emissiveIntensity: 0.3 });
         const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.6 });
@@ -1775,7 +1865,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
         cup.position.y = 3.0;
         group.add(cup);
 
-    // 9. GENERIC INTELLIGENT PROCEDURAL COMPOSITE
+    // 11. GENERIC INTELLIGENT PROCEDURAL COMPOSITE
     } else {
         const colorPalette = [0x9b59b6, 0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22, 0x1abc9c];
         const chosenColor = colorPalette[Math.abs(hashString(name)) % colorPalette.length];
@@ -1798,6 +1888,52 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
 
     return group;
 }
+
+const WORLD_CAPITALS_MAP: Record<string, { et: string, en: string, countryEt: string, countryEn: string }> = {
+    'eesti': { et: 'Tallinn', en: 'Tallinn', countryEt: 'Eesti', countryEn: 'Estonia' },
+    'estonia': { et: 'Tallinn', en: 'Tallinn', countryEt: 'Eesti', countryEn: 'Estonia' },
+    'soome': { et: 'Helsingi', en: 'Helsinki', countryEt: 'Soome', countryEn: 'Finland' },
+    'finland': { et: 'Helsingi', en: 'Helsinki', countryEt: 'Soome', countryEn: 'Finland' },
+    'rootsi': { et: 'Stockholm', en: 'Stockholm', countryEt: 'Rootsi', countryEn: 'Sweden' },
+    'sweden': { et: 'Stockholm', en: 'Stockholm', countryEt: 'Rootsi', countryEn: 'Sweden' },
+    'läti': { et: 'Riia', en: 'Riga', countryEt: 'Läti', countryEn: 'Latvia' },
+    'lati': { et: 'Riia', en: 'Riga', countryEt: 'Läti', countryEn: 'Latvia' },
+    'latvia': { et: 'Riia', en: 'Riga', countryEt: 'Läti', countryEn: 'Latvia' },
+    'leedu': { et: 'Vilnius', en: 'Vilnius', countryEt: 'Leedu', countryEn: 'Lithuania' },
+    'lithuania': { et: 'Vilnius', en: 'Vilnius', countryEt: 'Leedu', countryEn: 'Lithuania' },
+    'prantsusmaa': { et: 'Pariis', en: 'Paris', countryEt: 'Prantsusmaa', countryEn: 'France' },
+    'france': { et: 'Pariis', en: 'Paris', countryEt: 'Prantsusmaa', countryEn: 'France' },
+    'saksamaa': { et: 'Berliin', en: 'Berlin', countryEt: 'Saksamaa', countryEn: 'Germany' },
+    'germany': { et: 'Berliin', en: 'Berlin', countryEt: 'Saksamaa', countryEn: 'Germany' },
+    'suurbritannia': { et: 'London', en: 'London', countryEt: 'Suurbritannia', countryEn: 'United Kingdom' },
+    'inglismaa': { et: 'London', en: 'London', countryEt: 'Inglismaa', countryEn: 'England' },
+    'uk': { et: 'London', en: 'London', countryEt: 'Suurbritannia', countryEn: 'UK' },
+    'usa': { et: 'Washington D.C.', en: 'Washington, D.C.', countryEt: 'USA', countryEn: 'United States' },
+    'ameerika': { et: 'Washington D.C.', en: 'Washington, D.C.', countryEt: 'USA', countryEn: 'United States' },
+    'itaalia': { et: 'Rooma', en: 'Rome', countryEt: 'Itaalia', countryEn: 'Italy' },
+    'italy': { et: 'Rooma', en: 'Rome', countryEt: 'Itaalia', countryEn: 'Italy' },
+    'hispaania': { et: 'Madrid', en: 'Madrid', countryEt: 'Hispaania', countryEn: 'Spain' },
+    'spain': { et: 'Madrid', en: 'Madrid', countryEt: 'Hispaania', countryEn: 'Spain' },
+    'jaapan': { et: 'Tokyo', en: 'Tokyo', countryEt: 'Jaapan', countryEn: 'Japan' },
+    'japan': { et: 'Tokyo', en: 'Tokyo', countryEt: 'Jaapan', countryEn: 'Japan' },
+    'hiina': { et: 'Peking (Beijing)', en: 'Beijing', countryEt: 'Hiina', countryEn: 'China' },
+    'china': { et: 'Peking (Beijing)', en: 'Beijing', countryEt: 'Hiina', countryEn: 'China' },
+    'kanada': { et: 'Ottawa', en: 'Ottawa', countryEt: 'Kanada', countryEn: 'Canada' },
+    'canada': { et: 'Ottawa', en: 'Ottawa', countryEt: 'Kanada', countryEn: 'Canada' },
+    'austraalia': { et: 'Canberra', en: 'Canberra', countryEt: 'Austraalia', countryEn: 'Australia' },
+    'australia': { et: 'Canberra', en: 'Canberra', countryEt: 'Austraalia', countryEn: 'Australia' },
+    'brasiilia': { et: 'Brasília', en: 'Brasília', countryEt: 'Brasiilia', countryEn: 'Brazil' },
+    'brazil': { et: 'Brasília', en: 'Brasília', countryEt: 'Brasiilia', countryEn: 'Brazil' },
+    'norra': { et: 'Oslo', en: 'Oslo', countryEt: 'Norra', countryEn: 'Norway' },
+    'norway': { et: 'Oslo', en: 'Oslo', countryEt: 'Norra', countryEn: 'Norway' },
+    'taani': { et: 'Kopenhaagen', en: 'Copenhagen', countryEt: 'Taani', countryEn: 'Denmark' },
+    'denmark': { et: 'Kopenhaagen', en: 'Copenhagen', countryEt: 'Taani', countryEn: 'Denmark' },
+    'poola': { et: 'Varssavi', en: 'Warsaw', countryEt: 'Poola', countryEn: 'Poland' },
+    'poland': { et: 'Varssavi', en: 'Warsaw', countryEt: 'Poola', countryEn: 'Poland' },
+    'ukraina': { et: 'Kiiev', en: 'Kyiv', countryEt: 'Ukraina', countryEn: 'Ukraine' },
+    'ukraine': { et: 'Kiiev', en: 'Kyiv', countryEt: 'Ukraina', countryEn: 'Ukraine' },
+    'india': { et: 'New Delhi', en: 'New Delhi', countryEt: 'India', countryEn: 'India' }
+};
 
 export function executeAiBuild(promptText: string) {
     const chatLog = document.getElementById('ai-chat-log');
@@ -1910,7 +2046,78 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `🧮 <strong>Result:</strong><br><span style="font-size: 1.25rem; color: #ffd32a; font-weight: bold;">${mathExpr} = ${mathResult}</span><br><br>💡 I can calculate any arithmetic expression (addition, subtraction, multiplication, division, powers)!`;
         }
 
-    // --- 0.1 GENERAL KNOWLEDGE & WORLD ENCYCLOPEDIA Q&A (e.g. Largest Airplanes, Speed, World records) ---
+    // --- 0.1 WORLD CAPITALS Q&A (Pealinnad) ---
+    } else if (p.includes('pealinn') || p.includes('capital')) {
+        let matchedCapital: { et: string, en: string, countryEt: string, countryEn: string } | null = null;
+        for (const [key, val] of Object.entries(WORLD_CAPITALS_MAP)) {
+            if (p.includes(key)) {
+                matchedCapital = val;
+                break;
+            }
+        }
+
+        if (matchedCapital) {
+            if (isAdmin) {
+                aiResponse = `🏛️ <strong>Riigi ${matchedCapital.countryEt} pealinn on:</strong><br><span style="font-size: 1.2rem; color: #ffd32a; font-weight: bold;">${matchedCapital.et}</span>`;
+            } else {
+                aiResponse = `🏛️ <strong>The capital of ${matchedCapital.countryEn} is:</strong><br><span style="font-size: 1.2rem; color: #ffd32a; font-weight: bold;">${matchedCapital.en}</span>`;
+            }
+        } else {
+            if (isAdmin) {
+                aiResponse = `🏛️ <strong>Maailma tuntumad pealinnad:</strong><br>
+                • 🇪🇪 <strong>Eesti:</strong> Tallinn<br>
+                • 🇫🇮 <strong>Soome:</strong> Helsingi<br>
+                • 🇸🇪 <strong>Rootsi:</strong> Stockholm<br>
+                • 🇱🇻 <strong>Läti:</strong> Riia<br>
+                • 🇫🇷 <strong>Prantsusmaa:</strong> Pariis<br>
+                • 🇩🇪 <strong>Saksamaa:</strong> Berliin<br>
+                • 🇬🇧 <strong>Suurbritannia:</strong> London<br>
+                • 🇺🇸 <strong>USA:</strong> Washington D.C.<br>
+                • 🇯🇵 <strong>Jaapan:</strong> Tokyo<br>
+                • 🇨🇳 <strong>Hiina:</strong> Peking (Beijing)`;
+            } else {
+                aiResponse = `🏛️ <strong>Notable World Capitals:</strong><br>
+                • 🇪🇪 <strong>Estonia:</strong> Tallinn<br>
+                • 🇫🇮 <strong>Finland:</strong> Helsinki<br>
+                • 🇸🇪 <strong>Sweden:</strong> Stockholm<br>
+                • 🇱🇻 <strong>Latvia:</strong> Riga<br>
+                • 🇫🇷 <strong>France:</strong> Paris<br>
+                • 🇩🇪 <strong>Germany:</strong> Berlin<br>
+                • 🇬🇧 <strong>United Kingdom:</strong> London<br>
+                • 🇺🇸 <strong>USA:</strong> Washington, D.C.<br>
+                • 🇯🇵 <strong>Japan:</strong> Tokyo<br>
+                • 🇨🇳 <strong>China:</strong> Beijing`;
+            }
+        }
+
+    // --- 0.2 LARGEST COUNTRIES Q&A (Suurimad riigid) ---
+    } else if (
+        (p.includes('riik') || p.includes('riigid') || p.includes('country') || p.includes('countries')) &&
+        (p.includes('suurim') || p.includes('suurima') || p.includes('largest') || p.includes('biggest'))
+    ) {
+        if (isAdmin) {
+            aiResponse = `🌍 <strong>Maailma Suurimad Riigid (Pindala järgi):</strong><br>
+            1. 🇷🇺 <strong>Venemaa</strong> — 17 098 246 km²<br>
+            2. 🇨🇦 <strong>Kanada</strong> — 9 984 670 km²<br>
+            3. 🇺🇸 <strong>USA</strong> — 9 833 517 km²<br>
+            4. 🇨🇳 <strong>Hiina</strong> — 9 596 960 km²<br>
+            5. 🇧🇷 <strong>Brasiilia</strong> — 8 515 767 km²<br>
+            6. 🇦🇺 <strong>Austraalia</strong> — 7 692 024 km²<br>
+            7. 🇮🇳 <strong>India</strong> — 3 287 263 km²<br><br>
+            👥 <em>Rahvaarvu järgi on suurimad riigid <strong>India</strong> (~1.43 mld) ja <strong>Hiina</strong> (~1.41 mld).</em>`;
+        } else {
+            aiResponse = `🌍 <strong>World's Largest Countries (By Area):</strong><br>
+            1. 🇷🇺 <strong>Russia</strong> — 17,098,246 km²<br>
+            2. 🇨🇦 <strong>Canada</strong> — 9,984,670 km²<br>
+            3. 🇺🇸 <strong>United States</strong> — 9,833,517 km²<br>
+            4. 🇨🇳 <strong>China</strong> — 9,596,960 km²<br>
+            5. 🇧🇷 <strong>Brazil</strong> — 8,515,767 km²<br>
+            6. 🇦🇺 <strong>Australia</strong> — 7,692,024 km²<br>
+            7. 🇮🇳 <strong>India</strong> — 3,287,263 km²<br><br>
+            👥 <em>By population, the largest nations are <strong>India</strong> (~1.43B) and <strong>China</strong> (~1.41B).</em>`;
+        }
+
+    // --- 0.3 GENERAL KNOWLEDGE & WORLD ENCYCLOPEDIA Q&A (e.g. Largest Airplanes, Speed, World records) ---
     } else if (
         (p.includes('lennuk') || p.includes('plane') || p.includes('airplane') || p.includes('aircraft')) &&
         (p.includes('suurim') || p.includes('suurima') || p.includes('largest') || p.includes('biggest') || p.includes('raskeim') || p.includes('heaviest'))
@@ -1931,7 +2138,7 @@ export function executeAiBuild(promptText: string) {
             5. <strong>Hughes H-4 Hercules ("Spruce Goose")</strong> — Iconic historical flying boat with 97.5m wingspan.`;
         }
 
-    // --- 0.2 GAMEPLAY Q&A (How to drive, jump, save, earn yards, etc.) ---
+    // --- 0.4 GAMEPLAY Q&A (How to drive, jump, save, earn yards, etc.) ---
     } else if (
         p.includes('kuidas autoga') || p.includes('kuidas soita') || p.includes('kuidas sõita') || p.includes('auto juhtimine') ||
         p.includes('how to drive') || p.includes('drive car') || p.includes('drive a car')
