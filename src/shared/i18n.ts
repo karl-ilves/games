@@ -86,12 +86,26 @@ export function applyLocalization() {
         if (t2) t2.textContent = isEt ? 'Ringraja võidusõit' : 'Circuit Racing Experience';
 
         // Space
-        const p3 = cards[2].querySelector('p');
-        if (p3) p3.textContent = isEt
-            ? 'Tähtedevaheline kosmoseuuring ja planeetide avastamine.'
-            : 'Interstellar planetary exploration & space flight simulation.';
-        const t3 = cards[2].querySelector('.reward-tag span:last-child');
-        if (t3) t3.textContent = isEt ? 'Varsti tulekul' : 'Coming Soon';
+        const spaceCard = document.querySelector('.game-card.disabled');
+        if (spaceCard) {
+            const p3 = spaceCard.querySelector('p');
+            if (p3) p3.textContent = isEt
+                ? 'Tähtedevaheline kosmoseuuring ja planeetide avastamine.'
+                : 'Interstellar planetary exploration & space flight simulation.';
+            const t3 = spaceCard.querySelector('.reward-tag span:last-child');
+            if (t3) t3.textContent = isEt ? 'Varsti tulekul' : 'Coming Soon';
+        }
+    }
+
+    // Cooking Game Card
+    const cookingCard = document.getElementById('card-cooking-game');
+    if (cookingCard) {
+        const pCook = cookingCard.querySelector('p');
+        if (pCook) pCook.textContent = isEt
+            ? 'Valmista restorani peakokana burgereid, pitsasid ja pastasid, täida klientide tellimusi ja teeni Jarde!'
+            : 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!';
+        const tCook = cookingCard.querySelector('.reward-tag span:last-child');
+        if (tCook) tCook.textContent = isEt ? 'VIP Eksklusiivne Kokandusmäng' : 'VIP Exclusive Cooking Simulator';
     }
 
     // Community section

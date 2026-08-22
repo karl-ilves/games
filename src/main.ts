@@ -26,6 +26,10 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
     if (adminNavBtn) {
         adminNavBtn.style.display = isAdmin ? 'flex' : 'none';
     }
+    const cookingGameCard = document.getElementById('card-cooking-game');
+    if (cookingGameCard) {
+        cookingGameCard.style.display = isAdmin ? 'flex' : 'none';
+    }
 
     // Switch language: Estonian for admin 1karl.ilves@gmail.com, English for others!
     setLanguage(isAdmin ? 'et' : 'en');
@@ -44,6 +48,9 @@ function setupIcons() {
 
     const cardRacingYardIcon = document.getElementById('card-racing-yard-icon');
     if (cardRacingYardIcon) cardRacingYardIcon.innerHTML = yardService.renderYardSvg(16);
+
+    const cardCookingYardIcon = document.getElementById('card-cooking-yard-icon');
+    if (cardCookingYardIcon) cardCookingYardIcon.innerHTML = yardService.renderYardSvg(16);
 }
 
 // --- Live HMS Countdown Updater ---

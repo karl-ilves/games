@@ -10,7 +10,8 @@ export default defineConfig({
         airplane: resolve(__dirname, 'games/airplane/index.html'),
         racing: resolve(__dirname, 'games/racing/index.html'),
         creator: resolve(__dirname, 'games/creator/index.html'),
-        play: resolve(__dirname, 'games/play/index.html')
+        play: resolve(__dirname, 'games/play/index.html'),
+        cooking: resolve(__dirname, 'games/cooking/index.html')
       }
     }
   }

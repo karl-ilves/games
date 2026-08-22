@@ -532,6 +532,14 @@ export function rotateSelectedObject(rad = Math.PI / 4) {
     autoSaveDraft();
 }
 
+export function deleteSelectedObject() {
+    if (!selectedObject) return;
+    scene.remove(selectedObject.mesh);
+    placedObjects = placedObjects.filter(p => p.id !== selectedObject!.id);
+    selectObject(null);
+    autoSaveDraft();
+}
+
 function updateInspectorDisplay() {
     if (!selectedObject) return;
     const posVal = document.getElementById('obj-pos-val');
@@ -690,6 +698,12 @@ const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 // --- Event Handlers ---
 function setupStudioEvents() {
     window.addEventListener('keydown', e => {
+        // If user is typing in input fields, ignore creator hotkeys
+        const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+            return;
+        }
+
         keys[e.code] = true;
 
         if (!isPlayTestMode && selectedObject) {
@@ -697,6 +711,13 @@ function setupStudioEvents() {
             if (e.code === 'KeyR' || e.key.toLowerCase() === 'r') {
                 e.preventDefault();
                 rotateSelectedObject(Math.PI / 4);
+                return;
+            }
+
+            // D Key / Delete / Backspace: Delete selected object
+            if (e.code === 'KeyD' || e.key.toLowerCase() === 'd' || e.code === 'Delete' || e.code === 'Backspace') {
+                e.preventDefault();
+                deleteSelectedObject();
                 return;
             }
         }
@@ -1043,12 +1064,7 @@ function setupInspectorEvents() {
 
     if (deleteBtn) {
         deleteBtn.addEventListener('click', () => {
-            if (selectedObject) {
-                scene.remove(selectedObject.mesh);
-                placedObjects = placedObjects.filter(p => p.id !== selectedObject!.id);
-                selectObject(null);
-                autoSaveDraft();
-            }
+            deleteSelectedObject();
         });
     }
 

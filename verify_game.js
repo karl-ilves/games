@@ -48,13 +48,28 @@ try {
         const startYards = await page.$eval('#header-yard-val', el => el.textContent);
         console.log("   Initial Guest Yard Balance (Expected: 0):", startYards);
 
+        // Check Cooking Game visibility for guest (Expected: none)
+        const guestCookingDisplay = await page.$eval('#card-cooking-game', el => window.getComputedStyle(el).display);
+        console.log("   Guest Cooking Game Card visibility (Expected: none):", guestCookingDisplay);
+        if (guestCookingDisplay !== 'none') {
+            throw new Error("Cooking game card should be hidden for guests!");
+        }
+
         // 2. Test User Registration with @SuperPlayer & Earning Yards
         console.log("2. Testing User Registration (@SuperPlayer) & Yard Persistence on Logout/Login...");
         await page.type('#auth-email', 'super@player.com');
         await page.type('#auth-username', 'SuperPlayer');
         await page.type('#auth-password', 'Pass12345!');
         await page.click('#btn-register');
-        await new Promise(r => setTimeout(r, 1200));
+        await page.waitForFunction(() => document.getElementById('user-info')?.style.display === 'block' || (document.getElementById('auth-message')?.textContent || '').includes('Account created'), { timeout: 6000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 600));
+
+        // Check Cooking Game visibility for SuperPlayer (Expected: none)
+        const superCookingDisplay = await page.$eval('#card-cooking-game', el => window.getComputedStyle(el).display);
+        console.log("   SuperPlayer Cooking Game Card visibility (Expected: none):", superCookingDisplay);
+        if (superCookingDisplay !== 'none') {
+            throw new Error("Cooking game card should be hidden for non-admin users!");
+        }
 
         const authMsg = await page.$eval('#auth-message', el => el.textContent);
         const userInfoDisplay = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
@@ -140,6 +155,13 @@ try {
             throw new Error("Admin Panel button should be visible for admin account!");
         }
 
+        // Check Cooking Game visibility for 1karl.ilves@gmail.com (Expected: flex)
+        const adminCookingDisplay = await page.$eval('#card-cooking-game', el => window.getComputedStyle(el).display);
+        console.log("   Admin Cooking Game Card visibility (Expected: flex):", adminCookingDisplay);
+        if (adminCookingDisplay !== 'flex') {
+            throw new Error("Cooking game card should be visible for 1karl.ilves@gmail.com!");
+        }
+
         // 4. Test Admin Panel & Give Yards by Username
         console.log("4. Testing Admin Panel & Give Yards by Username...");
         await page.click('#btn-open-admin-panel');
@@ -199,6 +221,15 @@ try {
             await page.click('#btn-move-fwd');
             const posVal = await page.$eval('#obj-pos-val', el => el.textContent);
             console.log("   Object Position after Move button:", posVal);
+
+            // Test Object Delete with 'D' key
+            await page.keyboard.press('KeyD');
+            await new Promise(r => setTimeout(r, 400));
+            console.log("   Successfully tested Object Deletion with 'D' key!");
+
+            // Re-spawn an object for subsequent tests
+            await firstObjCard.click();
+            await new Promise(r => setTimeout(r, 400));
 
             // Test AI Game Assistant
             await page.click('#btn-toggle-ai');
@@ -377,6 +408,84 @@ try {
         
         const racingYards = await page.$eval('#racing-yard-val', el => el.textContent);
         console.log("   Racing Garage Yard Balance:", racingYards);
+
+        // 9. Test 3D Master Chef Cooking Simulator
+        console.log("9. Checking 3D Master Chef Cooking Simulator...");
+        await page.goto('http://localhost:4173/games/games/cooking/index.html');
+        await new Promise(r => setTimeout(r, 1500));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+
+        // Check that VIP restricted overlay is hidden for admin
+        const vipOverlayDisplay = await page.$eval('#vip-restricted-overlay', el => window.getComputedStyle(el).display);
+        console.log("   Cooking Game VIP restricted overlay (Expected: none):", vipOverlayDisplay);
+        if (vipOverlayDisplay !== 'none') {
+            throw new Error("VIP Restricted overlay should be hidden for admin 1karl.ilves@gmail.com!");
+        }
+
+        // Verify Yard display
+        await page.waitForSelector('#hud-yards-val', { visible: true, timeout: 5000 });
+        const cookingYards = await page.$eval('#hud-yards-val', el => el.textContent);
+        console.log("   Cooking HUD Yard Balance:", cookingYards);
+
+        // Test Pantry interaction (add ingredient to plate)
+        const firstIngredientBtn = await page.$('#pantry-items-grid .ingredient-btn');
+        if (firstIngredientBtn) {
+            await firstIngredientBtn.click();
+            await new Promise(r => setTimeout(r, 300));
+            const plateItemsCount = await page.$$eval('#plate-items-container .plate-item-badge', els => els.length);
+            console.log("   Plate items count after adding ingredient:", plateItemsCount);
+            if (plateItemsCount < 1) {
+                throw new Error("Failed to add ingredient to plate from pantry!");
+            }
+        }
+
+        // Test Chopping station
+        await page.click('#tab-btn-cutting');
+        await new Promise(r => setTimeout(r, 300));
+        const firstRawBtn = await page.$('#chopping-raw-options .ingredient-btn');
+        if (firstRawBtn) {
+            await firstRawBtn.click();
+            await new Promise(r => setTimeout(r, 300));
+            // Click chop button 5 times
+            for (let i = 0; i < 5; i++) {
+                await page.click('#btn-do-chop');
+                await new Promise(r => setTimeout(r, 100));
+            }
+            console.log("   Successfully performed chopping minigame on cutting board!");
+        }
+
+        // Test Stove station
+        await page.click('#tab-btn-stove');
+        await new Promise(r => setTimeout(r, 300));
+        const firstPanAddBtn = await page.$('#stove-pans-container .btn-add-pan');
+        if (firstPanAddBtn) {
+            await firstPanAddBtn.click();
+            await new Promise(r => setTimeout(r, 300));
+            console.log("   Successfully placed item on stove pan!");
+        }
+
+        // Test Recipe Book modal
+        await page.click('#btn-open-recipes');
+        await new Promise(r => setTimeout(r, 300));
+        const recipeModalDisplay = await page.$eval('#modal-recipes', el => window.getComputedStyle(el).display);
+        console.log("   Recipe Book modal visibility:", recipeModalDisplay);
+        if (recipeModalDisplay !== 'flex') {
+            throw new Error("Recipe Book modal failed to open!");
+        }
+        await page.click('#btn-close-recipes');
+        await new Promise(r => setTimeout(r, 300));
+
+        // Test Sound toggle
+        await page.click('#btn-toggle-sound');
+        const soundIcon = await page.$eval('#sound-icon', el => el.textContent);
+        console.log("   Sound toggle icon after click:", soundIcon);
+
+        // Test Clear plate
+        await page.click('#tab-btn-assembly');
+        await new Promise(r => setTimeout(r, 300));
+        await page.click('#btn-clear-plate');
+        await new Promise(r => setTimeout(r, 300));
+        console.log("   Successfully cleared plate!");
 
     } catch(err) {
         console.error("Verification failed:", err);

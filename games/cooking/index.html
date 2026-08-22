@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard - 3D Master Chef Simulator</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #111822;
+            color: #d2dae2;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top HUD Bar */
+        .top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 65px;
+            background: rgba(18, 25, 36, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 2px solid rgba(255, 177, 66, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .hud-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .hud-center {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 900;
+            font-size: 1.25rem;
+            color: #ffd32a;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 10px rgba(255, 211, 42, 0.4);
+        }
+
+        .hud-stat-box {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 5px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .btn-action {
+            background: #2f3542;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+        .btn-action:hover {
+            background: #475369;
+            transform: translateY(-2px);
+        }
+
+        /* Order Tickets Carousel */
+        .orders-bar {
+            position: absolute;
+            top: 75px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 8px 0;
+            z-index: 50;
+            pointer-events: auto;
+        }
+
+        .order-ticket {
+            background: #ffffff;
+            color: #2f3542;
+            border-radius: 12px;
+            padding: 12px 16px;
+            min-width: 200px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.45);
+            position: relative;
+            border-top: 5px solid #ff4757;
+            animation: slideInTicket 0.3s ease-out;
+            transition: transform 0.2s ease;
+        }
+        .order-ticket:hover {
+            transform: translateY(-3px);
+        }
+
+        @keyframes slideInTicket {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .ticket-title {
+            font-weight: 900;
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ticket-recipe-list {
+            font-size: 0.82rem;
+            color: #57606f;
+            line-height: 1.4;
+            margin: 6px 0;
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .ticket-recipe-list li {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .patience-bar-wrap {
+            width: 100%;
+            height: 6px;
+            background: #e4e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .patience-bar {
+            height: 100%;
+            background: #2ed573;
+            width: 100%;
+            transition: width 0.2s linear, background-color 0.3s;
+        }
+
+        /* Bottom Stations Interface */
+        .bottom-kitchen-ui {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 1100px;
+            background: rgba(22, 30, 44, 0.94);
+            backdrop-filter: blur(16px);
+            border: 1.5px solid rgba(0, 242, 254, 0.3);
+            border-radius: 20px;
+            padding: 16px 20px;
+            z-index: 100;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Station Tabs */
+        .station-tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #a4b0be;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(255, 177, 66, 0.25), rgba(255, 107, 129, 0.25));
+            border-color: #ffb142;
+            color: #ffd32a;
+            box-shadow: 0 0 15px rgba(255, 177, 66, 0.2);
+        }
+
+        /* Pantry Tray */
+        .pantry-grid {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 4px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .ingredient-btn {
+            background: #242f3d;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+            min-width: 85px;
+        }
+        .ingredient-btn:hover {
+            transform: scale(1.06);
+            border-color: #ffb142;
+            background: #2d3b4e;
+        }
+        .ingredient-btn:active {
+            transform: scale(0.95);
+        }
+        .ingredient-icon {
+            font-size: 1.6rem;
+        }
+        .ingredient-label {
+            font-size: 0.75rem;
+            color: #d2dae2;
+        }
+
+        /* Plate / Assembly UI */
+        .plate-assembly-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px dashed rgba(255,255,255,0.15);
+        }
+
+        .plate-items-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            flex: 1;
+            padding: 4px 0;
+        }
+
+        .plate-item-badge {
+            background: #34495e;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.6); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .btn-serve {
+            background: linear-gradient(135deg, #2ed573, #10ac84);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1.05rem;
+            font-weight: 900;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(46, 213, 115, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-serve:hover {
+            transform: scale(1.04);
+            box-shadow: 0 6px 20px rgba(46, 213, 115, 0.6);
+        }
+        .btn-serve:active {
+            transform: scale(0.96);
+        }
+
+        .btn-trash {
+            background: #eb4d4b;
+            border: none;
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-right: 10px;
+        }
+
+        /* Chopping Station Modal / Overlay View */
+        .station-panel {
+            display: none;
+        }
+        .station-panel.active {
+            display: block;
+        }
+
+        .chopping-board-box {
+            background: #574b90;
+            background: linear-gradient(135deg, #786fa6, #574b90);
+            border-radius: 14px;
+            padding: 15px;
+            text-align: center;
+            color: white;
+            border: 2px solid #f7d794;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .btn-chop {
+            background: linear-gradient(135deg, #f7d794, #f5cd79);
+            color: #303952;
+            border: none;
+            padding: 14px 30px;
+            font-size: 1.2rem;
+            font-weight: 900;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(245, 205, 121, 0.5);
+            transition: transform 0.1s ease;
+            margin-top: 8px;
+        }
+        .btn-chop:active {
+            transform: scale(0.92);
+        }
+
+        /* Stove Slots */
+        .stove-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .pan-card {
+            background: #1e272e;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .pan-heat-bar {
+            width: 100%;
+            height: 8px;
+            background: #2f3542;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .pan-heat-fill {
+            height: 100%;
+            width: 0%;
+            background: #ffd32a;
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+
+        /* Floating Score Popups */
+        .score-popup {
+            position: absolute;
+            color: #ffd32a;
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            pointer-events: none;
+            animation: floatUp 1.2s ease-out forwards;
+            z-index: 1000;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.8); opacity: 0; }
+            20% { transform: translateY(-15px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-70px) scale(1); opacity: 0; }
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+        .modal-box {
+            background: #1e272e;
+            border: 1.5px solid rgba(255, 177, 66, 0.4);
+            border-radius: 20px;
+            padding: 28px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            text-align: center;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            color: #a4b0be;
+            font-size: 1.6rem;
+            cursor: pointer;
+        }
+
+        /* VIP Access Block Screen (Non 1karl.ilves@gmail.com) */
+        #vip-restricted-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, #1e272e 0%, #0d1117 100%);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .vip-card {
+            background: #242f3d;
+            border: 2px solid #ffd32a;
+            border-radius: 24px;
+            padding: 40px 30px;
+            max-width: 520px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 30px rgba(255, 211, 42, 0.25);
+            animation: pulseVip 3s infinite ease-in-out;
+        }
+
+        @keyframes pulseVip {
+            0%, 100% { box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 20px rgba(255, 211, 42, 0.2); }
+            50% { box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(255, 211, 42, 0.5); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Top HUD Navigation -->
+    <div class="top-hud">
+        <div class="hud-left">
+            <a href="../../index.html" class="btn-action" id="btn-back-hub">
+                <span>◀</span> <span>Pealeht / Hub</span>
+            </a>
+            <div class="logo-badge">
+                <span>🍳</span>
+                <span>MASTER CHEF 3D</span>
+            </div>
+        </div>
+
+        <div class="hud-center">
+            <!-- Score & Orders -->
+            <div class="hud-stat-box">
+                <span>⭐ Punktid:</span>
+                <span id="hud-score" style="color: #ffd32a; font-size: 1.15rem;">0</span>
+            </div>
+            <div class="hud-stat-box">
+                <span>🔥 Kombo:</span>
+                <span id="hud-combo" style="color: #ff4757; font-size: 1.15rem;">x1</span>
+            </div>
+            <div class="hud-stat-box">
+                <span>📦 Täidetud tellimused:</span>
+                <span id="hud-orders-count" style="color: #2ed573; font-size: 1.15rem;">0</span>
+            </div>
+        </div>
+
+        <div class="hud-right">
+            <!-- Yard Wallet Badge -->
+            <div class="hud-stat-box" style="border-color: #00f2fe; background: rgba(0, 242, 254, 0.15);">
+                <span id="cooking-yard-icon"></span>
+                <span id="hud-yards-val" style="color: #ffffff; font-weight: 800; font-size: 1.15rem;">0</span>
+                <span style="font-size: 0.75rem; color: #00f2fe;">YARDS</span>
+            </div>
+
+            <!-- Recipe Book Button -->
+            <button class="btn-action" id="btn-open-recipes" title="Retseptiraamat">
+                <span>📖</span> <span>Retseptid</span>
+            </button>
+
+            <!-- Sound Toggle -->
+            <button class="btn-action" id="btn-toggle-sound" title="Heli sisse/välja">
+                <span id="sound-icon">🔊</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Incoming Customer Order Tickets Carousel -->
+    <div class="orders-bar" id="orders-queue-container">
+        <!-- Dynamically populated orders -->
+    </div>
+
+    <!-- Bottom Kitchen Workstation -->
+    <div class="bottom-kitchen-ui">
+        <!-- Workstation Selector Tabs -->
+        <div class="station-tabs">
+            <button class="tab-btn active" id="tab-btn-assembly" data-station="assembly">
+                <span>🍽️</span> <span>Komplekteerimine & Taldrik</span>
+            </button>
+            <button class="tab-btn" id="tab-btn-cutting" data-station="cutting">
+                <span>🔪</span> <span>Lõikelaud & Hakkimine</span>
+            </button>
+            <button class="tab-btn" id="tab-btn-stove" data-station="stove">
+                <span>🔥</span> <span>Pliit & Praepannid</span>
+            </button>
+            <button class="tab-btn" id="tab-btn-oven" data-station="oven">
+                <span>🍕</span> <span>Küpsetusahi</span>
+            </button>
+        </div>
+
+        <!-- 1. Assembly & Plate Station -->
+        <div class="station-panel active" id="panel-assembly">
+            <!-- Ingredient Pantry Tray -->
+            <div style="font-size: 0.85rem; color: #a4b0be; margin-bottom: 6px; font-weight: bold;">
+                🥗 Sahver ja Valmiskomponendid (Klõpsa lisamiseks taldrikule):
+            </div>
+            <div class="pantry-grid" id="pantry-items-grid">
+                <!-- Dynamically generated ingredient buttons -->
+            </div>
+
+            <!-- Current Plate / Dish Assembly -->
+            <div class="plate-assembly-row" style="margin-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.4rem;">🍽️</span>
+                    <strong style="color: #ffd32a;">Sinu Taldrik:</strong>
+                </div>
+
+                <div class="plate-items-container" id="plate-items-container">
+                    <span style="color: #718093; font-style: italic; font-size: 0.9rem;" id="plate-empty-msg">
+                        Taldrik on tühi. Vali sahvrist koostisosi või võta valminud toidud pliidilt/lõikelaualt!
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center;">
+                    <button class="btn-trash" id="btn-clear-plate" title="Tühjenda taldrik">🗑️ Tühjenda</button>
+                    <button class="btn-serve" id="btn-serve-dish">
+                        <span>🔔</span>
+                        <span>SERVEERI TOIT!</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Chopping Station -->
+        <div class="station-panel" id="panel-cutting">
+            <div class="chopping-board-box">
+                <h3 style="margin: 0 0 6px 0; color: #ffd32a; font-size: 1.3rem;">🔪 Lõikelaud & Viilutamine</h3>
+                <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #f1f2f6;" id="chopping-instruction">
+                    Vali tooraine hakkimiseks (Tomat, Juust, Sibul, Salat, Kartul, Seened) ja klõpsa "HAKI!"
+                </p>
+
+                <!-- Chopping Raw Selectors -->
+                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="chopping-raw-options">
+                    <!-- Buttons -->
+                </div>
+
+                <div id="chopping-active-area" style="display: none; flex-direction: column; align-items: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 8px;" id="chopping-item-icon">🍅</div>
+                    <div style="font-weight: bold; font-size: 1.1rem; color: #fff;" id="chopping-item-name">Tomat</div>
+                    <div style="width: 250px; height: 10px; background: rgba(0,0,0,0.4); border-radius: 5px; overflow: hidden; margin: 10px 0;">
+                        <div id="chopping-progress-fill" style="width: 0%; height: 100%; background: #2ed573; transition: width 0.08s;"></div>
+                    </div>
+                    <button class="btn-chop" id="btn-do-chop">🔪 HAKI! (Klõpsa kiiresti)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Stove & Pans Station -->
+        <div class="station-panel" id="panel-stove">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; color: #ff6b81;">🔥 Pliit & Praepannid</h3>
+                <div style="font-size: 0.85rem; color: #a4b0be;">Pane tooraine pannile ja jälgi, et see ei kõrbeks!</div>
+            </div>
+            <div class="stove-grid" id="stove-pans-container">
+                <!-- Pan 1, Pan 2, Pot 1 -->
+            </div>
+        </div>
+
+        <!-- 4. Oven Station -->
+        <div class="station-panel" id="panel-oven">
+            <div style="background: #2d3436; border: 1.5px solid #e17055; border-radius: 14px; padding: 18px; text-align: center;">
+                <h3 style="margin: 0 0 6px 0; color: #fab1a0; font-size: 1.3rem;">🍕 Küpsetusahi (Pitsa & Pirukad)</h3>
+                <p style="color: #dfe6e9; font-size: 0.9rem; margin-bottom: 15px;">
+                    Valmista pitsapõhi, lisa kaste, juust ja lisandid ning pane ahju küpsema!
+                </p>
+                <div id="oven-status-box" style="display: flex; justify-content: center; gap: 20px; align-items: center; flex-wrap: wrap;">
+                    <!-- Oven status and button -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipe Book Modal -->
+    <div class="modal-overlay" id="modal-recipes">
+        <div class="modal-card modal-box">
+            <button class="modal-close" id="btn-close-recipes">&times;</button>
+            <h2 style="margin: 0 0 6px 0; color: #ffd32a; font-size: 1.8rem;">📖 Peakoka Retseptiraamat</h2>
+            <p style="color: #a4b0be; margin-bottom: 20px; font-size: 0.9rem;">
+                Vaata, milliseid koostisosi on vaja erinevate roogade valmistamiseks!
+            </p>
+            <div id="recipe-book-list" style="display: flex; flex-direction: column; gap: 12px; text-align: left;">
+                <!-- Dynamically populated recipes -->
+            </div>
+        </div>
+    </div>
+
+    <!-- VIP Restricted Access Screen (Shown for non-admin) -->
+    <div id="vip-restricted-overlay">
+        <div class="vip-card">
+            <div style="font-size: 3.5rem; margin-bottom: 10px;">🔒👑</div>
+            <h1 style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 10px 0;">Salajane Peakoka Mäng</h1>
+            <p style="color: #a4b0be; font-size: 1.05rem; line-height: 1.5; margin-bottom: 25px;">
+                See 3D Master Chef kokkamismäng on eksklusiivne VIP mäng, mis on saadaval ainult kasutajale <strong style="color: #00f2fe;">1karl.ilves@gmail.com</strong>.
+            </p>
+            <div style="background: rgba(0,0,0,0.3); border: 1px dashed rgba(255,211,42,0.4); padding: 15px; border-radius: 12px; margin-bottom: 25px; font-size: 0.9rem; color: #dfe6e9;">
+                Palun logi sisse administraatori kontoga <strong style="color: #ffd32a;">1karl.ilves@gmail.com</strong> Playardi pealehel.
+            </div>
+            <a href="../../index.html" class="btn-action" style="display: inline-flex; justify-content: center; padding: 14px 28px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 900; font-size: 1.1rem; border-radius: 30px; text-decoration: none;">
+                ◀ Tagasi Playardi Pealehele
+            </a>
+        </div>
+    </div>
+
+    <!-- Game Script Entry Point -->
+    <script type="module" src="/src/games/cooking/main.ts"></script>
+</body>
+</html>
