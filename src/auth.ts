@@ -200,6 +200,9 @@ export async function initAuth() {
             if (username.toLowerCase() === 'admin' && !isAdmin) {
                 return showMsg("The username 'admin' is reserved for administrators!", 'error');
             }
+            if (isAdmin && username.toLowerCase() !== 'admin') {
+                return showMsg("Incorrect username for Admin account!", 'error');
+            }
 
             showMsg('Checking credentials...', 'info');
 
@@ -459,6 +462,9 @@ export async function initAuth() {
             if (username.toLowerCase() === 'admin' && !isAdmin) {
                 return showMsg("The username 'admin' is reserved for administrators!", 'error');
             }
+            if (isAdmin && username.toLowerCase() !== 'admin') {
+                return showMsg("Incorrect username for Admin account!", 'error');
+            }
 
             const localProfiles = getLocalProfiles();
             const taken = localProfiles.find(p => p.username.toLowerCase() === username.toLowerCase() && p.email !== email);
@@ -520,6 +526,12 @@ export async function initAuth() {
                     if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('already exists')) {
                         const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
                         if (!loginErr && loginData.session) {
+                            const expectedUsername = loginData.session.user.user_metadata?.username;
+                            if (expectedUsername && expectedUsername.toLowerCase() !== username.toLowerCase()) {
+                                await supabase.auth.signOut();
+                                return showMsg(`This email is already registered to user @${expectedUsername}!`, 'error');
+                            }
+                            
                             const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                             const profile: UserProfile = {
                                 id: loginData.session.user.id,

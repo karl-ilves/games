@@ -26,6 +26,10 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
     if (adminNavBtn) {
         adminNavBtn.style.display = isAdmin ? 'flex' : 'none';
     }
+    const btnOpenStreak = document.getElementById('btn-open-streak');
+    if (btnOpenStreak) {
+        btnOpenStreak.style.display = isAdmin ? 'none' : 'flex';
+    }
     const cookingGameCard = document.getElementById('card-cooking-game');
     if (cookingGameCard) {
         cookingGameCard.style.display = isAdmin ? 'flex' : 'none';
@@ -89,7 +93,12 @@ function updateStreakTimerLive() {
 // --- Update UI with Current Yard Data ---
 function updateYardDisplay(data: YardData) {
     const headerVal = document.getElementById('header-yard-val');
-    if (headerVal) headerVal.innerText = data.yards.toLocaleString();
+    const prof = getCurrentUserProfile();
+    const isAdmin = prof?.email === ADMIN_EMAIL;
+    
+    if (headerVal) {
+        headerVal.innerText = isAdmin ? '∞' : data.yards.toLocaleString();
+    }
 
     updateStreakTimerLive();
     renderStreakCards();

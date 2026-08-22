@@ -348,6 +348,7 @@ class YardService {
     }
 
     public getYards(): number {
+        if (this.currentUserEmail === '1karl.ilves@gmail.com') return Infinity;
         return this.data.yards;
     }
 
@@ -383,11 +384,16 @@ class YardService {
 
     public spendYards(amount: number, itemId?: string, reason = 'Purchase'): boolean {
         if (amount <= 0) return true;
-        if (this.data.yards < amount) {
+        
+        const isAdmin = this.currentUserEmail === '1karl.ilves@gmail.com';
+        
+        if (!isAdmin && this.data.yards < amount) {
             return false;
         }
 
-        this.data.yards -= amount;
+        if (!isAdmin) {
+            this.data.yards -= amount;
+        }
         if (itemId && !this.data.inventory.includes(itemId)) {
             this.data.inventory.push(itemId);
         }
