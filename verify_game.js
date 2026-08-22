@@ -313,8 +313,59 @@ try {
             await page.click('#btn-save-draft');
             await new Promise(r => setTimeout(r, 500));
 
-            // Test Multi-World Dimension Travel (Hop to World 1 from inside game)
-            console.log("   Testing Dimension Travel between 2 saved worlds...");
+            // Test Portal Destination Selection in Inspector & Walk-Through Teleportation
+            console.log("   Testing Portal Target Destination Selection in Inspector...");
+            // Filter catalog to gameplay/portal
+            await page.click('.cat-btn[data-cat="gameplay"]');
+            await new Promise(r => setTimeout(r, 400));
+            const portalCard = await page.$('.object-card');
+            if (portalCard) {
+                await portalCard.click();
+                await new Promise(r => setTimeout(r, 500));
+
+                // Verify Portal Destination Dropdown is populated with saved games
+                const portalTargetOptions = await page.$eval('#obj-portal-target', el => el.children.length);
+                console.log("   Portal Target options count in inspector:", portalTargetOptions);
+                if (portalTargetOptions < 2) {
+                    throw new Error("Portal Target dropdown should contain saved games!");
+                }
+
+                // Select World 1 as target
+                await page.evaluate(() => {
+                    const select = document.getElementById('obj-portal-target');
+                    if (select && select.children.length > 1) {
+                        select.selectedIndex = 1;
+                        select.dispatchEvent(new Event('change'));
+                    }
+                });
+                await new Promise(r => setTimeout(r, 400));
+
+                // Move portal closer to player spawn (z = -3)
+                await page.click('#btn-move-fwd');
+                await page.click('#btn-move-fwd');
+                await page.click('#btn-move-fwd');
+
+                // Enter Play Test Mode and walk into portal
+                console.log("   Testing Walk-Through Portal Automatic Teleportation...");
+                await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
+                await new Promise(r => setTimeout(r, 500));
+
+                // Walk forward into portal
+                await page.keyboard.down('KeyW');
+                await new Promise(r => setTimeout(r, 900));
+                await page.keyboard.up('KeyW');
+                await new Promise(r => setTimeout(r, 800));
+
+                const currentWorldTitle = await page.$eval('#game-title-input', el => el.value);
+                console.log("   World Title after walking through portal:", currentWorldTitle);
+
+                // Exit Play Test Mode
+                await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
+                await new Promise(r => setTimeout(r, 400));
+            }
+
+            // Test Multi-World Dimension Travel Modal
+            console.log("   Testing Dimension Travel Modal between saved worlds...");
             await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
             await new Promise(r => setTimeout(r, 500));
             await page.evaluate(() => document.getElementById('btn-quick-travel-hud')?.click());

@@ -570,6 +570,20 @@
                 <input type="text" id="obj-trigger-text" placeholder="nt: Leidsid võlumetsa saladuse!" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #0f172a; border: 1.5px solid #2ecc71; border-radius: 6px; color: #fff; font-size: 0.85rem;">
             </div>
 
+            <!-- Portal Destination Settings (Teleport to Target Saved World) -->
+            <div id="obj-portal-settings" style="margin-top: 12px; background: rgba(168,85,247,0.15); padding: 10px; border-radius: 10px; border: 1.5px solid #a855f7;">
+                <div style="font-size: 0.8rem; color: #e056fd; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <span>🌀</span> <span>Portaali Sihtkoht (Teleport World)</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 6px;">
+                    Vali, millisesse salvestatud maailma see portaal mängija kohe viib:
+                </div>
+                <select id="obj-portal-target" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #0f172a; border: 1.5px solid #a855f7; border-radius: 6px; color: #00f2fe; font-weight: bold; font-size: 0.85rem; outline: none; cursor: pointer;">
+                    <option value="">-- Vali sihtmaailm --</option>
+                </select>
+                <div id="portal-target-info" style="font-size: 0.75rem; color: #ffd32a; margin-top: 4px; display: none;"></div>
+            </div>
+
             <button id="btn-duplicate-obj" class="btn-studio" style="width: 100%; margin-top: 10px; justify-content: center;">
                 📋 Duplicate Object
             </button>

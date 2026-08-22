@@ -151,6 +151,7 @@ class CookingGame {
     private currentChoppingRaw: string | null = null;
     private choppingClicks: number = 0;
     private requiredChoppingClicks: number = 5;
+    private knife3D: THREE.Mesh | null = null;
 
     // Stove Pans state
     private pans = [
@@ -311,6 +312,7 @@ class CookingGame {
         const knifeBlade = new THREE.Mesh(knifeBladeGeo, knifeBladeMat);
         knifeBlade.position.set(1.9, 1.5, 0.9);
         knifeBlade.rotation.y = 0.3;
+        this.knife3D = knifeBlade;
         this.scene.add(knifeBlade);
 
         // Master Chef Plate in Center
@@ -465,26 +467,26 @@ class CookingGame {
         if (pantryContainer) {
             pantryContainer.innerHTML = `
                 <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
-                    <!-- 1. Cooked & Baked Items -->
+                    <!-- 1. Cooked & Baked Items (Ready to add to plate) -->
                     <div style="background: rgba(255, 71, 87, 0.12); border: 1.5px solid rgba(255, 71, 87, 0.4); border-radius: 12px; padding: 10px 14px;">
                         <div class="category-header" style="color: #ff6b81;">
-                            <span>🔥</span> <span>3. KÜPSETATUD & PRAETUD TOIDUD (Valmista jaos: 🔥 Pliit või 🍕 Ahi):</span>
+                            <span>🔥</span> <span>1. PRAETUD & KÜPSETATUD TOIDUD (Klõpsa lisamiseks taldrikule):</span>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-cooked"></div>
                     </div>
 
-                    <!-- 2. Chopped Ingredients -->
+                    <!-- 2. Chopped & Sliced Ingredients (Ready to add to plate) -->
                     <div style="background: rgba(87, 95, 207, 0.12); border: 1px solid rgba(87, 95, 207, 0.35); border-radius: 12px; padding: 10px 14px;">
                         <div class="category-header" style="color: #70a1ff;">
-                            <span>🔪</span> <span>2. VIILUTATUD KOOSTISOSAD (Valmista jaos: 🔪 Lõikelaud):</span>
+                            <span>🔪</span> <span>2. HAKITUD & VIILUTATUD TOIDUAINED (Klõpsa lisamiseks taldrikule):</span>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-chopped"></div>
                     </div>
 
-                    <!-- 3. Base Pantry Items -->
+                    <!-- 3. Base Pantry & Sauces (Ready to add to plate) -->
                     <div style="background: rgba(46, 213, 115, 0.1); border: 1px solid rgba(46, 213, 115, 0.3); border-radius: 12px; padding: 10px 14px;">
                         <div class="category-header" style="color: #2ed573;">
-                            <span>🍞</span> <span>1. SAHVRI TOOTED (Kohe valmis taldrikule panekuks):</span>
+                            <span>🍞</span> <span>3. SAHVRI TOOTED & KASTMED (Klõpsa lisamiseks taldrikule):</span>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-pantry"></div>
                     </div>
@@ -676,12 +678,16 @@ class CookingGame {
         const iconEl = document.getElementById('chopping-item-icon');
         const nameEl = document.getElementById('chopping-item-name');
         const progressEl = document.getElementById('chopping-progress-fill');
+        const slicesCountEl = document.getElementById('chopping-slices-count');
 
         if (activeArea && iconEl && nameEl && progressEl) {
             activeArea.style.display = 'flex';
             iconEl.innerText = raw.icon;
             nameEl.innerText = raw.nameEt;
             progressEl.style.width = '0%';
+            if (slicesCountEl) {
+                slicesCountEl.innerText = `0 / ${this.requiredChoppingClicks} viilu lõigatud`;
+            }
         }
     }
 
@@ -691,15 +697,78 @@ class CookingGame {
         this.choppingClicks++;
         kitchenAudio.playChop();
 
+        const raw = INGREDIENTS[this.currentChoppingRaw];
+
+        // 1. 2D Knife Slash Animation
+        const knifeActor = document.getElementById('knife-actor-el');
+        if (knifeActor) {
+            knifeActor.classList.remove('chopping');
+            void knifeActor.offsetWidth; // Force CSS reflow
+            knifeActor.classList.add('chopping');
+            setTimeout(() => knifeActor.classList.remove('chopping'), 100);
+        }
+
+        // 2. 2D Food Impact & Squash Animation
+        const foodTarget = document.getElementById('chopping-item-icon');
+        if (foodTarget) {
+            foodTarget.classList.remove('impact');
+            void foodTarget.offsetWidth;
+            foodTarget.classList.add('impact');
+            setTimeout(() => foodTarget.classList.remove('impact'), 100);
+        }
+
+        // 3. Spawn flying slice crumbs and cut lines on cutting board
+        const arena = document.getElementById('chopping-arena-el');
+        if (arena && raw) {
+            // Flying slice crumb
+            const crumb = document.createElement('div');
+            crumb.className = 'flying-crumb';
+            crumb.innerText = raw.icon;
+            const angle = (Math.random() * Math.PI) - Math.PI / 2;
+            const dist = 40 + Math.random() * 50;
+            crumb.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+            crumb.style.setProperty('--ty', `${-Math.abs(Math.sin(angle) * dist) - 20}px`);
+            crumb.style.setProperty('--rot', `${(Math.random() - 0.5) * 360}deg`);
+            arena.appendChild(crumb);
+            setTimeout(() => crumb.remove(), 400);
+
+            // Cut mark on board
+            const cut = document.createElement('div');
+            cut.className = 'cut-line';
+            cut.style.left = `${90 + (this.choppingClicks * 18) + (Math.random() * 8 - 4)}px`;
+            cut.style.top = `${45 + (Math.random() * 16 - 8)}px`;
+            cut.style.transform = `rotate(${(Math.random() - 0.5) * 30}deg)`;
+            arena.appendChild(cut);
+            setTimeout(() => cut.remove(), 800);
+        }
+
+        // 4. 3D Knife Animation in Three.js Scene
+        if (this.knife3D) {
+            this.knife3D.rotation.z = -0.4;
+            this.knife3D.position.y = 1.44;
+            setTimeout(() => {
+                if (this.knife3D) {
+                    this.knife3D.rotation.z = 0;
+                    this.knife3D.position.y = 1.5;
+                }
+            }, 90);
+        }
+
+        // 5. Update Progress Bar and Slices Count
         const pct = (this.choppingClicks / this.requiredChoppingClicks) * 100;
         const progressEl = document.getElementById('chopping-progress-fill');
         if (progressEl) progressEl.style.width = `${pct}%`;
 
+        const slicesCountEl = document.getElementById('chopping-slices-count');
+        if (slicesCountEl) {
+            slicesCountEl.innerText = `${this.choppingClicks} / ${this.requiredChoppingClicks} viilu lõigatud`;
+        }
+
+        // 6. Check Completion
         if (this.choppingClicks >= this.requiredChoppingClicks) {
-            const raw = INGREDIENTS[this.currentChoppingRaw];
             if (raw && raw.chopResult) {
                 this.addToPlate(raw.chopResult);
-                this.showScorePopup(`+ Viilutatud ${raw.nameEt}!`);
+                this.showScorePopup(`+ Viilutatud ${raw.nameEt}! ✨`);
             }
             this.currentChoppingRaw = null;
             this.choppingClicks = 0;

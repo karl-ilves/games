@@ -24,16 +24,21 @@ interface PlacedObject {
     rotation: { x: number; y: number; z: number };
     scale: { x: number; y: number; z: number };
     color: string;
+    portalTargetId?: string;
+    portalTargetTitle?: string;
     trigger?: {
-        type: 'touch' | 'proximity';
-        message: string;
+        type: 'touch' | 'proximity' | 'portal';
+        message?: string;
         title?: string;
         radius?: number;
+        targetWorldId?: string;
+        targetWorldTitle?: string;
     };
 }
 
 let placedObjects: PlacedObject[] = [];
 let selectedObject: PlacedObject | null = null;
+let isTeleporting = false;
 
 // Vehicle Drive State (Play Test Mode)
 let currentVehicle: PlacedObject | null = null;
@@ -466,7 +471,9 @@ export function serializeCurrentScene() {
             rotation: { x: p.mesh.rotation.x, y: p.mesh.rotation.y, z: p.mesh.rotation.z },
             scale: { x: p.mesh.scale.x, y: p.mesh.scale.y, z: p.mesh.scale.z },
             color: p.color,
-            trigger: p.trigger
+            trigger: p.trigger,
+            portalTargetId: p.portalTargetId,
+            portalTargetTitle: p.portalTargetTitle
         })),
         updatedAt: Date.now()
     };
@@ -552,7 +559,9 @@ export function loadSceneFromData(sceneData: any) {
                 rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
                 scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
                 color: objData.color || catItem.color,
-                trigger: objData.trigger
+                trigger: objData.trigger,
+                portalTargetId: objData.portalTargetId || objData.trigger?.targetWorldId,
+                portalTargetTitle: objData.portalTargetTitle || objData.trigger?.targetWorldTitle
             };
 
             placedObjects.push(placed);
@@ -635,6 +644,30 @@ function selectObject(placed: PlacedObject | null) {
     const triggerInput = document.getElementById('obj-trigger-text') as HTMLInputElement | null;
     if (triggerInput) {
         triggerInput.value = placed.trigger?.message || '';
+    }
+
+    // Populate Portal Target dropdown with user's saved games
+    const portalSelect = document.getElementById('obj-portal-target') as HTMLSelectElement | null;
+    const portalTargetInfo = document.getElementById('portal-target-info');
+    if (portalSelect) {
+        const profile = getCurrentUserProfile();
+        const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
+
+        portalSelect.innerHTML = `<option value="">-- Vali sihtmaailm --</option>` +
+            savedGames.map((g: any) => `<option value="${g.id}">🎮 ${g.title}</option>`).join('');
+
+        const currentTargetId = placed.portalTargetId || placed.trigger?.targetWorldId || '';
+        portalSelect.value = currentTargetId;
+
+        if (portalTargetInfo) {
+            if (currentTargetId) {
+                const targetGame = savedGames.find((g: any) => g.id === currentTargetId);
+                portalTargetInfo.style.display = 'block';
+                portalTargetInfo.innerText = `👉 Viib maailma: "${targetGame?.title || currentTargetId}"`;
+            } else {
+                portalTargetInfo.style.display = 'none';
+            }
+        }
     }
 }
 
@@ -1250,10 +1283,50 @@ function setupInspectorEvents() {
                         type: 'touch',
                         message: val,
                         title: selectedObject.name,
-                        radius: 3.5
+                        radius: 3.8
                     };
-                } else {
+                } else if (selectedObject.trigger?.type === 'touch') {
                     delete selectedObject.trigger;
+                }
+                autoSaveDraft();
+            }
+        });
+    }
+
+    const portalSelect = document.getElementById('obj-portal-target') as HTMLSelectElement | null;
+    const portalTargetInfo = document.getElementById('portal-target-info');
+    if (portalSelect) {
+        portalSelect.addEventListener('change', () => {
+            if (selectedObject) {
+                const targetId = portalSelect.value;
+                const profile = getCurrentUserProfile();
+                const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
+                const targetGame = savedGames.find((g: any) => g.id === targetId);
+
+                if (targetId && targetGame) {
+                    selectedObject.portalTargetId = targetId;
+                    selectedObject.portalTargetTitle = targetGame.title;
+                    selectedObject.trigger = {
+                        type: 'portal',
+                        targetWorldId: targetId,
+                        targetWorldTitle: targetGame.title,
+                        message: `🌀 Teleporteerumine maailma "${targetGame.title}"...`,
+                        title: '🌀 Dimensiooni Portaal',
+                        radius: 3.8
+                    };
+                    if (portalTargetInfo) {
+                        portalTargetInfo.style.display = 'block';
+                        portalTargetInfo.innerText = `👉 Viib maailma: "${targetGame.title}"`;
+                    }
+                } else {
+                    delete selectedObject.portalTargetId;
+                    delete selectedObject.portalTargetTitle;
+                    if (selectedObject.trigger?.type === 'portal') {
+                        delete selectedObject.trigger;
+                    }
+                    if (portalTargetInfo) {
+                        portalTargetInfo.style.display = 'none';
+                    }
                 }
                 autoSaveDraft();
             }
@@ -1902,10 +1975,55 @@ function animate() {
             }
         }
 
-        // Check Triggers & Dialogue (e.g. Walking through tree / proximity)
+        // Check Portal Teleport Triggers (Instant Multi-World Travel when walking through portal)
+        let activePortal: PlacedObject | null = null;
+        for (const p of placedObjects) {
+            const targetId = p.portalTargetId || p.trigger?.targetWorldId;
+            if (targetId) {
+                const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
+                const rad = p.trigger?.radius || 3.8;
+                if (dist <= rad) {
+                    activePortal = p;
+                    break;
+                }
+            }
+        }
+
+        if (activePortal && !isTeleporting) {
+            const targetId = activePortal.portalTargetId || activePortal.trigger?.targetWorldId;
+            const profile = getCurrentUserProfile();
+            const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
+            const targetGame = savedGames.find((g: any) => g.id === targetId);
+
+            if (targetGame) {
+                isTeleporting = true;
+                if (currentVehicle) exitVehicle();
+
+                const dialogPopup = document.getElementById('game-dialog-popup');
+                const dialogTitle = document.getElementById('game-dialog-title');
+                const dialogText = document.getElementById('game-dialog-text');
+                const dialogIcon = document.getElementById('game-dialog-icon');
+
+                if (dialogPopup && dialogTitle && dialogText && dialogIcon) {
+                    dialogIcon.innerText = '🌀';
+                    dialogTitle.innerText = '🌀 Dimensiooni Portaal';
+                    dialogText.innerText = `Teleporteerusid maailma "${targetGame.title}"!`;
+                    dialogPopup.style.display = 'block';
+                }
+
+                loadSceneFromData(targetGame);
+                humanCharacter.position.set(0, 0, 0);
+
+                setTimeout(() => {
+                    isTeleporting = false;
+                }, 2000);
+            }
+        }
+
+        // Check General Triggers & Dialogue (e.g. Walking through tree / proximity)
         let activeTrigger: PlacedObject | null = null;
         for (const p of placedObjects) {
-            if (p.trigger && p.trigger.message) {
+            if (p.trigger && p.trigger.message && p.trigger.type !== 'portal') {
                 const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
                 const rad = p.trigger.radius || 4.2;
                 if (dist <= rad) {
@@ -1920,13 +2038,13 @@ function animate() {
         const dialogText = document.getElementById('game-dialog-text');
         const dialogIcon = document.getElementById('game-dialog-icon');
 
-        if (activeTrigger && dialogPopup && dialogTitle && dialogText && dialogIcon) {
+        if (activeTrigger && dialogPopup && dialogTitle && dialogText && dialogIcon && !isTeleporting) {
             const isTree = activeTrigger.name.toLowerCase().includes('tree') || activeTrigger.name.toLowerCase().includes('puu') || activeTrigger.category === 'nature';
             dialogIcon.innerText = isTree ? '🌲' : (activeTrigger.category === 'gameplay' ? '💎' : '💬');
             dialogTitle.innerText = activeTrigger.trigger?.title || activeTrigger.name;
             dialogText.innerText = `"${activeTrigger.trigger?.message}"`;
             dialogPopup.style.display = 'block';
-        } else if (dialogPopup && dialogPopup.style.display !== 'none') {
+        } else if (dialogPopup && dialogPopup.style.display !== 'none' && !isTeleporting) {
             dialogPopup.style.display = 'none';
         }
     } else {
