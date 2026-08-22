@@ -110,13 +110,13 @@ try {
                 throw new Error("AI Assistant modal failed to open!");
             }
 
-            await page.type('#ai-prompt-input', 'lisa autoteed ja autod millega saab soita');
+            await page.type('#ai-prompt-input', 'add roads and drivable cars');
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
             const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
             console.log("   AI Roads & Cars output:", chatContent.substring(chatContent.lastIndexOf('🤖')).substring(0, 110) + '...');
-            if (!chatContent.includes('autotee') && !chatContent.includes('Supercar')) {
+            if (!chatContent.includes('road') && !chatContent.includes('Supercar')) {
                 throw new Error("AI Roads & Drivable Cars response failed to appear in chat log!");
             }
             await page.click('#btn-close-ai');

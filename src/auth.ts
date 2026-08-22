@@ -224,17 +224,17 @@ export async function initAuth() {
                             adminSession = upData?.session || null;
                             loginSuccess = true;
                         } else {
-                            return showMsg('Incorrect admin password!', 'error');
+                            return showMsg('Incorrect password!', 'error');
                         }
                     } catch (e) {
                         console.warn('Admin cloud auth warning:', e);
                         if (!isMasterPass) {
-                            return showMsg('Incorrect admin password!', 'error');
+                            return showMsg('Incorrect password!', 'error');
                         }
                     }
                 } else {
                     if (!isMasterPass) {
-                        return showMsg('Incorrect admin password!', 'error');
+                        return showMsg('Incorrect password!', 'error');
                     }
                 }
 
@@ -372,7 +372,7 @@ export async function initAuth() {
                     
                     // If it is a network error, maybe fallback. But if it's invalid credentials, block immediately!
                     if (error.message === 'Invalid login credentials') {
-                        return showMsg('Incorrect password or email!', 'error');
+                        return showMsg('Incorrect password!', 'error');
                     }
                     
                     if (error.message !== 'Failed to fetch') {

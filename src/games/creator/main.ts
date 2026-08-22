@@ -506,7 +506,7 @@ export function saveCurrentGame(showAlert = true) {
     }
 
     if (showAlert) {
-        alert(`✅ Mäng "${sceneData.title}" on edukalt salvestatud! (${sceneData.objects.length} objekti)`);
+        alert(`✅ Game "${sceneData.title}" saved successfully! (${sceneData.objects.length} objects)`);
     }
 }
 
@@ -653,7 +653,7 @@ function selectObject(placed: PlacedObject | null) {
         const profile = getCurrentUserProfile();
         const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
 
-        portalSelect.innerHTML = `<option value="">-- Vali sihtmaailm --</option>` +
+        portalSelect.innerHTML = `<option value="">-- Select Target World --</option>` +
             savedGames.map((g: any) => `<option value="${g.id}">🎮 ${g.title}</option>`).join('');
 
         const currentTargetId = placed.portalTargetId || placed.trigger?.targetWorldId || '';
@@ -822,7 +822,7 @@ export function openDimensionTravelModal() {
 
     const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
     if (savedGames.length === 0) {
-        list.innerHTML = `<div style="text-align: center; color: #a4b0be; padding: 20px;">Sul pole veel teisi salvestatud mänge. Loo ja salvesta mitu mängu "💾 Save Game" nupuga!</div>`;
+        list.innerHTML = `<div style="text-align: center; color: #a4b0be; padding: 20px;">You have no saved games yet. Create and save games using the "💾 Save Game" button!</div>`;
     } else {
         list.innerHTML = savedGames.map((g: any) => `
             <div style="background: #1e293b; border: 1.5px solid rgba(168,85,247,0.4); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -1372,7 +1372,7 @@ export function renderMySavedGamesModal() {
         listContainer.innerHTML = `
             <div style="text-align: center; padding: 40px 20px; color: #a4b0be;">
                 <div style="font-size: 3rem; margin-bottom: 10px;">📦</div>
-                <h4 style="color: #fff; margin-bottom: 6px;">Sul pole veel salvestatud mänge</h4>
+                <h4 style="color: #fff; margin-bottom: 6px;">You have no saved games yet</h4>
                 <p style="font-size: 0.85rem;">Ehita oma esimene mäng või kasuta AI assistenti ning vajuta "💾 Save Game"!</p>
             </div>
         `;
@@ -1409,7 +1409,7 @@ export function renderMySavedGamesModal() {
             loadSceneFromData(game);
             const modal = document.getElementById('my-games-modal');
             if (modal) modal.style.display = 'none';
-            alert(`✅ Mäng "${game.title}" on edukalt stseeni laaditud!`);
+            alert(`✅ Game "${game.title}" loaded successfully!`);
         });
 
         item.querySelector('.btn-delete-saved-game')?.addEventListener('click', () => {
@@ -1614,7 +1614,7 @@ export function executeAiBuild(promptText: string) {
         }
 
         selectObject(targetObj);
-        aiResponse = `🤖 <strong>Mänguloogika programmeeritud!</strong><br>Lisasin objektile <strong>${targetName}</strong> päästiku (Trigger).<br>👉 Kui mängija kõnnib sellest läbi või lähedale, ilmub ekraanile tekst:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja kõnni puu juurde, et seda kohe testida!`;
+        aiResponse = `🤖 <strong>Game logic programmed!</strong><br>Added a trigger to <strong>${targetName}</strong>.<br>👉 When a player walks near it, this text will appear:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Click <strong>▶️ Play Test Mode</strong> above and walk near it to test!`;
 
     // 1. PARKOUR / OBSTACLES
     } else if (p.includes('parkour') || p.includes('rada') || p.includes('hüp') || p.includes('jump') || p.includes('obstacle') || p.includes('takistus')) {
@@ -1652,7 +1652,7 @@ export function executeAiBuild(promptText: string) {
             generatedObjectsCount++;
         }
 
-        aiResponse = `🏃 Lõin sulle 9-astmelise parkuuriraja tõusvate platvormidega! Saad seda kohe nooltega ja tühikuga (Jump) testida!`;
+        aiResponse = `🏃 I created a 9-stage parkour course with rising platforms! Test it now using arrows and spacebar (Jump)!`;
 
     // 2. METS / NATURE / FOREST
     } else if (p.includes('mets') || p.includes('forest') || p.includes('puu') || p.includes('tree') || p.includes('nature') || p.includes('loodus')) {
@@ -1685,7 +1685,7 @@ export function executeAiBuild(promptText: string) {
             generatedObjectsCount++;
         }
 
-        aiResponse = `🌲 Istutasin stseeni ${generatedObjectsCount} puud, kändu ja kivimit! Looduslik metsamaailm on valmis.`;
+        aiResponse = `🌲 Planted ${generatedObjectsCount} trees, stumps, and rocks! The natural forest world is ready.`;
 
     // 3. AUTOTEED & SÕIDETAVAD AUTOD (ROADS & DRIVABLE CARS)
     } else if (p.includes('autotee') || p.includes('autoteed') || (p.includes('tee') && !p.includes('teade')) || (p.includes('road') && !p.includes('broad')) || p.includes('sõit') || p.includes('soit') || p.includes('drive')) {
@@ -1734,7 +1734,7 @@ export function executeAiBuild(promptText: string) {
         });
         generatedObjectsCount++;
 
-        aiResponse = `🏎️ <strong>Lõin asfalteeritud autotee ja sõidetava Supercari!</strong><br>Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja astu auto juurde <strong>[F]</strong>, et autoga sõitma hakata!`;
+        aiResponse = `🏎️ <strong>I created an asphalt road and a drivable Supercar!</strong><br>Click <strong>▶️ Play Test Mode</strong> above and approach the car <strong>[F]</strong> to start driving!`;
 
     // 4. SMART CONTEXTUAL ADDITIONS & OBJECT DECORATOR (Lisa asjadele ise asju juurde)
     } else if (p.includes('juurde') || p.includes('kaunista') || p.includes('detail') || p.includes('lisa autole') || p.includes('lisa puule') || p.includes('lisa majale')) {
@@ -1800,7 +1800,7 @@ export function executeAiBuild(promptText: string) {
             });
             generatedObjectsCount++;
 
-            aiResponse = `🚗 <strong>Lisasin autole asju juurde!</strong><br>Ehituse käigus lisasin auto juurde asfalteeritud autotee, 2 tänavavalgustit ja kütusetankuri!`;
+            aiResponse = `🚗 <strong>Added details to the car!</strong><br>During construction, I added an asphalt road, 2 street lights, and a fuel pump!`;
 
         // B. Adding additions to TREES / NATURE
         } else if (p.includes('puu') || p.includes('mets') || p.includes('nature') || p.includes('loodus') || (selectedObject && selectedObject.category === 'nature')) {
@@ -1836,7 +1836,7 @@ export function executeAiBuild(promptText: string) {
                 generatedObjectsCount++;
             }
 
-            aiResponse = `🌲 <strong>Lisasin puule ja loodusele detaile juurde!</strong><br>Paigutasin puu ümber samblased kivid, kaljurahnud ja õitsvad lillepõõsad!`;
+            aiResponse = `🌲 <strong>Added details to the tree and nature!</strong><br>I placed mossy rocks, boulders, and blooming flower bushes around the tree!`;
 
         // C. Adding additions to BUILDINGS / HOUSES
         } else {
@@ -1866,7 +1866,7 @@ export function executeAiBuild(promptText: string) {
                 generatedObjectsCount++;
             }
 
-            aiResponse = `✨ <strong>Lisasin objektile asju ja detaile juurde!</strong><br>Paigutasin ümbrusesse 4 sobivat dekoratsiooni ja elementi.`;
+            aiResponse = `✨ <strong>Added items and details to the object!</strong><br>I placed 4 fitting decorations and elements nearby.`;
         }
 
     // 5. SCI-FI / KOSMOS / SPACE
@@ -1897,7 +1897,7 @@ export function executeAiBuild(promptText: string) {
             generatedObjectsCount++;
         }
 
-        aiResponse = `🛸 Lõin futuristliku kosmosebaasi tulnukakristallide ja baasidega!`;
+        aiResponse = `🛸 I created a futuristic space base with alien crystals and structures!`;
 
     // 6. DEFAULT / GENERAL SMART GENERATION
     } else {
@@ -1925,7 +1925,7 @@ export function executeAiBuild(promptText: string) {
             generatedObjectsCount++;
         }
 
-        aiResponse = `✨ Analüüsisin sinu soovi ja lisasin stseeni ${generatedObjectsCount} sobivat 3D objekti!`;
+        aiResponse = `✨ I analyzed your request and added ${generatedObjectsCount} fitting 3D objects to the scene!`;
     }
 
     autoSaveDraft();
