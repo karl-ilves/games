@@ -67,6 +67,25 @@ export function saveLocalProfile(profile: UserProfile) {
     localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(profiles));
 }
 
+function saveUserGameProgress(profile: UserProfile | null) {
+    if (!profile) return;
+    const save = localStorage.getItem('racingSave');
+    if (save) {
+        if (profile.username) localStorage.setItem(`playard_racingSave_user_${profile.username.toLowerCase()}`, save);
+        if (profile.id) localStorage.setItem(`playard_racingSave_user_${profile.id}`, save);
+        if (profile.email) localStorage.setItem(`playard_racingSave_user_${profile.email.toLowerCase()}`, save);
+    }
+}
+
+function restoreUserGameProgress(profile: UserProfile) {
+    const saved = localStorage.getItem(`playard_racingSave_user_${profile.username.toLowerCase()}`)
+               || localStorage.getItem(`playard_racingSave_user_${profile.id}`)
+               || localStorage.getItem(`playard_racingSave_user_${profile.email?.toLowerCase()}`);
+    if (saved) {
+        localStorage.setItem('racingSave', saved);
+    }
+}
+
 function showMsg(msg: string, type: 'error' | 'success' | 'info') {
     const authMessage = document.getElementById('auth-message');
     if (!authMessage) return;
@@ -209,7 +228,8 @@ export async function initAuth() {
                     } catch (e) {}
                 }
 
-                await yardService.onUserLogin(adminProfile.id, 'admin');
+                await yardService.onUserLogin(adminProfile.id, 'admin', ADMIN_EMAIL);
+                restoreUserGameProgress(adminProfile);
 
                 showMsg('Tere tulemast tagasi, Admin✅!', 'success');
                 if (emailInput) emailInput.value = '';
@@ -253,7 +273,8 @@ export async function initAuth() {
                         console.warn(err);
                     }
 
-                    await yardService.onUserLogin(profile.id, profile.username);
+                    await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                    restoreUserGameProgress(profile);
 
                     showMsg(`Welcome back, ${profile.displayName}!`, 'success');
                     if (emailInput) emailInput.value = '';
@@ -280,7 +301,8 @@ export async function initAuth() {
                     };
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                     saveLocalProfile(profile);
-                    await yardService.onUserLogin(profile.id, profile.username);
+                    await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                    restoreUserGameProgress(profile);
 
                     showMsg(`Welcome back, ${profile.displayName}!`, 'success');
                     if (emailInput) emailInput.value = '';
@@ -299,7 +321,8 @@ export async function initAuth() {
                         return showMsg('This username does not exist!', 'error');
                     }
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(matched));
-                    await yardService.onUserLogin(matched.id, matched.username);
+                    await yardService.onUserLogin(matched.id, matched.username, matched.email);
+                    restoreUserGameProgress(matched);
 
                     showMsg(`Welcome back, ${matched.displayName}!`, 'success');
                     if (emailInput) emailInput.value = '';
@@ -335,7 +358,8 @@ export async function initAuth() {
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
-                await yardService.onUserLogin(profile.id, profile.username);
+                await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                restoreUserGameProgress(profile);
 
                 showMsg(`Welcome back, ${profile.displayName}!`, 'success');
                 updateAuthDisplay(profile);
@@ -472,7 +496,8 @@ export async function initAuth() {
                     console.warn(err);
                 }
 
-                await yardService.onUserLogin(profile.id, profile.username);
+                await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                restoreUserGameProgress(profile);
 
                 showMsg(`Account created! You are logged in as ${displayName}.`, 'success');
                 if (emailInput) emailInput.value = '';
@@ -490,7 +515,8 @@ export async function initAuth() {
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
-                await yardService.onUserLogin(profile.id, profile.username);
+                await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                restoreUserGameProgress(profile);
 
                 showMsg(`Account created as ${profile.displayName}!`, 'success');
                 updateAuthDisplay(profile);
@@ -501,6 +527,10 @@ export async function initAuth() {
     // 4. Logout Handler
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
+            const currentProf = getCurrentUserProfile();
+            if (currentProf) {
+                saveUserGameProgress(currentProf);
+            }
             if (hasSupabase) {
                 await supabase.auth.signOut();
             }

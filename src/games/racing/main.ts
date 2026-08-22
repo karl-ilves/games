@@ -195,35 +195,42 @@ let vehicleUpgrades: { [id: string]: { speedUpgrades: number } } = {};
 
 async function loadProgress() {
     let loadedFromDB = false;
+    const currentProfRaw = localStorage.getItem('playard_current_user_profile');
+    const currentProf = currentProfRaw ? JSON.parse(currentProfRaw) : null;
+
     if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            const { data, error } = await supabase.from('user_progress').select('*').eq('user_id', session.user.id).single();
-            if (data && !error) {
-                money = data.money || 0;
-                selectedLevel = data.selected_level || 1;
-                unlockedVehicles = data.unlocked_vehicles || ['car_1'];
-                vehicleUpgrades = data.vehicle_upgrades || {};
-                level2Unlocked = data.level2_unlocked || false;
-                level3Unlocked = data.level3_unlocked || false;
-                loadedFromDB = true;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const targetUserId = session?.user?.id || currentProf?.id;
+            if (targetUserId) {
+                const { data, error } = await supabase.from('user_progress').select('*').eq('user_id', targetUserId).single();
+                if (data && !error) {
+                    money = typeof data.money === 'number' ? data.money : 500;
+                    selectedLevel = data.selected_level || 1;
+                    unlockedVehicles = Array.isArray(data.unlocked_vehicles) ? data.unlocked_vehicles : ['car_1'];
+                    vehicleUpgrades = data.vehicle_upgrades || {};
+                    level2Unlocked = data.level2_unlocked || false;
+                    level3Unlocked = data.level3_unlocked || false;
+                    loadedFromDB = true;
+                }
             }
+        } catch (e) {
+            console.warn("Cloud progress load error:", e);
         }
     }
     
-    // 2. Fallback
+    // 2. Local Fallback & Multi-Key Profile Check
     if (!loadedFromDB) {
-        let session = null;
-        if (supabase) {
-            const res = await supabase.auth.getSession();
-            session = res.data.session;
-        }
-        
         let save = localStorage.getItem('racingSave');
-        if (session && save) {
-            // Logged in but DB failed (e.g. table missing or first time) -> load local fallback
+        if (!save && currentProf) {
+            save = localStorage.getItem(`playard_racingSave_user_${currentProf.username.toLowerCase()}`)
+                || localStorage.getItem(`playard_racingSave_user_${currentProf.id}`)
+                || localStorage.getItem(`playard_racingSave_user_${currentProf.email?.toLowerCase()}`);
+        }
+
+        if (currentProf && save) {
             let data = JSON.parse(save);
-            money = data.money || 0;
+            money = typeof data.money === 'number' ? data.money : 500;
             if (data.unlockedVehicles && !Array.isArray(data.unlockedVehicles)) {
                 unlockedVehicles = ['car_1'];
                 if (data.unlockedVehicles.moto) unlockedVehicles.push('moto_1');
@@ -233,7 +240,7 @@ async function loadProgress() {
             if (data.vehicleUpgrades) vehicleUpgrades = data.vehicleUpgrades;
             if (data.level2Unlocked) level2Unlocked = data.level2Unlocked;
             if (data.level3Unlocked) level3Unlocked = data.level3Unlocked;
-        } else if (session && !save) {
+        } else if (currentProf && !save) {
             // First time login! Give them 500
             money = 500;
             selectedLevel = 1;
@@ -243,7 +250,7 @@ async function loadProgress() {
             vehicleType = 'car_1';
             vehicleUpgrades = {};
         } else {
-            // Not logged in -> wipe!
+            // Not logged in -> Guest mode (0 money)
             money = 0;
             selectedLevel = 1;
             level2Unlocked = false;
@@ -253,6 +260,7 @@ async function loadProgress() {
             vehicleUpgrades = {};
         }
     }
+
     if (yardService.hasItem('cyber_hypercar') && !unlockedVehicles.includes('cyber_hypercar')) {
         unlockedVehicles.push('cyber_hypercar');
     }
@@ -268,23 +276,36 @@ async function saveProgress() {
         level3_unlocked: level3Unlocked
     };
     
-    // Always save locally as fallback
-    localStorage.setItem('racingSave', JSON.stringify({
+    const rawData = JSON.stringify({
         money: money,
         unlockedVehicles: unlockedVehicles,
         vehicleUpgrades: vehicleUpgrades,
         level2Unlocked: level2Unlocked,
         level3Unlocked: level3Unlocked
-    }));
+    });
+
+    localStorage.setItem('racingSave', rawData);
+
+    const currentProfRaw = localStorage.getItem('playard_current_user_profile');
+    if (currentProfRaw) {
+        try {
+            const currentProf = JSON.parse(currentProfRaw);
+            if (currentProf.username) localStorage.setItem(`playard_racingSave_user_${currentProf.username.toLowerCase()}`, rawData);
+            if (currentProf.id) localStorage.setItem(`playard_racingSave_user_${currentProf.id}`, rawData);
+            if (currentProf.email) localStorage.setItem(`playard_racingSave_user_${currentProf.email.toLowerCase()}`, rawData);
+        } catch (e) {}
+    }
     
     if (!supabase) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-        await supabase.from('user_progress').upsert({
-            user_id: session.user.id,
-            ...payload
-        });
-    }
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            await supabase.from('user_progress').upsert({
+                user_id: session.user.id,
+                ...payload
+            });
+        }
+    } catch (e) {}
 }
 
 

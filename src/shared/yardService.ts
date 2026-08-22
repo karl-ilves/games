@@ -64,6 +64,8 @@ export const PROMO_CODES: Record<string, number> = {
 class YardService {
     private data: YardData;
     private currentUserId: string | null = null;
+    private currentUserUsername: string | null = null;
+    private currentUserEmail: string | null = null;
     private listeners: Array<(data: YardData) => void> = [];
 
     constructor() {
@@ -72,17 +74,35 @@ class YardService {
         this.initAuthAndSync();
     }
 
-    private getUserStorageKey(): string {
-        return this.currentUserId ? `${STORAGE_PREFIX}user_${this.currentUserId}` : PRIMARY_STORAGE_KEY;
+    private getUserStorageKeys(): string[] {
+        const keys: string[] = [];
+        if (this.currentUserId) keys.push(`${STORAGE_PREFIX}user_${this.currentUserId}`);
+        if (this.currentUserUsername) keys.push(`${STORAGE_PREFIX}user_${this.currentUserUsername.toLowerCase()}`);
+        if (this.currentUserEmail) keys.push(`${STORAGE_PREFIX}user_${this.currentUserEmail.toLowerCase()}`);
+        return keys;
     }
 
     private loadLocalData(): YardData {
         try {
-            const key = this.getUserStorageKey();
-            let raw = localStorage.getItem(key);
-            if (!raw) {
-                raw = localStorage.getItem(PRIMARY_STORAGE_KEY);
+            const userKeys = this.getUserStorageKeys();
+            for (const key of userKeys) {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (typeof parsed.yards === 'number') {
+                        return {
+                            yards: parsed.yards,
+                            streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
+                            lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
+                            inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
+                            redeemedCodes: Array.isArray(parsed.redeemedCodes) ? parsed.redeemedCodes : [],
+                            transactions: Array.isArray(parsed.transactions) ? parsed.transactions : []
+                        };
+                    }
+                }
             }
+
+            const raw = localStorage.getItem(PRIMARY_STORAGE_KEY);
             if (raw) {
                 const parsed = JSON.parse(raw);
                 return {
@@ -113,9 +133,8 @@ class YardService {
         try {
             const raw = JSON.stringify(data);
             localStorage.setItem(PRIMARY_STORAGE_KEY, raw);
-            if (this.currentUserId) {
-                localStorage.setItem(this.getUserStorageKey(), raw);
-            }
+            const userKeys = this.getUserStorageKeys();
+            userKeys.forEach(k => localStorage.setItem(k, raw));
         } catch (e) {
             console.warn('Could not save YardData locally:', e);
         }
@@ -124,7 +143,8 @@ class YardService {
 
     private initStorageListener() {
         window.addEventListener('storage', (e) => {
-            if (e.key === PRIMARY_STORAGE_KEY || (this.currentUserId && e.key === this.getUserStorageKey())) {
+            const userKeys = this.getUserStorageKeys();
+            if (e.key === PRIMARY_STORAGE_KEY || (e.key && userKeys.includes(e.key))) {
                 if (e.newValue) {
                     try {
                         const parsed = JSON.parse(e.newValue);
@@ -146,10 +166,18 @@ class YardService {
     }
 
     public onUserLogout() {
-        if (this.currentUserId) {
-            localStorage.setItem(this.getUserStorageKey(), JSON.stringify(this.data));
+        if (this.currentUserId || this.currentUserUsername || this.currentUserEmail) {
+            // Save state under all user identifiers before resetting to guest 0
+            const raw = JSON.stringify(this.data);
+            const userKeys = this.getUserStorageKeys();
+            userKeys.forEach(k => localStorage.setItem(k, raw));
+            this.saveToCloud();
         }
+
         this.currentUserId = null;
+        this.currentUserUsername = null;
+        this.currentUserEmail = null;
+
         // Guest mode resets strictly to 0
         this.data = {
             yards: 0,
@@ -163,35 +191,44 @@ class YardService {
         this.notifyListeners();
     }
 
-    public async onUserLogin(userId: string, username?: string) {
+    public async onUserLogin(userId: string, username?: string, email?: string) {
         this.currentUserId = userId;
-        
-        let loaded = false;
-        // Try user key
-        const userKey = this.getUserStorageKey();
-        let userRaw = localStorage.getItem(userKey);
-        if (!userRaw && username) {
-            userRaw = localStorage.getItem(`${STORAGE_PREFIX}user_${username.toLowerCase()}`);
-        }
+        this.currentUserUsername = username || null;
+        this.currentUserEmail = email || null;
 
-        if (userRaw) {
-            try {
-                const parsed = JSON.parse(userRaw);
-                this.data = {
-                    yards: typeof parsed.yards === 'number' ? parsed.yards : 0,
-                    streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
-                    lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
-                    inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
-                    redeemedCodes: Array.isArray(parsed.redeemedCodes) ? parsed.redeemedCodes : [],
-                    transactions: Array.isArray(parsed.transactions) ? parsed.transactions : []
-                };
-                loaded = true;
-            } catch (e) {
-                console.warn(e);
+        let maxFoundYards = 0;
+        let bestData: YardData | null = null;
+
+        const candidateKeys = [
+            `${STORAGE_PREFIX}user_${userId}`,
+            username ? `${STORAGE_PREFIX}user_${username.toLowerCase()}` : '',
+            email ? `${STORAGE_PREFIX}user_${email.toLowerCase()}` : '',
+            userId.includes('@') ? `${STORAGE_PREFIX}user_${userId.toLowerCase()}` : ''
+        ].filter(Boolean);
+
+        for (const k of candidateKeys) {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (typeof parsed.yards === 'number' && (bestData === null || parsed.yards >= maxFoundYards)) {
+                        maxFoundYards = parsed.yards;
+                        bestData = {
+                            yards: parsed.yards,
+                            streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
+                            lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
+                            inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
+                            redeemedCodes: Array.isArray(parsed.redeemedCodes) ? parsed.redeemedCodes : [],
+                            transactions: Array.isArray(parsed.transactions) ? parsed.transactions : []
+                        };
+                    }
+                } catch (e) {}
             }
         }
 
-        if (!loaded) {
+        if (bestData) {
+            this.data = bestData;
+        } else {
             this.data = {
                 yards: 0,
                 streak: 0,
@@ -202,10 +239,7 @@ class YardService {
             };
         }
 
-        localStorage.setItem(PRIMARY_STORAGE_KEY, JSON.stringify(this.data));
-        localStorage.setItem(this.getUserStorageKey(), JSON.stringify(this.data));
-        this.notifyListeners();
-
+        this.saveLocally(this.data);
         await this.syncWithCloud(userId);
     }
 
@@ -215,13 +249,13 @@ class YardService {
             // 1. Initial Session Check
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
-                await this.onUserLogin(session.user.id, session.user.user_metadata?.username);
+                await this.onUserLogin(session.user.id, session.user.user_metadata?.username, session.user.email);
             }
 
             // 2. Listen to login / logout events
             supabase.auth.onAuthStateChange(async (_event, newSession) => {
                 if (newSession?.user?.id) {
-                    await this.onUserLogin(newSession.user.id, newSession.user.user_metadata?.username);
+                    await this.onUserLogin(newSession.user.id, newSession.user.user_metadata?.username, newSession.user.email);
                 } else {
                     const currentProfRaw = localStorage.getItem('playard_current_user_profile');
                     if (!currentProfRaw) {
