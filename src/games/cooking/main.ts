@@ -907,11 +907,10 @@ class CookingGame {
                 this.addToPlate(raw.chopResult);
                 const resName = this.getName(raw.chopResult);
                 if (raw.chopResult === 'potato_chopped') {
-                    this.showScorePopup(this.isEt ? `🥔 Toored kartulid hakitud! Nüüd mine pliidile ja friti need krõbedaks! 🔥` : `🥔 Raw potatoes chopped! Now go to stove and fry them crispy! 🔥`);
+                    this.showScorePopup(this.isEt ? `🥔 Toored kartulid hakitud ja taldrikul! Nüüd mine pliidile ja friti need krõbedaks! 🔥` : `🥔 Raw potatoes chopped on plate! Now go to stove and fry them crispy! 🔥`);
                 } else {
                     this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} viilutatud ja pandud otse taldrikule! 🔪✨` : `🍽️ +1 ${resName} sliced and added to plate! 🔪✨`);
                 }
-                this.switchToStation('assembly');
             }
             this.currentChoppingRaw = null;
             this.choppingClicks = 0;
@@ -1031,7 +1030,6 @@ class CookingGame {
             kitchenAudio.playServe();
             const resName = this.getName(resultId);
             this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} pandud otse taldrikule! ✨` : `🍽️ +1 ${resName} added to plate! ✨`);
-            this.switchToStation('assembly');
         } else if (pan.state === 'burned') {
             kitchenAudio.playBurn();
             this.showScorePopup(this.isEt ? `🔥 Kõrbenud toit visati minema!` : `🔥 Burned food was thrown away!`);
@@ -1098,7 +1096,6 @@ class CookingGame {
         this.addToPlate('baked_in_oven');
         kitchenAudio.playServe();
         this.showScorePopup(this.isEt ? '🍽️ +1 Küpsetatud Pitsa pandud otse taldrikule! 🍕✨' : '🍽️ +1 Baked Pizza added to plate! 🍕✨');
-        this.switchToStation('assembly');
         this.oven.state = 'empty';
         this.oven.progress = 0;
         this.renderOvenStatus();
