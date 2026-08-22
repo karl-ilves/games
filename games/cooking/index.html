@@ -105,57 +105,83 @@
             transform: translateY(-2px);
         }
 
-        /* Order Tickets Carousel */
-        .orders-bar {
-            position: absolute;
-            top: 75px;
-            left: 20px;
-            right: 20px;
+        /* Order Tickets Top Bar - ALWAYS VISIBLE */
+        .orders-bar-wrapper {
+            position: fixed;
+            top: 65px;
+            left: 0;
+            right: 0;
+            background: rgba(18, 25, 36, 0.96);
+            backdrop-filter: blur(14px);
+            border-bottom: 2px solid rgba(0, 242, 254, 0.35);
+            padding: 8px 16px;
+            z-index: 600;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
             display: flex;
-            gap: 15px;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .orders-header-title {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #ffd32a;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+        }
+
+        .orders-bar {
+            display: flex;
+            gap: 12px;
             overflow-x: auto;
-            padding: 8px 0;
-            z-index: 50;
+            padding: 2px 0 4px 0;
             pointer-events: auto;
         }
 
         .order-ticket {
             background: #ffffff;
             color: #2f3542;
-            border-radius: 12px;
-            padding: 12px 16px;
-            min-width: 200px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.45);
+            border-radius: 10px;
+            padding: 8px 12px;
+            min-width: 220px;
+            max-width: 260px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
             position: relative;
-            border-top: 5px solid #ff4757;
+            border-top: 4px solid #ff4757;
             animation: slideInTicket 0.3s ease-out;
             transition: transform 0.2s ease;
+            flex-shrink: 0;
         }
         .order-ticket:hover {
-            transform: translateY(-3px);
+            transform: translateY(-2px);
         }
 
         @keyframes slideInTicket {
-            from { transform: translateY(-30px); opacity: 0; }
+            from { transform: translateY(-20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
 
         .ticket-title {
             font-weight: 900;
-            font-size: 1.05rem;
-            margin-bottom: 4px;
+            font-size: 0.95rem;
+            margin-bottom: 2px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .ticket-recipe-list {
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             color: #57606f;
-            line-height: 1.4;
-            margin: 6px 0;
+            line-height: 1.35;
+            margin: 4px 0;
             list-style: none;
             padding-left: 0;
+            max-height: 90px;
+            overflow-y: auto;
         }
 
         .ticket-recipe-list li {
@@ -166,11 +192,11 @@
 
         .patience-bar-wrap {
             width: 100%;
-            height: 6px;
+            height: 5px;
             background: #e4e7eb;
             border-radius: 3px;
             overflow: hidden;
-            margin-top: 6px;
+            margin-top: 4px;
         }
         .patience-bar {
             height: 100%;
@@ -179,24 +205,101 @@
             transition: width 0.2s linear, background-color 0.3s;
         }
 
-        /* Bottom Stations Interface */
+        /* Bottom Stations Interface - COMPACT AT THE BOTTOM */
         .bottom-kitchen-ui {
-            position: absolute;
-            bottom: 20px;
+            position: fixed;
+            bottom: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 95%;
-            max-width: 1100px;
-            background: rgba(22, 30, 44, 0.94);
+            width: 100%;
+            max-width: 1150px;
+            max-height: 42vh;
+            overflow-y: auto;
+            background: rgba(20, 27, 40, 0.97);
             backdrop-filter: blur(16px);
-            border: 1.5px solid rgba(0, 242, 254, 0.3);
-            border-radius: 20px;
-            padding: 16px 20px;
-            z-index: 100;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            border-top: 2px solid rgba(0, 242, 254, 0.35);
+            border-left: 1px solid rgba(0, 242, 254, 0.2);
+            border-right: 1px solid rgba(0, 242, 254, 0.2);
+            border-radius: 16px 16px 0 0;
+            padding: 10px 16px;
+            z-index: 500;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.6);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
+        }
+
+        .tag-need-cook {
+            background: linear-gradient(135deg, #ff4757, #ff6b81);
+            color: #fff;
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            animation: pulse-warm 1.8s infinite ease-in-out;
+        }
+
+        .tag-need-oven {
+            background: linear-gradient(135deg, #e67e22, #f39c12);
+            color: #fff;
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .tag-need-chop {
+            background: linear-gradient(135deg, #575fcf, #3c40c6);
+            color: #fff;
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .tag-pantry {
+            background: rgba(46, 213, 115, 0.15);
+            color: #2ed573;
+            border: 1px solid rgba(46, 213, 115, 0.4);
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-left: auto;
+        }
+
+        @keyframes pulse-warm {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 6px rgba(255, 71, 87, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 14px rgba(255, 71, 87, 0.8); }
+        }
+
+        .category-header {
+            font-size: 0.85rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 10px 0 6px 0;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* Station Tabs */
@@ -206,26 +309,44 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
             padding-bottom: 10px;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .tab-btn {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.15);
+            background: #1e2738;
+            border: 1.5px solid rgba(255,255,255,0.15);
             color: #a4b0be;
-            padding: 8px 18px;
-            border-radius: 8px;
-            font-weight: 700;
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-weight: 800;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        .tab-btn:hover {
+            border-color: #ffd32a;
+            color: #fff;
         }
         .tab-btn.active {
-            background: linear-gradient(135deg, rgba(255, 177, 66, 0.25), rgba(255, 107, 129, 0.25));
+            background: linear-gradient(135deg, rgba(255, 177, 66, 0.3), rgba(255, 107, 129, 0.3));
             border-color: #ffb142;
             color: #ffd32a;
-            box-shadow: 0 0 15px rgba(255, 177, 66, 0.2);
+            box-shadow: 0 0 18px rgba(255, 177, 66, 0.35);
+        }
+
+        .tab-highlight-cook {
+            border-color: #ff4757;
+            color: #ff6b81;
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.25);
+        }
+        .tab-highlight-cook.active {
+            border-color: #ff4757;
+            background: linear-gradient(135deg, rgba(255, 71, 87, 0.35), rgba(255, 107, 129, 0.35));
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
         }
 
         /* Pantry Tray */
@@ -529,11 +650,12 @@
         </div>
 
         <div class="hud-right">
-            <!-- Yard Wallet Badge -->
-            <div class="hud-stat-box" style="border-color: #00f2fe; background: rgba(0, 242, 254, 0.15);">
+            <!-- Yard Wallet Badge with prominent "TEENI JARDE SIIN" badge -->
+            <div class="hud-stat-box" style="border: 2px solid #00f2fe; background: linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(46, 213, 115, 0.22)); box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); padding: 6px 14px; border-radius: 20px; gap: 8px;">
                 <span id="cooking-yard-icon"></span>
-                <span id="hud-yards-val" style="color: #ffffff; font-weight: 800; font-size: 1.15rem;">0</span>
-                <span style="font-size: 0.75rem; color: #00f2fe;">YARDS</span>
+                <span id="hud-yards-val" style="color: #ffffff; font-weight: 900; font-size: 1.2rem; text-shadow: 0 0 8px rgba(0,242,254,0.8);">0</span>
+                <span style="font-size: 0.78rem; color: #00f2fe; font-weight: 800;">YARDS</span>
+                <span style="background: linear-gradient(135deg, #00f2fe, #2ecc71); color: #111; font-size: 0.72rem; padding: 3px 8px; border-radius: 12px; font-weight: 900; box-shadow: 0 0 10px #00f2fe;">💎 TEENI JARDE SIIN!</span>
             </div>
 
             <!-- Recipe Book Button -->
@@ -548,9 +670,15 @@
         </div>
     </div>
 
-    <!-- Incoming Customer Order Tickets Carousel -->
-    <div class="orders-bar" id="orders-queue-container">
-        <!-- Dynamically populated orders -->
+    <!-- Incoming Customer Order Tickets Bar (Fixed at Top, Never Obscured) -->
+    <div class="orders-bar-wrapper">
+        <div class="orders-header-title">
+            <span>📋</span>
+            <span>Aktiivsed Klienditellimused (Valmista retsepti järgi ja teeni Jarde):</span>
+        </div>
+        <div class="orders-bar" id="orders-queue-container">
+            <!-- Dynamically populated orders -->
+        </div>
     </div>
 
     <!-- Bottom Kitchen Workstation -->
@@ -558,16 +686,16 @@
         <!-- Workstation Selector Tabs -->
         <div class="station-tabs">
             <button class="tab-btn active" id="tab-btn-assembly" data-station="assembly">
-                <span>🍽️</span> <span>Komplekteerimine & Taldrik</span>
+                <span>🍽️</span> <span>1. Taldrik & Komplekteerimine</span>
             </button>
-            <button class="tab-btn" id="tab-btn-cutting" data-station="cutting">
-                <span>🔪</span> <span>Lõikelaud & Hakkimine</span>
-            </button>
-            <button class="tab-btn" id="tab-btn-stove" data-station="stove">
-                <span>🔥</span> <span>Pliit & Praepannid</span>
+            <button class="tab-btn tab-highlight-cook" id="tab-btn-stove" data-station="stove">
+                <span>🔥</span> <span>2. PLIIT & PRAADIMINE (KÜPSETA SIIN!)</span>
             </button>
             <button class="tab-btn" id="tab-btn-oven" data-station="oven">
-                <span>🍕</span> <span>Küpsetusahi</span>
+                <span>🍕</span> <span>3. KÜPSETUSAHI (KÜPSETA PITSA!)</span>
+            </button>
+            <button class="tab-btn" id="tab-btn-cutting" data-station="cutting">
+                <span>🔪</span> <span>4. Lõikelaud (Haki toorained)</span>
             </button>
         </div>
 

@@ -189,8 +189,8 @@ class CookingGame {
         this.scene.fog = new THREE.FogExp2(0x1a2530, 0.025);
 
         this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-        this.camera.position.set(0, 4.5, 6.5);
-        this.camera.lookAt(0, 1.2, 0);
+        this.camera.position.set(0, 3.6, 5.0);
+        this.camera.lookAt(0, 1.3, 0);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -460,21 +460,67 @@ class CookingGame {
         const yardIcon = document.getElementById('cooking-yard-icon');
         if (yardIcon) yardIcon.innerHTML = yardService.renderYardSvg(20);
 
-        // Pantry Tray items
+        // Pantry Tray items - Grouped by Category for extreme clarity
         const pantryContainer = document.getElementById('pantry-items-grid');
         if (pantryContainer) {
-            pantryContainer.innerHTML = '';
+            pantryContainer.innerHTML = `
+                <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- 1. Cooked & Baked Items -->
+                    <div style="background: rgba(255, 71, 87, 0.12); border: 1.5px solid rgba(255, 71, 87, 0.4); border-radius: 12px; padding: 10px 14px;">
+                        <div class="category-header" style="color: #ff6b81;">
+                            <span>🔥</span> <span>3. KÜPSETATUD & PRAETUD TOIDUD (Valmista jaos: 🔥 Pliit või 🍕 Ahi):</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-cooked"></div>
+                    </div>
+
+                    <!-- 2. Chopped Ingredients -->
+                    <div style="background: rgba(87, 95, 207, 0.12); border: 1px solid rgba(87, 95, 207, 0.35); border-radius: 12px; padding: 10px 14px;">
+                        <div class="category-header" style="color: #70a1ff;">
+                            <span>🔪</span> <span>2. VIILUTATUD KOOSTISOSAD (Valmista jaos: 🔪 Lõikelaud):</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-chopped"></div>
+                    </div>
+
+                    <!-- 3. Base Pantry Items -->
+                    <div style="background: rgba(46, 213, 115, 0.1); border: 1px solid rgba(46, 213, 115, 0.3); border-radius: 12px; padding: 10px 14px;">
+                        <div class="category-header" style="color: #2ed573;">
+                            <span>🍞</span> <span>1. SAHVRI TOOTED (Kohe valmis taldrikule panekuks):</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-pantry"></div>
+                    </div>
+                </div>
+            `;
+
+            const groupCooked = document.getElementById('pantry-group-cooked');
+            const groupChopped = document.getElementById('pantry-group-chopped');
+            const groupPantry = document.getElementById('pantry-group-pantry');
+
             Object.values(INGREDIENTS).forEach(ing => {
                 if (ing.category === 'pantry' || ing.category === 'sauce' || ing.category === 'chopped' || ing.category === 'cooked') {
                     const btn = document.createElement('button');
                     btn.className = 'ingredient-btn';
                     btn.setAttribute('data-id', ing.id);
+
+                    let badgeHint = '';
+                    if (ing.category === 'cooked') {
+                        btn.style.borderColor = '#ff4757';
+                        btn.style.background = 'rgba(255, 71, 87, 0.18)';
+                        badgeHint = '<span style="font-size: 0.65rem; color: #ff6b81; font-weight: 800;">🔥 KÜPSETATUD</span>';
+                    } else if (ing.category === 'chopped') {
+                        btn.style.borderColor = '#575fcf';
+                        badgeHint = '<span style="font-size: 0.65rem; color: #70a1ff; font-weight: bold;">🔪 LÕIGATUD</span>';
+                    }
+
                     btn.innerHTML = `
                         <span class="ingredient-icon">${ing.icon}</span>
                         <span class="ingredient-label">${ing.nameEt}</span>
+                        ${badgeHint}
                     `;
                     btn.addEventListener('click', () => this.addToPlate(ing.id));
-                    pantryContainer.appendChild(btn);
+
+                    if (ing.category === 'cooked' && groupCooked) groupCooked.appendChild(btn);
+                    else if (ing.category === 'chopped' && groupChopped) groupChopped.appendChild(btn);
+                    else if (groupPantry) groupPantry.appendChild(btn);
                 }
             });
         }
@@ -668,31 +714,50 @@ class CookingGame {
         if (!container) return;
 
         container.innerHTML = this.pans.map(pan => {
-            let statusText = 'Tühi';
-            let btnAction = `<button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_patty">➕ Pihv</button>
-                             <button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_steak">➕ Steak</button>
-                             <button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_pasta">➕ Pasta</button>`;
+            let statusText = '<span style="color: #a4b0be;">Tühi - Pane tooraine küpsema!</span>';
+            let btnAction = `
+                <div style="display: flex; flex-direction: column; gap: 4px; width: 100%; align-items: center;">
+                    <span style="font-size: 0.76rem; color: #ffd32a; font-weight: 800;">👇 VALI TOORAINE KÜPSETAMISEKS:</span>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                        <button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_patty" style="background: linear-gradient(135deg, #e74c3c, #c0392b); border-color: #ff7675; font-size: 0.8rem; padding: 7px 10px; font-weight: 800;">
+                            🥩 Prae Pihv (🔥)
+                        </button>
+                        <button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_steak" style="background: linear-gradient(135deg, #d35400, #e67e22); border-color: #f39c12; font-size: 0.8rem; padding: 7px 10px; font-weight: 800;">
+                            🥩 Prae Steak (🔥)
+                        </button>
+                        <button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_pasta" style="background: linear-gradient(135deg, #2980b9, #3498db); border-color: #74b9ff; font-size: 0.8rem; padding: 7px 10px; font-weight: 800;">
+                            🍝 Keeda Pasta (💧)
+                        </button>
+                    </div>
+                </div>
+            `;
 
             if (pan.holding) {
                 const ing = INGREDIENTS[pan.holding];
-                if (pan.state === 'cooking') statusText = `Praeb: ${ing?.nameEt} (${Math.round(pan.progress)}%)`;
-                else if (pan.state === 'done') statusText = `✅ VALMIS: ${ing?.cookResult ? INGREDIENTS[ing.cookResult]?.nameEt : ing?.nameEt}`;
-                else if (pan.state === 'burned') statusText = `🔥 KÕRBENUD!`;
-
-                btnAction = `<button class="btn-action btn-take-pan" data-pan="${pan.id}" style="background: #2ed573; font-weight: bold;">🍽️ Võta taldrikule</button>`;
+                if (pan.state === 'cooking') {
+                    statusText = `<strong style="color: #ffd32a; animation: pulse 1s infinite;">🔥 PRAEB: ${ing?.nameEt} (${Math.round(pan.progress)}%)</strong>`;
+                    btnAction = `<span style="font-size: 0.8rem; color: #ffd32a; font-weight: bold;">⏳ Küpseb... oota kuni valmib!</span>`;
+                } else if (pan.state === 'done') {
+                    const resultName = ing?.cookResult ? INGREDIENTS[ing.cookResult]?.nameEt : ing?.nameEt;
+                    statusText = `<strong style="color: #2ed573; font-size: 1.05rem;">✨🔥 VALMIS: ${resultName}</strong>`;
+                    btnAction = `<button class="btn-action btn-take-pan" data-pan="${pan.id}" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.95rem; padding: 10px 18px; box-shadow: 0 0 15px #2ed573;">🍽️ VÕTA VALMIS TOIT TALDRIKULE</button>`;
+                } else if (pan.state === 'burned') {
+                    statusText = `<strong style="color: #ff4757; font-size: 1.05rem;">🔥 KÕRBENUD!</strong>`;
+                    btnAction = `<button class="btn-action btn-take-pan" data-pan="${pan.id}" style="background: #eb4d4b; font-weight: bold;">🗑️ Viska minema</button>`;
+                }
             }
 
             const fillWidth = Math.min(100, pan.progress);
             const fillColor = pan.state === 'burned' ? '#eb4d4b' : (pan.state === 'done' ? '#2ed573' : '#ffd32a');
 
             return `
-                <div class="pan-card">
-                    <strong style="color: #ffd32a;">🍳 ${pan.name}</strong>
+                <div class="pan-card" style="border: 1.5px solid ${pan.state === 'done' ? '#2ed573' : (pan.state === 'cooking' ? '#ff793f' : 'rgba(255,255,255,0.12)')}; background: ${pan.state === 'cooking' ? 'rgba(255, 121, 63, 0.1)' : '#1e272e'};">
+                    <strong style="color: #ffd32a; font-size: 1.05rem;">🍳 ${pan.name}</strong>
                     <div style="font-size: 0.9rem; color: #dfe6e9;">${statusText}</div>
                     <div class="pan-heat-bar">
                         <div class="pan-heat-fill" style="width: ${fillWidth}%; background: ${fillColor};"></div>
                     </div>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 6px;">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 6px; width: 100%;">
                         ${btnAction}
                     </div>
                 </div>
@@ -888,8 +953,27 @@ class CookingGame {
 
         container.innerHTML = this.activeOrders.map(order => {
             const ingList = order.requiredIngredients.map(id => {
-                const ing = INGREDIENTS[id] || { nameEt: id, icon: '🥘' };
-                return `<li><span>${ing.icon}</span> <span>${ing.nameEt}</span></li>`;
+                const ing = INGREDIENTS[id] || { nameEt: id, icon: '🥘', category: 'pantry' };
+                
+                let tagBadge = `<span class="tag-pantry">🍞 Sahvrist</span>`;
+                if (ing.category === 'cooked') {
+                    if (id === 'baked_in_oven') {
+                        tagBadge = `<span class="tag-need-oven">🍕 AHJUS KÜPSETADA</span>`;
+                    } else {
+                        tagBadge = `<span class="tag-need-cook">🔥 KÜPSETA PLIIDIL</span>`;
+                    }
+                } else if (ing.category === 'chopped') {
+                    tagBadge = `<span class="tag-need-chop">🔪 HAKI LÕIKELAUAL</span>`;
+                }
+
+                return `
+                    <li style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 0; border-bottom: 1px dashed #ecf0f1;">
+                        <span style="display: flex; align-items: center; gap: 4px; font-weight: 600;">
+                            <span>${ing.icon}</span> <span>${ing.nameEt}</span>
+                        </span>
+                        ${tagBadge}
+                    </li>
+                `;
             }).join('');
 
             const pct = Math.max(0, (order.currentPatience / order.maxPatience) * 100);
@@ -899,7 +983,11 @@ class CookingGame {
                 <div class="order-ticket" id="ticket-${order.id}">
                     <div class="ticket-title">
                         <span>${order.icon} ${order.title}</span>
-                        <span style="color: #00f2fe; font-size: 0.85rem;">+${order.yardReward} Y</span>
+                    </div>
+                    <div style="margin: 4px 0 8px 0;">
+                        <span style="background: linear-gradient(135deg, #00f2fe, #2ecc71); color: #111; font-weight: 900; font-size: 0.78rem; padding: 3px 8px; border-radius: 8px; box-shadow: 0 0 8px rgba(0,242,254,0.4); display: inline-flex; align-items: center; gap: 4px;">
+                            💎 TEENID: +${order.yardReward} YARDS
+                        </span>
                     </div>
                     <ul class="ticket-recipe-list">
                         ${ingList}

@@ -105,7 +105,7 @@ export function applyLocalization() {
             ? 'Valmista restorani peakokana burgereid, pitsasid ja pastasid, täida klientide tellimusi ja teeni Jarde!'
             : 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!';
         const tCook = cookingCard.querySelector('.reward-tag span:last-child');
-        if (tCook) tCook.textContent = isEt ? 'VIP Eksklusiivne Kokandusmäng' : 'VIP Exclusive Cooking Simulator';
+        if (tCook) tCook.textContent = isEt ? '💎 TEENI SIIN JARDE (+20Y kuni +40Y tellimuselt)' : '💎 EARN YARDS HERE (+20Y to +40Y per order)';
     }
 
     // Community section

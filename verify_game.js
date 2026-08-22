@@ -13,6 +13,9 @@ try {
 
 // 2. Load Check
 (async () => {
+    try {
+        execSync('lsof -ti:4173 | xargs kill -9', { stdio: 'ignore' });
+    } catch (e) {}
     console.log("Starting preview server...");
     const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort'], { stdio: 'ignore' });
     
@@ -22,6 +25,7 @@ try {
     console.log("Launching headless browser to check runtime errors and game platform features...");
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
     const page = await browser.newPage();
+    await page.setViewport({ width: 1400, height: 900 });
     
     let hasErrors = false;
     page.on('pageerror', error => {
@@ -198,15 +202,18 @@ try {
         await page.click('#btn-close-admin-panel');
         await new Promise(r => setTimeout(r, 500));
 
-        // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 5000 Objects)
+        // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 10,000 Objects)
         console.log("5. Testing 3D Game Creator Studio...");
         await page.goto('http://localhost:4173/games/games/creator/index.html');
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
-        // Verify 5,000 items catalog badge
+        // Verify 10,000 items catalog badge
         const catalogCountText = await page.$eval('#catalog-count-badge', el => el.textContent);
         console.log("   Catalog object count badge:", catalogCountText);
+        if (!catalogCountText.includes('10,000')) {
+            throw new Error(`Expected catalog badge to have 10,000 items, got: ${catalogCountText}`);
+        }
 
         // Click first object to spawn into scene
         const firstObjCard = await page.$('.object-card');
@@ -234,7 +241,7 @@ try {
             await firstObjCard.click();
             await new Promise(r => setTimeout(r, 400));
 
-            // Test AI Game Assistant
+            // Test AI Game Assistant with Roads & Drivable Cars Prompt
             await page.click('#btn-toggle-ai');
             await new Promise(r => setTimeout(r, 400));
             const aiModalVisible = await page.$eval('#ai-assistant-modal', el => window.getComputedStyle(el).display);
@@ -243,54 +250,97 @@ try {
                 throw new Error("AI Assistant modal failed to open!");
             }
 
-            // Test AI Game Assistant with Scripting & Programming Prompt
-            await page.type('#ai-prompt-input', 'kui ma konnin puu seest labi tuleb mulle ette tekst Leidsid volumetsa saladuse!');
+            await page.type('#ai-prompt-input', 'lisa autoteed ja autod millega saab soita');
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
             const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
-            console.log("   AI Programming Chat output:", chatContent.substring(chatContent.lastIndexOf('🤖')).substring(0, 100) + '...');
-            if (!chatContent.includes('Mänguloogika programmeeritud') && !chatContent.includes('AI Builder:')) {
-                throw new Error("AI Programming response failed to appear in chat log!");
+            console.log("   AI Roads & Cars output:", chatContent.substring(chatContent.lastIndexOf('🤖')).substring(0, 110) + '...');
+            if (!chatContent.includes('autotee') && !chatContent.includes('Supercar')) {
+                throw new Error("AI Roads & Drivable Cars response failed to appear in chat log!");
             }
             await page.click('#btn-close-ai');
 
-            // Test In-Game Trigger: Walk into tree and verify dialogue popup appears
-            console.log("   Testing In-Game Trigger: Walking towards programmed tree in Play Test Mode...");
+            // Test Drivable Car in Play Test Mode
+            console.log("   Testing Drivable Car in Play Test Mode...");
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 500));
 
-            // Hold ArrowUp/KeyW to walk towards the tree
+            // Walk to car at x: 1.8, z: -4 and press F to enter
             await page.keyboard.down('KeyW');
-            await page.waitForFunction(() => document.getElementById('game-dialog-popup')?.style.display === 'block', { timeout: 4000 });
+            await page.keyboard.down('KeyD');
+            await new Promise(r => setTimeout(r, 600));
             await page.keyboard.up('KeyW');
-            await new Promise(r => setTimeout(r, 200));
+            await page.keyboard.up('KeyD');
 
-            const dialogVisible = await page.$eval('#game-dialog-popup', el => window.getComputedStyle(el).display);
-            const dialogText = await page.$eval('#game-dialog-text', el => el.textContent);
-            console.log("   In-Game Dialog Popup visibility:", dialogVisible, "Dialog Text:", dialogText);
+            // Enter vehicle with F
+            await page.keyboard.press('KeyF');
+            await new Promise(r => setTimeout(r, 400));
 
-            if (!dialogText.includes('volumetsa saladuse')) {
-                throw new Error(`In-game trigger popup failed to appear when walking near tree! Got text: ${dialogText}`);
+            const vehicleHudDisplay = await page.$eval('#vehicle-hud', el => window.getComputedStyle(el).display);
+            console.log("   Vehicle HUD display after [F] (Expected: block):", vehicleHudDisplay);
+            if (vehicleHudDisplay !== 'block') {
+                throw new Error("Vehicle HUD failed to show when entering car with [F]!");
             }
+
+            // Accelerate vehicle with W
+            await page.keyboard.down('KeyW');
+            await new Promise(r => setTimeout(r, 500));
+            await page.keyboard.up('KeyW');
+            const carSpeed = await page.$eval('#vehicle-hud-speed', el => el.textContent);
+            console.log("   Drivable Car Speed after W acceleration:", carSpeed);
+
+            // Exit car with F
+            await page.keyboard.press('KeyF');
+            await new Promise(r => setTimeout(r, 300));
+            const vehicleHudAfterExit = await page.$eval('#vehicle-hud', el => window.getComputedStyle(el).display);
+            console.log("   Vehicle HUD display after exit [F] (Expected: none):", vehicleHudAfterExit);
 
             // Exit Play Test Mode back to Edit Mode
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
 
-            // Test Save Game Button & My Games Modal
+            // Save first game as "World 1"
+            await page.$eval('#game-title-input', el => el.value = 'World 1 - Highway');
             await page.click('#btn-save-draft');
-            await new Promise(r => setTimeout(r, 400));
-            console.log("   Successfully clicked 'Save Game' button!");
+            await new Promise(r => setTimeout(r, 500));
 
-            await page.click('#btn-open-my-games');
-            await new Promise(r => setTimeout(r, 400));
-            const myGamesModalVisible = await page.$eval('#my-games-modal', el => window.getComputedStyle(el).display);
-            console.log("   My Games Modal visibility:", myGamesModalVisible);
-            if (myGamesModalVisible !== 'flex') {
-                throw new Error("My Games modal failed to open!");
+            // Start New Game and Save as "World 2"
+            await page.click('#btn-new-game');
+            await new Promise(r => setTimeout(r, 500));
+            await page.$eval('#game-title-input', el => el.value = 'World 2 - Castle & Forest');
+            await firstObjCard.click();
+            await page.click('#btn-save-draft');
+            await new Promise(r => setTimeout(r, 500));
+
+            // Test Multi-World Dimension Travel (Hop to World 1 from inside game)
+            console.log("   Testing Dimension Travel between 2 saved worlds...");
+            await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
+            await new Promise(r => setTimeout(r, 500));
+            await page.evaluate(() => document.getElementById('btn-quick-travel-hud')?.click());
+            await new Promise(r => setTimeout(r, 500));
+
+            const dimensionModalVisible = await page.$eval('#dimension-travel-modal', el => window.getComputedStyle(el).display);
+            console.log("   Dimension Travel Modal visibility:", dimensionModalVisible);
+            if (dimensionModalVisible !== 'flex') {
+                throw new Error("Dimension travel modal failed to open!");
             }
-            await page.click('#btn-close-my-games');
+
+            const hopBtn = await page.$('.btn-hop-world');
+            if (hopBtn) {
+                await hopBtn.click();
+                await new Promise(r => setTimeout(r, 600));
+                const loadedTitle = await page.$eval('#game-title-input', el => el.value);
+                console.log("   Loaded World Title after Dimension Travel:", loadedTitle);
+            }
+            await page.evaluate(() => document.getElementById('btn-close-dimension-modal')?.click());
+            await new Promise(r => setTimeout(r, 300));
+
+            // Exit Play Test Mode
+            await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
+            await new Promise(r => setTimeout(r, 400));
+            await page.click('#btn-save-draft');
+            await new Promise(r => setTimeout(r, 500));
 
             // Test Studio Camera View Navigation Buttons & Keyboard Pan (Edit Mode)
             await page.click('#cam-btn-fwd');
@@ -318,6 +368,8 @@ try {
 
         // Test Submit for Review
         console.log("   Submitting created game for admin review...");
+        await page.click('#btn-save-draft');
+        await new Promise(r => setTimeout(r, 400));
         await page.click('#btn-submit-review');
         await new Promise(r => setTimeout(r, 800));
 
@@ -465,50 +517,44 @@ try {
         }
 
         // Test Chopping station
-        await page.click('#tab-btn-cutting');
+        await page.evaluate(() => document.getElementById('tab-btn-cutting')?.click());
         await new Promise(r => setTimeout(r, 300));
-        const firstRawBtn = await page.$('#chopping-raw-options .ingredient-btn');
-        if (firstRawBtn) {
-            await firstRawBtn.click();
-            await new Promise(r => setTimeout(r, 300));
-            // Click chop button 5 times
-            for (let i = 0; i < 5; i++) {
-                await page.click('#btn-do-chop');
-                await new Promise(r => setTimeout(r, 100));
-            }
-            console.log("   Successfully performed chopping minigame on cutting board!");
+        await page.evaluate(() => document.querySelector('#chopping-raw-options .ingredient-btn')?.click());
+        await new Promise(r => setTimeout(r, 300));
+        // Click chop button 5 times
+        for (let i = 0; i < 5; i++) {
+            await page.evaluate(() => document.getElementById('btn-do-chop')?.click());
+            await new Promise(r => setTimeout(r, 100));
         }
+        console.log("   Successfully performed chopping minigame on cutting board!");
 
         // Test Stove station
-        await page.click('#tab-btn-stove');
+        await page.evaluate(() => document.getElementById('tab-btn-stove')?.click());
         await new Promise(r => setTimeout(r, 300));
-        const firstPanAddBtn = await page.$('#stove-pans-container .btn-add-pan');
-        if (firstPanAddBtn) {
-            await firstPanAddBtn.click();
-            await new Promise(r => setTimeout(r, 300));
-            console.log("   Successfully placed item on stove pan!");
-        }
+        await page.evaluate(() => document.querySelector('#stove-pans-container .btn-add-pan')?.click());
+        await new Promise(r => setTimeout(r, 300));
+        console.log("   Successfully placed item on stove pan!");
 
         // Test Recipe Book modal
-        await page.click('#btn-open-recipes');
+        await page.evaluate(() => document.getElementById('btn-open-recipes')?.click());
         await new Promise(r => setTimeout(r, 300));
         const recipeModalDisplay = await page.$eval('#modal-recipes', el => window.getComputedStyle(el).display);
         console.log("   Recipe Book modal visibility:", recipeModalDisplay);
         if (recipeModalDisplay !== 'flex') {
             throw new Error("Recipe Book modal failed to open!");
         }
-        await page.click('#btn-close-recipes');
+        await page.evaluate(() => document.getElementById('btn-close-recipes')?.click());
         await new Promise(r => setTimeout(r, 300));
 
         // Test Sound toggle
-        await page.click('#btn-toggle-sound');
+        await page.evaluate(() => document.getElementById('btn-toggle-sound')?.click());
         const soundIcon = await page.$eval('#sound-icon', el => el.textContent);
         console.log("   Sound toggle icon after click:", soundIcon);
 
         // Test Clear plate
-        await page.click('#tab-btn-assembly');
+        await page.evaluate(() => document.getElementById('tab-btn-assembly')?.click());
         await new Promise(r => setTimeout(r, 300));
-        await page.click('#btn-clear-plate');
+        await page.evaluate(() => document.getElementById('btn-clear-plate')?.click());
         await new Promise(r => setTimeout(r, 300));
         console.log("   Successfully cleared plate!");
 

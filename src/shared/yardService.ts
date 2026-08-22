@@ -814,6 +814,14 @@ class YardService {
             target.updatedAt = Date.now();
             localStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(games));
 
+            // If changes are requested, ensure feedback banner is shown for this game
+            if (status === 'changes_requested') {
+                try {
+                    localStorage.removeItem('playard_hide_admin_feedback');
+                    localStorage.removeItem('playard_dismissed_feedback_' + gameId);
+                } catch (e) {}
+            }
+
             // If game is rejected or approved, clear any active changes_requested draft
             if (status === 'rejected' || status === 'approved') {
                 if (target.creatorUsername) {

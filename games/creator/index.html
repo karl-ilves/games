@@ -268,14 +268,14 @@
             top: 70px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.75);
+            background: rgba(0,0,0,0.85);
             border: 1.5px solid #2ecc71;
             padding: 8px 24px;
             border-radius: 30px;
             color: #2ecc71;
             font-weight: bold;
             z-index: 150;
-            pointer-events: none;
+            pointer-events: auto;
             box-shadow: 0 4px 20px rgba(46, 204, 113, 0.3);
             text-align: center;
             font-size: 0.9rem;
@@ -392,7 +392,61 @@
 
     <!-- Play Test Active HUD -->
     <div id="play-test-hud">
-        🎮 <strong>PLAY TEST MODE:</strong> Use <strong>Arrow Keys / WASD</strong> to Move | <strong>SPACE</strong> to Jump
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+            <div>
+                🎮 <strong>PLAY TEST:</strong> Nooltega / WASD liikumine | <strong>SPACE</strong> Hüpe | <strong>[F]</strong> Autosõit
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="btn-quick-travel-hud" style="background: rgba(168, 85, 247, 0.3); border: 1px solid #a855f7; color: #e056fd; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">
+                    🌀 Reisi teise seivi ➡️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Drive Active HUD -->
+    <div id="vehicle-hud" style="display: none; position: fixed; top: 75px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.92); border: 2px solid #ffd32a; border-radius: 16px; padding: 10px 24px; color: #fff; z-index: 1100; box-shadow: 0 10px 30px rgba(255, 211, 42, 0.3); text-align: center;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 1.6rem;">🏎️</span>
+            <div>
+                <strong style="color: #ffd32a; font-size: 1.05rem;" id="vehicle-hud-name">Autoga Sõitmine</strong>
+                <div style="font-size: 0.85rem; color: #00f2fe; margin-top: 2px;">
+                    Gaas: <strong>W / ⬆️</strong> | Pidur & Tagurpidi: <strong>S / ⬇️</strong> | Pööramine: <strong>A / D / ⬅️ ➡️</strong>
+                </div>
+            </div>
+            <div style="margin-left: 10px; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 12px; text-align: right;">
+                <div style="font-size: 1.2rem; font-weight: 900; color: #2ecc71;" id="vehicle-hud-speed">0 km/h</div>
+                <button id="btn-exit-vehicle" style="background: #e74c3c; border: none; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; margin-top: 4px;">
+                    🚪 Välju [F]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enter Vehicle Prompt Button -->
+    <div id="enter-vehicle-prompt" style="display: none; position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%); z-index: 1150;">
+        <button id="btn-enter-vehicle" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: 2px solid #fff; color: #111; font-weight: 900; padding: 10px 20px; border-radius: 30px; font-size: 1rem; cursor: pointer; box-shadow: 0 8px 25px rgba(255,211,42,0.6); display: flex; align-items: center; gap: 8px; animation: bounce 1s infinite alternate;">
+            <span>🚗</span> <span>Istu autosse ja sõida [F]</span>
+        </button>
+    </div>
+
+    <!-- Dimension Portal Travel Modal -->
+    <div id="dimension-travel-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 1500; align-items: center; justify-content: center;">
+        <div style="background: #121820; border: 2px solid #a855f7; border-radius: 16px; padding: 24px; width: 90%; max-width: 520px; color: #fff; box-shadow: 0 20px 50px rgba(168,85,247,0.35);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.8rem;">🌀</span>
+                    <h3 style="margin: 0; color: #e056fd; font-size: 1.4rem;">Reisi Teise Seivitud Kohta</h3>
+                </div>
+                <button id="btn-close-dimension-modal" style="background: none; border: none; color: #a4b0be; font-size: 1.3rem; cursor: pointer;">✕</button>
+            </div>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 16px 0;">
+                Vali oma teine salvestatud maailm ja hüppa otse mängu sees sellest kohast teise!
+            </p>
+            <div id="dimension-games-list" style="max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                <!-- Dynamically loaded -->
+            </div>
+        </div>
     </div>
 
     <!-- Play Test Easy On-Screen Controls -->
@@ -419,14 +473,14 @@
         </div>
     </div>
 
-    <!-- Left Object Catalog (5000+ Objects Engine) -->
+    <!-- Left Object Catalog (10,000+ Objects Engine) -->
     <div class="catalog-panel" id="catalog-panel">
         <div class="catalog-header">
             <h3>
-                <span>📦 5,000 Objects Library</span>
-                <span id="catalog-count-badge" style="font-size: 0.75rem; color: #a4b0be; background: #131920; padding: 2px 6px; border-radius: 10px;">5,000 items</span>
+                <span>📦 10,000 Objects Library</span>
+                <span id="catalog-count-badge" style="font-size: 0.75rem; color: #a4b0be; background: #131920; padding: 2px 6px; border-radius: 10px;">10,000 items</span>
             </h3>
-            <input type="text" id="catalog-search-input" class="catalog-search" placeholder="🔍 Search 5000 objects...">
+            <input type="text" id="catalog-search-input" class="catalog-search" placeholder="🔍 Search 10000 objects...">
             <div class="catalog-categories">
                 <button class="cat-btn active" data-cat="all">All</button>
                 <button class="cat-btn" data-cat="nature">🌿 Nature</button>

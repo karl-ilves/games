@@ -35,6 +35,11 @@ interface PlacedObject {
 let placedObjects: PlacedObject[] = [];
 let selectedObject: PlacedObject | null = null;
 
+// Vehicle Drive State (Play Test Mode)
+let currentVehicle: PlacedObject | null = null;
+let vehicleSpeed = 0;
+let nearbyVehicle: PlacedObject | null = null;
+
 // Character & Ultra Grass
 let humanCharacter: THREE.Group;
 let characterVelocity = new THREE.Vector3();
@@ -54,7 +59,7 @@ let orbitTarget = new THREE.Vector3(0, 2, 0);
 let isRightMouseDown = false;
 let mousePos = { x: 0, y: 0 };
 
-// --- 5000+ Object Catalog Engine ---
+// --- 10,000+ Object Catalog Engine ---
 interface CatalogItem {
     id: string;
     name: string;
@@ -67,7 +72,7 @@ interface CatalogItem {
 
 const CATALOG_DATABASE: CatalogItem[] = [];
 
-function generate5000ObjectCatalog() {
+function generate10000ObjectCatalog() {
     const categories: Array<{ id: CatalogItem['category']; name: string; icon: string; types: string[]; colors: string[] }> = [
         {
             id: 'nature',
@@ -78,28 +83,28 @@ function generate5000ObjectCatalog() {
         },
         {
             id: 'city',
-            name: 'City',
+            name: 'City & Roads',
             icon: '🏙️',
-            types: ['Skyscraper', 'Modern House', 'Apartment Tower', 'Asphalt Road', 'Intersection', 'Overpass Bridge', 'Street Light', 'Highway Sign', 'Guardrail', 'Brick Wall'],
+            types: ['Asphalt Road', 'Highway Overpass', 'Crossroad', 'Curve Road', 'Skyscraper', 'Modern House', 'Apartment Tower', 'Street Light', 'Highway Sign', 'Guardrail'],
             colors: ['#34495e', '#2c3e50', '#7f8c8d', '#bdc3c7', '#3498db', '#f39c12', '#e74c3c', '#95a5a6']
         },
         {
             id: 'vehicles',
-            name: 'Vehicles',
+            name: 'Vehicles & Cars',
             icon: '🚗',
-            types: ['Supercar', 'Muscle Car', 'Cyber Truck', 'Offroad Buggy', 'Fighter Jet', 'Prop Plane', 'Rescue Helicopter', 'Speedboat', 'Hoverboard', 'Spaceship'],
+            types: ['Supercar', 'Muscle Car', 'Cyber Truck', 'Offroad Buggy', 'Police Cruiser', 'Sports Roadster', 'Fighter Jet', 'Prop Plane', 'Rescue Helicopter', 'Hoverboard'],
             colors: ['#e74c3c', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c', '#2c3e50', '#ecf0f1']
         },
         {
             id: 'gameplay',
-            name: 'Gameplay',
+            name: 'Gameplay & Portals',
             icon: '🎮',
-            types: ['Yard Coin Ring', 'Checkpoint Arch', 'Finish Line Gate', 'Speed Booster Pad', 'Super Jump Pad', 'Spinning Blade', 'Spike Block', 'Laser Gate', 'Teleport Portal', 'Target Bullseye'],
+            types: ['Teleport Portal', 'Dimension Gate', 'Yard Coin Ring', 'Checkpoint Arch', 'Finish Line Gate', 'Speed Booster Pad', 'Super Jump Pad', 'Spinning Blade', 'Spike Block', 'Laser Gate'],
             colors: ['#ffd32a', '#00f2fe', '#2ecc71', '#e74c3c', '#9b59b6', '#ff9f1a', '#4facfe', '#ff4757']
         },
         {
             id: 'scifi',
-            name: 'Sci-Fi',
+            name: 'Sci-Fi & Space',
             icon: '🚀',
             types: ['Cyber Power Tower', 'Quantum Core', 'Neon Pillar', 'Cargo Container', 'Fuel Plasma Tank', 'Alien Obelisk', 'Hologram Beacon', 'Solar Panel Array', 'Orbital Relic', 'Gravity Station'],
             colors: ['#00f2fe', '#9b59b6', '#ff007f', '#00ffcc', '#242f3d', '#34495e', '#f39c12', '#8e44ad']
@@ -109,7 +114,7 @@ function generate5000ObjectCatalog() {
     let count = 0;
     categories.forEach(cat => {
         cat.types.forEach((type, typeIdx) => {
-            for (let v = 1; v <= 100; v++) {
+            for (let v = 1; v <= 200; v++) {
                 count++;
                 const color = cat.colors[(typeIdx + v) % cat.colors.length];
                 CATALOG_DATABASE.push({
@@ -301,36 +306,77 @@ function createObjectMesh(item: CatalogItem, color?: string): THREE.Group {
             roof.position.y = 3.9;
             roof.rotation.y = Math.PI / 4;
             group.add(roof);
-        } else {
-            // Road / Prop
-            const road = new THREE.Mesh(new THREE.BoxGeometry(5, 0.15, 5), material);
-            road.position.y = 0.08;
+        } else if (item.geometryType.includes('road') || item.geometryType.includes('crossroad') || item.geometryType.includes('overpass')) {
+            // Realistic Asphalt Road with yellow highway stripes
+            const road = new THREE.Mesh(new THREE.BoxGeometry(8, 0.12, 14), new THREE.MeshStandardMaterial({ color: 0x22272e, roughness: 0.85 }));
+            road.position.y = 0.06;
             group.add(road);
+
+            // Center Road Dashes
+            for (let s = -4.8; s <= 4.8; s += 2.4) {
+                const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.14, 1.4), new THREE.MeshStandardMaterial({ color: 0xffd32a, roughness: 0.4 }));
+                stripe.position.set(0, 0.07, s);
+                group.add(stripe);
+            }
+            // Road Edge Lines
+            [-3.6, 3.6].forEach(ex => {
+                const edgeLine = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 14), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                edgeLine.position.set(ex, 0.07, 0);
+                group.add(edgeLine);
+            });
+        } else {
+            // City Prop / Wall
+            const prop = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), material);
+            prop.position.y = 1.5;
+            group.add(prop);
         }
     } else if (item.category === 'vehicles') {
-        // Car / Jet / Vehicle Body
-        const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 4), material);
-        body.position.y = 0.6;
+        // Drivable Car Body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.75, 4.2), material);
+        body.position.y = 0.65;
         group.add(body);
 
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.7, 2), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-        cabin.position.set(0, 1.2, -0.2);
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.65, 2.2), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }));
+        cabin.position.set(0, 1.25, -0.2);
         group.add(cabin);
 
-        // Wheels
-        const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
-        wheelGeo.rotateZ(Math.PI / 2);
-        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        // Headlights & Taillights
+        const headlightMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+        const taillightMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
 
-        [-1, 1].forEach(x => {
-            [-1.3, 1.3].forEach(z => {
+        [-0.7, 0.7].forEach(hx => {
+            const hl = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), headlightMat);
+            hl.position.set(hx, 0.65, -2.12);
+            group.add(hl);
+
+            const tl = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), taillightMat);
+            tl.position.set(hx, 0.65, 2.12);
+            group.add(tl);
+        });
+
+        // 4 3D Rubber Wheels
+        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+        wheelGeo.rotateZ(Math.PI / 2);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
+
+        [-1.15, 1.15].forEach(x => {
+            [-1.35, 1.35].forEach(z => {
                 const w = new THREE.Mesh(wheelGeo, wheelMat);
-                w.position.set(x * 1.05, 0.35, z);
+                w.position.set(x, 0.4, z);
                 group.add(w);
             });
         });
     } else if (item.category === 'gameplay') {
-        if (item.geometryType.includes('coin') || item.geometryType.includes('ring')) {
+        if (item.geometryType.includes('portal') || item.geometryType.includes('gate') || item.geometryType.includes('teleport')) {
+            // Glowing Dimension Portal Frame
+            const portalFrame = new THREE.Mesh(new THREE.TorusGeometry(2, 0.28, 16, 32), new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0x8e44ad, emissiveIntensity: 0.7 }));
+            portalFrame.position.y = 2.2;
+            group.add(portalFrame);
+
+            const portalDisc = new THREE.Mesh(new THREE.CircleGeometry(1.75, 32), new THREE.MeshBasicMaterial({ color: 0x00f2fe, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
+            portalDisc.position.y = 2.2;
+            group.add(portalDisc);
+        } else if (item.geometryType.includes('coin') || item.geometryType.includes('ring')) {
             const coin = new THREE.Mesh(new THREE.TorusGeometry(1, 0.2, 12, 24), material);
             coin.position.y = 1.6;
             group.add(coin);
@@ -668,8 +714,8 @@ async function initStudio() {
     createUltraRealisticGrass();
     createUltraRealisticHuman();
 
-    // Generate 5000 Objects in Catalog
-    generate5000ObjectCatalog();
+    // Generate 10,000 Objects in Catalog
+    generate10000ObjectCatalog();
     renderCatalogUI();
 
     // Restore Draft or Admin Feedback Game
@@ -708,6 +754,72 @@ function onWindowResize() {
 let isDraggingObject = false;
 const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
+export function enterVehicle(vehicle: PlacedObject) {
+    if (!isPlayTestMode) return;
+    currentVehicle = vehicle;
+    vehicleSpeed = 0;
+    humanCharacter.visible = false;
+    
+    const prompt = document.getElementById('enter-vehicle-prompt');
+    if (prompt) prompt.style.display = 'none';
+
+    const vehicleHud = document.getElementById('vehicle-hud');
+    const vehicleHudName = document.getElementById('vehicle-hud-name');
+    if (vehicleHud) vehicleHud.style.display = 'block';
+    if (vehicleHudName) vehicleHudName.innerText = `🏎️ ${vehicle.name}`;
+}
+
+export function exitVehicle() {
+    if (!currentVehicle) return;
+    const exitPos = currentVehicle.mesh.position.clone().add(new THREE.Vector3(2.2, 0, 0));
+    humanCharacter.position.copy(exitPos);
+    humanCharacter.visible = true;
+    currentVehicle = null;
+    vehicleSpeed = 0;
+
+    const vehicleHud = document.getElementById('vehicle-hud');
+    if (vehicleHud) vehicleHud.style.display = 'none';
+}
+
+export function openDimensionTravelModal() {
+    const profile = getCurrentUserProfile();
+    const modal = document.getElementById('dimension-travel-modal');
+    const list = document.getElementById('dimension-games-list');
+    if (!modal || !list) return;
+
+    const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
+    if (savedGames.length === 0) {
+        list.innerHTML = `<div style="text-align: center; color: #a4b0be; padding: 20px;">Sul pole veel teisi salvestatud mänge. Loo ja salvesta mitu mängu "💾 Save Game" nupuga!</div>`;
+    } else {
+        list.innerHTML = savedGames.map((g: any) => `
+            <div style="background: #1e293b; border: 1.5px solid rgba(168,85,247,0.4); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div>
+                    <h4 style="margin: 0; color: #00f2fe; font-size: 1rem;">🎮 ${g.title}</h4>
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Kategooria: <strong style="color: #ffd32a;">${g.category}</strong> | Objekte: <strong>${g.objects?.length || 0} tk</strong></div>
+                </div>
+                <button class="btn-hop-world" data-game-id="${g.id}" style="background: linear-gradient(135deg, #a855f7, #00f2fe); border: none; color: #fff; font-weight: bold; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;">
+                    🌀 Rända siia
+                </button>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.btn-hop-world').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const gameId = (e.currentTarget as HTMLElement).getAttribute('data-game-id');
+                const targetGame = savedGames.find((sg: any) => sg.id === gameId);
+                if (targetGame) {
+                    modal.style.display = 'none';
+                    if (currentVehicle) exitVehicle();
+                    loadSceneFromData(targetGame);
+                    alert(`🌀 Rändasid edukalt teise salvestatud maailma "${targetGame.title}"!`);
+                }
+            });
+        });
+    }
+
+    modal.style.display = 'flex';
+}
+
 // --- Event Handlers ---
 function setupStudioEvents() {
     window.addEventListener('keydown', e => {
@@ -718,6 +830,19 @@ function setupStudioEvents() {
         }
 
         keys[e.code] = true;
+
+        if (isPlayTestMode) {
+            // F Key: Enter / Exit Vehicle
+            if (e.code === 'KeyF' || e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                if (currentVehicle) {
+                    exitVehicle();
+                } else if (nearbyVehicle) {
+                    enterVehicle(nearbyVehicle);
+                }
+                return;
+            }
+        }
 
         if (!isPlayTestMode && selectedObject) {
             // R Key: Rotate 45 degrees
@@ -734,6 +859,23 @@ function setupStudioEvents() {
                 return;
             }
         }
+    });
+
+    // Enter / Exit Vehicle Buttons
+    document.getElementById('btn-enter-vehicle')?.addEventListener('click', () => {
+        if (nearbyVehicle) enterVehicle(nearbyVehicle);
+    });
+    document.getElementById('btn-exit-vehicle')?.addEventListener('click', () => {
+        exitVehicle();
+    });
+
+    // Dimension Travel Modal Buttons
+    document.getElementById('btn-quick-travel-hud')?.addEventListener('click', () => {
+        openDimensionTravelModal();
+    });
+    document.getElementById('btn-close-dimension-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('dimension-travel-modal');
+        if (modal) modal.style.display = 'none';
     });
 
     window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1472,67 +1614,106 @@ export function executeAiBuild(promptText: string) {
 
         aiResponse = `🌲 Istutasin stseeni ${generatedObjectsCount} puud, kändu ja kivimit! Looduslik metsamaailm on valmis.`;
 
-    // 3. LINN / CITY / BUILDINGS / AUTOD
-    } else if (p.includes('linn') || p.includes('city') || p.includes('maja') || p.includes('building') || p.includes('auto') || p.includes('car')) {
-        if (titleInput) titleInput.value = 'AI Cyber City 3D';
-        if (catSelect) catSelect.value = 'Adventure';
-        if (descInput) descInput.value = 'Futuristic city with skyscrapers and vehicles generated by AI.';
-
-        const cityItems = CATALOG_DATABASE.filter(c => c.category === 'city' || c.category === 'vehicles');
-        for (let i = 0; i < 10; i++) {
-            const item = cityItems[i % cityItems.length] || CATALOG_DATABASE[0];
-            const mesh = createObjectMesh(item);
-            const rX = ((i % 4) - 1.5) * 9;
-            const rZ = (Math.floor(i / 4) - 1) * 11;
-            mesh.position.set(rX, 0, rZ);
-            mesh.scale.setScalar(item.baseScale * (1 + Math.random() * 0.3));
-            scene.add(mesh);
-
-            placedObjects.push({
-                id: 'placed_ai_' + Date.now() + '_' + i,
-                mesh,
-                catalogId: item.id,
-                name: item.name,
-                category: item.category,
-                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
-                rotation: { x: 0, y: 0, z: 0 },
-                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
-                color: item.color
-            });
-            generatedObjectsCount++;
-        }
-
-        aiResponse = `🏙️ Ehitasin stseeni suurlinna tänavad, hooned ja paigutasin autod!`;
-
-    // 4. RACING / RALLIRADA
-    } else if (p.includes('ralli') || p.includes('racing') || p.includes('racetrack') || p.includes('sõit')) {
-        if (titleInput) titleInput.value = 'AI Speed Circuit';
+    // 3. AUTOTEED & SÕIDETAVAD AUTOD (ROADS & DRIVABLE CARS)
+    } else if (p.includes('autotee') || p.includes('autoteed') || p.includes('tee') || p.includes('road') || p.includes('sõit') || p.includes('soit') || p.includes('auto') || p.includes('car') || p.includes('drive') || p.includes('masin')) {
+        if (titleInput) titleInput.value = 'Highway & Supercars 3D';
         if (catSelect) catSelect.value = 'Racing';
-        if (descInput) descInput.value = 'High speed racing track with jumps generated by AI.';
+        if (descInput) descInput.value = 'Long asphalt highway with high performance drivable supercars.';
 
-        const raceItems = CATALOG_DATABASE.filter(c => c.category === 'vehicles' || c.category === 'gameplay');
-        for (let i = 0; i < 8; i++) {
-            const item = raceItems[i % raceItems.length] || CATALOG_DATABASE[0];
-            const mesh = createObjectMesh(item);
-            mesh.position.set(i * 3 - 10, 0, -i * 4);
-            mesh.scale.setScalar(item.baseScale);
+        // 1. Place Continuous Asphalt Road Segments
+        const roadItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('road') || c.geometryType.includes('road')) || CATALOG_DATABASE[0];
+        for (let i = 0; i < 4; i++) {
+            const mesh = createObjectMesh(roadItem);
+            mesh.position.set(0, 0, (i - 1.5) * 13.5);
             scene.add(mesh);
 
             placedObjects.push({
-                id: 'placed_ai_' + Date.now() + '_' + i,
+                id: 'placed_ai_road_' + Date.now() + '_' + i,
                 mesh,
-                catalogId: item.id,
-                name: item.name,
-                category: item.category,
+                catalogId: roadItem.id,
+                name: `🛣️ Autotee Lõik #${i + 1}`,
+                category: 'city',
                 position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
                 rotation: { x: 0, y: 0, z: 0 },
-                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
-                color: item.color
+                scale: { x: 1, y: 1, z: 1 },
+                color: roadItem.color
             });
             generatedObjectsCount++;
         }
 
-        aiResponse = `🏎️ Lõin võidusõiduraja koos rampide ja autodega!`;
+        // 2. Place Drivable Supercars
+        const vehicleItems = CATALOG_DATABASE.filter(c => c.category === 'vehicles' || c.name.toLowerCase().includes('car') || c.name.toLowerCase().includes('truck'));
+        const car1 = vehicleItems[0] || CATALOG_DATABASE[0];
+        const meshCar1 = createObjectMesh(car1, '#e74c3c');
+        meshCar1.position.set(1.8, 0, -4);
+        scene.add(meshCar1);
+
+        placedObjects.push({
+            id: 'placed_ai_car_' + Date.now() + '_1',
+            mesh: meshCar1,
+            catalogId: car1.id,
+            name: '🏎️ Sõidetav Supercar',
+            category: 'vehicles',
+            position: { x: meshCar1.position.x, y: meshCar1.position.y, z: meshCar1.position.z },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#e74c3c'
+        });
+        generatedObjectsCount++;
+
+        const car2 = vehicleItems[1] || CATALOG_DATABASE[1];
+        const meshCar2 = createObjectMesh(car2, '#00f2fe');
+        meshCar2.position.set(-1.8, 0, 8);
+        scene.add(meshCar2);
+
+        placedObjects.push({
+            id: 'placed_ai_car_' + Date.now() + '_2',
+            mesh: meshCar2,
+            catalogId: car2.id,
+            name: '🚙 Sõidetav Cyber Truck',
+            category: 'vehicles',
+            position: { x: meshCar2.position.x, y: meshCar2.position.y, z: meshCar2.position.z },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#00f2fe'
+        });
+        generatedObjectsCount++;
+
+        aiResponse = `🏎️ <strong>Lõin asfalteeritud autotee ja sõidetavad autod!</strong><br>Paigutasin stseeni 4 teelõiku, <strong>🏎️ Supercari</strong> ja <strong>🚙 Cyber Trucki</strong>.<br><br>👉 Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja astu auto juurde <strong>[F]</strong>, et autoga sõitma hakata!`;
+
+    // 4. PORTAALID & TEISE MAAILMA REISIMINE (PORTALS & DIMENSION TRAVEL)
+    } else if (p.includes('portaal') || p.includes('portal') || p.includes('teise') || p.includes('seiv') || p.includes('travel') || p.includes('dimension') || p.includes('teleport')) {
+        if (titleInput) titleInput.value = 'Portal Dimension Hub';
+        if (catSelect) catSelect.value = 'Adventure';
+        if (descInput) descInput.value = 'Magical world with teleportation portals between saved dimensions.';
+
+        const portalItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('portal') || c.name.toLowerCase().includes('gate') || c.geometryType.includes('portal')) || CATALOG_DATABASE[0];
+        const mesh = createObjectMesh(portalItem);
+        mesh.position.set(0, 0, -6);
+        mesh.scale.setScalar(portalItem.baseScale * 1.4);
+        scene.add(mesh);
+
+        const portalObj: PlacedObject = {
+            id: 'placed_ai_portal_' + Date.now(),
+            mesh,
+            catalogId: portalItem.id,
+            name: '🌀 Dimensiooni Portaal',
+            category: 'gameplay',
+            position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+            color: portalItem.color,
+            trigger: {
+                type: 'touch',
+                message: 'Astusid portaali! Kasuta ekraani nuppu "🌀 Reisi teise seivi", et valida sihtmaailm!',
+                title: '🌀 Dimensiooni Portaal',
+                radius: 4.5
+            }
+        };
+        placedObjects.push(portalObj);
+        generatedObjectsCount++;
+
+        aiResponse = `🌀 <strong>Lõin helendava dimensiooniportaali!</strong><br>Astes Play Test režiimis portaali sisse või vajutades üleval HUD-il nuppu <strong>"🌀 Reisi teise seivi"</strong>, saad hüpata otse oma teise salvestatud maailma!`;
 
     // 5. SCI-FI / KOSMOS / SPACE
     } else if (p.includes('kosmos') || p.includes('space') || p.includes('sci-fi') || p.includes('alien') || p.includes('laev')) {
@@ -1611,55 +1792,122 @@ function animate() {
     const delta = Math.min(clock.getDelta(), 0.1);
 
     if (isPlayTestMode) {
-        // Human Character Movement & 3rd Person Camera
-        const moveSpeed = 9;
-        const moveDir = new THREE.Vector3();
+        if (currentVehicle) {
+            // --- Drivable Car Physics & Controls ---
+            const accel = 38;
+            const maxForwardSpeed = 32;
+            const maxReverseSpeed = -14;
 
-        if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
-        if (keys['KeyS'] || keys['ArrowDown']) moveDir.z += 1;
-        if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
-        if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+            if (keys['KeyW'] || keys['ArrowUp']) {
+                vehicleSpeed = Math.min(vehicleSpeed + accel * delta, maxForwardSpeed);
+            } else if (keys['KeyS'] || keys['ArrowDown']) {
+                vehicleSpeed = Math.max(vehicleSpeed - accel * delta, maxReverseSpeed);
+            } else {
+                vehicleSpeed = THREE.MathUtils.lerp(vehicleSpeed, 0, 2.5 * delta);
+            }
 
-        if (moveDir.lengthSq() > 0) {
-            moveDir.normalize();
-            characterYaw = Math.atan2(moveDir.x, moveDir.z);
-            humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
+            // Steer wheels and car rotation
+            if (Math.abs(vehicleSpeed) > 0.2) {
+                const steerDir = (vehicleSpeed >= 0 ? 1 : -1);
+                if (keys['KeyA'] || keys['ArrowLeft']) {
+                    currentVehicle.mesh.rotation.y += 2.4 * delta * steerDir;
+                }
+                if (keys['KeyD'] || keys['ArrowRight']) {
+                    currentVehicle.mesh.rotation.y -= 2.4 * delta * steerDir;
+                }
+            }
 
-            humanCharacter.position.x += moveDir.x * moveSpeed * delta;
-            humanCharacter.position.z += moveDir.z * moveSpeed * delta;
-        }
+            // Move car forward in its facing direction
+            currentVehicle.mesh.translateZ(-vehicleSpeed * delta);
+            currentVehicle.position = {
+                x: currentVehicle.mesh.position.x,
+                y: currentVehicle.mesh.position.y,
+                z: currentVehicle.mesh.position.z
+            };
 
-        // Jump & Gravity
-        if (keys['Space'] && isGrounded) {
-            characterVelocity.y = 9;
-            isGrounded = false;
-        }
+            // Sync human position to car
+            humanCharacter.position.copy(currentVehicle.mesh.position);
 
-        if (!isGrounded) {
-            characterVelocity.y -= 22 * delta;
-            humanCharacter.position.y += characterVelocity.y * delta;
-            if (humanCharacter.position.y <= 0) {
-                humanCharacter.position.y = 0;
-                characterVelocity.y = 0;
-                isGrounded = true;
+            // 3rd Person Vehicle Camera
+            const camOffset = new THREE.Vector3(0, 4.2, 8.5);
+            camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), currentVehicle.mesh.rotation.y);
+            const targetCamPos = currentVehicle.mesh.position.clone().add(camOffset);
+            camera.position.lerp(targetCamPos, 0.14);
+            camera.lookAt(currentVehicle.mesh.position.x, currentVehicle.mesh.position.y + 1.2, currentVehicle.mesh.position.z);
+
+            // Update Vehicle HUD Speed
+            const speedEl = document.getElementById('vehicle-hud-speed');
+            if (speedEl) {
+                speedEl.innerText = `${Math.round(Math.abs(vehicleSpeed) * 3.6)} km/h`;
+            }
+        } else {
+            // --- Human Character Movement & 3rd Person Camera ---
+            const moveSpeed = 9;
+            const moveDir = new THREE.Vector3();
+
+            if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) moveDir.z += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+
+            if (moveDir.lengthSq() > 0) {
+                moveDir.normalize();
+                characterYaw = Math.atan2(moveDir.x, moveDir.z);
+                humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
+
+                humanCharacter.position.x += moveDir.x * moveSpeed * delta;
+                humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+            }
+
+            // Jump & Gravity
+            if (keys['Space'] && isGrounded) {
+                characterVelocity.y = 9;
+                isGrounded = false;
+            }
+
+            if (!isGrounded) {
+                characterVelocity.y -= 22 * delta;
+                humanCharacter.position.y += characterVelocity.y * delta;
+                if (humanCharacter.position.y <= 0) {
+                    humanCharacter.position.y = 0;
+                    characterVelocity.y = 0;
+                    isGrounded = true;
+                }
+            }
+
+            // 3rd Person Smooth Camera Follow
+            const targetCamPos = new THREE.Vector3(
+                humanCharacter.position.x - Math.sin(characterYaw) * 7,
+                humanCharacter.position.y + 4,
+                humanCharacter.position.z - Math.cos(characterYaw) * 7
+            );
+            camera.position.lerp(targetCamPos, 0.1);
+            camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.6, humanCharacter.position.z);
+
+            // Check nearby Drivable Vehicles
+            nearbyVehicle = null;
+            for (const p of placedObjects) {
+                if (p.category === 'vehicles' || p.name.toLowerCase().includes('car') || p.name.toLowerCase().includes('truck') || p.name.toLowerCase().includes('buggy')) {
+                    const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
+                    if (dist < 4.2) {
+                        nearbyVehicle = p;
+                        break;
+                    }
+                }
+            }
+
+            const enterPrompt = document.getElementById('enter-vehicle-prompt');
+            if (enterPrompt) {
+                enterPrompt.style.display = nearbyVehicle ? 'block' : 'none';
             }
         }
-
-        // 3rd Person Smooth Camera Follow
-        const targetCamPos = new THREE.Vector3(
-            humanCharacter.position.x - Math.sin(characterYaw) * 7,
-            humanCharacter.position.y + 4,
-            humanCharacter.position.z - Math.cos(characterYaw) * 7
-        );
-        camera.position.lerp(targetCamPos, 0.1);
-        camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.6, humanCharacter.position.z);
 
         // Check Triggers & Dialogue (e.g. Walking through tree / proximity)
         let activeTrigger: PlacedObject | null = null;
         for (const p of placedObjects) {
             if (p.trigger && p.trigger.message) {
                 const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
-                const rad = p.trigger.radius || 3.8;
+                const rad = p.trigger.radius || 4.2;
                 if (dist <= rad) {
                     activeTrigger = p;
                     break;
@@ -1682,6 +1930,9 @@ function animate() {
             dialogPopup.style.display = 'none';
         }
     } else {
+        if (currentVehicle) exitVehicle();
+        const enterPrompt = document.getElementById('enter-vehicle-prompt');
+        if (enterPrompt) enterPrompt.style.display = 'none';
         const dialogPopup = document.getElementById('game-dialog-popup');
         if (dialogPopup && dialogPopup.style.display !== 'none') {
             dialogPopup.style.display = 'none';
