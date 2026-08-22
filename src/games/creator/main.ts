@@ -846,6 +846,10 @@ function setupStudioEvents() {
     const hideFeedbackBanner = () => {
         const banner = document.getElementById('admin-feedback-banner');
         if (banner) banner.style.display = 'none';
+        if (activeFeedbackGameId) {
+            localStorage.setItem('playard_dismissed_feedback_' + activeFeedbackGameId, 'true');
+        }
+        localStorage.setItem('playard_hide_admin_feedback', 'true');
     };
 
     document.getElementById('btn-close-feedback-banner')?.addEventListener('click', hideFeedbackBanner);
@@ -1066,6 +1070,8 @@ function setupInspectorEvents() {
     }
 }
 
+let activeFeedbackGameId: string | null = null;
+
 export function startNewEmptyGame() {
     if (placedObjects.length > 0 && !confirm('Alustada uut tühja mängu? Pooleli olev mäng jääb alles "My Games" alla.')) {
         return;
@@ -1081,6 +1087,11 @@ export function startNewEmptyGame() {
     if (titleInput) titleInput.value = 'My New 3D Adventure';
     if (catSelect) catSelect.value = 'Adventure';
     if (descInput) descInput.value = 'A brand new 3D world created in Playard!';
+
+    // Hide any active feedback banner permanently for this session
+    localStorage.setItem('playard_hide_admin_feedback', 'true');
+    const banner = document.getElementById('admin-feedback-banner');
+    if (banner) banner.style.display = 'none';
 
     autoSaveDraft();
     alert('✨ Uus tühi mäng loodud! Vali esemeid vasakult kataloogist või küsi AI Assistendilt abi!');
@@ -1159,13 +1170,20 @@ async function restoreDraftOrFeedbackGame() {
             const banner = document.getElementById('admin-feedback-banner');
             if (feedbackGames.length > 0) {
                 const fbGame = feedbackGames[0];
+                activeFeedbackGameId = fbGame.id;
                 const fbTitle = document.getElementById('feedback-banner-title');
                 const fbText = document.getElementById('feedback-banner-text');
+
+                const isDismissed = localStorage.getItem('playard_dismissed_feedback_' + fbGame.id) === 'true' || localStorage.getItem('playard_hide_admin_feedback') === 'true';
 
                 if (banner && fbTitle && fbText) {
                     fbTitle.innerText = `Admin✅ Requested Changes for "${fbGame.title}":`;
                     fbText.innerText = `"${fbGame.feedback}"`;
-                    banner.style.display = 'flex';
+                    if (!isDismissed) {
+                        banner.style.display = 'flex';
+                    } else {
+                        banner.style.display = 'none';
+                    }
                 }
 
                 if (fbGame.sceneData) {
