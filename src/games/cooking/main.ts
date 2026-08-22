@@ -813,6 +813,54 @@ class CookingGame {
             });
         });
 
+        // Global Event Delegation for ALL buttons (handles clicks on buttons, icons, emojis, text reliably)
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (!target) return;
+
+            // 1. Take from Pan Button (Plate or Stock)
+            const takePanBtn = target.closest('.btn-take-pan') as HTMLElement;
+            if (takePanBtn) {
+                const panId = parseInt(takePanBtn.getAttribute('data-pan') || '0', 10);
+                const action = takePanBtn.getAttribute('data-action');
+                if (action === 'plate') {
+                    this.takeToPlateFromPan(panId);
+                } else {
+                    this.takeFromPan(panId);
+                }
+                return;
+            }
+
+            // 2. Put raw food on Pan
+            const addPanBtn = target.closest('.btn-add-pan') as HTMLElement;
+            if (addPanBtn) {
+                const panId = parseInt(addPanBtn.getAttribute('data-pan') || '0', 10);
+                const item = addPanBtn.getAttribute('data-item');
+                if (item) {
+                    this.putOnPan(panId, item);
+                }
+                return;
+            }
+
+            // 3. Oven Bake Pizza Button
+            if (target.closest('#btn-oven-bake-pizza')) {
+                this.bakePizza();
+                return;
+            }
+
+            // 4. Oven Take to Plate Button
+            if (target.closest('#btn-oven-take-plate')) {
+                this.takeToPlateFromOven();
+                return;
+            }
+
+            // 5. Oven Take to Stock Button
+            if (target.closest('#btn-oven-take-pizza')) {
+                this.takeFromOven();
+                return;
+            }
+        });
+
         // Chopping Button
         const doChopBtn = document.getElementById('btn-do-chop');
         if (doChopBtn) {
@@ -1055,10 +1103,10 @@ class CookingGame {
                     statusText = `<strong style="color: #2ed573; font-size: 1.05rem;">✨🔥 ${isEt ? 'VALMIS:' : 'READY:'} ${resultName}</strong>`;
                     btnAction = `
                         <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
-                            <button class="btn-action btn-take-pan" onclick="window.cookingGame.takeToPlateFromPan(${pan.id})" data-pan="${pan.id}" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.88rem; padding: 8px 12px; box-shadow: 0 0 12px #2ed573; cursor: pointer;">
+                            <button class="btn-action btn-take-pan" data-action="plate" data-pan="${pan.id}" onclick="window.cookingGame.takeToPlateFromPan(${pan.id})" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.88rem; padding: 8px 12px; box-shadow: 0 0 12px #2ed573; cursor: pointer;">
                                 🍽️ ${isEt ? 'Taldrikule' : 'To Plate'}
                             </button>
-                            <button class="btn-action btn-take-pan" onclick="window.cookingGame.takeFromPan(${pan.id})" data-pan="${pan.id}" style="background: linear-gradient(135deg, #3498db, #2980b9); font-weight: 900; font-size: 0.88rem; padding: 8px 12px; box-shadow: 0 0 10px rgba(52, 152, 219, 0.5); cursor: pointer;">
+                            <button class="btn-action btn-take-pan" data-action="stock" data-pan="${pan.id}" onclick="window.cookingGame.takeFromPan(${pan.id})" style="background: linear-gradient(135deg, #3498db, #2980b9); font-weight: 900; font-size: 0.88rem; padding: 8px 12px; box-shadow: 0 0 10px rgba(52, 152, 219, 0.5); cursor: pointer;">
                                 📦 ${isEt ? 'Laovarusse' : 'To Stock'}
                             </button>
                         </div>
