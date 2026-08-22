@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Playard - Official Game Hub</title>
+    <title>Playard Games - Official Game Hub</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/playard_logo.svg">
     <style>
         * { box-sizing: border-box; }
         body {
@@ -403,9 +404,12 @@
 
     <!-- Top Navigation -->
     <nav class="top-navbar">
-        <a href="#" class="nav-logo">
-            <span id="nav-yard-icon"></span>
-            PLAYARD
+        <a href="#" class="nav-logo" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
+            <img src="./assets/playard_logo.svg" alt="Playard Games Logo" style="width: 38px; height: 38px; filter: drop-shadow(0 0 10px rgba(0,242,254,0.5));">
+            <span style="display: flex; flex-direction: column; text-align: left; line-height: 1.05;">
+                <span style="font-size: 1.5rem; font-weight: 900; letter-spacing: 1.5px; background: linear-gradient(135deg, #00f2fe, #4facfe, #0be881); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">PLAYARD</span>
+                <span style="font-size: 0.72rem; font-weight: 800; color: #ffd32a; letter-spacing: 3.5px; -webkit-text-fill-color: #ffd32a;">GAMES</span>
+            </span>
         </a>
 
         <div class="nav-right">
@@ -433,7 +437,7 @@
     </nav>
 
     <div class="hub-container">
-        <h1 class="hero-title">Welcome to Playard</h1>
+        <h1 class="hero-title">Welcome to Playard Games</h1>
         <p class="hero-subtitle">Play 3D simulators, explore community-created worlds, and create your own games!</p>
 
         <!-- Auth Container -->
