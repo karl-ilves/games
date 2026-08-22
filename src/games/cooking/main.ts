@@ -103,7 +103,7 @@ const RECIPES = [
         title: 'Gourmet Friikartulid',
         titleEn: 'Gourmet French Fries',
         icon: '🍟',
-        ingredients: ['potato_chopped', 'fried_crispy', 'salt_sauce'],
+        ingredients: ['fried_crispy', 'salt_sauce'],
         yardReward: 15,
         scoreReward: 150,
         patience: 35
@@ -906,7 +906,11 @@ class CookingGame {
             if (raw && raw.chopResult) {
                 this.addToPlate(raw.chopResult);
                 const resName = this.getName(raw.chopResult);
-                this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} viilutatud ja pandud otse taldrikule! 🔪✨` : `🍽️ +1 ${resName} sliced and added to plate! 🔪✨`);
+                if (raw.chopResult === 'potato_chopped') {
+                    this.showScorePopup(this.isEt ? `🥔 Toored kartulid hakitud! Nüüd mine pliidile ja friti need krõbedaks! 🔥` : `🥔 Raw potatoes chopped! Now go to stove and fry them crispy! 🔥`);
+                } else {
+                    this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} viilutatud ja pandud otse taldrikule! 🔪✨` : `🍽️ +1 ${resName} sliced and added to plate! 🔪✨`);
+                }
                 this.switchToStation('assembly');
             }
             this.currentChoppingRaw = null;
@@ -988,6 +992,26 @@ class CookingGame {
     public putOnPan(panId: number, rawId: string) {
         const pan = this.pans[panId];
         if (!pan || pan.holding) return;
+
+        // Kontroll: Friikartulite frittimiseks peab kartul olema enne lõikelaual hakitud!
+        if (rawId === 'potato_chopped') {
+            const hasChoppedPotato = this.currentPlate.includes('potato_chopped');
+            if (!hasChoppedPotato) {
+                kitchenAudio.playBurn();
+                this.showScorePopup(this.isEt ? '⚠️ Haki enne kartulid lõikelaual! 🔪🥔' : '⚠️ Chop potatoes on cutting board first! 🔪🥔');
+                this.switchToStation('cutting');
+                this.startChopping('potato');
+                return;
+            } else {
+                // Eemalda toored hakitud kartulid taldrikult, sest need lähevad nüüd fritüüri/pannile
+                const idx = this.currentPlate.indexOf('potato_chopped');
+                if (idx !== -1) {
+                    this.currentPlate.splice(idx, 1);
+                    this.renderPlateUI();
+                    this.update3DPlateModel();
+                }
+            }
+        }
 
         pan.holding = rawId;
         pan.progress = 0;
