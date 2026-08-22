@@ -233,6 +233,29 @@ try {
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
+            // Test Dynamic Motion & Animation: "Make it move back and forth"
+            console.log("   Testing Dynamic 3D Object Movement ('Make it move')...");
+            await page.type('#ai-prompt-input', 'Make it move back and forth');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const moveChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!moveChat.includes('Animated object into motion') && !moveChat.includes('patrolling')) {
+                throw new Error("Dynamic 3D Object Movement failed!");
+            }
+
+            // Test Elevator Vertical Motion: "Make an elevator moving up and down"
+            console.log("   Testing Elevator Vertical Motion ('Make elevator up and down')...");
+            await page.type('#ai-prompt-input', 'Make an elevator moving up and down');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            // Test Continuous Rotation: "Make it rotate"
+            console.log("   Testing Continuous Rotation ('Make it rotate')...");
+            await page.type('#ai-prompt-input', 'Make it rotate continuously');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
             await page.click('#btn-close-ai');
 
             // Test Drivable Car in Play Test Mode

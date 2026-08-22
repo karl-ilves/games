@@ -28,11 +28,20 @@ interface PlacedObject {
     portalTargetTitle?: string;
     trigger?: {
         type: 'touch' | 'proximity' | 'portal';
+        behavior?: string;
         message?: string;
         title?: string;
         radius?: number;
         targetWorldId?: string;
         targetWorldTitle?: string;
+    };
+    movement?: {
+        type: 'patrol' | 'elevator' | 'rotate' | 'bounce' | 'circle';
+        axis?: 'x' | 'y' | 'z';
+        speed: number;
+        distance: number;
+        origin: { x: number; y: number; z: number };
+        rotationSpeed?: number;
     };
 }
 
@@ -2038,6 +2047,94 @@ export function executeAiBuild(promptText: string) {
             aiResponse = isAdmin ? `⚠️ Vali objekt, mida soovid värvida!` : `⚠️ Please select an object to repaint!`;
         }
 
+    // --- 0.0 DYNAMIC MOVEMENT & ANIMATION (Pane liikuma, sõitma, pöörlema, hüppama) ---
+    } else if (
+        p.includes('liigu') || p.includes('liikuma') || p.includes('move') || p.includes('motion') ||
+        p.includes('patrulli') || p.includes('patrol') || p.includes('sõitma') || p.includes('soitma') ||
+        p.includes('pöörlema') || p.includes('poorlema') || p.includes('rotate') || p.includes('spin') ||
+        p.includes('tiirlema') || p.includes('hüppama') || p.includes('huppama') || p.includes('bounce') ||
+        p.includes('lift') || p.includes('elevator')
+    ) {
+        let target = selectedObject || placedObjects[placedObjects.length - 1];
+        let moveType: 'patrol' | 'elevator' | 'rotate' | 'bounce' | 'circle' = 'patrol';
+        let moveDescEt = 'patrullima edasi-tagasi';
+        let moveDescEn = 'patrolling back and forth';
+        let speed = 2.0;
+        let distance = 6.0;
+        let axis: 'x' | 'y' | 'z' = 'x';
+
+        if (p.includes('pöör') || p.includes('poor') || p.includes('spin') || p.includes('rotate')) {
+            moveType = 'rotate';
+            speed = 2.0;
+            moveDescEt = 'pidevalt ümber oma telje pöörlema';
+            moveDescEn = 'continuously spinning around its axis';
+        } else if (p.includes('lift') || p.includes('elevator') || p.includes('üles') || p.includes('kõrgus') || p.includes('up and down')) {
+            moveType = 'elevator';
+            axis = 'y';
+            speed = 1.8;
+            distance = 5.0;
+            moveDescEt = 'üles-alla liftina liikuma (kõrgus 5m)';
+            moveDescEn = 'moving up and down like an elevator (5m)';
+        } else if (p.includes('hüp') || p.includes('bounce') || p.includes('jump')) {
+            moveType = 'bounce';
+            speed = 3.2;
+            distance = 2.5;
+            moveDescEt = 'rõõmsalt hüppama ja põrkama';
+            moveDescEn = 'bouncing and hopping dynamically';
+        } else if (p.includes('ring') || p.includes('circle') || p.includes('tiirle')) {
+            moveType = 'circle';
+            speed = 1.4;
+            distance = 7.0;
+            moveDescEt = 'ringiratast tiirlema';
+            moveDescEn = 'moving in a smooth circular orbit';
+        } else if (p.includes('edasi') || p.includes('auto') || p.includes('sõit') || p.includes('z')) {
+            moveType = 'patrol';
+            axis = 'z';
+            speed = 2.2;
+            distance = 8.0;
+            moveDescEt = 'edasi-tagasi mööda teed liikuma (8m)';
+            moveDescEn = 'patrolling forward and backward (8m)';
+        }
+
+        if (!target) {
+            const platGeo = new THREE.BoxGeometry(4.0, 0.4, 4.0);
+            const platMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.4, roughness: 0.3 });
+            const platMesh = new THREE.Mesh(platGeo, platMat);
+            platMesh.position.set(0, 1.5, -4.0);
+            scene.add(platMesh);
+
+            target = {
+                id: 'placed_moving_plat_' + Date.now(),
+                mesh: platMesh,
+                catalogId: 'moving_platform',
+                name: isAdmin ? '⚡ Liikuv 3D Platvorm' : '⚡ Moving 3D Platform',
+                category: 'gameplay',
+                position: { x: 0, y: 1.5, z: -4.0 },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#00f2fe'
+            };
+            placedObjects.push(target);
+            generatedObjectsCount++;
+        }
+
+        target.movement = {
+            type: moveType,
+            axis,
+            speed,
+            distance,
+            origin: { x: target.mesh.position.x, y: target.mesh.position.y, z: target.mesh.position.z },
+            rotationSpeed: speed
+        };
+
+        selectObject(target);
+
+        if (isAdmin) {
+            aiResponse = `🎬 <strong>Panin objekti elama ja liikuma!</strong><br>Objekt <strong>${target.name}</strong> hakkas <strong>${moveDescEt}</strong>!<br>💡 Näed liikumist reaalajas nii stuudios kui ka <strong>▶️ Play Test Mode</strong> mängurežiimis!`;
+        } else {
+            aiResponse = `🎬 <strong>Animated object into motion!</strong><br><strong>${target.name}</strong> is now <strong>${moveDescEn}</strong>!<br>💡 Watch it move live in the Studio and in <strong>▶️ Play Test Mode</strong>!`;
+        }
+
     // --- 0. MATHEMATICS & CALCULATIONS (e.g. 1+1, 5*5, 100/4, 25-10, sqrt, mis on 5+5 jne) ---
     } else if (mathResult !== null) {
         if (isAdmin) {
@@ -2646,6 +2743,35 @@ export function executeAiBuild(promptText: string) {
 function animate() {
     requestAnimationFrame(animate);
     const delta = Math.min(clock.getDelta(), 0.1);
+    const time = Date.now() * 0.001;
+
+    // --- Update Dynamic Moving & Animated Objects ---
+    for (const obj of placedObjects) {
+        if (obj.movement) {
+            const m = obj.movement;
+            if (m.type === 'patrol') {
+                const axis = m.axis || 'x';
+                const offset = Math.sin(time * m.speed) * m.distance;
+                if (axis === 'x') obj.mesh.position.x = m.origin.x + offset;
+                else if (axis === 'z') obj.mesh.position.z = m.origin.z + offset;
+                else if (axis === 'y') obj.mesh.position.y = m.origin.y + offset;
+            } else if (m.type === 'elevator') {
+                obj.mesh.position.y = m.origin.y + (Math.sin(time * m.speed) * 0.5 + 0.5) * m.distance;
+            } else if (m.type === 'rotate') {
+                obj.mesh.rotation.y += (m.rotationSpeed || m.speed || 1.5) * delta;
+            } else if (m.type === 'bounce') {
+                obj.mesh.position.y = m.origin.y + Math.abs(Math.sin(time * m.speed)) * m.distance;
+                obj.mesh.position.z = m.origin.z + Math.cos(time * (m.speed * 0.5)) * 1.2;
+            } else if (m.type === 'circle') {
+                obj.mesh.position.x = m.origin.x + Math.cos(time * m.speed) * m.distance;
+                obj.mesh.position.z = m.origin.z + Math.sin(time * m.speed) * m.distance;
+                obj.mesh.rotation.y = -time * m.speed;
+            }
+            obj.position.x = obj.mesh.position.x;
+            obj.position.y = obj.mesh.position.y;
+            obj.position.z = obj.mesh.position.z;
+        }
+    }
 
     if (isPlayTestMode) {
         if (currentVehicle) {
