@@ -1415,9 +1415,14 @@ async function restoreDraftOrFeedbackGame() {
 }
 
 // --- AI Game Builder Assistant ---
-export function updateAiAssistantLocalization() {
+function isCurrentUserAdmin(): boolean {
     const profile = getCurrentUserProfile();
-    const isAdmin = profile?.isAdmin || profile?.email?.toLowerCase() === '1karl.ilves@gmail.com' || profile?.displayName?.includes('Admin') || profile?.username === 'Admin✅';
+    if (!profile) return false;
+    return !!(profile.isAdmin === true || profile.email?.toLowerCase() === '1karl.ilves@gmail.com');
+}
+
+export function updateAiAssistantLocalization() {
+    const isAdmin = isCurrentUserAdmin();
 
     const aiWelcome = document.getElementById('ai-welcome-msg');
     const inputField = document.getElementById('ai-prompt-input') as HTMLInputElement | null;
@@ -1516,8 +1521,7 @@ export function executeAiBuild(promptText: string) {
     const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
     const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
 
-    const profile = getCurrentUserProfile();
-    const isAdmin = profile?.isAdmin || profile?.email?.toLowerCase() === '1karl.ilves@gmail.com' || profile?.displayName?.includes('Admin') || profile?.username === 'Admin✅';
+    const isAdmin = isCurrentUserAdmin();
 
     // Append User message to chat
     if (chatLog) {
