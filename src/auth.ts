@@ -148,64 +148,21 @@ export async function initAuth() {
 
             showMsg('Kontrollin andmeid...', 'info');
 
-            // --- Step 1: Check if this username exists ---
-            let existingProfile: UserProfile | null = null;
-
-            if (hasSupabase) {
-                try {
-                    const { data: cloudProfile } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .ilike('username', username)
-                        .single();
-
-                    if (cloudProfile) {
-                        existingProfile = {
-                            id: cloudProfile.id,
-                            username: cloudProfile.username,
-                            email: cloudProfile.email,
-                            displayName: cloudProfile.display_name || (cloudProfile.is_admin ? 'Admin✅' : `@${cloudProfile.username}`),
-                            isAdmin: cloudProfile.is_admin || cloudProfile.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-                        };
-                    }
-                } catch (e) {}
-            }
-
-            if (!existingProfile) {
-                const localProfiles = getLocalProfiles();
-                const matched = localProfiles.find(p => p.username.toLowerCase() === username.toLowerCase());
-                if (matched) {
-                    existingProfile = matched;
-                }
-            }
-
-            if (!existingProfile && username.toLowerCase() === 'admin' && email === ADMIN_EMAIL.toLowerCase()) {
-                existingProfile = {
-                    id: 'admin_root',
-                    username: 'admin',
-                    email: ADMIN_EMAIL,
-                    displayName: 'Admin✅',
-                    isAdmin: true
-                };
-            }
-
-            // User requirement: "kui ei ole tuleb et seda nime ei ole"
-            if (!existingProfile) {
-                return showMsg('Seda nime ei ole!', 'error');
-            }
-
-            // User requirement: check that username belongs to the email
-            if (existingProfile.email.toLowerCase() !== email.toLowerCase()) {
-                return showMsg('See kasutajanimi ei kuulu sisestatud e-posti aadressile!', 'error');
-            }
-
-            // --- Step 2: Authenticate password ---
+            // --- Step 1: Authenticate with Supabase or Local Storage ---
             if (hasSupabase) {
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                
                 if (!error && data.session) {
+                    // Password is correct! Now check username validation
                     const isAdmin = email === ADMIN_EMAIL.toLowerCase();
-                    const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                    const expectedUsername = data.session.user.user_metadata?.username;
 
+                    if (expectedUsername && expectedUsername.toLowerCase() !== username.toLowerCase()) {
+                        await supabase.auth.signOut();
+                        return showMsg(`Seda nime ei ole sellel kontol! (Õige kasutajanimi sellele e-mailile on @${expectedUsername})`, 'error');
+                    }
+
+                    const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                     const profile: UserProfile = {
                         id: data.session.user.id,
                         username: username,
@@ -240,10 +197,43 @@ export async function initAuth() {
                     return;
                 }
 
-                // Fallback login
+                // If Supabase gave "Email not confirmed", check username first
+                if (error && error.message.toLowerCase().includes('not confirmed')) {
+                    const localProfiles = getLocalProfiles();
+                    const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
+                    if (matched && matched.username.toLowerCase() !== username.toLowerCase()) {
+                        return showMsg('Seda nime ei ole!', 'error');
+                    }
+
+                    const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+                    const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                    const profile: UserProfile = {
+                        id: matched?.id || 'confirmed_' + Date.now(),
+                        username: username,
+                        email: email,
+                        displayName: displayName,
+                        isAdmin: isAdmin
+                    };
+                    localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                    saveLocalProfile(profile);
+                    await yardService.onUserLogin(profile.id, profile.username);
+
+                    showMsg(`Tere tulemast tagasi, ${displayName}!`, 'success');
+                    if (emailInput) emailInput.value = '';
+                    if (usernameInput) usernameInput.value = '';
+                    if (passwordInput) passwordInput.value = '';
+                    updateAuthDisplay(profile);
+                    return;
+                }
+
+                // Fallback login for locally registered profiles
                 const localProfiles = getLocalProfiles();
-                const matched = localProfiles.find(p => p.email === email && p.username.toLowerCase() === username.toLowerCase());
+                const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
+
                 if (matched) {
+                    if (matched.username.toLowerCase() !== username.toLowerCase()) {
+                        return showMsg('Seda nime ei ole!', 'error');
+                    }
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(matched));
                     await yardService.onUserLogin(matched.id, matched.username);
 
@@ -255,14 +245,27 @@ export async function initAuth() {
                     return;
                 }
 
+                // If username is not found in local profiles either
+                const usernameExistsAnywhere = localProfiles.some(p => p.username.toLowerCase() === username.toLowerCase());
+                if (!usernameExistsAnywhere && username.toLowerCase() !== 'admin') {
+                    return showMsg('Seda nime ei ole!', 'error');
+                }
+
                 if (error) {
-                    return showMsg(error.message === 'Invalid login credentials' ? 'Vale parool!' : error.message, 'error');
+                    return showMsg(error.message === 'Invalid login credentials' ? 'Vale parool või e-post!' : error.message, 'error');
                 }
             } else {
                 // Offline fallback
+                const localProfiles = getLocalProfiles();
+                const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
+                
+                if (matched && matched.username.toLowerCase() !== username.toLowerCase()) {
+                    return showMsg('Seda nime ei ole!', 'error');
+                }
+
                 const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                 const profile: UserProfile = {
-                    id: existingProfile.id,
+                    id: matched?.id || 'offline_' + Date.now(),
                     username,
                     email,
                     displayName: isAdmin ? 'Admin✅' : `@${username}`,

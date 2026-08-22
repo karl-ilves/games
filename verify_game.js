@@ -94,7 +94,7 @@ try {
         await page.type('#auth-username', 'GhostUser');
         await page.type('#auth-password', 'Pass12345!');
         await page.click('#btn-login');
-        await new Promise(r => setTimeout(r, 600));
+        await page.waitForFunction(() => document.getElementById('auth-message') && document.getElementById('auth-message').textContent !== 'Kontrollin andmeid...', { timeout: 4000 });
 
         const errorMsg = await page.$eval('#auth-message', el => el.textContent);
         console.log("   Non-existent username error message:", errorMsg);
@@ -107,7 +107,7 @@ try {
         await page.$eval('#auth-username', el => el.value = '');
         await page.type('#auth-username', 'SuperPlayer');
         await page.click('#btn-login');
-        await new Promise(r => setTimeout(r, 800));
+        await page.waitForFunction(() => document.getElementById('auth-message') && document.getElementById('auth-message').textContent.includes('Tere tulemast tagasi'), { timeout: 4000 });
 
         const restoredYards = await page.$eval('#header-yard-val', el => el.textContent);
         console.log("   Restored Yard Balance for SuperPlayer (Expected: 500):", restoredYards);
