@@ -260,6 +260,11 @@ class CookingGame {
         if (tabCutting) tabCutting.textContent = isEt ? '4. Lõikelaud (Haki toorained)' : '4. Cutting Board (Chop items)';
 
         // Station 1: Assembly
+        const assemblyInstruction = document.querySelector('#panel-assembly .station-panel-title-hint');
+        if (assemblyInstruction) assemblyInstruction.textContent = isEt
+            ? 'Vali ja klõpsa siit alt valmis toiduained (praetud pihvid, hakitud köögiviljad, saiad jne) taldrikule lisamiseks:'
+            : 'Select and click finished ingredients below (patties, chopped veggies, buns, etc.) to add to plate:';
+
         const plateTitle = document.querySelector('.plate-assembly-row strong');
         if (plateTitle) plateTitle.textContent = isEt ? 'Sinu Taldrik:' : 'Your Plate:';
 
@@ -269,7 +274,10 @@ class CookingGame {
             : 'Plate is empty. Pick ingredients from pantry or take cooked/sliced food from stations!';
 
         const clearBtn = document.getElementById('btn-clear-plate');
-        if (clearBtn) clearBtn.textContent = isEt ? '🗑️ Tühjenda' : '🗑️ Clear Plate';
+        if (clearBtn) {
+            clearBtn.textContent = isEt ? '🗑️ Tühjenda' : '🗑️ Clear Plate';
+            clearBtn.setAttribute('title', isEt ? 'Tühjenda taldrik' : 'Clear plate');
+        }
 
         const serveBtnText = document.querySelector('#btn-serve-dish span:last-child');
         if (serveBtnText) serveBtnText.textContent = isEt ? 'SERVEERI TOIT!' : 'SERVE DISH!';
@@ -290,14 +298,14 @@ class CookingGame {
         const stoveHead = document.querySelector('#panel-stove h3');
         if (stoveHead) stoveHead.textContent = isEt ? '🔥 Pliit & Praepannid' : '🔥 Stove & Cooking Pans';
 
-        const stoveSub = document.querySelector('#panel-stove .station-panel > div:first-child > div');
+        const stoveSub = document.querySelector('#panel-stove .station-panel-desc');
         if (stoveSub) stoveSub.textContent = isEt ? 'Pane tooraine pannile ja jälgi, et see ei kõrbeks!' : 'Place raw items in pans and make sure they do not burn!';
 
         // Station 4: Oven
         const ovenHead = document.querySelector('#panel-oven h3');
         if (ovenHead) ovenHead.textContent = isEt ? '🍕 Küpsetusahi (Pitsa & Pirukad)' : '🍕 Baking Oven (Pizza & Pastries)';
 
-        const ovenSub = document.querySelector('#panel-oven p');
+        const ovenSub = document.querySelector('#panel-oven .station-panel-desc');
         if (ovenSub) ovenSub.textContent = isEt
             ? 'Valmista pitsapõhi, lisa kaste, juust ja lisandid ning pane ahju küpsema!'
             : 'Prepare pizza crust, add sauce, cheese and toppings, then bake in the oven!';
@@ -603,7 +611,7 @@ class CookingGame {
                     <div style="background: #242f3d; padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <strong style="color: #ffd32a; font-size: 1.1rem;">${r.icon} ${title}</strong>
-                            <span style="color: #00f2fe; font-weight: bold;">⭐ +30 PUNKTI (300p ➔ +50 Y)</span>
+                            <span style="color: #00f2fe; font-weight: bold;">${this.isEt ? '⭐ +30 PUNKTI (300p ➔ +50 Y)' : '⭐ +30 POINTS (300pts ➔ +50 Y)'}</span>
                         </div>
                         <div style="font-size: 0.85rem; color: #a4b0be; line-height: 1.4;">
                             ${this.isEt ? 'Vajalikud toiduained (mistahes järjekorras):' : 'Required ingredients (any order):'} <strong style="color: #d2dae2;">${ingNames}</strong>
