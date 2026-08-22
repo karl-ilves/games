@@ -11,7 +11,13 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
     const adminStreakControls = document.getElementById('streak-admin-controls');
     const adminNavBtn = document.getElementById('btn-open-admin-panel');
     
-    const isAdmin = !!userEmail && userEmail.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    let emailToCheck = userEmail;
+    if (!emailToCheck) {
+        const prof = getCurrentUserProfile();
+        emailToCheck = prof?.email;
+    }
+
+    const isAdmin = !!emailToCheck && emailToCheck.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
     if (adminStreakControls) {
         adminStreakControls.style.display = isAdmin ? 'flex' : 'none';
@@ -507,13 +513,3 @@ window.addEventListener('playard_auth_changed', (e: any) => {
     const profile = e.detail;
     updateAdminControlsVisibility(profile?.email);
 });
-
-if (supabase) {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        updateAdminControlsVisibility(session?.user?.email);
-    });
-
-    supabase.auth.onAuthStateChange((_event, session) => {
-        updateAdminControlsVisibility(session?.user?.email);
-    });
-}

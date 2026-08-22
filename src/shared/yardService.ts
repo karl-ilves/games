@@ -144,29 +144,88 @@ class YardService {
         });
     }
 
+    public onUserLogout() {
+        if (this.currentUserId) {
+            localStorage.setItem(this.getUserStorageKey(), JSON.stringify(this.data));
+        }
+        this.currentUserId = null;
+        // Guest mode resets strictly to 0
+        this.data = {
+            yards: 0,
+            streak: 0,
+            lastClaimTimestamp: 0,
+            inventory: [],
+            redeemedCodes: [],
+            transactions: []
+        };
+        localStorage.setItem(PRIMARY_STORAGE_KEY, JSON.stringify(this.data));
+        this.notifyListeners();
+    }
+
+    public async onUserLogin(userId: string, username?: string) {
+        this.currentUserId = userId;
+        
+        let loaded = false;
+        // Try user key
+        const userKey = this.getUserStorageKey();
+        let userRaw = localStorage.getItem(userKey);
+        if (!userRaw && username) {
+            userRaw = localStorage.getItem(`${STORAGE_PREFIX}user_${username.toLowerCase()}`);
+        }
+
+        if (userRaw) {
+            try {
+                const parsed = JSON.parse(userRaw);
+                this.data = {
+                    yards: typeof parsed.yards === 'number' ? parsed.yards : 0,
+                    streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
+                    lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
+                    inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
+                    redeemedCodes: Array.isArray(parsed.redeemedCodes) ? parsed.redeemedCodes : [],
+                    transactions: Array.isArray(parsed.transactions) ? parsed.transactions : []
+                };
+                loaded = true;
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+
+        if (!loaded) {
+            this.data = {
+                yards: 0,
+                streak: 0,
+                lastClaimTimestamp: 0,
+                inventory: [],
+                redeemedCodes: [],
+                transactions: []
+            };
+        }
+
+        localStorage.setItem(PRIMARY_STORAGE_KEY, JSON.stringify(this.data));
+        localStorage.setItem(this.getUserStorageKey(), JSON.stringify(this.data));
+        this.notifyListeners();
+
+        await this.syncWithCloud(userId);
+    }
+
     private async initAuthAndSync() {
         if (!supabase) return;
         try {
             // 1. Initial Session Check
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
-                this.currentUserId = session.user.id;
-                const userLocal = this.loadLocalData();
-                if (userLocal.yards > this.data.yards) {
-                    this.data = userLocal;
-                }
-                await this.syncWithCloud(session.user.id);
+                await this.onUserLogin(session.user.id, session.user.user_metadata?.username);
             }
 
             // 2. Listen to login / logout events
             supabase.auth.onAuthStateChange(async (_event, newSession) => {
                 if (newSession?.user?.id) {
-                    this.currentUserId = newSession.user.id;
-                    await this.syncWithCloud(newSession.user.id);
+                    await this.onUserLogin(newSession.user.id, newSession.user.user_metadata?.username);
                 } else {
-                    this.currentUserId = null;
-                    this.data = this.loadLocalData();
-                    this.notifyListeners();
+                    const currentProfRaw = localStorage.getItem('playard_current_user_profile');
+                    if (!currentProfRaw) {
+                        this.onUserLogout();
+                    }
                 }
             });
         } catch (e) {

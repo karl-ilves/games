@@ -1,17 +1,7 @@
 import { supabase } from './lib/supabase';
+import { yardService } from './shared/yardService';
 
-// Check if we have supabase configured
 const hasSupabase = !!supabase;
-
-const authContainer = document.getElementById('auth-container');
-const loginBtn = document.getElementById('btn-login');
-const registerBtn = document.getElementById('btn-register');
-const logoutBtn = document.getElementById('btn-logout');
-const emailInput = document.getElementById('auth-email') as HTMLInputElement;
-const usernameInput = document.getElementById('auth-username') as HTMLInputElement;
-const passwordInput = document.getElementById('auth-password') as HTMLInputElement;
-const authMessage = document.getElementById('auth-message');
-const userInfo = document.getElementById('user-info');
 
 export interface UserProfile {
     id: string;
@@ -25,19 +15,17 @@ const ADMIN_EMAIL = '1karl.ilves@gmail.com';
 const PROFILES_STORAGE_KEY = 'playard_user_profiles';
 const CURRENT_PROFILE_KEY = 'playard_current_user_profile';
 
-// Validate username (No emojis, alphanumeric + _ - ., 3 to 20 chars)
 export function validateUsername(username: string): { valid: boolean; error?: string } {
     const trimmed = username.trim();
     if (!trimmed) {
-        return { valid: false, error: 'Username cannot be empty.' };
+        return { valid: false, error: 'Palun sisesta kasutajanimi.' };
     }
     if (trimmed.length < 3 || trimmed.length > 20) {
-        return { valid: false, error: 'Username must be between 3 and 20 characters.' };
+        return { valid: false, error: 'Kasutajanimi peab olema 3 kuni 20 tähemärki pikk.' };
     }
-    // Check for emojis or disallowed characters
     const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
     if (!usernameRegex.test(trimmed)) {
-        return { valid: false, error: 'Usernames can only contain letters, numbers, dots, dashes, and underscores (no emojis or special symbols).' };
+        return { valid: false, error: 'Kasutajanimi võib sisaldada ainult tähti, numbreid ja punkte/kriipse (emotikonid pole lubatud).' };
     }
     return { valid: true };
 }
@@ -50,21 +38,92 @@ export function getCurrentUserProfile(): UserProfile | null {
     return null;
 }
 
+export function getLocalProfiles(): UserProfile[] {
+    try {
+        const raw = localStorage.getItem(PROFILES_STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return [];
+}
+
+export function saveLocalProfile(profile: UserProfile) {
+    const profiles = getLocalProfiles();
+    const index = profiles.findIndex(p => p.username.toLowerCase() === profile.username.toLowerCase());
+    if (index >= 0) {
+        profiles[index] = profile;
+    } else {
+        profiles.push(profile);
+    }
+    localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(profiles));
+}
+
+function showMsg(msg: string, type: 'error' | 'success' | 'info') {
+    const authMessage = document.getElementById('auth-message');
+    if (!authMessage) return;
+    authMessage.innerText = msg;
+    if (type === 'error') authMessage.style.color = '#e74c3c';
+    if (type === 'success') authMessage.style.color = '#2ecc71';
+    if (type === 'info') authMessage.style.color = '#3498db';
+}
+
+export function updateAuthDisplay(profile: UserProfile | null) {
+    const loginForm = document.getElementById('login-form');
+    const userInfo = document.getElementById('user-info');
+    const emailSpan = document.getElementById('user-email');
+
+    if (profile) {
+        if (loginForm) loginForm.style.display = 'none';
+        if (userInfo) userInfo.style.display = 'block';
+        if (emailSpan) {
+            emailSpan.innerHTML = `<strong>${profile.displayName}</strong> <span style="font-size: 0.8rem; color: #718093;">(${profile.email})</span>`;
+        }
+        window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: profile }));
+    } else {
+        if (loginForm) loginForm.style.display = 'block';
+        if (userInfo) userInfo.style.display = 'none';
+        window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: null }));
+    }
+}
+
 export async function initAuth() {
-    if (!authContainer) return;
-    authContainer.style.display = 'block';
+    const authContainer = document.getElementById('auth-container');
+    if (authContainer) authContainer.style.display = 'block';
+
+    const loginBtn = document.getElementById('btn-login');
+    const registerBtn = document.getElementById('btn-register');
+    const logoutBtn = document.getElementById('btn-logout');
+    const emailInput = document.getElementById('auth-email') as HTMLInputElement | null;
+    const usernameInput = document.getElementById('auth-username') as HTMLInputElement | null;
+    const passwordInput = document.getElementById('auth-password') as HTMLInputElement | null;
 
     // 1. Check existing session
-    if (hasSupabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        await updateAuthUI(session);
-
-        supabase.auth.onAuthStateChange(async (_event, session) => {
-            await updateAuthUI(session);
-        });
+    const currentProf = getCurrentUserProfile();
+    if (currentProf) {
+        updateAuthDisplay(currentProf);
+    } else if (hasSupabase) {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                const isAdmin = session.user.email === ADMIN_EMAIL.toLowerCase();
+                const username = session.user.user_metadata?.username || (isAdmin ? 'admin' : session.user.email?.split('@')[0] || 'user');
+                const profile: UserProfile = {
+                    id: session.user.id,
+                    username,
+                    email: session.user.email || '',
+                    displayName: isAdmin ? 'Admin✅' : `@${username}`,
+                    isAdmin
+                };
+                localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                saveLocalProfile(profile);
+                updateAuthDisplay(profile);
+            } else {
+                updateAuthDisplay(null);
+            }
+        } catch (e) {
+            updateAuthDisplay(null);
+        }
     } else {
-        const localProf = getCurrentUserProfile();
-        updateLocalAuthUI(localProf);
+        updateAuthDisplay(null);
     }
 
     // 2. Login Handler
@@ -75,7 +134,7 @@ export async function initAuth() {
             const password = passwordInput?.value;
 
             if (!email || !username || !password) {
-                return showMsg('Please enter your email, username, and password.', 'error');
+                return showMsg('Palun sisesta e-post, kasutajanimi ja parool.', 'error');
             }
 
             const usernameVal = validateUsername(username);
@@ -83,13 +142,64 @@ export async function initAuth() {
                 return showMsg(usernameVal.error!, 'error');
             }
 
-            // Check admin username reservation
             if (username.toLowerCase() === 'admin' && email !== ADMIN_EMAIL.toLowerCase()) {
-                return showMsg("The username 'admin' is strictly reserved for the system administrator!", 'error');
+                return showMsg("Kasutajanimi 'admin' on reserveeritud administraatorile!", 'error');
             }
 
-            showMsg('Logging in...', 'info');
+            showMsg('Kontrollin andmeid...', 'info');
 
+            // --- Step 1: Check if this username exists ---
+            let existingProfile: UserProfile | null = null;
+
+            if (hasSupabase) {
+                try {
+                    const { data: cloudProfile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .ilike('username', username)
+                        .single();
+
+                    if (cloudProfile) {
+                        existingProfile = {
+                            id: cloudProfile.id,
+                            username: cloudProfile.username,
+                            email: cloudProfile.email,
+                            displayName: cloudProfile.display_name || (cloudProfile.is_admin ? 'Admin✅' : `@${cloudProfile.username}`),
+                            isAdmin: cloudProfile.is_admin || cloudProfile.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
+                        };
+                    }
+                } catch (e) {}
+            }
+
+            if (!existingProfile) {
+                const localProfiles = getLocalProfiles();
+                const matched = localProfiles.find(p => p.username.toLowerCase() === username.toLowerCase());
+                if (matched) {
+                    existingProfile = matched;
+                }
+            }
+
+            if (!existingProfile && username.toLowerCase() === 'admin' && email === ADMIN_EMAIL.toLowerCase()) {
+                existingProfile = {
+                    id: 'admin_root',
+                    username: 'admin',
+                    email: ADMIN_EMAIL,
+                    displayName: 'Admin✅',
+                    isAdmin: true
+                };
+            }
+
+            // User requirement: "kui ei ole tuleb et seda nime ei ole"
+            if (!existingProfile) {
+                return showMsg('Seda nime ei ole!', 'error');
+            }
+
+            // User requirement: check that username belongs to the email
+            if (existingProfile.email.toLowerCase() !== email.toLowerCase()) {
+                return showMsg('See kasutajanimi ei kuulu sisestatud e-posti aadressile!', 'error');
+            }
+
+            // --- Step 2: Authenticate password ---
             if (hasSupabase) {
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                 if (!error && data.session) {
@@ -119,43 +229,51 @@ export async function initAuth() {
                         console.warn('Profile sync error:', err);
                     }
 
-                    showMsg(`Welcome back, ${displayName}!`, 'success');
-                    emailInput.value = '';
-                    usernameInput.value = '';
-                    passwordInput.value = '';
-                    await updateAuthUI(data.session);
+                    // Restore user's Yard balance!
+                    await yardService.onUserLogin(profile.id, profile.username);
+
+                    showMsg(`Tere tulemast tagasi, ${displayName}!`, 'success');
+                    if (emailInput) emailInput.value = '';
+                    if (usernameInput) usernameInput.value = '';
+                    if (passwordInput) passwordInput.value = '';
+                    updateAuthDisplay(profile);
                     return;
                 }
 
-                // If Supabase login fails, check local profile fallback (e.g. for testing / offline)
+                // Fallback login
                 const localProfiles = getLocalProfiles();
                 const matched = localProfiles.find(p => p.email === email && p.username.toLowerCase() === username.toLowerCase());
                 if (matched) {
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(matched));
-                    showMsg(`Welcome back, ${matched.displayName}!`, 'success');
-                    emailInput.value = '';
-                    usernameInput.value = '';
-                    passwordInput.value = '';
-                    updateLocalAuthUI(matched);
+                    await yardService.onUserLogin(matched.id, matched.username);
+
+                    showMsg(`Tere tulemast tagasi, ${matched.displayName}!`, 'success');
+                    if (emailInput) emailInput.value = '';
+                    if (usernameInput) usernameInput.value = '';
+                    if (passwordInput) passwordInput.value = '';
+                    updateAuthDisplay(matched);
                     return;
                 }
 
                 if (error) {
-                    return showMsg(error.message, 'error');
+                    return showMsg(error.message === 'Invalid login credentials' ? 'Vale parool!' : error.message, 'error');
                 }
             } else {
                 // Offline fallback
                 const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                 const profile: UserProfile = {
-                    id: 'offline_' + Date.now(),
+                    id: existingProfile.id,
                     username,
                     email,
                     displayName: isAdmin ? 'Admin✅' : `@${username}`,
                     isAdmin
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
-                showMsg(`Welcome, ${profile.displayName}! (Offline mode)`, 'success');
-                updateLocalAuthUI(profile);
+                saveLocalProfile(profile);
+                await yardService.onUserLogin(profile.id, profile.username);
+
+                showMsg(`Tere tulemast tagasi, ${profile.displayName}!`, 'success');
+                updateAuthDisplay(profile);
             }
         });
     }
@@ -168,7 +286,7 @@ export async function initAuth() {
             const password = passwordInput?.value;
 
             if (!email || !username || !password) {
-                return showMsg('Please enter your email, username, and password.', 'error');
+                return showMsg('Palun sisesta e-post, kasutajanimi ja parool.', 'error');
             }
 
             const usernameVal = validateUsername(username);
@@ -176,22 +294,19 @@ export async function initAuth() {
                 return showMsg(usernameVal.error!, 'error');
             }
 
-            // Check admin username reservation
             if (username.toLowerCase() === 'admin' && email !== ADMIN_EMAIL.toLowerCase()) {
-                return showMsg("The username 'admin' is reserved only for 1karl.ilves@gmail.com!", 'error');
+                return showMsg("Kasutajanimi 'admin' on reserveeritud administraatorile!", 'error');
             }
 
-            // Check if username is already taken locally
             const localProfiles = getLocalProfiles();
             const taken = localProfiles.find(p => p.username.toLowerCase() === username.toLowerCase() && p.email !== email);
             if (taken) {
-                return showMsg(`Username '@${username}' is already taken. Please choose another username!`, 'error');
+                return showMsg(`Kasutajanimi '@${username}' on juba võetud!`, 'error');
             }
 
-            showMsg('Creating account...', 'info');
+            showMsg('Konto loomine...', 'info');
 
             if (hasSupabase) {
-                // Check if username is taken in Supabase
                 try {
                     const { data: existingUser } = await supabase
                         .from('profiles')
@@ -200,7 +315,7 @@ export async function initAuth() {
                         .single();
 
                     if (existingUser) {
-                        return showMsg(`Username '@${username}' is already taken!`, 'error');
+                        return showMsg(`Kasutajanimi '@${username}' on juba võetud!`, 'error');
                     }
                 } catch (e) {}
 
@@ -217,58 +332,88 @@ export async function initAuth() {
                 });
 
                 if (error) {
+                    if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('already exists')) {
+                        const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
+                        if (!loginErr && loginData.session) {
+                            const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+                            const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                            const profile: UserProfile = {
+                                id: loginData.session.user.id,
+                                username: username,
+                                email: email,
+                                displayName: displayName,
+                                isAdmin: isAdmin
+                            };
+                            localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                            saveLocalProfile(profile);
+                            await yardService.onUserLogin(profile.id, profile.username);
+                            showMsg(`Tere tulemast tagasi, ${displayName}!`, 'success');
+                            if (emailInput) emailInput.value = '';
+                            if (usernameInput) usernameInput.value = '';
+                            if (passwordInput) passwordInput.value = '';
+                            updateAuthDisplay(profile);
+                            return;
+                        }
+                    }
+
+                    // If rate limit or other error, fallback to local registration gracefully
+                    if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('limit')) {
+                        const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+                        const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                        const profile: UserProfile = {
+                            id: 'local_' + Date.now(),
+                            username: username,
+                            email: email,
+                            displayName: displayName,
+                            isAdmin: isAdmin
+                        };
+                        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                        saveLocalProfile(profile);
+                        await yardService.onUserLogin(profile.id, profile.username);
+                        showMsg(`Konto loodud kohapeal (e-posti piirang): ${displayName}`, 'success');
+                        if (emailInput) emailInput.value = '';
+                        if (usernameInput) usernameInput.value = '';
+                        if (passwordInput) passwordInput.value = '';
+                        updateAuthDisplay(profile);
+                        return;
+                    }
+
                     return showMsg(error.message, 'error');
                 }
 
                 const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                 const displayName = isAdmin ? 'Admin✅' : `@${username}`;
 
-                if (data.session) {
-                    const profile: UserProfile = {
-                        id: data.session.user.id,
-                        username: username,
-                        email: email,
-                        displayName: displayName,
-                        isAdmin: isAdmin
-                    };
-                    localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
-                    saveLocalProfile(profile);
+                const profile: UserProfile = {
+                    id: data.session?.user?.id || data.user?.id || 'user_' + Date.now(),
+                    username: username,
+                    email: email,
+                    displayName: displayName,
+                    isAdmin: isAdmin
+                };
+                localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                saveLocalProfile(profile);
 
-                    try {
-                        await supabase.from('profiles').upsert({
-                            id: profile.id,
-                            username: profile.username,
-                            email: profile.email,
-                            display_name: profile.displayName,
-                            is_admin: profile.isAdmin
-                        });
-                    } catch (err) {
-                        console.warn(err);
-                    }
-
-                    showMsg(`Account created! Logged in as ${displayName}.`, 'success');
-                    emailInput.value = '';
-                    usernameInput.value = '';
-                    passwordInput.value = '';
-                    await updateAuthUI(data.session);
-                } else {
-                    const profile: UserProfile = {
-                        id: data.user?.id || 'reg_' + Date.now(),
-                        username: username,
-                        email: email,
-                        displayName: displayName,
-                        isAdmin: isAdmin
-                    };
-                    localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
-                    saveLocalProfile(profile);
-                    showMsg('Registration successful! Please check your email to confirm your account.', 'success');
-                    emailInput.value = '';
-                    usernameInput.value = '';
-                    passwordInput.value = '';
-                    updateLocalAuthUI(profile);
+                try {
+                    await supabase.from('profiles').upsert({
+                        id: profile.id,
+                        username: profile.username,
+                        email: profile.email,
+                        display_name: profile.displayName,
+                        is_admin: profile.isAdmin
+                    });
+                } catch (err) {
+                    console.warn(err);
                 }
+
+                await yardService.onUserLogin(profile.id, profile.username);
+
+                showMsg(`Konto loodud! Oled sisse logitud kui ${displayName}.`, 'success');
+                if (emailInput) emailInput.value = '';
+                if (usernameInput) usernameInput.value = '';
+                if (passwordInput) passwordInput.value = '';
+                updateAuthDisplay(profile);
             } else {
-                // Offline mode register
                 const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                 const profile: UserProfile = {
                     id: 'offline_' + Date.now(),
@@ -279,8 +424,10 @@ export async function initAuth() {
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
-                showMsg(`Account created as ${profile.displayName}!`, 'success');
-                updateLocalAuthUI(profile);
+                await yardService.onUserLogin(profile.id, profile.username);
+
+                showMsg(`Konto loodud kui ${profile.displayName}!`, 'success');
+                updateAuthDisplay(profile);
             }
         });
     }
@@ -291,95 +438,13 @@ export async function initAuth() {
             if (hasSupabase) {
                 await supabase.auth.signOut();
             }
+            // Strict reset of yards to 0 on logout
+            yardService.onUserLogout();
             localStorage.removeItem(CURRENT_PROFILE_KEY);
-            showMsg('Logged out successfully.', 'info');
-            updateLocalAuthUI(null);
-            window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: null }));
+            localStorage.removeItem('racingSave');
+
+            showMsg('Oled välja logitud. Yardid lähtestatud külalise režiimis 0-le.', 'info');
+            updateAuthDisplay(null);
         });
     }
-}
-
-async function updateAuthUI(session: any) {
-    const loginForm = document.getElementById('login-form');
-    
-    if (session?.user) {
-        if (loginForm) loginForm.style.display = 'none';
-        if (userInfo) {
-            userInfo.style.display = 'block';
-            const emailSpan = document.getElementById('user-email');
-            
-            let profile = getCurrentUserProfile();
-            if (!profile || profile.email !== session.user.email) {
-                const isAdmin = session.user.email === ADMIN_EMAIL.toLowerCase();
-                const username = session.user.user_metadata?.username || (isAdmin ? 'admin' : session.user.email.split('@')[0]);
-                profile = {
-                    id: session.user.id,
-                    username,
-                    email: session.user.email,
-                    displayName: isAdmin ? 'Admin✅' : `@${username}`,
-                    isAdmin
-                };
-                localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
-            }
-
-            if (emailSpan) {
-                emailSpan.innerHTML = `<strong>${profile.displayName}</strong> <span style="font-size: 0.8rem; color: #718093;">(${profile.email})</span>`;
-            }
-        }
-    } else {
-        const localProf = getCurrentUserProfile();
-        if (localProf) {
-            updateLocalAuthUI(localProf);
-        } else {
-            if (loginForm) loginForm.style.display = 'block';
-            if (userInfo) userInfo.style.display = 'none';
-            window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: null }));
-        }
-    }
-}
-
-function updateLocalAuthUI(profile: UserProfile | null) {
-    const loginForm = document.getElementById('login-form');
-    if (profile) {
-        if (loginForm) loginForm.style.display = 'none';
-        if (userInfo) {
-            userInfo.style.display = 'block';
-            const emailSpan = document.getElementById('user-email');
-            if (emailSpan) {
-                emailSpan.innerHTML = `<strong>${profile.displayName}</strong> <span style="font-size: 0.8rem; color: #718093;">(${profile.email})</span>`;
-            }
-        }
-        window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: profile }));
-    } else {
-        if (loginForm) loginForm.style.display = 'block';
-        if (userInfo) userInfo.style.display = 'none';
-        window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: null }));
-    }
-}
-
-function getLocalProfiles(): UserProfile[] {
-    try {
-        const raw = localStorage.getItem(PROFILES_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch (e) {}
-    return [];
-}
-
-function saveLocalProfile(profile: UserProfile) {
-    const profiles = getLocalProfiles();
-    const index = profiles.findIndex(p => p.username.toLowerCase() === profile.username.toLowerCase());
-    if (index >= 0) {
-        profiles[index] = profile;
-    } else {
-        profiles.push(profile);
-    }
-    localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(profiles));
-}
-
-function showMsg(msg: string, type: 'error' | 'success' | 'info') {
-    if (!authMessage) return;
-    authMessage.innerText = msg;
-    if (type === 'error') authMessage.style.color = '#e74c3c';
-    if (type === 'success') authMessage.style.color = '#2ecc71';
-    if (type === 'info') authMessage.style.color = '#3498db';
 }

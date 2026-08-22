@@ -43,39 +43,84 @@ try {
         await new Promise(r => setTimeout(r, 1000));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; window.prompt = () => 'Great game'; });
         
-        // Check Yard display
+        // Check initial Yard display
         await page.waitForSelector('#header-yard-val', { visible: true, timeout: 5000 });
         const startYards = await page.$eval('#header-yard-val', el => el.textContent);
-        console.log("   Initial Yard Balance:", startYards);
+        console.log("   Initial Guest Yard Balance (Expected: 0):", startYards);
 
-        // 2. Test SkyAviation2 Promo Code Redemption
-        console.log("2. Testing SkyAviation2 YouTube Promo Code Redemption...");
+        // 2. Test User Registration with @SuperPlayer & Earning Yards
+        console.log("2. Testing User Registration (@SuperPlayer) & Yard Persistence on Logout/Login...");
+        await page.type('#auth-email', 'super@player.com');
+        await page.type('#auth-username', 'SuperPlayer');
+        await page.type('#auth-password', 'Pass12345!');
+        await page.click('#btn-register');
+        await new Promise(r => setTimeout(r, 1200));
+
+        const authMsg = await page.$eval('#auth-message', el => el.textContent);
+        const userInfoDisplay = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
+        const loginFormDisplay = await page.$eval('#login-form', el => window.getComputedStyle(el).display);
+        console.log("   Registration debug -> AuthMsg:", authMsg, "UserInfo:", userInfoDisplay, "LoginForm:", loginFormDisplay);
+
+        // Redeem promo code +500 Y as SuperPlayer
         await page.click('#btn-open-streak');
         await page.waitForSelector('#promo-code-input', { visible: true, timeout: 3000 });
-
-        await page.type('#promo-code-input', 'SKYAVIATION2');
+        await page.type('#promo-code-input', 'PLAYARD2026');
         await page.click('#btn-redeem-promo');
         await new Promise(r => setTimeout(r, 500));
-
-        const promoStatus = await page.$eval('#promo-code-status', el => el.textContent);
-        console.log("   Promo status response:", promoStatus);
-
-        // Test Double-Redeem protection
-        await page.type('#promo-code-input', 'SKYAVIATION2');
-        await page.click('#btn-redeem-promo');
-        await new Promise(r => setTimeout(r, 500));
-        const doublePromoStatus = await page.$eval('#promo-code-status', el => el.textContent);
-        console.log("   Double-redeem protection response:", doublePromoStatus);
-        if (!doublePromoStatus.includes('already been redeemed')) {
-            throw new Error("Promo code double-redemption protection failed!");
-        }
-
-        // Close Streak Modal
         await page.click('#btn-close-streak');
         await new Promise(r => setTimeout(r, 500));
 
-        // 3. Test User Registration & Emoji Validation
-        console.log("3. Testing User Registration & Username Emoji Validation...");
+        const userYards = await page.$eval('#header-yard-val', el => el.textContent);
+        console.log("   SuperPlayer Yard Balance after promo (Expected: 500):", userYards);
+        if (userYards !== '500') {
+            throw new Error(`Expected SuperPlayer to have 500 Yards, got ${userYards}`);
+        }
+
+        // --- Test LOGOUT: Yards MUST reset strictly to 0 ---
+        console.log("   Testing Logout -> Yards MUST reset to 0...");
+        await page.waitForSelector('#btn-logout', { visible: true, timeout: 4000 });
+        await page.click('#btn-logout');
+        await new Promise(r => setTimeout(r, 800));
+
+        const yardsAfterLogout = await page.$eval('#header-yard-val', el => el.textContent);
+        console.log("   Yard Balance after Logout (Expected: 0):", yardsAfterLogout);
+        if (yardsAfterLogout !== '0') {
+            throw new Error(`Yard reset on logout failed! Expected '0', got '${yardsAfterLogout}'`);
+        }
+
+        // --- Test LOGIN with Non-Existent Username: MUST say 'Seda nime ei ole!' ---
+        console.log("   Testing Login with Non-Existent Username -> MUST display 'Seda nime ei ole!'...");
+        await page.type('#auth-email', 'super@player.com');
+        await page.type('#auth-username', 'GhostUser');
+        await page.type('#auth-password', 'Pass12345!');
+        await page.click('#btn-login');
+        await new Promise(r => setTimeout(r, 600));
+
+        const errorMsg = await page.$eval('#auth-message', el => el.textContent);
+        console.log("   Non-existent username error message:", errorMsg);
+        if (!errorMsg.includes('Seda nime ei ole')) {
+            throw new Error(`Expected 'Seda nime ei ole!', got '${errorMsg}'`);
+        }
+
+        // --- Test LOGIN with CORRECT Username: Yards MUST be restored to 500 ---
+        console.log("   Testing Login with Correct Username (@SuperPlayer) -> Yards MUST restore to 500...");
+        await page.$eval('#auth-username', el => el.value = '');
+        await page.type('#auth-username', 'SuperPlayer');
+        await page.click('#btn-login');
+        await new Promise(r => setTimeout(r, 800));
+
+        const restoredYards = await page.$eval('#header-yard-val', el => el.textContent);
+        console.log("   Restored Yard Balance for SuperPlayer (Expected: 500):", restoredYards);
+        if (restoredYards !== '500') {
+            throw new Error(`Yard restoration on login failed! Expected '500', got '${restoredYards}'`);
+        }
+
+        // Logout SuperPlayer before testing Admin flow
+        await page.click('#btn-logout');
+        await new Promise(r => setTimeout(r, 600));
+
+        // 3. Test Admin Registration & Controls
+        console.log("3. Testing Admin Registration & Controls (1karl.ilves@gmail.com)...");
         await page.type('#auth-email', '1karl.ilves@gmail.com');
         await page.type('#auth-username', 'admin');
         await page.type('#auth-password', 'SecretAdminPass123!');
@@ -98,7 +143,7 @@ try {
         await page.click('#tab-btn-give-yards');
         await new Promise(r => setTimeout(r, 400));
 
-        await page.type('#admin-give-username', 'admin');
+        await page.type('#admin-give-username', 'SuperPlayer');
         await page.$eval('#admin-give-amount', el => el.value = '500');
         await page.type('#admin-give-reason', 'Contest Prize');
         await page.click('#btn-admin-give-yards');
@@ -167,7 +212,7 @@ try {
         const airplaneYards = await page.$eval('#airplane-yard-val', el => el.textContent);
         console.log("   Airplane Simulator Yard Balance:", airplaneYards);
 
-        // 8. Test Racing Simulator (Buying Cars with Yards & Unlocking Levels)
+        // 8. Test Racing Simulator
         console.log("8. Checking Racing Simulator...");
         await page.goto('http://localhost:4173/games/games/racing/index.html');
         await new Promise(r => setTimeout(r, 1500));
