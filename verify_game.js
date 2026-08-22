@@ -132,6 +132,29 @@ try {
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
+            // Test AI Math Solver: "1+1"
+            console.log("   Testing AI Math Solver ('1+1')...");
+            await page.type('#ai-prompt-input', '1+1');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const mathChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            console.log("   AI Math Output for '1+1':", mathChatContent.substring(mathChatContent.lastIndexOf('🧮')).substring(0, 80));
+            if (!mathChatContent.includes('1+1 = 2') && !mathChatContent.includes('1 + 1 = 2')) {
+                throw new Error("AI Math Solver for 1+1 failed!");
+            }
+
+            // Test AI Q&A: "Kuidas autoga sõita?"
+            console.log("   Testing AI Q&A ('Kuidas autoga sõita?')...");
+            await page.type('#ai-prompt-input', 'Kuidas autoga sõita?');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const qaChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!qaChatContent.includes('Play Test') && !qaChatContent.includes('[F]')) {
+                throw new Error("AI Q&A for driving instructions failed!");
+            }
+
             await page.click('#btn-close-ai');
 
             // Test Drivable Car in Play Test Mode

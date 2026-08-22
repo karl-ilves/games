@@ -1485,13 +1485,71 @@ export function executeAiBuild(promptText: string) {
     let generatedObjectsCount = 0;
     let aiResponse = '';
 
+    // --- 0. MATHEMATICS & CALCULATIONS (e.g. 1+1, 5*5, 100/4, 25-10, sqrt, mis on 5+5 jne) ---
+    const isMathPattern = (
+        /^[0-9\.\s\+\-\*\/\^\(\)\%xX÷×]+[\?]?$/.test(promptText.trim()) ||
+        /(?:kui palju on|mis on|arvuta|calculate|what is)\s*([0-9\.\s\+\-\*\/\^\(\)\%xX÷×]+)/i.test(p) ||
+        /[0-9]+\s*[\+\-\*\/xX÷×\^]\s*[0-9]+/.test(p)
+    );
+
+    let mathResult: number | null = null;
+    let mathExpr = '';
+
+    if (isMathPattern) {
+        const cleanExpr = promptText
+            .replace(/(?:kui palju on|mis on|arvuta|calculate|what is|\?|võrdub|vordub|equals|=)/gi, '')
+            .replace(/x|X|×/g, '*')
+            .replace(/÷/g, '/')
+            .trim();
+
+        if (/^[0-9\.\s\+\-\*\/\^\(\)\%]+$/.test(cleanExpr) && /[0-9]/.test(cleanExpr)) {
+            try {
+                const evalExpr = cleanExpr.replace(/\^/g, '**');
+                const fn = new Function(`return (${evalExpr});`);
+                const res = fn();
+                if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
+                    mathResult = res;
+                    mathExpr = cleanExpr;
+                }
+            } catch (e) {}
+        }
+    }
+
+    if (mathResult !== null) {
+        aiResponse = `🧮 <strong>Vastus:</strong><br><span style="font-size: 1.25rem; color: #ffd32a; font-weight: bold;">${mathExpr} = ${mathResult}</span><br><br>💡 Oskan arvutada ka muid tehteid (nt liitmine, lahutamine, korrutamine, jagamine ja astendamine)!`;
+
+    // --- 0.1 GENERAL QUESTIONS & PLAYARD ASSISTANT Q&A ---
+    } else if (
+        p.includes('kuidas autoga') || p.includes('kuidas soita') || p.includes('kuidas sõita') || p.includes('auto juhtimine')
+    ) {
+        aiResponse = `🚗 <strong>Kuidas autoga sõita:</strong><br>1. Klõpsa üleval nuppu <strong>▶️ Play Test Mode</strong>.<br>2. Kõnni auto juurde — ekraanile ilmub nupp <strong>[F]</strong>.<br>3. Vajuta klaviatuuril <strong>[F]</strong> (või vajuta ekraani nuppu) autosse istumiseks.<br>4. Juhi auto liikumist: <strong>W / ⬆️</strong> (Gaas), <strong>S / ⬇️</strong> (Pidur/Tagurpidi), <strong>A / D</strong> (Pööramine).<br>5. Väljumiseks vajuta uuesti <strong>[F]</strong>!`;
+
+    } else if (p.includes('kuidas hüpata') || p.includes('kuidas hupata') || p.includes('kuidas hüppan') || p.includes('kuidas hüppab')) {
+        aiResponse = `🚀 <strong>Kuidas hüpata:</strong><br>Vajuta klaviatuuril <strong>SPACE</strong> (tühikuklahvi) või vajuta ekraani all paremal asuvat sinist nuppu <strong>JUMP 🚀</strong>!`;
+
+    } else if (p.includes('kuidas salvestada') || p.includes('kuidas seivida') || p.includes('kuidas salvestan')) {
+        aiResponse = `💾 <strong>Mängu salvestamine:</strong><br>Vajuta üleval paremal nuppu <strong>💾 Save Game</strong> (või <strong>🚀 Submit for Review</strong>, kui soovid mängu avalikustada administraatori ülevaatuseks)! Sinu mäng salvestub automaatselt ka <strong>📂 My Games</strong> kausta.`;
+
+    } else if (p.includes('kes sa oled') || p.includes('mis sa oled') || p.includes('who are you')) {
+        aiResponse = `🤖 <strong>Olen sinu Playard AI Mänguassistent!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, arvutada matemaatilisi tehteid (nt 1+1) ning programmeerida mänguloogikat ja dialooge!`;
+
+    } else if (p.includes('mis mäng see on') || p.includes('mis mang see on') || p.includes('mis on playard')) {
+        aiResponse = `🎮 <strong>Playard Games:</strong><br>See on Eesti oma 3D mängude ja simulaatorite platvorm! Siin saad luua oma 3D mänge (3D Creator Studio), lennata lennukiga (3D Flight Simulator), sõita rallit (Racing Simulator) ja kokata (3D Master Chef)!`;
+
+    } else if (p.includes('kuidas kustutada') || p.includes('kuidas eemaldada') || p.includes('kuidas ära võtta')) {
+        aiResponse = `🗑️ <strong>Objekti kustutamine:</strong><br>Klõpsa stseenis objektile, mida soovid kustutada, ja vajuta klaviatuuril <strong>[D]</strong> või <strong>Delete</strong> klahvi (või paremal paneelis punast nuppu <strong>🗑️ Delete Object</strong>).`;
+
+    } else if (p.includes('kuidas pöörata') || p.includes('kuidas poorata') || p.includes('kuidas keerata')) {
+        aiResponse = `🔄 <strong>Objekti pööramine:</strong><br>Vali objekt ja vajuta klaviatuuril <strong>[R]</strong> klahvi (iga vajutus pöörab 45°) või kasuta paremal paneelis asuvat nuppu <strong>🔄 R</strong>!`;
+
+    } else if (p.includes('kuidas raha') || p.includes('kuidas yarde') || p.includes('mis on yard')) {
+        aiResponse = `💎 <strong>Yards & Raha teenimine:</strong><br>Yarde saad teenida mängides simulaatoreid, lunastades igapäevaseid seeriaboonuseid (Daily Rewards) või sisestades promokoode oma rahakoti aknas!`;
+
     // 0. SCRIPTING / LOGIC / TRIGGERS (e.g. "kui ma kõnnin puu seest läbi tuleb ette tekst...")
-    const isScriptingPrompt = (
+    } else if ((
         (p.includes('läbi') || p.includes('labi') || p.includes('kõnnin') || p.includes('konnin') || p.includes('puudut') || p.includes('astun') || p.includes('touch') || p.includes('walk') || p.includes('trigger') || p.includes('seest')) &&
         (p.includes('tekst') || p.includes('kiri') || p.includes('teade') || p.includes('dialog') || p.includes('message') || p.includes('sõnum') || p.includes('sonum') || p.includes('ütle') || p.includes('utle') || p.includes('kekst'))
-    ) || p.includes('program') || p.includes('kui ma panen') || p.includes('kui ma lähen') || p.includes('kui ma lahen');
-
-    if (isScriptingPrompt) {
+    ) || p.includes('program') || p.includes('kui ma panen') || p.includes('kui ma lähen') || p.includes('kui ma lahen')) {
         // Extract message from quotes or prompt
         let msg = '';
         const quoteMatch = promptText.match(/["'„”«»](.*?)["'„”«»]/);
