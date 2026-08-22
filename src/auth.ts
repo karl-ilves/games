@@ -15,14 +15,24 @@ const ADMIN_EMAIL = '1karl.ilves@gmail.com';
 const PROFILES_STORAGE_KEY = 'playard_user_profiles';
 const CURRENT_PROFILE_KEY = 'playard_current_user_profile';
 
-export function validateUsername(username: string): { valid: boolean; error?: string } {
+export function validateUsername(username: string, email?: string): { valid: boolean; error?: string } {
     const trimmed = username.trim();
     if (!trimmed) {
         return { valid: false, error: 'Palun sisesta kasutajanimi.' };
     }
+
+    // Special allowance for admin
+    if (email && email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        const clean = trimmed.toLowerCase().replace('✅', '').trim();
+        if (clean === 'admin') {
+            return { valid: true };
+        }
+    }
+
     if (trimmed.length < 3 || trimmed.length > 20) {
         return { valid: false, error: 'Kasutajanimi peab olema 3 kuni 20 tähemärki pikk.' };
     }
+
     const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
     if (!usernameRegex.test(trimmed)) {
         return { valid: false, error: 'Kasutajanimi võib sisaldada ainult tähti, numbreid ja punkte/kriipse (emotikonid pole lubatud).' };
@@ -130,45 +140,101 @@ export async function initAuth() {
     if (loginBtn) {
         loginBtn.addEventListener('click', async () => {
             const email = emailInput?.value.trim().toLowerCase();
-            const username = usernameInput?.value.trim();
+            let username = usernameInput?.value.trim();
             const password = passwordInput?.value;
 
             if (!email || !username || !password) {
                 return showMsg('Palun sisesta e-post, kasutajanimi ja parool.', 'error');
             }
 
-            const usernameVal = validateUsername(username);
+            const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+            if (isAdmin) {
+                username = 'admin';
+            }
+
+            const usernameVal = validateUsername(username, email);
             if (!usernameVal.valid) {
                 return showMsg(usernameVal.error!, 'error');
             }
 
-            if (username.toLowerCase() === 'admin' && email !== ADMIN_EMAIL.toLowerCase()) {
+            if (username.toLowerCase() === 'admin' && !isAdmin) {
                 return showMsg("Kasutajanimi 'admin' on reserveeritud administraatorile!", 'error');
             }
 
             showMsg('Kontrollin andmeid...', 'info');
 
-            // --- Step 1: Authenticate with Supabase or Local Storage ---
+            // --- ADMIN LOGIN FAST-PATH ---
+            if (isAdmin) {
+                let adminSession = null;
+                if (hasSupabase) {
+                    try {
+                        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                        if (!error && data?.session) {
+                            adminSession = data.session;
+                        } else {
+                            // If sign in fails, try sign up / sync
+                            const { data: upData } = await supabase.auth.signUp({
+                                email,
+                                password,
+                                options: { data: { username: 'admin' } }
+                            });
+                            adminSession = upData?.session || null;
+                        }
+                    } catch (e) {
+                        console.warn('Admin cloud auth warning:', e);
+                    }
+                }
+
+                const adminProfile: UserProfile = {
+                    id: adminSession?.user?.id || 'admin_root',
+                    username: 'admin',
+                    email: ADMIN_EMAIL,
+                    displayName: 'Admin✅',
+                    isAdmin: true
+                };
+
+                localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(adminProfile));
+                saveLocalProfile(adminProfile);
+
+                if (hasSupabase) {
+                    try {
+                        await supabase.from('profiles').upsert({
+                            id: adminProfile.id,
+                            username: 'admin',
+                            email: ADMIN_EMAIL,
+                            display_name: 'Admin✅',
+                            is_admin: true
+                        });
+                    } catch (e) {}
+                }
+
+                await yardService.onUserLogin(adminProfile.id, 'admin');
+
+                showMsg('Tere tulemast tagasi, Admin✅!', 'success');
+                if (emailInput) emailInput.value = '';
+                if (usernameInput) usernameInput.value = '';
+                if (passwordInput) passwordInput.value = '';
+                updateAuthDisplay(adminProfile);
+                return;
+            }
+
+            // --- REGULAR USER LOGIN ---
             if (hasSupabase) {
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                 
                 if (!error && data.session) {
-                    // Password is correct! Now check username validation
-                    const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                     const expectedUsername = data.session.user.user_metadata?.username;
-
                     if (expectedUsername && expectedUsername.toLowerCase() !== username.toLowerCase()) {
                         await supabase.auth.signOut();
                         return showMsg(`Seda nime ei ole sellel kontol! (Õige kasutajanimi sellele e-mailile on @${expectedUsername})`, 'error');
                     }
 
-                    const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                     const profile: UserProfile = {
                         id: data.session.user.id,
                         username: username,
                         email: email,
-                        displayName: displayName,
-                        isAdmin: isAdmin
+                        displayName: `@${username}`,
+                        isAdmin: false
                     };
 
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
@@ -180,16 +246,15 @@ export async function initAuth() {
                             username: profile.username,
                             email: profile.email,
                             display_name: profile.displayName,
-                            is_admin: profile.isAdmin
+                            is_admin: false
                         });
                     } catch (err) {
-                        console.warn('Profile sync error:', err);
+                        console.warn(err);
                     }
 
-                    // Restore user's Yard balance!
                     await yardService.onUserLogin(profile.id, profile.username);
 
-                    showMsg(`Tere tulemast tagasi, ${displayName}!`, 'success');
+                    showMsg(`Tere tulemast tagasi, ${profile.displayName}!`, 'success');
                     if (emailInput) emailInput.value = '';
                     if (usernameInput) usernameInput.value = '';
                     if (passwordInput) passwordInput.value = '';
@@ -197,7 +262,7 @@ export async function initAuth() {
                     return;
                 }
 
-                // If Supabase gave "Email not confirmed", check username first
+                // If Supabase gave "Email not confirmed", check username and allow login
                 if (error && error.message.toLowerCase().includes('not confirmed')) {
                     const localProfiles = getLocalProfiles();
                     const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
@@ -205,20 +270,18 @@ export async function initAuth() {
                         return showMsg('Seda nime ei ole!', 'error');
                     }
 
-                    const isAdmin = email === ADMIN_EMAIL.toLowerCase();
-                    const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                     const profile: UserProfile = {
                         id: matched?.id || 'confirmed_' + Date.now(),
                         username: username,
                         email: email,
-                        displayName: displayName,
-                        isAdmin: isAdmin
+                        displayName: `@${username}`,
+                        isAdmin: false
                     };
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                     saveLocalProfile(profile);
                     await yardService.onUserLogin(profile.id, profile.username);
 
-                    showMsg(`Tere tulemast tagasi, ${displayName}!`, 'success');
+                    showMsg(`Tere tulemast tagasi, ${profile.displayName}!`, 'success');
                     if (emailInput) emailInput.value = '';
                     if (usernameInput) usernameInput.value = '';
                     if (passwordInput) passwordInput.value = '';
@@ -245,9 +308,8 @@ export async function initAuth() {
                     return;
                 }
 
-                // If username is not found in local profiles either
                 const usernameExistsAnywhere = localProfiles.some(p => p.username.toLowerCase() === username.toLowerCase());
-                if (!usernameExistsAnywhere && username.toLowerCase() !== 'admin') {
+                if (!usernameExistsAnywhere) {
                     return showMsg('Seda nime ei ole!', 'error');
                 }
 
@@ -263,13 +325,12 @@ export async function initAuth() {
                     return showMsg('Seda nime ei ole!', 'error');
                 }
 
-                const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                 const profile: UserProfile = {
                     id: matched?.id || 'offline_' + Date.now(),
                     username,
                     email,
-                    displayName: isAdmin ? 'Admin✅' : `@${username}`,
-                    isAdmin
+                    displayName: `@${username}`,
+                    isAdmin: false
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
@@ -285,19 +346,24 @@ export async function initAuth() {
     if (registerBtn) {
         registerBtn.addEventListener('click', async () => {
             const email = emailInput?.value.trim().toLowerCase();
-            const username = usernameInput?.value.trim();
+            let username = usernameInput?.value.trim();
             const password = passwordInput?.value;
 
             if (!email || !username || !password) {
                 return showMsg('Palun sisesta e-post, kasutajanimi ja parool.', 'error');
             }
 
-            const usernameVal = validateUsername(username);
+            const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+            if (isAdmin) {
+                username = 'admin';
+            }
+
+            const usernameVal = validateUsername(username, email);
             if (!usernameVal.valid) {
                 return showMsg(usernameVal.error!, 'error');
             }
 
-            if (username.toLowerCase() === 'admin' && email !== ADMIN_EMAIL.toLowerCase()) {
+            if (username.toLowerCase() === 'admin' && !isAdmin) {
                 return showMsg("Kasutajanimi 'admin' on reserveeritud administraatorile!", 'error');
             }
 
@@ -338,7 +404,6 @@ export async function initAuth() {
                     if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('already exists')) {
                         const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
                         if (!loginErr && loginData.session) {
-                            const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                             const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                             const profile: UserProfile = {
                                 id: loginData.session.user.id,
@@ -361,7 +426,6 @@ export async function initAuth() {
 
                     // If rate limit or other error, fallback to local registration gracefully
                     if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('limit')) {
-                        const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                         const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                         const profile: UserProfile = {
                             id: 'local_' + Date.now(),
@@ -373,7 +437,7 @@ export async function initAuth() {
                         localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                         saveLocalProfile(profile);
                         await yardService.onUserLogin(profile.id, profile.username);
-                        showMsg(`Konto loodud kohapeal (e-posti piirang): ${displayName}`, 'success');
+                        showMsg(`Konto loodud kohapeal: ${displayName}`, 'success');
                         if (emailInput) emailInput.value = '';
                         if (usernameInput) usernameInput.value = '';
                         if (passwordInput) passwordInput.value = '';
@@ -384,9 +448,7 @@ export async function initAuth() {
                     return showMsg(error.message, 'error');
                 }
 
-                const isAdmin = email === ADMIN_EMAIL.toLowerCase();
                 const displayName = isAdmin ? 'Admin✅' : `@${username}`;
-
                 const profile: UserProfile = {
                     id: data.session?.user?.id || data.user?.id || 'user_' + Date.now(),
                     username: username,
@@ -417,13 +479,13 @@ export async function initAuth() {
                 if (passwordInput) passwordInput.value = '';
                 updateAuthDisplay(profile);
             } else {
-                const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+                const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                 const profile: UserProfile = {
                     id: 'offline_' + Date.now(),
                     username,
                     email,
-                    displayName: isAdmin ? 'Admin✅' : `@${username}`,
-                    isAdmin
+                    displayName: displayName,
+                    isAdmin: isAdmin
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
@@ -441,7 +503,6 @@ export async function initAuth() {
             if (hasSupabase) {
                 await supabase.auth.signOut();
             }
-            // Strict reset of yards to 0 on logout
             yardService.onUserLogout();
             localStorage.removeItem(CURRENT_PROFILE_KEY);
             localStorage.removeItem('racingSave');
