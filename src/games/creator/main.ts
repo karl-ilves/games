@@ -842,11 +842,14 @@ function setupStudioEvents() {
         startNewEmptyGame();
     });
 
-    // Dismiss Feedback Banner Button
-    document.getElementById('btn-close-feedback-banner')?.addEventListener('click', () => {
+    // Dismiss Feedback Banner Buttons
+    const hideFeedbackBanner = () => {
         const banner = document.getElementById('admin-feedback-banner');
         if (banner) banner.style.display = 'none';
-    });
+    };
+
+    document.getElementById('btn-close-feedback-banner')?.addEventListener('click', hideFeedbackBanner);
+    document.getElementById('btn-dismiss-feedback-text')?.addEventListener('click', hideFeedbackBanner);
 
     // Studio Camera Navigation Buttons
     document.getElementById('cam-btn-left')?.addEventListener('click', () => {
