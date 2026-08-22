@@ -1415,20 +1415,74 @@ async function restoreDraftOrFeedbackGame() {
 }
 
 // --- AI Game Builder Assistant ---
+export function updateAiAssistantLocalization() {
+    const profile = getCurrentUserProfile();
+    const isAdmin = profile?.isAdmin || profile?.email?.toLowerCase() === '1karl.ilves@gmail.com' || profile?.displayName?.includes('Admin') || profile?.username === 'Admin✅';
+
+    const aiWelcome = document.getElementById('ai-welcome-msg');
+    const inputField = document.getElementById('ai-prompt-input') as HTMLInputElement | null;
+    const submitBtn = document.getElementById('btn-ai-submit');
+    const quickContainer = document.getElementById('ai-quick-container');
+
+    if (isAdmin) {
+        if (aiWelcome) {
+            aiWelcome.innerHTML = `👋 <strong>Tere! Olen sinu AI Mänguassistent.</strong><br>Kirjuta mulle, mida soovid ehitada, küsi matemaatikat (nt 1+1) või palu mul olemasolevatele asjadele detaile juurde lisada! 🚀`;
+        }
+        if (inputField) inputField.placeholder = "Kirjuta siia käsk või küsimus (nt 1+1 või lisa auto)...";
+        if (submitBtn) submitBtn.innerHTML = `<span>✨</span> Loo / Küsi`;
+        if (quickContainer) {
+            quickContainer.innerHTML = `
+                <button class="ai-quick-btn" data-prompt="Lisa autole autoteed, koonused ja tänavalambid juurde" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🚗 Lisa autole asju juurde</button>
+                <button class="ai-quick-btn" data-prompt="Lisa puudele kivid, lilled ja metsarada juurde" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌲 Kaunista mets</button>
+                <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+                <button class="ai-quick-btn" data-prompt="Loo suurlinn pilvelõhkujate ja autodega" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏙️ Suurlinn</button>
+            `;
+        }
+    } else {
+        if (aiWelcome) {
+            aiWelcome.innerHTML = `👋 <strong>Hello! I am your AI Game Assistant.</strong><br>Tell me what you would like to build, ask math calculations (e.g. 1+1), or ask me to add details and decorations to objects! 🚀`;
+        }
+        if (inputField) inputField.placeholder = "Type prompt or question (e.g. 1+1 or add car)...";
+        if (submitBtn) submitBtn.innerHTML = `<span>✨</span> Create / Ask`;
+        if (quickContainer) {
+            quickContainer.innerHTML = `
+                <button class="ai-quick-btn" data-prompt="Add roads, cones, and street lights to the car" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🚗 Add details to car</button>
+                <button class="ai-quick-btn" data-prompt="Add rocks, flowers, and path to the trees" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌲 Decorate forest</button>
+                <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+                <button class="ai-quick-btn" data-prompt="Create a big city with skyscrapers and cars" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏙️ Metropolis</button>
+            `;
+        }
+    }
+
+    // Rebind quick buttons
+    document.querySelectorAll('.ai-quick-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const promptText = (e.currentTarget as HTMLElement).getAttribute('data-prompt') || '';
+            const aiModal = document.getElementById('ai-assistant-modal');
+            if (promptText) {
+                if (aiModal) aiModal.style.display = 'flex';
+                executeAiBuild(promptText);
+            }
+        });
+    });
+}
+
 export function setupAiAssistantEvents() {
     const aiModal = document.getElementById('ai-assistant-modal');
     const toggleBtn = document.getElementById('btn-toggle-ai');
     const closeBtn = document.getElementById('btn-close-ai');
     const submitBtn = document.getElementById('btn-ai-submit');
     const inputField = document.getElementById('ai-prompt-input') as HTMLInputElement | null;
-    const quickBtns = document.querySelectorAll('.ai-quick-btn');
+
+    updateAiAssistantLocalization();
 
     if (toggleBtn && aiModal) {
         toggleBtn.addEventListener('click', () => {
             const isShown = aiModal.style.display === 'flex';
             aiModal.style.display = isShown ? 'none' : 'flex';
-            if (!isShown && inputField) {
-                inputField.focus();
+            if (!isShown) {
+                updateAiAssistantLocalization();
+                if (inputField) inputField.focus();
             }
         });
     }
@@ -1454,16 +1508,6 @@ export function setupAiAssistantEvents() {
             handleSend();
         }
     });
-
-    quickBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const promptText = (e.currentTarget as HTMLElement).getAttribute('data-prompt') || '';
-            if (promptText) {
-                if (aiModal) aiModal.style.display = 'flex';
-                executeAiBuild(promptText);
-            }
-        });
-    });
 }
 
 export function executeAiBuild(promptText: string) {
@@ -1471,6 +1515,9 @@ export function executeAiBuild(promptText: string) {
     const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
     const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
     const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
+
+    const profile = getCurrentUserProfile();
+    const isAdmin = profile?.isAdmin || profile?.email?.toLowerCase() === '1karl.ilves@gmail.com' || profile?.displayName?.includes('Admin') || profile?.username === 'Admin✅';
 
     // Append User message to chat
     if (chatLog) {
@@ -1516,34 +1563,71 @@ export function executeAiBuild(promptText: string) {
     }
 
     if (mathResult !== null) {
-        aiResponse = `🧮 <strong>Vastus:</strong><br><span style="font-size: 1.25rem; color: #ffd32a; font-weight: bold;">${mathExpr} = ${mathResult}</span><br><br>💡 Oskan arvutada ka muid tehteid (nt liitmine, lahutamine, korrutamine, jagamine ja astendamine)!`;
+        if (isAdmin) {
+            aiResponse = `🧮 <strong>Vastus:</strong><br><span style="font-size: 1.25rem; color: #ffd32a; font-weight: bold;">${mathExpr} = ${mathResult}</span><br><br>💡 Oskan arvutada ka muid tehteid (nt liitmine, lahutamine, korrutamine, jagamine ja astendamine)!`;
+        } else {
+            aiResponse = `🧮 <strong>Result:</strong><br><span style="font-size: 1.25rem; color: #ffd32a; font-weight: bold;">${mathExpr} = ${mathResult}</span><br><br>💡 I can calculate any arithmetic expression (addition, subtraction, multiplication, division, powers)!`;
+        }
 
     // --- 0.1 GENERAL QUESTIONS & PLAYARD ASSISTANT Q&A ---
     } else if (
-        p.includes('kuidas autoga') || p.includes('kuidas soita') || p.includes('kuidas sõita') || p.includes('auto juhtimine')
+        p.includes('kuidas autoga') || p.includes('kuidas soita') || p.includes('kuidas sõita') || p.includes('auto juhtimine') ||
+        p.includes('how to drive') || p.includes('drive car') || p.includes('drive a car')
     ) {
-        aiResponse = `🚗 <strong>Kuidas autoga sõita:</strong><br>1. Klõpsa üleval nuppu <strong>▶️ Play Test Mode</strong>.<br>2. Kõnni auto juurde — ekraanile ilmub nupp <strong>[F]</strong>.<br>3. Vajuta klaviatuuril <strong>[F]</strong> (või vajuta ekraani nuppu) autosse istumiseks.<br>4. Juhi auto liikumist: <strong>W / ⬆️</strong> (Gaas), <strong>S / ⬇️</strong> (Pidur/Tagurpidi), <strong>A / D</strong> (Pööramine).<br>5. Väljumiseks vajuta uuesti <strong>[F]</strong>!`;
+        if (isAdmin) {
+            aiResponse = `🚗 <strong>Kuidas autoga sõita:</strong><br>1. Klõpsa üleval nuppu <strong>▶️ Play Test Mode</strong>.<br>2. Kõnni auto juurde — ekraanile ilmub nupp <strong>[F]</strong>.<br>3. Vajuta klaviatuuril <strong>[F]</strong> (või vajuta ekraani nuppu) autosse istumiseks.<br>4. Juhi auto liikumist: <strong>W / ⬆️</strong> (Gaas), <strong>S / ⬇️</strong> (Pidur/Tagurpidi), <strong>A / D</strong> (Pööramine).<br>5. Väljumiseks vajuta uuesti <strong>[F]</strong>!`;
+        } else {
+            aiResponse = `🚗 <strong>How to Drive Cars:</strong><br>1. Click <strong>▶️ Play Test Mode</strong> in the top bar.<br>2. Walk close to any car — press <strong>[F]</strong> to enter.<br>3. Drive with <strong>W / ⬆️</strong> (Gas), <strong>S / ⬇️</strong> (Brake/Reverse), and <strong>A / D</strong> (Steer).<br>4. Press <strong>[F]</strong> again to exit!`;
+        }
 
-    } else if (p.includes('kuidas hüpata') || p.includes('kuidas hupata') || p.includes('kuidas hüppan') || p.includes('kuidas hüppab')) {
-        aiResponse = `🚀 <strong>Kuidas hüpata:</strong><br>Vajuta klaviatuuril <strong>SPACE</strong> (tühikuklahvi) või vajuta ekraani all paremal asuvat sinist nuppu <strong>JUMP 🚀</strong>!`;
+    } else if (p.includes('kuidas hüpata') || p.includes('kuidas hupata') || p.includes('kuidas hüppan') || p.includes('how to jump') || p.includes('jump')) {
+        if (isAdmin) {
+            aiResponse = `🚀 <strong>Kuidas hüpata:</strong><br>Vajuta klaviatuuril <strong>SPACE</strong> (tühikuklahvi) või vajuta ekraani all paremal asuvat sinist nuppu <strong>JUMP 🚀</strong>!`;
+        } else {
+            aiResponse = `🚀 <strong>How to Jump:</strong><br>Press the <strong>SPACEBAR</strong> on your keyboard or tap the blue <strong>JUMP 🚀</strong> button on screen!`;
+        }
 
-    } else if (p.includes('kuidas salvestada') || p.includes('kuidas seivida') || p.includes('kuidas salvestan')) {
-        aiResponse = `💾 <strong>Mängu salvestamine:</strong><br>Vajuta üleval paremal nuppu <strong>💾 Save Game</strong> (või <strong>🚀 Submit for Review</strong>, kui soovid mängu avalikustada administraatori ülevaatuseks)! Sinu mäng salvestub automaatselt ka <strong>📂 My Games</strong> kausta.`;
+    } else if (p.includes('kuidas salvestada') || p.includes('kuidas seivida') || p.includes('how to save') || p.includes('save game')) {
+        if (isAdmin) {
+            aiResponse = `💾 <strong>Mängu salvestamine:</strong><br>Vajuta üleval paremal nuppu <strong>💾 Save Game</strong> (või <strong>🚀 Submit for Review</strong>, kui soovid mängu avalikustada administraatori ülevaatuseks)! Sinu mäng salvestub automaatselt ka <strong>📂 My Games</strong> kausta.`;
+        } else {
+            aiResponse = `💾 <strong>Saving your Game:</strong><br>Click <strong>💾 Save Game</strong> (or <strong>🚀 Submit for Review</strong> to publish for admin approval)! Your games are safely stored in <strong>📂 My Games</strong>.`;
+        }
 
-    } else if (p.includes('kes sa oled') || p.includes('mis sa oled') || p.includes('who are you')) {
-        aiResponse = `🤖 <strong>Olen sinu Playard AI Mänguassistent!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, arvutada matemaatilisi tehteid (nt 1+1) ning programmeerida mänguloogikat ja dialooge!`;
+    } else if (p.includes('kes sa oled') || p.includes('mis sa oled') || p.includes('who are you') || p.includes('what are you')) {
+        if (isAdmin) {
+            aiResponse = `🤖 <strong>Olen sinu Playard AI Mänguassistent!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, arvutada matemaatilisi tehteid (nt 1+1) ning programmeerida mänguloogikat ja dialooge!`;
+        } else {
+            aiResponse = `🤖 <strong>I am your Playard AI Game Assistant!</strong><br>I can build 3D worlds, construct asphalt roads with drivable cars, decorate environments, solve math calculations (like 1+1), and program interactive game logic!`;
+        }
 
-    } else if (p.includes('mis mäng see on') || p.includes('mis mang see on') || p.includes('mis on playard')) {
-        aiResponse = `🎮 <strong>Playard Games:</strong><br>See on Eesti oma 3D mängude ja simulaatorite platvorm! Siin saad luua oma 3D mänge (3D Creator Studio), lennata lennukiga (3D Flight Simulator), sõita rallit (Racing Simulator) ja kokata (3D Master Chef)!`;
+    } else if (p.includes('mis mäng see on') || p.includes('mis mang see on') || p.includes('mis on playard') || p.includes('what is playard') || p.includes('what game is this')) {
+        if (isAdmin) {
+            aiResponse = `🎮 <strong>Playard Games:</strong><br>See on Eesti oma 3D mängude ja simulaatorite platvorm! Siin saad luua oma 3D mänge (3D Creator Studio), lennata lennukiga (3D Flight Simulator), sõita rallit (Racing Simulator) ja kokata (3D Master Chef)!`;
+        } else {
+            aiResponse = `🎮 <strong>Playard Games:</strong><br>The ultimate 3D sandbox and simulation gaming platform! Create games in 3D Creator Studio, fly planes, race sports cars, and cook master chef meals!`;
+        }
 
-    } else if (p.includes('kuidas kustutada') || p.includes('kuidas eemaldada') || p.includes('kuidas ära võtta')) {
-        aiResponse = `🗑️ <strong>Objekti kustutamine:</strong><br>Klõpsa stseenis objektile, mida soovid kustutada, ja vajuta klaviatuuril <strong>[D]</strong> või <strong>Delete</strong> klahvi (või paremal paneelis punast nuppu <strong>🗑️ Delete Object</strong>).`;
+    } else if (p.includes('kuidas kustutada') || p.includes('kuidas eemaldada') || p.includes('how to delete') || p.includes('delete object')) {
+        if (isAdmin) {
+            aiResponse = `🗑️ <strong>Objekti kustutamine:</strong><br>Klõpsa stseenis objektile, mida soovid kustutada, ja vajuta klaviatuuril <strong>[D]</strong> või <strong>Delete</strong> klahvi (või paremal paneelis punast nuppu <strong>🗑️ Delete Object</strong>).`;
+        } else {
+            aiResponse = `🗑️ <strong>Deleting Objects:</strong><br>Click on the object in the scene and press <strong>[D]</strong> or <strong>Delete</strong> key (or click the red <strong>🗑️ Delete Object</strong> button in the inspector).`;
+        }
 
-    } else if (p.includes('kuidas pöörata') || p.includes('kuidas poorata') || p.includes('kuidas keerata')) {
-        aiResponse = `🔄 <strong>Objekti pööramine:</strong><br>Vali objekt ja vajuta klaviatuuril <strong>[R]</strong> klahvi (iga vajutus pöörab 45°) või kasuta paremal paneelis asuvat nuppu <strong>🔄 R</strong>!`;
+    } else if (p.includes('kuidas pöörata') || p.includes('kuidas poorata') || p.includes('how to rotate') || p.includes('rotate object')) {
+        if (isAdmin) {
+            aiResponse = `🔄 <strong>Objekti pööramine:</strong><br>Vali objekt ja vajuta klaviatuuril <strong>[R]</strong> klahvi (iga vajutus pöörab 45°) või kasuta paremal paneelis asuvat nuppu <strong>🔄 R</strong>!`;
+        } else {
+            aiResponse = `🔄 <strong>Rotating Objects:</strong><br>Select an object and press <strong>[R]</strong> key (rotates 45° each press) or use the <strong>🔄 R</strong> button in the inspector!`;
+        }
 
-    } else if (p.includes('kuidas raha') || p.includes('kuidas yarde') || p.includes('mis on yard')) {
-        aiResponse = `💎 <strong>Yards & Raha teenimine:</strong><br>Yarde saad teenida mängides simulaatoreid, lunastades igapäevaseid seeriaboonuseid (Daily Rewards) või sisestades promokoode oma rahakoti aknas!`;
+    } else if (p.includes('kuidas raha') || p.includes('kuidas yarde') || p.includes('how to get yards') || p.includes('earn yards')) {
+        if (isAdmin) {
+            aiResponse = `💎 <strong>Yards & Raha teenimine:</strong><br>Yarde saad teenida mängides simulaatoreid, lunastades igapäevaseid seeriaboonuseid (Daily Rewards) või sisestades promokoode oma rahakoti aknas!`;
+        } else {
+            aiResponse = `💎 <strong>Earning Yards Currency:</strong><br>Earn Yards by playing 3D simulators, claiming Daily Rewards streaks, or redeeming promo codes in your Wallet!`;
+        }
 
     // 0. SCRIPTING / LOGIC / TRIGGERS (e.g. "kui ma kõnnin puu seest läbi tuleb ette tekst...")
     } else if ((
@@ -1562,11 +1646,11 @@ export function executeAiBuild(promptText: string) {
             }
         }
         if (!msg) {
-            msg = '🌲 Leidsid iidse puu saladuse! Oled edukalt mängu läbinud!';
+            msg = isAdmin ? '🌲 Leidsid iidse puu saladuse! Oled edukalt mängu läbinud!' : '🌲 You discovered the secret of the ancient tree!';
         }
 
         // Determine object target: tree or selected object or new object
-        let targetName = '🌲 Iidne Puu';
+        let targetName = isAdmin ? '🌲 Iidne Puu' : '🌲 Ancient Tree';
         let targetObj = placedObjects.find(obj => obj.name.toLowerCase().includes('tree') || obj.name.toLowerCase().includes('puu') || obj.category === 'nature');
 
         if (!targetObj) {
@@ -1582,7 +1666,7 @@ export function executeAiBuild(promptText: string) {
                 id: 'placed_ai_tree_' + Date.now(),
                 mesh,
                 catalogId: treeItem.id,
-                name: '🌲 Suur Võlupuu',
+                name: isAdmin ? '🌲 Suur Võlupuu' : '🌲 Magic Tree',
                 category: 'nature',
                 position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
                 rotation: { x: 0, y: 0, z: 0 },
@@ -1591,7 +1675,7 @@ export function executeAiBuild(promptText: string) {
                 trigger: {
                     type: 'touch',
                     message: msg,
-                    title: '🌲 Suur Võlupuu',
+                    title: isAdmin ? '🌲 Suur Võlupuu' : '🌲 Magic Tree',
                     radius: 5.0
                 }
             };
@@ -1608,7 +1692,11 @@ export function executeAiBuild(promptText: string) {
         }
 
         selectObject(targetObj);
-        aiResponse = `🤖 <strong>Game logic programmed!</strong><br>Added a trigger to <strong>${targetName}</strong>.<br>👉 When a player walks near it, this text will appear:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Click <strong>▶️ Play Test Mode</strong> above and walk near it to test!`;
+        if (isAdmin) {
+            aiResponse = `🤖 <strong>Mänguloogika programmeeritud!</strong><br>Lisasin objektile <strong>${targetName}</strong> päästiku (Trigger).<br>👉 Kui mängija kõnnib sellest läbi või lähedale, ilmub ekraanile tekst:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja kõnni puu juurde, et seda kohe testida!`;
+        } else {
+            aiResponse = `🤖 <strong>Game logic programmed!</strong><br>Added trigger to <strong>${targetName}</strong>.<br>👉 Walking near it displays:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Click <strong>▶️ Play Test Mode</strong> and test it!`;
+        }
 
     // 1. PARKOUR / OBSTACLES
     } else if (p.includes('parkour') || p.includes('rada') || p.includes('hüp') || p.includes('jump') || p.includes('obstacle') || p.includes('takistus')) {
@@ -1646,7 +1734,11 @@ export function executeAiBuild(promptText: string) {
             generatedObjectsCount++;
         }
 
-        aiResponse = `🏃 I created a 9-stage parkour course with rising platforms! Test it now using arrows and spacebar (Jump)!`;
+        if (isAdmin) {
+            aiResponse = `🏃 Lõin sulle 9-astmelise parkuuriraja tõusvate platvormidega! Saad seda kohe nooltega ja tühikuga (Jump) testida!`;
+        } else {
+            aiResponse = `🏃 I created a 9-stage parkour challenge with rising platforms! Test it now with arrows and spacebar (Jump)!`;
+        }
 
     // 2. METS / NATURE / FOREST
     } else if (p.includes('mets') || p.includes('forest') || p.includes('puu') || p.includes('tree') || p.includes('nature') || p.includes('loodus')) {
@@ -1679,59 +1771,19 @@ export function executeAiBuild(promptText: string) {
             generatedObjectsCount++;
         }
 
-        aiResponse = `🌲 Planted ${generatedObjectsCount} trees, stumps, and rocks! The natural forest world is ready.`;
-
-    // 3. AUTOTEED & SÕIDETAVAD AUTOD (ROADS & DRIVABLE CARS)
-    } else if (p.includes('autotee') || p.includes('autoteed') || (p.includes('tee') && !p.includes('teade')) || (p.includes('road') && !p.includes('broad')) || p.includes('sõit') || p.includes('soit') || p.includes('drive')) {
-        if (titleInput) titleInput.value = 'Highway & Supercars 3D';
-        if (catSelect) catSelect.value = 'Racing';
-        if (descInput) descInput.value = 'Long asphalt highway with high performance drivable supercars.';
-
-        // 1. Place Continuous Asphalt Road Segments
-        const roadItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('road') || c.geometryType.includes('road')) || CATALOG_DATABASE[0];
-        for (let i = 0; i < 4; i++) {
-            const mesh = createObjectMesh(roadItem);
-            mesh.position.set(0, 0, (i - 1.5) * 13.5);
-            scene.add(mesh);
-
-            placedObjects.push({
-                id: 'placed_ai_road_' + Date.now() + '_' + i,
-                mesh,
-                catalogId: roadItem.id,
-                name: `🛣️ Autotee Lõik #${i + 1}`,
-                category: 'city',
-                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
-                rotation: { x: 0, y: 0, z: 0 },
-                scale: { x: 1, y: 1, z: 1 },
-                color: roadItem.color
-            });
-            generatedObjectsCount++;
+        if (isAdmin) {
+            aiResponse = `🌲 Istutasin stseeni ${generatedObjectsCount} puud, kändu ja kivimit! Looduslik metsamaailm on valmis.`;
+        } else {
+            aiResponse = `🌲 Planted ${generatedObjectsCount} trees, stumps, and rocks! The natural forest world is ready.`;
         }
 
-        // 2. Place Drivable Supercars
-        const vehicleItems = CATALOG_DATABASE.filter(c => c.category === 'vehicles' || c.name.toLowerCase().includes('car') || c.name.toLowerCase().includes('truck'));
-        const car1 = vehicleItems[0] || CATALOG_DATABASE[0];
-        const meshCar1 = createObjectMesh(car1, '#e74c3c');
-        meshCar1.position.set(1.8, 0, -4);
-        scene.add(meshCar1);
-
-        placedObjects.push({
-            id: 'placed_ai_car_' + Date.now() + '_1',
-            mesh: meshCar1,
-            catalogId: car1.id,
-            name: '🏎️ Sõidetav Supercar',
-            category: 'vehicles',
-            position: { x: meshCar1.position.x, y: meshCar1.position.y, z: meshCar1.position.z },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            color: '#e74c3c'
-        });
-        generatedObjectsCount++;
-
-        aiResponse = `🏎️ <strong>I created an asphalt road and a drivable Supercar!</strong><br>Click <strong>▶️ Play Test Mode</strong> above and approach the car <strong>[F]</strong> to start driving!`;
-
-    // 4. SMART CONTEXTUAL ADDITIONS & OBJECT DECORATOR (Lisa asjadele ise asju juurde)
-    } else if (p.includes('juurde') || p.includes('kaunista') || p.includes('detail') || p.includes('lisa autole') || p.includes('lisa puule') || p.includes('lisa majale')) {
+    // 3. SMART CONTEXTUAL ADDITIONS & OBJECT DECORATOR (Lisa asjadele ise asju juurde)
+    } else if (
+        p.includes('juurde') || p.includes('kaunista') || p.includes('detail') ||
+        p.includes('lisa autole') || p.includes('lisa puule') || p.includes('lisa majale') ||
+        p.includes('add details') || p.includes('add to car') || p.includes('add to tree') ||
+        p.includes('decorate')
+    ) {
         // A. Adding additions to CAR / VEHICLE
         if (p.includes('auto') || p.includes('car') || (selectedObject && selectedObject.category === 'vehicles')) {
             const targetCar = selectedObject || placedObjects.find(obj => obj.category === 'vehicles') || placedObjects[0];
@@ -1747,7 +1799,7 @@ export function executeAiBuild(promptText: string) {
                 id: 'placed_ai_add_road_' + Date.now(),
                 mesh: meshRoad,
                 catalogId: roadItem.id,
-                name: '🛣️ Asfalttee',
+                name: isAdmin ? '🛣️ Asfalttee' : '🛣️ Asphalt Road',
                 category: 'city',
                 position: { x: meshRoad.position.x, y: 0, z: meshRoad.position.z },
                 rotation: { x: 0, y: 0, z: 0 },
@@ -1766,7 +1818,7 @@ export function executeAiBuild(promptText: string) {
                     id: 'placed_ai_add_light_' + Date.now() + '_' + idx,
                     mesh: meshLight,
                     catalogId: lightItem.id,
-                    name: '💡 Tänavalamp',
+                    name: isAdmin ? '💡 Tänavalamp' : '💡 Street Lamp',
                     category: 'city',
                     position: { x: meshLight.position.x, y: 0, z: meshLight.position.z },
                     rotation: { x: 0, y: 0, z: 0 },
@@ -1785,7 +1837,7 @@ export function executeAiBuild(promptText: string) {
                 id: 'placed_ai_add_fuel_' + Date.now(),
                 mesh: meshFuel,
                 catalogId: fuelItem.id,
-                name: '⛽ Kütusetankur',
+                name: isAdmin ? '⛽ Kütusetankur' : '⛽ Fuel Station',
                 category: 'city',
                 position: { x: meshFuel.position.x, y: 0, z: meshFuel.position.z },
                 rotation: { x: 0, y: 0, z: 0 },
@@ -1794,7 +1846,11 @@ export function executeAiBuild(promptText: string) {
             });
             generatedObjectsCount++;
 
-            aiResponse = `🚗 <strong>Added details to the car!</strong><br>During construction, I added an asphalt road, 2 street lights, and a fuel pump!`;
+            if (isAdmin) {
+                aiResponse = `🚗 <strong>Lisasin autole asju juurde!</strong><br>Ehituse käigus lisasin auto juurde asfalteeritud autotee, 2 tänavavalgustit ja kütusetankuri!`;
+            } else {
+                aiResponse = `🚗 <strong>Added details to the car!</strong><br>During construction, I added an asphalt road, 2 street lights, and a fuel pump!`;
+            }
 
         // B. Adding additions to TREES / NATURE
         } else if (p.includes('puu') || p.includes('mets') || p.includes('nature') || p.includes('loodus') || (selectedObject && selectedObject.category === 'nature')) {
@@ -1830,7 +1886,11 @@ export function executeAiBuild(promptText: string) {
                 generatedObjectsCount++;
             }
 
-            aiResponse = `🌲 <strong>Added details to the tree and nature!</strong><br>I placed mossy rocks, boulders, and blooming flower bushes around the tree!`;
+            if (isAdmin) {
+                aiResponse = `🌲 <strong>Lisasin puule ja loodusele detaile juurde!</strong><br>Paigutasin puu ümber samblased kivid, kaljurahnud ja õitsvad lillepõõsad!`;
+            } else {
+                aiResponse = `🌲 <strong>Decorated the trees and nature!</strong><br>I placed mossy rocks, boulders, and blooming flower bushes around the trees!`;
+            }
 
         // C. Adding additions to BUILDINGS / HOUSES
         } else {
@@ -1860,7 +1920,64 @@ export function executeAiBuild(promptText: string) {
                 generatedObjectsCount++;
             }
 
-            aiResponse = `✨ <strong>Added items and details to the object!</strong><br>I placed 4 fitting decorations and elements nearby.`;
+            if (isAdmin) {
+                aiResponse = `✨ <strong>Lisasin objektile asju ja detaile juurde!</strong><br>Paigutasin ümbrusesse 4 sobivat dekoratsiooni ja elementi.`;
+            } else {
+                aiResponse = `✨ <strong>Added items and details to the object!</strong><br>I placed 4 fitting decorations and elements nearby.`;
+            }
+        }
+
+    // 4. AUTOTEED & SÕIDETAVAD AUTOD (ROADS & DRIVABLE CARS)
+    } else if (p.includes('autotee') || p.includes('autoteed') || (p.includes('tee') && !p.includes('teade')) || (p.includes('road') && !p.includes('broad')) || p.includes('sõit') || p.includes('soit') || p.includes('drive') || p.includes('car') || p.includes('auto')) {
+        if (titleInput) titleInput.value = 'Highway & Supercars 3D';
+        if (catSelect) catSelect.value = 'Racing';
+        if (descInput) descInput.value = 'Long asphalt highway with high performance drivable supercars.';
+
+        // 1. Place Continuous Asphalt Road Segments
+        const roadItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('road') || c.geometryType.includes('road')) || CATALOG_DATABASE[0];
+        for (let i = 0; i < 4; i++) {
+            const mesh = createObjectMesh(roadItem);
+            mesh.position.set(0, 0, (i - 1.5) * 13.5);
+            scene.add(mesh);
+
+            placedObjects.push({
+                id: 'placed_ai_road_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: roadItem.id,
+                name: isAdmin ? `🛣️ Autotee Lõik #${i + 1}` : `🛣️ Highway Section #${i + 1}`,
+                category: 'city',
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: roadItem.color
+            });
+            generatedObjectsCount++;
+        }
+
+        // 2. Place Drivable Supercars
+        const vehicleItems = CATALOG_DATABASE.filter(c => c.category === 'vehicles' || c.name.toLowerCase().includes('car') || c.name.toLowerCase().includes('truck'));
+        const car1 = vehicleItems[0] || CATALOG_DATABASE[0];
+        const meshCar1 = createObjectMesh(car1, '#e74c3c');
+        meshCar1.position.set(1.8, 0, -4);
+        scene.add(meshCar1);
+
+        placedObjects.push({
+            id: 'placed_ai_car_' + Date.now() + '_1',
+            mesh: meshCar1,
+            catalogId: car1.id,
+            name: isAdmin ? '🏎️ Sõidetav Supercar' : '🏎️ Drivable Supercar',
+            category: 'vehicles',
+            position: { x: meshCar1.position.x, y: meshCar1.position.y, z: meshCar1.position.z },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#e74c3c'
+        });
+        generatedObjectsCount++;
+
+        if (isAdmin) {
+            aiResponse = `🏎️ <strong>Lõin asfalteeritud autotee ja sõidetava Supercari!</strong><br>Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja astu auto juurde <strong>[F]</strong>, et autoga sõitma hakata!`;
+        } else {
+            aiResponse = `🏎️ <strong>Created an asphalt highway and drivable Supercar!</strong><br>Click <strong>▶️ Play Test Mode</strong> above and approach the car <strong>[F]</strong> to start driving!`;
         }
 
     // 5. SCI-FI / KOSMOS / SPACE
@@ -1891,7 +2008,11 @@ export function executeAiBuild(promptText: string) {
             generatedObjectsCount++;
         }
 
-        aiResponse = `🛸 I created a futuristic space base with alien crystals and structures!`;
+        if (isAdmin) {
+            aiResponse = `🛸 <strong>Lõin futuristliku kosmosebaasi!</strong><br>Paigutasin stseeni ${generatedObjectsCount} kosmoselaeva ja baasistruktuuri!`;
+        } else {
+            aiResponse = `🛸 <strong>Created a futuristic space station!</strong><br>Placed ${generatedObjectsCount} spaceships and structures in the scene!`;
+        }
 
     // 6. DEFAULT / GENERAL SMART GENERATION
     } else {
@@ -1919,7 +2040,11 @@ export function executeAiBuild(promptText: string) {
             generatedObjectsCount++;
         }
 
-        aiResponse = `✨ I analyzed your request and added ${generatedObjectsCount} fitting 3D objects to the scene!`;
+        if (isAdmin) {
+            aiResponse = `✨ <strong>Analüüsisin sinu soovi ja lisasin stseeni ${generatedObjectsCount} 3D objekti!</strong>`;
+        } else {
+            aiResponse = `✨ <strong>Analyzed your prompt and added ${generatedObjectsCount} 3D objects to the scene!</strong>`;
+        }
     }
 
     autoSaveDraft();

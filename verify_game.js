@@ -121,14 +121,14 @@ try {
             await new Promise(r => setTimeout(r, 600));
 
             const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
-            console.log("   AI Smart Addition output:", chatContent.substring(chatContent.lastIndexOf('🚗')).substring(0, 110) + '...');
-            if (!chatContent.includes('autole asju juurde') && !chatContent.includes('tankur')) {
-                throw new Error("AI Smart Contextual addition response failed!");
+            console.log("   AI Smart Addition output (Guest/English):", chatContent.substring(chatContent.lastIndexOf('🚗')).substring(0, 110) + '...');
+            if (!chatContent.includes('Added details to the car') && !chatContent.includes('fuel pump')) {
+                throw new Error("AI Smart Contextual addition response for non-admin failed!");
             }
 
             // Test Smart Contextual Addition to Nature: "kaunista mets"
             console.log("   Testing Smart Contextual Addition to Nature with AI...");
-            await page.type('#ai-prompt-input', 'lisa puudele kivid ja lilled juurde');
+            await page.type('#ai-prompt-input', 'add rocks and flowers to trees');
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
@@ -144,9 +144,9 @@ try {
                 throw new Error("AI Math Solver for 1+1 failed!");
             }
 
-            // Test AI Q&A: "Kuidas autoga sõita?"
-            console.log("   Testing AI Q&A ('Kuidas autoga sõita?')...");
-            await page.type('#ai-prompt-input', 'Kuidas autoga sõita?');
+            // Test AI Q&A: "How to drive car?"
+            console.log("   Testing AI Q&A ('How to drive car?')...");
+            await page.type('#ai-prompt-input', 'How to drive car?');
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
