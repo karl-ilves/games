@@ -505,12 +505,34 @@
                 </div>
             </div>
 
+            <!-- Logic & Script Trigger Settings -->
+            <div style="margin-top: 12px; background: rgba(0,0,0,0.35); padding: 10px; border-radius: 10px; border: 1px solid rgba(46,204,113,0.4);">
+                <div style="font-size: 0.8rem; color: #2ecc71; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <span>📜</span> <span>Mänguloogika / Tekst läbi kõndimisel</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px;">
+                    Kui mängija kõnnib objektist läbi või lähedale, kuvatakse ekraanil:
+                </div>
+                <input type="text" id="obj-trigger-text" placeholder="nt: Leidsid võlumetsa saladuse!" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #0f172a; border: 1.5px solid #2ecc71; border-radius: 6px; color: #fff; font-size: 0.85rem;">
+            </div>
+
             <button id="btn-duplicate-obj" class="btn-studio" style="width: 100%; margin-top: 10px; justify-content: center;">
                 📋 Duplicate Object
             </button>
             <button id="btn-delete-obj" class="btn-danger">
                 🗑️ Delete Object
             </button>
+        </div>
+    </div>
+
+    <!-- In-Game Interaction Dialog Popup (When walking through/near objects) -->
+    <div id="game-dialog-popup" style="display: none; position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95)); border: 2px solid #00f2fe; border-radius: 16px; padding: 12px 24px; color: #fff; z-index: 1200; box-shadow: 0 10px 35px rgba(0,242,254,0.35); backdrop-filter: blur(12px); min-width: 320px; max-width: 600px; text-align: center; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <span id="game-dialog-icon" style="font-size: 1.5rem;">🌲</span>
+            <strong id="game-dialog-title" style="color: #00f2fe; font-size: 0.95rem; text-shadow: 0 0 10px rgba(0,242,254,0.5);">Puu</strong>
+        </div>
+        <div id="game-dialog-text" style="font-size: 1.1rem; font-weight: bold; color: #ffd32a; line-height: 1.4;">
+            "Leidsid võlumetsa saladuse!"
         </div>
     </div>
 

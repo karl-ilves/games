@@ -210,6 +210,7 @@ class CookingGame {
         this.setupUI();
         this.setupEventListeners();
         this.updateYardDisplay();
+        yardService.subscribe(() => this.updateYardDisplay());
 
         // Start Order Generation & Game Loop
         this.spawnOrder();
@@ -995,8 +996,7 @@ class CookingGame {
     private updateYardDisplay() {
         const yardsEl = document.getElementById('hud-yards-val');
         if (yardsEl) {
-            const data = yardService.getYardData();
-            yardsEl.innerText = data.yards.toLocaleString();
+            yardsEl.innerText = yardService.getYards().toLocaleString();
         }
     }
 

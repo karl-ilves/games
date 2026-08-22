@@ -14,10 +14,10 @@ try {
 // 2. Load Check
 (async () => {
     console.log("Starting preview server...");
-    const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173'], { stdio: 'pipe' });
+    const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort'], { stdio: 'ignore' });
     
     // Give it a moment to start
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 2500));
 
     console.log("Launching headless browser to check runtime errors and game platform features...");
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
@@ -146,7 +146,10 @@ try {
         await page.type('#auth-username', 'admin');
         await page.type('#auth-password', 'SecretAdminPass123!');
         await page.click('#btn-register');
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Wait for page ready
+        await page.waitForSelector('#btn-open-admin-panel', { visible: true, timeout: 6000 });
 
         // Check if Admin Panel button is visible for 1karl.ilves@gmail.com
         const adminBtnDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
@@ -165,7 +168,7 @@ try {
         // 4. Test Admin Panel & Give Yards by Username
         console.log("4. Testing Admin Panel & Give Yards by Username...");
         await page.click('#btn-open-admin-panel');
-        await page.waitForSelector('#modal-admin-panel', { visible: true, timeout: 3000 });
+        await page.waitForSelector('#modal-admin-panel', { visible: true, timeout: 4000 });
 
         // Switch to Give Yards Tab
         await page.click('#tab-btn-give-yards');
@@ -240,18 +243,40 @@ try {
                 throw new Error("AI Assistant modal failed to open!");
             }
 
-            // Click AI Quick Build (Parkour / Mets)
-            const aiQuickBtn = await page.$('.ai-quick-btn');
-            if (aiQuickBtn) {
-                await aiQuickBtn.click();
-                await new Promise(r => setTimeout(r, 600));
-                const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
-                console.log("   AI Assistant Chat output:", chatContent.substring(0, 80) + '...');
-                if (!chatContent.includes('AI Builder:')) {
-                    throw new Error("AI Builder response failed to appear in AI Chat log!");
-                }
+            // Test AI Game Assistant with Scripting & Programming Prompt
+            await page.type('#ai-prompt-input', 'kui ma konnin puu seest labi tuleb mulle ette tekst Leidsid volumetsa saladuse!');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            console.log("   AI Programming Chat output:", chatContent.substring(chatContent.lastIndexOf('🤖')).substring(0, 100) + '...');
+            if (!chatContent.includes('Mänguloogika programmeeritud') && !chatContent.includes('AI Builder:')) {
+                throw new Error("AI Programming response failed to appear in chat log!");
             }
             await page.click('#btn-close-ai');
+
+            // Test In-Game Trigger: Walk into tree and verify dialogue popup appears
+            console.log("   Testing In-Game Trigger: Walking towards programmed tree in Play Test Mode...");
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 500));
+
+            // Hold ArrowUp/KeyW to walk towards the tree
+            await page.keyboard.down('KeyW');
+            await page.waitForFunction(() => document.getElementById('game-dialog-popup')?.style.display === 'block', { timeout: 4000 });
+            await page.keyboard.up('KeyW');
+            await new Promise(r => setTimeout(r, 200));
+
+            const dialogVisible = await page.$eval('#game-dialog-popup', el => window.getComputedStyle(el).display);
+            const dialogText = await page.$eval('#game-dialog-text', el => el.textContent);
+            console.log("   In-Game Dialog Popup visibility:", dialogVisible, "Dialog Text:", dialogText);
+
+            if (!dialogText.includes('volumetsa saladuse')) {
+                throw new Error(`In-game trigger popup failed to appear when walking near tree! Got text: ${dialogText}`);
+            }
+
+            // Exit Play Test Mode back to Edit Mode
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
 
             // Test Save Game Button & My Games Modal
             await page.click('#btn-save-draft');

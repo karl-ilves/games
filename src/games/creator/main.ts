@@ -24,6 +24,12 @@ interface PlacedObject {
     rotation: { x: number; y: number; z: number };
     scale: { x: number; y: number; z: number };
     color: string;
+    trigger?: {
+        type: 'touch' | 'proximity';
+        message: string;
+        title?: string;
+        radius?: number;
+    };
 }
 
 let placedObjects: PlacedObject[] = [];
@@ -413,7 +419,8 @@ export function serializeCurrentScene() {
             position: { x: p.mesh.position.x, y: p.mesh.position.y, z: p.mesh.position.z },
             rotation: { x: p.mesh.rotation.x, y: p.mesh.rotation.y, z: p.mesh.rotation.z },
             scale: { x: p.mesh.scale.x, y: p.mesh.scale.y, z: p.mesh.scale.z },
-            color: p.color
+            color: p.color,
+            trigger: p.trigger
         })),
         updatedAt: Date.now()
     };
@@ -498,7 +505,8 @@ export function loadSceneFromData(sceneData: any) {
                 position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
                 rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
                 scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
-                color: objData.color || catItem.color
+                color: objData.color || catItem.color,
+                trigger: objData.trigger
             };
 
             placedObjects.push(placed);
@@ -576,6 +584,11 @@ function selectObject(placed: PlacedObject | null) {
     }
     if (colorInput) {
         colorInput.value = placed.color;
+    }
+
+    const triggerInput = document.getElementById('obj-trigger-text') as HTMLInputElement | null;
+    if (triggerInput) {
+        triggerInput.value = placed.trigger?.message || '';
     }
 }
 
@@ -1084,6 +1097,26 @@ function setupInspectorEvents() {
             }
         });
     }
+
+    const triggerInput = document.getElementById('obj-trigger-text') as HTMLInputElement | null;
+    if (triggerInput) {
+        triggerInput.addEventListener('input', () => {
+            if (selectedObject) {
+                const val = triggerInput.value.trim();
+                if (val) {
+                    selectedObject.trigger = {
+                        type: 'touch',
+                        message: val,
+                        title: selectedObject.name,
+                        radius: 3.5
+                    };
+                } else {
+                    delete selectedObject.trigger;
+                }
+                autoSaveDraft();
+            }
+        });
+    }
 }
 
 let activeFeedbackGameId: string | null = null;
@@ -1301,8 +1334,75 @@ export function executeAiBuild(promptText: string) {
     let generatedObjectsCount = 0;
     let aiResponse = '';
 
+    // 0. SCRIPTING / LOGIC / TRIGGERS (e.g. "kui ma kõnnin puu seest läbi tuleb ette tekst...")
+    const isScriptingPrompt = (
+        (p.includes('läbi') || p.includes('labi') || p.includes('kõnnin') || p.includes('konnin') || p.includes('puudut') || p.includes('astun') || p.includes('touch') || p.includes('walk') || p.includes('trigger') || p.includes('seest')) &&
+        (p.includes('tekst') || p.includes('kiri') || p.includes('teade') || p.includes('dialog') || p.includes('message') || p.includes('sõnum') || p.includes('sonum') || p.includes('ütle') || p.includes('utle') || p.includes('kekst'))
+    ) || p.includes('program') || p.includes('kui ma panen') || p.includes('kui ma lähen') || p.includes('kui ma lahen');
+
+    if (isScriptingPrompt) {
+        // Extract message from quotes or prompt
+        let msg = '';
+        const quoteMatch = promptText.match(/["'„”«»](.*?)["'„”«»]/);
+        if (quoteMatch && quoteMatch[1]) {
+            msg = quoteMatch[1].trim();
+        } else {
+            const textMatch = promptText.match(/(?:tekst|kiri|teade|sõnum|sonum|message|dialog|ütleb|utleb|kekst)\s+(.+)$/i);
+            if (textMatch && textMatch[1]) {
+                msg = textMatch[1].replace(/^[.,:!\s]+/, '').trim();
+            }
+        }
+        if (!msg) {
+            msg = '🌲 Leidsid iidse puu saladuse! Oled edukalt mängu läbinud!';
+        }
+
+        // Determine object target: tree or selected object or new object
+        let targetName = '🌲 Iidne Puu';
+        let targetObj = placedObjects.find(obj => obj.name.toLowerCase().includes('tree') || obj.name.toLowerCase().includes('puu') || obj.category === 'nature');
+
+        if (!targetObj) {
+            // Create a tree in front of the player
+            const natureItems = CATALOG_DATABASE.filter(c => c.category === 'nature' || c.name.toLowerCase().includes('tree') || c.name.toLowerCase().includes('wood'));
+            const treeItem = natureItems[0] || CATALOG_DATABASE[0];
+            const mesh = createObjectMesh(treeItem);
+            mesh.position.set(0, 0, -4.5);
+            mesh.scale.setScalar(treeItem.baseScale * 1.5);
+            scene.add(mesh);
+
+            targetObj = {
+                id: 'placed_ai_tree_' + Date.now(),
+                mesh,
+                catalogId: treeItem.id,
+                name: '🌲 Suur Võlupuu',
+                category: 'nature',
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: treeItem.color,
+                trigger: {
+                    type: 'touch',
+                    message: msg,
+                    title: '🌲 Suur Võlupuu',
+                    radius: 5.0
+                }
+            };
+            placedObjects.push(targetObj);
+            generatedObjectsCount++;
+        } else {
+            targetObj.trigger = {
+                type: 'touch',
+                message: msg,
+                title: targetObj.name,
+                radius: 5.0
+            };
+            targetName = targetObj.name;
+        }
+
+        selectObject(targetObj);
+        aiResponse = `🤖 <strong>Mänguloogika programmeeritud!</strong><br>Lisasin objektile <strong>${targetName}</strong> päästiku (Trigger).<br>👉 Kui mängija kõnnib sellest läbi või lähedale, ilmub ekraanile tekst:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja kõnni puu juurde, et seda kohe testida!`;
+
     // 1. PARKOUR / OBSTACLES
-    if (p.includes('parkour') || p.includes('rada') || p.includes('hüp') || p.includes('jump') || p.includes('obstacle') || p.includes('takistus')) {
+    } else if (p.includes('parkour') || p.includes('rada') || p.includes('hüp') || p.includes('jump') || p.includes('obstacle') || p.includes('takistus')) {
         if (titleInput) titleInput.value = 'AI Parkour Challenge';
         if (catSelect) catSelect.value = 'Platformer';
         if (descInput) descInput.value = 'Exciting 3D Parkour course generated with Playard AI!';
@@ -1553,7 +1653,39 @@ function animate() {
         );
         camera.position.lerp(targetCamPos, 0.1);
         camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.6, humanCharacter.position.z);
+
+        // Check Triggers & Dialogue (e.g. Walking through tree / proximity)
+        let activeTrigger: PlacedObject | null = null;
+        for (const p of placedObjects) {
+            if (p.trigger && p.trigger.message) {
+                const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
+                const rad = p.trigger.radius || 3.8;
+                if (dist <= rad) {
+                    activeTrigger = p;
+                    break;
+                }
+            }
+        }
+
+        const dialogPopup = document.getElementById('game-dialog-popup');
+        const dialogTitle = document.getElementById('game-dialog-title');
+        const dialogText = document.getElementById('game-dialog-text');
+        const dialogIcon = document.getElementById('game-dialog-icon');
+
+        if (activeTrigger && dialogPopup && dialogTitle && dialogText && dialogIcon) {
+            const isTree = activeTrigger.name.toLowerCase().includes('tree') || activeTrigger.name.toLowerCase().includes('puu') || activeTrigger.category === 'nature';
+            dialogIcon.innerText = isTree ? '🌲' : (activeTrigger.category === 'gameplay' ? '💎' : '💬');
+            dialogTitle.innerText = activeTrigger.trigger?.title || activeTrigger.name;
+            dialogText.innerText = `"${activeTrigger.trigger?.message}"`;
+            dialogPopup.style.display = 'block';
+        } else if (dialogPopup && dialogPopup.style.display !== 'none') {
+            dialogPopup.style.display = 'none';
+        }
     } else {
+        const dialogPopup = document.getElementById('game-dialog-popup');
+        if (dialogPopup && dialogPopup.style.display !== 'none') {
+            dialogPopup.style.display = 'none';
+        }
         // Edit Mode: Smooth Camera Pan with Arrow Keys and WASD
         const panSpeed = 16;
         const panDir = new THREE.Vector3();
