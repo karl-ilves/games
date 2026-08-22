@@ -76,7 +76,7 @@ const RECIPES = [
         ingredients: ['bun_bottom', 'cooked_patty', 'cheese_slice', 'lettuce_chopped', 'tomato_chopped', 'bun_top'],
         yardReward: 20,
         scoreReward: 200,
-        patience: 45
+        patience: 80
     },
     {
         key: 'double_burger',
@@ -86,7 +86,7 @@ const RECIPES = [
         ingredients: ['bun_bottom', 'cooked_patty', 'cheese_slice', 'cooked_patty', 'cheese_slice', 'onion_chopped', 'bun_top'],
         yardReward: 30,
         scoreReward: 300,
-        patience: 50
+        patience: 90
     },
     {
         key: 'pepperoni_pizza',
@@ -96,7 +96,7 @@ const RECIPES = [
         ingredients: ['pizza_dough', 'tomato_sauce', 'cheese_slice', 'pepperoni_chopped', 'baked_in_oven'],
         yardReward: 35,
         scoreReward: 350,
-        patience: 55
+        patience: 100
     },
     {
         key: 'fries',
@@ -106,7 +106,7 @@ const RECIPES = [
         ingredients: ['fried_crispy', 'salt_sauce'],
         yardReward: 15,
         scoreReward: 150,
-        patience: 35
+        patience: 70
     },
     {
         key: 'steak_deluxe',
@@ -116,7 +116,7 @@ const RECIPES = [
         ingredients: ['cooked_steak', 'mushrooms_chopped', 'tomato_chopped', 'lettuce_chopped'],
         yardReward: 40,
         scoreReward: 400,
-        patience: 50
+        patience: 90
     },
     {
         key: 'pasta_bolognese',
@@ -126,7 +126,7 @@ const RECIPES = [
         ingredients: ['boiled_pasta', 'tomato_sauce', 'cooked_patty', 'cheese_slice'],
         yardReward: 30,
         scoreReward: 300,
-        patience: 50
+        patience: 90
     }
 ];
 
@@ -1062,7 +1062,7 @@ class CookingGame {
                     <div style="font-size: 0.8rem; color: #a4b0be;">${isEt ? 'Pane pitsapõhi ahju küpsema!' : 'Put pizza crust into oven to bake!'}</div>
                 </div>
                 <button class="btn-action" id="btn-oven-bake-pizza" onclick="window.cookingGame.bakePizza()" style="background: #e67e22; font-weight: bold; padding: 10px 20px; cursor: pointer;">
-                    🍕 ${isEt ? 'Pane Pitsa Ahju (5s)' : 'Put Pizza into Oven (5s)'}
+                    🍕 ${isEt ? 'Pane Pitsa Ahju (10s)' : 'Put Pizza into Oven (10s)'}
                 </button>
             `;
         } else if (this.oven.state === 'baking') {
@@ -1107,16 +1107,16 @@ class CookingGame {
     private tickCooking() {
         let stateChanged = false;
 
-        // Tick pans
+        // Tick pans (1.0 = ~10 seconds for 100% cooking)
         this.pans.forEach(pan => {
             if (pan.state === 'cooking') {
-                pan.progress += 2.0; // ~5 seconds for 100%
-                if (pan.progress >= 100 && pan.progress < 160) {
+                pan.progress += 1.0; // Poole pikem aeg küpsetamiseks
+                if (pan.progress >= 100 && pan.progress < 200) {
                     if (pan.state !== 'done') {
                         pan.state = 'done';
                         stateChanged = true;
                     }
-                } else if (pan.progress >= 160) {
+                } else if (pan.progress >= 200) {
                     if (pan.state !== 'burned') {
                         pan.state = 'burned';
                         stateChanged = true;
@@ -1143,9 +1143,9 @@ class CookingGame {
             this.renderStovePans();
         }
 
-        // Tick oven
+        // Tick oven (1.0 = ~10 seconds for baking)
         if (this.oven.state === 'baking') {
-            this.oven.progress += 2.0;
+            this.oven.progress += 1.0; // Poole pikem aeg küpsetamiseks
             if (this.oven.progress >= 100) {
                 this.oven.state = 'done';
                 kitchenAudio.playBell();
