@@ -150,9 +150,37 @@ try {
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
-            const qaChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
-            if (!qaChatContent.includes('Play Test') && !qaChatContent.includes('[F]')) {
-                throw new Error("AI Q&A for driving instructions failed!");
+            // Test AI World Knowledge Q&A: "What are the largest airplanes in the world?"
+            console.log("   Testing AI World Knowledge Q&A ('Largest airplanes')...");
+            await page.type('#ai-prompt-input', 'What are the largest airplanes in the world?');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const planeChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!planeChatContent.includes('Antonov An-225') && !planeChatContent.includes('Airbus A380')) {
+                throw new Error("AI World Knowledge for largest airplanes failed!");
+            }
+
+            // Test AI Game Logic Programming: "Program a speed boost trigger"
+            console.log("   Testing AI Game Logic Programming ('Program speed boost')...");
+            await page.type('#ai-prompt-input', 'Program a speed boost trigger');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const progChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!progChatContent.includes('successfully programmed') && !progChatContent.includes('speed_boost')) {
+                throw new Error("AI Game Logic Programming failed!");
+            }
+
+            // Test Custom Procedural 3D Entity (not in catalog): "Create a giant robot"
+            console.log("   Testing Custom Procedural 3D Entity Creation ('Create a giant robot')...");
+            await page.type('#ai-prompt-input', 'Create a giant robot');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const customObjChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!customObjChat.includes('custom 3D model') && !customObjChat.includes('Robot')) {
+                throw new Error("Custom Procedural 3D Entity creation failed!");
             }
 
             await page.click('#btn-close-ai');

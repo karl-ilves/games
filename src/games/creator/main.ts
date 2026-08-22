@@ -1515,6 +1515,173 @@ export function setupAiAssistantEvents() {
     });
 }
 
+function hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return hash;
+}
+
+// --- Create Procedural 3D Mesh for any Custom Entity (not in catalog) ---
+function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
+    const group = new THREE.Group();
+    const p = (prompt + ' ' + name).toLowerCase();
+
+    // 1. DINOSAUR / DRAGON / MONSTER / CREATURE
+    if (p.includes('dino') || p.includes('t-rex') || p.includes('draakon') || p.includes('dragon') || p.includes('monster') || p.includes('koll') || p.includes('loom') || p.includes('creature')) {
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.6 });
+        const bellyMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.6 });
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: 0xe74c3c, emissiveIntensity: 0.6 });
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.5, 3.2), bodyMat);
+        body.position.y = 2.0;
+        group.add(body);
+
+        const belly = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 0.4), bellyMat);
+        belly.position.set(0, 1.8, 1.65);
+        group.add(belly);
+
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.4, 2.2), bodyMat);
+        head.position.set(0, 3.8, 1.4);
+        group.add(head);
+
+        [-0.85, 0.85].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 6), eyeMat);
+            eye.position.set(x, 4.1, 1.8);
+            group.add(eye);
+        });
+
+        const tail = new THREE.Mesh(new THREE.ConeGeometry(0.8, 3.0, 5), bodyMat);
+        tail.position.set(0, 1.8, -2.5);
+        tail.rotation.x = -Math.PI / 3;
+        group.add(tail);
+
+        [-0.9, 0.9].forEach(x => {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.6, 0.9), bodyMat);
+            leg.position.set(x, 0.8, 0);
+            group.add(leg);
+        });
+
+    // 2. ROBOT / MECHA / CYBORG / ANDROID / MECH
+    } else if (p.includes('robot') || p.includes('mecha') || p.includes('cyborg') || p.includes('android') || p.includes('droid') || p.includes('mech')) {
+        const metalMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, metalness: 0.8, roughness: 0.3 });
+        const coreMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xf39c12, metalness: 0.6 });
+
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.2, 1.2), metalMat);
+        torso.position.y = 2.2;
+        group.add(torso);
+
+        const core = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.2, 8), coreMat);
+        core.rotation.x = Math.PI / 2;
+        core.position.set(0, 2.4, 0.65);
+        group.add(core);
+
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.0), metalMat);
+        head.position.set(0, 3.8, 0);
+        group.add(head);
+
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.25, 0.2), coreMat);
+        visor.position.set(0, 3.8, 0.55);
+        group.add(visor);
+
+        const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.8), goldMat);
+        antenna.position.set(0, 4.6, 0);
+        group.add(antenna);
+
+        [-1.3, 1.3].forEach(x => {
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 0.5), goldMat);
+            arm.position.set(x, 2.0, 0);
+            group.add(arm);
+        });
+        [-0.6, 0.6].forEach(x => {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.6), metalMat);
+            leg.position.set(x, 0.7, 0);
+            group.add(leg);
+        });
+
+    // 3. CASTLE / FORTRESS / TOWER / PYRAMID / TEMPLE
+    } else if (p.includes('loss') || p.includes('castle') || p.includes('kindlus') || p.includes('fort') || p.includes('püramiid') || p.includes('pyramid') || p.includes('tempel') || p.includes('torn') || p.includes('palace')) {
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.9 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x9b59b6, roughness: 0.5 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.3 });
+
+        if (p.includes('püramiid') || p.includes('pyramid')) {
+            const pyr = new THREE.Mesh(new THREE.ConeGeometry(4.5, 5.0, 4), new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.8 }));
+            pyr.position.y = 2.5;
+            pyr.rotation.y = Math.PI / 4;
+            group.add(pyr);
+        } else {
+            const keep = new THREE.Mesh(new THREE.BoxGeometry(4.0, 4.0, 4.0), stoneMat);
+            keep.position.y = 2.0;
+            group.add(keep);
+
+            [-2.0, 2.0].forEach(tx => {
+                [-2.0, 2.0].forEach(tz => {
+                    const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 5.5, 8), stoneMat);
+                    tower.position.set(tx, 2.75, tz);
+                    group.add(tower);
+
+                    const troof = new THREE.Mesh(new THREE.ConeGeometry(1.0, 2.0, 8), roofMat);
+                    troof.position.set(tx, 6.2, tz);
+                    group.add(troof);
+                });
+            });
+
+            const gate = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.2, 0.4), goldMat);
+            gate.position.set(0, 1.1, 2.05);
+            group.add(gate);
+        }
+
+    // 4. SUBMARINE / SHIP / BOAT / HELICOPTER / PLANE
+    } else if (p.includes('allveelaev') || p.includes('submarine') || p.includes('laev') || p.includes('ship') || p.includes('boat') || p.includes('paat') || p.includes('kopter') || p.includes('copter')) {
+        const hullMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.5 });
+        const yellowMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.5 });
+
+        const hull = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 5.0, 12), yellowMat);
+        hull.rotation.x = Math.PI / 2;
+        hull.position.y = 1.6;
+        group.add(hull);
+
+        const nose = new THREE.Mesh(new THREE.SphereGeometry(1.0, 12, 12), yellowMat);
+        nose.position.set(0, 1.6, 2.5);
+        group.add(nose);
+
+        const conningTower = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 1.6), hullMat);
+        conningTower.position.set(0, 2.8, 0.2);
+        group.add(conningTower);
+
+        const periscope = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8), glassMat);
+        periscope.position.set(0, 3.6, 0.5);
+        group.add(periscope);
+
+    // 5. GENERIC PROCEDURAL COMPOSITE 3D OBJECT
+    } else {
+        const colorPalette = [0x9b59b6, 0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22, 0x1abc9c];
+        const chosenColor = colorPalette[Math.abs(hashString(name)) % colorPalette.length];
+        const mainMat = new THREE.MeshStandardMaterial({ color: chosenColor, roughness: 0.4, metalness: 0.3 });
+        const glowMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.6 });
+
+        const core = new THREE.Mesh(new THREE.DodecahedronGeometry(1.6, 1), mainMat);
+        core.position.y = 1.8;
+        group.add(core);
+
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.15, 8, 24), glowMat);
+        ring.position.y = 1.8;
+        ring.rotation.x = Math.PI / 3;
+        group.add(ring);
+
+        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.2, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x2c3e50 }));
+        pedestal.position.y = 0.25;
+        group.add(pedestal);
+    }
+
+    return group;
+}
+
 export function executeAiBuild(promptText: string) {
     const chatLog = document.getElementById('ai-chat-log');
     const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
@@ -1573,7 +1740,28 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `🧮 <strong>Result:</strong><br><span style="font-size: 1.25rem; color: #ffd32a; font-weight: bold;">${mathExpr} = ${mathResult}</span><br><br>💡 I can calculate any arithmetic expression (addition, subtraction, multiplication, division, powers)!`;
         }
 
-    // --- 0.1 GENERAL QUESTIONS & PLAYARD ASSISTANT Q&A ---
+    // --- 0.1 GENERAL KNOWLEDGE & WORLD ENCYCLOPEDIA Q&A (e.g. Largest Airplanes, Speed, World records) ---
+    } else if (
+        (p.includes('lennuk') || p.includes('plane') || p.includes('airplane') || p.includes('aircraft')) &&
+        (p.includes('suurim') || p.includes('suurima') || p.includes('largest') || p.includes('biggest') || p.includes('raskeim') || p.includes('heaviest'))
+    ) {
+        if (isAdmin) {
+            aiResponse = `✈️ <strong>Maailma Suurimad Lennukid:</strong><br>
+            1. <strong>Antonov An-225 Mriya</strong> — Maailma kõigi aegade raskeim ja pikim 6-mootoriline hiigellennuk (tiivaulatus 88.4 m, maksimaalne stardikaal 640 tonni).<br>
+            2. <strong>Stratolaunch Roc</strong> — Maailma suurima tiivaulatusega lennuk (117 meetrit / 385 jalga, kahe kere ja 6 Boeing 747 mootoriga kosmoserakettide kandja).<br>
+            3. <strong>Airbus A380-800</strong> — Maailma suurim kahekorruseline reisilennuk (kuni 853 reisijat, tiivaulatus 79.75 m).<br>
+            4. <strong>Boeing 747-8</strong> — Maailma pikim reisilennuk (pikkus 76.3 meetrit, tuntud kui "Taevakuninganna").<br>
+            5. <strong>Hughes H-4 Hercules ("Spruce Goose")</strong> — Ajalooline puidust hiiglaslik lennupaat (tiivaulatus 97.5 meetrit).`;
+        } else {
+            aiResponse = `✈️ <strong>World's Largest Airplanes:</strong><br>
+            1. <strong>Antonov An-225 Mriya</strong> — Heaviest and longest cargo aircraft ever built (wingspan 88.4m, max takeoff weight 640t).<br>
+            2. <strong>Stratolaunch Roc</strong> — Largest wingspan in aviation history (117m / 385ft double-fuselage carrier aircraft).<br>
+            3. <strong>Airbus A380-800</strong> — World's largest passenger airliner (full double-decker carrying up to 853 passengers).<br>
+            4. <strong>Boeing 747-8</strong> — Longest passenger airliner in service (76.3 meters long).<br>
+            5. <strong>Hughes H-4 Hercules ("Spruce Goose")</strong> — Iconic historical flying boat with 97.5m wingspan.`;
+        }
+
+    // --- 0.2 GAMEPLAY Q&A (How to drive, jump, save, earn yards, etc.) ---
     } else if (
         p.includes('kuidas autoga') || p.includes('kuidas soita') || p.includes('kuidas sõita') || p.includes('auto juhtimine') ||
         p.includes('how to drive') || p.includes('drive car') || p.includes('drive a car')
@@ -1584,7 +1772,7 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `🚗 <strong>How to Drive Cars:</strong><br>1. Click <strong>▶️ Play Test Mode</strong> in the top bar.<br>2. Walk close to any car — press <strong>[F]</strong> to enter.<br>3. Drive with <strong>W / ⬆️</strong> (Gas), <strong>S / ⬇️</strong> (Brake/Reverse), and <strong>A / D</strong> (Steer).<br>4. Press <strong>[F]</strong> again to exit!`;
         }
 
-    } else if (p.includes('kuidas hüpata') || p.includes('kuidas hupata') || p.includes('kuidas hüppan') || p.includes('how to jump') || p.includes('jump')) {
+    } else if (p.includes('kuidas hüpata') || p.includes('kuidas hupata') || p.includes('kuidas hüppan') || p.includes('how to jump') || (p.includes('jump') && !p.includes('pad') && !p.includes('parkour'))) {
         if (isAdmin) {
             aiResponse = `🚀 <strong>Kuidas hüpata:</strong><br>Vajuta klaviatuuril <strong>SPACE</strong> (tühikuklahvi) või vajuta ekraani all paremal asuvat sinist nuppu <strong>JUMP 🚀</strong>!`;
         } else {
@@ -1600,9 +1788,9 @@ export function executeAiBuild(promptText: string) {
 
     } else if (p.includes('kes sa oled') || p.includes('mis sa oled') || p.includes('who are you') || p.includes('what are you')) {
         if (isAdmin) {
-            aiResponse = `🤖 <strong>Olen sinu Playard AI Mänguassistent!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, arvutada matemaatilisi tehteid (nt 1+1) ning programmeerida mänguloogikat ja dialooge!`;
+            aiResponse = `🤖 <strong>Olen sinu Playard AI Mänguassistent!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, genereerida uusi unikaalseid 3D objekte (dinosaurused, robotid, lossid jne), arvutada matemaatikat (nt 1+1), vastata maailma faktidele (nt mis lennukid on suurimad) ning programmeerida mänguloogikat!`;
         } else {
-            aiResponse = `🤖 <strong>I am your Playard AI Game Assistant!</strong><br>I can build 3D worlds, construct asphalt roads with drivable cars, decorate environments, solve math calculations (like 1+1), and program interactive game logic!`;
+            aiResponse = `🤖 <strong>I am your Playard AI Game Assistant!</strong><br>I can build 3D worlds, construct asphalt roads with drivable cars, create custom 3D models (dinosaurs, robots, castles), solve math (1+1), answer general knowledge (e.g. largest airplanes), and program interactive game logic!`;
         }
 
     } else if (p.includes('mis mäng see on') || p.includes('mis mang see on') || p.includes('mis on playard') || p.includes('what is playard') || p.includes('what game is this')) {
@@ -1633,73 +1821,90 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `💎 <strong>Earning Yards Currency:</strong><br>Earn Yards by playing 3D simulators, claiming Daily Rewards streaks, or redeeming promo codes in your Wallet!`;
         }
 
-    // 0. SCRIPTING / LOGIC / TRIGGERS (e.g. "kui ma kõnnin puu seest läbi tuleb ette tekst...")
-    } else if ((
-        (p.includes('läbi') || p.includes('labi') || p.includes('kõnnin') || p.includes('konnin') || p.includes('puudut') || p.includes('astun') || p.includes('touch') || p.includes('walk') || p.includes('trigger') || p.includes('seest')) &&
-        (p.includes('tekst') || p.includes('kiri') || p.includes('teade') || p.includes('dialog') || p.includes('message') || p.includes('sõnum') || p.includes('sonum') || p.includes('ütle') || p.includes('utle') || p.includes('kekst'))
-    ) || p.includes('program') || p.includes('kui ma panen') || p.includes('kui ma lähen') || p.includes('kui ma lahen')) {
-        // Extract message from quotes or prompt
+    // --- 0.3 VERSATILE GAME PROGRAMMING ENGINE (Program whatever creator wants: text, speed boost, jump pad, yards bonus) ---
+    } else if (
+        p.includes('program') || p.includes('progameeri') || p.includes('skript') || p.includes('script') ||
+        p.includes('kui ma') || p.includes('kui mängija') || p.includes('kui mangija') || p.includes('when player') || p.includes('if player') ||
+        p.includes('trigger') || p.includes('päästik') || p.includes('paastik')
+    ) {
+        let behaviorType = 'dialog';
         let msg = '';
-        const quoteMatch = promptText.match(/["'„”«»](.*?)["'„”«»]/);
-        if (quoteMatch && quoteMatch[1]) {
-            msg = quoteMatch[1].trim();
+        let triggerTitle = isAdmin ? '✨ Interaktiivne Objekt' : '✨ Interactive Object';
+
+        // Detect desired behavior type
+        if (p.includes('kiirus') || p.includes('speed') || p.includes('boost')) {
+            behaviorType = 'speed_boost';
+            msg = isAdmin ? '⚡ Kiiruseboonus aktiveeritud (Speed Boost +100%)!' : '⚡ Speed Boost Activated (+100%)!';
+            triggerTitle = isAdmin ? '⚡ Kiirenduspadi' : '⚡ Speed Booster';
+        } else if (p.includes('hüpe') || p.includes('hupe') || p.includes('jump pad') || p.includes('bounce') || p.includes('lennuta')) {
+            behaviorType = 'super_jump';
+            msg = isAdmin ? '🚀 Superhüpe sooritatud!' : '🚀 Super Jump Boost Launched!';
+            triggerTitle = isAdmin ? '🚀 Superhüppe Padi' : '🚀 Jump Pad';
+        } else if (p.includes('yard') || p.includes('raha') || p.includes('punkt') || p.includes('score') || p.includes('coin')) {
+            behaviorType = 'reward_yards';
+            msg = isAdmin ? '💎 Kogusid boonuseks +50 Yardi!' : '💎 Collected +50 Yards Bonus!';
+            triggerTitle = isAdmin ? '💎 Boonuskristall' : '💎 Reward Crystal';
         } else {
-            const textMatch = promptText.match(/(?:tekst|kiri|teade|sõnum|sonum|message|dialog|ütleb|utleb|kekst)\s+(.+)$/i);
-            if (textMatch && textMatch[1]) {
-                msg = textMatch[1].replace(/^[.,:!\s]+/, '').trim();
+            // Extract custom dialogue/text
+            const quoteMatch = promptText.match(/["'„”«»](.*?)["'„”«»]/);
+            if (quoteMatch && quoteMatch[1]) {
+                msg = quoteMatch[1].trim();
+            } else {
+                const textMatch = promptText.match(/(?:tekst|kiri|teade|sõnum|sonum|message|dialog|ütleb|utleb|kekst|says|shows|text)\s+(.+)$/i);
+                if (textMatch && textMatch[1]) {
+                    msg = textMatch[1].replace(/^[.,:!\s]+/, '').trim();
+                }
+            }
+            if (!msg) {
+                msg = isAdmin ? '✨ Avastasid interaktiivse mänguobjekti saladuse!' : '✨ You discovered the secret of the interactive object!';
             }
         }
-        if (!msg) {
-            msg = isAdmin ? '🌲 Leidsid iidse puu saladuse! Oled edukalt mängu läbinud!' : '🌲 You discovered the secret of the ancient tree!';
-        }
 
-        // Determine object target: tree or selected object or new object
-        let targetName = isAdmin ? '🌲 Iidne Puu' : '🌲 Ancient Tree';
-        let targetObj = placedObjects.find(obj => obj.name.toLowerCase().includes('tree') || obj.name.toLowerCase().includes('puu') || obj.category === 'nature');
-
+        // Target existing selected object or create interactive beacon
+        let targetObj = selectedObject || placedObjects[placedObjects.length - 1];
         if (!targetObj) {
-            // Create a tree in front of the player
-            const natureItems = CATALOG_DATABASE.filter(c => c.category === 'nature' || c.name.toLowerCase().includes('tree') || c.name.toLowerCase().includes('wood'));
-            const treeItem = natureItems[0] || CATALOG_DATABASE[0];
-            const mesh = createObjectMesh(treeItem);
-            mesh.position.set(0, 0, -4.5);
-            mesh.scale.setScalar(treeItem.baseScale * 1.5);
-            scene.add(mesh);
+            const padGroup = new THREE.Group();
+            const padMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.6 });
+            const padMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.8, 0.3, 16), padMat);
+            padMesh.position.y = 0.15;
+            padGroup.add(padMesh);
+
+            const beaconMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.8), new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xffd32a, emissiveIntensity: 0.8 }));
+            beaconMesh.position.y = 1.6;
+            padGroup.add(beaconMesh);
+
+            scene.add(padGroup);
+            padGroup.position.set(0, 0, -4);
 
             targetObj = {
-                id: 'placed_ai_tree_' + Date.now(),
-                mesh,
-                catalogId: treeItem.id,
-                name: isAdmin ? '🌲 Suur Võlupuu' : '🌲 Magic Tree',
-                category: 'nature',
-                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                id: 'placed_ai_script_' + Date.now(),
+                mesh: padGroup,
+                catalogId: 'custom_script_obj',
+                name: triggerTitle,
+                category: 'gameplay',
+                position: { x: padGroup.position.x, y: padGroup.position.y, z: padGroup.position.z },
                 rotation: { x: 0, y: 0, z: 0 },
-                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
-                color: treeItem.color,
-                trigger: {
-                    type: 'touch',
-                    message: msg,
-                    title: isAdmin ? '🌲 Suur Võlupuu' : '🌲 Magic Tree',
-                    radius: 5.0
-                }
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#00f2fe'
             };
             placedObjects.push(targetObj);
             generatedObjectsCount++;
-        } else {
-            targetObj.trigger = {
-                type: 'touch',
-                message: msg,
-                title: targetObj.name,
-                radius: 5.0
-            };
-            targetName = targetObj.name;
         }
 
+        targetObj.trigger = {
+            type: 'touch',
+            behavior: behaviorType,
+            message: msg,
+            title: triggerTitle,
+            radius: 5.0
+        };
+
         selectObject(targetObj);
+
         if (isAdmin) {
-            aiResponse = `🤖 <strong>Mänguloogika programmeeritud!</strong><br>Lisasin objektile <strong>${targetName}</strong> päästiku (Trigger).<br>👉 Kui mängija kõnnib sellest läbi või lähedale, ilmub ekraanile tekst:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja kõnni puu juurde, et seda kohe testida!`;
+            aiResponse = `🤖 <strong>Mänguloogika edukalt programmeeritud!</strong><br>Objektile <strong>${targetObj.name}</strong> määrati käitumine: <strong>${behaviorType}</strong>.<br>👉 Tulemus mängijale:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Vajuta <strong>▶️ Play Test Mode</strong> ja kõnni objekti juurde, et seda kohe testida!`;
         } else {
-            aiResponse = `🤖 <strong>Game logic programmed!</strong><br>Added trigger to <strong>${targetName}</strong>.<br>👉 Walking near it displays:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Click <strong>▶️ Play Test Mode</strong> and test it!`;
+            aiResponse = `🤖 <strong>Game logic successfully programmed!</strong><br>Assigned logic (<strong>${behaviorType}</strong>) to <strong>${targetObj.name}</strong>.<br>👉 Player action result:<br><em style="color: #ffd32a; font-size: 1.05rem;">"${msg}"</em><br><br>💡 Click <strong>▶️ Play Test Mode</strong> and walk near it to test!`;
         }
 
     // 1. PARKOUR / OBSTACLES
@@ -2018,36 +2223,33 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `🛸 <strong>Created a futuristic space station!</strong><br>Placed ${generatedObjectsCount} spaceships and structures in the scene!`;
         }
 
-    // 6. DEFAULT / GENERAL SMART GENERATION
+    // 6. PROCEDURAL CUSTOM 3D CREATION FOR ANY OTHER OBJECT / NON-CATALOG REQUEST
     } else {
-        const matches = CATALOG_DATABASE.filter(c => p.includes(c.name.toLowerCase()) || p.includes(c.category));
-        const pool = matches.length > 0 ? matches : CATALOG_DATABASE;
+        let customName = promptText.replace(/(?:loo|lisa|tekit|tee|ehita|create|spawn|add|make|build|generate)/gi, '').trim();
+        if (!customName || customName.length < 2) customName = isAdmin ? '3D Kohandatud Mudel' : '3D Custom Model';
+        customName = customName.charAt(0).toUpperCase() + customName.slice(1);
 
-        for (let i = 0; i < 6; i++) {
-            const item = pool[Math.floor(Math.random() * pool.length)];
-            const mesh = createObjectMesh(item);
-            mesh.position.set((Math.random() - 0.5) * 20, 0, (Math.random() - 0.5) * 20);
-            mesh.scale.setScalar(item.baseScale);
-            scene.add(mesh);
+        const customMesh = createCustomProceduralMesh(promptText, customName);
+        customMesh.position.set(0, 0, -4.5);
+        scene.add(customMesh);
 
-            placedObjects.push({
-                id: 'placed_ai_' + Date.now() + '_' + i,
-                mesh,
-                catalogId: item.id,
-                name: item.name,
-                category: item.category,
-                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
-                rotation: { x: 0, y: 0, z: 0 },
-                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
-                color: item.color
-            });
-            generatedObjectsCount++;
-        }
+        placedObjects.push({
+            id: 'placed_ai_custom_' + Date.now(),
+            mesh: customMesh,
+            catalogId: 'procedural_' + Date.now(),
+            name: `✨ ${customName}`,
+            category: 'custom',
+            position: { x: customMesh.position.x, y: customMesh.position.y, z: customMesh.position.z },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#00f2fe'
+        });
+        generatedObjectsCount++;
 
         if (isAdmin) {
-            aiResponse = `✨ <strong>Analüüsisin sinu soovi ja lisasin stseeni ${generatedObjectsCount} 3D objekti!</strong>`;
+            aiResponse = `✨ <strong>Lõin sinu kirjelduse põhjal täiesti uue 3D mudeli!</strong><br>Paigutasin stseeni: <strong>✨ ${customName}</strong>.`;
         } else {
-            aiResponse = `✨ <strong>Analyzed your prompt and added ${generatedObjectsCount} 3D objects to the scene!</strong>`;
+            aiResponse = `✨ <strong>Created a brand new custom 3D model based on your request!</strong><br>Spawned in scene: <strong>✨ ${customName}</strong>.`;
         }
     }
 
