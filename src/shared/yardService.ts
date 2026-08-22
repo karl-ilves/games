@@ -5,22 +5,60 @@ export interface YardData {
     streak: number; // 0 to 7
     lastClaimTimestamp: number; // ms
     inventory: string[];
+    redeemedCodes: string[];
     transactions: {
         id: string;
         amount: number;
-        type: 'earn' | 'spend' | 'bonus' | 'claim';
+        type: 'earn' | 'spend' | 'bonus' | 'claim' | 'promo' | 'admin_grant';
         reason: string;
         timestamp: number;
     }[];
 }
 
+export interface AdminYardLog {
+    id: string;
+    adminEmail: string;
+    targetUsername: string;
+    amount: number;
+    reason: string;
+    timestamp: number;
+}
+
+export interface CreatedGame {
+    id: string;
+    userId?: string;
+    creatorUsername: string;
+    title: string;
+    description: string;
+    category: string;
+    thumbnail?: string;
+    sceneData: any;
+    status: 'pending_review' | 'approved' | 'rejected' | 'changes_requested';
+    feedback?: string;
+    plays: number;
+    createdAt: number;
+    updatedAt: number;
+}
+
 const PRIMARY_STORAGE_KEY = 'playard_yards_data';
 const STORAGE_PREFIX = 'playard_yards_';
+const ADMIN_LOGS_KEY = 'playard_admin_yard_logs';
+const GAMES_STORAGE_KEY = 'playard_user_created_games';
+
 const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_IN_48_HOURS = 48 * 60 * 60 * 1000;
 
 const DAILY_STREAK_REWARD = 100;
 const DAY_7_JACKPOT_REWARD = 500;
+
+export const PROMO_CODES: Record<string, number> = {
+    'SKYAVIATION2': 250,
+    'PLAYARD2026': 500,
+    'YARDS1000': 1000,
+    'YOUTUBE': 100,
+    'ADMINSPECIAL': 2000,
+    'CREATOR': 300
+};
 
 class YardService {
     private data: YardData;
@@ -39,7 +77,6 @@ class YardService {
 
     private loadLocalData(): YardData {
         try {
-            // Check user-specific key first if logged in, otherwise primary key
             const key = this.getUserStorageKey();
             let raw = localStorage.getItem(key);
             if (!raw) {
@@ -52,6 +89,7 @@ class YardService {
                     streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
                     lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
                     inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
+                    redeemedCodes: Array.isArray(parsed.redeemedCodes) ? parsed.redeemedCodes : [],
                     transactions: Array.isArray(parsed.transactions) ? parsed.transactions : []
                 };
             }
@@ -64,6 +102,7 @@ class YardService {
             streak: 0,
             lastClaimTimestamp: 0,
             inventory: [],
+            redeemedCodes: [],
             transactions: []
         };
     }
@@ -93,6 +132,7 @@ class YardService {
                             streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
                             lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
                             inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
+                            redeemedCodes: Array.isArray(parsed.redeemedCodes) ? parsed.redeemedCodes : [],
                             transactions: Array.isArray(parsed.transactions) ? parsed.transactions : []
                         };
                         this.notifyListeners();
@@ -111,7 +151,6 @@ class YardService {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
                 this.currentUserId = session.user.id;
-                // Merge/load user data
                 const userLocal = this.loadLocalData();
                 if (userLocal.yards > this.data.yards) {
                     this.data = userLocal;
@@ -138,7 +177,6 @@ class YardService {
     private async syncWithCloud(userId: string) {
         if (!supabase || !userId) return;
         try {
-            // Attempt to load from user_yards table
             const { data: yardRecord, error: yardErr } = await supabase
                 .from('user_yards')
                 .select('*')
@@ -146,7 +184,6 @@ class YardService {
                 .single();
 
             if (yardRecord && !yardErr && typeof yardRecord.yards === 'number') {
-                // If cloud has more or equal, adopt cloud state
                 if (yardRecord.yards >= this.data.yards) {
                     this.data.yards = yardRecord.yards;
                     this.data.streak = yardRecord.streak ?? this.data.streak;
@@ -156,11 +193,9 @@ class YardService {
                     }
                     this.saveLocally(this.data);
                 } else {
-                    // Local has more (e.g. offline play), sync local to cloud
                     await this.saveToCloud();
                 }
             } else {
-                // If not found in user_yards, check user_progress table (fallback)
                 const { data: progRecord } = await supabase
                     .from('user_progress')
                     .select('yards')
@@ -175,7 +210,6 @@ class YardService {
                         await this.saveToCloud();
                     }
                 } else {
-                    // First time save to cloud for this account
                     await this.saveToCloud();
                 }
             }
@@ -198,10 +232,7 @@ class YardService {
                     updated_at: new Date().toISOString()
                 };
 
-                // Upsert to user_yards
                 await supabase.from('user_yards').upsert(payload);
-
-                // Also sync to user_progress if applicable
                 await supabase.from('user_progress').upsert({
                     user_id: session.user.id,
                     yards: this.data.yards
@@ -268,6 +299,333 @@ class YardService {
         this.saveLocally(this.data);
         this.saveToCloud();
         return true;
+    }
+
+    // --- Promo Code Redemption ---
+    public redeemPromoCode(codeRaw: string): { success: boolean; amount: number; message: string } {
+        const code = codeRaw.trim().toUpperCase();
+        if (!code) {
+            return { success: false, amount: 0, message: 'Please enter a promo code.' };
+        }
+
+        if (this.data.redeemedCodes.includes(code)) {
+            return { success: false, amount: 0, message: `Code '${code}' has already been redeemed on this account!` };
+        }
+
+        const reward = PROMO_CODES[code];
+        if (!reward) {
+            return {
+                success: false,
+                amount: 0,
+                message: 'Invalid code! Check the SkyAviation2 YouTube channel for active codes.'
+            };
+        }
+
+        this.data.redeemedCodes.push(code);
+        this.data.yards += reward;
+        this.data.transactions.unshift({
+            id: 'tx_promo_' + Date.now(),
+            amount: reward,
+            type: 'promo',
+            reason: `Promo Code Redeemed: ${code}`,
+            timestamp: Date.now()
+        });
+
+        this.saveLocally(this.data);
+        this.saveToCloud();
+
+        return {
+            success: true,
+            amount: reward,
+            message: `🎉 Success! Redeemed code '${code}' for +${reward} Yards!`
+        };
+    }
+
+    // --- Admin Give Yards by Username ---
+    public async adminGiveYardsByUsername(
+        username: string,
+        amount: number,
+        reason = 'Admin Grant',
+        adminEmail = '1karl.ilves@gmail.com'
+    ): Promise<{ success: boolean; message: string; targetYards?: number }> {
+        const cleanUsername = username.trim();
+        const grantAmount = Math.round(amount);
+
+        if (!cleanUsername) {
+            return { success: false, message: 'Please enter a valid username.' };
+        }
+        if (isNaN(grantAmount) || grantAmount <= 0) {
+            return { success: false, message: 'Please enter a positive Yards amount.' };
+        }
+
+        // 1. Log transfer
+        const logEntry: AdminYardLog = {
+            id: 'admin_log_' + Date.now(),
+            adminEmail,
+            targetUsername: cleanUsername,
+            amount: grantAmount,
+            reason,
+            timestamp: Date.now()
+        };
+
+        const existingLogs = this.getAdminYardLogs();
+        existingLogs.unshift(logEntry);
+        localStorage.setItem(ADMIN_LOGS_KEY, JSON.stringify(existingLogs.slice(0, 100)));
+
+        if (supabase) {
+            try {
+                await supabase.from('admin_yard_logs').insert({
+                    id: logEntry.id,
+                    admin_email: adminEmail,
+                    target_username: cleanUsername,
+                    amount: grantAmount,
+                    reason: reason
+                });
+            } catch (err) {
+                console.warn('Could not sync admin log to cloud:', err);
+            }
+        }
+
+        // 2. Check if granting to self / current user
+        const currentProfileRaw = localStorage.getItem('playard_current_user_profile');
+        let isSelf = false;
+        if (currentProfileRaw) {
+            try {
+                const profile = JSON.parse(currentProfileRaw);
+                if (profile.username && profile.username.toLowerCase() === cleanUsername.toLowerCase()) {
+                    isSelf = true;
+                }
+            } catch (e) {}
+        }
+
+        if (isSelf || cleanUsername.toLowerCase() === 'admin') {
+            this.addYards(grantAmount, `Admin Grant: ${reason}`);
+            return {
+                success: true,
+                message: `Successfully granted +${grantAmount} Yards to @${cleanUsername}!`,
+                targetYards: this.data.yards
+            };
+        }
+
+        // 3. Search target user in Supabase by username
+        if (supabase) {
+            try {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('id, username')
+                    .ilike('username', cleanUsername)
+                    .single();
+
+                if (profile && profile.id) {
+                    // Update user_yards
+                    const { data: targetYardRec } = await supabase
+                        .from('user_yards')
+                        .select('yards')
+                        .eq('user_id', profile.id)
+                        .single();
+
+                    const currentTargetYards = targetYardRec?.yards ?? 0;
+                    const newTargetYards = currentTargetYards + grantAmount;
+
+                    await supabase.from('user_yards').upsert({
+                        user_id: profile.id,
+                        yards: newTargetYards,
+                        updated_at: new Date().toISOString()
+                    });
+
+                    return {
+                        success: true,
+                        message: `Successfully granted +${grantAmount} Yards to @${profile.username} (New balance: ${newTargetYards} Y)!`,
+                        targetYards: newTargetYards
+                    };
+                }
+            } catch (err) {
+                console.warn('Cloud username search error:', err);
+            }
+        }
+
+        // 4. Local storage fallback search
+        const userSpecificKey = `${STORAGE_PREFIX}username_${cleanUsername.toLowerCase()}`;
+        let rawTarget = localStorage.getItem(userSpecificKey);
+        let targetData = rawTarget ? JSON.parse(rawTarget) : { yards: 0 };
+        targetData.yards = (targetData.yards || 0) + grantAmount;
+        localStorage.setItem(userSpecificKey, JSON.stringify(targetData));
+
+        return {
+            success: true,
+            message: `Successfully granted +${grantAmount} Yards to @${cleanUsername}!`,
+            targetYards: targetData.yards
+        };
+    }
+
+    public getAdminYardLogs(): AdminYardLog[] {
+        try {
+            const raw = localStorage.getItem(ADMIN_LOGS_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [];
+    }
+
+    // --- User Created Games Management ---
+    public async submitGameForReview(game: Omit<CreatedGame, 'id' | 'status' | 'plays' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; message: string; gameId: string }> {
+        const gameId = 'game_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const fullGame: CreatedGame = {
+            ...game,
+            id: gameId,
+            status: 'pending_review',
+            plays: 0,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        // Save locally
+        const games = this.getLocalCreatedGames();
+        games.unshift(fullGame);
+        localStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(games));
+
+        // Save to Supabase
+        if (supabase) {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                await supabase.from('user_created_games').insert({
+                    id: gameId,
+                    user_id: session?.user?.id ?? null,
+                    creator_username: game.creatorUsername,
+                    title: game.title,
+                    description: game.description,
+                    category: game.category,
+                    scene_data: game.sceneData,
+                    status: 'pending_review'
+                });
+            } catch (err) {
+                console.warn('Could not sync created game to cloud:', err);
+            }
+        }
+
+        window.dispatchEvent(new CustomEvent('playard_games_updated'));
+
+        return {
+            success: true,
+            message: `Game "${game.title}" submitted for review! The admin (1karl.ilves@gmail.com) will review it soon.`,
+            gameId
+        };
+    }
+
+    public getLocalCreatedGames(): CreatedGame[] {
+        try {
+            const raw = localStorage.getItem(GAMES_STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [];
+    }
+
+    public async getPendingGames(): Promise<CreatedGame[]> {
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('user_created_games')
+                    .select('*')
+                    .eq('status', 'pending_review')
+                    .order('created_at', { ascending: false });
+
+                if (!error && Array.isArray(data) && data.length > 0) {
+                    return data.map(d => ({
+                        id: d.id,
+                        userId: d.user_id,
+                        creatorUsername: d.creator_username,
+                        title: d.title,
+                        description: d.description || '',
+                        category: d.category || 'Adventure',
+                        thumbnail: d.thumbnail,
+                        sceneData: d.scene_data,
+                        status: d.status,
+                        feedback: d.feedback,
+                        plays: d.plays || 0,
+                        createdAt: new Date(d.created_at).getTime(),
+                        updatedAt: new Date(d.updated_at).getTime()
+                    }));
+                }
+            } catch (err) {
+                console.warn('Could not fetch pending games from cloud:', err);
+            }
+        }
+
+        // Fallback to local
+        return this.getLocalCreatedGames().filter(g => g.status === 'pending_review');
+    }
+
+    public async getApprovedGames(): Promise<CreatedGame[]> {
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('user_created_games')
+                    .select('*')
+                    .eq('status', 'approved')
+                    .order('created_at', { ascending: false });
+
+                if (!error && Array.isArray(data) && data.length > 0) {
+                    return data.map(d => ({
+                        id: d.id,
+                        userId: d.user_id,
+                        creatorUsername: d.creator_username,
+                        title: d.title,
+                        description: d.description || '',
+                        category: d.category || 'Adventure',
+                        thumbnail: d.thumbnail,
+                        sceneData: d.scene_data,
+                        status: d.status,
+                        feedback: d.feedback,
+                        plays: d.plays || 0,
+                        createdAt: new Date(d.created_at).getTime(),
+                        updatedAt: new Date(d.updated_at).getTime()
+                    }));
+                }
+            } catch (err) {
+                console.warn('Could not fetch approved games from cloud:', err);
+            }
+        }
+
+        // Fallback to local
+        return this.getLocalCreatedGames().filter(g => g.status === 'approved');
+    }
+
+    public async updateGameStatus(
+        gameId: string,
+        status: 'approved' | 'rejected' | 'changes_requested',
+        feedback = ''
+    ): Promise<{ success: boolean; message: string }> {
+        // 1. Update locally
+        const games = this.getLocalCreatedGames();
+        const target = games.find(g => g.id === gameId);
+        if (target) {
+            target.status = status;
+            target.feedback = feedback;
+            target.updatedAt = Date.now();
+            localStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(games));
+        }
+
+        // 2. Update in Supabase
+        if (supabase) {
+            try {
+                await supabase
+                    .from('user_created_games')
+                    .update({
+                        status,
+                        feedback,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', gameId);
+            } catch (err) {
+                console.warn('Could not update game status in cloud:', err);
+            }
+        }
+
+        window.dispatchEvent(new CustomEvent('playard_games_updated'));
+
+        return {
+            success: true,
+            message: `Game status successfully updated to "${status.toUpperCase()}"!`
+        };
     }
 
     public getDailyStreakInfo() {
@@ -433,6 +791,7 @@ class YardService {
             streak: 0,
             lastClaimTimestamp: 0,
             inventory: [],
+            redeemedCodes: [],
             transactions: []
         };
         try {

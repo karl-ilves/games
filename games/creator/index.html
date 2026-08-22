@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playard - 3D Game Creator Studio</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f141c;
+            color: #d2dae2;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Top Studio Bar */
+        .studio-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(20, 27, 36, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 242, 254, 0.25);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+        }
+
+        .studio-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #fff;
+        }
+
+        .studio-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-studio {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: #2d3748;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-studio:hover {
+            transform: translateY(-2px);
+            background: #3d4d65;
+        }
+
+        .btn-play-test {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            border-color: #2ecc71;
+            color: white;
+        }
+        .btn-submit-review {
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            border-color: #00f2fe;
+            color: #111;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+        }
+
+        /* Left Object Catalog (5000 Objects Library) */
+        .catalog-panel {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            width: 320px;
+            bottom: 30px;
+            background: rgba(20, 27, 36, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .catalog-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .catalog-header h3 {
+            margin: 0 0 10px 0;
+            color: #00f2fe;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .catalog-search {
+            width: 100%;
+            padding: 8px 12px;
+            background: #131920;
+            border: 1px solid #485460;
+            border-radius: 6px;
+            color: white;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .catalog-categories {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .cat-btn {
+            background: #2d3748;
+            border: none;
+            color: #a4b0be;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .cat-btn.active {
+            background: #00f2fe;
+            color: #111;
+            font-weight: bold;
+        }
+
+        .catalog-items-grid {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .object-card {
+            background: #242f3d;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .object-card:hover {
+            border-color: #00f2fe;
+            background: #2d3b4d;
+            transform: translateY(-2px);
+        }
+        .object-icon {
+            font-size: 1.8rem;
+            margin-bottom: 4px;
+        }
+        .object-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #fff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Right Inspector / Transform Panel */
+        .inspector-panel {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            width: 260px;
+            background: rgba(20, 27, 36, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            z-index: 100;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .inspector-panel h4 {
+            margin: 0 0 10px 0;
+            color: #ffd32a;
+            font-size: 0.95rem;
+        }
+
+        .prop-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        .prop-row label { color: #a4b0be; }
+        .prop-row input, .prop-row select {
+            width: 130px;
+            padding: 4px 8px;
+            background: #131920;
+            border: 1px solid #485460;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* Test Mode Overlay */
+        #play-test-hud {
+            display: none;
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #2ecc71;
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: #2ecc71;
+            font-weight: bold;
+            z-index: 150;
+            pointer-events: none;
+        }
+
+        /* Controls Help Tooltip */
+        .controls-tooltip {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(6px);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #a4b0be;
+            pointer-events: none;
+            z-index: 90;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Studio Bar -->
+    <div class="studio-top-bar">
+        <div class="studio-title">
+            <a href="../../index.html" style="color: #00f2fe; text-decoration: none; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;">
+                <span>⬅</span> Hub
+            </a>
+            <span>|</span>
+            <span>✨ 3D Game Creator Studio</span>
+        </div>
+
+        <div class="studio-actions">
+            <button id="btn-toggle-play-test" class="btn-studio btn-play-test">
+                <span>▶️</span> <span>Play Test Mode</span>
+            </button>
+            <button id="btn-submit-review" class="btn-studio btn-submit-review">
+                <span>🚀</span> <span>Submit for Review</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Play Test Active HUD -->
+    <div id="play-test-hud">
+        🎮 PLAY TEST MODE (WASD to Walk, SPACE to Jump, Click 'Exit Play Test' on top to edit)
+    </div>
+
+    <!-- Left Object Catalog (5000+ Objects Engine) -->
+    <div class="catalog-panel" id="catalog-panel">
+        <div class="catalog-header">
+            <h3>
+                <span>📦 5,000 Objects Library</span>
+                <span id="catalog-count-badge" style="font-size: 0.75rem; color: #a4b0be; background: #131920; padding: 2px 6px; border-radius: 10px;">5,000 items</span>
+            </h3>
+            <input type="text" id="catalog-search-input" class="catalog-search" placeholder="🔍 Search 5000 objects...">
+            <div class="catalog-categories">
+                <button class="cat-btn active" data-cat="all">All</button>
+                <button class="cat-btn" data-cat="nature">🌿 Nature</button>
+                <button class="cat-btn" data-cat="city">🏙️ City</button>
+                <button class="cat-btn" data-cat="vehicles">🚗 Vehicles</button>
+                <button class="cat-btn" data-cat="gameplay">🎮 Gameplay</button>
+                <button class="cat-btn" data-cat="scifi">🚀 Sci-Fi</button>
+            </div>
+        </div>
+
+        <div class="catalog-items-grid" id="catalog-items-container">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+
+    <!-- Right Inspector & Game Settings -->
+    <div class="inspector-panel" id="inspector-panel">
+        <h4>⚙️ Game Settings</h4>
+        <div class="prop-row">
+            <label>Game Title:</label>
+            <input type="text" id="game-title-input" value="My 3D Adventure">
+        </div>
+        <div class="prop-row">
+            <label>Category:</label>
+            <select id="game-category-select">
+                <option value="Adventure">Adventure</option>
+                <option value="Racing">Racing / Driving</option>
+                <option value="Platformer">Parkour / Platformer</option>
+                <option value="Simulation">Simulation</option>
+            </select>
+        </div>
+        <div class="prop-row">
+            <label>Description:</label>
+            <input type="text" id="game-desc-input" value="An awesome 3D world created in Playard!">
+        </div>
+
+        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
+
+        <h4>🎯 Selected Object</h4>
+        <div id="selected-object-info" style="color: #718093; font-size: 0.85rem; margin-bottom: 8px;">
+            Click on an object to select and transform.
+        </div>
+        <div id="selected-object-props" style="display: none;">
+            <div class="prop-row">
+                <label>Position X/Y/Z:</label>
+                <span id="obj-pos-val" style="font-size: 0.8rem; color: #00f2fe;">0, 0, 0</span>
+            </div>
+            <div class="prop-row">
+                <label>Scale:</label>
+                <input type="number" id="obj-scale-input" value="1" step="0.2" min="0.2" max="10">
+            </div>
+            <div class="prop-row">
+                <label>Color Tint:</label>
+                <input type="color" id="obj-color-input" value="#ffffff">
+            </div>
+            <button id="btn-duplicate-obj" class="btn-studio" style="width: 100%; margin-top: 6px; justify-content: center;">
+                📋 Duplicate Object
+            </button>
+            <button id="btn-delete-obj" class="btn-danger">
+                🗑️ Delete Object
+            </button>
+        </div>
+    </div>
+
+    <!-- Controls Tooltip -->
+    <div class="controls-tooltip" id="controls-tooltip">
+        Left Click: Select/Place | Right Click + Drag: Rotate Camera | Scroll: Zoom | WASD: Move (Play Mode)
+    </div>
+
+    <script type="module" src="/src/games/creator/main.ts"></script>
+</body>
+</html>

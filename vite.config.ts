@@ -8,7 +8,9 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         airplane: resolve(__dirname, 'games/airplane/index.html'),
-        racing: resolve(__dirname, 'games/racing/index.html')
+        racing: resolve(__dirname, 'games/racing/index.html'),
+        creator: resolve(__dirname, 'games/creator/index.html'),
+        play: resolve(__dirname, 'games/play/index.html')
       }
     }
   }
