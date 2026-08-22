@@ -141,13 +141,9 @@ class CookingGame {
     private requiredChoppingClicks: number = 5;
     private knife3D: THREE.Mesh | null = null;
 
-    // Stove Pans state - 5 parallel cooking slots
+    // Stove Pan state - 1 dedicated focused cooking station
     private pans = [
-        { id: 0, nameEt: 'Pann 1 (Grill)', nameEn: 'Pan 1 (Grill)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
-        { id: 1, nameEt: 'Pann 2 (Grill)', nameEn: 'Pan 2 (Grill)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
-        { id: 2, nameEt: 'Pann 3 (Grill)', nameEn: 'Pan 3 (Grill)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
-        { id: 3, nameEt: 'Pott 1 (Keetmine)', nameEn: 'Pot 1 (Boiling)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
-        { id: 4, nameEt: 'Pann 4 (Grill)', nameEn: 'Pan 4 (Grill)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' }
+        { id: 0, nameEt: 'Master Chef Pliit & Pann', nameEn: 'Master Chef Stove & Pan', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' }
     ];
 
     // Oven state
@@ -677,6 +673,8 @@ class CookingGame {
             // 1. Take from Pan Button (directly to plate)
             const takePanBtn = target.closest('.btn-take-pan') as HTMLElement;
             if (takePanBtn) {
+                e.preventDefault();
+                e.stopPropagation();
                 const panId = parseInt(takePanBtn.getAttribute('data-pan') || '0', 10);
                 this.takeFromPan(panId);
                 return;
@@ -685,6 +683,8 @@ class CookingGame {
             // 2. Put raw food on Pan
             const addPanBtn = target.closest('.btn-add-pan') as HTMLElement;
             if (addPanBtn) {
+                e.preventDefault();
+                e.stopPropagation();
                 const panId = parseInt(addPanBtn.getAttribute('data-pan') || '0', 10);
                 const item = addPanBtn.getAttribute('data-item');
                 if (item) {
@@ -695,12 +695,16 @@ class CookingGame {
 
             // 3. Oven Bake Pizza Button
             if (target.closest('#btn-oven-bake-pizza')) {
+                e.preventDefault();
+                e.stopPropagation();
                 this.bakePizza();
                 return;
             }
 
             // 4. Oven Take Pizza to Plate Button
             if (target.closest('#btn-oven-take-pizza')) {
+                e.preventDefault();
+                e.stopPropagation();
                 this.takeFromOven();
                 return;
             }
@@ -912,18 +916,18 @@ class CookingGame {
 
         container.innerHTML = this.pans.map(pan => {
             const panName = isEt ? pan.nameEt : pan.nameEn;
-            let statusText = `<span style="color: #a4b0be;">${isEt ? 'Tühi - Pane tooraine küpsema!' : 'Empty - Put raw food to cook!'}</span>`;
+            let statusText = `<span style="color: #a4b0be;">${isEt ? 'Tühi - Vali tooraine küpsetamiseks!' : 'Empty - Select item to cook!'}</span>`;
             let btnAction = `
-                <div style="display: flex; flex-direction: column; gap: 4px; width: 100%; align-items: center;">
-                    <span style="font-size: 0.76rem; color: #ffd32a; font-weight: 800;">${isEt ? '👇 VALI TOORAINE KÜPSETAMISEKS:' : '👇 SELECT ITEM TO COOK:'}</span>
-                    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
-                        <button class="btn-action btn-add-pan" onclick="window.cookingGame.putOnPan(${pan.id}, 'raw_patty')" data-pan="${pan.id}" data-item="raw_patty" style="background: linear-gradient(135deg, #e74c3c, #c0392b); border-color: #ff7675; font-size: 0.8rem; padding: 7px 10px; font-weight: 800; cursor: pointer;">
+                <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; align-items: center;">
+                    <span style="font-size: 0.85rem; color: #ffd32a; font-weight: 800;">${isEt ? '👇 VALI TOORAINE KÜPSETAMISEKS:' : '👇 SELECT ITEM TO COOK:'}</span>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+                        <button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_patty" style="background: linear-gradient(135deg, #e74c3c, #c0392b); border-color: #ff7675; font-size: 0.95rem; padding: 10px 16px; font-weight: 900; cursor: pointer; border-radius: 8px;">
                             🥩 ${isEt ? 'Prae Pihv' : 'Fry Patty'} (🔥)
                         </button>
-                        <button class="btn-action btn-add-pan" onclick="window.cookingGame.putOnPan(${pan.id}, 'raw_steak')" data-pan="${pan.id}" data-item="raw_steak" style="background: linear-gradient(135deg, #d35400, #e67e22); border-color: #f39c12; font-size: 0.8rem; padding: 7px 10px; font-weight: 800; cursor: pointer;">
+                        <button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_steak" style="background: linear-gradient(135deg, #d35400, #e67e22); border-color: #f39c12; font-size: 0.95rem; padding: 10px 16px; font-weight: 900; cursor: pointer; border-radius: 8px;">
                             🥩 ${isEt ? 'Prae Steak' : 'Fry Steak'} (🔥)
                         </button>
-                        <button class="btn-action btn-add-pan" onclick="window.cookingGame.putOnPan(${pan.id}, 'raw_pasta')" data-pan="${pan.id}" data-item="raw_pasta" style="background: linear-gradient(135deg, #2980b9, #3498db); border-color: #74b9ff; font-size: 0.8rem; padding: 7px 10px; font-weight: 800; cursor: pointer;">
+                        <button class="btn-action btn-add-pan" data-pan="${pan.id}" data-item="raw_pasta" style="background: linear-gradient(135deg, #2980b9, #3498db); border-color: #74b9ff; font-size: 0.95rem; padding: 10px 16px; font-weight: 900; cursor: pointer; border-radius: 8px;">
                             🍝 ${isEt ? 'Keeda Pasta' : 'Boil Pasta'} (💧)
                         </button>
                     </div>
@@ -933,26 +937,26 @@ class CookingGame {
             if (pan.holding) {
                 const ingName = this.getName(pan.holding);
                 if (pan.state === 'cooking') {
-                    statusText = `<strong style="color: #ffd32a; animation: pulse 1s infinite;">🔥 ${isEt ? 'PRAEB:' : 'COOKING:'} ${ingName} (${Math.round(pan.progress)}%)</strong>`;
-                    btnAction = `<span style="font-size: 0.8rem; color: #ffd32a; font-weight: bold;">⏳ ${isEt ? 'Küpseb... oota kuni valmib!' : 'Cooking... wait until done!'}</span>`;
+                    statusText = `<strong style="color: #ffd32a; font-size: 1.1rem; animation: pulse 1s infinite;">🔥 ${isEt ? 'PRAEB:' : 'COOKING:'} ${ingName} (${Math.round(pan.progress)}%)</strong>`;
+                    btnAction = `<span style="font-size: 0.9rem; color: #ffd32a; font-weight: bold;">⏳ ${isEt ? 'Küpseb... oota kuni valmib!' : 'Cooking... wait until done!'}</span>`;
                 } else if (pan.state === 'done') {
                     const raw = INGREDIENTS[pan.holding];
                     const resultId = raw?.cookResult || pan.holding;
                     const resultName = this.getName(resultId);
-                    statusText = `<strong style="color: #2ed573; font-size: 1.05rem;">✨🔥 ${isEt ? 'VALMIS:' : 'READY:'} ${resultName}</strong>`;
+                    statusText = `<strong style="color: #2ed573; font-size: 1.2rem;">✨🔥 ${isEt ? 'VALMIS:' : 'READY:'} ${resultName}</strong>`;
                     btnAction = `
-                        <button class="btn-action btn-take-pan" data-pan="${pan.id}" onclick="window.cookingGame.takeFromPan(${pan.id})" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.95rem; padding: 10px 20px; box-shadow: 0 0 15px #2ed573; cursor: pointer; border-radius: 8px;">
+                        <button class="btn-action btn-take-pan" data-pan="${pan.id}" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 1.1rem; padding: 12px 28px; box-shadow: 0 0 20px #2ed573; cursor: pointer; border-radius: 10px;">
                             🍽️ ${isEt ? 'VÕTA TALDRIKULE' : 'TAKE TO PLATE'}
                         </button>
                     `;
                 } else if (pan.state === 'burned') {
-                    statusText = `<strong style="color: #ff4757; font-size: 1.05rem;">🔥 ${isEt ? 'KÕRBENUD!' : 'BURNED!'}</strong>`;
-                    btnAction = `<button class="btn-action btn-take-pan" onclick="window.cookingGame.takeFromPan(${pan.id})" data-pan="${pan.id}" style="background: #eb4d4b; font-weight: bold; cursor: pointer;">🗑️ ${isEt ? 'Viska minema' : 'Throw away'}</button>`;
+                    statusText = `<strong style="color: #ff4757; font-size: 1.1rem;">🔥 ${isEt ? 'KÕRBENUD!' : 'BURNED!'}</strong>`;
+                    btnAction = `<button class="btn-action btn-take-pan" data-pan="${pan.id}" style="background: #eb4d4b; font-weight: bold; font-size: 1rem; padding: 10px 20px; cursor: pointer; border-radius: 8px;">🗑️ ${isEt ? 'Viska minema' : 'Throw away'}</button>`;
                 }
             } else if (pan.state === 'washing') {
                 const timeLeft = Math.max(0, Math.ceil(30 - (pan.washProgress / 100) * 30));
-                statusText = `<strong style="color: #00f2fe; animation: pulse 1s infinite;">🧼 ${isEt ? 'PESEMINE:' : 'WASHING:'} ${timeLeft}s (${Math.round(pan.washProgress)}%)</strong>`;
-                btnAction = `<span style="font-size: 0.82rem; color: #70a1ff; font-weight: 700;">🧼 ${isEt ? 'Pann peseb ja jahtub (30s)...' : 'Pan is washing & cooling (30s)...'}</span>`;
+                statusText = `<strong style="color: #00f2fe; font-size: 1.15rem; animation: pulse 1s infinite;">🧼 ${isEt ? 'PESEMINE:' : 'WASHING:'} ${timeLeft}s (${Math.round(pan.washProgress)}%)</strong>`;
+                btnAction = `<span style="font-size: 0.95rem; color: #70a1ff; font-weight: 700;">🧼 ${isEt ? 'Pann peseb ja jahtub (30s)... oota enne uue tegemist!' : 'Pan is washing (30s)... please wait!'}</span>`;
             }
 
             const fillWidth = pan.state === 'washing' ? Math.min(100, pan.washProgress) : Math.min(100, pan.progress);
@@ -967,13 +971,13 @@ class CookingGame {
                 : (pan.state === 'cooking' ? 'rgba(255, 121, 63, 0.1)' : '#1e272e');
 
             return `
-                <div class="pan-card" data-pan-id="${pan.id}" style="border: 1.5px solid ${borderColor}; background: ${bgColor};">
-                    <strong style="color: #ffd32a; font-size: 1.05rem;">🍳 ${panName}</strong>
-                    <div class="pan-status-text" style="font-size: 0.9rem; color: #dfe6e9;">${statusText}</div>
-                    <div class="pan-heat-bar">
+                <div class="pan-card" data-pan-id="${pan.id}" style="border: 2px solid ${borderColor}; background: ${bgColor}; padding: 18px; border-radius: 14px;">
+                    <strong style="color: #ffd32a; font-size: 1.25rem;">🍳 ${panName}</strong>
+                    <div class="pan-status-text" style="font-size: 1.05rem; color: #dfe6e9; margin: 8px 0;">${statusText}</div>
+                    <div class="pan-heat-bar" style="height: 12px; border-radius: 6px; margin-bottom: 10px;">
                         <div class="pan-heat-fill" style="width: ${fillWidth}%; background: ${fillColor};"></div>
                     </div>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 6px; width: 100%;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; width: 100%;">
                         ${btnAction}
                     </div>
                 </div>
@@ -981,9 +985,9 @@ class CookingGame {
         }).join('');
     }
 
-    public putOnPan(panId: number, rawId: string) {
-        const pan = this.pans[panId];
-        if (!pan || pan.holding || pan.state === 'washing') return;
+    public putOnPan(panId: number = 0, rawId: string) {
+        const pan = this.pans[panId] || this.pans[0];
+        if (!pan || pan.holding || pan.state !== 'empty') return;
 
         pan.holding = rawId;
         pan.progress = 0;
@@ -993,32 +997,37 @@ class CookingGame {
         this.renderStovePans();
     }
 
-    public takeFromPan(panId: number) {
-        const pan = this.pans[panId];
-        if (!pan || !pan.holding || pan.state === 'washing') return;
+    public takeFromPan(panId: number = 0) {
+        const pan = this.pans[panId] || this.pans[0];
+        if (!pan || !pan.holding || (pan.state !== 'done' && pan.state !== 'burned')) return;
 
-        if (pan.state === 'done') {
-            const raw = INGREDIENTS[pan.holding];
-            const resultId = raw?.cookResult || pan.holding;
-            this.addToPlate(resultId);
-            kitchenAudio.playServe();
-            const resName = this.getName(resultId);
-            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} taldrikule! 🧼 Pann läheb 30s pesemisse!` : `🍽️ +1 ${resName} plated! 🧼 Pan is now washing for 30s!`);
-        } else if (pan.state === 'burned') {
-            kitchenAudio.playBurn();
-            this.showScorePopup(this.isEt ? `🔥 Kõrbenud toit visati minema! 🧼 Pann läheb 30s pesemisse!` : `🔥 Burned food thrown away! 🧼 Pan washing for 30s!`);
-        }
+        const rawItem = pan.holding;
+        const isDone = pan.state === 'done';
 
-        // Toidu võtmisel kaob nupp koheselt, holding tühjendatakse ja algab 30s pesemine
+        // 1. Instantly clear holding and switch to washing so button disappears instantly
         pan.holding = null;
         pan.progress = 0;
         pan.washProgress = 0;
         pan.state = 'washing';
 
+        // 2. Immediately re-render UI
+        this.renderStovePans();
+
+        // 3. Add exactly ONE item to the plate
+        if (isDone) {
+            const raw = INGREDIENTS[rawItem];
+            const resultId = raw?.cookResult || rawItem;
+            this.addToPlate(resultId);
+            kitchenAudio.playServe();
+            const resName = this.getName(resultId);
+            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} pandud taldrikule! 🧼 Pann peseb 30 sek!` : `🍽️ +1 ${resName} added to plate! 🧼 Pan is washing for 30s!`);
+        } else {
+            kitchenAudio.playBurn();
+            this.showScorePopup(this.isEt ? `🔥 Kõrbenud toit visatud minema! 🧼 Pann peseb 30 sek!` : `🔥 Burned food thrown away! 🧼 Pan washing for 30s!`);
+        }
+
         const anyCooking = this.pans.some(p => p.state === 'cooking');
         if (!anyCooking) kitchenAudio.playSizzle(false);
-
-        this.renderStovePans();
     }
 
     // --- Oven Mechanics ---
@@ -1035,7 +1044,7 @@ class CookingGame {
                     <strong>${isEt ? 'Ahi on tühi' : 'Oven is empty'}</strong>
                     <div style="font-size: 0.8rem; color: #a4b0be;">${isEt ? 'Pane pitsapõhi ahju küpsema!' : 'Put pizza crust into oven to bake!'}</div>
                 </div>
-                <button class="btn-action" id="btn-oven-bake-pizza" onclick="window.cookingGame.bakePizza()" style="background: #e67e22; font-weight: bold; padding: 10px 20px; cursor: pointer;">
+                <button class="btn-action" id="btn-oven-bake-pizza" style="background: #e67e22; font-weight: bold; padding: 10px 20px; cursor: pointer; border-radius: 8px;">
                     🍕 ${isEt ? 'Pane Pitsa Ahju (10s)' : 'Put Pizza into Oven (10s)'}
                 </button>
             `;
@@ -1055,7 +1064,7 @@ class CookingGame {
                 <div style="text-align: left;">
                     <strong style="color: #2ed573; font-size: 1.05rem;">${isEt ? 'Pitsa on valmis ja krõbe!' : 'Pizza is ready and crispy!'}</strong>
                 </div>
-                <button class="btn-action" id="btn-oven-take-pizza" onclick="window.cookingGame.takeFromOven()" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.95rem; padding: 10px 20px; box-shadow: 0 0 15px #2ed573; cursor: pointer; border-radius: 8px;">
+                <button class="btn-action" id="btn-oven-take-pizza" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.95rem; padding: 10px 20px; box-shadow: 0 0 15px #2ed573; cursor: pointer; border-radius: 8px;">
                     🍽️ ${isEt ? 'VÕTA TALDRIKULE' : 'TAKE TO PLATE'}
                 </button>
             `;
@@ -1069,12 +1078,14 @@ class CookingGame {
     }
 
     public takeFromOven() {
-        this.addToPlate('baked_in_oven');
-        kitchenAudio.playServe();
-        this.showScorePopup(this.isEt ? '🍽️ +1 Küpsetatud Pitsa pandud otse taldrikule! 🍕✨' : '🍽️ +1 Baked Pizza added to plate! 🍕✨');
+        if (this.oven.state !== 'done') return;
         this.oven.state = 'empty';
         this.oven.progress = 0;
         this.renderOvenStatus();
+
+        this.addToPlate('baked_in_oven');
+        kitchenAudio.playServe();
+        this.showScorePopup(this.isEt ? '🍽️ +1 Küpsetatud Pitsa pandud otse taldrikule! 🍕✨' : '🍽️ +1 Baked Pizza added to plate! 🍕✨');
     }
 
     private tickCooking() {
