@@ -211,7 +211,7 @@ export async function initAuth() {
 
                 await yardService.onUserLogin(adminProfile.id, 'admin');
 
-                showMsg('Welcome back, Admin✅!', 'success');
+                showMsg('Tere tulemast tagasi, Admin✅!', 'success');
                 if (emailInput) emailInput.value = '';
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';

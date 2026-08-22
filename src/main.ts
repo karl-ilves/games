@@ -1,6 +1,7 @@
 import { supabase } from './lib/supabase';
 import { initAuth, getCurrentUserProfile } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
+import { setLanguage, applyLocalization } from './shared/i18n';
 
 console.log("Playard Hub & Platform Loaded.");
 initAuth();
@@ -25,6 +26,9 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
     if (adminNavBtn) {
         adminNavBtn.style.display = isAdmin ? 'flex' : 'none';
     }
+
+    // Switch language: Estonian for admin 1karl.ilves@gmail.com, English for others!
+    setLanguage(isAdmin ? 'et' : 'en');
 }
 
 // --- Setup UI Icons & Elements ---
