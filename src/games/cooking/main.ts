@@ -141,9 +141,10 @@ class CookingGame {
     private requiredChoppingClicks: number = 5;
     private knife3D: THREE.Mesh | null = null;
 
-    // Stove Pan state - 1 dedicated focused cooking station
+    // Stove Pans state - 2 dedicated cooking spots
     private pans = [
-        { id: 0, nameEt: 'Master Chef Pliit & Pann', nameEn: 'Master Chef Stove & Pan', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' }
+        { id: 0, nameEt: 'Pann 1 (Küpsetuskoht 1)', nameEn: 'Pan 1 (Cooking Spot 1)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
+        { id: 1, nameEt: 'Pann 2 (Küpsetuskoht 2)', nameEn: 'Pan 2 (Cooking Spot 2)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' }
     ];
 
     // Oven state
@@ -167,19 +168,13 @@ class CookingGame {
     }
 
     constructor() {
-        // 1. VIP / Permission check
+        // 1. User & Language check
         const profile = getCurrentUserProfile();
         const isAdmin = !!profile?.email && profile.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
-        this.isEt = isAdmin; // Estonian only for Admin, English for everyone else!
+        this.isEt = isAdmin; // Estonian for Admin, English for everyone else!
 
         const vipOverlay = document.getElementById('vip-restricted-overlay');
-        if (!isAdmin) {
-            if (vipOverlay) vipOverlay.style.display = 'flex';
-            console.warn("Cooking game restricted: not administrator");
-            return;
-        } else {
-            if (vipOverlay) vipOverlay.style.display = 'none';
-        }
+        if (vipOverlay) vipOverlay.style.display = 'none';
 
         // 2. Setup 3D Scene
         const container = document.getElementById('canvas-container');
@@ -985,8 +980,8 @@ class CookingGame {
         }).join('');
     }
 
-    public putOnPan(panId: number = 0, rawId: string) {
-        const pan = this.pans[panId] || this.pans[0];
+    public putOnPan(panId: number, rawId: string) {
+        const pan = this.pans[panId];
         if (!pan || pan.holding || pan.state !== 'empty') return;
 
         pan.holding = rawId;
@@ -997,8 +992,8 @@ class CookingGame {
         this.renderStovePans();
     }
 
-    public takeFromPan(panId: number = 0) {
-        const pan = this.pans[panId] || this.pans[0];
+    public takeFromPan(panId: number) {
+        const pan = this.pans[panId];
         if (!pan || !pan.holding || (pan.state !== 'done' && pan.state !== 'burned')) return;
 
         const rawItem = pan.holding;
@@ -1020,10 +1015,10 @@ class CookingGame {
             this.addToPlate(resultId);
             kitchenAudio.playServe();
             const resName = this.getName(resultId);
-            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} pandud taldrikule! 🧼 Pann peseb 30 sek!` : `🍽️ +1 ${resName} added to plate! 🧼 Pan is washing for 30s!`);
+            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} pandud taldrikule! 🧼 ${pan.nameEt} peseb 30s!` : `🍽️ +1 ${resName} added to plate! 🧼 ${pan.nameEn} washing 30s!`);
         } else {
             kitchenAudio.playBurn();
-            this.showScorePopup(this.isEt ? `🔥 Kõrbenud toit visatud minema! 🧼 Pann peseb 30 sek!` : `🔥 Burned food thrown away! 🧼 Pan washing for 30s!`);
+            this.showScorePopup(this.isEt ? `🔥 Kõrbenud toit visatud minema! 🧼 ${pan.nameEt} peseb 30s!` : `🔥 Burned food thrown away! 🧼 ${pan.nameEn} washing 30s!`);
         }
 
         const anyCooking = this.pans.some(p => p.state === 'cooking');
