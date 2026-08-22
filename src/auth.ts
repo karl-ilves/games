@@ -207,12 +207,14 @@ export async function initAuth() {
             if (isAdmin) {
                 const isMasterPass = password === 'A380' || password === 'a380' || isTestMode(email);
                 let adminSession = null;
+                let loginSuccess = false;
 
                 if (hasSupabase && !isTestMode(email)) {
                     try {
                         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                         if (!error && data?.session) {
                             adminSession = data.session;
+                            loginSuccess = true;
                         } else if (isMasterPass) {
                             const { data: upData } = await supabase.auth.signUp({
                                 email,
@@ -220,9 +222,19 @@ export async function initAuth() {
                                 options: { data: { username: 'admin' } }
                             });
                             adminSession = upData?.session || null;
+                            loginSuccess = true;
+                        } else {
+                            return showMsg('Incorrect admin password!', 'error');
                         }
                     } catch (e) {
                         console.warn('Admin cloud auth warning:', e);
+                        if (!isMasterPass) {
+                            return showMsg('Incorrect admin password!', 'error');
+                        }
+                    }
+                } else {
+                    if (!isMasterPass) {
+                        return showMsg('Incorrect admin password!', 'error');
                     }
                 }
 
