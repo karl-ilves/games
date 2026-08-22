@@ -582,26 +582,6 @@ function setupStudioEvents() {
                 rotateSelectedObject(Math.PI / 4);
                 return;
             }
-            // Arrow Keys / WASD for Object Position
-            if (e.code === 'ArrowUp') {
-                e.preventDefault();
-                moveSelectedObject(0, 0, -0.5);
-            } else if (e.code === 'ArrowDown') {
-                e.preventDefault();
-                moveSelectedObject(0, 0, 0.5);
-            } else if (e.code === 'ArrowLeft') {
-                e.preventDefault();
-                moveSelectedObject(-0.5, 0, 0);
-            } else if (e.code === 'ArrowRight') {
-                e.preventDefault();
-                moveSelectedObject(0.5, 0, 0);
-            } else if (e.code === 'PageUp') {
-                e.preventDefault();
-                moveSelectedObject(0, 0.5, 0);
-            } else if (e.code === 'PageDown') {
-                e.preventDefault();
-                moveSelectedObject(0, -0.5, 0);
-            }
         }
     });
 
@@ -680,6 +660,7 @@ function setupStudioEvents() {
     const playTestBtn = document.getElementById('btn-toggle-play-test');
     const playTestHud = document.getElementById('play-test-hud');
     const playTestControls = document.getElementById('play-test-controls');
+    const studioCamControls = document.getElementById('studio-camera-controls');
     const catalogPanel = document.getElementById('catalog-panel');
     const inspectorPanel = document.getElementById('inspector-panel');
 
@@ -693,6 +674,7 @@ function setupStudioEvents() {
                 playTestBtn.style.background = '#e74c3c';
                 if (playTestHud) playTestHud.style.display = 'block';
                 if (playTestControls) playTestControls.style.display = 'flex';
+                if (studioCamControls) studioCamControls.style.display = 'none';
                 if (catalogPanel) catalogPanel.style.display = 'none';
                 if (inspectorPanel) inspectorPanel.style.display = 'none';
             } else {
@@ -700,6 +682,7 @@ function setupStudioEvents() {
                 playTestBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
                 if (playTestHud) playTestHud.style.display = 'none';
                 if (playTestControls) playTestControls.style.display = 'none';
+                if (studioCamControls) studioCamControls.style.display = 'flex';
                 if (catalogPanel) catalogPanel.style.display = 'flex';
                 if (inspectorPanel) inspectorPanel.style.display = 'block';
                 updateOrbitCamera();
@@ -707,7 +690,45 @@ function setupStudioEvents() {
         });
     }
 
-    // Touch / On-screen D-Pad and Jump Controls Setup
+    // Studio Camera Navigation Buttons
+    document.getElementById('cam-btn-left')?.addEventListener('click', () => {
+        const camRight = new THREE.Vector3(Math.cos(orbitTheta), 0, -Math.sin(orbitTheta)).normalize();
+        orbitTarget.addScaledVector(camRight, -4);
+        updateOrbitCamera();
+    });
+    document.getElementById('cam-btn-right')?.addEventListener('click', () => {
+        const camRight = new THREE.Vector3(Math.cos(orbitTheta), 0, -Math.sin(orbitTheta)).normalize();
+        orbitTarget.addScaledVector(camRight, 4);
+        updateOrbitCamera();
+    });
+    document.getElementById('cam-btn-fwd')?.addEventListener('click', () => {
+        const camForward = new THREE.Vector3(-Math.sin(orbitTheta), 0, -Math.cos(orbitTheta)).normalize();
+        orbitTarget.addScaledVector(camForward, 4);
+        updateOrbitCamera();
+    });
+    document.getElementById('cam-btn-back')?.addEventListener('click', () => {
+        const camForward = new THREE.Vector3(-Math.sin(orbitTheta), 0, -Math.cos(orbitTheta)).normalize();
+        orbitTarget.addScaledVector(camForward, -4);
+        updateOrbitCamera();
+    });
+    document.getElementById('cam-btn-zoom-in')?.addEventListener('click', () => {
+        orbitRadius = Math.max(5, orbitRadius - 4);
+        updateOrbitCamera();
+    });
+    document.getElementById('cam-btn-zoom-out')?.addEventListener('click', () => {
+        orbitRadius = Math.min(100, orbitRadius + 4);
+        updateOrbitCamera();
+    });
+    document.getElementById('cam-btn-rot-left')?.addEventListener('click', () => {
+        orbitTheta += Math.PI / 8;
+        updateOrbitCamera();
+    });
+    document.getElementById('cam-btn-rot-right')?.addEventListener('click', () => {
+        orbitTheta -= Math.PI / 8;
+        updateOrbitCamera();
+    });
+
+    // Touch / On-screen D-Pad and Jump Controls Setup (Play Test)
     const bindTouchBtn = (id: string, code: string) => {
         const btn = document.getElementById(id);
         if (!btn) return;
@@ -924,6 +945,23 @@ function animate() {
         camera.position.lerp(targetCamPos, 0.1);
         camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.6, humanCharacter.position.z);
     } else {
+        // Edit Mode: Smooth Camera Pan with Arrow Keys and WASD
+        const panSpeed = 16;
+        const panDir = new THREE.Vector3();
+        const camForward = new THREE.Vector3(-Math.sin(orbitTheta), 0, -Math.cos(orbitTheta)).normalize();
+        const camRight = new THREE.Vector3(Math.cos(orbitTheta), 0, -Math.sin(orbitTheta)).normalize();
+
+        if (keys['ArrowUp'] || keys['KeyW']) panDir.add(camForward);
+        if (keys['ArrowDown'] || keys['KeyS']) panDir.sub(camForward);
+        if (keys['ArrowLeft'] || keys['KeyA']) panDir.sub(camRight);
+        if (keys['ArrowRight'] || keys['KeyD']) panDir.add(camRight);
+
+        if (panDir.lengthSq() > 0) {
+            panDir.normalize();
+            orbitTarget.addScaledVector(panDir, panSpeed * delta);
+            updateOrbitCamera();
+        }
+
         // Idle breathing in edit mode
         if (humanCharacter) {
             humanCharacter.position.y = Math.sin(Date.now() * 0.003) * 0.04;

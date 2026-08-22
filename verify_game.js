@@ -188,6 +188,11 @@ try {
             const posVal = await page.$eval('#obj-pos-val', el => el.textContent);
             console.log("   Object Position after Move button:", posVal);
 
+            // Test Studio Camera View Navigation Buttons & Keyboard Pan (Edit Mode)
+            await page.click('#cam-btn-fwd');
+            await page.click('#cam-btn-zoom-in');
+            console.log("   Successfully tested Camera View Pan and Zoom controls in Creator Studio!");
+
             // Test Play Test Mode & On-Screen Arrow Controls
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));

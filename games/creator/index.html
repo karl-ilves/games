@@ -480,9 +480,27 @@
         </div>
     </div>
 
+    <!-- Studio Camera & View Navigation Controls -->
+    <div id="studio-camera-controls" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(20,27,36,0.92); border: 1.5px solid rgba(0,242,254,0.35); border-radius: 30px; padding: 6px 16px; display: flex; align-items: center; gap: 10px; z-index: 100; box-shadow: 0 8px 25px rgba(0,0,0,0.5);">
+        <span style="font-size: 0.8rem; font-weight: bold; color: #00f2fe; white-space: nowrap;">🎥 Move Camera (Arrows / WASD):</span>
+        <div style="display: flex; gap: 4px;">
+            <button id="cam-btn-left" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.9rem;" title="Pan Left (ArrowLeft / A)">⬅️</button>
+            <button id="cam-btn-fwd" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.9rem;" title="Pan Forward (ArrowUp / W)">⬆️</button>
+            <button id="cam-btn-back" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.9rem;" title="Pan Backward (ArrowDown / S)">⬇️</button>
+            <button id="cam-btn-right" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.9rem;" title="Pan Right (ArrowRight / D)">➡️</button>
+        </div>
+        <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.15);"></div>
+        <div style="display: flex; gap: 4px;">
+            <button id="cam-btn-zoom-in" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom In (+)">🔍➕</button>
+            <button id="cam-btn-zoom-out" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom Out (-)">🔍➖</button>
+            <button id="cam-btn-rot-left" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Left">🔄 ◀</button>
+            <button id="cam-btn-rot-right" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Right">🔄 ▶</button>
+        </div>
+    </div>
+
     <!-- Controls Tooltip -->
-    <div class="controls-tooltip" id="controls-tooltip">
-        💡 <strong>Click Object</strong> to select & drag | <strong>Press R</strong> to Rotate | <strong>Arrow Keys</strong> to Move | <strong>Right Click + Drag</strong> to Orbit Camera
+    <div class="controls-tooltip" id="controls-tooltip" style="bottom: 70px;">
+        💡 <strong>Arrow Keys / WASD:</strong> Move Camera View | <strong>Click Object:</strong> Drag to Move | <strong>R Key:</strong> Rotate Object | <strong>Right Click + Drag:</strong> Orbit Camera
     </div>
 
     <script type="module" src="/src/games/creator/main.ts"></script>
