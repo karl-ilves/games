@@ -1602,7 +1602,107 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(leg);
         });
 
-    // 3. CASTLE / FORTRESS / TOWER / PYRAMID / TEMPLE
+    // 3. AIRPORT & AIRPLANE (Lennujaam & Lennuk)
+    } else if (p.includes('lennuväli') || p.includes('lennuvali') || p.includes('lennujaam') || p.includes('airport') || p.includes('runway') || p.includes('aerodrome')) {
+        const tarmacMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.9 });
+        const planeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3 });
+        const stripeMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.6 });
+
+        // Runway tarmac
+        const runway = new THREE.Mesh(new THREE.BoxGeometry(8.0, 0.15, 20.0), tarmacMat);
+        runway.position.y = 0.07;
+        group.add(runway);
+
+        // Runway lights
+        [-3.8, 3.8].forEach(rx => {
+            for (let rz = -9; rz <= 9; rz += 4.5) {
+                const rlight = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), stripeMat);
+                rlight.position.set(rx, 0.3, rz);
+                group.add(rlight);
+            }
+        });
+
+        // 3D Airplane on runway
+        const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 5.5, 12), planeMat);
+        fuselage.rotation.x = Math.PI / 2;
+        fuselage.position.set(0, 1.4, -2);
+        group.add(fuselage);
+
+        const wings = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.1, 1.4), planeMat);
+        wings.position.set(0, 1.4, -2);
+        group.add(wings);
+
+        const tailFin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 1.0), planeMat);
+        tailFin.position.set(0, 2.2, 0.2);
+        group.add(tailFin);
+
+    // 4. HOUSE WITH GARDEN & FENCES (Maja ja aed / Villa)
+    } else if (p.includes('aed') || p.includes('garden') || p.includes('villa') || p.includes('mansion') || (p.includes('maja') && p.includes('aed'))) {
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, roughness: 0.6 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.4 });
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8e44ad, roughness: 0.7 });
+        const lawnMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.9 });
+
+        // Grass lawn base
+        const lawn = new THREE.Mesh(new THREE.BoxGeometry(14, 0.15, 14), lawnMat);
+        lawn.position.y = 0.07;
+        group.add(lawn);
+
+        // House
+        const house = new THREE.Mesh(new THREE.BoxGeometry(5.0, 3.5, 4.5), wallMat);
+        house.position.set(0, 1.8, -2.5);
+        group.add(house);
+
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(4.2, 2.2, 4), roofMat);
+        roof.position.set(0, 4.5, -2.5);
+        roof.rotation.y = Math.PI / 4;
+        group.add(roof);
+
+        // Chimney
+        const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.8, 0.6), new THREE.MeshStandardMaterial({ color: 0x7f8c8d }));
+        chimney.position.set(1.4, 5.0, -2.5);
+        group.add(chimney);
+
+        // Surrounding Fences
+        [-6.5, 6.5].forEach(fx => {
+            const fence = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.0, 13), woodMat);
+            fence.position.set(fx, 0.6, 0);
+            group.add(fence);
+        });
+
+    // 5. TROPICAL BEACH / ISLAND / LAKE (Rand / Saar / Oaas)
+    } else if (p.includes('rand') || p.includes('beach') || p.includes('saar') || p.includes('island') || p.includes('meri') || p.includes('lake') || p.includes('palm')) {
+        const sandMat = new THREE.MeshStandardMaterial({ color: 0xf4d03f, roughness: 0.9 });
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.1, metalness: 0.4 });
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.7 });
+        const palmMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71, roughness: 0.5 });
+
+        // Ocean Base & Island
+        const water = new THREE.Mesh(new THREE.CylinderGeometry(8.0, 8.0, 0.2, 24), waterMat);
+        water.position.y = 0.1;
+        group.add(water);
+
+        const island = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 6.5, 0.6, 24), sandMat);
+        island.position.y = 0.4;
+        group.add(island);
+
+        // Palm Trees
+        [-2.0, 2.0].forEach((px, idx) => {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.35, 3.5, 8), trunkMat);
+            trunk.position.set(px, 2.1, idx * 1.5 - 0.75);
+            trunk.rotation.z = px * -0.08;
+            group.add(trunk);
+
+            for (let i = 0; i < 5; i++) {
+                const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2.2, 4), palmMat);
+                leaf.position.set(px, 3.8, idx * 1.5 - 0.75);
+                leaf.rotation.x = Math.PI / 3;
+                leaf.rotation.y = (i / 5) * Math.PI * 2;
+                group.add(leaf);
+            }
+        });
+
+    // 6. CASTLE / FORTRESS / TOWER / PYRAMID / TEMPLE
     } else if (p.includes('loss') || p.includes('castle') || p.includes('kindlus') || p.includes('fort') || p.includes('püramiid') || p.includes('pyramid') || p.includes('tempel') || p.includes('torn') || p.includes('palace')) {
         const stoneMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.9 });
         const roofMat = new THREE.MeshStandardMaterial({ color: 0x9b59b6, roughness: 0.5 });
@@ -1635,7 +1735,7 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(gate);
         }
 
-    // 4. SUBMARINE / SHIP / BOAT / HELICOPTER / PLANE
+    // 7. SUBMARINE / SHIP / BOAT / HELICOPTER / PLANE
     } else if (p.includes('allveelaev') || p.includes('submarine') || p.includes('laev') || p.includes('ship') || p.includes('boat') || p.includes('paat') || p.includes('kopter') || p.includes('copter')) {
         const hullMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.5 });
         const yellowMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
@@ -1658,7 +1758,24 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
         periscope.position.set(0, 3.6, 0.5);
         group.add(periscope);
 
-    // 5. GENERIC PROCEDURAL COMPOSITE 3D OBJECT
+    // 8. TROPHY / KARIKAS / PIANO / CUSTOM OBJECT
+    } else if (p.includes('karikas') || p.includes('trophy') || p.includes('cup') || p.includes('kuld')) {
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.85, roughness: 0.2, emissive: 0xffd32a, emissiveIntensity: 0.3 });
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.6 });
+
+        const pedestal = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.8, 1.8), baseMat);
+        pedestal.position.y = 0.4;
+        group.add(pedestal);
+
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.6, 1.4, 12), goldMat);
+        stem.position.y = 1.5;
+        group.add(stem);
+
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 0.4, 1.8, 16, 1, true), goldMat);
+        cup.position.y = 3.0;
+        group.add(cup);
+
+    // 9. GENERIC INTELLIGENT PROCEDURAL COMPOSITE
     } else {
         const colorPalette = [0x9b59b6, 0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22, 0x1abc9c];
         const chosenColor = colorPalette[Math.abs(hashString(name)) % colorPalette.length];
@@ -1699,11 +1816,11 @@ export function executeAiBuild(promptText: string) {
         chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    const p = promptText.toLowerCase();
+    const p = promptText.toLowerCase().trim();
     let generatedObjectsCount = 0;
     let aiResponse = '';
 
-    // --- 0. MATHEMATICS & CALCULATIONS (e.g. 1+1, 5*5, 100/4, 25-10, sqrt, mis on 5+5 jne) ---
+    // Pre-calculate math if pattern matches
     const isMathPattern = (
         /^[0-9\.\s\+\-\*\/\^\(\)\%xX÷×]+[\?]?$/.test(promptText.trim()) ||
         /(?:kui palju on|mis on|arvuta|calculate|what is)\s*([0-9\.\s\+\-\*\/\^\(\)\%xX÷×]+)/i.test(p) ||
@@ -1733,7 +1850,60 @@ export function executeAiBuild(promptText: string) {
         }
     }
 
-    if (mathResult !== null) {
+    // --- 0.0 SEMANTIC SCENE & INTENT ACTIONS (Clear, Scale, Color, Transform) ---
+    if (p.includes('kustuta kõik') || p.includes('tühjenda') || p.includes('tuhjenda') || p.includes('alusta uuesti') || p.includes('clear all') || p.includes('clear scene')) {
+        placedObjects.forEach(obj => scene.remove(obj.mesh));
+        placedObjects.length = 0;
+        selectObject(null);
+        if (isAdmin) {
+            aiResponse = `🧹 <strong>Puhastasin kogu 3D stseeni!</strong><br>Kõik vanad objektid on eemaldatud. Saad alustada uue maailma loomisega!`;
+        } else {
+            aiResponse = `🧹 <strong>Cleared the entire 3D scene!</strong><br>All objects have been removed. Ready to build a new world!`;
+        }
+
+    } else if (p.includes('suurem') || p.includes('suuremaks') || p.includes('hiiglaslik') || p.includes('scale up') || p.includes('make bigger')) {
+        const target = selectedObject || placedObjects[placedObjects.length - 1];
+        if (target) {
+            target.mesh.scale.multiplyScalar(1.5);
+            target.scale = { x: target.mesh.scale.x, y: target.mesh.scale.y, z: target.mesh.scale.z };
+            if (isAdmin) {
+                aiResponse = `🔍 <strong>Tegin objekti ${target.name} 1.5x suuremaks!</strong>`;
+            } else {
+                aiResponse = `🔍 <strong>Scaled up ${target.name} by 1.5x!</strong>`;
+            }
+        } else {
+            aiResponse = isAdmin ? `⚠️ Vali enne objekt, mida soovid suurendada!` : `⚠️ Please select an object to scale up!`;
+        }
+
+    } else if (p.includes('värvi') || p.includes('varvi') || p.includes('color') || p.includes('paint')) {
+        const target = selectedObject || placedObjects[placedObjects.length - 1];
+        let newColor = '#00f2fe';
+        let colorName = 'Cyan';
+        if (p.includes('punan') || p.includes('red')) { newColor = '#e74c3c'; colorName = 'Red'; }
+        else if (p.includes('kuld') || p.includes('gold') || p.includes('kollan') || p.includes('yellow')) { newColor = '#ffd32a'; colorName = 'Gold'; }
+        else if (p.includes('rohelin') || p.includes('green')) { newColor = '#2ecc71'; colorName = 'Green'; }
+        else if (p.includes('sinin') || p.includes('blue')) { newColor = '#3498db'; colorName = 'Blue'; }
+        else if (p.includes('must') || p.includes('black')) { newColor = '#1e272e'; colorName = 'Black'; }
+        else if (p.includes('lilla') || p.includes('purple')) { newColor = '#9b59b6'; colorName = 'Purple'; }
+
+        if (target) {
+            target.mesh.traverse((node: any) => {
+                if (node.isMesh && node.material) {
+                    node.material = new THREE.MeshStandardMaterial({ color: newColor, roughness: 0.4, metalness: 0.4 });
+                }
+            });
+            target.color = newColor;
+            if (isAdmin) {
+                aiResponse = `🎨 <strong>Värvisin objekti ${target.name} tooni ${colorName}!</strong>`;
+            } else {
+                aiResponse = `🎨 <strong>Painted ${target.name} into ${colorName}!</strong>`;
+            }
+        } else {
+            aiResponse = isAdmin ? `⚠️ Vali objekt, mida soovid värvida!` : `⚠️ Please select an object to repaint!`;
+        }
+
+    // --- 0. MATHEMATICS & CALCULATIONS (e.g. 1+1, 5*5, 100/4, 25-10, sqrt, mis on 5+5 jne) ---
+    } else if (mathResult !== null) {
         if (isAdmin) {
             aiResponse = `🧮 <strong>Vastus:</strong><br><span style="font-size: 1.25rem; color: #ffd32a; font-weight: bold;">${mathExpr} = ${mathResult}</span><br><br>💡 Oskan arvutada ka muid tehteid (nt liitmine, lahutamine, korrutamine, jagamine ja astendamine)!`;
         } else {

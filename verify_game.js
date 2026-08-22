@@ -183,6 +183,23 @@ try {
                 throw new Error("Custom Procedural 3D Entity creation failed!");
             }
 
+            // Test Semantic 3D Understanding & Color Intent: "Paint gold"
+            console.log("   Testing Semantic 3D Intent ('Paint gold')...");
+            await page.type('#ai-prompt-input', 'Paint gold');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const paintChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!paintChat.includes('Painted') && !paintChat.includes('Gold')) {
+                throw new Error("Semantic 3D Paint Intent failed!");
+            }
+
+            // Test Semantic Complex 3D World Building: "Build tropical island with palm trees"
+            console.log("   Testing Complex Procedural 3D World ('Tropical island with palm trees')...");
+            await page.type('#ai-prompt-input', 'Build tropical island with palm trees');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
             await page.click('#btn-close-ai');
 
             // Test Drivable Car in Play Test Mode
