@@ -143,11 +143,11 @@ class CookingGame {
 
     // Stove Pans state - 5 parallel cooking slots
     private pans = [
-        { id: 0, nameEt: 'Pann 1 (Grill)', nameEn: 'Pan 1 (Grill)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' },
-        { id: 1, nameEt: 'Pann 2 (Grill)', nameEn: 'Pan 2 (Grill)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' },
-        { id: 2, nameEt: 'Pann 3 (Grill)', nameEn: 'Pan 3 (Grill)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' },
-        { id: 3, nameEt: 'Pott 1 (Keetmine)', nameEn: 'Pot 1 (Boiling)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' },
-        { id: 4, nameEt: 'Pann 4 (Grill)', nameEn: 'Pan 4 (Grill)', holding: null as string | null, progress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' }
+        { id: 0, nameEt: 'Pann 1 (Grill)', nameEn: 'Pan 1 (Grill)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
+        { id: 1, nameEt: 'Pann 2 (Grill)', nameEn: 'Pan 2 (Grill)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
+        { id: 2, nameEt: 'Pann 3 (Grill)', nameEn: 'Pan 3 (Grill)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
+        { id: 3, nameEt: 'Pott 1 (Keetmine)', nameEn: 'Pot 1 (Boiling)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' },
+        { id: 4, nameEt: 'Pann 4 (Grill)', nameEn: 'Pan 4 (Grill)', holding: null as string | null, progress: 0, washProgress: 0, state: 'empty' as 'empty' | 'cooking' | 'done' | 'burned' | 'washing' }
     ];
 
     // Oven state
@@ -949,13 +949,25 @@ class CookingGame {
                     statusText = `<strong style="color: #ff4757; font-size: 1.05rem;">🔥 ${isEt ? 'KÕRBENUD!' : 'BURNED!'}</strong>`;
                     btnAction = `<button class="btn-action btn-take-pan" onclick="window.cookingGame.takeFromPan(${pan.id})" data-pan="${pan.id}" style="background: #eb4d4b; font-weight: bold; cursor: pointer;">🗑️ ${isEt ? 'Viska minema' : 'Throw away'}</button>`;
                 }
+            } else if (pan.state === 'washing') {
+                const timeLeft = Math.max(0, Math.ceil(30 - (pan.washProgress / 100) * 30));
+                statusText = `<strong style="color: #00f2fe; animation: pulse 1s infinite;">🧼 ${isEt ? 'PESEMINE:' : 'WASHING:'} ${timeLeft}s (${Math.round(pan.washProgress)}%)</strong>`;
+                btnAction = `<span style="font-size: 0.82rem; color: #70a1ff; font-weight: 700;">🧼 ${isEt ? 'Pann peseb ja jahtub (30s)...' : 'Pan is washing & cooling (30s)...'}</span>`;
             }
 
-            const fillWidth = Math.min(100, pan.progress);
-            const fillColor = pan.state === 'burned' ? '#eb4d4b' : (pan.state === 'done' ? '#2ed573' : '#ffd32a');
+            const fillWidth = pan.state === 'washing' ? Math.min(100, pan.washProgress) : Math.min(100, pan.progress);
+            const fillColor = pan.state === 'washing' 
+                ? 'linear-gradient(90deg, #00f2fe, #4facfe)' 
+                : (pan.state === 'burned' ? '#eb4d4b' : (pan.state === 'done' ? '#2ed573' : '#ffd32a'));
+            const borderColor = pan.state === 'washing'
+                ? '#00f2fe'
+                : (pan.state === 'done' ? '#2ed573' : (pan.state === 'cooking' ? '#ff793f' : 'rgba(255,255,255,0.12)'));
+            const bgColor = pan.state === 'washing'
+                ? 'rgba(0, 242, 254, 0.08)'
+                : (pan.state === 'cooking' ? 'rgba(255, 121, 63, 0.1)' : '#1e272e');
 
             return `
-                <div class="pan-card" data-pan-id="${pan.id}" style="border: 1.5px solid ${pan.state === 'done' ? '#2ed573' : (pan.state === 'cooking' ? '#ff793f' : 'rgba(255,255,255,0.12)')}; background: ${pan.state === 'cooking' ? 'rgba(255, 121, 63, 0.1)' : '#1e272e'};">
+                <div class="pan-card" data-pan-id="${pan.id}" style="border: 1.5px solid ${borderColor}; background: ${bgColor};">
                     <strong style="color: #ffd32a; font-size: 1.05rem;">🍳 ${panName}</strong>
                     <div class="pan-status-text" style="font-size: 0.9rem; color: #dfe6e9;">${statusText}</div>
                     <div class="pan-heat-bar">
@@ -971,10 +983,11 @@ class CookingGame {
 
     public putOnPan(panId: number, rawId: string) {
         const pan = this.pans[panId];
-        if (!pan || pan.holding) return;
+        if (!pan || pan.holding || pan.state === 'washing') return;
 
         pan.holding = rawId;
         pan.progress = 0;
+        pan.washProgress = 0;
         pan.state = 'cooking';
         kitchenAudio.playSizzle(true);
         this.renderStovePans();
@@ -982,7 +995,7 @@ class CookingGame {
 
     public takeFromPan(panId: number) {
         const pan = this.pans[panId];
-        if (!pan || !pan.holding) return;
+        if (!pan || !pan.holding || pan.state === 'washing') return;
 
         if (pan.state === 'done') {
             const raw = INGREDIENTS[pan.holding];
@@ -990,15 +1003,17 @@ class CookingGame {
             this.addToPlate(resultId);
             kitchenAudio.playServe();
             const resName = this.getName(resultId);
-            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} pandud otse taldrikule! ✨` : `🍽️ +1 ${resName} added to plate! ✨`);
+            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} taldrikule! 🧼 Pann läheb 30s pesemisse!` : `🍽️ +1 ${resName} plated! 🧼 Pan is now washing for 30s!`);
         } else if (pan.state === 'burned') {
             kitchenAudio.playBurn();
-            this.showScorePopup(this.isEt ? `🔥 Kõrbenud toit visati minema!` : `🔥 Burned food was thrown away!`);
+            this.showScorePopup(this.isEt ? `🔥 Kõrbenud toit visati minema! 🧼 Pann läheb 30s pesemisse!` : `🔥 Burned food thrown away! 🧼 Pan washing for 30s!`);
         }
 
+        // Toidu võtmisel kaob nupp koheselt, holding tühjendatakse ja algab 30s pesemine
         pan.holding = null;
         pan.progress = 0;
-        pan.state = 'empty';
+        pan.washProgress = 0;
+        pan.state = 'washing';
 
         const anyCooking = this.pans.some(p => p.state === 'cooking');
         if (!anyCooking) kitchenAudio.playSizzle(false);
@@ -1092,6 +1107,32 @@ class CookingGame {
                     }
                     if (fillEl) {
                         fillEl.style.width = `${Math.min(100, pan.progress)}%`;
+                    }
+                }
+            } else if (pan.state === 'washing') {
+                // 30 seconds washing at 100ms ticks = 300 ticks (100 / 300 = 0.3333333333333333 per tick)
+                pan.washProgress += (100 / 300);
+                const timeLeft = Math.max(0, Math.ceil(30 - (pan.washProgress / 100) * 30));
+
+                if (pan.washProgress >= 100) {
+                    pan.state = 'empty';
+                    pan.washProgress = 0;
+                    pan.progress = 0;
+                    pan.holding = null;
+                    stateChanged = true;
+                    kitchenAudio.playSuccess();
+                } else {
+                    const panCard = document.querySelector(`.pan-card[data-pan-id="${pan.id}"]`);
+                    if (panCard) {
+                        const statusEl = panCard.querySelector('.pan-status-text');
+                        const fillEl = panCard.querySelector('.pan-heat-fill') as HTMLElement;
+                        if (statusEl) {
+                            statusEl.innerHTML = `<strong style="color: #00f2fe; animation: pulse 1s infinite;">🧼 ${this.isEt ? 'PESEMINE:' : 'WASHING:'} ${timeLeft}s (${Math.round(pan.washProgress)}%)</strong>`;
+                        }
+                        if (fillEl) {
+                            fillEl.style.width = `${Math.min(100, pan.washProgress)}%`;
+                            fillEl.style.background = 'linear-gradient(90deg, #00f2fe, #4facfe)';
+                        }
                     }
                 }
             }
