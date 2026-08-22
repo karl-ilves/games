@@ -88,18 +88,21 @@ try {
             throw new Error(`Yard reset on logout failed! Expected '0', got '${yardsAfterLogout}'`);
         }
 
-        // --- Test LOGIN with Non-Existent Username: MUST say 'Seda nime ei ole!' ---
-        console.log("   Testing Login with Non-Existent Username -> MUST display 'Seda nime ei ole!'...");
+        // --- Test LOGIN with Non-Existent Username: MUST say 'This username does not exist!' ---
+        console.log("   Testing Login with Non-Existent Username -> MUST display 'This username does not exist!'...");
         await page.type('#auth-email', 'super@player.com');
         await page.type('#auth-username', 'GhostUser');
         await page.type('#auth-password', 'Pass12345!');
         await page.click('#btn-login');
-        await page.waitForFunction(() => document.getElementById('auth-message') && document.getElementById('auth-message').textContent !== 'Kontrollin andmeid...', { timeout: 4000 });
+        await page.waitForFunction(() => {
+            const msg = document.getElementById('auth-message')?.textContent || '';
+            return msg !== '' && msg !== 'Checking credentials...' && msg !== 'Kontrollin andmeid...';
+        }, { timeout: 4000 });
 
         const errorMsg = await page.$eval('#auth-message', el => el.textContent);
         console.log("   Non-existent username error message:", errorMsg);
-        if (!errorMsg.includes('Seda nime ei ole')) {
-            throw new Error(`Expected 'Seda nime ei ole!', got '${errorMsg}'`);
+        if (!errorMsg.includes('does not exist') && !errorMsg.includes('Seda nime ei ole')) {
+            throw new Error(`Expected 'This username does not exist!', got '${errorMsg}'`);
         }
 
         // --- Test LOGIN with CORRECT Username: Yards MUST be restored to 500 ---
@@ -107,7 +110,10 @@ try {
         await page.$eval('#auth-username', el => el.value = '');
         await page.type('#auth-username', 'SuperPlayer');
         await page.click('#btn-login');
-        await page.waitForFunction(() => document.getElementById('auth-message') && document.getElementById('auth-message').textContent.includes('Tere tulemast tagasi'), { timeout: 4000 });
+        await page.waitForFunction(() => {
+            const msg = document.getElementById('auth-message')?.textContent || '';
+            return msg.includes('Welcome back') || msg.includes('Tere tulemast');
+        }, { timeout: 4000 });
 
         const restoredYards = await page.$eval('#header-yard-val', el => el.textContent);
         console.log("   Restored Yard Balance for SuperPlayer (Expected: 500):", restoredYards);

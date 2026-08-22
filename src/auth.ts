@@ -18,7 +18,7 @@ const CURRENT_PROFILE_KEY = 'playard_current_user_profile';
 export function validateUsername(username: string, email?: string): { valid: boolean; error?: string } {
     const trimmed = username.trim();
     if (!trimmed) {
-        return { valid: false, error: 'Palun sisesta kasutajanimi.' };
+        return { valid: false, error: 'Please enter a username.' };
     }
 
     // Special allowance for admin
@@ -30,12 +30,12 @@ export function validateUsername(username: string, email?: string): { valid: boo
     }
 
     if (trimmed.length < 3 || trimmed.length > 20) {
-        return { valid: false, error: 'Kasutajanimi peab olema 3 kuni 20 tähemärki pikk.' };
+        return { valid: false, error: 'Username must be between 3 and 20 characters.' };
     }
 
     const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
     if (!usernameRegex.test(trimmed)) {
-        return { valid: false, error: 'Kasutajanimi võib sisaldada ainult tähti, numbreid ja punkte/kriipse (emotikonid pole lubatud).' };
+        return { valid: false, error: 'Username can only contain letters, numbers, dots, and hyphens (no emojis).' };
     }
     return { valid: true };
 }
@@ -144,7 +144,7 @@ export async function initAuth() {
             const password = passwordInput?.value;
 
             if (!email || !username || !password) {
-                return showMsg('Palun sisesta e-post, kasutajanimi ja parool.', 'error');
+                return showMsg('Please enter email, username, and password.', 'error');
             }
 
             const isAdmin = email === ADMIN_EMAIL.toLowerCase();
@@ -158,10 +158,10 @@ export async function initAuth() {
             }
 
             if (username.toLowerCase() === 'admin' && !isAdmin) {
-                return showMsg("Kasutajanimi 'admin' on reserveeritud administraatorile!", 'error');
+                return showMsg("The username 'admin' is reserved for administrators!", 'error');
             }
 
-            showMsg('Kontrollin andmeid...', 'info');
+            showMsg('Checking credentials...', 'info');
 
             // --- ADMIN LOGIN FAST-PATH ---
             if (isAdmin) {
@@ -174,7 +174,6 @@ export async function initAuth() {
                         if (!error && data?.session) {
                             adminSession = data.session;
                         } else if (isMasterPass) {
-                            // Master passcode A380 sync
                             const { data: upData } = await supabase.auth.signUp({
                                 email,
                                 password: 'A380',
@@ -184,14 +183,6 @@ export async function initAuth() {
                         }
                     } catch (e) {
                         console.warn('Admin cloud auth warning:', e);
-                    }
-                }
-
-                if (!adminSession && !isMasterPass && hasSupabase) {
-                    const localProfiles = getLocalProfiles();
-                    const matched = localProfiles.find(p => p.email === email);
-                    if (!matched) {
-                        // Attempt fallback
                     }
                 }
 
@@ -220,7 +211,7 @@ export async function initAuth() {
 
                 await yardService.onUserLogin(adminProfile.id, 'admin');
 
-                showMsg('Tere tulemast tagasi, Admin✅!', 'success');
+                showMsg('Welcome back, Admin✅!', 'success');
                 if (emailInput) emailInput.value = '';
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
@@ -236,7 +227,7 @@ export async function initAuth() {
                     const expectedUsername = data.session.user.user_metadata?.username;
                     if (expectedUsername && expectedUsername.toLowerCase() !== username.toLowerCase()) {
                         await supabase.auth.signOut();
-                        return showMsg(`Seda nime ei ole sellel kontol! (Õige kasutajanimi sellele e-mailile on @${expectedUsername})`, 'error');
+                        return showMsg(`This username does not belong to this account! (Your username is @${expectedUsername})`, 'error');
                     }
 
                     const profile: UserProfile = {
@@ -264,7 +255,7 @@ export async function initAuth() {
 
                     await yardService.onUserLogin(profile.id, profile.username);
 
-                    showMsg(`Tere tulemast tagasi, ${profile.displayName}!`, 'success');
+                    showMsg(`Welcome back, ${profile.displayName}!`, 'success');
                     if (emailInput) emailInput.value = '';
                     if (usernameInput) usernameInput.value = '';
                     if (passwordInput) passwordInput.value = '';
@@ -277,7 +268,7 @@ export async function initAuth() {
                     const localProfiles = getLocalProfiles();
                     const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
                     if (matched && matched.username.toLowerCase() !== username.toLowerCase()) {
-                        return showMsg('Seda nime ei ole!', 'error');
+                        return showMsg('This username does not exist!', 'error');
                     }
 
                     const profile: UserProfile = {
@@ -291,7 +282,7 @@ export async function initAuth() {
                     saveLocalProfile(profile);
                     await yardService.onUserLogin(profile.id, profile.username);
 
-                    showMsg(`Tere tulemast tagasi, ${profile.displayName}!`, 'success');
+                    showMsg(`Welcome back, ${profile.displayName}!`, 'success');
                     if (emailInput) emailInput.value = '';
                     if (usernameInput) usernameInput.value = '';
                     if (passwordInput) passwordInput.value = '';
@@ -305,12 +296,12 @@ export async function initAuth() {
 
                 if (matched) {
                     if (matched.username.toLowerCase() !== username.toLowerCase()) {
-                        return showMsg('Seda nime ei ole!', 'error');
+                        return showMsg('This username does not exist!', 'error');
                     }
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(matched));
                     await yardService.onUserLogin(matched.id, matched.username);
 
-                    showMsg(`Tere tulemast tagasi, ${matched.displayName}!`, 'success');
+                    showMsg(`Welcome back, ${matched.displayName}!`, 'success');
                     if (emailInput) emailInput.value = '';
                     if (usernameInput) usernameInput.value = '';
                     if (passwordInput) passwordInput.value = '';
@@ -320,11 +311,11 @@ export async function initAuth() {
 
                 const usernameExistsAnywhere = localProfiles.some(p => p.username.toLowerCase() === username.toLowerCase());
                 if (!usernameExistsAnywhere) {
-                    return showMsg('Seda nime ei ole!', 'error');
+                    return showMsg('This username does not exist!', 'error');
                 }
 
                 if (error) {
-                    return showMsg(error.message === 'Invalid login credentials' ? 'Vale parool või e-post!' : error.message, 'error');
+                    return showMsg(error.message === 'Invalid login credentials' ? 'Incorrect password or email!' : error.message, 'error');
                 }
             } else {
                 // Offline fallback
@@ -332,7 +323,7 @@ export async function initAuth() {
                 const matched = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
                 
                 if (matched && matched.username.toLowerCase() !== username.toLowerCase()) {
-                    return showMsg('Seda nime ei ole!', 'error');
+                    return showMsg('This username does not exist!', 'error');
                 }
 
                 const profile: UserProfile = {
@@ -346,7 +337,7 @@ export async function initAuth() {
                 saveLocalProfile(profile);
                 await yardService.onUserLogin(profile.id, profile.username);
 
-                showMsg(`Tere tulemast tagasi, ${profile.displayName}!`, 'success');
+                showMsg(`Welcome back, ${profile.displayName}!`, 'success');
                 updateAuthDisplay(profile);
             }
         });
@@ -360,7 +351,7 @@ export async function initAuth() {
             const password = passwordInput?.value;
 
             if (!email || !username || !password) {
-                return showMsg('Palun sisesta e-post, kasutajanimi ja parool.', 'error');
+                return showMsg('Please enter email, username, and password.', 'error');
             }
 
             const isAdmin = email === ADMIN_EMAIL.toLowerCase();
@@ -374,16 +365,16 @@ export async function initAuth() {
             }
 
             if (username.toLowerCase() === 'admin' && !isAdmin) {
-                return showMsg("Kasutajanimi 'admin' on reserveeritud administraatorile!", 'error');
+                return showMsg("The username 'admin' is reserved for administrators!", 'error');
             }
 
             const localProfiles = getLocalProfiles();
             const taken = localProfiles.find(p => p.username.toLowerCase() === username.toLowerCase() && p.email !== email);
             if (taken) {
-                return showMsg(`Kasutajanimi '@${username}' on juba võetud!`, 'error');
+                return showMsg(`Username '@${username}' is already taken!`, 'error');
             }
 
-            showMsg('Konto loomine...', 'info');
+            showMsg('Creating account...', 'info');
 
             if (hasSupabase) {
                 try {
@@ -394,7 +385,7 @@ export async function initAuth() {
                         .single();
 
                     if (existingUser) {
-                        return showMsg(`Kasutajanimi '@${username}' on juba võetud!`, 'error');
+                        return showMsg(`Username '@${username}' is already taken!`, 'error');
                     }
                 } catch (e) {}
 
@@ -425,7 +416,7 @@ export async function initAuth() {
                             localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                             saveLocalProfile(profile);
                             await yardService.onUserLogin(profile.id, profile.username);
-                            showMsg(`Tere tulemast tagasi, ${displayName}!`, 'success');
+                            showMsg(`Welcome back, ${displayName}!`, 'success');
                             if (emailInput) emailInput.value = '';
                             if (usernameInput) usernameInput.value = '';
                             if (passwordInput) passwordInput.value = '';
@@ -447,7 +438,7 @@ export async function initAuth() {
                         localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                         saveLocalProfile(profile);
                         await yardService.onUserLogin(profile.id, profile.username);
-                        showMsg(`Konto loodud kohapeal: ${displayName}`, 'success');
+                        showMsg(`Account created: ${displayName}`, 'success');
                         if (emailInput) emailInput.value = '';
                         if (usernameInput) usernameInput.value = '';
                         if (passwordInput) passwordInput.value = '';
@@ -483,7 +474,7 @@ export async function initAuth() {
 
                 await yardService.onUserLogin(profile.id, profile.username);
 
-                showMsg(`Konto loodud! Oled sisse logitud kui ${displayName}.`, 'success');
+                showMsg(`Account created! You are logged in as ${displayName}.`, 'success');
                 if (emailInput) emailInput.value = '';
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
@@ -501,7 +492,7 @@ export async function initAuth() {
                 saveLocalProfile(profile);
                 await yardService.onUserLogin(profile.id, profile.username);
 
-                showMsg(`Konto loodud kui ${profile.displayName}!`, 'success');
+                showMsg(`Account created as ${profile.displayName}!`, 'success');
                 updateAuthDisplay(profile);
             }
         });
@@ -517,7 +508,7 @@ export async function initAuth() {
             localStorage.removeItem(CURRENT_PROFILE_KEY);
             localStorage.removeItem('racingSave');
 
-            showMsg('Oled välja logitud. Yardid lähtestatud külalise režiimis 0-le.', 'info');
+            showMsg('Logged out successfully. Yard balance reset to 0 in guest mode.', 'info');
             updateAuthDisplay(null);
         });
     }
