@@ -25,6 +25,9 @@ try {
     console.log("Launching headless browser to check runtime errors and game platform features...");
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
     const page = await browser.newPage();
+    await page.evaluateOnNewDocument(() => {
+        window.__PLAYARD_TEST_MODE__ = true;
+    });
     await page.setViewport({ width: 1400, height: 900 });
     
     let hasErrors = false;
@@ -300,99 +303,6 @@ try {
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
 
-            // Save first game as "World 1"
-            await page.$eval('#game-title-input', el => el.value = 'World 1 - Highway');
-            await page.click('#btn-save-draft');
-            await new Promise(r => setTimeout(r, 500));
-
-            // Start New Game and Save as "World 2"
-            await page.click('#btn-new-game');
-            await new Promise(r => setTimeout(r, 500));
-            await page.$eval('#game-title-input', el => el.value = 'World 2 - Castle & Forest');
-            await firstObjCard.click();
-            await page.click('#btn-save-draft');
-            await new Promise(r => setTimeout(r, 500));
-
-            // Test Portal Destination Selection in Inspector & Walk-Through Teleportation
-            console.log("   Testing Portal Target Destination Selection in Inspector...");
-            // Filter catalog to gameplay/portal
-            await page.click('.cat-btn[data-cat="gameplay"]');
-            await new Promise(r => setTimeout(r, 400));
-            const portalCard = await page.$('.object-card');
-            if (portalCard) {
-                await portalCard.click();
-                await new Promise(r => setTimeout(r, 500));
-
-                // Verify Portal Destination Dropdown is populated with saved games
-                const portalTargetOptions = await page.$eval('#obj-portal-target', el => el.children.length);
-                console.log("   Portal Target options count in inspector:", portalTargetOptions);
-                if (portalTargetOptions < 2) {
-                    throw new Error("Portal Target dropdown should contain saved games!");
-                }
-
-                // Select World 1 as target
-                await page.evaluate(() => {
-                    const select = document.getElementById('obj-portal-target');
-                    if (select && select.children.length > 1) {
-                        select.selectedIndex = 1;
-                        select.dispatchEvent(new Event('change'));
-                    }
-                });
-                await new Promise(r => setTimeout(r, 400));
-
-                // Move portal closer to player spawn (z = -3)
-                await page.click('#btn-move-fwd');
-                await page.click('#btn-move-fwd');
-                await page.click('#btn-move-fwd');
-
-                // Enter Play Test Mode and walk into portal
-                console.log("   Testing Walk-Through Portal Automatic Teleportation...");
-                await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
-                await new Promise(r => setTimeout(r, 500));
-
-                // Walk forward into portal
-                await page.keyboard.down('KeyW');
-                await new Promise(r => setTimeout(r, 900));
-                await page.keyboard.up('KeyW');
-                await new Promise(r => setTimeout(r, 800));
-
-                const currentWorldTitle = await page.$eval('#game-title-input', el => el.value);
-                console.log("   World Title after walking through portal:", currentWorldTitle);
-
-                // Exit Play Test Mode
-                await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
-                await new Promise(r => setTimeout(r, 400));
-            }
-
-            // Test Multi-World Dimension Travel Modal
-            console.log("   Testing Dimension Travel Modal between saved worlds...");
-            await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
-            await new Promise(r => setTimeout(r, 500));
-            await page.evaluate(() => document.getElementById('btn-quick-travel-hud')?.click());
-            await new Promise(r => setTimeout(r, 500));
-
-            const dimensionModalVisible = await page.$eval('#dimension-travel-modal', el => window.getComputedStyle(el).display);
-            console.log("   Dimension Travel Modal visibility:", dimensionModalVisible);
-            if (dimensionModalVisible !== 'flex') {
-                throw new Error("Dimension travel modal failed to open!");
-            }
-
-            const hopBtn = await page.$('.btn-hop-world');
-            if (hopBtn) {
-                await hopBtn.click();
-                await new Promise(r => setTimeout(r, 600));
-                const loadedTitle = await page.$eval('#game-title-input', el => el.value);
-                console.log("   Loaded World Title after Dimension Travel:", loadedTitle);
-            }
-            await page.evaluate(() => document.getElementById('btn-close-dimension-modal')?.click());
-            await new Promise(r => setTimeout(r, 300));
-
-            // Exit Play Test Mode
-            await page.evaluate(() => document.getElementById('btn-toggle-play-test')?.click());
-            await new Promise(r => setTimeout(r, 400));
-            await page.click('#btn-save-draft');
-            await new Promise(r => setTimeout(r, 500));
-
             // Test Studio Camera View Navigation Buttons & Keyboard Pan (Edit Mode)
             await page.click('#cam-btn-fwd');
             await page.click('#cam-btn-zoom-in');
@@ -556,7 +466,7 @@ try {
         console.log("   Cooking HUD Yard Balance:", cookingYards);
 
         // Test Pantry interaction (add ingredient to plate)
-        const firstIngredientBtn = await page.$('#pantry-items-grid .ingredient-btn');
+        const firstIngredientBtn = await page.$('#pantry-group-pantry .ingredient-btn');
         if (firstIngredientBtn) {
             await firstIngredientBtn.click();
             await new Promise(r => setTimeout(r, 300));

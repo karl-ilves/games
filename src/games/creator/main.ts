@@ -1688,7 +1688,7 @@ export function executeAiBuild(promptText: string) {
         aiResponse = `🌲 Istutasin stseeni ${generatedObjectsCount} puud, kändu ja kivimit! Looduslik metsamaailm on valmis.`;
 
     // 3. AUTOTEED & SÕIDETAVAD AUTOD (ROADS & DRIVABLE CARS)
-    } else if (p.includes('autotee') || p.includes('autoteed') || p.includes('tee') || p.includes('road') || p.includes('sõit') || p.includes('soit') || p.includes('auto') || p.includes('car') || p.includes('drive') || p.includes('masin')) {
+    } else if (p.includes('autotee') || p.includes('autoteed') || (p.includes('tee') && !p.includes('teade')) || (p.includes('road') && !p.includes('broad')) || p.includes('sõit') || p.includes('soit') || p.includes('drive')) {
         if (titleInput) titleInput.value = 'Highway & Supercars 3D';
         if (catSelect) catSelect.value = 'Racing';
         if (descInput) descInput.value = 'Long asphalt highway with high performance drivable supercars.';
@@ -1734,59 +1734,140 @@ export function executeAiBuild(promptText: string) {
         });
         generatedObjectsCount++;
 
-        const car2 = vehicleItems[1] || CATALOG_DATABASE[1];
-        const meshCar2 = createObjectMesh(car2, '#00f2fe');
-        meshCar2.position.set(-1.8, 0, 8);
-        scene.add(meshCar2);
+        aiResponse = `🏎️ <strong>Lõin asfalteeritud autotee ja sõidetava Supercari!</strong><br>Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja astu auto juurde <strong>[F]</strong>, et autoga sõitma hakata!`;
 
-        placedObjects.push({
-            id: 'placed_ai_car_' + Date.now() + '_2',
-            mesh: meshCar2,
-            catalogId: car2.id,
-            name: '🚙 Sõidetav Cyber Truck',
-            category: 'vehicles',
-            position: { x: meshCar2.position.x, y: meshCar2.position.y, z: meshCar2.position.z },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            color: '#00f2fe'
-        });
-        generatedObjectsCount++;
+    // 4. SMART CONTEXTUAL ADDITIONS & OBJECT DECORATOR (Lisa asjadele ise asju juurde)
+    } else if (p.includes('juurde') || p.includes('kaunista') || p.includes('detail') || p.includes('lisa autole') || p.includes('lisa puule') || p.includes('lisa majale')) {
+        // A. Adding additions to CAR / VEHICLE
+        if (p.includes('auto') || p.includes('car') || (selectedObject && selectedObject.category === 'vehicles')) {
+            const targetCar = selectedObject || placedObjects.find(obj => obj.category === 'vehicles') || placedObjects[0];
+            const baseX = targetCar ? targetCar.position.x : 0;
+            const baseZ = targetCar ? targetCar.position.z : 0;
 
-        aiResponse = `🏎️ <strong>Lõin asfalteeritud autotee ja sõidetavad autod!</strong><br>Paigutasin stseeni 4 teelõiku, <strong>🏎️ Supercari</strong> ja <strong>🚙 Cyber Trucki</strong>.<br><br>👉 Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja astu auto juurde <strong>[F]</strong>, et autoga sõitma hakata!`;
+            // Add Road section under/next to car
+            const roadItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('road')) || CATALOG_DATABASE[0];
+            const meshRoad = createObjectMesh(roadItem);
+            meshRoad.position.set(baseX, 0, baseZ);
+            scene.add(meshRoad);
+            placedObjects.push({
+                id: 'placed_ai_add_road_' + Date.now(),
+                mesh: meshRoad,
+                catalogId: roadItem.id,
+                name: '🛣️ Asfalttee',
+                category: 'city',
+                position: { x: meshRoad.position.x, y: 0, z: meshRoad.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: roadItem.color
+            });
+            generatedObjectsCount++;
 
-    // 4. PORTAALID & TEISE MAAILMA REISIMINE (PORTALS & DIMENSION TRAVEL)
-    } else if (p.includes('portaal') || p.includes('portal') || p.includes('teise') || p.includes('seiv') || p.includes('travel') || p.includes('dimension') || p.includes('teleport')) {
-        if (titleInput) titleInput.value = 'Portal Dimension Hub';
-        if (catSelect) catSelect.value = 'Adventure';
-        if (descInput) descInput.value = 'Magical world with teleportation portals between saved dimensions.';
+            // Add Street Lights on both sides
+            const lightItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('light')) || CATALOG_DATABASE[0];
+            [-3.5, 3.5].forEach((lx, idx) => {
+                const meshLight = createObjectMesh(lightItem);
+                meshLight.position.set(baseX + lx, 0, baseZ - 3 + idx * 6);
+                scene.add(meshLight);
+                placedObjects.push({
+                    id: 'placed_ai_add_light_' + Date.now() + '_' + idx,
+                    mesh: meshLight,
+                    catalogId: lightItem.id,
+                    name: '💡 Tänavalamp',
+                    category: 'city',
+                    position: { x: meshLight.position.x, y: 0, z: meshLight.position.z },
+                    rotation: { x: 0, y: 0, z: 0 },
+                    scale: { x: 1, y: 1, z: 1 },
+                    color: lightItem.color
+                });
+                generatedObjectsCount++;
+            });
 
-        const portalItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('portal') || c.name.toLowerCase().includes('gate') || c.geometryType.includes('portal')) || CATALOG_DATABASE[0];
-        const mesh = createObjectMesh(portalItem);
-        mesh.position.set(0, 0, -6);
-        mesh.scale.setScalar(portalItem.baseScale * 1.4);
-        scene.add(mesh);
+            // Add Fuel Tank / Gas Station prop
+            const fuelItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('fuel') || c.name.toLowerCase().includes('tank') || c.category === 'scifi') || CATALOG_DATABASE[0];
+            const meshFuel = createObjectMesh(fuelItem, '#f39c12');
+            meshFuel.position.set(baseX + 4.5, 0, baseZ);
+            scene.add(meshFuel);
+            placedObjects.push({
+                id: 'placed_ai_add_fuel_' + Date.now(),
+                mesh: meshFuel,
+                catalogId: fuelItem.id,
+                name: '⛽ Kütusetankur',
+                category: 'city',
+                position: { x: meshFuel.position.x, y: 0, z: meshFuel.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#f39c12'
+            });
+            generatedObjectsCount++;
 
-        const portalObj: PlacedObject = {
-            id: 'placed_ai_portal_' + Date.now(),
-            mesh,
-            catalogId: portalItem.id,
-            name: '🌀 Dimensiooni Portaal',
-            category: 'gameplay',
-            position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
-            color: portalItem.color,
-            trigger: {
-                type: 'touch',
-                message: 'Astusid portaali! Kasuta ekraani nuppu "🌀 Reisi teise seivi", et valida sihtmaailm!',
-                title: '🌀 Dimensiooni Portaal',
-                radius: 4.5
+            aiResponse = `🚗 <strong>Lisasin autole asju juurde!</strong><br>Ehituse käigus lisasin auto juurde asfalteeritud autotee, 2 tänavavalgustit ja kütusetankuri!`;
+
+        // B. Adding additions to TREES / NATURE
+        } else if (p.includes('puu') || p.includes('mets') || p.includes('nature') || p.includes('loodus') || (selectedObject && selectedObject.category === 'nature')) {
+            const targetTree = selectedObject || placedObjects.find(obj => obj.category === 'nature') || placedObjects[0];
+            const baseX = targetTree ? targetTree.position.x : 0;
+            const baseZ = targetTree ? targetTree.position.z : 0;
+
+            const natureItems = CATALOG_DATABASE.filter(c => c.category === 'nature');
+            const rockItem = natureItems.find(c => c.name.toLowerCase().includes('rock') || c.name.toLowerCase().includes('boulder')) || natureItems[0];
+            const flowerItem = natureItems.find(c => c.name.toLowerCase().includes('flower') || c.name.toLowerCase().includes('bush')) || natureItems[1];
+
+            // Add rocks and flowers in circle around tree
+            for (let i = 0; i < 5; i++) {
+                const angle = (i / 5) * Math.PI * 2;
+                const r = 2.5 + (i % 2) * 1.2;
+                const itm = (i % 2 === 0) ? rockItem : flowerItem;
+                const mesh = createObjectMesh(itm);
+                mesh.position.set(baseX + Math.cos(angle) * r, 0, baseZ + Math.sin(angle) * r);
+                mesh.scale.setScalar(itm.baseScale * 0.9);
+                scene.add(mesh);
+
+                placedObjects.push({
+                    id: 'placed_ai_add_nat_' + Date.now() + '_' + i,
+                    mesh,
+                    catalogId: itm.id,
+                    name: itm.name,
+                    category: 'nature',
+                    position: { x: mesh.position.x, y: 0, z: mesh.position.z },
+                    rotation: { x: 0, y: 0, z: 0 },
+                    scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                    color: itm.color
+                });
+                generatedObjectsCount++;
             }
-        };
-        placedObjects.push(portalObj);
-        generatedObjectsCount++;
 
-        aiResponse = `🌀 <strong>Lõin helendava dimensiooniportaali!</strong><br>Astes Play Test režiimis portaali sisse või vajutades üleval HUD-il nuppu <strong>"🌀 Reisi teise seivi"</strong>, saad hüpata otse oma teise salvestatud maailma!`;
+            aiResponse = `🌲 <strong>Lisasin puule ja loodusele detaile juurde!</strong><br>Paigutasin puu ümber samblased kivid, kaljurahnud ja õitsvad lillepõõsad!`;
+
+        // C. Adding additions to BUILDINGS / HOUSES
+        } else {
+            const targetObj = selectedObject || placedObjects[0];
+            const baseX = targetObj ? targetObj.position.x : 0;
+            const baseZ = targetObj ? targetObj.position.z : 0;
+
+            // Place 4 decorative props around the object
+            const props = CATALOG_DATABASE.filter(c => c.category === 'city' || c.category === 'nature');
+            for (let i = 0; i < 4; i++) {
+                const item = props[i % props.length];
+                const mesh = createObjectMesh(item);
+                mesh.position.set(baseX + ((i % 2) * 2 - 1) * 3.5, 0, baseZ + (Math.floor(i / 2) * 2 - 1) * 3.5);
+                scene.add(mesh);
+
+                placedObjects.push({
+                    id: 'placed_ai_add_prop_' + Date.now() + '_' + i,
+                    mesh,
+                    catalogId: item.id,
+                    name: item.name,
+                    category: item.category,
+                    position: { x: mesh.position.x, y: 0, z: mesh.position.z },
+                    rotation: { x: 0, y: 0, z: 0 },
+                    scale: { x: 1, y: 1, z: 1 },
+                    color: item.color
+                });
+                generatedObjectsCount++;
+            }
+
+            aiResponse = `✨ <strong>Lisasin objektile asju ja detaile juurde!</strong><br>Paigutasin ümbrusesse 4 sobivat dekoratsiooni ja elementi.`;
+        }
 
     // 5. SCI-FI / KOSMOS / SPACE
     } else if (p.includes('kosmos') || p.includes('space') || p.includes('sci-fi') || p.includes('alien') || p.includes('laev')) {
@@ -1975,55 +2056,10 @@ function animate() {
             }
         }
 
-        // Check Portal Teleport Triggers (Instant Multi-World Travel when walking through portal)
-        let activePortal: PlacedObject | null = null;
-        for (const p of placedObjects) {
-            const targetId = p.portalTargetId || p.trigger?.targetWorldId;
-            if (targetId) {
-                const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
-                const rad = p.trigger?.radius || 3.8;
-                if (dist <= rad) {
-                    activePortal = p;
-                    break;
-                }
-            }
-        }
-
-        if (activePortal && !isTeleporting) {
-            const targetId = activePortal.portalTargetId || activePortal.trigger?.targetWorldId;
-            const profile = getCurrentUserProfile();
-            const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
-            const targetGame = savedGames.find((g: any) => g.id === targetId);
-
-            if (targetGame) {
-                isTeleporting = true;
-                if (currentVehicle) exitVehicle();
-
-                const dialogPopup = document.getElementById('game-dialog-popup');
-                const dialogTitle = document.getElementById('game-dialog-title');
-                const dialogText = document.getElementById('game-dialog-text');
-                const dialogIcon = document.getElementById('game-dialog-icon');
-
-                if (dialogPopup && dialogTitle && dialogText && dialogIcon) {
-                    dialogIcon.innerText = '🌀';
-                    dialogTitle.innerText = '🌀 Dimensiooni Portaal';
-                    dialogText.innerText = `Teleporteerusid maailma "${targetGame.title}"!`;
-                    dialogPopup.style.display = 'block';
-                }
-
-                loadSceneFromData(targetGame);
-                humanCharacter.position.set(0, 0, 0);
-
-                setTimeout(() => {
-                    isTeleporting = false;
-                }, 2000);
-            }
-        }
-
         // Check General Triggers & Dialogue (e.g. Walking through tree / proximity)
         let activeTrigger: PlacedObject | null = null;
         for (const p of placedObjects) {
-            if (p.trigger && p.trigger.message && p.trigger.type !== 'portal') {
+            if (p.trigger && p.trigger.message) {
                 const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
                 const rad = p.trigger.radius || 4.2;
                 if (dist <= rad) {
@@ -2038,13 +2074,13 @@ function animate() {
         const dialogText = document.getElementById('game-dialog-text');
         const dialogIcon = document.getElementById('game-dialog-icon');
 
-        if (activeTrigger && dialogPopup && dialogTitle && dialogText && dialogIcon && !isTeleporting) {
+        if (activeTrigger && dialogPopup && dialogTitle && dialogText && dialogIcon) {
             const isTree = activeTrigger.name.toLowerCase().includes('tree') || activeTrigger.name.toLowerCase().includes('puu') || activeTrigger.category === 'nature';
             dialogIcon.innerText = isTree ? '🌲' : (activeTrigger.category === 'gameplay' ? '💎' : '💬');
             dialogTitle.innerText = activeTrigger.trigger?.title || activeTrigger.name;
             dialogText.innerText = `"${activeTrigger.trigger?.message}"`;
             dialogPopup.style.display = 'block';
-        } else if (dialogPopup && dialogPopup.style.display !== 'none' && !isTeleporting) {
+        } else if (dialogPopup && dialogPopup.style.display !== 'none') {
             dialogPopup.style.display = 'none';
         }
     } else {

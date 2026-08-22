@@ -147,6 +147,9 @@ class CookingGame {
     private maxConcurrentOrders: number = 3;
     private orderIdCounter: number = 1;
 
+    // Prepared stock storage (items chopped on board or fried on stove)
+    private preparedStock: Record<string, number> = {};
+
     // Chopping state
     private currentChoppingRaw: string | null = null;
     private choppingClicks: number = 0;
@@ -457,12 +460,22 @@ class CookingGame {
         });
     }
 
+    private switchToStation(station: 'assembly' | 'cutting' | 'stove' | 'oven') {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        const targetTab = document.getElementById(`tab-btn-${station}`);
+        if (targetTab) targetTab.classList.add('active');
+
+        document.querySelectorAll('.station-panel').forEach(p => p.classList.remove('active'));
+        const panel = document.getElementById(`panel-${station}`);
+        if (panel) panel.classList.add('active');
+    }
+
     private setupUI() {
         // Top Yard icon
         const yardIcon = document.getElementById('cooking-yard-icon');
         if (yardIcon) yardIcon.innerHTML = yardService.renderYardSvg(20);
 
-        // Pantry Tray items - Grouped by Category for extreme clarity
+        // Pantry Tray items - Initial render
         const pantryContainer = document.getElementById('pantry-items-grid');
         if (pantryContainer) {
             pantryContainer.innerHTML = `
@@ -470,7 +483,7 @@ class CookingGame {
                     <!-- 1. Cooked & Baked Items (Ready to add to plate) -->
                     <div style="background: rgba(255, 71, 87, 0.12); border: 1.5px solid rgba(255, 71, 87, 0.4); border-radius: 12px; padding: 10px 14px;">
                         <div class="category-header" style="color: #ff6b81;">
-                            <span>🔥</span> <span>1. PRAETUD & KÜPSETATUD TOIDUD (Klõpsa lisamiseks taldrikule):</span>
+                            <span>🔥</span> <span>1. PRAETUD & KÜPSETATUD TOIDUD (Prae jaos 🔥 Pliit või 🍕 Ahi, seejärel lisa siit taldrikule):</span>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-cooked"></div>
                     </div>
@@ -478,7 +491,7 @@ class CookingGame {
                     <!-- 2. Chopped & Sliced Ingredients (Ready to add to plate) -->
                     <div style="background: rgba(87, 95, 207, 0.12); border: 1px solid rgba(87, 95, 207, 0.35); border-radius: 12px; padding: 10px 14px;">
                         <div class="category-header" style="color: #70a1ff;">
-                            <span>🔪</span> <span>2. HAKITUD & VIILUTATUD TOIDUAINED (Klõpsa lisamiseks taldrikule):</span>
+                            <span>🔪</span> <span>2. HAKITUD & VIILUTATUD TOIDUAINED (Haki jaos 🔪 Lõikelaud, seejärel lisa siit taldrikule):</span>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-chopped"></div>
                     </div>
@@ -486,45 +499,13 @@ class CookingGame {
                     <!-- 3. Base Pantry & Sauces (Ready to add to plate) -->
                     <div style="background: rgba(46, 213, 115, 0.1); border: 1px solid rgba(46, 213, 115, 0.3); border-radius: 12px; padding: 10px 14px;">
                         <div class="category-header" style="color: #2ed573;">
-                            <span>🍞</span> <span>3. SAHVRI TOOTED & KASTMED (Klõpsa lisamiseks taldrikule):</span>
+                            <span>🍞</span> <span>3. SAHVRI TOOTED & KASTMED (Piiramatu laovaru - klõpsa kohe taldrikule panekuks):</span>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="pantry-group-pantry"></div>
                     </div>
                 </div>
             `;
-
-            const groupCooked = document.getElementById('pantry-group-cooked');
-            const groupChopped = document.getElementById('pantry-group-chopped');
-            const groupPantry = document.getElementById('pantry-group-pantry');
-
-            Object.values(INGREDIENTS).forEach(ing => {
-                if (ing.category === 'pantry' || ing.category === 'sauce' || ing.category === 'chopped' || ing.category === 'cooked') {
-                    const btn = document.createElement('button');
-                    btn.className = 'ingredient-btn';
-                    btn.setAttribute('data-id', ing.id);
-
-                    let badgeHint = '';
-                    if (ing.category === 'cooked') {
-                        btn.style.borderColor = '#ff4757';
-                        btn.style.background = 'rgba(255, 71, 87, 0.18)';
-                        badgeHint = '<span style="font-size: 0.65rem; color: #ff6b81; font-weight: 800;">🔥 KÜPSETATUD</span>';
-                    } else if (ing.category === 'chopped') {
-                        btn.style.borderColor = '#575fcf';
-                        badgeHint = '<span style="font-size: 0.65rem; color: #70a1ff; font-weight: bold;">🔪 LÕIGATUD</span>';
-                    }
-
-                    btn.innerHTML = `
-                        <span class="ingredient-icon">${ing.icon}</span>
-                        <span class="ingredient-label">${ing.nameEt}</span>
-                        ${badgeHint}
-                    `;
-                    btn.addEventListener('click', () => this.addToPlate(ing.id));
-
-                    if (ing.category === 'cooked' && groupCooked) groupCooked.appendChild(btn);
-                    else if (ing.category === 'chopped' && groupChopped) groupChopped.appendChild(btn);
-                    else if (groupPantry) groupPantry.appendChild(btn);
-                }
-            });
+            this.renderPantryItems();
         }
 
         // Chopping Station Raw Selectors
@@ -564,6 +545,110 @@ class CookingGame {
 
         this.renderStovePans();
         this.renderOvenStatus();
+    }
+
+    private renderPantryItems() {
+        const groupCooked = document.getElementById('pantry-group-cooked');
+        const groupChopped = document.getElementById('pantry-group-chopped');
+        const groupPantry = document.getElementById('pantry-group-pantry');
+
+        if (!groupCooked || !groupChopped || !groupPantry) return;
+
+        groupCooked.innerHTML = '';
+        groupChopped.innerHTML = '';
+        groupPantry.innerHTML = '';
+
+        Object.values(INGREDIENTS).forEach(ing => {
+            if (ing.category === 'pantry' || ing.category === 'sauce') {
+                // Unlimited pantry items
+                const btn = document.createElement('button');
+                btn.className = 'ingredient-btn';
+                btn.setAttribute('data-id', ing.id);
+                btn.innerHTML = `
+                    <span class="ingredient-icon">${ing.icon}</span>
+                    <span class="ingredient-label">${ing.nameEt}</span>
+                    <span style="font-size: 0.65rem; color: #2ed573; font-weight: bold;">∞ Sahvris</span>
+                `;
+                btn.addEventListener('click', () => this.addToPlate(ing.id));
+                groupPantry.appendChild(btn);
+            } else if (ing.category === 'chopped') {
+                // Chopped items stock
+                const count = this.preparedStock[ing.id] || 0;
+                const btn = document.createElement('button');
+                btn.className = 'ingredient-btn';
+                btn.setAttribute('data-id', ing.id);
+
+                if (count > 0) {
+                    btn.style.borderColor = '#575fcf';
+                    btn.style.background = 'rgba(87, 95, 207, 0.28)';
+                    btn.style.boxShadow = '0 0 12px rgba(87, 95, 207, 0.45)';
+                    btn.innerHTML = `
+                        <span class="ingredient-icon">${ing.icon}</span>
+                        <span class="ingredient-label">${ing.nameEt}</span>
+                        <span style="font-size: 0.72rem; color: #70a1ff; font-weight: 900; background: rgba(0,0,0,0.45); padding: 2px 7px; border-radius: 6px;">x${count} VALMIS!</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        if (this.preparedStock[ing.id] > 0) {
+                            this.preparedStock[ing.id]--;
+                            this.addToPlate(ing.id);
+                            this.renderPantryItems();
+                        }
+                    });
+                } else {
+                    btn.style.opacity = '0.65';
+                    btn.style.borderStyle = 'dashed';
+                    btn.innerHTML = `
+                        <span class="ingredient-icon" style="filter: grayscale(0.5);">${ing.icon}</span>
+                        <span class="ingredient-label">${ing.nameEt}</span>
+                        <span style="font-size: 0.62rem; color: #a4b0be;">0 tk (Haki 🔪)</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        this.switchToStation('cutting');
+                        const rawItem = Object.values(INGREDIENTS).find(r => r.chopResult === ing.id);
+                        if (rawItem) this.startChopping(rawItem.id);
+                    });
+                }
+                groupChopped.appendChild(btn);
+            } else if (ing.category === 'cooked') {
+                // Cooked items stock
+                const count = this.preparedStock[ing.id] || 0;
+                const btn = document.createElement('button');
+                btn.className = 'ingredient-btn';
+                btn.setAttribute('data-id', ing.id);
+
+                if (count > 0) {
+                    btn.style.borderColor = '#ff4757';
+                    btn.style.background = 'rgba(255, 71, 87, 0.28)';
+                    btn.style.boxShadow = '0 0 14px rgba(255, 71, 87, 0.55)';
+                    btn.innerHTML = `
+                        <span class="ingredient-icon">${ing.icon}</span>
+                        <span class="ingredient-label">${ing.nameEt}</span>
+                        <span style="font-size: 0.72rem; color: #ff6b81; font-weight: 900; background: rgba(0,0,0,0.45); padding: 2px 7px; border-radius: 6px;">x${count} VALMIS! 🔥</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        if (this.preparedStock[ing.id] > 0) {
+                            this.preparedStock[ing.id]--;
+                            this.addToPlate(ing.id);
+                            this.renderPantryItems();
+                        }
+                    });
+                } else {
+                    btn.style.opacity = '0.65';
+                    btn.style.borderStyle = 'dashed';
+                    const actionHint = ing.id === 'baked_in_oven' ? '0 tk (Ahi 🍕)' : '0 tk (Prae 🔥)';
+                    btn.innerHTML = `
+                        <span class="ingredient-icon" style="filter: grayscale(0.5);">${ing.icon}</span>
+                        <span class="ingredient-label">${ing.nameEt}</span>
+                        <span style="font-size: 0.62rem; color: #a4b0be;">${actionHint}</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        if (ing.id === 'baked_in_oven') this.switchToStation('oven');
+                        else this.switchToStation('stove');
+                    });
+                }
+                groupCooked.appendChild(btn);
+            }
+        });
     }
 
     private setupEventListeners() {
@@ -767,8 +852,10 @@ class CookingGame {
         // 6. Check Completion
         if (this.choppingClicks >= this.requiredChoppingClicks) {
             if (raw && raw.chopResult) {
-                this.addToPlate(raw.chopResult);
-                this.showScorePopup(`+ Viilutatud ${raw.nameEt}! ✨`);
+                this.preparedStock[raw.chopResult] = (this.preparedStock[raw.chopResult] || 0) + 1;
+                this.showScorePopup(`+1 ${INGREDIENTS[raw.chopResult]?.nameEt} viilutatud ja viidud taldrikulauale! ✨`);
+                this.renderPantryItems();
+                this.switchToStation('assembly');
             }
             this.currentChoppingRaw = null;
             this.choppingClicks = 0;
@@ -867,10 +954,12 @@ class CookingGame {
 
         if (pan.state === 'done') {
             const raw = INGREDIENTS[pan.holding];
-            if (raw && raw.cookResult) {
-                this.addToPlate(raw.cookResult);
-                this.showScorePopup(`+ Valmis ${INGREDIENTS[raw.cookResult]?.nameEt}!`);
-            }
+            const resultId = raw?.cookResult || pan.holding;
+            this.preparedStock[resultId] = (this.preparedStock[resultId] || 0) + 1;
+            kitchenAudio.playServe();
+            this.showScorePopup(`+1 ${INGREDIENTS[resultId]?.nameEt} praetud ja viidud taldrikulauale! 🔥✨`);
+            this.renderPantryItems();
+            this.switchToStation('assembly');
         } else if (pan.state === 'burned') {
             kitchenAudio.playBurn();
             this.showScorePopup(`🔥 Kõrbenud toit visati minema!`);
@@ -928,7 +1017,11 @@ class CookingGame {
                 </button>
             `;
             document.getElementById('btn-oven-take-pizza')?.addEventListener('click', () => {
-                this.addToPlate('baked_in_oven');
+                this.preparedStock['baked_in_oven'] = (this.preparedStock['baked_in_oven'] || 0) + 1;
+                kitchenAudio.playServe();
+                this.showScorePopup('+1 Küpsetatud Pitsa viidud taldrikulauale! 🍕✨');
+                this.renderPantryItems();
+                this.switchToStation('assembly');
                 this.oven.state = 'empty';
                 this.oven.progress = 0;
                 this.renderOvenStatus();
