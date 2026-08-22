@@ -674,6 +674,32 @@ class CookingGame {
 
         const isEt = this.isEt;
 
+        // Render Stock Quick Bars
+        const cookedStockList = Object.keys(this.preparedStock).filter(k => (this.preparedStock[k] || 0) > 0);
+        const stockHtml = cookedStockList.length === 0
+            ? `<div style="background: rgba(0,0,0,0.3); border: 1px dashed rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 12px; font-size: 0.8rem; color: #a4b0be; display: flex; justify-content: space-between; align-items: center;">
+                <span>📦 ${isEt ? 'Laovaru on tühi (Valmista toitu ja võta laovarusse või otse taldrikule)' : 'Stock is empty (Cook food and save to stock or directly to plate)'}</span>
+               </div>`
+            : `<div style="background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.35); border-radius: 8px; padding: 6px 12px; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <strong style="color: #00f2fe;">📦 ${isEt ? 'Sinu Valmis Toidud Laos:' : 'Your Prepared Stock:'}</strong>
+                    ${cookedStockList.map(id => {
+                        const ing = INGREDIENTS[id];
+                        return `<span style="background: #242f3d; padding: 3px 8px; border-radius: 5px; color: #ffd32a; font-weight: bold; border: 1px solid rgba(255,211,42,0.3);">${ing?.icon || '🥘'} ${this.getName(id)}: <strong style="color: #2ed573;">x${this.preparedStock[id]}</strong></span>`;
+                    }).join(' ')}
+                </div>
+                <button onclick="window.cookingGame.switchToStation('assembly')" style="padding: 4px 10px; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; border-radius: 5px; color: #111; font-weight: 800; cursor: pointer; font-size: 0.78rem;">
+                    🍽️ ${isEt ? 'Mine Taldrikule Lisama 👉' : 'Assemble on Plate 👉'}
+                </button>
+               </div>`;
+
+        const stoveStock = document.getElementById('stove-stock-bar');
+        if (stoveStock) stoveStock.innerHTML = stockHtml;
+        const cuttingStock = document.getElementById('cutting-stock-bar');
+        if (cuttingStock) cuttingStock.innerHTML = stockHtml;
+        const ovenStock = document.getElementById('oven-stock-bar');
+        if (ovenStock) ovenStock.innerHTML = stockHtml;
+
         Object.values(INGREDIENTS).forEach(ing => {
             const ingName = this.getName(ing.id);
             if (ing.category === 'pantry' || ing.category === 'sauce') {
@@ -1027,7 +1053,16 @@ class CookingGame {
                     const resultId = raw?.cookResult || pan.holding;
                     const resultName = this.getName(resultId);
                     statusText = `<strong style="color: #2ed573; font-size: 1.05rem;">✨🔥 ${isEt ? 'VALMIS:' : 'READY:'} ${resultName}</strong>`;
-                    btnAction = `<button class="btn-action btn-take-pan" onclick="window.cookingGame.takeFromPan(${pan.id})" data-pan="${pan.id}" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.95rem; padding: 10px 18px; box-shadow: 0 0 15px #2ed573; cursor: pointer;">📦 ${isEt ? 'VÕTA TOIT LAOVARUSSE' : 'TAKE TO INVENTORY'}</button>`;
+                    btnAction = `
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+                            <button class="btn-action btn-take-pan" onclick="window.cookingGame.takeToPlateFromPan(${pan.id})" data-pan="${pan.id}" style="background: linear-gradient(135deg, #2ed573, #10ac84); font-weight: 900; font-size: 0.88rem; padding: 8px 12px; box-shadow: 0 0 12px #2ed573; cursor: pointer;">
+                                🍽️ ${isEt ? 'Taldrikule' : 'To Plate'}
+                            </button>
+                            <button class="btn-action btn-take-pan" onclick="window.cookingGame.takeFromPan(${pan.id})" data-pan="${pan.id}" style="background: linear-gradient(135deg, #3498db, #2980b9); font-weight: 900; font-size: 0.88rem; padding: 8px 12px; box-shadow: 0 0 10px rgba(52, 152, 219, 0.5); cursor: pointer;">
+                                📦 ${isEt ? 'Laovarusse' : 'To Stock'}
+                            </button>
+                        </div>
+                    `;
                 } else if (pan.state === 'burned') {
                     statusText = `<strong style="color: #ff4757; font-size: 1.05rem;">🔥 ${isEt ? 'KÕRBENUD!' : 'BURNED!'}</strong>`;
                     btnAction = `<button class="btn-action btn-take-pan" onclick="window.cookingGame.takeFromPan(${pan.id})" data-pan="${pan.id}" style="background: #eb4d4b; font-weight: bold; cursor: pointer;">🗑️ ${isEt ? 'Viska minema' : 'Throw away'}</button>`;
@@ -1060,6 +1095,31 @@ class CookingGame {
         pan.progress = 0;
         pan.state = 'cooking';
         kitchenAudio.playSizzle(true);
+        this.renderStovePans();
+    }
+
+    public takeToPlateFromPan(panId: number) {
+        const pan = this.pans[panId];
+        if (!pan || !pan.holding) return;
+
+        if (pan.state === 'done') {
+            const raw = INGREDIENTS[pan.holding];
+            const resultId = raw?.cookResult || pan.holding;
+            this.addToPlate(resultId);
+            kitchenAudio.playServe();
+            const resName = this.getName(resultId);
+            this.showScorePopup(this.isEt ? `🍽️ +1 ${resName} pandud otse taldrikule!` : `🍽️ +1 ${resName} added to plate!`);
+            this.renderPantryItems();
+            this.switchToStation('assembly');
+        }
+
+        pan.holding = null;
+        pan.progress = 0;
+        pan.state = 'empty';
+
+        const anyCooking = this.pans.some(p => p.state === 'cooking');
+        if (!anyCooking) kitchenAudio.playSizzle(false);
+
         this.renderStovePans();
     }
 
@@ -1124,15 +1184,31 @@ class CookingGame {
                 <div style="text-align: left;">
                     <strong style="color: #2ed573;">${isEt ? 'Pitsa on valmis ja krõbe!' : 'Pizza is ready and crispy!'}</strong>
                 </div>
-                <button class="btn-action" id="btn-oven-take-pizza" onclick="window.cookingGame.takeFromOven()" style="background: #2ed573; font-weight: bold; padding: 10px 20px; box-shadow: 0 0 15px #2ed573; cursor: pointer;">
-                    📦 ${isEt ? 'Võta Ahjust Laovarusse' : 'Take from Oven to Inventory'}
-                </button>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+                    <button class="btn-action" id="btn-oven-take-plate" onclick="window.cookingGame.takeToPlateFromOven()" style="background: #2ed573; font-weight: bold; padding: 10px 16px; box-shadow: 0 0 15px #2ed573; cursor: pointer;">
+                        🍽️ ${isEt ? 'Taldrikule' : 'To Plate'}
+                    </button>
+                    <button class="btn-action" id="btn-oven-take-pizza" onclick="window.cookingGame.takeFromOven()" style="background: #3498db; font-weight: bold; padding: 10px 16px; box-shadow: 0 0 10px rgba(52,152,219,0.5); cursor: pointer;">
+                        📦 ${isEt ? 'Laovarusse' : 'To Stock'}
+                    </button>
+                </div>
             `;
         }
     }
 
     public bakePizza() {
         this.oven.state = 'baking';
+        this.oven.progress = 0;
+        this.renderOvenStatus();
+    }
+
+    public takeToPlateFromOven() {
+        this.addToPlate('baked_in_oven');
+        kitchenAudio.playServe();
+        this.showScorePopup(this.isEt ? '🍽️ +1 Küpsetatud Pitsa pandud otse taldrikule! 🍕' : '🍽️ +1 Baked Pizza added to plate! 🍕');
+        this.renderPantryItems();
+        this.switchToStation('assembly');
+        this.oven.state = 'empty';
         this.oven.progress = 0;
         this.renderOvenStatus();
     }
