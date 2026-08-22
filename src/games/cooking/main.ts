@@ -237,9 +237,6 @@ class CookingGame {
         const hudOrdersLabel = document.getElementById('hud-orders-label');
         if (hudOrdersLabel) hudOrdersLabel.textContent = isEt ? '📦 Tellimused:' : '📦 Orders:';
 
-        const hudYardEarnBadge = document.querySelector('.hud-right .hud-stat-box span:last-child');
-        if (hudYardEarnBadge) hudYardEarnBadge.textContent = isEt ? '💎 TEENI JARDE SIIN!' : '💎 EARN YARDS HERE!';
-
         const btnOpenRecipes = document.querySelector('#btn-open-recipes span:last-child');
         if (btnOpenRecipes) btnOpenRecipes.textContent = isEt ? 'Retseptid' : 'Recipes';
 
@@ -283,8 +280,8 @@ class CookingGame {
 
         const chopInstruction = document.getElementById('chopping-instruction');
         if (chopInstruction) chopInstruction.textContent = isEt
-            ? 'Vali tooraine (Tomat, Juust, Sibul, Salat, Kartul, Seened) ja klõpsa "HAKI!" nuppu viilutamiseks!'
-            : 'Select raw item (Tomato, Cheese, Onion, Lettuce, Potato, Mushrooms) and click "CHOP!" rapidly to slice!';
+            ? 'Vali tooraine (Tomat, Juust, Sibul, Salat, Seened, Pepperoni) ja klõpsa "HAKI!" nuppu viilutamiseks!'
+            : 'Select raw item (Tomato, Cheese, Onion, Lettuce, Mushrooms, Pepperoni) and click "CHOP!" rapidly to slice!';
 
         const chopBtn = document.getElementById('btn-do-chop');
         if (chopBtn) chopBtn.textContent = isEt ? '🔪 HAKI! (Klõpsa kiiresti)' : '🔪 CHOP! (Click rapidly)';
