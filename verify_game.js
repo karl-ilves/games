@@ -217,22 +217,56 @@ try {
         await page.click('#btn-submit-review');
         await new Promise(r => setTimeout(r, 800));
 
-        // 6. Test Admin Review & Approve Workflow
-        console.log("6. Testing Admin Review & Approve Workflow...");
+        // 6. Test Admin Review & Request Changes / Approve Workflow
+        console.log("6. Testing Admin Review & Request Changes Workflow...");
         await page.goto('http://localhost:4173/games/');
         await new Promise(r => setTimeout(r, 1000));
-        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+        await page.evaluate(() => { 
+            window.alert = () => {}; 
+            window.confirm = () => true; 
+            window.prompt = () => "Please add more trees and obstacles before approval!";
+        });
 
         await page.waitForSelector('#btn-open-admin-panel', { visible: true, timeout: 5000 });
         await page.click('#btn-open-admin-panel');
-        await page.waitForSelector('.btn-admin-approve', { visible: true, timeout: 4000 });
-        const approveBtn = await page.$('.btn-admin-approve');
-        if (approveBtn) {
-            console.log("   Found submitted game waiting for review. Approving game...");
-            await approveBtn.click();
-            await new Promise(r => setTimeout(r, 1000));
+        await page.waitForSelector('.btn-admin-changes', { visible: true, timeout: 4000 });
+
+        // Admin clicks Request Changes
+        console.log("   Admin requesting changes with feedback: 'Please add more trees and obstacles before approval!'");
+        await page.click('.btn-admin-changes');
+        await new Promise(r => setTimeout(r, 1000));
+        await page.click('#btn-close-admin-panel');
+        await new Promise(r => setTimeout(r, 500));
+
+        // Now open Creator Studio again as creator -> Admin Feedback Banner MUST be displayed!
+        console.log("   Checking Creator Studio for Admin Feedback Banner...");
+        await page.goto('http://localhost:4173/games/games/creator/index.html');
+        await new Promise(r => setTimeout(r, 1500));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+
+        const feedbackBannerVisible = await page.$eval('#admin-feedback-banner', el => window.getComputedStyle(el).display);
+        const feedbackText = await page.$eval('#feedback-banner-text', el => el.textContent);
+        console.log("   Admin Feedback Banner visibility in Creator Studio:", feedbackBannerVisible);
+        console.log("   Admin Feedback message:", feedbackText);
+
+        if (feedbackBannerVisible === 'none' || !feedbackText.includes('more trees and obstacles')) {
+            throw new Error("Admin Requested Changes banner failed to display in Creator Studio!");
         }
 
+        // Now re-submit the game and approve it
+        console.log("   Re-submitting game after changes...");
+        await page.click('#btn-submit-review');
+        await new Promise(r => setTimeout(r, 800));
+
+        // Return to Hub and Approve
+        await page.goto('http://localhost:4173/games/');
+        await new Promise(r => setTimeout(r, 1000));
+        await page.waitForSelector('#btn-open-admin-panel', { visible: true, timeout: 5000 });
+        await page.click('#btn-open-admin-panel');
+        await page.waitForSelector('.btn-admin-approve', { visible: true, timeout: 4000 });
+        console.log("   Found submitted game waiting for review. Approving game...");
+        await page.click('.btn-admin-approve');
+        await new Promise(r => setTimeout(r, 1000));
         await page.click('#btn-close-admin-panel');
         await new Promise(r => setTimeout(r, 500));
 

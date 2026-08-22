@@ -393,6 +393,101 @@ function spawnObjectIntoScene(catalogItem: CatalogItem) {
 
     placedObjects.push(placed);
     selectObject(placed);
+    autoSaveDraft();
+}
+
+export function serializeCurrentScene() {
+    const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
+    const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
+    const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
+
+    return {
+        title: titleInput?.value.trim() || 'My 3D Adventure',
+        category: catSelect?.value || 'Adventure',
+        description: descInput?.value.trim() || '',
+        objects: placedObjects.map(p => ({
+            id: p.id,
+            catalogId: p.catalogId,
+            name: p.name,
+            category: p.category,
+            position: { x: p.mesh.position.x, y: p.mesh.position.y, z: p.mesh.position.z },
+            rotation: { x: p.mesh.rotation.x, y: p.mesh.rotation.y, z: p.mesh.rotation.z },
+            scale: { x: p.mesh.scale.x, y: p.mesh.scale.y, z: p.mesh.scale.z },
+            color: p.color
+        })),
+        updatedAt: Date.now()
+    };
+}
+
+export function autoSaveDraft() {
+    const profile = getCurrentUserProfile();
+    const sceneData = serializeCurrentScene();
+    yardService.saveDraftGame(profile?.username ?? null, sceneData);
+
+    const indicator = document.getElementById('draft-status-indicator');
+    if (indicator) {
+        indicator.innerText = '💾 Draft Saved';
+        indicator.style.opacity = '1';
+        setTimeout(() => {
+            if (indicator) indicator.style.opacity = '0.7';
+        }, 2000);
+    }
+}
+
+export function loadSceneFromData(sceneData: any) {
+    if (!sceneData) return;
+
+    // Clear current placed objects
+    placedObjects.forEach(p => scene.remove(p.mesh));
+    placedObjects = [];
+    selectObject(null);
+
+    const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
+    const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
+    const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
+
+    if (titleInput && sceneData.title) titleInput.value = sceneData.title;
+    if (catSelect && sceneData.category) catSelect.value = sceneData.category;
+    if (descInput && sceneData.description) descInput.value = sceneData.description;
+
+    if (Array.isArray(sceneData.objects)) {
+        sceneData.objects.forEach((objData: any) => {
+            const catItem: CatalogItem = CATALOG_DATABASE.find(c => c.id === objData.catalogId) || {
+                id: objData.catalogId || 'obj_custom',
+                name: objData.name || 'Object',
+                category: objData.category || 'nature',
+                icon: '📦',
+                color: objData.color || '#00f2fe',
+                geometryType: (objData.name || '').toLowerCase(),
+                baseScale: objData.scale?.x || 1
+            };
+
+            const mesh = createObjectMesh(catItem);
+            mesh.position.set(objData.position?.x || 0, objData.position?.y || 0, objData.position?.z || 0);
+            if (objData.rotation) {
+                mesh.rotation.set(objData.rotation.x || 0, objData.rotation.y || 0, objData.rotation.z || 0);
+            }
+            if (objData.scale) {
+                mesh.scale.set(objData.scale.x || 1, objData.scale.y || 1, objData.scale.z || 1);
+            }
+
+            scene.add(mesh);
+
+            const placed: PlacedObject = {
+                id: objData.id || ('placed_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
+                mesh,
+                catalogId: catItem.id,
+                name: objData.name || catItem.name,
+                category: objData.category || catItem.category,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: objData.color || catItem.color
+            };
+
+            placedObjects.push(placed);
+        });
+    }
 }
 
 export function moveSelectedObject(dx: number, dy: number, dz: number) {
@@ -406,6 +501,7 @@ export function moveSelectedObject(dx: number, dy: number, dz: number) {
         z: selectedObject.mesh.position.z
     };
     updateInspectorDisplay();
+    autoSaveDraft();
 }
 
 export function rotateSelectedObject(rad = Math.PI / 4) {
@@ -417,6 +513,7 @@ export function rotateSelectedObject(rad = Math.PI / 4) {
         z: selectedObject.mesh.rotation.z
     };
     updateInspectorDisplay();
+    autoSaveDraft();
 }
 
 function updateInspectorDisplay() {
@@ -496,7 +593,7 @@ function renderCatalogUI(filterCat = 'all', searchQuery = '') {
 }
 
 // --- Three.js Initialization ---
-function initStudio() {
+async function initStudio() {
     const container = document.getElementById('canvas-container')!;
 
     scene = new THREE.Scene();
@@ -537,6 +634,9 @@ function initStudio() {
     // Generate 5000 Objects in Catalog
     generate5000ObjectCatalog();
     renderCatalogUI();
+
+    // Restore Draft or Admin Feedback Game
+    await restoreDraftOrFeedbackGame();
 
     // Event Listeners
     setupStudioEvents();
@@ -690,6 +790,18 @@ function setupStudioEvents() {
         });
     }
 
+    // Save Draft Button
+    document.getElementById('btn-save-draft')?.addEventListener('click', () => {
+        autoSaveDraft();
+        alert('💾 Game draft saved successfully!');
+    });
+
+    // Dismiss Feedback Banner Button
+    document.getElementById('btn-close-feedback-banner')?.addEventListener('click', () => {
+        const banner = document.getElementById('admin-feedback-banner');
+        if (banner) banner.style.display = 'none';
+    });
+
     // Studio Camera Navigation Buttons
     document.getElementById('cam-btn-left')?.addEventListener('click', () => {
         const camRight = new THREE.Vector3(Math.cos(orbitTheta), 0, -Math.sin(orbitTheta)).normalize();
@@ -798,6 +910,7 @@ function setupStudioEvents() {
             (submitBtn as HTMLButtonElement).disabled = false;
 
             if (res.success) {
+                yardService.clearDraftGame(profile.username);
                 alert(`✅ ${res.message}`);
                 if (confirm('Would you like to return to the Hub?')) {
                     window.location.href = '../../index.html';
@@ -829,6 +942,11 @@ function setupCatalogEvents() {
             renderCatalogUI(currentCat, searchInput.value);
         });
     }
+
+    // Input listeners for auto-save draft
+    document.getElementById('game-title-input')?.addEventListener('input', autoSaveDraft);
+    document.getElementById('game-category-select')?.addEventListener('change', autoSaveDraft);
+    document.getElementById('game-desc-input')?.addEventListener('input', autoSaveDraft);
 }
 
 function setupInspectorEvents() {
@@ -851,6 +969,7 @@ function setupInspectorEvents() {
             if (selectedObject) {
                 const s = parseFloat(scaleInput.value) || 1;
                 selectedObject.mesh.scale.setScalar(s);
+                autoSaveDraft();
             }
         });
     }
@@ -864,6 +983,7 @@ function setupInspectorEvents() {
                         ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(colorInput.value);
                     }
                 });
+                autoSaveDraft();
             }
         });
     }
@@ -874,6 +994,7 @@ function setupInspectorEvents() {
                 scene.remove(selectedObject.mesh);
                 placedObjects = placedObjects.filter(p => p.id !== selectedObject!.id);
                 selectObject(null);
+                autoSaveDraft();
             }
         });
     }
@@ -893,6 +1014,49 @@ function setupInspectorEvents() {
                 spawnObjectIntoScene(catItem);
             }
         });
+    }
+}
+
+async function restoreDraftOrFeedbackGame() {
+    const profile = getCurrentUserProfile();
+    let hasRestored = false;
+
+    // 1. Check if admin requested changes with feedback
+    if (profile?.username) {
+        try {
+            const feedbackGames = await yardService.getFeedbackGamesForCreator(profile.username);
+            if (feedbackGames.length > 0) {
+                const fbGame = feedbackGames[0];
+                const banner = document.getElementById('admin-feedback-banner');
+                const fbTitle = document.getElementById('feedback-banner-title');
+                const fbText = document.getElementById('feedback-banner-text');
+
+                if (banner && fbTitle && fbText) {
+                    fbTitle.innerText = `Admin (1karl.ilves@gmail.com) Requested Changes for "${fbGame.title}":`;
+                    fbText.innerText = `"${fbGame.feedback}"`;
+                    banner.style.display = 'flex';
+                }
+
+                if (fbGame.sceneData) {
+                    loadSceneFromData(fbGame.sceneData);
+                    hasRestored = true;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not check feedback games:', e);
+        }
+    }
+
+    // 2. If no feedback game, restore local auto-saved draft
+    if (!hasRestored) {
+        const draft = yardService.getDraftGame(profile?.username ?? null);
+        if (draft && Array.isArray(draft.objects) && draft.objects.length > 0) {
+            loadSceneFromData(draft);
+            const indicator = document.getElementById('draft-status-indicator');
+            if (indicator) {
+                indicator.innerText = '💾 Draft Restored';
+            }
+        }
     }
 }
 

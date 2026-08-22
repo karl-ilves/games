@@ -722,6 +722,87 @@ class YardService {
         };
     }
 
+    // --- Draft Game Auto-Save & Restore ---
+    public saveDraftGame(username: string | null, draftData: any) {
+        if (!draftData) return;
+        try {
+            const raw = JSON.stringify(draftData);
+            localStorage.setItem('playard_draft_game_global', raw);
+            if (username) {
+                localStorage.setItem(`playard_draft_game_${username.toLowerCase()}`, raw);
+            }
+        } catch (e) {
+            console.warn('Could not save game draft:', e);
+        }
+    }
+
+    public getDraftGame(username?: string | null): any | null {
+        try {
+            if (username) {
+                const userDraft = localStorage.getItem(`playard_draft_game_${username.toLowerCase()}`);
+                if (userDraft) return JSON.parse(userDraft);
+            }
+            const globalDraft = localStorage.getItem('playard_draft_game_global');
+            if (globalDraft) return JSON.parse(globalDraft);
+        } catch (e) {
+            console.warn('Could not load game draft:', e);
+        }
+        return null;
+    }
+
+    public clearDraftGame(username?: string | null) {
+        try {
+            localStorage.removeItem('playard_draft_game_global');
+            if (username) {
+                localStorage.removeItem(`playard_draft_game_${username.toLowerCase()}`);
+            }
+        } catch (e) {}
+    }
+
+    public async getFeedbackGamesForCreator(username: string): Promise<CreatedGame[]> {
+        if (!username) return [];
+        const cleanUser = username.trim().toLowerCase();
+
+        // 1. Cloud query
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('user_created_games')
+                    .select('*')
+                    .ilike('creator_username', cleanUser)
+                    .eq('status', 'changes_requested')
+                    .order('updated_at', { ascending: false });
+
+                if (!error && Array.isArray(data) && data.length > 0) {
+                    return data.map(d => ({
+                        id: d.id,
+                        userId: d.user_id,
+                        creatorUsername: d.creator_username,
+                        title: d.title,
+                        description: d.description || '',
+                        category: d.category || 'Adventure',
+                        thumbnail: d.thumbnail,
+                        sceneData: d.scene_data,
+                        status: d.status,
+                        feedback: d.feedback,
+                        plays: d.plays || 0,
+                        createdAt: new Date(d.created_at).getTime(),
+                        updatedAt: new Date(d.updated_at).getTime()
+                    }));
+                }
+            } catch (err) {
+                console.warn('Could not fetch creator feedback games from cloud:', err);
+            }
+        }
+
+        // 2. Local fallback
+        return this.getLocalCreatedGames().filter(g => 
+            g.creatorUsername.toLowerCase() === cleanUser && 
+            g.status === 'changes_requested' && 
+            !!g.feedback
+        );
+    }
+
     public getDailyStreakInfo() {
         const now = Date.now();
         const last = this.data.lastClaimTimestamp;
