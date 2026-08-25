@@ -24,6 +24,7 @@ interface PlacedObject {
     rotation: { x: number; y: number; z: number };
     scale: { x: number; y: number; z: number };
     color: string;
+    isAirplane?: boolean;
     portalTargetId?: string;
     portalTargetTitle?: string;
     trigger?: {
@@ -43,6 +44,13 @@ interface PlacedObject {
         origin: { x: number; y: number; z: number };
         rotationSpeed?: number;
     };
+}
+
+export function isAirplaneObject(obj?: PlacedObject | null): boolean {
+    if (!obj) return false;
+    if (obj.isAirplane === true) return true;
+    const n = ((obj.name || '') + ' ' + (obj.catalogId || '')).toLowerCase();
+    return n.includes('plane') || n.includes('lennuk') || n.includes('jet') || n.includes('aircraft') || n.includes('fighter') || n.includes('propeller');
 }
 
 let placedObjects: PlacedObject[] = [];
@@ -267,6 +275,106 @@ function createUltraRealisticHuman() {
     scene.add(humanCharacter);
 }
 
+// --- Create High-Detail 3D Flyable Airplane Mesh ---
+export function createAirplane3DMesh(color = '#3498db'): THREE.Group {
+    const group = new THREE.Group();
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3, metalness: 0.4 });
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.4, metalness: 0.5 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.8 });
+    const engineMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, metalness: 0.8 });
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+
+    // 1. Fuselage (Aerodynamic Body)
+    const fuselageGeo = new THREE.CylinderGeometry(0.75, 0.8, 6.2, 16);
+    fuselageGeo.rotateX(Math.PI / 2);
+    const fuselage = new THREE.Mesh(fuselageGeo, bodyMat);
+    fuselage.position.y = 1.3;
+    group.add(fuselage);
+
+    // 2. Streamlined Nose Cone
+    const noseGeo = new THREE.ConeGeometry(0.75, 1.8, 16);
+    noseGeo.rotateX(-Math.PI / 2);
+    const nose = new THREE.Mesh(noseGeo, bodyMat);
+    nose.position.set(0, 1.3, -3.95);
+    group.add(nose);
+
+    // 3. Cockpit Canopy (Tinted Glass)
+    const cockpitGeo = new THREE.SphereGeometry(0.65, 16, 16);
+    cockpitGeo.scale(0.8, 0.75, 1.8);
+    const cockpit = new THREE.Mesh(cockpitGeo, glassMat);
+    cockpit.position.set(0, 1.8, -1.2);
+    group.add(cockpit);
+
+    // 4. Main Swept Wings (Left & Right)
+    const wingGeo = new THREE.BoxGeometry(9.2, 0.12, 1.8);
+    const mainWings = new THREE.Mesh(wingGeo, wingMat);
+    mainWings.position.set(0, 1.25, -0.4);
+    group.add(mainWings);
+
+    // Wingtips / Winglets with Red/Green Nav Lights
+    [-4.55, 4.55].forEach((wx, idx) => {
+        const winglet = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.8), bodyMat);
+        winglet.position.set(wx, 1.55, -0.4);
+        group.add(winglet);
+
+        const navLightMat = new THREE.MeshBasicMaterial({ color: idx === 0 ? 0xff4757 : 0x2ecc71 });
+        const navLight = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), navLightMat);
+        navLight.position.set(wx, 1.95, -0.4);
+        group.add(navLight);
+    });
+
+    // 5. Tail Fin (Vertical Stabilizer)
+    const tailFinGeo = new THREE.BoxGeometry(0.14, 1.7, 1.6);
+    const tailFin = new THREE.Mesh(tailFinGeo, bodyMat);
+    tailFin.position.set(0, 2.3, 2.6);
+    tailFin.rotation.x = -0.3;
+    group.add(tailFin);
+
+    // Horizontal Tail Stabilizers
+    const tailWingGeo = new THREE.BoxGeometry(3.4, 0.1, 1.1);
+    const tailWings = new THREE.Mesh(tailWingGeo, wingMat);
+    tailWings.position.set(0, 1.45, 2.8);
+    group.add(tailWings);
+
+    // 6. Dual Jet Engines under Wings
+    [-2.0, 2.0].forEach(ex => {
+        const engine = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 2.1, 12), engineMat);
+        engine.rotateX(Math.PI / 2);
+        engine.position.set(ex, 0.8, -0.3);
+        group.add(engine);
+
+        // Glowing Blue Jet Exhaust
+        const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.15, 12), glowMat);
+        exhaust.rotateX(Math.PI / 2);
+        exhaust.position.set(ex, 0.8, 0.8);
+        group.add(exhaust);
+    });
+
+    // 7. Landing Gear Wheels
+    const frontGear = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.18, 12), wheelMat);
+    frontGear.rotateZ(Math.PI / 2);
+    frontGear.position.set(0, 0.24, -2.4);
+    group.add(frontGear);
+
+    [-1.3, 1.3].forEach(gx => {
+        const rearGear = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.2, 12), wheelMat);
+        rearGear.rotateZ(Math.PI / 2);
+        rearGear.position.set(gx, 0.26, 0.8);
+        group.add(rearGear);
+    });
+
+    group.traverse(child => {
+        if ((child as THREE.Mesh).isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
+
+    return group;
+}
+
 // --- Create 3D Mesh for Catalog Item ---
 function createObjectMesh(item: CatalogItem, color?: string): THREE.Group {
     const group = new THREE.Group();
@@ -345,6 +453,11 @@ function createObjectMesh(item: CatalogItem, color?: string): THREE.Group {
             group.add(prop);
         }
     } else if (item.category === 'vehicles') {
+        const isPlane = item.geometryType.includes('plane') || item.geometryType.includes('jet') || item.name.toLowerCase().includes('plane') || item.name.toLowerCase().includes('jet') || item.name.toLowerCase().includes('fighter') || item.name.toLowerCase().includes('prop') || item.name.toLowerCase().includes('helicopter');
+        if (isPlane) {
+            return createAirplane3DMesh(matColor);
+        }
+
         // Drivable Car Body
         const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.75, 4.2), material);
         body.position.y = 0.65;
@@ -781,15 +894,35 @@ export function enterVehicle(vehicle: PlacedObject) {
     const prompt = document.getElementById('enter-vehicle-prompt');
     if (prompt) prompt.style.display = 'none';
 
+    const isPlane = isAirplaneObject(vehicle);
+    const isAdmin = isCurrentUserAdmin();
+
     const vehicleHud = document.getElementById('vehicle-hud');
+    const vehicleHudIcon = document.getElementById('vehicle-hud-icon');
     const vehicleHudName = document.getElementById('vehicle-hud-name');
+    const vehicleHudDesc = document.getElementById('vehicle-hud-desc');
+
     if (vehicleHud) vehicleHud.style.display = 'block';
-    if (vehicleHudName) vehicleHudName.innerText = `🏎️ ${vehicle.name}`;
+    if (vehicleHudIcon) vehicleHudIcon.innerText = isPlane ? '✈️' : '🏎️';
+    if (vehicleHudName) vehicleHudName.innerText = isPlane ? (vehicle.name.startsWith('✈️') ? vehicle.name : `✈️ ${vehicle.name}`) : (vehicle.name.startsWith('🏎️') || vehicle.name.startsWith('🚗') ? vehicle.name : `🏎️ ${vehicle.name}`);
+    if (vehicleHudDesc) {
+        if (isPlane) {
+            vehicleHudDesc.innerHTML = isAdmin
+                ? `Gaas: <strong>W / ⬆️</strong> | Pidur: <strong>S / ⬇️</strong> | Pööra: <strong>A / D</strong> | Tõus: <strong>SPACE / Q</strong> | Laskumine: <strong>Shift / E</strong>`
+                : `Throttle: <strong>W / ⬆️</strong> | Brake: <strong>S / ⬇️</strong> | Steer: <strong>A / D</strong> | Climb: <strong>SPACE / Q</strong> | Dive: <strong>Shift / E</strong>`;
+        } else {
+            vehicleHudDesc.innerHTML = isAdmin
+                ? `Gaas: <strong>W / ⬆️</strong> | Pidur & Tagurpidi: <strong>S / ⬇️</strong> | Pööramine: <strong>A / D / ⬅️ ➡️</strong>`
+                : `Gas: <strong>W / ⬆️</strong> | Brake & Reverse: <strong>S / ⬇️</strong> | Steer: <strong>A / D / ⬅️ ➡️</strong>`;
+        }
+    }
 }
 
 export function exitVehicle() {
     if (!currentVehicle) return;
-    const exitPos = currentVehicle.mesh.position.clone().add(new THREE.Vector3(2.2, 0, 0));
+    const isPlane = isAirplaneObject(currentVehicle);
+    const exitPos = currentVehicle.mesh.position.clone().add(new THREE.Vector3(isPlane ? 3.5 : 2.2, 0, 0));
+    if (exitPos.y > 0) exitPos.y = 0;
     humanCharacter.position.copy(exitPos);
     humanCharacter.visible = true;
     currentVehicle = null;
@@ -981,6 +1114,9 @@ function setupStudioEvents() {
             if (isPlayTestMode) {
                 selectObject(null);
                 isDraggingObject = false;
+                humanCharacter.position.set(0, 0, 0);
+                characterVelocity.set(0, 0, 0);
+                isGrounded = true;
                 playTestBtn.innerHTML = '<span>⏹️</span> <span>Exit Play Test</span>';
                 playTestBtn.style.background = '#e74c3c';
                 if (playTestHud) playTestHud.style.display = 'block';
@@ -989,6 +1125,7 @@ function setupStudioEvents() {
                 if (catalogPanel) catalogPanel.style.display = 'none';
                 if (inspectorPanel) inspectorPanel.style.display = 'none';
             } else {
+                if (currentVehicle) exitVehicle();
                 playTestBtn.innerHTML = '<span>▶️</span> <span>Play Test Mode</span>';
                 playTestBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
                 if (playTestHud) playTestHud.style.display = 'none';
@@ -1446,10 +1583,10 @@ export function updateAiAssistantLocalization() {
         if (submitBtn) submitBtn.innerHTML = `<span>✨</span> Loo / Küsi`;
         if (quickContainer) {
             quickContainer.innerHTML = `
+                <button class="ai-quick-btn" data-prompt="Loo lendav lennuk ja lennurada millega lennata" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Loo lendav lennuk</button>
                 <button class="ai-quick-btn" data-prompt="Lisa autole autoteed, koonused ja tänavalambid juurde" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🚗 Lisa autole asju juurde</button>
                 <button class="ai-quick-btn" data-prompt="Lisa puudele kivid, lilled ja metsarada juurde" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌲 Kaunista mets</button>
-                <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
-                <button class="ai-quick-btn" data-prompt="Loo suurlinn pilvelõhkujate ja autodega" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏙️ Suurlinn</button>
+                <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
             `;
         }
     } else {
@@ -1460,10 +1597,10 @@ export function updateAiAssistantLocalization() {
         if (submitBtn) submitBtn.innerHTML = `<span>✨</span> Create / Ask`;
         if (quickContainer) {
             quickContainer.innerHTML = `
+                <button class="ai-quick-btn" data-prompt="Create a flyable airplane with runway" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Flyable Airplane</button>
                 <button class="ai-quick-btn" data-prompt="Add roads, cones, and street lights to the car" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🚗 Add details to car</button>
                 <button class="ai-quick-btn" data-prompt="Add rocks, flowers, and path to the trees" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌲 Decorate forest</button>
-                <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
-                <button class="ai-quick-btn" data-prompt="Create a big city with skyscrapers and cars" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏙️ Metropolis</button>
+                <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
             `;
         }
     }
@@ -1538,37 +1675,44 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
     const group = new THREE.Group();
     const p = (prompt + ' ' + name).toLowerCase();
 
-    // 1. RABBIT / JÄNES / BUNNY / HARE
+    // Color extraction helper
+    let tint = 0x3498db;
+    if (p.includes('punan') || p.includes('red')) tint = 0xe74c3c;
+    else if (p.includes('kollan') || p.includes('yellow') || p.includes('gold') || p.includes('kuld')) tint = 0xf1c40f;
+    else if (p.includes('rohelin') || p.includes('green')) tint = 0x2ecc71;
+    else if (p.includes('sinin') || p.includes('blue')) tint = 0x3498db;
+    else if (p.includes('must') || p.includes('black')) tint = 0x2c3e50;
+    else if (p.includes('valg') || p.includes('white')) tint = 0xfafafa;
+    else if (p.includes('lilla') || p.includes('purple')) tint = 0x9b59b6;
+    else if (p.includes('roosa') || p.includes('pink')) tint = 0xff7675;
+    else if (p.includes('oranž') || p.includes('oranz') || p.includes('orange')) tint = 0xe67e22;
+
+    // 1. RABBIT / JÄNES / BUNNY
     if (p.includes('jänes') || p.includes('janes') || p.includes('rabbit') || p.includes('bunny') || p.includes('hare') || p.includes('janku')) {
         const furMat = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.8 });
         const earInnerMat = new THREE.MeshStandardMaterial({ color: 0xffb8b8, roughness: 0.5 });
         const eyeMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.2 });
         const noseMat = new THREE.MeshStandardMaterial({ color: 0xff7675 });
 
-        // Fluffy Body
         const body = new THREE.Mesh(new THREE.SphereGeometry(1.1, 16, 16), furMat);
         body.scale.set(1.0, 1.2, 1.3);
         body.position.set(0, 1.2, 0);
         group.add(body);
 
-        // Head
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.75, 16, 16), furMat);
         head.position.set(0, 2.2, 0.6);
         group.add(head);
 
-        // Cute Pink Nose
         const nose = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), noseMat);
         nose.position.set(0, 2.15, 1.3);
         group.add(nose);
 
-        // Eyes
         [-0.35, 0.35].forEach(x => {
             const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeMat);
             eye.position.set(x, 2.35, 1.15);
             group.add(eye);
         });
 
-        // Long Upright Ears with Pink Inner
         [-0.3, 0.3].forEach(x => {
             const earOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.22, 1.5, 8), furMat);
             earOuter.position.set(x, 3.4, 0.5);
@@ -1581,12 +1725,10 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(earInner);
         });
 
-        // Fluffy Round Tail
         const tail = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), furMat);
         tail.position.set(0, 1.0, -1.3);
         group.add(tail);
 
-        // Paws
         [-0.45, 0.45].forEach(x => {
             const frontPaw = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), furMat);
             frontPaw.scale.set(0.8, 0.6, 1.4);
@@ -1599,37 +1741,688 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(backPaw);
         });
 
-    // 2. SATURN (PLANET WITH ICONIC PLANETARY RINGS)
-    } else if (p.includes('saturn') || p.includes('planeet') || p.includes('planet') || p.includes('jupiter') || p.includes('mars') || p.includes('neptuun')) {
-        const saturnColor = p.includes('mars') ? 0xe74c3c : (p.includes('neptuun') ? 0x0984e3 : 0xf9ca24);
-        const planetMat = new THREE.MeshStandardMaterial({ color: saturnColor, roughness: 0.7, metalness: 0.1 });
-        const ringMat = new THREE.MeshStandardMaterial({ color: 0xf6e58d, side: THREE.DoubleSide, transparent: true, opacity: 0.85, roughness: 0.5 });
-        const ringOuterMat = new THREE.MeshStandardMaterial({ color: 0xdfb15b, side: THREE.DoubleSide, transparent: true, opacity: 0.7, roughness: 0.6 });
+    // 2. DOG / KOER / WOLF / HUNT / FOX / REBANE / PUPPY
+    } else if (p.includes('koer') || p.includes('dog') || p.includes('kutsik') || p.includes('puppy') || p.includes('wolf') || p.includes('hunt') || p.includes('fox') || p.includes('rebane')) {
+        const coatColor = p.includes('fox') || p.includes('rebane') ? 0xe67e22 : (p.includes('wolf') || p.includes('hunt') ? 0x7f8c8d : 0xc0392b);
+        const coatMat = new THREE.MeshStandardMaterial({ color: coatColor, roughness: 0.7 });
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.8 });
+        const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.3 });
+        const collarMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.4 });
 
-        // Saturn Sphere Body
+        // Body & Chest
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.5, 2.8), coatMat);
+        body.position.set(0, 1.5, 0);
+        group.add(body);
+
+        const chest = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.4), whiteMat);
+        chest.position.set(0, 1.5, 1.3);
+        group.add(chest);
+
+        // Head & Muzzle
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.3), coatMat);
+        head.position.set(0, 2.5, 1.4);
+        group.add(head);
+
+        const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 1.0), whiteMat);
+        muzzle.position.set(0, 2.3, 2.2);
+        group.add(muzzle);
+
+        const nose = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), blackMat);
+        nose.position.set(0, 2.5, 2.7);
+        group.add(nose);
+
+        [-0.35, 0.35].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), blackMat);
+            eye.position.set(x, 2.7, 1.95);
+            group.add(eye);
+            const ear = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.7, 4), coatMat);
+            ear.position.set(x, 3.3, 1.3);
+            group.add(ear);
+        });
+
+        // Collar
+        const collar = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.08, 6, 16), collarMat);
+        collar.position.set(0, 2.0, 1.2);
+        collar.rotation.x = Math.PI / 3;
+        group.add(collar);
+
+        // 4 Legs
+        [-0.5, 0.5].forEach(lx => {
+            [0.9, -0.9].forEach(lz => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.4, 8), coatMat);
+                leg.position.set(lx, 0.7, lz);
+                group.add(leg);
+            });
+        });
+
+        // Wagging Tail
+        const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 1.3, 6), coatMat);
+        tail.position.set(0, 2.0, -1.8);
+        tail.rotation.x = -Math.PI / 4;
+        group.add(tail);
+
+    // 3. CAT / KASS / LION / LÕVI / TIGER / TIIGER
+    } else if (p.includes('kass') || p.includes('cat') || p.includes('kiisu') || p.includes('kitten') || p.includes('lion') || p.includes('lõvi') || p.includes('lovi') || p.includes('tiger') || p.includes('tiiger')) {
+        const furColor = p.includes('lion') || p.includes('lõvi') ? 0xf39c12 : (p.includes('tiger') || p.includes('tiiger') ? 0xe67e22 : 0x2c3e50);
+        const furMat = new THREE.MeshStandardMaterial({ color: furColor, roughness: 0.6 });
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71, emissive: 0x2ecc71, emissiveIntensity: 0.6 });
+
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 2.4, 12), furMat);
+        body.rotation.x = Math.PI / 2;
+        body.position.set(0, 1.2, 0);
+        group.add(body);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.65, 12, 12), furMat);
+        head.position.set(0, 1.8, 1.3);
+        group.add(head);
+
+        [-0.3, 0.3].forEach(x => {
+            const ear = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 3), furMat);
+            ear.position.set(x, 2.4, 1.3);
+            group.add(ear);
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), eyeMat);
+            eye.position.set(x, 1.9, 1.85);
+            group.add(eye);
+        });
+
+        const snout = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), whiteMat);
+        snout.position.set(0, 1.7, 1.9);
+        group.add(snout);
+
+        [-0.4, 0.4].forEach(lx => {
+            [0.7, -0.7].forEach(lz => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.1, 8), furMat);
+                leg.position.set(lx, 0.55, lz);
+                group.add(leg);
+            });
+        });
+
+        // Curled Sleek Tail
+        const tail = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.1, 6, 12, Math.PI), furMat);
+        tail.position.set(0, 1.4, -1.5);
+        tail.rotation.y = Math.PI / 2;
+        group.add(tail);
+
+    // 4. HORSE / HOBUNE / UNICORN / ÜKSSARVIK / PEGASUS
+    } else if (p.includes('hobune') || p.includes('horse') || p.includes('ükssarvik') || p.includes('ukssarvik') || p.includes('unicorn') || p.includes('pegas')) {
+        const horseColor = p.includes('unicorn') || p.includes('ükssarvik') ? 0xffffff : 0x8b4513;
+        const horseMat = new THREE.MeshStandardMaterial({ color: horseColor, roughness: 0.6 });
+        const maneMat = new THREE.MeshStandardMaterial({ color: p.includes('unicorn') ? 0xff7675 : 0x2c3e50 });
+        const hornMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, emissive: 0xffd32a, emissiveIntensity: 0.8 });
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.8, 3.4), horseMat);
+        body.position.set(0, 2.2, 0);
+        group.add(body);
+
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 2.0, 8), horseMat);
+        neck.position.set(0, 3.4, 1.5);
+        neck.rotation.x = -Math.PI / 6;
+        group.add(neck);
+
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 1.6), horseMat);
+        head.position.set(0, 4.4, 2.0);
+        head.rotation.x = Math.PI / 8;
+        group.add(head);
+
+        if (p.includes('unicorn') || p.includes('ükssarvik') || p.includes('ukssarvik')) {
+            const horn = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.8, 8), hornMat);
+            horn.position.set(0, 5.4, 2.5);
+            horn.rotation.x = Math.PI / 4;
+            group.add(horn);
+        }
+
+        [-0.6, 0.6].forEach(lx => {
+            [1.2, -1.2].forEach(lz => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 2.2, 8), horseMat);
+                leg.position.set(lx, 1.1, lz);
+                group.add(leg);
+            });
+        });
+
+    // 5. BEAR / KARU / PANDA
+    } else if (p.includes('karu') || p.includes('bear') || p.includes('panda')) {
+        const isPanda = p.includes('panda');
+        const bearColor = isPanda ? 0xffffff : (p.includes('jääkaru') || p.includes('polar') ? 0xfafafa : 0x5d4037);
+        const bearMat = new THREE.MeshStandardMaterial({ color: bearColor, roughness: 0.8 });
+        const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.7 });
+
+        const body = new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 16), isPanda ? blackMat : bearMat);
+        body.position.set(0, 1.8, 0);
+        group.add(body);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(1.1, 14, 14), bearMat);
+        head.position.set(0, 3.2, 0.8);
+        group.add(head);
+
+        const snout = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 0.7), bearMat);
+        snout.position.set(0, 3.0, 1.8);
+        group.add(snout);
+
+        [-0.7, 0.7].forEach(x => {
+            const ear = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), isPanda ? blackMat : bearMat);
+            ear.position.set(x, 4.1, 0.7);
+            group.add(ear);
+        });
+
+    // 6. BIRD / LIND / EAGLE / KOTKAS / PENGUIN / PINGVIIN / DUCK / PART
+    } else if (p.includes('lind') || p.includes('bird') || p.includes('kotkas') || p.includes('eagle') || p.includes('pingviin') || p.includes('penguin') || p.includes('part') || p.includes('duck') || p.includes('öökull') || p.includes('owl')) {
+        const isPenguin = p.includes('pingviin') || p.includes('penguin');
+        const bodyMat = new THREE.MeshStandardMaterial({ color: isPenguin ? 0x1e272e : 0x3498db, roughness: 0.6 });
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
+        const beakMat = new THREE.MeshStandardMaterial({ color: 0xf39c12, roughness: 0.3 });
+
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.0, 2.2, 12), bodyMat);
+        body.position.set(0, 1.4, 0);
+        group.add(body);
+
+        const belly = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.6, 0.3), whiteMat);
+        belly.position.set(0, 1.4, 0.8);
+        group.add(belly);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.65, 12, 12), bodyMat);
+        head.position.set(0, 2.7, 0);
+        group.add(head);
+
+        const beak = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.8, 4), beakMat);
+        beak.rotation.x = Math.PI / 2;
+        beak.position.set(0, 2.6, 0.9);
+        group.add(beak);
+
+        [-1.2, 1.2].forEach(x => {
+            const wing = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.8), bodyMat);
+            wing.position.set(x, 1.6, 0);
+            wing.rotation.z = x < 0 ? 0.3 : -0.3;
+            group.add(wing);
+        });
+
+    // 7. FISH / KALA / SHARK / HAI / WHALE / VAAL / DOLPHIN / DELFIIN
+    } else if (p.includes('kala') || p.includes('fish') || p.includes('hai') || p.includes('shark') || p.includes('vaal') || p.includes('whale') || p.includes('delfiin') || p.includes('dolphin')) {
+        const fishColor = p.includes('shark') || p.includes('hai') ? 0x7f8c8d : 0x00f2fe;
+        const fishMat = new THREE.MeshStandardMaterial({ color: fishColor, roughness: 0.4, metalness: 0.2 });
+
+        const body = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), fishMat);
+        body.scale.set(0.8, 1.0, 2.6);
+        body.position.set(0, 1.5, 0);
+        group.add(body);
+
+        // Dorsal Fin
+        const fin = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.4, 3), fishMat);
+        fin.position.set(0, 2.8, 0);
+        group.add(fin);
+
+        // Tail Fin
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.6, 1.2), fishMat);
+        tail.position.set(0, 1.5, -3.2);
+        group.add(tail);
+
+    // 8. MOTORCYCLE / MOOTORRATAS / BIKE / JALGRATAS / SCOOTER
+    } else if (p.includes('mootorratas') || p.includes('motorcycle') || p.includes('bike') || p.includes('krossikas') || p.includes('roller') || p.includes('scooter') || p.includes('jalgratas')) {
+        const frameMat = new THREE.MeshStandardMaterial({ color: tint, metalness: 0.6, roughness: 0.3 });
+        const tireMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.9 });
+        const chromeMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, metalness: 0.9, roughness: 0.1 });
+
+        // Two Wheels
+        [-1.8, 1.8].forEach(z => {
+            const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.22, 12, 24), tireMat);
+            wheel.position.set(0, 0.7, z);
+            group.add(wheel);
+        });
+
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 2.6), frameMat);
+        frame.position.set(0, 1.2, 0);
+        group.add(frame);
+
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 1.0), new THREE.MeshStandardMaterial({ color: 0x2c3e50 }));
+        seat.position.set(0, 1.65, -0.4);
+        group.add(seat);
+
+        const handlebar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.6, 8), chromeMat);
+        handlebar.rotation.z = Math.PI / 2;
+        handlebar.position.set(0, 2.0, 1.4);
+        group.add(handlebar);
+
+        const headlight = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 }));
+        headlight.position.set(0, 1.8, 2.0);
+        group.add(headlight);
+
+    // 9. TRAIN / RONG / LOCOMOTIVE / VEDUR / TRAM / TRAMM
+    } else if (p.includes('rong') || p.includes('train') || p.includes('vedur') || p.includes('locomotive') || p.includes('tramm') || p.includes('tram')) {
+        const trainMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.5 });
+        const metalMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.7 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.8 });
+
+        const boiler = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 5.0, 16), metalMat);
+        boiler.rotation.x = Math.PI / 2;
+        boiler.position.set(0, 2.0, 0.5);
+        group.add(boiler);
+
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3.2, 2.8), trainMat);
+        cab.position.set(0, 2.5, -2.5);
+        group.add(cab);
+
+        const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 1.6, 12), metalMat);
+        chimney.position.set(0, 3.8, 2.0);
+        group.add(chimney);
+
+        // 6 Wheels
+        [-1.3, 1.3].forEach(x => {
+            [-2.2, 0, 2.2].forEach(z => {
+                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.3, 16), goldMat);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.set(x, 0.6, z);
+                group.add(wheel);
+            });
+        });
+
+    // 10. TRUCK / VEOAUTO / FIRETRUCK / TULETÕRJE / AMBULANCE / KIIRABI / POLICE / POLITSEI / TANK
+    } else if (p.includes('veoauto') || p.includes('truck') || p.includes('tuletõrje') || p.includes('tuletorje') || p.includes('kiirabi') || p.includes('ambulance') || p.includes('politsei') || p.includes('police') || p.includes('tank')) {
+        const isFire = p.includes('tulet');
+        const isPolice = p.includes('politsei') || p.includes('police');
+        const isTank = p.includes('tank');
+        const truckColor = isTank ? 0x27ae60 : (isFire ? 0xe74c3c : (isPolice ? 0x2c3e50 : 0xf39c12));
+        const bodyMat = new THREE.MeshStandardMaterial({ color: truckColor, roughness: 0.5 });
+        const tireMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.9 });
+
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.2, 2.4), bodyMat);
+        cab.position.set(0, 1.8, 1.8);
+        group.add(cab);
+
+        const bed = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.0, 4.0), bodyMat);
+        bed.position.set(0, 1.7, -1.6);
+        group.add(bed);
+
+        if (isTank) {
+            const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.2, 1.0, 12), bodyMat);
+            turret.position.set(0, 3.2, 0);
+            group.add(turret);
+
+            const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 4.0, 8), new THREE.MeshStandardMaterial({ color: 0x1e272e }));
+            cannon.rotation.x = Math.PI / 2;
+            cannon.position.set(0, 3.3, 2.2);
+            group.add(cannon);
+        } else {
+            // Flashing Siren Lightbar
+            const sirenMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 });
+            const siren = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 0.4), sirenMat);
+            siren.position.set(0, 3.0, 1.8);
+            group.add(siren);
+        }
+
+        [-1.3, 1.3].forEach(x => {
+            [-2.4, -0.8, 1.8].forEach(z => {
+                const w = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.4, 12), tireMat);
+                w.rotation.z = Math.PI / 2;
+                w.position.set(x, 0.55, z);
+                group.add(w);
+            });
+        });
+
+    // 11. SPACESHIP / ROCKET / RAKETT / UFO / SATELLITE
+    } else if (p.includes('rakett') || p.includes('rocket') || p.includes('kosmoselaev') || p.includes('spaceship') || p.includes('ufo') || p.includes('satellite') || p.includes('mars rover')) {
+        const isUfo = p.includes('ufo');
+        const hullMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, metalness: 0.8, roughness: 0.2 });
+        const glowMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 });
+
+        if (isUfo) {
+            const saucer = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 0.8, 0.8, 24), hullMat);
+            saucer.position.set(0, 2.0, 0);
+            group.add(saucer);
+
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 16), glowMat);
+            dome.position.set(0, 2.6, 0);
+            group.add(dome);
+        } else {
+            const rocketBody = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.4, 6.5, 16), hullMat);
+            rocketBody.position.set(0, 3.5, 0);
+            group.add(rocketBody);
+
+            const noseCone = new THREE.Mesh(new THREE.ConeGeometry(1.0, 2.2, 16), new THREE.MeshStandardMaterial({ color: 0xe74c3c }));
+            noseCone.position.set(0, 7.8, 0);
+            group.add(noseCone);
+
+            for (let f = 0; f < 4; f++) {
+                const fin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.8, 1.4), new THREE.MeshStandardMaterial({ color: 0xe74c3c }));
+                fin.position.set(Math.cos(f * Math.PI / 2) * 1.5, 1.2, Math.sin(f * Math.PI / 2) * 1.5);
+                fin.rotation.y = f * Math.PI / 2;
+                group.add(fin);
+            }
+
+            const exhaust = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.5, 12), new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xff4500, emissiveIntensity: 0.9 }));
+            exhaust.position.set(0, 0, 0);
+            exhaust.rotation.x = Math.PI;
+            group.add(exhaust);
+        }
+
+    // 12. VOLCANO / VULKAAN / MOUNTAIN / MÄGI / CAVE / KOOBAS
+    } else if (p.includes('vulkaan') || p.includes('volcano') || p.includes('laava') || p.includes('lava') || p.includes('mägi') || p.includes('magi') || p.includes('mountain') || p.includes('koobas')) {
+        const rockMat = new THREE.MeshStandardMaterial({ color: 0x3d3d3d, roughness: 0.95 });
+        const lavaMat = new THREE.MeshStandardMaterial({ color: 0xff3838, emissive: 0xff3838, emissiveIntensity: 0.9, roughness: 0.2 });
+
+        const cone = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 6.5, 6.0, 16), rockMat);
+        cone.position.set(0, 3.0, 0);
+        group.add(cone);
+
+        const crater = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 0.2, 0.4, 16), lavaMat);
+        crater.position.set(0, 6.0, 0);
+        group.add(crater);
+
+    // 13. LIGHTHOUSE / TULETORN / WINDMILL / TUULEVESKI / TOWER / TORN
+    } else if (p.includes('tuletorn') || p.includes('lighthouse') || p.includes('tuuleveski') || p.includes('windmill') || p.includes('torn') || p.includes('tower')) {
+        const isWindmill = p.includes('tuuleveski') || p.includes('windmill');
+        const towerMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, roughness: 0.6 });
+        const redMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, roughness: 0.5 });
+        const lightMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xffd32a, emissiveIntensity: 0.95 });
+
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2.2, 8.0, 12), towerMat);
+        shaft.position.set(0, 4.0, 0);
+        group.add(shaft);
+
+        const stripe = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 1.8, 12), redMat);
+        stripe.position.set(0, 4.5, 0);
+        group.add(stripe);
+
+        const lantern = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 1.5, 8), lightMat);
+        lantern.position.set(0, 8.8, 0);
+        group.add(lantern);
+
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.0, 8), redMat);
+        roof.position.set(0, 10.2, 0);
+        group.add(roof);
+
+        if (isWindmill) {
+            for (let b = 0; b < 4; b++) {
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.5, 0.08), new THREE.MeshStandardMaterial({ color: 0x8b4513 }));
+                blade.position.set(Math.cos(b * Math.PI / 2) * 2.2, 8.5 + Math.sin(b * Math.PI / 2) * 2.2, 1.4);
+                blade.rotation.z = b * Math.PI / 2;
+                group.add(blade);
+            }
+        }
+
+    // 14. TREEHOUSE / PUUONN / CABIN / PALKMAJA / TENT / TELK / IGLOO
+    } else if (p.includes('puuonn') || p.includes('treehouse') || p.includes('palkmaja') || p.includes('cabin') || p.includes('telk') || p.includes('tent') || p.includes('igloo')) {
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.8 });
+        const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71, roughness: 0.7 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.5 });
+
+        if (p.includes('telk') || p.includes('tent')) {
+            const tent = new THREE.Mesh(new THREE.ConeGeometry(2.5, 3.0, 4), new THREE.MeshStandardMaterial({ color: tint, roughness: 0.5 }));
+            tent.position.set(0, 1.5, 0);
+            tent.rotation.y = Math.PI / 4;
+            group.add(tent);
+        } else {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.2, 5.0, 10), woodMat);
+            trunk.position.set(0, 2.5, 0);
+            group.add(trunk);
+
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.4, 3.5), woodMat);
+            cabin.position.set(0, 5.5, 0);
+            group.add(cabin);
+
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 2.0, 4), roofMat);
+            roof.position.set(0, 7.5, 0);
+            roof.rotation.y = Math.PI / 4;
+            group.add(roof);
+
+            const canopy = new THREE.Mesh(new THREE.SphereGeometry(3.0, 12, 12), leavesMat);
+            canopy.position.set(0, 9.0, 0);
+            group.add(canopy);
+        }
+
+    // 15. BRIDGE / SILD / TUNNEL
+    } else if (p.includes('sild') || p.includes('bridge') || p.includes('tunnel')) {
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.8 });
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.9 });
+
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.4, 12.0), roadMat);
+        deck.position.set(0, 2.0, 0);
+        group.add(deck);
+
+        [-1.8, 1.8].forEach(x => {
+            const railing = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.0, 12.0), stoneMat);
+            railing.position.set(x, 2.6, 0);
+            group.add(railing);
+
+            [-4.0, 4.0].forEach(z => {
+                const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 2.0, 8), stoneMat);
+                pillar.position.set(x, 1.0, z);
+                group.add(pillar);
+            });
+        });
+
+    // 16. FERRIS WHEEL / VAATERATAS / CAROUSEL / KARUSSELL / PLAYGROUND
+    } else if (p.includes('vaateratas') || p.includes('ferris') || p.includes('karussell') || p.includes('carousel') || p.includes('mänguväljak') || p.includes('manguvaljak')) {
+        const steelMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, metalness: 0.7 });
+        const neonMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8 });
+
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(4.0, 0.15, 8, 32), neonMat);
+        rim.position.set(0, 5.0, 0);
+        group.add(rim);
+
+        for (let s = 0; s < 8; s++) {
+            const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 8.0, 6), steelMat);
+            spoke.position.set(0, 5.0, 0);
+            spoke.rotation.z = s * Math.PI / 4;
+            group.add(spoke);
+
+            const gondola = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xff7675 }));
+            gondola.position.set(Math.cos(s * Math.PI / 4) * 4.0, 5.0 + Math.sin(s * Math.PI / 4) * 4.0, 0);
+            group.add(gondola);
+        }
+
+    // 17. FOOD: PIZZA / BURGER / ICE CREAM / JÄÄTIS / CAKE / KOOK / APPLE / BANAAN
+    } else if (p.includes('pizza') || p.includes('burger') || p.includes('jäätis') || p.includes('jaatis') || p.includes('ice cream') || p.includes('kook') || p.includes('cake') || p.includes('õun') || p.includes('oun') || p.includes('apple') || p.includes('banaan') || p.includes('banana')) {
+        if (p.includes('pizza')) {
+            const crustMat = new THREE.MeshStandardMaterial({ color: 0xd35400, roughness: 0.8 });
+            const cheeseMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
+            const pepMat = new THREE.MeshStandardMaterial({ color: 0xc0392b });
+
+            const crust = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 0.2, 24), crustMat);
+            crust.position.set(0, 0.8, 0);
+            group.add(crust);
+
+            const cheese = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.22, 24), cheeseMat);
+            cheese.position.set(0, 0.82, 0);
+            group.add(cheese);
+
+            for (let i = 0; i < 7; i++) {
+                const pep = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.25, 8), pepMat);
+                pep.position.set(Math.cos(i * 0.9) * 1.1, 0.85, Math.sin(i * 0.9) * 1.1);
+                group.add(pep);
+            }
+        } else if (p.includes('burger')) {
+            const bunMat = new THREE.MeshStandardMaterial({ color: 0xd35400, roughness: 0.6 });
+            const pattyMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.9 });
+            const cheeseMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f });
+            const saladMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71 });
+
+            const bunBottom = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.4, 16), bunMat);
+            bunBottom.position.set(0, 0.4, 0);
+            group.add(bunBottom);
+
+            const patty = new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.45, 0.35, 16), pattyMat);
+            patty.position.set(0, 0.75, 0);
+            group.add(patty);
+
+            const cheese = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 1.8), cheeseMat);
+            cheese.position.set(0, 0.95, 0);
+            cheese.rotation.y = Math.PI / 6;
+            group.add(cheese);
+
+            const salad = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.1, 12), saladMat);
+            salad.position.set(0, 1.05, 0);
+            group.add(salad);
+
+            const bunTop = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), bunMat);
+            bunTop.position.set(0, 1.1, 0);
+            group.add(bunTop);
+        } else {
+            // Layered Cake with candle
+            const cakeMat = new THREE.MeshStandardMaterial({ color: 0xff7675, roughness: 0.5 });
+            const creamMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+            const candleMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xffa502, emissiveIntensity: 0.9 });
+
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 1.0, 20), cakeMat);
+            base.position.set(0, 0.8, 0);
+            group.add(base);
+
+            const topLayer = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.8, 16), creamMat);
+            topLayer.position.set(0, 1.7, 0);
+            group.add(topLayer);
+
+            const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.8, 8), candleMat);
+            candle.position.set(0, 2.5, 0);
+            group.add(candle);
+        }
+
+    // 18. MUSIC: PIANO / KLAVER / GUITAR / KITARR / DRUMS / TRUMMID
+    } else if (p.includes('klaver') || p.includes('piano') || p.includes('kitarr') || p.includes('guitar') || p.includes('trumm') || p.includes('drum')) {
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.2, metalness: 0.4 });
+        const whiteKeyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+        const blackKeyMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.3 });
+
+        const pianoBody = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.5, 2.2), woodMat);
+        pianoBody.position.set(0, 1.8, 0);
+        group.add(pianoBody);
+
+        const keyboard = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.15, 0.8), whiteKeyMat);
+        keyboard.position.set(0, 1.5, 0.9);
+        group.add(keyboard);
+
+        for (let k = -1.1; k <= 1.1; k += 0.3) {
+            const bkey = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.5), blackKeyMat);
+            bkey.position.set(k, 1.62, 0.8);
+            group.add(bkey);
+        }
+
+        [-1.3, 1.3].forEach(x => {
+            [-0.8, 0.8].forEach(z => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 1.2, 8), woodMat);
+                leg.position.set(x, 0.6, z);
+                group.add(leg);
+            });
+        });
+
+    // 19. FURNITURE / CHAIR / TABLE / BED / COMPUTER / TV
+    } else if (p.includes('tool') || p.includes('chair') || p.includes('laud') || p.includes('table') || p.includes('voodi') || p.includes('bed') || p.includes('arvuti') || p.includes('computer') || p.includes('laptop') || p.includes('tv') || p.includes('televiisor')) {
+        const mat = new THREE.MeshStandardMaterial({ color: tint, roughness: 0.6 });
+        const screenMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8 });
+
+        if (p.includes('arvuti') || p.includes('computer') || p.includes('tv') || p.includes('laptop')) {
+            const table = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.2, 1.6), mat);
+            table.position.set(0, 1.4, 0);
+            group.add(table);
+
+            const monitor = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.2, 0.1), screenMat);
+            monitor.position.set(0, 2.3, -0.4);
+            group.add(monitor);
+
+            const keyboard = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.5), new THREE.MeshStandardMaterial({ color: 0x1e272e }));
+            keyboard.position.set(0, 1.53, 0.2);
+            group.add(keyboard);
+
+            [-1.3, 1.3].forEach(x => {
+                [-0.6, 0.6].forEach(z => {
+                    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 6), mat);
+                    leg.position.set(x, 0.7, z);
+                    group.add(leg);
+                });
+            });
+        } else {
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 1.6), mat);
+            seat.position.set(0, 1.2, 0);
+            group.add(seat);
+
+            const backrest = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.8, 0.2), mat);
+            backrest.position.set(0, 2.1, -0.7);
+            group.add(backrest);
+
+            [-0.7, 0.7].forEach(x => {
+                [-0.7, 0.7].forEach(z => {
+                    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2, 6), mat);
+                    leg.position.set(x, 0.6, z);
+                    group.add(leg);
+                });
+            });
+        }
+
+    // 20. WEAPON: SWORD / MÕÕK / SHIELD / KILP / BOW / VIBU / CANNON / KAHUR / WAND / VÕLUKEPP
+    } else if (p.includes('mõõk') || p.includes('mook') || p.includes('sword') || p.includes('kilp') || p.includes('shield') || p.includes('kahur') || p.includes('cannon') || p.includes('võlukepp') || p.includes('wand')) {
+        const steelMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, metalness: 0.9, roughness: 0.1 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.3 });
+        const magicMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 });
+
+        if (p.includes('kilp') || p.includes('shield')) {
+            const shield = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.2, 0.3, 16), steelMat);
+            shield.rotation.x = Math.PI / 2;
+            shield.position.set(0, 1.8, 0);
+            group.add(shield);
+
+            const emblem = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), goldMat);
+            emblem.position.set(0, 1.8, 0.25);
+            group.add(emblem);
+        } else {
+            const blade = new THREE.Mesh(new THREE.BoxGeometry(0.35, 3.6, 0.08), steelMat);
+            blade.position.set(0, 2.8, 0);
+            group.add(blade);
+
+            const tip = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.8, 4), steelMat);
+            tip.position.set(0, 5.0, 0);
+            group.add(tip);
+
+            const guard = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 0.3), goldMat);
+            guard.position.set(0, 1.0, 0);
+            group.add(guard);
+
+            const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.9, 8), new THREE.MeshStandardMaterial({ color: 0x795548 }));
+            hilt.position.set(0, 0.45, 0);
+            group.add(hilt);
+
+            const pommel = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), magicMat);
+            pommel.position.set(0, 0, 0);
+            group.add(pommel);
+        }
+
+    // 21. TREASURE CHEST / AARDEKIRST / DIAMOND / TEEMANT / GOLD
+    } else if (p.includes('aare') || p.includes('kirst') || p.includes('chest') || p.includes('teemant') || p.includes('diamond') || p.includes('kuld') || p.includes('gold')) {
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.8 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.9, roughness: 0.2, emissive: 0xffd32a, emissiveIntensity: 0.4 });
+        const gemMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9, metalness: 0.5 });
+
+        const chestBase = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 1.6), woodMat);
+        chestBase.position.set(0, 0.6, 0);
+        group.add(chestBase);
+
+        const chestLid = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 2.2, 12, 1, false, 0, Math.PI), woodMat);
+        chestLid.rotation.z = Math.PI / 2;
+        chestLid.position.set(0, 1.2, 0);
+        group.add(chestLid);
+
+        const lock = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.15), goldMat);
+        lock.position.set(0, 1.0, 0.85);
+        group.add(lock);
+
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.6), gemMat);
+        gem.position.set(0, 2.2, 0);
+        group.add(gem);
+
+    // 22. SATURN & PLANETS
+    } else if (p.includes('saturn') || p.includes('planeet') || p.includes('planet') || p.includes('jupiter') || p.includes('mars') || p.includes('neptuun') || p.includes('kuu') || p.includes('moon') || p.includes('päike') || p.includes('sun')) {
+        const saturnColor = p.includes('mars') ? 0xe74c3c : (p.includes('neptuun') ? 0x0984e3 : (p.includes('päike') || p.includes('sun') ? 0xffa502 : 0xf9ca24));
+        const planetMat = new THREE.MeshStandardMaterial({ color: saturnColor, roughness: 0.7, metalness: 0.1, emissive: p.includes('päike') ? 0xffa502 : 0x000000, emissiveIntensity: 0.5 });
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xf6e58d, side: THREE.DoubleSide, transparent: true, opacity: 0.85, roughness: 0.5 });
+
         const planetSphere = new THREE.Mesh(new THREE.SphereGeometry(2.4, 32, 32), planetMat);
         planetSphere.position.set(0, 3.5, 0);
         group.add(planetSphere);
 
-        // Saturn Bands / Atmosphere rings
-        const bandMat = new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.6 });
-        const band = new THREE.Mesh(new THREE.CylinderGeometry(2.42, 2.42, 0.6, 32), bandMat);
-        band.position.set(0, 3.5, 0);
-        group.add(band);
-
-        // Huge Majestic Planetary Rings (Tilted at 26.7 degrees like real Saturn)
         const innerRing = new THREE.Mesh(new THREE.RingGeometry(3.2, 4.6, 64), ringMat);
         innerRing.rotation.x = Math.PI / 2 + 0.45;
         innerRing.position.set(0, 3.5, 0);
         group.add(innerRing);
 
-        const outerRing = new THREE.Mesh(new THREE.RingGeometry(4.8, 5.8, 64), ringMat);
-        outerRing.rotation.x = Math.PI / 2 + 0.45;
-        outerRing.position.set(0, 3.5, 0);
-        group.add(outerRing);
-
-    // 3. DINOSAUR / DRAGON / MONSTER / CREATURE
-    } else if (p.includes('dino') || p.includes('t-rex') || p.includes('draakon') || p.includes('dragon') || p.includes('monster') || p.includes('koll') || p.includes('loom') || p.includes('creature')) {
+    // 23. DINOSAUR / DRAGON / MONSTER / COLLOSSAL BEAST
+    } else if (p.includes('dino') || p.includes('t-rex') || p.includes('draakon') || p.includes('dragon') || p.includes('monster') || p.includes('koll') || p.includes('godzilla')) {
         const bodyMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.6 });
         const bellyMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.6 });
         const eyeMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: 0xe74c3c, emissiveIntensity: 0.6 });
@@ -1663,8 +2456,8 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(leg);
         });
 
-    // 4. ROBOT / MECHA / CYBORG / ANDROID / MECH
-    } else if (p.includes('robot') || p.includes('mecha') || p.includes('cyborg') || p.includes('android') || p.includes('droid') || p.includes('mech')) {
+    // 24. ROBOT / MECHA / CYBORG / ANDROID
+    } else if (p.includes('robot') || p.includes('mecha') || p.includes('cyborg') || p.includes('android') || p.includes('mech')) {
         const metalMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, metalness: 0.8, roughness: 0.3 });
         const coreMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8 });
         const goldMat = new THREE.MeshStandardMaterial({ color: 0xf39c12, metalness: 0.6 });
@@ -1701,108 +2494,8 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(leg);
         });
 
-    // 5. AIRPORT & AIRPLANE (Lennujaam & Lennuk)
-    } else if (p.includes('lennuväli') || p.includes('lennuvali') || p.includes('lennujaam') || p.includes('airport') || p.includes('runway') || p.includes('aerodrome')) {
-        const tarmacMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.9 });
-        const planeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3 });
-        const stripeMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.6 });
-
-        // Runway tarmac
-        const runway = new THREE.Mesh(new THREE.BoxGeometry(8.0, 0.15, 20.0), tarmacMat);
-        runway.position.y = 0.07;
-        group.add(runway);
-
-        // Runway lights
-        [-3.8, 3.8].forEach(rx => {
-            for (let rz = -9; rz <= 9; rz += 4.5) {
-                const rlight = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), stripeMat);
-                rlight.position.set(rx, 0.3, rz);
-                group.add(rlight);
-            }
-        });
-
-        // 3D Airplane on runway
-        const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 5.5, 12), planeMat);
-        fuselage.rotation.x = Math.PI / 2;
-        fuselage.position.set(0, 1.4, -2);
-        group.add(fuselage);
-
-        const wings = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.1, 1.4), planeMat);
-        wings.position.set(0, 1.4, -2);
-        group.add(wings);
-
-        const tailFin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 1.0), planeMat);
-        tailFin.position.set(0, 2.2, 0.2);
-        group.add(tailFin);
-
-    // 6. HOUSE WITH GARDEN & FENCES (Maja ja aed / Villa)
-    } else if (p.includes('aed') || p.includes('garden') || p.includes('villa') || p.includes('mansion') || (p.includes('maja') && p.includes('aed'))) {
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, roughness: 0.6 });
-        const roofMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.4 });
-        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8e44ad, roughness: 0.7 });
-        const lawnMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.9 });
-
-        // Grass lawn base
-        const lawn = new THREE.Mesh(new THREE.BoxGeometry(14, 0.15, 14), lawnMat);
-        lawn.position.y = 0.07;
-        group.add(lawn);
-
-        // House
-        const house = new THREE.Mesh(new THREE.BoxGeometry(5.0, 3.5, 4.5), wallMat);
-        house.position.set(0, 1.8, -2.5);
-        group.add(house);
-
-        const roof = new THREE.Mesh(new THREE.ConeGeometry(4.2, 2.2, 4), roofMat);
-        roof.position.set(0, 4.5, -2.5);
-        roof.rotation.y = Math.PI / 4;
-        group.add(roof);
-
-        // Chimney
-        const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.8, 0.6), new THREE.MeshStandardMaterial({ color: 0x7f8c8d }));
-        chimney.position.set(1.4, 5.0, -2.5);
-        group.add(chimney);
-
-        // Surrounding Fences
-        [-6.5, 6.5].forEach(fx => {
-            const fence = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.0, 13), woodMat);
-            fence.position.set(fx, 0.6, 0);
-            group.add(fence);
-        });
-
-    // 7. TROPICAL BEACH / ISLAND / LAKE (Rand / Saar / Oaas)
-    } else if (p.includes('rand') || p.includes('beach') || p.includes('saar') || p.includes('island') || p.includes('meri') || p.includes('lake') || p.includes('palm')) {
-        const sandMat = new THREE.MeshStandardMaterial({ color: 0xf4d03f, roughness: 0.9 });
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.1, metalness: 0.4 });
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.7 });
-        const palmMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71, roughness: 0.5 });
-
-        // Ocean Base & Island
-        const water = new THREE.Mesh(new THREE.CylinderGeometry(8.0, 8.0, 0.2, 24), waterMat);
-        water.position.y = 0.1;
-        group.add(water);
-
-        const island = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 6.5, 0.6, 24), sandMat);
-        island.position.y = 0.4;
-        group.add(island);
-
-        // Palm Trees
-        [-2.0, 2.0].forEach((px, idx) => {
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.35, 3.5, 8), trunkMat);
-            trunk.position.set(px, 2.1, idx * 1.5 - 0.75);
-            trunk.rotation.z = px * -0.08;
-            group.add(trunk);
-
-            for (let i = 0; i < 5; i++) {
-                const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2.2, 4), palmMat);
-                leaf.position.set(px, 3.8, idx * 1.5 - 0.75);
-                leaf.rotation.x = Math.PI / 3;
-                leaf.rotation.y = (i / 5) * Math.PI * 2;
-                group.add(leaf);
-            }
-        });
-
-    // 8. CASTLE / FORTRESS / TOWER / PYRAMID / TEMPLE
-    } else if (p.includes('loss') || p.includes('castle') || p.includes('kindlus') || p.includes('fort') || p.includes('püramiid') || p.includes('pyramid') || p.includes('tempel') || p.includes('torn') || p.includes('palace')) {
+    // 25. CASTLE / FORTRESS / PYRAMID / TEMPLE
+    } else if (p.includes('loss') || p.includes('castle') || p.includes('kindlus') || p.includes('fort') || p.includes('püramiid') || p.includes('pyramid') || p.includes('tempel') || p.includes('palace')) {
         const stoneMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.9 });
         const roofMat = new THREE.MeshStandardMaterial({ color: 0x9b59b6, roughness: 0.5 });
         const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.3 });
@@ -1834,8 +2527,13 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(gate);
         }
 
-    // 9. SUBMARINE / SHIP / BOAT / HELICOPTER / PLANE
-    } else if (p.includes('allveelaev') || p.includes('submarine') || p.includes('laev') || p.includes('ship') || p.includes('boat') || p.includes('paat') || p.includes('kopter') || p.includes('copter')) {
+    // 26. AIRPLANE / JET / FIGHTER / AIRCRAFT / FLYING
+    } else if (p.includes('lennuk') || p.includes('airplane') || p.includes('plane') || p.includes('jet') || p.includes('aircraft') || p.includes('hävitaja') || p.includes('havitaja') || p.includes('propeller') || p.includes('lendav')) {
+        const planeColor = p.includes('red') || p.includes('punan') ? '#e74c3c' : (p.includes('gold') || p.includes('kuld') ? '#ffd32a' : (p.includes('black') || p.includes('must') ? '#1e272e' : '#3498db'));
+        return createAirplane3DMesh(planeColor);
+
+    // 27. SUBMARINE / SHIP / BOAT / LAEV / PAAT
+    } else if (p.includes('allveelaev') || p.includes('submarine') || p.includes('laev') || p.includes('ship') || p.includes('boat') || p.includes('paat') || p.includes('jaht') || p.includes('yacht')) {
         const hullMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.5 });
         const yellowMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
         const glassMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.5 });
@@ -1857,42 +2555,30 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
         periscope.position.set(0, 3.6, 0.5);
         group.add(periscope);
 
-    // 10. TROPHY / KARIKAS / PIANO / CUSTOM OBJECT
-    } else if (p.includes('karikas') || p.includes('trophy') || p.includes('cup') || p.includes('kuld')) {
-        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.85, roughness: 0.2, emissive: 0xffd32a, emissiveIntensity: 0.3 });
-        const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.6 });
-
-        const pedestal = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.8, 1.8), baseMat);
-        pedestal.position.y = 0.4;
-        group.add(pedestal);
-
-        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.6, 1.4, 12), goldMat);
-        stem.position.y = 1.5;
-        group.add(stem);
-
-        const cup = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 0.4, 1.8, 16, 1, true), goldMat);
-        cup.position.y = 3.0;
-        group.add(cup);
-
-    // 11. GENERIC INTELLIGENT PROCEDURAL COMPOSITE
+    // 28. ULTRA SMART UNIVERSAL PROCEDURAL SCULPTOR (Synthesizes ANY arbitrary object)
     } else {
-        const colorPalette = [0x9b59b6, 0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22, 0x1abc9c];
-        const chosenColor = colorPalette[Math.abs(hashString(name)) % colorPalette.length];
-        const mainMat = new THREE.MeshStandardMaterial({ color: chosenColor, roughness: 0.4, metalness: 0.3 });
-        const glowMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.6 });
+        const colorPalette = [0x9b59b6, 0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22, 0x1abc9c, 0xff7675];
+        const chosenColor = tint || colorPalette[Math.abs(hashString(name)) % colorPalette.length];
+        const mainMat = new THREE.MeshStandardMaterial({ color: chosenColor, roughness: 0.35, metalness: 0.35 });
+        const glowMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.75 });
+        const accentMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.2 });
+
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.4, 0.5, 12), new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.7 }));
+        base.position.y = 0.25;
+        group.add(base);
 
         const core = new THREE.Mesh(new THREE.DodecahedronGeometry(1.6, 1), mainMat);
-        core.position.y = 1.8;
+        core.position.y = 2.0;
         group.add(core);
 
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.15, 8, 24), glowMat);
-        ring.position.y = 1.8;
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.16, 8, 28), glowMat);
+        ring.position.y = 2.0;
         ring.rotation.x = Math.PI / 3;
         group.add(ring);
 
-        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.2, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x2c3e50 }));
-        pedestal.position.y = 0.25;
-        group.add(pedestal);
+        const crown = new THREE.Mesh(new THREE.OctahedronGeometry(0.7), accentMat);
+        crown.position.y = 3.8;
+        group.add(crown);
     }
 
     return group;
@@ -2244,6 +2930,16 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `🚗 <strong>Kuidas autoga sõita:</strong><br>1. Klõpsa üleval nuppu <strong>▶️ Play Test Mode</strong>.<br>2. Kõnni auto juurde — ekraanile ilmub nupp <strong>[F]</strong>.<br>3. Vajuta klaviatuuril <strong>[F]</strong> (või vajuta ekraani nuppu) autosse istumiseks.<br>4. Juhi auto liikumist: <strong>W / ⬆️</strong> (Gaas), <strong>S / ⬇️</strong> (Pidur/Tagurpidi), <strong>A / D</strong> (Pööramine).<br>5. Väljumiseks vajuta uuesti <strong>[F]</strong>!`;
         } else {
             aiResponse = `🚗 <strong>How to Drive Cars:</strong><br>1. Click <strong>▶️ Play Test Mode</strong> in the top bar.<br>2. Walk close to any car — press <strong>[F]</strong> to enter.<br>3. Drive with <strong>W / ⬆️</strong> (Gas), <strong>S / ⬇️</strong> (Brake/Reverse), and <strong>A / D</strong> (Steer).<br>4. Press <strong>[F]</strong> again to exit!`;
+        }
+
+    } else if (
+        p.includes('kuidas lennata') || p.includes('kuidas lennukiga') || p.includes('kuidas lennukit juhtida') ||
+        p.includes('how to fly') || p.includes('fly airplane') || p.includes('how to control plane')
+    ) {
+        if (isAdmin) {
+            aiResponse = `✈️ <strong>Kuidas lennukiga lennata:</strong><br>1. Klõpsa üleval nuppu <strong>▶️ Play Test Mode</strong>.<br>2. Kõnni lennuki juurde ja vajuta <strong>[F]</strong> lennukisse istumiseks.<br>3. Vajuta <strong>W</strong> gaasi andmiseks (lennuki kiirus tõuseb).<br>4. Hoia all <strong>SPACE</strong> või <strong>Q</strong> tõusmiseks ja taevasse tõusmiseks!<br>5. Pööra lennukit <strong>A / D</strong> klahvidega (lennuk teeb realistlikke pöördeid ja kallutab tiibu).<br>6. Laskumiseks ja maandumiseks kasuta <strong>Shift</strong> või <strong>E</strong> klahve.<br>7. Väljumiseks vajuta uuesti <strong>[F]</strong>!`;
+        } else {
+            aiResponse = `✈️ <strong>How to Fly Airplanes:</strong><br>1. Click <strong>▶️ Play Test Mode</strong> in the top bar.<br>2. Walk to the airplane and press <strong>[F]</strong> to board.<br>3. Press <strong>W</strong> for throttle/acceleration.<br>4. Hold <strong>SPACE</strong> or <strong>Q</strong> to climb and take off into the sky!<br>5. Steer and bank with <strong>A / D</strong> keys.<br>6. Descend/land using <strong>Shift</strong> or <strong>E</strong>.<br>7. Press <strong>[F]</strong> again to exit!`;
         }
 
     } else if (p.includes('kuidas hüpata') || p.includes('kuidas hupata') || p.includes('kuidas hüppan') || p.includes('how to jump') || (p.includes('jump') && !p.includes('pad') && !p.includes('parkour'))) {
@@ -2610,7 +3306,90 @@ export function executeAiBuild(promptText: string) {
             }
         }
 
-    // 4. AUTOTEED & SÕIDETAVAD AUTOD (ROADS & DRIVABLE CARS)
+    // 4. LENDAVAD LENNUKID & LENNUJAAM / LENNURADA (FLYABLE AIRPLANES & RUNWAY)
+    } else if (
+        p.includes('lennuk') || p.includes('airplane') || p.includes('plane') ||
+        p.includes('lendav') || p.includes('lenda') || p.includes('fly') ||
+        p.includes('jet') || p.includes('aircraft') || p.includes('hävitaja') ||
+        p.includes('havitaja') || p.includes('propeller') || p.includes('lennuväli') ||
+        p.includes('lennuvali') || p.includes('lennurada') || p.includes('airport') || p.includes('runway')
+    ) {
+        if (titleInput) titleInput.value = '3D Flight Simulator';
+        if (catSelect) catSelect.value = 'Racing';
+        if (descInput) descInput.value = 'Airport runway with high speed flyable 3D airplanes in Playard.';
+
+        // 1. Place Airport Runway Segments
+        const roadItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('road') || c.geometryType.includes('road')) || CATALOG_DATABASE[0];
+        for (let i = 0; i < 5; i++) {
+            const mesh = createObjectMesh(roadItem);
+            mesh.position.set(0, 0, (i - 2) * 14);
+            mesh.scale.set(1.4, 1, 1);
+            scene.add(mesh);
+
+            placedObjects.push({
+                id: 'placed_ai_runway_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: roadItem.id,
+                name: isAdmin ? `🛫 Lennurada Lõik #${i + 1}` : `🛫 Runway Section #${i + 1}`,
+                category: 'city',
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1.4, y: 1, z: 1 },
+                color: roadItem.color
+            });
+            generatedObjectsCount++;
+        }
+
+        // 2. Place Runway Edge Lights
+        const lightItem = CATALOG_DATABASE.find(c => c.name.toLowerCase().includes('light')) || CATALOG_DATABASE[0];
+        [-5.2, 5.2].forEach((lx) => {
+            for (let li = 0; li < 4; li++) {
+                const meshLight = createObjectMesh(lightItem, '#00f2fe');
+                meshLight.position.set(lx, 0, -24 + li * 16);
+                meshLight.scale.set(0.7, 0.7, 0.7);
+                scene.add(meshLight);
+
+                placedObjects.push({
+                    id: 'placed_ai_rlight_' + Date.now() + '_' + lx + '_' + li,
+                    mesh: meshLight,
+                    catalogId: lightItem.id,
+                    name: isAdmin ? '💡 Rajavalgusti' : '💡 Runway Light',
+                    category: 'city',
+                    position: { x: meshLight.position.x, y: 0, z: meshLight.position.z },
+                    rotation: { x: 0, y: 0, z: 0 },
+                    scale: { x: 0.7, y: 0.7, z: 0.7 },
+                    color: '#00f2fe'
+                });
+                generatedObjectsCount++;
+            }
+        });
+
+        // 3. Place Flyable 3D Airplane on Runway
+        const planeMesh = createAirplane3DMesh('#3498db');
+        planeMesh.position.set(0, 0, -4);
+        scene.add(planeMesh);
+
+        placedObjects.push({
+            id: 'placed_ai_plane_' + Date.now(),
+            mesh: planeMesh,
+            catalogId: 'vehicle_plane_' + Date.now(),
+            name: isAdmin ? '✈️ Lendav Lennuk' : '✈️ Flyable Airplane',
+            category: 'vehicles',
+            isAirplane: true,
+            position: { x: planeMesh.position.x, y: 0, z: planeMesh.position.z },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#3498db'
+        });
+        generatedObjectsCount++;
+
+        if (isAdmin) {
+            aiResponse = `✈️ <strong>Lõin stseeni lennuraja ja lendava lennuki!</strong><br>Vajuta ülevalt <strong>▶️ Play Test Mode</strong> ja astu lennuki juurde <strong>[F]</strong>, et taevasse lennata!<br>🎮 <strong>Juhtimine:</strong> <strong>W</strong> (gaas/kiirendus), <strong>S</strong> (pidur), <strong>A/D</strong> (pööramine ja kallutus), <strong>SPACE / Q</strong> (tõus taevasse), <strong>Shift / E</strong> (laskumine).`;
+        } else {
+            aiResponse = `✈️ <strong>Created a runway and a flyable airplane!</strong><br>Click <strong>▶️ Play Test Mode</strong> above and approach the airplane <strong>[F]</strong> to fly into the sky!<br>🎮 <strong>Controls:</strong> <strong>W</strong> (throttle), <strong>S</strong> (brake), <strong>A/D</strong> (steer & bank), <strong>SPACE / Q</strong> (climb into sky), <strong>Shift / E</strong> (descend).`;
+        }
+
+    // 5. AUTOTEED & SÕIDETAVAD AUTOD (ROADS & DRIVABLE CARS)
     } else if (p.includes('autotee') || p.includes('autoteed') || (p.includes('tee') && !p.includes('teade')) || (p.includes('road') && !p.includes('broad')) || p.includes('sõit') || p.includes('soit') || p.includes('drive') || p.includes('car') || p.includes('auto')) {
         if (titleInput) titleInput.value = 'Highway & Supercars 3D';
         if (catSelect) catSelect.value = 'Racing';
@@ -2703,27 +3482,32 @@ export function executeAiBuild(promptText: string) {
         if (!customName || customName.length < 2) customName = isAdmin ? '3D Kohandatud Mudel' : '3D Custom Model';
         customName = customName.charAt(0).toUpperCase() + customName.slice(1);
 
+        const isVehicle = p.includes('auto') || p.includes('car') || p.includes('mootorratas') || p.includes('bike') || p.includes('krossikas') || p.includes('roller') || p.includes('scooter') || p.includes('veoauto') || p.includes('truck') || p.includes('tank') || p.includes('laev') || p.includes('ship') || p.includes('paat') || p.includes('boat') || p.includes('allveelaev') || p.includes('submarine') || p.includes('rong') || p.includes('train');
+        const isFlyable = p.includes('lennuk') || p.includes('plane') || p.includes('airplane') || p.includes('jet') || p.includes('kopter') || p.includes('copter') || p.includes('ufo') || p.includes('rakett') || p.includes('rocket') || p.includes('kosmoselaev') || p.includes('spaceship') || p.includes('lendav');
+
         const customMesh = createCustomProceduralMesh(promptText, customName);
         customMesh.position.set(0, 0, -4.5);
         scene.add(customMesh);
 
-        placedObjects.push({
+        const newObj: PlacedObject = {
             id: 'placed_ai_custom_' + Date.now(),
             mesh: customMesh,
             catalogId: 'procedural_' + Date.now(),
             name: `✨ ${customName}`,
-            category: 'custom',
+            category: (isVehicle || isFlyable) ? 'vehicles' : 'custom',
+            isAirplane: isFlyable,
             position: { x: customMesh.position.x, y: customMesh.position.y, z: customMesh.position.z },
             rotation: { x: 0, y: 0, z: 0 },
             scale: { x: 1, y: 1, z: 1 },
             color: '#00f2fe'
-        });
+        };
+        placedObjects.push(newObj);
         generatedObjectsCount++;
 
         if (isAdmin) {
-            aiResponse = `✨ <strong>Lõin sinu kirjelduse põhjal täiesti uue 3D mudeli!</strong><br>Paigutasin stseeni: <strong>✨ ${customName}</strong>.`;
+            aiResponse = `✨ <strong>Lõin sinu kirjelduse põhjal täiesti uue 3D mudeli!</strong><br>Paigutasin stseeni: <strong>✨ ${customName}</strong>.${(isVehicle || isFlyable) ? '<br>🚗/✈️ <em>See sõiduk on Play Test režiimis sõidetav / lennatav! Vajuta [F] sisenemiseks!</em>' : ''}`;
         } else {
-            aiResponse = `✨ <strong>Created a brand new custom 3D model based on your request!</strong><br>Spawned in scene: <strong>✨ ${customName}</strong>.`;
+            aiResponse = `✨ <strong>Created a brand new custom 3D model based on your request!</strong><br>Spawned in scene: <strong>✨ ${customName}</strong>.${(isVehicle || isFlyable) ? '<br>🚗/✈️ <em>This vehicle is drivable/flyable in Play Test mode! Press [F] to enter!</em>' : ''}`;
         }
     }
 
@@ -2775,52 +3559,148 @@ function animate() {
 
     if (isPlayTestMode) {
         if (currentVehicle) {
-            // --- Drivable Car Physics & Controls ---
-            const accel = 38;
-            const maxForwardSpeed = 32;
-            const maxReverseSpeed = -14;
+            const isPlane = isAirplaneObject(currentVehicle);
 
-            if (keys['KeyW'] || keys['ArrowUp']) {
-                vehicleSpeed = Math.min(vehicleSpeed + accel * delta, maxForwardSpeed);
-            } else if (keys['KeyS'] || keys['ArrowDown']) {
-                vehicleSpeed = Math.max(vehicleSpeed - accel * delta, maxReverseSpeed);
-            } else {
-                vehicleSpeed = THREE.MathUtils.lerp(vehicleSpeed, 0, 2.5 * delta);
-            }
+            if (isPlane) {
+                // --- ✈️ 3D Airplane Flight Physics & Flight Controls ---
+                const maxFlightSpeed = 52; // ~190 km/h
+                const flightAccel = 34;
 
-            // Steer wheels and car rotation
-            if (Math.abs(vehicleSpeed) > 0.2) {
+                // 1. Throttle / Acceleration & Brake
+                if (keys['KeyW'] || keys['ArrowUp']) {
+                    vehicleSpeed = Math.min(vehicleSpeed + flightAccel * delta, maxFlightSpeed);
+                } else if (keys['KeyS'] || keys['ArrowDown']) {
+                    if (currentVehicle.mesh.position.y <= 0.3) {
+                        // On runway: brake / reverse
+                        vehicleSpeed = Math.max(vehicleSpeed - flightAccel * delta, -10);
+                    } else {
+                        // Airborne: air-brake / slow down
+                        vehicleSpeed = Math.max(vehicleSpeed - flightAccel * 0.7 * delta, 8);
+                    }
+                } else {
+                    // Natural air resistance
+                    vehicleSpeed = THREE.MathUtils.lerp(vehicleSpeed, currentVehicle.mesh.position.y > 0.5 ? 18 : 0, 1.2 * delta);
+                }
+
+                // 2. Yaw Steering & Roll Banking
                 const steerDir = (vehicleSpeed >= 0 ? 1 : -1);
                 if (keys['KeyA'] || keys['ArrowLeft']) {
-                    currentVehicle.mesh.rotation.y += 2.4 * delta * steerDir;
+                    currentVehicle.mesh.rotation.y += 2.2 * delta * steerDir;
+                    currentVehicle.mesh.rotation.z = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.z, 0.42, 6 * delta);
+                } else if (keys['KeyD'] || keys['ArrowRight']) {
+                    currentVehicle.mesh.rotation.y -= 2.2 * delta * steerDir;
+                    currentVehicle.mesh.rotation.z = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.z, -0.42, 6 * delta);
+                } else {
+                    // Auto level wings roll
+                    currentVehicle.mesh.rotation.z = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.z, 0, 5 * delta);
                 }
-                if (keys['KeyD'] || keys['ArrowRight']) {
-                    currentVehicle.mesh.rotation.y -= 2.4 * delta * steerDir;
+
+                // 3. Pitch (Climb / Dive) & Altitude Lift
+                const isClimbing = keys['Space'] || keys['KeyQ'];
+                const isDiving = keys['ShiftLeft'] || keys['ShiftRight'] || keys['KeyE'] || (keys['KeyS'] && currentVehicle.mesh.position.y > 0.5);
+
+                if (isClimbing) {
+                    // Climb rate proportional to speed
+                    const climbPower = Math.max(10, Math.abs(vehicleSpeed) * 0.5);
+                    currentVehicle.mesh.position.y = Math.min(180, currentVehicle.mesh.position.y + climbPower * delta);
+                    currentVehicle.mesh.rotation.x = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.x, -0.32, 5 * delta);
+                } else if (isDiving) {
+                    currentVehicle.mesh.position.y = Math.max(0, currentVehicle.mesh.position.y - 14 * delta);
+                    currentVehicle.mesh.rotation.x = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.x, 0.32, 5 * delta);
+                } else {
+                    // Natural level pitch
+                    currentVehicle.mesh.rotation.x = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.x, 0, 4 * delta);
+
+                    // Aerodynamic lift if airborne
+                    if (currentVehicle.mesh.position.y > 0) {
+                        if (Math.abs(vehicleSpeed) < 6) {
+                            currentVehicle.mesh.position.y = Math.max(0, currentVehicle.mesh.position.y - 8 * delta);
+                        }
+                    }
                 }
-            }
 
-            // Move car forward in its facing direction
-            currentVehicle.mesh.translateZ(-vehicleSpeed * delta);
-            currentVehicle.position = {
-                x: currentVehicle.mesh.position.x,
-                y: currentVehicle.mesh.position.y,
-                z: currentVehicle.mesh.position.z
-            };
+                // 4. Ground Collision & Landing
+                if (currentVehicle.mesh.position.y <= 0) {
+                    currentVehicle.mesh.position.y = 0;
+                    currentVehicle.mesh.rotation.x = 0;
+                    currentVehicle.mesh.rotation.z = 0;
+                }
 
-            // Sync human position to car
-            humanCharacter.position.copy(currentVehicle.mesh.position);
+                // 5. Move Airplane Forward in its 3D Heading
+                currentVehicle.mesh.translateZ(-vehicleSpeed * delta);
+                currentVehicle.position = {
+                    x: currentVehicle.mesh.position.x,
+                    y: currentVehicle.mesh.position.y,
+                    z: currentVehicle.mesh.position.z
+                };
 
-            // 3rd Person Vehicle Camera
-            const camOffset = new THREE.Vector3(0, 4.2, 8.5);
-            camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), currentVehicle.mesh.rotation.y);
-            const targetCamPos = currentVehicle.mesh.position.clone().add(camOffset);
-            camera.position.lerp(targetCamPos, 0.14);
-            camera.lookAt(currentVehicle.mesh.position.x, currentVehicle.mesh.position.y + 1.2, currentVehicle.mesh.position.z);
+                // Sync human position to airplane
+                humanCharacter.position.copy(currentVehicle.mesh.position);
 
-            // Update Vehicle HUD Speed
-            const speedEl = document.getElementById('vehicle-hud-speed');
-            if (speedEl) {
-                speedEl.innerText = `${Math.round(Math.abs(vehicleSpeed) * 3.6)} km/h`;
+                // 6. Smooth 3rd Person Follow Camera
+                const camDistance = 10.5;
+                const camHeight = 4.2;
+                const camOffset = new THREE.Vector3(0, camHeight, camDistance);
+                camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), currentVehicle.mesh.rotation.y);
+                const targetCamPos = currentVehicle.mesh.position.clone().add(camOffset);
+                camera.position.lerp(targetCamPos, 0.15);
+                camera.lookAt(currentVehicle.mesh.position.x, currentVehicle.mesh.position.y + 1.2, currentVehicle.mesh.position.z);
+
+                // 7. Update HUD Speed & Altitude
+                const speedEl = document.getElementById('vehicle-hud-speed');
+                if (speedEl) {
+                    const speedKmh = Math.round(Math.abs(vehicleSpeed) * 3.6);
+                    const altitudeM = Math.round(currentVehicle.mesh.position.y * 3);
+                    speedEl.innerHTML = `${speedKmh} km/h <span style="font-size: 0.8rem; color: #00f2fe; display: block;">Alt: ${altitudeM} m</span>`;
+                }
+            } else {
+                // --- 🏎️ Drivable Car Physics & Controls ---
+                const accel = 38;
+                const maxForwardSpeed = 32;
+                const maxReverseSpeed = -14;
+
+                if (keys['KeyW'] || keys['ArrowUp']) {
+                    vehicleSpeed = Math.min(vehicleSpeed + accel * delta, maxForwardSpeed);
+                } else if (keys['KeyS'] || keys['ArrowDown']) {
+                    vehicleSpeed = Math.max(vehicleSpeed - accel * delta, maxReverseSpeed);
+                } else {
+                    vehicleSpeed = THREE.MathUtils.lerp(vehicleSpeed, 0, 2.5 * delta);
+                }
+
+                // Steer wheels and car rotation
+                if (Math.abs(vehicleSpeed) > 0.2) {
+                    const steerDir = (vehicleSpeed >= 0 ? 1 : -1);
+                    if (keys['KeyA'] || keys['ArrowLeft']) {
+                        currentVehicle.mesh.rotation.y += 2.4 * delta * steerDir;
+                    }
+                    if (keys['KeyD'] || keys['ArrowRight']) {
+                        currentVehicle.mesh.rotation.y -= 2.4 * delta * steerDir;
+                    }
+                }
+
+                // Move car forward in its facing direction
+                currentVehicle.mesh.translateZ(-vehicleSpeed * delta);
+                currentVehicle.position = {
+                    x: currentVehicle.mesh.position.x,
+                    y: currentVehicle.mesh.position.y,
+                    z: currentVehicle.mesh.position.z
+                };
+
+                // Sync human position to car
+                humanCharacter.position.copy(currentVehicle.mesh.position);
+
+                // 3rd Person Vehicle Camera
+                const camOffset = new THREE.Vector3(0, 4.2, 8.5);
+                camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), currentVehicle.mesh.rotation.y);
+                const targetCamPos = currentVehicle.mesh.position.clone().add(camOffset);
+                camera.position.lerp(targetCamPos, 0.14);
+                camera.lookAt(currentVehicle.mesh.position.x, currentVehicle.mesh.position.y + 1.2, currentVehicle.mesh.position.z);
+
+                // Update Vehicle HUD Speed
+                const speedEl = document.getElementById('vehicle-hud-speed');
+                if (speedEl) {
+                    speedEl.innerText = `${Math.round(Math.abs(vehicleSpeed) * 3.6)} km/h`;
+                }
             }
         } else {
             // --- Human Character Movement & 3rd Person Camera ---
@@ -2866,21 +3746,35 @@ function animate() {
             camera.position.lerp(targetCamPos, 0.1);
             camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.6, humanCharacter.position.z);
 
-            // Check nearby Drivable Vehicles
+            // Check nearby Drivable Vehicles (Cars, Trucks, Airplanes, Jets)
             nearbyVehicle = null;
+            let closestVehicleDist = Infinity;
             for (const p of placedObjects) {
-                if (p.category === 'vehicles' || p.name.toLowerCase().includes('car') || p.name.toLowerCase().includes('truck') || p.name.toLowerCase().includes('buggy')) {
+                if (p.category === 'vehicles' || isAirplaneObject(p) || p.name.toLowerCase().includes('car') || p.name.toLowerCase().includes('truck') || p.name.toLowerCase().includes('buggy') || p.name.toLowerCase().includes('plane') || p.name.toLowerCase().includes('lennuk') || p.name.toLowerCase().includes('jet')) {
                     const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
-                    if (dist < 4.2) {
+                    if (dist < 4.8 && dist < closestVehicleDist) {
+                        closestVehicleDist = dist;
                         nearbyVehicle = p;
-                        break;
                     }
                 }
             }
 
             const enterPrompt = document.getElementById('enter-vehicle-prompt');
+            const enterIcon = document.getElementById('enter-vehicle-icon');
+            const enterText = document.getElementById('enter-vehicle-text');
+
             if (enterPrompt) {
                 enterPrompt.style.display = nearbyVehicle ? 'block' : 'none';
+                if (nearbyVehicle) {
+                    const isPlane = isAirplaneObject(nearbyVehicle);
+                    const isAdmin = isCurrentUserAdmin();
+                    if (enterIcon) enterIcon.innerText = isPlane ? '✈️' : '🚗';
+                    if (enterText) {
+                        enterText.innerText = isPlane
+                            ? (isAdmin ? 'Istu lennukisse ja lenda [F]' : 'Board Airplane and Fly [F]')
+                            : (isAdmin ? 'Istu autosse ja sõida [F]' : 'Enter Vehicle and Drive [F]');
+                    }
+                }
             }
         }
 

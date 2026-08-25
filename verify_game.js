@@ -256,6 +256,27 @@ try {
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
+            // Test Universal Custom 3D Object Synthesis (Any creature / item: "Loo koer ja pitsa")
+            console.log("   Testing Universal Custom 3D Object Creation ('Loo koer ja pitsa')...");
+            await page.type('#ai-prompt-input', 'Loo armas koer ja suur pizza');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+            const customObjChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!customObjChat.includes('mudel') && !customObjChat.includes('model') && !customObjChat.includes('Lõin') && !customObjChat.includes('Created')) {
+                throw new Error("Universal custom 3D object creation failed!");
+            }
+
+            // Test AI Flyable Airplane Creation: "Loo lendav lennuk ja lennurada millega lennata"
+            console.log("   Testing AI Flyable Airplane Creation ('Loo lendav lennuk ja lennurada')...");
+            await page.type('#ai-prompt-input', 'Loo lendav lennuk ja lennurada millega lennata');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const planeAiChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!planeAiChat.includes('lennuk') && !planeAiChat.includes('airplane') && !planeAiChat.includes('lennata')) {
+                throw new Error("AI Flyable Airplane creation failed!");
+            }
+
             await page.click('#btn-close-ai');
 
             // Test Drivable Car in Play Test Mode
@@ -293,11 +314,52 @@ try {
             const vehicleHudAfterExit = await page.$eval('#vehicle-hud', el => window.getComputedStyle(el).display);
             console.log("   Vehicle HUD display after exit [F] (Expected: none):", vehicleHudAfterExit);
 
-            // Exit Play Test Mode back to Edit Mode
+            // Re-toggle Play Test Mode to reset position to (0, 0, 0)
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
 
+            // Test Flyable Airplane in Play Test Mode
+            console.log("   Testing Flyable Airplane flight in Play Test Mode...");
+            // Move forward to airplane at x: 0, z: -4 and press F to enter
+            await page.keyboard.down('KeyW');
+            await new Promise(r => setTimeout(r, 500));
+            await page.keyboard.up('KeyW');
+
+            // Enter airplane with F
+            await page.keyboard.press('KeyF');
+            await new Promise(r => setTimeout(r, 400));
+
+            const airplaneHudDisplay = await page.$eval('#vehicle-hud', el => window.getComputedStyle(el).display);
+            const airplaneHudName = await page.$eval('#vehicle-hud-name', el => el.textContent);
+            console.log("   Airplane HUD display after [F] (Expected: block):", airplaneHudDisplay, "| Name:", airplaneHudName);
+            if (airplaneHudDisplay !== 'block' || (!airplaneHudName.includes('✈️') && !airplaneHudName.includes('Lennuk') && !airplaneHudName.includes('Plane'))) {
+                throw new Error("Airplane HUD failed to show when entering plane with [F]!");
+            }
+
+            // Accelerate airplane with W and climb with Space
+            await page.keyboard.down('KeyW');
+            await page.keyboard.down('Space');
+            await new Promise(r => setTimeout(r, 600));
+            await page.keyboard.up('Space');
+            await page.keyboard.up('KeyW');
+            const airplaneFlightHud = await page.$eval('#vehicle-hud-speed', el => el.textContent);
+            console.log("   Airplane Flight HUD after acceleration and climb:", airplaneFlightHud);
+            if (!airplaneFlightHud.includes('Alt:')) {
+                throw new Error("Airplane Altitude HUD failed to show during flight!");
+            }
+
+            // Exit airplane with F
+            await page.keyboard.press('KeyF');
+            await new Promise(r => setTimeout(r, 300));
+
+            // Reload Creator page for clean state before camera test
+            await page.goto(page.url(), { waitUntil: 'networkidle2' });
+            await new Promise(r => setTimeout(r, 2000));
+
             // Test Studio Camera View Navigation Buttons & Keyboard Pan (Edit Mode)
+            await page.waitForSelector('#cam-btn-fwd', { visible: true, timeout: 8000 });
             await page.click('#cam-btn-fwd');
             await page.click('#cam-btn-zoom-in');
             console.log("   Successfully tested Camera View Pan and Zoom controls in Creator Studio!");
@@ -323,10 +385,31 @@ try {
 
         // Test Submit for Review
         console.log("   Submitting created game for admin review...");
+        // Auto-dismiss any alert/confirm dialogs from submit
+        page.on('dialog', async dialog => { await dialog.dismiss(); });
         await page.click('#btn-save-draft');
         await new Promise(r => setTimeout(r, 400));
         await page.click('#btn-submit-review');
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1500));
+
+        // 6b. Test Bug Report Button
+        console.log("6b. Testing Bug Report Button...");
+        await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 10000 });
+        await new Promise(r => setTimeout(r, 1500));
+        await page.waitForSelector('#btn-open-bug-report', { visible: true, timeout: 5000 });
+        const bugBtnVisible = await page.$eval('#btn-open-bug-report', el => window.getComputedStyle(el).display);
+        console.log("   Bug Report Button visibility:", bugBtnVisible);
+        if (bugBtnVisible === 'none') {
+            throw new Error("Bug Report button should be visible on homepage!");
+        }
+        await page.click('#btn-open-bug-report');
+        await new Promise(r => setTimeout(r, 500));
+        const bugModalVisible = await page.$eval('#modal-bug-report', el => el.style.display);
+        console.log("   Bug Report Modal visibility:", bugModalVisible);
+        if (bugModalVisible !== 'flex') {
+            throw new Error("Bug Report modal should be visible after clicking button!");
+        }
+        await page.click('#btn-close-bug-report');
 
         // 7. Test Airplane Simulator
         console.log("7. Checking Airplane Simulator...");

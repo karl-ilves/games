@@ -365,6 +365,81 @@ function renderAdminPromoStats() {
     }
 }
 
+// --- Render Admin Bug Reports ---
+async function renderAdminBugReports() {
+    const container = document.getElementById('admin-bug-reports-list');
+    if (!container) return;
+
+    if (!supabase) {
+        container.innerHTML = '<div style="text-align: center; color: #718093; padding: 25px;">Supabase not connected.</div>';
+        return;
+    }
+
+    try {
+        const { data: reports, error } = await supabase
+            .from('bug_reports')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+
+        if (!reports || reports.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #718093; padding: 25px;">🎉 No bug reports yet!</div>';
+            return;
+        }
+
+        container.innerHTML = reports.map((r: any) => {
+            const date = new Date(r.created_at).toLocaleString();
+            const statusColors: Record<string, string> = { 'new': '#ff4757', 'seen': '#ffd32a', 'fixed': '#2ecc71', 'wontfix': '#a4b0be' };
+            const statusLabels: Record<string, string> = { 'new': '🆕 New', 'seen': '👀 Seen', 'fixed': '✅ Fixed', 'wontfix': '🚫 Won\'t Fix' };
+            const color = statusColors[r.status] || '#a4b0be';
+            const label = statusLabels[r.status] || r.status;
+
+            return `<div style="background: #1a2430; border: 1px solid ${r.status === 'new' ? 'rgba(255,71,87,0.4)' : 'rgba(255,255,255,0.08)'}; border-radius: 10px; padding: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div>
+                        <strong style="color: #fff; font-size: 1rem;">${r.title}</strong>
+                        <span style="font-size: 0.75rem; color: ${color}; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 10px; margin-left: 8px;">${label}</span>
+                    </div>
+                    <select data-bug-id="${r.id}" class="bug-status-select" style="background: #131920; color: #fff; border: 1px solid #485460; border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
+                        <option value="new" ${r.status === 'new' ? 'selected' : ''}>🆕 New</option>
+                        <option value="seen" ${r.status === 'seen' ? 'selected' : ''}>👀 Seen</option>
+                        <option value="fixed" ${r.status === 'fixed' ? 'selected' : ''}>✅ Fixed</option>
+                        <option value="wontfix" ${r.status === 'wontfix' ? 'selected' : ''}>🚫 Won't Fix</option>
+                    </select>
+                </div>
+                <p style="color: #d2dae2; font-size: 0.9rem; margin: 0 0 8px 0; white-space: pre-wrap;">${r.description}</p>
+                <div style="font-size: 0.75rem; color: #718093;">
+                    👤 <strong style="color: #00f2fe;">@${r.username || 'Guest'}</strong>
+                    ${r.email ? `(${r.email})` : ''}
+                    · 📄 ${r.page || '/'}
+                    · 🕐 ${date}
+                </div>
+            </div>`;
+        }).join('');
+
+        // Attach status change listeners
+        container.querySelectorAll('.bug-status-select').forEach(sel => {
+            sel.addEventListener('change', async (e) => {
+                const target = e.target as HTMLSelectElement;
+                const bugId = target.dataset.bugId;
+                const newStatus = target.value;
+                try {
+                    await supabase!.from('bug_reports').update({ status: newStatus }).eq('id', bugId);
+                    renderAdminBugReports(); // Re-render
+                } catch (err) {
+                    console.error('Failed to update bug status:', err);
+                }
+            });
+        });
+
+    } catch (err) {
+        console.error('Failed to load bug reports:', err);
+        container.innerHTML = '<div style="text-align: center; color: #ff4757; padding: 25px;">Failed to load bug reports.</div>';
+    }
+}
+
 // --- Setup Modal & Button Event Listeners ---
 function setupModals() {
     // 1. Streak Modal
@@ -498,27 +573,33 @@ function setupModals() {
     const tabReview = document.getElementById('tab-btn-review-games');
     const tabGive = document.getElementById('tab-btn-give-yards');
     const tabPromo = document.getElementById('tab-btn-promo-stats');
+    const tabBugs = document.getElementById('tab-btn-bug-reports');
     const viewReview = document.getElementById('admin-tab-review-games');
     const viewGive = document.getElementById('admin-tab-give-yards');
     const viewPromo = document.getElementById('admin-tab-promo-stats');
+    const viewBugs = document.getElementById('admin-tab-bug-reports');
 
-    const switchAdminTab = (activeTab: 'review' | 'give' | 'promo') => {
+    const switchAdminTab = (activeTab: 'review' | 'give' | 'promo' | 'bugs') => {
         tabReview?.classList.toggle('active', activeTab === 'review');
         tabGive?.classList.toggle('active', activeTab === 'give');
         tabPromo?.classList.toggle('active', activeTab === 'promo');
+        tabBugs?.classList.toggle('active', activeTab === 'bugs');
 
         if (viewReview) viewReview.style.display = activeTab === 'review' ? 'block' : 'none';
         if (viewGive) viewGive.style.display = activeTab === 'give' ? 'block' : 'none';
         if (viewPromo) viewPromo.style.display = activeTab === 'promo' ? 'block' : 'none';
+        if (viewBugs) viewBugs.style.display = activeTab === 'bugs' ? 'block' : 'none';
 
         if (activeTab === 'review') renderAdminReviewGames();
         if (activeTab === 'give') renderAdminYardLogs();
         if (activeTab === 'promo') renderAdminPromoStats();
+        if (activeTab === 'bugs') renderAdminBugReports();
     };
 
     tabReview?.addEventListener('click', () => switchAdminTab('review'));
     tabGive?.addEventListener('click', () => switchAdminTab('give'));
     tabPromo?.addEventListener('click', () => switchAdminTab('promo'));
+    tabBugs?.addEventListener('click', () => switchAdminTab('bugs'));
 
     // Give Yards Handler
     const giveYardsBtn = document.getElementById('btn-admin-give-yards');
@@ -567,10 +648,73 @@ function setupModals() {
         });
     }
 
+    // Bug Report Modal
+    const modalBugReport = document.getElementById('modal-bug-report');
+    const openBugBtn = document.getElementById('btn-open-bug-report');
+    const closeBugBtn = document.getElementById('btn-close-bug-report');
+    const submitBugBtn = document.getElementById('btn-submit-bug-report');
+
+    if (openBugBtn && modalBugReport) {
+        openBugBtn.addEventListener('click', () => {
+            modalBugReport.style.display = 'flex';
+        });
+    }
+    if (closeBugBtn && modalBugReport) {
+        closeBugBtn.addEventListener('click', () => modalBugReport.style.display = 'none');
+    }
+
+    if (submitBugBtn) {
+        submitBugBtn.addEventListener('click', async () => {
+            const titleInput = document.getElementById('bug-report-title') as HTMLInputElement | null;
+            const descInput = document.getElementById('bug-report-description') as HTMLTextAreaElement | null;
+            const statusEl = document.getElementById('bug-report-status');
+            const title = titleInput?.value.trim() || '';
+            const description = descInput?.value.trim() || '';
+
+            if (!title || !description) {
+                if (statusEl) { statusEl.innerText = 'Please fill in both title and description!'; statusEl.style.color = '#ff4757'; }
+                return;
+            }
+
+            if (statusEl) { statusEl.innerText = 'Submitting...'; statusEl.style.color = '#ffd32a'; }
+
+            const prof = getCurrentUserProfile();
+
+            if (supabase) {
+                try {
+                    const { error } = await supabase.from('bug_reports').insert({
+                        user_id: prof?.id && !prof.id.startsWith('local_') && !prof.id.startsWith('offline_') && !prof.id.startsWith('confirmed_') ? prof.id : null,
+                        username: prof?.username || 'Guest',
+                        email: prof?.email || null,
+                        title,
+                        description,
+                        page: window.location.pathname
+                    });
+                    if (error) throw error;
+                    if (statusEl) { statusEl.innerText = '✅ Bug report submitted! Thank you!'; statusEl.style.color = '#2ecc71'; }
+                    if (titleInput) titleInput.value = '';
+                    if (descInput) descInput.value = '';
+                } catch (err: any) {
+                    console.error('Bug report submit error:', err);
+                    if (statusEl) { statusEl.innerText = 'Failed to submit. Please try again.'; statusEl.style.color = '#ff4757'; }
+                }
+            } else {
+                // Save locally if no Supabase
+                const reports = JSON.parse(localStorage.getItem('playard_bug_reports') || '[]');
+                reports.push({ username: prof?.username || 'Guest', email: prof?.email, title, description, page: window.location.pathname, created_at: new Date().toISOString(), status: 'new' });
+                localStorage.setItem('playard_bug_reports', JSON.stringify(reports));
+                if (statusEl) { statusEl.innerText = '✅ Bug report saved locally! Thank you!'; statusEl.style.color = '#2ecc71'; }
+                if (titleInput) titleInput.value = '';
+                if (descInput) descInput.value = '';
+            }
+        });
+    }
+
     // Modal Background Clicks
     window.addEventListener('click', (e) => {
         if (e.target === modalStreak && modalStreak) modalStreak.style.display = 'none';
         if (e.target === modalAdmin && modalAdmin) modalAdmin.style.display = 'none';
+        if (e.target === modalBugReport && modalBugReport) modalBugReport.style.display = 'none';
     });
 }
 

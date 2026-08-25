@@ -428,6 +428,12 @@
                 <span id="streak-notification-dot" class="badge-dot" style="display: none;"></span>
             </button>
 
+            <!-- Report a Bug Button -->
+            <button id="btn-open-bug-report" class="nav-btn" style="background: rgba(255,71,87,0.15); border: 1px solid rgba(255,71,87,0.4);">
+                <span>🐛</span>
+                <span>Report Bug</span>
+            </button>
+
             <!-- Admin Panel Button (Hidden for non-admin) -->
             <button id="btn-open-admin-panel" class="nav-btn admin-nav-btn" style="display: none;">
                 <span>👑</span>
@@ -598,6 +604,7 @@
                 <button id="tab-btn-review-games" class="admin-tab-btn active">🎮 Games to Review</button>
                 <button id="tab-btn-give-yards" class="admin-tab-btn">💎 Give Yards by Username</button>
                 <button id="tab-btn-promo-stats" class="admin-tab-btn">📊 Code Redemptions & Stats</button>
+                <button id="tab-btn-bug-reports" class="admin-tab-btn">🐛 Bug Reports</button>
             </div>
 
             <!-- Tab 1: Games to Review -->
@@ -672,6 +679,41 @@
                     <!-- Dynamically populated -->
                 </div>
             </div>
+
+            <!-- Tab 4: Bug Reports -->
+            <div id="admin-tab-bug-reports" style="display: none;">
+                <h3 style="color: #ff4757; margin-top: 0;">🐛 User Bug Reports</h3>
+                <div id="admin-bug-reports-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto;">
+                    <div style="text-align: center; color: #718093; padding: 25px;">Loading bug reports...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bug Report Modal -->
+    <div id="modal-bug-report" class="modal-overlay">
+        <div class="modal-card" style="max-width: 520px; text-align: left;">
+            <button class="modal-close" id="btn-close-bug-report">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <span style="font-size: 1.8rem;">🐛</span>
+                <h2 style="margin: 0; color: #ff4757; font-size: 1.5rem;">Report a Bug</h2>
+            </div>
+            <p style="color: #a4b0be; margin: 0 0 18px 0; font-size: 0.85rem;">
+                Found something broken? Let us know and we'll fix it!
+            </p>
+
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Bug Title:</label>
+                <input type="text" id="bug-report-title" placeholder="e.g. Car falls through the ground" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Describe the bug:</label>
+                <textarea id="bug-report-description" placeholder="What happened? What did you expect to happen?" rows="5" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; resize: vertical; font-family: inherit;"></textarea>
+            </div>
+            <button id="btn-submit-bug-report" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ff4757, #ff6b81); border: none; border-radius: 8px; color: #fff; font-weight: 800; font-size: 1rem; cursor: pointer;">
+                🐛 Submit Bug Report
+            </button>
+            <div id="bug-report-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
         </div>
     </div>
 

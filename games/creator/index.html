@@ -397,13 +397,13 @@
         🎮 <strong>PLAY TEST:</strong> Nooltega / WASD liikumine | <strong>SPACE</strong> Hüpe | <strong>[F]</strong> Autosõit
     </div>
 
-    <!-- Vehicle Drive Active HUD -->
+    <!-- Vehicle Drive & Flight Active HUD -->
     <div id="vehicle-hud" style="display: none; position: fixed; top: 75px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.92); border: 2px solid #ffd32a; border-radius: 16px; padding: 10px 24px; color: #fff; z-index: 1100; box-shadow: 0 10px 30px rgba(255, 211, 42, 0.3); text-align: center;">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 1.6rem;">🏎️</span>
+            <span style="font-size: 1.6rem;" id="vehicle-hud-icon">🏎️</span>
             <div>
                 <strong style="color: #ffd32a; font-size: 1.05rem;" id="vehicle-hud-name">Autoga Sõitmine</strong>
-                <div style="font-size: 0.85rem; color: #00f2fe; margin-top: 2px;">
+                <div style="font-size: 0.85rem; color: #00f2fe; margin-top: 2px;" id="vehicle-hud-desc">
                     Gaas: <strong>W / ⬆️</strong> | Pidur & Tagurpidi: <strong>S / ⬇️</strong> | Pööramine: <strong>A / D / ⬅️ ➡️</strong>
                 </div>
             </div>
@@ -419,7 +419,7 @@
     <!-- Enter Vehicle Prompt Button -->
     <div id="enter-vehicle-prompt" style="display: none; position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%); z-index: 1150;">
         <button id="btn-enter-vehicle" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: 2px solid #fff; color: #111; font-weight: 900; padding: 10px 20px; border-radius: 30px; font-size: 1rem; cursor: pointer; box-shadow: 0 8px 25px rgba(255,211,42,0.6); display: flex; align-items: center; gap: 8px; animation: bounce 1s infinite alternate;">
-            <span>🚗</span> <span>Istu autosse ja sõida [F]</span>
+            <span id="enter-vehicle-icon">🚗</span> <span id="enter-vehicle-text">Istu autosse ja sõida [F]</span>
         </button>
     </div>
             <div id="dimension-games-list" style="max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
