@@ -348,7 +348,7 @@ class YardService {
     }
 
     public getYards(): number {
-        if (this.currentUserEmail === '1karl.ilves@gmail.com') return Infinity;
+        if (this.currentUserEmail === '1karl.ilves@gmail.com') return 999999999;
         return this.data.yards;
     }
 
