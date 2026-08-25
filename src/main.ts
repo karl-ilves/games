@@ -563,6 +563,12 @@ function setupModals() {
             }
             return;
         }
+        // Check if on mobile/tablet
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+        if (isMobile) {
+            alert('💻 Game Creator is only available on a computer or laptop!\n\nYou need a keyboard and mouse to build 3D games.');
+            return;
+        }
         window.location.href = './games/creator/index.html';
     };
 
