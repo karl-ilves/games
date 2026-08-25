@@ -402,12 +402,15 @@ async function renderAdminBugReports() {
                         <strong style="color: #fff; font-size: 1rem;">${r.title}</strong>
                         <span style="font-size: 0.75rem; color: ${color}; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 10px; margin-left: 8px;">${label}</span>
                     </div>
-                    <select data-bug-id="${r.id}" class="bug-status-select" style="background: #131920; color: #fff; border: 1px solid #485460; border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
-                        <option value="new" ${r.status === 'new' ? 'selected' : ''}>🆕 New</option>
-                        <option value="seen" ${r.status === 'seen' ? 'selected' : ''}>👀 Seen</option>
-                        <option value="fixed" ${r.status === 'fixed' ? 'selected' : ''}>✅ Fixed</option>
-                        <option value="wontfix" ${r.status === 'wontfix' ? 'selected' : ''}>🚫 Won't Fix</option>
-                    </select>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <select data-bug-id="${r.id}" class="bug-status-select" style="background: #131920; color: #fff; border: 1px solid #485460; border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
+                            <option value="new" ${r.status === 'new' ? 'selected' : ''}>🆕 New</option>
+                            <option value="seen" ${r.status === 'seen' ? 'selected' : ''}>👀 Seen</option>
+                            <option value="fixed" ${r.status === 'fixed' ? 'selected' : ''}>✅ Fixed</option>
+                            <option value="wontfix" ${r.status === 'wontfix' ? 'selected' : ''}>🚫 Won't Fix</option>
+                        </select>
+                        <button data-bug-id="${r.id}" class="bug-delete-btn" style="background: #ff4757; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer; font-weight: bold;" title="Delete this report">🗑️</button>
+                    </div>
                 </div>
                 <p style="color: #d2dae2; font-size: 0.9rem; margin: 0 0 8px 0; white-space: pre-wrap;">${r.description}</p>
                 <div style="font-size: 0.75rem; color: #718093;">
@@ -427,9 +430,23 @@ async function renderAdminBugReports() {
                 const newStatus = target.value;
                 try {
                     await supabase!.from('bug_reports').update({ status: newStatus }).eq('id', bugId);
-                    renderAdminBugReports(); // Re-render
+                    renderAdminBugReports();
                 } catch (err) {
                     console.error('Failed to update bug status:', err);
+                }
+            });
+        });
+
+        // Attach delete listeners
+        container.querySelectorAll('.bug-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.target as HTMLButtonElement;
+                const bugId = target.dataset.bugId;
+                try {
+                    await supabase!.from('bug_reports').delete().eq('id', bugId);
+                    renderAdminBugReports();
+                } catch (err) {
+                    console.error('Failed to delete bug report:', err);
                 }
             });
         });

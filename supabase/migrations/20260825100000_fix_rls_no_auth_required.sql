@@ -25,6 +25,12 @@ DO $$ BEGIN
 END $$;
 create policy "Anyone can update bug reports" on public.bug_reports for update using (true);
 
+-- Allow deleting bug reports from admin panel
+DO $$ BEGIN
+    DROP POLICY IF EXISTS "Anyone can delete bug reports" ON bug_reports;
+END $$;
+create policy "Anyone can delete bug reports" on public.bug_reports for delete using (true);
+
 -- Fix user_yards: allow read/write without strict auth (admin gives yards)  
 DO $$ BEGIN
     DROP POLICY IF EXISTS "Admins can read all yards" ON user_yards;
