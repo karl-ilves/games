@@ -79,6 +79,16 @@ class YardService {
     private listeners: Array<(data: YardData) => void> = [];
 
     constructor() {
+        // Load cached profile so admin check works on game subpages too
+        try {
+            const profRaw = localStorage.getItem('playard_current_user_profile');
+            if (profRaw) {
+                const prof = JSON.parse(profRaw);
+                this.currentUserId = prof.id || null;
+                this.currentUserUsername = prof.username || null;
+                this.currentUserEmail = prof.email || null;
+            }
+        } catch (e) {}
         this.data = this.loadLocalData();
         this.initStorageListener();
         this.initAuthAndSync();
