@@ -682,8 +682,9 @@ function setupModals() {
 
             if (supabase) {
                 try {
+                    const isValidUuid = prof?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(prof.id);
                     const { error } = await supabase.from('bug_reports').insert({
-                        user_id: prof?.id && !prof.id.startsWith('local_') && !prof.id.startsWith('offline_') && !prof.id.startsWith('confirmed_') ? prof.id : null,
+                        user_id: isValidUuid ? prof!.id : null,
                         username: prof?.username || 'Guest',
                         email: prof?.email || null,
                         title,
