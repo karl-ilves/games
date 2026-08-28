@@ -3120,6 +3120,80 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
             group.add(leg);
         });
 
+    // 24.5 PAHALANE / BAD GUY / VILLAIN / ENEMY / BANDIT / KOLL
+    } else if (p.includes('pahalane') || p.includes('kurikael') || p.includes('vaenlane') || p.includes('villain') || p.includes('enemy') || p.includes('bandit') || p.includes('röövel') || p.includes('roovel') || p.includes('skelett') || p.includes('zombie') || p.includes('zombi')) {
+        const darkArmorMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, metalness: 0.8, roughness: 0.3 });
+        const redEyeMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 1.0 });
+        const hornMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, roughness: 0.4 });
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.2, 1.0), darkArmorMat);
+        body.position.y = 2.1;
+        group.add(body);
+
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 1.0), darkArmorMat);
+        head.position.set(0, 3.7, 0);
+        group.add(head);
+
+        // Glowing red eyes
+        [-0.25, 0.25].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), redEyeMat);
+            eye.position.set(x, 3.8, 0.52);
+            group.add(eye);
+        });
+
+        // Horns on helmet
+        [-0.45, 0.45].forEach(x => {
+            const horn = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.9, 6), hornMat);
+            horn.position.set(x, 4.4, 0);
+            horn.rotation.z = (x > 0 ? -0.3 : 0.3);
+            group.add(horn);
+        });
+
+        // Spiked battle weapon in hand
+        const weapon = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.15, 2.4, 8), darkArmorMat);
+        weapon.position.set(1.2, 2.2, 0.4);
+        weapon.rotation.x = Math.PI / 4;
+        group.add(weapon);
+        const spikeBall = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), hornMat);
+        spikeBall.position.set(1.2, 3.2, 1.4);
+        group.add(spikeBall);
+
+        [-0.5, 0.5].forEach(x => {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.4, 0.55), darkArmorMat);
+            leg.position.set(x, 0.7, 0);
+            group.add(leg);
+        });
+
+    // 24.6 NPC / NBS / NON-PLAYER CHARACTER / KÜLAELANIK / QUEST GIVER
+    } else if (p.includes('npc') || p.includes('nbs') || p.includes('tegelane') || p.includes('külaelanik') || p.includes('kulaelanik') || p.includes('villager') || p.includes('guide') || p.includes('quest giver') || p.includes('kaupmees') || p.includes('merchant')) {
+        const tunicMat = new THREE.MeshStandardMaterial({ color: 0x3498db, roughness: 0.7 });
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.8 });
+        const hairMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.6 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xffd32a, emissiveIntensity: 0.8 });
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.0, 0.8), tunicMat);
+        body.position.y = 2.0;
+        group.add(body);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.65, 12, 12), skinMat);
+        head.position.set(0, 3.5, 0);
+        group.add(head);
+
+        const hair = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 1.2), hairMat);
+        hair.position.set(0, 4.0, 0);
+        group.add(hair);
+
+        // Floating Quest / Dialogue Icon above head
+        const iconMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.35), goldMat);
+        iconMesh.position.set(0, 4.8, 0);
+        group.add(iconMesh);
+
+        [-0.4, 0.4].forEach(x => {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.3, 0.5), new THREE.MeshStandardMaterial({ color: 0x2c3e50 }));
+            leg.position.set(x, 0.65, 0);
+            group.add(leg);
+        });
+
     // 25. CASTLE / FORTRESS / PYRAMID / TEMPLE
     } else if (p.includes('loss') || p.includes('castle') || p.includes('kindlus') || p.includes('fort') || p.includes('püramiid') || p.includes('pyramid') || p.includes('tempel') || p.includes('palace')) {
         const stoneMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.9 });
@@ -3885,6 +3959,70 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `🛒 <strong>Lisasin stseeni kaupmehe ja mängusisese poe!</strong><br>Kõnni kaupmehe juurde ja vajuta [E] poe avamiseks, kus mängijad saavad osta elujooke, kiiruseboonuseid ja mõõkasid!`;
         } else {
             aiResponse = `🛒 <strong>Spawned Shopkeeper NPC with In-Game Item Store!</strong><br>Walk near and press [E] to buy potions, speed boosts, and swords!`;
+        }
+
+    } else if (p.includes('pahalane') || p.includes('pahalased') || p.includes('kurikael') || p.includes('vaenlane') || p.includes('vaenlased') || p.includes('koll') || p.includes('villain') || p.includes('enemy') || p.includes('bandit') || p.includes('röövel') || p.includes('roovel')) {
+        const villainMesh = createCustomProceduralMesh('Pahalane Villain Kurikael Vaenlane', 'Pahalane');
+        villainMesh.position.set(0, 0, -6);
+        scene.add(villainMesh);
+
+        placedObjects.push({
+            id: 'placed_ai_villain_' + Date.now(),
+            mesh: villainMesh,
+            catalogId: 'enemy_villain',
+            name: '👾 Pahalane (Enemy Mob)',
+            category: 'gameplay',
+            gameItemType: 'enemy',
+            enemyData: { health: 60, maxHealth: 60, damage: 18, speed: 4.0, name: 'Pahalane' },
+            position: { ...villainMesh.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#1e272e'
+        });
+        generatedObjectsCount++;
+
+        if (isAdmin) {
+            aiResponse = `👾 <strong>Lisasin mängu Pahalase (Enemy AI)!</strong><br>• Pahalane patrullib ja ründab mängijat, kui talle lähedale minna.<br>• Play Test režiimis saad teda rünnata vajutades <strong>[E]</strong> või klõpsates ekraanilt nuppu <strong>⚔️ RÜNDA [E]</strong>!`;
+        } else {
+            aiResponse = `👾 <strong>Spawned Bad Guy Villain (Enemy AI)!</strong><br>• Bad guy patrols and attacks player when nearby.<br>• In Play Test Mode, attack him with <strong>[E]</strong> key or the on-screen <strong>⚔️ ATTACK [E]</strong> button!`;
+        }
+
+    } else if (p.includes('npc') || p.includes('nbs') || p.includes('tegelane') || p.includes('külaelanik') || p.includes('kulaelanik') || p.includes('quest giver') || p.includes('teejuht') || p.includes('villager')) {
+        const npcMesh = createCustomProceduralMesh('NPC NBS Tegelane Külaelanik', 'Külaelanik NPC');
+        npcMesh.position.set(0, 0, -4);
+        scene.add(npcMesh);
+
+        placedObjects.push({
+            id: 'placed_ai_npc_' + Date.now(),
+            mesh: npcMesh,
+            catalogId: 'npc_character',
+            name: '💬 Külaelanik (NPC)',
+            category: 'gameplay',
+            gameItemType: 'npc',
+            trigger: {
+                type: 'proximity',
+                message: isAdmin ? 'Tere rändur! Olen Playardi NPC tegelane. Avasta seda maailma, võitle pahalastega ja kogu punkte!' : 'Hello adventurer! I am a Playard NPC. Explore this world, fight villains and collect points!',
+                title: '💬 Külaelanik (NPC)',
+                radius: 4.5
+            },
+            position: { ...npcMesh.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#3498db'
+        });
+        generatedObjectsCount++;
+
+        if (isAdmin) {
+            aiResponse = `💬 <strong>Lisasin stseeni interaktiivse NPC / tegelase!</strong><br>Kui mängija kõnnib NPC juurde, avaneb automaatselt dialoogiaken ja NPC räägib mängijaga.`;
+        } else {
+            aiResponse = `💬 <strong>Spawned an interactive NPC / Character!</strong><br>When the player walks near the NPC, a dialogue popup appears and the NPC speaks with the player.`;
+        }
+
+    } else if (p.includes('elud') || p.includes('elusid') || p.includes('tervis') || p.includes('ründa') || p.includes('runda') || p.includes('attack') || p.includes('combat') || p.includes('health')) {
+        if (isAdmin) {
+            aiResponse = `❤️ <strong>Tervisesüsteem ja ⚔️ Ründa Nupp on aktiivsed!</strong><br>1. Klõpsa üleval nuppu <strong>▶️ Play Test Mode</strong>.<br>2. Ekraani ülaosas näed oma terviseriba (❤️ 100/100 HP) ja kogutud münte/Yarde.<br>3. All paremal on punane nupp <strong>⚔️ RÜNDA [E]</strong> (või vajuta klaviatuuril <strong>[E]</strong> / vasakut hiireklõpsu), millega saad vaenlasi lüüa!`;
+        } else {
+            aiResponse = `❤️ <strong>Health System & ⚔️ Attack Button are Active!</strong><br>1. Click <strong>▶️ Play Test Mode</strong> in the top bar.<br>2. You will see your Health bar (❤️ 100/100 HP) and Coins/Yards HUD.<br>3. Use the red <strong>⚔️ ATTACK [E]</strong> button or press <strong>[E]</strong> / click to attack enemies!`;
         }
 
     } else if (p.includes('paranda') || p.includes('fix') || p.includes('tee korda') || p.includes('repair')) {

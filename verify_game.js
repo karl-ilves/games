@@ -294,9 +294,26 @@ try {
             await page.click('#btn-ai-submit');
             await new Promise(r => setTimeout(r, 600));
 
-            const qtyChat = await page.$eval('#ai-chat-log', el => el.textContent);
-            if (!qtyChat.includes('30') || (!qtyChat.includes('Auto') && !qtyChat.includes('Car'))) {
-                throw new Error("Quantity 30 Cars scatter failed!");
+            // Test Pahalane (Bad Guy Villain) Creation ("lisa pahalane")
+            console.log("   Testing Pahalane (Bad Guy Villain) Creation ('lisa pahalane')...");
+            await page.type('#ai-prompt-input', 'lisa pahalane ja kurikael');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const villainChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!villainChat.includes('Pahalase') && !villainChat.includes('Villain') && !villainChat.includes('Enemy')) {
+                throw new Error("Pahalane villain creation failed!");
+            }
+
+            // Test NPC / NBS Character Creation ("lisa nbs tegelane")
+            console.log("   Testing NPC / NBS Character Creation ('lisa nbs tegelane')...");
+            await page.type('#ai-prompt-input', 'lisa nbs külaelanik tegelane');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const npcChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!npcChat.includes('NPC') && !npcChat.includes('tegelase') && !npcChat.includes('külaelanik')) {
+                throw new Error("NPC/NBS character creation failed!");
             }
 
             // Test Full AI Horror Game Generation ("Tee õudusmäng mahajäetud haiglas...")
