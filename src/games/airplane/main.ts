@@ -54,8 +54,9 @@ scene.background = new THREE.Color(0x87CEEB); // Sky color
 scene.fog = new THREE.Fog(0x87CEEB, 100, 100000);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 2.0, 50000);
-const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
