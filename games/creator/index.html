@@ -347,6 +347,12 @@
 
         <div class="studio-actions">
             <span id="draft-status-indicator" style="font-size: 0.8rem; color: #2ecc71; font-weight: 600;"></span>
+            <button id="btn-undo" class="btn-studio" title="Undo Last AI / Edit Action (Ctrl+Z)" style="padding: 8px 12px; background: rgba(255,255,255,0.08);">
+                <span>↩️</span> <span style="display: none; sm:inline;">Undo</span>
+            </button>
+            <button id="btn-redo" class="btn-studio" title="Redo Action (Ctrl+Y)" style="padding: 8px 12px; background: rgba(255,255,255,0.08);">
+                <span>↪️</span> <span style="display: none; sm:inline;">Redo</span>
+            </button>
             <button id="btn-open-my-games" class="btn-studio" style="background: rgba(0, 242, 254, 0.2); border-color: #00f2fe; color: #00f2fe;">
                 <span>📂</span> <span>My Games</span>
             </button>
@@ -392,9 +398,124 @@
     <!-- Canvas Container -->
     <div id="canvas-container"></div>
 
+    <!-- Full In-Game Gameplay HUD (Play Test Mode) -->
+    <div id="gameplay-hud" style="display: none; position: fixed; top: 15px; left: 20px; z-index: 1050; pointer-events: none; display: flex; flex-direction: column; gap: 10px;">
+        <!-- Top Status: Health, Coins, Yards -->
+        <div style="display: flex; align-items: center; gap: 12px; pointer-events: auto;">
+            <!-- Health Bar -->
+            <div style="background: rgba(15, 23, 42, 0.9); border: 2px solid #e74c3c; border-radius: 12px; padding: 6px 12px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(231,76,60,0.4); min-width: 170px;">
+                <span style="font-size: 1.2rem;">❤️</span>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 800; color: #fff; margin-bottom: 2px;">
+                        <span>HEALTH</span>
+                        <span id="player-health-text">100/100</span>
+                    </div>
+                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.15); border-radius: 4px; overflow: hidden;">
+                        <div id="player-health-bar" style="width: 100%; height: 100%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.25s ease, background 0.25s ease;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In-game Coins -->
+            <div id="hud-coins-container" style="background: rgba(15, 23, 42, 0.9); border: 2px solid #ffd32a; border-radius: 12px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(255,211,42,0.3); font-weight: 800; color: #ffd32a; font-size: 0.95rem;">
+                <span>🪙</span> <span id="hud-coins-val">0</span>
+            </div>
+
+            <!-- Playard Yards -->
+            <div id="hud-yards-container" style="background: rgba(15, 23, 42, 0.9); border: 2px solid #00f2fe; border-radius: 12px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,242,254,0.3); font-weight: 800; color: #00f2fe; font-size: 0.95rem;">
+                <span>💎</span> <span id="hud-yards-val">0</span> <span style="font-size: 0.75rem; color: #94a3b8;">Yards</span>
+            </div>
+        </div>
+
+        <!-- Active Quest & Objectives Tracker -->
+        <div id="hud-quest-tracker" style="display: none; background: rgba(15, 23, 42, 0.92); border-left: 4px solid #a855f7; border-radius: 8px; padding: 8px 14px; max-width: 320px; box-shadow: 0 6px 20px rgba(0,0,0,0.6); pointer-events: auto;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #c084fc; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                <span>📜</span> <span id="hud-quest-title">Ülesanne / Quest</span>
+            </div>
+            <div id="hud-quest-desc" style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-top: 3px;">
+                Otsi ja kogu kokku 3 võtit!
+            </div>
+            <div style="font-size: 0.8rem; color: #ffd32a; font-weight: 800; margin-top: 4px;" id="hud-quest-progress">
+                Edenemine: 0 / 3
+            </div>
+        </div>
+
+        <!-- Inventory Hotbar -->
+        <div id="hud-inventory-container" style="display: flex; gap: 6px; pointer-events: auto; margin-top: 4px;">
+            <!-- Inventory items injected dynamically -->
+        </div>
+    </div>
+
+    <!-- In-Game Combat / Action Buttons (Play Test Mode) -->
+    <div id="gameplay-action-controls" style="display: none; position: fixed; bottom: 120px; right: 40px; z-index: 1050; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+        <button id="btn-attack-action" style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #e74c3c, #c0392b); border: 2px solid #fff; color: white; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 8px 25px rgba(231,76,60,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform 0.1s;">
+            <span>⚔️</span>
+            <span style="font-size: 0.65rem; font-weight: 800;">RÜNDA [E]</span>
+        </button>
+    </div>
+
+    <!-- In-Game Shop Modal -->
+    <div id="in-game-shop-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 1300; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #141b24; border: 2px solid #ffd32a; border-radius: 20px; width: 100%; max-width: 600px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); overflow: hidden; display: flex; flex-direction: column;">
+            <div style="background: linear-gradient(135deg, #d35400, #e67e22); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; color: white;">
+                <div style="font-weight: 800; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                    <span>🛒</span> <span id="in-game-shop-title">Mängusisene Pood / Item Shop</span>
+                </div>
+                <button id="btn-close-ingame-shop" style="background: transparent; border: none; color: white; font-size: 1.3rem; cursor: pointer;">✕</button>
+            </div>
+            <div id="in-game-shop-items" style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; max-height: 400px; overflow-y: auto;">
+                <!-- Dynamically populated shop items -->
+            </div>
+            <div style="padding: 12px 20px; background: #1a2330; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 0.9rem; color: #ffd32a; font-weight: bold;">
+                    Rahakott: <span id="shop-user-coins">0</span> 🪙 | <span id="shop-user-yards">0</span> 💎
+                </div>
+                <button id="btn-close-shop-bottom" class="btn-studio" style="background: #34495e; color: white;">Sulge</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory Overlay Modal -->
+    <div id="game-victory-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 1400; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1e272e, #0f172a); border: 3px solid #ffd32a; border-radius: 24px; padding: 30px; text-align: center; max-width: 500px; width: 100%; box-shadow: 0 0 50px rgba(255,211,42,0.6); animation: bounce 0.6s ease;">
+            <div style="font-size: 4rem; margin-bottom: 10px;">🏆</div>
+            <h2 style="color: #ffd32a; font-size: 2rem; margin: 0 0 10px 0; text-transform: uppercase;" id="victory-title">PALJU ÕNNE! VÕIT!</h2>
+            <p style="color: #e2e8f0; font-size: 1.1rem; line-height: 1.5; margin-bottom: 20px;" id="victory-desc">
+                Suurepärane! Läbisid mängu edukalt ja täitsid kõik eesmärgid!
+            </p>
+            <div style="display: flex; justify-content: center; gap: 12px;">
+                <button id="btn-victory-restart" class="btn-studio" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; padding: 10px 20px; font-size: 1rem;">
+                    🔄 Mängi Uuesti
+                </button>
+                <button id="btn-victory-edit" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; padding: 10px 20px; font-size: 1rem; font-weight: bold;">
+                    🛠️ Tagasi Redigeerima
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay Modal -->
+    <div id="game-over-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 1400; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1e272e, #0f172a); border: 3px solid #e74c3c; border-radius: 24px; padding: 30px; text-align: center; max-width: 500px; width: 100%; box-shadow: 0 0 50px rgba(231,76,60,0.6);">
+            <div style="font-size: 4rem; margin-bottom: 10px;">💀</div>
+            <h2 style="color: #e74c3c; font-size: 2rem; margin: 0 0 10px 0; text-transform: uppercase;">MÄNG LÄBI!</h2>
+            <p style="color: #e2e8f0; font-size: 1.1rem; line-height: 1.5; margin-bottom: 20px;" id="gameover-desc">
+                Tervis sai otsa! Vali, kas soovid taassündida kontrollpunktis või redigeerida mängu.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 12px;">
+                <button id="btn-gameover-respawn" class="btn-studio" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 10px 20px; font-size: 1rem;">
+                    🔄 Taassünni (Respawn)
+                </button>
+                <button id="btn-gameover-edit" class="btn-studio" style="background: #34495e; color: white; padding: 10px 20px; font-size: 1rem;">
+                    🛠️ Tagasi Redigeerima
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Play Test Active HUD -->
     <div id="play-test-hud">
-        🎮 <strong>PLAY TEST:</strong> Nooltega / WASD liikumine | <strong>SPACE</strong> Hüpe | <strong>[F]</strong> Autosõit
+        🎮 <strong>PLAY TEST:</strong> Nooltega / WASD liikumine | <strong>SPACE</strong> Hüpe | <strong>[E] / Click</strong> Rünnak | <strong>[F]</strong> Sõidukid
     </div>
 
     <!-- Vehicle Drive & Flight Active HUD -->

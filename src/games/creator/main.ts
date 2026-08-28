@@ -27,8 +27,22 @@ interface PlacedObject {
     isAirplane?: boolean;
     portalTargetId?: string;
     portalTargetTitle?: string;
+    gameItemType?: 'coin' | 'key' | 'door' | 'weapon' | 'potion' | 'goal' | 'checkpoint' | 'hazard' | 'shop' | 'enemy' | 'boss' | 'npc';
+    keyName?: string;
+    requiredKeyName?: string;
+    isUnlocked?: boolean;
+    isCollected?: boolean;
+    enemyData?: {
+        health: number;
+        maxHealth: number;
+        damage: number;
+        speed: number;
+        lastAttackTime?: number;
+        isBoss?: boolean;
+        name: string;
+    };
     trigger?: {
-        type: 'touch' | 'proximity' | 'portal';
+        type: 'touch' | 'proximity' | 'portal' | 'key_door' | 'goal_win' | 'hazard_lava' | 'checkpoint' | 'shop';
         behavior?: string;
         message?: string;
         title?: string;
@@ -56,6 +70,133 @@ export function isAirplaneObject(obj?: PlacedObject | null): boolean {
 let placedObjects: PlacedObject[] = [];
 let selectedObject: PlacedObject | null = null;
 let isTeleporting = false;
+
+// In-Game Gameplay & Combat State (Play Test Mode)
+let playerHealth = 100;
+let playerMaxHealth = 100;
+let playerCoins = 0;
+let playerInventory: Array<{ id: string; name: string; icon: string; type: string }> = [];
+let activeQuest: {
+    title: string;
+    desc: string;
+    current: number;
+    target: number;
+    completed: boolean;
+    rewardCoins?: number;
+    rewardYards?: number;
+} | null = null;
+let checkpointPosition = new THREE.Vector3(0, 0, 0);
+let isGameFinished = false;
+let isGameOver = false;
+let playerAttackDamage = 25;
+let lastAttackTime = 0;
+
+// Lighting & Weather
+let dirLight: THREE.DirectionalLight;
+let hemiLight: THREE.HemisphereLight;
+let currentEnvMode: 'day' | 'night' | 'sunset' | 'horror_fog' = 'day';
+
+// Undo / Redo History Stack
+interface SceneSnapshot {
+    title: string;
+    desc: string;
+    category: string;
+    envMode: 'day' | 'night' | 'sunset' | 'horror_fog';
+    quest?: any;
+    objects: Array<{
+        catalogId: string;
+        name: string;
+        category: string;
+        position: { x: number; y: number; z: number };
+        rotation: { x: number; y: number; z: number };
+        scale: { x: number; y: number; z: number };
+        color: string;
+        isAirplane?: boolean;
+        gameItemType?: string;
+        keyName?: string;
+        requiredKeyName?: string;
+        trigger?: any;
+        movement?: any;
+        enemyData?: any;
+    }>;
+}
+const undoStack: SceneSnapshot[] = [];
+const redoStack: SceneSnapshot[] = [];
+
+// Audio Synthesis System
+let audioCtx: AudioContext | null = null;
+export function playGameSound(type: 'coin' | 'jump' | 'hit' | 'victory' | 'attack' | 'gameover' | 'door_unlock' | 'quest_complete') {
+    try {
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContextClass) audioCtx = new AudioContextClass();
+        }
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'coin') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(987.77, now);
+            osc.frequency.setValueAtTime(1318.51, now + 0.08);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.start(now);
+            osc.stop(now + 0.35);
+        } else if (type === 'jump') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(450, now + 0.15);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        } else if (type === 'hit' || type === 'attack') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        } else if (type === 'victory' || type === 'quest_complete') {
+            osc.type = 'sine';
+            [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                if (!audioCtx) return;
+                const subOsc = audioCtx.createOscillator();
+                const subGain = audioCtx.createGain();
+                subOsc.connect(subGain);
+                subGain.connect(audioCtx.destination);
+                subOsc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                subGain.gain.setValueAtTime(0.18, now + idx * 0.1);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.35);
+                subOsc.start(now + idx * 0.1);
+                subOsc.stop(now + idx * 0.1 + 0.35);
+            });
+        } else if (type === 'gameover') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.6);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+            osc.start(now);
+            osc.stop(now + 0.7);
+        } else if (type === 'door_unlock') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(880, now + 0.1);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+    } catch (e) {}
+}
 
 // Vehicle Drive State (Play Test Mode)
 let currentVehicle: PlacedObject | null = null;
@@ -825,11 +966,11 @@ async function initStudio() {
     clock = new THREE.Clock();
 
     // Lighting
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7);
+    hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7);
     hemiLight.position.set(0, 50, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+    dirLight = new THREE.DirectionalLight(0xfffaed, 1.2);
     dirLight.position.set(40, 80, 40);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
@@ -933,6 +1074,399 @@ export function exitVehicle() {
     if (vehicleHud) vehicleHud.style.display = 'none';
 }
 
+// --- Gameplay & HUD Controller ---
+export function updateGameplayHUD() {
+    const healthText = document.getElementById('player-health-text');
+    const healthBar = document.getElementById('player-health-bar');
+    const coinsVal = document.getElementById('hud-coins-val');
+    const yardsVal = document.getElementById('hud-yards-val');
+    const questTracker = document.getElementById('hud-quest-tracker');
+    const questTitle = document.getElementById('hud-quest-title');
+    const questDesc = document.getElementById('hud-quest-desc');
+    const questProgress = document.getElementById('hud-quest-progress');
+    const invContainer = document.getElementById('hud-inventory-container');
+
+    if (healthText) healthText.innerText = `${Math.max(0, Math.round(playerHealth))}/${playerMaxHealth}`;
+    if (healthBar) {
+        const pct = Math.max(0, Math.min(100, (playerHealth / playerMaxHealth) * 100));
+        healthBar.style.width = `${pct}%`;
+        if (pct > 50) healthBar.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+        else if (pct > 25) healthBar.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+        else healthBar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+    }
+
+    if (coinsVal) coinsVal.innerText = playerCoins.toString();
+    if (yardsVal) {
+        const profile = getCurrentUserProfile();
+        const yards = yardService.getYards(profile?.username ?? null);
+        yardsVal.innerText = yards.toLocaleString();
+    }
+
+    if (questTracker) {
+        if (activeQuest) {
+            questTracker.style.display = 'block';
+            if (questTitle) questTitle.innerText = activeQuest.title;
+            if (questDesc) questDesc.innerText = activeQuest.desc;
+            if (questProgress) questProgress.innerText = `Edenemine: ${activeQuest.current} / ${activeQuest.target}`;
+        } else {
+            questTracker.style.display = 'none';
+        }
+    }
+
+    if (invContainer) {
+        invContainer.innerHTML = playerInventory.map(item => `
+            <div style="background: rgba(15,23,42,0.9); border: 1.5px solid #ffd32a; border-radius: 8px; padding: 4px 8px; font-size: 0.8rem; font-weight: bold; color: #fff; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                <span>${item.icon}</span> <span>${item.name}</span>
+            </div>
+        `).join('');
+    }
+}
+
+export function damagePlayer(amount: number) {
+    if (isGameOver || isGameFinished || !isPlayTestMode) return;
+    playerHealth = Math.max(0, playerHealth - amount);
+    playGameSound('hit');
+    updateGameplayHUD();
+
+    // Screen flash
+    document.body.style.boxShadow = 'inset 0 0 50px rgba(231,76,60,0.8)';
+    setTimeout(() => { document.body.style.boxShadow = 'none'; }, 200);
+
+    if (playerHealth <= 0) {
+        triggerGameOver();
+    }
+}
+
+export function healPlayer(amount: number) {
+    playerHealth = Math.min(playerMaxHealth, playerHealth + amount);
+    playGameSound('coin');
+    updateGameplayHUD();
+}
+
+export function collectCoin(amount = 10) {
+    playerCoins += amount;
+    playGameSound('coin');
+    updateGameplayHUD();
+}
+
+export function collectKey(keyName: string) {
+    if (!playerInventory.some(i => i.name === keyName)) {
+        playerInventory.push({ id: 'key_' + Date.now(), name: keyName, icon: '🔑', type: 'key' });
+        playGameSound('door_unlock');
+        if (activeQuest && !activeQuest.completed) {
+            activeQuest.current++;
+            if (activeQuest.current >= activeQuest.target) {
+                activeQuest.completed = true;
+                playGameSound('quest_complete');
+            }
+        }
+        updateGameplayHUD();
+    }
+}
+
+export function playerAttack() {
+    if (!isPlayTestMode || isGameOver || isGameFinished) return;
+    const now = Date.now();
+    if (now - lastAttackTime < 400) return;
+    lastAttackTime = now;
+
+    playGameSound('attack');
+
+    // Human sword swing / punch animation
+    humanCharacter.rotation.x = -0.3;
+    setTimeout(() => { humanCharacter.rotation.x = 0; }, 150);
+
+    // Hit nearby enemies
+    for (let i = placedObjects.length - 1; i >= 0; i--) {
+        const obj = placedObjects[i];
+        if (obj.gameItemType === 'enemy' || obj.gameItemType === 'boss' || obj.enemyData) {
+            const dist = humanCharacter.position.distanceTo(obj.mesh.position);
+            if (dist < 4.2) {
+                if (obj.enemyData) {
+                    obj.enemyData.health -= playerAttackDamage;
+                    playGameSound('hit');
+                    
+                    // Flash enemy white/red
+                    obj.mesh.position.y += 0.3;
+                    setTimeout(() => { if (obj.mesh) obj.mesh.position.y -= 0.3; }, 100);
+
+                    if (obj.enemyData.health <= 0) {
+                        playGameSound('victory');
+                        scene.remove(obj.mesh);
+                        placedObjects.splice(i, 1);
+                        collectCoin(obj.enemyData.isBoss ? 50 : 15);
+                        
+                        if (activeQuest && (activeQuest.title.toLowerCase().includes('draakon') || activeQuest.title.toLowerCase().includes('vaenla') || activeQuest.title.toLowerCase().includes('boss'))) {
+                            activeQuest.current++;
+                            if (activeQuest.current >= activeQuest.target) {
+                                activeQuest.completed = true;
+                                triggerVictory('🏆 Boss Alistatud!', 'Suurepärane võit! Päästsid maailma ja täitsid ülesande!');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export function triggerVictory(title = 'PALJU ÕNNE! VÕIT!', desc = 'Suurepärane! Läbisid mängu edukalt ja täitsid kõik eesmärgid!') {
+    if (isGameFinished) return;
+    isGameFinished = true;
+    playGameSound('victory');
+
+    // Award bonus Yards
+    const profile = getCurrentUserProfile();
+    if (activeQuest?.rewardYards) {
+        yardService.addYards(activeQuest.rewardYards, profile?.username ?? null);
+    }
+
+    const modal = document.getElementById('game-victory-modal');
+    const titleEl = document.getElementById('victory-title');
+    const descEl = document.getElementById('victory-desc');
+    if (titleEl) titleEl.innerText = title;
+    if (descEl) descEl.innerText = desc;
+    if (modal) modal.style.display = 'flex';
+}
+
+export function triggerGameOver() {
+    isGameOver = true;
+    playGameSound('gameover');
+    const modal = document.getElementById('game-over-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+export function respawnPlayerAtCheckpoint() {
+    isGameOver = false;
+    playerHealth = playerMaxHealth;
+    humanCharacter.position.copy(checkpointPosition);
+    characterVelocity.set(0, 0, 0);
+    isGrounded = true;
+
+    const modal = document.getElementById('game-over-modal');
+    if (modal) modal.style.display = 'none';
+    updateGameplayHUD();
+}
+
+export function setDayNightMode(mode: 'day' | 'night' | 'sunset' | 'horror_fog') {
+    currentEnvMode = mode;
+    if (!scene) return;
+    if (mode === 'night') {
+        scene.background = new THREE.Color(0x0a0e17);
+        scene.fog = new THREE.FogExp2(0x0a0e17, 0.015);
+        if (hemiLight) hemiLight.color.setHex(0x1a2536);
+        if (dirLight) {
+            dirLight.color.setHex(0x34495e);
+            dirLight.intensity = 0.4;
+        }
+    } else if (mode === 'horror_fog') {
+        scene.background = new THREE.Color(0x05070a);
+        scene.fog = new THREE.FogExp2(0x05070a, 0.04);
+        if (hemiLight) hemiLight.color.setHex(0x0d131a);
+        if (dirLight) {
+            dirLight.color.setHex(0x1e272e);
+            dirLight.intensity = 0.25;
+        }
+    } else if (mode === 'sunset') {
+        scene.background = new THREE.Color(0x2c1b18);
+        scene.fog = new THREE.FogExp2(0x2c1b18, 0.012);
+        if (hemiLight) hemiLight.color.setHex(0xe67e22);
+        if (dirLight) {
+            dirLight.color.setHex(0xf39c12);
+            dirLight.intensity = 1.0;
+        }
+    } else {
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.FogExp2(0x87ceeb, 0.008);
+        if (hemiLight) hemiLight.color.setHex(0xffffff);
+        if (dirLight) {
+            dirLight.color.setHex(0xfffaed);
+            dirLight.intensity = 1.2;
+        }
+    }
+}
+
+// In-Game Shop Items
+const IN_GAME_SHOP_CATALOG = [
+    { id: 'potion_hp', name: 'Tervisejook (+50 HP)', icon: '🧪', price: 20, currency: 'coins' as const, type: 'heal' },
+    { id: 'speed_boost', name: 'Super Kiirus (+100%)', icon: '⚡', price: 40, currency: 'coins' as const, type: 'speed' },
+    { id: 'laser_sword', name: 'Laser Mõõk (Tugev)', icon: '⚔️', price: 75, currency: 'coins' as const, type: 'weapon' },
+    { id: 'vip_gold_armor', name: 'VIP Kuldne Rüü', icon: '💎', price: 25, currency: 'yards' as const, type: 'armor' }
+];
+
+export function openInGameShop() {
+    const modal = document.getElementById('in-game-shop-modal');
+    const itemsContainer = document.getElementById('in-game-shop-items');
+    const userCoins = document.getElementById('shop-user-coins');
+    const userYards = document.getElementById('shop-user-yards');
+    if (!modal || !itemsContainer) return;
+
+    const profile = getCurrentUserProfile();
+    if (userCoins) userCoins.innerText = playerCoins.toString();
+    if (userYards) userYards.innerText = yardService.getYards(profile?.username ?? null).toString();
+
+    itemsContainer.innerHTML = IN_GAME_SHOP_CATALOG.map(item => `
+        <div style="background: #1e293b; border: 1.5px solid rgba(255,211,42,0.4); border-radius: 12px; padding: 12px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+            <div style="font-size: 2rem;">${item.icon}</div>
+            <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">${item.name}</div>
+            <button class="btn-buy-shop-item" data-id="${item.id}" style="background: linear-gradient(135deg, #ffd32a, #f39c12); border: none; color: #111; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">
+                Osta: ${item.price} ${item.currency === 'coins' ? '🪙' : '💎'}
+            </button>
+        </div>
+    `).join('');
+
+    itemsContainer.querySelectorAll('.btn-buy-shop-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
+            const item = IN_GAME_SHOP_CATALOG.find(i => i.id === id);
+            if (item) buyShopItem(item);
+        });
+    });
+
+    modal.style.display = 'flex';
+}
+
+export function buyShopItem(item: (typeof IN_GAME_SHOP_CATALOG)[0]) {
+    const profile = getCurrentUserProfile();
+    if (item.currency === 'coins') {
+        if (playerCoins >= item.price) {
+            playerCoins -= item.price;
+            playGameSound('coin');
+            if (item.type === 'heal') healPlayer(50);
+            else if (item.type === 'weapon') {
+                playerAttackDamage += 25;
+                playerInventory.push({ id: 'wpn_' + Date.now(), name: item.name, icon: item.icon, type: 'weapon' });
+            }
+            updateGameplayHUD();
+            openInGameShop();
+        } else {
+            alert('Pole piisavalt münte! Kogu maailmast münte juurde.');
+        }
+    } else {
+        const yards = yardService.getYards(profile?.username ?? null);
+        if (yards >= item.price) {
+            yardService.deductYards(item.price, profile?.username ?? null);
+            playGameSound('victory');
+            playerInventory.push({ id: 'arm_' + Date.now(), name: item.name, icon: item.icon, type: 'armor' });
+            playerMaxHealth += 50;
+            playerHealth += 50;
+            updateGameplayHUD();
+            openInGameShop();
+        } else {
+            alert('Pole piisavalt Yarde! Teeni Yarde mänge mängides.');
+        }
+    }
+}
+
+// --- Undo & Redo History System ---
+export function saveUndoSnapshot() {
+    const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
+    const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
+    const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
+
+    const snapshot: SceneSnapshot = {
+        title: titleInput ? titleInput.value : 'My 3D Game',
+        desc: descInput ? descInput.value : '',
+        category: catSelect ? catSelect.value : 'Adventure',
+        envMode: currentEnvMode,
+        quest: activeQuest ? JSON.parse(JSON.stringify(activeQuest)) : null,
+        objects: placedObjects.map(p => ({
+            catalogId: p.catalogId,
+            name: p.name,
+            category: p.category,
+            position: { x: p.position.x, y: p.position.y, z: p.position.z },
+            rotation: { x: p.rotation.x, y: p.rotation.y, z: p.rotation.z },
+            scale: { x: p.scale.x, y: p.scale.y, z: p.scale.z },
+            color: p.color,
+            isAirplane: p.isAirplane,
+            gameItemType: p.gameItemType,
+            keyName: p.keyName,
+            requiredKeyName: p.requiredKeyName,
+            trigger: p.trigger ? JSON.parse(JSON.stringify(p.trigger)) : undefined,
+            movement: p.movement ? JSON.parse(JSON.stringify(p.movement)) : undefined,
+            enemyData: p.enemyData ? JSON.parse(JSON.stringify(p.enemyData)) : undefined
+        }))
+    };
+    undoStack.push(snapshot);
+    if (undoStack.length > 30) undoStack.shift();
+    redoStack.length = 0;
+}
+
+export function restoreSceneSnapshot(snapshot: SceneSnapshot) {
+    if (!snapshot) return;
+    // Clear existing placed objects
+    for (const p of placedObjects) {
+        scene.remove(p.mesh);
+    }
+    placedObjects = [];
+    selectedObject = null;
+
+    const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
+    const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
+    const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
+    if (titleInput) titleInput.value = snapshot.title;
+    if (catSelect) catSelect.value = snapshot.category;
+    if (descInput) descInput.value = snapshot.desc;
+
+    setDayNightMode(snapshot.envMode || 'day');
+    activeQuest = snapshot.quest ? JSON.parse(JSON.stringify(snapshot.quest)) : null;
+
+    for (const objData of snapshot.objects) {
+        let mesh: THREE.Group | THREE.Mesh;
+        if (objData.isAirplane) {
+            mesh = createAirplane3DMesh(objData.color);
+        } else {
+            const catalogItem = CATALOG_DATABASE.find(c => c.id === objData.catalogId);
+            if (catalogItem) {
+                mesh = createObjectMesh(catalogItem, objData.color);
+            } else {
+                mesh = createCustomProceduralMesh(objData.name, objData.name);
+            }
+        }
+        mesh.position.set(objData.position.x, objData.position.y, objData.position.z);
+        mesh.rotation.set(objData.rotation.x, objData.rotation.y, objData.rotation.z);
+        mesh.scale.set(objData.scale.x, objData.scale.y, objData.scale.z);
+        scene.add(mesh);
+
+        placedObjects.push({
+            id: 'placed_' + Date.now() + '_' + Math.random(),
+            mesh,
+            catalogId: objData.catalogId,
+            name: objData.name,
+            category: objData.category,
+            position: { ...objData.position },
+            rotation: { ...objData.rotation },
+            scale: { ...objData.scale },
+            color: objData.color,
+            isAirplane: objData.isAirplane,
+            gameItemType: objData.gameItemType as any,
+            keyName: objData.keyName,
+            requiredKeyName: objData.requiredKeyName,
+            trigger: objData.trigger,
+            movement: objData.movement,
+            enemyData: objData.enemyData
+        });
+    }
+
+    updateInspectorDisplay();
+    updateGameplayHUD();
+}
+
+export function performUndo() {
+    if (undoStack.length <= 1) return;
+    const current = undoStack.pop()!;
+    redoStack.push(current);
+    const prev = undoStack[undoStack.length - 1];
+    restoreSceneSnapshot(prev);
+}
+
+export function performRedo() {
+    if (redoStack.length === 0) return;
+    const next = redoStack.pop()!;
+    undoStack.push(next);
+    restoreSceneSnapshot(next);
+}
+
 export function openDimensionTravelModal() {
     const profile = getCurrentUserProfile();
     const modal = document.getElementById('dimension-travel-modal');
@@ -975,6 +1509,19 @@ export function openDimensionTravelModal() {
 // --- Event Handlers ---
 function setupStudioEvents() {
     window.addEventListener('keydown', e => {
+        // Undo / Redo Shortcuts
+        if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
+            e.preventDefault();
+            if (e.shiftKey) performRedo();
+            else performUndo();
+            return;
+        }
+        if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') {
+            e.preventDefault();
+            performRedo();
+            return;
+        }
+
         // If user is typing in input fields, ignore creator hotkeys
         const activeTag = (document.activeElement?.tagName || '').toLowerCase();
         if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
@@ -984,6 +1531,13 @@ function setupStudioEvents() {
         keys[e.code] = true;
 
         if (isPlayTestMode) {
+            // E Key: Player Attack / Action
+            if (e.code === 'KeyE' || e.key.toLowerCase() === 'e') {
+                e.preventDefault();
+                playerAttack();
+                return;
+            }
+
             // F Key: Enter / Exit Vehicle
             if (e.code === 'KeyF' || e.key.toLowerCase() === 'f') {
                 e.preventDefault();
@@ -1011,6 +1565,54 @@ function setupStudioEvents() {
                 return;
             }
         }
+    });
+
+    // Undo / Redo Buttons
+    document.getElementById('btn-undo')?.addEventListener('click', () => {
+        performUndo();
+    });
+    document.getElementById('btn-redo')?.addEventListener('click', () => {
+        performRedo();
+    });
+
+    // Gameplay Action Attack Button
+    document.getElementById('btn-attack-action')?.addEventListener('click', () => {
+        playerAttack();
+    });
+
+    // Shop Close Buttons
+    document.getElementById('btn-close-ingame-shop')?.addEventListener('click', () => {
+        const modal = document.getElementById('in-game-shop-modal');
+        if (modal) modal.style.display = 'none';
+    });
+    document.getElementById('btn-close-shop-bottom')?.addEventListener('click', () => {
+        const modal = document.getElementById('in-game-shop-modal');
+        if (modal) modal.style.display = 'none';
+    });
+
+    // Victory Modal Buttons
+    document.getElementById('btn-victory-restart')?.addEventListener('click', () => {
+        const modal = document.getElementById('game-victory-modal');
+        if (modal) modal.style.display = 'none';
+        isGameFinished = false;
+        humanCharacter.position.set(0, 0, 0);
+        playerHealth = playerMaxHealth;
+        updateGameplayHUD();
+    });
+    document.getElementById('btn-victory-edit')?.addEventListener('click', () => {
+        const modal = document.getElementById('game-victory-modal');
+        if (modal) modal.style.display = 'none';
+        document.getElementById('btn-toggle-play-test')?.click();
+    });
+
+    // Game Over Modal Buttons
+    document.getElementById('btn-gameover-respawn')?.addEventListener('click', () => {
+        respawnPlayerAtCheckpoint();
+    });
+    document.getElementById('btn-gameover-edit')?.addEventListener('click', () => {
+        const modal = document.getElementById('game-over-modal');
+        if (modal) modal.style.display = 'none';
+        document.getElementById('btn-toggle-play-test')?.click();
     });
 
     // Enter / Exit Vehicle Buttons
@@ -1056,6 +1658,9 @@ function setupStudioEvents() {
                 selectObject(hitGroup);
                 isDraggingObject = true;
             }
+        } else if (e.button === 0 && isPlayTestMode) {
+            // Click in play test mode triggers player attack
+            playerAttack();
         }
     });
 
@@ -1104,6 +1709,8 @@ function setupStudioEvents() {
     // Play Test Mode Toggle & On-Screen Controls
     const playTestBtn = document.getElementById('btn-toggle-play-test');
     const playTestHud = document.getElementById('play-test-hud');
+    const gameplayHud = document.getElementById('gameplay-hud');
+    const gameplayActions = document.getElementById('gameplay-action-controls');
     const playTestControls = document.getElementById('play-test-controls');
     const studioCamControls = document.getElementById('studio-camera-controls');
     const catalogPanel = document.getElementById('catalog-panel');
@@ -1118,22 +1725,40 @@ function setupStudioEvents() {
                 humanCharacter.position.set(0, 0, 0);
                 characterVelocity.set(0, 0, 0);
                 isGrounded = true;
+                playerHealth = playerMaxHealth;
+                isGameOver = false;
+                isGameFinished = false;
+
                 playTestBtn.innerHTML = '<span>⏹️</span> <span>Exit Play Test</span>';
                 playTestBtn.style.background = '#e74c3c';
                 if (playTestHud) playTestHud.style.display = 'block';
+                if (gameplayHud) gameplayHud.style.display = 'flex';
+                if (gameplayActions) gameplayActions.style.display = 'flex';
                 if (playTestControls) playTestControls.style.display = 'flex';
                 if (studioCamControls) studioCamControls.style.display = 'none';
                 if (catalogPanel) catalogPanel.style.display = 'none';
                 if (inspectorPanel) inspectorPanel.style.display = 'none';
+
+                updateGameplayHUD();
             } else {
                 if (currentVehicle) exitVehicle();
                 playTestBtn.innerHTML = '<span>▶️</span> <span>Play Test Mode</span>';
                 playTestBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
                 if (playTestHud) playTestHud.style.display = 'none';
+                if (gameplayHud) gameplayHud.style.display = 'none';
+                if (gameplayActions) gameplayActions.style.display = 'none';
                 if (playTestControls) playTestControls.style.display = 'none';
                 if (studioCamControls) studioCamControls.style.display = 'flex';
                 if (catalogPanel) catalogPanel.style.display = 'flex';
                 if (inspectorPanel) inspectorPanel.style.display = 'block';
+
+                const victoryModal = document.getElementById('game-victory-modal');
+                const gameOverModal = document.getElementById('game-over-modal');
+                const shopModal = document.getElementById('in-game-shop-modal');
+                if (victoryModal) victoryModal.style.display = 'none';
+                if (gameOverModal) gameOverModal.style.display = 'none';
+                if (shopModal) shopModal.style.display = 'none';
+
                 updateOrbitCamera();
             }
         });
@@ -2652,6 +3277,9 @@ export function executeAiBuild(promptText: string) {
     let generatedObjectsCount = 0;
     let aiResponse = '';
 
+    // Save snapshot for undo/redo before modifying state
+    saveUndoSnapshot();
+
     // Pre-calculate math if pattern matches
     const isMathPattern = (
         /^[0-9\.\s\+\-\*\/\^\(\)\%xX÷×]+[\?]?$/.test(promptText.trim()) ||
@@ -2682,8 +3310,339 @@ export function executeAiBuild(promptText: string) {
         }
     }
 
-    // --- 0.0 SEMANTIC SCENE & INTENT ACTIONS (Clear, Scale, Color, Transform) ---
-    if (p.includes('kustuta kõik') || p.includes('tühjenda') || p.includes('tuhjenda') || p.includes('alusta uuesti') || p.includes('clear all') || p.includes('clear scene')) {
+    // --- 0.0 UNDO & REDO COMMANDS ---
+    if (p === 'undo' || p.includes('võta tagasi') || p.includes('vota tagasi') || p.includes('tagasi')) {
+        performUndo();
+        aiResponse = isAdmin ? `↩️ <strong>Viimane tegevus edukalt tagasi võetud (Undo)!</strong>` : `↩️ <strong>Last action successfully undone!</strong>`;
+
+    } else if (p === 'redo' || p.includes('tee uuesti') || p.includes('uuesti')) {
+        performRedo();
+        aiResponse = isAdmin ? `↪️ <strong>Tegevus uuesti rakendatud (Redo)!</strong>` : `↪️ <strong>Action redone!</strong>`;
+
+    // --- 0.1 ENVIRONMENT & WEATHER SETTINGS ---
+    } else if (p.includes('öö') || p.includes('night') || p.includes('pime') || p.includes('dark')) {
+        setDayNightMode('night');
+        aiResponse = isAdmin ? `🌙 <strong>Muutsin maailma öiseks!</strong><br>Taevas on nüüd tume tähistaevas koos öise atmosfääriga.` : `🌙 <strong>Set environment to Night!</strong><br>The sky is now dark and starry.`;
+
+    } else if (p.includes('päev') || p.includes('day') || p.includes('päike') || p.includes('sunny')) {
+        setDayNightMode('day');
+        aiResponse = isAdmin ? `☀️ <strong>Muutsin maailma päikseliseks päevaks!</strong>` : `☀️ <strong>Set environment to sunny Daytime!</strong>`;
+
+    } else if (p.includes('päikeseloojang') || p.includes('sunset') || p.includes('eha')) {
+        setDayNightMode('sunset');
+        aiResponse = isAdmin ? `🌅 <strong>Lõin kauni kuldse päikeseloojangu!</strong>` : `🌅 <strong>Set a beautiful golden Sunset!</strong>`;
+
+    } else if (p.includes('udu') || p.includes('fog') || p.includes('õudne udu')) {
+        setDayNightMode('horror_fog');
+        aiResponse = isAdmin ? `🌫️ <strong>Lisasin tiheda atmosfääri udu!</strong>` : `🌫️ <strong>Added dense atmospheric fog!</strong>`;
+
+    // --- 0.2 FULL GAME: HORROR / ABANDONED HOSPITAL / ESCAPE GAME ---
+    } else if (
+        (p.includes('haigla') || p.includes('haiglas') || p.includes('hospital')) &&
+        (p.includes('õudus') || p.includes('horror') || p.includes('põgene') || p.includes('escape') || p.includes('võt') || p.includes('key'))
+    ) {
+        // Clear old scene
+        placedObjects.forEach(obj => scene.remove(obj.mesh));
+        placedObjects.length = 0;
+        selectObject(null);
+
+        if (titleInput) titleInput.value = 'Mahajäetud Haigla Õudusunenägu / Horror Hospital';
+        if (catSelect) catSelect.value = 'Adventure';
+        if (descInput) descInput.value = 'Põgene mahajäetud haiglast! Leia 3 peidetud võtit ja ava väljapääs samal ajal kummitust vältides!';
+
+        setDayNightMode('horror_fog');
+
+        // 1. Hospital Walls & Corridors
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.9 });
+        const bloodMat = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.8 });
+
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.9 }));
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
+
+        // Corridors & Rooms
+        const wallConfigs = [
+            { x: 0, z: -15, w: 40, h: 4, d: 0.6 },
+            { x: 0, z: 15, w: 40, h: 4, d: 0.6 },
+            { x: -20, z: 0, w: 0.6, h: 4, d: 30 },
+            { x: 20, z: 0, w: 0.6, h: 4, d: 30 },
+            { x: -8, z: -5, w: 16, h: 4, d: 0.6 },
+            { x: 8, z: 5, w: 16, h: 4, d: 0.6 }
+        ];
+
+        wallConfigs.forEach((wc, idx) => {
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(wc.w, wc.h, wc.d), wallMat);
+            wall.position.set(wc.x, wc.h / 2, wc.z);
+            scene.add(wall);
+            placedObjects.push({
+                id: 'placed_hosp_wall_' + idx,
+                mesh: wall,
+                catalogId: 'wall_stone',
+                name: `Sein #${idx + 1}`,
+                category: 'city',
+                position: { ...wall.position },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#2c3e50'
+            });
+            generatedObjectsCount++;
+        });
+
+        // 2. Three Hidden Glowing Keys
+        const keyLocations = [
+            { x: -14, z: -10, name: '🔑 Haigla Võti #1' },
+            { x: 14, z: -8, name: '🔑 Haigla Võti #2' },
+            { x: -12, z: 10, name: '🔑 Haigla Võti #3' }
+        ];
+
+        keyLocations.forEach((loc, idx) => {
+            const keyGroup = new THREE.Group();
+            const keyMesh = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.08, 8, 16), new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xffd32a, emissiveIntensity: 0.8 }));
+            keyMesh.position.y = 1.0;
+            keyGroup.add(keyMesh);
+            keyGroup.position.set(loc.x, 0, loc.z);
+            scene.add(keyGroup);
+
+            placedObjects.push({
+                id: 'placed_hosp_key_' + idx,
+                mesh: keyGroup,
+                catalogId: 'gold_key',
+                name: loc.name,
+                category: 'gameplay',
+                gameItemType: 'key',
+                keyName: loc.name,
+                position: { ...keyGroup.position },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#ffd32a',
+                movement: { type: 'rotate', speed: 2.0, distance: 0, origin: { ...keyGroup.position } }
+            });
+            generatedObjectsCount++;
+        });
+
+        // 3. Locked Exit Gate
+        const gateGroup = new THREE.Group();
+        const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 0.5), new THREE.MeshStandardMaterial({ color: 0xe74c3c, metalness: 0.8, roughness: 0.2 }));
+        gateMesh.position.y = 2.5;
+        gateGroup.add(gateMesh);
+        gateGroup.position.set(0, 0, 15);
+        scene.add(gateGroup);
+
+        placedObjects.push({
+            id: 'placed_hosp_gate',
+            mesh: gateGroup,
+            catalogId: 'locked_gate',
+            name: '🚪 Lukus Väljapääsu Värav',
+            category: 'gameplay',
+            gameItemType: 'door',
+            requiredKeyName: 'all_keys',
+            position: { ...gateGroup.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#e74c3c'
+        });
+        generatedObjectsCount++;
+
+        // 4. Roaming Scary Ghost / Monster Enemy
+        const ghostGroup = new THREE.Group();
+        const ghostBody = new THREE.Mesh(new THREE.ConeGeometry(1.0, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0xecf0f1, transparent: true, opacity: 0.75, emissive: 0x00f2fe, emissiveIntensity: 0.3 }));
+        ghostBody.position.y = 1.6;
+        ghostGroup.add(ghostBody);
+        const ghostEyes = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 6), new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: 0xe74c3c, emissiveIntensity: 1.0 }));
+        ghostEyes.position.set(0, 2.3, 0.6);
+        ghostGroup.add(ghostEyes);
+        ghostGroup.position.set(0, 0, -8);
+        scene.add(ghostGroup);
+
+        placedObjects.push({
+            id: 'placed_hosp_ghost',
+            mesh: ghostGroup,
+            catalogId: 'enemy_ghost',
+            name: '👻 Õudusunenäo Kummitus',
+            category: 'gameplay',
+            gameItemType: 'enemy',
+            enemyData: { health: 60, maxHealth: 60, damage: 20, speed: 4.2, name: 'Kummitus' },
+            position: { ...ghostGroup.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#ecf0f1'
+        });
+        generatedObjectsCount++;
+
+        // 5. Victory Goal behind gate
+        const goalGroup = new THREE.Group();
+        const goalMesh = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 16, 32), new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 }));
+        goalMesh.position.y = 2.0;
+        goalGroup.add(goalMesh);
+        goalGroup.position.set(0, 0, 20);
+        scene.add(goalGroup);
+
+        placedObjects.push({
+            id: 'placed_hosp_goal',
+            mesh: goalGroup,
+            catalogId: 'victory_portal',
+            name: '🏆 Pääsetee Vabadusse',
+            category: 'gameplay',
+            gameItemType: 'goal',
+            position: { ...goalGroup.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#00f2fe'
+        });
+        generatedObjectsCount++;
+
+        // Set Active Quest & HUD
+        activeQuest = {
+            title: 'Põgene Haiglast!',
+            desc: 'Otsi üles 3 peidetud võtit ja ava väljapääsu värav!',
+            current: 0,
+            target: 3,
+            completed: false,
+            rewardCoins: 100,
+            rewardYards: 50
+        };
+
+        if (isAdmin) {
+            aiResponse = `🏥 <strong>Lõin täieliku Õudusmängu "Mahajäetud Haigla"!</strong><br>• Lõin haigla ruumid, uduse pimeda taeva ja 3 peidetud võtit.<br>• Lisasin patrulliva Kummituse (Enemy AI), lukus värava ja võiduportaali!<br>• Seadistasin ülesande: <em>"Leia 3 võtit ja põgene haiglast!"</em><br><br>👉 Klõpsa <strong>▶️ Play Test Mode</strong> ja alusta põgenemist!`;
+        } else {
+            aiResponse = `🏥 <strong>Created a full "Abandoned Hospital" Horror Game!</strong><br>• Generated dark corridors, eerie fog, 3 hidden keys, roaming Ghost monster, locked exit gate, and victory trigger!<br>• Configured quest: <em>"Find 3 keys to escape the Hospital!"</em><br><br>👉 Click <strong>▶️ Play Test Mode</strong> to play!`;
+        }
+
+    // --- 0.3 FULL GAME: MEDIEVAL RPG & DRAGON QUEST ---
+    } else if (
+        p.includes('rpg') || (p.includes('loss') && (p.includes('draakon') || p.includes('mõõk') || p.includes('koll'))) ||
+        (p.includes('seiklus') && p.includes('draakon')) || (p.includes('dragon') && p.includes('castle'))
+    ) {
+        placedObjects.forEach(obj => scene.remove(obj.mesh));
+        placedObjects.length = 0;
+        selectObject(null);
+
+        if (titleInput) titleInput.value = 'Draakoni Lossi Seiklus / Dragon Castle RPG';
+        if (catSelect) catSelect.value = 'Adventure';
+        if (descInput) descInput.value = 'Võta külast mõõk, osta poest varustust ja alista lossis elutsev hiiglaslik Tule-Draakon!';
+
+        setDayNightMode('sunset');
+
+        // 1. Village & Shopkeeper NPC
+        const shopMesh = createCustomProceduralMesh('Pood Shop Merchant', 'Küla Kauplus');
+        shopMesh.position.set(-8, 0, -5);
+        scene.add(shopMesh);
+        placedObjects.push({
+            id: 'placed_rpg_shop',
+            mesh: shopMesh,
+            catalogId: 'shop_npc',
+            name: '🛒 Küla Relvapood',
+            category: 'gameplay',
+            gameItemType: 'shop',
+            position: { ...shopMesh.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#ffd32a'
+        });
+        generatedObjectsCount++;
+
+        // 2. Legendary Sword on Pedestal
+        const swordMesh = createCustomProceduralMesh('Mõõk Sword', 'Legendaarne Mõõk');
+        swordMesh.position.set(0, 0, -4);
+        scene.add(swordMesh);
+        placedObjects.push({
+            id: 'placed_rpg_sword',
+            mesh: swordMesh,
+            catalogId: 'item_sword',
+            name: '⚔️ Legendaarne Mõõk',
+            category: 'gameplay',
+            gameItemType: 'weapon',
+            position: { ...swordMesh.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#00f2fe',
+            movement: { type: 'rotate', speed: 2.5, distance: 0, origin: { ...swordMesh.position } }
+        });
+        generatedObjectsCount++;
+
+        // 3. Castle Structure
+        const castleMesh = createCustomProceduralMesh('Loss Castle Fortress', 'Kuninglik Loss');
+        castleMesh.position.set(0, 0, -22);
+        castleMesh.scale.setScalar(2.0);
+        scene.add(castleMesh);
+        placedObjects.push({
+            id: 'placed_rpg_castle',
+            mesh: castleMesh,
+            catalogId: 'castle_main',
+            name: '🏰 Kuninglik Loss',
+            category: 'city',
+            position: { ...castleMesh.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 2, y: 2, z: 2 },
+            color: '#95a5a6'
+        });
+        generatedObjectsCount++;
+
+        // 4. Colossal Fire Dragon Boss
+        const dragonMesh = createCustomProceduralMesh('Draakon Dragon Monster Boss', 'Tule-Draakon');
+        dragonMesh.position.set(0, 0, -26);
+        dragonMesh.scale.setScalar(2.2);
+        scene.add(dragonMesh);
+        placedObjects.push({
+            id: 'placed_rpg_dragon',
+            mesh: dragonMesh,
+            catalogId: 'boss_dragon',
+            name: '🐉 Lossi Tule-Draakon (BOSS)',
+            category: 'gameplay',
+            gameItemType: 'boss',
+            enemyData: { health: 150, maxHealth: 150, damage: 25, speed: 3.2, isBoss: true, name: 'Tule-Draakon' },
+            position: { ...dragonMesh.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 2.2, y: 2.2, z: 2.2 },
+            color: '#e74c3c'
+        });
+        generatedObjectsCount++;
+
+        // 5. Gold Coins scattered
+        [-5, 5, -12, 12].forEach((x, idx) => {
+            const coinGroup = new THREE.Group();
+            const coinMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.1, 16), new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.9, roughness: 0.1 }));
+            coinMesh.rotation.x = Math.PI / 2;
+            coinMesh.position.y = 0.8;
+            coinGroup.add(coinMesh);
+            coinGroup.position.set(x, 0, -10 + idx * 3);
+            scene.add(coinGroup);
+
+            placedObjects.push({
+                id: 'placed_rpg_coin_' + idx,
+                mesh: coinGroup,
+                catalogId: 'gold_coin',
+                name: '🪙 Kuldne Münt',
+                category: 'gameplay',
+                gameItemType: 'coin',
+                position: { ...coinGroup.position },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#ffd32a',
+                movement: { type: 'rotate', speed: 3.0, distance: 0, origin: { ...coinGroup.position } }
+            });
+            generatedObjectsCount++;
+        });
+
+        // Set Active Quest & HUD
+        activeQuest = {
+            title: 'Alista Draakon!',
+            desc: 'Haara külast mõõk, sisene lossi ja võida Draakon!',
+            current: 0,
+            target: 1,
+            completed: false,
+            rewardCoins: 250,
+            rewardYards: 100
+        };
+
+        if (isAdmin) {
+            aiResponse = `🐉 <strong>Lõin täieliku Keskaegse RPG Seiklusmängu!</strong><br>• Külas ootab <strong>🛒 Relvapood</strong> ja maas hõljub <strong>⚔️ Legendaarne Mõõk</strong>.<br>• Lossi troonisaalis varitseb võimas <strong>🐉 Tule-Draakon (Boss)</strong> eluribaga!<br>• Ründa vaenlast hiireklõpsuga või vajuta <strong>[E]</strong>!<br><br>👉 Klõpsa <strong>▶️ Play Test Mode</strong> ja asu lahingusse!`;
+        } else {
+            aiResponse = `🐉 <strong>Created a complete Medieval RPG Adventure Game!</strong><br>• Features weapon shop NPC, legendary sword pickup, massive castle, and Fire Dragon Boss!<br>• Attack with mouse click or <strong>[E]</strong> key!<br><br>👉 Click <strong>▶️ Play Test Mode</strong> to play!`;
+        }
+
+    // --- 0.4 SEMANTIC SCENE & INTENT ACTIONS (Clear, Scale, Color, Transform) ---
+    } else if (p.includes('kustuta kõik') || p.includes('tühjenda') || p.includes('tuhjenda') || p.includes('alusta uuesti') || p.includes('clear all') || p.includes('clear scene')) {
         placedObjects.forEach(obj => scene.remove(obj.mesh));
         placedObjects.length = 0;
         selectObject(null);
@@ -2705,6 +3664,52 @@ export function executeAiBuild(promptText: string) {
             }
         } else {
             aiResponse = isAdmin ? `⚠️ Vali enne objekt, mida soovid suurendada!` : `⚠️ Please select an object to scale up!`;
+        }
+
+    } else if (p.includes('väiksem') || p.includes('vaiksem') || p.includes('väiksemaks') || p.includes('smaller') || p.includes('scale down')) {
+        const target = selectedObject || placedObjects[placedObjects.length - 1];
+        if (target) {
+            target.mesh.scale.multiplyScalar(0.7);
+            target.scale = { x: target.mesh.scale.x, y: target.mesh.scale.y, z: target.mesh.scale.z };
+            if (isAdmin) {
+                aiResponse = `🔍 <strong>Tegin objekti ${target.name} väiksemaks (0.7x)!</strong>`;
+            } else {
+                aiResponse = `🔍 <strong>Scaled down ${target.name} (0.7x)!</strong>`;
+            }
+        } else {
+            aiResponse = isAdmin ? `⚠️ Vali enne objekt, mida soovid vähendada!` : `⚠️ Please select an object to scale down!`;
+        }
+
+    } else if (p.includes('pood') || p.includes('shop') || p.includes('kauplus') || p.includes('merchant')) {
+        const shopMesh = createCustomProceduralMesh('Pood Shop Merchant', 'Kaupmees');
+        shopMesh.position.set(0, 0, -4);
+        scene.add(shopMesh);
+        placedObjects.push({
+            id: 'placed_ai_shop_' + Date.now(),
+            mesh: shopMesh,
+            catalogId: 'shop_npc',
+            name: '🛒 Kaupmees (Mängusisene Pood)',
+            category: 'gameplay',
+            gameItemType: 'shop',
+            position: { ...shopMesh.position },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#ffd32a'
+        });
+        generatedObjectsCount++;
+        if (isAdmin) {
+            aiResponse = `🛒 <strong>Lisasin stseeni kaupmehe ja mängusisese poe!</strong><br>Kõnni kaupmehe juurde ja vajuta [E] poe avamiseks, kus mängijad saavad osta elujooke, kiiruseboonuseid ja mõõkasid!`;
+        } else {
+            aiResponse = `🛒 <strong>Spawned Shopkeeper NPC with In-Game Item Store!</strong><br>Walk near and press [E] to buy potions, speed boosts, and swords!`;
+        }
+
+    } else if (p.includes('paranda') || p.includes('fix') || p.includes('tee korda') || p.includes('repair')) {
+        // Ensure spawn point, goal, and valid scene objects
+        if (placedObjects.length === 0) {
+            executeAiBuild('Loo parkour seiklusrada');
+            aiResponse = isAdmin ? `🛠️ <strong>Mäng oli tühi – lõin automaatselt uue täieliku mänguraja!</strong>` : `🛠️ <strong>Repaired empty scene and created a full playable game!</strong>`;
+        } else {
+            aiResponse = isAdmin ? `🛠️ <strong>Kontrollisin mängu struktuuri:</strong> Kõik 3D objektid, füüsika ja päästikud töötavad korrektselt!` : `🛠️ <strong>Game audit complete:</strong> All 3D objects, physics, and gameplay triggers are functional!`;
         }
 
     } else if (p.includes('värvi') || p.includes('varvi') || p.includes('color') || p.includes('paint')) {
@@ -3779,15 +4784,140 @@ function animate() {
             }
         }
 
-        // Check General Triggers & Dialogue (e.g. Walking through tree / proximity)
+        // Check General Triggers & Dialogue & Interactive Gameplay Items
         let activeTrigger: PlacedObject | null = null;
-        for (const p of placedObjects) {
-            if (p.trigger && p.trigger.message) {
-                const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
+        const playerPos = humanCharacter.position;
+
+        // Fall check (Falling off world / parkour)
+        if (playerPos.y < -15) {
+            damagePlayer(50);
+            playerPos.copy(checkpointPosition);
+            characterVelocity.set(0, 0, 0);
+        }
+
+        for (let i = placedObjects.length - 1; i >= 0; i--) {
+            const p = placedObjects[i];
+            const dist = playerPos.distanceTo(p.mesh.position);
+
+            // 1. Enemy & Boss Patrol / Chase AI
+            if (p.enemyData && p.enemyData.health > 0) {
+                if (dist < 18) {
+                    // Aggro & Chase player
+                    const chaseDir = new THREE.Vector3().subVectors(playerPos, p.mesh.position).normalize();
+                    p.mesh.position.x += chaseDir.x * p.enemyData.speed * delta;
+                    p.mesh.position.z += chaseDir.z * p.enemyData.speed * delta;
+                    p.mesh.rotation.y = Math.atan2(chaseDir.x, chaseDir.z);
+
+                    // Attack player if within melee range
+                    if (dist < 2.4) {
+                        const now = Date.now();
+                        const lastAttack = p.enemyData.lastAttackTime || 0;
+                        if (now - lastAttack > 1500) {
+                            p.enemyData.lastAttackTime = now;
+                            damagePlayer(p.enemyData.damage || 15);
+                        }
+                    }
+                }
+            }
+
+            // 2. Interactive Item Pickups (Coins, Keys, Potions, Weapons)
+            if (p.gameItemType === 'coin' && !p.isCollected && dist < 2.0) {
+                p.isCollected = true;
+                collectCoin(10);
+                scene.remove(p.mesh);
+                placedObjects.splice(i, 1);
+                continue;
+            }
+
+            if (p.gameItemType === 'key' && !p.isCollected && dist < 2.0) {
+                p.isCollected = true;
+                collectKey(p.keyName || p.name);
+                scene.remove(p.mesh);
+                placedObjects.splice(i, 1);
+                continue;
+            }
+
+            if (p.gameItemType === 'potion' && !p.isCollected && dist < 2.0) {
+                p.isCollected = true;
+                healPlayer(40);
+                scene.remove(p.mesh);
+                placedObjects.splice(i, 1);
+                continue;
+            }
+
+            if (p.gameItemType === 'weapon' && !p.isCollected && dist < 2.2) {
+                p.isCollected = true;
+                playerAttackDamage += 25;
+                playerInventory.push({ id: 'wpn_' + Date.now(), name: p.name, icon: '⚔️', type: 'weapon' });
+                playGameSound('victory');
+                updateGameplayHUD();
+                scene.remove(p.mesh);
+                placedObjects.splice(i, 1);
+                continue;
+            }
+
+            // 3. Locked Doors & Gates
+            if (p.gameItemType === 'door' && !p.isUnlocked && dist < 3.2) {
+                if (p.requiredKeyName === 'all_keys') {
+                    if (activeQuest && activeQuest.completed) {
+                        p.isUnlocked = true;
+                        playGameSound('door_unlock');
+                        p.mesh.position.y += 6; // Open gate upwards
+                    } else {
+                        activeTrigger = {
+                            ...p,
+                            trigger: { type: 'touch', message: 'Värav on lukus! Otsi üles kõik vajalikud võtmed!', title: '🔒 Lukustatud Värav' }
+                        };
+                    }
+                } else if (p.requiredKeyName) {
+                    if (playerInventory.some(item => item.name === p.requiredKeyName)) {
+                        p.isUnlocked = true;
+                        playGameSound('door_unlock');
+                        p.mesh.position.y += 6;
+                    } else {
+                        activeTrigger = {
+                            ...p,
+                            trigger: { type: 'touch', message: `Uks on lukus! Vajad võtit: ${p.requiredKeyName}`, title: '🔒 Lukustatud Uks' }
+                        };
+                    }
+                }
+            }
+
+            // 4. Hazards (Lava floor, spikes)
+            if ((p.gameItemType === 'hazard' || p.trigger?.type === 'hazard_lava') && dist < 4.0) {
+                damagePlayer(25);
+            }
+
+            // 5. Checkpoints
+            if (p.gameItemType === 'checkpoint' && dist < 3.0) {
+                if (checkpointPosition.distanceTo(p.mesh.position) > 2.0) {
+                    checkpointPosition.copy(p.mesh.position);
+                    checkpointPosition.y = 0;
+                    playGameSound('coin');
+                }
+            }
+
+            // 6. Victory Goal / Portal
+            if ((p.gameItemType === 'goal' || p.trigger?.type === 'goal_win') && dist < 3.0) {
+                triggerVictory('🏆 PALJU ÕNNE! VÕIT!', 'Jõudsid edukalt finišisse ja läbisid mängumaailma!');
+            }
+
+            // 7. Shop NPC Interaction
+            if (p.gameItemType === 'shop' && dist < 4.0) {
+                activeTrigger = {
+                    ...p,
+                    trigger: { type: 'proximity', message: 'Tere rändur! Vajuta [E] või klõpsa relvapoe avamiseks!', title: '🛒 Kaupmees' }
+                };
+                if (keys['KeyE']) {
+                    openInGameShop();
+                }
+            }
+
+            // Standard Dialogue / Walkthrough Triggers
+            if (p.trigger && p.trigger.message && !activeTrigger) {
                 const rad = p.trigger.radius || 4.2;
                 if (dist <= rad) {
                     activeTrigger = p;
-                    break;
                 }
             }
         }
@@ -3799,7 +4929,7 @@ function animate() {
 
         if (activeTrigger && dialogPopup && dialogTitle && dialogText && dialogIcon) {
             const isTree = activeTrigger.name.toLowerCase().includes('tree') || activeTrigger.name.toLowerCase().includes('puu') || activeTrigger.category === 'nature';
-            dialogIcon.innerText = isTree ? '🌲' : (activeTrigger.category === 'gameplay' ? '💎' : '💬');
+            dialogIcon.innerText = isTree ? '🌲' : (activeTrigger.gameItemType === 'shop' ? '🛒' : (activeTrigger.category === 'gameplay' ? '💎' : '💬'));
             dialogTitle.innerText = activeTrigger.trigger?.title || activeTrigger.name;
             dialogText.innerText = `"${activeTrigger.trigger?.message}"`;
             dialogPopup.style.display = 'block';

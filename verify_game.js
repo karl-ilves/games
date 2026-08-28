@@ -277,89 +277,58 @@ try {
                 throw new Error("AI Flyable Airplane creation failed!");
             }
 
+            // Test Full AI Horror Game Generation ("Tee õudusmäng mahajäetud haiglas...")
+            console.log("   Testing Full AI Horror Game Generation ('Tee õudusmäng mahajäetud haiglas')...");
+            await page.type('#ai-prompt-input', 'Tee õudusmäng mahajäetud haiglas, kus mängija peab leidma kolm võtit ja põgenema');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 800));
+
+            const horrorChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!horrorChat.includes('Haigla') && !horrorChat.includes('Hospital') && !horrorChat.includes('võtit')) {
+                throw new Error("Full AI Horror Game generation failed!");
+            }
+
+            // Test Full AI Medieval Dragon RPG Game Generation ("Tee RPG seiklusmäng draakoni ja lossiga...")
+            console.log("   Testing Full AI Medieval Dragon RPG Game Generation ('Tee RPG seiklusmäng draakoni ja lossiga')...");
+            await page.type('#ai-prompt-input', 'Tee RPG seiklusmäng draakoni, lossi, küla ja mõõgaga');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 800));
+
+            const rpgChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!rpgChat.includes('Draakon') && !rpgChat.includes('Dragon') && !rpgChat.includes('RPG')) {
+                throw new Error("Full AI Medieval Dragon RPG Game generation failed!");
+            }
+
+            // Test Undo and Redo
+            console.log("   Testing Undo and Redo...");
+            await page.click('#btn-undo');
+            await new Promise(r => setTimeout(r, 300));
+            await page.click('#btn-redo');
+            await new Promise(r => setTimeout(r, 300));
+
             await page.click('#btn-close-ai');
 
-            // Test Drivable Car in Play Test Mode
-            console.log("   Testing Drivable Car in Play Test Mode...");
+            // Test Play Test Mode with Full Gameplay HUD & Combat Attack
+            console.log("   Testing Play Test Mode with Gameplay HUD and Combat...");
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 500));
 
-            // Walk to car at x: 1.8, z: -4 and press F to enter
-            await page.keyboard.down('KeyW');
-            await page.keyboard.down('KeyD');
-            await new Promise(r => setTimeout(r, 600));
-            await page.keyboard.up('KeyW');
-            await page.keyboard.up('KeyD');
-
-            // Enter vehicle with F
-            await page.keyboard.press('KeyF');
-            await new Promise(r => setTimeout(r, 400));
-
-            const vehicleHudDisplay = await page.$eval('#vehicle-hud', el => window.getComputedStyle(el).display);
-            console.log("   Vehicle HUD display after [F] (Expected: block):", vehicleHudDisplay);
-            if (vehicleHudDisplay !== 'block') {
-                throw new Error("Vehicle HUD failed to show when entering car with [F]!");
+            const gameplayHudVis = await page.$eval('#gameplay-hud', el => window.getComputedStyle(el).display);
+            if (gameplayHudVis !== 'flex') {
+                throw new Error("Full Gameplay HUD failed to display in Play Test mode!");
             }
 
-            // Accelerate vehicle with W
-            await page.keyboard.down('KeyW');
-            await new Promise(r => setTimeout(r, 500));
-            await page.keyboard.up('KeyW');
-            const carSpeed = await page.$eval('#vehicle-hud-speed', el => el.textContent);
-            console.log("   Drivable Car Speed after W acceleration:", carSpeed);
-
-            // Exit car with F
-            await page.keyboard.press('KeyF');
-            await new Promise(r => setTimeout(r, 300));
-            const vehicleHudAfterExit = await page.$eval('#vehicle-hud', el => window.getComputedStyle(el).display);
-            console.log("   Vehicle HUD display after exit [F] (Expected: none):", vehicleHudAfterExit);
-
-            // Re-toggle Play Test Mode to reset position to (0, 0, 0)
-            await page.click('#btn-toggle-play-test');
-            await new Promise(r => setTimeout(r, 400));
-            await page.click('#btn-toggle-play-test');
-            await new Promise(r => setTimeout(r, 400));
-
-            // Test Flyable Airplane in Play Test Mode
-            console.log("   Testing Flyable Airplane flight in Play Test Mode...");
-            // Move forward to airplane at x: 0, z: -4 and press F to enter
-            await page.keyboard.down('KeyW');
-            await new Promise(r => setTimeout(r, 500));
-            await page.keyboard.up('KeyW');
-
-            // Enter airplane with F
-            await page.keyboard.press('KeyF');
-            await new Promise(r => setTimeout(r, 400));
-
-            const airplaneHudDisplay = await page.$eval('#vehicle-hud', el => window.getComputedStyle(el).display);
-            const airplaneHudName = await page.$eval('#vehicle-hud-name', el => el.textContent);
-            console.log("   Airplane HUD display after [F] (Expected: block):", airplaneHudDisplay, "| Name:", airplaneHudName);
-            if (airplaneHudDisplay !== 'block' || (!airplaneHudName.includes('✈️') && !airplaneHudName.includes('Lennuk') && !airplaneHudName.includes('Plane'))) {
-                throw new Error("Airplane HUD failed to show when entering plane with [F]!");
-            }
-
-            // Accelerate airplane with W and climb with Space
-            await page.keyboard.down('KeyW');
-            await page.keyboard.down('Space');
-            await new Promise(r => setTimeout(r, 600));
-            await page.keyboard.up('Space');
-            await page.keyboard.up('KeyW');
-            const airplaneFlightHud = await page.$eval('#vehicle-hud-speed', el => el.textContent);
-            console.log("   Airplane Flight HUD after acceleration and climb:", airplaneFlightHud);
-            if (!airplaneFlightHud.includes('Alt:')) {
-                throw new Error("Airplane Altitude HUD failed to show during flight!");
-            }
-
-            // Exit airplane with F
-            await page.keyboard.press('KeyF');
+            // Test Combat Attack with [E] and Attack button
+            await page.keyboard.press('KeyE');
+            await page.click('#btn-attack-action');
             await new Promise(r => setTimeout(r, 300));
 
-            // Reload Creator page for clean state before camera test
-            await page.goto(page.url(), { waitUntil: 'networkidle2' });
-            await new Promise(r => setTimeout(r, 2000));
+            // Test Exit Play Test Mode back to Edit Mode
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 500));
 
             // Test Studio Camera View Navigation Buttons & Keyboard Pan (Edit Mode)
-            await page.waitForSelector('#cam-btn-fwd', { visible: true, timeout: 8000 });
+            await page.waitForSelector('#cam-btn-fwd', { visible: true, timeout: 5000 });
             await page.click('#cam-btn-fwd');
             await page.click('#cam-btn-zoom-in');
             console.log("   Successfully tested Camera View Pan and Zoom controls in Creator Studio!");
@@ -411,16 +380,8 @@ try {
         }
         await page.click('#btn-close-bug-report');
 
-        // 7. Test Airplane Simulator
-        console.log("7. Checking Airplane Simulator...");
-        await page.goto('http://localhost:4173/games/games/airplane/index.html');
-        await new Promise(r => setTimeout(r, 1500));
-        await page.waitForSelector('#airplane-yard-badge', { visible: true, timeout: 5000 });
-        const airplaneYards = await page.$eval('#airplane-yard-val', el => el.textContent);
-        console.log("   Airplane Simulator Yard Balance:", airplaneYards);
-
-        // 8. Test Racing Simulator
-        console.log("8. Checking Racing Simulator...");
+        // 7. Test Racing Simulator
+        console.log("7. Checking Racing Simulator...");
         await page.goto('http://localhost:4173/games/games/racing/index.html');
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });

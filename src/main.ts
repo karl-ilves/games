@@ -45,9 +45,6 @@ function setupIcons() {
     const headerYardIcon = document.getElementById('header-yard-icon');
     if (headerYardIcon) headerYardIcon.innerHTML = yardService.renderYardSvg(22);
 
-    const cardAirplaneYardIcon = document.getElementById('card-airplane-yard-icon');
-    if (cardAirplaneYardIcon) cardAirplaneYardIcon.innerHTML = yardService.renderYardSvg(16);
-
     const cardRacingYardIcon = document.getElementById('card-racing-yard-icon');
     if (cardRacingYardIcon) cardRacingYardIcon.innerHTML = yardService.renderYardSvg(16);
 
