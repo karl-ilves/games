@@ -91,6 +91,8 @@ let isGameOver = false;
 let playerAttackDamage = 25;
 let lastAttackTime = 0;
 export let isCombatSystemEnabled = false;
+export let isMoneySystemEnabled = false;
+export let isYardsSystemEnabled = false;
 
 // Lighting & Weather
 let dirLight: THREE.DirectionalLight;
@@ -1079,6 +1081,8 @@ export function exitVehicle() {
 export function updateGameplayHUD() {
     const healthContainer = document.getElementById('hud-health-container');
     const gameplayActions = document.getElementById('gameplay-action-controls');
+    const coinsContainer = document.getElementById('hud-coins-container');
+    const yardsContainer = document.getElementById('hud-yards-container');
     const healthText = document.getElementById('player-health-text');
     const healthBar = document.getElementById('player-health-bar');
     const coinsVal = document.getElementById('hud-coins-val');
@@ -1090,12 +1094,20 @@ export function updateGameplayHUD() {
     const invContainer = document.getElementById('hud-inventory-container');
 
     const hasCombat = isCombatSystemEnabled || placedObjects.some(o => o.gameItemType === 'enemy' || o.catalogId?.includes('enemy') || o.enemyData != null);
+    const hasMoney = isMoneySystemEnabled || placedObjects.some(o => o.gameItemType === 'coin' || o.gameItemType === 'shop' || o.catalogId?.includes('coin') || o.catalogId?.includes('shop'));
+    const hasYards = isYardsSystemEnabled || (activeQuest && activeQuest.rewardYards) || placedObjects.some(o => o.gameItemType === 'shop');
 
     if (healthContainer) {
         healthContainer.style.display = (hasCombat && isPlayTestMode) ? 'flex' : 'none';
     }
     if (gameplayActions) {
         gameplayActions.style.display = (hasCombat && isPlayTestMode) ? 'flex' : 'none';
+    }
+    if (coinsContainer) {
+        coinsContainer.style.display = (hasMoney && isPlayTestMode) ? 'flex' : 'none';
+    }
+    if (yardsContainer) {
+        yardsContainer.style.display = (hasYards && isPlayTestMode) ? 'flex' : 'none';
     }
 
     if (healthText) healthText.innerText = `${Math.max(0, Math.round(playerHealth))}/${playerMaxHealth}`;
@@ -4046,6 +4058,27 @@ export function executeAiBuild(promptText: string) {
                 aiResponse = `❤️ <strong>Tervisesüsteem ja ⚔️ Ründa Nupp on nüüd aktiivsed!</strong><br>• Eluriba ja nupp <strong>⚔️ RÜNDA [E]</strong> ilmuvad nüüd ekraanile Play Test režiimis.<br>• Saad rünnata vaenlasi vajutades klaviatuuril <strong>[E]</strong> või klõpsates ekraanilt punast RÜNDA nuppu.`;
             } else {
                 aiResponse = `❤️ <strong>Health System & ⚔️ Attack Button are now active!</strong><br>• Health bar and <strong>⚔️ ATTACK [E]</strong> button will now appear in Play Test Mode.<br>• Attack enemies with <strong>[E]</strong> or by clicking the on-screen Attack button.`;
+            }
+        }
+
+    } else if (p.includes('raha') || p.includes('mündid') || p.includes('münt') || p.includes('munt') || p.includes('coins') || p.includes('coin') || p.includes('money') || p.includes('valuuta') || p.includes('yards')) {
+        if (p.includes('eemalda') || p.includes('peida') || p.includes('kustuta') || p.includes('ära') || p.includes('remove') || p.includes('hide') || p.includes('disable') || p.includes('off') || p.includes('välja')) {
+            isMoneySystemEnabled = false;
+            isYardsSystemEnabled = false;
+            updateGameplayHUD();
+            if (isAdmin) {
+                aiResponse = `🪙 <strong>Peitsin mängusisese raha ja müntide näidiku!</strong>`;
+            } else {
+                aiResponse = `🪙 <strong>Disabled in-game currency and coins counter!</strong>`;
+            }
+        } else {
+            isMoneySystemEnabled = true;
+            if (p.includes('yards') || p.includes('teemant') || p.includes('diamond')) isYardsSystemEnabled = true;
+            updateGameplayHUD();
+            if (isAdmin) {
+                aiResponse = `🪙 <strong>Mängusisene rahasüsteem on nüüd aktiivne!</strong><br>• Mündiloendur (🪙 0) ilmub Play Test režiimis ekraanile.<br>• Mängijad saavad teenida raha münte korjates, ülesandeid täites ja poes oste sooritades!`;
+            } else {
+                aiResponse = `🪙 <strong>In-Game Currency System is now active!</strong><br>• Coins counter (🪙 0) will now appear in Play Test Mode.<br>• Players can collect coins, complete quests, and buy items in the shop!`;
             }
         }
 
