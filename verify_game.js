@@ -338,6 +338,32 @@ try {
                 throw new Error("Full AI Medieval Dragon RPG Game generation failed!");
             }
 
+            // Test Health Regulation ("pane eludeks 250")
+            console.log("   Testing Health Regulation ('pane eludeks 250')...");
+            await page.type('#ai-prompt-input', 'pane eludeks 250');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+            const hpChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!hpChat.includes('250') || !hpChat.includes('HP')) {
+                throw new Error("Health regulation failed!");
+            }
+
+            // Test Enemy Damage Regulation ("pahalane võtab 35")
+            console.log("   Testing Enemy Damage Regulation ('pahalane võtab 35')...");
+            await page.type('#ai-prompt-input', 'pahalane võtab 35');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+            const dmgChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!dmgChat.includes('35') || !dmgChat.includes('HP')) {
+                throw new Error("Enemy damage regulation failed!");
+            }
+
+            // Test In-Game Money and Yards Activation ("lisa raha" & "lisa yardid")
+            console.log("   Testing Money and Yards Activation ('lisa raha', 'lisa yardid')...");
+            await page.type('#ai-prompt-input', 'lisa raha ja lisa yardid');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
             // Test Undo and Redo
             console.log("   Testing Undo and Redo...");
             await page.click('#btn-undo');

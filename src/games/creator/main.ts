@@ -3441,8 +3441,9 @@ export function executeAiBuild(promptText: string) {
         p.includes('kogu map') || p.includes('igale poole') || p.includes('täida kaart') || p.includes('taida kaart') ||
         p.includes('scatter') || p.includes('across the map') || p.includes('whole map') || p.includes('entire map') ||
         p.includes('everywhere') || p.includes('fill map') || p.includes('fill entire') ||
-        (/\b(\d+)\b/.test(p) && !isMathPattern && !p.includes('haigla') && !p.includes('hospital') && !p.includes('salvesta')) ||
-        p.includes('kolmkümmend') || p.includes('paarkümmend') || p.includes('viiskümmend')
+        ((p.includes('pane') || p.includes('lisa') || p.includes('spawn') || p.includes('ehita') || p.includes('create') || p.includes('make')) &&
+            (/\b(\d+)\b/.test(p) || p.includes('kolmkümmend') || p.includes('paarkümmend') || p.includes('viiskümmend')) &&
+            !p.includes('elu') && !p.includes('tervis') && !p.includes('kahju') && !p.includes('võtab') && !p.includes('votab') && !p.includes('damage') && !p.includes('löök') && !p.includes('look') && !isMathPattern && !p.includes('haigla') && !p.includes('hospital'))
     ) {
         // 1. Extract Quantity
         let targetCount = 0;
@@ -4042,6 +4043,50 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `💬 <strong>Spawned an interactive NPC / Character!</strong><br>When the player walks near the NPC, a dialogue popup appears and the NPC speaks with the player.`;
         }
 
+    } else if (
+        p.includes('pahalane võtab') || p.includes('pahalase kahju') || p.includes('vaenlase kahju') ||
+        p.includes('vaenlane võtab') || p.includes('vaenlane teeb') || p.includes('pahalane teeb') ||
+        p.includes('enemy damage') || p.includes('damage taken')
+    ) {
+        let dmg = 20;
+        const numMatch = p.match(/\b(\d+)\b/);
+        if (numMatch) dmg = parseInt(numMatch[1], 10);
+        placedObjects.forEach(obj => {
+            if (obj.gameItemType === 'enemy' && obj.enemyData) {
+                obj.enemyData.damage = dmg;
+            }
+        });
+        isCombatSystemEnabled = true;
+        updateGameplayHUD();
+        aiResponse = isAdmin ? `⚔️ <strong>Pahalase kahjuks määrati ${dmg} HP löögi kohta!</strong><br>Iga kord, kui pahalane või vaenlane sind ründab, võtab ta sinult ${dmg} elupunkti.` : `⚔️ <strong>Enemy damage set to ${dmg} HP per hit!</strong>`;
+
+    } else if (
+        p.includes('eludeks') || p.includes('mängija elud') || p.includes('elusid') ||
+        (p.includes('elud') && /\b(\d+)\b/.test(p)) ||
+        (p.includes('tervis') && /\b(\d+)\b/.test(p)) ||
+        p.includes('max health') || p.includes('player health')
+    ) {
+        let hp = 100;
+        const numMatch = p.match(/\b(\d+)\b/);
+        if (numMatch) hp = parseInt(numMatch[1], 10);
+        playerMaxHealth = hp;
+        playerHealth = hp;
+        isCombatSystemEnabled = true;
+        updateGameplayHUD();
+        aiResponse = isAdmin ? `❤️ <strong>Mängija maksimaalseks terviseks määrati ${hp} HP!</strong><br>Terviseriba on nüüd reguleeritud ja kuvatakse Play Test režiimis.` : `❤️ <strong>Player max health set to ${hp} HP!</strong>`;
+
+    } else if (
+        p.includes('mängija teeb') || p.includes('mõõga löök') || p.includes('mõõk võtab') ||
+        p.includes('mängija rünnak') || p.includes('player damage') || p.includes('attack damage')
+    ) {
+        let atk = 25;
+        const numMatch = p.match(/\b(\d+)\b/);
+        if (numMatch) atk = parseInt(numMatch[1], 10);
+        playerAttackDamage = atk;
+        isCombatSystemEnabled = true;
+        updateGameplayHUD();
+        aiResponse = isAdmin ? `⚔️ <strong>Mängija rünnakutugevuseks määrati ${atk} kahju löögi kohta!</strong>` : `⚔️ <strong>Player attack damage set to ${atk}!</strong>`;
+
     } else if (p.includes('elud') || p.includes('elusid') || p.includes('tervis') || p.includes('ründa') || p.includes('runda') || p.includes('attack') || p.includes('combat') || p.includes('health') || p.includes('võitlus') || p.includes('voitlus')) {
         if (p.includes('eemalda') || p.includes('peida') || p.includes('kustuta') || p.includes('ära') || p.includes('remove') || p.includes('hide') || p.includes('disable') || p.includes('off') || p.includes('välja')) {
             isCombatSystemEnabled = false;
@@ -4061,10 +4106,20 @@ export function executeAiBuild(promptText: string) {
             }
         }
 
-    } else if (p.includes('raha') || p.includes('mündid') || p.includes('münt') || p.includes('munt') || p.includes('coins') || p.includes('coin') || p.includes('money') || p.includes('valuuta') || p.includes('yards')) {
+    } else if (p.includes('yards') || p.includes('yardid') || p.includes('yarde')) {
+        if (p.includes('eemalda') || p.includes('peida') || p.includes('remove') || p.includes('hide')) {
+            isYardsSystemEnabled = false;
+            updateGameplayHUD();
+            aiResponse = isAdmin ? `💎 <strong>Peitsin Playard Yards näidiku!</strong>` : `💎 <strong>Disabled Yards counter!</strong>`;
+        } else {
+            isYardsSystemEnabled = true;
+            updateGameplayHUD();
+            aiResponse = isAdmin ? `💎 <strong>Lisasin Playard Yards näidiku!</strong><br>See ilmub Play Test režiimis ekraanile.` : `💎 <strong>Enabled Playard Yards counter!</strong>`;
+        }
+
+    } else if (p.includes('raha') || p.includes('mündid') || p.includes('münt') || p.includes('munt') || p.includes('coins') || p.includes('coin') || p.includes('money') || p.includes('valuuta')) {
         if (p.includes('eemalda') || p.includes('peida') || p.includes('kustuta') || p.includes('ära') || p.includes('remove') || p.includes('hide') || p.includes('disable') || p.includes('off') || p.includes('välja')) {
             isMoneySystemEnabled = false;
-            isYardsSystemEnabled = false;
             updateGameplayHUD();
             if (isAdmin) {
                 aiResponse = `🪙 <strong>Peitsin mängusisese raha ja müntide näidiku!</strong>`;
@@ -4073,7 +4128,6 @@ export function executeAiBuild(promptText: string) {
             }
         } else {
             isMoneySystemEnabled = true;
-            if (p.includes('yards') || p.includes('teemant') || p.includes('diamond')) isYardsSystemEnabled = true;
             updateGameplayHUD();
             if (isAdmin) {
                 aiResponse = `🪙 <strong>Mängusisene rahasüsteem on nüüd aktiivne!</strong><br>• Mündiloendur (🪙 0) ilmub Play Test režiimis ekraanile.<br>• Mängijad saavad teenida raha münte korjates, ülesandeid täites ja poes oste sooritades!`;
