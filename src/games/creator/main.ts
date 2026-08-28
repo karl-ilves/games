@@ -90,6 +90,7 @@ let isGameFinished = false;
 let isGameOver = false;
 let playerAttackDamage = 25;
 let lastAttackTime = 0;
+export let isCombatSystemEnabled = false;
 
 // Lighting & Weather
 let dirLight: THREE.DirectionalLight;
@@ -1076,6 +1077,8 @@ export function exitVehicle() {
 
 // --- Gameplay & HUD Controller ---
 export function updateGameplayHUD() {
+    const healthContainer = document.getElementById('hud-health-container');
+    const gameplayActions = document.getElementById('gameplay-action-controls');
     const healthText = document.getElementById('player-health-text');
     const healthBar = document.getElementById('player-health-bar');
     const coinsVal = document.getElementById('hud-coins-val');
@@ -1085,6 +1088,15 @@ export function updateGameplayHUD() {
     const questDesc = document.getElementById('hud-quest-desc');
     const questProgress = document.getElementById('hud-quest-progress');
     const invContainer = document.getElementById('hud-inventory-container');
+
+    const hasCombat = isCombatSystemEnabled || placedObjects.some(o => o.gameItemType === 'enemy' || o.catalogId?.includes('enemy') || o.enemyData != null);
+
+    if (healthContainer) {
+        healthContainer.style.display = (hasCombat && isPlayTestMode) ? 'flex' : 'none';
+    }
+    if (gameplayActions) {
+        gameplayActions.style.display = (hasCombat && isPlayTestMode) ? 'flex' : 'none';
+    }
 
     if (healthText) healthText.innerText = `${Math.max(0, Math.round(playerHealth))}/${playerMaxHealth}`;
     if (healthBar) {
@@ -4018,11 +4030,23 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `💬 <strong>Spawned an interactive NPC / Character!</strong><br>When the player walks near the NPC, a dialogue popup appears and the NPC speaks with the player.`;
         }
 
-    } else if (p.includes('elud') || p.includes('elusid') || p.includes('tervis') || p.includes('ründa') || p.includes('runda') || p.includes('attack') || p.includes('combat') || p.includes('health')) {
-        if (isAdmin) {
-            aiResponse = `❤️ <strong>Tervisesüsteem ja ⚔️ Ründa Nupp on aktiivsed!</strong><br>1. Klõpsa üleval nuppu <strong>▶️ Play Test Mode</strong>.<br>2. Ekraani ülaosas näed oma terviseriba (❤️ 100/100 HP) ja kogutud münte/Yarde.<br>3. All paremal on punane nupp <strong>⚔️ RÜNDA [E]</strong> (või vajuta klaviatuuril <strong>[E]</strong> / vasakut hiireklõpsu), millega saad vaenlasi lüüa!`;
+    } else if (p.includes('elud') || p.includes('elusid') || p.includes('tervis') || p.includes('ründa') || p.includes('runda') || p.includes('attack') || p.includes('combat') || p.includes('health') || p.includes('võitlus') || p.includes('voitlus')) {
+        if (p.includes('eemalda') || p.includes('peida') || p.includes('kustuta') || p.includes('ära') || p.includes('remove') || p.includes('hide') || p.includes('disable') || p.includes('off') || p.includes('välja')) {
+            isCombatSystemEnabled = false;
+            updateGameplayHUD();
+            if (isAdmin) {
+                aiResponse = `🛡️ <strong>Peitsin eluriba ja ründamisnupu!</strong><br>Mäng on nüüd rahulikul režiimil ilma elude ja ründamisnupuga.`;
+            } else {
+                aiResponse = `🛡️ <strong>Disabled Health Bar and Attack button!</strong><br>Game is now in peaceful mode without health bars or attack controls.`;
+            }
         } else {
-            aiResponse = `❤️ <strong>Health System & ⚔️ Attack Button are Active!</strong><br>1. Click <strong>▶️ Play Test Mode</strong> in the top bar.<br>2. You will see your Health bar (❤️ 100/100 HP) and Coins/Yards HUD.<br>3. Use the red <strong>⚔️ ATTACK [E]</strong> button or press <strong>[E]</strong> / click to attack enemies!`;
+            isCombatSystemEnabled = true;
+            updateGameplayHUD();
+            if (isAdmin) {
+                aiResponse = `❤️ <strong>Tervisesüsteem ja ⚔️ Ründa Nupp on nüüd aktiivsed!</strong><br>• Eluriba ja nupp <strong>⚔️ RÜNDA [E]</strong> ilmuvad nüüd ekraanile Play Test režiimis.<br>• Saad rünnata vaenlasi vajutades klaviatuuril <strong>[E]</strong> või klõpsates ekraanilt punast RÜNDA nuppu.`;
+            } else {
+                aiResponse = `❤️ <strong>Health System & ⚔️ Attack Button are now active!</strong><br>• Health bar and <strong>⚔️ ATTACK [E]</strong> button will now appear in Play Test Mode.<br>• Attack enemies with <strong>[E]</strong> or by clicking the on-screen Attack button.`;
+            }
         }
 
     } else if (p.includes('paranda') || p.includes('fix') || p.includes('tee korda') || p.includes('repair')) {

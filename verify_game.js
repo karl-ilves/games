@@ -353,8 +353,10 @@ try {
             await new Promise(r => setTimeout(r, 500));
 
             const gameplayHudVis = await page.$eval('#gameplay-hud', el => window.getComputedStyle(el).display);
-            if (gameplayHudVis !== 'flex') {
-                throw new Error("Full Gameplay HUD failed to display in Play Test mode!");
+            const healthContainerVis = await page.$eval('#hud-health-container', el => window.getComputedStyle(el).display);
+            const attackActionVis = await page.$eval('#gameplay-action-controls', el => window.getComputedStyle(el).display);
+            if (gameplayHudVis !== 'flex' || healthContainerVis !== 'flex' || attackActionVis !== 'flex') {
+                throw new Error("Combat HUD (Health Bar and Attack Button) failed to display in Play Test mode!");
             }
 
             // Test Combat Attack with [E] and Attack button
