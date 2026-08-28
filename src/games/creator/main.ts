@@ -3336,6 +3336,190 @@ export function executeAiBuild(promptText: string) {
         setDayNightMode('horror_fog');
         aiResponse = isAdmin ? `🌫️ <strong>Lisasin tiheda atmosfääri udu!</strong>` : `🌫️ <strong>Added dense atmospheric fog!</strong>`;
 
+    // --- 0.15 UNIVERSAL QUANTITY & WHOLE MAP SCATTER ENGINE ("pane tervesse mappi...", "pane 30...", "scatter across map", "fill map with...") ---
+    } else if (
+        p.includes('tervesse mappi') || p.includes('terve mapp') || p.includes('tervesse kaarti') || p.includes('terve kaart') ||
+        p.includes('üle kogu mapi') || p.includes('ule kogu mapi') || p.includes('üle kogu kaardi') || p.includes('kogu kaardile') ||
+        p.includes('kogu map') || p.includes('igale poole') || p.includes('täida kaart') || p.includes('taida kaart') ||
+        p.includes('scatter') || p.includes('across the map') || p.includes('whole map') || p.includes('entire map') ||
+        p.includes('everywhere') || p.includes('fill map') || p.includes('fill entire') ||
+        (/\b(\d+)\b/.test(p) && !isMathPattern && !p.includes('haigla') && !p.includes('hospital') && !p.includes('salvesta')) ||
+        p.includes('kolmkümmend') || p.includes('paarkümmend') || p.includes('viiskümmend')
+    ) {
+        // 1. Extract Quantity
+        let targetCount = 0;
+        const numMatch = p.match(/\b(\d+)\b/);
+        if (numMatch) {
+            targetCount = parseInt(numMatch[1], 10);
+        } else if (p.includes('paarkümmend') || p.includes('paarkummend')) {
+            targetCount = 20;
+        } else if (p.includes('kolmkümmend') || p.includes('kolmkummend')) {
+            targetCount = 30;
+        } else if (p.includes('viiskümmend') || p.includes('viiskummend')) {
+            targetCount = 50;
+        } else if (p.includes('sada') || p.includes('hundred')) {
+            targetCount = 100;
+        } else if (p.includes('kümme') || p.includes('kumme') || p.includes('ten')) {
+            targetCount = 10;
+        } else if (p.includes('viis') || p.includes('five')) {
+            targetCount = 5;
+        }
+
+        // If no explicit number, default to a generous map-wide density of 30 items
+        if (targetCount <= 0) targetCount = 30;
+        const count = Math.min(120, Math.max(2, targetCount));
+
+        // 2. Extract item/entity type from prompt
+        const cleanedQuery = promptText
+            .replace(/(?:pane|lisa|loo|tee|ehita|spawn|add|place|make|build|scatter|fill|with|across|the|whole|entire|map|everywhere|tervesse|mappi|mapile|kaardile|kaarti|kaart|üle|ule|kogu|täida|taida|midagi|something|asju|asja|tk|tükki|tukki|items|objects|kõikjale)/gi, '')
+            .replace(/\b\d+\b/g, '')
+            .trim();
+
+        const qLower = cleanedQuery.toLowerCase();
+        const isGenericSomething = (!cleanedQuery || qLower.length < 2 || qLower.includes('midagi') || qLower.includes('asja') || qLower.includes('something'));
+
+        // Identify item category / nature
+        const isCoins = qLower.includes('münt') || qLower.includes('munt') || qLower.includes('coin') || qLower.includes('raha') || qLower.includes('kuld');
+        const isTrees = qLower.includes('puu') || qLower.includes('tree') || qLower.includes('mets') || qLower.includes('forest') || qLower.includes('palm');
+        const isCars = qLower.includes('auto') || qLower.includes('car') || qLower.includes('veoauto') || qLower.includes('truck') || qLower.includes('kart');
+        const isPlanes = qLower.includes('lennuk') || qLower.includes('plane') || qLower.includes('jet') || qLower.includes('ufo') || qLower.includes('rakett') || qLower.includes('rocket');
+        const isEnemies = qLower.includes('vaenla') || qLower.includes('koll') || qLower.includes('enemy') || qLower.includes('monster') || qLower.includes('zombie') || qLower.includes('draakon') || qLower.includes('dragon');
+        const isCrystals = qLower.includes('kristall') || qLower.includes('crystal') || qLower.includes('gem') || qLower.includes('teemant') || qLower.includes('diamond');
+        const isFlowers = qLower.includes('lill') || qLower.includes('flower') || qLower.includes('roos');
+        const isRocks = qLower.includes('kivi') || qLower.includes('rock') || qLower.includes('stone') || qLower.includes('lohk');
+        const isHouses = qLower.includes('maja') || qLower.includes('house') || qLower.includes('kodu') || qLower.includes('hoone') || qLower.includes('building');
+
+        // Determine title & icon
+        let itemLabel = isAdmin ? '✨ Maagiline 3D Objekt' : '✨ Magical 3D Object';
+        if (isCoins) itemLabel = isAdmin ? '🪙 Kuldne Münt' : '🪙 Gold Coin';
+        else if (isTrees) itemLabel = isAdmin ? '🌲 3D Puu' : '🌲 3D Tree';
+        else if (isCars) itemLabel = isAdmin ? '🚗 Sõidetav Auto' : '🚗 Drivable Car';
+        else if (isPlanes) itemLabel = isAdmin ? '✈️ Lennatav Lennuk' : '✈️ Flyable Airplane';
+        else if (isEnemies) itemLabel = isAdmin ? '👾 Patrulliv Vaenlane' : '👾 Enemy Mob';
+        else if (isCrystals) itemLabel = isAdmin ? '💎 Energiakristall' : '💎 Power Crystal';
+        else if (isFlowers) itemLabel = isAdmin ? '🌸 Kaunis Lill' : '🌸 Flower';
+        else if (isRocks) itemLabel = isAdmin ? '🪨 Graniitkivi' : '🪨 Rock';
+        else if (isHouses) itemLabel = isAdmin ? '🏠 3D Maja' : '🏠 3D House';
+        else if (!isGenericSomething) itemLabel = `✨ ${cleanedQuery.charAt(0).toUpperCase() + cleanedQuery.slice(1)}`;
+
+        // 3. Grid-Jitter Spread across the entire map
+        const spreadRadius = 55;
+        const cols = Math.ceil(Math.sqrt(count));
+        const step = (spreadRadius * 2) / cols;
+
+        for (let i = 0; i < count; i++) {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            let posX = (col * step - spreadRadius) + (Math.random() - 0.5) * (step * 0.85);
+            let posZ = (row * step - spreadRadius) + (Math.random() - 0.5) * (step * 0.85);
+
+            // Avoid spawning right on top of player start (0, 0, 0)
+            if (Math.abs(posX) < 3.5 && Math.abs(posZ) < 3.5) {
+                posX += (posX >= 0 ? 5 : -5);
+                posZ += (posZ >= 0 ? 5 : -5);
+            }
+
+            let mesh: THREE.Group | THREE.Mesh;
+            let itemType: PlacedObject['gameItemType'] = undefined;
+            let isFlyable = false;
+            let enemyProps: any = undefined;
+            let movementProps: any = undefined;
+
+            if (isGenericSomething) {
+                // Mix of crystals, trees, ancient obelisks, and gold coins
+                const mixIdx = i % 5;
+                if (mixIdx === 0) {
+                    mesh = createCustomProceduralMesh('Kristall Gem', 'Kristall');
+                    itemType = 'coin';
+                    movementProps = { type: 'rotate', speed: 2.0, distance: 0, origin: { x: posX, y: 0, z: posZ } };
+                } else if (mixIdx === 1) {
+                    mesh = createCustomProceduralMesh('Puu Mets', 'Puu');
+                } else if (mixIdx === 2) {
+                    mesh = createCustomProceduralMesh('Loss Sammas Ruin', 'Muinassammas');
+                } else if (mixIdx === 3) {
+                    mesh = createCustomProceduralMesh('Münt Kuld', 'Münt');
+                    itemType = 'coin';
+                    movementProps = { type: 'rotate', speed: 3.0, distance: 0, origin: { x: posX, y: 0, z: posZ } };
+                } else {
+                    mesh = createCustomProceduralMesh('Lill Roos', 'Võlulill');
+                }
+            } else if (isCoins) {
+                const coinGroup = new THREE.Group();
+                const coinMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.12, 16), new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.9, roughness: 0.1, emissive: 0xffd32a, emissiveIntensity: 0.3 }));
+                coinMesh.rotation.x = Math.PI / 2;
+                coinMesh.position.y = 0.8;
+                coinGroup.add(coinMesh);
+                mesh = coinGroup;
+                itemType = 'coin';
+                movementProps = { type: 'rotate', speed: 2.8, distance: 0, origin: { x: posX, y: 0, z: posZ } };
+
+            } else if (isTrees) {
+                mesh = createCustomProceduralMesh('Puu Mets Tree', 'Puu');
+                mesh.scale.setScalar(0.8 + Math.random() * 0.6);
+
+            } else if (isCars) {
+                mesh = createCustomProceduralMesh('Auto Car Sõiduk', 'Auto');
+
+            } else if (isPlanes) {
+                mesh = createAirplane3DMesh(i % 2 === 0 ? '#00f2fe' : '#e74c3c');
+                isFlyable = true;
+
+            } else if (isEnemies) {
+                mesh = createCustomProceduralMesh(cleanedQuery || 'Vaenlane Koll Monster', 'Vaenlane');
+                itemType = 'enemy';
+                enemyProps = { health: 45, maxHealth: 45, damage: 12, speed: 3.8, name: itemLabel };
+
+            } else if (isCrystals) {
+                mesh = createCustomProceduralMesh('Kristall Gem Teemant', 'Kristall');
+                itemType = 'coin';
+                movementProps = { type: 'rotate', speed: 2.0, distance: 0, origin: { x: posX, y: 0, z: posZ } };
+
+            } else if (isFlowers) {
+                mesh = createCustomProceduralMesh('Lill Roos Flower', 'Lill');
+                mesh.scale.setScalar(0.7 + Math.random() * 0.4);
+
+            } else if (isRocks) {
+                mesh = createCustomProceduralMesh('Kivi Rock Stone', 'Kivi');
+                mesh.scale.setScalar(0.8 + Math.random() * 0.7);
+
+            } else if (isHouses) {
+                mesh = createCustomProceduralMesh('Maja House Hoone', 'Maja');
+                mesh.scale.setScalar(1.2);
+
+            } else {
+                mesh = createCustomProceduralMesh(cleanedQuery, cleanedQuery);
+            }
+
+            mesh.position.set(posX, 0, posZ);
+            mesh.rotation.y = Math.random() * Math.PI * 2;
+            scene.add(mesh);
+
+            const newPlaced: PlacedObject = {
+                id: 'placed_ai_scatter_' + Date.now() + '_' + i,
+                mesh,
+                catalogId: 'scatter_' + i,
+                name: `${itemLabel} #${i + 1}`,
+                category: (isCars || isPlanes) ? 'vehicles' : 'custom',
+                isAirplane: isFlyable,
+                gameItemType: itemType,
+                enemyData: enemyProps,
+                movement: movementProps,
+                position: { x: posX, y: 0, z: posZ },
+                rotation: { x: 0, y: mesh.rotation.y, z: 0 },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
+                color: '#00f2fe'
+            };
+
+            placedObjects.push(newPlaced);
+            generatedObjectsCount++;
+        }
+
+        if (isAdmin) {
+            aiResponse = `🌍 <strong>Paigutasin üle terve mapi ${generatedObjectsCount} tk: ${itemLabel}!</strong><br>• Objektid jaotati ühtlaselt üle kogu 3D maailma (raadiuses 110m).${isCoins ? '<br>🪙 <em>Kõik mündid on Play Test režiimis kogutavad!</em>' : ''}${isEnemies ? '<br>⚔️ <em>Vaenlased liiguvad ja ründavad mängijat (Combat AI)!</em>' : ''}${(isCars || isPlanes) ? '<br>🚗/✈️ <em>Kõik sõidukid on [F] vajutusega juhitavad!</em>' : ''}<br><br>👉 Vajuta <strong>▶️ Play Test Mode</strong> ja uuri tervet kaarti!`;
+        } else {
+            aiResponse = `🌍 <strong>Distributed ${generatedObjectsCount}x ${itemLabel} across the entire map!</strong><br>• Objects are spread across the full 3D world (110m radius).${isCoins ? '<br>🪙 <em>Coins can be collected in Play Test Mode!</em>' : ''}${isEnemies ? '<br>⚔️ <em>Enemies will patrol and attack player with combat AI!</em>' : ''}${(isCars || isPlanes) ? '<br>🚗/✈️ <em>All vehicles are drivable/flyable with [F]!</em>' : ''}<br><br>👉 Click <strong>▶️ Play Test Mode</strong> to explore the map!`;
+        }
+
     // --- 0.2 FULL GAME: HORROR / ABANDONED HOSPITAL / ESCAPE GAME ---
     } else if (
         (p.includes('haigla') || p.includes('haiglas') || p.includes('hospital')) &&

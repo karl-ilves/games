@@ -277,6 +277,28 @@ try {
                 throw new Error("AI Flyable Airplane creation failed!");
             }
 
+            // Test Whole Map Scatter ("pane tervesse mappi midagi")
+            console.log("   Testing Whole Map Scatter ('pane tervesse mappi midagi')...");
+            await page.type('#ai-prompt-input', 'pane tervesse mappi midagi');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const scatterChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!scatterChat.includes('terve') && !scatterChat.includes('entire') && !scatterChat.includes('map')) {
+                throw new Error("Whole Map Scatter failed!");
+            }
+
+            // Test Exact Quantity Scatter ("pane 30 autot tervesse kaarti")
+            console.log("   Testing Exact Quantity Scatter ('pane 30 autot tervesse kaarti')...");
+            await page.type('#ai-prompt-input', 'pane 30 autot tervesse kaarti');
+            await page.click('#btn-ai-submit');
+            await new Promise(r => setTimeout(r, 600));
+
+            const qtyChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!qtyChat.includes('30') || (!qtyChat.includes('Auto') && !qtyChat.includes('Car'))) {
+                throw new Error("Quantity 30 Cars scatter failed!");
+            }
+
             // Test Full AI Horror Game Generation ("Tee õudusmäng mahajäetud haiglas...")
             console.log("   Testing Full AI Horror Game Generation ('Tee õudusmäng mahajäetud haiglas')...");
             await page.type('#ai-prompt-input', 'Tee õudusmäng mahajäetud haiglas, kus mängija peab leidma kolm võtit ja põgenema');
