@@ -23,6 +23,15 @@ export function isUserAdminEmail(email?: string | null): boolean {
     return ADMIN_EMAILS.some(e => e.toLowerCase() === clean);
 }
 
+export function getAdminDisplayName(email?: string | null): string {
+    if (!email) return 'Admin✅';
+    const clean = email.trim().toLowerCase();
+    if (clean === '1karl.iles@gmail.com' || clean === '1karl.ilves@gmail.com') {
+        return 'Playard Owner✅';
+    }
+    return 'Admin✅';
+}
+
 const PROFILES_STORAGE_KEY = 'playard_user_profiles';
 const CURRENT_PROFILE_KEY = 'playard_current_user_profile';
 
@@ -167,11 +176,12 @@ export async function initAuth() {
             if (session?.user) {
                 const isAdmin = isUserAdminEmail(session.user.email);
                 const username = session.user.user_metadata?.username || (isAdmin ? 'admin' : session.user.email?.split('@')[0] || 'user');
+                const adminName = getAdminDisplayName(session.user.email);
                 const profile: UserProfile = {
                     id: session.user.id,
                     username: isAdmin ? 'admin' : username,
                     email: session.user.email || '',
-                    displayName: isAdmin ? 'Admin✅' : `@${username}`,
+                    displayName: isAdmin ? adminName : `@${username}`,
                     isAdmin
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
@@ -249,11 +259,12 @@ export async function initAuth() {
                     }
                 }
 
+                const adminTitle = getAdminDisplayName(email);
                 const adminProfile: UserProfile = {
                     id: adminSession?.user?.id || 'admin_root',
                     username: 'admin',
                     email: email,
-                    displayName: 'Admin✅',
+                    displayName: adminTitle,
                     isAdmin: true
                 };
 
@@ -266,7 +277,7 @@ export async function initAuth() {
                             id: adminProfile.id,
                             username: 'admin',
                             email: email,
-                            display_name: 'Admin✅',
+                            display_name: adminTitle,
                             is_admin: true
                         });
                     } catch (e) {}
@@ -275,7 +286,7 @@ export async function initAuth() {
                 await yardService.onUserLogin(adminProfile.id, 'admin', email);
                 restoreUserGameProgress(adminProfile);
 
-                showMsg('Tere tulemast tagasi, Admin✅!', 'success');
+                showMsg(`Tere tulemast tagasi, ${adminTitle}!`, 'success');
                 if (emailInput) emailInput.value = '';
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
@@ -484,7 +495,7 @@ export async function initAuth() {
 
             // --- TEST MODE OR OFFLINE REGISTRATION (NO NETWORK / NO EMAILS) ---
             if (isTestMode(email) || !hasSupabase) {
-                const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                const displayName = isAdmin ? getAdminDisplayName(email) : `@${username}`;
                 const profile: UserProfile = {
                     id: isAdmin ? 'admin_root' : 'user_' + username.toLowerCase(),
                     username: username,
@@ -540,7 +551,7 @@ export async function initAuth() {
                                 return showMsg(`This email is already registered to user @${expectedUsername}!`, 'error');
                             }
                             
-                            const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                            const displayName = isAdmin ? getAdminDisplayName(email) : `@${username}`;
                             const profile: UserProfile = {
                                 id: loginData.session.user.id,
                                 username: username,
