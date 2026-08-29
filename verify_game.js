@@ -119,13 +119,15 @@ try {
         await new Promise(r => setTimeout(r, 200));
 
         // Fill update fields
-        await page.type('#admin-update-title', 'Uus 3D Superauto ja Kaart');
-        await page.evaluate(() => { document.getElementById('admin-update-version').value = 'v2.1.0'; });
-        await page.type('#admin-update-content', 'Lisasime uued sõidukid, täiustasime andmebaasi ja parandasime heli.');
+        await page.evaluate(() => {
+            (document.getElementById('admin-update-title')).value = 'Uus 3D Superauto ja Kaart';
+            (document.getElementById('admin-update-version')).value = 'v2.1.0';
+            (document.getElementById('admin-update-content')).value = 'Lisasime uued sõidukid, täiustasime andmebaasi ja parandasime heli.';
+        });
 
         // Click Send Update to Owner
         await page.click('#btn-send-update-to-owner');
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 600));
 
         const updateStatusText = await page.$eval('#admin-update-status', el => el.textContent);
         console.log("   Admin Update Submit Status:", updateStatusText);
@@ -135,7 +137,7 @@ try {
 
         const sentUpdatesText = await page.$eval('#admin-sent-updates-list', el => el.textContent);
         if (!sentUpdatesText.includes('Uus 3D Superauto ja Kaart') || !sentUpdatesText.includes('v2.1.0')) {
-            throw new Error("Sent update not found in sent updates list!");
+            throw new Error(`Sent update not found in sent updates list! Got: ${sentUpdatesText}`);
         }
         console.log("   Admin successfully sent update to Owner and saved to database!");
 

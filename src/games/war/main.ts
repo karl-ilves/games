@@ -47,6 +47,10 @@ interface Projectile {
     life: number;
     isExplosive: boolean;
     isCannon: boolean;
+    isGrenade?: boolean;
+    gravity?: number;
+    tumbleSpeed?: THREE.Vector3;
+    targetPos?: THREE.Vector3;
 }
 
 interface Shockwave {
@@ -689,6 +693,9 @@ class WarGameEngine {
                 .on('broadcast', { event: 'airstrike_drop' }, ({ payload }: any) => {
                     this.onRemoteAirstrike(payload);
                 })
+                .on('broadcast', { event: 'grenade_throw' }, ({ payload }: any) => {
+                    this.onRemoteGrenade(payload);
+                })
                 .subscribe(async (status: string) => {
                     if (status === 'SUBSCRIBED') {
                         await this.channel.track({
@@ -752,6 +759,13 @@ class WarGameEngine {
                 this.triggerSpreadingExplosion(impactPos, 16.0, 85, payload.shooterId, payload.shooterName, payload.team);
             }, 600 + i * 260);
         }
+    }
+
+    private onRemoteGrenade(payload: any) {
+        if (!payload || payload.shooterId === this.localPlayerId) return;
+        const from = new THREE.Vector3(payload.fromX, payload.fromY, payload.fromZ);
+        const target = new THREE.Vector3(payload.targetX, payload.targetY, payload.targetZ);
+        this.spawnGrenade(payload.shooterId, payload.shooterName, payload.team, from, target);
     }
 
     private broadcastState() {
@@ -971,17 +985,72 @@ class WarGameEngine {
             warAudio.playMachineGun();
             this.updateHUD();
         } else {
-            // Soldier Hand Grenade (Spreading Explosion AoE)
+            // Soldier Hand Grenade (Realistic Ballistic Arc to Target)
             if (this.secondaryReloadTimer > 0) return;
             this.secondaryReloadTimer = 3.5;
 
             const fromPos = this.localUnit.pos.clone().add(new THREE.Vector3(0, 1.8, 0));
-            const dir = new THREE.Vector3().subVectors(this.mouseAimTarget, fromPos).normalize();
-            dir.y += 0.25;
-
-            this.spawnProjectile(this.localPlayerId, this.localUnit.name, this.localTeam, fromPos, dir, true, false);
+            this.spawnGrenade(this.localPlayerId, this.localUnit.name, this.localTeam, fromPos, this.mouseAimTarget.clone());
             warAudio.playMachineGun();
             this.updateHUD();
+        }
+    }
+
+    private spawnGrenade(
+        shooterId: string, shooterName: string, team: Team,
+        from: THREE.Vector3, targetPos: THREE.Vector3
+    ) {
+        const dx = targetPos.x - from.x;
+        const dz = targetPos.z - from.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        const flightTime = Math.max(0.45, Math.min(1.8, dist / 26.0));
+        const g = 26.0;
+
+        const vx = dx / flightTime;
+        const vz = dz / flightTime;
+        const vy = (targetPos.y - from.y + 0.5 * g * flightTime * flightTime) / flightTime;
+
+        const grenadeGeo = new THREE.SphereGeometry(0.3, 10, 10);
+        const grenadeMat = new THREE.MeshStandardMaterial({
+            color: team === 'red' ? 0x8b0000 : 0x2d572c,
+            roughness: 0.6,
+            metalness: 0.4
+        });
+        const mesh = new THREE.Mesh(grenadeGeo, grenadeMat);
+        mesh.position.copy(from);
+        mesh.castShadow = true;
+
+        this.scene.add(mesh);
+        this.projectiles.push({
+            id: 'grenade_' + Math.random(),
+            shooterId,
+            shooterName,
+            team,
+            mesh,
+            velocity: new THREE.Vector3(vx, vy, vz),
+            damage: 65,
+            explosionRadius: 14.0,
+            life: flightTime + 0.05,
+            isExplosive: true,
+            isCannon: false,
+            isGrenade: true,
+            gravity: g,
+            tumbleSpeed: new THREE.Vector3(8 + Math.random() * 6, 6 + Math.random() * 4, 10 + Math.random() * 6),
+            targetPos: targetPos.clone()
+        });
+
+        if (this.channel) {
+            this.channel.send({
+                type: 'broadcast',
+                event: 'grenade_throw',
+                payload: {
+                    shooterId,
+                    shooterName,
+                    team,
+                    fromX: from.x, fromY: from.y, fromZ: from.z,
+                    targetX: targetPos.x, targetY: targetPos.y, targetZ: targetPos.z
+                }
+            });
         }
     }
 
@@ -1595,6 +1664,16 @@ class WarGameEngine {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
             p.life -= dt;
+
+            // Ballistic arc physics for grenade
+            if (p.isGrenade) {
+                p.velocity.y -= (p.gravity || 26.0) * dt;
+                if (p.tumbleSpeed) {
+                    p.mesh.rotation.x += p.tumbleSpeed.x * dt;
+                    p.mesh.rotation.z += p.tumbleSpeed.z * dt;
+                }
+            }
+
             p.mesh.position.addScaledVector(p.velocity, dt);
 
             if (p.mesh.position.y <= 0.2 || p.life <= 0) {
