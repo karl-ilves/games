@@ -29,8 +29,12 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
     if (btnOpenStreak) {
         btnOpenStreak.style.display = showAdminPanel ? 'none' : 'flex';
     }
-    // Kokkamise mängu kaart on nüüd alati avalehel nähtav!
-
+    
+    // War game kaart on nähtav AINULT Playardi Ownerile ja Adminile
+    const warGameCard = document.getElementById('card-war-game');
+    if (warGameCard) {
+        warGameCard.style.display = isUserAdminEmail(emailToCheck) ? 'flex' : 'none';
+    }
 
     // Switch language: Estonian for admin and owner, English for others!
     setLanguage(isEstonian ? 'et' : 'en');
@@ -49,6 +53,9 @@ function setupIcons() {
 
     const cardCookingYardIcon = document.getElementById('card-cooking-yard-icon');
     if (cardCookingYardIcon) cardCookingYardIcon.innerHTML = yardService.renderYardSvg(16);
+
+    const cardWarYardIcon = document.getElementById('card-war-yard-icon');
+    if (cardWarYardIcon) cardWarYardIcon.innerHTML = yardService.renderYardSvg(16);
 }
 
 // --- Live HMS Countdown Updater ---

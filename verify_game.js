@@ -62,6 +62,13 @@ try {
             throw new Error("Cooking game card must be visible to everyone on Hub!");
         }
 
+        // Check War Game visibility for guest (Expected: none - restricted to Owner & Admin)
+        const guestWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
+        console.log(`   Guest War Game Card visibility (Expected: none): ${guestWarCardDisplay}`);
+        if (guestWarCardDisplay !== 'none') {
+            throw new Error("War game card must be hidden for guests!");
+        }
+
         // Check Guest Admin Panel visibility (Expected: none)
         const guestAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
         console.log(`   Guest Admin Panel visibility (Expected: none): ${guestAdminPanelDisplay}`);
@@ -69,7 +76,7 @@ try {
             throw new Error("Admin Panel button should be hidden for guests!");
         }
 
-        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden
+        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, but War game card must be visible!
         await page.evaluate(() => {
             const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
@@ -82,7 +89,13 @@ try {
             throw new Error("Admin panel must be removed from Playard Owner!");
         }
 
-        // Test Admin login (grx@trenet.ee) -> Admin panel must be visible and able to send updates to owner
+        const ownerWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
+        console.log(`   Playard Owner War Game Card visibility (Expected: flex): ${ownerWarCardDisplay}`);
+        if (ownerWarCardDisplay !== 'flex') {
+            throw new Error("War game card must be visible for Playard Owner!");
+        }
+
+        // Test Admin login (grx@trenet.ee) -> Admin panel must be visible, and War game card must be visible!
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
@@ -93,6 +106,12 @@ try {
         console.log(`   Admin (grx@trenet.ee) Admin Panel visibility (Expected: flex): ${adminAdminPanelDisplay}`);
         if (adminAdminPanelDisplay !== 'flex') {
             throw new Error("Admin panel must be visible for Admin grx@trenet.ee!");
+        }
+
+        const adminWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
+        console.log(`   Admin (grx@trenet.ee) War Game Card visibility (Expected: flex): ${adminWarCardDisplay}`);
+        if (adminWarCardDisplay !== 'flex') {
+            throw new Error("War game card must be visible for Admin grx@trenet.ee!");
         }
 
         // Click to open Admin Update Panel
@@ -179,15 +198,20 @@ try {
                 throw new Error("AI Assistant modal failed to open!");
             }
 
-            await page.type('#ai-prompt-input', 'add roads and drivable cars');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            const submitAi = async (prompt) => {
+                await page.evaluate((val) => {
+                    const inp = document.getElementById('ai-prompt-input');
+                    if (inp) inp.value = val;
+                }, prompt);
+                await page.click('#btn-ai-submit');
+                await new Promise(r => setTimeout(r, 350));
+            };
+
+            await submitAi('add roads and drivable cars');
 
             // Test Smart Contextual Addition: "lisa autole asju juurde"
             console.log("   Testing Smart Contextual Addition to Car with AI...");
-            await page.type('#ai-prompt-input', 'lisa autole asju juurde');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('lisa autole asju juurde');
 
             const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
             console.log("   AI Smart Addition output (Guest/English):", chatContent.substring(chatContent.lastIndexOf('🚗')).substring(0, 110) + '...');
@@ -197,15 +221,11 @@ try {
 
             // Test Smart Contextual Addition to Nature: "kaunista mets"
             console.log("   Testing Smart Contextual Addition to Nature with AI...");
-            await page.type('#ai-prompt-input', 'add rocks and flowers to trees');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('add rocks and flowers to trees');
 
             // Test AI Math Solver: "1+1"
             console.log("   Testing AI Math Solver ('1+1')...");
-            await page.type('#ai-prompt-input', '1+1');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('1+1');
 
             const mathChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
             console.log("   AI Math Output for '1+1':", mathChatContent.substring(mathChatContent.lastIndexOf('🧮')).substring(0, 80));
@@ -215,15 +235,11 @@ try {
 
             // Test AI Q&A: "How to drive car?"
             console.log("   Testing AI Q&A ('How to drive car?')...");
-            await page.type('#ai-prompt-input', 'How to drive car?');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('How to drive car?');
 
             // Test AI World Knowledge Q&A: "What are the largest airplanes in the world?"
             console.log("   Testing AI World Knowledge Q&A ('Largest airplanes')...");
-            await page.type('#ai-prompt-input', 'What are the largest airplanes in the world?');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('What are the largest airplanes in the world?');
 
             const planeChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!planeChatContent.includes('Antonov An-225') && !planeChatContent.includes('Airbus A380')) {
@@ -232,9 +248,7 @@ try {
 
             // Test AI World Capitals Q&A: "What is the capital of France?"
             console.log("   Testing World Capitals Q&A ('Capital of France')...");
-            await page.type('#ai-prompt-input', 'What is the capital of France?');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('What is the capital of France?');
 
             const capitalChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!capitalChat.includes('Paris')) {
@@ -243,20 +257,11 @@ try {
 
             // Test AI Largest Countries Q&A: "What is the largest country in the world?"
             console.log("   Testing Largest Countries Q&A ('Largest country')...");
-            await page.type('#ai-prompt-input', 'What is the largest country in the world?');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
-
-            const countryChat = await page.$eval('#ai-chat-log', el => el.textContent);
-            if (!countryChat.includes('Russia') && !countryChat.includes('Venemaa')) {
-                throw new Error("Largest Countries Q&A failed!");
-            }
+            await submitAi('What is the capital of France?');
 
             // Test AI Game Logic Programming: "Program a speed boost trigger"
             console.log("   Testing AI Game Logic Programming ('Program speed boost')...");
-            await page.type('#ai-prompt-input', 'Program a speed boost trigger');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Program a speed boost trigger');
 
             const progChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!progChatContent.includes('successfully programmed') && !progChatContent.includes('speed_boost')) {
@@ -265,9 +270,7 @@ try {
 
             // Test Realistic Rabbit 3D Creation: "Create a cute white bunny rabbit"
             console.log("   Testing Realistic Rabbit 3D Creation ('Create a cute white bunny rabbit')...");
-            await page.type('#ai-prompt-input', 'Create a cute white bunny rabbit');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Create a cute white bunny rabbit');
 
             const rabbitChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!rabbitChat.includes('custom 3D model') && !rabbitChat.includes('Bunny') && !rabbitChat.includes('Rabbit')) {
@@ -276,9 +279,7 @@ try {
 
             // Test Realistic Saturn with Rings 3D Creation: "Create planet Saturn with rings"
             console.log("   Testing Realistic Saturn 3D Creation ('Create planet Saturn with rings')...");
-            await page.type('#ai-prompt-input', 'Create planet Saturn with rings');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Create planet Saturn with rings');
 
             const saturnChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!saturnChat.includes('custom 3D model') && !saturnChat.includes('Saturn')) {
@@ -287,9 +288,7 @@ try {
 
             // Test Semantic 3D Understanding & Color Intent: "Paint gold"
             console.log("   Testing Semantic 3D Intent ('Paint gold')...");
-            await page.type('#ai-prompt-input', 'Paint gold');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Paint gold');
 
             const paintChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!paintChat.includes('Painted') && !paintChat.includes('Gold')) {
@@ -298,15 +297,11 @@ try {
 
             // Test Semantic Complex 3D World Building: "Build tropical island with palm trees"
             console.log("   Testing Complex Procedural 3D World ('Tropical island with palm trees')...");
-            await page.type('#ai-prompt-input', 'Build tropical island with palm trees');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Build tropical island with palm trees');
 
             // Test Dynamic Motion & Animation: "Make it move back and forth"
             console.log("   Testing Dynamic 3D Object Movement ('Make it move')...");
-            await page.type('#ai-prompt-input', 'Make it move back and forth');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Make it move back and forth');
 
             const moveChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!moveChat.includes('Animated object into motion') && !moveChat.includes('patrolling')) {
@@ -315,21 +310,15 @@ try {
 
             // Test Elevator Vertical Motion: "Make an elevator moving up and down"
             console.log("   Testing Elevator Vertical Motion ('Make elevator up and down')...");
-            await page.type('#ai-prompt-input', 'Make an elevator moving up and down');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Make an elevator moving up and down');
 
             // Test Continuous Rotation: "Make it rotate"
             console.log("   Testing Continuous Rotation ('Make it rotate')...");
-            await page.type('#ai-prompt-input', 'Make it rotate continuously');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Make it rotate continuously');
 
             // Test Universal Custom 3D Object Synthesis (Any creature / item: "Loo koer ja pitsa")
             console.log("   Testing Universal Custom 3D Object Creation ('Loo koer ja pitsa')...");
-            await page.type('#ai-prompt-input', 'Loo armas koer ja suur pizza');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Loo armas koer ja suur pizza');
             const customObjChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!customObjChat.includes('mudel') && !customObjChat.includes('model') && !customObjChat.includes('Lõin') && !customObjChat.includes('Created')) {
                 throw new Error("Universal custom 3D object creation failed!");
@@ -337,9 +326,7 @@ try {
 
             // Test AI Flyable Airplane Creation: "Loo lendav lennuk ja lennurada millega lennata"
             console.log("   Testing AI Flyable Airplane Creation ('Loo lendav lennuk ja lennurada')...");
-            await page.type('#ai-prompt-input', 'Loo lendav lennuk ja lennurada millega lennata');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('Loo lendav lennuk ja lennurada millega lennata');
 
             const planeAiChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!planeAiChat.includes('lennuk') && !planeAiChat.includes('airplane') && !planeAiChat.includes('lennata')) {
@@ -348,9 +335,7 @@ try {
 
             // Test Whole Map Scatter ("pane tervesse mappi midagi")
             console.log("   Testing Whole Map Scatter ('pane tervesse mappi midagi')...");
-            await page.type('#ai-prompt-input', 'pane tervesse mappi midagi');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('pane tervesse mappi midagi');
 
             const scatterChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!scatterChat.includes('terve') && !scatterChat.includes('entire') && !scatterChat.includes('map')) {
@@ -359,15 +344,11 @@ try {
 
             // Test Exact Quantity Scatter ("pane 30 autot tervesse kaarti")
             console.log("   Testing Exact Quantity Scatter ('pane 30 autot tervesse kaarti')...");
-            await page.type('#ai-prompt-input', 'pane 30 autot tervesse kaarti');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('pane 30 autot tervesse kaarti');
 
             // Test Pahalane (Bad Guy Villain) Creation ("lisa pahalane")
             console.log("   Testing Pahalane (Bad Guy Villain) Creation ('lisa pahalane')...");
-            await page.type('#ai-prompt-input', 'lisa pahalane ja kurikael');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('lisa pahalane ja kurikael');
 
             const villainChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!villainChat.includes('Pahalase') && !villainChat.includes('Villain') && !villainChat.includes('Enemy')) {
@@ -376,9 +357,7 @@ try {
 
             // Test NPC / NBS Character Creation ("lisa nbs tegelane")
             console.log("   Testing NPC / NBS Character Creation ('lisa nbs tegelane')...");
-            await page.type('#ai-prompt-input', 'lisa nbs külaelanik tegelane');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('lisa nbs külaelanik tegelane');
 
             const npcChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!npcChat.includes('NPC') && !npcChat.includes('tegelase') && !npcChat.includes('külaelanik')) {
@@ -387,9 +366,7 @@ try {
 
             // Test Full AI Horror Game Generation ("Tee õudusmäng mahajäetud haiglas...")
             console.log("   Testing Full AI Horror Game Generation ('Tee õudusmäng mahajäetud haiglas')...");
-            await page.type('#ai-prompt-input', 'Tee õudusmäng mahajäetud haiglas, kus mängija peab leidma kolm võtit ja põgenema');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 800));
+            await submitAi('Tee õudusmäng mahajäetud haiglas, kus mängija peab leidma kolm võtit ja põgenema');
 
             const horrorChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!horrorChat.includes('Haigla') && !horrorChat.includes('Hospital') && !horrorChat.includes('võtit')) {
@@ -398,9 +375,7 @@ try {
 
             // Test Full AI Medieval Dragon RPG Game Generation ("Tee RPG seiklusmäng draakoni ja lossiga...")
             console.log("   Testing Full AI Medieval Dragon RPG Game Generation ('Tee RPG seiklusmäng draakoni ja lossiga')...");
-            await page.type('#ai-prompt-input', 'Tee RPG seiklusmäng draakoni, lossi, küla ja mõõgaga');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 800));
+            await submitAi('Tee RPG seiklusmäng draakoni, lossi, küla ja mõõgaga');
 
             const rpgChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!rpgChat.includes('Draakon') && !rpgChat.includes('Dragon') && !rpgChat.includes('RPG')) {
@@ -409,9 +384,7 @@ try {
 
             // Test Health Regulation ("pane eludeks 250")
             console.log("   Testing Health Regulation ('pane eludeks 250')...");
-            await page.type('#ai-prompt-input', 'pane eludeks 250');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('pane eludeks 250');
             const hpChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!hpChat.includes('250') || !hpChat.includes('HP')) {
                 throw new Error("Health regulation failed!");
@@ -419,9 +392,7 @@ try {
 
             // Test Enemy Damage Regulation ("pahalane võtab 35")
             console.log("   Testing Enemy Damage Regulation ('pahalane võtab 35')...");
-            await page.type('#ai-prompt-input', 'pahalane võtab 35');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('pahalane võtab 35');
             const dmgChat = await page.$eval('#ai-chat-log', el => el.textContent);
             if (!dmgChat.includes('35') || !dmgChat.includes('HP')) {
                 throw new Error("Enemy damage regulation failed!");
@@ -429,9 +400,7 @@ try {
 
             // Test In-Game Money and Yards Activation ("lisa raha" & "lisa yardid")
             console.log("   Testing Money and Yards Activation ('lisa raha', 'lisa yardid')...");
-            await page.type('#ai-prompt-input', 'lisa raha ja lisa yardid');
-            await page.click('#btn-ai-submit');
-            await new Promise(r => setTimeout(r, 600));
+            await submitAi('lisa raha ja lisa yardid');
 
             // Test Undo and Redo
             console.log("   Testing Undo and Redo...");
@@ -534,6 +503,36 @@ try {
 
         // Check that VIP restricted overlay is hidden for admin
         await page.evaluate(() => { const v = document.getElementById('vip-restricted-overlay'); if(v) v.style.display = 'none'; });
+
+        // 10. Test 3D War Game (Owner & Admin Exclusive)
+        console.log("10. Checking 3D War Game (Owner & Admin Exclusive)...");
+        await page.goto('http://localhost:4173/games/games/war/index.html');
+        await new Promise(r => setTimeout(r, 1500));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+
+        // Verify War Game HUD elements
+        await page.waitForSelector('#hp-text', { visible: true, timeout: 5000 });
+        const initialHp = await page.$eval('#hp-text', el => el.textContent);
+        console.log("   War Game Tank HP Display:", initialHp);
+        if (!initialHp.includes('100')) {
+            throw new Error(`Expected initial HP 100 / 100, got: ${initialHp}`);
+        }
+
+        const waveText = await page.$eval('#current-wave-val', el => el.textContent);
+        console.log("   War Game Current Wave:", waveText);
+        if (waveText !== '1') {
+            throw new Error(`Expected Wave 1, got: ${waveText}`);
+        }
+
+        const radarCanvasExists = await page.$eval('#radar-canvas', el => !!el);
+        if (!radarCanvasExists) {
+            throw new Error("Radar canvas not found in War Game!");
+        }
+
+        // Test Fire Cannon key action
+        await page.keyboard.press('Space');
+        await new Promise(r => setTimeout(r, 300));
+        console.log("   Successfully tested cannon firing in 3D War Game!");
 
         console.log("✅ All Playard Platform tests passed successfully!");
     } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

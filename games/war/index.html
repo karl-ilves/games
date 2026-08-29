@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard Games - War Game (Owner & Admin Exclusive)</title>
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d1117;
+            color: #d2dae2;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top HUD Bar */
+        .top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: rgba(13, 17, 23, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 2px solid rgba(255, 71, 87, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+        }
+
+        .hud-left, .hud-center, .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            color: #ff4757;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+            text-decoration: none;
+        }
+
+        .vip-tag {
+            background: linear-gradient(135deg, #ffd32a, #ff9f1a);
+            color: #111;
+            font-size: 0.72rem;
+            font-weight: 900;
+            padding: 3px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .hud-stat-box {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 5px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .btn-action {
+            background: #1f2937;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .btn-action:hover {
+            background: #374151;
+            border-color: #ff4757;
+            transform: translateY(-1px);
+        }
+
+        /* Tactical Crosshair */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 36px;
+            height: 36px;
+            pointer-events: none;
+            z-index: 50;
+            transition: transform 0.05s ease-out;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 71, 87, 0.85);
+            box-shadow: 0 0 6px #ff4757;
+        }
+        #crosshair::before {
+            top: 0; left: 17px; width: 2px; height: 36px;
+        }
+        #crosshair::after {
+            top: 17px; left: 0; width: 36px; height: 2px;
+        }
+        #crosshair .circle {
+            position: absolute;
+            top: 6px; left: 6px; width: 22px; height: 22px;
+            border: 1.5px dashed rgba(255, 211, 42, 0.7);
+            border-radius: 50%;
+        }
+
+        /* Bottom Gameplay HUD */
+        .bottom-hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 80;
+            pointer-events: none;
+        }
+
+        .tank-status-panel {
+            pointer-events: auto;
+            background: rgba(13, 17, 23, 0.88);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 14px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 280px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        }
+
+        .bar-container {
+            width: 100%;
+            height: 14px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 7px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%;
+            transition: width 0.2s ease;
+        }
+        .health-fill {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            width: 100%;
+        }
+        .reload-fill {
+            background: linear-gradient(90deg, #ffd32a, #ff9f1a);
+            width: 100%;
+        }
+
+        .weapons-panel {
+            pointer-events: auto;
+            background: rgba(13, 17, 23, 0.88);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 14px;
+            padding: 16px 20px;
+            display: flex;
+            gap: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        }
+
+        .weapon-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 10px 14px;
+            text-align: center;
+            min-width: 90px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .weapon-card.active {
+            border-color: #ffd32a;
+            background: rgba(255, 211, 42, 0.15);
+            box-shadow: 0 0 12px rgba(255, 211, 42, 0.3);
+        }
+
+        /* Radar Minimap */
+        #radar-container {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 160px;
+            height: 160px;
+            background: rgba(13, 17, 23, 0.85);
+            border: 2px solid rgba(0, 242, 254, 0.4);
+            border-radius: 50%;
+            overflow: hidden;
+            z-index: 80;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
+        }
+        #radar-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Mission / Wave Banner */
+        #wave-banner {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 211, 42, 0.4);
+            border-radius: 25px;
+            padding: 8px 24px;
+            z-index: 80;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: 800;
+            font-size: 1rem;
+            color: #ffd32a;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: none;
+            justify-content: space-between;
+            z-index: 90;
+            pointer-events: none;
+        }
+        .touch-btn {
+            pointer-events: auto;
+            width: 65px;
+            height: 65px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            color: white;
+            font-size: 1.4rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            touch-action: none;
+        }
+        .touch-btn:active {
+            background: rgba(255, 71, 87, 0.4);
+            border-color: #ff4757;
+            transform: scale(0.95);
+        }
+
+        /* VIP Restricted Modal Overlay */
+        #vip-restricted-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(20, 10, 15, 0.98) 0%, rgba(5, 5, 8, 1) 100%);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+            text-align: center;
+        }
+        .vip-lock-card {
+            background: #181f2a;
+            border: 2px solid #ff4757;
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 500px;
+            box-shadow: 0 0 50px rgba(255, 71, 87, 0.4);
+        }
+        .vip-lock-card h1 {
+            color: #ff4757;
+            margin: 0 0 10px 0;
+            font-size: 2rem;
+        }
+        .vip-lock-card p {
+            color: #a4b0be;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        /* Victory / Game Over Overlay */
+        #game-over-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+        .game-over-card {
+            background: #1e293b;
+            border: 2px solid #ffd32a;
+            border-radius: 20px;
+            padding: 35px 30px;
+            max-width: 460px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+        }
+
+        /* Help Modal */
+        #modal-help {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2500;
+            padding: 20px;
+        }
+        .modal-card {
+            background: #1e293b;
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 550px;
+            width: 100%;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            color: #a4b0be;
+            font-size: 1.6rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top HUD Navigation -->
+    <header class="top-hud">
+        <div class="hud-left">
+            <a href="../../index.html" class="logo-badge">
+                <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 32px; height: 32px;">
+                <span>WAR GAME</span>
+            </a>
+            <span class="vip-tag">👑 OWNER & ADMIN</span>
+        </div>
+
+        <div class="hud-center">
+            <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.3);">
+                <span>🎖️ Score:</span>
+                <span id="stat-score" style="color: #ffd32a;">0</span>
+            </div>
+            <div class="hud-stat-box" style="border-color: rgba(255, 71, 87, 0.3);">
+                <span>💥 Kills:</span>
+                <span id="stat-kills" style="color: #ff4757;">0</span>
+            </div>
+            <div class="hud-stat-box" style="border-color: rgba(0, 242, 254, 0.3);">
+                <span id="hud-yard-icon">💎</span>
+                <span id="stat-yards" style="color: #00f2fe;">0</span>
+                <span style="font-size: 0.75rem; color: #718093;">YARDS</span>
+            </div>
+        </div>
+
+        <div class="hud-right">
+            <button id="btn-sound-toggle" class="btn-action">🔊 Sound: ON</button>
+            <button id="btn-open-help" class="btn-action">❓ Controls</button>
+            <a href="../../index.html" class="btn-action" style="border-color: #ff4757; color: #ff6b81;">🏠 Hub</a>
+        </div>
+    </header>
+
+    <!-- Wave & Mission Tracker -->
+    <div id="wave-banner">
+        <span>⚔️ WAVE <span id="current-wave-val">1</span></span>
+        <span style="color: #a4b0be;">|</span>
+        <span id="wave-enemies-left">Enemies Remaining: 4</span>
+    </div>
+
+    <!-- Radar Minimap (Top Right) -->
+    <div id="radar-container">
+        <canvas id="radar-canvas" width="160" height="160"></canvas>
+    </div>
+
+    <!-- Tactical Crosshair -->
+    <div id="crosshair">
+        <div class="circle"></div>
+    </div>
+
+    <!-- 3D Canvas Viewport -->
+    <div id="canvas-container"></div>
+
+    <!-- Bottom Tactical Gameplay HUD -->
+    <div class="bottom-hud">
+        <!-- Tank Health & Armor -->
+        <div class="tank-status-panel">
+            <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 0.85rem;">
+                <span style="color: #2ecc71;">🛡️ HULL ARMOR (HP)</span>
+                <span id="hp-text" style="color: #2ecc71;">100 / 100</span>
+            </div>
+            <div class="bar-container">
+                <div id="hp-bar" class="bar-fill health-fill"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 0.85rem; margin-top: 4px;">
+                <span style="color: #ffd32a;">⏳ CANNON RELOAD</span>
+                <span id="reload-text" style="color: #ffd32a;">READY</span>
+            </div>
+            <div class="bar-container">
+                <div id="reload-bar" class="bar-fill reload-fill"></div>
+            </div>
+        </div>
+
+        <!-- Weapons Arsenal Selection -->
+        <div class="weapons-panel">
+            <div class="weapon-card active" id="weapon-cannon" title="Main Heavy Cannon (LMB / Space)">
+                <div style="font-size: 1.4rem;">🚀</div>
+                <div style="font-weight: 800; font-size: 0.85rem; color: #ffd32a;">CANNON</div>
+                <div style="font-size: 0.75rem; color: #a4b0be;" id="ammo-cannon">∞ Shells</div>
+            </div>
+
+            <div class="weapon-card" id="weapon-mg" title="Rapid Machine Gun (RMB / Shift)">
+                <div style="font-size: 1.4rem;">🔫</div>
+                <div style="font-weight: 800; font-size: 0.85rem; color: #00f2fe;">MG-42</div>
+                <div style="font-size: 0.75rem; color: #a4b0be;" id="ammo-mg">500 rds</div>
+            </div>
+
+            <div class="weapon-card" id="weapon-airstrike" title="Tactical Strike (Key F)">
+                <div style="font-size: 1.4rem;">✈️</div>
+                <div style="font-weight: 800; font-size: 0.85rem; color: #ff4757;">AIRSTRIKE</div>
+                <div style="font-size: 0.75rem; color: #ff6b81;" id="cooldown-airstrike">READY</div>
+            </div>
+
+            <div class="weapon-card" id="weapon-repair" title="Field Repair Kit (Key R)">
+                <div style="font-size: 1.4rem;">🔧</div>
+                <div style="font-weight: 800; font-size: 0.85rem; color: #2ecc71;">REPAIR</div>
+                <div style="font-size: 0.75rem; color: #2ecc71;" id="count-repair">3 Left</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Virtual Controls -->
+    <div id="mobile-controls">
+        <div style="display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 6px;">
+            <div></div>
+            <button class="touch-btn" id="m-btn-up">⬆️</button>
+            <div></div>
+            <button class="touch-btn" id="m-btn-left">⬅️</button>
+            <button class="touch-btn" id="m-btn-down">⬇️</button>
+            <button class="touch-btn" id="m-btn-right">➡️</button>
+        </div>
+
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <button class="touch-btn" id="m-btn-mg" style="background: rgba(0, 242, 254, 0.25); border-color: #00f2fe; width: 70px; height: 70px;">🔫</button>
+            <button class="touch-btn" id="m-btn-fire" style="background: rgba(255, 71, 87, 0.35); border-color: #ff4757; width: 85px; height: 85px; font-size: 1.8rem;">💥</button>
+        </div>
+    </div>
+
+    <!-- VIP / Non-Owner Lockout Overlay -->
+    <div id="vip-restricted-overlay">
+        <div class="vip-lock-card">
+            <div style="font-size: 3.5rem; margin-bottom: 10px;">🔒</div>
+            <h1>War game</h1>
+            <div style="display: inline-block; background: rgba(255, 71, 87, 0.15); border: 1px solid #ff4757; color: #ff4757; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; margin-bottom: 18px;">
+                PIIRATUD LIGIPÄÄS / RESTRICTED ACCESS
+            </div>
+            <p>
+                See 3D sõjamäng on eksklusiivselt kättesaadav <strong>ainult Playardi Ownerile ja Adminile</strong>.<br><br>
+                Palun logi sisse volitatud kontoga või naase pealehele.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 15px;">
+                <a href="../../index.html" class="btn-action" style="padding: 12px 24px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 800; border: none;">🏠 Tagasi Avalehele</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over / Victory Modal -->
+    <div id="game-over-modal">
+        <div class="game-over-card">
+            <div id="game-over-icon" style="font-size: 3.5rem; margin-bottom: 10px;">🏆</div>
+            <h2 id="game-over-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 10px 0;">MISSION ACCOMPLISHED!</h2>
+            <p id="game-over-desc" style="color: #a4b0be; margin-bottom: 20px;">You eliminated all enemy tanks and fortified the battlezone!</p>
+            <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; margin-bottom: 25px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span>Final Score:</span>
+                    <strong id="final-score-val" style="color: #ffd32a;">0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span>Tanks & Drones Destroyed:</span>
+                    <strong id="final-kills-val" style="color: #ff4757;">0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: #00f2fe; font-weight: 800;">
+                    <span>Yards Earned:</span>
+                    <strong id="final-yards-val">+150 YARDS</strong>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="btn-restart-game" class="btn-action" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #111; font-weight: 800; border: none; padding: 12px 24px;">🔄 Next Battle</button>
+                <a href="../../index.html" class="btn-action" style="padding: 12px 20px;">🏠 Hub</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Controls Modal -->
+    <div id="modal-help">
+        <div class="modal-card">
+            <button class="modal-close" id="btn-close-help">&times;</button>
+            <h2 style="color: #ffd32a; margin-top: 0;">🎮 War Game Controls</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.95rem; color: #e2e8f0;">
+                <div><strong style="color: #00f2fe;">W / A / S / D (või Nooleklahvid):</strong> Tanki juhtimine (sõit ette/taha ja pööramine)</div>
+                <div><strong style="color: #ffd32a;">Hiir:</strong> Tanki torni ja sihturi suunamine (360 kraadi)</div>
+                <div><strong style="color: #ff4757;">Vasak hiireklõps / Tühik:</strong> Kahurist tulistamine (raske mürsk)</div>
+                <div><strong style="color: #00f2fe;">Parem hiireklõps / Shift:</strong> Kuulipilduja valang (kiirtuli)</div>
+                <div><strong style="color: #ff6b81;">Klahv F:</strong> Taktikaline õhulöök (Airstrike pommitus)</div>
+                <div><strong style="color: #2ecc71;">Klahv R:</strong> Remondikomplekt (Taastab 50% eludest)</div>
+                <div><strong style="color: #a4b0be;">1, 2, 3, 4:</strong> Relva vahetamine</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Script Entry Point -->
+    <script type="module" src="/src/games/war/main.ts"></script>
+</body>
+</html>
