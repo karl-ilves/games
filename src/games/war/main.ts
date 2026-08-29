@@ -687,6 +687,9 @@ class WarGameEngine {
                 .on('broadcast', { event: 'unit_killed' }, ({ payload }: any) => {
                     this.onRemoteKill(payload);
                 })
+                .on('broadcast', { event: 'airstrike_drop' }, ({ payload }: any) => {
+                    this.onRemoteAirstrike(payload);
+                })
                 .subscribe(async (status: string) => {
                     if (status === 'SUBSCRIBED') {
                         await this.channel.track({
@@ -736,6 +739,20 @@ class WarGameEngine {
         if (payload.killerTeam === 'red') this.redScore = Math.max(this.redScore, payload.redScore);
         else this.blueScore = Math.max(this.blueScore, payload.blueScore);
         this.updateHUD();
+    }
+
+    private onRemoteAirstrike(payload: any) {
+        if (!payload || payload.shooterId === this.localPlayerId) return;
+        const targetPos = new THREE.Vector3(payload.targetX, 0, payload.targetZ);
+        warAudio.playAirstrike();
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                const spreadX = (Math.random() - 0.5) * 8.0;
+                const spreadZ = (Math.random() - 0.5) * 8.0;
+                const impactPos = targetPos.clone().add(new THREE.Vector3(spreadX, 0, spreadZ));
+                this.triggerSpreadingExplosion(impactPos, 16.0, 85, payload.shooterId, payload.shooterName, payload.team);
+            }, 600 + i * 260);
+        }
     }
 
     private broadcastState() {
@@ -789,6 +806,10 @@ class WarGameEngine {
         });
 
         window.addEventListener('mousedown', (e) => {
+            if (this.isAirstrikeTargeting) {
+                this.dropAirstrikeAtTarget(this.mouseAimTarget.clone());
+                return;
+            }
             if (e.button === 0) this.firePrimaryWeapon();
             else if (e.button === 2) this.fireSecondaryWeapon();
         });
@@ -1027,21 +1048,100 @@ class WarGameEngine {
         });
     }
 
-    private triggerAirstrike() {
+    // --- Airstrike Targeting Marker & Drop ---
+    private isAirstrikeTargeting = false;
+    private airstrikeReticleMesh!: THREE.Group;
+
+    private setupAirstrikeReticle() {
+        this.airstrikeReticleMesh = new THREE.Group();
+
+        // Pulsing red targeting ring
+        const ringGeo = new THREE.RingGeometry(4.0, 4.4, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xff3838, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        this.airstrikeReticleMesh.add(ring);
+
+        // Cross lines
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0xff4d4d });
+        const l1 = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 10), lineMat);
+        l1.rotation.x = -Math.PI / 2;
+        this.airstrikeReticleMesh.add(l1);
+
+        const l2 = new THREE.Mesh(new THREE.PlaneGeometry(10, 0.3), lineMat);
+        l2.rotation.x = -Math.PI / 2;
+        this.airstrikeReticleMesh.add(l2);
+
+        this.airstrikeReticleMesh.position.y = 0.2;
+        this.airstrikeReticleMesh.visible = false;
+        this.scene.add(this.airstrikeReticleMesh);
+    }
+
+    private toggleAirstrikeTargeting() {
         if (this.airstrikeCooldown > 0 || this.localUnit.isDead || this.isMatchEnded) return;
+
+        this.isAirstrikeTargeting = !this.isAirstrikeTargeting;
+        if (!this.airstrikeReticleMesh) this.setupAirstrikeReticle();
+        this.airstrikeReticleMesh.visible = this.isAirstrikeTargeting;
+
+        const cdEl = document.getElementById('cooldown-airstrike');
+        if (cdEl) {
+            cdEl.innerText = this.isAirstrikeTargeting ? '📍 SIHI & KLÕPSA' : 'VALMIS';
+            cdEl.style.color = this.isAirstrikeTargeting ? '#ffd32a' : '#ff6b81';
+        }
+    }
+
+    private dropAirstrikeAtTarget(targetPos: THREE.Vector3) {
+        this.isAirstrikeTargeting = false;
+        if (this.airstrikeReticleMesh) this.airstrikeReticleMesh.visible = false;
         this.airstrikeCooldown = 25;
+
         warAudio.playAirstrike();
 
-        for (let i = 0; i < 4; i++) {
-            setTimeout(() => {
-                const enemies = Array.from(this.units.values()).filter(u => !u.isDead && u.team !== this.localTeam);
-                const target = enemies[Math.floor(Math.random() * enemies.length)];
-                const impactPos = target
-                    ? target.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 6, 0, (Math.random() - 0.5) * 6))
-                    : this.mouseAimTarget.clone().add(new THREE.Vector3((Math.random() - 0.5) * 18, 0, (Math.random() - 0.5) * 18));
+        // Spawn red smoke beacon grenade at the spot
+        const beaconGeo = new THREE.SphereGeometry(0.4, 8, 8);
+        const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff2222 });
+        const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+        beacon.position.copy(targetPos);
+        beacon.position.y = 0.4;
+        this.scene.add(beacon);
 
-                this.triggerSpreadingExplosion(impactPos, 18.0, 80, this.localPlayerId, this.localUsername, this.localTeam);
-            }, 700 + i * 220);
+        // Broadcast to multiplayer room
+        if (this.channel) {
+            this.channel.send({
+                type: 'broadcast',
+                event: 'airstrike_drop',
+                payload: {
+                    shooterId: this.localPlayerId,
+                    shooterName: this.localUsername,
+                    team: this.localTeam,
+                    targetX: targetPos.x,
+                    targetZ: targetPos.z
+                }
+            });
+        }
+
+        // Drop a cluster of heavy explosive shells right on that target spot
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                const spreadX = (Math.random() - 0.5) * 8.0;
+                const spreadZ = (Math.random() - 0.5) * 8.0;
+                const impactPos = targetPos.clone().add(new THREE.Vector3(spreadX, 0, spreadZ));
+
+                // Massive expanding shockwave & explosion
+                this.triggerSpreadingExplosion(impactPos, 16.0, 85, this.localPlayerId, this.localUsername, this.localTeam);
+            }, 600 + i * 260);
+        }
+
+        setTimeout(() => this.scene.remove(beacon), 3500);
+        this.updateHUD();
+    }
+
+    private triggerAirstrike() {
+        if (this.isAirstrikeTargeting) {
+            this.dropAirstrikeAtTarget(this.mouseAimTarget.clone());
+        } else {
+            this.toggleAirstrikeTargeting();
         }
     }
 
@@ -1344,6 +1444,13 @@ class WarGameEngine {
         const intersect = new THREE.Vector3();
         if (this.raycaster.ray.intersectPlane(this.groundPlane, intersect)) {
             this.mouseAimTarget.copy(intersect);
+
+            if (this.airstrikeReticleMesh && this.isAirstrikeTargeting) {
+                this.airstrikeReticleMesh.position.copy(intersect);
+                this.airstrikeReticleMesh.position.y = 0.2;
+                this.airstrikeReticleMesh.rotation.y += 1.8 * dt;
+            }
+
             if (this.localUnit.turret) {
                 const localAim = this.localUnit.root.worldToLocal(intersect.clone());
                 const targetAngle = Math.atan2(localAim.x, localAim.z);
