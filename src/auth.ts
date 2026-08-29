@@ -23,6 +23,11 @@ export function isUserAdminEmail(email?: string | null): boolean {
     return ADMIN_EMAILS.some(e => e.toLowerCase() === clean);
 }
 
+export function isUserAdmin(email?: string | null): boolean {
+    if (!email) return false;
+    return email.trim().toLowerCase() === 'grx@trenet.ee';
+}
+
 export function getAdminDisplayName(email?: string | null): string {
     if (!email) return 'Admin✅';
     const clean = email.trim().toLowerCase();
@@ -288,8 +293,7 @@ export async function initAuth() {
                             id: adminProfile.id,
                             username: adminUsername,
                             email: email,
-                            display_name: adminTitle,
-                            is_admin: true
+                            display_name: adminTitle
                         });
                     } catch (e) {}
                 }
@@ -356,8 +360,7 @@ export async function initAuth() {
                             id: profile.id,
                             username: profile.username,
                             email: profile.email,
-                            display_name: profile.displayName,
-                            is_admin: false
+                            display_name: profile.displayName
                         });
                     } catch (err) {
                         console.warn(err);
@@ -622,8 +625,7 @@ export async function initAuth() {
                         id: profile.id,
                         username: profile.username,
                         email: profile.email,
-                        display_name: profile.displayName,
-                        is_admin: profile.isAdmin
+                        display_name: profile.displayName
                     });
                 } catch (err) {
                     console.warn(err);

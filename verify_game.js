@@ -62,6 +62,46 @@ try {
             throw new Error("Cooking game card must be visible to everyone on Hub!");
         }
 
+        // Check Guest Admin Panel visibility (Expected: none)
+        const guestAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
+        console.log(`   Guest Admin Panel visibility (Expected: none): ${guestAdminPanelDisplay}`);
+        if (guestAdminPanelDisplay !== 'none') {
+            throw new Error("Admin Panel button should be hidden for guests!");
+        }
+
+        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden
+        await page.evaluate(() => {
+            const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
+            localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+            window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: ownerProf } }));
+        });
+        await new Promise(r => setTimeout(r, 200));
+        const ownerAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
+        console.log(`   Playard Owner Admin Panel visibility (Expected: none): ${ownerAdminPanelDisplay}`);
+        if (ownerAdminPanelDisplay !== 'none') {
+            throw new Error("Admin panel must be removed from Playard Owner!");
+        }
+
+        // Test Admin login (grx@trenet.ee) -> Admin panel must be visible
+        await page.evaluate(() => {
+            const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
+            localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
+            window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: adminProf } }));
+        });
+        await new Promise(r => setTimeout(r, 200));
+        const adminAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
+        console.log(`   Admin (grx@trenet.ee) Admin Panel visibility (Expected: flex): ${adminAdminPanelDisplay}`);
+        if (adminAdminPanelDisplay !== 'flex') {
+            throw new Error("Admin panel must be visible for Admin grx@trenet.ee!");
+        }
+
+        // Reset to guest for remaining tests
+        await page.evaluate(() => {
+            localStorage.removeItem('playard_current_user_profile');
+            window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: null } }));
+        });
+        await new Promise(r => setTimeout(r, 200));
+
         // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 10,000 Objects)
         console.log("5. Testing 3D Game Creator Studio...");
         await page.goto('http://localhost:4173/games/games/creator/index.html');

@@ -3,15 +3,17 @@
 -- Run this in your Supabase SQL Editor (https://supabase.com/dashboard)
 -- ==============================================================================
 
--- 1. PROFILES TABLE (Username, Display Name, Admin role)
+-- 1. PROFILES TABLE (Username, Display Name)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username text UNIQUE NOT NULL,
   email text NOT NULL,
   display_name text NOT NULL,
-  is_admin boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
+
+-- Remove is_admin column if it previously existed
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS is_admin;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 

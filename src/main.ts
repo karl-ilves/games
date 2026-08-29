@@ -1,5 +1,5 @@
 import { supabase } from './lib/supabase';
-import { initAuth, getCurrentUserProfile, isUserAdminEmail } from './auth';
+import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
 import { setLanguage, applyLocalization } from './shared/i18n';
 
@@ -16,23 +16,24 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         emailToCheck = prof?.email;
     }
 
-    const isAdmin = isUserAdminEmail(emailToCheck);
+    const showAdminPanel = isUserAdmin(emailToCheck);
+    const isEstonian = isUserAdminEmail(emailToCheck);
 
     if (adminStreakControls) {
-        adminStreakControls.style.display = isAdmin ? 'flex' : 'none';
+        adminStreakControls.style.display = showAdminPanel ? 'flex' : 'none';
     }
     if (adminNavBtn) {
-        adminNavBtn.style.display = isAdmin ? 'flex' : 'none';
+        adminNavBtn.style.display = showAdminPanel ? 'flex' : 'none';
     }
     const btnOpenStreak = document.getElementById('btn-open-streak');
     if (btnOpenStreak) {
-        btnOpenStreak.style.display = isAdmin ? 'none' : 'flex';
+        btnOpenStreak.style.display = showAdminPanel ? 'none' : 'flex';
     }
     // Kokkamise mängu kaart on nüüd alati avalehel nähtav!
 
 
-    // Switch language: Estonian for admin 1karl.ilves@gmail.com, English for others!
-    setLanguage(isAdmin ? 'et' : 'en');
+    // Switch language: Estonian for admin and owner, English for others!
+    setLanguage(isEstonian ? 'et' : 'en');
 }
 
 // --- Setup UI Icons & Elements ---
@@ -577,6 +578,10 @@ function setupModals() {
 
     if (openAdminBtn && modalAdmin) {
         openAdminBtn.addEventListener('click', () => {
+            const prof = getCurrentUserProfile();
+            if (!isUserAdmin(prof?.email)) {
+                return;
+            }
             modalAdmin.style.display = 'flex';
             renderAdminReviewGames();
             renderAdminYardLogs();
