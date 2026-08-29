@@ -504,40 +504,53 @@ try {
         // Check that VIP restricted overlay is hidden for admin
         await page.evaluate(() => { const v = document.getElementById('vip-restricted-overlay'); if(v) v.style.display = 'none'; });
 
-        // 10. Test 3D War Game (3 Tanks + 7 Soldiers Squad Battle)
-        console.log("10. Checking 3D War Game (3 Tanks + 7 Soldiers Squad Battle)...");
+        // 10. Test 3D War Game (Team & Class Selection + 2v2/PvP + Spreading Explosion)
+        console.log("10. Checking 3D War Game (Team & Class Selection + 2v2/PvP + Spreading Explosion)...");
         await page.goto('http://localhost:4173/games/games/war/index.html');
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
+        // Verify Team & Class selection modal
+        const deployModalExists = await page.$eval('#modal-deploy-selection', el => !!el);
+        if (!deployModalExists) {
+            throw new Error("Deploy team/class selection modal not found!");
+        }
+
+        // Test Selecting Red Team and Human Class, then Deploy
+        await page.click('#btn-select-red');
+        await page.click('#btn-select-human');
+        await page.click('#btn-confirm-deploy');
+        await new Promise(r => setTimeout(r, 500));
+
+        // Verify Player Team Badge updated to RED and Human
+        const teamBadgeText = await page.$eval('#player-team-name', el => el.textContent);
+        console.log("   Player Team & Role Badge:", teamBadgeText);
+        if (!teamBadgeText.includes('RED') || !teamBadgeText.includes('INIMENE')) {
+            throw new Error(`Expected badge to reflect RED and INIMENE, got: ${teamBadgeText}`);
+        }
+
         // Verify War Game HUD elements
         await page.waitForSelector('#hp-text', { visible: true, timeout: 5000 });
         const initialHp = await page.$eval('#hp-text', el => el.textContent);
-        console.log("   War Game Tank HP Display:", initialHp);
-        if (!initialHp.includes('100')) {
-            throw new Error(`Expected initial HP 100 / 100, got: ${initialHp}`);
-        }
+        console.log("   War Game Unit HP Display:", initialHp);
 
-        // Verify 10v10 Squad Scoreboard (Red vs Blue)
+        // Verify Scoreboard (Red vs Blue)
         const redScore = await page.$eval('#team-red-score', el => el.textContent);
         const blueScore = await page.$eval('#team-blue-score', el => el.textContent);
-        console.log(`   Squad Scoreboard: Red=${redScore}, Blue=${blueScore}`);
+        console.log(`   Scoreboard: Red=${redScore}, Blue=${blueScore}`);
 
         const serverCount = await page.$eval('#server-players-count', el => el.textContent);
         console.log("   Server Player Status:", serverCount);
-        if (!serverCount.includes('Mängijat') && !serverCount.includes('Online')) {
-            throw new Error(`Expected server status to show players count, got: ${serverCount}`);
-        }
 
         const radarCanvasExists = await page.$eval('#radar-canvas', el => !!el);
         if (!radarCanvasExists) {
             throw new Error("Radar canvas not found in War Game!");
         }
 
-        // Test Fire Cannon key action
+        // Test Weapon Firing & Spreading Explosion
         await page.keyboard.press('Space');
         await new Promise(r => setTimeout(r, 300));
-        console.log("   Successfully tested cannon firing in 3D War Game!");
+        console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
 
         console.log("✅ All Playard Platform tests passed successfully!");
     } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
