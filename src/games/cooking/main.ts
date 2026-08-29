@@ -1,9 +1,7 @@
 import * as THREE from 'three';
-import { getCurrentUserProfile } from '../../auth';
+import { getCurrentUserProfile, isUserAdminEmail } from '../../auth';
 import { yardService } from '../../shared/yardService';
 import { kitchenAudio } from './audio';
-
-const ADMIN_EMAIL = '1karl.ilves@gmail.com';
 
 interface OrderItem {
     id: string;
@@ -170,7 +168,7 @@ class CookingGame {
     constructor() {
         // 1. User & Language check
         const profile = getCurrentUserProfile();
-        const isAdmin = !!profile?.email && profile.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        const isAdmin = isUserAdminEmail(profile?.email);
         this.isEt = isAdmin; // Estonian for Admin, English for everyone else!
 
         const vipOverlay = document.getElementById('vip-restricted-overlay');

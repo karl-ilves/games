@@ -1,12 +1,10 @@
 import { supabase } from './lib/supabase';
-import { initAuth, getCurrentUserProfile } from './auth';
+import { initAuth, getCurrentUserProfile, isUserAdminEmail } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
 import { setLanguage, applyLocalization } from './shared/i18n';
 
 console.log("Playard Hub & Platform Loaded.");
 initAuth();
-
-const ADMIN_EMAIL = '1karl.ilves@gmail.com';
 
 function updateAdminControlsVisibility(userEmail?: string | null) {
     const adminStreakControls = document.getElementById('streak-admin-controls');
@@ -18,7 +16,7 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         emailToCheck = prof?.email;
     }
 
-    const isAdmin = !!emailToCheck && emailToCheck.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    const isAdmin = isUserAdminEmail(emailToCheck);
 
     if (adminStreakControls) {
         adminStreakControls.style.display = isAdmin ? 'flex' : 'none';
@@ -89,7 +87,7 @@ function updateStreakTimerLive() {
 function updateYardDisplay(data: YardData) {
     const headerVal = document.getElementById('header-yard-val');
     const prof = getCurrentUserProfile();
-    const isAdmin = prof?.email === ADMIN_EMAIL;
+    const isAdmin = isUserAdminEmail(prof?.email);
     
     if (headerVal) {
         headerVal.innerText = isAdmin ? '∞' : data.yards.toLocaleString();
@@ -655,7 +653,8 @@ function setupModals() {
                 giveStatus.style.color = '#ffd32a';
             }
 
-            const res = await yardService.adminGiveYardsByUsername(username, amount, reason, ADMIN_EMAIL);
+            const adminEmail = getCurrentUserProfile()?.email || '1karl.ilves@gmail.com';
+            const res = await yardService.adminGiveYardsByUsername(username, amount, reason, adminEmail);
             if (giveStatus) {
                 giveStatus.innerText = res.message;
                 giveStatus.style.color = res.success ? '#2ecc71' : '#ff4757';

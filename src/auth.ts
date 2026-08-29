@@ -11,7 +11,18 @@ export interface UserProfile {
     isAdmin: boolean;
 }
 
-const ADMIN_EMAIL = '1karl.ilves@gmail.com';
+export const ADMIN_EMAILS = [
+    '1karl.ilves@gmail.com',
+    '1karl.iles@gmail.com',
+    'grx@trenet.ee'
+];
+
+export function isUserAdminEmail(email?: string | null): boolean {
+    if (!email) return false;
+    const clean = email.trim().toLowerCase();
+    return ADMIN_EMAILS.some(e => e.toLowerCase() === clean);
+}
+
 const PROFILES_STORAGE_KEY = 'playard_user_profiles';
 const CURRENT_PROFILE_KEY = 'playard_current_user_profile';
 
@@ -22,9 +33,9 @@ export function validateUsername(username: string, email?: string): { valid: boo
     }
 
     // Special allowance for admin
-    if (email && email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    if (email && isUserAdminEmail(email)) {
         const clean = trimmed.toLowerCase().replace('✅', '').trim();
-        if (clean === 'admin') {
+        if (clean === 'admin' || clean === 'playard owner' || clean === 'owner') {
             return { valid: true };
         }
     }
@@ -154,13 +165,13 @@ export async function initAuth() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const isAdmin = session.user.email === ADMIN_EMAIL.toLowerCase();
+                const isAdmin = isUserAdminEmail(session.user.email);
                 const username = session.user.user_metadata?.username || (isAdmin ? 'admin' : session.user.email?.split('@')[0] || 'user');
                 const profile: UserProfile = {
                     id: session.user.id,
                     username,
                     email: session.user.email || '',
-                    displayName: isAdmin ? 'Admin✅' : `@${username}`,
+                    displayName: isAdmin ? 'Playard Owner✅' : `@${username}`,
                     isAdmin
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
@@ -187,7 +198,7 @@ export async function initAuth() {
                 return showMsg('Please enter email, username, and password.', 'error');
             }
 
-            const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+            const isAdmin = isUserAdminEmail(email);
             if (isAdmin) {
                 username = 'admin';
             }
@@ -200,7 +211,7 @@ export async function initAuth() {
             if (username.toLowerCase() === 'admin' && !isAdmin) {
                 return showMsg("The username 'admin' is reserved for administrators!", 'error');
             }
-            if (isAdmin && username.toLowerCase() !== 'admin') {
+            if (isAdmin && username.toLowerCase() !== 'admin' && username.toLowerCase() !== 'owner' && username.toLowerCase() !== 'playard owner') {
                 return showMsg("Incorrect username for Admin account!", 'error');
             }
 
@@ -244,8 +255,8 @@ export async function initAuth() {
                 const adminProfile: UserProfile = {
                     id: adminSession?.user?.id || 'admin_root',
                     username: 'admin',
-                    email: ADMIN_EMAIL,
-                    displayName: 'Admin✅',
+                    email: email,
+                    displayName: 'Playard Owner✅',
                     isAdmin: true
                 };
 
@@ -257,17 +268,17 @@ export async function initAuth() {
                         await supabase.from('profiles').upsert({
                             id: adminProfile.id,
                             username: 'admin',
-                            email: ADMIN_EMAIL,
-                            display_name: 'Admin✅',
+                            email: email,
+                            display_name: 'Playard Owner✅',
                             is_admin: true
                         });
                     } catch (e) {}
                 }
 
-                await yardService.onUserLogin(adminProfile.id, 'admin', ADMIN_EMAIL);
+                await yardService.onUserLogin(adminProfile.id, 'admin', email);
                 restoreUserGameProgress(adminProfile);
 
-                showMsg('Tere tulemast tagasi, Admin✅!', 'success');
+                showMsg('Tere tulemast tagasi, Playard Owner✅!', 'success');
                 if (emailInput) emailInput.value = '';
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
@@ -449,7 +460,7 @@ export async function initAuth() {
                 return showMsg('Please enter email, username, and password.', 'error');
             }
 
-            const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+            const isAdmin = isUserAdminEmail(email);
             if (isAdmin) {
                 username = 'admin';
             }
@@ -462,7 +473,7 @@ export async function initAuth() {
             if (username.toLowerCase() === 'admin' && !isAdmin) {
                 return showMsg("The username 'admin' is reserved for administrators!", 'error');
             }
-            if (isAdmin && username.toLowerCase() !== 'admin') {
+            if (isAdmin && username.toLowerCase() !== 'admin' && username.toLowerCase() !== 'owner' && username.toLowerCase() !== 'playard owner') {
                 return showMsg("Incorrect username for Admin account!", 'error');
             }
 
@@ -476,7 +487,7 @@ export async function initAuth() {
 
             // --- TEST MODE OR OFFLINE REGISTRATION (NO NETWORK / NO EMAILS) ---
             if (isTestMode(email) || !hasSupabase) {
-                const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                const displayName = isAdmin ? 'Playard Owner✅' : `@${username}`;
                 const profile: UserProfile = {
                     id: isAdmin ? 'admin_root' : 'user_' + username.toLowerCase(),
                     username: username,
@@ -532,7 +543,7 @@ export async function initAuth() {
                                 return showMsg(`This email is already registered to user @${expectedUsername}!`, 'error');
                             }
                             
-                            const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                            const displayName = isAdmin ? 'Playard Owner✅' : `@${username}`;
                             const profile: UserProfile = {
                                 id: loginData.session.user.id,
                                 username: username,
@@ -554,7 +565,7 @@ export async function initAuth() {
 
                     // If rate limit or other error, fallback to local registration gracefully
                     if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('limit')) {
-                        const displayName = isAdmin ? 'Admin✅' : `@${username}`;
+                        const displayName = isAdmin ? 'Playard Owner✅' : `@${username}`;
                         const profile: UserProfile = {
                             id: 'local_' + Date.now(),
                             username: username,

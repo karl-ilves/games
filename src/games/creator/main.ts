@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { yardService } from '../../shared/yardService';
-import { getCurrentUserProfile } from '../../auth';
+import { getCurrentUserProfile, isUserAdminEmail } from '../../auth';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -2214,7 +2214,7 @@ async function restoreDraftOrFeedbackGame() {
 function isCurrentUserAdmin(): boolean {
     const profile = getCurrentUserProfile();
     if (!profile) return false;
-    return !!(profile.isAdmin === true || profile.email?.toLowerCase() === '1karl.ilves@gmail.com');
+    return !!(profile.isAdmin === true || isUserAdminEmail(profile.email));
 }
 
 export function updateAiAssistantLocalization() {
