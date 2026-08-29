@@ -1,14 +1,42 @@
 import * as THREE from 'three';
+import { supabase } from '../../lib/supabase';
 import { getCurrentUserProfile, isUserAdminEmail } from '../../auth';
 import { yardService } from '../../shared/yardService';
 import { warAudio } from './audio';
 
 // --- Types & Interfaces ---
+type Team = 'red' | 'blue';
+
+interface TankEntity {
+    id: string;
+    name: string;
+    team: Team;
+    isLocalPlayer: boolean;
+    isBot: boolean;
+    hp: number;
+    maxHp: number;
+    pos: THREE.Vector3;
+    rotation: number;
+    turretAngle: number;
+    speed: number;
+    root: THREE.Group;
+    turret: THREE.Group;
+    barrel: THREE.Mesh;
+    nameTagSprite: THREE.Sprite;
+    nameTagCanvas: HTMLCanvasElement;
+    reloadTimer: number;
+    respawnTimer: number;
+    isDead: boolean;
+    targetEntityId?: string;
+}
+
 interface Projectile {
+    id: string;
+    shooterId: string;
+    team: Team;
     mesh: THREE.Mesh;
     velocity: THREE.Vector3;
     damage: number;
-    isPlayer: boolean;
     life: number;
     isCannon: boolean;
 }
@@ -18,80 +46,45 @@ interface Particle {
     velocity: THREE.Vector3;
     life: number;
     maxLife: number;
-    colorStart: THREE.Color;
-    colorEnd: THREE.Color;
     sizeStart: number;
     sizeEnd: number;
 }
 
-interface EnemyTank {
-    root: THREE.Group;
-    turret: THREE.Group;
-    barrel: THREE.Mesh;
-    hp: number;
-    maxHp: number;
-    hpBarMesh?: THREE.Mesh;
-    speed: number;
-    state: 'patrol' | 'chase' | 'attack';
-    targetPos: THREE.Vector3;
-    reloadTimer: number;
-    patrolAngle: number;
-    isDestroyed: boolean;
-}
-
-interface EnemyDrone {
-    root: THREE.Group;
-    rotors: THREE.Mesh[];
-    hp: number;
-    maxHp: number;
-    speed: number;
-    orbitAngle: number;
-    reloadTimer: number;
-    isDestroyed: boolean;
-}
-
-// --- Game Engine Class ---
 class WarGameEngine {
     private container: HTMLElement;
     private scene!: THREE.Scene;
     private camera!: THREE.PerspectiveCamera;
     private renderer!: THREE.WebGLRenderer;
 
-    // Player Tank Components
-    private playerGroup!: THREE.Group;
-    private playerHull!: THREE.Mesh;
-    private playerTurret!: THREE.Group;
-    private playerBarrel!: THREE.Mesh;
-    private playerPosition = new THREE.Vector3(0, 0, 0);
-    private playerRotation = 0;
-    private playerSpeed = 0;
-    private playerTurnSpeed = 0;
-    private turretTargetAngle = 0;
-    private currentTurretAngle = 0;
-    private recoilOffset = 0;
-
-    // Player Stats
-    private playerHp = 100;
-    private maxPlayerHp = 100;
-    private score = 0;
-    private kills = 0;
-    private yardsEarned = 0;
-    private currentWave = 1;
+    // Local Player
+    private localPlayerId = 'p_' + Math.random().toString(36).substring(2, 9);
+    private localUsername = 'Commander';
+    private localTeam: Team = 'blue';
+    private localTank!: TankEntity;
     private repairKits = 3;
     private mgAmmo = 500;
-    private cannonReloadTime = 1.2; // seconds
+    private cannonReloadTime = 1.2;
     private cannonReloadTimer = 0;
     private airstrikeCooldown = 0;
-    private isGameOver = false;
+    private myKills = 0;
+    private yardsEarned = 0;
 
-    // World & Entities
+    // Team Scores (First to 30 Kills)
+    private redScore = 0;
+    private blueScore = 0;
+    private readonly targetScore = 30;
+    private isMatchEnded = false;
+
+    // 20 Tank Slots (10 Red vs 10 Blue)
+    private tanks: Map<string, TankEntity> = new Map();
     private projectiles: Projectile[] = [];
     private particles: Particle[] = [];
-    private enemyTanks: EnemyTank[] = [];
-    private enemyDrones: EnemyDrone[] = [];
-    private obstacleBoxes: THREE.Box3[] = [];
 
-    // Controls State
+    // Realtime Supabase Channel
+    private channel: any = null;
+    private lastBroadcastTime = 0;
+
+    // Controls
     private keys: Record<string, boolean> = {};
     private mouseScreenPos = new THREE.Vector2();
     private raycaster = new THREE.Raycaster();
@@ -109,32 +102,20 @@ class WarGameEngine {
         this.init();
     }
 
-    private init() {
-        // 1. Authorization Verification
+    private async init() {
         this.checkAuthorization();
-
-        // 2. Setup Three.js Scene, Camera, Renderer
+        this.setupLocalIdentity();
         this.setupScene();
-
-        // 3. Build Battlefield Map & Fortifications
         this.buildBattlefield();
-
-        // 4. Build Player Armored Tank
-        this.buildPlayerTank();
-
-        // 5. Setup UI & Event Listeners
+        this.setupTanks10v10();
         this.setupUI();
         this.setupInputListeners();
+        this.initMultiplayer();
 
-        // 6. Spawn Initial Wave
-        this.spawnWave(this.currentWave);
-
-        // 7. Start Game Loop
         this.clock.start();
         this.animate();
     }
 
-    // --- Authorization Check ---
     private checkAuthorization() {
         const prof = getCurrentUserProfile();
         const email = prof?.email;
@@ -148,14 +129,42 @@ class WarGameEngine {
         }
     }
 
+    private setupLocalIdentity() {
+        const prof = getCurrentUserProfile();
+        if (prof) {
+            this.localUsername = prof.displayName || prof.username || 'Commander';
+            if (prof.id) this.localPlayerId = prof.id;
+        }
+
+        // Assign team (default to Blue, or balance)
+        this.localTeam = Math.random() > 0.5 ? 'blue' : 'blue'; // Primary blue team
+        this.updateTeamBadge();
+    }
+
+    private updateTeamBadge() {
+        const badge = document.getElementById('player-team-badge');
+        const nameEl = document.getElementById('player-team-name');
+        if (badge && nameEl) {
+            if (this.localTeam === 'red') {
+                badge.className = 'team-red';
+                badge.style.borderColor = '#e74c3c';
+                nameEl.innerText = `🔴 RED TEAM (North Base) · ${this.localUsername}`;
+            } else {
+                badge.className = 'team-blue';
+                badge.style.borderColor = '#3498db';
+                nameEl.innerText = `🔵 BLUE TEAM (South Base) · ${this.localUsername}`;
+            }
+        }
+    }
+
     // --- Scene Setup ---
     private setupScene() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0d141e);
-        this.scene.fog = new THREE.FogExp2(0x0d141e, 0.008);
+        this.scene.background = new THREE.Color(0x090e17);
+        this.scene.fog = new THREE.FogExp2(0x090e17, 0.007);
 
         this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 1000);
-        this.camera.position.set(0, 15, -25);
+        this.camera.position.set(0, 16, -26);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -165,40 +174,33 @@ class WarGameEngine {
         this.container.appendChild(this.renderer.domElement);
 
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0xdde8f0, 0.7);
+        const ambientLight = new THREE.AmbientLight(0xdce7f0, 0.75);
         this.scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.2);
-        sunLight.position.set(60, 120, 80);
+        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.25);
+        sunLight.position.set(70, 140, 90);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 2048;
         sunLight.shadow.mapSize.height = 2048;
         sunLight.shadow.camera.near = 10;
-        sunLight.shadow.camera.far = 300;
-        sunLight.shadow.camera.left = -120;
-        sunLight.shadow.camera.right = 120;
-        sunLight.shadow.camera.top = 120;
-        sunLight.shadow.camera.bottom = -120;
+        sunLight.shadow.camera.far = 400;
+        sunLight.shadow.camera.left = -160;
+        sunLight.shadow.camera.right = 160;
+        sunLight.shadow.camera.top = 160;
+        sunLight.shadow.camera.bottom = -160;
         this.scene.add(sunLight);
 
-        // Warm battlefield fill light
-        const fillLight = new THREE.DirectionalLight(0xff7675, 0.4);
-        fillLight.position.set(-80, 40, -60);
-        this.scene.add(fillLight);
-
-        // Radar canvas
+        // Radar
         this.radarCanvas = document.getElementById('radar-canvas') as HTMLCanvasElement;
-        if (this.radarCanvas) {
-            this.radarCtx = this.radarCanvas.getContext('2d');
-        }
+        if (this.radarCanvas) this.radarCtx = this.radarCanvas.getContext('2d');
     }
 
-    // --- Build Battlefield Environment ---
+    // --- Battlefield Map ---
     private buildBattlefield() {
         // Ground Terrain
-        const groundGeo = new THREE.PlaneGeometry(350, 350, 40, 40);
+        const groundGeo = new THREE.PlaneGeometry(420, 420, 50, 50);
         const groundMat = new THREE.MeshStandardMaterial({
-            color: 0x232d20, // Muddy olive warzone earth
+            color: 0x1f271c,
             roughness: 0.9,
             metalness: 0.1
         });
@@ -207,420 +209,390 @@ class WarGameEngine {
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        // Battlefield Grid Marks
-        const gridHelper = new THREE.GridHelper(340, 34, 0x3d4a36, 0x1f261c);
-        gridHelper.position.y = 0.05;
-        this.scene.add(gridHelper);
+        // Grid lines
+        const grid = new THREE.GridHelper(400, 40, 0x3d4a36, 0x171d15);
+        grid.position.y = 0.05;
+        this.scene.add(grid);
 
-        // Outer Boundary Walls (Perimeter)
-        this.createBoundaryWall(0, 0, 340);
+        // North Base (Red Team)
+        this.createBaseStation(new THREE.Vector3(0, 0, 135), 'red');
+        // South Base (Blue Team)
+        this.createBaseStation(new THREE.Vector3(0, 0, -135), 'blue');
 
-        // Military Bunker Fortifications & Outposts
-        this.createMilitaryBunker(new THREE.Vector3(45, 0, 50));
-        this.createMilitaryBunker(new THREE.Vector3(-60, 0, -40));
-        this.createMilitaryBunker(new THREE.Vector3(70, 0, -60));
+        // Center Battlezone Structures & Bunkers
+        this.createMilitaryFort(new THREE.Vector3(0, 0, 0));
+        this.createMilitaryFort(new THREE.Vector3(65, 0, 45));
+        this.createMilitaryFort(new THREE.Vector3(-65, 0, -45));
+        this.createMilitaryFort(new THREE.Vector3(-65, 0, 45));
+        this.createMilitaryFort(new THREE.Vector3(65, 0, -45));
 
-        // Radar Command Tower
-        this.createRadarTower(new THREE.Vector3(0, 0, 80));
-
-        // Anti-Tank Czech Hedgehogs & Barricades
-        for (let i = 0; i < 20; i++) {
-            const angle = (i / 20) * Math.PI * 2;
-            const dist = 35 + Math.random() * 80;
-            const x = Math.cos(angle) * dist;
-            const z = Math.sin(angle) * dist;
-            if (Math.abs(x) < 15 && Math.abs(z) < 15) continue; // Leave center open
-            this.createCzechHedgehog(new THREE.Vector3(x, 0, z));
+        // Anti-tank barricades scattered
+        for (let i = 0; i < 28; i++) {
+            const angle = (i / 28) * Math.PI * 2;
+            const dist = 35 + (i % 4) * 25;
+            const x = Math.cos(angle) * dist + (Math.random() - 0.5) * 10;
+            const z = Math.sin(angle) * dist + (Math.random() - 0.5) * 10;
+            if (Math.abs(z) > 115) continue; // Keep bases clear
+            this.createBarricade(new THREE.Vector3(x, 0, z));
         }
-
-        // Concrete Ruined Walls & Shipping Containers
-        this.createRuinedStructure(new THREE.Vector3(-30, 0, 35));
-        this.createRuinedStructure(new THREE.Vector3(30, 0, -35));
-        this.createShippingContainers(new THREE.Vector3(-45, 0, -70));
-        this.createShippingContainers(new THREE.Vector3(60, 0, 20));
     }
 
-    private createBoundaryWall(centerX: number, centerZ: number, size: number) {
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.8 });
-        const half = size / 2;
-        const thickness = 4;
-        const height = 12;
-
-        const wallNorth = new THREE.Mesh(new THREE.BoxGeometry(size, height, thickness), wallMat);
-        wallNorth.position.set(centerX, height / 2, centerZ + half);
-        wallNorth.castShadow = true;
-        wallNorth.receiveShadow = true;
-        this.scene.add(wallNorth);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(wallNorth));
-
-        const wallSouth = new THREE.Mesh(new THREE.BoxGeometry(size, height, thickness), wallMat);
-        wallSouth.position.set(centerX, height / 2, centerZ - half);
-        wallSouth.castShadow = true;
-        wallSouth.receiveShadow = true;
-        this.scene.add(wallSouth);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(wallSouth));
-
-        const wallEast = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, size), wallMat);
-        wallEast.position.set(centerX + half, height / 2, centerZ);
-        wallEast.castShadow = true;
-        wallEast.receiveShadow = true;
-        this.scene.add(wallEast);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(wallEast));
-
-        const wallWest = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, size), wallMat);
-        wallWest.position.set(centerX - half, height / 2, centerZ);
-        wallWest.castShadow = true;
-        wallWest.receiveShadow = true;
-        this.scene.add(wallWest);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(wallWest));
-    }
-
-    private createMilitaryBunker(pos: THREE.Vector3) {
+    private createBaseStation(pos: THREE.Vector3, team: Team) {
         const group = new THREE.Group();
         group.position.copy(pos);
 
-        const baseGeo = new THREE.BoxGeometry(14, 5, 14);
-        const baseMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.85 });
-        const base = new THREE.Mesh(baseGeo, baseMat);
-        base.position.y = 2.5;
-        base.castShadow = true;
-        base.receiveShadow = true;
-        group.add(base);
+        const color = team === 'red' ? 0xe74c3c : 0x3498db;
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8 });
+        const padMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.4 });
 
-        const roofGeo = new THREE.CylinderGeometry(8, 10, 2, 8);
-        const roofMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.9 });
-        const roof = new THREE.Mesh(roofGeo, roofMat);
-        roof.position.y = 6;
-        roof.castShadow = true;
-        group.add(roof);
+        // Base platform
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(60, 0.8, 40), padMat);
+        pad.position.y = 0.4;
+        pad.receiveShadow = true;
+        group.add(pad);
 
-        // Sandbags in front
-        const sandbagMat = new THREE.MeshStandardMaterial({ color: 0x9c8850, roughness: 0.95 });
-        for (let i = -5; i <= 5; i += 2.2) {
-            const bag = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 1), sandbagMat);
-            bag.position.set(i, 0.5, 8.5);
-            bag.castShadow = true;
-            group.add(bag);
-        }
-
-        this.scene.add(group);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(base));
-    }
-
-    private createRadarTower(pos: THREE.Vector3) {
-        const group = new THREE.Group();
-        group.position.copy(pos);
-
-        // Tower Structure
-        const towerGeo = new THREE.CylinderGeometry(2, 4, 18, 6);
-        const towerMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.6, roughness: 0.4 });
-        const tower = new THREE.Mesh(towerGeo, towerMat);
-        tower.position.y = 9;
+        // Radar Dish
+        const tower = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 14, 8), baseMat);
+        tower.position.set(team === 'red' ? 22 : -22, 7, 0);
         tower.castShadow = true;
         group.add(tower);
 
-        // Rotating Dish
-        const dishGeo = new THREE.CylinderGeometry(4, 1, 2, 16, 1, true);
-        const dishMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, metalness: 0.8, roughness: 0.2 });
-        const dish = new THREE.Mesh(dishGeo, dishMat);
-        dish.position.y = 19;
+        const dish = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 0.5, 1.5, 12, 1, true), padMat);
+        dish.position.set(team === 'red' ? 22 : -22, 14.5, 0);
         dish.rotation.x = Math.PI / 4;
         group.add(dish);
 
         this.scene.add(group);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(tower));
     }
 
-    private createCzechHedgehog(pos: THREE.Vector3) {
+    private createMilitaryFort(pos: THREE.Vector3) {
         const group = new THREE.Group();
         group.position.copy(pos);
-        const beamMat = new THREE.MeshStandardMaterial({ color: 0x718093, metalness: 0.8, roughness: 0.3 });
 
-        const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 3.5), beamMat);
+        const bunkerMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 });
+        const bunker = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 16), bunkerMat);
+        bunker.position.y = 3;
+        bunker.castShadow = true;
+        bunker.receiveShadow = true;
+        group.add(bunker);
+
+        const roof = new THREE.Mesh(new THREE.CylinderGeometry(9, 11, 2, 8), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+        roof.position.y = 7;
+        roof.castShadow = true;
+        group.add(roof);
+
+        this.scene.add(group);
+    }
+
+    private createBarricade(pos: THREE.Vector3) {
+        const group = new THREE.Group();
+        group.position.copy(pos);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.3 });
+
+        const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 3.2), mat);
         b1.rotation.x = Math.PI / 4;
         b1.castShadow = true;
         group.add(b1);
 
-        const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 3.5), beamMat);
+        const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 3.2), mat);
         b2.rotation.z = Math.PI / 4;
         b2.castShadow = true;
         group.add(b2);
 
-        const b3 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.4, 0.4), beamMat);
-        b3.castShadow = true;
-        group.add(b3);
-
-        group.position.y = 1.2;
+        group.position.y = 1.1;
         this.scene.add(group);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(group));
     }
 
-    private createRuinedStructure(pos: THREE.Vector3) {
-        const group = new THREE.Group();
-        group.position.copy(pos);
-        const brickMat = new THREE.MeshStandardMaterial({ color: 0x5c4d3c, roughness: 0.9 });
+    // --- 10v10 Tanks Creation (10 Red, 10 Blue) ---
+    private setupTanks10v10() {
+        const redBotNames = [
+            'Crimson_Alpha', 'Viper_Red', 'Iron_Ghost', 'Red_Scorpion', 'Apex_Warlord',
+            'Blood_Fang', 'Titan_Red', 'Thunder_Bolt', 'Red_Centurion', 'Dragon_Fury'
+        ];
+        const blueBotNames = [
+            'Azure_Leader', 'Cobalt_Fox', 'Shadow_Blue', 'Frost_Bite', 'Steel_Vanguard',
+            'Blue_Phantom', 'Cyclone_Blue', 'Ice_Gladiator', 'Sky_Hunter', 'Storm_Rider'
+        ];
 
-        const w1 = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 1.5), brickMat);
-        w1.position.set(0, 3, 0);
-        w1.castShadow = true;
-        group.add(w1);
+        // 1. Create 10 Red Tanks
+        for (let i = 0; i < 10; i++) {
+            const isLocal = (this.localTeam === 'red' && i === 0);
+            const id = isLocal ? this.localPlayerId : `bot_red_${i}`;
+            const name = isLocal ? this.localUsername : `[RED] ${redBotNames[i]}`;
+            const spawnX = (i - 4.5) * 12;
+            const spawnZ = 130 + (i % 2) * 8;
 
-        const w2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 6, 8), brickMat);
-        w2.position.set(5, 3, 3);
-        w2.castShadow = true;
-        group.add(w2);
-
-        this.scene.add(group);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(group));
-    }
-
-    private createShippingContainers(pos: THREE.Vector3) {
-        const group = new THREE.Group();
-        group.position.copy(pos);
-        const colors = [0xc0392b, 0x2980b9, 0x27ae60];
-
-        for (let i = 0; i < 3; i++) {
-            const mat = new THREE.MeshStandardMaterial({ color: colors[i], roughness: 0.6, metalness: 0.3 });
-            const box = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 14), mat);
-            box.position.set(i * 7 - 7, 1.5, 0);
-            box.castShadow = true;
-            box.receiveShadow = true;
-            group.add(box);
+            const tank = this.createTankEntity(id, name, 'red', isLocal, !isLocal, new THREE.Vector3(spawnX, 0, spawnZ), Math.PI);
+            this.tanks.set(id, tank);
+            if (isLocal) this.localTank = tank;
         }
 
-        this.scene.add(group);
-        this.obstacleBoxes.push(new THREE.Box3().setFromObject(group));
-    }
+        // 2. Create 10 Blue Tanks
+        for (let i = 0; i < 10; i++) {
+            const isLocal = (this.localTeam === 'blue' && i === 0);
+            const id = isLocal ? this.localPlayerId : `bot_blue_${i}`;
+            const name = isLocal ? this.localUsername : `[BLUE] ${blueBotNames[i]}`;
+            const spawnX = (i - 4.5) * 12;
+            const spawnZ = -130 - (i % 2) * 8;
 
-    // --- Build Player 3D Combat Tank ---
-    private buildPlayerTank() {
-        this.playerGroup = new THREE.Group();
-
-        // 1. Armored Hull
-        const hullMat = new THREE.MeshStandardMaterial({
-            color: 0x3d4a36, // Olive military camo
-            roughness: 0.65,
-            metalness: 0.35
-        });
-        const hullGeo = new THREE.BoxGeometry(4.4, 1.5, 6.6);
-        this.playerHull = new THREE.Mesh(hullGeo, hullMat);
-        this.playerHull.position.y = 1.3;
-        this.playerHull.castShadow = true;
-        this.playerHull.receiveShadow = true;
-        this.playerGroup.add(this.playerHull);
-
-        // 2. Left & Right Heavy Treads
-        const treadMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.9, metalness: 0.2 });
-        const leftTread = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 7.2), treadMat);
-        leftTread.position.set(-2.5, 0.7, 0);
-        leftTread.castShadow = true;
-        this.playerGroup.add(leftTread);
-
-        const rightTread = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 7.2), treadMat);
-        rightTread.position.set(2.5, 0.7, 0);
-        rightTread.castShadow = true;
-        this.playerGroup.add(rightTread);
-
-        // Tread Wheels
-        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x485460, metalness: 0.5 });
-        for (let side of [-2.5, 2.5]) {
-            for (let z = -2.8; z <= 2.8; z += 1.4) {
-                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.05, 12), wheelMat);
-                wheel.rotation.z = Math.PI / 2;
-                wheel.position.set(side, 0.6, z);
-                this.playerGroup.add(wheel);
-            }
-        }
-
-        // 3. Rotating Turret
-        this.playerTurret = new THREE.Group();
-        this.playerTurret.position.set(0, 2.2, 0);
-
-        const turretMat = new THREE.MeshStandardMaterial({
-            color: 0x485a40,
-            roughness: 0.55,
-            metalness: 0.4
-        });
-        const turretDome = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.2, 3.8), turretMat);
-        turretDome.position.set(0, 0.6, -0.4);
-        turretDome.castShadow = true;
-        this.playerTurret.add(turretDome);
-
-        // Turret Commander Hatch & Star Emblem
-        const hatchMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.2 });
-        const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.3, 16), hatchMat);
-        hatch.position.set(0.6, 1.3, -0.6);
-        this.playerTurret.add(hatch);
-
-        // 4. Main Cannon Barrel
-        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x2f3640, metalness: 0.7, roughness: 0.3 });
-        const barrelGeo = new THREE.CylinderGeometry(0.22, 0.28, 5.0, 16);
-        this.playerBarrel = new THREE.Mesh(barrelGeo, barrelMat);
-        this.playerBarrel.rotation.x = -Math.PI / 2;
-        this.playerBarrel.position.set(0, 0.6, 2.8);
-        this.playerBarrel.castShadow = true;
-        this.playerTurret.add(this.playerBarrel);
-
-        // Muzzle Brake
-        const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.7, 16), barrelMat);
-        muzzle.rotation.x = -Math.PI / 2;
-        muzzle.position.set(0, 0.6, 5.2);
-        this.playerTurret.add(muzzle);
-
-        // Machine Gun Mount
-        const mg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 1.8), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-        mg.position.set(-0.8, 1.2, 0.8);
-        this.playerTurret.add(mg);
-
-        this.playerGroup.add(this.playerTurret);
-        this.scene.add(this.playerGroup);
-    }
-
-    // --- Spawn Wave of Enemies ---
-    private spawnWave(wave: number) {
-        this.currentWave = wave;
-        const waveBanner = document.getElementById('current-wave-val');
-        if (waveBanner) waveBanner.innerText = wave.toString();
-
-        const tankCount = Math.min(3 + wave, 8);
-        const droneCount = wave > 1 ? Math.min(wave, 5) : 0;
-
-        // Clear remaining
-        this.enemyTanks.forEach(t => this.scene.remove(t.root));
-        this.enemyDrones.forEach(d => this.scene.remove(d.root));
-        this.enemyTanks = [];
-        this.enemyDrones = [];
-
-        // Spawn Enemy Tanks
-        for (let i = 0; i < tankCount; i++) {
-            const angle = (i / tankCount) * Math.PI * 2 + Math.random() * 0.4;
-            const dist = 55 + Math.random() * 60;
-            const x = Math.cos(angle) * dist;
-            const z = Math.sin(angle) * dist;
-            this.createEnemyTank(new THREE.Vector3(x, 0, z));
-        }
-
-        // Spawn Enemy Drones
-        for (let i = 0; i < droneCount; i++) {
-            const angle = (i / droneCount) * Math.PI * 2;
-            const dist = 40 + Math.random() * 40;
-            const x = Math.cos(angle) * dist;
-            const z = Math.sin(angle) * dist;
-            this.createEnemyDrone(new THREE.Vector3(x, 14 + Math.random() * 6, z));
+            const tank = this.createTankEntity(id, name, 'blue', isLocal, !isLocal, new THREE.Vector3(spawnX, 0, spawnZ), 0);
+            this.tanks.set(id, tank);
+            if (isLocal) this.localTank = tank;
         }
 
         this.updateHUD();
     }
 
-    private createEnemyTank(pos: THREE.Vector3) {
+    private createTankEntity(
+        id: string, name: string, team: Team,
+        isLocal: boolean, isBot: boolean,
+        pos: THREE.Vector3, rot: number
+    ): TankEntity {
         const root = new THREE.Group();
         root.position.copy(pos);
+        root.rotation.y = rot;
 
-        // Hull (Red/Crimson Camo)
-        const hullMat = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.6, metalness: 0.4 });
-        const hull = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.4, 6.2), hullMat);
-        hull.position.y = 1.2;
+        const isRed = team === 'red';
+        const hullColor = isRed ? 0x991b1b : 0x1d4ed8;
+        const accentColor = isRed ? 0xff4757 : 0x00f2fe;
+
+        // 1. Armored Hull
+        const hullMat = new THREE.MeshStandardMaterial({ color: hullColor, roughness: 0.65, metalness: 0.35 });
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.5, 6.6), hullMat);
+        hull.position.y = 1.3;
         hull.castShadow = true;
         hull.receiveShadow = true;
         root.add(hull);
 
-        // Treads
-        const treadMat = new THREE.MeshStandardMaterial({ color: 0x18181b });
-        const lt = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 6.8), treadMat);
-        lt.position.set(-2.3, 0.6, 0);
+        // 2. Treads
+        const treadMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.9 });
+        const lt = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 7.2), treadMat);
+        lt.position.set(-2.5, 0.7, 0);
+        lt.castShadow = true;
         root.add(lt);
 
-        const rt = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 6.8), treadMat);
-        rt.position.set(2.3, 0.6, 0);
+        const rt = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 7.2), treadMat);
+        rt.position.set(2.5, 0.7, 0);
+        rt.castShadow = true;
         root.add(rt);
 
-        // Turret
+        // 3. Rotating Turret
         const turret = new THREE.Group();
-        turret.position.set(0, 2.0, 0);
-        const turretDome = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.1, 3.4), hullMat);
-        turretDome.position.set(0, 0.5, -0.3);
+        turret.position.set(0, 2.2, 0);
+
+        const turretDome = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.2, 3.8), hullMat);
+        turretDome.position.set(0, 0.6, -0.4);
         turretDome.castShadow = true;
         turret.add(turretDome);
 
-        // Barrel
-        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x27272a, metalness: 0.8 });
-        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 4.4, 12), barrelMat);
+        // Team Badge on Turret
+        const badgeMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.55, 0.55, 0.2, 16),
+            new THREE.MeshStandardMaterial({ color: accentColor, metalness: 0.8 })
+        );
+        badgeMesh.position.set(0.6, 1.25, -0.5);
+        turret.add(badgeMesh);
+
+        // 4. Barrel
+        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x27272a, metalness: 0.8, roughness: 0.2 });
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 5.0, 16), barrelMat);
         barrel.rotation.x = -Math.PI / 2;
-        barrel.position.set(0, 0.5, 2.5);
+        barrel.position.set(0, 0.6, 2.8);
         barrel.castShadow = true;
         turret.add(barrel);
 
         root.add(turret);
 
-        // 3D Health Bar Billboard above tank
-        const hpBarCanvas = document.createElement('canvas');
-        hpBarCanvas.width = 64;
-        hpBarCanvas.height = 8;
-        const hpTex = new THREE.CanvasTexture(hpBarCanvas);
-        const hpMat = new THREE.SpriteMaterial({ map: hpTex });
-        const hpSprite = new THREE.Sprite(hpMat);
-        hpSprite.scale.set(4, 0.6, 1);
-        hpSprite.position.set(0, 4.2, 0);
-        root.add(hpSprite);
+        // 5. Overhead 3D Canvas Name Tag & Health Bar
+        const nameCanvas = document.createElement('canvas');
+        nameCanvas.width = 256;
+        nameCanvas.height = 64;
+        const nameTexture = new THREE.CanvasTexture(nameCanvas);
+        const nameMat = new THREE.SpriteMaterial({ map: nameTexture, depthTest: false });
+        const nameTagSprite = new THREE.Sprite(nameMat);
+        nameTagSprite.scale.set(6, 1.5, 1);
+        nameTagSprite.position.set(0, 4.8, 0);
+        root.add(nameTagSprite);
+
+        this.updateNameTag(nameCanvas, name, team, 100, 100);
+        nameTexture.needsUpdate = true;
 
         this.scene.add(root);
 
-        this.enemyTanks.push({
+        return {
+            id,
+            name,
+            team,
+            isLocalPlayer: isLocal,
+            isBot,
+            hp: 100,
+            maxHp: 100,
+            pos: pos.clone(),
+            rotation: rot,
+            turretAngle: 0,
+            speed: 0,
             root,
             turret,
             barrel,
-            hp: 60 + this.currentWave * 15,
-            maxHp: 60 + this.currentWave * 15,
-            speed: 6.5 + Math.random() * 2,
-            state: 'patrol',
-            targetPos: new THREE.Vector3(pos.x, 0, pos.z),
+            nameTagSprite,
+            nameTagCanvas: nameCanvas,
             reloadTimer: Math.random() * 2,
-            patrolAngle: Math.random() * Math.PI * 2,
-            isDestroyed: false
-        });
+            respawnTimer: 0,
+            isDead: false
+        };
     }
 
-    private createEnemyDrone(pos: THREE.Vector3) {
-        const root = new THREE.Group();
-        root.position.copy(pos);
+    private updateNameTag(canvas: HTMLCanvasElement, name: string, team: Team, hp: number, maxHp: number) {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, metalness: 0.7, roughness: 0.3 });
-        const body = new THREE.Mesh(new THREE.OctahedronGeometry(1.2), bodyMat);
-        body.castShadow = true;
-        root.add(body);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Glowing Eye Sensor
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), eyeMat);
-        eye.position.set(0, 0, 1.0);
-        root.add(eye);
+        // Background pill
+        ctx.fillStyle = 'rgba(10, 15, 25, 0.82)';
+        ctx.beginPath();
+        ctx.roundRect(10, 6, 236, 52, 10);
+        ctx.fill();
 
-        // Rotors
-        const rotorMat = new THREE.MeshStandardMaterial({ color: 0x27272a });
-        const rotors: THREE.Mesh[] = [];
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 2.2), bodyMat);
-            arm.rotation.y = angle;
-            root.add(arm);
+        // Team border
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = team === 'red' ? '#ff4757' : '#00f2fe';
+        ctx.stroke();
 
-            const blade = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.05, 0.2), rotorMat);
-            blade.position.set(Math.cos(angle) * 1.5, 0.3, Math.sin(angle) * 1.5);
-            root.add(blade);
-            rotors.push(blade);
+        // Text
+        ctx.font = 'bold 20px "Segoe UI", sans-serif';
+        ctx.fillStyle = team === 'red' ? '#ff6b81' : '#70a1ff';
+        ctx.textAlign = 'center';
+        ctx.fillText(name.length > 18 ? name.substring(0, 18) + '..' : name, 128, 30);
+
+        // Health Bar
+        const barW = 210;
+        const barH = 8;
+        const barX = 23;
+        const barY = 40;
+
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(barX, barY, barW, barH);
+
+        const pct = Math.max(0, hp / maxHp);
+        ctx.fillStyle = pct > 0.5 ? '#2ecc71' : pct > 0.25 ? '#ffd32a' : '#ff4757';
+        ctx.fillRect(barX, barY, barW * pct, barH);
+    }
+
+    // --- Multiplayer Supabase Realtime Setup ---
+    private initMultiplayer() {
+        if (!supabase) {
+            console.log("Supabase not active. Running 10v10 War Game in local simulated server mode.");
+            return;
         }
 
-        this.scene.add(root);
+        try {
+            this.channel = supabase.channel('war_battle_server_1', {
+                config: {
+                    broadcast: { self: false },
+                    presence: { key: this.localPlayerId }
+                }
+            });
 
-        this.enemyDrones.push({
-            root,
-            rotors,
-            hp: 35 + this.currentWave * 10,
-            maxHp: 35 + this.currentWave * 10,
-            speed: 12 + Math.random() * 4,
-            orbitAngle: Math.random() * Math.PI * 2,
-            reloadTimer: Math.random() * 2,
-            isDestroyed: false
+            // 1. Presence Sync
+            this.channel
+                .on('presence', { event: 'sync' }, () => {
+                    const state = this.channel.presenceState();
+                    const playersCount = Object.keys(state).length;
+                    const serverEl = document.getElementById('server-players-count');
+                    if (serverEl) {
+                        serverEl.innerText = `${Math.max(1, Math.min(20, playersCount))} / 20 Online (Server #1)`;
+                    }
+                })
+                .on('broadcast', { event: 'player_state' }, ({ payload }: any) => {
+                    this.onRemotePlayerState(payload);
+                })
+                .on('broadcast', { event: 'player_fire' }, ({ payload }: any) => {
+                    this.onRemotePlayerFire(payload);
+                })
+                .on('broadcast', { event: 'tank_killed' }, ({ payload }: any) => {
+                    this.onRemoteKill(payload);
+                })
+                .subscribe(async (status: string) => {
+                    if (status === 'SUBSCRIBED') {
+                        await this.channel.track({
+                            id: this.localPlayerId,
+                            name: this.localUsername,
+                            team: this.localTeam,
+                            onlineAt: new Date().toISOString()
+                        });
+                    }
+                });
+        } catch (e) {
+            console.warn("Realtime connection error:", e);
+        }
+    }
+
+    private onRemotePlayerState(payload: any) {
+        if (!payload || payload.id === this.localPlayerId) return;
+
+        let remoteTank = this.tanks.get(payload.id);
+        if (!remoteTank) {
+            // Replace a bot slot on the matching team
+            const botSlot = Array.from(this.tanks.values()).find(t => t.isBot && t.team === payload.team);
+            if (botSlot) {
+                this.tanks.delete(botSlot.id);
+                this.scene.remove(botSlot.root);
+            }
+            remoteTank = this.createTankEntity(
+                payload.id, payload.name || 'Soldier', payload.team,
+                false, false,
+                new THREE.Vector3(payload.x, 0, payload.z), payload.rot
+            );
+            this.tanks.set(payload.id, remoteTank);
+        }
+
+        remoteTank.pos.set(payload.x, 0, payload.z);
+        remoteTank.root.position.copy(remoteTank.pos);
+        remoteTank.root.rotation.y = payload.rot;
+        remoteTank.turret.rotation.y = payload.turretRot;
+        remoteTank.hp = payload.hp;
+
+        this.updateNameTag(remoteTank.nameTagCanvas, remoteTank.name, remoteTank.team, remoteTank.hp, remoteTank.maxHp);
+        (remoteTank.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
+    }
+
+    private onRemotePlayerFire(payload: any) {
+        if (!payload || payload.shooterId === this.localPlayerId) return;
+
+        const fromPos = new THREE.Vector3(payload.fromX, payload.fromY, payload.fromZ);
+        const dir = new THREE.Vector3(payload.dirX, payload.dirY, payload.dirZ);
+        this.spawnProjectile(payload.shooterId, payload.team, fromPos, dir, payload.isCannon);
+    }
+
+    private onRemoteKill(payload: any) {
+        if (!payload) return;
+        this.addKillFeedEntry(payload.killerName, payload.killerTeam, payload.victimName, payload.victimTeam);
+        if (payload.killerTeam === 'red') this.redScore = Math.max(this.redScore, payload.redScore);
+        else this.blueScore = Math.max(this.blueScore, payload.blueScore);
+        this.updateHUD();
+    }
+
+    private broadcastState() {
+        if (!this.channel || this.localTank.isDead) return;
+
+        const now = performance.now();
+        if (now - this.lastBroadcastTime < 50) return; // 20 updates/sec
+        this.lastBroadcastTime = now;
+
+        this.channel.send({
+            type: 'broadcast',
+            event: 'player_state',
+            payload: {
+                id: this.localPlayerId,
+                name: this.localUsername,
+                team: this.localTeam,
+                x: this.localTank.pos.x,
+                z: this.localTank.pos.z,
+                rot: this.localTank.rotation,
+                turretRot: this.localTank.turretAngle,
+                hp: this.localTank.hp
+            }
         });
     }
 
@@ -628,31 +600,21 @@ class WarGameEngine {
     private setupInputListeners() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-
-            if (e.code === 'Space' || e.code === 'KeyE') {
-                this.fireCannon();
-            }
-            if (e.code === 'KeyR') {
-                this.useRepairKit();
-            }
-            if (e.code === 'KeyF') {
-                this.triggerAirstrike();
-            }
+            if (e.code === 'Space' || e.code === 'KeyE') this.fireCannon();
+            if (e.code === 'KeyR') this.useRepairKit();
+            if (e.code === 'KeyF') this.triggerAirstrike();
             if (e.code === 'Digit1') this.selectWeapon('cannon');
             if (e.code === 'Digit2') this.selectWeapon('mg');
             if (e.code === 'Digit3') this.selectWeapon('airstrike');
             if (e.code === 'Digit4') this.selectWeapon('repair');
         });
 
-        window.addEventListener('keyup', (e) => {
-            this.keys[e.code] = false;
-        });
+        window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
 
         window.addEventListener('mousemove', (e) => {
             this.mouseScreenPos.x = (e.clientX / window.innerWidth) * 2 - 1;
             this.mouseScreenPos.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
-            // Move Crosshair UI
             const crosshair = document.getElementById('crosshair');
             if (crosshair) {
                 crosshair.style.left = `${e.clientX}px`;
@@ -661,11 +623,8 @@ class WarGameEngine {
         });
 
         window.addEventListener('mousedown', (e) => {
-            if (e.button === 0) { // Left Click
-                this.fireCannon();
-            } else if (e.button === 2) { // Right Click
-                this.fireMachineGun();
-            }
+            if (e.button === 0) this.fireCannon();
+            else if (e.button === 2) this.fireMachineGun();
         });
 
         window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -676,337 +635,355 @@ class WarGameEngine {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Mobile Controls setup
-        this.setupMobileControls();
-    }
-
-    private setupMobileControls() {
-        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        const mobileControls = document.getElementById('mobile-controls');
-        if (isTouch && mobileControls) {
-            mobileControls.style.display = 'flex';
-        }
-
+        // Touch setup
         const bindTouch = (id: string, code: string) => {
             const btn = document.getElementById(id);
             if (!btn) return;
             btn.addEventListener('touchstart', (e) => { e.preventDefault(); this.keys[code] = true; });
             btn.addEventListener('touchend', (e) => { e.preventDefault(); this.keys[code] = false; });
         };
-
         bindTouch('m-btn-up', 'KeyW');
         bindTouch('m-btn-down', 'KeyS');
         bindTouch('m-btn-left', 'KeyA');
         bindTouch('m-btn-right', 'KeyD');
 
-        document.getElementById('m-btn-fire')?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.fireCannon();
-        });
-
-        document.getElementById('m-btn-mg')?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.fireMachineGun();
-        });
+        document.getElementById('m-btn-fire')?.addEventListener('touchstart', (e) => { e.preventDefault(); this.fireCannon(); });
+        document.getElementById('m-btn-mg')?.addEventListener('touchstart', (e) => { e.preventDefault(); this.fireMachineGun(); });
     }
 
     private setupUI() {
-        // Sound toggle
         const soundBtn = document.getElementById('btn-sound-toggle');
         if (soundBtn) {
             soundBtn.addEventListener('click', () => {
                 const muted = warAudio.toggleMute();
-                soundBtn.innerText = muted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
+                soundBtn.innerText = muted ? '🔇 Sound' : '🔊 Sound';
                 soundBtn.style.color = muted ? '#e74c3c' : '#ffffff';
             });
         }
 
-        // Help Modal
         const helpModal = document.getElementById('modal-help');
-        document.getElementById('btn-open-help')?.addEventListener('click', () => {
-            if (helpModal) helpModal.style.display = 'flex';
-        });
-        document.getElementById('btn-close-help')?.addEventListener('click', () => {
-            if (helpModal) helpModal.style.display = 'none';
-        });
+        document.getElementById('btn-open-help')?.addEventListener('click', () => { if (helpModal) helpModal.style.display = 'flex'; });
+        document.getElementById('btn-close-help')?.addEventListener('click', () => { if (helpModal) helpModal.style.display = 'none'; });
 
-        // Weapons click selection
         document.getElementById('weapon-cannon')?.addEventListener('click', () => this.selectWeapon('cannon'));
-        document.getElementById('weapon-mg')?.addEventListener('click', () => this.selectWeapon('mg'));
-        document.getElementById('weapon-airstrike')?.addEventListener('click', () => this.selectWeapon('airstrike'));
-        document.getElementById('weapon-repair')?.addEventListener('click', () => this.selectWeapon('repair'));
+        document.getElementById('weapon-mg')?.addEventListener('click', () => { this.selectWeapon('mg'); this.fireMachineGun(); });
+        document.getElementById('weapon-airstrike')?.addEventListener('click', () => { this.selectWeapon('airstrike'); this.triggerAirstrike(); });
+        document.getElementById('weapon-repair')?.addEventListener('click', () => { this.selectWeapon('repair'); this.useRepairKit(); });
 
-        // Restart Game Button
-        document.getElementById('btn-restart-game')?.addEventListener('click', () => {
-            const gameOverModal = document.getElementById('game-over-modal');
-            if (gameOverModal) gameOverModal.style.display = 'none';
-            this.isGameOver = false;
-            this.playerHp = this.maxPlayerHp;
-            this.spawnWave(this.currentWave + 1);
+        document.getElementById('btn-restart-match')?.addEventListener('click', () => {
+            const matchModal = document.getElementById('match-end-modal');
+            if (matchModal) matchModal.style.display = 'none';
+            this.isMatchEnded = false;
+            this.redScore = 0;
+            this.blueScore = 0;
+            this.updateHUD();
         });
     }
 
     private selectWeapon(type: 'cannon' | 'mg' | 'airstrike' | 'repair') {
         document.querySelectorAll('.weapon-card').forEach(c => c.classList.remove('active'));
-        if (type === 'cannon') {
-            document.getElementById('weapon-cannon')?.classList.add('active');
-        } else if (type === 'mg') {
-            document.getElementById('weapon-mg')?.classList.add('active');
-            this.fireMachineGun();
-        } else if (type === 'airstrike') {
-            document.getElementById('weapon-airstrike')?.classList.add('active');
-            this.triggerAirstrike();
-        } else if (type === 'repair') {
-            document.getElementById('weapon-repair')?.classList.add('active');
-            this.useRepairKit();
-        }
+        document.getElementById(`weapon-${type}`)?.classList.add('active');
     }
 
-    // --- Weapons & Combat Actions ---
+    // --- Weapons & Combat ---
     private fireCannon() {
-        if (this.cannonReloadTimer > 0 || this.isGameOver) return;
+        if (this.cannonReloadTimer > 0 || this.localTank.isDead || this.isMatchEnded) return;
         this.cannonReloadTimer = this.cannonReloadTime;
-        this.recoilOffset = 0.6; // Barrel recoil kickback
 
-        // Spawn Projectile Shell
-        const shellGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 8);
-        const shellMat = new THREE.MeshBasicMaterial({ color: 0xffd32a });
-        const shell = new THREE.Mesh(shellGeo, shellMat);
-
-        // Muzzle position in world coordinates
         const muzzlePos = new THREE.Vector3(0, 0.6, 5.2);
-        this.playerTurret.localToWorld(muzzlePos);
-        shell.position.copy(muzzlePos);
+        this.localTank.turret.localToWorld(muzzlePos);
 
-        // Direction towards mouse aim target
         const dir = new THREE.Vector3().subVectors(this.mouseAimTarget, muzzlePos).normalize();
-        dir.y += 0.04; // Slight ballistic arch
-        shell.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        dir.y += 0.03;
 
-        this.scene.add(shell);
-        this.projectiles.push({
-            mesh: shell,
-            velocity: dir.multiplyScalar(95),
-            damage: 60,
-            isPlayer: true,
-            life: 3.0,
-            isCannon: true
-        });
+        this.spawnProjectile(this.localPlayerId, this.localTeam, muzzlePos, dir, true);
 
-        // Muzzle Flash Effect & Audio
-        this.createExplosion(muzzlePos, 0.8, 10, true);
+        // Broadcast Shot to Server
+        if (this.channel) {
+            this.channel.send({
+                type: 'broadcast',
+                event: 'player_fire',
+                payload: {
+                    shooterId: this.localPlayerId,
+                    team: this.localTeam,
+                    fromX: muzzlePos.x, fromY: muzzlePos.y, fromZ: muzzlePos.z,
+                    dirX: dir.x, dirY: dir.y, dirZ: dir.z,
+                    isCannon: true
+                }
+            });
+        }
+
         warAudio.playCannonShot();
     }
 
     private fireMachineGun() {
-        if (this.mgAmmo <= 0 || this.isGameOver) return;
+        if (this.mgAmmo <= 0 || this.localTank.isDead || this.isMatchEnded) return;
         this.mgAmmo--;
 
-        const bulletGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.8, 6);
-        const bulletMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
-        const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-
         const mgPos = new THREE.Vector3(-0.8, 1.2, 1.8);
-        this.playerTurret.localToWorld(mgPos);
-        bullet.position.copy(mgPos);
+        this.localTank.turret.localToWorld(mgPos);
 
-        const spread = (Math.random() - 0.5) * 0.05;
+        const spread = (Math.random() - 0.5) * 0.06;
         const dir = new THREE.Vector3().subVectors(this.mouseAimTarget, mgPos).normalize();
         dir.x += spread;
         dir.z += spread;
-        bullet.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
 
-        this.scene.add(bullet);
-        this.projectiles.push({
-            mesh: bullet,
-            velocity: dir.multiplyScalar(150),
-            damage: 15,
-            isPlayer: true,
-            life: 1.5,
-            isCannon: false
-        });
+        this.spawnProjectile(this.localPlayerId, this.localTeam, mgPos, dir, false);
+
+        if (this.channel) {
+            this.channel.send({
+                type: 'broadcast',
+                event: 'player_fire',
+                payload: {
+                    shooterId: this.localPlayerId,
+                    team: this.localTeam,
+                    fromX: mgPos.x, fromY: mgPos.y, fromZ: mgPos.z,
+                    dirX: dir.x, dirY: dir.y, dirZ: dir.z,
+                    isCannon: false
+                }
+            });
+        }
 
         warAudio.playMachineGun();
         this.updateHUD();
     }
 
+    private spawnProjectile(shooterId: string, team: Team, from: THREE.Vector3, dir: THREE.Vector3, isCannon: boolean) {
+        const geo = isCannon
+            ? new THREE.CylinderGeometry(0.2, 0.2, 1.2, 8)
+            : new THREE.CylinderGeometry(0.08, 0.08, 0.7, 6);
+
+        const color = team === 'red' ? 0xff4757 : 0x00f2fe;
+        const mat = new THREE.MeshBasicMaterial({ color });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(from);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+
+        this.scene.add(mesh);
+        this.projectiles.push({
+            id: 'proj_' + Math.random(),
+            shooterId,
+            team,
+            mesh,
+            velocity: dir.clone().multiplyScalar(isCannon ? 100 : 160),
+            damage: isCannon ? 60 : 15,
+            life: isCannon ? 3.0 : 1.5,
+            isCannon
+        });
+    }
+
     private triggerAirstrike() {
-        if (this.airstrikeCooldown > 0 || this.isGameOver) return;
-        this.airstrikeCooldown = 25; // 25s cooldown
+        if (this.airstrikeCooldown > 0 || this.localTank.isDead || this.isMatchEnded) return;
+        this.airstrikeCooldown = 25;
 
         warAudio.playAirstrike();
 
-        // 4 Delayed Artillery Shells across enemy locations
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 4; i++) {
             setTimeout(() => {
-                const target = this.enemyTanks.find(t => !t.isDestroyed) || this.enemyDrones.find(d => !d.isDestroyed);
+                const enemyTanks = Array.from(this.tanks.values()).filter(t => !t.isDead && t.team !== this.localTeam);
+                const target = enemyTanks[Math.floor(Math.random() * enemyTanks.length)];
                 const impactPos = target
-                    ? target.root.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 10, 0, (Math.random() - 0.5) * 10))
+                    ? target.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8))
                     : this.mouseAimTarget.clone().add(new THREE.Vector3((Math.random() - 0.5) * 20, 0, (Math.random() - 0.5) * 20));
 
-                this.createExplosion(impactPos, 3.5, 35, false);
+                this.createExplosion(impactPos, 3.2, 30);
 
-                // Damage all enemies in blast radius
-                this.enemyTanks.forEach(t => {
-                    if (!t.isDestroyed && t.root.position.distanceTo(impactPos) < 18) {
-                        this.damageEnemyTank(t, 80);
+                // Area damage
+                this.tanks.forEach(t => {
+                    if (!t.isDead && t.team !== this.localTeam && t.pos.distanceTo(impactPos) < 16) {
+                        this.damageTank(t, 75, this.localPlayerId, this.localUsername, this.localTeam);
                     }
                 });
-                this.enemyDrones.forEach(d => {
-                    if (!d.isDestroyed && d.root.position.distanceTo(impactPos) < 22) {
-                        this.damageEnemyDrone(d, 80);
-                    }
-                });
-            }, 800 + i * 250);
+            }, 750 + i * 240);
         }
     }
 
     private useRepairKit() {
-        if (this.repairKits <= 0 || this.playerHp >= this.maxPlayerHp || this.isGameOver) return;
+        if (this.repairKits <= 0 || this.localTank.hp >= this.localTank.maxHp || this.localTank.isDead) return;
         this.repairKits--;
-        this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + 50);
+        this.localTank.hp = Math.min(this.localTank.maxHp, this.localTank.hp + 50);
+        warAudio.playRepair();
+        this.updateNameTag(this.localTank.nameTagCanvas, this.localTank.name, this.localTank.team, this.localTank.hp, this.localTank.maxHp);
+        (this.localTank.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
+        this.updateHUD();
+    }
+
+    // --- Damage, Kill & Respawn ---
+    private damageTank(victim: TankEntity, damage: number, attackerId: string, attackerName: string, attackerTeam: Team) {
+        if (victim.isDead || this.isMatchEnded) return;
+
+        victim.hp = Math.max(0, victim.hp - damage);
+        warAudio.playHit();
+
+        this.updateNameTag(victim.nameTagCanvas, victim.name, victim.team, victim.hp, victim.maxHp);
+        (victim.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
+
+        if (victim.isLocalPlayer) {
+            this.camera.position.x += (Math.random() - 0.5) * 1.5;
+            this.camera.position.y += (Math.random() - 0.5) * 1.5;
+            this.updateHUD();
+        }
+
+        if (victim.hp <= 0) {
+            this.killTank(victim, attackerId, attackerName, attackerTeam);
+        }
+    }
+
+    private killTank(victim: TankEntity, killerId: string, killerName: string, killerTeam: Team) {
+        victim.isDead = true;
+        victim.root.visible = false;
+        this.createExplosion(victim.pos.clone().add(new THREE.Vector3(0, 1.5, 0)), 3.5, 35);
+
+        // Update score
+        if (killerTeam === 'red') this.redScore++;
+        else this.blueScore++;
+
+        // Add to Kill Feed
+        this.addKillFeedEntry(killerName, killerTeam, victim.name, victim.team);
+
+        // Broadcast kill
+        if (this.channel) {
+            this.channel.send({
+                type: 'broadcast',
+                event: 'tank_killed',
+                payload: {
+                    killerId, killerName, killerTeam,
+                    victimId: victim.id, victimName: victim.name, victimTeam: victim.team,
+                    redScore: this.redScore,
+                    blueScore: this.blueScore
+                }
+            });
+        }
+
+        // Rewards
+        if (killerId === this.localPlayerId) {
+            this.myKills++;
+            this.yardsEarned += 50;
+            yardService.addYards(50);
+        }
+
+        this.updateHUD();
+
+        // Check Match Winner
+        if (this.redScore >= this.targetScore || this.blueScore >= this.targetScore) {
+            this.endMatch(this.redScore >= this.targetScore ? 'red' : 'blue');
+            return;
+        }
+
+        // Respawn Timer (5 seconds)
+        victim.respawnTimer = 5.0;
+        if (victim.isLocalPlayer) {
+            this.showRespawnOverlay(5);
+        }
+    }
+
+    private addKillFeedEntry(killerName: string, killerTeam: Team, victimName: string, victimTeam: Team) {
+        const feed = document.getElementById('kill-feed');
+        if (!feed) return;
+
+        const entry = document.createElement('div');
+        entry.className = 'kill-entry';
+        const kColor = killerTeam === 'red' ? '#ff6b81' : '#70a1ff';
+        const vColor = victimTeam === 'red' ? '#ff6b81' : '#70a1ff';
+        entry.innerHTML = `<span style="color: ${kColor};">${killerName}</span> 💥 <span style="color: ${vColor};">${victimName}</span>`;
+
+        feed.appendChild(entry);
+        setTimeout(() => entry.remove(), 5000);
+    }
+
+    private showRespawnOverlay(sec: number) {
+        const overlay = document.getElementById('respawn-overlay');
+        const countEl = document.getElementById('respawn-countdown');
+        if (!overlay || !countEl) return;
+
+        overlay.style.display = 'flex';
+        let left = sec;
+        countEl.innerText = left.toString();
+
+        const timer = setInterval(() => {
+            left--;
+            if (left > 0) {
+                countEl.innerText = left.toString();
+            } else {
+                clearInterval(timer);
+                overlay.style.display = 'none';
+            }
+        }, 1000);
+    }
+
+    private respawnTank(tank: TankEntity) {
+        tank.isDead = false;
+        tank.hp = tank.maxHp;
+        tank.root.visible = true;
+
+        // Base spawn coords
+        const spawnX = (Math.random() - 0.5) * 60;
+        const spawnZ = tank.team === 'red' ? 130 + Math.random() * 10 : -130 - Math.random() * 10;
+        tank.pos.set(spawnX, 0, spawnZ);
+        tank.root.position.copy(tank.pos);
+        tank.rotation = tank.team === 'red' ? Math.PI : 0;
+        tank.root.rotation.y = tank.rotation;
+
+        this.updateNameTag(tank.nameTagCanvas, tank.name, tank.team, tank.hp, tank.maxHp);
+        (tank.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
+
+        this.createExplosion(tank.pos.clone().add(new THREE.Vector3(0, 1, 0)), 1.5, 12);
         warAudio.playRepair();
         this.updateHUD();
     }
 
-    // --- Damage & Destruction ---
-    private damageEnemyTank(tank: EnemyTank, damage: number) {
-        tank.hp -= damage;
-        warAudio.playHit();
+    private endMatch(winningTeam: Team) {
+        this.isMatchEnded = true;
+        const isWin = winningTeam === this.localTeam;
 
-        // Flash red
-        tank.root.traverse(obj => {
-            if ((obj as THREE.Mesh).material) {
-                const mat = (obj as THREE.Mesh).material as THREE.MeshStandardMaterial;
-                if (mat.color) mat.color.setHex(0xffffff);
-            }
-        });
-        setTimeout(() => {
-            tank.root.traverse(obj => {
-                if ((obj as THREE.Mesh).material) {
-                    const mat = (obj as THREE.Mesh).material as THREE.MeshStandardMaterial;
-                    if (mat.color) mat.color.setHex(0x7f1d1d);
-                }
-            });
-        }, 80);
-
-        if (tank.hp <= 0 && !tank.isDestroyed) {
-            tank.isDestroyed = true;
-            this.createExplosion(tank.root.position.clone().add(new THREE.Vector3(0, 1.5, 0)), 3.0, 30, false);
-            this.scene.remove(tank.root);
-
-            this.kills++;
-            this.score += 250;
-            this.awardYards(25);
-            this.checkWaveProgress();
-        }
-    }
-
-    private damageEnemyDrone(drone: EnemyDrone, damage: number) {
-        drone.hp -= damage;
-        warAudio.playHit();
-
-        if (drone.hp <= 0 && !drone.isDestroyed) {
-            drone.isDestroyed = true;
-            this.createExplosion(drone.root.position.clone(), 2.2, 25, false);
-            this.scene.remove(drone.root);
-
-            this.kills++;
-            this.score += 180;
-            this.awardYards(15);
-            this.checkWaveProgress();
-        }
-    }
-
-    private damagePlayer(damage: number) {
-        if (this.isGameOver) return;
-        this.playerHp = Math.max(0, this.playerHp - damage);
-        warAudio.playHit();
-        this.updateHUD();
-
-        // Screen shake
-        this.camera.position.x += (Math.random() - 0.5) * 1.5;
-        this.camera.position.y += (Math.random() - 0.5) * 1.5;
-
-        if (this.playerHp <= 0) {
-            this.isGameOver = true;
-            this.createExplosion(this.playerPosition.clone().add(new THREE.Vector3(0, 1.5, 0)), 4.0, 50, false);
-            this.showGameOver(false);
-        }
-    }
-
-    private awardYards(amount: number) {
-        this.yardsEarned += amount;
-        yardService.addYards(amount);
-        this.updateHUD();
-    }
-
-    private checkWaveProgress() {
-        const remainingTanks = this.enemyTanks.filter(t => !t.isDestroyed).length;
-        const remainingDrones = this.enemyDrones.filter(d => !d.isDestroyed).length;
-        const totalRemaining = remainingTanks + remainingDrones;
-
-        const leftEl = document.getElementById('wave-enemies-left');
-        if (leftEl) leftEl.innerText = `Enemies Remaining: ${totalRemaining}`;
-
-        if (totalRemaining === 0 && !this.isGameOver) {
-            // Wave Clear Victory!
+        if (isWin) {
             warAudio.playVictory();
-            this.awardYards(150);
-            this.score += 1000;
-            this.showGameOver(true);
+            this.yardsEarned += 250;
+            yardService.addYards(250);
         }
-    }
 
-    private showGameOver(victory: boolean) {
-        const modal = document.getElementById('game-over-modal');
-        const icon = document.getElementById('game-over-icon');
-        const title = document.getElementById('game-over-title');
-        const desc = document.getElementById('game-over-desc');
-        const finalScore = document.getElementById('final-score-val');
+        const modal = document.getElementById('match-end-modal');
+        const icon = document.getElementById('match-end-icon');
+        const title = document.getElementById('match-end-title');
+        const desc = document.getElementById('match-end-desc');
         const finalKills = document.getElementById('final-kills-val');
         const finalYards = document.getElementById('final-yards-val');
 
-        if (modal && title && desc && finalScore && finalKills && finalYards) {
+        if (modal && title && desc && finalKills && finalYards) {
             modal.style.display = 'flex';
-            if (victory) {
+            if (isWin) {
                 if (icon) icon.innerText = '🏆';
-                title.innerText = `WAVE ${this.currentWave} VICTORY!`;
+                title.innerText = 'VICTORY!';
                 title.style.color = '#ffd32a';
-                desc.innerText = 'Superb armored warfare tactics! You eliminated all hostile threats.';
+                desc.innerText = `Your ${this.localTeam.toUpperCase()} team reached 30 kills and triumphed over the battlefield!`;
             } else {
-                if (icon) icon.innerText = '💥';
-                title.innerText = 'TANK DESTROYED IN COMBAT';
+                if (icon) icon.innerText = '⚔️';
+                title.innerText = 'DEFEAT!';
                 title.style.color = '#ff4757';
-                desc.innerText = 'Your armor was compromised by hostile artillery. Deploy reinforcements and try again!';
+                desc.innerText = `Enemy ${winningTeam.toUpperCase()} team reached 30 kills first. Re-arm and prepare for revenge!`;
             }
-            finalScore.innerText = this.score.toString();
-            finalKills.innerText = this.kills.toString();
+            finalKills.innerText = this.myKills.toString();
             finalYards.innerText = `+${this.yardsEarned} YARDS`;
         }
     }
 
-    // --- Particle System & Explosions ---
-    private createExplosion(pos: THREE.Vector3, scale = 2.0, count = 20, isMuzzle = false) {
+    // --- Explosions & Particles ---
+    private createExplosion(pos: THREE.Vector3, scale = 2.0, count = 20) {
         warAudio.playExplosion();
 
         for (let i = 0; i < count; i++) {
             const size = (0.3 + Math.random() * 0.8) * scale;
             const geo = new THREE.DodecahedronGeometry(size);
             const mat = new THREE.MeshBasicMaterial({
-                color: isMuzzle ? (Math.random() > 0.5 ? 0xffd32a : 0xff7675) : (Math.random() > 0.4 ? 0xff4757 : 0xffa502),
+                color: Math.random() > 0.4 ? 0xff4757 : 0xffa502,
                 transparent: true,
                 opacity: 0.95
             });
             const pMesh = new THREE.Mesh(geo, mat);
             pMesh.position.copy(pos);
 
-            const speed = (5 + Math.random() * 20) * (isMuzzle ? 0.5 : 1.0);
-            const dir = new THREE.Vector3(
-                (Math.random() - 0.5) * 2,
-                Math.random() * 1.8 + 0.2,
-                (Math.random() - 0.5) * 2
-            ).normalize();
+            const speed = 6 + Math.random() * 22;
+            const dir = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.8 + 0.2, (Math.random() - 0.5) * 2).normalize();
 
             this.scene.add(pMesh);
             this.particles.push({
@@ -1014,34 +991,33 @@ class WarGameEngine {
                 velocity: dir.multiplyScalar(speed),
                 life: 0.6 + Math.random() * 0.5,
                 maxLife: 0.6 + Math.random() * 0.5,
-                colorStart: new THREE.Color(0xffd32a),
-                colorEnd: new THREE.Color(0x2f3640),
                 sizeStart: size,
                 sizeEnd: 0.1
             });
         }
     }
 
-    // --- Update HUD ---
+    // --- Update HUD & Radar ---
     private updateHUD() {
+        const redScoreEl = document.getElementById('team-red-score');
+        const blueScoreEl = document.getElementById('team-blue-score');
         const hpText = document.getElementById('hp-text');
         const hpBar = document.getElementById('hp-bar');
         const reloadText = document.getElementById('reload-text');
         const reloadBar = document.getElementById('reload-bar');
-        const statScore = document.getElementById('stat-score');
         const statKills = document.getElementById('stat-kills');
         const statYards = document.getElementById('stat-yards');
         const ammoMg = document.getElementById('ammo-mg');
         const countRepair = document.getElementById('count-repair');
         const cdAirstrike = document.getElementById('cooldown-airstrike');
 
-        if (hpText && hpBar) {
-            hpText.innerText = `${Math.round(this.playerHp)} / ${this.maxPlayerHp}`;
-            const pct = Math.max(0, (this.playerHp / this.maxPlayerHp) * 100);
+        if (redScoreEl) redScoreEl.innerText = this.redScore.toString();
+        if (blueScoreEl) blueScoreEl.innerText = this.blueScore.toString();
+
+        if (hpText && hpBar && this.localTank) {
+            hpText.innerText = `${Math.round(this.localTank.hp)} / ${this.localTank.maxHp}`;
+            const pct = Math.max(0, (this.localTank.hp / this.localTank.maxHp) * 100);
             hpBar.style.width = `${pct}%`;
-            if (pct < 30) hpBar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
-            else if (pct < 60) hpBar.style.background = 'linear-gradient(90deg, #ffd32a, #f39c12)';
-            else hpBar.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
         }
 
         if (reloadText && reloadBar) {
@@ -1055,271 +1031,182 @@ class WarGameEngine {
             }
         }
 
-        if (statScore) statScore.innerText = this.score.toLocaleString();
-        if (statKills) statKills.innerText = this.kills.toString();
+        if (statKills) statKills.innerText = this.myKills.toString();
         if (statYards) statYards.innerText = yardService.getYards().toLocaleString();
         if (ammoMg) ammoMg.innerText = `${this.mgAmmo} rds`;
         if (countRepair) countRepair.innerText = `${this.repairKits} Left`;
         if (cdAirstrike) cdAirstrike.innerText = this.airstrikeCooldown > 0 ? `${Math.ceil(this.airstrikeCooldown)}s` : 'READY';
     }
 
-    // --- Radar Minimap Drawing ---
     private renderRadar() {
-        if (!this.radarCtx || !this.radarCanvas) return;
+        if (!this.radarCtx || !this.radarCanvas || !this.localTank) return;
         const ctx = this.radarCtx;
         const w = this.radarCanvas.width;
         const h = this.radarCanvas.height;
         const cx = w / 2;
         const cy = h / 2;
-        const scale = 0.42;
+        const scale = 0.35;
 
         ctx.clearRect(0, 0, w, h);
-
-        // Radar background & grid circles
-        ctx.fillStyle = 'rgba(13, 20, 30, 0.85)';
+        ctx.fillStyle = 'rgba(9, 14, 23, 0.9)';
         ctx.fillRect(0, 0, w, h);
 
+        // Circles
         ctx.strokeStyle = 'rgba(0, 242, 254, 0.25)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(cx, cy, 25, 0, Math.PI * 2);
-        ctx.arc(cx, cy, 50, 0, Math.PI * 2);
-        ctx.arc(cx, cy, 75, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 45, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 68, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Crosshairs
-        ctx.beginPath();
-        ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
-        ctx.moveTo(0, cy); ctx.lineTo(w, cy);
-        ctx.stroke();
+        // Tanks
+        this.tanks.forEach(tank => {
+            if (tank.isDead) return;
+            const rx = cx + (tank.pos.x - this.localTank.pos.x) * scale;
+            const ry = cy + (tank.pos.z - this.localTank.pos.z) * scale;
 
-        // Enemy Tanks (Red)
-        ctx.fillStyle = '#ff4757';
-        this.enemyTanks.forEach(t => {
-            if (t.isDestroyed) return;
-            const rx = cx + (t.root.position.x - this.playerPosition.x) * scale;
-            const ry = cy + (t.root.position.z - this.playerPosition.z) * scale;
-            if (rx >= 4 && rx <= w - 4 && ry >= 4 && ry <= h - 4) {
+            if (rx >= 3 && rx <= w - 3 && ry >= 3 && ry <= h - 3) {
+                ctx.fillStyle = tank.team === 'red' ? '#ff4757' : '#00f2fe';
                 ctx.beginPath();
-                ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
+                ctx.arc(rx, ry, tank.isLocalPlayer ? 4.5 : 3.0, 0, Math.PI * 2);
                 ctx.fill();
             }
         });
-
-        // Enemy Drones (Yellow)
-        ctx.fillStyle = '#ffd32a';
-        this.enemyDrones.forEach(d => {
-            if (d.isDestroyed) return;
-            const rx = cx + (d.root.position.x - this.playerPosition.x) * scale;
-            const ry = cy + (d.root.position.z - this.playerPosition.z) * scale;
-            if (rx >= 4 && rx <= w - 4 && ry >= 4 && ry <= h - 4) {
-                ctx.beginPath();
-                ctx.arc(rx, ry, 2.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        });
-
-        // Player (Cyan triangle pointing forward)
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(-this.playerRotation);
-        ctx.fillStyle = '#00f2fe';
-        ctx.beginPath();
-        ctx.moveTo(0, -6);
-        ctx.lineTo(4, 5);
-        ctx.lineTo(-4, 5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
     }
 
-    // --- Main Game Loop ---
+    // --- Main Loop ---
     private animate = () => {
         requestAnimationFrame(this.animate);
         const dt = Math.min(this.clock.getDelta(), 0.1);
 
-        if (!this.isGameOver) {
+        if (!this.isMatchEnded) {
             this.updatePlayer(dt);
-            this.updateEnemies(dt);
+            this.updateBots(dt);
             this.updateProjectiles(dt);
             this.updateParticles(dt);
             this.updateCamera();
             this.renderRadar();
-            this.updateHUD();
+            this.broadcastState();
         }
 
         this.renderer.render(this.scene, this.camera);
     };
 
     private updatePlayer(dt: number) {
-        // Tank Drive Steering
+        if (this.localTank.isDead) {
+            if (this.localTank.respawnTimer > 0) {
+                this.localTank.respawnTimer -= dt;
+                if (this.localTank.respawnTimer <= 0) {
+                    this.respawnTank(this.localTank);
+                }
+            }
+            return;
+        }
+
         const turnRate = 2.2;
         const maxSpeed = 16.0;
         const accel = 35.0;
         const drag = 12.0;
 
-        if (this.keys['KeyA'] || this.keys['ArrowLeft']) {
-            this.playerRotation += turnRate * dt;
-        }
-        if (this.keys['KeyD'] || this.keys['ArrowRight']) {
-            this.playerRotation -= turnRate * dt;
-        }
+        if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.localTank.rotation += turnRate * dt;
+        if (this.keys['KeyD'] || this.keys['ArrowRight']) this.localTank.rotation -= turnRate * dt;
 
         if (this.keys['KeyW'] || this.keys['ArrowUp']) {
-            this.playerSpeed = Math.min(maxSpeed, this.playerSpeed + accel * dt);
+            this.localTank.speed = Math.min(maxSpeed, this.localTank.speed + accel * dt);
         } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
-            this.playerSpeed = Math.max(-maxSpeed * 0.6, this.playerSpeed - accel * dt);
+            this.localTank.speed = Math.max(-maxSpeed * 0.6, this.localTank.speed - accel * dt);
         } else {
-            if (this.playerSpeed > 0) this.playerSpeed = Math.max(0, this.playerSpeed - drag * dt);
-            else if (this.playerSpeed < 0) this.playerSpeed = Math.min(0, this.playerSpeed + drag * dt);
+            if (this.localTank.speed > 0) this.localTank.speed = Math.max(0, this.localTank.speed - drag * dt);
+            else if (this.localTank.speed < 0) this.localTank.speed = Math.min(0, this.localTank.speed + drag * dt);
         }
 
-        const moveStep = this.playerSpeed * dt;
-        const forward = new THREE.Vector3(Math.sin(this.playerRotation), 0, Math.cos(this.playerRotation));
-        this.playerPosition.addScaledVector(forward, moveStep);
+        const forward = new THREE.Vector3(Math.sin(this.localTank.rotation), 0, Math.cos(this.localTank.rotation));
+        this.localTank.pos.addScaledVector(forward, this.localTank.speed * dt);
 
-        // Boundary Clamping
-        this.playerPosition.x = Math.max(-160, Math.min(160, this.playerPosition.x));
-        this.playerPosition.z = Math.max(-160, Math.min(160, this.playerPosition.z));
+        // Clamp
+        this.localTank.pos.x = Math.max(-190, Math.min(190, this.localTank.pos.x));
+        this.localTank.pos.z = Math.max(-190, Math.min(190, this.localTank.pos.z));
 
-        this.playerGroup.position.copy(this.playerPosition);
-        this.playerGroup.rotation.y = this.playerRotation;
+        this.localTank.root.position.copy(this.localTank.pos);
+        this.localTank.root.rotation.y = this.localTank.rotation;
 
-        // Turret Aim Calculation (Raycast to Ground Plane)
+        // Turret Aim
         this.raycaster.setFromCamera(this.mouseScreenPos, this.camera);
-        const intersectPoint = new THREE.Vector3();
-        if (this.raycaster.ray.intersectPlane(this.groundPlane, intersectPoint)) {
-            this.mouseAimTarget.copy(intersectPoint);
-            const localAim = this.playerGroup.worldToLocal(intersectPoint.clone());
-            this.turretTargetAngle = Math.atan2(localAim.x, localAim.z);
+        const intersect = new THREE.Vector3();
+        if (this.raycaster.ray.intersectPlane(this.groundPlane, intersect)) {
+            this.mouseAimTarget.copy(intersect);
+            const localAim = this.localTank.root.worldToLocal(intersect.clone());
+            const targetAngle = Math.atan2(localAim.x, localAim.z);
+
+            let diff = targetAngle - this.localTank.turretAngle;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            this.localTank.turretAngle += diff * Math.min(1.0, 14.0 * dt);
+            this.localTank.turret.rotation.y = this.localTank.turretAngle;
         }
 
-        // Smooth Turret Rotation
-        let diff = this.turretTargetAngle - this.currentTurretAngle;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-        while (diff > Math.PI) diff -= Math.PI * 2;
-        this.currentTurretAngle += diff * Math.min(1.0, 14.0 * dt);
-        this.playerTurret.rotation.y = this.currentTurretAngle;
-
-        // Recoil Recovery
-        if (this.recoilOffset > 0) {
-            this.recoilOffset = Math.max(0, this.recoilOffset - dt * 3.0);
-            this.playerBarrel.position.z = 2.8 - this.recoilOffset;
-        }
-
-        // Reload Timer & Airstrike Cooldown
+        // Timers
         if (this.cannonReloadTimer > 0) this.cannonReloadTimer = Math.max(0, this.cannonReloadTimer - dt);
         if (this.airstrikeCooldown > 0) this.airstrikeCooldown = Math.max(0, this.airstrikeCooldown - dt);
     }
 
-    private updateEnemies(dt: number) {
-        // 1. Enemy Tanks AI
-        this.enemyTanks.forEach(tank => {
-            if (tank.isDestroyed) return;
+    private updateBots(dt: number) {
+        this.tanks.forEach(tank => {
+            if (tank.isLocalPlayer || !tank.isBot) return;
 
-            const distToPlayer = tank.root.position.distanceTo(this.playerPosition);
+            // Handle Respawn
+            if (tank.isDead) {
+                if (tank.respawnTimer > 0) {
+                    tank.respawnTimer -= dt;
+                    if (tank.respawnTimer <= 0) {
+                        this.respawnTank(tank);
+                    }
+                }
+                return;
+            }
 
-            if (distToPlayer < 75) {
-                tank.state = 'attack';
-                // Turn towards player
-                const toPlayer = new THREE.Vector3().subVectors(this.playerPosition, tank.root.position).normalize();
-                const targetRot = Math.atan2(toPlayer.x, toPlayer.z);
+            // Bot AI: Find nearest opposing team tank
+            const enemies = Array.from(this.tanks.values()).filter(e => !e.isDead && e.team !== tank.team);
+            let nearestEnemy: TankEntity | null = null;
+            let minDist = Infinity;
 
-                let curRot = tank.root.rotation.y;
-                let rotDiff = targetRot - curRot;
+            for (let e of enemies) {
+                const d = tank.pos.distanceTo(e.pos);
+                if (d < minDist) {
+                    minDist = d;
+                    nearestEnemy = e;
+                }
+            }
+
+            if (nearestEnemy) {
+                const toEnemy = new THREE.Vector3().subVectors(nearestEnemy.pos, tank.pos).normalize();
+                const desiredRot = Math.atan2(toEnemy.x, toEnemy.z);
+
+                let rotDiff = desiredRot - tank.rotation;
                 while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
                 while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
-                tank.root.rotation.y += rotDiff * Math.min(1.0, 2.0 * dt);
+                tank.rotation += rotDiff * Math.min(1.0, 2.5 * dt);
 
-                // Move closer if far, or strafe
-                if (distToPlayer > 30) {
-                    tank.root.position.addScaledVector(toPlayer, tank.speed * dt);
+                if (minDist > 25) {
+                    tank.speed = 10.0;
+                    tank.pos.addScaledVector(toEnemy, tank.speed * dt);
+                } else {
+                    tank.speed = 0;
                 }
 
-                // Aim Turret at player
-                tank.turret.rotation.y = 0; // Aligned with hull
+                tank.root.position.copy(tank.pos);
+                tank.root.rotation.y = tank.rotation;
 
-                // Shoot at player
+                // Aim and shoot at enemy
                 tank.reloadTimer -= dt;
-                if (tank.reloadTimer <= 0 && distToPlayer < 65) {
-                    tank.reloadTimer = 2.5 + Math.random() * 1.5;
-                    this.fireEnemyShell(tank.root.position.clone().add(new THREE.Vector3(0, 2.5, 0)), this.playerPosition);
+                if (tank.reloadTimer <= 0 && minDist < 80) {
+                    tank.reloadTimer = 2.0 + Math.random() * 1.5;
+                    const fromPos = tank.pos.clone().add(new THREE.Vector3(0, 2.6, 0));
+                    this.spawnProjectile(tank.id, tank.team, fromPos, toEnemy, Math.random() > 0.3);
                 }
-            } else {
-                // Patrol
-                tank.patrolAngle += 0.3 * dt;
-                tank.root.rotation.y = tank.patrolAngle;
-                const forward = new THREE.Vector3(Math.sin(tank.patrolAngle), 0, Math.cos(tank.patrolAngle));
-                tank.root.position.addScaledVector(forward, tank.speed * 0.4 * dt);
             }
         });
-
-        // 2. Enemy Drones AI
-        this.enemyDrones.forEach(drone => {
-            if (drone.isDestroyed) return;
-
-            // Spin Rotors
-            drone.rotors.forEach(r => r.rotation.y += 25 * dt);
-
-            // Orbit around battlefield
-            drone.orbitAngle += (drone.speed / 50) * dt;
-            drone.root.position.x = Math.cos(drone.orbitAngle) * 55;
-            drone.root.position.z = Math.sin(drone.orbitAngle) * 55;
-            drone.root.position.y = 15 + Math.sin(drone.orbitAngle * 3) * 3;
-
-            drone.root.lookAt(this.playerPosition);
-
-            // Drone Laser Fire
-            drone.reloadTimer -= dt;
-            if (drone.reloadTimer <= 0) {
-                drone.reloadTimer = 1.8 + Math.random();
-                this.fireDroneLaser(drone.root.position, this.playerPosition);
-            }
-        });
-    }
-
-    private fireEnemyShell(fromPos: THREE.Vector3, toPos: THREE.Vector3) {
-        const shellGeo = new THREE.CylinderGeometry(0.18, 0.18, 1.0, 6);
-        const shellMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
-        const shell = new THREE.Mesh(shellGeo, shellMat);
-        shell.position.copy(fromPos);
-
-        const dir = new THREE.Vector3().subVectors(toPos, fromPos).normalize();
-        shell.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-
-        this.scene.add(shell);
-        this.projectiles.push({
-            mesh: shell,
-            velocity: dir.multiplyScalar(75),
-            damage: 22,
-            isPlayer: false,
-            life: 3.0,
-            isCannon: true
-        });
-
-        warAudio.playCannonShot();
-    }
-
-    private fireDroneLaser(fromPos: THREE.Vector3, toPos: THREE.Vector3) {
-        const laserGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.5, 4);
-        const laserMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-        const laser = new THREE.Mesh(laserGeo, laserMat);
-        laser.position.copy(fromPos);
-
-        const dir = new THREE.Vector3().subVectors(toPos, fromPos).normalize();
-        laser.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-
-        this.scene.add(laser);
-        this.projectiles.push({
-            mesh: laser,
-            velocity: dir.multiplyScalar(100),
-            damage: 10,
-            isPlayer: false,
-            life: 2.0,
-            isCannon: false
-        });
-
-        warAudio.playMachineGun();
     }
 
     private updateProjectiles(dt: number) {
@@ -1328,48 +1215,31 @@ class WarGameEngine {
             p.life -= dt;
             p.mesh.position.addScaledVector(p.velocity, dt);
 
-            // Ground Collision
             if (p.mesh.position.y <= 0.2 || p.life <= 0) {
-                this.createExplosion(p.mesh.position, p.isCannon ? 1.5 : 0.4, p.isCannon ? 12 : 3, false);
+                this.createExplosion(p.mesh.position, p.isCannon ? 1.4 : 0.4, p.isCannon ? 10 : 3);
                 this.scene.remove(p.mesh);
                 this.projectiles.splice(i, 1);
                 continue;
             }
 
-            // Player Projectile Hit Tests against Enemies
-            if (p.isPlayer) {
-                let hit = false;
-                for (let tank of this.enemyTanks) {
-                    if (!tank.isDestroyed && p.mesh.position.distanceTo(tank.root.position) < 3.2) {
-                        this.damageEnemyTank(tank, p.damage);
+            // Hit test against opposing team tanks
+            let hit = false;
+            for (let [_, tank] of this.tanks) {
+                if (!tank.isDead && tank.team !== p.team) {
+                    if (p.mesh.position.distanceTo(tank.pos.clone().add(new THREE.Vector3(0, 1.5, 0))) < 3.2) {
+                        const shooter = this.tanks.get(p.shooterId);
+                        const shooterName = shooter?.name || 'Soldier';
+                        this.damageTank(tank, p.damage, p.shooterId, shooterName, p.team);
                         hit = true;
                         break;
                     }
                 }
-                if (!hit) {
-                    for (let drone of this.enemyDrones) {
-                        if (!drone.isDestroyed && p.mesh.position.distanceTo(drone.root.position) < 2.5) {
-                            this.damageEnemyDrone(drone, p.damage);
-                            hit = true;
-                            break;
-                        }
-                    }
-                }
-                if (hit) {
-                    this.createExplosion(p.mesh.position, p.isCannon ? 1.8 : 0.6, p.isCannon ? 15 : 4, false);
-                    this.scene.remove(p.mesh);
-                    this.projectiles.splice(i, 1);
-                    continue;
-                }
-            } else {
-                // Enemy Projectile Hit Test against Player
-                if (p.mesh.position.distanceTo(this.playerPosition) < 3.0) {
-                    this.damagePlayer(p.damage);
-                    this.createExplosion(p.mesh.position, 1.5, 12, false);
-                    this.scene.remove(p.mesh);
-                    this.projectiles.splice(i, 1);
-                    continue;
-                }
+            }
+
+            if (hit) {
+                this.createExplosion(p.mesh.position, p.isCannon ? 1.8 : 0.6, p.isCannon ? 14 : 4);
+                this.scene.remove(p.mesh);
+                this.projectiles.splice(i, 1);
             }
         }
     }
@@ -1387,31 +1257,25 @@ class WarGameEngine {
 
             p.mesh.position.addScaledVector(p.velocity, dt);
             const progress = 1.0 - (p.life / p.maxLife);
-            const currentSize = THREE.MathUtils.lerp(p.sizeStart, p.sizeEnd, progress);
-            p.mesh.scale.set(currentSize, currentSize, currentSize);
-
-            const mat = p.mesh.material as THREE.MeshBasicMaterial;
-            if (mat) {
-                mat.opacity = (p.life / p.maxLife) * 0.9;
-                mat.color.lerpColors(p.colorStart, p.colorEnd, progress);
-            }
+            const curSize = THREE.MathUtils.lerp(p.sizeStart, p.sizeEnd, progress);
+            p.mesh.scale.set(curSize, curSize, curSize);
         }
     }
 
     private updateCamera() {
-        // Third-person combat camera tracking tank
-        const camOffset = new THREE.Vector3(
-            -Math.sin(this.playerRotation) * 22,
+        if (!this.localTank) return;
+        const offset = new THREE.Vector3(
+            -Math.sin(this.localTank.rotation) * 22,
             12,
-            -Math.cos(this.playerRotation) * 22
+            -Math.cos(this.localTank.rotation) * 22
         );
-        const desiredCamPos = this.playerPosition.clone().add(camOffset);
-        this.camera.position.lerp(desiredCamPos, 0.1);
-        this.camera.lookAt(this.playerPosition.clone().add(new THREE.Vector3(0, 2.5, 0)));
+        const targetCam = this.localTank.pos.clone().add(offset);
+        this.camera.position.lerp(targetCam, 0.12);
+        this.camera.lookAt(this.localTank.pos.clone().add(new THREE.Vector3(0, 2.5, 0)));
     }
 }
 
-// Initialise Game Engine
+// Initialise
 window.addEventListener('DOMContentLoaded', () => {
     new WarGameEngine();
 });

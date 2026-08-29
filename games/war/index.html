@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Playard Games - War Game (Owner & Admin Exclusive)</title>
+    <title>Playard Games - War Game (10v10 Online Multiplayer)</title>
     <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -14,7 +14,7 @@
             height: 100%;
             overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0d1117;
+            background: #090d14;
             color: #d2dae2;
         }
 
@@ -34,7 +34,7 @@
             left: 0;
             right: 0;
             height: 64px;
-            background: rgba(13, 17, 23, 0.92);
+            background: rgba(9, 13, 20, 0.94);
             backdrop-filter: blur(12px);
             border-bottom: 2px solid rgba(255, 71, 87, 0.4);
             display: flex;
@@ -42,13 +42,13 @@
             align-items: center;
             padding: 0 20px;
             z-index: 100;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
         }
 
         .hud-left, .hud-center, .hud-right {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
 
         .logo-badge {
@@ -73,23 +73,82 @@
             letter-spacing: 0.5px;
         }
 
+        .server-status-badge {
+            background: rgba(0, 242, 254, 0.12);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            color: #00f2fe;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            background: #2ecc71;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #2ecc71;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
         .hud-stat-box {
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 20px;
-            padding: 5px 14px;
+            padding: 5px 12px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+        }
+
+        /* 10v10 Team Scoreboard */
+        .team-scoreboard {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 4px 14px;
+            border-radius: 24px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        .team-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 900;
+            font-size: 1rem;
+            padding: 3px 10px;
+            border-radius: 16px;
+        }
+        .team-red {
+            background: rgba(231, 76, 60, 0.25);
+            border: 1px solid #e74c3c;
+            color: #ff6b81;
+        }
+        .team-blue {
+            background: rgba(52, 152, 219, 0.25);
+            border: 1px solid #3498db;
+            color: #70a1ff;
         }
 
         .btn-action {
             background: #1f2937;
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 8px 14px;
+            padding: 8px 12px;
             border-radius: 8px;
             font-weight: 700;
             cursor: pointer;
@@ -98,7 +157,7 @@
             gap: 6px;
             transition: all 0.2s ease;
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         .btn-action:hover {
             background: #374151;
@@ -116,7 +175,6 @@
             height: 36px;
             pointer-events: none;
             z-index: 50;
-            transition: transform 0.05s ease-out;
         }
         #crosshair::before, #crosshair::after {
             content: '';
@@ -135,6 +193,74 @@
             top: 6px; left: 6px; width: 22px; height: 22px;
             border: 1.5px dashed rgba(255, 211, 42, 0.7);
             border-radius: 50%;
+        }
+
+        /* Kill Feed (Top Left) */
+        #kill-feed {
+            position: absolute;
+            top: 75px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 80;
+            pointer-events: none;
+            max-width: 320px;
+        }
+        .kill-entry {
+            background: rgba(13, 17, 23, 0.82);
+            border-left: 3px solid #ffd32a;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            animation: fadeInOut 5s forwards;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-15px); }
+            10% { opacity: 1; transform: translateX(0); }
+            80% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-8px); }
+        }
+
+        /* Radar Minimap (Top Right) */
+        #radar-container {
+            position: absolute;
+            top: 75px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(13, 17, 23, 0.88);
+            border: 2px solid rgba(0, 242, 254, 0.4);
+            border-radius: 50%;
+            overflow: hidden;
+            z-index: 80;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
+        }
+        #radar-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Player Team Assignment Badge */
+        #player-team-badge {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 6px 18px;
+            z-index: 80;
+            font-weight: 900;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
         /* Bottom Gameplay HUD */
@@ -156,19 +282,19 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 71, 87, 0.3);
             border-radius: 14px;
-            padding: 16px 20px;
+            padding: 14px 18px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            min-width: 280px;
+            gap: 8px;
+            min-width: 260px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.6);
         }
 
         .bar-container {
             width: 100%;
-            height: 14px;
+            height: 12px;
             background: rgba(255,255,255,0.1);
-            border-radius: 7px;
+            border-radius: 6px;
             overflow: hidden;
             position: relative;
         }
@@ -191,9 +317,9 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 242, 254, 0.3);
             border-radius: 14px;
-            padding: 16px 20px;
+            padding: 14px 18px;
             display: flex;
-            gap: 15px;
+            gap: 12px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.6);
         }
 
@@ -201,9 +327,9 @@
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 10px;
-            padding: 10px 14px;
+            padding: 8px 12px;
             text-align: center;
-            min-width: 90px;
+            min-width: 85px;
             transition: all 0.2s ease;
             cursor: pointer;
         }
@@ -211,46 +337,6 @@
             border-color: #ffd32a;
             background: rgba(255, 211, 42, 0.15);
             box-shadow: 0 0 12px rgba(255, 211, 42, 0.3);
-        }
-
-        /* Radar Minimap */
-        #radar-container {
-            position: absolute;
-            top: 80px;
-            right: 20px;
-            width: 160px;
-            height: 160px;
-            background: rgba(13, 17, 23, 0.85);
-            border: 2px solid rgba(0, 242, 254, 0.4);
-            border-radius: 50%;
-            overflow: hidden;
-            z-index: 80;
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
-        }
-        #radar-canvas {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Mission / Wave Banner */
-        #wave-banner {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(13, 17, 23, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 211, 42, 0.4);
-            border-radius: 25px;
-            padding: 8px 24px;
-            z-index: 80;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-weight: 800;
-            font-size: 1rem;
-            color: #ffd32a;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
         /* Mobile Controls */
@@ -266,13 +352,13 @@
         }
         .touch-btn {
             pointer-events: auto;
-            width: 65px;
-            height: 65px;
+            width: 60px;
+            height: 60px;
             background: rgba(255,255,255,0.15);
             border: 2px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             color: white;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -283,6 +369,30 @@
             background: rgba(255, 71, 87, 0.4);
             border-color: #ff4757;
             transform: scale(0.95);
+        }
+
+        /* Respawn Overlay */
+        #respawn-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(10px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1500;
+            text-align: center;
+        }
+        .respawn-card {
+            background: #1e293b;
+            border: 2px solid #ff4757;
+            border-radius: 20px;
+            padding: 30px 40px;
+            box-shadow: 0 0 40px rgba(255, 71, 87, 0.4);
         }
 
         /* VIP Restricted Modal Overlay */
@@ -320,15 +430,15 @@
             margin-bottom: 25px;
         }
 
-        /* Victory / Game Over Overlay */
-        #game-over-modal {
+        /* Match Victory / Defeat Modal */
+        #match-end-modal {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(12px);
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -336,12 +446,12 @@
             z-index: 2000;
             padding: 20px;
         }
-        .game-over-card {
+        .match-end-card {
             background: #1e293b;
             border: 2px solid #ffd32a;
             border-radius: 20px;
             padding: 35px 30px;
-            max-width: 460px;
+            max-width: 480px;
             width: 100%;
             text-align: center;
             box-shadow: 0 0 40px rgba(0,0,0,0.8);
@@ -385,49 +495,64 @@
 </head>
 <body>
 
-    <!-- Top HUD Navigation -->
+    <!-- Top HUD Navigation & 10v10 Scoreboard -->
     <header class="top-hud">
         <div class="hud-left">
             <a href="../../index.html" class="logo-badge">
-                <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 32px; height: 32px;">
+                <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 30px; height: 30px;">
                 <span>WAR GAME</span>
             </a>
-            <span class="vip-tag">👑 OWNER & ADMIN</span>
+            <div class="server-status-badge">
+                <span class="online-dot"></span>
+                <span id="server-players-count">20 / 20 Online (Server #1)</span>
+            </div>
         </div>
 
         <div class="hud-center">
-            <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.3);">
-                <span>🎖️ Score:</span>
-                <span id="stat-score" style="color: #ffd32a;">0</span>
-            </div>
-            <div class="hud-stat-box" style="border-color: rgba(255, 71, 87, 0.3);">
-                <span>💥 Kills:</span>
-                <span id="stat-kills" style="color: #ff4757;">0</span>
-            </div>
-            <div class="hud-stat-box" style="border-color: rgba(0, 242, 254, 0.3);">
-                <span id="hud-yard-icon">💎</span>
-                <span id="stat-yards" style="color: #00f2fe;">0</span>
-                <span style="font-size: 0.75rem; color: #718093;">YARDS</span>
+            <!-- 10v10 Team Scoreboard -->
+            <div class="team-scoreboard">
+                <div class="team-pill team-red">
+                    <span>🔴 RED</span>
+                    <span id="team-red-score">0</span>
+                    <span style="font-size: 0.72rem; color: #a4b0be;">(10)</span>
+                </div>
+                <div style="font-size: 0.8rem; font-weight: 800; color: #ffd32a;">VS</div>
+                <div class="team-pill team-blue">
+                    <span>🔵 BLUE</span>
+                    <span id="team-blue-score">0</span>
+                    <span style="font-size: 0.72rem; color: #a4b0be;">(10)</span>
+                </div>
             </div>
         </div>
 
         <div class="hud-right">
-            <button id="btn-sound-toggle" class="btn-action">🔊 Sound: ON</button>
+            <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.3);">
+                <span>💥 Kills:</span>
+                <span id="stat-kills" style="color: #ffd32a;">0</span>
+            </div>
+            <div class="hud-stat-box" style="border-color: rgba(0, 242, 254, 0.3);">
+                <span id="hud-yard-icon">💎</span>
+                <span id="stat-yards" style="color: #00f2fe;">0</span>
+                <span style="font-size: 0.75rem; color: #718093;">Y</span>
+            </div>
+            <button id="btn-sound-toggle" class="btn-action">🔊 Sound</button>
             <button id="btn-open-help" class="btn-action">❓ Controls</button>
             <a href="../../index.html" class="btn-action" style="border-color: #ff4757; color: #ff6b81;">🏠 Hub</a>
         </div>
     </header>
 
-    <!-- Wave & Mission Tracker -->
-    <div id="wave-banner">
-        <span>⚔️ WAVE <span id="current-wave-val">1</span></span>
-        <span style="color: #a4b0be;">|</span>
-        <span id="wave-enemies-left">Enemies Remaining: 4</span>
+    <!-- Kill Feed (Top Left) -->
+    <div id="kill-feed"></div>
+
+    <!-- Player Team Badge (Top Center below header) -->
+    <div id="player-team-badge" class="team-blue" style="border: 1px solid #3498db;">
+        <span>YOUR TEAM:</span>
+        <strong id="player-team-name">🔵 BLUE TEAM (South Base)</strong>
     </div>
 
     <!-- Radar Minimap (Top Right) -->
     <div id="radar-container">
-        <canvas id="radar-canvas" width="160" height="160"></canvas>
+        <canvas id="radar-canvas" width="150" height="150"></canvas>
     </div>
 
     <!-- Tactical Crosshair -->
@@ -443,7 +568,7 @@
         <!-- Tank Health & Armor -->
         <div class="tank-status-panel">
             <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 0.85rem;">
-                <span style="color: #2ecc71;">🛡️ HULL ARMOR (HP)</span>
+                <span style="color: #2ecc71;">🛡️ TANK ARMOR (HP)</span>
                 <span id="hp-text" style="color: #2ecc71;">100 / 100</span>
             </div>
             <div class="bar-container">
@@ -462,34 +587,34 @@
         <!-- Weapons Arsenal Selection -->
         <div class="weapons-panel">
             <div class="weapon-card active" id="weapon-cannon" title="Main Heavy Cannon (LMB / Space)">
-                <div style="font-size: 1.4rem;">🚀</div>
-                <div style="font-weight: 800; font-size: 0.85rem; color: #ffd32a;">CANNON</div>
-                <div style="font-size: 0.75rem; color: #a4b0be;" id="ammo-cannon">∞ Shells</div>
+                <div style="font-size: 1.3rem;">🚀</div>
+                <div style="font-weight: 800; font-size: 0.8rem; color: #ffd32a;">CANNON</div>
+                <div style="font-size: 0.72rem; color: #a4b0be;" id="ammo-cannon">∞ Shells</div>
             </div>
 
             <div class="weapon-card" id="weapon-mg" title="Rapid Machine Gun (RMB / Shift)">
-                <div style="font-size: 1.4rem;">🔫</div>
-                <div style="font-weight: 800; font-size: 0.85rem; color: #00f2fe;">MG-42</div>
-                <div style="font-size: 0.75rem; color: #a4b0be;" id="ammo-mg">500 rds</div>
+                <div style="font-size: 1.3rem;">🔫</div>
+                <div style="font-weight: 800; font-size: 0.8rem; color: #00f2fe;">MG-42</div>
+                <div style="font-size: 0.72rem; color: #a4b0be;" id="ammo-mg">500 rds</div>
             </div>
 
-            <div class="weapon-card" id="weapon-airstrike" title="Tactical Strike (Key F)">
-                <div style="font-size: 1.4rem;">✈️</div>
-                <div style="font-weight: 800; font-size: 0.85rem; color: #ff4757;">AIRSTRIKE</div>
-                <div style="font-size: 0.75rem; color: #ff6b81;" id="cooldown-airstrike">READY</div>
+            <div class="weapon-card" id="weapon-airstrike" title="Tactical Airstrike (Key F)">
+                <div style="font-size: 1.3rem;">✈️</div>
+                <div style="font-weight: 800; font-size: 0.8rem; color: #ff4757;">AIRSTRIKE</div>
+                <div style="font-size: 0.72rem; color: #ff6b81;" id="cooldown-airstrike">READY</div>
             </div>
 
             <div class="weapon-card" id="weapon-repair" title="Field Repair Kit (Key R)">
-                <div style="font-size: 1.4rem;">🔧</div>
-                <div style="font-weight: 800; font-size: 0.85rem; color: #2ecc71;">REPAIR</div>
-                <div style="font-size: 0.75rem; color: #2ecc71;" id="count-repair">3 Left</div>
+                <div style="font-size: 1.3rem;">🔧</div>
+                <div style="font-weight: 800; font-size: 0.8rem; color: #2ecc71;">REPAIR</div>
+                <div style="font-size: 0.72rem; color: #2ecc71;" id="count-repair">3 Left</div>
             </div>
         </div>
     </div>
 
     <!-- Mobile Virtual Controls -->
     <div id="mobile-controls">
-        <div style="display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 6px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 55px); grid-template-rows: repeat(3, 55px); gap: 6px;">
             <div></div>
             <button class="touch-btn" id="m-btn-up">⬆️</button>
             <div></div>
@@ -498,9 +623,19 @@
             <button class="touch-btn" id="m-btn-right">➡️</button>
         </div>
 
-        <div style="display: flex; gap: 15px; align-items: center;">
-            <button class="touch-btn" id="m-btn-mg" style="background: rgba(0, 242, 254, 0.25); border-color: #00f2fe; width: 70px; height: 70px;">🔫</button>
-            <button class="touch-btn" id="m-btn-fire" style="background: rgba(255, 71, 87, 0.35); border-color: #ff4757; width: 85px; height: 85px; font-size: 1.8rem;">💥</button>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="touch-btn" id="m-btn-mg" style="background: rgba(0, 242, 254, 0.25); border-color: #00f2fe; width: 65px; height: 65px;">🔫</button>
+            <button class="touch-btn" id="m-btn-fire" style="background: rgba(255, 71, 87, 0.35); border-color: #ff4757; width: 78px; height: 78px; font-size: 1.6rem;">💥</button>
+        </div>
+    </div>
+
+    <!-- Respawn Overlay -->
+    <div id="respawn-overlay">
+        <div class="respawn-card">
+            <div style="font-size: 3.2rem; margin-bottom: 10px;">💥</div>
+            <h2 style="color: #ff4757; margin: 0 0 8px 0; font-size: 1.6rem;">TANK DESTROYED!</h2>
+            <p style="color: #a4b0be; margin-bottom: 15px;">Respawning at Team Base with fresh armor in:</p>
+            <div id="respawn-countdown" style="font-size: 3rem; font-weight: 900; color: #ffd32a; font-family: monospace;">5</div>
         </div>
     </div>
 
@@ -522,28 +657,24 @@
         </div>
     </div>
 
-    <!-- Game Over / Victory Modal -->
-    <div id="game-over-modal">
-        <div class="game-over-card">
-            <div id="game-over-icon" style="font-size: 3.5rem; margin-bottom: 10px;">🏆</div>
-            <h2 id="game-over-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 10px 0;">MISSION ACCOMPLISHED!</h2>
-            <p id="game-over-desc" style="color: #a4b0be; margin-bottom: 20px;">You eliminated all enemy tanks and fortified the battlezone!</p>
+    <!-- Match End Modal (Victory / Defeat) -->
+    <div id="match-end-modal">
+        <div class="match-end-card">
+            <div id="match-end-icon" style="font-size: 3.5rem; margin-bottom: 10px;">🏆</div>
+            <h2 id="match-end-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 10px 0;">VICTORY!</h2>
+            <p id="match-end-desc" style="color: #a4b0be; margin-bottom: 20px;">Your team reached 30 kills and secured the battlezone!</p>
             <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; margin-bottom: 25px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span>Final Score:</span>
-                    <strong id="final-score-val" style="color: #ffd32a;">0</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span>Tanks & Drones Destroyed:</span>
-                    <strong id="final-kills-val" style="color: #ff4757;">0</strong>
+                    <span>Your Kills:</span>
+                    <strong id="final-kills-val" style="color: #ffd32a;">0</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between; color: #00f2fe; font-weight: 800;">
                     <span>Yards Earned:</span>
-                    <strong id="final-yards-val">+150 YARDS</strong>
+                    <strong id="final-yards-val">+250 YARDS</strong>
                 </div>
             </div>
             <div style="display: flex; gap: 12px; justify-content: center;">
-                <button id="btn-restart-game" class="btn-action" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #111; font-weight: 800; border: none; padding: 12px 24px;">🔄 Next Battle</button>
+                <button id="btn-restart-match" class="btn-action" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #111; font-weight: 800; border: none; padding: 12px 24px;">🔄 Next Battle</button>
                 <a href="../../index.html" class="btn-action" style="padding: 12px 20px;">🏠 Hub</a>
             </div>
         </div>
@@ -553,15 +684,16 @@
     <div id="modal-help">
         <div class="modal-card">
             <button class="modal-close" id="btn-close-help">&times;</button>
-            <h2 style="color: #ffd32a; margin-top: 0;">🎮 War Game Controls</h2>
+            <h2 style="color: #ffd32a; margin-top: 0;">🎮 War Game 10v10 Controls</h2>
             <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.95rem; color: #e2e8f0;">
-                <div><strong style="color: #00f2fe;">W / A / S / D (või Nooleklahvid):</strong> Tanki juhtimine (sõit ette/taha ja pööramine)</div>
+                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Tanki juhtimine (sõit ette/taha ja pööramine)</div>
                 <div><strong style="color: #ffd32a;">Hiir:</strong> Tanki torni ja sihturi suunamine (360 kraadi)</div>
-                <div><strong style="color: #ff4757;">Vasak hiireklõps / Tühik:</strong> Kahurist tulistamine (raske mürsk)</div>
-                <div><strong style="color: #00f2fe;">Parem hiireklõps / Shift:</strong> Kuulipilduja valang (kiirtuli)</div>
-                <div><strong style="color: #ff6b81;">Klahv F:</strong> Taktikaline õhulöök (Airstrike pommitus)</div>
-                <div><strong style="color: #2ecc71;">Klahv R:</strong> Remondikomplekt (Taastab 50% eludest)</div>
-                <div><strong style="color: #a4b0be;">1, 2, 3, 4:</strong> Relva vahetamine</div>
+                <div><strong style="color: #ff4757;">Vasak hiireklõps / Tühik:</strong> Kahurist tulistamine</div>
+                <div><strong style="color: #00f2fe;">Parem hiireklõps / Shift:</strong> Kuulipilduja valang</div>
+                <div><strong style="color: #ff6b81;">Klahv F:</strong> Taktikaline õhulöök (Airstrike)</div>
+                <div><strong style="color: #2ecc71;">Klahv R:</strong> Remondikomplekt (+50% HP)</div>
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+                <div style="color: #ffd32a;"><strong>🎯 Eesmärk:</strong> Sinu tiim (10 mängijat) peab hävitama vastastiimi (10 mängijat). Esimene tiim 30 tapmiseni võidab lahingu!</div>
             </div>
         </div>
     </div>
