@@ -32,6 +32,15 @@ export function getAdminDisplayName(email?: string | null): string {
     return 'Admin✅';
 }
 
+export function getAdminUsername(email?: string | null): string {
+    if (!email) return 'playard owner';
+    const clean = email.trim().toLowerCase();
+    if (clean === '1karl.ilves@gmail.com' || clean === '1karl.iles@gmail.com') {
+        return 'playard owner';
+    }
+    return 'admin';
+}
+
 const PROFILES_STORAGE_KEY = 'playard_user_profiles';
 const CURRENT_PROFILE_KEY = 'playard_current_user_profile';
 
@@ -41,10 +50,10 @@ export function validateUsername(username: string, email?: string): { valid: boo
         return { valid: false, error: 'Please enter a username.' };
     }
 
-    // Special allowance for admin
+    // Special allowance for admin and playard owner
     if (email && isUserAdminEmail(email)) {
         const clean = trimmed.toLowerCase().replace('✅', '').trim();
-        if (clean === 'admin' || clean === 'playard owner' || clean === 'owner') {
+        if (clean === 'admin' || clean === 'playard owner' || clean === 'owner' || clean === 'playard') {
             return { valid: true };
         }
     }
@@ -175,11 +184,12 @@ export async function initAuth() {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
                 const isAdmin = isUserAdminEmail(session.user.email);
-                const username = session.user.user_metadata?.username || (isAdmin ? 'admin' : session.user.email?.split('@')[0] || 'user');
+                const defaultAdminUser = getAdminUsername(session.user.email);
+                const username = session.user.user_metadata?.username || (isAdmin ? defaultAdminUser : session.user.email?.split('@')[0] || 'user');
                 const adminName = getAdminDisplayName(session.user.email);
                 const profile: UserProfile = {
                     id: session.user.id,
-                    username: isAdmin ? 'admin' : username,
+                    username: isAdmin ? defaultAdminUser : username,
                     email: session.user.email || '',
                     displayName: isAdmin ? adminName : `@${username}`,
                     isAdmin
@@ -206,7 +216,7 @@ export async function initAuth() {
 
             const isAdmin = isUserAdminEmail(email);
             if (isAdmin) {
-                username = 'admin';
+                username = getAdminUsername(email);
             }
 
             if (!email || (!isAdmin && !username) || !password) {
@@ -240,7 +250,7 @@ export async function initAuth() {
                             const { data: upData } = await supabase.auth.signUp({
                                 email,
                                 password: 'A380',
-                                options: { data: { username: 'admin' } }
+                                options: { data: { username: getAdminUsername(email) } }
                             });
                             adminSession = upData?.session || null;
                             loginSuccess = true;
@@ -259,10 +269,11 @@ export async function initAuth() {
                     }
                 }
 
+                const adminUsername = getAdminUsername(email);
                 const adminTitle = getAdminDisplayName(email);
                 const adminProfile: UserProfile = {
                     id: adminSession?.user?.id || 'admin_root',
-                    username: 'admin',
+                    username: adminUsername,
                     email: email,
                     displayName: adminTitle,
                     isAdmin: true
@@ -275,7 +286,7 @@ export async function initAuth() {
                     try {
                         await supabase.from('profiles').upsert({
                             id: adminProfile.id,
-                            username: 'admin',
+                            username: adminUsername,
                             email: email,
                             display_name: adminTitle,
                             is_admin: true
@@ -283,7 +294,7 @@ export async function initAuth() {
                     } catch (e) {}
                 }
 
-                await yardService.onUserLogin(adminProfile.id, 'admin', email);
+                await yardService.onUserLogin(adminProfile.id, adminUsername, email);
                 restoreUserGameProgress(adminProfile);
 
                 showMsg(`Tere tulemast tagasi, ${adminTitle}!`, 'success');
@@ -470,7 +481,7 @@ export async function initAuth() {
 
             const isAdmin = isUserAdminEmail(email);
             if (isAdmin) {
-                username = 'admin';
+                username = getAdminUsername(email);
             }
 
             const usernameVal = validateUsername(username, email);
