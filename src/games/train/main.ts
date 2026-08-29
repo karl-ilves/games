@@ -3,7 +3,7 @@ import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
 import { yardService, YardData } from '../../shared/yardService';
 import { trainAudio } from './audio';
 
-console.log("3D Rongimäng (Train Simulator) Initialized.");
+console.log("3D Rongimäng (Train Simulator - 10 Trains Depot) Initialized.");
 
 // --- Access Gating Check (Playard Owner Only) ---
 function checkOwnerAccess(): boolean {
@@ -22,6 +22,204 @@ function checkOwnerAccess(): boolean {
         }
     }
     return true;
+}
+
+// --- 10 Trains Catalog & Definitions ---
+export interface TrainDef {
+    id: string;
+    name: string;
+    icon: string;
+    price: number; // Yards (0 for default, 100 for cheapest purchasable, up to 2000)
+    maxSpeed: number; // km/h
+    acceleration: number; // multiplier
+    passengers: number;
+    description: string;
+    special: string;
+    style: 'classic_steam' | 'commuter_emu' | 'heavy_diesel' | 'forest_shunter' | 'bullet_shinkansen' | 'royal_orient' | 'alpine_climber' | 'cyber_bullet' | 'armored_dreadnought' | 'hyperloop_plasma';
+    locoColor: number;
+    trimColor: number;
+    coachColor: number;
+}
+
+export const TRAINS_CATALOG: TrainDef[] = [
+    {
+        id: 'classic_steam',
+        name: 'Klassikaline Auruvedur',
+        icon: '🚂',
+        price: 0, // Tasuta / Default
+        maxSpeed: 90,
+        acceleration: 1.0,
+        passengers: 24,
+        description: 'Autentne 19. sajandi auruvedur messingist viimistluse ja suitsukorstnaga.',
+        special: 'Autentne auruheli & suitsupahvakud',
+        style: 'classic_steam',
+        locoColor: 0x1c2430,
+        trimColor: 0xf59e0b,
+        coachColor: 0xb91c1c
+    },
+    {
+        id: 'commuter_emu',
+        name: 'Linnalähirong Express',
+        icon: '🚆',
+        price: 100, // Kõige odavam ostetav rong (100 Y)
+        maxSpeed: 120,
+        acceleration: 1.4,
+        passengers: 42,
+        description: 'Kaasaegne voolujooneline reisirong kiireks linnalähiliikluseks.',
+        special: 'Kiire kiirendus & LED esituled',
+        style: 'commuter_emu',
+        locoColor: 0xdc2626,
+        trimColor: 0xffffff,
+        coachColor: 0xe2e8f0
+    },
+    {
+        id: 'heavy_diesel',
+        name: 'Raske Diisel Kaubavedur',
+        icon: '🚜',
+        price: 150,
+        maxSpeed: 105,
+        acceleration: 1.2,
+        passengers: 30,
+        description: 'Võimas Ameerika stiilis tööstuslik diiselvedur topeltpasunatega.',
+        special: 'Suur veojõud ja kaubaveo võimekus',
+        style: 'heavy_diesel',
+        locoColor: 0xd97706,
+        trimColor: 0x111827,
+        coachColor: 0x78350f
+    },
+    {
+        id: 'forest_shunter',
+        name: 'Metsa Auru-Tankvedur',
+        icon: '🌲',
+        price: 250,
+        maxSpeed: 95,
+        acceleration: 1.3,
+        passengers: 28,
+        description: 'Kompaktne metsaveo tankvedur, spetsialiseerunud kurvilistele radadele.',
+        special: 'Suur stabiilsus mägikurvides',
+        style: 'forest_shunter',
+        locoColor: 0x166534,
+        trimColor: 0xfacc15,
+        coachColor: 0x14532d
+    },
+    {
+        id: 'bullet_shinkansen',
+        name: 'Super-Kiirrong Shinkansen',
+        icon: '⚡',
+        price: 400,
+        maxSpeed: 180,
+        acceleration: 1.9,
+        passengers: 55,
+        description: 'Jaapani tipptehnoloogiline terava aerodünaamilise ninaga kuulirong.',
+        special: 'Aerodünaamiline nina & katuse pantograaf',
+        style: 'bullet_shinkansen',
+        locoColor: 0xf8fafc,
+        trimColor: 0x0284c7,
+        coachColor: 0x0369a1
+    },
+    {
+        id: 'royal_orient',
+        name: 'Kuldne Kuninglik Express',
+        icon: '🌌',
+        price: 600,
+        maxSpeed: 140,
+        acceleration: 1.5,
+        passengers: 48,
+        description: 'Kuninglik luksusrong safiirsinise kere ja puhta kulla ornamentidega.',
+        special: 'Luksuslik interjöör & kuldsed laternad',
+        style: 'royal_orient',
+        locoColor: 0x1e3a8a,
+        trimColor: 0xfbbf24,
+        coachColor: 0x172554
+    },
+    {
+        id: 'alpine_climber',
+        name: 'Alpi Mägironija',
+        icon: '🏔️',
+        price: 800,
+        maxSpeed: 130,
+        acceleration: 1.7,
+        passengers: 36,
+        description: 'Šveitsi mägiraudtee rong panoraamklaasist vaatevagunitega.',
+        special: 'Panoraamvaade & mäeronimise võimekus',
+        style: 'alpine_climber',
+        locoColor: 0x991b1b,
+        trimColor: 0xe2e8f0,
+        coachColor: 0x38bdf8
+    },
+    {
+        id: 'cyber_bullet',
+        name: 'Cyber-Kiirrong 2099',
+        icon: '⚡',
+        price: 1000,
+        maxSpeed: 220,
+        acceleration: 2.3,
+        passengers: 60,
+        description: 'Tulevikulinna mattmust küberrong neoonsinise põhjavalgustusega.',
+        special: 'Neoonvalgustus & küberkiirus',
+        style: 'cyber_bullet',
+        locoColor: 0x09090b,
+        trimColor: 0x00f2fe,
+        coachColor: 0x18181b
+    },
+    {
+        id: 'armored_dreadnought',
+        name: 'Soomustatud Lahinguvedur',
+        icon: '🌋',
+        price: 1500,
+        maxSpeed: 115,
+        acceleration: 1.2,
+        passengers: 50,
+        description: 'Raskete terasplaatide, kaitserauast sahkade ja topeltkorstnatega kindlus.',
+        special: 'Raske soomus & võimas prožektor',
+        style: 'armored_dreadnought',
+        locoColor: 0x3f3f46,
+        trimColor: 0xb91c1c,
+        coachColor: 0x27272a
+    },
+    {
+        id: 'hyperloop_plasma',
+        name: 'Hyperloop Plasma Rong 3000',
+        icon: '🚀',
+        price: 2000,
+        maxSpeed: 260,
+        acceleration: 2.9,
+        passengers: 80,
+        description: 'Eksperimentaalne plasma-mootoriga monorail rong ulmelise kiirusega.',
+        special: 'Lillakas plasmajoa efekt & tippkiirus 260 km/h',
+        style: 'hyperloop_plasma',
+        locoColor: 0x581c87,
+        trimColor: 0xd946ef,
+        coachColor: 0x3b0764
+    }
+];
+
+// --- Unlocked Trains Storage & Active Train ---
+const UNLOCKED_TRAINS_KEY = 'playard_unlocked_trains';
+const ACTIVE_TRAIN_KEY = 'playard_active_train';
+
+function getUnlockedTrainIds(): string[] {
+    try {
+        const raw = localStorage.getItem(UNLOCKED_TRAINS_KEY);
+        if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list) && list.includes('classic_steam')) return list;
+        }
+    } catch (e) {}
+    return ['classic_steam'];
+}
+
+function saveUnlockedTrainIds(list: string[]) {
+    localStorage.setItem(UNLOCKED_TRAINS_KEY, JSON.stringify(list));
+}
+
+function getActiveTrainDef(): TrainDef {
+    const activeId = localStorage.getItem(ACTIVE_TRAIN_KEY) || 'classic_steam';
+    return TRAINS_CATALOG.find(t => t.id === activeId) || TRAINS_CATALOG[0];
+}
+
+function setActiveTrainId(id: string) {
+    localStorage.setItem(ACTIVE_TRAIN_KEY, id);
 }
 
 // --- Stations Definition ---
@@ -43,7 +241,7 @@ const STATIONS: Station[] = [
         trackU: 0.05,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 28,
-        yardReward: 40
+        yardReward: 50 // +50 Yards per stop
     },
     {
         id: 'forest',
@@ -51,8 +249,8 @@ const STATIONS: Station[] = [
         description: 'Metsa vahel asuv puidust reisijate ooteplatvorm',
         trackU: 0.32,
         worldPos: new THREE.Vector3(0, 0, 0),
-        passengersWaiting: 16,
-        yardReward: 45
+        passengersWaiting: 20,
+        yardReward: 50 // +50 Yards per stop
     },
     {
         id: 'harbor',
@@ -60,8 +258,8 @@ const STATIONS: Station[] = [
         description: 'Sadamadepoo jõe ääres kaubakraanade ja konteineritega',
         trackU: 0.58,
         worldPos: new THREE.Vector3(0, 0, 0),
-        passengersWaiting: 22,
-        yardReward: 50
+        passengersWaiting: 25,
+        yardReward: 50 // +50 Yards per stop
     },
     {
         id: 'mountain',
@@ -69,8 +267,8 @@ const STATIONS: Station[] = [
         description: 'Mägine jaam vaatega orule ja tunnelitele',
         trackU: 0.82,
         worldPos: new THREE.Vector3(0, 0, 0),
-        passengersWaiting: 30,
-        yardReward: 60
+        passengersWaiting: 35,
+        yardReward: 50 // +50 Yards per stop
     }
 ];
 
@@ -95,12 +293,13 @@ let camera: THREE.PerspectiveCamera;
 let renderer: THREE.WebGLRenderer;
 
 // Train motion state
+let activeTrain: TrainDef = getActiveTrainDef();
 let trainU = 0.05; // 0..1 along track spline
 let trainSpeed = 0; // km/h
 let targetThrottle = 0; // 0..100%
 let currentThrottle = 0;
 let isBraking = false;
-let totalPassengers = 24;
+let totalPassengers = activeTrain.passengers;
 let currentStationIndex = 1; // start heading to station 1 (Männimetsa)
 let isBoarding = false;
 let boardingTimer = 0;
@@ -174,9 +373,13 @@ function initEngine() {
     buildRailwayTracks();
     buildTerrainAndScenery();
     buildStations();
-    buildTrain();
+    
+    // Build initial train matching active train definition
+    rebuildTrainModel(activeTrain);
+
     setupControls();
     setupHUD();
+    renderDepotModal();
 
     // Check access
     checkOwnerAccess();
@@ -208,9 +411,146 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+// --- Train Depot & Store Modal Rendering ---
+function renderDepotModal() {
+    const gridContainer = document.getElementById('trains-grid-container');
+    const depotYardVal = document.getElementById('depot-yard-val');
+    if (!gridContainer) return;
+
+    const unlockedIds = getUnlockedTrainIds();
+    const currentActiveId = activeTrain.id;
+    const currentYards = yardService.getYards();
+
+    if (depotYardVal) {
+        depotYardVal.innerText = currentYards.toLocaleString();
+    }
+
+    gridContainer.innerHTML = '';
+
+    TRAINS_CATALOG.forEach(train => {
+        const isUnlocked = unlockedIds.includes(train.id);
+        const isActive = train.id === currentActiveId;
+
+        const card = document.createElement('div');
+        card.className = `train-card ${isActive ? 'active-train' : (!isUnlocked ? 'locked-train' : '')}`;
+
+        let priceBadgeHtml = '';
+        if (train.price === 0) {
+            priceBadgeHtml = `<span class="train-price-badge badge-free">TASUTA</span>`;
+        } else {
+            priceBadgeHtml = `<span class="train-price-badge badge-price">${train.price} YARDS 💎</span>`;
+        }
+
+        let actionBtnHtml = '';
+        if (isActive) {
+            actionBtnHtml = `<button class="btn-train-select btn-selected" disabled>✅ VALITUD</button>`;
+        } else if (isUnlocked) {
+            actionBtnHtml = `<button class="btn-train-select btn-choose" data-train-id="${train.id}">▶️ VALI RONG</button>`;
+        } else {
+            actionBtnHtml = `<button class="btn-train-select btn-buy" data-train-id="${train.id}" data-price="${train.price}">💎 OSTA (${train.price} Y)</button>`;
+        }
+
+        card.innerHTML = `
+            <div class="train-icon">${train.icon}</div>
+            <div class="train-title">${train.name}</div>
+            ${priceBadgeHtml}
+            <div style="width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px; margin-bottom: 8px;">
+                <div class="train-stat-row">
+                    <span>Tippkiirus:</span>
+                    <strong>${train.maxSpeed} km/h</strong>
+                </div>
+                <div class="train-stat-row">
+                    <span>Kiirendus:</span>
+                    <strong>${train.acceleration}x</strong>
+                </div>
+                <div class="train-stat-row">
+                    <span>Mahutavus:</span>
+                    <strong>${train.passengers} reisijat</strong>
+                </div>
+            </div>
+            <div style="font-size: 0.72rem; color: #64748b; line-height: 1.3; min-height: 28px; margin-bottom: 4px;">
+                ${train.description}
+            </div>
+            ${actionBtnHtml}
+        `;
+
+        gridContainer.appendChild(card);
+    });
+
+    // Attach Click Handlers
+    gridContainer.querySelectorAll('.btn-choose').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget as HTMLButtonElement;
+            const trainId = target.dataset.trainId;
+            if (!trainId) return;
+            selectTrain(trainId);
+        });
+    });
+
+    gridContainer.querySelectorAll('.btn-buy').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget as HTMLButtonElement;
+            const trainId = target.dataset.trainId;
+            const price = parseInt(target.dataset.price || '0', 10);
+            if (!trainId) return;
+            buyTrain(trainId, price);
+        });
+    });
+}
+
+function showDepotMessage(text: string, isError: boolean = false) {
+    const msgEl = document.getElementById('depot-msg');
+    if (!msgEl) return;
+    msgEl.innerText = text;
+    msgEl.style.display = 'block';
+    msgEl.style.background = isError ? 'rgba(239, 68, 68, 0.2)' : 'rgba(46, 204, 113, 0.2)';
+    msgEl.style.border = isError ? '1px solid #ef4444' : '1px solid #2ecc71';
+    msgEl.style.color = isError ? '#f87171' : '#4ade80';
+
+    setTimeout(() => {
+        if (msgEl) msgEl.style.display = 'none';
+    }, 4000);
+}
+
+function buyTrain(trainId: string, price: number) {
+    const train = TRAINS_CATALOG.find(t => t.id === trainId);
+    if (!train) return;
+
+    const success = yardService.spendYards(price, train.id, `Rongimäng: Osteti ${train.name}`);
+    if (!success) {
+        showDepotMessage(`Sul pole piisavalt Yarde! Vajad ${price} Yardi (praegu ${yardService.getYards()} Y). Teeni jaamapeatustega +50 Y!`, true);
+        return;
+    }
+
+    const unlocked = getUnlockedTrainIds();
+    if (!unlocked.includes(trainId)) {
+        unlocked.push(trainId);
+        saveUnlockedTrainIds(unlocked);
+    }
+
+    trainAudio.playCoinReward();
+    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}"! Rong on nüüd valitud.`, false);
+    selectTrain(trainId);
+}
+
+function selectTrain(trainId: string) {
+    const train = TRAINS_CATALOG.find(t => t.id === trainId);
+    if (!train) return;
+
+    activeTrain = train;
+    setActiveTrainId(trainId);
+    totalPassengers = train.passengers;
+
+    // Rebuild 3D model
+    rebuildTrainModel(activeTrain);
+
+    // Update HUD
+    updateHUD();
+    renderDepotModal();
+}
+
 // --- Build Railway Track Splines & 3D Rails ---
 function buildRailwayTracks() {
-    // 1. Main Scenic Circuit Track (Curves through plains, over river, through forests)
     const mainPoints = [
         new THREE.Vector3(0, 0, 0),        // Central Station
         new THREE.Vector3(120, 0, 40),
@@ -228,24 +568,22 @@ function buildRailwayTracks() {
 
     mainTrackCurve = new THREE.CatmullRomCurve3(mainPoints, true, 'centripetal', 0.2);
 
-    // Mountain Branch Loop (alternative route on track switch)
     const mountainPoints = [
         new THREE.Vector3(-360, 16, 200),
         new THREE.Vector3(-420, 28, 140),
-        new THREE.Vector3(-380, 36, -20),  // High peak viaduct
+        new THREE.Vector3(-380, 36, -20),
         new THREE.Vector3(-260, 26, -50),
         new THREE.Vector3(-140, 10, -40),
     ];
     mountainTrackCurve = new THREE.CatmullRomCurve3(mountainPoints, false, 'centripetal', 0.2);
 
-    // Render 3D Rail Track Geometry along Main Curve
     renderTrackMesh(mainTrackCurve, 600);
     renderTrackMesh(mountainTrackCurve, 150);
 }
 
 function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
-    const railGauge = 2.4; // width between 2 rails
-    const sleeperSpacing = 3.0; // meters between ties
+    const railGauge = 2.4;
+    const sleeperSpacing = 3.0;
     const sleeperMat = new THREE.MeshStandardMaterial({ color: 0x4a3525, roughness: 0.9 });
     const railMat = new THREE.MeshStandardMaterial({ color: 0x8c97a8, metalness: 0.85, roughness: 0.3 });
     const ballastMat = new THREE.MeshStandardMaterial({ color: 0x4f4a43, roughness: 0.95 });
@@ -253,7 +591,6 @@ function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
     const totalLength = curve.getLength();
     const numSleepers = Math.floor(totalLength / sleeperSpacing);
 
-    // 1. Wooden Sleepers (Ties)
     const sleeperGeo = new THREE.BoxGeometry(3.6, 0.25, 0.7);
     const sleeperInstanced = new THREE.InstancedMesh(sleeperGeo, sleeperMat, numSleepers);
     sleeperInstanced.castShadow = true;
@@ -264,9 +601,6 @@ function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
         const u = (i / numSleepers);
         const pos = curve.getPointAt(u);
         const tangent = curve.getTangentAt(u).normalize();
-        const up = new THREE.Vector3(0, 1, 0);
-        const normal = new THREE.Vector3().crossVectors(tangent, up).normalize();
-
         dummy.position.copy(pos);
         dummy.position.y += 0.1;
         dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
@@ -276,15 +610,13 @@ function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
     sleeperInstanced.instanceMatrix.needsUpdate = true;
     scene.add(sleeperInstanced);
 
-    // 2. Twin Steel Rails (Left & Right)
     [-railGauge / 2, railGauge / 2].forEach(offset => {
         const railPoints: THREE.Vector3[] = [];
         for (let i = 0; i <= samples; i++) {
             const u = i / samples;
             const p = curve.getPointAt(u);
             const tangent = curve.getTangentAt(u).normalize();
-            const up = new THREE.Vector3(0, 1, 0);
-            const normal = new THREE.Vector3().crossVectors(tangent, up).normalize();
+            const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
             const railPoint = p.clone().add(normal.clone().multiplyScalar(offset));
             railPoint.y += 0.35;
             railPoints.push(railPoint);
@@ -297,7 +629,6 @@ function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
         scene.add(railMesh);
     });
 
-    // 3. Ballast Gravel Base (Gravel bed under tracks)
     const ballastGeo = new THREE.TubeGeometry(curve, samples, 2.3, 5, curve.closed);
     const ballastMesh = new THREE.Mesh(ballastGeo, ballastMat);
     ballastMesh.scale.set(1, 0.25, 1);
@@ -307,7 +638,6 @@ function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
 
 // --- Build Scenic Terrain, River, Trees, Rocks, Bridges & Tunnels ---
 function buildTerrainAndScenery() {
-    // 1. Terrain Ground
     const groundGeo = new THREE.PlaneGeometry(1600, 1600, 64, 64);
     const groundMat = new THREE.MeshStandardMaterial({
         color: 0x3d7e35,
@@ -315,12 +645,10 @@ function buildTerrainAndScenery() {
         flatShading: true
     });
 
-    // Add subtle procedural terrain waves
     const posAttr = groundGeo.attributes.position;
     for (let i = 0; i < posAttr.count; i++) {
         const x = posAttr.getX(i);
         const y = posAttr.getY(i);
-        // Mountains to the North-West
         if (x < -150 && y < 100) {
             const dist = Math.sqrt((x + 300) ** 2 + (y - 50) ** 2);
             posAttr.setZ(i, Math.max(0, 45 - dist * 0.15 + Math.sin(x * 0.03) * 6));
@@ -336,7 +664,7 @@ function buildTerrainAndScenery() {
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
 
-    // 2. Scenic Blue River
+    // River
     const riverGeo = new THREE.PlaneGeometry(140, 1200);
     const riverMat = new THREE.MeshStandardMaterial({
         color: 0x1d70b8,
@@ -352,7 +680,7 @@ function buildTerrainAndScenery() {
     river.receiveShadow = true;
     scene.add(river);
 
-    // 3. Railway Bridge across river
+    // Bridge
     const bridgeGroup = new THREE.Group();
     const pillarMat = new THREE.MeshStandardMaterial({ color: 0x6e757d, roughness: 0.8 });
     for (let x = -40; x <= 40; x += 20) {
@@ -361,7 +689,6 @@ function buildTerrainAndScenery() {
         pillar.castShadow = true;
         bridgeGroup.add(pillar);
     }
-    // Truss structure on sides of bridge
     const trussMat = new THREE.MeshStandardMaterial({ color: 0x9b2226, metalness: 0.7, roughness: 0.4 });
     const trussL = new THREE.Mesh(new THREE.BoxGeometry(90, 4, 0.4), trussMat);
     trussL.position.set(0, 2.5, 462.5);
@@ -370,16 +697,13 @@ function buildTerrainAndScenery() {
     bridgeGroup.add(trussL, trussR);
     scene.add(bridgeGroup);
 
-    // 4. Mountain Tunnel
-    const tunnelGroup = new THREE.Group();
+    // Tunnel
     const tunnelArchMat = new THREE.MeshStandardMaterial({ color: 0x343a40, roughness: 0.95 });
     const tunnelArch = new THREE.Mesh(new THREE.TorusGeometry(8, 2.5, 8, 16, Math.PI), tunnelArchMat);
     tunnelArch.position.set(-140, 10, -40);
     tunnelArch.rotation.y = Math.PI / 3;
-    tunnelGroup.add(tunnelArch);
-    scene.add(tunnelGroup);
+    scene.add(tunnelArch);
 
-    // 5. Procedural Forests (Pine & Birch Trees)
     buildPineForest();
 }
 
@@ -395,7 +719,6 @@ function buildPineForest() {
         const isBirch = Math.random() > 0.65;
         const tree = new THREE.Group();
 
-        // Random location (keep away from center 0,0)
         let x = (Math.random() - 0.5) * 1100;
         let z = (Math.random() - 0.5) * 1100;
         if (Math.abs(x) < 50 && Math.abs(z) < 50) x += 80;
@@ -404,7 +727,6 @@ function buildPineForest() {
         tree.scale.set(scale, scale, scale);
         tree.position.set(x, 0, z);
 
-        // Trunk
         const trunkHeight = isBirch ? 6 : 4;
         const trunkGeo = new THREE.CylinderGeometry(0.3, 0.5, trunkHeight, 6);
         const trunk = new THREE.Mesh(trunkGeo, trunkMat);
@@ -412,7 +734,6 @@ function buildPineForest() {
         trunk.castShadow = true;
         tree.add(trunk);
 
-        // Foliage Cones
         if (!isBirch) {
             for (let c = 0; c < 3; c++) {
                 const cone = new THREE.Mesh(new THREE.ConeGeometry(2.8 - c * 0.6, 3.5, 6), foliageMat);
@@ -432,18 +753,16 @@ function buildPineForest() {
     scene.add(treeGroup);
 }
 
-// --- Build 4 Detailed Stations with Platforms & Passengers ---
+// --- Build 4 Detailed Stations ---
 function buildStations() {
     STATIONS.forEach(st => {
         st.worldPos = mainTrackCurve.getPointAt(st.trackU);
         const tangent = mainTrackCurve.getTangentAt(st.trackU).normalize();
-        const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
 
         const stationGroup = new THREE.Group();
         stationGroup.position.copy(st.worldPos);
         stationGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
 
-        // Platform (raised concrete slab alongside tracks)
         const platformMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 });
         const platform = new THREE.Mesh(new THREE.BoxGeometry(8, 0.8, 45), platformMat);
         platform.position.set(5.5, 0.4, 0);
@@ -451,13 +770,11 @@ function buildStations() {
         platform.castShadow = true;
         stationGroup.add(platform);
 
-        // Platform yellow stopping safety line
         const lineMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4 });
         const line = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 45), lineMat);
         line.position.set(2.2, 0.81, 0);
         stationGroup.add(line);
 
-        // Station Signboard with Station Name
         const signPostMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
         const post1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4), signPostMat);
         post1.position.set(6, 2, -10);
@@ -465,19 +782,16 @@ function buildStations() {
         post2.position.set(6, 2, 10);
         stationGroup.add(post1, post2);
 
-        // Station Building / Canopy
         const roofMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.3, roughness: 0.4 });
         const canopy = new THREE.Mesh(new THREE.BoxGeometry(7, 0.4, 25), roofMat);
         canopy.position.set(6, 4.5, 0);
         canopy.castShadow = true;
         stationGroup.add(canopy);
 
-        // Station Lamps with warm glowing lights
         const lamp = new THREE.PointLight(0xfff3bf, 1.2, 25);
         lamp.position.set(6, 4, 0);
         stationGroup.add(lamp);
 
-        // 3D Animated Passengers on Platform waiting
         const passengerMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.7 });
         for (let p = 0; p < 6; p++) {
             const person = new THREE.Group();
@@ -489,115 +803,154 @@ function buildStations() {
             stationGroup.add(person);
         }
 
-        // Railway Signal (Red/Green glowing lamp)
-        const signalGroup = new THREE.Group();
-        signalGroup.position.set(-3.5, 0, 24);
-        const signalPole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 5), signPostMat);
-        signalPole.position.y = 2.5;
-        const signalBox = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.6), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-        signalBox.position.y = 4.2;
-        const signalGreen = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
-        signalGreen.position.set(0, 4.4, -0.3);
-        signalGroup.add(signalPole, signalBox, signalGreen);
-        stationGroup.add(signalGroup);
-
         scene.add(stationGroup);
     });
 }
 
-// --- Build Complete 3D Steam Locomotive & Wagons Train ---
-function buildTrain() {
+// --- Dynamic 3D Train Builder for 10 Train Types ---
+function rebuildTrainModel(trainDef: TrainDef) {
+    if (trainGroup) {
+        scene.remove(trainGroup);
+    }
+    wheels = [];
+    connectingRods = [];
+
     trainGroup = new THREE.Group();
 
     // 1. Locomotive Engine
-    locomotiveGroup = new THREE.Group();
-    const ironMat = new THREE.MeshStandardMaterial({ color: 0x1c2430, metalness: 0.75, roughness: 0.35 });
-    const brassMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.2 });
-    const redTrimMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.5 });
-    const windowMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfef08a, emissiveIntensity: 0.6, roughness: 0.1 });
+    locomotiveGroup = buildLocomotiveEngine(trainDef);
+    trainGroup.add(locomotiveGroup);
 
-    // Boiler Main Cylinder
-    const boilerGeo = new THREE.CylinderGeometry(1.3, 1.3, 6.5, 16);
-    const boiler = new THREE.Mesh(boilerGeo, ironMat);
-    boiler.rotation.x = Math.PI / 2;
-    boiler.position.set(0, 2.4, 0.5);
-    boiler.castShadow = true;
-    locomotiveGroup.add(boiler);
+    // 2. Tender / Power Car
+    tenderGroup = buildTenderOrPowerUnit(trainDef);
+    trainGroup.add(tenderGroup);
 
-    // Brass bands around boiler
-    [-1.5, 0.5, 2.5].forEach(z => {
-        const band = new THREE.Mesh(new THREE.TorusGeometry(1.33, 0.06, 8, 24), brassMat);
-        band.position.set(0, 2.4, z);
-        locomotiveGroup.add(band);
-    });
+    // 3. Passenger Carriage 1
+    carriage1Group = buildPassengerCarriage(trainDef, 1);
+    trainGroup.add(carriage1Group);
 
-    // Boiler Front Cap
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(1.3, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), brassMat);
-    cap.rotation.x = -Math.PI / 2;
-    cap.position.set(0, 2.4, 3.75);
-    locomotiveGroup.add(cap);
+    // 4. Passenger Carriage 2
+    carriage2Group = buildPassengerCarriage(trainDef, 2);
+    trainGroup.add(carriage2Group);
 
-    // Cowcatcher (Front Plow)
-    const cowcatcher = new THREE.Mesh(new THREE.ConeGeometry(1.8, 1.6, 4), redTrimMat);
-    cowcatcher.rotation.x = Math.PI / 2;
-    cowcatcher.rotation.y = Math.PI / 4;
-    cowcatcher.position.set(0, 0.8, 4.8);
-    locomotiveGroup.add(cowcatcher);
+    // 5. Cargo / Rear Unit
+    cargoGroup = buildRearOrCargoWagon(trainDef);
+    trainGroup.add(cargoGroup);
 
-    // Smokestack (Chimney with steam exhaust point)
-    const smokestack = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.35, 1.6, 12), ironMat);
-    smokestack.position.set(0, 4.3, 2.8);
-    smokestack.castShadow = true;
-    locomotiveGroup.add(smokestack);
+    scene.add(trainGroup);
+}
 
-    const smokestackCrown = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.08, 8, 16), brassMat);
-    smokestackCrown.rotation.x = Math.PI / 2;
-    smokestackCrown.position.set(0, 5.1, 2.8);
-    locomotiveGroup.add(smokestackCrown);
+function buildLocomotiveEngine(def: TrainDef): THREE.Group {
+    const group = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color: def.locoColor, metalness: 0.6, roughness: 0.35 });
+    const trimMat = new THREE.MeshStandardMaterial({ color: def.trimColor, metalness: 0.8, roughness: 0.2 });
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfef08a, emissiveIntensity: 0.8, roughness: 0.1 });
 
-    // Steam Dome & Brass Whistle
-    const steamDome = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 8), brassMat);
-    steamDome.position.set(0, 3.8, 0.8);
-    const whistle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8), brassMat);
-    whistle.position.set(0.4, 4.0, -0.2);
-    locomotiveGroup.add(steamDome, whistle);
+    if (def.style === 'bullet_shinkansen' || def.style === 'cyber_bullet' || def.style === 'hyperloop_plasma') {
+        // Futuristic Streamlined Bullet Train Nose
+        const noseGeo = new THREE.ConeGeometry(1.6, 6.0, 16);
+        const nose = new THREE.Mesh(noseGeo, bodyMat);
+        nose.rotation.x = Math.PI / 2;
+        nose.position.set(0, 2.0, 4.0);
+        nose.scale.set(1.0, 1.0, 0.75);
+        group.add(nose);
 
-    // Driver's Cabin (Cab)
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.2, 3.2), ironMat);
-    cab.position.set(0, 3.0, -3.0);
-    cab.castShadow = true;
-    locomotiveGroup.add(cab);
+        const cabBody = new THREE.Mesh(new THREE.BoxGeometry(3.0, 2.6, 7.0), bodyMat);
+        cabBody.position.set(0, 2.0, -1.0);
+        cabBody.castShadow = true;
+        group.add(cabBody);
 
-    // Cab Roof Curved
-    const cabRoof = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 3.4, 12, 1, false, 0, Math.PI), redTrimMat);
-    cabRoof.rotation.z = Math.PI / 2;
-    cabRoof.position.set(0, 4.6, -3.0);
-    locomotiveGroup.add(cabRoof);
+        // Cyber Glow Trim Strip
+        const stripMat = new THREE.MeshBasicMaterial({ color: def.trimColor });
+        const stripL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 8.5), stripMat);
+        stripL.position.set(-1.52, 1.5, 0.5);
+        const stripR = stripL.clone();
+        stripR.position.set(1.52, 1.5, 0.5);
+        group.add(stripL, stripR);
 
-    // Cab Windows (Glowing yellow interior)
-    const winL = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.9), windowMat);
-    winL.position.set(-1.52, 3.4, -3.0);
-    winL.rotation.y = -Math.PI / 2;
-    const winR = winL.clone();
-    winR.position.set(1.52, 3.4, -3.0);
-    winR.rotation.y = Math.PI / 2;
-    const winF = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), windowMat);
-    winF.position.set(0.7, 3.4, -1.38);
-    locomotiveGroup.add(winL, winR, winF);
+        // Windshield Glass
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.8 });
+        const glass = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.9, 1.8), glassMat);
+        glass.position.set(0, 2.8, 3.2);
+        glass.rotation.x = -Math.PI / 8;
+        group.add(glass);
 
-    // Bright Headlight & SpotLight Beam
-    const lampHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 0.8, 12), brassMat);
+    } else if (def.style === 'commuter_emu' || def.style === 'alpine_climber') {
+        // Modern Commuter / Mountain Railcar
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.0, 7.5), bodyMat);
+        cab.position.set(0, 2.3, 0);
+        cab.castShadow = true;
+        group.add(cab);
+
+        const frontNose = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 3.0, 12, 1, false, 0, Math.PI), trimMat);
+        frontNose.rotation.z = Math.PI / 2;
+        frontNose.position.set(0, 2.3, 3.75);
+        group.add(frontNose);
+
+        const winFront = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.2), windowMat);
+        winFront.position.set(0, 2.8, 3.8);
+        group.add(winFront);
+
+    } else if (def.style === 'heavy_diesel') {
+        // Heavy American Boxy Industrial Diesel
+        const hood = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.5, 6.0), bodyMat);
+        hood.position.set(0, 2.2, 1.0);
+        hood.castShadow = true;
+
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.4, 2.8), bodyMat);
+        cab.position.set(0, 2.6, -3.0);
+        cab.castShadow = true;
+        group.add(hood, cab);
+
+        const horn = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.3, 1.0, 8), trimMat);
+        horn.rotation.x = Math.PI / 2;
+        horn.position.set(0.6, 4.4, -2.5);
+        group.add(horn);
+
+    } else {
+        // Classic Steam / Royal Orient / Armored Dreadnought Boiler
+        const boilerGeo = new THREE.CylinderGeometry(1.3, 1.3, 6.5, 16);
+        const boiler = new THREE.Mesh(boilerGeo, bodyMat);
+        boiler.rotation.x = Math.PI / 2;
+        boiler.position.set(0, 2.4, 0.5);
+        boiler.castShadow = true;
+        group.add(boiler);
+
+        [-1.5, 0.5, 2.5].forEach(z => {
+            const band = new THREE.Mesh(new THREE.TorusGeometry(1.33, 0.06, 8, 24), trimMat);
+            band.position.set(0, 2.4, z);
+            group.add(band);
+        });
+
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(1.3, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), trimMat);
+        cap.rotation.x = -Math.PI / 2;
+        cap.position.set(0, 2.4, 3.75);
+        group.add(cap);
+
+        const smokestack = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.35, 1.6, 12), bodyMat);
+        smokestack.position.set(0, 4.3, 2.8);
+        smokestack.castShadow = true;
+        group.add(smokestack);
+
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.2, 3.2), bodyMat);
+        cab.position.set(0, 3.0, -3.0);
+        cab.castShadow = true;
+        group.add(cab);
+    }
+
+    // Headlight & Spotlight Beam
+    const lampHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 0.8, 12), trimMat);
     lampHousing.rotation.x = Math.PI / 2;
-    lampHousing.position.set(0, 3.6, 4.1);
+    lampHousing.position.set(0, 2.8, 4.6);
     trainHeadlightMesh = new THREE.Mesh(new THREE.CircleGeometry(0.45, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    trainHeadlightMesh.position.set(0, 3.6, 4.51);
+    trainHeadlightMesh.position.set(0, 2.8, 5.01);
 
-    trainHeadlight = new THREE.SpotLight(0xfffaed, 5, 80, Math.PI / 6, 0.4, 1.2);
-    trainHeadlight.position.set(0, 3.6, 4.5);
+    trainHeadlight = new THREE.SpotLight(0xfffaed, 6, 90, Math.PI / 6, 0.4, 1.2);
+    trainHeadlight.position.set(0, 2.8, 5.0);
     trainHeadlight.target.position.set(0, 0, 35);
-    locomotiveGroup.add(lampHousing, trainHeadlightMesh, trainHeadlight, trainHeadlight.target);
+    group.add(lampHousing, trainHeadlightMesh, trainHeadlight, trainHeadlight.target);
 
-    // Rotating Drive Wheels (6 Wheels on Locomotive)
+    // 6 Drive Wheels
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.9, roughness: 0.3 });
     const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.3, 16);
     [-2.2, 0.2, 2.4].forEach(z => {
@@ -606,7 +959,7 @@ function buildTrain() {
             wheel.rotation.z = Math.PI / 2;
             wheel.position.set(x, 0.9, z);
             wheel.castShadow = true;
-            locomotiveGroup.add(wheel);
+            group.add(wheel);
             wheels.push(wheel);
         });
     });
@@ -617,46 +970,26 @@ function buildTrain() {
     rodL.position.set(-1.55, 0.9, 0.1);
     const rodR = rodL.clone();
     rodR.position.set(1.55, 0.9, 0.1);
-    locomotiveGroup.add(rodL, rodR);
+    group.add(rodL, rodR);
     connectingRods.push(rodL, rodR);
 
-    trainGroup.add(locomotiveGroup);
-
-    // 2. Coal Tender Wagon
-    tenderGroup = buildTenderWagon();
-    trainGroup.add(tenderGroup);
-
-    // 3. Passenger Carriage 1 (Red Express)
-    carriage1Group = buildPassengerCarriage(0xb91c1c);
-    trainGroup.add(carriage1Group);
-
-    // 4. Passenger Carriage 2 (Blue Express)
-    carriage2Group = buildPassengerCarriage(0x1d4ed8);
-    trainGroup.add(carriage2Group);
-
-    // 5. Cargo Wagon (Wood Timber)
-    cargoGroup = buildCargoWagon();
-    trainGroup.add(cargoGroup);
-
-    scene.add(trainGroup);
+    return group;
 }
 
-function buildTenderWagon(): THREE.Group {
+function buildTenderOrPowerUnit(def: TrainDef): THREE.Group {
     const group = new THREE.Group();
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.4 });
-    const coalMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.95 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: def.locoColor, metalness: 0.7, roughness: 0.4 });
+    const trimMat = new THREE.MeshStandardMaterial({ color: def.trimColor, roughness: 0.5 });
 
     const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.2, 4.5), bodyMat);
     body.position.y = 2.0;
     body.castShadow = true;
     group.add(body);
 
-    const coal = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2), coalMat);
-    coal.position.set(0, 3.2, 0);
-    coal.scale.set(1.1, 0.6, 1.8);
-    group.add(coal);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.3, 4.6), trimMat);
+    roof.position.y = 3.2;
+    group.add(roof);
 
-    // 4 Wheels
     [-1.3, 1.3].forEach(z => {
         [-1.3, 1.3].forEach(x => {
             const w = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.3, 12), bodyMat);
@@ -670,10 +1003,10 @@ function buildTenderWagon(): THREE.Group {
     return group;
 }
 
-function buildPassengerCarriage(colorHex: number): THREE.Group {
+function buildPassengerCarriage(def: TrainDef, idx: number): THREE.Group {
     const group = new THREE.Group();
-    const coachMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.3, roughness: 0.5 });
-    const roofMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.4 });
+    const coachMat = new THREE.MeshStandardMaterial({ color: def.coachColor, metalness: 0.4, roughness: 0.4 });
+    const roofMat = new THREE.MeshStandardMaterial({ color: def.trimColor, roughness: 0.3 });
     const winMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfef08a, emissiveIntensity: 0.7 });
 
     const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.8, 7.5), coachMat);
@@ -686,7 +1019,6 @@ function buildPassengerCarriage(colorHex: number): THREE.Group {
     roof.position.set(0, 3.8, 0);
     group.add(roof);
 
-    // Rows of Windows
     for (let z = -2.6; z <= 2.6; z += 1.3) {
         [-1.42, 1.42].forEach(x => {
             const win = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.9), winMat);
@@ -696,7 +1028,6 @@ function buildPassengerCarriage(colorHex: number): THREE.Group {
         });
     }
 
-    // 4 Bogie Wheels
     [-2.4, -1.2, 1.2, 2.4].forEach(z => {
         [-1.3, 1.3].forEach(x => {
             const w = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.25, 12), coachMat);
@@ -710,7 +1041,7 @@ function buildPassengerCarriage(colorHex: number): THREE.Group {
     return group;
 }
 
-function buildCargoWagon(): THREE.Group {
+function buildRearOrCargoWagon(def: TrainDef): THREE.Group {
     const group = new THREE.Group();
     const flatbedMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
     const logMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
@@ -719,7 +1050,6 @@ function buildCargoWagon(): THREE.Group {
     bed.position.y = 1.4;
     group.add(bed);
 
-    // Stacks of Timber Logs
     for (let row = 0; row < 3; row++) {
         for (let col = 0; col < 3 - row; col++) {
             const log = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 6.0, 8), logMat);
@@ -747,9 +1077,12 @@ function buildCargoWagon(): THREE.Group {
 function emitSmokePuff(isHornBurst: boolean = false) {
     if (!locomotiveGroup) return;
 
+    const isPlasma = activeTrain.style === 'hyperloop_plasma' || activeTrain.style === 'cyber_bullet';
     const smokeGeo = new THREE.DodecahedronGeometry(isHornBurst ? 0.9 : 0.5);
     const smokeMat = new THREE.MeshStandardMaterial({
-        color: 0xeeeeee,
+        color: isPlasma ? 0xd946ef : 0xeeeeee,
+        emissive: isPlasma ? 0xd946ef : 0x000000,
+        emissiveIntensity: isPlasma ? 0.8 : 0.0,
         transparent: true,
         opacity: isHornBurst ? 0.85 : 0.6,
         roughness: 1.0,
@@ -757,8 +1090,7 @@ function emitSmokePuff(isHornBurst: boolean = false) {
     });
 
     const mesh = new THREE.Mesh(smokeGeo, smokeMat);
-    // Position at smokestack exit
-    const stackWorld = new THREE.Vector3(0, 5.2, 2.8);
+    const stackWorld = new THREE.Vector3(0, 4.8, 2.8);
     locomotiveGroup.localToWorld(stackWorld);
     mesh.position.copy(stackWorld);
 
@@ -798,20 +1130,21 @@ function updateParticles(delta: number) {
 let smokeTimer = 0;
 
 function updateTrainPhysics(delta: number) {
-    // 1. Throttle & Acceleration
+    const accelRate = (activeTrain.acceleration || 1.0) * 2.0;
+    const maxSpd = activeTrain.maxSpeed || 120;
+
     if (isBraking) {
         currentThrottle = THREE.MathUtils.lerp(currentThrottle, 0, delta * 3.5);
         trainSpeed = THREE.MathUtils.lerp(trainSpeed, 0, delta * 2.8);
     } else {
-        currentThrottle = THREE.MathUtils.lerp(currentThrottle, targetThrottle, delta * 2.0);
-        const targetSpeed = currentThrottle * 1.2; // 0..120 km/h
+        currentThrottle = THREE.MathUtils.lerp(currentThrottle, targetThrottle, delta * accelRate);
+        const targetSpeed = (currentThrottle / 100) * maxSpd;
         trainSpeed = THREE.MathUtils.lerp(trainSpeed, targetSpeed, delta * 0.8);
     }
 
     if (Math.abs(trainSpeed) < 0.05) trainSpeed = 0;
 
-    // 2. Advance train on curve spline
-    const speedRatio = trainSpeed / 120;
+    const speedRatio = trainSpeed / maxSpd;
     const trackLength = mainTrackCurve.getLength();
     const meterPerSec = (trainSpeed * 1000) / 3600;
     const deltaU = (meterPerSec * delta) / trackLength;
@@ -819,10 +1152,8 @@ function updateTrainPhysics(delta: number) {
     trainU = (trainU + deltaU) % 1.0;
     if (trainU < 0) trainU += 1.0;
 
-    // 3. Audio Chug update
     trainAudio.updateChugSpeed(speedRatio);
 
-    // 4. Emit continuous smoke puffs based on speed
     smokeTimer += delta;
     const puffInterval = Math.max(0.12, 0.6 - Math.abs(speedRatio) * 0.45);
     if (smokeTimer >= puffInterval && Math.abs(trainSpeed) > 1) {
@@ -830,21 +1161,16 @@ function updateTrainPhysics(delta: number) {
         emitSmokePuff(false);
     }
 
-    // 5. Position & Articulate Train Units along Track
     positionTrainUnits();
 
-    // 6. Rotate Wheels & Connecting Rods
     const wheelRotDelta = (meterPerSec * delta) / 0.9;
     wheels.forEach(w => w.rotation.x += wheelRotDelta);
-    connectingRods.forEach((r, idx) => {
+    connectingRods.forEach((r) => {
         r.position.y = 0.9 + Math.sin(wheels[0]?.rotation.x || 0) * 0.35;
         r.position.z = 0.1 + Math.cos(wheels[0]?.rotation.x || 0) * 0.35;
     });
 
-    // 7. Station Arrival & Boarding Check
     checkStationArrival(delta);
-
-    // 8. Junction Switch Detection
     checkJunctionProximity();
 }
 
@@ -860,6 +1186,7 @@ function positionTrainUnits() {
     const totalLen = mainTrackCurve.getLength();
 
     units.forEach(u => {
+        if (!u.group) return;
         const unitU = (trainU - (u.offsetDist / totalLen) + 1.0) % 1.0;
         const pos = mainTrackCurve.getPointAt(unitU);
         const tangent = mainTrackCurve.getTangentAt(unitU).normalize();
@@ -869,7 +1196,7 @@ function positionTrainUnits() {
     });
 }
 
-// --- Station Passenger Pickup & Yard Reward Logic ---
+// --- Station Passenger Pickup & Yard Reward Logic (+50 Yards Per Stop) ---
 function checkStationArrival(delta: number) {
     const targetStation = STATIONS[currentStationIndex];
     if (!targetStation) return;
@@ -882,14 +1209,13 @@ function checkStationArrival(delta: number) {
 
     const distMeters = Math.abs(distU * totalLen);
 
-    // Update Top HUD Target Distance
     const distEl = document.getElementById('target-station-dist');
     if (distEl) distEl.innerText = `(${Math.round(distMeters)}m)`;
 
     const boardingPanel = document.getElementById('station-boarding-panel');
     const progressBar = document.getElementById('boarding-progress');
 
-    // If within 15 meters and train stopped (< 3 km/h)
+    // If within 18 meters and train stopped (< 3 km/h)
     if (distMeters < 18 && trainSpeed < 3.0) {
         if (!isBoarding) {
             isBoarding = true;
@@ -907,20 +1233,17 @@ function checkStationArrival(delta: number) {
         if (progressBar) progressBar.style.width = `${progressPct}%`;
 
         if (boardingTimer >= 2.5) {
-            // Station Boarding Complete!
             isBoarding = false;
             if (boardingPanel) boardingPanel.style.display = 'none';
 
-            // Add passengers & give Yards
+            // Give +50 Yards per stop as requested
+            const reward = 50;
             totalPassengers += targetStation.passengersWaiting;
-            const reward = targetStation.yardReward;
             yardService.addYards(reward, `Rongimäng: ${targetStation.name} reisijatevedu`);
             trainAudio.playCoinReward();
 
-            // Show Success Modal
             showStationRewardModal(targetStation, reward);
 
-            // Advance to next station
             currentStationIndex = (currentStationIndex + 1) % STATIONS.length;
             const nextSt = STATIONS[currentStationIndex];
             const nameEl = document.getElementById('target-station-name');
@@ -941,7 +1264,7 @@ function showStationRewardModal(station: Station, yards: number) {
     const yardsTxt = document.getElementById('reward-yards-text');
 
     if (title) title.innerText = `🎉 ${station.name.toUpperCase()} EDUKALT LÄBITUD!`;
-    if (desc) desc.innerText = `Reisijad (+${station.passengersWaiting} inimest) toimetati turvaliselt kohale.`;
+    if (desc) desc.innerText = `Reisijad (+${station.passengersWaiting} inimest) toimetati kohale. Teeni igal peatusel 50 Yardi!`;
     if (yardsTxt) yardsTxt.innerText = `+${yards} YARDS 💎`;
     if (modal) modal.style.display = 'flex';
 }
@@ -1004,7 +1327,6 @@ function toggleWeather() {
     const btn = document.getElementById('btn-toggle-weather');
 
     if (weatherMode === 0) {
-        // Day
         scene.background = new THREE.Color(0x87ceeb);
         scene.fog = new THREE.FogExp2(0x87ceeb, 0.002);
         dirLight.color.setHex(0xfffaed);
@@ -1013,7 +1335,6 @@ function toggleWeather() {
         trainHeadlight.intensity = 3;
         if (btn) btn.innerText = '☀️ Päev';
     } else if (weatherMode === 1) {
-        // Sunset
         scene.background = new THREE.Color(0xf97316);
         scene.fog = new THREE.FogExp2(0xea580c, 0.003);
         dirLight.color.setHex(0xffaa5e);
@@ -1022,13 +1343,12 @@ function toggleWeather() {
         trainHeadlight.intensity = 6;
         if (btn) btn.innerText = '🌅 Loojang';
     } else if (weatherMode === 2) {
-        // Night
         scene.background = new THREE.Color(0x060b13);
         scene.fog = new THREE.FogExp2(0x060b13, 0.004);
         dirLight.color.setHex(0x38bdf8);
         dirLight.intensity = 0.2;
         ambientLight.intensity = 0.15;
-        trainHeadlight.intensity = 12; // Bright beam shining through dark
+        trainHeadlight.intensity = 12;
         if (btn) btn.innerText = '🌙 Öö';
     }
 }
@@ -1066,6 +1386,23 @@ function setupControls() {
         if (e.code === 'Space') {
             isBraking = false;
         }
+    });
+
+    // Depot Modal Open / Close
+    const depotModal = document.getElementById('modal-train-depot');
+    document.getElementById('btn-open-depot')?.addEventListener('click', () => {
+        if (depotModal) {
+            depotModal.style.display = 'flex';
+            renderDepotModal();
+        }
+    });
+    document.getElementById('btn-close-depot')?.addEventListener('click', () => {
+        if (depotModal) depotModal.style.display = 'none';
+    });
+    document.getElementById('btn-depot-start-driving')?.addEventListener('click', () => {
+        if (depotModal) depotModal.style.display = 'none';
+        targetThrottle = 40; // Auto-start cruising
+        isBraking = false;
     });
 
     // Button Controls
@@ -1110,7 +1447,7 @@ function setupControls() {
     document.getElementById('btn-next-station-continue')?.addEventListener('click', () => {
         const modal = document.getElementById('modal-station-success');
         if (modal) modal.style.display = 'none';
-        targetThrottle = 50; // Resume cruising
+        targetThrottle = 50;
         isBraking = false;
     });
 
@@ -1150,23 +1487,24 @@ function setupHUD() {
 
 function updateYardBalance(data: YardData) {
     const yardVal = document.getElementById('train-yard-val');
+    const depotYardVal = document.getElementById('depot-yard-val');
     if (yardVal) {
         yardVal.innerText = data.yards.toLocaleString();
+    }
+    if (depotYardVal) {
+        depotYardVal.innerText = data.yards.toLocaleString();
     }
 }
 
 function updateHUD() {
-    // Speedometer
     const speedEl = document.getElementById('speed-text');
     if (speedEl) speedEl.innerText = Math.round(trainSpeed).toString();
 
-    // Throttle bar
     const throttleEl = document.getElementById('throttle-text');
     const throttleFill = document.getElementById('throttle-fill');
     if (throttleEl) throttleEl.innerText = `${Math.round(currentThrottle)}%`;
     if (throttleFill) throttleFill.style.width = `${Math.round(currentThrottle)}%`;
 
-    // Passenger count
     const passEl = document.getElementById('stat-passengers');
     if (passEl) passEl.innerText = totalPassengers.toString();
 }

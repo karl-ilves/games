@@ -590,10 +590,38 @@ try {
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
+        // Verify Train Depot Modal with 10 Trains
+        await page.waitForSelector('.train-card', { visible: true, timeout: 5000 });
+        const trainCardsCount = await page.$$eval('.train-card', els => els.length);
+        console.log("   Depot 3D Trains Count (Expected: 10):", trainCardsCount);
+        if (trainCardsCount !== 10) {
+            throw new Error(`Expected 10 trains in depot, found: ${trainCardsCount}`);
+        }
+
+        const depotText = await page.$eval('#trains-grid-container', el => el.textContent);
+        if (!depotText.includes('100 YARDS') || !depotText.includes('TASUTA') || !depotText.includes('Linnalähirong Express')) {
+            throw new Error("Depot must contain cheapest 100 Yards train and default train!");
+        }
+        console.log("   Successfully verified 10 distinct trains with cheapest 100 Yards train in depot!");
+
+        // Start driving from depot
+        await page.click('#btn-depot-start-driving');
+        await new Promise(r => setTimeout(r, 400));
+
+        // Test Opening Depot from Top HUD and closing
+        await page.click('#btn-open-depot');
+        await new Promise(r => setTimeout(r, 300));
+        const depotVisible = await page.$eval('#modal-train-depot', el => window.getComputedStyle(el).display);
+        if (depotVisible !== 'flex') {
+            throw new Error("Expected #modal-train-depot to be open after clicking #btn-open-depot!");
+        }
+        await page.click('#btn-close-depot');
+        await new Promise(r => setTimeout(r, 300));
+
         // Verify Train HUD elements
         await page.waitForSelector('#speed-text', { visible: true, timeout: 5000 });
         const initialSpeed = await page.$eval('#speed-text', el => el.textContent);
-        console.log("   Initial Train Speedometer (Expected: 0):", initialSpeed);
+        console.log("   Initial Train Speedometer:", initialSpeed);
 
         const targetStation = await page.$eval('#target-station-name', el => el.textContent);
         console.log("   Initial Target Station:", targetStation);
