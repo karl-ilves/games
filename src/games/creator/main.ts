@@ -4425,9 +4425,9 @@ export function executeAiBuild(promptText: string) {
 
     } else if (p.includes('kuidas raha') || p.includes('kuidas yarde') || p.includes('how to get yards') || p.includes('earn yards')) {
         if (isAdmin) {
-            aiResponse = `💎 <strong>Yards & Raha teenimine:</strong><br>Yarde saad teenida mängides simulaatoreid, lunastades igapäevaseid seeriaboonuseid (Daily Rewards) või sisestades promokoode oma rahakoti aknas!`;
+            aiResponse = `💎 <strong>Yards & Raha teenimine:</strong><br>Yarde saad teenida mängides simulaatoreid ja lunastades igapäevaseid seeriaboonuseid (Daily Rewards) oma rahakoti aknas!`;
         } else {
-            aiResponse = `💎 <strong>Earning Yards Currency:</strong><br>Earn Yards by playing 3D simulators, claiming Daily Rewards streaks, or redeeming promo codes in your Wallet!`;
+            aiResponse = `💎 <strong>Earning Yards Currency:</strong><br>Earn Yards by playing 3D simulators and claiming Daily Rewards streaks in your Wallet!`;
         }
 
     // --- 0.3 VERSATILE GAME PROGRAMMING ENGINE (Program whatever creator wants: text, speed boost, jump pad, yards bonus) ---

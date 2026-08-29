@@ -135,20 +135,6 @@ export function applyLocalization() {
     const countdownLabel = document.querySelector('#streak-countdown-box span:first-child');
     if (countdownLabel) countdownLabel.textContent = isEt ? '⏳ Järgmine +100 Y preemia:' : '⏳ Next +100 Y Reward:';
 
-    const promoTitle = document.querySelector('#modal-streak h4');
-    if (promoTitle) promoTitle.textContent = isEt ? '🎁 Lunasta loojakoode' : '🎁 Redeem Creator Codes';
-
-    const promoSub = document.querySelector('#modal-streak div p');
-    if (promoSub) promoSub.innerHTML = isEt
-        ? 'Sisesta kood, et saada rohkem Jarde. Uusi koode leiad <strong style="color: #ff4757;">SkyAviation2</strong> YouTube\'i kanalilt.'
-        : 'Enter codes to get more Yards. You can find new codes by watching the <strong style="color: #ff4757;">SkyAviation2</strong> YouTube channel.';
-
-    const promoInput = document.getElementById('promo-code-input') as HTMLInputElement | null;
-    if (promoInput) promoInput.placeholder = isEt ? 'Sisesta kood (nt SKYAVIATION2)' : 'Enter code (e.g. SKYAVIATION2)';
-
-    const redeemBtn = document.getElementById('btn-redeem-promo');
-    if (redeemBtn) redeemBtn.textContent = isEt ? 'Lunasta' : 'Redeem';
-
     const debugReset = document.getElementById('btn-debug-reset');
     if (debugReset) debugReset.textContent = isEt ? '🔄 Lähtesta seeria ja taimer' : '🔄 Reset Streak & Timer';
 

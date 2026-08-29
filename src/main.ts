@@ -380,25 +380,6 @@ function setupModals() {
         });
     }
 
-    // 3. Promo Code Redeem
-    const promoInput = document.getElementById('promo-code-input') as HTMLInputElement | null;
-    const redeemBtn = document.getElementById('btn-redeem-promo');
-    const promoStatus = document.getElementById('promo-code-status');
-
-    if (redeemBtn && promoInput) {
-        redeemBtn.addEventListener('click', () => {
-            const code = promoInput.value;
-            const res = yardService.redeemPromoCode(code);
-            if (promoStatus) {
-                promoStatus.innerText = res.message;
-                promoStatus.style.color = res.success ? '#2ecc71' : '#ff4757';
-            }
-            if (res.success) {
-                promoInput.value = '';
-            }
-        });
-    }
-
     // 4. Debug Fast-Forward & Reset (Admin)
     const debugBtn = document.getElementById('btn-debug-fastforward');
     if (debugBtn) {
