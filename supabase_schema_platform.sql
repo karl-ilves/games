@@ -88,3 +88,26 @@ DROP POLICY IF EXISTS "Users can view and insert their own redeemed codes" ON pu
 CREATE POLICY "Users can view and insert their own redeemed codes" ON public.redeemed_codes
   FOR ALL USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- 5. PLATFORM UPDATES TABLE (Admin updates sent to Owner database)
+CREATE TABLE IF NOT EXISTS public.platform_updates (
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  version text DEFAULT 'v1.0.0',
+  content text NOT NULL,
+  author_email text DEFAULT 'grx@trenet.ee',
+  author_name text DEFAULT 'Admin✅',
+  recipient_email text DEFAULT '1karl.ilves@gmail.com',
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.platform_updates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view platform updates" ON public.platform_updates;
+CREATE POLICY "Anyone can view platform updates" ON public.platform_updates
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admin can insert platform updates" ON public.platform_updates;
+CREATE POLICY "Admin can insert platform updates" ON public.platform_updates
+  FOR INSERT WITH CHECK (true);
+

@@ -49,11 +49,23 @@ export interface CreatedGame {
     updatedAt: number;
 }
 
+export interface PlatformUpdate {
+    id: string;
+    title: string;
+    version: string;
+    content: string;
+    authorEmail: string;
+    authorName: string;
+    recipientEmail: string;
+    createdAt: number;
+}
+
 const PRIMARY_STORAGE_KEY = 'playard_yards_data';
 const STORAGE_PREFIX = 'playard_yards_';
 const ADMIN_LOGS_KEY = 'playard_admin_yard_logs';
 const GAMES_STORAGE_KEY = 'playard_user_created_games';
 const CODE_REDEMPTIONS_STORAGE_KEY = 'playard_code_redemptions_global';
+const PLATFORM_UPDATES_KEY = 'playard_platform_updates';
 
 const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_IN_48_HOURS = 48 * 60 * 60 * 1000;
@@ -1212,6 +1224,79 @@ class YardService {
         this.data.lastClaimTimestamp = 0;
         this.saveLocally(this.data);
         this.saveToCloud();
+    }
+
+    public async sendUpdateToOwner(title: string, content: string, version: string = 'v1.0.0', authorEmail: string = 'grx@trenet.ee'): Promise<PlatformUpdate> {
+        const update: PlatformUpdate = {
+            id: 'upd_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            title: title.trim(),
+            version: (version || 'v1.0.0').trim(),
+            content: content.trim(),
+            authorEmail: authorEmail.trim(),
+            authorName: 'Admin✅',
+            recipientEmail: '1karl.ilves@gmail.com',
+            createdAt: Date.now()
+        };
+
+        const existing = this.getPlatformUpdates();
+        existing.unshift(update);
+        try {
+            localStorage.setItem(PLATFORM_UPDATES_KEY, JSON.stringify(existing));
+        } catch (e) {}
+
+        if (supabase) {
+            Promise.resolve(
+                supabase.from('platform_updates').insert({
+                    id: update.id,
+                    title: update.title,
+                    version: update.version,
+                    content: update.content,
+                    author_email: update.authorEmail,
+                    author_name: update.authorName,
+                    recipient_email: update.recipientEmail,
+                    created_at: new Date(update.createdAt).toISOString()
+                })
+            ).catch(err => console.warn('Supabase platform_updates insert fallback to local:', err));
+        }
+
+        return update;
+    }
+
+    public getPlatformUpdates(): PlatformUpdate[] {
+        try {
+            const raw = localStorage.getItem(PLATFORM_UPDATES_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    public async fetchPlatformUpdatesFromCloud(): Promise<PlatformUpdate[]> {
+        if (supabase) {
+            try {
+                const cloudPromise = supabase
+                    .from('platform_updates')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject('timeout'), 1000));
+                const res: any = await Promise.race([cloudPromise, timeoutPromise]);
+                if (res && !res.error && res.data && res.data.length > 0) {
+                    const mapped: PlatformUpdate[] = res.data.map((d: any) => ({
+                        id: d.id,
+                        title: d.title,
+                        version: d.version || 'v1.0.0',
+                        content: d.content,
+                        authorEmail: d.author_email || 'grx@trenet.ee',
+                        authorName: d.author_name || 'Admin✅',
+                        recipientEmail: d.recipient_email || '1karl.ilves@gmail.com',
+                        createdAt: new Date(d.created_at).getTime()
+                    }));
+                    localStorage.setItem(PLATFORM_UPDATES_KEY, JSON.stringify(mapped));
+                    return mapped;
+                }
+            } catch (e) {}
+        }
+        return this.getPlatformUpdates();
     }
 
     public renderYardSvg(size = 22, className = ''): string {

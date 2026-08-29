@@ -155,30 +155,12 @@ export function applyLocalization() {
     const debugFf = document.getElementById('btn-debug-fastforward');
     if (debugFf) debugFf.textContent = isEt ? '⚡ Keri edasi +24h (Admin)' : '⚡ Fast Forward +24h (Admin)';
 
-    // Admin Panel Modal
+    // Admin Panel Modal (Update Hub)
     const adminPanelH2 = document.querySelector('#modal-admin-panel h2');
-    if (adminPanelH2) adminPanelH2.textContent = isEt ? 'Playardi Salajane Administraatori Paneel' : 'Playard Secret Admin Panel';
+    if (adminPanelH2) adminPanelH2.textContent = isEt ? 'Admini Uuenduste Paneel' : 'Admin Update Hub';
 
     const adminPanelSub = document.querySelector('#modal-admin-panel > .modal-card > p');
     if (adminPanelSub) adminPanelSub.innerHTML = isEt
-        ? 'Sisse logitud kui <strong>Admin✅</strong>. Vaata üle kasutajate mänge ja jaga Jarde.'
-        : 'Logged in as <strong>Admin✅</strong>. Review creator games & grant Yards.';
-
-    const tabReview = document.getElementById('tab-btn-review-games');
-    if (tabReview) tabReview.textContent = isEt ? '🎮 Ülevaatust ootavad mängud' : '🎮 Games to Review';
-
-    const tabGive = document.getElementById('tab-btn-give-yards');
-    if (tabGive) tabGive.textContent = isEt ? '💎 Jaga Jarde kasutajanime järgi' : '💎 Give Yards by Username';
-
-    const reviewH3 = document.querySelector('#admin-tab-review-games h3');
-    if (reviewH3) reviewH3.textContent = isEt ? 'Esitatud mängud, mis ootavad heakskiitu' : 'Submitted Games Waiting for Approval';
-
-    const giveH3 = document.querySelector('#admin-tab-give-yards h3');
-    if (giveH3) giveH3.textContent = isEt ? 'Anna kasutajale Jarde kasutajanime järgi' : 'Grant Yards to User by Username';
-
-    const giveBtn = document.getElementById('btn-admin-give-yards');
-    if (giveBtn) giveBtn.textContent = isEt ? '💎 Anna Yardid' : '💎 Give Yards';
-
-    const logsH4 = document.querySelector('#admin-tab-give-yards h4');
-    if (logsH4) logsH4.textContent = isEt ? 'Viimased Yardide jagamise logid:' : 'Recent Yard Grant Logs:';
+        ? 'Logitud sisse kui <strong style="color: #ffd32a;">Admin✅</strong> (<span style="color: #00f2fe;">grx@trenet.ee</span>). Siin saad koostada uusi mängu- ja süsteemiuuendusi ning saata need otse Playard Owneri andmebaasi.'
+        : 'Logged in as <strong style="color: #ffd32a;">Admin✅</strong> (<span style="color: #00f2fe;">grx@trenet.ee</span>). Write new updates and send them directly to Playard Owner database.';
 }

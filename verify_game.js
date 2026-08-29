@@ -82,7 +82,7 @@ try {
             throw new Error("Admin panel must be removed from Playard Owner!");
         }
 
-        // Test Admin login (grx@trenet.ee) -> Admin panel must be visible
+        // Test Admin login (grx@trenet.ee) -> Admin panel must be visible and able to send updates to owner
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
@@ -94,6 +94,35 @@ try {
         if (adminAdminPanelDisplay !== 'flex') {
             throw new Error("Admin panel must be visible for Admin grx@trenet.ee!");
         }
+
+        // Click to open Admin Update Panel
+        await page.click('#btn-open-admin-panel');
+        await new Promise(r => setTimeout(r, 200));
+
+        // Fill update fields
+        await page.type('#admin-update-title', 'Uus 3D Superauto ja Kaart');
+        await page.evaluate(() => { document.getElementById('admin-update-version').value = 'v2.1.0'; });
+        await page.type('#admin-update-content', 'Lisasime uued sõidukid, täiustasime andmebaasi ja parandasime heli.');
+
+        // Click Send Update to Owner
+        await page.click('#btn-send-update-to-owner');
+        await new Promise(r => setTimeout(r, 400));
+
+        const updateStatusText = await page.$eval('#admin-update-status', el => el.textContent);
+        console.log("   Admin Update Submit Status:", updateStatusText);
+        if (!updateStatusText.includes('edukalt saadetud')) {
+            throw new Error(`Expected successful update send message, got: ${updateStatusText}`);
+        }
+
+        const sentUpdatesText = await page.$eval('#admin-sent-updates-list', el => el.textContent);
+        if (!sentUpdatesText.includes('Uus 3D Superauto ja Kaart') || !sentUpdatesText.includes('v2.1.0')) {
+            throw new Error("Sent update not found in sent updates list!");
+        }
+        console.log("   Admin successfully sent update to Owner and saved to database!");
+
+        // Close admin modal
+        await page.click('#btn-close-admin-panel');
+        await new Promise(r => setTimeout(r, 200));
 
         // Reset to guest for remaining tests
         await page.evaluate(() => {

@@ -194,171 +194,53 @@ async function renderCommunityGames() {
     });
 }
 
-// --- Admin Panel Functions ---
-async function renderAdminReviewGames() {
-    const listContainer = document.getElementById('admin-review-games-list');
+// --- Admin Update Panel Functions ---
+async function renderAdminUpdatesList() {
+    const listContainer = document.getElementById('admin-sent-updates-list');
+    const countBadge = document.getElementById('admin-updates-count-badge');
     if (!listContainer) return;
 
-    listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 20px;">Fetching pending games...</div>';
+    listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 15px;">Laen uuendusi andmebaasist...</div>';
 
-    const pending = await yardService.getPendingGames();
-    if (!pending || pending.length === 0) {
+    const updates = await yardService.fetchPlatformUpdatesFromCloud();
+    if (countBadge) {
+        countBadge.innerText = `${updates.length} uuendust`;
+    }
+
+    if (!updates || updates.length === 0) {
         listContainer.innerHTML = `
-            <div style="text-align: center; color: #2ecc71; padding: 30px; background: rgba(46, 204, 113, 0.08); border-radius: 8px; border: 1px dashed rgba(46, 204, 113, 0.3);">
-                <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">✓ All caught up!</p>
-                <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #a4b0be;">There are currently no games waiting for review.</p>
+            <div style="text-align: center; color: #a4b0be; padding: 25px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
+                <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: #718093;">📭 Ühtegi uuendust pole veel saadetud.</p>
+                <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #57606f;">Kirjuta ülalpool uus uuendus ja vajuta "Saada Ownerile".</p>
             </div>
         `;
         return;
     }
 
     listContainer.innerHTML = '';
-    pending.forEach(game => {
+    updates.forEach(upd => {
         const item = document.createElement('div');
-        item.style.cssText = 'background: #242f3d; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;';
+        item.style.cssText = 'background: #1e293b; border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;';
         
-        const dateStr = new Date(game.createdAt).toLocaleString();
-        const objCount = game.sceneData?.objects?.length ?? 0;
-
+        const dateStr = new Date(upd.createdAt).toLocaleString();
         item.innerHTML = `
-            <div>
-                <h4 style="margin: 0 0 4px 0; color: #00f2fe; font-size: 1.1rem;">${game.title}</h4>
-                <div style="font-size: 0.85rem; color: #a4b0be;">
-                    By: <strong style="color: #ffd32a;">${game.creatorUsername}</strong> | Category: <strong>${game.category}</strong> | Objects: <strong>${objCount}</strong> | ${dateStr}
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <strong style="color: #ffd32a; font-size: 1rem;">${upd.title}</strong>
+                    <span style="background: rgba(0,242,254,0.15); color: #00f2fe; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; font-family: monospace;">${upd.version}</span>
                 </div>
-                <div style="font-size: 0.85rem; color: #d2dae2; margin-top: 6px;">${game.description || 'No description provided.'}</div>
+                <span style="font-size: 0.75rem; color: #2ecc71; background: rgba(46, 204, 113, 0.15); padding: 3px 8px; border-radius: 6px; font-weight: bold;">
+                    ✓ Saadetud Ownerile andmebaasi
+                </span>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <a href="./games/play/index.html?id=${game.id}&mode=review" target="_blank" style="padding: 8px 14px; background: #3498db; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
-                    🎮 Play & Test
-                </a>
-                <button class="btn-admin-approve" data-id="${game.id}" style="padding: 8px 14px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">
-                    ✅ Approve
-                </button>
-                <button class="btn-admin-reject" data-id="${game.id}" style="padding: 8px 14px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">
-                    ❌ Reject
-                </button>
-                <button class="btn-admin-changes" data-id="${game.id}" style="padding: 8px 14px; background: #f39c12; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">
-                    ⚠️ Request Changes
-                </button>
+            <div style="font-size: 0.85rem; color: #e2e8f0; white-space: pre-wrap; line-height: 1.4; background: #131920; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">${upd.content}</div>
+            <div style="font-size: 0.75rem; color: #64748b; display: flex; justify-content: space-between;">
+                <span>Saatja: <strong style="color: #ffd32a;">${upd.authorName} (${upd.authorEmail})</strong></span>
+                <span>${dateStr}</span>
             </div>
         `;
         listContainer.appendChild(item);
     });
-
-    // Bind action buttons
-    listContainer.querySelectorAll('.btn-admin-approve').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
-            if (id) {
-                await yardService.updateGameStatus(id, 'approved');
-                renderAdminReviewGames();
-                renderCommunityGames();
-            }
-        });
-    });
-
-    listContainer.querySelectorAll('.btn-admin-reject').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
-            if (id && confirm('Are you sure you want to reject this game?')) {
-                const reason = prompt('Optional rejection reason:', '') || '';
-                await yardService.updateGameStatus(id, 'rejected', reason);
-                renderAdminReviewGames();
-            }
-        });
-    });
-
-    listContainer.querySelectorAll('.btn-admin-changes').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
-            if (id) {
-                const feedback = prompt('What changes should the creator make?', 'Please add more gameplay elements.');
-                if (feedback) {
-                    await yardService.updateGameStatus(id, 'changes_requested', feedback);
-                    renderAdminReviewGames();
-                }
-            }
-        });
-    });
-}
-
-function renderAdminYardLogs() {
-    const logsContainer = document.getElementById('admin-yard-logs-container');
-    if (!logsContainer) return;
-
-    const logs = yardService.getAdminYardLogs();
-    if (!logs || logs.length === 0) {
-        logsContainer.innerHTML = '<div style="color: #718093; text-align: center;">No Yard grant logs recorded yet.</div>';
-        return;
-    }
-
-    logsContainer.innerHTML = logs.map(l => {
-        const time = new Date(l.timestamp).toLocaleString();
-        const adminDisplay = (l.adminEmail === '1karl.ilves@gmail.com' || !l.adminEmail) ? 'Admin✅' : l.adminEmail;
-        return `<div style="margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 3px;">
-            [${time}] <strong style="color: #ffd32a;">+${l.amount} Y</strong> granted to <strong style="color: #00f2fe;">@${l.targetUsername}</strong> (Reason: ${l.reason || 'N/A'}) by ${adminDisplay}
-        </div>`;
-    }).join('');
-}
-
-function renderAdminPromoStats() {
-    const stats = yardService.getCodeRedemptionStats();
-    
-    // Overview numbers
-    const totalClaimsEl = document.getElementById('admin-stat-total-claims');
-    const totalYardsEl = document.getElementById('admin-stat-total-yards');
-    const activeCodesEl = document.getElementById('admin-stat-active-codes');
-
-    if (totalClaimsEl) totalClaimsEl.innerText = stats.totalRedemptions.toString();
-    if (totalYardsEl) totalYardsEl.innerText = stats.totalYardsGiven.toLocaleString() + ' Y';
-    if (activeCodesEl) activeCodesEl.innerText = stats.codes.length.toString();
-
-    // Table of codes
-    const tableContainer = document.getElementById('admin-promo-codes-table');
-    if (tableContainer) {
-        tableContainer.innerHTML = stats.codes.map(c => {
-            const userNames = c.users.map(u => `@${u.username}`).slice(0, 3).join(', ');
-            const moreUsers = c.users.length > 3 ? ` ja veel ${c.users.length - 3}` : '';
-            const usersDisplay = c.users.length > 0 ? `${userNames}${moreUsers}` : 'Mitte keegi veel';
-            const lastTime = c.lastRedeemed ? new Date(c.lastRedeemed).toLocaleString() : '-';
-
-            return `
-                <div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <div>
-                        <span style="font-family: monospace; font-size: 1.05rem; font-weight: 800; color: #00f2fe; background: rgba(0,242,254,0.1); padding: 3px 8px; border-radius: 5px;">
-                            ${c.code}
-                        </span>
-                        <span style="font-size: 0.85rem; color: #ffd32a; font-weight: bold; margin-left: 8px;">+${c.reward} Yards</span>
-                        <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">
-                            Sisestanud kasutajad: <strong style="color: #e2e8f0;">${usersDisplay}</strong>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 1.1rem; font-weight: 900; color: #2ecc71;">
-                            ${c.count} <span style="font-size: 0.8rem; font-weight: normal; color: #a4b0be;">inimest</span>
-                        </div>
-                        <div style="font-size: 0.75rem; color: #64748b;">Viimati: ${lastTime}</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // Recent Logs
-    const logsContainer = document.getElementById('admin-code-redemption-logs');
-    if (logsContainer) {
-        if (stats.recentLogs.length === 0) {
-            logsContainer.innerHTML = '<div style="color: #718093; text-align: center;">Ühtegi koodi pole veel sisestatud.</div>';
-        } else {
-            logsContainer.innerHTML = stats.recentLogs.map(l => {
-                const time = new Date(l.timestamp).toLocaleString();
-                return `<div style="margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 3px;">
-                    [${time}] Kasutaja <strong style="color: #00f2fe;">@${l.username}</strong> sisestas koodi <strong style="color: #ffd32a;">${l.code}</strong> ja sai <strong style="color: #2ecc71;">+${l.amount} Y</strong>
-                </div>`;
-            }).join('');
-        }
-    }
 }
 
 // --- Render Admin Bug Reports ---
@@ -583,91 +465,65 @@ function setupModals() {
                 return;
             }
             modalAdmin.style.display = 'flex';
-            renderAdminReviewGames();
-            renderAdminYardLogs();
-            renderAdminPromoStats();
+            renderAdminUpdatesList();
         });
     }
     if (closeAdminBtn && modalAdmin) {
         closeAdminBtn.addEventListener('click', () => modalAdmin.style.display = 'none');
     }
 
-    // Tab Switching
-    const tabReview = document.getElementById('tab-btn-review-games');
-    const tabGive = document.getElementById('tab-btn-give-yards');
-    const tabPromo = document.getElementById('tab-btn-promo-stats');
-    const tabBugs = document.getElementById('tab-btn-bug-reports');
-    const viewReview = document.getElementById('admin-tab-review-games');
-    const viewGive = document.getElementById('admin-tab-give-yards');
-    const viewPromo = document.getElementById('admin-tab-promo-stats');
-    const viewBugs = document.getElementById('admin-tab-bug-reports');
+    // Send Update to Owner Handler
+    const btnSendUpdate = document.getElementById('btn-send-update-to-owner');
+    const updateTitleInput = document.getElementById('admin-update-title') as HTMLInputElement | null;
+    const updateVersionInput = document.getElementById('admin-update-version') as HTMLInputElement | null;
+    const updateContentInput = document.getElementById('admin-update-content') as HTMLTextAreaElement | null;
+    const updateStatus = document.getElementById('admin-update-status');
 
-    const switchAdminTab = (activeTab: 'review' | 'give' | 'promo' | 'bugs') => {
-        tabReview?.classList.toggle('active', activeTab === 'review');
-        tabGive?.classList.toggle('active', activeTab === 'give');
-        tabPromo?.classList.toggle('active', activeTab === 'promo');
-        tabBugs?.classList.toggle('active', activeTab === 'bugs');
+    if (btnSendUpdate && updateTitleInput && updateContentInput) {
+        btnSendUpdate.addEventListener('click', async () => {
+            const title = updateTitleInput.value.trim();
+            const version = updateVersionInput?.value.trim() || 'v1.0.0';
+            const content = updateContentInput.value.trim();
+            const prof = getCurrentUserProfile();
 
-        if (viewReview) viewReview.style.display = activeTab === 'review' ? 'block' : 'none';
-        if (viewGive) viewGive.style.display = activeTab === 'give' ? 'block' : 'none';
-        if (viewPromo) viewPromo.style.display = activeTab === 'promo' ? 'block' : 'none';
-        if (viewBugs) viewBugs.style.display = activeTab === 'bugs' ? 'block' : 'none';
-
-        if (activeTab === 'review') renderAdminReviewGames();
-        if (activeTab === 'give') renderAdminYardLogs();
-        if (activeTab === 'promo') renderAdminPromoStats();
-        if (activeTab === 'bugs') renderAdminBugReports();
-    };
-
-    tabReview?.addEventListener('click', () => switchAdminTab('review'));
-    tabGive?.addEventListener('click', () => switchAdminTab('give'));
-    tabPromo?.addEventListener('click', () => switchAdminTab('promo'));
-    tabBugs?.addEventListener('click', () => switchAdminTab('bugs'));
-
-    // Give Yards Handler
-    const giveYardsBtn = document.getElementById('btn-admin-give-yards');
-    const giveUsernameInput = document.getElementById('admin-give-username') as HTMLInputElement | null;
-    const giveAmountInput = document.getElementById('admin-give-amount') as HTMLInputElement | null;
-    const giveReasonInput = document.getElementById('admin-give-reason') as HTMLInputElement | null;
-    const giveStatus = document.getElementById('admin-give-status');
-
-    if (giveYardsBtn && giveUsernameInput && giveAmountInput) {
-        giveYardsBtn.addEventListener('click', async () => {
-            const username = giveUsernameInput.value.trim();
-            const amount = parseInt(giveAmountInput.value, 10);
-            const reason = giveReasonInput?.value.trim() || 'Admin Grant';
-
-            if (!username) {
-                if (giveStatus) {
-                    giveStatus.innerText = 'Please enter a target username.';
-                    giveStatus.style.color = '#ff4757';
+            if (!title) {
+                if (updateStatus) {
+                    updateStatus.innerText = 'Palun sisesta uuenduse pealkiri!';
+                    updateStatus.style.color = '#ff4757';
                 }
                 return;
             }
 
-            if (isNaN(amount) || amount <= 0) {
-                if (giveStatus) {
-                    giveStatus.innerText = 'Please enter a valid amount of Yards.';
-                    giveStatus.style.color = '#ff4757';
+            if (!content) {
+                if (updateStatus) {
+                    updateStatus.innerText = 'Palun sisesta uuenduse sisu / muudatuste kirjeldus!';
+                    updateStatus.style.color = '#ff4757';
                 }
                 return;
             }
 
-            if (giveStatus) {
-                giveStatus.innerText = `Granting ${amount} Yards to @${username}...`;
-                giveStatus.style.color = '#ffd32a';
+            btnSendUpdate.disabled = true;
+            if (updateStatus) {
+                updateStatus.innerText = 'Saadan uuendust andmebaasi...';
+                updateStatus.style.color = '#00f2fe';
             }
 
-            const adminEmail = getCurrentUserProfile()?.email || '1karl.ilves@gmail.com';
-            const res = await yardService.adminGiveYardsByUsername(username, amount, reason, adminEmail);
-            if (giveStatus) {
-                giveStatus.innerText = res.message;
-                giveStatus.style.color = res.success ? '#2ecc71' : '#ff4757';
-            }
-
-            if (res.success) {
-                giveUsernameInput.value = '';
-                renderAdminYardLogs();
+            try {
+                await yardService.sendUpdateToOwner(title, content, version, prof?.email || 'grx@trenet.ee');
+                if (updateStatus) {
+                    updateStatus.innerText = '✅ Uuendus edukalt saadetud Playard Ownerile ja salvestatud andmebaasi!';
+                    updateStatus.style.color = '#2ecc71';
+                }
+                updateTitleInput.value = '';
+                updateContentInput.value = '';
+                await renderAdminUpdatesList();
+            } catch (err: any) {
+                if (updateStatus) {
+                    updateStatus.innerText = 'Viga uuenduse saatmisel: ' + (err?.message || 'Tundmatu viga');
+                    updateStatus.style.color = '#ff4757';
+                }
+            } finally {
+                btnSendUpdate.disabled = false;
             }
         });
     }

@@ -578,105 +578,56 @@
         </div>
     </div>
 
-    <!-- Admin Panel Modal (Secret Admin Panel) -->
+    <!-- Admin Panel Modal (Update Management for Admin grx@trenet.ee) -->
     <div id="modal-admin-panel" class="modal-overlay">
-        <div class="modal-card" style="max-width: 800px; text-align: left;">
+        <div class="modal-card" style="max-width: 720px; text-align: left;">
             <button class="modal-close" id="btn-close-admin-panel">&times;</button>
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                 <span style="font-size: 1.8rem;">👑</span>
-                <h2 style="margin: 0; color: #ffd32a; font-size: 1.8rem;">Playard Secret Admin Panel</h2>
+                <h2 style="margin: 0; color: #ffd32a; font-size: 1.6rem;">Admini Uuenduste Paneel</h2>
             </div>
-            <p style="color: #a4b0be; margin: 0 0 20px 0; font-size: 0.9rem;">
-                Logged in as <strong>Admin✅</strong>. Review creator games & grant Yards.
+            <p style="color: #a4b0be; margin: 0 0 18px 0; font-size: 0.9rem;">
+                Logitud sisse kui <strong style="color: #ffd32a;">Admin✅</strong> (<span style="color: #00f2fe;">grx@trenet.ee</span>). Siin saad koostada uusi mängu- ja süsteemiuuendusi ning saata need otse Playard Owneri andmebaasi.
             </p>
 
-            <!-- Admin Navigation Tabs -->
-            <div class="admin-tabs">
-                <button id="tab-btn-review-games" class="admin-tab-btn active">🎮 Games to Review</button>
-                <button id="tab-btn-give-yards" class="admin-tab-btn">💎 Give Yards by Username</button>
-                <button id="tab-btn-promo-stats" class="admin-tab-btn">📊 Code Redemptions & Stats</button>
-                <button id="tab-btn-bug-reports" class="admin-tab-btn">🐛 Bug Reports</button>
-            </div>
-
-            <!-- Tab 1: Games to Review -->
-            <div id="admin-tab-review-games">
-                <h3 style="color: #00f2fe; margin-top: 0;">Submitted Games Waiting for Approval</h3>
-                <div id="admin-review-games-list" style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
-                    <!-- Dynamically populated -->
-                    <div style="text-align: center; color: #718093; padding: 25px;">Loading submitted games...</div>
-                </div>
-            </div>
-
-            <!-- Tab 2: Give Yards -->
-            <div id="admin-tab-give-yards" style="display: none;">
-                <h3 style="color: #ffd32a; margin-top: 0;">Grant Yards to User by Username</h3>
-                <div style="background: #242f3d; padding: 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                        <div>
-                            <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Target Username:</label>
-                            <input type="text" id="admin-give-username" placeholder="e.g. SuperRacer" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Yards Amount:</label>
-                            <input type="number" id="admin-give-amount" placeholder="e.g. 500" value="500" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: #ffd32a; font-weight: bold;">
-                        </div>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Reason / Note:</label>
-                        <input type="text" id="admin-give-reason" placeholder="e.g. Contest Winner / Community Creator Reward" value="Admin Reward" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white;">
-                    </div>
-                    <button id="btn-admin-give-yards" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: none; border-radius: 8px; color: #111; font-weight: 800; font-size: 1rem; cursor: pointer;">
-                        💎 Give Yards
-                    </button>
-                    <div id="admin-give-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
-                </div>
-
-                <h4 style="color: #a4b0be; margin: 0 0 8px 0;">Recent Yard Grant Logs:</h4>
-                <div id="admin-yard-logs-container" style="max-height: 180px; overflow-y: auto; background: #131920; border-radius: 8px; padding: 10px; border: 1px solid rgba(255,255,255,0.05); font-family: monospace; font-size: 0.8rem; color: #d2dae2;">
-                    <!-- Dynamically populated -->
-                </div>
-            </div>
-
-            <!-- Tab 3: Code Redemptions & Stats -->
-            <div id="admin-tab-promo-stats" style="display: none;">
-                <h3 style="color: #00f2fe; margin-top: 0;">📊 Promo Code Redemptions & Usage Stats</h3>
-                <p style="font-size: 0.85rem; color: #a4b0be; margin-top: -5px;">Vaata, kui palju inimesi on milliseid koode sisestanud ja lunastanud.</p>
+            <!-- Update Creation Box -->
+            <div style="background: #1c2733; border: 1px solid rgba(255, 211, 42, 0.25); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                <h3 style="color: #ffd32a; margin: 0 0 14px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                    <span>✍️</span> Kirjuta uus uuendus (Update)
+                </h3>
                 
-                <!-- Overview Stats Cards -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px;">
-                    <div style="background: #1a2430; border: 1px solid rgba(0,242,254,0.3); border-radius: 10px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.8rem; color: #94a3b8;">Total Code Claims</div>
-                        <div id="admin-stat-total-claims" style="font-size: 1.6rem; font-weight: 900; color: #00f2fe; margin-top: 4px;">0</div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Uuenduse pealkiri:</label>
+                        <input type="text" id="admin-update-title" placeholder="nt Uued 3D autod, heli ja AI uuendus" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.95rem;">
                     </div>
-                    <div style="background: #1a2430; border: 1px solid rgba(255,211,42,0.3); border-radius: 10px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.8rem; color: #94a3b8;">Total Yards Claimed</div>
-                        <div id="admin-stat-total-yards" style="font-size: 1.6rem; font-weight: 900; color: #ffd32a; margin-top: 4px;">0 Y</div>
-                    </div>
-                    <div style="background: #1a2430; border: 1px solid rgba(46,204,113,0.3); border-radius: 10px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.8rem; color: #94a3b8;">Active Promo Codes</div>
-                        <div id="admin-stat-active-codes" style="font-size: 1.6rem; font-weight: 900; color: #2ecc71; margin-top: 4px;">7</div>
+                    <div>
+                        <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Versioon / Silt:</label>
+                        <input type="text" id="admin-update-version" placeholder="nt v1.2.0" value="v1.2.0" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: #00f2fe; font-weight: bold; font-size: 0.95rem;">
                     </div>
                 </div>
 
-                <!-- Codes List Table -->
-                <h4 style="color: #ffd32a; margin: 15px 0 8px 0;">🎯 Promo Codes Usage Overview:</h4>
-                <div id="admin-promo-codes-table" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 16px;">
-                    <!-- Dynamically populated -->
+                <div style="margin-bottom: 14px;">
+                    <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Uuenduse sisu ja muudatuste nimekiri (Changelog):</label>
+                    <textarea id="admin-update-content" placeholder="Kirjelda siin uusi funktsioone, parandusi või teadaandeid..." rows="5" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; resize: vertical; font-family: inherit; font-size: 0.9rem; line-height: 1.4;"></textarea>
                 </div>
 
-                <!-- Live Redemption Logs -->
-                <h4 style="color: #a4b0be; margin: 0 0 8px 0;">📜 Recent Code Redemptions Log:</h4>
-                <div id="admin-code-redemption-logs" style="max-height: 160px; overflow-y: auto; background: #131920; border-radius: 8px; padding: 10px; border: 1px solid rgba(255,255,255,0.05); font-family: monospace; font-size: 0.8rem; color: #d2dae2;">
-                    <!-- Dynamically populated -->
-                </div>
+                <button id="btn-send-update-to-owner" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: none; border-radius: 8px; color: #111; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(255, 211, 42, 0.3);">
+                    <span>🚀</span> Saada Ownerile (Salvesta andmebaasi)
+                </button>
+                <div id="admin-update-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
             </div>
 
-            <!-- Tab 4: Bug Reports -->
-            <div id="admin-tab-bug-reports" style="display: none;">
-                <h3 style="color: #ff4757; margin-top: 0;">🐛 User Bug Reports</h3>
-                <div id="admin-bug-reports-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto;">
-                    <div style="text-align: center; color: #718093; padding: 25px;">Loading bug reports...</div>
-                </div>
+            <!-- Sent Updates List from Database -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <h3 style="color: #00f2fe; margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;">
+                    <span>📋</span> Ownerile saadetud uuendused andmebaasis
+                </h3>
+                <span id="admin-updates-count-badge" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0 uuendust</span>
+            </div>
+
+            <div id="admin-sent-updates-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="text-align: center; color: #718093; padding: 20px;">Uuendusi pole veel saadetud.</div>
             </div>
         </div>
     </div>
