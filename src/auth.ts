@@ -169,9 +169,9 @@ export async function initAuth() {
                 const username = session.user.user_metadata?.username || (isAdmin ? 'admin' : session.user.email?.split('@')[0] || 'user');
                 const profile: UserProfile = {
                     id: session.user.id,
-                    username,
+                    username: isAdmin ? 'admin' : username,
                     email: session.user.email || '',
-                    displayName: isAdmin ? 'Playard Owner✅' : `@${username}`,
+                    displayName: isAdmin ? 'Admin✅' : `@${username}`,
                     isAdmin
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
@@ -191,16 +191,16 @@ export async function initAuth() {
     if (loginBtn) {
         loginBtn.addEventListener('click', async () => {
             const email = emailInput?.value.trim().toLowerCase();
-            let username = usernameInput?.value.trim();
+            let username = usernameInput?.value.trim() || '';
             const password = passwordInput?.value;
-
-            if (!email || !username || !password) {
-                return showMsg('Please enter email, username, and password.', 'error');
-            }
 
             const isAdmin = isUserAdminEmail(email);
             if (isAdmin) {
                 username = 'admin';
+            }
+
+            if (!email || (!isAdmin && !username) || !password) {
+                return showMsg('Please enter email, username, and password.', 'error');
             }
 
             const usernameVal = validateUsername(username, email);
@@ -210,9 +210,6 @@ export async function initAuth() {
 
             if (username.toLowerCase() === 'admin' && !isAdmin) {
                 return showMsg("The username 'admin' is reserved for administrators!", 'error');
-            }
-            if (isAdmin && username.toLowerCase() !== 'admin' && username.toLowerCase() !== 'owner' && username.toLowerCase() !== 'playard owner') {
-                return showMsg("Incorrect username for Admin account!", 'error');
             }
 
             showMsg('Checking credentials...', 'info');
@@ -256,7 +253,7 @@ export async function initAuth() {
                     id: adminSession?.user?.id || 'admin_root',
                     username: 'admin',
                     email: email,
-                    displayName: 'Playard Owner✅',
+                    displayName: 'Admin✅',
                     isAdmin: true
                 };
 
@@ -269,7 +266,7 @@ export async function initAuth() {
                             id: adminProfile.id,
                             username: 'admin',
                             email: email,
-                            display_name: 'Playard Owner✅',
+                            display_name: 'Admin✅',
                             is_admin: true
                         });
                     } catch (e) {}
@@ -278,7 +275,7 @@ export async function initAuth() {
                 await yardService.onUserLogin(adminProfile.id, 'admin', email);
                 restoreUserGameProgress(adminProfile);
 
-                showMsg('Tere tulemast tagasi, Playard Owner✅!', 'success');
+                showMsg('Tere tulemast tagasi, Admin✅!', 'success');
                 if (emailInput) emailInput.value = '';
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
@@ -487,7 +484,7 @@ export async function initAuth() {
 
             // --- TEST MODE OR OFFLINE REGISTRATION (NO NETWORK / NO EMAILS) ---
             if (isTestMode(email) || !hasSupabase) {
-                const displayName = isAdmin ? 'Playard Owner✅' : `@${username}`;
+                const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                 const profile: UserProfile = {
                     id: isAdmin ? 'admin_root' : 'user_' + username.toLowerCase(),
                     username: username,
@@ -543,7 +540,7 @@ export async function initAuth() {
                                 return showMsg(`This email is already registered to user @${expectedUsername}!`, 'error');
                             }
                             
-                            const displayName = isAdmin ? 'Playard Owner✅' : `@${username}`;
+                            const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                             const profile: UserProfile = {
                                 id: loginData.session.user.id,
                                 username: username,
@@ -565,7 +562,7 @@ export async function initAuth() {
 
                     // If rate limit or other error, fallback to local registration gracefully
                     if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('limit')) {
-                        const displayName = isAdmin ? 'Playard Owner✅' : `@${username}`;
+                        const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                         const profile: UserProfile = {
                             id: 'local_' + Date.now(),
                             username: username,
