@@ -29,6 +29,7 @@ export class WarMultiplayerNetwork {
     private localClass: 'tank' | 'soldier';
 
     private peer: Peer | null = null;
+    private isHost = false;
     private connections: Map<string, DataConnection> = new Map();
     private broadcastChannel: BroadcastChannel | null = null;
     private supabaseChannel: any = null;
@@ -38,6 +39,7 @@ export class WarMultiplayerNetwork {
     private onStatusCallback: (statusText: string, onlineCount: number) => void;
 
     private isDestroyed = false;
+    private readonly hostRoomId = 'playard_war_room_host_v1';
 
     constructor(
         localId: string,
@@ -80,7 +82,7 @@ export class WarMultiplayerNetwork {
                     if (data.type === 'player_join') {
                         this.connectedPeers.add(data.payload.id);
                         this.notifyStatus();
-                        // Reply with own presence so new tab knows about us
+                        // Reply with own presence so new player knows about us
                         this.broadcastChannel?.postMessage({
                             type: 'player_join',
                             payload: {
@@ -98,7 +100,7 @@ export class WarMultiplayerNetwork {
                     this.onEventCallback(data);
                 };
 
-                // Announce presence to other tabs
+                // Announce presence
                 this.broadcastChannel.postMessage({
                     type: 'player_join',
                     payload: {
@@ -148,19 +150,15 @@ export class WarMultiplayerNetwork {
                     }
                 });
         } catch (e) {
-            console.warn('Supabase Realtime error:', e);
+            console.warn('Supabase Realtime note:', e);
         }
     }
 
-    // 3. WebRTC PeerJS P2P Mesh (Internet-wide cross-device multiplayer with zero backend configuration)
+    // 3. WebRTC PeerJS Room Host / Client Mesh (Universal Online Across Entire Internet)
     private initPeerJS() {
-        // Deterministic room host ID
-        const roomPrefix = 'playard_war_room_host_v1';
-
         try {
-            // First, attempt to become room host if available, or generate unique peer ID
-            const peerId = `pwar_${this.localId}_${Math.floor(Math.random() * 1000)}`;
-            this.peer = new Peer(peerId, {
+            // First attempt: try to claim the Host room peer ID
+            this.peer = new Peer(this.hostRoomId, {
                 debug: 0,
                 config: {
                     iceServers: [
@@ -170,10 +168,9 @@ export class WarMultiplayerNetwork {
                 }
             });
 
-            this.peer.on('open', (id) => {
-                // Try connecting to room host or broadcast discovery
-                this.tryConnectToHost(roomPrefix);
-                // Also attempt to listen if someone connects to us
+            this.peer.on('open', () => {
+                this.isHost = true;
+                this.notifyStatus();
             });
 
             this.peer.on('connection', (conn) => {
@@ -181,22 +178,45 @@ export class WarMultiplayerNetwork {
             });
 
             this.peer.on('error', (err) => {
-                // Ignore peer unavailable error during discovery
-                if (err.type === 'peer-unavailable') return;
-                console.warn('PeerJS note:', err.type);
+                if (err.type === 'unavailable-id') {
+                    // Host already exists! Create client peer and connect to existing room host
+                    this.isHost = false;
+                    this.createClientPeer();
+                }
             });
         } catch (e) {
             console.warn('PeerJS init note:', e);
         }
     }
 
-    private tryConnectToHost(hostId: string) {
-        if (!this.peer || this.peer.destroyed) return;
+    private createClientPeer() {
         try {
-            const conn = this.peer.connect(hostId, { reliable: false });
-            this.setupConnection(conn);
+            const clientPeerId = `pwar_client_${this.localId}_${Math.floor(Math.random() * 1000)}`;
+            this.peer = new Peer(clientPeerId, {
+                debug: 0,
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
+
+            this.peer.on('open', () => {
+                // Connect to host
+                const conn = this.peer!.connect(this.hostRoomId, { reliable: false });
+                this.setupConnection(conn);
+            });
+
+            this.peer.on('connection', (conn) => {
+                this.setupConnection(conn);
+            });
+
+            this.peer.on('error', (err) => {
+                console.warn('Client peer note:', err.type);
+            });
         } catch (e) {
-            // normal when host is not up yet
+            console.warn('Client peer creation note:', e);
         }
     }
 
@@ -223,7 +243,20 @@ export class WarMultiplayerNetwork {
                 if (data.type === 'player_join') {
                     this.connectedPeers.add(data.payload.id || conn.peer);
                     this.notifyStatus();
+                } else if (data.type === 'player_leave') {
+                    this.connectedPeers.delete(data.payload.id || conn.peer);
+                    this.notifyStatus();
                 }
+
+                // If this peer is the room host, relay data to all other connected clients
+                if (this.isHost) {
+                    this.connections.forEach((otherConn, peerId) => {
+                        if (peerId !== conn.peer && otherConn.open) {
+                            try { otherConn.send(data); } catch (e) {}
+                        }
+                    });
+                }
+
                 this.onEventCallback(data);
             }
         });
@@ -238,8 +271,8 @@ export class WarMultiplayerNetwork {
     private notifyStatus() {
         const count = Math.max(1, this.connectedPeers.size + 1);
         const statusText = count > 1
-            ? `🟢 ONLINE (${count} Mängijat)`
-            : `🟢 ONLINE (Ootel · 1 Mängija)`;
+            ? `🟢 War Server #1 · ${count} / 4 Mängijat`
+            : `🟢 War Server #1 · 1 / 4 Mängija`;
         this.onStatusCallback(statusText, count);
     }
 

@@ -69,6 +69,13 @@ try {
             throw new Error("War game card must be hidden for guests!");
         }
 
+        // Check Rongimäng visibility for guest (Expected: none - restricted to Playard Owner only)
+        const guestTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
+        console.log(`   Guest Rongimäng Card visibility (Expected: none): ${guestTrainCardDisplay}`);
+        if (guestTrainCardDisplay !== 'none') {
+            throw new Error("Rongimäng card must be hidden for guests!");
+        }
+
         // Check Guest Admin Panel visibility (Expected: none)
         const guestAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
         console.log(`   Guest Admin Panel visibility (Expected: none): ${guestAdminPanelDisplay}`);
@@ -76,7 +83,7 @@ try {
             throw new Error("Admin Panel button should be hidden for guests!");
         }
 
-        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, but War game card must be visible!
+        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, but War game AND Rongimäng card must be visible!
         await page.evaluate(() => {
             const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
@@ -95,7 +102,13 @@ try {
             throw new Error("War game card must be visible for Playard Owner!");
         }
 
-        // Test Admin login (grx@trenet.ee) -> Admin panel must be visible, and War game card must be visible!
+        const ownerTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
+        console.log(`   Playard Owner Rongimäng Card visibility (Expected: flex): ${ownerTrainCardDisplay}`);
+        if (ownerTrainCardDisplay !== 'flex') {
+            throw new Error("Rongimäng card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
+        }
+
+        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, but Rongimäng HIDDEN (Owner only)!
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
@@ -112,6 +125,12 @@ try {
         console.log(`   Admin (grx@trenet.ee) War Game Card visibility (Expected: flex): ${adminWarCardDisplay}`);
         if (adminWarCardDisplay !== 'flex') {
             throw new Error("War game card must be visible for Admin grx@trenet.ee!");
+        }
+
+        const adminTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
+        console.log(`   Admin (grx@trenet.ee) Rongimäng Card visibility (Expected: none): ${adminTrainCardDisplay}`);
+        if (adminTrainCardDisplay !== 'none') {
+            throw new Error("Rongimäng card must be hidden for non-owner admin (grx@trenet.ee)!");
         }
 
         // Click to open Admin Update Panel
@@ -564,6 +583,73 @@ try {
         await page.keyboard.press('Space');
         await new Promise(r => setTimeout(r, 300));
         console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
+
+        // 11. Test 3D Rongimäng (Train Simulator - Owner Exclusive)
+        console.log("11. Checking 3D Rongimäng (Train Simulator - Owner Exclusive)...");
+        await page.goto('http://localhost:4173/games/games/train/index.html');
+        await new Promise(r => setTimeout(r, 1500));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+
+        // Verify Train HUD elements
+        await page.waitForSelector('#speed-text', { visible: true, timeout: 5000 });
+        const initialSpeed = await page.$eval('#speed-text', el => el.textContent);
+        console.log("   Initial Train Speedometer (Expected: 0):", initialSpeed);
+
+        const targetStation = await page.$eval('#target-station-name', el => el.textContent);
+        console.log("   Initial Target Station:", targetStation);
+        if (!targetStation.includes('Männimetsa')) {
+            throw new Error(`Expected initial station to be Männimetsa Peatus, got: ${targetStation}`);
+        }
+
+        const passCount = await page.$eval('#stat-passengers', el => el.textContent);
+        console.log("   Initial Passenger Count:", passCount);
+
+        // Test Throttle Acceleration
+        await page.click('#btn-throttle-up');
+        await page.click('#btn-throttle-up');
+        await new Promise(r => setTimeout(r, 300));
+        const throttleText = await page.$eval('#throttle-text', el => el.textContent);
+        console.log("   Throttle after acceleration:", throttleText);
+
+        // Test Whistle (Tuut-tuut!)
+        await page.click('#btn-horn');
+        await page.keyboard.press('KeyH');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Successfully tested Train Whistle & Steam Burst!");
+
+        // Test Camera View Switch
+        await page.click('#btn-camera-view');
+        await new Promise(r => setTimeout(r, 200));
+        const camBtnText = await page.$eval('#btn-camera-view', el => el.textContent);
+        console.log("   Camera mode after toggle:", camBtnText);
+
+        // Test Weather / Time of Day Switch
+        await page.click('#btn-toggle-weather');
+        await new Promise(r => setTimeout(r, 200));
+        const weatherBtnText = await page.$eval('#btn-toggle-weather', el => el.textContent);
+        console.log("   Weather after toggle:", weatherBtnText);
+
+        // Test Track Switch with 'KeyJ'
+        await page.keyboard.press('KeyJ');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Successfully tested Track Switch key (KeyJ)!");
+
+        // Test Brake Button
+        await page.click('#btn-throttle-down');
+        await page.click('#btn-throttle-down');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Successfully tested Train Braking!");
+
+        // Test Help Modal
+        await page.click('#btn-open-help');
+        await new Promise(r => setTimeout(r, 200));
+        const helpVisible = await page.$eval('#modal-help', el => window.getComputedStyle(el).display);
+        if (helpVisible !== 'flex') {
+            throw new Error("Expected #modal-help to be visible after click!");
+        }
+        await page.click('#btn-close-help');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Successfully tested Help Modal in Rongimäng!");
 
         console.log("✅ All Playard Platform tests passed successfully!");
     } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

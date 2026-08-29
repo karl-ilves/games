@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard Games - Rongimäng (3D Train Simulator)</title>
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0b1118;
+            color: #d2dae2;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top HUD Bar */
+        .top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: rgba(11, 17, 24, 0.94);
+            backdrop-filter: blur(12px);
+            border-bottom: 2px solid rgba(0, 242, 254, 0.35);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 18px;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+        }
+
+        .hud-left, .hud-center, .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 900;
+            font-size: 1.15rem;
+            color: #00f2fe;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+            text-decoration: none;
+        }
+
+        .owner-pill {
+            background: linear-gradient(135deg, rgba(255, 211, 42, 0.2), rgba(243, 156, 18, 0.3));
+            border: 1px solid #ffd32a;
+            color: #ffd32a;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+        }
+
+        .mission-badge {
+            background: rgba(0, 242, 254, 0.1);
+            border: 1.5px solid rgba(0, 242, 254, 0.35);
+            border-radius: 20px;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .hud-stat-box {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 5px 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .btn-action {
+            background: #1e293b;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 0.82rem;
+        }
+        .btn-action:hover {
+            background: #334155;
+            border-color: #00f2fe;
+            transform: translateY(-1px);
+        }
+
+        /* Bottom Train Control Dashboard */
+        .bottom-hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 80;
+            pointer-events: none;
+        }
+
+        .dashboard-panel {
+            pointer-events: auto;
+            background: rgba(11, 17, 24, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(0, 242, 254, 0.35);
+            border-radius: 18px;
+            padding: 16px 22px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.7);
+        }
+
+        .speedometer-dial {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 100px;
+        }
+
+        .speed-val {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #00f2fe;
+            font-family: 'Courier New', Courier, monospace;
+            line-height: 1;
+            text-shadow: 0 0 12px rgba(0, 242, 254, 0.6);
+        }
+        .speed-unit {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #a4b0be;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        .throttle-bar-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 130px;
+        }
+        .bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .throttle-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2ecc71, #ffd32a, #ff4757);
+            transition: width 0.1s ease;
+        }
+
+        .controls-btn-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .train-control-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+            min-width: 68px;
+        }
+        .train-control-btn:hover {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.15);
+            transform: translateY(-2px);
+        }
+        .train-control-btn:active {
+            transform: scale(0.96);
+        }
+
+        .horn-btn {
+            background: linear-gradient(135deg, rgba(255, 211, 42, 0.2), rgba(243, 156, 18, 0.3));
+            border-color: #ffd32a;
+            color: #ffd32a;
+        }
+        .horn-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 211, 42, 0.35), rgba(243, 156, 18, 0.45));
+            box-shadow: 0 0 15px rgba(255, 211, 42, 0.4);
+        }
+
+        .brake-btn {
+            background: linear-gradient(135deg, rgba(255, 71, 87, 0.2), rgba(231, 76, 60, 0.3));
+            border-color: #ff4757;
+            color: #ff6b81;
+        }
+        .brake-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 71, 87, 0.35), rgba(231, 76, 60, 0.45));
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.4);
+        }
+
+        /* Junction Switcher Notification Banner */
+        #junction-banner {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(11, 17, 24, 0.92);
+            border: 2px solid #ffd32a;
+            border-radius: 20px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 90;
+            box-shadow: 0 0 25px rgba(255, 211, 42, 0.35);
+            font-weight: 800;
+            font-size: 0.95rem;
+            animation: bounceIn 0.3s ease;
+        }
+        @keyframes bounceIn {
+            0% { transform: translateX(-50%) scale(0.9); opacity: 0; }
+            100% { transform: translateX(-50%) scale(1); opacity: 1; }
+        }
+
+        /* Station Stopping / Passenger Boarding HUD */
+        #station-boarding-panel {
+            position: absolute;
+            top: 130px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(11, 17, 24, 0.94);
+            border: 2px solid #2ecc71;
+            border-radius: 20px;
+            padding: 15px 30px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 90;
+            box-shadow: 0 0 35px rgba(46, 204, 113, 0.4);
+            min-width: 320px;
+            text-align: center;
+        }
+
+        .boarding-bar {
+            width: 100%;
+            height: 14px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 7px;
+            overflow: hidden;
+        }
+        .boarding-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2ecc71, #00f2fe);
+            transition: width 0.1s linear;
+        }
+
+        /* Mobile Controls */
+        #mobile-train-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: none;
+            justify-content: space-between;
+            z-index: 90;
+            pointer-events: none;
+        }
+
+        .touch-btn {
+            pointer-events: auto;
+            width: 64px;
+            height: 64px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            color: white;
+            font-size: 1.4rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            touch-action: none;
+        }
+        .touch-btn:active {
+            background: rgba(0, 242, 254, 0.4);
+            border-color: #00f2fe;
+            transform: scale(0.94);
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+        .modal-card {
+            background: #182230;
+            border: 2px solid #00f2fe;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0, 242, 254, 0.35);
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px; right: 18px;
+            background: transparent;
+            border: none;
+            color: #a4b0be;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+
+        /* VIP Restricted Overlay */
+        #vip-restricted-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, rgba(16, 26, 38, 0.98) 0%, rgba(6, 10, 16, 1) 100%);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+            text-align: center;
+        }
+        .vip-lock-card {
+            background: #151f2b;
+            border: 2px solid #00f2fe;
+            border-radius: 22px;
+            padding: 40px 30px;
+            max-width: 500px;
+            box-shadow: 0 0 50px rgba(0, 242, 254, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top HUD Navigation -->
+    <header class="top-hud">
+        <div class="hud-left">
+            <a href="../../index.html" class="logo-badge">
+                <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 30px; height: 30px;">
+                <span>RONGIMÄNG</span>
+            </a>
+            <span class="owner-pill">👑 OWNER EXCLUSIVE</span>
+        </div>
+
+        <div class="hud-center">
+            <div class="mission-badge" id="mission-target-badge">
+                <span>🎯 Sihtjaam:</span>
+                <strong style="color: #ffd32a;" id="target-station-name">Männimetsa Peatus</strong>
+                <span style="color: #a4b0be; font-size: 0.8rem;" id="target-station-dist">(120m)</span>
+            </div>
+            <div class="hud-stat-box" style="border-color: rgba(46, 204, 113, 0.4);">
+                <span>👥 Reisijaid:</span>
+                <strong style="color: #2ecc71;" id="stat-passengers">24</strong>
+            </div>
+        </div>
+
+        <div class="hud-right">
+            <div class="hud-stat-box" style="border-color: rgba(0, 242, 254, 0.4);">
+                <span id="hud-yard-icon">💎</span>
+                <span id="train-yard-val" style="color: #00f2fe;">0</span>
+                <span style="font-size: 0.75rem; color: #718093;">Y</span>
+            </div>
+            <button id="btn-camera-view" class="btn-action" title="Vaheta vaadet (Klahv C)">🎥 Vaade (3D)</button>
+            <button id="btn-toggle-weather" class="btn-action" title="Päev / Loojang / Öö (Klahv N)">☀️ Päev</button>
+            <button id="btn-sound-toggle" class="btn-action">🔊 Heli</button>
+            <button id="btn-open-help" class="btn-action">❓ Abi</button>
+            <a href="../../index.html" class="btn-action" style="border-color: #00f2fe; color: #00f2fe;">🏠 Hub</a>
+        </div>
+    </header>
+
+    <!-- Track Junction Switcher Indicator Banner -->
+    <div id="junction-banner" style="display: none;">
+        <span style="font-size: 1.3rem;">🔀</span>
+        <span>Lähened pöörmele:</span>
+        <button id="btn-switch-track" class="btn-action" style="background: #ffd32a; color: #111; font-weight: 900; border: none; padding: 6px 14px;">
+            Vaheta Suunda (J / Tühik)
+        </button>
+        <span id="junction-dir-text" style="color: #00f2fe;">[VASAKULE]</span>
+    </div>
+
+    <!-- Station Stopping & Boarding HUD -->
+    <div id="station-boarding-panel">
+        <div style="font-weight: 900; font-size: 1.1rem; color: #2ecc71; display: flex; align-items: center; gap: 8px;">
+            <span>🚉</span> <span id="boarding-station-title">PEATUS JAAMAS</span>
+        </div>
+        <div style="color: #a4b0be; font-size: 0.85rem;" id="boarding-subtext">Reisijate pealeminek ja kaubavahetus...</div>
+        <div class="boarding-bar">
+            <div class="boarding-fill" id="boarding-progress"></div>
+        </div>
+    </div>
+
+    <!-- 3D Canvas Viewport -->
+    <div id="canvas-container"></div>
+
+    <!-- Bottom Train Dashboard & Controls -->
+    <div class="bottom-hud">
+        <div class="dashboard-panel">
+            <!-- Speedometer -->
+            <div class="speedometer-dial">
+                <div class="speed-val" id="speed-text">0</div>
+                <div class="speed-unit">KM / H</div>
+            </div>
+
+            <!-- Throttle & Reverser -->
+            <div class="throttle-bar-wrap">
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 800;">
+                    <span style="color: #a4b0be;">KIIRENDUS</span>
+                    <span id="throttle-text" style="color: #2ecc71;">0%</span>
+                </div>
+                <div class="bar-container">
+                    <div class="throttle-fill" id="throttle-fill"></div>
+                </div>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="controls-btn-group">
+                <button class="train-control-btn" id="btn-throttle-up" title="Kiirenda (W / Nool Üles)">
+                    <span>⚡</span>
+                    <span>GAAS</span>
+                </button>
+                <button class="train-control-btn brake-btn" id="btn-throttle-down" title="Pidurda / Tagurda (S / Nool Alla)">
+                    <span>🛑</span>
+                    <span>PIDUR</span>
+                </button>
+                <button class="train-control-btn horn-btn" id="btn-horn" title="Rongivile (H / Tühik)">
+                    <span>📢</span>
+                    <span>VILE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Virtual Controls -->
+    <div id="mobile-train-controls">
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="touch-btn" id="m-btn-throttle-down">🛑</button>
+            <button class="touch-btn" id="m-btn-throttle-up" style="background: rgba(46, 204, 113, 0.3); border-color: #2ecc71;">⚡</button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="touch-btn" id="m-btn-switch" style="background: rgba(255, 211, 42, 0.25); border-color: #ffd32a;">🔀</button>
+            <button class="touch-btn" id="m-btn-horn" style="background: rgba(255, 211, 42, 0.3); border-color: #ffd32a; width: 72px; height: 72px; font-size: 1.6rem;">📢</button>
+        </div>
+    </div>
+
+    <!-- Station Success Reward Modal -->
+    <div id="modal-station-success" class="modal-overlay">
+        <div class="modal-card">
+            <div style="font-size: 3.5rem; margin-bottom: 8px;">🎉</div>
+            <h2 style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 8px 0;" id="reward-modal-title">JAAM EDUKALT LÄBITUD!</h2>
+            <p style="color: #d2dae2; margin-bottom: 20px;" id="reward-modal-desc">
+                Reisijad toimetati turvaliselt sihtjaama ja graafikust peeti kinni!
+            </p>
+            <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 16px; margin-bottom: 22px;">
+                <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: #00f2fe; font-weight: 800;">
+                    <span>Teenitud Yardid:</span>
+                    <strong id="reward-yards-text">+50 YARDS 💎</strong>
+                </div>
+            </div>
+            <button id="btn-next-station-continue" class="btn-action" style="width: 100%; justify-content: center; padding: 12px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 900; font-size: 1.05rem; border: none;">
+                🚂 JÄTKA JÄRGMISELE LIINILE
+            </button>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="modal-help" class="modal-overlay">
+        <div class="modal-card" style="text-align: left;">
+            <button class="modal-close" id="btn-close-help">&times;</button>
+            <h2 style="color: #ffd32a; margin-top: 0;">🚂 Rongimäng - Juhtimisjuhised</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.92rem; color: #e2e8f0; line-height: 1.4;">
+                <div><strong style="color: #00f2fe;">W / Nool Üles / [GAAS]:</strong> Kiirenda vedurit edasi</div>
+                <div><strong style="color: #ff4757;">S / Nool Alla / [PIDUR]:</strong> Pidurda või tagurda</div>
+                <div><strong style="color: #ffd32a;">H / Tühik / [VILE]:</strong> Lase rongivilet (Tuut-tuut!)</div>
+                <div><strong style="color: #ffd32a;">J / Tühik:</strong> Vaheta raudteepööret / suunda ristmikel</div>
+                <div><strong style="color: #00f2fe;">C:</strong> Vaheta kaameravaadet (Juhi kabiin, Tagaajamisvaade, Kinovaade, Pealtvaade)</div>
+                <div><strong style="color: #ffd32a;">N:</strong> Vaheta ilma ja kellaaega (Päev, Loojang, Öö)</div>
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+                <div><strong style="color: #2ecc71;">💎 Kuidas teenida Yarde:</strong> Peatu kollases jaamatsoonis kiirusel 0 km/h, oota kuni reisijad peale lähevad ja teeni Yarde!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIP Restricted Lockout Overlay -->
+    <div id="vip-restricted-overlay">
+        <div class="vip-lock-card">
+            <div style="font-size: 3.5rem; margin-bottom: 10px;">🔒</div>
+            <h1 style="color: #00f2fe; margin: 0 0 10px 0;">Rongimäng (3D Train Simulator)</h1>
+            <div style="display: inline-block; background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; color: #00f2fe; padding: 4px 14px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; margin-bottom: 18px;">
+                PLAYARD OWNER EXCLUSIVE
+            </div>
+            <p style="line-height: 1.5; color: #d2dae2;">
+                See uus 3D Rongimäng on praegu algusfaasis nähtav ja mängitav <strong>ainult Playardi Ownerile</strong> (1karl.ilves@gmail.com).<br><br>
+                Palun logi sisse volitatud Playard Owneri kontoga või mine tagasi mängude keskusesse.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 20px;">
+                <a href="../../index.html" class="btn-action" style="padding: 12px 24px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 800; border: none;">🏠 Tagasi Avalehele</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Script Entry Point -->
+    <script type="module" src="/src/games/train/main.ts"></script>
+</body>
+</html>
