@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Playard Games - War Game (10v10 Online Multiplayer)</title>
+    <title>Playard Games - War Game (3 Tanks + 7 Soldiers)</title>
     <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -63,16 +63,6 @@
             text-decoration: none;
         }
 
-        .vip-tag {
-            background: linear-gradient(135deg, #ffd32a, #ff9f1a);
-            color: #111;
-            font-size: 0.72rem;
-            font-weight: 900;
-            padding: 3px 8px;
-            border-radius: 6px;
-            letter-spacing: 0.5px;
-        }
-
         .server-status-badge {
             background: rgba(0, 242, 254, 0.12);
             border: 1px solid rgba(0, 242, 254, 0.3);
@@ -112,7 +102,7 @@
             font-size: 0.9rem;
         }
 
-        /* 10v10 Team Scoreboard */
+        /* 10v10 Team Scoreboard (3 Tanks + 7 Soldiers) */
         .team-scoreboard {
             display: flex;
             align-items: center;
@@ -205,10 +195,10 @@
             gap: 6px;
             z-index: 80;
             pointer-events: none;
-            max-width: 320px;
+            max-width: 340px;
         }
         .kill-entry {
-            background: rgba(13, 17, 23, 0.82);
+            background: rgba(13, 17, 23, 0.85);
             border-left: 3px solid #ffd32a;
             border-radius: 4px;
             padding: 5px 10px;
@@ -504,23 +494,23 @@
             </a>
             <div class="server-status-badge">
                 <span class="online-dot"></span>
-                <span id="server-players-count">20 / 20 Online (Server #1)</span>
+                <span id="server-players-count">1 / 2 Mängijat (Server #1)</span>
             </div>
         </div>
 
         <div class="hud-center">
-            <!-- 10v10 Team Scoreboard -->
+            <!-- 10v10 Team Scoreboard (3 Tanks + 7 Soldiers) -->
             <div class="team-scoreboard">
                 <div class="team-pill team-red">
                     <span>🔴 RED</span>
                     <span id="team-red-score">0</span>
-                    <span style="font-size: 0.72rem; color: #a4b0be;">(10)</span>
+                    <span style="font-size: 0.72rem; color: #a4b0be;" title="3 Tanks + 7 Soldiers">(3T / 7S)</span>
                 </div>
                 <div style="font-size: 0.8rem; font-weight: 800; color: #ffd32a;">VS</div>
                 <div class="team-pill team-blue">
                     <span>🔵 BLUE</span>
                     <span id="team-blue-score">0</span>
-                    <span style="font-size: 0.72rem; color: #a4b0be;">(10)</span>
+                    <span style="font-size: 0.72rem; color: #a4b0be;" title="3 Tanks + 7 Soldiers">(3T / 7S)</span>
                 </div>
             </div>
         </div>
@@ -547,7 +537,7 @@
     <!-- Player Team Badge (Top Center below header) -->
     <div id="player-team-badge" class="team-blue" style="border: 1px solid #3498db;">
         <span>YOUR TEAM:</span>
-        <strong id="player-team-name">🔵 BLUE TEAM (South Base)</strong>
+        <strong id="player-team-name">🔵 BLUE SQUAD (3 Tanks + 7 Soldiers)</strong>
     </div>
 
     <!-- Radar Minimap (Top Right) -->
@@ -662,7 +652,7 @@
         <div class="match-end-card">
             <div id="match-end-icon" style="font-size: 3.5rem; margin-bottom: 10px;">🏆</div>
             <h2 id="match-end-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 10px 0;">VICTORY!</h2>
-            <p id="match-end-desc" style="color: #a4b0be; margin-bottom: 20px;">Your team reached 30 kills and secured the battlezone!</p>
+            <p id="match-end-desc" style="color: #a4b0be; margin-bottom: 20px;">Your squad reached 30 kills and secured the battlezone!</p>
             <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; margin-bottom: 25px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                     <span>Your Kills:</span>
@@ -684,7 +674,7 @@
     <div id="modal-help">
         <div class="modal-card">
             <button class="modal-close" id="btn-close-help">&times;</button>
-            <h2 style="color: #ffd32a; margin-top: 0;">🎮 War Game 10v10 Controls</h2>
+            <h2 style="color: #ffd32a; margin-top: 0;">🎮 War Game - 1v1 Squad Battle (3 Tanks + 7 Soldiers)</h2>
             <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.95rem; color: #e2e8f0;">
                 <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Tanki juhtimine (sõit ette/taha ja pööramine)</div>
                 <div><strong style="color: #ffd32a;">Hiir:</strong> Tanki torni ja sihturi suunamine (360 kraadi)</div>
@@ -693,7 +683,7 @@
                 <div><strong style="color: #ff6b81;">Klahv F:</strong> Taktikaline õhulöök (Airstrike)</div>
                 <div><strong style="color: #2ecc71;">Klahv R:</strong> Remondikomplekt (+50% HP)</div>
                 <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
-                <div style="color: #ffd32a;"><strong>🎯 Eesmärk:</strong> Sinu tiim (10 mängijat) peab hävitama vastastiimi (10 mängijat). Esimene tiim 30 tapmiseni võidab lahingu!</div>
+                <div style="color: #ffd32a;"><strong>🎯 Meeskonna koosseis:</strong> Serveris on maksimaalselt 2 mängijat. Igas tiimis on <strong>3 tanki ja 7 3D mehikest (sõdurit)</strong>, kelle kohal on sisselogitud kasutaja nimi!</div>
             </div>
         </div>
     </div>

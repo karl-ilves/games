@@ -504,8 +504,8 @@ try {
         // Check that VIP restricted overlay is hidden for admin
         await page.evaluate(() => { const v = document.getElementById('vip-restricted-overlay'); if(v) v.style.display = 'none'; });
 
-        // 10. Test 3D War Game (10v10 Online Multiplayer)
-        console.log("10. Checking 3D War Game (10v10 Online Multiplayer)...");
+        // 10. Test 3D War Game (3 Tanks + 7 Soldiers Squad Battle)
+        console.log("10. Checking 3D War Game (3 Tanks + 7 Soldiers Squad Battle)...");
         await page.goto('http://localhost:4173/games/games/war/index.html');
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -518,15 +518,15 @@ try {
             throw new Error(`Expected initial HP 100 / 100, got: ${initialHp}`);
         }
 
-        // Verify 10v10 Scoreboard (Red vs Blue)
+        // Verify 10v10 Squad Scoreboard (Red vs Blue)
         const redScore = await page.$eval('#team-red-score', el => el.textContent);
         const blueScore = await page.$eval('#team-blue-score', el => el.textContent);
-        console.log(`   10v10 Scoreboard: Red=${redScore}, Blue=${blueScore}`);
+        console.log(`   Squad Scoreboard: Red=${redScore}, Blue=${blueScore}`);
 
         const serverCount = await page.$eval('#server-players-count', el => el.textContent);
         console.log("   Server Player Status:", serverCount);
-        if (!serverCount.includes('Online')) {
-            throw new Error(`Expected server status to show Online count, got: ${serverCount}`);
+        if (!serverCount.includes('Mängijat') && !serverCount.includes('Online')) {
+            throw new Error(`Expected server status to show players count, got: ${serverCount}`);
         }
 
         const radarCanvasExists = await page.$eval('#radar-canvas', el => !!el);
