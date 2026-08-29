@@ -219,6 +219,7 @@ class WarGameEngine {
             this.spawnBattleRoster();
             this.updateTeamBadge();
             this.network?.updateIdentity(this.localTeam, this.localClass);
+            this.showToast(`🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${this.localClass === 'tank' ? 'TANK' : 'SÕDUR'})`, this.localTeam === 'red' ? '#ff4757' : '#00f2fe');
         });
 
         // Open loadout change button in navbar
@@ -230,6 +231,32 @@ class WarGameEngine {
         this.deployLocalUnit();
         this.spawnBattleRoster();
         this.updateTeamBadge();
+    }
+
+    private showToast(message: string, color = '#2ecc71') {
+        const toast = document.createElement('div');
+        toast.style.position = 'fixed';
+        toast.style.top = '70px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.background = 'rgba(10, 15, 25, 0.9)';
+        toast.style.border = `1.5px solid ${color}`;
+        toast.style.color = '#ffffff';
+        toast.style.padding = '10px 22px';
+        toast.style.borderRadius = '30px';
+        toast.style.fontWeight = 'bold';
+        toast.style.fontSize = '0.92rem';
+        toast.style.zIndex = '3000';
+        toast.style.boxShadow = `0 4px 20px ${color}44`;
+        toast.style.backdropFilter = 'blur(8px)';
+        toast.style.transition = 'all 0.3s ease';
+        toast.innerText = message;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(-10px)';
+            setTimeout(() => toast.remove(), 350);
+        }, 3200);
     }
 
     private updateTeamBadge() {
@@ -670,10 +697,12 @@ class WarGameEngine {
                 } else if (event.type === 'unit_killed') {
                     this.onRemoteKill(event.payload);
                 } else if (event.type === 'player_join') {
+                    this.showToast(`👥 ${event.payload.name || 'Uus mängija'} liitus serveriga!`, event.payload.team === 'red' ? '#ff4757' : '#00f2fe');
                     this.spawnBattleRoster();
                 } else if (event.type === 'player_leave') {
                     const unit = this.units.get(event.payload.id);
                     if (unit) {
+                        this.showToast(`🚪 ${unit.name} lahkus serverist`, '#a4b0be');
                         this.scene.remove(unit.root);
                         this.units.delete(event.payload.id);
                     }
