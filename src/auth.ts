@@ -13,6 +13,7 @@ export interface UserProfile {
 
 export const ADMIN_EMAILS = [
     '1karl.ilves@gmail.com',
+    '1karl.ilves@gmailo.com',
     '1karl.iles@gmail.com',
     'grx@trenet.ee'
 ];
@@ -23,6 +24,12 @@ export function isUserAdminEmail(email?: string | null): boolean {
     return ADMIN_EMAILS.some(e => e.toLowerCase() === clean);
 }
 
+export function isPlayardOwner(email?: string | null): boolean {
+    if (!email) return false;
+    const clean = email.trim().toLowerCase();
+    return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com';
+}
+
 export function isUserAdmin(email?: string | null): boolean {
     if (!email) return false;
     return email.trim().toLowerCase() === 'grx@trenet.ee';
@@ -31,7 +38,7 @@ export function isUserAdmin(email?: string | null): boolean {
 export function getAdminDisplayName(email?: string | null): string {
     if (!email) return 'Admin✅';
     const clean = email.trim().toLowerCase();
-    if (clean === '1karl.iles@gmail.com' || clean === '1karl.ilves@gmail.com') {
+    if (clean === '1karl.iles@gmail.com' || clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com') {
         return 'Playard Owner✅';
     }
     return 'Admin✅';
@@ -40,7 +47,7 @@ export function getAdminDisplayName(email?: string | null): string {
 export function getAdminUsername(email?: string | null): string {
     if (!email) return 'playard owner';
     const clean = email.trim().toLowerCase();
-    if (clean === '1karl.ilves@gmail.com' || clean === '1karl.iles@gmail.com') {
+    if (clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com') {
         return 'playard owner';
     }
     return 'admin';

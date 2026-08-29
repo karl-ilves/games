@@ -11,7 +11,8 @@ export default defineConfig({
         creator: resolve(__dirname, 'games/creator/index.html'),
         play: resolve(__dirname, 'games/play/index.html'),
         cooking: resolve(__dirname, 'games/cooking/index.html'),
-        war: resolve(__dirname, 'games/war/index.html')
+        war: resolve(__dirname, 'games/war/index.html'),
+        train: resolve(__dirname, 'games/train/index.html')
       }
     }
   }

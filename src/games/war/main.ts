@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { getCurrentUserProfile, isUserAdminEmail } from '../../auth';
 import { yardService } from '../../shared/yardService';
 import { warAudio } from './audio';
+import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
 
 // --- Types & Interfaces ---
 type Team = 'red' | 'blue';
@@ -117,8 +118,8 @@ class WarGameEngine {
     private shockwaves: Shockwave[] = [];
     private particles: Particle[] = [];
 
-    // Realtime Supabase Channel
-    private channel: any = null;
+    // Realtime Multiplayer Network
+    private network?: WarMultiplayerNetwork;
     private connectedHumanCount = 1;
     private lastBroadcastTime = 0;
 
@@ -217,6 +218,7 @@ class WarGameEngine {
             this.deployLocalUnit();
             this.spawnBattleRoster();
             this.updateTeamBadge();
+            this.network?.updateIdentity(this.localTeam, this.localClass);
         });
 
         // Open loadout change button in navbar
@@ -649,67 +651,48 @@ class WarGameEngine {
         ctx.fillRect(barX, barY, barW * pct, barH);
     }
 
-    // --- Multiplayer Supabase Realtime Setup ---
+    // --- Multiplayer Network Setup ---
     private initMultiplayer() {
-        if (!supabase) {
-            console.log("Supabase offline. Running local 2v2 simulated battle.");
-            return;
-        }
-
-        try {
-            this.channel = supabase.channel('war_squad_server_1', {
-                config: {
-                    broadcast: { self: false },
-                    presence: { key: this.localPlayerId }
-                }
-            });
-
-            this.channel
-                .on('presence', { event: 'sync' }, () => {
-                    const state = this.channel.presenceState();
-                    const players = Object.values(state).flat() as any[];
-                    this.connectedHumanCount = players.length;
-
-                    const serverEl = document.getElementById('server-players-count');
-                    if (serverEl) {
-                        if (this.connectedHumanCount <= 4) {
-                            serverEl.innerText = `${this.connectedHumanCount} / 4 Mängijat (2v2 Salk)`;
-                        } else {
-                            serverEl.innerText = `${Math.min(10, this.connectedHumanCount)} / 10 Mängijat (PvP Lahing)`;
-                        }
-                    }
-
+        this.network = new WarMultiplayerNetwork(
+            this.localPlayerId,
+            this.localUsername,
+            this.localTeam,
+            this.localClass,
+            (event: MultiplayerEvent) => {
+                if (event.type === 'player_state') {
+                    this.onRemotePlayerState(event.payload);
+                } else if (event.type === 'player_fire') {
+                    this.onRemotePlayerFire(event.payload);
+                } else if (event.type === 'grenade_throw') {
+                    this.onRemoteGrenade(event.payload);
+                } else if (event.type === 'airstrike_drop') {
+                    this.onRemoteAirstrike(event.payload);
+                } else if (event.type === 'unit_killed') {
+                    this.onRemoteKill(event.payload);
+                } else if (event.type === 'player_join') {
                     this.spawnBattleRoster();
-                })
-                .on('broadcast', { event: 'player_state' }, ({ payload }: any) => {
-                    this.onRemotePlayerState(payload);
-                })
-                .on('broadcast', { event: 'player_fire' }, ({ payload }: any) => {
-                    this.onRemotePlayerFire(payload);
-                })
-                .on('broadcast', { event: 'unit_killed' }, ({ payload }: any) => {
-                    this.onRemoteKill(payload);
-                })
-                .on('broadcast', { event: 'airstrike_drop' }, ({ payload }: any) => {
-                    this.onRemoteAirstrike(payload);
-                })
-                .on('broadcast', { event: 'grenade_throw' }, ({ payload }: any) => {
-                    this.onRemoteGrenade(payload);
-                })
-                .subscribe(async (status: string) => {
-                    if (status === 'SUBSCRIBED') {
-                        await this.channel.track({
-                            id: this.localPlayerId,
-                            name: this.localUsername,
-                            team: this.localTeam,
-                            unitClass: this.localClass,
-                            onlineAt: new Date().toISOString()
-                        });
+                } else if (event.type === 'player_leave') {
+                    const unit = this.units.get(event.payload.id);
+                    if (unit) {
+                        this.scene.remove(unit.root);
+                        this.units.delete(event.payload.id);
                     }
-                });
-        } catch (e) {
-            console.warn("Realtime connection error:", e);
-        }
+                    this.spawnBattleRoster();
+                }
+            },
+            (statusText: string, onlineCount: number) => {
+                this.connectedHumanCount = onlineCount;
+                const serverEl = document.getElementById('server-players-count');
+                if (serverEl) {
+                    if (this.connectedHumanCount <= 4) {
+                        serverEl.innerText = `${this.connectedHumanCount} / 4 Mängijat (2v2 Salk)`;
+                    } else {
+                        serverEl.innerText = `${Math.min(10, this.connectedHumanCount)} / 10 Mängijat (PvP Lahing)`;
+                    }
+                }
+                this.spawnBattleRoster();
+            }
+        );
     }
 
     private onRemotePlayerState(payload: any) {
@@ -769,15 +752,14 @@ class WarGameEngine {
     }
 
     private broadcastState() {
-        if (!this.channel || this.localUnit.isDead) return;
+        if (!this.network || this.localUnit.isDead) return;
 
         const now = performance.now();
         if (now - this.lastBroadcastTime < 50) return;
         this.lastBroadcastTime = now;
 
-        this.channel.send({
-            type: 'broadcast',
-            event: 'player_state',
+        this.network.send({
+            type: 'player_state',
             payload: {
                 id: this.localPlayerId,
                 name: this.localUsername,
@@ -946,21 +928,18 @@ class WarGameEngine {
             warAudio.playMachineGun();
         }
 
-        if (this.channel) {
-            this.channel.send({
-                type: 'broadcast',
-                event: 'player_fire',
-                payload: {
-                    shooterId: this.localPlayerId,
-                    shooterName: this.localUnit.name,
-                    team: this.localTeam,
-                    fromX: this.localUnit.pos.x, fromY: 1.5, fromZ: this.localUnit.pos.z,
-                    dirX: this.mouseAimTarget.x, dirY: 0, dirZ: this.mouseAimTarget.z,
-                    isExplosive: this.localClass === 'tank',
-                    isCannon: this.localClass === 'tank'
-                }
-            });
-        }
+        this.network?.send({
+            type: 'player_fire',
+            payload: {
+                shooterId: this.localPlayerId,
+                shooterName: this.localUnit.name,
+                team: this.localTeam,
+                fromX: this.localUnit.pos.x, fromY: 1.5, fromZ: this.localUnit.pos.z,
+                dirX: this.mouseAimTarget.x, dirY: 0, dirZ: this.mouseAimTarget.z,
+                isExplosive: this.localClass === 'tank',
+                isCannon: this.localClass === 'tank'
+            }
+        });
     }
 
     private fireMachineGunWeapon() {
@@ -1039,19 +1018,16 @@ class WarGameEngine {
             targetPos: targetPos.clone()
         });
 
-        if (this.channel) {
-            this.channel.send({
-                type: 'broadcast',
-                event: 'grenade_throw',
-                payload: {
-                    shooterId,
-                    shooterName,
-                    team,
-                    fromX: from.x, fromY: from.y, fromZ: from.z,
-                    targetX: targetPos.x, targetY: targetPos.y, targetZ: targetPos.z
-                }
-            });
-        }
+        this.network?.send({
+            type: 'grenade_throw',
+            payload: {
+                shooterId,
+                shooterName,
+                team,
+                fromX: from.x, fromY: from.y, fromZ: from.z,
+                targetX: targetPos.x, targetY: targetPos.y, targetZ: targetPos.z
+            }
+        });
     }
 
     private spawnProjectile(
@@ -1213,19 +1189,16 @@ class WarGameEngine {
         this.scene.add(beacon);
 
         // Broadcast to multiplayer room
-        if (this.channel) {
-            this.channel.send({
-                type: 'broadcast',
-                event: 'airstrike_drop',
-                payload: {
-                    shooterId: this.localPlayerId,
-                    shooterName: this.localUsername,
-                    team: this.localTeam,
-                    targetX: targetPos.x,
-                    targetZ: targetPos.z
-                }
-            });
-        }
+        this.network?.send({
+            type: 'airstrike_drop',
+            payload: {
+                shooterId: this.localPlayerId,
+                shooterName: this.localUsername,
+                team: this.localTeam,
+                targetX: targetPos.x,
+                targetZ: targetPos.z
+            }
+        });
 
         // Drop a cluster of heavy explosive shells right on that target spot
         for (let i = 0; i < 5; i++) {
@@ -1280,18 +1253,15 @@ class WarGameEngine {
 
         this.addKillFeedEntry(killerName, killerTeam, victimName, victimTeam);
 
-        if (this.channel) {
-            this.channel.send({
-                type: 'broadcast',
-                event: 'unit_killed',
-                payload: {
-                    killerId, killerName, killerTeam,
-                    victimId, victimName, victimTeam,
-                    redScore: this.redScore,
-                    blueScore: this.blueScore
-                }
-            });
-        }
+        this.network?.send({
+            type: 'unit_killed',
+            payload: {
+                killerId, killerName, killerTeam,
+                victimId, victimName, victimTeam,
+                redScore: this.redScore,
+                blueScore: this.blueScore
+            }
+        });
 
         if (killerId === this.localPlayerId) {
             this.myKills++;

@@ -1,5 +1,5 @@
 import { supabase } from './lib/supabase';
-import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin } from './auth';
+import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
 import { setLanguage, applyLocalization } from './shared/i18n';
 
@@ -30,10 +30,16 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         btnOpenStreak.style.display = showAdminPanel ? 'none' : 'flex';
     }
     
-    // War game kaart on nähtav AINULT Playardi Ownerile ja Adminile
+    // War game kaart on nähtav Playardi Ownerile ja Adminile
     const warGameCard = document.getElementById('card-war-game');
     if (warGameCard) {
         warGameCard.style.display = isUserAdminEmail(emailToCheck) ? 'flex' : 'none';
+    }
+
+    // Rongimäng on alguses nähtav AINULT Playardi Ownerile (1karl.ilves@gmail.com)
+    const trainGameCard = document.getElementById('card-train-game');
+    if (trainGameCard) {
+        trainGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
     }
 
     // Switch language: Estonian for admin and owner, English for others!
@@ -56,6 +62,9 @@ function setupIcons() {
 
     const cardWarYardIcon = document.getElementById('card-war-yard-icon');
     if (cardWarYardIcon) cardWarYardIcon.innerHTML = yardService.renderYardSvg(16);
+
+    const cardTrainYardIcon = document.getElementById('card-train-yard-icon');
+    if (cardTrainYardIcon) cardTrainYardIcon.innerHTML = yardService.renderYardSvg(16);
 }
 
 // --- Live HMS Countdown Updater ---
