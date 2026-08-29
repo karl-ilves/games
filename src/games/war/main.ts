@@ -92,7 +92,6 @@ class WarGameEngine {
     private localTeam: Team = 'blue';
     private localClass: UnitClass = 'tank';
     private localUnit!: CombatUnit;
-    private repairKits = 3;
     private mgAmmo = 500;
     private primaryReloadTime = 1.2;
     private primaryReloadTimer = 0;
@@ -780,16 +779,16 @@ class WarGameEngine {
     }
 
     // --- Input & Controls ---
+    private activeWeapon: 'cannon' | 'mg' | 'airstrike' = 'cannon';
+    private isMouseDown = false;
+
     private setupInputListeners() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            if (e.code === 'Space' || e.code === 'KeyE') this.firePrimaryWeapon();
-            if (e.code === 'KeyR') this.useRepairKit();
-            if (e.code === 'KeyF') this.triggerAirstrike();
             if (e.code === 'Digit1') this.selectWeapon('cannon');
             if (e.code === 'Digit2') this.selectWeapon('mg');
-            if (e.code === 'Digit3') this.selectWeapon('airstrike');
-            if (e.code === 'Digit4') this.selectWeapon('repair');
+            if (e.code === 'Digit3' || e.code === 'KeyF') this.selectWeapon('airstrike');
+            if (e.code === 'Space' || e.code === 'KeyE') this.fireActiveWeapon();
         });
 
         window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
@@ -806,13 +805,17 @@ class WarGameEngine {
         });
 
         window.addEventListener('mousedown', (e) => {
-            if (this.isAirstrikeTargeting) {
-                this.dropAirstrikeAtTarget(this.mouseAimTarget.clone());
-                return;
+            if (e.button === 0) {
+                this.isMouseDown = true;
+                this.fireActiveWeapon();
+            } else if (e.button === 2) {
+                // Secondary action: alternate fire
+                if (this.activeWeapon === 'cannon') this.selectWeapon('mg');
+                else this.selectWeapon('cannon');
             }
-            if (e.button === 0) this.firePrimaryWeapon();
-            else if (e.button === 2) this.fireSecondaryWeapon();
         });
+
+        window.addEventListener('mouseup', () => { this.isMouseDown = false; });
 
         window.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -834,8 +837,8 @@ class WarGameEngine {
         bindTouch('m-btn-left', 'KeyA');
         bindTouch('m-btn-right', 'KeyD');
 
-        document.getElementById('m-btn-fire')?.addEventListener('touchstart', (e) => { e.preventDefault(); this.firePrimaryWeapon(); });
-        document.getElementById('m-btn-mg')?.addEventListener('touchstart', (e) => { e.preventDefault(); this.fireSecondaryWeapon(); });
+        document.getElementById('m-btn-fire')?.addEventListener('touchstart', (e) => { e.preventDefault(); this.fireActiveWeapon(); });
+        document.getElementById('m-btn-mg')?.addEventListener('touchstart', (e) => { e.preventDefault(); this.selectWeapon('mg'); this.fireActiveWeapon(); });
     }
 
     private setupUI() {
@@ -852,10 +855,9 @@ class WarGameEngine {
         document.getElementById('btn-open-help')?.addEventListener('click', () => { if (helpModal) helpModal.style.display = 'flex'; });
         document.getElementById('btn-close-help')?.addEventListener('click', () => { if (helpModal) helpModal.style.display = 'none'; });
 
-        document.getElementById('weapon-cannon')?.addEventListener('click', () => { this.selectWeapon('cannon'); this.firePrimaryWeapon(); });
-        document.getElementById('weapon-mg')?.addEventListener('click', () => { this.selectWeapon('mg'); this.fireSecondaryWeapon(); });
-        document.getElementById('weapon-airstrike')?.addEventListener('click', () => { this.selectWeapon('airstrike'); this.triggerAirstrike(); });
-        document.getElementById('weapon-repair')?.addEventListener('click', () => { this.selectWeapon('repair'); this.useRepairKit(); });
+        document.getElementById('weapon-cannon')?.addEventListener('click', () => this.selectWeapon('cannon'));
+        document.getElementById('weapon-mg')?.addEventListener('click', () => this.selectWeapon('mg'));
+        document.getElementById('weapon-airstrike')?.addEventListener('click', () => this.selectWeapon('airstrike'));
 
         document.getElementById('btn-restart-match')?.addEventListener('click', () => {
             const matchModal = document.getElementById('match-end-modal');
@@ -867,13 +869,44 @@ class WarGameEngine {
         });
     }
 
-    private selectWeapon(type: 'cannon' | 'mg' | 'airstrike' | 'repair') {
+    private selectWeapon(type: 'cannon' | 'mg' | 'airstrike') {
+        this.activeWeapon = type;
         document.querySelectorAll('.weapon-card').forEach(c => c.classList.remove('active'));
         document.getElementById(`weapon-${type}`)?.classList.add('active');
+
+        if (type === 'airstrike') {
+            if (!this.isAirstrikeTargeting) this.toggleAirstrikeTargeting();
+        } else {
+            if (this.isAirstrikeTargeting) {
+                this.isAirstrikeTargeting = false;
+                if (this.airstrikeReticleMesh) this.airstrikeReticleMesh.visible = false;
+                const cdEl = document.getElementById('cooldown-airstrike');
+                if (cdEl) {
+                    cdEl.innerText = this.airstrikeCooldown > 0 ? `${Math.ceil(this.airstrikeCooldown)}s` : 'VALMIS';
+                    cdEl.style.color = '#ff6b81';
+                }
+            }
+        }
+        this.updateHUD();
     }
 
-    // --- Weapons & Expanding Blast Wave Combat ---
-    private firePrimaryWeapon() {
+    // --- Active Weapon Firing Routing ---
+    private fireActiveWeapon() {
+        if (this.localUnit.isDead || this.isMatchEnded) return;
+
+        if (this.activeWeapon === 'airstrike' || this.isAirstrikeTargeting) {
+            this.triggerAirstrike();
+            return;
+        }
+
+        if (this.activeWeapon === 'mg') {
+            this.fireMachineGunWeapon();
+        } else {
+            this.fireCannonWeapon();
+        }
+    }
+
+    private fireCannonWeapon() {
         if (this.primaryReloadTimer > 0 || this.localUnit.isDead || this.isMatchEnded) return;
         this.primaryReloadTimer = this.primaryReloadTime;
 
@@ -916,11 +949,14 @@ class WarGameEngine {
         }
     }
 
-    private fireSecondaryWeapon() {
+    private fireMachineGunWeapon() {
         if (this.localUnit.isDead || this.isMatchEnded) return;
 
         if (this.localClass === 'tank') {
-            // Tank MG-42
+            // Rapid Tank MG-42 (0.09s interval)
+            if (this.secondaryReloadTimer > 0) return;
+            this.secondaryReloadTimer = 0.09;
+
             if (this.mgAmmo <= 0) return;
             this.mgAmmo--;
 
@@ -937,7 +973,7 @@ class WarGameEngine {
         } else {
             // Soldier Hand Grenade (Spreading Explosion AoE)
             if (this.secondaryReloadTimer > 0) return;
-            this.secondaryReloadTimer = 4.0;
+            this.secondaryReloadTimer = 3.5;
 
             const fromPos = this.localUnit.pos.clone().add(new THREE.Vector3(0, 1.8, 0));
             const dir = new THREE.Vector3().subVectors(this.mouseAimTarget, fromPos).normalize();
@@ -945,6 +981,7 @@ class WarGameEngine {
 
             this.spawnProjectile(this.localPlayerId, this.localUnit.name, this.localTeam, fromPos, dir, true, false);
             warAudio.playMachineGun();
+            this.updateHUD();
         }
     }
 
@@ -1145,16 +1182,6 @@ class WarGameEngine {
         }
     }
 
-    private useRepairKit() {
-        if (this.repairKits <= 0 || this.localUnit.hp >= this.localUnit.maxHp || this.localUnit.isDead) return;
-        this.repairKits--;
-        this.localUnit.hp = Math.min(this.localUnit.maxHp, this.localUnit.hp + (this.localClass === 'tank' ? 50 : 35));
-        warAudio.playRepair();
-        this.updateNameTag(this.localUnit.nameTagCanvas, this.localUnit.name, this.localUnit.team, this.localUnit.hp, this.localUnit.maxHp);
-        (this.localUnit.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
-        this.updateHUD();
-    }
-
     // --- Damage & Elimination ---
     private damageUnit(victim: CombatUnit, damage: number, attackerId: string, attackerName: string, attackerTeam: Team) {
         if (victim.isDead || this.isMatchEnded) return;
@@ -1308,7 +1335,6 @@ class WarGameEngine {
         const statKills = document.getElementById('stat-kills');
         const statYards = document.getElementById('stat-yards');
         const ammoMg = document.getElementById('ammo-mg');
-        const countRepair = document.getElementById('count-repair');
         const cdAirstrike = document.getElementById('cooldown-airstrike');
 
         if (redScoreEl) redScoreEl.innerText = this.redScore.toString();
@@ -1321,20 +1347,44 @@ class WarGameEngine {
         }
 
         if (reloadText && reloadBar) {
-            if (this.primaryReloadTimer > 0) {
-                reloadText.innerText = `${this.primaryReloadTimer.toFixed(1)}s`;
-                const pct = ((this.primaryReloadTime - this.primaryReloadTimer) / this.primaryReloadTime) * 100;
-                reloadBar.style.width = `${pct}%`;
-            } else {
-                reloadText.innerText = 'VALMIS';
-                reloadBar.style.width = '100%';
+            if (this.activeWeapon === 'cannon') {
+                if (this.primaryReloadTimer > 0) {
+                    reloadText.innerText = `${this.primaryReloadTimer.toFixed(1)}s`;
+                    const pct = ((this.primaryReloadTime - this.primaryReloadTimer) / this.primaryReloadTime) * 100;
+                    reloadBar.style.width = `${pct}%`;
+                } else {
+                    reloadText.innerText = 'VALMIS';
+                    reloadBar.style.width = '100%';
+                }
+            } else if (this.activeWeapon === 'mg') {
+                if (this.localClass === 'soldier') {
+                    if (this.secondaryReloadTimer > 0) {
+                        reloadText.innerText = `${this.secondaryReloadTimer.toFixed(1)}s`;
+                        const pct = ((3.5 - this.secondaryReloadTimer) / 3.5) * 100;
+                        reloadBar.style.width = `${pct}%`;
+                    } else {
+                        reloadText.innerText = 'GRANAAT VALMIS';
+                        reloadBar.style.width = '100%';
+                    }
+                } else {
+                    reloadText.innerText = this.mgAmmo > 0 ? `${this.mgAmmo} RDS` : 'TÜHI';
+                    reloadBar.style.width = `${Math.max(0, (this.mgAmmo / 500) * 100)}%`;
+                }
+            } else if (this.activeWeapon === 'airstrike') {
+                if (this.airstrikeCooldown > 0) {
+                    reloadText.innerText = `${Math.ceil(this.airstrikeCooldown)}s`;
+                    const pct = ((25.0 - this.airstrikeCooldown) / 25.0) * 100;
+                    reloadBar.style.width = `${pct}%`;
+                } else {
+                    reloadText.innerText = this.isAirstrikeTargeting ? '📍 SIHI & KLÕPSA' : 'VALMIS';
+                    reloadBar.style.width = '100%';
+                }
             }
         }
 
         if (statKills) statKills.innerText = this.myKills.toString();
         if (statYards) statYards.innerText = yardService.getYards().toLocaleString();
         if (ammoMg) ammoMg.innerText = this.localClass === 'tank' ? `${this.mgAmmo} rds` : '💣 Granaat';
-        if (countRepair) countRepair.innerText = `${this.repairKits} Järel`;
         if (cdAirstrike) cdAirstrike.innerText = this.airstrikeCooldown > 0 ? `${Math.ceil(this.airstrikeCooldown)}s` : 'VALMIS';
     }
 
@@ -1465,6 +1515,15 @@ class WarGameEngine {
         if (this.primaryReloadTimer > 0) this.primaryReloadTimer = Math.max(0, this.primaryReloadTimer - dt);
         if (this.secondaryReloadTimer > 0) this.secondaryReloadTimer = Math.max(0, this.secondaryReloadTimer - dt);
         if (this.airstrikeCooldown > 0) this.airstrikeCooldown = Math.max(0, this.airstrikeCooldown - dt);
+
+        // Continuous Auto-Fire for MG-42 when holding mouse or Space
+        if ((this.isMouseDown || this.keys['Space']) && !this.localUnit.isDead && !this.isMatchEnded) {
+            if (this.activeWeapon === 'mg' && this.localClass === 'tank' && this.secondaryReloadTimer <= 0) {
+                this.fireMachineGunWeapon();
+            } else if (this.activeWeapon === 'cannon' && this.localClass === 'soldier' && this.primaryReloadTimer <= 0) {
+                this.fireCannonWeapon();
+            }
+        }
     }
 
     private updateBots(dt: number) {

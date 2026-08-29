@@ -547,6 +547,17 @@ try {
             throw new Error("Radar canvas not found in War Game!");
         }
 
+        // Test Weapon Switching (MG-42 and Cannon)
+        await page.click('#weapon-mg');
+        const mgActive = await page.$eval('#weapon-mg', el => el.classList.contains('active'));
+        if (!mgActive) throw new Error("Expected #weapon-mg to be active after click!");
+        console.log("   Successfully switched active weapon to MG-42!");
+
+        await page.click('#weapon-cannon');
+        const cannonActive = await page.$eval('#weapon-cannon', el => el.classList.contains('active'));
+        if (!cannonActive) throw new Error("Expected #weapon-cannon to be active after click!");
+        console.log("   Successfully switched active weapon to Cannon!");
+
         // Test Weapon Firing & Spreading Explosion
         await page.keyboard.press('Space');
         await new Promise(r => setTimeout(r, 300));
