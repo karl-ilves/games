@@ -3,7 +3,7 @@ import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
 import { yardService, YardData } from '../../shared/yardService';
 import { trainAudio } from './audio';
 
-console.log("3D Rongimäng (Train Simulator - 10 Trains Depot) Initialized.");
+console.log("3D Rongimäng (Train Simulator - 10 Trains Depot & In-Game Currency) Initialized.");
 
 // --- Access Gating Check (Playard Owner Only) ---
 function checkOwnerAccess(): boolean {
@@ -24,12 +24,46 @@ function checkOwnerAccess(): boolean {
     return true;
 }
 
+// --- In-Game Currency ("Rongiraha" / 🪙 €) ---
+const TRAIN_MONEY_KEY = 'playard_train_money';
+
+function getTrainMoney(): number {
+    try {
+        const raw = localStorage.getItem(TRAIN_MONEY_KEY);
+        if (raw !== null) {
+            const val = parseInt(raw, 10);
+            if (!isNaN(val)) return val;
+        }
+    } catch (e) {}
+    return 0;
+}
+
+function saveTrainMoney(val: number) {
+    localStorage.setItem(TRAIN_MONEY_KEY, Math.max(0, Math.round(val)).toString());
+}
+
+function addTrainMoney(amount: number): number {
+    const current = getTrainMoney();
+    const updated = current + Math.max(0, Math.round(amount));
+    saveTrainMoney(updated);
+    updateHUD();
+    return updated;
+}
+
+function spendTrainMoney(amount: number): boolean {
+    const current = getTrainMoney();
+    if (current < amount) return false;
+    saveTrainMoney(current - amount);
+    updateHUD();
+    return true;
+}
+
 // --- 10 Trains Catalog & Definitions ---
 export interface TrainDef {
     id: string;
     name: string;
     icon: string;
-    price: number; // Yards (0 for default, 100 for cheapest purchasable, up to 2000)
+    price: number; // 0 for default, 100 for cheapest purchasable (100€ / 100Y), up to 2000
     maxSpeed: number; // km/h
     acceleration: number; // multiplier
     passengers: number;
@@ -61,7 +95,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
         id: 'commuter_emu',
         name: 'Linnalähirong Express',
         icon: '🚆',
-        price: 100, // Kõige odavam ostetav rong (100 Y)
+        price: 100, // Kõige odavam ostetav rong (100€ või 100Y)
         maxSpeed: 120,
         acceleration: 1.4,
         passengers: 42,
@@ -230,7 +264,8 @@ interface Station {
     trackU: number; // position on track [0..1]
     worldPos: THREE.Vector3;
     passengersWaiting: number;
-    yardReward: number;
+    moneyReward: number; // Rongiraha
+    yardReward: number;  // Yardid
 }
 
 const STATIONS: Station[] = [
@@ -241,7 +276,8 @@ const STATIONS: Station[] = [
         trackU: 0.05,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 28,
-        yardReward: 50 // +50 Yards per stop
+        moneyReward: 50,
+        yardReward: 50
     },
     {
         id: 'forest',
@@ -250,7 +286,8 @@ const STATIONS: Station[] = [
         trackU: 0.32,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 20,
-        yardReward: 50 // +50 Yards per stop
+        moneyReward: 50,
+        yardReward: 50
     },
     {
         id: 'harbor',
@@ -259,7 +296,8 @@ const STATIONS: Station[] = [
         trackU: 0.58,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 25,
-        yardReward: 50 // +50 Yards per stop
+        moneyReward: 50,
+        yardReward: 50
     },
     {
         id: 'mountain',
@@ -268,7 +306,8 @@ const STATIONS: Station[] = [
         trackU: 0.82,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 35,
-        yardReward: 50 // +50 Yards per stop
+        moneyReward: 50,
+        yardReward: 50
     }
 ];
 
@@ -411,19 +450,20 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// --- Train Depot & Store Modal Rendering ---
+// --- Train Depot & Store Modal Rendering (Rongiraha + Yardid) ---
 function renderDepotModal() {
     const gridContainer = document.getElementById('trains-grid-container');
     const depotYardVal = document.getElementById('depot-yard-val');
+    const depotMoneyVal = document.getElementById('depot-money-val');
     if (!gridContainer) return;
 
     const unlockedIds = getUnlockedTrainIds();
     const currentActiveId = activeTrain.id;
     const currentYards = yardService.getYards();
+    const currentMoney = getTrainMoney();
 
-    if (depotYardVal) {
-        depotYardVal.innerText = currentYards.toLocaleString();
-    }
+    if (depotYardVal) depotYardVal.innerText = currentYards.toLocaleString();
+    if (depotMoneyVal) depotMoneyVal.innerText = currentMoney.toLocaleString();
 
     gridContainer.innerHTML = '';
 
@@ -438,7 +478,7 @@ function renderDepotModal() {
         if (train.price === 0) {
             priceBadgeHtml = `<span class="train-price-badge badge-free">TASUTA</span>`;
         } else {
-            priceBadgeHtml = `<span class="train-price-badge badge-price">${train.price} YARDS 💎</span>`;
+            priceBadgeHtml = `<span class="train-price-badge badge-price">🪙 ${train.price} €  või  💎 ${train.price} Y</span>`;
         }
 
         let actionBtnHtml = '';
@@ -447,7 +487,12 @@ function renderDepotModal() {
         } else if (isUnlocked) {
             actionBtnHtml = `<button class="btn-train-select btn-choose" data-train-id="${train.id}">▶️ VALI RONG</button>`;
         } else {
-            actionBtnHtml = `<button class="btn-train-select btn-buy" data-train-id="${train.id}" data-price="${train.price}">💎 OSTA (${train.price} Y)</button>`;
+            actionBtnHtml = `
+                <div style="display: flex; flex-direction: column; width: 100%; gap: 6px; margin-top: 8px;">
+                    <button class="btn-train-select btn-buy-money" data-train-id="${train.id}" data-price="${train.price}">🪙 OSTA (${train.price} €)</button>
+                    <button class="btn-train-select btn-buy-yard" data-train-id="${train.id}" data-price="${train.price}">💎 OSTA (${train.price} Y)</button>
+                </div>
+            `;
         }
 
         card.innerHTML = `
@@ -477,7 +522,7 @@ function renderDepotModal() {
         gridContainer.appendChild(card);
     });
 
-    // Attach Click Handlers
+    // Attach Click Handlers for Choose
     gridContainer.querySelectorAll('.btn-choose').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
@@ -487,13 +532,25 @@ function renderDepotModal() {
         });
     });
 
-    gridContainer.querySelectorAll('.btn-buy').forEach(btn => {
+    // Attach Click Handlers for Buying with Rongiraha (🪙 €)
+    gridContainer.querySelectorAll('.btn-buy-money').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
             const trainId = target.dataset.trainId;
             const price = parseInt(target.dataset.price || '0', 10);
             if (!trainId) return;
-            buyTrain(trainId, price);
+            buyTrainWithMoney(trainId, price);
+        });
+    });
+
+    // Attach Click Handlers for Buying with Playard Yards (💎 Y)
+    gridContainer.querySelectorAll('.btn-buy-yard').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget as HTMLButtonElement;
+            const trainId = target.dataset.trainId;
+            const price = parseInt(target.dataset.price || '0', 10);
+            if (!trainId) return;
+            buyTrainWithYards(trainId, price);
         });
     });
 }
@@ -512,13 +569,13 @@ function showDepotMessage(text: string, isError: boolean = false) {
     }, 4000);
 }
 
-function buyTrain(trainId: string, price: number) {
+function buyTrainWithMoney(trainId: string, price: number) {
     const train = TRAINS_CATALOG.find(t => t.id === trainId);
     if (!train) return;
 
-    const success = yardService.spendYards(price, train.id, `Rongimäng: Osteti ${train.name}`);
+    const success = spendTrainMoney(price);
     if (!success) {
-        showDepotMessage(`Sul pole piisavalt Yarde! Vajad ${price} Yardi (praegu ${yardService.getYards()} Y). Teeni jaamapeatustega +50 Y!`, true);
+        showDepotMessage(`Sul pole piisavalt Rongiraha! Vajad ${price} € (sul on ${getTrainMoney()} €). Teeni jaamapeatustega +50 €!`, true);
         return;
     }
 
@@ -529,7 +586,28 @@ function buyTrain(trainId: string, price: number) {
     }
 
     trainAudio.playCoinReward();
-    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}"! Rong on nüüd valitud.`, false);
+    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}" Rongiraha eest (${price} €)!`, false);
+    selectTrain(trainId);
+}
+
+function buyTrainWithYards(trainId: string, price: number) {
+    const train = TRAINS_CATALOG.find(t => t.id === trainId);
+    if (!train) return;
+
+    const success = yardService.spendYards(price, train.id, `Rongimäng: Osteti ${train.name}`);
+    if (!success) {
+        showDepotMessage(`Sul pole piisavalt Yarde! Vajad ${price} Y (praegu ${yardService.getYards()} Y).`, true);
+        return;
+    }
+
+    const unlocked = getUnlockedTrainIds();
+    if (!unlocked.includes(trainId)) {
+        unlocked.push(trainId);
+        saveUnlockedTrainIds(unlocked);
+    }
+
+    trainAudio.playCoinReward();
+    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}" Playard Yardide eest (${price} Y)!`, false);
     selectTrain(trainId);
 }
 
@@ -1196,7 +1274,7 @@ function positionTrainUnits() {
     });
 }
 
-// --- Station Passenger Pickup & Yard Reward Logic (+50 Yards Per Stop) ---
+// --- Station Passenger Pickup & Money/Yard Rewards (+50€ / +50Y Per Stop) ---
 function checkStationArrival(delta: number) {
     const targetStation = STATIONS[currentStationIndex];
     if (!targetStation) return;
@@ -1236,13 +1314,16 @@ function checkStationArrival(delta: number) {
             isBoarding = false;
             if (boardingPanel) boardingPanel.style.display = 'none';
 
-            // Give +50 Yards per stop as requested
-            const reward = 50;
+            // Give +50€ in-game money and +50 Yards per stop
+            const moneyReward = 50;
+            const yardReward = 50;
             totalPassengers += targetStation.passengersWaiting;
-            yardService.addYards(reward, `Rongimäng: ${targetStation.name} reisijatevedu`);
+            
+            addTrainMoney(moneyReward);
+            yardService.addYards(yardReward, `Rongimäng: ${targetStation.name} reisijatevedu`);
             trainAudio.playCoinReward();
 
-            showStationRewardModal(targetStation, reward);
+            showStationRewardModal(targetStation, moneyReward, yardReward);
 
             currentStationIndex = (currentStationIndex + 1) % STATIONS.length;
             const nextSt = STATIONS[currentStationIndex];
@@ -1257,14 +1338,16 @@ function checkStationArrival(delta: number) {
     }
 }
 
-function showStationRewardModal(station: Station, yards: number) {
+function showStationRewardModal(station: Station, money: number, yards: number) {
     const modal = document.getElementById('modal-station-success');
     const title = document.getElementById('reward-modal-title');
     const desc = document.getElementById('reward-modal-desc');
+    const moneyTxt = document.getElementById('reward-money-text');
     const yardsTxt = document.getElementById('reward-yards-text');
 
     if (title) title.innerText = `🎉 ${station.name.toUpperCase()} EDUKALT LÄBITUD!`;
-    if (desc) desc.innerText = `Reisijad (+${station.passengersWaiting} inimest) toimetati kohale. Teeni igal peatusel 50 Yardi!`;
+    if (desc) desc.innerText = `Reisijad (+${station.passengersWaiting} inimest) toimetati kohale. Teeni igal peatusel +50 € Rongiraha ja +50 Yardi!`;
+    if (moneyTxt) moneyTxt.innerText = `+${money} € 🪙`;
     if (yardsTxt) yardsTxt.innerText = `+${yards} YARDS 💎`;
     if (modal) modal.style.display = 'flex';
 }
@@ -1476,7 +1559,7 @@ function updateCameraBtnText() {
     if (camBtn) camBtn.innerText = modes[cameraMode];
 }
 
-// --- Setup HUD & Yard Updates ---
+// --- Setup HUD & Currency Updates ---
 function setupHUD() {
     const hudYardIcon = document.getElementById('hud-yard-icon');
     if (hudYardIcon) hudYardIcon.innerHTML = yardService.renderYardSvg(20);
@@ -1507,6 +1590,12 @@ function updateHUD() {
 
     const passEl = document.getElementById('stat-passengers');
     if (passEl) passEl.innerText = totalPassengers.toString();
+
+    const moneyEl = document.getElementById('train-money-val');
+    if (moneyEl) moneyEl.innerText = getTrainMoney().toLocaleString();
+
+    const depotMoneyEl = document.getElementById('depot-money-val');
+    if (depotMoneyEl) depotMoneyEl.innerText = getTrainMoney().toLocaleString();
 }
 
 // Start

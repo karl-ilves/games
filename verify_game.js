@@ -593,7 +593,7 @@ try {
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
-        // Verify Train Depot Modal with 10 Trains
+        // Verify Train Depot Modal with 10 Trains & Dual Currency Options
         await page.waitForSelector('.train-card', { visible: true, timeout: 5000 });
         const trainCardsCount = await page.$$eval('.train-card', els => els.length);
         console.log("   Depot 3D Trains Count (Expected: 10):", trainCardsCount);
@@ -602,10 +602,17 @@ try {
         }
 
         const depotText = await page.$eval('#trains-grid-container', el => el.textContent);
-        if (!depotText.includes('100 YARDS') || !depotText.includes('TASUTA') || !depotText.includes('Linnalähirong Express')) {
-            throw new Error("Depot must contain cheapest 100 Yards train and default train!");
+        if (!depotText.includes('100') || !depotText.includes('TASUTA') || !depotText.includes('Linnalähirong Express')) {
+            throw new Error("Depot must contain cheapest 100 price train and default train!");
         }
-        console.log("   Successfully verified 10 distinct trains with cheapest 100 Yards train in depot!");
+
+        const moneyBuyBtnCount = await page.$$eval('.btn-buy-money', els => els.length);
+        const yardBuyBtnCount = await page.$$eval('.btn-buy-yard', els => els.length);
+        console.log(`   Depot Buy Options: ${moneyBuyBtnCount} Money buttons, ${yardBuyBtnCount} Yard buttons`);
+        if (moneyBuyBtnCount === 0 || yardBuyBtnCount === 0) {
+            throw new Error("Expected both Rongiraha and Yard purchase buttons in depot!");
+        }
+        console.log("   Successfully verified 10 distinct trains with in-game currency + Yard purchase in depot!");
 
         // Start driving from depot
         await page.click('#btn-depot-start-driving');
@@ -620,6 +627,11 @@ try {
         }
         await page.click('#btn-close-depot');
         await new Promise(r => setTimeout(r, 300));
+
+        // Verify Train In-Game Money HUD & Yard HUD
+        await page.waitForSelector('#train-money-val', { visible: true, timeout: 5000 });
+        const initialMoney = await page.$eval('#train-money-val', el => el.textContent);
+        console.log("   Initial Rongiraha In-Game Currency:", initialMoney);
 
         // Verify Train HUD elements
         await page.waitForSelector('#speed-text', { visible: true, timeout: 5000 });
