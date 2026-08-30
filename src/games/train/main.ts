@@ -264,8 +264,7 @@ interface Station {
     trackU: number; // position on track [0..1]
     worldPos: THREE.Vector3;
     passengersWaiting: number;
-    moneyReward: number; // Rongiraha
-    yardReward: number;  // Yardid
+    moneyReward: number; // Rongiraha (+50 € jaama kohta)
 }
 
 const STATIONS: Station[] = [
@@ -276,8 +275,7 @@ const STATIONS: Station[] = [
         trackU: 0.04,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 28,
-        moneyReward: 50,
-        yardReward: 50
+        moneyReward: 50
     },
     {
         id: 'forest',
@@ -286,8 +284,7 @@ const STATIONS: Station[] = [
         trackU: 0.35,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 20,
-        moneyReward: 50,
-        yardReward: 50
+        moneyReward: 50
     },
     {
         id: 'harbor',
@@ -296,8 +293,7 @@ const STATIONS: Station[] = [
         trackU: 0.62,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 25,
-        moneyReward: 50,
-        yardReward: 50
+        moneyReward: 50
     },
     {
         id: 'mountain',
@@ -306,8 +302,7 @@ const STATIONS: Station[] = [
         trackU: 0.85,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 35,
-        moneyReward: 50,
-        yardReward: 50
+        moneyReward: 50
     }
 ];
 
@@ -1292,16 +1287,14 @@ function checkStationArrival(delta: number) {
             isBoarding = false;
             if (boardingPanel) boardingPanel.style.display = 'none';
 
-            // Give +50€ in-game money and +50 Yards per stop
+            // Give +50€ in-game money (Rongiraha) per stop (no Yards earned in train game)
             const moneyReward = 50;
-            const yardReward = 50;
             totalPassengers += targetStation.passengersWaiting;
             
             addTrainMoney(moneyReward);
-            yardService.addYards(yardReward, `Rongimäng: ${targetStation.name} reisijatevedu`);
             trainAudio.playCoinReward();
 
-            showStationRewardModal(targetStation, moneyReward, yardReward);
+            showStationRewardModal(targetStation, moneyReward);
 
             currentStationIndex = (currentStationIndex + 1) % STATIONS.length;
             const nextSt = STATIONS[currentStationIndex];
@@ -1316,17 +1309,15 @@ function checkStationArrival(delta: number) {
     }
 }
 
-function showStationRewardModal(station: Station, money: number, yards: number) {
+function showStationRewardModal(station: Station, money: number) {
     const modal = document.getElementById('modal-station-success');
     const title = document.getElementById('reward-modal-title');
     const desc = document.getElementById('reward-modal-desc');
     const moneyTxt = document.getElementById('reward-money-text');
-    const yardsTxt = document.getElementById('reward-yards-text');
 
     if (title) title.innerText = `🎉 ${station.name.toUpperCase()} EDUKALT LÄBITUD!`;
-    if (desc) desc.innerText = `Reisijad (+${station.passengersWaiting} inimest) toimetati kohale. Teeni igal peatusel +50 € Rongiraha ja +50 Yardi!`;
+    if (desc) desc.innerText = `Reisijad (+${station.passengersWaiting} inimest) toimetati kohale. Teeni igal peatusel +50 € Rongiraha!`;
     if (moneyTxt) moneyTxt.innerText = `+${money} € 🪙`;
-    if (yardsTxt) yardsTxt.innerText = `+${yards} YARDS 💎`;
     if (modal) modal.style.display = 'flex';
 }
 
