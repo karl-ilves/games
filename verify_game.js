@@ -605,8 +605,8 @@ try {
         }
 
         const depotText = await page.$eval('#trains-grid-container', el => el.textContent);
-        if (!depotText.includes('100 €') || !depotText.includes('200 Y') || !depotText.includes('TASUTA') || !depotText.includes('Linnalähirong Express')) {
-            throw new Error("Depot must contain cheapest 100 € train with 2x Yard price (200 Y) and default free train!");
+        if (!depotText.includes('100 €') || !depotText.includes('500 Y') || !depotText.includes('TASUTA') || !depotText.includes('Linnalähirong Express')) {
+            throw new Error("Depot must contain cheapest 100 € train with 5x Yard price (500 Y) and default free train!");
         }
 
         const moneyBuyBtnCount = await page.$$eval('.btn-buy-money', els => els.length);
@@ -615,7 +615,7 @@ try {
         if (moneyBuyBtnCount === 0 || yardBuyBtnCount === 0) {
             throw new Error("Expected both Rongiraha and Yard purchase buttons in depot!");
         }
-        console.log("   Successfully verified 10 distinct trains with 2x Yard price (100 € vs 200 Y) in depot!");
+        console.log("   Successfully verified 10 distinct trains with 5x Yard price (100 € vs 500 Y) in depot!");
 
         // Start driving from depot
         await page.click('#btn-depot-start-driving');
