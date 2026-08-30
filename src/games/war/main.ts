@@ -1460,38 +1460,114 @@ class WarGameEngine {
         if (cdAirstrike) cdAirstrike.innerText = this.airstrikeCooldown > 0 ? `${Math.ceil(this.airstrikeCooldown)}s` : 'VALMIS';
     }
 
-    private renderRadar() {
+    private radarSweepAngle = 0;
+
+    private renderRadar(dt: number) {
         if (!this.radarCtx || !this.radarCanvas || !this.localUnit) return;
         const ctx = this.radarCtx;
         const w = this.radarCanvas.width;
         const h = this.radarCanvas.height;
         const cx = w / 2;
         const cy = h / 2;
-        const scale = 0.18;
+        const r = w / 2 - 6;
 
         ctx.clearRect(0, 0, w, h);
-        ctx.fillStyle = 'rgba(9, 14, 23, 0.9)';
+
+        // Circular clipping
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Dark tactical radar background
+        ctx.fillStyle = 'rgba(7, 12, 20, 0.95)';
         ctx.fillRect(0, 0, w, h);
 
-        ctx.strokeStyle = 'rgba(0, 242, 254, 0.25)';
+        // Tactical Range Rings
+        ctx.strokeStyle = 'rgba(0, 242, 254, 0.2)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
-        ctx.arc(cx, cy, 45, 0, Math.PI * 2);
-        ctx.arc(cx, cy, 65, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r * 0.33, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r * 0.66, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r * 0.98, 0, Math.PI * 2);
+        ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
+        ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
         ctx.stroke();
 
+        // Center frontline marker
+        ctx.strokeStyle = 'rgba(255, 211, 42, 0.35)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(cx - r, cy);
+        ctx.lineTo(cx + r, cy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const mapMax = 320; // Maps -320..+320 world units to radar
+
+        // Base zones
+        const blueBaseY = cy + (-270 / mapMax) * (r * 0.85);
+        const redBaseY = cy + (270 / mapMax) * (r * 0.85);
+
+        ctx.fillStyle = 'rgba(0, 242, 254, 0.3)';
+        ctx.beginPath();
+        ctx.arc(cx, blueBaseY, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 71, 87, 0.3)';
+        ctx.beginPath();
+        ctx.arc(cx, redBaseY, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rotating radar sweep line
+        this.radarSweepAngle = (this.radarSweepAngle + 2.0 * dt) % (Math.PI * 2);
+        const sweepX = cx + Math.cos(this.radarSweepAngle) * r;
+        const sweepY = cy + Math.sin(this.radarSweepAngle) * r;
+        ctx.strokeStyle = 'rgba(0, 242, 254, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(sweepX, sweepY);
+        ctx.stroke();
+
+        // Render all 20 units across battlefield
         this.units.forEach(unit => {
             if (unit.isDead) return;
-            const rx = cx + (unit.pos.x - this.localUnit.pos.x) * scale;
-            const ry = cy + (unit.pos.z - this.localUnit.pos.z) * scale;
-            if (rx >= 3 && rx <= w - 3 && ry >= 3 && ry <= h - 3) {
+            const rx = cx + (unit.pos.x / mapMax) * (r * 0.85);
+            const ry = cy + (unit.pos.z / mapMax) * (r * 0.85);
+
+            if (unit.isLocalPlayer) {
+                // Local player: golden icon with direction arrow
+                ctx.fillStyle = '#ffd32a';
+                ctx.beginPath();
+                ctx.arc(rx, ry, 5.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                const dirX = Math.sin(unit.rotation);
+                const dirZ = Math.cos(unit.rotation);
+                ctx.strokeStyle = '#ffd32a';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(rx + dirX * 9, ry + dirZ * 9);
+                ctx.stroke();
+            } else {
                 ctx.fillStyle = unit.team === 'red' ? '#ff4757' : '#00f2fe';
                 ctx.beginPath();
-                ctx.arc(rx, ry, unit.isLocalPlayer ? 4.5 : unit.unitClass === 'tank' ? 3.5 : 2.2, 0, Math.PI * 2);
+                const dotSize = unit.unitClass === 'tank' ? 4.2 : 2.6;
+                ctx.arc(rx, ry, dotSize, 0, Math.PI * 2);
                 ctx.fill();
             }
         });
+
+        ctx.restore();
+
+        // Radar border glow
+        ctx.strokeStyle = '#00f2fe';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     // --- Main Game Loop ---
@@ -1506,7 +1582,7 @@ class WarGameEngine {
             this.updateShockwaves(dt);
             this.updateParticles(dt);
             this.updateCamera();
-            this.renderRadar();
+            this.renderRadar(dt);
             this.broadcastState();
         }
 
@@ -1610,6 +1686,16 @@ class WarGameEngine {
                 return;
             }
 
+            // Boid Separation Force: Prevent clumping between bots
+            this.units.forEach(other => {
+                if (other.id === unit.id || other.isDead) return;
+                const dist = unit.pos.distanceTo(other.pos);
+                if (dist < 18 && dist > 0.01) {
+                    const push = new THREE.Vector3().subVectors(unit.pos, other.pos).normalize();
+                    unit.pos.addScaledVector(push, (18 - dist) * 2.2 * dt);
+                }
+            });
+
             // Find nearest opponent
             const enemies = Array.from(this.units.values()).filter(e => !e.isDead && e.team !== unit.team);
             let nearest: CombatUnit | null = null;
@@ -1632,7 +1718,7 @@ class WarGameEngine {
                 while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
                 unit.rotation += rotDiff * Math.min(1.0, 2.8 * dt);
 
-                if (minDist > 24) {
+                if (minDist > 25) {
                     unit.speed = unit.unitClass === 'tank' ? 14.0 : 16.0;
                     unit.pos.addScaledVector(toEnemy, unit.speed * dt);
                     if (unit.leftLeg && unit.rightLeg) {

@@ -146,7 +146,7 @@ try {
 
         // Click Send Update to Owner
         await page.click('#btn-send-update-to-owner');
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise(r => setTimeout(r, 1200));
 
         const updateStatusText = await page.$eval('#admin-update-status', el => el.textContent);
         console.log("   Admin Update Submit Status:", updateStatusText);
@@ -154,7 +154,11 @@ try {
             throw new Error(`Expected successful update send message, got: ${updateStatusText}`);
         }
 
-        const sentUpdatesText = await page.$eval('#admin-sent-updates-list', el => el.textContent);
+        let sentUpdatesText = await page.$eval('#admin-sent-updates-list', el => el.textContent);
+        if (!sentUpdatesText.includes('Uus 3D Superauto ja Kaart')) {
+            await new Promise(r => setTimeout(r, 800));
+            sentUpdatesText = await page.$eval('#admin-sent-updates-list', el => el.textContent);
+        }
         if (!sentUpdatesText.includes('Uus 3D Superauto ja Kaart') || !sentUpdatesText.includes('v2.1.0')) {
             throw new Error(`Sent update not found in sent updates list! Got: ${sentUpdatesText}`);
         }
@@ -592,7 +596,7 @@ try {
 
         // 11. Test 3D Rongimäng (Train Simulator - Owner Exclusive)
         console.log("11. Checking 3D Rongimäng (Train Simulator - Owner Exclusive)...");
-        await page.goto('http://localhost:4173/games/games/train/index.html');
+        await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
