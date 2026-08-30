@@ -1596,56 +1596,24 @@ class WarGameEngine {
         ctx.fill();
 
         // Rotating radar sweep line
-        this.radarSweepAngle = (this.radarSweepAngle + 2.0 * dt) % (Math.PI * 2);
+        const prevAngle = this.radarSweepAngle;
+        this.radarSweepAngle = (this.radarSweepAngle + 2.5 * dt) % (Math.PI * 2);
+        const currAngle = this.radarSweepAngle;
         const sweepX = cx + Math.cos(this.radarSweepAngle) * r;
         const sweepY = cy + Math.sin(this.radarSweepAngle) * r;
-        ctx.strokeStyle = 'rgba(0, 242, 254, 0.3)';
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(0, 242, 254, 0.4)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(sweepX, sweepY);
         ctx.stroke();
-
-        // Proximity detection: trigger radar sonar beep if enemies are nearby
-        if (!this.localUnit.isDead && !this.isMatchEnded) {
-            let nearestEnemyDist = Infinity;
-            this.units.forEach(u => {
-                if (u.isDead || u.team === this.localTeam || u.id === this.localPlayerId) return;
-                const d = this.localUnit.pos.distanceTo(u.pos);
-                if (d < nearestEnemyDist) nearestEnemyDist = d;
-            });
-
-            if (nearestEnemyDist < 140) {
-                let beepInterval = 1.1;
-                let beepPitch = 1500;
-                let beepVol = 0.2;
-
-                if (nearestEnemyDist < 40) {
-                    beepInterval = 0.32;
-                    beepPitch = 2300;
-                    beepVol = 0.35;
-                } else if (nearestEnemyDist < 80) {
-                    beepInterval = 0.6;
-                    beepPitch = 1900;
-                    beepVol = 0.28;
-                }
-
-                this.radarBeepTimer -= dt;
-                if (this.radarBeepTimer <= 0) {
-                    this.radarBeepTimer = beepInterval;
-                    warAudio.playRadarBeep(beepPitch, beepVol);
-                    this.radarPulseAlpha = 0.8;
-                }
-            } else {
-                this.radarBeepTimer = 0;
-            }
-        }
 
         // Render all 20 units across battlefield
         this.units.forEach(unit => {
             if (unit.isDead) return;
             const rx = cx + (unit.pos.x / mapMax) * (r * 0.85);
             const ry = cy + (unit.pos.z / mapMax) * (r * 0.85);
+            const distFromCenter = Math.hypot(rx - cx, ry - cy);
 
             if (unit.isLocalPlayer) {
                 // Proximity danger warning pulse ring
@@ -1673,11 +1641,45 @@ class WarGameEngine {
                 ctx.lineTo(rx + dirX * 9, ry + dirZ * 9);
                 ctx.stroke();
             } else {
-                ctx.fillStyle = unit.team === 'red' ? '#ff4757' : '#00f2fe';
+                const isEnemy = unit.team !== this.localTeam;
+
+                // Check if radar line just swept over this unit inside the radar line
+                if (isEnemy && distFromCenter <= r) {
+                    const unitAngle = (Math.atan2(ry - cy, rx - cx) + Math.PI * 2) % (Math.PI * 2);
+                    let isSwept = false;
+                    if (currAngle >= prevAngle) {
+                        isSwept = unitAngle >= prevAngle && unitAngle < currAngle;
+                    } else {
+                        isSwept = unitAngle >= prevAngle || unitAngle < currAngle;
+                    }
+
+                    if (isSwept && !this.localUnit.isDead && !this.isMatchEnded) {
+                        // Enemy is swept by the radar line -> BEEP!
+                        warAudio.playRadarBeep(2100, 0.35);
+                        unit.radarFlash = 1.0;
+                    }
+                }
+
+                // Fade out radar flash
+                if (unit.radarFlash && unit.radarFlash > 0) {
+                    unit.radarFlash = Math.max(0, unit.radarFlash - dt * 2.0);
+                }
+
+                const baseColor = isEnemy ? '#ff4757' : '#00f2fe';
+                ctx.fillStyle = baseColor;
                 ctx.beginPath();
                 const dotSize = unit.unitClass === 'tank' ? 4.2 : 2.6;
                 ctx.arc(rx, ry, dotSize, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Flash glow ring when line swept over enemy
+                if (isEnemy && unit.radarFlash && unit.radarFlash > 0) {
+                    ctx.strokeStyle = `rgba(255, 71, 87, ${unit.radarFlash})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(rx, ry, dotSize + 6 * (1 - unit.radarFlash), 0, Math.PI * 2);
+                    ctx.stroke();
+                }
             }
         });
 
