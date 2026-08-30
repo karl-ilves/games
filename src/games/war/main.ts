@@ -374,11 +374,6 @@ class WarGameEngine {
         const planeDesc = document.querySelector('#btn-select-plane .class-select-desc');
         if (planeDesc) planeDesc.textContent = isEt ? '150 HP · Ülehelikiirus · Topeltkahurid & Pommid' : '150 HP · Supersonic Flight · Twin Guns & Air Bombs';
 
-        const missileTitle = document.querySelector('#btn-select-missile .class-select-title');
-        if (missileTitle) missileTitle.textContent = isEt ? 'TIIMI RAKETIJUHT' : 'MISSILE COMMANDER';
-        const missileDesc = document.querySelector('#btn-select-missile .class-select-desc');
-        if (missileDesc) missileDesc.textContent = isEt ? '100 HP · Satelliidisihtimine · 10s Raketid & 60s Tuumapomm' : '100 HP · Satellite Targeting · 10s Missiles & 60s Nuke';
-
         const btnConfirm = document.getElementById('btn-confirm-deploy');
         if (btnConfirm) btnConfirm.textContent = isEt ? '🚀 SUUNDU LAHINGUVÄLJALE (DEPLOY)' : '🚀 DEPLOY TO BATTLEFIELD';
 
@@ -436,7 +431,6 @@ class WarGameEngine {
         const btnTank = document.getElementById('btn-select-tank');
         const btnHuman = document.getElementById('btn-select-human');
         const btnPlane = document.getElementById('btn-select-plane');
-        const btnMissile = document.getElementById('btn-select-missile');
         const planeBadge = document.getElementById('plane-lock-badge');
         const btnConfirm = document.getElementById('btn-confirm-deploy');
 
@@ -505,7 +499,6 @@ class WarGameEngine {
             btnTank.className = 'select-box selected-class';
             btnHuman!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
-            if (btnMissile) btnMissile.className = 'select-box';
         });
 
         btnHuman?.addEventListener('click', () => {
@@ -513,7 +506,6 @@ class WarGameEngine {
             btnHuman.className = 'select-box selected-class';
             btnTank!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
-            if (btnMissile) btnMissile.className = 'select-box';
         });
 
         btnPlane?.addEventListener('click', () => {
@@ -529,15 +521,6 @@ class WarGameEngine {
             btnPlane.className = 'select-box selected-class';
             btnTank!.className = 'select-box';
             btnHuman!.className = 'select-box';
-            if (btnMissile) btnMissile.className = 'select-box';
-        });
-
-        btnMissile?.addEventListener('click', () => {
-            chosenClass = 'missile';
-            btnMissile.className = 'select-box selected-class';
-            btnTank!.className = 'select-box';
-            btnHuman!.className = 'select-box';
-            if (btnPlane) btnPlane.className = 'select-box';
         });
 
         btnConfirm?.addEventListener('click', () => {
@@ -551,9 +534,7 @@ class WarGameEngine {
             this.startMatchCountdown();
             const classLabel = this.localClass === 'plane'
                 ? (this.isOwnerLang ? 'LENNUK' : 'PLANE')
-                : (this.localClass === 'missile'
-                    ? (this.isOwnerLang ? 'RAKETIJUHT' : 'MISSILE')
-                    : (this.localClass === 'tank' ? 'TANK' : (this.isOwnerLang ? 'SÕDUR' : 'SOLDIER')));
+                : (this.localClass === 'tank' ? 'TANK' : (this.isOwnerLang ? 'SÕDUR' : 'SOLDIER'));
             const teamLabel = this.localTeam === 'missile'
                 ? (this.isOwnerLang ? 'RAKETITIIM' : 'MISSILE TEAM')
                 : this.localTeam.toUpperCase();
@@ -573,11 +554,10 @@ class WarGameEngine {
                 btnRed.className = chosenTeam === 'red' ? 'select-box selected-red' : 'select-box';
                 if (btnMissileTeam) btnMissileTeam.className = chosenTeam === 'missile' ? 'select-box selected-missile' : 'select-box';
             }
-            if (btnTank && btnHuman && btnPlane && btnMissile) {
+            if (btnTank && btnHuman && btnPlane) {
                 btnTank.className = chosenClass === 'tank' ? 'select-box selected-class' : 'select-box';
                 btnHuman.className = chosenClass === 'soldier' ? 'select-box selected-class' : 'select-box';
                 btnPlane.className = chosenClass === 'plane' ? 'select-box selected-class' : 'select-box';
-                btnMissile.className = chosenClass === 'missile' ? 'select-box selected-class' : 'select-box';
             }
             if (deployModal) deployModal.style.display = 'flex';
         });

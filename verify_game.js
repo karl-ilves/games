@@ -649,11 +649,14 @@ try {
             throw new Error("Missile Team option (#btn-select-missile-team) must exist in deploy modal!");
         }
 
-        // Check Missile Commander role in selection modal
-        const missileCardOptionExists = await page.$eval('#btn-select-missile', el => !!el);
-        console.log("   Missile Commander Option Exists in Modal:", missileCardOptionExists);
-        if (!missileCardOptionExists) {
-            throw new Error("Missile Commander role option (#btn-select-missile) must exist in deploy modal!");
+        // Verify Deploy / Play button is visible and clickable
+        const deployBtnVisible = await page.$eval('#btn-confirm-deploy', el => {
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).display !== 'none';
+        });
+        console.log("   Deploy / Play Button Visible:", deployBtnVisible);
+        if (!deployBtnVisible) {
+            throw new Error("Deploy button (#btn-confirm-deploy) must be visible!");
         }
 
         // Test Selecting Red Team and Human Class, then Deploy
