@@ -7,7 +7,7 @@ import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
 
 // --- Types & Interfaces ---
 type Team = 'red' | 'blue';
-type UnitClass = 'tank' | 'soldier';
+type UnitClass = 'tank' | 'soldier' | 'plane';
 
 interface CombatUnit {
     id: string;
@@ -34,6 +34,7 @@ interface CombatUnit {
     respawnTimer: number;
     isDead: boolean;
     walkCycle?: number;
+    bankAngle?: number;
 }
 
 interface Projectile {
@@ -134,6 +135,11 @@ class WarGameEngine {
     // Radar Minimap
     private radarCanvas!: HTMLCanvasElement;
     private radarCtx!: CanvasRenderingContext2D | null;
+
+    // Match Start / Restart 3-2-1 Countdown
+    private isCountdownActive = false;
+    private countdownTimer: any = null;
+    private initialBotSpawnMap: Map<string, { pos: THREE.Vector3; rot: number }> = new Map();
 
     private clock = new THREE.Clock();
 
@@ -313,6 +319,11 @@ class WarGameEngine {
         const humanDesc = document.querySelector('#btn-select-human .class-select-desc');
         if (humanDesc) humanDesc.textContent = isEt ? '50 HP · Kiire Liikumine · Automaat & Granaat' : '50 HP · High Mobility · Assault Rifle & Grenade';
 
+        const planeTitle = document.querySelector('#btn-select-plane .class-select-title');
+        if (planeTitle) planeTitle.textContent = isEt ? 'LAHINGULENNUK' : 'FIGHTER JET';
+        const planeDesc = document.querySelector('#btn-select-plane .class-select-desc');
+        if (planeDesc) planeDesc.textContent = isEt ? '150 HP · Ülehelikiirus · Topeltkahurid & Pommid' : '150 HP · Supersonic Flight · Twin Guns & Air Bombs';
+
         const btnConfirm = document.getElementById('btn-confirm-deploy');
         if (btnConfirm) btnConfirm.textContent = isEt ? '🚀 SUUNDU LAHINGUVÄLJALE (DEPLOY)' : '🚀 DEPLOY TO BATTLEFIELD';
 
@@ -329,21 +340,23 @@ class WarGameEngine {
         const helpContent = document.getElementById('help-modal-content');
         if (helpContent) {
             helpContent.innerHTML = isEt ? `
-                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Liikumine (Tank või Inimene)</div>
+                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Liikumine (Tank, Sõdur või Lennuk)</div>
                 <div><strong style="color: #ffd32a;">Hiir:</strong> Torni või relva sihtimine (360 kraadi)</div>
-                <div><strong style="color: #ffd32a;">Klahv 1 / 2 / 3:</strong> Relva vahetamine (1: Kahur, 2: MG-42, 3: Airstrike)</div>
+                <div><strong style="color: #ffd32a;">Klahv 1 / 2 / 3:</strong> Relva vahetamine (1: Kahur/Autocannon, 2: MG/Pommid, 3: Airstrike)</div>
                 <div><strong style="color: #ff4757;">Vasak hiireklõps / Tühik:</strong> Tulistab valitud aktiivset relva!</div>
                 <div><strong style="color: #ff6b81;">Klahv F:</strong> Kiire õhulöök (Airstrike sihtimine ja klõpsuga kukutamine)</div>
                 <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+                <div><strong style="color: #ffd32a;">✈️ Lahingulennuk (50,000 €):</strong> Ava võimas ülehelikiirusega lennuk 50,000 € mänguraha eest!</div>
                 <div><strong style="color: #ffd32a;">💥 Leviv Plahvatus:</strong> Plahvatused tekitavad leviva lööklaine, mis kahjustab kõiki objekte levialas!</div>
-                <div><strong style="color: #00f2fe;">👥 Mängijate loogika:</strong> Mängus on eepiline 10v10 lahing (kokku 20 võitlejat: 10 Sinist vs 10 Punast). Kui oled üksi serveris, on Sinu tiimis 9 AI-d ja vastasel 10 AI-d (kokku 19 AI-d oma nimedega)!</div>
+                <div><strong style="color: #00f2fe;">👥 Mängijate loogika:</strong> Mängus on eepiline 10v10 lahing (kokku 20 võitlejat: 10 Sinist vs 10 Punast). Kui oled üksi serveris, on Sinu tiimis 9 AI-d ja vastasel 10 AI-d!</div>
             ` : `
-                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Movement (Tank or Soldier)</div>
+                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Movement (Tank, Soldier, or Fighter Jet)</div>
                 <div><strong style="color: #ffd32a;">Mouse:</strong> Turret & weapon aiming (360 degrees)</div>
-                <div><strong style="color: #ffd32a;">Keys 1 / 2 / 3:</strong> Switch weapon (1: Cannon, 2: MG-42, 3: Airstrike)</div>
+                <div><strong style="color: #ffd32a;">Keys 1 / 2 / 3:</strong> Switch weapon (1: Cannon/Autocannon, 2: MG/Air Bombs, 3: Airstrike)</div>
                 <div><strong style="color: #ff4757;">Left Click / Space:</strong> Fire selected active weapon!</div>
                 <div><strong style="color: #ff6b81;">Key F:</strong> Quick Airstrike (Aim artillery and click to drop)</div>
                 <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+                <div><strong style="color: #ffd32a;">✈️ Fighter Jet (50,000 €):</strong> Unlock supersonic combat jet with 50,000 € War Cash!</div>
                 <div><strong style="color: #ffd32a;">💥 Spreading Blast:</strong> Explosions unleash expanding shockwaves damaging everything in radius!</div>
                 <div><strong style="color: #00f2fe;">👥 10v10 Combat Roster:</strong> Massive 10v10 warfare (20 total units: 10 Blue vs 10 Red). When alone in server, 19 named AI combatants deploy automatically!</div>
             `;
@@ -364,10 +377,48 @@ class WarGameEngine {
         const btnRed = document.getElementById('btn-select-red');
         const btnTank = document.getElementById('btn-select-tank');
         const btnHuman = document.getElementById('btn-select-human');
+        const btnPlane = document.getElementById('btn-select-plane');
+        const planeBadge = document.getElementById('plane-lock-badge');
         const btnConfirm = document.getElementById('btn-confirm-deploy');
 
         let chosenTeam: Team = 'blue';
         let chosenClass: UnitClass = 'tank';
+
+        const reloadMoney = () => {
+            const prof = getCurrentUserProfile();
+            const userId = prof?.id || this.localPlayerId;
+            const storageKey = `playard_war_data_${userId}`;
+            const localData = localStorage.getItem(storageKey) || localStorage.getItem('playard_war_game_money');
+            if (localData) {
+                try {
+                    if (localData.startsWith('{')) {
+                        const parsed = JSON.parse(localData);
+                        if (parsed.money !== undefined) this.warMoney = parsed.money;
+                    } else {
+                        const num = parseInt(localData, 10);
+                        if (!isNaN(num)) this.warMoney = num;
+                    }
+                } catch (e) {}
+            }
+        };
+
+        const updatePlaneBadgeUI = () => {
+            reloadMoney();
+            if (!planeBadge) return;
+            const isUnlocked = this.warMoney >= 50000;
+            if (isUnlocked) {
+                planeBadge.style.background = 'rgba(46, 213, 115, 0.2)';
+                planeBadge.style.borderColor = '#2ecc71';
+                planeBadge.style.color = '#2ecc71';
+                planeBadge.innerText = this.isOwnerLang ? '✨ AVATUD (50,000 €)' : '✨ UNLOCKED (50,000 €)';
+            } else {
+                planeBadge.style.background = 'rgba(255, 71, 87, 0.2)';
+                planeBadge.style.borderColor = '#ff4757';
+                planeBadge.style.color = '#ff6b81';
+                planeBadge.innerText = this.isOwnerLang ? '🔒 50,000 €' : '🔒 50,000 €';
+            }
+        };
+        updatePlaneBadgeUI();
 
         btnBlue?.addEventListener('click', () => {
             chosenTeam = 'blue';
@@ -385,12 +436,29 @@ class WarGameEngine {
             chosenClass = 'tank';
             btnTank.className = 'select-box selected-class';
             btnHuman!.className = 'select-box';
+            if (btnPlane) btnPlane.className = 'select-box';
         });
 
         btnHuman?.addEventListener('click', () => {
             chosenClass = 'soldier';
             btnHuman.className = 'select-box selected-class';
             btnTank!.className = 'select-box';
+            if (btnPlane) btnPlane.className = 'select-box';
+        });
+
+        btnPlane?.addEventListener('click', () => {
+            reloadMoney();
+            if (this.warMoney < 50000) {
+                const warnMsg = this.isOwnerLang
+                    ? `🔒 Vajad 50,000 € lahingulennuki avamiseks! Sul on: ${this.warMoney.toLocaleString()} €`
+                    : `🔒 Requires 50,000 € War Cash to unlock Fighter Jet! Current: ${this.warMoney.toLocaleString()} €`;
+                this.showToast(warnMsg, '#ff4757');
+                return;
+            }
+            chosenClass = 'plane';
+            btnPlane.className = 'select-box selected-class';
+            btnTank!.className = 'select-box';
+            btnHuman!.className = 'select-box';
         });
 
         btnConfirm?.addEventListener('click', () => {
@@ -401,14 +469,30 @@ class WarGameEngine {
             if (!this.isRosterSpawned) this.spawnBattleRoster();
             this.updateTeamBadge();
             this.network?.updateIdentity(this.localTeam, this.localClass);
+            this.startMatchCountdown();
+            const classLabel = this.localClass === 'plane'
+                ? (this.isOwnerLang ? 'LENNUK' : 'PLANE')
+                : (this.localClass === 'tank' ? 'TANK' : (this.isOwnerLang ? 'SÕDUR' : 'SOLDIER'));
             const enteringMsg = this.isOwnerLang
-                ? `🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${this.localClass === 'tank' ? 'TANK' : 'SÕDUR'})`
-                : `🚀 Entering battle: War Server #1 (${this.localTeam.toUpperCase()} ${this.localClass === 'tank' ? 'TANK' : 'SOLDIER'})`;
+                ? `🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`
+                : `🚀 Entering battle: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`;
             this.showToast(enteringMsg, this.localTeam === 'red' ? '#ff4757' : '#00f2fe');
         });
 
         // Open loadout change button in navbar
         document.getElementById('btn-open-loadout')?.addEventListener('click', () => {
+            updatePlaneBadgeUI();
+            chosenTeam = this.localTeam;
+            chosenClass = this.localClass;
+            if (btnBlue && btnRed) {
+                btnBlue.className = chosenTeam === 'blue' ? 'select-box selected-blue' : 'select-box';
+                btnRed.className = chosenTeam === 'red' ? 'select-box selected-red' : 'select-box';
+            }
+            if (btnTank && btnHuman && btnPlane) {
+                btnTank.className = chosenClass === 'tank' ? 'select-box selected-class' : 'select-box';
+                btnHuman.className = chosenClass === 'soldier' ? 'select-box selected-class' : 'select-box';
+                btnPlane.className = chosenClass === 'plane' ? 'select-box selected-class' : 'select-box';
+            }
             if (deployModal) deployModal.style.display = 'flex';
         });
 
@@ -416,6 +500,7 @@ class WarGameEngine {
         this.deployLocalUnit();
         this.spawnBattleRoster();
         this.updateTeamBadge();
+        this.startMatchCountdown();
     }
 
     private showToast(message: string, color = '#2ecc71') {
@@ -453,9 +538,11 @@ class WarGameEngine {
         const weapon2Name = document.getElementById('weapon-name-2');
         const weapon2Icon = document.getElementById('weapon-icon-2');
 
-        const roleIcon = this.localClass === 'tank'
-            ? '🏎️ TANK'
-            : (this.isOwnerLang ? '🏃 INIMENE (SÕDUR)' : '🏃 SOLDIER');
+        const roleIcon = this.localClass === 'plane'
+            ? (this.isOwnerLang ? '✈️ LAHINGULENNUK' : '✈️ FIGHTER JET')
+            : this.localClass === 'tank'
+                ? '🏎️ TANK'
+                : (this.isOwnerLang ? '🏃 INIMENE (SÕDUR)' : '🏃 SOLDIER');
 
         const youAreLabel = this.isOwnerLang ? 'OLED:' : 'YOU ARE:';
         const youAreSpan = badge?.querySelector('span');
@@ -474,21 +561,27 @@ class WarGameEngine {
         }
 
         if (hpLabel) {
-            hpLabel.innerText = this.localClass === 'tank'
-                ? (this.isOwnerLang ? '🛡️ SOOMUS (HP)' : '🛡️ ARMOR (HP)')
-                : (this.isOwnerLang ? '❤️ ELUD (HP)' : '❤️ HEALTH (HP)');
+            hpLabel.innerText = this.localClass === 'plane'
+                ? (this.isOwnerLang ? '🛡️ LENNUKI SOOMUS (HP)' : '🛡️ JET ARMOR (HP)')
+                : this.localClass === 'tank'
+                    ? (this.isOwnerLang ? '🛡️ SOOMUS (HP)' : '🛡️ ARMOR (HP)')
+                    : (this.isOwnerLang ? '❤️ ELUD (HP)' : '❤️ HEALTH (HP)');
         }
         if (weapon1Name && weapon1Icon) {
-            weapon1Name.innerText = this.localClass === 'tank'
-                ? (this.isOwnerLang ? 'KAHUR' : 'CANNON')
-                : (this.isOwnerLang ? 'AUTOMAAT' : 'RIFLE');
-            weapon1Icon.innerText = this.localClass === 'tank' ? '🚀' : '🔫';
+            weapon1Name.innerText = this.localClass === 'plane'
+                ? (this.isOwnerLang ? 'VULCAN KAHUR' : 'VULCAN CANNON')
+                : this.localClass === 'tank'
+                    ? (this.isOwnerLang ? 'KAHUR' : 'CANNON')
+                    : (this.isOwnerLang ? 'AUTOMAAT' : 'RIFLE');
+            weapon1Icon.innerText = this.localClass === 'plane' ? '🚀' : this.localClass === 'tank' ? '🚀' : '🔫';
         }
         if (weapon2Name && weapon2Icon) {
-            weapon2Name.innerText = this.localClass === 'tank'
-                ? 'MG-42'
-                : (this.isOwnerLang ? 'GRANAAT' : 'GRENADE');
-            weapon2Icon.innerText = this.localClass === 'tank' ? '🔫' : '💣';
+            weapon2Name.innerText = this.localClass === 'plane'
+                ? (this.isOwnerLang ? 'LENNUKIPOMMID' : 'AIR BOMBS')
+                : this.localClass === 'tank'
+                    ? 'MG-42'
+                    : (this.isOwnerLang ? 'GRANAAT' : 'GRENADE');
+            weapon2Icon.innerText = this.localClass === 'plane' ? '💣' : this.localClass === 'tank' ? '🔫' : '💣';
         }
     }
 
@@ -640,7 +733,10 @@ class WarGameEngine {
         const rot = this.localTeam === 'red' ? Math.PI : 0;
         const pos = new THREE.Vector3(0, 0, spawnZ);
 
-        if (this.localClass === 'tank') {
+        if (this.localClass === 'plane') {
+            this.localUnit = this.createPlane(this.localPlayerId, this.localUsername, this.localTeam, true, false, pos, rot);
+            this.primaryReloadTime = 0.15; // Rapid twin autocannon
+        } else if (this.localClass === 'tank') {
             this.localUnit = this.createTank(this.localPlayerId, this.localUsername, this.localTeam, true, false, pos, rot);
             this.primaryReloadTime = 1.2;
         } else {
@@ -691,6 +787,7 @@ class WarGameEngine {
         blueBotsToSpawn.forEach((entry, idx) => {
             const id = `ai_blue_${idx + 1}`;
             const pos = new THREE.Vector3(entry.x, 0, entry.z);
+            this.initialBotSpawnMap.set(id, { pos: pos.clone(), rot: 0 });
             const u = entry.class === 'tank'
                 ? this.createTank(id, entry.name, 'blue', false, true, pos, 0)
                 : this.createSoldier(id, entry.name, 'blue', false, true, pos, 0);
@@ -702,11 +799,124 @@ class WarGameEngine {
         redBotsToSpawn.forEach((entry, idx) => {
             const id = `ai_red_${idx + 1}`;
             const pos = new THREE.Vector3(entry.x, 0, entry.z);
+            this.initialBotSpawnMap.set(id, { pos: pos.clone(), rot: Math.PI });
             const u = entry.class === 'tank'
                 ? this.createTank(id, entry.name, 'red', false, true, pos, Math.PI)
                 : this.createSoldier(id, entry.name, 'red', false, true, pos, Math.PI);
             this.units.set(id, u);
         });
+    }
+
+    public resetAllUnitsToBase() {
+        // 1. Reset local player to initial base position
+        if (this.localUnit) {
+            const spawnZ = this.localTeam === 'red' ? 260 : -260;
+            const spawnRot = this.localTeam === 'red' ? Math.PI : 0;
+            const spawnY = this.localClass === 'plane' ? 14.0 : 0;
+            this.localUnit.pos.set(0, spawnY, spawnZ);
+            this.localUnit.rotation = spawnRot;
+            this.localUnit.speed = 0;
+            this.localUnit.bankAngle = 0;
+            this.localUnit.hp = this.localUnit.maxHp;
+            this.localUnit.isDead = false;
+            this.localUnit.respawnTimer = 0;
+            this.localUnit.root.position.copy(this.localUnit.pos);
+            this.localUnit.root.rotation.set(0, spawnRot, 0);
+            this.localUnit.root.visible = true;
+            this.updateNameTag(this.localUnit.nameTagCanvas, this.localUnit.name, this.localUnit.team, this.localUnit.hp, this.localUnit.maxHp);
+            (this.localUnit.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
+        }
+
+        // 2. Reset all bots to their initial base positions & full health
+        this.units.forEach((unit, id) => {
+            if (unit.isLocalPlayer) return;
+            const initSpawn = this.initialBotSpawnMap.get(id);
+            if (initSpawn) {
+                unit.pos.copy(initSpawn.pos);
+                unit.rotation = initSpawn.rot;
+            }
+            unit.speed = 0;
+            unit.hp = unit.maxHp;
+            unit.isDead = false;
+            unit.respawnTimer = 0;
+            unit.root.position.copy(unit.pos);
+            unit.root.rotation.set(0, unit.rotation, 0);
+            unit.root.visible = true;
+            this.updateNameTag(unit.nameTagCanvas, unit.name, unit.team, unit.hp, unit.maxHp);
+            (unit.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
+        });
+
+        // 3. Clear existing projectiles, shockwaves & particles
+        for (const p of this.projectiles) this.scene.remove(p.mesh);
+        this.projectiles = [];
+
+        for (const sw of this.shockwaves) this.scene.remove(sw.mesh);
+        this.shockwaves = [];
+
+        for (const pt of this.particles) this.scene.remove(pt.mesh);
+        this.particles = [];
+
+        this.updateHUD();
+    }
+
+    public startMatchCountdown() {
+        if (this.countdownTimer) {
+            clearTimeout(this.countdownTimer);
+            this.countdownTimer = null;
+        }
+
+        this.resetAllUnitsToBase();
+        this.isCountdownActive = true;
+
+        const overlay = document.getElementById('match-countdown-overlay');
+        const numEl = document.getElementById('countdown-number');
+        const subEl = document.getElementById('countdown-subtitle');
+
+        if (!overlay || !numEl || !subEl) {
+            this.isCountdownActive = false;
+            return;
+        }
+
+        overlay.style.display = 'flex';
+
+        const setStep = (text: string, color: string, scale: number, subText: string, isGo: boolean = false) => {
+            numEl.innerText = text;
+            numEl.style.color = color;
+            numEl.style.transform = `scale(${scale})`;
+            subEl.innerText = subText;
+            setTimeout(() => {
+                numEl.style.transform = 'scale(1)';
+            }, 50);
+            warAudio.playCountdownBeep(isGo);
+        };
+
+        const prepText = this.isOwnerLang ? 'VALMISTU LAHINGUKS' : 'PREPARE FOR BATTLE';
+        const goText = this.isOwnerLang ? 'LAHINUGUSSE!' : 'ENGAGE!';
+
+        // Step 3
+        setStep('3', '#ffd32a', 1.8, prepText, false);
+
+        // Step 2 (after 1s)
+        this.countdownTimer = setTimeout(() => {
+            setStep('2', '#ffd32a', 1.8, prepText, false);
+
+            // Step 1 (after 2s)
+            this.countdownTimer = setTimeout(() => {
+                setStep('1', '#ff9f1a', 1.8, prepText, false);
+
+                // Step 0: GO / LAHINGUSSE! (after 3s)
+                this.countdownTimer = setTimeout(() => {
+                    setStep(goText, '#2ecc71', 2.2, '', true);
+
+                    // End Countdown after 0.85s
+                    this.countdownTimer = setTimeout(() => {
+                        overlay.style.display = 'none';
+                        this.isCountdownActive = false;
+                        this.countdownTimer = null;
+                    }, 850);
+                }, 1000);
+            }, 1000);
+        }, 1000);
     }
 
     // --- Unit Creators (Tank & Soldier) ---
@@ -845,6 +1055,110 @@ class WarGameEngine {
         };
     }
 
+    private createPlane(id: string, name: string, team: Team, isLocal: boolean, isBot: boolean, pos: THREE.Vector3, rot: number): CombatUnit {
+        const root = new THREE.Group();
+        const spawnPos = pos.clone();
+        spawnPos.y = 14.0; // Fly elevated above the battlefield
+        root.position.copy(spawnPos);
+        root.rotation.y = rot;
+
+        const isRed = team === 'red';
+        const bodyColor = isRed ? 0x991b1b : 0x1e3a8a;
+        const accentColor = isRed ? 0xff4757 : 0x00f2fe;
+
+        const fuselageMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.4, metalness: 0.6 });
+
+        // 1. Sleek Jet Fuselage
+        const fuselage = new THREE.Mesh(new THREE.ConeGeometry(1.4, 9.0, 16), fuselageMat);
+        fuselage.rotation.x = Math.PI / 2;
+        fuselage.castShadow = true;
+        root.add(fuselage);
+
+        // Cockpit Canopy (Tinted reflective glass)
+        const canopyMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.75 });
+        const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.75, 12, 12), canopyMat);
+        canopy.scale.set(0.9, 0.7, 2.2);
+        canopy.position.set(0, 0.7, 0.6);
+        root.add(canopy);
+
+        // 2. Swept Delta Main Wings
+        const wingMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.5, metalness: 0.5 });
+        const wings = new THREE.Mesh(new THREE.BoxGeometry(11.0, 0.22, 3.8), wingMat);
+        wings.position.set(0, 0, -0.6);
+        wings.castShadow = true;
+        root.add(wings);
+
+        // Wing accents
+        const wingAccentMat = new THREE.MeshStandardMaterial({ color: accentColor, roughness: 0.3, metalness: 0.7 });
+        const leftWingTip = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 3.0), wingAccentMat);
+        leftWingTip.position.set(-5.3, 0, -0.6);
+        root.add(leftWingTip);
+
+        const rightWingTip = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 3.0), wingAccentMat);
+        rightWingTip.position.set(5.3, 0, -0.6);
+        root.add(rightWingTip);
+
+        // Twin Autocannons under wings
+        const gunMat = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.9, roughness: 0.2 });
+        const leftGun = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3.2, 12), gunMat);
+        leftGun.rotation.x = -Math.PI / 2;
+        leftGun.position.set(-2.6, -0.25, 1.0);
+        root.add(leftGun);
+
+        const rightGun = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3.2, 12), gunMat);
+        rightGun.rotation.x = -Math.PI / 2;
+        rightGun.position.set(2.6, -0.25, 1.0);
+        root.add(rightGun);
+
+        // 3. Twin Tail Stabilizer Fins
+        const finMat = new THREE.MeshStandardMaterial({ color: accentColor, roughness: 0.4, metalness: 0.6 });
+        const leftFin = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.8, 2.0), finMat);
+        leftFin.position.set(-1.1, 1.0, -3.2);
+        leftFin.rotation.z = -0.22; // Canted outward
+        root.add(leftFin);
+
+        const rightFin = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.8, 2.0), finMat);
+        rightFin.position.set(1.1, 1.0, -3.2);
+        rightFin.rotation.z = 0.22; // Canted outward
+        root.add(rightFin);
+
+        // 4. Dual Afterburner Jet Exhausts
+        const exhaustMat = new THREE.MeshBasicMaterial({ color: isRed ? 0xff4757 : 0x00f2fe });
+        const leftExhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.3, 0.8, 12), exhaustMat);
+        leftExhaust.rotation.x = Math.PI / 2;
+        leftExhaust.position.set(-0.65, 0, -4.2);
+        root.add(leftExhaust);
+
+        const rightExhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.3, 0.8, 12), exhaustMat);
+        rightExhaust.rotation.x = Math.PI / 2;
+        rightExhaust.position.set(0.65, 0, -4.2);
+        root.add(rightExhaust);
+
+        // Name tag sprite
+        const nameCanvas = document.createElement('canvas');
+        nameCanvas.width = 256;
+        nameCanvas.height = 64;
+        const nameTexture = new THREE.CanvasTexture(nameCanvas);
+        const nameMat = new THREE.SpriteMaterial({ map: nameTexture, depthTest: false });
+        const nameTagSprite = new THREE.Sprite(nameMat);
+        nameTagSprite.scale.set(6.0, 1.5, 1);
+        nameTagSprite.position.set(0, 3.8, 0);
+        root.add(nameTagSprite);
+
+        this.updateNameTag(nameCanvas, name, team, 150, 150);
+        nameTexture.needsUpdate = true;
+
+        this.scene.add(root);
+
+        return {
+            id, name, team, unitClass: 'plane', isLocalPlayer: isLocal, isBot,
+            hp: 150, maxHp: 150, pos: spawnPos.clone(), rotation: rot, speed: 28,
+            root, nameTagSprite, nameTagCanvas: nameCanvas,
+            reloadTimer: Math.random() * 1.5, secondaryReloadTimer: 0, respawnTimer: 0,
+            isDead: false, bankAngle: 0
+        };
+    }
+
     private updateNameTag(canvas: HTMLCanvasElement, name: string, team: Team, hp: number, maxHp: number) {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
@@ -930,13 +1244,18 @@ class WarGameEngine {
 
         let remote = this.units.get(payload.id);
         if (!remote) {
-            remote = payload.unitClass === 'tank'
-                ? this.createTank(payload.id, payload.name, payload.team, false, false, new THREE.Vector3(payload.x, 0, payload.z), payload.rot)
-                : this.createSoldier(payload.id, payload.name, payload.team, false, false, new THREE.Vector3(payload.x, 0, payload.z), payload.rot);
+            if (payload.unitClass === 'plane') {
+                remote = this.createPlane(payload.id, payload.name, payload.team, false, false, new THREE.Vector3(payload.x, 0, payload.z), payload.rot);
+            } else if (payload.unitClass === 'tank') {
+                remote = this.createTank(payload.id, payload.name, payload.team, false, false, new THREE.Vector3(payload.x, 0, payload.z), payload.rot);
+            } else {
+                remote = this.createSoldier(payload.id, payload.name, payload.team, false, false, new THREE.Vector3(payload.x, 0, payload.z), payload.rot);
+            }
             this.units.set(payload.id, remote);
         }
 
-        remote.pos.set(payload.x, 0, payload.z);
+        const targetY = payload.unitClass === 'plane' ? 14.0 : (payload.y || 0);
+        remote.pos.set(payload.x, targetY, payload.z);
         remote.root.position.copy(remote.pos);
         remote.root.rotation.y = payload.rot;
         if (remote.turret && payload.turretRot !== undefined) remote.turret.rotation.y = payload.turretRot;
@@ -1091,7 +1410,7 @@ class WarGameEngine {
             this.isMatchEnded = false;
             this.redScore = 0;
             this.blueScore = 0;
-            this.updateHUD();
+            this.startMatchCountdown();
         });
     }
 
@@ -1132,11 +1451,23 @@ class WarGameEngine {
         }
     }
 
+    private planeGunAlternator = false;
+
     private fireCannonWeapon() {
         if (this.primaryReloadTimer > 0 || this.localUnit.isDead || this.isMatchEnded) return;
         this.primaryReloadTimer = this.primaryReloadTime;
 
-        if (this.localClass === 'tank') {
+        if (this.localClass === 'plane') {
+            // Fighter Jet Twin Vulcan Autocannon
+            this.planeGunAlternator = !this.planeGunAlternator;
+            const gunOffset = new THREE.Vector3(this.planeGunAlternator ? -2.6 : 2.6, -0.25, 2.5);
+            gunOffset.applyEuler(this.localUnit.root.rotation);
+            const muzzlePos = this.localUnit.pos.clone().add(gunOffset);
+
+            const dir = new THREE.Vector3().subVectors(this.mouseAimTarget, muzzlePos).normalize();
+            this.spawnProjectile(this.localPlayerId, this.localUnit.name, this.localTeam, muzzlePos, dir, true, true);
+            warAudio.playCannonShot();
+        } else if (this.localClass === 'tank') {
             // Tank Cannon (Huge Shell with Spreading Explosion)
             const muzzlePos = new THREE.Vector3(0, 0.6, 5.2);
             this.localUnit.turret!.localToWorld(muzzlePos);
@@ -1164,10 +1495,10 @@ class WarGameEngine {
                 shooterId: this.localPlayerId,
                 shooterName: this.localUnit.name,
                 team: this.localTeam,
-                fromX: this.localUnit.pos.x, fromY: 1.5, fromZ: this.localUnit.pos.z,
+                fromX: this.localUnit.pos.x, fromY: this.localUnit.pos.y, fromZ: this.localUnit.pos.z,
                 dirX: this.mouseAimTarget.x, dirY: 0, dirZ: this.mouseAimTarget.z,
-                isExplosive: this.localClass === 'tank',
-                isCannon: this.localClass === 'tank'
+                isExplosive: this.localClass === 'tank' || this.localClass === 'plane',
+                isCannon: this.localClass === 'tank' || this.localClass === 'plane'
             }
         });
     }
@@ -1175,7 +1506,17 @@ class WarGameEngine {
     private fireMachineGunWeapon() {
         if (this.localUnit.isDead || this.isMatchEnded) return;
 
-        if (this.localClass === 'tank') {
+        if (this.localClass === 'plane') {
+            // Fighter Jet Heavy Air-to-Ground Bomb Drop
+            if (this.secondaryReloadTimer > 0) return;
+            this.secondaryReloadTimer = 2.4;
+
+            const bombFrom = this.localUnit.pos.clone().add(new THREE.Vector3(0, -1.0, 0));
+            const targetPos = this.mouseAimTarget.clone();
+            this.spawnGrenade(this.localPlayerId, this.localUnit.name, this.localTeam, bombFrom, targetPos);
+            warAudio.playAirstrike();
+            this.updateHUD();
+        } else if (this.localClass === 'tank') {
             // Rapid Tank MG-42 (0.09s interval)
             if (this.secondaryReloadTimer > 0) return;
             this.secondaryReloadTimer = 0.09;
@@ -1854,6 +2195,11 @@ class WarGameEngine {
     };
 
     private updatePlayer(dt: number) {
+        if (this.isCountdownActive) {
+            this.localUnit.speed = 0;
+            return;
+        }
+
         if (this.localUnit.isDead) {
             if (this.localUnit.respawnTimer > 0) {
                 this.localUnit.respawnTimer -= dt;
@@ -1862,42 +2208,105 @@ class WarGameEngine {
             return;
         }
 
+        const isPlane = this.localClass === 'plane';
         const isTank = this.localClass === 'tank';
-        const turnRate = isTank ? 2.2 : 4.0;
-        const maxSpeed = isTank ? 16.0 : 19.0;
-        const accel = isTank ? 35.0 : 50.0;
-        const drag = 14.0;
 
-        if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.localUnit.rotation += turnRate * dt;
-        if (this.keys['KeyD'] || this.keys['ArrowRight']) this.localUnit.rotation -= turnRate * dt;
+        if (isPlane) {
+            const turnRate = 2.4;
+            const maxSpeed = 36.0;
+            const minSpeed = 18.0;
+            const accel = 35.0;
 
-        if (this.keys['KeyW'] || this.keys['ArrowUp']) {
-            this.localUnit.speed = Math.min(maxSpeed, this.localUnit.speed + accel * dt);
-        } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
-            this.localUnit.speed = Math.max(-maxSpeed * 0.6, this.localUnit.speed - accel * dt);
-        } else {
-            if (this.localUnit.speed > 0) this.localUnit.speed = Math.max(0, this.localUnit.speed - drag * dt);
-            else if (this.localUnit.speed < 0) this.localUnit.speed = Math.min(0, this.localUnit.speed + drag * dt);
-        }
+            let steering = 0;
+            if (this.keys['KeyA'] || this.keys['ArrowLeft']) {
+                this.localUnit.rotation += turnRate * dt;
+                steering = 1;
+            }
+            if (this.keys['KeyD'] || this.keys['ArrowRight']) {
+                this.localUnit.rotation -= turnRate * dt;
+                steering = -1;
+            }
 
-        const forward = new THREE.Vector3(Math.sin(this.localUnit.rotation), 0, Math.cos(this.localUnit.rotation));
-        this.localUnit.pos.addScaledVector(forward, this.localUnit.speed * dt);
-
-        this.localUnit.pos.x = Math.max(-385, Math.min(385, this.localUnit.pos.x));
-        this.localUnit.pos.z = Math.max(-385, Math.min(385, this.localUnit.pos.z));
-
-        this.localUnit.root.position.copy(this.localUnit.pos);
-        this.localUnit.root.rotation.y = this.localUnit.rotation;
-
-        // Soldier leg walking anim
-        if (!isTank && this.localUnit.leftLeg && this.localUnit.rightLeg) {
-            if (Math.abs(this.localUnit.speed) > 1) {
-                this.localUnit.walkCycle = (this.localUnit.walkCycle || 0) + 14 * dt;
-                this.localUnit.leftLeg.rotation.x = Math.sin(this.localUnit.walkCycle) * 0.6;
-                this.localUnit.rightLeg.rotation.x = -Math.sin(this.localUnit.walkCycle) * 0.6;
+            if (this.keys['KeyW'] || this.keys['ArrowUp']) {
+                this.localUnit.speed = Math.min(maxSpeed, this.localUnit.speed + accel * dt);
+            } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
+                this.localUnit.speed = Math.max(minSpeed, this.localUnit.speed - accel * dt);
             } else {
-                this.localUnit.leftLeg.rotation.x = 0;
-                this.localUnit.rightLeg.rotation.x = 0;
+                this.localUnit.speed = THREE.MathUtils.lerp(this.localUnit.speed, 28.0, dt * 2.0);
+            }
+
+            // Smooth Banking (Roll)
+            const targetBank = steering * 0.55;
+            this.localUnit.bankAngle = THREE.MathUtils.lerp(this.localUnit.bankAngle || 0, targetBank, dt * 7.0);
+
+            const forward = new THREE.Vector3(Math.sin(this.localUnit.rotation), 0, Math.cos(this.localUnit.rotation));
+            this.localUnit.pos.addScaledVector(forward, this.localUnit.speed * dt);
+            this.localUnit.pos.y = 14.0;
+
+            this.localUnit.pos.x = Math.max(-385, Math.min(385, this.localUnit.pos.x));
+            this.localUnit.pos.z = Math.max(-385, Math.min(385, this.localUnit.pos.z));
+
+            this.localUnit.root.position.copy(this.localUnit.pos);
+            this.localUnit.root.rotation.set(0, this.localUnit.rotation, this.localUnit.bankAngle || 0, 'YXZ');
+
+            // Spawn jet exhaust afterburner trails
+            if (Math.random() < 0.75) {
+                const exhaustLeft = new THREE.Vector3(-0.65, 0, -4.2).applyEuler(this.localUnit.root.rotation).add(this.localUnit.pos);
+                const exhaustRight = new THREE.Vector3(0.65, 0, -4.2).applyEuler(this.localUnit.root.rotation).add(this.localUnit.pos);
+                for (const exPos of [exhaustLeft, exhaustRight]) {
+                    const pMesh = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.35, 6, 6),
+                        new THREE.MeshBasicMaterial({ color: this.localTeam === 'red' ? 0xff4757 : 0x00f2fe, transparent: true, opacity: 0.85 })
+                    );
+                    pMesh.position.copy(exPos);
+                    this.scene.add(pMesh);
+                    this.particles.push({
+                        mesh: pMesh,
+                        velocity: forward.clone().negate().multiplyScalar(12.0),
+                        life: 0.35,
+                        maxLife: 0.35,
+                        sizeStart: 0.35,
+                        sizeEnd: 0.05
+                    });
+                }
+            }
+        } else {
+            const turnRate = isTank ? 2.2 : 4.0;
+            const maxSpeed = isTank ? 16.0 : 19.0;
+            const accel = isTank ? 35.0 : 50.0;
+            const drag = 14.0;
+
+            if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.localUnit.rotation += turnRate * dt;
+            if (this.keys['KeyD'] || this.keys['ArrowRight']) this.localUnit.rotation -= turnRate * dt;
+
+            if (this.keys['KeyW'] || this.keys['ArrowUp']) {
+                this.localUnit.speed = Math.min(maxSpeed, this.localUnit.speed + accel * dt);
+            } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
+                this.localUnit.speed = Math.max(-maxSpeed * 0.6, this.localUnit.speed - accel * dt);
+            } else {
+                if (this.localUnit.speed > 0) this.localUnit.speed = Math.max(0, this.localUnit.speed - drag * dt);
+                else if (this.localUnit.speed < 0) this.localUnit.speed = Math.min(0, this.localUnit.speed + drag * dt);
+            }
+
+            const forward = new THREE.Vector3(Math.sin(this.localUnit.rotation), 0, Math.cos(this.localUnit.rotation));
+            this.localUnit.pos.addScaledVector(forward, this.localUnit.speed * dt);
+
+            this.localUnit.pos.x = Math.max(-385, Math.min(385, this.localUnit.pos.x));
+            this.localUnit.pos.z = Math.max(-385, Math.min(385, this.localUnit.pos.z));
+
+            this.localUnit.root.position.copy(this.localUnit.pos);
+            this.localUnit.root.rotation.y = this.localUnit.rotation;
+
+            // Soldier leg walking anim
+            if (!isTank && this.localUnit.leftLeg && this.localUnit.rightLeg) {
+                if (Math.abs(this.localUnit.speed) > 1) {
+                    this.localUnit.walkCycle = (this.localUnit.walkCycle || 0) + 14 * dt;
+                    this.localUnit.leftLeg.rotation.x = Math.sin(this.localUnit.walkCycle) * 0.6;
+                    this.localUnit.rightLeg.rotation.x = -Math.sin(this.localUnit.walkCycle) * 0.6;
+                } else {
+                    this.localUnit.leftLeg.rotation.x = 0;
+                    this.localUnit.rightLeg.rotation.x = 0;
+                }
             }
         }
 
@@ -1928,17 +2337,19 @@ class WarGameEngine {
         if (this.secondaryReloadTimer > 0) this.secondaryReloadTimer = Math.max(0, this.secondaryReloadTimer - dt);
         if (this.airstrikeCooldown > 0) this.airstrikeCooldown = Math.max(0, this.airstrikeCooldown - dt);
 
-        // Continuous Auto-Fire for MG-42 when holding mouse or Space
+        // Continuous Auto-Fire for MG / Vulcan when holding mouse or Space
         if ((this.isMouseDown || this.keys['Space']) && !this.localUnit.isDead && !this.isMatchEnded) {
             if (this.activeWeapon === 'mg' && this.localClass === 'tank' && this.secondaryReloadTimer <= 0) {
                 this.fireMachineGunWeapon();
-            } else if (this.activeWeapon === 'cannon' && this.localClass === 'soldier' && this.primaryReloadTimer <= 0) {
+            } else if (this.activeWeapon === 'cannon' && (this.localClass === 'soldier' || this.localClass === 'plane') && this.primaryReloadTimer <= 0) {
                 this.fireCannonWeapon();
             }
         }
     }
 
     private updateBots(dt: number) {
+        if (this.isCountdownActive) return;
+
         this.units.forEach(unit => {
             if (unit.isLocalPlayer || !unit.isBot) return;
 
@@ -1950,64 +2361,91 @@ class WarGameEngine {
                 return;
             }
 
-            // Boid Separation Force: Prevent clumping between bots
+            // Find closest enemy
+            let closestEnemy: CombatUnit | null = null;
+            let minDist = 9999;
             this.units.forEach(other => {
-                if (other.id === unit.id || other.isDead) return;
-                const dist = unit.pos.distanceTo(other.pos);
-                if (dist < 18 && dist > 0.01) {
-                    const push = new THREE.Vector3().subVectors(unit.pos, other.pos).normalize();
-                    unit.pos.addScaledVector(push, (18 - dist) * 2.2 * dt);
+                if (!other.isDead && other.team !== unit.team) {
+                    const dist = unit.pos.distanceTo(other.pos);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestEnemy = other;
+                    }
                 }
             });
 
-            // Find nearest opponent
-            const enemies = Array.from(this.units.values()).filter(e => !e.isDead && e.team !== unit.team);
-            let nearest: CombatUnit | null = null;
-            let minDist = Infinity;
+            const isTank = unit.unitClass === 'tank';
+            const maxSpeed = isTank ? 11.0 : 13.0;
 
-            for (let e of enemies) {
-                const d = unit.pos.distanceTo(e.pos);
-                if (d < minDist) {
-                    minDist = d;
-                    nearest = e;
-                }
-            }
+            if (closestEnemy) {
+                const targetPos = (closestEnemy as CombatUnit).pos;
+                const dx = targetPos.x - unit.pos.x;
+                const dz = targetPos.z - unit.pos.z;
+                const desiredAngle = Math.atan2(dx, dz);
 
-            if (nearest) {
-                const toEnemy = new THREE.Vector3().subVectors(nearest.pos, unit.pos).normalize();
-                const desiredRot = Math.atan2(toEnemy.x, toEnemy.z);
+                let diff = desiredAngle - unit.rotation;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                unit.rotation += diff * Math.min(1.0, 3.5 * dt);
 
-                let rotDiff = desiredRot - unit.rotation;
-                while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
-                while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
-                unit.rotation += rotDiff * Math.min(1.0, 2.8 * dt);
-
-                if (minDist > 25) {
-                    unit.speed = unit.unitClass === 'tank' ? 14.0 : 16.0;
-                    unit.pos.addScaledVector(toEnemy, unit.speed * dt);
-                    if (unit.leftLeg && unit.rightLeg) {
-                        unit.walkCycle = (unit.walkCycle || 0) + 12 * dt;
-                        unit.leftLeg.rotation.x = Math.sin(unit.walkCycle) * 0.6;
-                        unit.rightLeg.rotation.x = -Math.sin(unit.walkCycle) * 0.6;
+                let sepX = 0;
+                let sepZ = 0;
+                this.units.forEach(other => {
+                    if (other.id !== unit.id && !other.isDead) {
+                        const d = unit.pos.distanceTo(other.pos);
+                        if (d < 18.0 && d > 0.001) {
+                            const push = (18.0 - d) / 18.0;
+                            sepX += ((unit.pos.x - other.pos.x) / d) * push * 16.0;
+                            sepZ += ((unit.pos.z - other.pos.z) / d) * push * 16.0;
+                        }
                     }
-                } else {
-                    unit.speed = 0;
-                    if (unit.leftLeg && unit.rightLeg) {
+                });
+
+                let moveSpeed = 0;
+                if (minDist > 30) moveSpeed = maxSpeed;
+                else if (minDist < 16) moveSpeed = -maxSpeed * 0.4;
+                else moveSpeed = maxSpeed * 0.35;
+
+                const forward = new THREE.Vector3(Math.sin(unit.rotation), 0, Math.cos(unit.rotation));
+                unit.pos.addScaledVector(forward, moveSpeed * dt);
+                unit.pos.x += sepX * dt;
+                unit.pos.z += sepZ * dt;
+
+                unit.pos.x = Math.max(-380, Math.min(380, unit.pos.x));
+                unit.pos.z = Math.max(-380, Math.min(380, unit.pos.z));
+
+                unit.root.position.copy(unit.pos);
+                unit.root.rotation.y = unit.rotation;
+
+                // Soldier leg walking anim
+                if (!isTank && unit.leftLeg && unit.rightLeg) {
+                    if (Math.abs(moveSpeed) > 1) {
+                        unit.walkCycle = (unit.walkCycle || 0) + 12 * dt;
+                        unit.leftLeg.rotation.x = Math.sin(unit.walkCycle) * 0.5;
+                        unit.rightLeg.rotation.x = -Math.sin(unit.walkCycle) * 0.5;
+                    } else {
                         unit.leftLeg.rotation.x = 0;
                         unit.rightLeg.rotation.x = 0;
                     }
                 }
 
-                unit.root.position.copy(unit.pos);
-                unit.root.rotation.y = unit.rotation;
+                // Aim Turret at enemy
+                if (unit.turret) {
+                    const localAim = unit.root.worldToLocal(targetPos.clone());
+                    const aimAngle = Math.atan2(localAim.x, localAim.z);
+                    unit.turret.rotation.y = aimAngle;
+                }
 
-                // Shoot
+                // AI Attack
                 unit.reloadTimer -= dt;
-                if (unit.reloadTimer <= 0 && minDist < 120) {
-                    unit.reloadTimer = unit.unitClass === 'tank' ? 2.5 + Math.random() * 1.5 : 0.8 + Math.random() * 0.8;
-                    const fromPos = unit.pos.clone().add(new THREE.Vector3(0, unit.unitClass === 'tank' ? 2.5 : 1.4, 0));
-                    const isExplosive = unit.unitClass === 'tank' || Math.random() > 0.7;
-                    this.spawnProjectile(unit.id, unit.name, unit.team, fromPos, toEnemy, isExplosive, unit.unitClass === 'tank');
+                if (unit.reloadTimer <= 0 && minDist < 160) {
+                    unit.reloadTimer = isTank ? 2.6 + Math.random() * 1.5 : 1.2 + Math.random() * 1.0;
+                    const fromPos = unit.pos.clone().add(new THREE.Vector3(0, isTank ? 2.5 : 1.4, 0));
+                    const spread = (Math.random() - 0.5) * 0.12;
+                    const dir = new THREE.Vector3().subVectors(targetPos, fromPos).normalize();
+                    dir.x += spread;
+                    dir.z += spread;
+                    this.spawnProjectile(unit.id, unit.name, unit.team, fromPos, dir, isTank, isTank);
                 }
             }
         });
@@ -2018,46 +2456,45 @@ class WarGameEngine {
             const p = this.projectiles[i];
             p.life -= dt;
 
-            // Ballistic arc physics for grenade
-            if (p.isGrenade) {
-                p.velocity.y -= (p.gravity || 26.0) * dt;
+            if (p.isGrenade && p.gravity) {
+                p.velocity.y -= p.gravity * dt;
                 if (p.tumbleSpeed) {
                     p.mesh.rotation.x += p.tumbleSpeed.x * dt;
+                    p.mesh.rotation.y += p.tumbleSpeed.y * dt;
                     p.mesh.rotation.z += p.tumbleSpeed.z * dt;
                 }
             }
 
             p.mesh.position.addScaledVector(p.velocity, dt);
 
-            if (p.mesh.position.y <= 0.2 || p.life <= 0) {
+            // Ground hit
+            const groundHit = p.isGrenade ? p.mesh.position.y <= 0.3 : p.mesh.position.y <= 0.1;
+            if (p.life <= 0 || groundHit) {
                 if (p.isExplosive) {
                     this.triggerSpreadingExplosion(p.mesh.position, p.explosionRadius, p.damage, p.shooterId, p.shooterName, p.team);
+                    warAudio.playExplosion();
                 }
                 this.scene.remove(p.mesh);
                 this.projectiles.splice(i, 1);
                 continue;
             }
 
-            // Direct Hit Test
-            let hit = false;
-            for (let [_, unit] of this.units) {
-                if (!unit.isDead && unit.team !== p.team) {
-                    const hitDist = unit.unitClass === 'tank' ? 3.2 : 1.4;
-                    if (p.mesh.position.distanceTo(unit.pos.clone().add(new THREE.Vector3(0, 1.2, 0))) < hitDist) {
-                        if (p.isExplosive) {
-                            this.triggerSpreadingExplosion(p.mesh.position, p.explosionRadius, p.damage, p.shooterId, p.shooterName, p.team);
-                        } else {
-                            this.damageUnit(unit, p.damage, p.shooterId, p.shooterName, p.team);
-                        }
-                        hit = true;
-                        break;
-                    }
-                }
-            }
+            // Direct Unit Impact Detection
+            for (const [id, unit] of this.units) {
+                if (unit.isDead || unit.team === p.team || id === p.shooterId) continue;
 
-            if (hit) {
-                this.scene.remove(p.mesh);
-                this.projectiles.splice(i, 1);
+                const hitboxRadius = unit.unitClass === 'plane' ? 4.5 : (unit.unitClass === 'tank' ? 3.0 : 1.2);
+                if (p.mesh.position.distanceTo(unit.pos) < hitboxRadius) {
+                    if (p.isExplosive) {
+                        this.triggerSpreadingExplosion(p.mesh.position, p.explosionRadius, p.damage, p.shooterId, p.shooterName, p.team);
+                        warAudio.playExplosion();
+                    } else {
+                        this.damageUnit(unit, p.damage, p.shooterId, p.shooterName, p.team);
+                    }
+                    this.scene.remove(p.mesh);
+                    this.projectiles.splice(i, 1);
+                    break;
+                }
             }
         }
     }
@@ -2068,13 +2505,11 @@ class WarGameEngine {
             sw.life -= dt;
             sw.currentRadius += sw.expansionSpeed * dt;
 
-            // Scale ring
+            // Update Shockwave visual mesh scale & fade
             const scale = sw.currentRadius;
-            sw.mesh.scale.set(scale, scale, 1);
-
-            // Fade opacity
-            const progress = 1.0 - (sw.life / sw.maxLife);
-            (sw.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.9 * (1.0 - progress));
+            sw.mesh.scale.set(scale, scale, scale);
+            const fade = Math.max(0, sw.life / sw.maxLife);
+            (sw.mesh.material as THREE.MeshBasicMaterial).opacity = fade * 0.9;
 
             // Damage units caught in the expanding blast wave
             this.units.forEach(unit => {
@@ -2117,9 +2552,10 @@ class WarGameEngine {
 
     private updateCamera() {
         if (!this.localUnit) return;
+        const isPlane = this.localClass === 'plane';
         const isTank = this.localClass === 'tank';
-        const dist = isTank ? 22 : 12;
-        const height = isTank ? 12 : 6.5;
+        const dist = isPlane ? 32 : (isTank ? 22 : 12);
+        const height = isPlane ? 14 : (isTank ? 12 : 6.5);
 
         const offset = new THREE.Vector3(
             -Math.sin(this.localUnit.rotation) * dist,
@@ -2127,8 +2563,8 @@ class WarGameEngine {
             -Math.cos(this.localUnit.rotation) * dist
         );
         const targetCam = this.localUnit.pos.clone().add(offset);
-        this.camera.position.lerp(targetCam, 0.14);
-        this.camera.lookAt(this.localUnit.pos.clone().add(new THREE.Vector3(0, isTank ? 2.5 : 1.6, 0)));
+        this.camera.position.lerp(targetCam, isPlane ? 0.18 : 0.14);
+        this.camera.lookAt(this.localUnit.pos.clone().add(new THREE.Vector3(0, isPlane ? -2.0 : (isTank ? 2.5 : 1.6), 0)));
     }
 }
 

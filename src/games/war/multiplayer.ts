@@ -5,7 +5,7 @@ export interface PlayerPayload {
     id: string;
     name: string;
     team: 'red' | 'blue';
-    unitClass: 'tank' | 'soldier';
+    unitClass: 'tank' | 'soldier' | 'plane';
     x: number;
     z: number;
     rot: number;
@@ -14,7 +14,7 @@ export interface PlayerPayload {
 }
 
 export type MultiplayerEvent =
-    | { type: 'player_join'; payload: { id: string; name: string; team: 'red' | 'blue'; unitClass: 'tank' | 'soldier' } }
+    | { type: 'player_join'; payload: { id: string; name: string; team: 'red' | 'blue'; unitClass: 'tank' | 'soldier' | 'plane' } }
     | { type: 'player_leave'; payload: { id: string } }
     | { type: 'player_state'; payload: PlayerPayload }
     | { type: 'player_fire'; payload: any }
@@ -26,7 +26,7 @@ export class WarMultiplayerNetwork {
     private localId: string;
     private localName: string;
     private localTeam: 'red' | 'blue';
-    private localClass: 'tank' | 'soldier';
+    private localClass: 'tank' | 'soldier' | 'plane';
 
     private peer: Peer | null = null;
     private isHost = false;
@@ -45,7 +45,7 @@ export class WarMultiplayerNetwork {
         localId: string,
         localName: string,
         localTeam: 'red' | 'blue',
-        localClass: 'tank' | 'soldier',
+        localClass: 'tank' | 'soldier' | 'plane',
         onEvent: (event: MultiplayerEvent) => void,
         onStatus: (statusText: string, onlineCount: number) => void
     ) {
@@ -308,7 +308,7 @@ export class WarMultiplayerNetwork {
         }
     }
 
-    public updateIdentity(team: 'red' | 'blue', unitClass: 'tank' | 'soldier') {
+    public updateIdentity(team: 'red' | 'blue', unitClass: 'tank' | 'soldier' | 'plane') {
         this.localTeam = team;
         this.localClass = unitClass;
         this.send({

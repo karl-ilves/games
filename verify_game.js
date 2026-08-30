@@ -622,8 +622,8 @@ try {
         // Check that VIP restricted overlay is hidden for admin
         await page.evaluate(() => { const v = document.getElementById('vip-restricted-overlay'); if(v) v.style.display = 'none'; });
 
-        // 10. Test 3D War Game (Team & Class Selection + 2v2/PvP + Spreading Explosion)
-        console.log("10. Checking 3D War Game (Team & Class Selection + 2v2/PvP + Spreading Explosion)...");
+        // 10. Test 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)
+        console.log("10. Checking 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)...");
         await page.goto('http://localhost:4173/games/games/war/index.html');
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -634,11 +634,29 @@ try {
             throw new Error("Deploy team/class selection modal not found!");
         }
 
+        // Check Fighter Jet card & 50,000 € lock badge
+        const planeCardExists = await page.$eval('#btn-select-plane', el => !!el);
+        const planeLockBadge = await page.$eval('#plane-lock-badge', el => el.textContent);
+        console.log("   Fighter Jet Option Exists:", planeCardExists, "Lock Badge:", planeLockBadge.trim());
+        if (!planeCardExists || !planeLockBadge.includes('50,000 €')) {
+            throw new Error("Fighter jet option with 50,000 € lock badge must exist!");
+        }
+
         // Test Selecting Red Team and Human Class, then Deploy
         await page.click('#btn-select-red');
         await page.click('#btn-select-human');
         await page.click('#btn-confirm-deploy');
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 300));
+
+        // Verify 3-2-1 Countdown Overlay triggered
+        const countdownOverlayDisplay = await page.$eval('#match-countdown-overlay', el => window.getComputedStyle(el).display);
+        console.log("   Match Countdown Overlay on Deploy (Expected: flex):", countdownOverlayDisplay);
+        if (countdownOverlayDisplay !== 'flex') {
+            throw new Error("3-2-1 Countdown overlay must appear when match starts/deploys!");
+        }
+
+        // Wait for countdown to finish (3.5s)
+        await new Promise(r => setTimeout(r, 4000));
 
         // Verify Player Team Badge updated to RED and Soldier / Inimene
         const teamBadgeText = await page.$eval('#player-team-name', el => el.textContent);
@@ -687,11 +705,30 @@ try {
         await new Promise(r => setTimeout(r, 300));
         console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
 
+        // Test Fighter Jet Unlock with 50,000 €
+        console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");
+        await page.evaluate(() => {
+            localStorage.setItem('playard_war_game_money', '55000');
+        });
+        await page.click('#btn-open-loadout');
+        await new Promise(r => setTimeout(r, 300));
+        await page.click('#btn-select-plane');
+        await page.click('#btn-confirm-deploy');
+        await new Promise(r => setTimeout(r, 4000)); // Wait for 3-2-1 countdown
+
+        const planeBadgeText = await page.$eval('#player-team-name', el => el.textContent);
+        console.log("   Player Team & Role Badge as Fighter Jet:", planeBadgeText);
+        if (!planeBadgeText.includes('JET') && !planeBadgeText.includes('LENNUK')) {
+            throw new Error(`Expected badge to reflect FIGHTER JET, got: ${planeBadgeText}`);
+        }
+        console.log("   Successfully unlocked and deployed Fighter Jet with 50,000 €!");
+
         // 10b. Test Playard Owner Estonian Localization in War Game
         console.log("10b. Checking Playard Owner Estonian Localization in War Game...");
         await page.evaluate(() => {
             const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+            localStorage.setItem('playard_war_game_money', '50000');
         });
         await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
         await new Promise(r => setTimeout(r, 1500));
@@ -704,20 +741,21 @@ try {
         }
 
         await page.click('#btn-select-blue');
-        await page.click('#btn-select-human');
+        await page.click('#btn-select-plane');
         await page.click('#btn-confirm-deploy');
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 4000)); // Wait for countdown
 
         const ownerBadgeText = await page.$eval('#player-team-name', el => el.textContent);
         console.log("   Playard Owner Team Badge (Estonian):", ownerBadgeText);
-        if (!ownerBadgeText.includes('INIMENE (SÕDUR)')) {
-            throw new Error(`Expected Playard Owner badge to say INIMENE (SÕDUR), got: ${ownerBadgeText}`);
+        if (!ownerBadgeText.includes('LAHINGULENNUK')) {
+            throw new Error(`Expected Playard Owner badge to say LAHINGULENNUK, got: ${ownerBadgeText}`);
         }
-        console.log("   Successfully tested Playard Owner Estonian Localization in War Game!");
+        console.log("   Successfully tested Playard Owner Estonian Localization with Fighter Jet in War Game!");
 
         // Reset guest profile for subsequent tests
         await page.evaluate(() => {
             localStorage.removeItem('playard_current_user_profile');
+            localStorage.removeItem('playard_war_game_money');
         });
 
         // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)

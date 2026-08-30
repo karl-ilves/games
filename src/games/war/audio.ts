@@ -313,6 +313,32 @@ class WarAudio {
         clickOsc.start(now);
         clickOsc.stop(now + 0.02);
     }
+
+    public playCountdownBeep(isGo: boolean = false) {
+        if (this.isMuted) return;
+        this.initCtx();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = isGo ? 'sawtooth' : 'sine';
+        osc.frequency.setValueAtTime(isGo ? 880 : 440, now);
+        if (isGo) {
+            osc.frequency.exponentialRampToValueAtTime(1760, now + 0.4);
+            gain.gain.setValueAtTime(0.5, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        } else {
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        }
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + (isGo ? 0.55 : 0.25));
+    }
 }
 
 export const warAudio = new WarAudio();
