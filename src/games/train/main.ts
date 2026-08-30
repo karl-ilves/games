@@ -204,13 +204,16 @@ function getTrainMoney(): number {
         // 4. Check primary key
         const raw = localStorage.getItem(TRAIN_MONEY_KEY);
         if (raw !== null) {
-            const val = parseInt(raw, 10);
-            if (!isNaN(val)) return Math.max(0, val);
+            let val = parseInt(raw, 10);
+            if (!isNaN(val)) {
+                if (isPlayardOwner(prof?.email)) val = Math.max(val, 100000);
+                return Math.max(0, val);
+            }
         }
 
-        // 5. If Playard Owner and uninitialized, start with a generous initial bonus (10,000 €)
+        // 5. If Playard Owner and uninitialized, start with a generous initial bonus (100,000 €)
         if (isPlayardOwner(prof?.email)) {
-            const initialBonus = 10000;
+            const initialBonus = 100000;
             saveTrainMoney(initialBonus);
             return initialBonus;
         }

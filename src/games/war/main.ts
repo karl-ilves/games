@@ -198,6 +198,13 @@ class WarGameEngine {
                 console.warn('War DB load note:', e);
             }
         }
+
+        if (isPlayardOwner(prof?.email)) {
+            this.warMoney = Math.max(this.warMoney, 100000);
+            localStorage.setItem('playard_war_game_money', this.warMoney.toString());
+            localStorage.setItem(storageKey, JSON.stringify({ user_id: userId, username: this.localUsername, money: this.warMoney, kills: this.myKills, updated_at: new Date().toISOString() }));
+        }
+
         this.updateHUD();
     }
 

@@ -11,6 +11,8 @@ export interface UserProfile {
     isAdmin: boolean;
     rongimäng?: number;
     ronginäng?: number;
+    warmäng?: number;
+    war_money?: number;
 }
 
 export const ADMIN_EMAILS = [
@@ -124,11 +126,27 @@ function saveUserGameProgress(profile: UserProfile | null) {
     if (trainMoney !== null) {
         const val = parseInt(trainMoney, 10);
         if (!isNaN(val)) {
-            if (profile.username) localStorage.setItem(`playard_train_money_user_${profile.username.toLowerCase()}`, val.toString());
-            if (profile.id) localStorage.setItem(`playard_train_money_user_${profile.id}`, val.toString());
-            if (profile.email) localStorage.setItem(`playard_train_money_user_${profile.email.toLowerCase()}`, val.toString());
-            profile.rongimäng = val;
-            profile.ronginäng = val;
+            const finalTrainVal = isPlayardOwner(profile.email) ? Math.max(val, 100000) : val;
+            if (profile.username) localStorage.setItem(`playard_train_money_user_${profile.username.toLowerCase()}`, finalTrainVal.toString());
+            if (profile.id) localStorage.setItem(`playard_train_money_user_${profile.id}`, finalTrainVal.toString());
+            if (profile.email) localStorage.setItem(`playard_train_money_user_${profile.email.toLowerCase()}`, finalTrainVal.toString());
+            profile.rongimäng = finalTrainVal;
+            profile.ronginäng = finalTrainVal;
+            saveLocalProfile(profile);
+        }
+    }
+
+    // Save War game money
+    const warMoney = localStorage.getItem('playard_war_game_money');
+    if (warMoney !== null) {
+        const val = parseInt(warMoney, 10);
+        if (!isNaN(val)) {
+            const finalWarVal = isPlayardOwner(profile.email) ? Math.max(val, 100000) : val;
+            if (profile.username) localStorage.setItem(`playard_war_data_${profile.username.toLowerCase()}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
+            if (profile.id) localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
+            if (profile.email) localStorage.setItem(`playard_war_data_${profile.email.toLowerCase()}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
+            profile.warmäng = finalWarVal;
+            profile.war_money = finalWarVal;
             saveLocalProfile(profile);
         }
     }
@@ -150,8 +168,9 @@ function restoreUserGameProgress(profile: UserProfile) {
                          || (profile.ronginäng !== undefined ? profile.ronginäng.toString() : null);
 
     if (savedTrainMoney !== null) {
-        const val = parseInt(savedTrainMoney, 10);
+        let val = parseInt(savedTrainMoney, 10);
         if (!isNaN(val)) {
+            if (isPlayardOwner(profile.email)) val = Math.max(val, 100000);
             localStorage.setItem('playard_train_money', val.toString());
             localStorage.setItem('rongimäng', val.toString());
             localStorage.setItem('ronginäng', val.toString());
@@ -159,13 +178,51 @@ function restoreUserGameProgress(profile: UserProfile) {
             profile.ronginäng = val;
         }
     } else if (isPlayardOwner(profile.email)) {
-        // Initial generous money for Playard Owner (10,000 € Rongiraha)
-        const initialOwnerMoney = 10000;
+        // Initial generous money for Playard Owner (100,000 €)
+        const initialOwnerMoney = 100000;
         localStorage.setItem('playard_train_money', initialOwnerMoney.toString());
         localStorage.setItem('rongimäng', initialOwnerMoney.toString());
         localStorage.setItem('ronginäng', initialOwnerMoney.toString());
         profile.rongimäng = initialOwnerMoney;
         profile.ronginäng = initialOwnerMoney;
+        saveLocalProfile(profile);
+    }
+
+    // Restore War game money
+    const savedWarMoney = localStorage.getItem(`playard_war_data_${profile.id}`)
+                       || localStorage.getItem(`playard_war_data_${profile.username.toLowerCase()}`)
+                       || localStorage.getItem(`playard_war_data_${profile.email?.toLowerCase()}`)
+                       || localStorage.getItem('playard_war_game_money')
+                       || (profile.warmäng !== undefined ? profile.warmäng.toString() : null)
+                       || (profile.war_money !== undefined ? profile.war_money.toString() : null);
+
+    if (savedWarMoney !== null) {
+        let val = 0;
+        try {
+            if (savedWarMoney.startsWith('{')) {
+                const parsed = JSON.parse(savedWarMoney);
+                if (parsed.money !== undefined) val = parsed.money;
+            } else {
+                val = parseInt(savedWarMoney, 10);
+            }
+        } catch (e) {
+            val = parseInt(savedWarMoney, 10) || 0;
+        }
+
+        if (isPlayardOwner(profile.email)) {
+            val = Math.max(val, 100000);
+        }
+        localStorage.setItem('playard_war_game_money', val.toString());
+        localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: val }));
+        profile.warmäng = val;
+        profile.war_money = val;
+        saveLocalProfile(profile);
+    } else if (isPlayardOwner(profile.email)) {
+        const initialWarMoney = 100000;
+        localStorage.setItem('playard_war_game_money', initialWarMoney.toString());
+        localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: initialWarMoney }));
+        profile.warmäng = initialWarMoney;
+        profile.war_money = initialWarMoney;
         saveLocalProfile(profile);
     }
 }

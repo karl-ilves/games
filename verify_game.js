@@ -750,7 +750,13 @@ try {
         if (!ownerBadgeText.includes('LAHINGULENNUK')) {
             throw new Error(`Expected Playard Owner badge to say LAHINGULENNUK, got: ${ownerBadgeText}`);
         }
-        console.log("   Successfully tested Playard Owner Estonian Localization with Fighter Jet in War Game!");
+
+        const ownerWarMoneyText = await page.$eval('#stat-money', el => el.textContent);
+        console.log("   Playard Owner War Cash Balance (Expected: >= 100,000 €):", ownerWarMoneyText);
+        if (parseInt(ownerWarMoneyText.replace(/,/g, ''), 10) < 100000) {
+            throw new Error(`Expected Playard Owner to have 100,000 € War Cash, got: ${ownerWarMoneyText}`);
+        }
+        console.log("   Successfully tested Playard Owner Estonian Localization with 100,000 € and Fighter Jet in War Game!");
 
         // Reset guest profile for subsequent tests
         await page.evaluate(() => {
@@ -935,9 +941,9 @@ try {
             }
 
             const ownerMoneyVal = await page.$eval('#train-money-val', el => el.textContent);
-            console.log("   Playard Owner Saved Train Money (Expected: >= 10000):", ownerMoneyVal);
-            if (parseInt(ownerMoneyVal.replace(/,/g, ''), 10) < 1000) {
-                throw new Error(`Expected Playard Owner to have initial saved money, got: ${ownerMoneyVal}`);
+            console.log("   Playard Owner Saved Train Money (Expected: >= 100000):", ownerMoneyVal);
+            if (parseInt(ownerMoneyVal.replace(/,/g, ''), 10) < 100000) {
+                throw new Error(`Expected Playard Owner to have 100,000 € saved money, got: ${ownerMoneyVal}`);
             }
 
             // Verify 'rongimäng' database column in localStorage and user profile
