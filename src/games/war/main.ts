@@ -507,7 +507,6 @@ class WarGameEngine {
         this.deployLocalUnit();
         this.spawnBattleRoster();
         this.updateTeamBadge();
-        this.startMatchCountdown();
     }
 
     private showToast(message: string, color = '#2ecc71') {
