@@ -1344,10 +1344,11 @@ class YardService {
         return [];
     }
 
-    public recordPlayedGame(game: Omit<RecentlyPlayedGame, 'lastPlayed'> & { lastPlayed?: number }): RecentlyPlayedGame[] {
+    public recordPlayedGame(game: Omit<RecentlyPlayedGame, 'lastPlayed'> & { lastPlayed?: number }, overrideTime?: number): RecentlyPlayedGame[] {
         try {
             const currentList = this.getRecentlyPlayedGames();
-            const now = game.lastPlayed || Date.now();
+            // Always stamp with Date.now() when a game is played/clicked, unless explicitly overriding timestamp
+            const now = overrideTime !== undefined ? overrideTime : Date.now();
             const updatedItem: RecentlyPlayedGame = {
                 ...game,
                 lastPlayed: now

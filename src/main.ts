@@ -601,13 +601,29 @@ function setupModals() {
 // --- Recently Played Games Management & Rendering ---
 function formatTimeAgo(timestamp: number, isEt: boolean): string {
     const diff = Math.max(0, Date.now() - timestamp);
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return isEt ? 'Äsja mängitud' : 'Just played';
+    const secs = Math.floor(diff / 1000);
+    if (secs < 10) return isEt ? 'Äsja mängitud' : 'Just played';
+    if (secs < 60) return isEt ? `${secs} sek tagasi` : `${secs}s ago`;
+    const mins = Math.floor(secs / 60);
     if (mins < 60) return isEt ? `${mins} min tagasi` : `${mins}m ago`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return isEt ? `${hours} h tagasi` : `${hours}h ago`;
     const days = Math.floor(hours / 24);
     return isEt ? `${days} p tagasi` : `${days}d ago`;
+}
+
+function updateRecentlyPlayedTimestamps() {
+    const container = document.getElementById('recently-played-grid');
+    if (!container) return;
+    const isEt = getLanguage() === 'et';
+    const games = yardService.getRecentlyPlayedGames();
+    const top3 = games.slice(0, 3);
+    const timeEls = container.querySelectorAll('.recently-played-time-val');
+    timeEls.forEach((el, idx) => {
+        if (top3[idx]) {
+            el.textContent = formatTimeAgo(top3[idx].lastPlayed, isEt);
+        }
+    });
 }
 
 function renderRecentlyPlayed() {
@@ -712,7 +728,7 @@ function renderRecentlyPlayed() {
                     </span>
                     <span style="font-size: 0.78rem; color: #8899a6; display: flex; align-items: center; gap: 4px;">
                         <span>🕒</span>
-                        <span>${timeStr}</span>
+                        <span class="recently-played-time-val">${timeStr}</span>
                     </span>
                 </div>
                 <h2 style="font-size: 1.45rem; margin-bottom: 8px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
@@ -817,6 +833,7 @@ updateAdminControlsVisibility(initialProf?.email);
 
 yardService.subscribe(updateYardDisplay);
 setInterval(updateStreakTimerLive, 1000);
+setInterval(updateRecentlyPlayedTimestamps, 1000);
 
 window.addEventListener('playard_game_played', () => {
     renderRecentlyPlayed();
