@@ -805,6 +805,44 @@ try {
             }
             console.log("   Successfully verified 'You missed the station' notification banner in 3D Train Simulator!");
 
+            // 11b. Test Mobile / Tablet Automatic Touch Controls Detection
+            console.log("11b. Checking Mobile / Tablet Automatic Touch Controls in 3D Train Simulator...");
+            const mobilePage = await browser.newPage();
+            await mobilePage.evaluateOnNewDocument(() => {
+                window.__PLAYARD_TEST_MODE__ = true;
+            });
+            await mobilePage.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+            await mobilePage.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await new Promise(r => setTimeout(r, 1500));
+
+            // Verify on-screen touch controls are automatically displayed on phone/tablet
+            const mobileControlsDisplay = await mobilePage.$eval('#mobile-train-controls', el => window.getComputedStyle(el).display);
+            console.log("   Mobile / Tablet Touch Controls Display (Expected: flex):", mobileControlsDisplay);
+            if (mobileControlsDisplay !== 'flex') {
+                throw new Error("Mobile/Tablet touch controls must be automatically visible on mobile/touch devices!");
+            }
+
+            // Test Mobile Touch Buttons
+            await mobilePage.click('#m-btn-throttle-up');
+            await new Promise(r => setTimeout(r, 200));
+            const mobileThrottle = await mobilePage.$eval('#throttle-text', el => el.textContent);
+            console.log("   Mobile Throttle after Touch Power Button:", mobileThrottle);
+
+            await mobilePage.click('#m-btn-horn');
+            await new Promise(r => setTimeout(r, 100));
+
+            await mobilePage.click('#m-btn-cam');
+            await new Promise(r => setTimeout(r, 200));
+
+            await mobilePage.click('#m-btn-weather');
+            await new Promise(r => setTimeout(r, 200));
+
+            await mobilePage.click('#m-btn-throttle-down');
+            await mobilePage.click('#m-btn-throttle-down');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   Successfully tested all Mobile / Tablet Touch Controls in 3D Train Simulator!");
+            await mobilePage.close();
+
             // 12. Test Playard Owner Estonian Localization & Database Money Persistence in Rongimäng
             console.log("12. Checking Playard Owner Estonian Localization & Database Money (rongimäng)...");
             await page.evaluate(() => {

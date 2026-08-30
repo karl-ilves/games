@@ -69,6 +69,12 @@ export const I18N = {
         btnPower: 'GAAS',
         btnBrake: 'PIDUR',
         btnHorn: 'VILE',
+        mPower: 'GAAS',
+        mBrake: 'PIDUR',
+        mHorn: 'VILE',
+        mSwitch: 'PÖÖRE',
+        mCam: 'VAADE',
+        mWeather: 'ILM',
         helpTitle: '🚂 Rongimäng - Juhtimisjuhised',
         helpContent: `
             <div><strong style="color: #00f2fe;">W / Nool Üles / [GAAS]:</strong> Kiirenda vedurit edasi</div>
@@ -79,6 +85,7 @@ export const I18N = {
             <div><strong style="color: #ffd32a;">N:</strong> Vaheta ilma ja kellaaega (Päev, Loojang, Öö)</div>
             <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
             <div><strong style="color: #ffd32a;">🪙 Kuidas teenida Rongiraha:</strong> Peatu jaamatsoonis kiirusel 0 km/h, oota kuni reisijad peale lähevad ja teeni iga peatusega +50 €!</div>
+            <div><strong style="color: #2ecc71;">📱 Nutiseadmed:</strong> Telefonis ja tahvlis aktiveeruvad ekraanile automaatselt mugavad puutetundlikud juhtnupud!</div>
         `
     },
     en: {
@@ -130,6 +137,12 @@ export const I18N = {
         btnPower: 'POWER',
         btnBrake: 'BRAKE',
         btnHorn: 'HORN',
+        mPower: 'POWER',
+        mBrake: 'BRAKE',
+        mHorn: 'HORN',
+        mSwitch: 'SWITCH',
+        mCam: 'CAM',
+        mWeather: 'DAY',
         helpTitle: '🚂 Train Simulator Guide & Controls',
         helpContent: `
             <div><strong style="color: #00f2fe;">W / Up Arrow / [POWER]:</strong> Accelerate locomotive forward</div>
@@ -140,6 +153,7 @@ export const I18N = {
             <div><strong style="color: #ffd32a;">N:</strong> Toggle weather & lighting (Day, Sunset, Night)</div>
             <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
             <div><strong style="color: #ffd32a;">🪙 How to Earn Train Money:</strong> Stop inside station zone at 0 km/h, wait for boarding to finish, and earn +50 € at every station stop!</div>
+            <div><strong style="color: #2ecc71;">📱 Touch Devices:</strong> On phone or tablet, ergonomic on-screen touch buttons appear automatically!</div>
         `
     }
 };
@@ -1743,7 +1757,76 @@ function setupControls() {
             trainAudio.playBrakeSqueal();
         }
     });
-    document.getElementById('btn-horn')?.addEventListener('click', () => {
+    // Continuous touch & button hold intervals
+    let powerInterval: any = null;
+    let brakeInterval: any = null;
+
+    const btnPowerEl = document.getElementById('btn-throttle-up');
+    const btnBrakeEl = document.getElementById('btn-throttle-down');
+    const btnHornEl = document.getElementById('btn-horn');
+
+    const mBtnPower = document.getElementById('m-btn-throttle-up');
+    const mBtnBrake = document.getElementById('m-btn-throttle-down');
+    const mBtnHorn = document.getElementById('m-btn-horn');
+    const mBtnSwitch = document.getElementById('m-btn-switch');
+    const mBtnCam = document.getElementById('m-btn-cam');
+    const mBtnWeather = document.getElementById('m-btn-weather');
+
+    function startPower() {
+        isBraking = false;
+        targetThrottle = Math.min(100, targetThrottle + 15);
+        mBtnPower?.classList.add('active');
+        if (powerInterval) clearInterval(powerInterval);
+        powerInterval = setInterval(() => {
+            targetThrottle = Math.min(100, targetThrottle + 8);
+            isBraking = false;
+        }, 70);
+    }
+    function stopPower() {
+        mBtnPower?.classList.remove('active');
+        if (powerInterval) {
+            clearInterval(powerInterval);
+            powerInterval = null;
+        }
+    }
+
+    function startBrake() {
+        targetThrottle = Math.max(0, targetThrottle - 15);
+        if (targetThrottle === 0) {
+            isBraking = true;
+            trainAudio.playBrakeSqueal();
+        }
+        mBtnBrake?.classList.add('active');
+        if (brakeInterval) clearInterval(brakeInterval);
+        brakeInterval = setInterval(() => {
+            targetThrottle = Math.max(0, targetThrottle - 10);
+            if (targetThrottle === 0) {
+                isBraking = true;
+                trainAudio.playBrakeSqueal();
+            }
+        }, 70);
+    }
+    function stopBrake() {
+        mBtnBrake?.classList.remove('active');
+        if (brakeInterval) {
+            clearInterval(brakeInterval);
+            brakeInterval = null;
+        }
+    }
+
+    // Bind standard buttons
+    btnPowerEl?.addEventListener('click', () => {
+        targetThrottle = Math.min(100, targetThrottle + 20);
+        isBraking = false;
+    });
+    btnBrakeEl?.addEventListener('click', () => {
+        targetThrottle = Math.max(0, targetThrottle - 20);
+        if (targetThrottle === 0) {
+            isBraking = true;
+            trainAudio.playBrakeSqueal();
+        }
+    });
+    btnHornEl?.addEventListener('click', () => {
         trainAudio.playWhistle();
         emitSmokePuff(true);
     });
@@ -1754,20 +1837,78 @@ function setupControls() {
     });
     document.getElementById('btn-toggle-weather')?.addEventListener('click', toggleWeather);
 
-    // Mobile Virtual Touch
-    document.getElementById('m-btn-throttle-up')?.addEventListener('pointerdown', () => {
-        targetThrottle = Math.min(100, targetThrottle + 25);
-        isBraking = false;
-    });
-    document.getElementById('m-btn-throttle-down')?.addEventListener('pointerdown', () => {
-        targetThrottle = Math.max(0, targetThrottle - 25);
-        if (targetThrottle === 0) isBraking = true;
-    });
-    document.getElementById('m-btn-horn')?.addEventListener('pointerdown', () => {
-        trainAudio.playWhistle();
-        emitSmokePuff(true);
-    });
-    document.getElementById('m-btn-switch')?.addEventListener('pointerdown', toggleTrackSwitch);
+    // Bind mobile / tablet virtual touch buttons
+    if (mBtnPower) {
+        mBtnPower.addEventListener('touchstart', (e) => { e.preventDefault(); startPower(); }, { passive: false });
+        mBtnPower.addEventListener('touchend', (e) => { e.preventDefault(); stopPower(); }, { passive: false });
+        mBtnPower.addEventListener('touchcancel', (e) => { e.preventDefault(); stopPower(); }, { passive: false });
+        mBtnPower.addEventListener('mousedown', startPower);
+        mBtnPower.addEventListener('mouseup', stopPower);
+        mBtnPower.addEventListener('mouseleave', stopPower);
+    }
+
+    if (mBtnBrake) {
+        mBtnBrake.addEventListener('touchstart', (e) => { e.preventDefault(); startBrake(); }, { passive: false });
+        mBtnBrake.addEventListener('touchend', (e) => { e.preventDefault(); stopBrake(); }, { passive: false });
+        mBtnBrake.addEventListener('touchcancel', (e) => { e.preventDefault(); stopBrake(); }, { passive: false });
+        mBtnBrake.addEventListener('mousedown', startBrake);
+        mBtnBrake.addEventListener('mouseup', stopBrake);
+        mBtnBrake.addEventListener('mouseleave', stopBrake);
+    }
+
+    if (mBtnHorn) {
+        const triggerHorn = (e?: Event) => {
+            if (e && e.cancelable) e.preventDefault();
+            mBtnHorn.classList.add('active');
+            trainAudio.playWhistle();
+            emitSmokePuff(true);
+            setTimeout(() => mBtnHorn.classList.remove('active'), 250);
+        };
+        mBtnHorn.addEventListener('touchstart', triggerHorn, { passive: false });
+        mBtnHorn.addEventListener('click', triggerHorn);
+    }
+
+    if (mBtnSwitch) {
+        const triggerSwitch = (e?: Event) => {
+            if (e && e.cancelable) e.preventDefault();
+            mBtnSwitch.classList.add('active');
+            toggleTrackSwitch();
+            setTimeout(() => mBtnSwitch.classList.remove('active'), 250);
+        };
+        mBtnSwitch.addEventListener('touchstart', triggerSwitch, { passive: false });
+        mBtnSwitch.addEventListener('click', triggerSwitch);
+    }
+
+    if (mBtnCam) {
+        const triggerCam = (e?: Event) => {
+            if (e && e.cancelable) e.preventDefault();
+            cameraMode = (cameraMode + 1) % 4;
+            updateCameraBtnText();
+        };
+        mBtnCam.addEventListener('touchstart', triggerCam, { passive: false });
+        mBtnCam.addEventListener('click', triggerCam);
+    }
+
+    if (mBtnWeather) {
+        const triggerWeather = (e?: Event) => {
+            if (e && e.cancelable) e.preventDefault();
+            toggleWeather();
+        };
+        mBtnWeather.addEventListener('touchstart', triggerWeather, { passive: false });
+        mBtnWeather.addEventListener('click', triggerWeather);
+    }
+
+    // Automatic Phone / Tablet Touch Controls Activation
+    const isMobileOrTablet = ('ontouchstart' in window) ||
+                             (navigator.maxTouchPoints > 0) ||
+                             window.matchMedia('(pointer: coarse)').matches ||
+                             window.innerWidth <= 1024 ||
+                             /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Tablet/i.test(navigator.userAgent);
+
+    const mobileControlsContainer = document.getElementById('mobile-train-controls');
+    if (mobileControlsContainer && isMobileOrTablet) {
+        mobileControlsContainer.style.display = 'flex';
+    }
 
     // Continue Next Station Modal Button
     document.getElementById('btn-next-station-continue')?.addEventListener('click', () => {
@@ -1799,6 +1940,8 @@ function setupControls() {
 function updateCameraBtnText() {
     const camBtn = document.getElementById('btn-camera-view');
     if (camBtn) camBtn.innerText = t.camModes[cameraMode];
+    const mCamLabel = document.getElementById('m-cam-label');
+    if (mCamLabel) mCamLabel.innerText = t.mCam;
 }
 
 // --- Setup HUD & Currency Updates ---
@@ -1876,6 +2019,25 @@ function applyTrainLocalization() {
 
     const btnHorn = document.getElementById('btn-horn-text');
     if (btnHorn) btnHorn.innerText = t.btnHorn;
+
+    // Mobile touch buttons labels
+    const mPowerLabel = document.getElementById('m-power-label');
+    if (mPowerLabel) mPowerLabel.innerText = t.mPower;
+
+    const mBrakeLabel = document.getElementById('m-brake-label');
+    if (mBrakeLabel) mBrakeLabel.innerText = t.mBrake;
+
+    const mHornLabel = document.getElementById('m-horn-label');
+    if (mHornLabel) mHornLabel.innerText = t.mHorn;
+
+    const mSwitchLabel = document.getElementById('m-switch-label');
+    if (mSwitchLabel) mSwitchLabel.innerText = t.mSwitch;
+
+    const mCamLabel = document.getElementById('m-cam-label');
+    if (mCamLabel) mCamLabel.innerText = t.mCam;
+
+    const mWeatherLabel = document.getElementById('m-weather-label');
+    if (mWeatherLabel) mWeatherLabel.innerText = weatherMode === 0 ? (isOwner ? 'PÄEV' : 'DAY') : (weatherMode === 1 ? (isOwner ? 'LOOJANG' : 'SUNSET') : (isOwner ? 'ÖÖ' : 'NIGHT'));
 
     const depotTitle = document.getElementById('depot-title-text');
     if (depotTitle) depotTitle.innerText = t.depotTitle;

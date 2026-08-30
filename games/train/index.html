@@ -297,37 +297,138 @@
             transition: width 0.1s linear;
         }
 
-        /* Mobile Controls */
+        /* Mobile & Tablet Controls */
         #mobile-train-controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
+            position: fixed;
+            bottom: max(16px, env(safe-area-inset-bottom));
+            left: max(16px, env(safe-area-inset-left));
+            right: max(16px, env(safe-area-inset-right));
             display: none;
             justify-content: space-between;
-            z-index: 90;
+            align-items: flex-end;
+            z-index: 100;
             pointer-events: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .mobile-control-cluster {
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+            align-items: center;
+        }
+
+        .mobile-cluster-left {
+            flex-direction: row;
+        }
+
+        .mobile-cluster-right {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
         }
 
         .touch-btn {
             pointer-events: auto;
-            width: 64px;
-            height: 64px;
-            background: rgba(255,255,255,0.15);
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            color: white;
-            font-size: 1.4rem;
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            background: rgba(15, 23, 42, 0.82);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            backdrop-filter: blur(8px);
+            gap: 3px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+            cursor: pointer;
             touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: transform 0.1s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
         }
-        .touch-btn:active {
-            background: rgba(0, 242, 254, 0.4);
-            border-color: #00f2fe;
-            transform: scale(0.94);
+
+        .touch-btn .touch-icon {
+            font-size: 1.55rem;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .touch-btn .touch-label {
+            font-size: 0.65rem;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        .touch-btn:active, .touch-btn.active {
+            transform: scale(0.92);
+        }
+
+        .touch-btn-power {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.35), rgba(16, 185, 129, 0.45));
+            border-color: #22c55e;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.35);
+        }
+        .touch-btn-power:active, .touch-btn-power.active {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.6), rgba(16, 185, 129, 0.7));
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.65);
+        }
+
+        .touch-btn-brake {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(220, 38, 38, 0.45));
+            border-color: #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+        }
+        .touch-btn-brake:active, .touch-btn-brake.active {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.6), rgba(220, 38, 38, 0.7));
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.65);
+        }
+
+        .touch-btn-horn {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(217, 119, 6, 0.45));
+            border-color: #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+        }
+        .touch-btn-horn:active, .touch-btn-horn.active {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.6), rgba(217, 119, 6, 0.7));
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.65);
+        }
+
+        .touch-btn-switch {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(14, 165, 233, 0.45));
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+        }
+        .touch-btn-switch:active, .touch-btn-switch.active {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.6), rgba(14, 165, 233, 0.7));
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.65);
+        }
+
+        .touch-btn-cam, .touch-btn-weather {
+            width: 58px;
+            height: 58px;
+            border-radius: 16px;
+        }
+
+        /* Adjust bottom dashboard in mobile mode to make room for on-screen controls */
+        @media (max-width: 900px), (pointer: coarse) {
+            .bottom-hud {
+                bottom: 100px;
+            }
+            .dashboard-panel {
+                padding: 8px 14px;
+                gap: 12px;
+            }
+            .controls-btn-group {
+                display: none;
+            }
         }
 
         /* Modals */
@@ -625,15 +726,38 @@
         </div>
     </div>
 
-    <!-- Mobile Virtual Controls -->
-    <div id="mobile-train-controls">
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <button class="touch-btn" id="m-btn-throttle-down">🛑</button>
-            <button class="touch-btn" id="m-btn-throttle-up" style="background: rgba(46, 204, 113, 0.3); border-color: #2ecc71;">⚡</button>
+    <!-- Mobile / Tablet Virtual Touch Controls (Automatically activated on phone/tablet) -->
+    <div id="mobile-train-controls" style="display: none;">
+        <!-- Left Cluster: Gas & Brake (Driving) -->
+        <div class="mobile-control-cluster mobile-cluster-left">
+            <button class="touch-btn touch-btn-power" id="m-btn-throttle-up" title="Gas / Power (Hold to accelerate)">
+                <span class="touch-icon">⚡</span>
+                <span class="touch-label" id="m-power-label">POWER</span>
+            </button>
+            <button class="touch-btn touch-btn-brake" id="m-btn-throttle-down" title="Brake / Stop (Hold to brake)">
+                <span class="touch-icon">🛑</span>
+                <span class="touch-label" id="m-brake-label">BRAKE</span>
+            </button>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <button class="touch-btn" id="m-btn-switch" style="background: rgba(255, 211, 42, 0.25); border-color: #ffd32a;">🔀</button>
-            <button class="touch-btn" id="m-btn-horn" style="background: rgba(255, 211, 42, 0.3); border-color: #ffd32a; width: 72px; height: 72px; font-size: 1.6rem;">📢</button>
+
+        <!-- Right Cluster: Horn, Switch, Camera, Weather -->
+        <div class="mobile-control-cluster mobile-cluster-right">
+            <button class="touch-btn touch-btn-horn" id="m-btn-horn" title="Horn / Whistle">
+                <span class="touch-icon">📢</span>
+                <span class="touch-label" id="m-horn-label">HORN</span>
+            </button>
+            <button class="touch-btn touch-btn-switch" id="m-btn-switch" title="Switch Track Junction">
+                <span class="touch-icon">🔀</span>
+                <span class="touch-label" id="m-switch-label">SWITCH</span>
+            </button>
+            <button class="touch-btn touch-btn-cam" id="m-btn-cam" title="Toggle Camera View">
+                <span class="touch-icon">🎥</span>
+                <span class="touch-label" id="m-cam-label">CAM</span>
+            </button>
+            <button class="touch-btn touch-btn-weather" id="m-btn-weather" title="Toggle Weather / Time of Day">
+                <span class="touch-icon">☀️</span>
+                <span class="touch-label" id="m-weather-label">DAY</span>
+            </button>
         </div>
     </div>
 
