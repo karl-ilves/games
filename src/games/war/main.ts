@@ -6,7 +6,7 @@ import { warAudio } from './audio';
 import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
 
 // --- Types & Interfaces ---
-type Team = 'red' | 'blue';
+type Team = 'red' | 'blue' | 'missile';
 type UnitClass = 'tank' | 'soldier' | 'plane' | 'missile';
 type ActiveWeapon = 'cannon' | 'mg' | 'airstrike' | 'missile' | 'nuke';
 
@@ -131,6 +131,7 @@ class WarGameEngine {
     private isSatelliteTargeting = false;
     private satelliteTargetType: 'missile' | 'nuke' = 'missile';
     private satelliteReticleMesh!: THREE.Group;
+    private satelliteCamCenter = new THREE.Vector3(0, 0, 0);
     private missileSilos: Map<Team, THREE.Vector3> = new Map();
     private myKills = 0;
     private warMoney = parseInt(localStorage.getItem('playard_war_game_money') || '0', 10);
@@ -350,6 +351,11 @@ class WarGameEngine {
         const redDesc = document.querySelector('#btn-select-red .team-select-desc');
         if (redDesc) redDesc.textContent = isEt ? 'Põhja baas (North Base)' : 'North Base';
 
+        const missileTeamName = document.querySelector('#btn-select-missile-team .team-select-title');
+        if (missileTeamName) missileTeamName.textContent = isEt ? 'RAKETITIIM' : 'MISSILE TEAM';
+        const missileTeamDesc = document.querySelector('#btn-select-missile-team .team-select-desc');
+        if (missileTeamDesc) missileTeamDesc.textContent = isEt ? 'Raketibaasi juhtimiskeskus' : 'Command Silo Base';
+
         const step2 = document.getElementById('deploy-step-2-label');
         if (step2) step2.textContent = isEt ? '2. Vali Roll / Üksus:' : '2. Select Class / Unit:';
 
@@ -426,6 +432,7 @@ class WarGameEngine {
         const deployModal = document.getElementById('modal-deploy-selection');
         const btnBlue = document.getElementById('btn-select-blue');
         const btnRed = document.getElementById('btn-select-red');
+        const btnMissileTeam = document.getElementById('btn-select-missile-team');
         const btnTank = document.getElementById('btn-select-tank');
         const btnHuman = document.getElementById('btn-select-human');
         const btnPlane = document.getElementById('btn-select-plane');
@@ -476,12 +483,21 @@ class WarGameEngine {
             chosenTeam = 'blue';
             btnBlue.className = 'select-box selected-blue';
             btnRed!.className = 'select-box';
+            if (btnMissileTeam) btnMissileTeam.className = 'select-box';
         });
 
         btnRed?.addEventListener('click', () => {
             chosenTeam = 'red';
             btnRed.className = 'select-box selected-red';
             btnBlue!.className = 'select-box';
+            if (btnMissileTeam) btnMissileTeam.className = 'select-box';
+        });
+
+        btnMissileTeam?.addEventListener('click', () => {
+            chosenTeam = 'missile';
+            btnMissileTeam.className = 'select-box selected-missile';
+            btnBlue!.className = 'select-box';
+            btnRed!.className = 'select-box';
         });
 
         btnTank?.addEventListener('click', () => {
@@ -538,10 +554,13 @@ class WarGameEngine {
                 : (this.localClass === 'missile'
                     ? (this.isOwnerLang ? 'RAKETIJUHT' : 'MISSILE')
                     : (this.localClass === 'tank' ? 'TANK' : (this.isOwnerLang ? 'SÕDUR' : 'SOLDIER')));
+            const teamLabel = this.localTeam === 'missile'
+                ? (this.isOwnerLang ? 'RAKETITIIM' : 'MISSILE TEAM')
+                : this.localTeam.toUpperCase();
             const enteringMsg = this.isOwnerLang
-                ? `🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`
-                : `🚀 Entering battle: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`;
-            this.showToast(enteringMsg, this.localTeam === 'red' ? '#ff4757' : '#00f2fe');
+                ? `🚀 Sisened lahingusse: War Server #1 (${teamLabel} ${classLabel})`
+                : `🚀 Entering battle: War Server #1 (${teamLabel} ${classLabel})`;
+            this.showToast(enteringMsg, this.localTeam === 'red' ? '#ff4757' : (this.localTeam === 'missile' ? '#2ed573' : '#00f2fe'));
         });
 
         // Open loadout change button in navbar
@@ -552,6 +571,7 @@ class WarGameEngine {
             if (btnBlue && btnRed) {
                 btnBlue.className = chosenTeam === 'blue' ? 'select-box selected-blue' : 'select-box';
                 btnRed.className = chosenTeam === 'red' ? 'select-box selected-red' : 'select-box';
+                if (btnMissileTeam) btnMissileTeam.className = chosenTeam === 'missile' ? 'select-box selected-missile' : 'select-box';
             }
             if (btnTank && btnHuman && btnPlane && btnMissile) {
                 btnTank.className = chosenClass === 'tank' ? 'select-box selected-class' : 'select-box';
@@ -620,6 +640,10 @@ class WarGameEngine {
                 badge.className = 'team-red';
                 badge.style.borderColor = '#e74c3c';
                 nameEl.innerText = `🔴 RED TEAM · ${roleIcon} · ${this.localUsername}`;
+            } else if (this.localTeam === 'missile') {
+                badge.className = 'team-missile';
+                badge.style.borderColor = '#2ed573';
+                nameEl.innerText = `🚀 ${this.isOwnerLang ? 'RAKETITIIM' : 'MISSILE TEAM'} · ${roleIcon} · ${this.localUsername}`;
             } else {
                 badge.className = 'team-blue';
                 badge.style.borderColor = '#3498db';
@@ -710,9 +734,10 @@ class WarGameEngine {
         this.createBaseStation(new THREE.Vector3(0, 0, 270), 'red');
         this.createBaseStation(new THREE.Vector3(0, 0, -270), 'blue');
 
-        // Team Missile Silo Command Houses (100 € Raketid & 60s Tuumapomm)
+        // Team Missile Silo Command Houses (10s Raketid & 60s Tuumapomm)
         this.createMissileSilo(new THREE.Vector3(45, 0, 270), 'red');
         this.createMissileSilo(new THREE.Vector3(-45, 0, -270), 'blue');
+        this.createMissileSilo(new THREE.Vector3(75, 0, 0), 'missile');
 
         // Central & Strategic Fortresses
         this.createMilitaryFort(new THREE.Vector3(0, 0, 0));
@@ -884,8 +909,10 @@ class WarGameEngine {
         group.position.copy(pos);
 
         const isRed = team === 'red';
+        const isMissile = team === 'missile';
+        const trimColor = isRed ? 0xe74c3c : (isMissile ? 0x2ed573 : 0x00f2fe);
         const siloMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
-        const trimMat = new THREE.MeshStandardMaterial({ color: isRed ? 0xe74c3c : 0x00f2fe, metalness: 0.6 });
+        const trimMat = new THREE.MeshStandardMaterial({ color: trimColor, metalness: 0.6 });
         const buildingMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
 
         // 1. Silo Command HQ House (16 x 6 x 14)
@@ -1054,7 +1081,16 @@ class WarGameEngine {
     // --- Base Spawn Positioning ---
     private getRandomBaseSpawn(team: Team, unitClass: UnitClass): { pos: THREE.Vector3; rot: number } {
         const isRed = team === 'red';
-        const rot = isRed ? Math.PI : 0;
+        const isMissileTeam = team === 'missile';
+        const rot = isRed ? Math.PI : (isMissileTeam ? Math.PI / 2 : 0);
+
+        if (isMissileTeam) {
+            const siloPos = this.missileSilos.get('missile') || new THREE.Vector3(75, 0, 0);
+            return {
+                pos: new THREE.Vector3(siloPos.x + 4, unitClass === 'plane' ? 14.0 : 0, siloPos.z + 10),
+                rot
+            };
+        }
 
         if (unitClass === 'plane') {
             // Airstrips / flight lanes spread across runway
@@ -2477,6 +2513,7 @@ class WarGameEngine {
 
         this.isSatelliteTargeting = true;
         this.satelliteTargetType = type;
+        this.satelliteCamCenter.copy(this.localUnit ? this.localUnit.pos : new THREE.Vector3(0, 0, 0));
         if (!this.satelliteReticleMesh) this.setupSatelliteReticle();
         this.satelliteReticleMesh.visible = true;
 
@@ -3430,21 +3467,33 @@ class WarGameEngine {
                 }
             }
         } else {
+            const isTank = this.localClass === 'tank';
             const turnRate = isTank ? 2.2 : 4.0;
             const maxSpeed = isTank ? 16.0 : 19.0;
             const accel = isTank ? 35.0 : 50.0;
             const drag = 14.0;
 
-            if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.localUnit.rotation += turnRate * dt;
-            if (this.keys['KeyD'] || this.keys['ArrowRight']) this.localUnit.rotation -= turnRate * dt;
-
-            if (this.keys['KeyW'] || this.keys['ArrowUp']) {
-                this.localUnit.speed = Math.min(maxSpeed, this.localUnit.speed + accel * dt);
-            } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
-                this.localUnit.speed = Math.max(-maxSpeed * 0.6, this.localUnit.speed - accel * dt);
+            if (this.isSatelliteTargeting) {
+                // Smooth WASD / Arrow key panning for satellite camera
+                const panSpeed = 110.0;
+                if (this.keys['KeyW'] || this.keys['ArrowUp']) this.satelliteCamCenter.z -= panSpeed * dt;
+                if (this.keys['KeyS'] || this.keys['ArrowDown']) this.satelliteCamCenter.z += panSpeed * dt;
+                if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.satelliteCamCenter.x -= panSpeed * dt;
+                if (this.keys['KeyD'] || this.keys['ArrowRight']) this.satelliteCamCenter.x += panSpeed * dt;
+                this.satelliteCamCenter.x = THREE.MathUtils.clamp(this.satelliteCamCenter.x, -240, 240);
+                this.satelliteCamCenter.z = THREE.MathUtils.clamp(this.satelliteCamCenter.z, -360, 360);
             } else {
-                if (this.localUnit.speed > 0) this.localUnit.speed = Math.max(0, this.localUnit.speed - drag * dt);
-                else if (this.localUnit.speed < 0) this.localUnit.speed = Math.min(0, this.localUnit.speed + drag * dt);
+                if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.localUnit.rotation += turnRate * dt;
+                if (this.keys['KeyD'] || this.keys['ArrowRight']) this.localUnit.rotation -= turnRate * dt;
+
+                if (this.keys['KeyW'] || this.keys['ArrowUp']) {
+                    this.localUnit.speed = Math.min(maxSpeed, this.localUnit.speed + accel * dt);
+                } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
+                    this.localUnit.speed = Math.max(-maxSpeed * 0.6, this.localUnit.speed - accel * dt);
+                } else {
+                    if (this.localUnit.speed > 0) this.localUnit.speed = Math.max(0, this.localUnit.speed - drag * dt);
+                    else if (this.localUnit.speed < 0) this.localUnit.speed = Math.min(0, this.localUnit.speed + drag * dt);
+                }
             }
 
             const forward = new THREE.Vector3(Math.sin(this.localUnit.rotation), 0, Math.cos(this.localUnit.rotation));
@@ -3857,9 +3906,9 @@ class WarGameEngine {
 
         // Tactical Satellite & Drone Overhead Targeting Camera View
         if (this.isSatelliteTargeting) {
-            const targetCam = new THREE.Vector3(this.mouseAimTarget.x, 85, this.mouseAimTarget.z + 18);
-            this.camera.position.lerp(targetCam, 0.12);
-            this.camera.lookAt(new THREE.Vector3(this.mouseAimTarget.x, 0, this.mouseAimTarget.z));
+            const targetCam = new THREE.Vector3(this.satelliteCamCenter.x, 90, this.satelliteCamCenter.z + 10);
+            this.camera.position.lerp(targetCam, 0.2);
+            this.camera.lookAt(new THREE.Vector3(this.satelliteCamCenter.x, 0, this.satelliteCamCenter.z));
             return;
         }
 

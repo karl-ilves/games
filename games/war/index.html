@@ -407,6 +407,16 @@
             background: rgba(231, 76, 60, 0.2);
             box-shadow: 0 0 20px rgba(231, 76, 60, 0.4);
         }
+        .select-box.selected-missile {
+            border-color: #2ed573;
+            background: rgba(46, 213, 115, 0.2);
+            box-shadow: 0 0 20px rgba(46, 213, 115, 0.4);
+        }
+        .team-missile {
+            background: rgba(46, 213, 115, 0.15);
+            border: 2px solid #2ed573;
+            box-shadow: 0 0 20px rgba(46, 213, 115, 0.4);
+        }
         .select-box.selected-class {
             border-color: #ffd32a;
             background: rgba(255, 211, 42, 0.18);
@@ -842,16 +852,21 @@
 
             <!-- 1. Team Choice -->
             <div id="deploy-step-1-label" style="text-align: left; font-weight: 800; color: #fff; font-size: 0.95rem; margin-bottom: 8px;">1. Select Team:</div>
-            <div class="selection-grid" style="margin-top: 0;">
-                <div class="select-box selected-blue" id="btn-select-blue">
+            <div class="team-selection-scroll-container" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory; margin-top: 0; scrollbar-width: thin;">
+                <div class="select-box selected-blue" id="btn-select-blue" style="min-width: 145px; flex: 1; scroll-snap-align: start;">
                     <div style="font-size: 2.2rem;">🔵</div>
-                    <div class="team-select-title" style="font-weight: 900; font-size: 1.1rem; color: #70a1ff; margin-top: 6px;">BLUE TEAM</div>
-                    <div class="team-select-desc" style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">South Base</div>
+                    <div class="team-select-title" style="font-weight: 900; font-size: 1.05rem; color: #70a1ff; margin-top: 6px;">BLUE TEAM</div>
+                    <div class="team-select-desc" style="font-size: 0.76rem; color: #a4b0be; margin-top: 4px;">South Base</div>
                 </div>
-                <div class="select-box" id="btn-select-red">
+                <div class="select-box" id="btn-select-red" style="min-width: 145px; flex: 1; scroll-snap-align: start;">
                     <div style="font-size: 2.2rem;">🔴</div>
-                    <div class="team-select-title" style="font-weight: 900; font-size: 1.1rem; color: #ff6b81; margin-top: 6px;">RED TEAM</div>
-                    <div class="team-select-desc" style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">North Base</div>
+                    <div class="team-select-title" style="font-weight: 900; font-size: 1.05rem; color: #ff6b81; margin-top: 6px;">RED TEAM</div>
+                    <div class="team-select-desc" style="font-size: 0.76rem; color: #a4b0be; margin-top: 4px;">North Base</div>
+                </div>
+                <div class="select-box" id="btn-select-missile-team" style="min-width: 145px; flex: 1; scroll-snap-align: start; border-color: rgba(46, 213, 115, 0.4);">
+                    <div style="font-size: 2.2rem;">🚀</div>
+                    <div class="team-select-title" style="font-weight: 900; font-size: 1.05rem; color: #2ed573; margin-top: 6px;">MISSILE TEAM</div>
+                    <div class="team-select-desc" style="font-size: 0.76rem; color: #a4b0be; margin-top: 4px;">Command Silo Base</div>
                 </div>
             </div>
 

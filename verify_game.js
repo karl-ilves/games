@@ -642,6 +642,13 @@ try {
             throw new Error("Fighter jet option with 50,000 € lock badge must exist!");
         }
 
+        // Check Missile Team in scrollable selection
+        const missileTeamOptionExists = await page.$eval('#btn-select-missile-team', el => !!el);
+        console.log("   Missile Team Option Exists in Modal:", missileTeamOptionExists);
+        if (!missileTeamOptionExists) {
+            throw new Error("Missile Team option (#btn-select-missile-team) must exist in deploy modal!");
+        }
+
         // Check Missile Commander role in selection modal
         const missileCardOptionExists = await page.$eval('#btn-select-missile', el => !!el);
         console.log("   Missile Commander Option Exists in Modal:", missileCardOptionExists);

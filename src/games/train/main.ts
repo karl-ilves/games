@@ -1000,15 +1000,41 @@ function buildTerrainAndScenery() {
     river.receiveShadow = true;
     scene.add(river);
 
-    // Tasapinnalised piirded jõeületuse kohas (maa tasandil)
-    const bridgeGroup = new THREE.Group();
-    const trussMat = new THREE.MeshStandardMaterial({ color: 0x9b2226, metalness: 0.7, roughness: 0.4 });
-    const trussL = new THREE.Mesh(new THREE.BoxGeometry(180, 1.2, 0.3), trussMat);
-    trussL.position.set(380, 0.6, 1063.5);
-    const trussR = new THREE.Mesh(new THREE.BoxGeometry(180, 1.2, 0.3), trussMat);
-    trussR.position.set(380, 0.6, 1056.5);
-    bridgeGroup.add(trussL, trussR);
-    scene.add(bridgeGroup);
+    // Täpselt raudtee kurviga kohanduvad jõesillaposti- ja piirdemudelid
+    const bridgeRiverUStart = 0.38;
+    const bridgeRiverUEnd = 0.46;
+    const bridgeSteps = 14;
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.3 });
+    const pierMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+
+    for (let i = 0; i <= bridgeSteps; i++) {
+        const u = bridgeRiverUStart + (i / bridgeSteps) * (bridgeRiverUEnd - bridgeRiverUStart);
+        const pos = mainTrackCurve.getPointAt(u);
+        const tangent = mainTrackCurve.getTangentAt(u).normalize();
+        const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+
+        // Vasak ja parem kaitsepiire sillal täpselt kurvi suunaliselt
+        const postGeo = new THREE.BoxGeometry(0.3, 0.9, 0.3);
+        const postL = new THREE.Mesh(postGeo, postMat);
+        postL.position.copy(pos).add(normal.clone().multiplyScalar(2.2));
+        postL.position.y += 0.45;
+
+        const postR = new THREE.Mesh(postGeo, postMat);
+        postR.position.copy(pos).add(normal.clone().multiplyScalar(-2.2));
+        postR.position.y += 0.45;
+
+        scene.add(postL, postR);
+
+        // Sillatoed / sambad vette
+        if (i % 3 === 0) {
+            const pierGeo = new THREE.CylinderGeometry(1.2, 1.5, 6, 8);
+            const pier = new THREE.Mesh(pierGeo, pierMat);
+            pier.position.copy(pos);
+            pier.position.y -= 2.8;
+            pier.receiveShadow = true;
+            scene.add(pier);
+        }
+    }
 
     buildPineForest();
 }
