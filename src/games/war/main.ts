@@ -103,7 +103,8 @@ class WarGameEngine {
     private secondaryReloadTimer = 0;
     private airstrikeCooldown = 0;
     private myKills = 0;
-    private yardsEarned = 0;
+    private warMoney = parseInt(localStorage.getItem('playard_war_game_money') || '0', 10);
+    private matchMoneyEarned = 0;
 
     // Team Scores (Target: 30 Kills)
     private redScore = 0;
@@ -461,30 +462,30 @@ class WarGameEngine {
 
         // 10 Unique AI Blue Units (3 Tanks + 7 Soldiers)
         const blueRoster = [
-            { name: '[AI] Kpt. Miller', class: 'tank' as UnitClass, x: -35, z: -130 },
-            { name: '[AI] Tank Titan', class: 'tank' as UnitClass, x: 0, z: -140 },
-            { name: '[AI] Tank Ironclad', class: 'tank' as UnitClass, x: 35, z: -130 },
-            { name: '[AI] Srs. Kask', class: 'soldier' as UnitClass, x: -55, z: -125 },
-            { name: '[AI] Kpr. Hunt', class: 'soldier' as UnitClass, x: -20, z: -125 },
-            { name: '[AI] Ream. Tamm', class: 'soldier' as UnitClass, x: -10, z: -122 },
-            { name: '[AI] Kpr. Ilves', class: 'soldier' as UnitClass, x: 10, z: -122 },
-            { name: '[AI] Sõdur Karu', class: 'soldier' as UnitClass, x: 20, z: -125 },
-            { name: '[AI] Srs. Sepp', class: 'soldier' as UnitClass, x: 55, z: -125 },
-            { name: '[AI] Ream. Kuusk', class: 'soldier' as UnitClass, x: 0, z: -120 }
+            { name: 'Kpt. Miller', class: 'tank' as UnitClass, x: -35, z: -130 },
+            { name: 'Tank Titan', class: 'tank' as UnitClass, x: 0, z: -140 },
+            { name: 'Tank Ironclad', class: 'tank' as UnitClass, x: 35, z: -130 },
+            { name: 'Srs. Kask', class: 'soldier' as UnitClass, x: -55, z: -125 },
+            { name: 'Kpr. Hunt', class: 'soldier' as UnitClass, x: -20, z: -125 },
+            { name: 'Ream. Tamm', class: 'soldier' as UnitClass, x: -10, z: -122 },
+            { name: 'Kpr. Ilves', class: 'soldier' as UnitClass, x: 10, z: -122 },
+            { name: 'Sõdur Karu', class: 'soldier' as UnitClass, x: 20, z: -125 },
+            { name: 'Srs. Sepp', class: 'soldier' as UnitClass, x: 55, z: -125 },
+            { name: 'Ream. Kuusk', class: 'soldier' as UnitClass, x: 0, z: -120 }
         ];
 
         // 10 Unique AI Red Units (3 Tanks + 7 Soldiers)
         const redRoster = [
-            { name: '[AI] Tank Viper', class: 'tank' as UnitClass, x: -35, z: 130 },
-            { name: '[AI] Tank Goliath', class: 'tank' as UnitClass, x: 0, z: 140 },
-            { name: '[AI] Tank Panzer', class: 'tank' as UnitClass, x: 35, z: 130 },
-            { name: '[AI] Sõdur Fox', class: 'soldier' as UnitClass, x: -55, z: 125 },
-            { name: '[AI] Snaiper Hawk', class: 'soldier' as UnitClass, x: -20, z: 125 },
-            { name: '[AI] Kpt. Wolf', class: 'soldier' as UnitClass, x: -10, z: 122 },
-            { name: '[AI] Srs. Shadow', class: 'soldier' as UnitClass, x: 10, z: 122 },
-            { name: '[AI] Kpr. Blaze', class: 'soldier' as UnitClass, x: 20, z: 125 },
-            { name: '[AI] Ream. Storm', class: 'soldier' as UnitClass, x: 55, z: 125 },
-            { name: '[AI] Sõdur Ghost', class: 'soldier' as UnitClass, x: 0, z: 120 }
+            { name: 'Tank Viper', class: 'tank' as UnitClass, x: -35, z: 130 },
+            { name: 'Tank Goliath', class: 'tank' as UnitClass, x: 0, z: 140 },
+            { name: 'Tank Panzer', class: 'tank' as UnitClass, x: 35, z: 130 },
+            { name: 'Sõdur Fox', class: 'soldier' as UnitClass, x: -55, z: 125 },
+            { name: 'Snaiper Hawk', class: 'soldier' as UnitClass, x: -20, z: 125 },
+            { name: 'Kpt. Wolf', class: 'soldier' as UnitClass, x: -10, z: 122 },
+            { name: 'Srs. Shadow', class: 'soldier' as UnitClass, x: 10, z: 122 },
+            { name: 'Kpr. Blaze', class: 'soldier' as UnitClass, x: 20, z: 125 },
+            { name: 'Ream. Storm', class: 'soldier' as UnitClass, x: 55, z: 125 },
+            { name: 'Sõdur Ghost', class: 'soldier' as UnitClass, x: 0, z: 120 }
         ];
 
         // Spawn Blue Team (If local is Blue, spawn 9 Blue AI; otherwise spawn 10 Blue AI)
@@ -1291,9 +1292,7 @@ class WarGameEngine {
 
         if (killerId === this.localPlayerId) {
             this.myKills++;
-            const yardReward = 50;
-            this.yardsEarned += yardReward;
-            yardService.addYards(yardReward);
+            this.addWarMoney(150);
         }
 
         this.updateHUD();
@@ -1308,6 +1307,13 @@ class WarGameEngine {
             victim.respawnTimer = 5.0;
             if (victim.isLocalPlayer) this.showRespawnOverlay(5);
         }
+    }
+
+    private addWarMoney(amount: number) {
+        this.warMoney += amount;
+        this.matchMoneyEarned += amount;
+        localStorage.setItem('playard_war_game_money', this.warMoney.toString());
+        this.updateHUD();
     }
 
     private addKillFeedEntry(killerName: string, killerTeam: Team, victimName: string, victimTeam: Team) {
@@ -1360,8 +1366,7 @@ class WarGameEngine {
 
         if (isWin) {
             warAudio.playVictory();
-            this.yardsEarned += 250;
-            yardService.addYards(250);
+            this.addWarMoney(1000);
         }
 
         const modal = document.getElementById('match-end-modal');
@@ -1369,9 +1374,9 @@ class WarGameEngine {
         const title = document.getElementById('match-end-title');
         const desc = document.getElementById('match-end-desc');
         const finalKills = document.getElementById('final-kills-val');
-        const finalYards = document.getElementById('final-yards-val');
+        const finalMoney = document.getElementById('final-money-val');
 
-        if (modal && title && desc && finalKills && finalYards) {
+        if (modal && title && desc && finalKills && finalMoney) {
             modal.style.display = 'flex';
             if (isWin) {
                 if (icon) icon.innerText = '🏆';
@@ -1385,7 +1390,7 @@ class WarGameEngine {
                 desc.innerText = `Vastaste ${winningTeam.toUpperCase()} tiim jõudis 30 tapmiseni esimesena.`;
             }
             finalKills.innerText = this.myKills.toString();
-            finalYards.innerText = `+${this.yardsEarned} YARDS`;
+            finalMoney.innerText = `+${this.matchMoneyEarned.toLocaleString()} €`;
         }
     }
 
@@ -1398,7 +1403,7 @@ class WarGameEngine {
         const reloadText = document.getElementById('reload-text');
         const reloadBar = document.getElementById('reload-bar');
         const statKills = document.getElementById('stat-kills');
-        const statYards = document.getElementById('stat-yards');
+        const statMoney = document.getElementById('stat-money');
         const ammoMg = document.getElementById('ammo-mg');
         const cdAirstrike = document.getElementById('cooldown-airstrike');
 
@@ -1448,7 +1453,7 @@ class WarGameEngine {
         }
 
         if (statKills) statKills.innerText = this.myKills.toString();
-        if (statYards) statYards.innerText = yardService.getYards().toLocaleString();
+        if (statMoney) statMoney.innerText = this.warMoney.toLocaleString();
         if (ammoMg) ammoMg.innerText = this.localClass === 'tank' ? `${this.mgAmmo} rds` : '💣 Granaat';
         if (cdAirstrike) cdAirstrike.innerText = this.airstrikeCooldown > 0 ? `${Math.ceil(this.airstrikeCooldown)}s` : 'VALMIS';
     }

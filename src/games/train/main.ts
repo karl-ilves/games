@@ -470,7 +470,7 @@ function renderDepotModal() {
     TRAINS_CATALOG.forEach(train => {
         const isUnlocked = unlockedIds.includes(train.id);
         const isActive = train.id === currentActiveId;
-        const yardPrice = train.price * 3; // Yardid maksavad 3 korda rohkem kui mänguraha
+        const yardPrice = train.price * 2; // Yardid maksavad 2 korda rohkem kui mänguraha
 
         const card = document.createElement('div');
         card.className = `train-card ${isActive ? 'active-train' : (!isUnlocked ? 'locked-train' : '')}`;
