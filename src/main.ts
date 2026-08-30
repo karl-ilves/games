@@ -615,7 +615,13 @@ function renderRecentlyPlayed() {
 
     const games = yardService.getRecentlyPlayedGames();
     if (!games || games.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; padding: 25px; text-align: center; color: #8899a6; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">Pole veel mänge mängitud. Vali allpool simulaator ja alusta!</div>`;
+        container.innerHTML = `
+            <div id="recently-played-empty" style="grid-column: 1/-1; padding: 35px 20px; text-align: center; color: #8899a6; background: rgba(30, 39, 46, 0.4); border-radius: 16px; border: 1.5px dashed rgba(255, 255, 255, 0.12);">
+                <div style="font-size: 2.2rem; margin-bottom: 8px;">🕹️</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 6px;">Sa pole veel ühtegi mängu mänginud</div>
+                <div style="font-size: 0.88rem; color: #7f8c8d;">Vali allpool ametlik simulaator või kogukonnamäng ja sinu viimati mängitud mängud ilmuvad siia!</div>
+            </div>
+        `;
         return;
     }
 

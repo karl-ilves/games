@@ -65,40 +65,81 @@ try {
         // Test Recently Played Games Section (Viimati mängitud mängud)
         console.log("   Testing Recently Played Games Table (Viimati mängitud mängud)...");
         await page.waitForSelector('#recently-played-section', { visible: true, timeout: 5000 });
-        const recentCards = await page.$$('#recently-played-grid .recently-played-card');
-        console.log(`   Recently Played Cards count (Expected: 3): ${recentCards.length}`);
-        if (recentCards.length !== 3) {
-            throw new Error(`Expected exactly 3 recently played game cards, got: ${recentCards.length}`);
+        
+        // 1. Verify clean empty state for a new player who hasn't played anything yet
+        const emptyStateText = await page.$eval('#recently-played-empty', el => el.textContent).catch(() => '');
+        console.log("   New player empty state (Expected: Sa pole veel ühtegi mängu mänginud):", emptyStateText.replace(/\s+/g, ' ').substring(0, 55));
+        if (!emptyStateText.includes('Sa pole veel ühtegi mängu mänginud')) {
+            throw new Error("New player who has not played any game must see the clean empty state!");
         }
 
-        // Verify that the leftmost card (#1) has the #1 VIIMATI MÄNGITUD badge
-        const firstCardText = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.textContent);
-        console.log("   Leftmost card content (#1 Recent):", firstCardText.replace(/\s+/g, ' ').substring(0, 60));
-        if (!firstCardText.includes('#1 VIIMATI MÄNGITUD') && !firstCardText.includes('#1')) {
-            throw new Error("Leftmost card in Recently Played must be marked as #1 most recent!");
-        }
+        // 2. Play 1st game (Racing) -> Should appear as #1 on far left
+        await page.evaluate(() => {
+            window.yardService.recordPlayedGame({
+                id: 'racing',
+                title: '🏎️ Racing Simulator',
+                description: 'Võistle kiirete sportautode ja mootorratastega ringradadel.',
+                url: './games/racing/index.html',
+                icon: '🏎️',
+                badgeText: 'Circuit Racing'
+            });
+        });
+        await new Promise(r => setTimeout(r, 200));
+        let cards = await page.$$('#recently-played-grid .recently-played-card');
+        console.log(`   Cards count after 1st game played (Expected: 1): ${cards.length}`);
+        if (cards.length !== 1) throw new Error("Expected exactly 1 recently played card after 1st game!");
 
-        // Test dynamic updating: click the 2nd card (e.g. Cooking) and verify it shifts to #1 leftmost position
-        const secondCard = await page.$('#recently-played-grid .recently-played-card:nth-child(2)');
-        if (secondCard) {
-            const secondGameId = await page.evaluate(el => el.getAttribute('data-game-id'), secondCard);
-            await page.evaluate(id => {
-                const map = {
-                    cooking: { id: 'cooking', title: '🍳 3D Master Chef', description: 'Test', url: './games/cooking/index.html', icon: '🍳' },
-                    play: { id: 'play', title: '🎮 Kogukonna 3D mängud', description: 'Test', url: './games/play/index.html', icon: '🎮' }
-                };
-                if (window.yardService && map[id]) {
-                    window.yardService.recordPlayedGame(map[id]);
-                }
-            }, secondGameId);
-            await new Promise(r => setTimeout(r, 200));
-            
-            const newFirstCardId = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.getAttribute('data-game-id'));
-            console.log(`   New leftmost game ID after recordPlayedGame (Expected: ${secondGameId}): ${newFirstCardId}`);
-            if (newFirstCardId !== secondGameId) {
-                console.warn(`Dynamic shift verified via DOM event.`);
-            }
-        }
+        // 3. Play 2nd game (Cooking) -> Cooking must become #1 (leftmost), Racing becomes #2
+        await page.evaluate(() => {
+            window.yardService.recordPlayedGame({
+                id: 'cooking',
+                title: '🍳 3D Master Chef',
+                description: 'Valmista burgereid, pitsasid ja pastasid.',
+                url: './games/cooking/index.html',
+                icon: '🍳',
+                badgeText: '💎 +20Y kuni +40Y'
+            });
+        });
+        await new Promise(r => setTimeout(r, 200));
+        cards = await page.$$('#recently-played-grid .recently-played-card');
+        console.log(`   Cards count after 2nd game played (Expected: 2): ${cards.length}`);
+        const leftmostId2 = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.getAttribute('data-game-id'));
+        console.log(`   Leftmost game ID after cooking played (Expected: cooking): ${leftmostId2}`);
+        if (leftmostId2 !== 'cooking') throw new Error("Cooking must be #1 leftmost after being played most recently!");
+
+        // 4. Play 3rd game (Play) -> Play becomes #1, Cooking is #2, Racing is #3
+        await page.evaluate(() => {
+            window.yardService.recordPlayedGame({
+                id: 'play',
+                title: '🎮 Kogukonna 3D mängud',
+                description: 'Mängi teiste mängijate loodud mänge.',
+                url: './games/play/index.html',
+                icon: '🎮',
+                badgeText: 'Community Play'
+            });
+        });
+        await new Promise(r => setTimeout(r, 200));
+        cards = await page.$$('#recently-played-grid .recently-played-card');
+        console.log(`   Cards count after 3rd game played (Expected: 3): ${cards.length}`);
+        const leftmostId3 = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.getAttribute('data-game-id'));
+        console.log(`   Leftmost game ID after play played (Expected: play): ${leftmostId3}`);
+        if (leftmostId3 !== 'play') throw new Error("Play community game must be #1 leftmost!");
+
+        // 5. Re-play Racing -> Racing jumps to leftmost #1!
+        await page.evaluate(() => {
+            window.yardService.recordPlayedGame({
+                id: 'racing',
+                title: '🏎️ Racing Simulator',
+                description: 'Võistle kiirete sportautode ja mootorratastega ringradadel.',
+                url: './games/racing/index.html',
+                icon: '🏎️',
+                badgeText: 'Circuit Racing'
+            });
+        });
+        await new Promise(r => setTimeout(r, 200));
+        const leftmostIdReplay = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.getAttribute('data-game-id'));
+        console.log(`   Leftmost game ID after re-playing racing (Expected: racing): ${leftmostIdReplay}`);
+        if (leftmostIdReplay !== 'racing') throw new Error("Racing must jump back to #1 leftmost after being played again!");
 
         // Check War Game visibility for guest (Expected: none - restricted to Owner & Admin)
         const guestWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);

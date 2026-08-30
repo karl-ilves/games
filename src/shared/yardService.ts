@@ -79,39 +79,6 @@ const CODE_REDEMPTIONS_STORAGE_KEY = 'playard_code_redemptions_global';
 const PLATFORM_UPDATES_KEY = 'playard_platform_updates';
 const RECENTLY_PLAYED_STORAGE_KEY = 'playard_recently_played_games';
 
-export const DEFAULT_RECENTLY_PLAYED_GAMES: RecentlyPlayedGame[] = [
-    {
-        id: 'racing',
-        title: '🏎️ Racing Simulator',
-        description: 'Võistle kiirete sportautode ja mootorratastega põnevatel ringradadel vastaste vastu.',
-        url: './games/racing/index.html',
-        icon: '🏎️',
-        badgeText: 'Circuit Racing',
-        badgeColor: '#00f2fe',
-        lastPlayed: Date.now() - 60 * 1000 // 1 minute ago (#1 most recent default)
-    },
-    {
-        id: 'cooking',
-        title: '🍳 3D Master Chef',
-        description: 'Valmista burgereid, pitsasid ja pastasid, täida klientide tellimusi ja teeni Yarde!',
-        url: './games/cooking/index.html',
-        icon: '🍳',
-        badgeText: '💎 +20Y kuni +40Y',
-        badgeColor: '#ffd32a',
-        lastPlayed: Date.now() - 60 * 60 * 1000 // 1 hour ago (#2)
-    },
-    {
-        id: 'play',
-        title: '🎮 Kogukonna 3D mängud',
-        description: 'Mängi teiste mängijate poolt loodud ja administraatori poolt heaks kiidetud 3D mänge.',
-        url: './games/play/index.html',
-        icon: '🎮',
-        badgeText: 'Community Play',
-        badgeColor: '#2ecc71',
-        lastPlayed: Date.now() - 24 * 60 * 60 * 1000 // 1 day ago (#3)
-    }
-];
-
 const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_IN_48_HOURS = 48 * 60 * 60 * 1000;
 
@@ -1374,7 +1341,7 @@ class YardService {
                 }
             }
         } catch (e) {}
-        return [...DEFAULT_RECENTLY_PLAYED_GAMES];
+        return [];
     }
 
     public recordPlayedGame(game: Omit<RecentlyPlayedGame, 'lastPlayed'> & { lastPlayed?: number }): RecentlyPlayedGame[] {
