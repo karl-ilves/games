@@ -154,6 +154,9 @@ class WarGameEngine {
     private isOutOfBounds = false;
     private outOfBoundsTimer = 5.0;
 
+    // Death Explosion Camera Tracking
+    private lastDeathPos: THREE.Vector3 | null = null;
+
     private clock = new THREE.Clock();
 
     constructor() {
@@ -2198,6 +2201,10 @@ class WarGameEngine {
         }
 
         if (victim.hp <= 0) {
+            if (victim.isLocalPlayer) {
+                this.lastDeathPos = victim.pos.clone();
+            }
+
             if (victim.unitClass === 'plane' && !victim.isCrashing) {
                 // Trigger airplane dramatic crash sequence
                 victim.isCrashing = true;
@@ -2291,8 +2298,13 @@ class WarGameEngine {
 
     private respawnUnit(unit: CombatUnit) {
         unit.isDead = false;
+        unit.isCrashing = false;
         unit.hp = unit.maxHp;
         unit.root.visible = true;
+
+        if (unit.isLocalPlayer) {
+            this.lastDeathPos = null;
+        }
 
         const spawn = this.getRandomBaseSpawn(unit.team, unit.unitClass);
         unit.pos.copy(spawn.pos);
@@ -3079,6 +3091,15 @@ class WarGameEngine {
 
     private updateCamera() {
         if (!this.localUnit) return;
+
+        // If local player died, elevate and pullback camera to clearly view the explosion and carnage
+        if (this.localUnit.isDead && this.lastDeathPos) {
+            const deathCamTarget = this.lastDeathPos.clone().add(new THREE.Vector3(0, 16.0, -22.0));
+            this.camera.position.lerp(deathCamTarget, 0.08);
+            this.camera.lookAt(this.lastDeathPos.clone().add(new THREE.Vector3(0, 1.5, 0)));
+            return;
+        }
+
         const isPlane = this.localClass === 'plane';
         const isTank = this.localClass === 'tank';
         const dist = isPlane ? 32 : (isTank ? 22 : 12);
