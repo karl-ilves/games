@@ -719,30 +719,42 @@ try {
         await new Promise(r => setTimeout(r, 300));
         console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
 
-        // Test 10s Missile Strike & Satellite Targeting HUD
-        console.log("   Testing 10s Missile Strike & Satellite Targeting...");
-        const missileCardExists = await page.$eval('#weapon-missile', el => !!el);
-        const missileCooldownText = await page.$eval('#cooldown-missile', el => el.textContent);
-        console.log("   Missile Card Exists:", missileCardExists, "Cooldown Text:", missileCooldownText);
-        if (!missileCardExists) {
-            throw new Error("Expected #weapon-missile card to exist!");
+        // Verify missile & nuke are hidden for regular soldier/red team
+        const redMissileDisplay = await page.$eval('#weapon-missile', el => window.getComputedStyle(el).display);
+        const redNukeDisplay = await page.$eval('#weapon-nuke', el => window.getComputedStyle(el).display);
+        console.log("   Regular Player Missile & Nuke Display (Expected: none):", redMissileDisplay, redNukeDisplay);
+        if (redMissileDisplay !== 'none' || redNukeDisplay !== 'none') {
+            throw new Error("Missiles and Nukes must be hidden for regular teams!");
         }
 
-        // Test 60s Nuke Timer
-        const nukeCardExists = await page.$eval('#weapon-nuke', el => !!el);
-        const nukeTimerText = await page.$eval('#timer-nuke', el => el.textContent);
-        console.log("   Nuclear Strike Card Exists:", nukeCardExists, "Nuke Timer Text:", nukeTimerText);
-        if (!nukeCardExists) {
-            throw new Error("Expected #weapon-nuke card to exist!");
+        // Test Deploying as Missile Team
+        console.log("   Testing Missile Team Exclusive Weapons & Satellite Targeting...");
+        await page.click('#btn-open-loadout');
+        await new Promise(r => setTimeout(r, 300));
+        await page.click('#btn-select-missile-team');
+        await page.click('#btn-confirm-deploy');
+        await new Promise(r => setTimeout(r, 4000)); // Wait for 3-2-1 countdown
+
+        const missileTeamBadgeText = await page.$eval('#player-team-name', el => el.textContent);
+        console.log("   Player Team Badge as Missile Team:", missileTeamBadgeText);
+        if (!missileTeamBadgeText.includes('MISSILE') && !missileTeamBadgeText.includes('RAKETITIIM')) {
+            throw new Error(`Expected badge to reflect MISSILE TEAM, got: ${missileTeamBadgeText}`);
         }
 
-        // Test opening Satellite Targeting Mode
+        // Test 10s Missile Strike & Satellite Targeting HUD for Missile Team
+        const missileCardDisplay = await page.$eval('#weapon-missile', el => window.getComputedStyle(el).display);
+        const nukeCardDisplay = await page.$eval('#weapon-nuke', el => window.getComputedStyle(el).display);
+        console.log("   Missile Team Card Display (Expected: flex):", missileCardDisplay, nukeCardDisplay);
+        if (missileCardDisplay !== 'flex' || nukeCardDisplay !== 'flex') {
+            throw new Error("Missile and Nuke cards must be visible for Missile Team!");
+        }
+
+        // Test opening Satellite Targeting Mode for Missile Team
         await page.click('#weapon-missile');
         await new Promise(r => setTimeout(r, 200));
-        // Verify satellite targeting HUD overlay is activated or toast shown
         await page.keyboard.press('Escape');
         await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully verified 10s Missile Strike and 60s Nuke weapon systems!");
+        console.log("   Successfully verified Missile Team exclusive 10s Missile Strike and 60s Nuke!");
 
         // Test Fighter Jet Unlock with 50,000 €
         console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");

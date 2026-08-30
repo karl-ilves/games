@@ -683,7 +683,21 @@ class WarGameEngine {
         if (airstrikeCard) {
             airstrikeCard.style.display = this.localClass === 'plane' ? 'none' : 'flex';
         }
+
+        const missileCard = document.getElementById('weapon-missile');
+        if (missileCard) {
+            missileCard.style.display = this.localTeam === 'missile' ? 'flex' : 'none';
+        }
+
+        const nukeCard = document.getElementById('weapon-nuke');
+        if (nukeCard) {
+            nukeCard.style.display = this.localTeam === 'missile' ? 'flex' : 'none';
+        }
+
         if (this.localClass === 'plane' && this.activeWeapon === 'airstrike') {
+            this.selectWeapon('cannon');
+        }
+        if (this.localTeam !== 'missile' && (this.activeWeapon === 'missile' || this.activeWeapon === 'nuke')) {
             this.selectWeapon('cannon');
         }
     }
@@ -1849,6 +1863,14 @@ class WarGameEngine {
 
     private selectWeapon(type: ActiveWeapon) {
         if (this.localClass === 'plane' && type === 'airstrike') {
+            return;
+        }
+
+        if ((type === 'missile' || type === 'nuke') && this.localTeam !== 'missile') {
+            const warnMsg = this.isOwnerLang
+                ? '🔒 Ainult Raketitiim saab kasutada rakette ja tuumapomme!'
+                : '🔒 Only Missile Team can use missiles and nuclear strikes!';
+            this.showToast(warnMsg, '#ff4757');
             return;
         }
 
