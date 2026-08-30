@@ -60,12 +60,57 @@ export interface PlatformUpdate {
     createdAt: number;
 }
 
+export interface RecentlyPlayedGame {
+    id: string;
+    title: string;
+    description: string;
+    url: string;
+    icon: string;
+    badgeText?: string;
+    badgeColor?: string;
+    lastPlayed: number;
+}
+
 const PRIMARY_STORAGE_KEY = 'playard_yards_data';
 const STORAGE_PREFIX = 'playard_yards_';
 const ADMIN_LOGS_KEY = 'playard_admin_yard_logs';
 const GAMES_STORAGE_KEY = 'playard_user_created_games';
 const CODE_REDEMPTIONS_STORAGE_KEY = 'playard_code_redemptions_global';
 const PLATFORM_UPDATES_KEY = 'playard_platform_updates';
+const RECENTLY_PLAYED_STORAGE_KEY = 'playard_recently_played_games';
+
+export const DEFAULT_RECENTLY_PLAYED_GAMES: RecentlyPlayedGame[] = [
+    {
+        id: 'racing',
+        title: '🏎️ Racing Simulator',
+        description: 'Race high-speed sports cars and motorcycles on challenging circuits against opponents.',
+        url: './games/racing/index.html',
+        icon: '🏎️',
+        badgeText: 'Circuit Racing',
+        badgeColor: '#00f2fe',
+        lastPlayed: Date.now() - 60 * 1000 // 1 minute ago (#1 most recent default)
+    },
+    {
+        id: 'cooking',
+        title: '🍳 3D Master Chef',
+        description: 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!',
+        url: './games/cooking/index.html',
+        icon: '🍳',
+        badgeText: '💎 +20Y to +40Y',
+        badgeColor: '#ffd32a',
+        lastPlayed: Date.now() - 60 * 60 * 1000 // 1 hour ago (#2)
+    },
+    {
+        id: 'creator',
+        title: '🛠️ 3D Game Creator Studio',
+        description: 'Build custom 3D worlds, roads, cars, code interactive game logic with AI, and publish games.',
+        url: './games/creator/index.html',
+        icon: '🛠️',
+        badgeText: 'Studio & AI',
+        badgeColor: '#2ecc71',
+        lastPlayed: Date.now() - 24 * 60 * 60 * 1000 // 1 day ago (#3)
+    }
+];
 
 const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_IN_48_HOURS = 48 * 60 * 60 * 1000;
@@ -1309,12 +1354,56 @@ class YardService {
                         recipientEmail: d.recipient_email || '1karl.ilves@gmail.com',
                         createdAt: new Date(d.created_at).getTime()
                     }));
-                    localStorage.setItem(PLATFORM_UPDATES_KEY, JSON.stringify(mapped));
                     return mapped;
                 }
             } catch (e) {}
         }
         return this.getPlatformUpdates();
+    }
+
+    public getRecentlyPlayedGames(): RecentlyPlayedGame[] {
+        try {
+            const userKey = this.currentUserId ? `${STORAGE_PREFIX}recently_played_${this.currentUserId}` : (this.currentUserUsername ? `${STORAGE_PREFIX}recently_played_${this.currentUserUsername.toLowerCase()}` : null);
+            let raw = userKey ? localStorage.getItem(userKey) : null;
+            if (!raw) raw = localStorage.getItem(RECENTLY_PLAYED_STORAGE_KEY);
+            
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed.sort((a, b) => b.lastPlayed - a.lastPlayed).slice(0, 3);
+                }
+            }
+        } catch (e) {}
+        return [...DEFAULT_RECENTLY_PLAYED_GAMES];
+    }
+
+    public recordPlayedGame(game: Omit<RecentlyPlayedGame, 'lastPlayed'> & { lastPlayed?: number }): RecentlyPlayedGame[] {
+        try {
+            const currentList = this.getRecentlyPlayedGames();
+            const now = game.lastPlayed || Date.now();
+            const updatedItem: RecentlyPlayedGame = {
+                ...game,
+                lastPlayed: now
+            };
+
+            // Remove existing entry with same id
+            const filtered = currentList.filter(g => g.id !== game.id);
+            // Insert at beginning (most recent, leftmost #1)
+            const updated = [updatedItem, ...filtered].sort((a, b) => b.lastPlayed - a.lastPlayed);
+            
+            const json = JSON.stringify(updated.slice(0, 10));
+            localStorage.setItem(RECENTLY_PLAYED_STORAGE_KEY, json);
+            if (this.currentUserId) localStorage.setItem(`${STORAGE_PREFIX}recently_played_${this.currentUserId}`, json);
+            if (this.currentUserUsername) localStorage.setItem(`${STORAGE_PREFIX}recently_played_${this.currentUserUsername.toLowerCase()}`, json);
+
+            // Dispatch global event for live UI reactivity
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('playard_game_played', { detail: updatedItem }));
+            }
+            return updated.slice(0, 3);
+        } catch (e) {
+            return this.getRecentlyPlayedGames();
+        }
     }
 
     public renderYardSvg(size = 22, className = ''): string {

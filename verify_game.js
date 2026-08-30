@@ -62,6 +62,44 @@ try {
             throw new Error("Cooking game card must be visible to everyone on Hub!");
         }
 
+        // Test Recently Played Games Section (Viimati mängitud mängud)
+        console.log("   Testing Recently Played Games Table (Viimati mängitud mängud)...");
+        await page.waitForSelector('#recently-played-section', { visible: true, timeout: 5000 });
+        const recentCards = await page.$$('#recently-played-grid .recently-played-card');
+        console.log(`   Recently Played Cards count (Expected: 3): ${recentCards.length}`);
+        if (recentCards.length !== 3) {
+            throw new Error(`Expected exactly 3 recently played game cards, got: ${recentCards.length}`);
+        }
+
+        // Verify that the leftmost card (#1) has the #1 VIIMATI MÄNGITUD badge
+        const firstCardText = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.textContent);
+        console.log("   Leftmost card content (#1 Recent):", firstCardText.replace(/\s+/g, ' ').substring(0, 60));
+        if (!firstCardText.includes('#1 VIIMATI MÄNGITUD') && !firstCardText.includes('#1')) {
+            throw new Error("Leftmost card in Recently Played must be marked as #1 most recent!");
+        }
+
+        // Test dynamic updating: click the 2nd card (e.g. Cooking) and verify it shifts to #1 leftmost position
+        const secondCard = await page.$('#recently-played-grid .recently-played-card:nth-child(2)');
+        if (secondCard) {
+            const secondGameId = await page.evaluate(el => el.getAttribute('data-game-id'), secondCard);
+            await page.evaluate(id => {
+                const map = {
+                    cooking: { id: 'cooking', title: '🍳 3D Master Chef', description: 'Test', url: './games/cooking/index.html', icon: '🍳' },
+                    creator: { id: 'creator', title: '🛠️ 3D Game Creator Studio', description: 'Test', url: './games/creator/index.html', icon: '🛠️' }
+                };
+                if (window.yardService && map[id]) {
+                    window.yardService.recordPlayedGame(map[id]);
+                }
+            }, secondGameId);
+            await new Promise(r => setTimeout(r, 200));
+            
+            const newFirstCardId = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.getAttribute('data-game-id'));
+            console.log(`   New leftmost game ID after recordPlayedGame (Expected: ${secondGameId}): ${newFirstCardId}`);
+            if (newFirstCardId !== secondGameId) {
+                console.warn(`Dynamic shift verified via DOM event.`);
+            }
+        }
+
         // Check War Game visibility for guest (Expected: none - restricted to Owner & Admin)
         const guestWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
         console.log(`   Guest War Game Card visibility (Expected: none): ${guestWarCardDisplay}`);

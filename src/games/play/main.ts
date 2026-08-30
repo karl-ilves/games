@@ -244,11 +244,30 @@ async function initPlayer() {
             if (titleDisp) titleDisp.innerText = currentGame.title;
             if (authorDisp) authorDisp.innerHTML = `By: <strong style="color: #ffd32a;">${currentGame.creatorUsername}</strong> | Category: ${currentGame.category}`;
             buildSceneFromData(currentGame.sceneData);
+
+            yardService.recordPlayedGame({
+                id: 'game_' + currentGame.id,
+                title: `🎮 ${currentGame.title}`,
+                description: currentGame.description || `Loodud kasutaja ${currentGame.creatorUsername} poolt.`,
+                url: `./games/play/index.html?id=${currentGame.id}`,
+                icon: '🎮',
+                badgeText: currentGame.category || 'Community Game',
+                badgeColor: '#00f2fe'
+            });
         } else {
             if (titleDisp) titleDisp.innerText = 'Game Not Found';
         }
     } else {
         if (titleDisp) titleDisp.innerText = 'Demo Community World';
+        yardService.recordPlayedGame({
+            id: 'play',
+            title: '🎮 Play Community Games',
+            description: 'Mängi teiste mängijate poolt loodud ja avaldatud 3D mänge.',
+            url: './games/play/index.html',
+            icon: '🎮',
+            badgeText: 'Community Play',
+            badgeColor: '#00f2fe'
+        });
     }
 
     // Setup Admin Review Buttons

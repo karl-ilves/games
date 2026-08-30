@@ -5,6 +5,7 @@ import { setLanguage, applyLocalization } from './shared/i18n';
 
 console.log("Playard Hub & Platform Loaded.");
 initAuth();
+(window as any).yardService = yardService;
 
 function updateAdminControlsVisibility(userEmail?: string | null) {
     const adminStreakControls = document.getElementById('streak-admin-controls');
@@ -596,9 +597,160 @@ function setupModals() {
     });
 }
 
+// --- Recently Played Games Management & Rendering ---
+function formatTimeAgo(timestamp: number): string {
+    const diff = Math.max(0, Date.now() - timestamp);
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Äsja mängitud';
+    if (mins < 60) return `${mins} min tagasi`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} h tagasi`;
+    const days = Math.floor(hours / 24);
+    return `${days} p tagasi`;
+}
+
+function renderRecentlyPlayed() {
+    const container = document.getElementById('recently-played-grid');
+    if (!container) return;
+
+    const games = yardService.getRecentlyPlayedGames();
+    if (!games || games.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; padding: 25px; text-align: center; color: #8899a6; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">Pole veel mänge mängitud. Vali allpool simulaator ja alusta!</div>`;
+        return;
+    }
+
+    // Always take top 3 (leftmost = index 0 = most recently played)
+    const top3 = games.slice(0, 3);
+
+    container.innerHTML = top3.map((game, index) => {
+        const isLatest = index === 0;
+        const rankLabel = isLatest ? '👑 #1 VIIMATI MÄNGITUD' : (index === 1 ? '🥈 #2 EELMINE' : '🥉 #3 MÄNGITUD');
+        const rankBadgeStyle = isLatest
+            ? 'background: linear-gradient(135deg, #00f2fe, #4facfe); color: #0b1a2d; font-weight: 900; box-shadow: 0 0 12px rgba(0, 242, 254, 0.4);'
+            : (index === 1 ? 'background: rgba(255, 211, 42, 0.18); color: #ffd32a; border: 1px solid rgba(255, 211, 42, 0.4); font-weight: 800;' : 'background: rgba(255, 255, 255, 0.08); color: #a4b0be; border: 1px solid rgba(255, 255, 255, 0.15); font-weight: 700;');
+
+        const cardBorder = isLatest
+            ? 'border: 1.5px solid rgba(0, 242, 254, 0.6); box-shadow: 0 12px 32px rgba(0, 242, 254, 0.22); background: linear-gradient(145deg, #162432 0%, #111a24 100%);'
+            : 'border: 1px solid rgba(255, 255, 255, 0.08); background: #1e272e;';
+
+        const timeStr = formatTimeAgo(game.lastPlayed);
+        const badgeColor = game.badgeColor || '#00f2fe';
+
+        return `
+            <a href="${game.url}" class="game-card recently-played-card" data-game-id="${game.id}" style="${cardBorder}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 0.72rem; padding: 4px 10px; border-radius: 12px; letter-spacing: 0.5px; ${rankBadgeStyle}">
+                        ${rankLabel}
+                    </span>
+                    <span style="font-size: 0.78rem; color: #8899a6; display: flex; align-items: center; gap: 4px;">
+                        <span>🕒</span>
+                        <span>${timeStr}</span>
+                    </span>
+                </div>
+                <h2 style="font-size: 1.45rem; margin-bottom: 8px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                    <span>${game.title}</span>
+                </h2>
+                <p style="font-size: 0.9rem; line-height: 1.45; color: #a4b0be; margin-bottom: 16px; min-height: 42px;">${game.description}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                    <div class="reward-tag" style="border-color: ${badgeColor}; color: ${badgeColor}; background: rgba(0, 242, 254, 0.08); font-size: 0.78rem; padding: 4px 10px;">
+                        <span>${yardService.renderYardSvg(14)}</span>
+                        <span>${game.badgeText || 'Playard'}</span>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 800; color: #00f2fe; display: flex; align-items: center; gap: 4px;">
+                        Mängi uuesti ▶
+                    </span>
+                </div>
+            </a>
+        `;
+    }).join('');
+
+    // Attach click listeners to update recently played immediately
+    container.querySelectorAll('.recently-played-card').forEach(el => {
+        el.addEventListener('click', () => {
+            const gameId = el.getAttribute('data-game-id');
+            const targetGame = top3.find(g => g.id === gameId);
+            if (targetGame) {
+                yardService.recordPlayedGame(targetGame);
+            }
+        });
+    });
+}
+
+function setupGameCardTracking() {
+    // Track clicks on official and community cards
+    const officialGameMap: Record<string, { id: string; title: string; description: string; url: string; icon: string; badgeText: string; badgeColor: string }> = {
+        './games/racing/index.html': {
+            id: 'racing',
+            title: '🏎️ Racing Simulator',
+            description: 'Race high-speed sports cars and motorcycles on challenging circuits against opponents.',
+            url: './games/racing/index.html',
+            icon: '🏎️',
+            badgeText: 'Circuit Racing',
+            badgeColor: '#00f2fe'
+        },
+        './games/cooking/index.html': {
+            id: 'cooking',
+            title: '🍳 3D Master Chef',
+            description: 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!',
+            url: './games/cooking/index.html',
+            icon: '🍳',
+            badgeText: '💎 +20Y to +40Y',
+            badgeColor: '#ffd32a'
+        },
+        './games/war/index.html': {
+            id: 'war',
+            title: '⚔️ War game',
+            description: 'Lead advanced 3D armored combat units, command tactical firepower, defeat enemy forces, and capture strategic zones.',
+            url: './games/war/index.html',
+            icon: '⚔️',
+            badgeText: '🎖️ Combat (+50Y)',
+            badgeColor: '#ff4757'
+        },
+        './games/train/index.html': {
+            id: 'train',
+            title: '🚂 Rongimäng',
+            description: 'Juhi võimsat 3D vedurit mööda maalilist raudteevõrku, vaheta pöörmeid, teeninda jaamu ja teeni Yarde!',
+            url: './games/train/index.html',
+            icon: '🚂',
+            badgeText: '💎 +40Y kuni +100Y',
+            badgeColor: '#00f2fe'
+        },
+        './games/creator/index.html': {
+            id: 'creator',
+            title: '🛠️ 3D Game Creator Studio',
+            description: 'Build custom 3D worlds, roads, cars, code interactive game logic with AI, and publish games.',
+            url: './games/creator/index.html',
+            icon: '🛠️',
+            badgeText: 'Studio & AI',
+            badgeColor: '#2ecc71'
+        },
+        './games/play/index.html': {
+            id: 'play',
+            title: '🎮 Play Community Games',
+            description: 'Play 3D community created games submitted by players.',
+            url: './games/play/index.html',
+            icon: '🎮',
+            badgeText: 'Community Play',
+            badgeColor: '#00f2fe'
+        }
+    };
+
+    document.querySelectorAll<HTMLAnchorElement>('.game-grid a.game-card').forEach(card => {
+        if (card.classList.contains('recently-played-card')) return;
+        const href = card.getAttribute('href');
+        if (href && officialGameMap[href]) {
+            card.addEventListener('click', () => {
+                yardService.recordPlayedGame(officialGameMap[href]);
+            });
+        }
+    });
+}
+
 // Initialise
 setupIcons();
 setupModals();
+renderRecentlyPlayed();
+setupGameCardTracking();
 renderCommunityGames();
 
 const initialProf = getCurrentUserProfile();
@@ -606,6 +758,10 @@ updateAdminControlsVisibility(initialProf?.email);
 
 yardService.subscribe(updateYardDisplay);
 setInterval(updateStreakTimerLive, 1000);
+
+window.addEventListener('playard_game_played', () => {
+    renderRecentlyPlayed();
+});
 
 window.addEventListener('playard_games_updated', () => {
     renderCommunityGames();
@@ -615,4 +771,5 @@ window.addEventListener('playard_games_updated', () => {
 window.addEventListener('playard_auth_changed', (e: any) => {
     const profile = e.detail;
     updateAdminControlsVisibility(profile?.email);
+    renderRecentlyPlayed();
 });

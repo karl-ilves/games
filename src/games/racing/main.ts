@@ -1935,6 +1935,15 @@ async function init() {
     await loadProgress();
     updateGarageUI();
     yardService.subscribe(() => updateGarageUI());
+    yardService.recordPlayedGame({
+        id: 'racing',
+        title: '🏎️ Racing Simulator',
+        description: 'Race high-speed sports cars and motorcycles on challenging circuits against opponents.',
+        url: './games/racing/index.html',
+        icon: '🏎️',
+        badgeText: 'Circuit Racing',
+        badgeColor: '#00f2fe'
+    });
 
     // Bind UI
     uiGarage = document.getElementById('garage-screen')!;

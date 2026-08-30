@@ -207,6 +207,15 @@ class CookingGame {
         this.setupEventListeners();
         this.updateYardDisplay();
         yardService.subscribe(() => this.updateYardDisplay());
+        yardService.recordPlayedGame({
+            id: 'cooking',
+            title: '🍳 3D Master Chef',
+            description: 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!',
+            url: './games/cooking/index.html',
+            icon: '🍳',
+            badgeText: '💎 +20Y to +40Y',
+            badgeColor: '#ffd32a'
+        });
 
         // Start Order Generation & Game Loop
         this.spawnOrder();
