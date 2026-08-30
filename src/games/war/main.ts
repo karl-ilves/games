@@ -459,54 +459,55 @@ class WarGameEngine {
             }
         });
 
-        // AI Unique Name Pool
-        const blueAINames = [
-            { name: '[AI] Kpt. Miller', class: 'tank' as UnitClass },
-            { name: '[AI] Srs. Kask', class: 'soldier' as UnitClass },
-            { name: '[AI] Kpr. Hunt', class: 'soldier' as UnitClass },
-            { name: '[AI] Ream. Tamm', class: 'soldier' as UnitClass }
+        // 10 Unique AI Blue Units (3 Tanks + 7 Soldiers)
+        const blueRoster = [
+            { name: '[AI] Kpt. Miller', class: 'tank' as UnitClass, x: -35, z: -130 },
+            { name: '[AI] Tank Titan', class: 'tank' as UnitClass, x: 0, z: -140 },
+            { name: '[AI] Tank Ironclad', class: 'tank' as UnitClass, x: 35, z: -130 },
+            { name: '[AI] Srs. Kask', class: 'soldier' as UnitClass, x: -55, z: -125 },
+            { name: '[AI] Kpr. Hunt', class: 'soldier' as UnitClass, x: -20, z: -125 },
+            { name: '[AI] Ream. Tamm', class: 'soldier' as UnitClass, x: -10, z: -122 },
+            { name: '[AI] Kpr. Ilves', class: 'soldier' as UnitClass, x: 10, z: -122 },
+            { name: '[AI] Sõdur Karu', class: 'soldier' as UnitClass, x: 20, z: -125 },
+            { name: '[AI] Srs. Sepp', class: 'soldier' as UnitClass, x: 55, z: -125 },
+            { name: '[AI] Ream. Kuusk', class: 'soldier' as UnitClass, x: 0, z: -120 }
         ];
 
-        const redAINames = [
-            { name: '[AI] Tank Titan', class: 'tank' as UnitClass },
-            { name: '[AI] Tank Viper', class: 'tank' as UnitClass },
-            { name: '[AI] Sõdur Fox', class: 'soldier' as UnitClass },
-            { name: '[AI] Snaiper Hawk', class: 'soldier' as UnitClass }
+        // 10 Unique AI Red Units (3 Tanks + 7 Soldiers)
+        const redRoster = [
+            { name: '[AI] Tank Viper', class: 'tank' as UnitClass, x: -35, z: 130 },
+            { name: '[AI] Tank Goliath', class: 'tank' as UnitClass, x: 0, z: 140 },
+            { name: '[AI] Tank Panzer', class: 'tank' as UnitClass, x: 35, z: 130 },
+            { name: '[AI] Sõdur Fox', class: 'soldier' as UnitClass, x: -55, z: 125 },
+            { name: '[AI] Snaiper Hawk', class: 'soldier' as UnitClass, x: -20, z: 125 },
+            { name: '[AI] Kpt. Wolf', class: 'soldier' as UnitClass, x: -10, z: 122 },
+            { name: '[AI] Srs. Shadow', class: 'soldier' as UnitClass, x: 10, z: 122 },
+            { name: '[AI] Kpr. Blaze', class: 'soldier' as UnitClass, x: 20, z: 125 },
+            { name: '[AI] Ream. Storm', class: 'soldier' as UnitClass, x: 55, z: 125 },
+            { name: '[AI] Sõdur Ghost', class: 'soldier' as UnitClass, x: 0, z: 120 }
         ];
 
-        // If 1-4 players: fill 2v2 roster (2 Blue vs 2 Red)
-        if (this.connectedHumanCount < 4) {
-            // Blue Teammate (if local is blue, add 1 AI teammate)
-            if (this.localTeam === 'blue') {
-                const bMate = blueAINames[0];
-                const u = bMate.class === 'tank'
-                    ? this.createTank('ai_blue_1', bMate.name, 'blue', false, true, new THREE.Vector3(14, 0, -132), 0)
-                    : this.createSoldier('ai_blue_1', bMate.name, 'blue', false, true, new THREE.Vector3(14, 0, -132), 0);
-                this.units.set('ai_blue_1', u);
-            } else {
-                // Local is Red, add 2 Blue AI enemies
-                const b1 = this.createTank('ai_blue_1', blueAINames[0].name, 'blue', false, true, new THREE.Vector3(0, 0, -130), 0);
-                const b2 = this.createSoldier('ai_blue_2', blueAINames[1].name, 'blue', false, true, new THREE.Vector3(14, 0, -132), 0);
-                this.units.set('ai_blue_1', b1);
-                this.units.set('ai_blue_2', b2);
-            }
+        // Spawn Blue Team (If local is Blue, spawn 9 Blue AI; otherwise spawn 10 Blue AI)
+        const blueBotsToSpawn = this.localTeam === 'blue' ? blueRoster.slice(0, 9) : blueRoster;
+        blueBotsToSpawn.forEach((entry, idx) => {
+            const id = `ai_blue_${idx + 1}`;
+            const pos = new THREE.Vector3(entry.x, 0, entry.z);
+            const u = entry.class === 'tank'
+                ? this.createTank(id, entry.name, 'blue', false, true, pos, 0)
+                : this.createSoldier(id, entry.name, 'blue', false, true, pos, 0);
+            this.units.set(id, u);
+        });
 
-            // Red Opponents (if local is blue, add 2 Red AI enemies)
-            if (this.localTeam === 'blue') {
-                const r1 = this.createTank('ai_red_1', redAINames[0].name, 'red', false, true, new THREE.Vector3(0, 0, 130), Math.PI);
-                const r2 = this.createSoldier('ai_red_2', redAINames[2].name, 'red', false, true, new THREE.Vector3(-14, 0, 132), Math.PI);
-                this.units.set('ai_red_1', r1);
-                this.units.set('ai_red_2', r2);
-            } else {
-                // Local is Red, add 1 Red AI teammate
-                const rMate = redAINames[1];
-                const u = rMate.class === 'tank'
-                    ? this.createTank('ai_red_1', rMate.name, 'red', false, true, new THREE.Vector3(-14, 0, 132), Math.PI)
-                    : this.createSoldier('ai_red_1', rMate.name, 'red', false, true, new THREE.Vector3(-14, 0, 132), Math.PI);
-                this.units.set('ai_red_1', u);
-            }
-        }
-        // If >= 4 players: No AI spawned! Pure PvP up to 10 players.
+        // Spawn Red Team (If local is Red, spawn 9 Red AI; otherwise spawn 10 Red AI)
+        const redBotsToSpawn = this.localTeam === 'red' ? redRoster.slice(0, 9) : redRoster;
+        redBotsToSpawn.forEach((entry, idx) => {
+            const id = `ai_red_${idx + 1}`;
+            const pos = new THREE.Vector3(entry.x, 0, entry.z);
+            const u = entry.class === 'tank'
+                ? this.createTank(id, entry.name, 'red', false, true, pos, Math.PI)
+                : this.createSoldier(id, entry.name, 'red', false, true, pos, Math.PI);
+            this.units.set(id, u);
+        });
     }
 
     // --- Unit Creators (Tank & Soldier) ---
@@ -713,11 +714,7 @@ class WarGameEngine {
                 this.connectedHumanCount = onlineCount;
                 const serverEl = document.getElementById('server-players-count');
                 if (serverEl) {
-                    if (this.connectedHumanCount <= 4) {
-                        serverEl.innerText = `${this.connectedHumanCount} / 4 Mängijat (2v2 Salk)`;
-                    } else {
-                        serverEl.innerText = `${Math.min(10, this.connectedHumanCount)} / 10 Mängijat (PvP Lahing)`;
-                    }
+                    serverEl.innerText = `${Math.min(20, this.connectedHumanCount)} / 20 Mängijat (10v10 Lahing)`;
                 }
                 this.spawnBattleRoster();
             }

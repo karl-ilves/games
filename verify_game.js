@@ -562,6 +562,9 @@ try {
 
         const serverCount = await page.$eval('#server-players-count', el => el.textContent);
         console.log("   Server Player Status:", serverCount);
+        if (!serverCount.includes('10v10') || !serverCount.includes('20')) {
+            throw new Error(`Expected 10v10 battle status, got: ${serverCount}`);
+        }
 
         const radarCanvasExists = await page.$eval('#radar-canvas', el => !!el);
         if (!radarCanvasExists) {

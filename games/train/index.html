@@ -490,12 +490,21 @@
             box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
             transform: scale(1.02);
         }
-        .btn-train-select.btn-buy {
-            background: linear-gradient(135deg, #ffd32a, #ff9f1a);
+        .btn-train-select.btn-buy-money {
+            background: linear-gradient(135deg, #ffd32a, #f59e0b);
             color: #111;
         }
-        .btn-train-select.btn-buy:hover {
+        .btn-train-select.btn-buy-money:hover {
             box-shadow: 0 0 15px rgba(255, 211, 42, 0.5);
+            transform: scale(1.02);
+        }
+        .btn-train-select.btn-buy-yard {
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            color: #111;
+            margin-top: 6px;
+        }
+        .btn-train-select.btn-buy-yard:hover {
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
             transform: scale(1.02);
         }
     </style>
@@ -529,7 +538,15 @@
         </div>
 
         <div class="hud-right">
-            <div class="hud-stat-box" style="border-color: rgba(0, 242, 254, 0.4);">
+            <!-- In-game Train Money Balance -->
+            <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.45); background: rgba(255, 211, 42, 0.12);" title="Rongimängu oma raha (teenid +50€ iga jaamaga)">
+                <span>🪙</span>
+                <span id="train-money-val" style="color: #ffd32a; font-weight: 800;">0</span>
+                <span style="font-size: 0.75rem; color: #ffd32a; font-weight: 700;">€</span>
+            </div>
+
+            <!-- Playard Yards Balance -->
+            <div class="hud-stat-box" style="border-color: rgba(0, 242, 254, 0.4);" title="Playard Yards">
                 <span id="hud-yard-icon">💎</span>
                 <span id="train-yard-val" style="color: #00f2fe;">0</span>
                 <span style="font-size: 0.75rem; color: #718093;">Y</span>
@@ -557,7 +574,7 @@
         <div style="font-weight: 900; font-size: 1.1rem; color: #2ecc71; display: flex; align-items: center; gap: 8px;">
             <span>🚉</span> <span id="boarding-station-title">PEATUS JAAMAS</span>
         </div>
-        <div style="color: #a4b0be; font-size: 0.85rem;" id="boarding-subtext">Reisijate pealeminek ja kaubavahetus...</div>
+        <div style="color: #a4b0be; font-size: 0.85rem;" id="boarding-subtext">Reisijate pealeminek ja kaubavahetus (+50 €)...</div>
         <div class="boarding-bar">
             <div class="boarding-fill" id="boarding-progress"></div>
         </div>
@@ -618,21 +635,28 @@
 
     <!-- Train Depot & Selection Modal (10 Trains) -->
     <div id="modal-train-depot" class="modal-overlay" style="display: flex;">
-        <div class="modal-card" style="max-width: 820px; text-align: left;">
+        <div class="modal-card" style="max-width: 860px; text-align: left;">
             <button class="modal-close" id="btn-close-depot">&times;</button>
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
                 <div>
                     <h2 style="color: #ffd32a; font-size: 1.7rem; margin: 0; display: flex; align-items: center; gap: 10px;">
-                        <span>🚆</span> <span>Rongide Depoo & Valik</span>
+                        <span>🚆</span> <span>Rongide Depoo & Pood</span>
                     </h2>
                     <p style="color: #94a3b8; font-size: 0.85rem; margin: 4px 0 0 0;">
-                        Vali sõiduks rong või osta uusi võimsaid ronge! Iga jaamapeatus teenib <strong>+50 Yardi</strong>.
+                        Vali oma rong või osta uusi ronge Rongiraha (teenid +50€ jaamaga) või Yardide eest!
                     </p>
                 </div>
-                <div class="hud-stat-box" style="border-color: #00f2fe; background: rgba(0, 242, 254, 0.15); padding: 8px 16px;">
-                    <span style="color: #a4b0be; font-size: 0.85rem;">Sinu saldo:</span>
-                    <strong id="depot-yard-val" style="color: #00f2fe; font-size: 1.15rem;">0</strong>
-                    <span style="color: #00f2fe; font-weight: bold; font-size: 0.85rem;">YARDS 💎</span>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div class="hud-stat-box" style="border-color: #ffd32a; background: rgba(255, 211, 42, 0.15); padding: 6px 14px;">
+                        <span style="color: #a4b0be; font-size: 0.85rem;">🪙 Rongiraha:</span>
+                        <strong id="depot-money-val" style="color: #ffd32a; font-size: 1.15rem;">0</strong>
+                        <span style="color: #ffd32a; font-weight: bold; font-size: 0.85rem;">€</span>
+                    </div>
+                    <div class="hud-stat-box" style="border-color: #00f2fe; background: rgba(0, 242, 254, 0.15); padding: 6px 14px;">
+                        <span style="color: #a4b0be; font-size: 0.85rem;">💎 Playard:</span>
+                        <strong id="depot-yard-val" style="color: #00f2fe; font-size: 1.15rem;">0</strong>
+                        <span style="color: #00f2fe; font-weight: bold; font-size: 0.85rem;">Y</span>
+                    </div>
                 </div>
             </div>
 
@@ -661,6 +685,10 @@
                 Reisijad toimetati turvaliselt sihtjaama ja graafikust peeti kinni!
             </p>
             <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 16px; margin-bottom: 22px;">
+                <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: #ffd32a; font-weight: 800; margin-bottom: 6px;">
+                    <span>Teenitud Rongiraha:</span>
+                    <strong id="reward-money-text">+50 € 🪙</strong>
+                </div>
                 <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: #00f2fe; font-weight: 800;">
                     <span>Teenitud Yardid:</span>
                     <strong id="reward-yards-text">+50 YARDS 💎</strong>
