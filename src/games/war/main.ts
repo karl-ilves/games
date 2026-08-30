@@ -645,16 +645,16 @@ class WarGameEngine {
         if (this.radarCanvas) this.radarCtx = this.radarCanvas.getContext('2d');
     }
 
-    // --- Battlefield Map & Explosive Barrels (2x Larger Map: 840x840) ---
+    // --- Battlefield Map & Explosive Barrels (2x Larger Battle Area: 1680x1680) ---
     private buildBattlefield() {
-        const groundGeo = new THREE.PlaneGeometry(840, 840, 60, 60);
+        const groundGeo = new THREE.PlaneGeometry(1680, 1680, 80, 80);
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x1f271c, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        const grid = new THREE.GridHelper(800, 40, 0x3d4a36, 0x171d15);
+        const grid = new THREE.GridHelper(1600, 80, 0x3d4a36, 0x171d15);
         grid.position.y = 0.05;
         this.scene.add(grid);
 
@@ -687,7 +687,7 @@ class WarGameEngine {
             this.createExplosiveBarrel(pos);
         }
 
-        // Visible Battlefield Boundaries & Laser Perimeter
+        // Visible Battlefield Boundaries & Laser Perimeter (2x Larger: 800m x 1220m)
         this.createVisibleBoundaries();
     }
 
@@ -706,26 +706,26 @@ class WarGameEngine {
             color: 0xff2222
         });
 
-        // 1. Four Holographic Laser Perimeter Walls (Height 40m)
-        // North Wall (Z = 305)
-        const wallNorth = new THREE.Mesh(new THREE.PlaneGeometry(400, 40, 20, 4), wallMat);
-        wallNorth.position.set(0, 20, 305);
+        // 1. Four Holographic Laser Perimeter Walls (2x Area: X=±400, Z=±610, Height 50m)
+        // North Wall (Z = 610)
+        const wallNorth = new THREE.Mesh(new THREE.PlaneGeometry(800, 50, 30, 4), wallMat);
+        wallNorth.position.set(0, 25, 610);
         boundGroup.add(wallNorth);
 
-        // South Wall (Z = -305)
-        const wallSouth = new THREE.Mesh(new THREE.PlaneGeometry(400, 40, 20, 4), wallMat);
-        wallSouth.position.set(0, 20, -305);
+        // South Wall (Z = -610)
+        const wallSouth = new THREE.Mesh(new THREE.PlaneGeometry(800, 50, 30, 4), wallMat);
+        wallSouth.position.set(0, 25, -610);
         boundGroup.add(wallSouth);
 
-        // East Wall (X = 200)
-        const wallEast = new THREE.Mesh(new THREE.PlaneGeometry(610, 40, 30, 4), wallMat);
-        wallEast.position.set(200, 20, 0);
+        // East Wall (X = 400)
+        const wallEast = new THREE.Mesh(new THREE.PlaneGeometry(1220, 50, 40, 4), wallMat);
+        wallEast.position.set(400, 25, 0);
         wallEast.rotation.y = Math.PI / 2;
         boundGroup.add(wallEast);
 
-        // West Wall (X = -200)
-        const wallWest = new THREE.Mesh(new THREE.PlaneGeometry(610, 40, 30, 4), wallMat);
-        wallWest.position.set(-200, 20, 0);
+        // West Wall (X = -400)
+        const wallWest = new THREE.Mesh(new THREE.PlaneGeometry(1220, 50, 40, 4), wallMat);
+        wallWest.position.set(-400, 25, 0);
         wallWest.rotation.y = Math.PI / 2;
         boundGroup.add(wallWest);
 
@@ -736,49 +736,49 @@ class WarGameEngine {
             boundGroup.add(rail);
         };
 
-        // Top rails
-        addRail(400, 0.6, 0.6, 0, 40, 305);
-        addRail(400, 0.6, 0.6, 0, 40, -305);
-        addRail(0.6, 0.6, 610, 200, 40, 0);
-        addRail(0.6, 0.6, 610, -200, 40, 0);
+        // Top rails (Y = 50)
+        addRail(800, 0.8, 0.8, 0, 50, 610);
+        addRail(800, 0.8, 0.8, 0, 50, -610);
+        addRail(0.8, 0.8, 1220, 400, 50, 0);
+        addRail(0.8, 0.8, 1220, -400, 50, 0);
 
-        // Bottom ground rails
-        addRail(400, 0.4, 0.4, 0, 0.2, 305);
-        addRail(400, 0.4, 0.4, 0, 0.2, -305);
-        addRail(0.4, 0.4, 610, 200, 0.2, 0);
-        addRail(0.4, 0.4, 610, -200, 0.2, 0);
+        // Bottom ground rails (Y = 0.2)
+        addRail(800, 0.5, 0.5, 0, 0.25, 610);
+        addRail(800, 0.5, 0.5, 0, 0.25, -610);
+        addRail(0.5, 0.5, 1220, 400, 0.25, 0);
+        addRail(0.5, 0.5, 1220, -400, 0.25, 0);
 
-        // 3. Perimeter Warning Beacons & Pylons
-        const pylonGeo = new THREE.CylinderGeometry(0.5, 0.8, 12, 8);
+        // 3. Perimeter Warning Beacons & Pylons (Every 40m along 2x border)
+        const pylonGeo = new THREE.CylinderGeometry(0.6, 0.9, 14, 8);
         const pylonMat = new THREE.MeshStandardMaterial({ color: 0x222f3e, metalness: 0.8, roughness: 0.3 });
-        const beaconGeo = new THREE.SphereGeometry(0.7, 8, 8);
+        const beaconGeo = new THREE.SphereGeometry(0.8, 8, 8);
         const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff3838 });
 
         const createPylon = (x: number, z: number) => {
             const p = new THREE.Mesh(pylonGeo, pylonMat);
-            p.position.set(x, 6, z);
+            p.position.set(x, 7, z);
             p.castShadow = true;
             boundGroup.add(p);
 
             const b = new THREE.Mesh(beaconGeo, beaconMat);
-            b.position.set(x, 12.5, z);
+            b.position.set(x, 14.5, z);
             boundGroup.add(b);
 
-            // Vertical laser pillar
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 30, 4), beaconMat);
-            beam.position.set(x, 27, z);
+            // Vertical laser pillar reaching sky
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 40, 4), beaconMat);
+            beam.position.set(x, 34, z);
             boundGroup.add(beam);
         };
 
-        // Along North/South borders
-        for (let x = -200; x <= 200; x += 40) {
-            createPylon(x, 305);
-            createPylon(x, -305);
+        // Along North/South borders (X in [-400..400])
+        for (let x = -400; x <= 400; x += 50) {
+            createPylon(x, 610);
+            createPylon(x, -610);
         }
-        // Along East/West borders
-        for (let z = -280; z <= 280; z += 40) {
-            createPylon(200, z);
-            createPylon(-200, z);
+        // Along East/West borders (Z in [-550..550])
+        for (let z = -550; z <= 550; z += 50) {
+            createPylon(400, z);
+            createPylon(-400, z);
         }
 
         this.scene.add(boundGroup);
@@ -2474,7 +2474,7 @@ class WarGameEngine {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        const mapMax = 320; // Maps -320..+320 world units to radar
+        const mapMax = 640; // Maps -640..+640 world units (2x enlarged map) to radar
 
         // Base zones
         const blueBaseY = cy + (-270 / mapMax) * (r * 0.85);
@@ -2620,7 +2620,7 @@ class WarGameEngine {
 
         const bx = Math.abs(this.localUnit.pos.x);
         const bz = Math.abs(this.localUnit.pos.z);
-        const isOutside = bx > 200 || bz > 305;
+        const isOutside = bx > 400 || bz > 610;
 
         const overlay = document.getElementById('out-of-bounds-overlay');
         const titleEl = document.getElementById('out-of-bounds-title');
@@ -2758,8 +2758,8 @@ class WarGameEngine {
             this.localUnit.pos.addScaledVector(forward, this.localUnit.speed * dt);
             this.localUnit.pos.y = 14.0;
 
-            this.localUnit.pos.x = Math.max(-385, Math.min(385, this.localUnit.pos.x));
-            this.localUnit.pos.z = Math.max(-385, Math.min(385, this.localUnit.pos.z));
+            this.localUnit.pos.x = Math.max(-780, Math.min(780, this.localUnit.pos.x));
+            this.localUnit.pos.z = Math.max(-780, Math.min(780, this.localUnit.pos.z));
 
             this.localUnit.root.position.copy(this.localUnit.pos);
             this.localUnit.root.rotation.set(0, this.localUnit.rotation, this.localUnit.bankAngle || 0, 'YXZ');
@@ -2806,8 +2806,8 @@ class WarGameEngine {
             const forward = new THREE.Vector3(Math.sin(this.localUnit.rotation), 0, Math.cos(this.localUnit.rotation));
             this.localUnit.pos.addScaledVector(forward, this.localUnit.speed * dt);
 
-            this.localUnit.pos.x = Math.max(-385, Math.min(385, this.localUnit.pos.x));
-            this.localUnit.pos.z = Math.max(-385, Math.min(385, this.localUnit.pos.z));
+            this.localUnit.pos.x = Math.max(-780, Math.min(780, this.localUnit.pos.x));
+            this.localUnit.pos.z = Math.max(-780, Math.min(780, this.localUnit.pos.z));
 
             this.localUnit.root.position.copy(this.localUnit.pos);
             this.localUnit.root.rotation.y = this.localUnit.rotation;
@@ -2926,8 +2926,8 @@ class WarGameEngine {
                 unit.pos.x += sepX * dt;
                 unit.pos.z += sepZ * dt;
 
-                unit.pos.x = Math.max(-380, Math.min(380, unit.pos.x));
-                unit.pos.z = Math.max(-380, Math.min(380, unit.pos.z));
+                unit.pos.x = Math.max(-780, Math.min(780, unit.pos.x));
+                unit.pos.z = Math.max(-780, Math.min(780, unit.pos.z));
 
                 unit.root.position.copy(unit.pos);
                 unit.root.rotation.y = unit.rotation;
