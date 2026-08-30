@@ -701,6 +701,14 @@ try {
         await new Promise(r => setTimeout(r, 200));
         console.log("   Successfully tested Help Modal in Rongimäng!");
 
+        // Verify Station Skipped Notification Element
+        await page.waitForSelector('#station-skipped-banner', { timeout: 3000 });
+        const skippedTitle = await page.$eval('#skipped-title', el => el.textContent);
+        if (!skippedTitle.includes('JÄTSID PEATUSE VAHELE')) {
+            throw new Error(`Expected station skipped title, got: ${skippedTitle}`);
+        }
+        console.log("   Successfully verified 'Sa jätsid peatuse vahele' notification banner in Rongimäng!");
+
         console.log("✅ All Playard Platform tests passed successfully!");
     } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
 })();

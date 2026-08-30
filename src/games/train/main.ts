@@ -1306,7 +1306,37 @@ function checkStationArrival(delta: number) {
             isBoarding = false;
             if (boardingPanel) boardingPanel.style.display = 'none';
         }
+
+        // Kui sõidetakse peatusest mööda ilma peatumata -> "Sa jätsid peatuse vahele" ja mäng läheb edasi!
+        if (distU < -0.015 && distU > -0.25 && !isBoarding && trainSpeed > 2.0) {
+            showStationSkippedNotification(targetStation);
+
+            // Mäng läheb edasi järgmisele jaamale
+            currentStationIndex = (currentStationIndex + 1) % STATIONS.length;
+            const nextSt = STATIONS[currentStationIndex];
+            const nameEl = document.getElementById('target-station-name');
+            if (nameEl) nameEl.innerText = nextSt.name;
+        }
     }
+}
+
+let skippedBannerTimeout: any = null;
+function showStationSkippedNotification(station: Station) {
+    const banner = document.getElementById('station-skipped-banner');
+    const desc = document.getElementById('skipped-desc');
+    if (!banner) return;
+
+    if (desc) {
+        desc.innerText = `Jätsid vahele: "${station.name}". Sõit jätkub järgmise jaama poole!`;
+    }
+    banner.style.display = 'block';
+
+    trainAudio.playBrakeSqueal();
+
+    if (skippedBannerTimeout) clearTimeout(skippedBannerTimeout);
+    skippedBannerTimeout = setTimeout(() => {
+        if (banner) banner.style.display = 'none';
+    }, 4500);
 }
 
 function showStationRewardModal(station: Station, money: number) {
