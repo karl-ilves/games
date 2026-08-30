@@ -8,6 +8,7 @@ import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
 // --- Types & Interfaces ---
 type Team = 'red' | 'blue';
 type UnitClass = 'tank' | 'soldier' | 'plane';
+type ActiveWeapon = 'cannon' | 'mg' | 'airstrike' | 'missile' | 'nuke';
 
 interface CombatUnit {
     id: string;
@@ -119,11 +120,17 @@ class WarGameEngine {
     private localTeam: Team = 'blue';
     private localClass: UnitClass = 'tank';
     private localUnit!: CombatUnit;
+    private activeWeapon: ActiveWeapon = 'cannon';
     private mgAmmo = 500;
     private primaryReloadTime = 1.2;
     private primaryReloadTimer = 0;
     private secondaryReloadTimer = 0;
     private airstrikeCooldown = 0;
+    private nukeTimer = 60.0;
+    private isSatelliteTargeting = false;
+    private satelliteTargetType: 'missile' | 'nuke' = 'missile';
+    private satelliteReticleMesh!: THREE.Group;
+    private missileSilos: Map<Team, THREE.Vector3> = new Map();
     private myKills = 0;
     private warMoney = parseInt(localStorage.getItem('playard_war_game_money') || '0', 10);
     private matchMoneyEarned = 0;
@@ -674,6 +681,10 @@ class WarGameEngine {
         this.createBaseStation(new THREE.Vector3(0, 0, 270), 'red');
         this.createBaseStation(new THREE.Vector3(0, 0, -270), 'blue');
 
+        // Team Missile Silo Command Houses (100 € Raketid & 60s Tuumapomm)
+        this.createMissileSilo(new THREE.Vector3(45, 0, 270), 'red');
+        this.createMissileSilo(new THREE.Vector3(-45, 0, -270), 'blue');
+
         // Central & Strategic Fortresses
         this.createMilitaryFort(new THREE.Vector3(0, 0, 0));
         this.createMilitaryFort(new THREE.Vector3(130, 0, 90));
@@ -836,6 +847,60 @@ class WarGameEngine {
             centerZ: pos.z,
             radius: 3.8,
             height: 16
+        });
+    }
+
+    private createMissileSilo(pos: THREE.Vector3, team: Team) {
+        const group = new THREE.Group();
+        group.position.copy(pos);
+
+        const isRed = team === 'red';
+        const siloMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
+        const trimMat = new THREE.MeshStandardMaterial({ color: isRed ? 0xe74c3c : 0x00f2fe, metalness: 0.6 });
+        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+
+        // 1. Silo Command HQ House (16 x 6 x 14)
+        const hq = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 14), buildingMat);
+        hq.position.set(0, 3, 0);
+        hq.castShadow = true;
+        hq.receiveShadow = true;
+        group.add(hq);
+
+        // Radar Dish on Silo HQ
+        const dish = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 0.4, 0.6, 16), trimMat);
+        dish.position.set(0, 7.2, 0);
+        dish.rotation.x = Math.PI / 6;
+        dish.castShadow = true;
+        group.add(dish);
+
+        // 2. Vertical Ballistic Missile Silo Hatch & Erect Missile
+        const siloHatch = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.6, 2.0, 16), siloMat);
+        siloHatch.position.set(isRed ? -12 : 12, 1.0, 0);
+        siloHatch.castShadow = true;
+        group.add(siloHatch);
+
+        // Vertical Rocket on launch pad
+        const missileBody = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 9.0, 12), new THREE.MeshStandardMaterial({ color: 0xecf0f1, metalness: 0.8 }));
+        missileBody.position.set(isRed ? -12 : 12, 6.0, 0);
+        missileBody.castShadow = true;
+        group.add(missileBody);
+
+        const missileNose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2.5, 12), trimMat);
+        missileNose.position.set(isRed ? -12 : 12, 11.5, 0);
+        missileNose.castShadow = true;
+        group.add(missileNose);
+
+        this.scene.add(group);
+        this.missileSilos.set(team, pos.clone().add(new THREE.Vector3(isRed ? -12 : 12, 10, 0)));
+
+        // Register Solid Building Collider
+        this.obstacles.push({
+            type: 'box',
+            minX: pos.x - 10,
+            maxX: pos.x + 10,
+            minZ: pos.z - 9,
+            maxZ: pos.z + 9,
+            height: 9.0
         });
     }
 
@@ -1596,7 +1661,6 @@ class WarGameEngine {
     }
 
     // --- Input & Controls ---
-    private activeWeapon: 'cannon' | 'mg' | 'airstrike' = 'cannon';
     private isMouseDown = false;
 
     private setupInputListeners() {
@@ -1607,6 +1671,9 @@ class WarGameEngine {
             if (e.code === 'Digit3' || e.code === 'KeyF') {
                 if (this.localClass !== 'plane') this.selectWeapon('airstrike');
             }
+            if (e.code === 'Digit4' || e.code === 'KeyR') this.selectWeapon('missile');
+            if (e.code === 'Digit5' || e.code === 'KeyN') this.selectWeapon('nuke');
+            if (e.code === 'Escape' && this.isSatelliteTargeting) this.stopSatelliteTargeting();
             if (e.code === 'Space' || e.code === 'KeyE') this.fireActiveWeapon();
         });
 
@@ -1628,9 +1695,14 @@ class WarGameEngine {
                 this.isMouseDown = true;
                 this.fireActiveWeapon();
             } else if (e.button === 2) {
-                // Secondary action: alternate fire
-                if (this.activeWeapon === 'cannon') this.selectWeapon('mg');
-                else this.selectWeapon('cannon');
+                // Secondary action: alternate fire or cancel satellite targeting
+                if (this.isSatelliteTargeting) {
+                    this.stopSatelliteTargeting();
+                } else if (this.activeWeapon === 'cannon') {
+                    this.selectWeapon('mg');
+                } else {
+                    this.selectWeapon('cannon');
+                }
             }
         });
 
@@ -1677,6 +1749,8 @@ class WarGameEngine {
         document.getElementById('weapon-cannon')?.addEventListener('click', () => this.selectWeapon('cannon'));
         document.getElementById('weapon-mg')?.addEventListener('click', () => this.selectWeapon('mg'));
         document.getElementById('weapon-airstrike')?.addEventListener('click', () => this.selectWeapon('airstrike'));
+        document.getElementById('weapon-missile')?.addEventListener('click', () => this.selectWeapon('missile'));
+        document.getElementById('weapon-nuke')?.addEventListener('click', () => this.selectWeapon('nuke'));
 
         document.getElementById('btn-restart-match')?.addEventListener('click', () => {
             const matchModal = document.getElementById('match-end-modal');
@@ -1688,7 +1762,7 @@ class WarGameEngine {
         });
     }
 
-    private selectWeapon(type: 'cannon' | 'mg' | 'airstrike') {
+    private selectWeapon(type: ActiveWeapon) {
         if (this.localClass === 'plane' && type === 'airstrike') {
             return;
         }
@@ -1696,6 +1770,14 @@ class WarGameEngine {
         this.activeWeapon = type;
         document.querySelectorAll('.weapon-card').forEach(c => c.classList.remove('active'));
         document.getElementById(`weapon-${type}`)?.classList.add('active');
+
+        if (type === 'missile' || type === 'nuke') {
+            this.startSatelliteTargeting(type);
+        } else {
+            if (this.isSatelliteTargeting) {
+                this.stopSatelliteTargeting();
+            }
+        }
 
         if (type === 'airstrike') {
             if (!this.isAirstrikeTargeting) this.toggleAirstrikeTargeting();
@@ -1716,6 +1798,11 @@ class WarGameEngine {
     // --- Active Weapon Firing Routing ---
     private fireActiveWeapon() {
         if (this.localUnit.isDead || this.isMatchEnded) return;
+
+        if (this.isSatelliteTargeting) {
+            this.launchSatelliteStrike(this.mouseAimTarget.clone(), this.satelliteTargetType);
+            return;
+        }
 
         if (this.activeWeapon === 'airstrike' || this.isAirstrikeTargeting) {
             this.triggerAirstrike();
@@ -2294,6 +2381,384 @@ class WarGameEngine {
         }
     }
 
+    // --- Satellite Targeting & Missile / Nuke Strikes ---
+    private setupSatelliteReticle() {
+        this.satelliteReticleMesh = new THREE.Group();
+
+        // 1. Dynamic Outer Blast Radius Ring
+        const ringGeo = new THREE.RingGeometry(22.5, 24.0, 64);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.name = 'blastRing';
+        ring.rotation.x = -Math.PI / 2;
+        this.satelliteReticleMesh.add(ring);
+
+        // 2. Holographic Crosshair Lines
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, transparent: true, opacity: 0.9 });
+        const l1 = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 25), lineMat);
+        l1.rotation.x = -Math.PI / 2;
+        this.satelliteReticleMesh.add(l1);
+
+        const l2 = new THREE.Mesh(new THREE.PlaneGeometry(25, 0.4), lineMat);
+        l2.rotation.x = -Math.PI / 2;
+        this.satelliteReticleMesh.add(l2);
+
+        // 3. Center Target Dot
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffd32a }));
+        dot.position.y = 0.4;
+        this.satelliteReticleMesh.add(dot);
+
+        this.satelliteReticleMesh.position.y = 0.2;
+        this.satelliteReticleMesh.visible = false;
+        this.scene.add(this.satelliteReticleMesh);
+    }
+
+    private startSatelliteTargeting(type: 'missile' | 'nuke') {
+        if (this.localUnit.isDead || this.isMatchEnded) return;
+
+        if (type === 'missile' && this.warMoney < 100) {
+            this.showToast(this.isOwnerLang ? 'Sul pole piisavalt raha! Rakett maksab 100 €.' : 'Not enough War Cash! Missile costs 100 €.', '#ff4757');
+            return;
+        }
+
+        if (type === 'nuke' && this.nukeTimer > 0) {
+            this.showToast(this.isOwnerLang ? `Tuumapomm laeb veel: ${Math.ceil(this.nukeTimer)}s!` : `Nuclear strike charging: ${Math.ceil(this.nukeTimer)}s!`, '#ffd32a');
+            return;
+        }
+
+        this.isSatelliteTargeting = true;
+        this.satelliteTargetType = type;
+        if (!this.satelliteReticleMesh) this.setupSatelliteReticle();
+        this.satelliteReticleMesh.visible = true;
+
+        const isNuke = type === 'nuke';
+        const ring = this.satelliteReticleMesh.getObjectByName('blastRing') as THREE.Mesh;
+        if (ring) {
+            const rad = isNuke ? 88.0 : 24.0;
+            ring.geometry.dispose();
+            ring.geometry = new THREE.RingGeometry(rad - 1.5, rad, 64);
+            (ring.material as THREE.MeshBasicMaterial).color.setHex(isNuke ? 0xff4757 : 0x2ed573);
+        }
+
+        const hud = document.getElementById('satellite-targeting-hud');
+        if (hud) hud.style.display = 'flex';
+
+        const iconEl = document.getElementById('sat-mode-icon');
+        const titleEl = document.getElementById('sat-mode-title');
+        const descEl = document.getElementById('sat-mode-desc');
+        const promptEl = document.getElementById('sat-bottom-prompt');
+
+        if (isNuke) {
+            if (iconEl) iconEl.innerText = '☢️';
+            if (titleEl) {
+                titleEl.innerText = this.isOwnerLang ? '☢️ TUUMAPOMMI SATELLIIDISIHTIMINE (4x PLAHVATUS)' : '☢️ NUCLEAR STRIKE TARGETING (4x BLAST)';
+                titleEl.style.color = '#ff4757';
+            }
+            if (descEl) descEl.innerText = this.isOwnerLang ? 'Vali kaardilt sihtmärk ja klõpsa TUUMARÜNNAK! (ESC - tühista)' : 'Select target coordinates on battlefield and click to launch! (ESC cancel)';
+            if (promptEl) promptEl.innerText = this.isOwnerLang ? '☢️ KLÕPSA MAASTIKUL, ET SAATA TUUMAPOMM!' : '☢️ CLICK ON TERRAIN TO LAUNCH NUKE!';
+        } else {
+            if (iconEl) iconEl.innerText = '🚀';
+            if (titleEl) {
+                titleEl.innerText = this.isOwnerLang ? '🚀 100 € RAKETIRÜNNAKU SATELLIIDISIHTIMINE' : '🚀 100 € MISSILE STRIKE TARGETING';
+                titleEl.style.color = '#2ed573';
+            }
+            if (descEl) descEl.innerText = this.isOwnerLang ? 'Maksumus: 100 €. Liiguta pildiga hiirt ja klõpsa sihtmärgile!' : 'Cost: 100 €. Move targeting camera and click to fire missile!';
+            if (promptEl) promptEl.innerText = this.isOwnerLang ? '🚀 KLÕPSA MAASTIKUL, ET SAATA RAKETT (100 €)!' : '🚀 CLICK ON TERRAIN TO FIRE MISSILE (100 €)!';
+        }
+    }
+
+    private stopSatelliteTargeting() {
+        this.isSatelliteTargeting = false;
+        if (this.satelliteReticleMesh) this.satelliteReticleMesh.visible = false;
+        const hud = document.getElementById('satellite-targeting-hud');
+        if (hud) hud.style.display = 'none';
+        this.selectWeapon('cannon');
+    }
+
+    private launchSatelliteStrike(targetPos: THREE.Vector3, type: 'missile' | 'nuke') {
+        this.stopSatelliteTargeting();
+
+        const isNuke = type === 'nuke';
+        const siloOrigin = this.missileSilos.get(this.localTeam) || this.localUnit.pos.clone().add(new THREE.Vector3(0, 10, 0));
+
+        if (!isNuke) {
+            // 100 € Missile Strike
+            this.warMoney = Math.max(0, this.warMoney - 100);
+            this.saveUserDataToDb();
+            this.updateHUD();
+
+            warAudio.playMissileLaunch();
+            const launchMsg = this.isOwnerLang ? '🚀 100 € Rakett välja saadetud!' : '🚀 100 € Missile launched!';
+            this.showToast(launchMsg, '#2ed573');
+
+            // Ballistic Rocket Trajectory Projectile
+            const rocketGeo = new THREE.CylinderGeometry(0.4, 0.4, 3.5, 8);
+            const rocketMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, metalness: 0.8 });
+            const rocketMesh = new THREE.Mesh(rocketGeo, rocketMat);
+            rocketMesh.position.copy(siloOrigin);
+            this.scene.add(rocketMesh);
+
+            const flightTime = 1.35;
+            const startPos = siloOrigin.clone();
+            const endPos = targetPos.clone();
+            let elapsed = 0;
+
+            const rocketAnim = (dt: number) => {
+                elapsed += dt;
+                const t = Math.min(1.0, elapsed / flightTime);
+
+                const curX = THREE.MathUtils.lerp(startPos.x, endPos.x, t);
+                const curZ = THREE.MathUtils.lerp(startPos.z, endPos.z, t);
+                const arcHeight = Math.sin(t * Math.PI) * 75;
+                const curY = THREE.MathUtils.lerp(startPos.y, 0, t) + arcHeight;
+
+                rocketMesh.position.set(curX, curY, curZ);
+
+                // Spawn heavy rocket exhaust flame
+                if (Math.random() < 0.8) {
+                    this.spawnCrashParticle(rocketMesh.position.clone());
+                }
+
+                if (t >= 1.0) {
+                    this.scene.remove(rocketMesh);
+                    this.triggerSpreadingExplosion(endPos, 24.0, 125, this.localPlayerId, this.localUnit.name, this.localTeam);
+                } else {
+                    requestAnimationFrame(() => rocketAnim(0.016));
+                }
+            };
+            rocketAnim(0.016);
+        } else {
+            // ☢️ Nuclear Strike (4x Plahvatus)
+            this.nukeTimer = 60.0;
+            this.updateHUD();
+
+            warAudio.playNuclearSiren();
+
+            // Display global warning banner for 5.5s
+            const banner = document.getElementById('nuke-warning-banner');
+            const bannerText = document.getElementById('nuke-warning-text');
+            if (banner && bannerText) {
+                bannerText.innerText = this.isOwnerLang ? '🚨 HOIATUS: TUUMARÜNNAK TULEKUL!' : '🚨 ALERT: NUCLEAR STRIKE INBOUND!';
+                banner.style.display = 'flex';
+                setTimeout(() => { banner.style.display = 'none'; }, 5500);
+            }
+
+            // Massive ICBM Missile Flight
+            const icbmGeo = new THREE.CylinderGeometry(1.0, 1.0, 8.0, 12);
+            const icbmMat = new THREE.MeshStandardMaterial({ color: 0x2f3542, metalness: 0.9 });
+            const icbmMesh = new THREE.Mesh(icbmGeo, icbmMat);
+            icbmMesh.position.copy(siloOrigin);
+            this.scene.add(icbmMesh);
+
+            const flightTime = 2.4;
+            const startPos = siloOrigin.clone();
+            const endPos = targetPos.clone();
+            let elapsed = 0;
+
+            const icbmAnim = (dt: number) => {
+                elapsed += dt;
+                const t = Math.min(1.0, elapsed / flightTime);
+
+                const curX = THREE.MathUtils.lerp(startPos.x, endPos.x, t);
+                const curZ = THREE.MathUtils.lerp(startPos.z, endPos.z, t);
+                const arcHeight = Math.sin(t * Math.PI) * 110;
+                const curY = THREE.MathUtils.lerp(startPos.y, 0, t) + arcHeight;
+
+                icbmMesh.position.set(curX, curY, curZ);
+
+                // Massive rocket exhaust jet
+                for (let i = 0; i < 2; i++) {
+                    this.spawnCrashParticle(icbmMesh.position.clone());
+                }
+
+                if (t >= 1.0) {
+                    this.scene.remove(icbmMesh);
+                    this.triggerNuclearExplosion(endPos, this.localPlayerId, this.localUnit.name, this.localTeam);
+                } else {
+                    requestAnimationFrame(() => icbmAnim(0.016));
+                }
+            };
+            icbmAnim(0.016);
+        }
+    }
+
+    private triggerNuclearExplosion(epicenter: THREE.Vector3, shooterId: string, shooterName: string, team: Team) {
+        warAudio.playNuclearBlast();
+
+        const nukeRadius = 88.0; // 4x standard 22m blast radius
+
+        // 1. Blinding Thermonuclear Flash Light
+        const flashLight = new THREE.PointLight(0xfff3a0, 40, 260);
+        flashLight.position.copy(epicenter).add(new THREE.Vector3(0, 10, 0));
+        this.scene.add(flashLight);
+        let flashLife = 0.55;
+        const fadeLight = () => {
+            flashLife -= 0.04;
+            if (flashLife > 0) {
+                flashLight.intensity = (flashLife / 0.55) * 40;
+                setTimeout(fadeLight, 40);
+            } else {
+                this.scene.remove(flashLight);
+            }
+        };
+        setTimeout(fadeLight, 40);
+
+        // 2. Colossal Scorch Crater
+        const craterGeo = new THREE.RingGeometry(0.5, 36.0, 32);
+        const craterMat = new THREE.MeshBasicMaterial({
+            color: 0x05080a,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.9
+        });
+        const crater = new THREE.Mesh(craterGeo, craterMat);
+        crater.position.copy(epicenter);
+        crater.position.y = 0.09;
+        crater.rotation.x = -Math.PI / 2;
+        this.scene.add(crater);
+
+        // 3. Massive Dual High-Velocity Blast Shockwaves
+        const ringGeo = new THREE.RingGeometry(0.5, 3.5, 48);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0xff4757,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.95
+        });
+        const shockMesh = new THREE.Mesh(ringGeo, ringMat);
+        shockMesh.position.copy(epicenter);
+        shockMesh.position.y = 0.3;
+        shockMesh.rotation.x = -Math.PI / 2;
+        this.scene.add(shockMesh);
+
+        this.shockwaves.push({
+            mesh: shockMesh,
+            currentRadius: 2.0,
+            maxRadius: nukeRadius,
+            expansionSpeed: 48.0,
+            life: 1.8,
+            maxLife: 1.8,
+            damage: 350,
+            shooterId,
+            shooterName,
+            team,
+            epicenter: epicenter.clone(),
+            damagedUnits: new Set()
+        });
+
+        // Dust Seismic Wavefront
+        const dustGeo = new THREE.RingGeometry(0.5, 5.0, 48);
+        const dustMat = new THREE.MeshBasicMaterial({
+            color: 0x57606f,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.75
+        });
+        const dustMesh = new THREE.Mesh(dustGeo, dustMat);
+        dustMesh.position.copy(epicenter);
+        dustMesh.position.y = 0.22;
+        dustMesh.rotation.x = -Math.PI / 2;
+        this.scene.add(dustMesh);
+
+        this.shockwaves.push({
+            mesh: dustMesh,
+            currentRadius: 1.5,
+            maxRadius: nukeRadius * 1.3,
+            expansionSpeed: 38.0,
+            life: 2.2,
+            maxLife: 2.2,
+            damage: 0,
+            shooterId,
+            shooterName,
+            team,
+            epicenter: epicenter.clone(),
+            damagedUnits: new Set()
+        });
+
+        // 4. Towering Nuclear Mushroom Cloud Stem
+        for (let y = 2; y <= 55; y += 4) {
+            const pGeo = new THREE.SphereGeometry(3.0 + (y * 0.1), 8, 8);
+            const pMat = new THREE.MeshBasicMaterial({
+                color: y < 20 ? 0xff4757 : 0x2f3542,
+                transparent: true,
+                opacity: 0.85
+            });
+            const pMesh = new THREE.Mesh(pGeo, pMat);
+            pMesh.position.copy(epicenter).add(new THREE.Vector3((Math.random() - 0.5) * 4, y, (Math.random() - 0.5) * 4));
+            this.scene.add(pMesh);
+
+            this.particles.push({
+                mesh: pMesh,
+                velocity: new THREE.Vector3((Math.random() - 0.5) * 2, 8.0, (Math.random() - 0.5) * 2),
+                life: 3.5,
+                maxLife: 3.5,
+                sizeStart: 3.0,
+                sizeEnd: 8.5,
+                drag: 0.5,
+                startColor: new THREE.Color(y < 20 ? 0xfff3a0 : 0xeb2f06),
+                endColor: new THREE.Color(0x0f1416)
+            });
+        }
+
+        // 5. Huge Boiling Mushroom Cloud Top / Cap (Mushroom Head at Y=50..70)
+        for (let i = 0; i < 40; i++) {
+            const angle = (i / 40) * Math.PI * 2;
+            const dist = 6 + Math.random() * 22;
+            const capY = 52 + Math.random() * 16;
+            const pGeo = new THREE.IcosahedronGeometry(4.5 + Math.random() * 3.5, 1);
+            const pMat = new THREE.MeshBasicMaterial({
+                color: Math.random() < 0.4 ? 0xff4757 : 0x1e272e,
+                transparent: true,
+                opacity: 0.9
+            });
+            const pMesh = new THREE.Mesh(pGeo, pMat);
+            pMesh.position.copy(epicenter).add(new THREE.Vector3(Math.cos(angle) * dist, capY, Math.sin(angle) * dist));
+            this.scene.add(pMesh);
+
+            const outward = new THREE.Vector3(Math.cos(angle), (Math.random() - 0.3) * 0.5, Math.sin(angle)).normalize();
+            this.particles.push({
+                mesh: pMesh,
+                velocity: outward.multiplyScalar(8 + Math.random() * 12),
+                life: 4.5,
+                maxLife: 4.5,
+                sizeStart: 4.5,
+                sizeEnd: 16.0,
+                drag: 0.8,
+                rotSpeed: new THREE.Vector3(1, 1, 1),
+                startColor: new THREE.Color(0xff6b81),
+                endColor: new THREE.Color(0x0a0d10)
+            });
+        }
+
+        // 6. Ground Blast Jet Particles & Glowing Radioactive Sparks
+        for (let i = 0; i < 45; i++) {
+            const sparkGeo = new THREE.BoxGeometry(0.3, 0.3, 0.8);
+            const sparkMat = new THREE.MeshBasicMaterial({ color: 0xfffa65 });
+            const sparkMesh = new THREE.Mesh(sparkGeo, sparkMat);
+            sparkMesh.position.copy(epicenter).add(new THREE.Vector3(0, 1.5, 0));
+
+            const dir = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.6 + 0.4, (Math.random() - 0.5) * 2).normalize();
+            this.scene.add(sparkMesh);
+            this.particles.push({
+                mesh: sparkMesh,
+                velocity: dir.multiplyScalar(35 + Math.random() * 30),
+                life: 1.8 + Math.random() * 0.8,
+                maxLife: 2.6,
+                sizeStart: 2.0,
+                sizeEnd: 0.3,
+                gravity: 28.0,
+                drag: 0.6,
+                rotSpeed: new THREE.Vector3(20, 20, 20),
+                startColor: new THREE.Color(0xfffa65),
+                endColor: new THREE.Color(0xff3838)
+            });
+        }
+
+        // Camera Shake
+        this.camera.position.y += 6.0;
+        this.camera.position.x += 4.0;
+    }
+
     // --- Damage & Elimination ---
     private damageUnit(victim: CombatUnit, damage: number, attackerId: string, attackerName: string, attackerTeam: Team) {
         if (victim.isDead || this.isMatchEnded) return;
@@ -2523,6 +2988,12 @@ class WarGameEngine {
                         : (this.isOwnerLang ? 'VALMIS' : 'READY');
                     reloadBar.style.width = '100%';
                 }
+            } else if (this.activeWeapon === 'missile') {
+                reloadText.innerText = this.isOwnerLang ? '🚀 100 € RAKETT' : '🚀 100 € MISSILE';
+                reloadBar.style.width = '100%';
+            } else if (this.activeWeapon === 'nuke') {
+                reloadText.innerText = this.nukeTimer > 0 ? `☢️ ${Math.ceil(this.nukeTimer)}s` : (this.isOwnerLang ? '☢️ VALMIS' : '☢️ READY');
+                reloadBar.style.width = this.nukeTimer > 0 ? `${((60.0 - this.nukeTimer) / 60.0) * 100}%` : '100%';
             }
         }
 
@@ -2537,6 +3008,13 @@ class WarGameEngine {
             cdAirstrike.innerText = this.airstrikeCooldown > 0
                 ? `${Math.ceil(this.airstrikeCooldown)}s`
                 : (this.isOwnerLang ? 'VALMIS' : 'READY');
+        }
+        const timerNukeEl = document.getElementById('timer-nuke');
+        if (timerNukeEl) {
+            timerNukeEl.innerText = this.nukeTimer > 0
+                ? `${Math.ceil(this.nukeTimer)}s`
+                : (this.isOwnerLang ? 'VALMIS' : 'READY');
+            timerNukeEl.style.color = this.nukeTimer > 0 ? '#ffd32a' : '#2ed573';
         }
     }
 
@@ -2949,6 +3427,16 @@ class WarGameEngine {
                 this.airstrikeReticleMesh.rotation.y += 1.8 * dt;
             }
 
+            if (this.satelliteReticleMesh && this.isSatelliteTargeting) {
+                this.satelliteReticleMesh.position.copy(intersect);
+                this.satelliteReticleMesh.position.y = 0.2;
+                this.satelliteReticleMesh.rotation.y += 1.2 * dt;
+                const coordsEl = document.getElementById('sat-coords-text');
+                if (coordsEl) {
+                    coordsEl.innerText = `COORD: X: ${intersect.x.toFixed(1)} | Z: ${intersect.z.toFixed(1)}`;
+                }
+            }
+
             if (this.localUnit.turret) {
                 const localAim = this.localUnit.root.worldToLocal(intersect.clone());
                 const targetAngle = Math.atan2(localAim.x, localAim.z);
@@ -2963,6 +3451,16 @@ class WarGameEngine {
         if (this.primaryReloadTimer > 0) this.primaryReloadTimer = Math.max(0, this.primaryReloadTimer - dt);
         if (this.secondaryReloadTimer > 0) this.secondaryReloadTimer = Math.max(0, this.secondaryReloadTimer - dt);
         if (this.airstrikeCooldown > 0) this.airstrikeCooldown = Math.max(0, this.airstrikeCooldown - dt);
+        if (this.nukeTimer > 0) {
+            this.nukeTimer = Math.max(0, this.nukeTimer - dt);
+            const timerNukeEl = document.getElementById('timer-nuke');
+            if (timerNukeEl) {
+                timerNukeEl.innerText = this.nukeTimer > 0
+                    ? `${Math.ceil(this.nukeTimer)}s`
+                    : (this.isOwnerLang ? 'VALMIS' : 'READY');
+                timerNukeEl.style.color = this.nukeTimer > 0 ? '#ffd32a' : '#2ed573';
+            }
+        }
 
         // Continuous Auto-Fire for MG / Vulcan when holding mouse or Space
         if ((this.isMouseDown || this.keys['Space']) && !this.localUnit.isDead && !this.isMatchEnded) {
@@ -3289,6 +3787,14 @@ class WarGameEngine {
 
     private updateCamera() {
         if (!this.localUnit) return;
+
+        // Tactical Satellite & Drone Overhead Targeting Camera View
+        if (this.isSatelliteTargeting) {
+            const targetCam = new THREE.Vector3(this.mouseAimTarget.x, 85, this.mouseAimTarget.z + 18);
+            this.camera.position.lerp(targetCam, 0.12);
+            this.camera.lookAt(new THREE.Vector3(this.mouseAimTarget.x, 0, this.mouseAimTarget.z));
+            return;
+        }
 
         // If local player died, elevate and pullback camera to clearly view the explosion and carnage
         if (this.localUnit.isDead && this.lastDeathPos) {

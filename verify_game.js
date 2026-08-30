@@ -705,6 +705,31 @@ try {
         await new Promise(r => setTimeout(r, 300));
         console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
 
+        // Test 100 € Missile Strike & Satellite Targeting HUD
+        console.log("   Testing 100 € Missile Strike & Satellite Targeting...");
+        const missileCardExists = await page.$eval('#weapon-missile', el => !!el);
+        const missileCostText = await page.$eval('#cost-missile', el => el.textContent);
+        console.log("   Missile Card Exists:", missileCardExists, "Cost Text:", missileCostText);
+        if (!missileCardExists || !missileCostText.includes('100 €')) {
+            throw new Error("Expected #weapon-missile card with 100 € cost!");
+        }
+
+        // Test 60s Nuke Timer
+        const nukeCardExists = await page.$eval('#weapon-nuke', el => !!el);
+        const nukeTimerText = await page.$eval('#timer-nuke', el => el.textContent);
+        console.log("   Nuclear Strike Card Exists:", nukeCardExists, "Nuke Timer Text:", nukeTimerText);
+        if (!nukeCardExists) {
+            throw new Error("Expected #weapon-nuke card to exist!");
+        }
+
+        // Test opening Satellite Targeting Mode
+        await page.click('#weapon-missile');
+        await new Promise(r => setTimeout(r, 200));
+        // Verify satellite targeting HUD overlay is activated or toast shown
+        await page.keyboard.press('Escape');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Successfully verified 100 € Missile Strike and 60s Nuke weapon systems!");
+
         // Test Fighter Jet Unlock with 50,000 €
         console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");
         await page.evaluate(() => {

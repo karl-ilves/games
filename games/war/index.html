@@ -586,6 +586,80 @@
             0% { transform: scale(0.97); }
             100% { transform: scale(1.03); box-shadow: 0 0 60px rgba(255, 71, 87, 1); }
         }
+
+        /* Tactical Satellite & Drone Targeting HUD */
+        #satellite-targeting-hud {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 2200;
+            box-shadow: inset 0 0 100px rgba(0, 242, 254, 0.45);
+        }
+        .satellite-scanlines {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 242, 254, 0.08) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+        .satellite-header-box {
+            margin-top: 75px;
+            background: rgba(10, 25, 47, 0.92);
+            border: 2px solid #00f2fe;
+            border-radius: 14px;
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 0 35px rgba(0, 242, 254, 0.5);
+            backdrop-filter: blur(8px);
+        }
+        .satellite-coords-box {
+            font-family: monospace;
+            font-size: 0.95rem;
+            color: #ffd32a;
+            font-weight: 800;
+        }
+        .satellite-bottom-bar {
+            margin-bottom: 90px;
+            background: rgba(10, 25, 47, 0.92);
+            border: 2px solid #ffd32a;
+            border-radius: 14px;
+            padding: 10px 24px;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 1rem;
+            box-shadow: 0 0 30px rgba(255, 211, 42, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Nuclear Warning Banner */
+        #nuke-warning-banner {
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, rgba(235, 47, 47, 0.95), rgba(255, 159, 26, 0.95));
+            border: 2px solid #ffd32a;
+            border-radius: 30px;
+            padding: 12px 36px;
+            color: #ffffff;
+            font-size: 1.3rem;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 3500;
+            box-shadow: 0 0 50px rgba(255, 71, 87, 0.9);
+            animation: pulseWarningBox 0.6s infinite alternate;
+        }
     </style>
 </head>
 <body>
@@ -696,6 +770,48 @@
                 <div style="font-weight: 800; font-size: 0.8rem; color: #ff4757;">AIRSTRIKE</div>
                 <div style="font-size: 0.72rem; color: #ff6b81;" id="cooldown-airstrike">VALMIS</div>
             </div>
+
+            <div class="weapon-card" id="weapon-missile" title="100 € Raketirünnak (Klahv 4 / R) - Satelliitsihik">
+                <div style="font-size: 1.3rem;">🚀</div>
+                <div style="font-weight: 800; font-size: 0.8rem; color: #2ed573;" id="weapon-name-missile">RAKETT</div>
+                <div style="font-size: 0.72rem; color: #2ed573;" id="cost-missile">100 €</div>
+            </div>
+
+            <div class="weapon-card" id="weapon-nuke" title="☢️ TUUMAPOMM (Klahv 5 / N) - 4x Suurem Plahvatus (60s)">
+                <div style="font-size: 1.3rem;">☢️</div>
+                <div style="font-weight: 800; font-size: 0.8rem; color: #ff4757;" id="weapon-name-nuke">TUUMAPOMM</div>
+                <div style="font-size: 0.72rem; color: #ffd32a;" id="timer-nuke">60s</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Nuclear Strike Inbound Warning Banner -->
+    <div id="nuke-warning-banner">
+        <span>☢️</span>
+        <span id="nuke-warning-text">HOIATUS: TUUMARÜNNAK TULEKUL!</span>
+        <span>☢️</span>
+    </div>
+
+    <!-- Tactical Satellite & Drone Targeting Viewport Overlay -->
+    <div id="satellite-targeting-hud">
+        <div class="satellite-scanlines"></div>
+        <div class="satellite-header-box">
+            <span style="font-size: 1.5rem;" id="sat-mode-icon">🛰️</span>
+            <div>
+                <div style="font-weight: 900; font-size: 1.1rem; color: #00f2fe; letter-spacing: 1px;" id="sat-mode-title">
+                    TAKTIKALINE SATELLIIDI SIHTIMISPILT
+                </div>
+                <div style="font-size: 0.8rem; color: #a4b0be;" id="sat-mode-desc">
+                    Liiguta pildiga hiirt/kaamerat kaardil ja klõpsa sihtmärgile! (ESC - tühista)
+                </div>
+            </div>
+            <div class="satellite-coords-box" id="sat-coords-text">
+                COORD: X: 0.0 | Z: 0.0
+            </div>
+        </div>
+        <div class="satellite-bottom-bar">
+            <span id="sat-bottom-prompt">🎯 KLÕPSA MAASTIKUL, ET SAATA RAKETT!</span>
+            <span style="font-size: 0.8rem; color: #a4b0be; margin-left: auto;">[ESC] Tühista</span>
         </div>
     </div>
 
