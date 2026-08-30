@@ -80,6 +80,12 @@ interface Particle {
     maxLife: number;
     sizeStart: number;
     sizeEnd: number;
+    gravity?: number;
+    drag?: number;
+    rotSpeed?: THREE.Vector3;
+    startColor?: THREE.Color;
+    endColor?: THREE.Color;
+    fadeOpacity?: boolean;
 }
 
 interface ExplosiveBarrel {
@@ -1848,13 +1854,55 @@ class WarGameEngine {
     private triggerSpreadingExplosion(epicenter: THREE.Vector3, maxRadius: number, baseDamage: number, shooterId: string, shooterName: string, team: Team) {
         warAudio.playExplosion();
 
-        // 1. Spreading Shockwave Visual Ring
-        const ringGeo = new THREE.RingGeometry(0.2, 1.2, 32);
+        // 1. Dynamic Flash Point Light (Illuminates battlefield surroundings)
+        const flashLight = new THREE.PointLight(0xffa502, 12, Math.max(30, maxRadius * 2.5));
+        flashLight.position.copy(epicenter).add(new THREE.Vector3(0, 3.5, 0));
+        this.scene.add(flashLight);
+        let flashLife = 0.22;
+        const fadeLight = () => {
+            flashLife -= 0.04;
+            if (flashLife > 0) {
+                flashLight.intensity = (flashLife / 0.22) * 12;
+                setTimeout(fadeLight, 40);
+            } else {
+                this.scene.remove(flashLight);
+            }
+        };
+        setTimeout(fadeLight, 40);
+
+        // 2. Ground Charred Crater Decal
+        const craterGeo = new THREE.RingGeometry(0.1, Math.min(7.5, maxRadius * 0.42), 24);
+        const craterMat = new THREE.MeshBasicMaterial({
+            color: 0x090d10,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.75
+        });
+        const crater = new THREE.Mesh(craterGeo, craterMat);
+        crater.position.copy(epicenter);
+        crater.position.y = 0.08;
+        crater.rotation.x = -Math.PI / 2;
+        this.scene.add(crater);
+        setTimeout(() => {
+            let op = 0.75;
+            const fadeCrater = setInterval(() => {
+                op -= 0.05;
+                if (op <= 0) {
+                    clearInterval(fadeCrater);
+                    this.scene.remove(crater);
+                } else {
+                    craterMat.opacity = op;
+                }
+            }, 500);
+        }, 12000);
+
+        // 3. Expanding Blast Shockwaves (Primary High-Velocity Ring + Dust Wavefront)
+        const ringGeo = new THREE.RingGeometry(0.2, 1.4, 32);
         const ringMat = new THREE.MeshBasicMaterial({
             color: team === 'red' ? 0xff4757 : 0xffa502,
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.9
+            opacity: 0.95
         });
         const shockwaveMesh = new THREE.Mesh(ringGeo, ringMat);
         shockwaveMesh.position.copy(epicenter);
@@ -1866,9 +1914,9 @@ class WarGameEngine {
             mesh: shockwaveMesh,
             currentRadius: 1.0,
             maxRadius,
-            expansionSpeed: 28.0, // expands fast outwards
-            life: 0.6,
-            maxLife: 0.6,
+            expansionSpeed: 34.0,
+            life: 0.65,
+            maxLife: 0.65,
             damage: baseDamage,
             shooterId,
             shooterName,
@@ -1877,29 +1925,158 @@ class WarGameEngine {
             damagedUnits: new Set()
         });
 
-        // 2. Fire Burst Particles
-        for (let i = 0; i < 28; i++) {
-            const size = 0.4 + Math.random() * 0.9;
+        // Dust Wavefront Ring
+        const dustGeo = new THREE.RingGeometry(0.2, 1.8, 32);
+        const dustMat = new THREE.MeshBasicMaterial({
+            color: 0x7f8c8d,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.55
+        });
+        const dustMesh = new THREE.Mesh(dustGeo, dustMat);
+        dustMesh.position.copy(epicenter);
+        dustMesh.position.y = 0.18;
+        dustMesh.rotation.x = -Math.PI / 2;
+        this.scene.add(dustMesh);
+
+        this.shockwaves.push({
+            mesh: dustMesh,
+            currentRadius: 0.8,
+            maxRadius: maxRadius * 1.15,
+            expansionSpeed: 24.0,
+            life: 0.85,
+            maxLife: 0.85,
+            damage: 0,
+            shooterId,
+            shooterName,
+            team,
+            epicenter: epicenter.clone(),
+            damagedUnits: new Set()
+        });
+
+        // 4. White-Hot Core Fireball Mushroom
+        for (let i = 0; i < 14; i++) {
+            const size = 1.2 + Math.random() * 1.6;
+            const geo = new THREE.IcosahedronGeometry(size, 1);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0xfff3a0,
+                transparent: true,
+                opacity: 0.95
+            });
+            const pMesh = new THREE.Mesh(geo, mat);
+            pMesh.position.copy(epicenter).add(new THREE.Vector3((Math.random() - 0.5) * 1.2, Math.random() * 1.0 + 0.3, (Math.random() - 0.5) * 1.2));
+            this.scene.add(pMesh);
+
+            const upwardVel = new THREE.Vector3(
+                (Math.random() - 0.5) * 6,
+                Math.random() * 9 + 6,
+                (Math.random() - 0.5) * 6
+            );
+            this.particles.push({
+                mesh: pMesh,
+                velocity: upwardVel,
+                life: 0.6 + Math.random() * 0.35,
+                maxLife: 0.95,
+                sizeStart: size,
+                sizeEnd: size * 2.8,
+                drag: 1.8,
+                startColor: new THREE.Color(0xfff3a0),
+                endColor: new THREE.Color(0xd63031),
+                rotSpeed: new THREE.Vector3(Math.random() * 4, Math.random() * 4, Math.random() * 4)
+            });
+        }
+
+        // 5. Fiery Outward Blast Jets
+        for (let i = 0; i < 24; i++) {
+            const size = 0.5 + Math.random() * 0.9;
             const geo = new THREE.DodecahedronGeometry(size);
-            const mat = new THREE.MeshBasicMaterial({ color: Math.random() > 0.35 ? 0xff4757 : 0xffa502, transparent: true, opacity: 0.95 });
+            const mat = new THREE.MeshBasicMaterial({
+                color: Math.random() > 0.4 ? 0xff4757 : 0xffa502,
+                transparent: true,
+                opacity: 0.9
+            });
             const pMesh = new THREE.Mesh(geo, mat);
             pMesh.position.copy(epicenter);
 
-            const speed = 8 + Math.random() * 26;
-            const dir = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.8 + 0.2, (Math.random() - 0.5) * 2).normalize();
+            const speed = 12 + Math.random() * 26;
+            const dir = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.4 + 0.2, (Math.random() - 0.5) * 2).normalize();
 
             this.scene.add(pMesh);
             this.particles.push({
                 mesh: pMesh,
                 velocity: dir.multiplyScalar(speed),
-                life: 0.7 + Math.random() * 0.5,
-                maxLife: 0.7 + Math.random() * 0.5,
+                life: 0.6 + Math.random() * 0.4,
+                maxLife: 0.6 + Math.random() * 0.4,
                 sizeStart: size,
-                sizeEnd: 0.1
+                sizeEnd: 0.1,
+                drag: 2.5,
+                gravity: 12.0,
+                startColor: new THREE.Color(0xffa502),
+                endColor: new THREE.Color(0xeb2f06)
             });
         }
 
-        // 3. Chain Reaction on Barrels
+        // 6. Dense Black Billowing Smoke Columns
+        for (let i = 0; i < 20; i++) {
+            const size = 1.0 + Math.random() * 1.5;
+            const geo = new THREE.SphereGeometry(size, 7, 7);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0x1e272e,
+                transparent: true,
+                opacity: 0.8
+            });
+            const pMesh = new THREE.Mesh(geo, mat);
+            pMesh.position.copy(epicenter).add(new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.5 + 0.5, (Math.random() - 0.5) * 2));
+
+            const smokeVel = new THREE.Vector3(
+                (Math.random() - 0.5) * 4,
+                Math.random() * 6 + 3,
+                (Math.random() - 0.5) * 4
+            );
+
+            this.scene.add(pMesh);
+            this.particles.push({
+                mesh: pMesh,
+                velocity: smokeVel,
+                life: 1.4 + Math.random() * 0.9,
+                maxLife: 2.3,
+                sizeStart: size,
+                sizeEnd: size * 4.5,
+                drag: 0.8,
+                startColor: new THREE.Color(0x2d3436),
+                endColor: new THREE.Color(0x0a0d10)
+            });
+        }
+
+        // 7. Hot Flying Metal Shrapnel Sparks
+        for (let i = 0; i < 18; i++) {
+            const sparkGeo = new THREE.BoxGeometry(0.15, 0.15, 0.4);
+            const sparkMat = new THREE.MeshBasicMaterial({
+                color: 0xfffa65
+            });
+            const sparkMesh = new THREE.Mesh(sparkGeo, sparkMat);
+            sparkMesh.position.copy(epicenter).add(new THREE.Vector3(0, 0.5, 0));
+
+            const sparkDir = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.8 + 0.5, (Math.random() - 0.5) * 2).normalize();
+            const sparkSpeed = 20 + Math.random() * 24;
+
+            this.scene.add(sparkMesh);
+            this.particles.push({
+                mesh: sparkMesh,
+                velocity: sparkDir.multiplyScalar(sparkSpeed),
+                life: 0.8 + Math.random() * 0.5,
+                maxLife: 1.3,
+                sizeStart: 1.0,
+                sizeEnd: 0.2,
+                gravity: 24.0,
+                drag: 0.9,
+                rotSpeed: new THREE.Vector3(15, 12, 10),
+                startColor: new THREE.Color(0xfffa65),
+                endColor: new THREE.Color(0xff4757)
+            });
+        }
+
+        // 8. Chain Reaction on Barrels
         this.barrels.forEach(barrel => {
             if (!barrel.isExploded && barrel.pos.distanceTo(epicenter) < maxRadius + 2.0) {
                 barrel.isExploded = true;
@@ -2869,10 +3046,34 @@ class WarGameEngine {
                 continue;
             }
 
+            if (p.gravity) {
+                p.velocity.y -= p.gravity * dt;
+            }
+            if (p.drag) {
+                p.velocity.multiplyScalar(Math.max(0, 1 - p.drag * dt));
+            }
+
             p.mesh.position.addScaledVector(p.velocity, dt);
+
+            if (p.rotSpeed) {
+                p.mesh.rotation.x += p.rotSpeed.x * dt;
+                p.mesh.rotation.y += p.rotSpeed.y * dt;
+                p.mesh.rotation.z += p.rotSpeed.z * dt;
+            }
+
             const progress = 1.0 - (p.life / p.maxLife);
             const curSize = THREE.MathUtils.lerp(p.sizeStart, p.sizeEnd, progress);
             p.mesh.scale.set(curSize, curSize, curSize);
+
+            const mat = p.mesh.material as THREE.MeshBasicMaterial;
+            if (mat) {
+                if (p.startColor && p.endColor) {
+                    mat.color.copy(p.startColor).lerp(p.endColor, progress);
+                }
+                if (p.fadeOpacity !== false) {
+                    mat.opacity = Math.max(0, p.life / p.maxLife);
+                }
+            }
         }
     }
 
