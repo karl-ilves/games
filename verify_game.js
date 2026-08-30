@@ -62,23 +62,23 @@ try {
             throw new Error("Cooking game card must be visible to everyone on Hub!");
         }
 
-        // Test Recently Played Games Section (Viimati mängitud mängud)
-        console.log("   Testing Recently Played Games Table (Viimati mängitud mängud)...");
+        // Test Recently Played Games Section (English for guests, Estonian for Playard Owner)
+        console.log("   Testing Recently Played Games Table (English for Guest)...");
         await page.waitForSelector('#recently-played-section', { visible: true, timeout: 5000 });
         
-        // 1. Verify clean empty state for a new player who hasn't played anything yet
+        // 1. Verify clean empty state for a new guest player (English: You haven't played any games yet)
         const emptyStateText = await page.$eval('#recently-played-empty', el => el.textContent).catch(() => '');
-        console.log("   New player empty state (Expected: Sa pole veel ühtegi mängu mänginud):", emptyStateText.replace(/\s+/g, ' ').substring(0, 55));
-        if (!emptyStateText.includes('Sa pole veel ühtegi mängu mänginud')) {
-            throw new Error("New player who has not played any game must see the clean empty state!");
+        console.log("   New guest player empty state (Expected: You haven't played any games yet):", emptyStateText.replace(/\s+/g, ' ').substring(0, 60));
+        if (!emptyStateText.includes("You haven't played any games yet")) {
+            throw new Error("New guest player must see English empty state!");
         }
 
-        // 2. Play 1st game (Racing) -> Should appear as #1 on far left
+        // 2. Play 1st game (Racing) -> Should appear as #1 on far left in English
         await page.evaluate(() => {
             window.yardService.recordPlayedGame({
                 id: 'racing',
                 title: '🏎️ Racing Simulator',
-                description: 'Võistle kiirete sportautode ja mootorratastega ringradadel.',
+                description: 'Race high-speed sports cars and motorcycles.',
                 url: './games/racing/index.html',
                 icon: '🏎️',
                 badgeText: 'Circuit Racing'
@@ -89,15 +89,21 @@ try {
         console.log(`   Cards count after 1st game played (Expected: 1): ${cards.length}`);
         if (cards.length !== 1) throw new Error("Expected exactly 1 recently played card after 1st game!");
 
+        const guestBadge1 = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.textContent);
+        console.log("   Guest #1 Card text (Expected: MOST RECENT & Play again):", guestBadge1.replace(/\s+/g, ' ').substring(0, 60));
+        if (!guestBadge1.includes('MOST RECENT') || !guestBadge1.includes('Play again')) {
+            throw new Error("Guest cards in Recently Played must be in English!");
+        }
+
         // 3. Play 2nd game (Cooking) -> Cooking must become #1 (leftmost), Racing becomes #2
         await page.evaluate(() => {
             window.yardService.recordPlayedGame({
                 id: 'cooking',
                 title: '🍳 3D Master Chef',
-                description: 'Valmista burgereid, pitsasid ja pastasid.',
+                description: 'Cook burgers and pizzas.',
                 url: './games/cooking/index.html',
                 icon: '🍳',
-                badgeText: '💎 +20Y kuni +40Y'
+                badgeText: '💎 +20Y to +40Y'
             });
         });
         await new Promise(r => setTimeout(r, 200));
@@ -111,8 +117,8 @@ try {
         await page.evaluate(() => {
             window.yardService.recordPlayedGame({
                 id: 'play',
-                title: '🎮 Kogukonna 3D mängud',
-                description: 'Mängi teiste mängijate loodud mänge.',
+                title: '🎮 Community 3D Games',
+                description: 'Play community created 3D worlds.',
                 url: './games/play/index.html',
                 icon: '🎮',
                 badgeText: 'Community Play'
@@ -130,7 +136,7 @@ try {
             window.yardService.recordPlayedGame({
                 id: 'racing',
                 title: '🏎️ Racing Simulator',
-                description: 'Võistle kiirete sportautode ja mootorratastega ringradadel.',
+                description: 'Race high-speed sports cars and motorcycles.',
                 url: './games/racing/index.html',
                 icon: '🏎️',
                 badgeText: 'Circuit Racing'
@@ -168,6 +174,14 @@ try {
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: ownerProf } }));
         });
+        await new Promise(r => setTimeout(r, 200));
+
+        // Verify Estonian translation for Playard Owner in Recently Played
+        const ownerRecentBadge1 = await page.$eval('#recently-played-grid .recently-played-card:first-child', el => el.textContent);
+        console.log("   Playard Owner #1 Card text (Expected: VIIMATI MÄNGITUD & Mängi uuesti):", ownerRecentBadge1.replace(/\s+/g, ' ').substring(0, 60));
+        if (!ownerRecentBadge1.includes('VIIMATI MÄNGITUD') || !ownerRecentBadge1.includes('Mängi uuesti')) {
+            throw new Error("Playard Owner must see Estonian text in Recently Played!");
+        }
         await new Promise(r => setTimeout(r, 200));
         const ownerAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
         console.log(`   Playard Owner Admin Panel visibility (Expected: none): ${ownerAdminPanelDisplay}`);

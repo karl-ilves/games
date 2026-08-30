@@ -1,7 +1,7 @@
 import { supabase } from './lib/supabase';
 import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
-import { setLanguage, applyLocalization } from './shared/i18n';
+import { setLanguage, applyLocalization, getLanguage } from './shared/i18n';
 
 console.log("Playard Hub & Platform Loaded.");
 initAuth();
@@ -45,6 +45,7 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
 
     // Switch language: Estonian for admin and owner, English for others!
     setLanguage(isEstonian ? 'et' : 'en');
+    renderRecentlyPlayed();
 }
 
 // --- Setup UI Icons & Elements ---
@@ -598,28 +599,34 @@ function setupModals() {
 }
 
 // --- Recently Played Games Management & Rendering ---
-function formatTimeAgo(timestamp: number): string {
+function formatTimeAgo(timestamp: number, isEt: boolean): string {
     const diff = Math.max(0, Date.now() - timestamp);
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Äsja mängitud';
-    if (mins < 60) return `${mins} min tagasi`;
+    if (mins < 1) return isEt ? 'Äsja mängitud' : 'Just played';
+    if (mins < 60) return isEt ? `${mins} min tagasi` : `${mins}m ago`;
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} h tagasi`;
+    if (hours < 24) return isEt ? `${hours} h tagasi` : `${hours}h ago`;
     const days = Math.floor(hours / 24);
-    return `${days} p tagasi`;
+    return isEt ? `${days} p tagasi` : `${days}d ago`;
 }
 
 function renderRecentlyPlayed() {
     const container = document.getElementById('recently-played-grid');
     if (!container) return;
 
+    const isEt = getLanguage() === 'et';
     const games = yardService.getRecentlyPlayedGames();
+
     if (!games || games.length === 0) {
         container.innerHTML = `
             <div id="recently-played-empty" style="grid-column: 1/-1; padding: 35px 20px; text-align: center; color: #8899a6; background: rgba(30, 39, 46, 0.4); border-radius: 16px; border: 1.5px dashed rgba(255, 255, 255, 0.12);">
                 <div style="font-size: 2.2rem; margin-bottom: 8px;">🕹️</div>
-                <div style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 6px;">Sa pole veel ühtegi mängu mänginud</div>
-                <div style="font-size: 0.88rem; color: #7f8c8d;">Vali allpool ametlik simulaator või kogukonnamäng ja sinu viimati mängitud mängud ilmuvad siia!</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 6px;">
+                    ${isEt ? 'Sa pole veel ühtegi mängu mänginud' : "You haven't played any games yet"}
+                </div>
+                <div style="font-size: 0.88rem; color: #7f8c8d;">
+                    ${isEt ? 'Vali allpool ametlik simulaator või kogukonnamäng ja sinu viimati mängitud mängud ilmuvad siia!' : 'Pick an official simulator or community game below and your recently played games will appear here!'}
+                </div>
             </div>
         `;
         return;
@@ -630,7 +637,10 @@ function renderRecentlyPlayed() {
 
     container.innerHTML = top3.map((game, index) => {
         const isLatest = index === 0;
-        const rankLabel = isLatest ? '👑 #1 VIIMATI MÄNGITUD' : (index === 1 ? '🥈 #2 EELMINE' : '🥉 #3 MÄNGITUD');
+        const rankLabel = isLatest
+            ? (isEt ? '👑 #1 VIIMATI MÄNGITUD' : '👑 #1 MOST RECENT')
+            : (index === 1 ? (isEt ? '🥈 #2 EELMINE' : '🥈 #2 PREVIOUS') : (isEt ? '🥉 #3 MÄNGITUD' : '🥉 #3 PLAYED'));
+
         const rankBadgeStyle = isLatest
             ? 'background: linear-gradient(135deg, #00f2fe, #4facfe); color: #0b1a2d; font-weight: 900; box-shadow: 0 0 12px rgba(0, 242, 254, 0.4);'
             : (index === 1 ? 'background: rgba(255, 211, 42, 0.18); color: #ffd32a; border: 1px solid rgba(255, 211, 42, 0.4); font-weight: 800;' : 'background: rgba(255, 255, 255, 0.08); color: #a4b0be; border: 1px solid rgba(255, 255, 255, 0.15); font-weight: 700;');
@@ -639,8 +649,60 @@ function renderRecentlyPlayed() {
             ? 'border: 1.5px solid rgba(0, 242, 254, 0.6); box-shadow: 0 12px 32px rgba(0, 242, 254, 0.22); background: linear-gradient(145deg, #162432 0%, #111a24 100%);'
             : 'border: 1px solid rgba(255, 255, 255, 0.08); background: #1e272e;';
 
-        const timeStr = formatTimeAgo(game.lastPlayed);
+        const timeStr = formatTimeAgo(game.lastPlayed, isEt);
         const badgeColor = game.badgeColor || '#00f2fe';
+        const playAgainText = isEt ? 'Mängi uuesti ▶' : 'Play again ▶';
+
+        // Localize game title and description depending on language
+        let gameTitle = game.title;
+        let gameDesc = game.description;
+        let badgeText = game.badgeText || 'Playard';
+
+        if (!isEt) {
+            if (game.id === 'racing') {
+                gameTitle = '🏎️ Racing Simulator';
+                gameDesc = 'Race high-speed sports cars and motorcycles on challenging circuits against opponents.';
+                badgeText = 'Circuit Racing';
+            } else if (game.id === 'cooking') {
+                gameTitle = '🍳 3D Master Chef';
+                gameDesc = 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!';
+                badgeText = '💎 +20Y to +40Y';
+            } else if (game.id === 'war') {
+                gameTitle = '⚔️ War game';
+                gameDesc = 'Lead advanced 3D armored combat units, command tactical firepower, defeat enemy forces, and capture strategic zones.';
+                badgeText = '🎖️ Combat (+50Y)';
+            } else if (game.id === 'train') {
+                gameTitle = '🚂 3D Train Simulator';
+                gameDesc = 'Drive realistic 3D locomotives across scenic railway networks, switch tracks, blow the horn, stop at stations, and earn Train Money!';
+                badgeText = '🪙 Station Stops';
+            } else if (game.id === 'play') {
+                gameTitle = '🎮 Community 3D Games';
+                gameDesc = 'Play 3D worlds created by players and approved by admins.';
+                badgeText = 'Community Play';
+            }
+        } else {
+            if (game.id === 'racing') {
+                gameTitle = '🏎️ Racing Simulator';
+                gameDesc = 'Võistle kiirete sportautode ja mootorratastega põnevatel ringradadel vastaste vastu.';
+                badgeText = 'Ringraja võidusõit';
+            } else if (game.id === 'cooking') {
+                gameTitle = '🍳 3D Master Chef';
+                gameDesc = 'Valmista restorani peakokana burgereid, pitsasid ja pastasid, täida tellimusi ja teeni Yarde!';
+                badgeText = '💎 +20Y kuni +40Y';
+            } else if (game.id === 'war') {
+                gameTitle = '⚔️ War game';
+                gameDesc = 'Juhi 3D soomustehnikat, lahingüksusi ja alista vaenlased 10v10 lahingus!';
+                badgeText = '🎖️ Lahing (+50Y)';
+            } else if (game.id === 'train') {
+                gameTitle = '🚂 Rongimäng';
+                gameDesc = 'Juhi võimsat 3D vedurit mööda raudteevõrku, vaheta pöörmeid ja teeninda jaamu!';
+                badgeText = '💎 Rongiraha';
+            } else if (game.id === 'play') {
+                gameTitle = '🎮 Kogukonna 3D mängud';
+                gameDesc = 'Mängi teiste mängijate poolt loodud ja administraatori poolt heaks kiidetud 3D mänge.';
+                badgeText = 'Kogukonnamängud';
+            }
+        }
 
         return `
             <a href="${game.url}" class="game-card recently-played-card" data-game-id="${game.id}" style="${cardBorder}">
@@ -654,16 +716,16 @@ function renderRecentlyPlayed() {
                     </span>
                 </div>
                 <h2 style="font-size: 1.45rem; margin-bottom: 8px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-                    <span>${game.title}</span>
+                    <span>${gameTitle}</span>
                 </h2>
-                <p style="font-size: 0.9rem; line-height: 1.45; color: #a4b0be; margin-bottom: 16px; min-height: 42px;">${game.description}</p>
+                <p style="font-size: 0.9rem; line-height: 1.45; color: #a4b0be; margin-bottom: 16px; min-height: 42px;">${gameDesc}</p>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
                     <div class="reward-tag" style="border-color: ${badgeColor}; color: ${badgeColor}; background: rgba(0, 242, 254, 0.08); font-size: 0.78rem; padding: 4px 10px;">
                         <span>${yardService.renderYardSvg(14)}</span>
-                        <span>${game.badgeText || 'Playard'}</span>
+                        <span>${badgeText}</span>
                     </div>
                     <span style="font-size: 0.85rem; font-weight: 800; color: #00f2fe; display: flex; align-items: center; gap: 4px;">
-                        Mängi uuesti ▶
+                        ${playAgainText}
                     </span>
                 </div>
             </a>

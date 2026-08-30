@@ -62,6 +62,19 @@ export function applyLocalization() {
         loggedInAs.innerHTML = isEt ? `Sisse logitud kui: ${spanHtml}` : `Logged in as: ${spanHtml}`;
     }
 
+    // Recently Played Games Section Header
+    const recSub = document.getElementById('recently-played-subheading-text');
+    if (recSub) recSub.textContent = isEt ? 'MÄNGUDE AJALUGU' : 'GAME HISTORY';
+
+    const recTitle = document.getElementById('recently-played-title-text');
+    if (recTitle) recTitle.textContent = isEt ? '⏱️ Viimati mängitud mängud' : '⏱️ Recently Played Games';
+
+    const recHintStrong = document.getElementById('recently-played-hint-strong');
+    if (recHintStrong) recHintStrong.textContent = isEt ? 'Kõige vasakul' : 'Most recent';
+
+    const recHintSpan = document.getElementById('recently-played-hint-span');
+    if (recHintSpan) recHintSpan.textContent = isEt ? 'on viimati mängitud mäng' : 'on the far left';
+
     // Official simulators header
     const officialH2 = document.querySelector('.hub-container > h2');
     if (officialH2) officialH2.textContent = isEt ? 'Ametlikud simulaatorid' : 'Official Simulators';
