@@ -258,28 +258,60 @@ class WarAudio {
         });
     }
 
-    // High-Tech Tactical Radar Sonar Beep
-    public playRadarBeep(pitch = 1800, volume = 0.25) {
+    // Authentic Real Military Radar / Sonar "PING"
+    public playRadarBeep(volume = 0.32) {
         if (this.isMuted) return;
         this.initCtx();
         if (!this.ctx) return;
 
         const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
 
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(pitch, now);
-        osc.frequency.exponentialRampToValueAtTime(pitch * 0.75, now + 0.08);
+        // 1. Primary Sonar Resonator (Iconic 1280 Hz Sine Ping)
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1280, now);
+        osc1.frequency.exponentialRampToValueAtTime(1240, now + 0.22);
 
-        gain.gain.setValueAtTime(Math.min(0.5, volume), now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        gain1.gain.setValueAtTime(0.001, now);
+        gain1.gain.linearRampToValueAtTime(volume, now + 0.005);
+        gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
 
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        osc1.connect(gain1);
+        gain1.connect(this.ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.25);
 
-        osc.start(now);
-        osc.stop(now + 0.09);
+        // 2. Harmonic Overtone (2560 Hz Metallic Sonar Shimmer)
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(2560, now);
+        osc2.frequency.exponentialRampToValueAtTime(2480, now + 0.12);
+
+        gain2.gain.setValueAtTime(0.001, now);
+        gain2.gain.linearRampToValueAtTime(volume * 0.45, now + 0.004);
+        gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+
+        osc2.connect(gain2);
+        gain2.connect(this.ctx.destination);
+        osc2.start(now);
+        osc2.stop(now + 0.15);
+
+        // 3. Subtle Acoustic Transducer Transient Click
+        const clickOsc = this.ctx.createOscillator();
+        const clickGain = this.ctx.createGain();
+        clickOsc.type = 'triangle';
+        clickOsc.frequency.setValueAtTime(3200, now);
+        clickOsc.frequency.exponentialRampToValueAtTime(800, now + 0.015);
+
+        clickGain.gain.setValueAtTime(volume * 0.3, now);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+
+        clickOsc.connect(clickGain);
+        clickGain.connect(this.ctx.destination);
+        clickOsc.start(now);
+        clickOsc.stop(now + 0.02);
     }
 }
 

@@ -1654,8 +1654,8 @@ class WarGameEngine {
                     }
 
                     if (isSwept && !this.localUnit.isDead && !this.isMatchEnded) {
-                        // Enemy is swept by the radar line -> BEEP!
-                        warAudio.playRadarBeep(2100, 0.35);
+                        // Enemy is swept by the radar line -> Authentic Sonar PING!
+                        warAudio.playRadarBeep(0.35);
                         unit.radarFlash = 1.0;
                     }
                 }
