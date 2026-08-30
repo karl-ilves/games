@@ -95,6 +95,18 @@ interface ExplosiveBarrel {
     isExploded: boolean;
 }
 
+interface WorldObstacle {
+    type: 'box' | 'circle';
+    minX?: number;
+    maxX?: number;
+    minZ?: number;
+    maxZ?: number;
+    centerX?: number;
+    centerZ?: number;
+    radius?: number;
+    height: number;
+}
+
 class WarGameEngine {
     private container: HTMLElement;
     private scene!: THREE.Scene;
@@ -128,6 +140,7 @@ class WarGameEngine {
     private projectiles: Projectile[] = [];
     private shockwaves: Shockwave[] = [];
     private particles: Particle[] = [];
+    private obstacles: WorldObstacle[] = [];
 
     // Realtime Multiplayer Network
     private network?: WarMultiplayerNetwork;
@@ -661,6 +674,7 @@ class WarGameEngine {
         this.createBaseStation(new THREE.Vector3(0, 0, 270), 'red');
         this.createBaseStation(new THREE.Vector3(0, 0, -270), 'blue');
 
+        // Central & Strategic Fortresses
         this.createMilitaryFort(new THREE.Vector3(0, 0, 0));
         this.createMilitaryFort(new THREE.Vector3(130, 0, 90));
         this.createMilitaryFort(new THREE.Vector3(-130, 0, -90));
@@ -668,6 +682,16 @@ class WarGameEngine {
         this.createMilitaryFort(new THREE.Vector3(130, 0, -90));
         this.createMilitaryFort(new THREE.Vector3(0, 0, 135));
         this.createMilitaryFort(new THREE.Vector3(0, 0, -135));
+
+        // Military town houses & barracks across battle sectors
+        this.createMilitaryHouse(new THREE.Vector3(70, 0, 45), 14, 12);
+        this.createMilitaryHouse(new THREE.Vector3(-70, 0, -45), 14, 12);
+        this.createMilitaryHouse(new THREE.Vector3(70, 0, -45), 14, 12);
+        this.createMilitaryHouse(new THREE.Vector3(-70, 0, 45), 14, 12);
+        this.createMilitaryHouse(new THREE.Vector3(200, 0, 180), 16, 14);
+        this.createMilitaryHouse(new THREE.Vector3(-200, 0, -180), 16, 14);
+        this.createMilitaryHouse(new THREE.Vector3(200, 0, -180), 16, 14);
+        this.createMilitaryHouse(new THREE.Vector3(-200, 0, 180), 16, 14);
 
         // Anti-tank barricades
         for (let i = 0; i < 40; i++) {
@@ -797,24 +821,100 @@ class WarGameEngine {
         pad.receiveShadow = true;
         group.add(pad);
 
+        const towerX = team === 'red' ? 28 : -28;
         const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.5, 16, 8), baseMat);
-        tower.position.set(team === 'red' ? 28 : -28, 8, 0);
+        tower.position.set(towerX, 8, 0);
         tower.castShadow = true;
         group.add(tower);
 
         this.scene.add(group);
+
+        // Register Tower Collider
+        this.obstacles.push({
+            type: 'circle',
+            centerX: pos.x + towerX,
+            centerZ: pos.z,
+            radius: 3.8,
+            height: 16
+        });
     }
 
     private createMilitaryFort(pos: THREE.Vector3) {
         const group = new THREE.Group();
         group.position.copy(pos);
+
         const bunkerMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+        const metalMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
+
+        // Main Fort Structure (20 x 7 x 20)
         const bunker = new THREE.Mesh(new THREE.BoxGeometry(20, 7, 20), bunkerMat);
         bunker.position.y = 3.5;
         bunker.castShadow = true;
         bunker.receiveShadow = true;
         group.add(bunker);
+
+        // Roof Parapet / Upper Bastion
+        const parapet = new THREE.Mesh(new THREE.BoxGeometry(20.4, 1.2, 20.4), roofMat);
+        parapet.position.y = 7.4;
+        parapet.castShadow = true;
+        group.add(parapet);
+
+        // Reinforced Blast Doors on sides
+        const door = new THREE.Mesh(new THREE.BoxGeometry(4.0, 4.5, 0.6), metalMat);
+        door.position.set(0, 2.25, 10.1);
+        group.add(door);
+
+        const doorBack = new THREE.Mesh(new THREE.BoxGeometry(4.0, 4.5, 0.6), metalMat);
+        doorBack.position.set(0, 2.25, -10.1);
+        group.add(doorBack);
+
         this.scene.add(group);
+
+        // Register Solid Fort Collider Box
+        this.obstacles.push({
+            type: 'box',
+            minX: pos.x - 10.5,
+            maxX: pos.x + 10.5,
+            minZ: pos.z - 10.5,
+            maxZ: pos.z + 10.5,
+            height: 8.5
+        });
+    }
+
+    private createMilitaryHouse(pos: THREE.Vector3, sizeX = 14, sizeZ = 12) {
+        const group = new THREE.Group();
+        group.position.copy(pos);
+
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x57606f, roughness: 0.9 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.6 });
+
+        // Main Walls
+        const height = 5.5;
+        const house = new THREE.Mesh(new THREE.BoxGeometry(sizeX, height, sizeZ), wallMat);
+        house.position.y = height / 2;
+        house.castShadow = true;
+        house.receiveShadow = true;
+        group.add(house);
+
+        // Peaked Roof
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.hypot(sizeX, sizeZ) * 0.55, 3.0, 4), roofMat);
+        roof.position.y = height + 1.5;
+        roof.rotation.y = Math.PI / 4;
+        roof.castShadow = true;
+        group.add(roof);
+
+        this.scene.add(group);
+
+        // Register House Collider Box
+        this.obstacles.push({
+            type: 'box',
+            minX: pos.x - sizeX / 2 - 0.5,
+            maxX: pos.x + sizeX / 2 + 0.5,
+            minZ: pos.z - sizeZ / 2 - 0.5,
+            maxZ: pos.z + sizeZ / 2 + 0.5,
+            height: height + 3.0
+        });
     }
 
     private createBarricade(pos: THREE.Vector3) {
@@ -829,6 +929,15 @@ class WarGameEngine {
         group.add(b2);
         group.position.y = 1.1;
         this.scene.add(group);
+
+        // Register Barricade Collider
+        this.obstacles.push({
+            type: 'circle',
+            centerX: pos.x,
+            centerZ: pos.z,
+            radius: 2.0,
+            height: 2.4
+        });
     }
 
     private createExplosiveBarrel(pos: THREE.Vector3) {
@@ -2806,6 +2915,9 @@ class WarGameEngine {
             const forward = new THREE.Vector3(Math.sin(this.localUnit.rotation), 0, Math.cos(this.localUnit.rotation));
             this.localUnit.pos.addScaledVector(forward, this.localUnit.speed * dt);
 
+            // Block player from passing through buildings, houses, forts & barricades
+            this.resolveObstacleCollisions(this.localUnit.pos, isTank ? 3.2 : 1.4);
+
             this.localUnit.pos.x = Math.max(-780, Math.min(780, this.localUnit.pos.x));
             this.localUnit.pos.z = Math.max(-780, Math.min(780, this.localUnit.pos.z));
 
@@ -2926,6 +3038,9 @@ class WarGameEngine {
                 unit.pos.x += sepX * dt;
                 unit.pos.z += sepZ * dt;
 
+                // Resolve bot building obstacle collisions
+                this.resolveObstacleCollisions(unit.pos, isTank ? 3.2 : 1.4);
+
                 unit.pos.x = Math.max(-780, Math.min(780, unit.pos.x));
                 unit.pos.z = Math.max(-780, Math.min(780, unit.pos.z));
 
@@ -2966,6 +3081,75 @@ class WarGameEngine {
         });
     }
 
+    private resolveObstacleCollisions(pos: THREE.Vector3, unitRadius: number) {
+        for (const obs of this.obstacles) {
+            if (obs.height < pos.y) continue;
+
+            if (obs.type === 'box' && obs.minX !== undefined && obs.maxX !== undefined && obs.minZ !== undefined && obs.maxZ !== undefined) {
+                const closestX = Math.max(obs.minX, Math.min(obs.maxX, pos.x));
+                const closestZ = Math.max(obs.minZ, Math.min(obs.maxZ, pos.z));
+
+                const dx = pos.x - closestX;
+                const dz = pos.z - closestZ;
+                const distSq = dx * dx + dz * dz;
+
+                if (distSq < unitRadius * unitRadius) {
+                    const dist = Math.sqrt(distSq);
+                    if (dist > 0.0001) {
+                        const overlap = unitRadius - dist;
+                        pos.x += (dx / dist) * overlap;
+                        pos.z += (dz / dist) * overlap;
+                    } else {
+                        // Inside box - push out along shortest axis
+                        const dLeft = Math.abs(pos.x - obs.minX);
+                        const dRight = Math.abs(pos.x - obs.maxX);
+                        const dTop = Math.abs(pos.z - obs.minZ);
+                        const dBottom = Math.abs(pos.z - obs.maxZ);
+                        const minD = Math.min(dLeft, dRight, dTop, dBottom);
+                        if (minD === dLeft) pos.x = obs.minX - unitRadius;
+                        else if (minD === dRight) pos.x = obs.maxX + unitRadius;
+                        else if (minD === dTop) pos.z = obs.minZ - unitRadius;
+                        else pos.z = obs.maxZ + unitRadius;
+                    }
+                }
+            } else if (obs.type === 'circle' && obs.centerX !== undefined && obs.centerZ !== undefined && obs.radius !== undefined) {
+                const dx = pos.x - obs.centerX;
+                const dz = pos.z - obs.centerZ;
+                const minDist = obs.radius + unitRadius;
+                const distSq = dx * dx + dz * dz;
+
+                if (distSq < minDist * minDist) {
+                    const dist = Math.sqrt(distSq);
+                    if (dist > 0.0001) {
+                        const overlap = minDist - dist;
+                        pos.x += (dx / dist) * overlap;
+                        pos.z += (dz / dist) * overlap;
+                    } else {
+                        pos.x += minDist;
+                    }
+                }
+            }
+        }
+    }
+
+    private checkObstacleProjectileHit(pos: THREE.Vector3): boolean {
+        for (const obs of this.obstacles) {
+            if (pos.y > obs.height) continue;
+            if (obs.type === 'box' && obs.minX !== undefined && obs.maxX !== undefined && obs.minZ !== undefined && obs.maxZ !== undefined) {
+                if (pos.x >= obs.minX && pos.x <= obs.maxX && pos.z >= obs.minZ && pos.z <= obs.maxZ) {
+                    return true;
+                }
+            } else if (obs.type === 'circle' && obs.centerX !== undefined && obs.centerZ !== undefined && obs.radius !== undefined) {
+                const dx = pos.x - obs.centerX;
+                const dz = pos.z - obs.centerZ;
+                if (dx * dx + dz * dz <= obs.radius * obs.radius) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private updateProjectiles(dt: number) {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
@@ -2988,6 +3172,20 @@ class WarGameEngine {
                 if (p.isExplosive) {
                     this.triggerSpreadingExplosion(p.mesh.position, p.explosionRadius, p.damage, p.shooterId, p.shooterName, p.team);
                     warAudio.playExplosion();
+                }
+                this.scene.remove(p.mesh);
+                this.projectiles.splice(i, 1);
+                continue;
+            }
+
+            // Building / House Obstacle Impact Detection
+            if (this.checkObstacleProjectileHit(p.mesh.position)) {
+                if (p.isExplosive) {
+                    this.triggerSpreadingExplosion(p.mesh.position, p.explosionRadius, p.damage, p.shooterId, p.shooterName, p.team);
+                    warAudio.playExplosion();
+                } else {
+                    this.spawnCrashParticle(p.mesh.position);
+                    warAudio.playHit();
                 }
                 this.scene.remove(p.mesh);
                 this.projectiles.splice(i, 1);
