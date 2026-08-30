@@ -771,10 +771,10 @@
                 <div style="font-size: 0.72rem; color: #ff6b81;" id="cooldown-airstrike">VALMIS</div>
             </div>
 
-            <div class="weapon-card" id="weapon-missile" title="100 € Raketirünnak (Klahv 4 / R) - Satelliitsihik">
+            <div class="weapon-card" id="weapon-missile" title="Taktikaline Rakett (Klahv 4 / R) - 10s Vahega Satelliitsihik">
                 <div style="font-size: 1.3rem;">🚀</div>
                 <div style="font-weight: 800; font-size: 0.8rem; color: #2ed573;" id="weapon-name-missile">RAKETT</div>
-                <div style="font-size: 0.72rem; color: #2ed573;" id="cost-missile">100 €</div>
+                <div style="font-size: 0.72rem; color: #2ed573;" id="cooldown-missile">VALMIS</div>
             </div>
 
             <div class="weapon-card" id="weapon-nuke" title="☢️ TUUMAPOMM (Klahv 5 / N) - 4x Suurem Plahvatus (60s)">
@@ -837,7 +837,7 @@
         <div class="deploy-card">
             <h2 id="deploy-modal-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 6px 0;">⚔️ SELECT TEAM & COMBAT CLASS</h2>
             <p id="deploy-modal-desc" style="color: #a4b0be; margin-bottom: 20px; font-size: 0.9rem;">
-                Choose your team and whether to command a heavy battle tank or a nimble frontline soldier!
+                Choose your team and whether to command a battle tank, soldier, fighter jet or team missile silo!
             </p>
 
             <!-- 1. Team Choice -->
@@ -857,7 +857,7 @@
 
             <!-- 2. Class Choice -->
             <div id="deploy-step-2-label" style="text-align: left; font-weight: 800; color: #fff; font-size: 0.95rem; margin-bottom: 8px;">2. Select Class / Unit:</div>
-            <div class="selection-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 0;">
+            <div class="selection-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-top: 0;">
                 <div class="select-box selected-class" id="btn-select-tank">
                     <div style="font-size: 2.2rem;">🏎️</div>
                     <div class="class-select-title" style="font-weight: 900; font-size: 1.05rem; color: #ffd32a; margin-top: 6px;">BATTLE TANK</div>
@@ -877,6 +877,12 @@
                     <div id="plane-lock-badge" style="display: inline-block; margin-top: 6px; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; background: rgba(255, 71, 87, 0.2); border: 1px solid #ff4757; color: #ff6b81;">
                         🔒 50,000 €
                     </div>
+                </div>
+                <div class="select-box" id="btn-select-missile" style="border-color: rgba(46, 213, 115, 0.35);">
+                    <div style="font-size: 2.2rem;">🚀</div>
+                    <div class="class-select-title" style="font-weight: 900; font-size: 1.05rem; color: #2ed573; margin-top: 6px;">MISSILE COMMANDER</div>
+                    <div class="class-select-desc" style="font-size: 0.74rem; color: #a4b0be; margin-top: 4px;">100 HP · Satellite Targeting · 10s Missiles & 60s Nuke</div>
+                    <div style="margin-top: 6px; font-size: 0.72rem; font-weight: 800; color: #2ecc71;">FREE</div>
                 </div>
             </div>
 

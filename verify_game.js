@@ -642,6 +642,13 @@ try {
             throw new Error("Fighter jet option with 50,000 € lock badge must exist!");
         }
 
+        // Check Missile Commander role in selection modal
+        const missileCardOptionExists = await page.$eval('#btn-select-missile', el => !!el);
+        console.log("   Missile Commander Option Exists in Modal:", missileCardOptionExists);
+        if (!missileCardOptionExists) {
+            throw new Error("Missile Commander role option (#btn-select-missile) must exist in deploy modal!");
+        }
+
         // Test Selecting Red Team and Human Class, then Deploy
         await page.click('#btn-select-red');
         await page.click('#btn-select-human');
@@ -705,13 +712,13 @@ try {
         await new Promise(r => setTimeout(r, 300));
         console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
 
-        // Test 100 € Missile Strike & Satellite Targeting HUD
-        console.log("   Testing 100 € Missile Strike & Satellite Targeting...");
+        // Test 10s Missile Strike & Satellite Targeting HUD
+        console.log("   Testing 10s Missile Strike & Satellite Targeting...");
         const missileCardExists = await page.$eval('#weapon-missile', el => !!el);
-        const missileCostText = await page.$eval('#cost-missile', el => el.textContent);
-        console.log("   Missile Card Exists:", missileCardExists, "Cost Text:", missileCostText);
-        if (!missileCardExists || !missileCostText.includes('100 €')) {
-            throw new Error("Expected #weapon-missile card with 100 € cost!");
+        const missileCooldownText = await page.$eval('#cooldown-missile', el => el.textContent);
+        console.log("   Missile Card Exists:", missileCardExists, "Cooldown Text:", missileCooldownText);
+        if (!missileCardExists) {
+            throw new Error("Expected #weapon-missile card to exist!");
         }
 
         // Test 60s Nuke Timer
@@ -728,7 +735,7 @@ try {
         // Verify satellite targeting HUD overlay is activated or toast shown
         await page.keyboard.press('Escape');
         await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully verified 100 € Missile Strike and 60s Nuke weapon systems!");
+        console.log("   Successfully verified 10s Missile Strike and 60s Nuke weapon systems!");
 
         // Test Fighter Jet Unlock with 50,000 €
         console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");

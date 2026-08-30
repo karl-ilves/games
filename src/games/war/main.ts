@@ -7,7 +7,7 @@ import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
 
 // --- Types & Interfaces ---
 type Team = 'red' | 'blue';
-type UnitClass = 'tank' | 'soldier' | 'plane';
+type UnitClass = 'tank' | 'soldier' | 'plane' | 'missile';
 type ActiveWeapon = 'cannon' | 'mg' | 'airstrike' | 'missile' | 'nuke';
 
 interface CombatUnit {
@@ -126,6 +126,7 @@ class WarGameEngine {
     private primaryReloadTimer = 0;
     private secondaryReloadTimer = 0;
     private airstrikeCooldown = 0;
+    private missileCooldown = 0;
     private nukeTimer = 60.0;
     private isSatelliteTargeting = false;
     private satelliteTargetType: 'missile' | 'nuke' = 'missile';
@@ -367,6 +368,11 @@ class WarGameEngine {
         const planeDesc = document.querySelector('#btn-select-plane .class-select-desc');
         if (planeDesc) planeDesc.textContent = isEt ? '150 HP · Ülehelikiirus · Topeltkahurid & Pommid' : '150 HP · Supersonic Flight · Twin Guns & Air Bombs';
 
+        const missileTitle = document.querySelector('#btn-select-missile .class-select-title');
+        if (missileTitle) missileTitle.textContent = isEt ? 'TIIMI RAKETIJUHT' : 'MISSILE COMMANDER';
+        const missileDesc = document.querySelector('#btn-select-missile .class-select-desc');
+        if (missileDesc) missileDesc.textContent = isEt ? '100 HP · Satelliidisihtimine · 10s Raketid & 60s Tuumapomm' : '100 HP · Satellite Targeting · 10s Missiles & 60s Nuke';
+
         const btnConfirm = document.getElementById('btn-confirm-deploy');
         if (btnConfirm) btnConfirm.textContent = isEt ? '🚀 SUUNDU LAHINGUVÄLJALE (DEPLOY)' : '🚀 DEPLOY TO BATTLEFIELD';
 
@@ -383,21 +389,23 @@ class WarGameEngine {
         const helpContent = document.getElementById('help-modal-content');
         if (helpContent) {
             helpContent.innerHTML = isEt ? `
-                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Liikumine (Tank, Sõdur või Lennuk)</div>
+                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Liikumine (Tank, Sõdur, Lennuk või Raketijuht)</div>
                 <div><strong style="color: #ffd32a;">Hiir:</strong> Torni või relva sihtimine (360 kraadi)</div>
-                <div><strong style="color: #ffd32a;">Klahv 1 / 2 / 3:</strong> Relva vahetamine (1: Kahur/Autocannon, 2: MG/Pommid, 3: Airstrike)</div>
+                <div><strong style="color: #ffd32a;">Klahv 1 / 2 / 3 / 4 / 5:</strong> Relva vahetamine (1: Kahur, 2: MG/Pommid, 3: Airstrike, 4: Rakett (10s), 5: Tuumapomm (60s))</div>
                 <div><strong style="color: #ff4757;">Vasak hiireklõps / Tühik:</strong> Tulistab valitud aktiivset relva!</div>
-                <div><strong style="color: #ff6b81;">Klahv F:</strong> Kiire õhulöök (Airstrike sihtimine ja klõpsuga kukutamine)</div>
+                <div><strong style="color: #2ed573;">🚀 Raketirünnak (10s vahega):</strong> Satelliidisihtimisega täppislöök 10-sekundilise vahega!</div>
+                <div><strong style="color: #ff4757;">☢️ Tuumapomm (60s loendus):</strong> 4 korda suurema hävitava plahvatusraadiusega tuumarünnak!</div>
                 <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
                 <div><strong style="color: #ffd32a;">✈️ Lahingulennuk (50,000 €):</strong> Ava võimas ülehelikiirusega lennuk 50,000 € mänguraha eest!</div>
                 <div><strong style="color: #ffd32a;">💥 Leviv Plahvatus:</strong> Plahvatused tekitavad leviva lööklaine, mis kahjustab kõiki objekte levialas!</div>
                 <div><strong style="color: #00f2fe;">👥 Mängijate loogika:</strong> Mängus on eepiline 10v10 lahing (kokku 20 võitlejat: 10 Sinist vs 10 Punast). Kui oled üksi serveris, on Sinu tiimis 9 AI-d ja vastasel 10 AI-d!</div>
             ` : `
-                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Movement (Tank, Soldier, or Fighter Jet)</div>
+                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Movement (Tank, Soldier, Fighter Jet, or Missile Commander)</div>
                 <div><strong style="color: #ffd32a;">Mouse:</strong> Turret & weapon aiming (360 degrees)</div>
-                <div><strong style="color: #ffd32a;">Keys 1 / 2 / 3:</strong> Switch weapon (1: Cannon/Autocannon, 2: MG/Air Bombs, 3: Airstrike)</div>
+                <div><strong style="color: #ffd32a;">Keys 1-5:</strong> Switch weapon (1: Cannon, 2: MG/Air Bombs, 3: Airstrike, 4: Missile (10s), 5: Nuke (60s))</div>
                 <div><strong style="color: #ff4757;">Left Click / Space:</strong> Fire selected active weapon!</div>
-                <div><strong style="color: #ff6b81;">Key F:</strong> Quick Airstrike (Aim artillery and click to drop)</div>
+                <div><strong style="color: #2ed573;">🚀 Missile Strike (10s Cooldown):</strong> Tactical satellite strike with 10s cooldown!</div>
+                <div><strong style="color: #ff4757;">☢️ Nuclear Strike (60s Timer):</strong> Cataclysmic nuclear strike with 4x blast radius!</div>
                 <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
                 <div><strong style="color: #ffd32a;">✈️ Fighter Jet (50,000 €):</strong> Unlock supersonic combat jet with 50,000 € War Cash!</div>
                 <div><strong style="color: #ffd32a;">💥 Spreading Blast:</strong> Explosions unleash expanding shockwaves damaging everything in radius!</div>
@@ -421,6 +429,7 @@ class WarGameEngine {
         const btnTank = document.getElementById('btn-select-tank');
         const btnHuman = document.getElementById('btn-select-human');
         const btnPlane = document.getElementById('btn-select-plane');
+        const btnMissile = document.getElementById('btn-select-missile');
         const planeBadge = document.getElementById('plane-lock-badge');
         const btnConfirm = document.getElementById('btn-confirm-deploy');
 
@@ -480,6 +489,7 @@ class WarGameEngine {
             btnTank.className = 'select-box selected-class';
             btnHuman!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
+            if (btnMissile) btnMissile.className = 'select-box';
         });
 
         btnHuman?.addEventListener('click', () => {
@@ -487,6 +497,7 @@ class WarGameEngine {
             btnHuman.className = 'select-box selected-class';
             btnTank!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
+            if (btnMissile) btnMissile.className = 'select-box';
         });
 
         btnPlane?.addEventListener('click', () => {
@@ -502,6 +513,15 @@ class WarGameEngine {
             btnPlane.className = 'select-box selected-class';
             btnTank!.className = 'select-box';
             btnHuman!.className = 'select-box';
+            if (btnMissile) btnMissile.className = 'select-box';
+        });
+
+        btnMissile?.addEventListener('click', () => {
+            chosenClass = 'missile';
+            btnMissile.className = 'select-box selected-class';
+            btnTank!.className = 'select-box';
+            btnHuman!.className = 'select-box';
+            if (btnPlane) btnPlane.className = 'select-box';
         });
 
         btnConfirm?.addEventListener('click', () => {
@@ -515,7 +535,9 @@ class WarGameEngine {
             this.startMatchCountdown();
             const classLabel = this.localClass === 'plane'
                 ? (this.isOwnerLang ? 'LENNUK' : 'PLANE')
-                : (this.localClass === 'tank' ? 'TANK' : (this.isOwnerLang ? 'SÕDUR' : 'SOLDIER'));
+                : (this.localClass === 'missile'
+                    ? (this.isOwnerLang ? 'RAKETIJUHT' : 'MISSILE')
+                    : (this.localClass === 'tank' ? 'TANK' : (this.isOwnerLang ? 'SÕDUR' : 'SOLDIER')));
             const enteringMsg = this.isOwnerLang
                 ? `🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`
                 : `🚀 Entering battle: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`;
@@ -531,10 +553,11 @@ class WarGameEngine {
                 btnBlue.className = chosenTeam === 'blue' ? 'select-box selected-blue' : 'select-box';
                 btnRed.className = chosenTeam === 'red' ? 'select-box selected-red' : 'select-box';
             }
-            if (btnTank && btnHuman && btnPlane) {
+            if (btnTank && btnHuman && btnPlane && btnMissile) {
                 btnTank.className = chosenClass === 'tank' ? 'select-box selected-class' : 'select-box';
                 btnHuman.className = chosenClass === 'soldier' ? 'select-box selected-class' : 'select-box';
                 btnPlane.className = chosenClass === 'plane' ? 'select-box selected-class' : 'select-box';
+                btnMissile.className = chosenClass === 'missile' ? 'select-box selected-class' : 'select-box';
             }
             if (deployModal) deployModal.style.display = 'flex';
         });
@@ -582,9 +605,11 @@ class WarGameEngine {
 
         const roleIcon = this.localClass === 'plane'
             ? (this.isOwnerLang ? '✈️ LAHINGULENNUK' : '✈️ FIGHTER JET')
-            : this.localClass === 'tank'
-                ? '🏎️ TANK'
-                : (this.isOwnerLang ? '🏃 INIMENE (SÕDUR)' : '🏃 SOLDIER');
+            : this.localClass === 'missile'
+                ? (this.isOwnerLang ? '🚀 RAKETIJUHT' : '🚀 MISSILE COMMANDER')
+                : this.localClass === 'tank'
+                    ? '🏎️ TANK'
+                    : (this.isOwnerLang ? '🏃 INIMENE (SÕDUR)' : '🏃 SOLDIER');
 
         const youAreLabel = this.isOwnerLang ? 'OLED:' : 'YOU ARE:';
         const youAreSpan = badge?.querySelector('span');
@@ -612,18 +637,22 @@ class WarGameEngine {
         if (weapon1Name && weapon1Icon) {
             weapon1Name.innerText = this.localClass === 'plane'
                 ? (this.isOwnerLang ? 'VULCAN KAHUR' : 'VULCAN CANNON')
-                : this.localClass === 'tank'
-                    ? (this.isOwnerLang ? 'KAHUR' : 'CANNON')
-                    : (this.isOwnerLang ? 'AUTOMAAT' : 'RIFLE');
-            weapon1Icon.innerText = this.localClass === 'plane' ? '🚀' : this.localClass === 'tank' ? '🚀' : '🔫';
+                : this.localClass === 'missile'
+                    ? (this.isOwnerLang ? 'RAKETT (10s)' : 'MISSILE (10s)')
+                    : this.localClass === 'tank'
+                        ? (this.isOwnerLang ? 'KAHUR' : 'CANNON')
+                        : (this.isOwnerLang ? 'AUTOMAAT' : 'RIFLE');
+            weapon1Icon.innerText = this.localClass === 'plane' ? '🚀' : this.localClass === 'missile' ? '🚀' : this.localClass === 'tank' ? '🚀' : '🔫';
         }
         if (weapon2Name && weapon2Icon) {
             weapon2Name.innerText = this.localClass === 'plane'
                 ? (this.isOwnerLang ? 'LENNUKIPOMMID' : 'AIR BOMBS')
-                : this.localClass === 'tank'
-                    ? 'MG-42'
-                    : (this.isOwnerLang ? 'GRANAAT' : 'GRENADE');
-            weapon2Icon.innerText = this.localClass === 'plane' ? '💣' : this.localClass === 'tank' ? '🔫' : '💣';
+                : this.localClass === 'missile'
+                    ? (this.isOwnerLang ? 'TUUMAPOMM (60s)' : 'NUKE (60s)')
+                    : this.localClass === 'tank'
+                        ? 'MG-42'
+                        : (this.isOwnerLang ? 'GRANAAT' : 'GRENADE');
+            weapon2Icon.innerText = this.localClass === 'plane' ? '💣' : this.localClass === 'missile' ? '☢️' : this.localClass === 'tank' ? '🔫' : '💣';
         }
 
         const airstrikeCard = document.getElementById('weapon-airstrike');
@@ -1036,6 +1065,19 @@ class WarGameEngine {
                 pos: new THREE.Vector3(laneX, 14.0, baseZ),
                 rot
             };
+        } else if (unitClass === 'missile') {
+            // Missile silo control station spawn
+            const siloPos = this.missileSilos.get(team);
+            if (siloPos) {
+                return {
+                    pos: new THREE.Vector3(siloPos.x + (isRed ? 4 : -4), 0, siloPos.z + (isRed ? -8 : 8)),
+                    rot
+                };
+            }
+            return {
+                pos: new THREE.Vector3(isRed ? 45 : -45, 0, isRed ? 255 : -255),
+                rot
+            };
         } else if (unitClass === 'tank') {
             // Tank vehicle staging positions across base
             const tankSlots = [-85, -50, -20, 20, 50, 85];
@@ -1072,6 +1114,13 @@ class WarGameEngine {
         } else if (this.localClass === 'tank') {
             this.localUnit = this.createTank(this.localPlayerId, this.localUsername, this.localTeam, true, false, spawn.pos, spawn.rot);
             this.primaryReloadTime = 1.2;
+        } else if (this.localClass === 'missile') {
+            this.localUnit = this.createSoldier(this.localPlayerId, this.localUsername, this.localTeam, true, false, spawn.pos, spawn.rot);
+            this.localUnit.hp = 100;
+            this.localUnit.maxHp = 100;
+            this.primaryReloadTime = 0.2;
+            this.activeWeapon = 'missile';
+            setTimeout(() => this.selectWeapon('missile'), 100);
         } else {
             this.localUnit = this.createSoldier(this.localPlayerId, this.localUsername, this.localTeam, true, false, spawn.pos, spawn.rot);
             this.primaryReloadTime = 0.12; // Fast rifle fire
@@ -2416,8 +2465,8 @@ class WarGameEngine {
     private startSatelliteTargeting(type: 'missile' | 'nuke') {
         if (this.localUnit.isDead || this.isMatchEnded) return;
 
-        if (type === 'missile' && this.warMoney < 100) {
-            this.showToast(this.isOwnerLang ? 'Sul pole piisavalt raha! Rakett maksab 100 €.' : 'Not enough War Cash! Missile costs 100 €.', '#ff4757');
+        if (type === 'missile' && this.missileCooldown > 0) {
+            this.showToast(this.isOwnerLang ? `Rakett laeb veel: ${Math.ceil(this.missileCooldown)}s!` : `Missile reload: ${Math.ceil(this.missileCooldown)}s!`, '#ffd32a');
             return;
         }
 
@@ -2459,11 +2508,11 @@ class WarGameEngine {
         } else {
             if (iconEl) iconEl.innerText = '🚀';
             if (titleEl) {
-                titleEl.innerText = this.isOwnerLang ? '🚀 100 € RAKETIRÜNNAKU SATELLIIDISIHTIMINE' : '🚀 100 € MISSILE STRIKE TARGETING';
+                titleEl.innerText = this.isOwnerLang ? '🚀 RAKETIRÜNNAKU SATELLIIDISIHTIMINE (10s VAHEGA)' : '🚀 MISSILE STRIKE TARGETING (10s COOLDOWN)';
                 titleEl.style.color = '#2ed573';
             }
-            if (descEl) descEl.innerText = this.isOwnerLang ? 'Maksumus: 100 €. Liiguta pildiga hiirt ja klõpsa sihtmärgile!' : 'Cost: 100 €. Move targeting camera and click to fire missile!';
-            if (promptEl) promptEl.innerText = this.isOwnerLang ? '🚀 KLÕPSA MAASTIKUL, ET SAATA RAKETT (100 €)!' : '🚀 CLICK ON TERRAIN TO FIRE MISSILE (100 €)!';
+            if (descEl) descEl.innerText = this.isOwnerLang ? '10 sek vahega raketirünnak! Liiguta pildiga hiirt ja klõpsa sihtmärgile!' : '10s cooldown missile strike! Move targeting camera and click to fire!';
+            if (promptEl) promptEl.innerText = this.isOwnerLang ? '🚀 KLÕPSA MAASTIKUL, ET SAATA RAKETT (10s VAHEGA)!' : '🚀 CLICK ON TERRAIN TO FIRE MISSILE (10s COOLDOWN)!';
         }
     }
 
@@ -2472,7 +2521,9 @@ class WarGameEngine {
         if (this.satelliteReticleMesh) this.satelliteReticleMesh.visible = false;
         const hud = document.getElementById('satellite-targeting-hud');
         if (hud) hud.style.display = 'none';
-        this.selectWeapon('cannon');
+        if (this.localClass !== 'missile') {
+            this.selectWeapon('cannon');
+        }
     }
 
     private launchSatelliteStrike(targetPos: THREE.Vector3, type: 'missile' | 'nuke') {
@@ -2482,13 +2533,12 @@ class WarGameEngine {
         const siloOrigin = this.missileSilos.get(this.localTeam) || this.localUnit.pos.clone().add(new THREE.Vector3(0, 10, 0));
 
         if (!isNuke) {
-            // 100 € Missile Strike
-            this.warMoney = Math.max(0, this.warMoney - 100);
-            this.saveUserDataToDb();
+            // Tactical Missile Strike (10s cooldown, free)
+            this.missileCooldown = 10.0;
             this.updateHUD();
 
             warAudio.playMissileLaunch();
-            const launchMsg = this.isOwnerLang ? '🚀 100 € Rakett välja saadetud!' : '🚀 100 € Missile launched!';
+            const launchMsg = this.isOwnerLang ? '🚀 Rakett välja saadetud (10s vahega)!' : '🚀 Missile launched (10s cooldown)!';
             this.showToast(launchMsg, '#2ed573');
 
             // Ballistic Rocket Trajectory Projectile
@@ -2989,8 +3039,8 @@ class WarGameEngine {
                     reloadBar.style.width = '100%';
                 }
             } else if (this.activeWeapon === 'missile') {
-                reloadText.innerText = this.isOwnerLang ? '🚀 100 € RAKETT' : '🚀 100 € MISSILE';
-                reloadBar.style.width = '100%';
+                reloadText.innerText = this.missileCooldown > 0 ? `🚀 ${Math.ceil(this.missileCooldown)}s` : (this.isOwnerLang ? '🚀 RAKETT VALMIS' : '🚀 MISSILE READY');
+                reloadBar.style.width = this.missileCooldown > 0 ? `${((10.0 - this.missileCooldown) / 10.0) * 100}%` : '100%';
             } else if (this.activeWeapon === 'nuke') {
                 reloadText.innerText = this.nukeTimer > 0 ? `☢️ ${Math.ceil(this.nukeTimer)}s` : (this.isOwnerLang ? '☢️ VALMIS' : '☢️ READY');
                 reloadBar.style.width = this.nukeTimer > 0 ? `${((60.0 - this.nukeTimer) / 60.0) * 100}%` : '100%';
@@ -3008,6 +3058,13 @@ class WarGameEngine {
             cdAirstrike.innerText = this.airstrikeCooldown > 0
                 ? `${Math.ceil(this.airstrikeCooldown)}s`
                 : (this.isOwnerLang ? 'VALMIS' : 'READY');
+        }
+        const cdMissileEl = document.getElementById('cooldown-missile') || document.getElementById('cost-missile');
+        if (cdMissileEl) {
+            cdMissileEl.innerText = this.missileCooldown > 0
+                ? `${Math.ceil(this.missileCooldown)}s`
+                : (this.isOwnerLang ? 'VALMIS' : 'READY');
+            cdMissileEl.style.color = this.missileCooldown > 0 ? '#ffd32a' : '#2ed573';
         }
         const timerNukeEl = document.getElementById('timer-nuke');
         if (timerNukeEl) {
@@ -3451,6 +3508,16 @@ class WarGameEngine {
         if (this.primaryReloadTimer > 0) this.primaryReloadTimer = Math.max(0, this.primaryReloadTimer - dt);
         if (this.secondaryReloadTimer > 0) this.secondaryReloadTimer = Math.max(0, this.secondaryReloadTimer - dt);
         if (this.airstrikeCooldown > 0) this.airstrikeCooldown = Math.max(0, this.airstrikeCooldown - dt);
+        if (this.missileCooldown > 0) {
+            this.missileCooldown = Math.max(0, this.missileCooldown - dt);
+            const cdMissileEl = document.getElementById('cooldown-missile') || document.getElementById('cost-missile');
+            if (cdMissileEl) {
+                cdMissileEl.innerText = this.missileCooldown > 0
+                    ? `${Math.ceil(this.missileCooldown)}s`
+                    : (this.isOwnerLang ? 'VALMIS' : 'READY');
+                cdMissileEl.style.color = this.missileCooldown > 0 ? '#ffd32a' : '#2ed573';
+            }
+        }
         if (this.nukeTimer > 0) {
             this.nukeTimer = Math.max(0, this.nukeTimer - dt);
             const timerNukeEl = document.getElementById('timer-nuke');
