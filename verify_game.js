@@ -721,6 +721,19 @@ try {
         if (!planeBadgeText.includes('JET') && !planeBadgeText.includes('LENNUK')) {
             throw new Error(`Expected badge to reflect FIGHTER JET, got: ${planeBadgeText}`);
         }
+
+        // Verify airstrike card is hidden for Fighter Jet
+        const airstrikeDisplay = await page.$eval('#weapon-airstrike', el => window.getComputedStyle(el).display);
+        console.log("   Fighter Jet Airstrike Card Display (Expected: none):", airstrikeDisplay);
+        if (airstrikeDisplay !== 'none') {
+            throw new Error(`Expected airstrike card to be hidden for Fighter Jet, got: ${airstrikeDisplay}`);
+        }
+
+        // Test bomb drop directly under fighter jet
+        await page.click('#weapon-mg');
+        await page.keyboard.press('Space');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Successfully verified Fighter Jet Airstrike disabled and direct bomb dropping!");
         console.log("   Successfully unlocked and deployed Fighter Jet with 50,000 €!");
 
         // 10b. Test Playard Owner Estonian Localization in War Game

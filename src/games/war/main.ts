@@ -589,6 +589,14 @@ class WarGameEngine {
                     : (this.isOwnerLang ? 'GRANAAT' : 'GRENADE');
             weapon2Icon.innerText = this.localClass === 'plane' ? '💣' : this.localClass === 'tank' ? '🔫' : '💣';
         }
+
+        const airstrikeCard = document.getElementById('weapon-airstrike');
+        if (airstrikeCard) {
+            airstrikeCard.style.display = this.localClass === 'plane' ? 'none' : 'flex';
+        }
+        if (this.localClass === 'plane' && this.activeWeapon === 'airstrike') {
+            this.selectWeapon('cannon');
+        }
     }
 
     // --- Scene Setup ---
@@ -1375,7 +1383,9 @@ class WarGameEngine {
             this.keys[e.code] = true;
             if (e.code === 'Digit1') this.selectWeapon('cannon');
             if (e.code === 'Digit2') this.selectWeapon('mg');
-            if (e.code === 'Digit3' || e.code === 'KeyF') this.selectWeapon('airstrike');
+            if (e.code === 'Digit3' || e.code === 'KeyF') {
+                if (this.localClass !== 'plane') this.selectWeapon('airstrike');
+            }
             if (e.code === 'Space' || e.code === 'KeyE') this.fireActiveWeapon();
         });
 
@@ -1458,6 +1468,10 @@ class WarGameEngine {
     }
 
     private selectWeapon(type: 'cannon' | 'mg' | 'airstrike') {
+        if (this.localClass === 'plane' && type === 'airstrike') {
+            return;
+        }
+
         this.activeWeapon = type;
         document.querySelectorAll('.weapon-card').forEach(c => c.classList.remove('active'));
         document.getElementById(`weapon-${type}`)?.classList.add('active');
@@ -1550,13 +1564,17 @@ class WarGameEngine {
         if (this.localUnit.isDead || this.isMatchEnded) return;
 
         if (this.localClass === 'plane') {
-            // Fighter Jet Heavy Air-to-Ground Bomb Drop
+            // Fighter Jet Heavy Air-to-Ground Bomb Drop directly beneath the airplane
             if (this.secondaryReloadTimer > 0) return;
-            this.secondaryReloadTimer = 2.4;
+            this.secondaryReloadTimer = 1.8;
 
-            const bombFrom = this.localUnit.pos.clone().add(new THREE.Vector3(0, -1.0, 0));
-            const targetPos = this.mouseAimTarget.clone();
-            this.spawnGrenade(this.localPlayerId, this.localUnit.name, this.localTeam, bombFrom, targetPos);
+            const bombFrom = this.localUnit.pos.clone().add(new THREE.Vector3(0, -1.2, 0));
+            const forward = new THREE.Vector3(Math.sin(this.localUnit.rotation), 0, Math.cos(this.localUnit.rotation));
+            const planeSpeed = Math.max(12.0, this.localUnit.speed || 28.0);
+            const bombVel = forward.clone().multiplyScalar(planeSpeed * 0.7);
+            bombVel.y = -8.0; // drops straight down under the plane
+
+            this.spawnAirBomb(this.localPlayerId, this.localUnit.name, this.localTeam, bombFrom, bombVel);
             warAudio.playAirstrike();
             this.updateHUD();
         } else if (this.localClass === 'tank') {
@@ -1587,6 +1605,52 @@ class WarGameEngine {
             warAudio.playMachineGun();
             this.updateHUD();
         }
+    }
+
+    private spawnAirBomb(
+        shooterId: string, shooterName: string, team: Team,
+        from: THREE.Vector3, velocity: THREE.Vector3
+    ) {
+        const bombGeo = new THREE.CylinderGeometry(0.32, 0.45, 1.8, 12);
+        const bombMat = new THREE.MeshStandardMaterial({
+            color: team === 'red' ? 0x991b1b : 0x1e3a8a,
+            roughness: 0.35,
+            metalness: 0.75
+        });
+        const mesh = new THREE.Mesh(bombGeo, bombMat);
+        mesh.rotation.x = Math.PI / 2;
+        mesh.position.copy(from);
+        mesh.castShadow = true;
+
+        this.scene.add(mesh);
+        this.projectiles.push({
+            id: 'airbomb_' + Math.random(),
+            shooterId,
+            shooterName,
+            team,
+            mesh,
+            velocity: velocity.clone(),
+            damage: 100,
+            explosionRadius: 18.0,
+            life: 3.5,
+            isExplosive: true,
+            isCannon: false,
+            isGrenade: true,
+            gravity: 28.0,
+            tumbleSpeed: new THREE.Vector3(1.8, 0.3, 0),
+            targetPos: from.clone()
+        });
+
+        this.network?.send({
+            type: 'airstrike_drop',
+            payload: {
+                shooterId,
+                shooterName,
+                team,
+                targetX: from.x,
+                targetZ: from.z
+            }
+        });
     }
 
     private spawnGrenade(
