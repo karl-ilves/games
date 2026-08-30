@@ -145,6 +145,7 @@ class WarGameEngine {
     private async init() {
         this.checkAuthorization();
         this.setupLocalIdentity();
+        await this.loadUserDataFromDb();
         this.setupScene();
         this.buildBattlefield();
         this.setupDeployModal();
@@ -152,8 +153,81 @@ class WarGameEngine {
         this.setupInputListeners();
         this.initMultiplayer();
 
+        window.addEventListener('beforeunload', () => this.saveUserDataToDb());
+
         this.clock.start();
         this.animate();
+    }
+
+    private async loadUserDataFromDb() {
+        const prof = getCurrentUserProfile();
+        const userId = prof?.id || this.localPlayerId;
+        const storageKey = `playard_war_data_${userId}`;
+
+        const localData = localStorage.getItem(storageKey) || localStorage.getItem('playard_war_game_money');
+        if (localData) {
+            try {
+                if (localData.startsWith('{')) {
+                    const parsed = JSON.parse(localData);
+                    if (parsed.money !== undefined) this.warMoney = parsed.money;
+                } else {
+                    const num = parseInt(localData, 10);
+                    if (!isNaN(num)) this.warMoney = num;
+                }
+            } catch (e) {}
+        }
+
+        if (supabase && prof && prof.id) {
+            try {
+                const { data } = await supabase
+                    .from('war_game_stats')
+                    .select('money, kills, matches_won')
+                    .eq('user_id', prof.id)
+                    .single();
+
+                if (data && data.money !== undefined) {
+                    this.warMoney = Math.max(this.warMoney, data.money);
+                }
+            } catch (e) {
+                console.warn('War DB load note:', e);
+            }
+        }
+        this.updateHUD();
+    }
+
+    private async saveUserDataToDb() {
+        const prof = getCurrentUserProfile();
+        const userId = prof?.id || this.localPlayerId;
+        const storageKey = `playard_war_data_${userId}`;
+
+        const dataToSave = {
+            user_id: userId,
+            username: this.localUsername,
+            money: this.warMoney,
+            kills: this.myKills,
+            updated_at: new Date().toISOString()
+        };
+
+        // 1. Local storage persistence
+        localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+        localStorage.setItem('playard_war_game_money', this.warMoney.toString());
+
+        // 2. Cloud Database persistence in Supabase
+        if (supabase && prof && prof.id) {
+            try {
+                await supabase
+                    .from('war_game_stats')
+                    .upsert({
+                        user_id: prof.id,
+                        username: prof.username || this.localUsername,
+                        money: this.warMoney,
+                        kills: this.myKills,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_id' });
+            } catch (e) {
+                console.warn('War Game DB save note:', e);
+            }
+        }
     }
 
     private checkAuthorization() {
@@ -1314,7 +1388,7 @@ class WarGameEngine {
     private addWarMoney(amount: number) {
         this.warMoney += amount;
         this.matchMoneyEarned += amount;
-        localStorage.setItem('playard_war_game_money', this.warMoney.toString());
+        this.saveUserDataToDb();
         this.updateHUD();
     }
 
@@ -1369,6 +1443,8 @@ class WarGameEngine {
         if (isWin) {
             warAudio.playVictory();
             this.addWarMoney(1000);
+        } else {
+            this.saveUserDataToDb();
         }
 
         const modal = document.getElementById('match-end-modal');
