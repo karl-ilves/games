@@ -603,7 +603,7 @@ function buyTrainWithYards(trainId: string, yardPrice: number) {
     }
 
     trainAudio.playCoinReward();
-    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}" Playard Yardide eest (${yardPrice} Y)!`, false);
+    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}" Yardide eest (${yardPrice} Y)!`, false);
     selectTrain(trainId);
 }
 

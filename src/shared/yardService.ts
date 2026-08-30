@@ -369,8 +369,26 @@ class YardService {
         }
     }
 
+    private isOwnerUser(): boolean {
+        let email = this.currentUserEmail;
+        if (!email) {
+            try {
+                const profRaw = localStorage.getItem('playard_current_user_profile');
+                if (profRaw) {
+                    const prof = JSON.parse(profRaw);
+                    email = prof.email || null;
+                }
+            } catch (e) {}
+        }
+        if (!email) return false;
+        const clean = email.trim().toLowerCase();
+        return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com';
+    }
+
     public getYards(): number {
-        if (this.currentUserEmail === '1karl.ilves@gmail.com') return 999999999;
+        if (this.isOwnerUser()) {
+            return this.data.yards > 0 ? this.data.yards : 999999999;
+        }
         return this.data.yards;
     }
 
@@ -385,7 +403,7 @@ class YardService {
     public addYards(amount: number, reason = 'Game Reward'): number {
         if (amount <= 0) return this.data.yards;
         
-        const finalAmount = Math.round(amount);
+        const finalAmount = amount;
         this.data.yards += finalAmount;
         this.data.transactions.unshift({
             id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -407,13 +425,13 @@ class YardService {
     public spendYards(amount: number, itemId?: string, reason = 'Purchase'): boolean {
         if (amount <= 0) return true;
         
-        const isAdmin = this.currentUserEmail === '1karl.ilves@gmail.com';
+        const isOwner = this.isOwnerUser();
         
-        if (!isAdmin && this.data.yards < amount) {
+        if (!isOwner && this.data.yards < amount) {
             return false;
         }
 
-        if (!isAdmin) {
+        if (!isOwner) {
             this.data.yards -= amount;
         }
         if (itemId && !this.data.inventory.includes(itemId)) {
