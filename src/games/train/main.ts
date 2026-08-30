@@ -273,7 +273,7 @@ const STATIONS: Station[] = [
         id: 'central',
         name: 'Kesklinna Peajaam',
         description: 'Suur reisijate peajaam kellatorni ja reisijate perrooniga',
-        trackU: 0.05,
+        trackU: 0.04,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 28,
         moneyReward: 50,
@@ -283,7 +283,7 @@ const STATIONS: Station[] = [
         id: 'forest',
         name: 'Männimetsa Peatus',
         description: 'Metsa vahel asuv puidust reisijate ooteplatvorm',
-        trackU: 0.32,
+        trackU: 0.35,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 20,
         moneyReward: 50,
@@ -293,7 +293,7 @@ const STATIONS: Station[] = [
         id: 'harbor',
         name: 'Jõekalda Sadam',
         description: 'Sadamadepoo jõe ääres kaubakraanade ja konteineritega',
-        trackU: 0.58,
+        trackU: 0.62,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 25,
         moneyReward: 50,
@@ -302,8 +302,8 @@ const STATIONS: Station[] = [
     {
         id: 'mountain',
         name: 'Mäejaam / Lumetipp',
-        description: 'Mägine jaam vaatega orule ja tunnelitele',
-        trackU: 0.82,
+        description: 'Mägine jaam vaatega orule ja avarale maastikule',
+        trackU: 0.85,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 35,
         moneyReward: 50,
@@ -321,7 +321,7 @@ interface Junction {
 
 const JUNCTION: Junction = {
     id: 'junc_1',
-    switchU: 0.72,
+    switchU: 0.76,
     description: 'Põhiliin vs Mäering',
     activeBranch: 'main'
 };
@@ -333,7 +333,7 @@ let renderer: THREE.WebGLRenderer;
 
 // Train motion state
 let activeTrain: TrainDef = getActiveTrainDef();
-let trainU = 0.05; // 0..1 along track spline
+let trainU = 0.04; // 0..1 along track spline
 let trainSpeed = 0; // km/h
 let targetThrottle = 0; // 0..100%
 let currentThrottle = 0;
@@ -372,9 +372,9 @@ function initEngine() {
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.FogExp2(0x87ceeb, 0.002);
+    scene.fog = new THREE.FogExp2(0x87ceeb, 0.0008);
 
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 3000);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 5000);
     camera.position.set(0, 15, 35);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -389,24 +389,24 @@ function initEngine() {
 
     window.addEventListener('resize', onWindowResize);
 
-    // Setup Lighting
-    ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    // Setup Lighting for 2x expansive landscape
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
     scene.add(ambientLight);
 
-    hemiLight = new THREE.HemisphereLight(0xddeeff, 0x334433, 0.4);
+    hemiLight = new THREE.HemisphereLight(0xddeeff, 0x334433, 0.45);
     scene.add(hemiLight);
 
-    dirLight = new THREE.DirectionalLight(0xfffaed, 1.3);
-    dirLight.position.set(120, 200, 100);
+    dirLight = new THREE.DirectionalLight(0xfffaed, 1.35);
+    dirLight.position.set(300, 500, 300);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
     dirLight.shadow.camera.near = 10;
-    dirLight.shadow.camera.far = 600;
-    dirLight.shadow.camera.left = -250;
-    dirLight.shadow.camera.right = 250;
-    dirLight.shadow.camera.top = 250;
-    dirLight.shadow.camera.bottom = -250;
+    dirLight.shadow.camera.far = 1800;
+    dirLight.shadow.camera.left = -900;
+    dirLight.shadow.camera.right = 900;
+    dirLight.shadow.camera.top = 900;
+    dirLight.shadow.camera.bottom = -900;
     scene.add(dirLight);
 
     buildRailwayTracks();
@@ -544,7 +544,7 @@ function renderDepotModal() {
         });
     });
 
-    // Attach Click Handlers for Buying with Playard Yards (💎 Y - 3x hind)
+    // Attach Click Handlers for Buying with Playard Yards (💎 Y - 5x hind)
     gridContainer.querySelectorAll('.btn-buy-yard').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
@@ -628,36 +628,37 @@ function selectTrain(trainId: string) {
     renderDepotModal();
 }
 
-// --- Build Railway Track Splines & 3D Rails ---
+// --- Build Railway Track Splines & 3D Rails (2x Suurem ja 100% Maa Peal) ---
 function buildRailwayTracks() {
+    // Kõik punktid rangelt maa tasapinnal (y = 0)
     const mainPoints = [
-        new THREE.Vector3(0, 0, 0),        // Central Station
-        new THREE.Vector3(120, 0, 40),
-        new THREE.Vector3(260, 4, 120),
-        new THREE.Vector3(340, 8, 260),
-        new THREE.Vector3(300, 6, 420),    // Forest Station area
-        new THREE.Vector3(180, 2, 500),
-        new THREE.Vector3(0, 0, 460),      // River bridge crossing
-        new THREE.Vector3(-180, 2, 480),   // Harbor Station area
-        new THREE.Vector3(-320, 8, 380),
-        new THREE.Vector3(-360, 16, 200),  // Mountain approach
-        new THREE.Vector3(-280, 22, 40),   // Mountain Station area
-        new THREE.Vector3(-140, 10, -40),  // Tunnel exit into valley
+        new THREE.Vector3(0, 0, 0),          // Kesklinna Peajaam
+        new THREE.Vector3(260, 0, 80),
+        new THREE.Vector3(560, 0, 260),
+        new THREE.Vector3(720, 0, 560),      // Idakaare lai kurv
+        new THREE.Vector3(620, 0, 880),      // Männimetsa Peatus
+        new THREE.Vector3(380, 0, 1060),     // Jõeületus
+        new THREE.Vector3(0, 0, 980),
+        new THREE.Vector3(-380, 0, 1020),    // Jõekalda Sadam
+        new THREE.Vector3(-680, 0, 800),     // Läänekaare oruring
+        new THREE.Vector3(-760, 0, 420),     // Pööre mäeringile
+        new THREE.Vector3(-600, 0, 80),      // Mäejaam / Lumetipp
+        new THREE.Vector3(-300, 0, -80),     // Põhjasuund tagasi peajaama
     ];
 
     mainTrackCurve = new THREE.CatmullRomCurve3(mainPoints, true, 'centripetal', 0.2);
 
     const mountainPoints = [
-        new THREE.Vector3(-360, 16, 200),
-        new THREE.Vector3(-420, 28, 140),
-        new THREE.Vector3(-380, 36, -20),
-        new THREE.Vector3(-260, 26, -50),
-        new THREE.Vector3(-140, 10, -40),
+        new THREE.Vector3(-760, 0, 420),
+        new THREE.Vector3(-880, 0, 300),
+        new THREE.Vector3(-820, 0, -40),
+        new THREE.Vector3(-550, 0, -120),
+        new THREE.Vector3(-300, 0, -80),
     ];
     mountainTrackCurve = new THREE.CatmullRomCurve3(mountainPoints, false, 'centripetal', 0.2);
 
-    renderTrackMesh(mainTrackCurve, 600);
-    renderTrackMesh(mountainTrackCurve, 150);
+    renderTrackMesh(mainTrackCurve, 1200);
+    renderTrackMesh(mountainTrackCurve, 300);
 }
 
 function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
@@ -715,36 +716,24 @@ function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
     scene.add(ballastMesh);
 }
 
-// --- Build Scenic Terrain, River, Trees, Rocks, Bridges & Tunnels ---
+// --- Build Scenic Terrain, River & Pine Forest (100% Maa Peal) ---
 function buildTerrainAndScenery() {
-    const groundGeo = new THREE.PlaneGeometry(1600, 1600, 64, 64);
+    // 2x Suurem maastik (3600 x 3600), tasapinnaline maapind y = -0.1
+    const groundGeo = new THREE.PlaneGeometry(3600, 3600, 32, 32);
     const groundMat = new THREE.MeshStandardMaterial({
         color: 0x3d7e35,
         roughness: 0.9,
         flatShading: true
     });
 
-    const posAttr = groundGeo.attributes.position;
-    for (let i = 0; i < posAttr.count; i++) {
-        const x = posAttr.getX(i);
-        const y = posAttr.getY(i);
-        if (x < -150 && y < 100) {
-            const dist = Math.sqrt((x + 300) ** 2 + (y - 50) ** 2);
-            posAttr.setZ(i, Math.max(0, 45 - dist * 0.15 + Math.sin(x * 0.03) * 6));
-        } else {
-            posAttr.setZ(i, Math.sin(x * 0.015) * 3 + Math.cos(y * 0.015) * 3);
-        }
-    }
-    groundGeo.computeVertexNormals();
-
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
     groundMesh.rotation.x = -Math.PI / 2;
-    groundMesh.position.y = -0.3;
+    groundMesh.position.y = -0.1;
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
 
-    // River
-    const riverGeo = new THREE.PlaneGeometry(140, 1200);
+    // River maa tasapinnal
+    const riverGeo = new THREE.PlaneGeometry(160, 2600);
     const riverMat = new THREE.MeshStandardMaterial({
         color: 0x1d70b8,
         roughness: 0.1,
@@ -754,34 +743,20 @@ function buildTerrainAndScenery() {
     });
     const river = new THREE.Mesh(riverGeo, riverMat);
     river.rotation.x = -Math.PI / 2;
-    river.rotation.z = Math.PI / 10;
-    river.position.set(0, -0.2, 450);
+    river.rotation.z = Math.PI / 12;
+    river.position.set(200, -0.05, 1000);
     river.receiveShadow = true;
     scene.add(river);
 
-    // Bridge
+    // Tasapinnalised piirded jõeületuse kohas (maa tasandil)
     const bridgeGroup = new THREE.Group();
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x6e757d, roughness: 0.8 });
-    for (let x = -40; x <= 40; x += 20) {
-        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.6, 12, 8), pillarMat);
-        pillar.position.set(x, -5, 460);
-        pillar.castShadow = true;
-        bridgeGroup.add(pillar);
-    }
     const trussMat = new THREE.MeshStandardMaterial({ color: 0x9b2226, metalness: 0.7, roughness: 0.4 });
-    const trussL = new THREE.Mesh(new THREE.BoxGeometry(90, 4, 0.4), trussMat);
-    trussL.position.set(0, 2.5, 462.5);
-    const trussR = new THREE.Mesh(new THREE.BoxGeometry(90, 4, 0.4), trussMat);
-    trussR.position.set(0, 2.5, 457.5);
+    const trussL = new THREE.Mesh(new THREE.BoxGeometry(180, 1.2, 0.3), trussMat);
+    trussL.position.set(380, 0.6, 1063.5);
+    const trussR = new THREE.Mesh(new THREE.BoxGeometry(180, 1.2, 0.3), trussMat);
+    trussR.position.set(380, 0.6, 1056.5);
     bridgeGroup.add(trussL, trussR);
     scene.add(bridgeGroup);
-
-    // Tunnel
-    const tunnelArchMat = new THREE.MeshStandardMaterial({ color: 0x343a40, roughness: 0.95 });
-    const tunnelArch = new THREE.Mesh(new THREE.TorusGeometry(8, 2.5, 8, 16, Math.PI), tunnelArchMat);
-    tunnelArch.position.set(-140, 10, -40);
-    tunnelArch.rotation.y = Math.PI / 3;
-    scene.add(tunnelArch);
 
     buildPineForest();
 }
@@ -791,18 +766,20 @@ function buildPineForest() {
     const foliageMat = new THREE.MeshStandardMaterial({ color: 0x1e4620, roughness: 0.8, flatShading: true });
     const birchFoliageMat = new THREE.MeshStandardMaterial({ color: 0x38b000, roughness: 0.8, flatShading: true });
 
-    const numTrees = 280;
+    const numTrees = 450;
     const treeGroup = new THREE.Group();
 
     for (let i = 0; i < numTrees; i++) {
         const isBirch = Math.random() > 0.65;
         const tree = new THREE.Group();
 
-        let x = (Math.random() - 0.5) * 1100;
-        let z = (Math.random() - 0.5) * 1100;
-        if (Math.abs(x) < 50 && Math.abs(z) < 50) x += 80;
+        let x = (Math.random() - 0.5) * 2800;
+        let z = (Math.random() - 0.5) * 2800;
+        
+        // Hoia rööbaste vahetust lähedusest puud eemal
+        if (Math.abs(x) < 70 && Math.abs(z) < 70) x += 150;
 
-        const scale = 0.8 + Math.random() * 0.8;
+        const scale = 0.8 + Math.random() * 0.9;
         tree.scale.set(scale, scale, scale);
         tree.position.set(x, 0, z);
 
@@ -1294,8 +1271,8 @@ function checkStationArrival(delta: number) {
     const boardingPanel = document.getElementById('station-boarding-panel');
     const progressBar = document.getElementById('boarding-progress');
 
-    // If within 18 meters and train stopped (< 3 km/h)
-    if (distMeters < 18 && trainSpeed < 3.0) {
+    // If within 30 meters and train stopped (< 5 km/h)
+    if (distMeters < 30 && trainSpeed < 5.0) {
         if (!isBoarding) {
             isBoarding = true;
             boardingTimer = 0;
@@ -1332,7 +1309,7 @@ function checkStationArrival(delta: number) {
             if (nameEl) nameEl.innerText = nextSt.name;
         }
     } else {
-        if (isBoarding && distMeters >= 25) {
+        if (isBoarding && distMeters >= 40) {
             isBoarding = false;
             if (boardingPanel) boardingPanel.style.display = 'none';
         }
