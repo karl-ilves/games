@@ -1247,7 +1247,7 @@ function positionTrainUnits() {
     });
 }
 
-// --- Station Passenger Pickup & Money/Yard Rewards (+50€ / +50Y Per Stop) ---
+// --- Station Passenger Pickup & In-Game Rongiraha Rewards (+50€ Per Stop, Yarde ei teeni) ---
 function checkStationArrival(delta: number) {
     const targetStation = STATIONS[currentStationIndex];
     if (!targetStation) return;

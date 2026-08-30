@@ -291,7 +291,7 @@ class WarGameEngine {
             this.localClass = chosenClass;
             if (deployModal) deployModal.style.display = 'none';
             this.deployLocalUnit();
-            this.spawnBattleRoster();
+            if (!this.isRosterSpawned) this.spawnBattleRoster();
             this.updateTeamBadge();
             this.network?.updateIdentity(this.localTeam, this.localClass);
             this.showToast(`🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${this.localClass === 'tank' ? 'TANK' : 'SÕDUR'})`, this.localTeam === 'red' ? '#ff4757' : '#00f2fe');
@@ -527,14 +527,11 @@ class WarGameEngine {
         this.updateHUD();
     }
 
+    private isRosterSpawned = false;
+
     private spawnBattleRoster() {
-        // Clear all previous AI units
-        this.units.forEach((u, id) => {
-            if (u.isBot) {
-                this.scene.remove(u.root);
-                this.units.delete(id);
-            }
-        });
+        if (this.isRosterSpawned) return;
+        this.isRosterSpawned = true;
 
         // 10 Unique AI Blue Units (3 Tanks + 7 Soldiers across 2x battlefield)
         const blueRoster = [
@@ -776,7 +773,6 @@ class WarGameEngine {
                     this.onRemoteKill(event.payload);
                 } else if (event.type === 'player_join') {
                     this.showToast(`👥 ${event.payload.name || 'Uus mängija'} liitus serveriga!`, event.payload.team === 'red' ? '#ff4757' : '#00f2fe');
-                    this.spawnBattleRoster();
                 } else if (event.type === 'player_leave') {
                     const unit = this.units.get(event.payload.id);
                     if (unit) {
@@ -784,7 +780,6 @@ class WarGameEngine {
                         this.scene.remove(unit.root);
                         this.units.delete(event.payload.id);
                     }
-                    this.spawnBattleRoster();
                 }
             },
             (statusText: string, onlineCount: number) => {
@@ -793,7 +788,6 @@ class WarGameEngine {
                 if (serverEl) {
                     serverEl.innerText = `${Math.min(20, this.connectedHumanCount)} / 20 Mängijat (10v10 Lahing)`;
                 }
-                this.spawnBattleRoster();
             }
         );
     }
