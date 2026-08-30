@@ -771,6 +771,18 @@ try {
         }
         console.log("   Successfully tested Playard Owner Estonian Localization with 100,000 € and Fighter Jet in War Game!");
 
+        // Test Out of Bounds Warning for Playard Owner
+        await page.evaluate(() => {
+            const el = document.getElementById('out-of-bounds-overlay');
+            if (el) el.style.display = 'flex';
+        });
+        const oobTitle = await page.$eval('#out-of-bounds-title', el => el.textContent);
+        console.log("   Playard Owner Out of Bounds Warning Title:", oobTitle);
+        if (!oobTitle.includes('MINE TAGASI')) {
+            throw new Error(`Expected Out of Bounds title to contain 'MINE TAGASI', got: ${oobTitle}`);
+        }
+        console.log("   Successfully tested Out-of-Bounds Warning System and Visible Boundaries!");
+
         // Reset guest profile for subsequent tests
         await page.evaluate(() => {
             localStorage.removeItem('playard_current_user_profile');

@@ -33,6 +33,9 @@ interface CombatUnit {
     secondaryReloadTimer?: number;
     respawnTimer: number;
     isDead: boolean;
+    isCrashing?: boolean;
+    crashVelocity?: THREE.Vector3;
+    crashRotationSpeed?: THREE.Vector3;
     walkCycle?: number;
     bankAngle?: number;
 }
@@ -140,6 +143,10 @@ class WarGameEngine {
     private isCountdownActive = false;
     private countdownTimer: any = null;
     private initialBotSpawnMap: Map<string, { pos: THREE.Vector3; rot: number }> = new Map();
+
+    // Out of Bounds Return or Die System
+    private isOutOfBounds = false;
+    private outOfBoundsTimer = 5.0;
 
     private clock = new THREE.Clock();
 
@@ -670,6 +677,102 @@ class WarGameEngine {
             const pos = new THREE.Vector3(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
             this.createExplosiveBarrel(pos);
         }
+
+        // Visible Battlefield Boundaries & Laser Perimeter
+        this.createVisibleBoundaries();
+    }
+
+    private createVisibleBoundaries() {
+        const boundGroup = new THREE.Group();
+
+        const wallMat = new THREE.MeshBasicMaterial({
+            color: 0xff3838,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.DoubleSide
+        });
+
+        const glowRailMat = new THREE.MeshBasicMaterial({
+            color: 0xff2222
+        });
+
+        // 1. Four Holographic Laser Perimeter Walls (Height 40m)
+        // North Wall (Z = 305)
+        const wallNorth = new THREE.Mesh(new THREE.PlaneGeometry(400, 40, 20, 4), wallMat);
+        wallNorth.position.set(0, 20, 305);
+        boundGroup.add(wallNorth);
+
+        // South Wall (Z = -305)
+        const wallSouth = new THREE.Mesh(new THREE.PlaneGeometry(400, 40, 20, 4), wallMat);
+        wallSouth.position.set(0, 20, -305);
+        boundGroup.add(wallSouth);
+
+        // East Wall (X = 200)
+        const wallEast = new THREE.Mesh(new THREE.PlaneGeometry(610, 40, 30, 4), wallMat);
+        wallEast.position.set(200, 20, 0);
+        wallEast.rotation.y = Math.PI / 2;
+        boundGroup.add(wallEast);
+
+        // West Wall (X = -200)
+        const wallWest = new THREE.Mesh(new THREE.PlaneGeometry(610, 40, 30, 4), wallMat);
+        wallWest.position.set(-200, 20, 0);
+        wallWest.rotation.y = Math.PI / 2;
+        boundGroup.add(wallWest);
+
+        // 2. Glowing Laser Rails on Top & Bottom
+        const addRail = (w: number, h: number, d: number, x: number, y: number, z: number) => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), glowRailMat);
+            rail.position.set(x, y, z);
+            boundGroup.add(rail);
+        };
+
+        // Top rails
+        addRail(400, 0.6, 0.6, 0, 40, 305);
+        addRail(400, 0.6, 0.6, 0, 40, -305);
+        addRail(0.6, 0.6, 610, 200, 40, 0);
+        addRail(0.6, 0.6, 610, -200, 40, 0);
+
+        // Bottom ground rails
+        addRail(400, 0.4, 0.4, 0, 0.2, 305);
+        addRail(400, 0.4, 0.4, 0, 0.2, -305);
+        addRail(0.4, 0.4, 610, 200, 0.2, 0);
+        addRail(0.4, 0.4, 610, -200, 0.2, 0);
+
+        // 3. Perimeter Warning Beacons & Pylons
+        const pylonGeo = new THREE.CylinderGeometry(0.5, 0.8, 12, 8);
+        const pylonMat = new THREE.MeshStandardMaterial({ color: 0x222f3e, metalness: 0.8, roughness: 0.3 });
+        const beaconGeo = new THREE.SphereGeometry(0.7, 8, 8);
+        const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff3838 });
+
+        const createPylon = (x: number, z: number) => {
+            const p = new THREE.Mesh(pylonGeo, pylonMat);
+            p.position.set(x, 6, z);
+            p.castShadow = true;
+            boundGroup.add(p);
+
+            const b = new THREE.Mesh(beaconGeo, beaconMat);
+            b.position.set(x, 12.5, z);
+            boundGroup.add(b);
+
+            // Vertical laser pillar
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 30, 4), beaconMat);
+            beam.position.set(x, 27, z);
+            boundGroup.add(beam);
+        };
+
+        // Along North/South borders
+        for (let x = -200; x <= 200; x += 40) {
+            createPylon(x, 305);
+            createPylon(x, -305);
+        }
+        // Along East/West borders
+        for (let z = -280; z <= 280; z += 40) {
+            createPylon(200, z);
+            createPylon(-200, z);
+        }
+
+        this.scene.add(boundGroup);
     }
 
     private createBaseStation(pos: THREE.Vector3, team: Team) {
@@ -1918,10 +2021,25 @@ class WarGameEngine {
         }
 
         if (victim.hp <= 0) {
-            victim.isDead = true;
-            victim.root.visible = false;
-            this.triggerSpreadingExplosion(victim.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), 12.0, 30, attackerId, attackerName, attackerTeam);
-            this.handleKill(attackerId, attackerName, attackerTeam, victim.id, victim.name, victim.team);
+            if (victim.unitClass === 'plane' && !victim.isCrashing) {
+                // Trigger airplane dramatic crash sequence
+                victim.isCrashing = true;
+                victim.isDead = false;
+                const forwardSpeed = Math.max(16.0, victim.speed || 24.0);
+                victim.crashVelocity = new THREE.Vector3(
+                    Math.sin(victim.rotation) * forwardSpeed,
+                    -7.0,
+                    Math.cos(victim.rotation) * forwardSpeed
+                );
+                victim.crashRotationSpeed = new THREE.Vector3(2.8, (Math.random() - 0.5) * 3.5, 6.5);
+                this.handleKill(attackerId, attackerName, attackerTeam, victim.id, victim.name, victim.team);
+                warAudio.playCannonShot();
+            } else if (!victim.isCrashing) {
+                victim.isDead = true;
+                victim.root.visible = false;
+                this.triggerSpreadingExplosion(victim.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), 12.0, 30, attackerId, attackerName, attackerTeam);
+                this.handleKill(attackerId, attackerName, attackerTeam, victim.id, victim.name, victim.team);
+            }
         }
     }
 
@@ -1954,7 +2072,7 @@ class WarGameEngine {
         }
 
         const victim = this.units.get(victimId);
-        if (victim) {
+        if (victim && !victim.isCrashing) {
             victim.respawnTimer = 5.0;
             if (victim.isLocalPlayer) this.showRespawnOverlay(5);
         }
@@ -2287,6 +2405,7 @@ class WarGameEngine {
         const dt = Math.min(this.clock.getDelta(), 0.1);
 
         if (!this.isMatchEnded) {
+            this.updateCrashingUnits(dt);
             this.updatePlayer(dt);
             this.updateBots(dt);
             this.updateProjectiles(dt);
@@ -2295,10 +2414,111 @@ class WarGameEngine {
             this.updateCamera();
             this.renderRadar(dt);
             this.broadcastState();
+            this.checkOutOfBounds(dt);
         }
 
         this.renderer.render(this.scene, this.camera);
     };
+
+    private checkOutOfBounds(dt: number) {
+        if (!this.localUnit || this.localUnit.isDead || this.localUnit.isCrashing || this.isCountdownActive) {
+            const overlay = document.getElementById('out-of-bounds-overlay');
+            if (overlay) overlay.style.display = 'none';
+            this.isOutOfBounds = false;
+            this.outOfBoundsTimer = 5.0;
+            return;
+        }
+
+        const bx = Math.abs(this.localUnit.pos.x);
+        const bz = Math.abs(this.localUnit.pos.z);
+        const isOutside = bx > 200 || bz > 305;
+
+        const overlay = document.getElementById('out-of-bounds-overlay');
+        const titleEl = document.getElementById('out-of-bounds-title');
+        const timerEl = document.getElementById('out-of-bounds-timer');
+
+        if (isOutside) {
+            this.isOutOfBounds = true;
+            this.outOfBoundsTimer = Math.max(0, this.outOfBoundsTimer - dt);
+
+            if (overlay) overlay.style.display = 'flex';
+            if (titleEl) {
+                titleEl.innerText = this.isOwnerLang
+                    ? '⚠️ MINE TAGASI VÕI SURED!'
+                    : '⚠️ RETURN TO BATTLEFIELD OR DIE!';
+            }
+            if (timerEl) {
+                timerEl.innerText = `${this.outOfBoundsTimer.toFixed(1)}s`;
+            }
+
+            if (this.outOfBoundsTimer <= 0) {
+                this.outOfBoundsTimer = 5.0;
+                if (overlay) overlay.style.display = 'none';
+                this.damageUnit(this.localUnit, 9999, 'boundary', 'Battlefield Boundary', this.localTeam === 'red' ? 'blue' : 'red');
+                const killMsg = this.isOwnerLang ? '💀 Lahkusid lahingualalt ja hukkusid!' : '💀 Eliminated for leaving battlefield!';
+                this.showToast(killMsg, '#ff4757');
+            }
+        } else {
+            this.isOutOfBounds = false;
+            this.outOfBoundsTimer = 5.0;
+            if (overlay) overlay.style.display = 'none';
+        }
+    }
+
+    private spawnCrashParticle(pos: THREE.Vector3) {
+        const isFire = Math.random() < 0.45;
+        const pGeo = new THREE.SphereGeometry(isFire ? 0.8 : 1.4, 6, 6);
+        const pMat = new THREE.MeshBasicMaterial({
+            color: isFire ? (Math.random() < 0.5 ? 0xff4757 : 0xffa502) : 0x1e272e,
+            transparent: true,
+            opacity: 0.85
+        });
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        pMesh.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 2));
+        this.scene.add(pMesh);
+
+        this.particles.push({
+            mesh: pMesh,
+            velocity: new THREE.Vector3((Math.random() - 0.5) * 6, Math.random() * 6 + 2, (Math.random() - 0.5) * 6),
+            life: 0.85,
+            maxLife: 0.85,
+            sizeStart: isFire ? 0.9 : 1.5,
+            sizeEnd: isFire ? 0.2 : 3.0
+        });
+    }
+
+    private updateCrashingUnits(dt: number) {
+        this.units.forEach(unit => {
+            if (unit.isCrashing && unit.crashVelocity && unit.crashRotationSpeed) {
+                // Downward gravity acceleration
+                unit.crashVelocity.y -= 22.0 * dt;
+                unit.pos.addScaledVector(unit.crashVelocity, dt);
+                unit.root.position.copy(unit.pos);
+
+                unit.root.rotation.x += unit.crashRotationSpeed.x * dt;
+                unit.root.rotation.y += unit.crashRotationSpeed.y * dt;
+                unit.root.rotation.z += unit.crashRotationSpeed.z * dt;
+
+                // Spawn continuous heavy smoke and crash flames
+                this.spawnCrashParticle(unit.pos.clone());
+
+                // Ground impact
+                if (unit.pos.y <= 0.5) {
+                    unit.pos.y = 0;
+                    unit.isCrashing = false;
+                    unit.isDead = true;
+                    unit.root.visible = false;
+
+                    // Fiery impact explosion
+                    this.triggerSpreadingExplosion(unit.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), 18.0, 50, unit.id, unit.name, unit.team);
+                    warAudio.playCannonShot();
+
+                    unit.respawnTimer = 5.0;
+                    if (unit.isLocalPlayer) this.showRespawnOverlay(5);
+                }
+            }
+        });
+    }
 
     private updatePlayer(dt: number) {
         if (this.isCountdownActive) {
@@ -2306,8 +2526,8 @@ class WarGameEngine {
             return;
         }
 
-        if (this.localUnit.isDead) {
-            if (this.localUnit.respawnTimer > 0) {
+        if (this.localUnit.isDead || this.localUnit.isCrashing) {
+            if (this.localUnit.isDead && this.localUnit.respawnTimer > 0) {
                 this.localUnit.respawnTimer -= dt;
                 if (this.localUnit.respawnTimer <= 0) this.respawnUnit(this.localUnit);
             }
