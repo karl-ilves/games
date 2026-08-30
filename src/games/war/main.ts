@@ -106,10 +106,10 @@ class WarGameEngine {
     private warMoney = parseInt(localStorage.getItem('playard_war_game_money') || '0', 10);
     private matchMoneyEarned = 0;
 
-    // Team Scores (Target: 30 Kills)
+    // Team Scores (Target: 100 Kills)
     private redScore = 0;
     private blueScore = 0;
-    private readonly targetScore = 30;
+    private readonly targetScore = 100;
     private isMatchEnded = false;
 
     // Units (2v2 or PvP up to 10 players)
@@ -323,42 +323,44 @@ class WarGameEngine {
         if (this.radarCanvas) this.radarCtx = this.radarCanvas.getContext('2d');
     }
 
-    // --- Battlefield Map & Explosive Barrels ---
+    // --- Battlefield Map & Explosive Barrels (2x Larger Map: 840x840) ---
     private buildBattlefield() {
-        const groundGeo = new THREE.PlaneGeometry(420, 420, 50, 50);
+        const groundGeo = new THREE.PlaneGeometry(840, 840, 60, 60);
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x1f271c, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        const grid = new THREE.GridHelper(400, 40, 0x3d4a36, 0x171d15);
+        const grid = new THREE.GridHelper(800, 40, 0x3d4a36, 0x171d15);
         grid.position.y = 0.05;
         this.scene.add(grid);
 
-        this.createBaseStation(new THREE.Vector3(0, 0, 135), 'red');
-        this.createBaseStation(new THREE.Vector3(0, 0, -135), 'blue');
+        this.createBaseStation(new THREE.Vector3(0, 0, 270), 'red');
+        this.createBaseStation(new THREE.Vector3(0, 0, -270), 'blue');
 
         this.createMilitaryFort(new THREE.Vector3(0, 0, 0));
-        this.createMilitaryFort(new THREE.Vector3(65, 0, 45));
-        this.createMilitaryFort(new THREE.Vector3(-65, 0, -45));
-        this.createMilitaryFort(new THREE.Vector3(-65, 0, 45));
-        this.createMilitaryFort(new THREE.Vector3(65, 0, -45));
+        this.createMilitaryFort(new THREE.Vector3(130, 0, 90));
+        this.createMilitaryFort(new THREE.Vector3(-130, 0, -90));
+        this.createMilitaryFort(new THREE.Vector3(-130, 0, 90));
+        this.createMilitaryFort(new THREE.Vector3(130, 0, -90));
+        this.createMilitaryFort(new THREE.Vector3(0, 0, 135));
+        this.createMilitaryFort(new THREE.Vector3(0, 0, -135));
 
         // Anti-tank barricades
-        for (let i = 0; i < 20; i++) {
-            const angle = (i / 20) * Math.PI * 2;
-            const dist = 32 + (i % 3) * 28;
+        for (let i = 0; i < 40; i++) {
+            const angle = (i / 40) * Math.PI * 2;
+            const dist = 60 + (i % 5) * 45;
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
-            if (Math.abs(z) > 115) continue;
+            if (Math.abs(z) > 240) continue;
             this.createBarricade(new THREE.Vector3(x, 0, z));
         }
 
         // Explosive Red Barrels (Chain Reaction)
-        for (let i = 0; i < 16; i++) {
-            const angle = (i / 16) * Math.PI * 2;
-            const dist = 24 + (i % 4) * 22;
+        for (let i = 0; i < 32; i++) {
+            const angle = (i / 32) * Math.PI * 2;
+            const dist = 45 + (i % 6) * 35;
             const pos = new THREE.Vector3(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
             this.createExplosiveBarrel(pos);
         }
@@ -372,13 +374,13 @@ class WarGameEngine {
         const baseMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8 });
         const padMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.4 });
 
-        const pad = new THREE.Mesh(new THREE.BoxGeometry(60, 0.8, 40), padMat);
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(80, 0.8, 50), padMat);
         pad.position.y = 0.4;
         pad.receiveShadow = true;
         group.add(pad);
 
-        const tower = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 14, 8), baseMat);
-        tower.position.set(team === 'red' ? 22 : -22, 7, 0);
+        const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.5, 16, 8), baseMat);
+        tower.position.set(team === 'red' ? 28 : -28, 8, 0);
         tower.castShadow = true;
         group.add(tower);
 
@@ -389,8 +391,8 @@ class WarGameEngine {
         const group = new THREE.Group();
         group.position.copy(pos);
         const bunkerMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 });
-        const bunker = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 16), bunkerMat);
-        bunker.position.y = 3;
+        const bunker = new THREE.Mesh(new THREE.BoxGeometry(20, 7, 20), bunkerMat);
+        bunker.position.y = 3.5;
         bunker.castShadow = true;
         bunker.receiveShadow = true;
         group.add(bunker);
@@ -401,10 +403,10 @@ class WarGameEngine {
         const group = new THREE.Group();
         group.position.copy(pos);
         const mat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.3 });
-        const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 3.2), mat);
+        const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 3.8), mat);
         b1.rotation.x = Math.PI / 4;
         group.add(b1);
-        const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 3.2), mat);
+        const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 3.8), mat);
         b2.rotation.z = Math.PI / 4;
         group.add(b2);
         group.position.y = 1.1;
@@ -428,14 +430,14 @@ class WarGameEngine {
         });
     }
 
-    // --- Unit Deployment & Roster (2v2 or 4-10 PvP) ---
+    // --- Unit Deployment & Roster (10v10 Battle) ---
     private deployLocalUnit() {
         if (this.localUnit) {
             this.scene.remove(this.localUnit.root);
             this.units.delete(this.localPlayerId);
         }
 
-        const spawnZ = this.localTeam === 'red' ? 130 : -130;
+        const spawnZ = this.localTeam === 'red' ? 260 : -260;
         const rot = this.localTeam === 'red' ? Math.PI : 0;
         const pos = new THREE.Vector3(0, 0, spawnZ);
 
@@ -460,32 +462,32 @@ class WarGameEngine {
             }
         });
 
-        // 10 Unique AI Blue Units (3 Tanks + 7 Soldiers)
+        // 10 Unique AI Blue Units (3 Tanks + 7 Soldiers across 2x battlefield)
         const blueRoster = [
-            { name: 'Kpt. Miller', class: 'tank' as UnitClass, x: -35, z: -130 },
-            { name: 'Tank Titan', class: 'tank' as UnitClass, x: 0, z: -140 },
-            { name: 'Tank Ironclad', class: 'tank' as UnitClass, x: 35, z: -130 },
-            { name: 'Srs. Kask', class: 'soldier' as UnitClass, x: -55, z: -125 },
-            { name: 'Kpr. Hunt', class: 'soldier' as UnitClass, x: -20, z: -125 },
-            { name: 'Ream. Tamm', class: 'soldier' as UnitClass, x: -10, z: -122 },
-            { name: 'Kpr. Ilves', class: 'soldier' as UnitClass, x: 10, z: -122 },
-            { name: 'Sõdur Karu', class: 'soldier' as UnitClass, x: 20, z: -125 },
-            { name: 'Srs. Sepp', class: 'soldier' as UnitClass, x: 55, z: -125 },
-            { name: 'Ream. Kuusk', class: 'soldier' as UnitClass, x: 0, z: -120 }
+            { name: 'Kpt. Miller', class: 'tank' as UnitClass, x: -70, z: -260 },
+            { name: 'Tank Titan', class: 'tank' as UnitClass, x: 0, z: -275 },
+            { name: 'Tank Ironclad', class: 'tank' as UnitClass, x: 70, z: -260 },
+            { name: 'Srs. Kask', class: 'soldier' as UnitClass, x: -90, z: -250 },
+            { name: 'Kpr. Hunt', class: 'soldier' as UnitClass, x: -40, z: -250 },
+            { name: 'Ream. Tamm', class: 'soldier' as UnitClass, x: -20, z: -245 },
+            { name: 'Kpr. Ilves', class: 'soldier' as UnitClass, x: 20, z: -245 },
+            { name: 'Sõdur Karu', class: 'soldier' as UnitClass, x: 40, z: -250 },
+            { name: 'Srs. Sepp', class: 'soldier' as UnitClass, x: 90, z: -250 },
+            { name: 'Ream. Kuusk', class: 'soldier' as UnitClass, x: 0, z: -240 }
         ];
 
-        // 10 Unique AI Red Units (3 Tanks + 7 Soldiers)
+        // 10 Unique AI Red Units (3 Tanks + 7 Soldiers across 2x battlefield)
         const redRoster = [
-            { name: 'Tank Viper', class: 'tank' as UnitClass, x: -35, z: 130 },
-            { name: 'Tank Goliath', class: 'tank' as UnitClass, x: 0, z: 140 },
-            { name: 'Tank Panzer', class: 'tank' as UnitClass, x: 35, z: 130 },
-            { name: 'Sõdur Fox', class: 'soldier' as UnitClass, x: -55, z: 125 },
-            { name: 'Snaiper Hawk', class: 'soldier' as UnitClass, x: -20, z: 125 },
-            { name: 'Kpt. Wolf', class: 'soldier' as UnitClass, x: -10, z: 122 },
-            { name: 'Srs. Shadow', class: 'soldier' as UnitClass, x: 10, z: 122 },
-            { name: 'Kpr. Blaze', class: 'soldier' as UnitClass, x: 20, z: 125 },
-            { name: 'Ream. Storm', class: 'soldier' as UnitClass, x: 55, z: 125 },
-            { name: 'Sõdur Ghost', class: 'soldier' as UnitClass, x: 0, z: 120 }
+            { name: 'Tank Viper', class: 'tank' as UnitClass, x: -70, z: 260 },
+            { name: 'Tank Goliath', class: 'tank' as UnitClass, x: 0, z: 275 },
+            { name: 'Tank Panzer', class: 'tank' as UnitClass, x: 70, z: 260 },
+            { name: 'Sõdur Fox', class: 'soldier' as UnitClass, x: -90, z: 250 },
+            { name: 'Snaiper Hawk', class: 'soldier' as UnitClass, x: -40, z: 250 },
+            { name: 'Kpt. Wolf', class: 'soldier' as UnitClass, x: -20, z: 245 },
+            { name: 'Srs. Shadow', class: 'soldier' as UnitClass, x: 20, z: 245 },
+            { name: 'Kpr. Blaze', class: 'soldier' as UnitClass, x: 40, z: 250 },
+            { name: 'Ream. Storm', class: 'soldier' as UnitClass, x: 90, z: 250 },
+            { name: 'Sõdur Ghost', class: 'soldier' as UnitClass, x: 0, z: 240 }
         ];
 
         // Spawn Blue Team (If local is Blue, spawn 9 Blue AI; otherwise spawn 10 Blue AI)
@@ -1348,8 +1350,8 @@ class WarGameEngine {
         unit.hp = unit.maxHp;
         unit.root.visible = true;
 
-        const spawnX = (Math.random() - 0.5) * 45;
-        const spawnZ = unit.team === 'red' ? 130 + Math.random() * 10 : -130 - Math.random() * 10;
+        const spawnX = (Math.random() - 0.5) * 120;
+        const spawnZ = unit.team === 'red' ? 260 + Math.random() * 15 : -260 - Math.random() * 15;
         unit.pos.set(spawnX, 0, spawnZ);
         unit.root.position.copy(unit.pos);
         unit.rotation = unit.team === 'red' ? Math.PI : 0;
@@ -1382,12 +1384,12 @@ class WarGameEngine {
                 if (icon) icon.innerText = '🏆';
                 title.innerText = 'VÕIT!';
                 title.style.color = '#ffd32a';
-                desc.innerText = `Sinu ${this.localTeam.toUpperCase()} tiim kindlustas lahinguvälja võidu!`;
+                desc.innerText = `Sinu ${this.localTeam.toUpperCase()} tiim saavutas 100 tapmist ja kindlustas lahinguvälja võidu!`;
             } else {
                 if (icon) icon.innerText = '⚔️';
                 title.innerText = 'KAOTUS!';
                 title.style.color = '#ff4757';
-                desc.innerText = `Vastaste ${winningTeam.toUpperCase()} tiim jõudis 30 tapmiseni esimesena.`;
+                desc.innerText = `Vastaste ${winningTeam.toUpperCase()} tiim jõudis 100 tapmiseni esimesena.`;
             }
             finalKills.innerText = this.myKills.toString();
             finalMoney.innerText = `+${this.matchMoneyEarned.toLocaleString()} €`;
@@ -1465,7 +1467,7 @@ class WarGameEngine {
         const h = this.radarCanvas.height;
         const cx = w / 2;
         const cy = h / 2;
-        const scale = 0.35;
+        const scale = 0.18;
 
         ctx.clearRect(0, 0, w, h);
         ctx.fillStyle = 'rgba(9, 14, 23, 0.9)';
@@ -1541,8 +1543,8 @@ class WarGameEngine {
         const forward = new THREE.Vector3(Math.sin(this.localUnit.rotation), 0, Math.cos(this.localUnit.rotation));
         this.localUnit.pos.addScaledVector(forward, this.localUnit.speed * dt);
 
-        this.localUnit.pos.x = Math.max(-190, Math.min(190, this.localUnit.pos.x));
-        this.localUnit.pos.z = Math.max(-190, Math.min(190, this.localUnit.pos.z));
+        this.localUnit.pos.x = Math.max(-385, Math.min(385, this.localUnit.pos.x));
+        this.localUnit.pos.z = Math.max(-385, Math.min(385, this.localUnit.pos.z));
 
         this.localUnit.root.position.copy(this.localUnit.pos);
         this.localUnit.root.rotation.y = this.localUnit.rotation;
@@ -1630,8 +1632,8 @@ class WarGameEngine {
                 while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
                 unit.rotation += rotDiff * Math.min(1.0, 2.8 * dt);
 
-                if (minDist > 22) {
-                    unit.speed = unit.unitClass === 'tank' ? 10.0 : 12.0;
+                if (minDist > 24) {
+                    unit.speed = unit.unitClass === 'tank' ? 14.0 : 16.0;
                     unit.pos.addScaledVector(toEnemy, unit.speed * dt);
                     if (unit.leftLeg && unit.rightLeg) {
                         unit.walkCycle = (unit.walkCycle || 0) + 12 * dt;
@@ -1651,7 +1653,7 @@ class WarGameEngine {
 
                 // Shoot
                 unit.reloadTimer -= dt;
-                if (unit.reloadTimer <= 0 && minDist < 80) {
+                if (unit.reloadTimer <= 0 && minDist < 120) {
                     unit.reloadTimer = unit.unitClass === 'tank' ? 2.5 + Math.random() * 1.5 : 0.8 + Math.random() * 0.8;
                     const fromPos = unit.pos.clone().add(new THREE.Vector3(0, unit.unitClass === 'tank' ? 2.5 : 1.4, 0));
                     const isExplosive = unit.unitClass === 'tank' || Math.random() > 0.7;
