@@ -728,6 +728,41 @@ class WarGameEngine {
         });
     }
 
+    // --- Base Spawn Positioning ---
+    private getRandomBaseSpawn(team: Team, unitClass: UnitClass): { pos: THREE.Vector3; rot: number } {
+        const isRed = team === 'red';
+        const rot = isRed ? Math.PI : 0;
+
+        if (unitClass === 'plane') {
+            // Airstrips / flight lanes spread across runway
+            const planeLanes = [-65, -35, 0, 35, 65];
+            const laneX = planeLanes[Math.floor(Math.random() * planeLanes.length)] + (Math.random() - 0.5) * 8;
+            const baseZ = isRed ? 275 + Math.random() * 10 : -275 - Math.random() * 10;
+            return {
+                pos: new THREE.Vector3(laneX, 14.0, baseZ),
+                rot
+            };
+        } else if (unitClass === 'tank') {
+            // Tank vehicle staging positions across base
+            const tankSlots = [-85, -50, -20, 20, 50, 85];
+            const slotX = tankSlots[Math.floor(Math.random() * tankSlots.length)] + (Math.random() - 0.5) * 6;
+            const baseZ = isRed ? 262 + Math.random() * 12 : -262 - Math.random() * 12;
+            return {
+                pos: new THREE.Vector3(slotX, 0, baseZ),
+                rot
+            };
+        } else {
+            // Infantry trench line and bunker positions
+            const soldierSlots = [-105, -75, -45, -15, 15, 45, 75, 105];
+            const slotX = soldierSlots[Math.floor(Math.random() * soldierSlots.length)] + (Math.random() - 0.5) * 8;
+            const baseZ = isRed ? 245 + Math.random() * 15 : -245 - Math.random() * 15;
+            return {
+                pos: new THREE.Vector3(slotX, 0, baseZ),
+                rot
+            };
+        }
+    }
+
     // --- Unit Deployment & Roster (10v10 Battle) ---
     private deployLocalUnit() {
         if (this.localUnit) {
@@ -735,18 +770,16 @@ class WarGameEngine {
             this.units.delete(this.localPlayerId);
         }
 
-        const spawnZ = this.localTeam === 'red' ? 260 : -260;
-        const rot = this.localTeam === 'red' ? Math.PI : 0;
-        const pos = new THREE.Vector3(0, 0, spawnZ);
+        const spawn = this.getRandomBaseSpawn(this.localTeam, this.localClass);
 
         if (this.localClass === 'plane') {
-            this.localUnit = this.createPlane(this.localPlayerId, this.localUsername, this.localTeam, true, false, pos, rot);
+            this.localUnit = this.createPlane(this.localPlayerId, this.localUsername, this.localTeam, true, false, spawn.pos, spawn.rot);
             this.primaryReloadTime = 0.15; // Rapid twin autocannon
         } else if (this.localClass === 'tank') {
-            this.localUnit = this.createTank(this.localPlayerId, this.localUsername, this.localTeam, true, false, pos, rot);
+            this.localUnit = this.createTank(this.localPlayerId, this.localUsername, this.localTeam, true, false, spawn.pos, spawn.rot);
             this.primaryReloadTime = 1.2;
         } else {
-            this.localUnit = this.createSoldier(this.localPlayerId, this.localUsername, this.localTeam, true, false, pos, rot);
+            this.localUnit = this.createSoldier(this.localPlayerId, this.localUsername, this.localTeam, true, false, spawn.pos, spawn.rot);
             this.primaryReloadTime = 0.12; // Fast rifle fire
         }
 
@@ -814,32 +847,36 @@ class WarGameEngine {
     }
 
     public resetAllUnitsToBase() {
-        // 1. Reset local player to initial base position
+        // 1. Reset local player to a distinct base position
         if (this.localUnit) {
-            const spawnZ = this.localTeam === 'red' ? 260 : -260;
-            const spawnRot = this.localTeam === 'red' ? Math.PI : 0;
-            const spawnY = this.localClass === 'plane' ? 14.0 : 0;
-            this.localUnit.pos.set(0, spawnY, spawnZ);
-            this.localUnit.rotation = spawnRot;
+            const spawn = this.getRandomBaseSpawn(this.localTeam, this.localClass);
+            this.localUnit.pos.copy(spawn.pos);
+            this.localUnit.rotation = spawn.rot;
             this.localUnit.speed = 0;
             this.localUnit.bankAngle = 0;
             this.localUnit.hp = this.localUnit.maxHp;
             this.localUnit.isDead = false;
             this.localUnit.respawnTimer = 0;
             this.localUnit.root.position.copy(this.localUnit.pos);
-            this.localUnit.root.rotation.set(0, spawnRot, 0);
+            this.localUnit.root.rotation.set(0, spawn.rot, 0);
             this.localUnit.root.visible = true;
             this.updateNameTag(this.localUnit.nameTagCanvas, this.localUnit.name, this.localUnit.team, this.localUnit.hp, this.localUnit.maxHp);
             (this.localUnit.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
         }
 
-        // 2. Reset all bots to their initial base positions & full health
+        // 2. Reset all bots to their distinct spread-out base positions
         this.units.forEach((unit, id) => {
             if (unit.isLocalPlayer) return;
             const initSpawn = this.initialBotSpawnMap.get(id);
             if (initSpawn) {
-                unit.pos.copy(initSpawn.pos);
+                const offsetX = (Math.random() - 0.5) * 6;
+                const offsetZ = (Math.random() - 0.5) * 6;
+                unit.pos.set(initSpawn.pos.x + offsetX, initSpawn.pos.y || 0, initSpawn.pos.z + offsetZ);
                 unit.rotation = initSpawn.rot;
+            } else {
+                const sp = this.getRandomBaseSpawn(unit.team, unit.unitClass);
+                unit.pos.copy(sp.pos);
+                unit.rotation = sp.rot;
             }
             unit.speed = 0;
             unit.hp = unit.maxHp;
@@ -1898,12 +1935,11 @@ class WarGameEngine {
         unit.hp = unit.maxHp;
         unit.root.visible = true;
 
-        const spawnX = (Math.random() - 0.5) * 120;
-        const spawnZ = unit.team === 'red' ? 260 + Math.random() * 15 : -260 - Math.random() * 15;
-        unit.pos.set(spawnX, 0, spawnZ);
+        const spawn = this.getRandomBaseSpawn(unit.team, unit.unitClass);
+        unit.pos.copy(spawn.pos);
         unit.root.position.copy(unit.pos);
-        unit.rotation = unit.team === 'red' ? Math.PI : 0;
-        unit.root.rotation.y = unit.rotation;
+        unit.rotation = spawn.rot;
+        unit.root.rotation.set(0, spawn.rot, 0);
 
         this.updateNameTag(unit.nameTagCanvas, unit.name, unit.team, unit.hp, unit.maxHp);
         (unit.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
