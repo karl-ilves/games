@@ -9,6 +9,8 @@ export interface UserProfile {
     email: string;
     displayName: string;
     isAdmin: boolean;
+    rongimäng?: number;
+    ronginäng?: number;
 }
 
 export const ADMIN_EMAILS = [
@@ -116,6 +118,20 @@ function saveUserGameProgress(profile: UserProfile | null) {
         if (profile.id) localStorage.setItem(`playard_racingSave_user_${profile.id}`, save);
         if (profile.email) localStorage.setItem(`playard_racingSave_user_${profile.email.toLowerCase()}`, save);
     }
+
+    // Save train game money under rongimäng / ronginäng database field
+    const trainMoney = localStorage.getItem('playard_train_money') || localStorage.getItem('rongimäng') || localStorage.getItem('ronginäng');
+    if (trainMoney !== null) {
+        const val = parseInt(trainMoney, 10);
+        if (!isNaN(val)) {
+            if (profile.username) localStorage.setItem(`playard_train_money_user_${profile.username.toLowerCase()}`, val.toString());
+            if (profile.id) localStorage.setItem(`playard_train_money_user_${profile.id}`, val.toString());
+            if (profile.email) localStorage.setItem(`playard_train_money_user_${profile.email.toLowerCase()}`, val.toString());
+            profile.rongimäng = val;
+            profile.ronginäng = val;
+            saveLocalProfile(profile);
+        }
+    }
 }
 
 function restoreUserGameProgress(profile: UserProfile) {
@@ -124,6 +140,33 @@ function restoreUserGameProgress(profile: UserProfile) {
                || localStorage.getItem(`playard_racingSave_user_${profile.email?.toLowerCase()}`);
     if (saved) {
         localStorage.setItem('racingSave', saved);
+    }
+
+    // Restore train game money from rongimäng / ronginäng
+    const savedTrainMoney = localStorage.getItem(`playard_train_money_user_${profile.username.toLowerCase()}`)
+                         || localStorage.getItem(`playard_train_money_user_${profile.id}`)
+                         || localStorage.getItem(`playard_train_money_user_${profile.email?.toLowerCase()}`)
+                         || (profile.rongimäng !== undefined ? profile.rongimäng.toString() : null)
+                         || (profile.ronginäng !== undefined ? profile.ronginäng.toString() : null);
+
+    if (savedTrainMoney !== null) {
+        const val = parseInt(savedTrainMoney, 10);
+        if (!isNaN(val)) {
+            localStorage.setItem('playard_train_money', val.toString());
+            localStorage.setItem('rongimäng', val.toString());
+            localStorage.setItem('ronginäng', val.toString());
+            profile.rongimäng = val;
+            profile.ronginäng = val;
+        }
+    } else if (isPlayardOwner(profile.email)) {
+        // Initial generous money for Playard Owner (10,000 € Rongiraha)
+        const initialOwnerMoney = 10000;
+        localStorage.setItem('playard_train_money', initialOwnerMoney.toString());
+        localStorage.setItem('rongimäng', initialOwnerMoney.toString());
+        localStorage.setItem('ronginäng', initialOwnerMoney.toString());
+        profile.rongimäng = initialOwnerMoney;
+        profile.ronginäng = initialOwnerMoney;
+        saveLocalProfile(profile);
     }
 }
 

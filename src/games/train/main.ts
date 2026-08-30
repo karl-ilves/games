@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
+import { getCurrentUserProfile, isPlayardOwner, isTestMode, saveLocalProfile } from '../../auth';
 import { yardService, YardData } from '../../shared/yardService';
 import { trainAudio } from './audio';
 
@@ -146,22 +146,85 @@ export const I18N = {
 
 const t = isOwner ? I18N.et : I18N.en;
 
-// --- In-Game Currency ("Rongiraha" / 🪙 €) ---
+// --- In-Game Currency ("Rongiraha" / Database lahter: "rongimäng" / "ronginäng") ---
 const TRAIN_MONEY_KEY = 'playard_train_money';
+const DB_RONGIMANG_KEY = 'rongimäng';
+const DB_RONGINANG_KEY = 'ronginäng';
 
 function getTrainMoney(): number {
     try {
+        const prof = getCurrentUserProfile();
+        // 1. Check user profile field `rongimäng` or `ronginäng` in database
+        if (prof?.rongimäng !== undefined && !isNaN(Number(prof.rongimäng))) {
+            return Math.max(0, Math.round(Number(prof.rongimäng)));
+        }
+        if (prof?.ronginäng !== undefined && !isNaN(Number(prof.ronginäng))) {
+            return Math.max(0, Math.round(Number(prof.ronginäng)));
+        }
+
+        // 2. Check user-specific localStorage key
+        if (prof?.email) {
+            const userKey = `playard_train_money_user_${prof.email.toLowerCase()}`;
+            const userVal = localStorage.getItem(userKey);
+            if (userVal !== null) {
+                const parsed = parseInt(userVal, 10);
+                if (!isNaN(parsed)) return Math.max(0, parsed);
+            }
+        }
+        if (prof?.username) {
+            const userKey = `playard_train_money_user_${prof.username.toLowerCase()}`;
+            const userVal = localStorage.getItem(userKey);
+            if (userVal !== null) {
+                const parsed = parseInt(userVal, 10);
+                if (!isNaN(parsed)) return Math.max(0, parsed);
+            }
+        }
+
+        // 3. Check direct database fields 'rongimäng' or 'ronginäng' in localStorage
+        const directDbVal = localStorage.getItem(DB_RONGIMANG_KEY) || localStorage.getItem(DB_RONGINANG_KEY);
+        if (directDbVal !== null) {
+            const parsed = parseInt(directDbVal, 10);
+            if (!isNaN(parsed)) return Math.max(0, parsed);
+        }
+
+        // 4. Check primary key
         const raw = localStorage.getItem(TRAIN_MONEY_KEY);
         if (raw !== null) {
             const val = parseInt(raw, 10);
-            if (!isNaN(val)) return val;
+            if (!isNaN(val)) return Math.max(0, val);
+        }
+
+        // 5. If Playard Owner and uninitialized, start with a generous initial bonus (10,000 €)
+        if (isPlayardOwner(prof?.email)) {
+            const initialBonus = 10000;
+            saveTrainMoney(initialBonus);
+            return initialBonus;
         }
     } catch (e) {}
     return 0;
 }
 
 function saveTrainMoney(val: number) {
-    localStorage.setItem(TRAIN_MONEY_KEY, Math.max(0, Math.round(val)).toString());
+    const cleanVal = Math.max(0, Math.round(val));
+    const strVal = cleanVal.toString();
+    try {
+        localStorage.setItem(TRAIN_MONEY_KEY, strVal);
+        localStorage.setItem(DB_RONGIMANG_KEY, strVal);
+        localStorage.setItem(DB_RONGINANG_KEY, strVal);
+
+        const prof = getCurrentUserProfile();
+        if (prof) {
+            if (prof.email) localStorage.setItem(`playard_train_money_user_${prof.email.toLowerCase()}`, strVal);
+            if (prof.username) localStorage.setItem(`playard_train_money_user_${prof.username.toLowerCase()}`, strVal);
+            if (prof.id) localStorage.setItem(`playard_train_money_user_${prof.id}`, strVal);
+
+            // Add/update column in user profile in local database
+            prof.rongimäng = cleanVal;
+            prof.ronginäng = cleanVal;
+            localStorage.setItem('playard_current_user_profile', JSON.stringify(prof));
+            saveLocalProfile(prof);
+        }
+    } catch (e) {}
 }
 
 function addTrainMoney(amount: number): number {

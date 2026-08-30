@@ -805,8 +805,8 @@ try {
             }
             console.log("   Successfully verified 'You missed the station' notification banner in 3D Train Simulator!");
 
-            // 12. Test Playard Owner Estonian Localization in Train Game
-            console.log("12. Checking Playard Owner Estonian Localization in Rongimäng...");
+            // 12. Test Playard Owner Estonian Localization & Database Money Persistence in Rongimäng
+            console.log("12. Checking Playard Owner Estonian Localization & Database Money (rongimäng)...");
             await page.evaluate(() => {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
@@ -824,7 +824,25 @@ try {
             if (!ownerDepotText.includes('TASUTA') || !ownerDepotText.includes('Linnalähirong Express')) {
                 throw new Error(`Expected Playard Owner depot to be in Estonian, got: ${ownerDepotText.substring(0, 120)}`);
             }
-            console.log("   Successfully verified Estonian localization for Playard Owner (1karl.ilves@gmail.com)!");
+
+            const ownerMoneyVal = await page.$eval('#train-money-val', el => el.textContent);
+            console.log("   Playard Owner Saved Train Money (Expected: >= 10000):", ownerMoneyVal);
+            if (parseInt(ownerMoneyVal.replace(/,/g, ''), 10) < 1000) {
+                throw new Error(`Expected Playard Owner to have initial saved money, got: ${ownerMoneyVal}`);
+            }
+
+            // Verify 'rongimäng' database column in localStorage and user profile
+            const dbCheck = await page.evaluate(() => {
+                const p = JSON.parse(localStorage.getItem('playard_current_user_profile') || '{}');
+                const rawDb = localStorage.getItem('rongimäng') || localStorage.getItem('ronginäng');
+                return { profileDb: p.rongimäng || p.ronginäng, rawDb: rawDb };
+            });
+            console.log("   Database 'rongimäng' column check in profile:", dbCheck);
+            if (!dbCheck.rawDb || !dbCheck.profileDb) {
+                throw new Error(`Expected 'rongimäng' database column to be populated, got: ${JSON.stringify(dbCheck)}`);
+            }
+
+            console.log("   Successfully verified Estonian localization & 'rongimäng' database money persistence for Playard Owner!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
