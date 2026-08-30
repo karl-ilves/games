@@ -147,11 +147,11 @@ try {
         console.log(`   Leftmost game ID after re-playing racing (Expected: racing): ${leftmostIdReplay}`);
         if (leftmostIdReplay !== 'racing') throw new Error("Racing must jump back to #1 leftmost after being played again!");
 
-        // Check War Game visibility for guest (Expected: none - restricted to Owner & Admin)
+        // Check War Game visibility for guest (Expected: flex - published to everyone!)
         const guestWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
-        console.log(`   Guest War Game Card visibility (Expected: none): ${guestWarCardDisplay}`);
-        if (guestWarCardDisplay !== 'none') {
-            throw new Error("War game card must be hidden for guests!");
+        console.log(`   Guest War Game Card visibility (Expected: flex): ${guestWarCardDisplay}`);
+        if (guestWarCardDisplay !== 'flex') {
+            throw new Error("War game card must be visible to all players on Hub!");
         }
 
         // Check Rongimäng visibility for guest (Expected: flex - published to everyone, even not logged in)
@@ -640,11 +640,11 @@ try {
         await page.click('#btn-confirm-deploy');
         await new Promise(r => setTimeout(r, 500));
 
-        // Verify Player Team Badge updated to RED and Human
+        // Verify Player Team Badge updated to RED and Soldier / Inimene
         const teamBadgeText = await page.$eval('#player-team-name', el => el.textContent);
         console.log("   Player Team & Role Badge:", teamBadgeText);
-        if (!teamBadgeText.includes('RED') || !teamBadgeText.includes('INIMENE')) {
-            throw new Error(`Expected badge to reflect RED and INIMENE, got: ${teamBadgeText}`);
+        if (!teamBadgeText.includes('RED') || (!teamBadgeText.includes('SOLDIER') && !teamBadgeText.includes('INIMENE'))) {
+            throw new Error(`Expected badge to reflect RED and SOLDIER/INIMENE, got: ${teamBadgeText}`);
         }
 
         // Verify War Game HUD elements
@@ -687,7 +687,40 @@ try {
         await new Promise(r => setTimeout(r, 300));
         console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
 
-            // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)
+        // 10b. Test Playard Owner Estonian Localization in War Game
+        console.log("10b. Checking Playard Owner Estonian Localization in War Game...");
+        await page.evaluate(() => {
+            const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
+            localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+        });
+        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await new Promise(r => setTimeout(r, 1500));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+
+        const ownerDeployTitle = await page.$eval('#deploy-modal-title', el => el.textContent);
+        console.log("   Playard Owner War Deploy Modal Title (Estonian):", ownerDeployTitle);
+        if (!ownerDeployTitle.includes('VALI TIIM JA LAHINGUROLL')) {
+            throw new Error(`Expected Playard Owner War modal title to be in Estonian, got: ${ownerDeployTitle}`);
+        }
+
+        await page.click('#btn-select-blue');
+        await page.click('#btn-select-human');
+        await page.click('#btn-confirm-deploy');
+        await new Promise(r => setTimeout(r, 500));
+
+        const ownerBadgeText = await page.$eval('#player-team-name', el => el.textContent);
+        console.log("   Playard Owner Team Badge (Estonian):", ownerBadgeText);
+        if (!ownerBadgeText.includes('INIMENE (SÕDUR)')) {
+            throw new Error(`Expected Playard Owner badge to say INIMENE (SÕDUR), got: ${ownerBadgeText}`);
+        }
+        console.log("   Successfully tested Playard Owner Estonian Localization in War Game!");
+
+        // Reset guest profile for subsequent tests
+        await page.evaluate(() => {
+            localStorage.removeItem('playard_current_user_profile');
+        });
+
+        // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)
             console.log("11. Checking 3D Train Simulator (Guest English Localization)...");
             await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
             await new Promise(r => setTimeout(r, 1500));

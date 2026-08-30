@@ -101,6 +101,21 @@ export function applyLocalization() {
         if (tCook) tCook.textContent = isEt ? '💎 TEENI SIIN JARDE (+20Y kuni +40Y tellimuselt)' : '💎 EARN YARDS HERE (+20Y to +40Y per order)';
     }
 
+    // War Game Card
+    const warCard = document.getElementById('card-war-game');
+    if (warCard) {
+        const h2 = warCard.querySelector('h2');
+        if (h2) h2.textContent = isEt ? '⚔️ War game' : '⚔️ 3D War Simulator';
+        const pWar = warCard.querySelector('p');
+        if (pWar) pWar.textContent = isEt
+            ? 'Juhi võimsaid 3D tanke ja sõdureid, kasuta taktikalist tulejõudu, purusta vastased ja teeni mänguraha!'
+            : 'Command powerful 3D tanks and soldiers, unleash tactical firepower, defeat enemy forces, and earn War Cash!';
+        const tWar = warCard.querySelector('.reward-tag span:last-child');
+        if (tWar) tWar.textContent = isEt ? '💰 10v10 LAHING · TEENI MÄNGURAHA (+150 € / +1,000 €)' : '💰 10v10 BATTLE · EARN WAR CASH (+150 € / +1,000 €)';
+        const warPill = warCard.querySelector('.war-badge-pill');
+        if (warPill) warPill.textContent = isEt ? '👑 10v10 LAHING' : '⚔️ 10v10 MULTIPLAYER';
+    }
+
     // Train Game Card
     const trainCard = document.getElementById('card-train-game');
     if (trainCard) {

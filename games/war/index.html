@@ -643,43 +643,43 @@
     <!-- Loadout: Team & Class Selection Modal -->
     <div id="modal-deploy-selection">
         <div class="deploy-card">
-            <h2 style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 6px 0;">⚔️ VALI TIIM JA LAHINGUROLL</h2>
-            <p style="color: #a4b0be; margin-bottom: 20px; font-size: 0.9rem;">
-                Vali oma meeskond ja kas soovid juhtida rasket lahingutanki või liikuvat jalaväelast!
+            <h2 id="deploy-modal-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 6px 0;">⚔️ SELECT TEAM & COMBAT CLASS</h2>
+            <p id="deploy-modal-desc" style="color: #a4b0be; margin-bottom: 20px; font-size: 0.9rem;">
+                Choose your team and whether to command a heavy battle tank or a nimble frontline soldier!
             </p>
 
             <!-- 1. Team Choice -->
-            <div style="text-align: left; font-weight: 800; color: #fff; font-size: 0.95rem; margin-bottom: 8px;">1. Vali Tiim:</div>
+            <div id="deploy-step-1-label" style="text-align: left; font-weight: 800; color: #fff; font-size: 0.95rem; margin-bottom: 8px;">1. Select Team:</div>
             <div class="selection-grid" style="margin-top: 0;">
                 <div class="select-box selected-blue" id="btn-select-blue">
                     <div style="font-size: 2.2rem;">🔵</div>
-                    <div style="font-weight: 900; font-size: 1.1rem; color: #70a1ff; margin-top: 6px;">SININE TIIM</div>
-                    <div style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">Lõuna baas (South Base)</div>
+                    <div class="team-select-title" style="font-weight: 900; font-size: 1.1rem; color: #70a1ff; margin-top: 6px;">BLUE TEAM</div>
+                    <div class="team-select-desc" style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">South Base</div>
                 </div>
                 <div class="select-box" id="btn-select-red">
                     <div style="font-size: 2.2rem;">🔴</div>
-                    <div style="font-weight: 900; font-size: 1.1rem; color: #ff6b81; margin-top: 6px;">PUNANE TIIM</div>
-                    <div style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">Põhja baas (North Base)</div>
+                    <div class="team-select-title" style="font-weight: 900; font-size: 1.1rem; color: #ff6b81; margin-top: 6px;">RED TEAM</div>
+                    <div class="team-select-desc" style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">North Base</div>
                 </div>
             </div>
 
             <!-- 2. Class Choice -->
-            <div style="text-align: left; font-weight: 800; color: #fff; font-size: 0.95rem; margin-bottom: 8px;">2. Vali Roll / Üksus:</div>
+            <div id="deploy-step-2-label" style="text-align: left; font-weight: 800; color: #fff; font-size: 0.95rem; margin-bottom: 8px;">2. Select Class / Unit:</div>
             <div class="selection-grid" style="margin-top: 0;">
                 <div class="select-box selected-class" id="btn-select-tank">
                     <div style="font-size: 2.2rem;">🏎️</div>
-                    <div style="font-weight: 900; font-size: 1.1rem; color: #ffd32a; margin-top: 6px;">LAHINTANK</div>
-                    <div style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">100 HP · Raske Kahur · Suur Plahvatusjõud</div>
+                    <div class="class-select-title" style="font-weight: 900; font-size: 1.1rem; color: #ffd32a; margin-top: 6px;">BATTLE TANK</div>
+                    <div class="class-select-desc" style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">100 HP · Heavy Cannon · Massive Blast Radius</div>
                 </div>
                 <div class="select-box" id="btn-select-human">
                     <div style="font-size: 2.2rem;">🏃</div>
-                    <div style="font-weight: 900; font-size: 1.1rem; color: #00f2fe; margin-top: 6px;">INIMENE / SÕDUR</div>
-                    <div style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">50 HP · Kiire Liikumine · Automaat & Granaat</div>
+                    <div class="class-select-title" style="font-weight: 900; font-size: 1.1rem; color: #00f2fe; margin-top: 6px;">INFANTRY SOLDIER</div>
+                    <div class="class-select-desc" style="font-size: 0.78rem; color: #a4b0be; margin-top: 4px;">50 HP · High Mobility · Assault Rifle & Grenade</div>
                 </div>
             </div>
 
             <button id="btn-confirm-deploy" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; border-radius: 12px; color: #111; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4); margin-top: 10px;">
-                🚀 SUUNDU LAHINGUVÄLJALE (DEPLOY)
+                🚀 DEPLOY TO BATTLEFIELD
             </button>
         </div>
     </div>
@@ -688,8 +688,8 @@
     <div id="respawn-overlay">
         <div class="respawn-card">
             <div style="font-size: 3.2rem; margin-bottom: 10px;">💥</div>
-            <h2 style="color: #ff4757; margin: 0 0 8px 0; font-size: 1.6rem;">ÜKSUS HÄVITATUD!</h2>
-            <p style="color: #a4b0be; margin-bottom: 15px;">Taassünd baasis uue soomusega:</p>
+            <h2 id="respawn-title" style="color: #ff4757; margin: 0 0 8px 0; font-size: 1.6rem;">UNIT DESTROYED!</h2>
+            <p id="respawn-desc" style="color: #a4b0be; margin-bottom: 15px;">Respawning at base with fresh armor in:</p>
             <div id="respawn-countdown" style="font-size: 3rem; font-weight: 900; color: #ffd32a; font-family: monospace;">5</div>
         </div>
     </div>
@@ -698,16 +698,16 @@
     <div id="vip-restricted-overlay">
         <div class="vip-lock-card">
             <div style="font-size: 3.5rem; margin-bottom: 10px;">🔒</div>
-            <h1>War game</h1>
+            <h1>3D War Simulator</h1>
             <div style="display: inline-block; background: rgba(255, 71, 87, 0.15); border: 1px solid #ff4757; color: #ff4757; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; margin-bottom: 18px;">
-                PIIRATUD LIGIPÄÄS / RESTRICTED ACCESS
+                RESTRICTED ACCESS
             </div>
             <p>
-                See 3D sõjamäng on eksklusiivselt kättesaadav <strong>ainult Playardi Ownerile ja Adminile</strong>.<br><br>
-                Palun logi sisse volitatud kontoga või naase pealehele.
+                This 3D multiplayer war simulator is available to Playard players.<br><br>
+                Please log in or return to the main hub.
             </p>
             <div style="display: flex; justify-content: center; gap: 15px;">
-                <a href="../../index.html" class="btn-action" style="padding: 12px 24px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 800; border: none;">🏠 Tagasi Avalehele</a>
+                <a href="../../index.html" class="btn-action" style="padding: 12px 24px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 800; border: none;">🏠 Return to Hub</a>
             </div>
         </div>
     </div>
@@ -716,20 +716,20 @@
     <div id="match-end-modal">
         <div class="match-end-card">
             <div id="match-end-icon" style="font-size: 3.5rem; margin-bottom: 10px;">🏆</div>
-            <h2 id="match-end-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 10px 0;">VÕIT!</h2>
-            <p id="match-end-desc" style="color: #a4b0be; margin-bottom: 20px;">Sinu meeskond saavutas 100 tapmist ja kindlustas lahinguvälja!</p>
+            <h2 id="match-end-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 10px 0;">VICTORY!</h2>
+            <p id="match-end-desc" style="color: #a4b0be; margin-bottom: 20px;">Your team reached 100 kills and secured battlefield victory!</p>
             <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; margin-bottom: 25px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span>Sinu Tapmised:</span>
+                    <span id="final-kills-label">Your Kills:</span>
                     <strong id="final-kills-val" style="color: #ffd32a;">0</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between; color: #2ed573; font-weight: 800;">
-                    <span>Teenitud Mänguraha:</span>
+                    <span id="final-money-label">War Cash Earned:</span>
                     <strong id="final-money-val">+1,000 €</strong>
                 </div>
             </div>
             <div style="display: flex; gap: 12px; justify-content: center;">
-                <button id="btn-restart-match" class="btn-action" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #111; font-weight: 800; border: none; padding: 12px 24px;">🔄 Uus Lahing</button>
+                <button id="btn-restart-match" class="btn-action" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #111; font-weight: 800; border: none; padding: 12px 24px;">🔄 New Battle</button>
                 <a href="../../index.html" class="btn-action" style="padding: 12px 20px;">🏠 Hub</a>
             </div>
         </div>
@@ -739,16 +739,16 @@
     <div id="modal-help">
         <div class="modal-card">
             <button class="modal-close" id="btn-close-help">&times;</button>
-            <h2 style="color: #ffd32a; margin-top: 0;">🎮 War Game - Juhised & Reeglid</h2>
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.92rem; color: #e2e8f0;">
-                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Liikumine (Tank või Inimene)</div>
-                <div><strong style="color: #ffd32a;">Hiir:</strong> Torni või relva sihtimine (360 kraadi)</div>
-                <div><strong style="color: #ffd32a;">Klahv 1 / 2 / 3:</strong> Relva vahetamine (1: Kahur, 2: MG-42, 3: Airstrike)</div>
-                <div><strong style="color: #ff4757;">Vasak hiireklõps / Tühik:</strong> Tulistab valitud aktiivset relva!</div>
-                <div><strong style="color: #ff6b81;">Klahv F:</strong> Kiire õhulöök (Airstrike sihtimine ja klõpsuga kukutamine)</div>
+            <h2 id="help-modal-title" style="color: #ffd32a; margin-top: 0;">🎮 War Game - Controls & Rules</h2>
+            <div id="help-modal-content" style="display: flex; flex-direction: column; gap: 10px; font-size: 0.92rem; color: #e2e8f0;">
+                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Movement (Tank or Soldier)</div>
+                <div><strong style="color: #ffd32a;">Mouse:</strong> Turret & weapon aiming (360 degrees)</div>
+                <div><strong style="color: #ffd32a;">Keys 1 / 2 / 3:</strong> Switch weapon (1: Cannon, 2: MG-42, 3: Airstrike)</div>
+                <div><strong style="color: #ff4757;">Left Click / Space:</strong> Fire selected active weapon!</div>
+                <div><strong style="color: #ff6b81;">Key F:</strong> Quick Airstrike (Aim artillery and click to drop)</div>
                 <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
-                <div><strong style="color: #ffd32a;">💥 Leviv Plahvatus:</strong> Plahvatused tekitavad leviva lööklaine, mis kahjustab kõiki objekte levialas!</div>
-                <div><strong style="color: #00f2fe;">👥 Mängijate loogika:</strong> Mängus on eepiline 10v10 lahing (kokku 20 võitlejat: 10 Sinist vs 10 Punast). Kui oled üksi serveris, on Sinu tiimis 9 AI-d ja vastasel 10 AI-d (kokku 19 AI-d oma nimedega)!</div>
+                <div><strong style="color: #ffd32a;">💥 Spreading Blast:</strong> Explosions unleash expanding shockwaves damaging everything in radius!</div>
+                <div><strong style="color: #00f2fe;">👥 10v10 Combat Roster:</strong> Massive 10v10 warfare (20 total units: 10 Blue vs 10 Red). When alone in server, 19 named AI combatants deploy automatically!</div>
             </div>
         </div>
     </div>

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { supabase } from '../../lib/supabase';
-import { getCurrentUserProfile, isUserAdminEmail } from '../../auth';
+import { getCurrentUserProfile, isUserAdminEmail, isPlayardOwner } from '../../auth';
 import { yardService } from '../../shared/yardService';
 import { warAudio } from './audio';
 import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
@@ -230,25 +230,132 @@ class WarGameEngine {
         }
     }
 
-    private checkAuthorization() {
-        const prof = getCurrentUserProfile();
-        const email = prof?.email;
-        const isAuthorized = isUserAdminEmail(email) || (typeof window !== 'undefined' && (window as any).__PLAYARD_TEST_MODE__);
+    private isOwnerLang = false;
 
+    private checkAuthorization() {
+        // War Game is now open to all players!
         const vipOverlay = document.getElementById('vip-restricted-overlay');
-        if (!isAuthorized && vipOverlay) {
-            vipOverlay.style.display = 'flex';
-        } else if (vipOverlay) {
+        if (vipOverlay) {
             vipOverlay.style.display = 'none';
         }
     }
 
     private setupLocalIdentity() {
         const prof = getCurrentUserProfile();
+        this.isOwnerLang = isPlayardOwner(prof?.email);
         if (prof) {
-            this.localUsername = prof.displayName || prof.username || 'Commander';
+            this.localUsername = prof.displayName || prof.username || (this.isOwnerLang ? 'Komandör' : 'Commander');
             if (prof.id) this.localPlayerId = prof.id;
+        } else {
+            this.localUsername = this.isOwnerLang ? 'Komandör' : 'Commander';
         }
+        this.applyWarLocalization();
+    }
+
+    private applyWarLocalization() {
+        const isEt = this.isOwnerLang;
+        document.title = isEt ? 'Playard Games - War Game (10v10 Lahing)' : 'Playard Games - 3D War Simulator (10v10 Battle)';
+
+        const serverEl = document.getElementById('server-players-count');
+        if (serverEl) {
+            serverEl.innerText = isEt
+                ? `${Math.min(20, this.connectedHumanCount)} / 20 Mängijat (10v10 Lahing)`
+                : `${Math.min(20, this.connectedHumanCount)} / 20 Players (10v10 Battle)`;
+        }
+
+        const btnLoadout = document.getElementById('btn-open-loadout');
+        if (btnLoadout) btnLoadout.innerText = isEt ? '⚔️ Vali Tiim / Roll' : '⚔️ Choose Team / Role';
+
+        const btnSound = document.getElementById('btn-sound-toggle');
+        if (btnSound) btnSound.innerText = isEt ? (warAudio.getMuted() ? '🔇 Vaigistatud' : '🔊 Heli') : (warAudio.getMuted() ? '🔇 Muted' : '🔊 Sound');
+
+        const btnHelp = document.getElementById('btn-open-help');
+        if (btnHelp) btnHelp.innerText = isEt ? '❓ Abi' : '❓ Help';
+
+        const ammoCannon = document.getElementById('ammo-cannon');
+        if (ammoCannon) ammoCannon.innerText = isEt ? '∞ Mürsud' : '∞ Shells';
+
+        const reloadLabel = document.getElementById('unit-reload-label');
+        if (reloadLabel) reloadLabel.innerText = isEt ? '⏳ LAADIMINE' : '⏳ RELOAD';
+
+        // Deploy Modal
+        const deployTitle = document.getElementById('deploy-modal-title');
+        if (deployTitle) deployTitle.textContent = isEt ? '⚔️ VALI TIIM JA LAHINGUROLL' : '⚔️ SELECT TEAM & COMBAT CLASS';
+
+        const deployDesc = document.getElementById('deploy-modal-desc');
+        if (deployDesc) deployDesc.textContent = isEt
+            ? 'Vali oma meeskond ja kas soovid juhtida rasket lahingutanki või liikuvat jalaväelast!'
+            : 'Choose your team and whether to command a heavy battle tank or a nimble frontline soldier!';
+
+        const step1 = document.getElementById('deploy-step-1-label');
+        if (step1) step1.textContent = isEt ? '1. Vali Tiim:' : '1. Select Team:';
+
+        const blueName = document.querySelector('#btn-select-blue .team-select-title');
+        if (blueName) blueName.textContent = isEt ? 'SININE TIIM' : 'BLUE TEAM';
+        const blueDesc = document.querySelector('#btn-select-blue .team-select-desc');
+        if (blueDesc) blueDesc.textContent = isEt ? 'Lõuna baas (South Base)' : 'South Base';
+
+        const redName = document.querySelector('#btn-select-red .team-select-title');
+        if (redName) redName.textContent = isEt ? 'PUNANE TIIM' : 'RED TEAM';
+        const redDesc = document.querySelector('#btn-select-red .team-select-desc');
+        if (redDesc) redDesc.textContent = isEt ? 'Põhja baas (North Base)' : 'North Base';
+
+        const step2 = document.getElementById('deploy-step-2-label');
+        if (step2) step2.textContent = isEt ? '2. Vali Roll / Üksus:' : '2. Select Class / Unit:';
+
+        const tankTitle = document.querySelector('#btn-select-tank .class-select-title');
+        if (tankTitle) tankTitle.textContent = isEt ? 'LAHINGTANK' : 'BATTLE TANK';
+        const tankDesc = document.querySelector('#btn-select-tank .class-select-desc');
+        if (tankDesc) tankDesc.textContent = isEt ? '100 HP · Raske Kahur · Suur Plahvatusjõud' : '100 HP · Heavy Cannon · Massive Blast Radius';
+
+        const humanTitle = document.querySelector('#btn-select-human .class-select-title');
+        if (humanTitle) humanTitle.textContent = isEt ? 'INIMENE / SÕDUR' : 'INFANTRY SOLDIER';
+        const humanDesc = document.querySelector('#btn-select-human .class-select-desc');
+        if (humanDesc) humanDesc.textContent = isEt ? '50 HP · Kiire Liikumine · Automaat & Granaat' : '50 HP · High Mobility · Assault Rifle & Grenade';
+
+        const btnConfirm = document.getElementById('btn-confirm-deploy');
+        if (btnConfirm) btnConfirm.textContent = isEt ? '🚀 SUUNDU LAHINGUVÄLJALE (DEPLOY)' : '🚀 DEPLOY TO BATTLEFIELD';
+
+        // Respawn Overlay
+        const respawnTitle = document.getElementById('respawn-title');
+        if (respawnTitle) respawnTitle.textContent = isEt ? '💥 ÜKSUS HÄVITATUD!' : '💥 UNIT DESTROYED!';
+        const respawnDesc = document.getElementById('respawn-desc');
+        if (respawnDesc) respawnDesc.textContent = isEt ? 'Taassünd baasis uue soomusega:' : 'Respawning at base with fresh armor in:';
+
+        // Help Modal
+        const helpTitle = document.getElementById('help-modal-title');
+        if (helpTitle) helpTitle.textContent = isEt ? '🎮 War Game - Juhised & Reeglid' : '🎮 War Game - Controls & Rules';
+
+        const helpContent = document.getElementById('help-modal-content');
+        if (helpContent) {
+            helpContent.innerHTML = isEt ? `
+                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Liikumine (Tank või Inimene)</div>
+                <div><strong style="color: #ffd32a;">Hiir:</strong> Torni või relva sihtimine (360 kraadi)</div>
+                <div><strong style="color: #ffd32a;">Klahv 1 / 2 / 3:</strong> Relva vahetamine (1: Kahur, 2: MG-42, 3: Airstrike)</div>
+                <div><strong style="color: #ff4757;">Vasak hiireklõps / Tühik:</strong> Tulistab valitud aktiivset relva!</div>
+                <div><strong style="color: #ff6b81;">Klahv F:</strong> Kiire õhulöök (Airstrike sihtimine ja klõpsuga kukutamine)</div>
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+                <div><strong style="color: #ffd32a;">💥 Leviv Plahvatus:</strong> Plahvatused tekitavad leviva lööklaine, mis kahjustab kõiki objekte levialas!</div>
+                <div><strong style="color: #00f2fe;">👥 Mängijate loogika:</strong> Mängus on eepiline 10v10 lahing (kokku 20 võitlejat: 10 Sinist vs 10 Punast). Kui oled üksi serveris, on Sinu tiimis 9 AI-d ja vastasel 10 AI-d (kokku 19 AI-d oma nimedega)!</div>
+            ` : `
+                <div><strong style="color: #00f2fe;">W / A / S / D:</strong> Movement (Tank or Soldier)</div>
+                <div><strong style="color: #ffd32a;">Mouse:</strong> Turret & weapon aiming (360 degrees)</div>
+                <div><strong style="color: #ffd32a;">Keys 1 / 2 / 3:</strong> Switch weapon (1: Cannon, 2: MG-42, 3: Airstrike)</div>
+                <div><strong style="color: #ff4757;">Left Click / Space:</strong> Fire selected active weapon!</div>
+                <div><strong style="color: #ff6b81;">Key F:</strong> Quick Airstrike (Aim artillery and click to drop)</div>
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+                <div><strong style="color: #ffd32a;">💥 Spreading Blast:</strong> Explosions unleash expanding shockwaves damaging everything in radius!</div>
+                <div><strong style="color: #00f2fe;">👥 10v10 Combat Roster:</strong> Massive 10v10 warfare (20 total units: 10 Blue vs 10 Red). When alone in server, 19 named AI combatants deploy automatically!</div>
+            `;
+        }
+
+        // Match end restart btn & labels
+        const btnRestart = document.getElementById('btn-restart-match');
+        if (btnRestart) btnRestart.innerText = isEt ? '🔄 Uus Lahing' : '🔄 New Battle';
+        const finalKillsLabel = document.getElementById('final-kills-label');
+        if (finalKillsLabel) finalKillsLabel.innerText = isEt ? 'Sinu Tapmised:' : 'Your Kills:';
+        const finalMoneyLabel = document.getElementById('final-money-label');
+        if (finalMoneyLabel) finalMoneyLabel.innerText = isEt ? 'Teenitud Mänguraha:' : 'War Cash Earned:';
     }
 
     private setupDeployModal() {
@@ -294,7 +401,10 @@ class WarGameEngine {
             if (!this.isRosterSpawned) this.spawnBattleRoster();
             this.updateTeamBadge();
             this.network?.updateIdentity(this.localTeam, this.localClass);
-            this.showToast(`🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${this.localClass === 'tank' ? 'TANK' : 'SÕDUR'})`, this.localTeam === 'red' ? '#ff4757' : '#00f2fe');
+            const enteringMsg = this.isOwnerLang
+                ? `🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${this.localClass === 'tank' ? 'TANK' : 'SÕDUR'})`
+                : `🚀 Entering battle: War Server #1 (${this.localTeam.toUpperCase()} ${this.localClass === 'tank' ? 'TANK' : 'SOLDIER'})`;
+            this.showToast(enteringMsg, this.localTeam === 'red' ? '#ff4757' : '#00f2fe');
         });
 
         // Open loadout change button in navbar
@@ -343,7 +453,14 @@ class WarGameEngine {
         const weapon2Name = document.getElementById('weapon-name-2');
         const weapon2Icon = document.getElementById('weapon-icon-2');
 
-        const roleIcon = this.localClass === 'tank' ? '🏎️ TANK' : '🏃 INIMENE (SÕDUR)';
+        const roleIcon = this.localClass === 'tank'
+            ? '🏎️ TANK'
+            : (this.isOwnerLang ? '🏃 INIMENE (SÕDUR)' : '🏃 SOLDIER');
+
+        const youAreLabel = this.isOwnerLang ? 'OLED:' : 'YOU ARE:';
+        const youAreSpan = badge?.querySelector('span');
+        if (youAreSpan) youAreSpan.innerText = youAreLabel;
+
         if (badge && nameEl) {
             if (this.localTeam === 'red') {
                 badge.className = 'team-red';
@@ -356,13 +473,21 @@ class WarGameEngine {
             }
         }
 
-        if (hpLabel) hpLabel.innerText = this.localClass === 'tank' ? '🛡️ SOOMUS (HP)' : '❤️ ELUD (HP)';
+        if (hpLabel) {
+            hpLabel.innerText = this.localClass === 'tank'
+                ? (this.isOwnerLang ? '🛡️ SOOMUS (HP)' : '🛡️ ARMOR (HP)')
+                : (this.isOwnerLang ? '❤️ ELUD (HP)' : '❤️ HEALTH (HP)');
+        }
         if (weapon1Name && weapon1Icon) {
-            weapon1Name.innerText = this.localClass === 'tank' ? 'KAHUR' : 'AUTOMAAT';
+            weapon1Name.innerText = this.localClass === 'tank'
+                ? (this.isOwnerLang ? 'KAHUR' : 'CANNON')
+                : (this.isOwnerLang ? 'AUTOMAAT' : 'RIFLE');
             weapon1Icon.innerText = this.localClass === 'tank' ? '🚀' : '🔫';
         }
         if (weapon2Name && weapon2Icon) {
-            weapon2Name.innerText = this.localClass === 'tank' ? 'MG-42' : 'GRANAAT';
+            weapon2Name.innerText = this.localClass === 'tank'
+                ? 'MG-42'
+                : (this.isOwnerLang ? 'GRANAAT' : 'GRENADE');
             weapon2Icon.innerText = this.localClass === 'tank' ? '🔫' : '💣';
         }
     }
@@ -772,11 +897,17 @@ class WarGameEngine {
                 } else if (event.type === 'unit_killed') {
                     this.onRemoteKill(event.payload);
                 } else if (event.type === 'player_join') {
-                    this.showToast(`👥 ${event.payload.name || 'Uus mängija'} liitus serveriga!`, event.payload.team === 'red' ? '#ff4757' : '#00f2fe');
+                    const msg = this.isOwnerLang
+                        ? `👥 ${event.payload.name || 'Uus mängija'} liitus serveriga!`
+                        : `👥 ${event.payload.name || 'New player'} joined the server!`;
+                    this.showToast(msg, event.payload.team === 'red' ? '#ff4757' : '#00f2fe');
                 } else if (event.type === 'player_leave') {
                     const unit = this.units.get(event.payload.id);
                     if (unit) {
-                        this.showToast(`🚪 ${unit.name} lahkus serverist`, '#a4b0be');
+                        const msg = this.isOwnerLang
+                            ? `🚪 ${unit.name} lahkus serverist`
+                            : `🚪 ${unit.name} left the server`;
+                        this.showToast(msg, '#a4b0be');
                         this.scene.remove(unit.root);
                         this.units.delete(event.payload.id);
                     }
@@ -786,7 +917,9 @@ class WarGameEngine {
                 this.connectedHumanCount = onlineCount;
                 const serverEl = document.getElementById('server-players-count');
                 if (serverEl) {
-                    serverEl.innerText = `${Math.min(20, this.connectedHumanCount)} / 20 Mängijat (10v10 Lahing)`;
+                    serverEl.innerText = this.isOwnerLang
+                        ? `${Math.min(20, this.connectedHumanCount)} / 20 Mängijat (10v10 Lahing)`
+                        : `${Math.min(20, this.connectedHumanCount)} / 20 Players (10v10 Battle)`;
                 }
             }
         );
@@ -1452,14 +1585,18 @@ class WarGameEngine {
             modal.style.display = 'flex';
             if (isWin) {
                 if (icon) icon.innerText = '🏆';
-                title.innerText = 'VÕIT!';
+                title.innerText = this.isOwnerLang ? 'VÕIT!' : 'VICTORY!';
                 title.style.color = '#ffd32a';
-                desc.innerText = `Sinu ${this.localTeam.toUpperCase()} tiim saavutas 100 tapmist ja kindlustas lahinguvälja võidu!`;
+                desc.innerText = this.isOwnerLang
+                    ? `Sinu ${this.localTeam.toUpperCase()} tiim saavutas 100 tapmist ja kindlustas lahinguvälja võidu!`
+                    : `Your ${this.localTeam.toUpperCase()} team reached 100 kills and secured battlefield victory!`;
             } else {
                 if (icon) icon.innerText = '⚔️';
-                title.innerText = 'KAOTUS!';
+                title.innerText = this.isOwnerLang ? 'KAOTUS!' : 'DEFEAT!';
                 title.style.color = '#ff4757';
-                desc.innerText = `Vastaste ${winningTeam.toUpperCase()} tiim jõudis 100 tapmiseni esimesena.`;
+                desc.innerText = this.isOwnerLang
+                    ? `Vastaste ${winningTeam.toUpperCase()} tiim jõudis 100 tapmiseni esimesena.`
+                    : `Enemy ${winningTeam.toUpperCase()} team reached 100 kills first.`;
             }
             finalKills.innerText = this.myKills.toString();
             finalMoney.innerText = `+${this.matchMoneyEarned.toLocaleString()} €`;
@@ -1495,7 +1632,7 @@ class WarGameEngine {
                     const pct = ((this.primaryReloadTime - this.primaryReloadTimer) / this.primaryReloadTime) * 100;
                     reloadBar.style.width = `${pct}%`;
                 } else {
-                    reloadText.innerText = 'VALMIS';
+                    reloadText.innerText = this.isOwnerLang ? 'VALMIS' : 'READY';
                     reloadBar.style.width = '100%';
                 }
             } else if (this.activeWeapon === 'mg') {
@@ -1505,11 +1642,11 @@ class WarGameEngine {
                         const pct = ((3.5 - this.secondaryReloadTimer) / 3.5) * 100;
                         reloadBar.style.width = `${pct}%`;
                     } else {
-                        reloadText.innerText = 'GRANAAT VALMIS';
+                        reloadText.innerText = this.isOwnerLang ? 'GRANAAT VALMIS' : 'GRENADE READY';
                         reloadBar.style.width = '100%';
                     }
                 } else {
-                    reloadText.innerText = this.mgAmmo > 0 ? `${this.mgAmmo} RDS` : 'TÜHI';
+                    reloadText.innerText = this.mgAmmo > 0 ? `${this.mgAmmo} RDS` : (this.isOwnerLang ? 'TÜHI' : 'EMPTY');
                     reloadBar.style.width = `${Math.max(0, (this.mgAmmo / 500) * 100)}%`;
                 }
             } else if (this.activeWeapon === 'airstrike') {
@@ -1518,7 +1655,9 @@ class WarGameEngine {
                     const pct = ((25.0 - this.airstrikeCooldown) / 25.0) * 100;
                     reloadBar.style.width = `${pct}%`;
                 } else {
-                    reloadText.innerText = this.isAirstrikeTargeting ? '📍 SIHI & KLÕPSA' : 'VALMIS';
+                    reloadText.innerText = this.isAirstrikeTargeting
+                        ? (this.isOwnerLang ? '📍 SIHI & KLÕPSA' : '📍 TARGET & CLICK')
+                        : (this.isOwnerLang ? 'VALMIS' : 'READY');
                     reloadBar.style.width = '100%';
                 }
             }
@@ -1526,8 +1665,16 @@ class WarGameEngine {
 
         if (statKills) statKills.innerText = this.myKills.toString();
         if (statMoney) statMoney.innerText = this.warMoney.toLocaleString();
-        if (ammoMg) ammoMg.innerText = this.localClass === 'tank' ? `${this.mgAmmo} rds` : '💣 Granaat';
-        if (cdAirstrike) cdAirstrike.innerText = this.airstrikeCooldown > 0 ? `${Math.ceil(this.airstrikeCooldown)}s` : 'VALMIS';
+        if (ammoMg) {
+            ammoMg.innerText = this.localClass === 'tank'
+                ? `${this.mgAmmo} rds`
+                : (this.isOwnerLang ? '💣 Granaat' : '💣 Grenade');
+        }
+        if (cdAirstrike) {
+            cdAirstrike.innerText = this.airstrikeCooldown > 0
+                ? `${Math.ceil(this.airstrikeCooldown)}s`
+                : (this.isOwnerLang ? 'VALMIS' : 'READY');
+        }
     }
 
     private radarSweepAngle = 0;

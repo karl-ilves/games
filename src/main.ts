@@ -31,13 +31,13 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         btnOpenStreak.style.display = showAdminPanel ? 'none' : 'flex';
     }
     
-    // War game kaart on nähtav Playardi Ownerile ja Adminile
+    // War game on nüüd avaldatud KÕIKIDELE mängijatele
     const warGameCard = document.getElementById('card-war-game');
     if (warGameCard) {
-        warGameCard.style.display = isUserAdminEmail(emailToCheck) ? 'flex' : 'none';
+        warGameCard.style.display = 'flex';
     }
 
-    // Rongimäng on avaldatud KÕIKIDELE mängijatele (isegi neile, kes pole sisse loginud)
+    // Rongimäng on avaldatud KÕIKIDELE mängijatele
     const trainGameCard = document.getElementById('card-train-game');
     if (trainGameCard) {
         trainGameCard.style.display = 'flex';
