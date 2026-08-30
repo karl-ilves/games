@@ -602,8 +602,8 @@ try {
         }
 
         const depotText = await page.$eval('#trains-grid-container', el => el.textContent);
-        if (!depotText.includes('100') || !depotText.includes('TASUTA') || !depotText.includes('Linnalähirong Express')) {
-            throw new Error("Depot must contain cheapest 100 price train and default train!");
+        if (!depotText.includes('100 €') || !depotText.includes('300 Y') || !depotText.includes('TASUTA') || !depotText.includes('Linnalähirong Express')) {
+            throw new Error("Depot must contain cheapest 100 € train with 3x Yard price (300 Y) and default free train!");
         }
 
         const moneyBuyBtnCount = await page.$$eval('.btn-buy-money', els => els.length);
@@ -612,7 +612,7 @@ try {
         if (moneyBuyBtnCount === 0 || yardBuyBtnCount === 0) {
             throw new Error("Expected both Rongiraha and Yard purchase buttons in depot!");
         }
-        console.log("   Successfully verified 10 distinct trains with in-game currency + Yard purchase in depot!");
+        console.log("   Successfully verified 10 distinct trains with 3x Yard price (100 € vs 300 Y) in depot!");
 
         // Start driving from depot
         await page.click('#btn-depot-start-driving');

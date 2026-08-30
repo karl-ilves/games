@@ -470,6 +470,7 @@ function renderDepotModal() {
     TRAINS_CATALOG.forEach(train => {
         const isUnlocked = unlockedIds.includes(train.id);
         const isActive = train.id === currentActiveId;
+        const yardPrice = train.price * 3; // Yardid maksavad 3 korda rohkem kui mänguraha
 
         const card = document.createElement('div');
         card.className = `train-card ${isActive ? 'active-train' : (!isUnlocked ? 'locked-train' : '')}`;
@@ -478,7 +479,7 @@ function renderDepotModal() {
         if (train.price === 0) {
             priceBadgeHtml = `<span class="train-price-badge badge-free">TASUTA</span>`;
         } else {
-            priceBadgeHtml = `<span class="train-price-badge badge-price">🪙 ${train.price} €  või  💎 ${train.price} Y</span>`;
+            priceBadgeHtml = `<span class="train-price-badge badge-price">🪙 ${train.price} €  või  💎 ${yardPrice} Y</span>`;
         }
 
         let actionBtnHtml = '';
@@ -490,7 +491,7 @@ function renderDepotModal() {
             actionBtnHtml = `
                 <div style="display: flex; flex-direction: column; width: 100%; gap: 6px; margin-top: 8px;">
                     <button class="btn-train-select btn-buy-money" data-train-id="${train.id}" data-price="${train.price}">🪙 OSTA (${train.price} €)</button>
-                    <button class="btn-train-select btn-buy-yard" data-train-id="${train.id}" data-price="${train.price}">💎 OSTA (${train.price} Y)</button>
+                    <button class="btn-train-select btn-buy-yard" data-train-id="${train.id}" data-price="${yardPrice}">💎 OSTA (${yardPrice} Y)</button>
                 </div>
             `;
         }
@@ -543,14 +544,14 @@ function renderDepotModal() {
         });
     });
 
-    // Attach Click Handlers for Buying with Playard Yards (💎 Y)
+    // Attach Click Handlers for Buying with Playard Yards (💎 Y - 3x hind)
     gridContainer.querySelectorAll('.btn-buy-yard').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
             const trainId = target.dataset.trainId;
-            const price = parseInt(target.dataset.price || '0', 10);
+            const yardPrice = parseInt(target.dataset.price || '0', 10);
             if (!trainId) return;
-            buyTrainWithYards(trainId, price);
+            buyTrainWithYards(trainId, yardPrice);
         });
     });
 }
@@ -590,13 +591,13 @@ function buyTrainWithMoney(trainId: string, price: number) {
     selectTrain(trainId);
 }
 
-function buyTrainWithYards(trainId: string, price: number) {
+function buyTrainWithYards(trainId: string, yardPrice: number) {
     const train = TRAINS_CATALOG.find(t => t.id === trainId);
     if (!train) return;
 
-    const success = yardService.spendYards(price, train.id, `Rongimäng: Osteti ${train.name}`);
+    const success = yardService.spendYards(yardPrice, train.id, `Rongimäng: Osteti ${train.name}`);
     if (!success) {
-        showDepotMessage(`Sul pole piisavalt Yarde! Vajad ${price} Y (praegu ${yardService.getYards()} Y).`, true);
+        showDepotMessage(`Sul pole piisavalt Yarde! Vajad ${yardPrice} Y (praegu ${yardService.getYards()} Y).`, true);
         return;
     }
 
@@ -607,7 +608,7 @@ function buyTrainWithYards(trainId: string, price: number) {
     }
 
     trainAudio.playCoinReward();
-    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}" Playard Yardide eest (${price} Y)!`, false);
+    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}" Playard Yardide eest (${yardPrice} Y)!`, false);
     selectTrain(trainId);
 }
 
