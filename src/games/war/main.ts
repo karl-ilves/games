@@ -1530,6 +1530,41 @@ class WarGameEngine {
         ctx.lineTo(sweepX, sweepY);
         ctx.stroke();
 
+        // Proximity detection: trigger radar sonar beep if enemies are nearby
+        if (!this.localUnit.isDead && !this.isMatchEnded) {
+            let nearestEnemyDist = Infinity;
+            this.units.forEach(u => {
+                if (u.isDead || u.team === this.localTeam || u.id === this.localPlayerId) return;
+                const d = this.localUnit.pos.distanceTo(u.pos);
+                if (d < nearestEnemyDist) nearestEnemyDist = d;
+            });
+
+            if (nearestEnemyDist < 140) {
+                let beepInterval = 1.1;
+                let beepPitch = 1500;
+                let beepVol = 0.2;
+
+                if (nearestEnemyDist < 40) {
+                    beepInterval = 0.32;
+                    beepPitch = 2300;
+                    beepVol = 0.35;
+                } else if (nearestEnemyDist < 80) {
+                    beepInterval = 0.6;
+                    beepPitch = 1900;
+                    beepVol = 0.28;
+                }
+
+                this.radarBeepTimer -= dt;
+                if (this.radarBeepTimer <= 0) {
+                    this.radarBeepTimer = beepInterval;
+                    warAudio.playRadarBeep(beepPitch, beepVol);
+                    this.radarPulseAlpha = 0.8;
+                }
+            } else {
+                this.radarBeepTimer = 0;
+            }
+        }
+
         // Render all 20 units across battlefield
         this.units.forEach(unit => {
             if (unit.isDead) return;
@@ -1537,6 +1572,16 @@ class WarGameEngine {
             const ry = cy + (unit.pos.z / mapMax) * (r * 0.85);
 
             if (unit.isLocalPlayer) {
+                // Proximity danger warning pulse ring
+                if (this.radarPulseAlpha > 0) {
+                    this.radarPulseAlpha = Math.max(0, this.radarPulseAlpha - dt * 2.2);
+                    ctx.strokeStyle = `rgba(255, 71, 87, ${this.radarPulseAlpha})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(rx, ry, 16 * (1 - this.radarPulseAlpha * 0.4), 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
                 // Local player: golden icon with direction arrow
                 ctx.fillStyle = '#ffd32a';
                 ctx.beginPath();
