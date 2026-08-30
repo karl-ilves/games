@@ -642,11 +642,11 @@ try {
             throw new Error("Fighter jet option with 50,000 € lock badge must exist!");
         }
 
-        // Check Missile Team in scrollable selection
-        const missileTeamOptionExists = await page.$eval('#btn-select-missile-team', el => !!el);
-        console.log("   Missile Team Option Exists in Modal:", missileTeamOptionExists);
-        if (!missileTeamOptionExists) {
-            throw new Error("Missile Team option (#btn-select-missile-team) must exist in deploy modal!");
+        // Check Missile Team role in scrollable roles selection
+        const missileRoleOptionExists = await page.$eval('#btn-select-missile', el => !!el);
+        console.log("   Raketitiim Role Option Exists in Modal:", missileRoleOptionExists);
+        if (!missileRoleOptionExists) {
+            throw new Error("Raketitiim option (#btn-select-missile) must exist in deploy modal roles!");
         }
 
         // Verify Deploy / Play button is visible and clickable
@@ -725,39 +725,39 @@ try {
         // Verify missile & nuke are hidden for regular soldier/red team
         const redMissileDisplay = await page.$eval('#weapon-missile', el => window.getComputedStyle(el).display);
         const redNukeDisplay = await page.$eval('#weapon-nuke', el => window.getComputedStyle(el).display);
-        console.log("   Regular Player Missile & Nuke Display (Expected: none):", redMissileDisplay, redNukeDisplay);
+        console.log("   Regular Soldier Missile & Nuke Display (Expected: none):", redMissileDisplay, redNukeDisplay);
         if (redMissileDisplay !== 'none' || redNukeDisplay !== 'none') {
-            throw new Error("Missiles and Nukes must be hidden for regular teams!");
+            throw new Error("Missiles and Nukes must be hidden for regular soldiers/tanks!");
         }
 
-        // Test Deploying as Missile Team
-        console.log("   Testing Missile Team Exclusive Weapons & Satellite Targeting...");
+        // Test Deploying as Raketitiim Role
+        console.log("   Testing Raketitiim Role Exclusive Weapons & Satellite Targeting...");
         await page.click('#btn-open-loadout');
         await new Promise(r => setTimeout(r, 300));
-        await page.click('#btn-select-missile-team');
+        await page.click('#btn-select-missile');
         await page.click('#btn-confirm-deploy');
         await new Promise(r => setTimeout(r, 4000)); // Wait for 3-2-1 countdown
 
-        const missileTeamBadgeText = await page.$eval('#player-team-name', el => el.textContent);
-        console.log("   Player Team Badge as Missile Team:", missileTeamBadgeText);
-        if (!missileTeamBadgeText.includes('MISSILE') && !missileTeamBadgeText.includes('RAKETITIIM')) {
-            throw new Error(`Expected badge to reflect MISSILE TEAM, got: ${missileTeamBadgeText}`);
+        const missileRoleBadgeText = await page.$eval('#player-team-name', el => el.textContent);
+        console.log("   Player Role Badge as Raketitiim:", missileRoleBadgeText);
+        if (!missileRoleBadgeText.includes('MISSILE') && !missileRoleBadgeText.includes('RAKETITIIM')) {
+            throw new Error(`Expected badge to reflect MISSILE / RAKETITIIM, got: ${missileRoleBadgeText}`);
         }
 
-        // Test 10s Missile Strike & Satellite Targeting HUD for Missile Team
+        // Test 10s Missile Strike & Satellite Targeting HUD for Raketitiim Role
         const missileCardDisplay = await page.$eval('#weapon-missile', el => window.getComputedStyle(el).display);
         const nukeCardDisplay = await page.$eval('#weapon-nuke', el => window.getComputedStyle(el).display);
-        console.log("   Missile Team Card Display (Expected: flex):", missileCardDisplay, nukeCardDisplay);
+        console.log("   Raketitiim Card Display (Expected: flex):", missileCardDisplay, nukeCardDisplay);
         if (missileCardDisplay !== 'flex' || nukeCardDisplay !== 'flex') {
-            throw new Error("Missile and Nuke cards must be visible for Missile Team!");
+            throw new Error("Missile and Nuke cards must be visible for Raketitiim role!");
         }
 
-        // Test opening Satellite Targeting Mode for Missile Team
+        // Test opening Satellite Targeting Mode for Raketitiim Role
         await page.click('#weapon-missile');
         await new Promise(r => setTimeout(r, 200));
         await page.keyboard.press('Escape');
         await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully verified Missile Team exclusive 10s Missile Strike and 60s Nuke!");
+        console.log("   Successfully verified Raketitiim role exclusive 10s Missile Strike and 60s Nuke!");
 
         // Test Fighter Jet Unlock with 50,000 €
         console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");
