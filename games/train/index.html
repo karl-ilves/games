@@ -516,39 +516,39 @@
         <div class="hud-left">
             <a href="../../index.html" class="logo-badge">
                 <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 30px; height: 30px;">
-                <span>RONGIMÄNG</span>
+                <span id="logo-title-text">3D TRAIN SIMULATOR</span>
             </a>
-            <span class="owner-pill">👑 OWNER EXCLUSIVE</span>
+            <span class="owner-pill" id="owner-badge-pill">🔥 3D SIMULATOR</span>
             <button id="btn-open-depot" class="btn-action" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #111; font-weight: 900; border: none; box-shadow: 0 0 12px rgba(255,211,42,0.4);">
                 <span>🚆</span>
-                <span>Rongide Valik (10 Rongi)</span>
+                <span id="btn-open-depot-text">Train Selection (10 Trains)</span>
             </button>
         </div>
 
         <div class="hud-center">
             <div class="mission-badge" id="mission-target-badge">
-                <span>🎯 Sihtjaam:</span>
-                <strong style="color: #ffd32a;" id="target-station-name">Männimetsa Peatus</strong>
+                <span id="target-station-label">🎯 Target Station:</span>
+                <strong style="color: #ffd32a;" id="target-station-name">Pine Forest Station</strong>
                 <span style="color: #a4b0be; font-size: 0.8rem;" id="target-station-dist">(120m)</span>
             </div>
             <div class="hud-stat-box" style="border-color: rgba(46, 204, 113, 0.4);">
-                <span>👥 Reisijaid:</span>
+                <span id="passengers-label">👥 Passengers:</span>
                 <strong style="color: #2ecc71;" id="stat-passengers">24</strong>
             </div>
         </div>
 
         <div class="hud-right">
             <!-- In-game Train Money Balance -->
-            <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.45); background: rgba(255, 211, 42, 0.12);" title="Rongimängu oma raha (teenid +50€ iga jaamaga)">
+            <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.45); background: rgba(255, 211, 42, 0.12);" id="train-money-box" title="Train Money (earn +50€ per station)">
                 <span>🪙</span>
                 <span id="train-money-val" style="color: #ffd32a; font-weight: 800;">0</span>
                 <span style="font-size: 0.75rem; color: #ffd32a; font-weight: 700;">€</span>
             </div>
 
-            <button id="btn-camera-view" class="btn-action" title="Vaheta vaadet (Klahv C)">🎥 Vaade (3D)</button>
-            <button id="btn-toggle-weather" class="btn-action" title="Päev / Loojang / Öö (Klahv N)">☀️ Päev</button>
-            <button id="btn-sound-toggle" class="btn-action">🔊 Heli</button>
-            <button id="btn-open-help" class="btn-action">❓ Abi</button>
+            <button id="btn-camera-view" class="btn-action" title="Switch View (Key C)">🎥 View (3D)</button>
+            <button id="btn-toggle-weather" class="btn-action" title="Day / Sunset / Night (Key N)">☀️ Day</button>
+            <button id="btn-sound-toggle" class="btn-action">🔊 Sound</button>
+            <button id="btn-open-help" class="btn-action">❓ Help</button>
             <a href="../../index.html" class="btn-action" style="border-color: #00f2fe; color: #00f2fe;">🏠 Hub</a>
         </div>
     </header>
@@ -556,19 +556,19 @@
     <!-- Track Junction Switcher Indicator Banner -->
     <div id="junction-banner" style="display: none;">
         <span style="font-size: 1.3rem;">🔀</span>
-        <span>Lähened pöörmele:</span>
+        <span id="junction-notice-text">Approaching junction:</span>
         <button id="btn-switch-track" class="btn-action" style="background: #ffd32a; color: #111; font-weight: 900; border: none; padding: 6px 14px;">
-            Vaheta Suunda (J / Tühik)
+            Switch Track (J / Space)
         </button>
-        <span id="junction-dir-text" style="color: #00f2fe;">[VASAKULE]</span>
+        <span id="junction-dir-text" style="color: #00f2fe;">[MAIN LINE]</span>
     </div>
 
     <!-- Station Stopping & Boarding HUD -->
     <div id="station-boarding-panel">
         <div style="font-weight: 900; font-size: 1.1rem; color: #2ecc71; display: flex; align-items: center; gap: 8px;">
-            <span>🚉</span> <span id="boarding-station-title">PEATUS JAAMAS</span>
+            <span>🚉</span> <span id="boarding-station-title">STATION STOP</span>
         </div>
-        <div style="color: #a4b0be; font-size: 0.85rem;" id="boarding-subtext">Reisijate pealeminek ja kaubavahetus (+50 €)...</div>
+        <div style="color: #a4b0be; font-size: 0.85rem;" id="boarding-subtext">Passenger boarding and cargo exchange (+50 €)...</div>
         <div class="boarding-bar">
             <div class="boarding-fill" id="boarding-progress"></div>
         </div>
@@ -577,10 +577,10 @@
     <!-- Station Skipped Notification Banner -->
     <div id="station-skipped-banner" style="display: none; position: fixed; top: 120px; left: 50%; transform: translateX(-50%); background: rgba(220, 38, 38, 0.95); border: 2px solid #ef4444; box-shadow: 0 8px 32px rgba(220, 38, 38, 0.45); border-radius: 12px; padding: 12px 24px; color: #fff; z-index: 100; text-align: center; backdrop-filter: blur(10px);">
         <div style="font-size: 1.25rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fee2e2;">
-            <span>⚠️</span> <span id="skipped-title">SA JÄTSID PEATUSE VAHELE!</span>
+            <span>⚠️</span> <span id="skipped-title">YOU MISSED THE STATION!</span>
         </div>
         <div style="font-size: 0.88rem; color: #fecaca; margin-top: 4px;" id="skipped-desc">
-            Peatus jäi vahele. Sõit jätkub järgmise jaama suunas!
+            You missed the station. Continuing towards the next stop!
         </div>
     </div>
 
@@ -593,13 +593,13 @@
             <!-- Speedometer -->
             <div class="speedometer-dial">
                 <div class="speed-val" id="speed-text">0</div>
-                <div class="speed-unit">KM / H</div>
+                <div class="speed-unit" id="speed-unit-text">KM / H</div>
             </div>
 
             <!-- Throttle & Reverser -->
             <div class="throttle-bar-wrap">
                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 800;">
-                    <span style="color: #a4b0be;">KIIRENDUS</span>
+                    <span style="color: #a4b0be;" id="throttle-label-text">THROTTLE</span>
                     <span id="throttle-text" style="color: #2ecc71;">0%</span>
                 </div>
                 <div class="bar-container">
@@ -609,17 +609,17 @@
 
             <!-- Control Buttons -->
             <div class="controls-btn-group">
-                <button class="train-control-btn" id="btn-throttle-up" title="Kiirenda (W / Nool Üles)">
+                <button class="train-control-btn" id="btn-throttle-up" title="Accelerate (W / Up Arrow)">
                     <span>⚡</span>
-                    <span>GAAS</span>
+                    <span id="btn-power-text">POWER</span>
                 </button>
-                <button class="train-control-btn brake-btn" id="btn-throttle-down" title="Pidurda / Tagurda (S / Nool Alla)">
+                <button class="train-control-btn brake-btn" id="btn-throttle-down" title="Brake / Reverse (S / Down Arrow)">
                     <span>🛑</span>
-                    <span>PIDUR</span>
+                    <span id="btn-brake-text">BRAKE</span>
                 </button>
-                <button class="train-control-btn horn-btn" id="btn-horn" title="Rongivile (H / Tühik)">
+                <button class="train-control-btn horn-btn" id="btn-horn" title="Train Horn (H / Space)">
                     <span>📢</span>
-                    <span>VILE</span>
+                    <span id="btn-horn-text">HORN</span>
                 </button>
             </div>
         </div>
@@ -644,20 +644,20 @@
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
                 <div>
                     <h2 style="color: #ffd32a; font-size: 1.7rem; margin: 0; display: flex; align-items: center; gap: 10px;">
-                        <span>🚆</span> <span>Rongide Depoo & Pood</span>
+                        <span>🚆</span> <span id="depot-title-text">Train Depot & Store</span>
                     </h2>
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin: 4px 0 0 0;">
-                        Vali oma rong või osta uusi ronge Rongiraha eest (teenid +50€ jaamaga) või Yardidega (Yardid = 5x mänguraha)!
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin: 4px 0 0 0;" id="depot-desc-text">
+                        Select your train or unlock new locomotives using Train Money (+50€ per stop) or Yards (Yards = 5x train price)!
                     </p>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <div class="hud-stat-box" style="border-color: #ffd32a; background: rgba(255, 211, 42, 0.15); padding: 6px 14px;">
-                        <span style="color: #a4b0be; font-size: 0.85rem;">🪙 Rongiraha:</span>
+                        <span style="color: #a4b0be; font-size: 0.85rem;" id="depot-money-label-text">🪙 Train Money:</span>
                         <strong id="depot-money-val" style="color: #ffd32a; font-size: 1.15rem;">0</strong>
                         <span style="color: #ffd32a; font-weight: bold; font-size: 0.85rem;">€</span>
                     </div>
                     <div class="hud-stat-box" style="border-color: #00f2fe; background: rgba(0, 242, 254, 0.15); padding: 6px 14px;">
-                        <span style="color: #a4b0be; font-size: 0.85rem;">💎 Yardid:</span>
+                        <span style="color: #a4b0be; font-size: 0.85rem;" id="depot-yard-label-text">💎 Yards:</span>
                         <strong id="depot-yard-val" style="color: #00f2fe; font-size: 1.15rem;">0</strong>
                         <span style="color: #00f2fe; font-weight: bold; font-size: 0.85rem;">Y</span>
                     </div>
@@ -674,7 +674,7 @@
 
             <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">
                 <button id="btn-depot-start-driving" class="btn-action" style="padding: 12px 28px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 900; font-size: 1rem; border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,242,254,0.4);">
-                    🚂 SÕIDA VALITUD RONGIGA
+                    🚂 START DRIVING
                 </button>
             </div>
         </div>
@@ -684,18 +684,18 @@
     <div id="modal-station-success" class="modal-overlay">
         <div class="modal-card">
             <div style="font-size: 3.5rem; margin-bottom: 8px;">🎉</div>
-            <h2 style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 8px 0;" id="reward-modal-title">JAAM EDUKALT LÄBITUD!</h2>
+            <h2 style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 8px 0;" id="reward-modal-title">STATION ARRIVAL SUCCESS!</h2>
             <p style="color: #d2dae2; margin-bottom: 20px;" id="reward-modal-desc">
-                Reisijad toimetati turvaliselt sihtjaama ja graafikust peeti kinni!
+                Passengers safely transported to destination!
             </p>
             <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 16px; margin-bottom: 22px;">
                 <div style="display: flex; justify-content: space-between; font-size: 1.25rem; color: #ffd32a; font-weight: 800;">
-                    <span>Teenitud Rongiraha:</span>
+                    <span id="reward-money-label">Earned Train Money:</span>
                     <strong id="reward-money-text">+50 € 🪙</strong>
                 </div>
             </div>
             <button id="btn-next-station-continue" class="btn-action" style="width: 100%; justify-content: center; padding: 12px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 900; font-size: 1.05rem; border: none;">
-                🚂 JÄTKA JÄRGMISELE LIINILE
+                🚂 CONTINUE JOURNEY
             </button>
         </div>
     </div>
@@ -704,34 +704,16 @@
     <div id="modal-help" class="modal-overlay">
         <div class="modal-card" style="text-align: left;">
             <button class="modal-close" id="btn-close-help">&times;</button>
-            <h2 style="color: #ffd32a; margin-top: 0;">🚂 Rongimäng - Juhtimisjuhised</h2>
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.92rem; color: #e2e8f0; line-height: 1.4;">
-                <div><strong style="color: #00f2fe;">W / Nool Üles / [GAAS]:</strong> Kiirenda vedurit edasi</div>
-                <div><strong style="color: #ff4757;">S / Nool Alla / [PIDUR]:</strong> Pidurda või tagurda</div>
-                <div><strong style="color: #ffd32a;">H / Tühik / [VILE]:</strong> Lase rongivilet (Tuut-tuut!)</div>
-                <div><strong style="color: #ffd32a;">J / Tühik:</strong> Vaheta raudteepööret / suunda ristmikel</div>
-                <div><strong style="color: #00f2fe;">C:</strong> Vaheta kaameravaadet (Juhi kabiin, Tagaajamisvaade, Kinovaade, Pealtvaade)</div>
-                <div><strong style="color: #ffd32a;">N:</strong> Vaheta ilma ja kellaaega (Päev, Loojang, Öö)</div>
+            <h2 style="color: #ffd32a; margin-top: 0;" id="help-title">🚂 Train Simulator Guide & Controls</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.92rem; color: #e2e8f0; line-height: 1.4;" id="help-content-box">
+                <div><strong style="color: #00f2fe;">W / Up Arrow / [POWER]:</strong> Accelerate locomotive forward</div>
+                <div><strong style="color: #ff4757;">S / Down Arrow / [BRAKE]:</strong> Brake or reverse</div>
+                <div><strong style="color: #ffd32a;">H / Space / [HORN]:</strong> Sound train horn and steam burst</div>
+                <div><strong style="color: #ffd32a;">J / KeyJ:</strong> Switch track junction (Main line vs Mountain Loop)</div>
+                <div><strong style="color: #00f2fe;">C:</strong> Toggle camera view (Cab Driver, Chase 3D, Cinematic, Map)</div>
+                <div><strong style="color: #ffd32a;">N:</strong> Toggle weather & lighting (Day, Sunset, Night)</div>
                 <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
-                <div><strong style="color: #ffd32a;">🪙 Kuidas teenida Rongiraha:</strong> Peatu jaamatsoonis kiirusel 0 km/h, oota kuni reisijad peale lähevad ja teeni iga peatusega +50 €!</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- VIP Restricted Lockout Overlay -->
-    <div id="vip-restricted-overlay">
-        <div class="vip-lock-card">
-            <div style="font-size: 3.5rem; margin-bottom: 10px;">🔒</div>
-            <h1 style="color: #00f2fe; margin: 0 0 10px 0;">Rongimäng (3D Train Simulator)</h1>
-            <div style="display: inline-block; background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; color: #00f2fe; padding: 4px 14px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; margin-bottom: 18px;">
-                PLAYARD OWNER EXCLUSIVE
-            </div>
-            <p style="line-height: 1.5; color: #d2dae2;">
-                See uus 3D Rongimäng on praegu algusfaasis nähtav ja mängitav <strong>ainult Playardi Ownerile</strong> (1karl.ilves@gmail.com).<br><br>
-                Palun logi sisse volitatud Playard Owneri kontoga või mine tagasi mängude keskusesse.
-            </p>
-            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 20px;">
-                <a href="../../index.html" class="btn-action" style="padding: 12px 24px; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; font-weight: 800; border: none;">🏠 Tagasi Avalehele</a>
+                <div><strong style="color: #ffd32a;">🪙 How to Earn Train Money:</strong> Stop inside station zone at 0 km/h, wait for boarding to finish, and earn +50 € at every station stop!</div>
             </div>
         </div>
     </div>

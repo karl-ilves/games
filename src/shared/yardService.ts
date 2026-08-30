@@ -83,7 +83,7 @@ export const DEFAULT_RECENTLY_PLAYED_GAMES: RecentlyPlayedGame[] = [
     {
         id: 'racing',
         title: '🏎️ Racing Simulator',
-        description: 'Race high-speed sports cars and motorcycles on challenging circuits against opponents.',
+        description: 'Võistle kiirete sportautode ja mootorratastega põnevatel ringradadel vastaste vastu.',
         url: './games/racing/index.html',
         icon: '🏎️',
         badgeText: 'Circuit Racing',
@@ -93,20 +93,20 @@ export const DEFAULT_RECENTLY_PLAYED_GAMES: RecentlyPlayedGame[] = [
     {
         id: 'cooking',
         title: '🍳 3D Master Chef',
-        description: 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!',
+        description: 'Valmista burgereid, pitsasid ja pastasid, täida klientide tellimusi ja teeni Yarde!',
         url: './games/cooking/index.html',
         icon: '🍳',
-        badgeText: '💎 +20Y to +40Y',
+        badgeText: '💎 +20Y kuni +40Y',
         badgeColor: '#ffd32a',
         lastPlayed: Date.now() - 60 * 60 * 1000 // 1 hour ago (#2)
     },
     {
-        id: 'creator',
-        title: '🛠️ 3D Game Creator Studio',
-        description: 'Build custom 3D worlds, roads, cars, code interactive game logic with AI, and publish games.',
-        url: './games/creator/index.html',
-        icon: '🛠️',
-        badgeText: 'Studio & AI',
+        id: 'play',
+        title: '🎮 Kogukonna 3D mängud',
+        description: 'Mängi teiste mängijate poolt loodud ja administraatori poolt heaks kiidetud 3D mänge.',
+        url: './games/play/index.html',
+        icon: '🎮',
+        badgeText: 'Community Play',
         badgeColor: '#2ecc71',
         lastPlayed: Date.now() - 24 * 60 * 60 * 1000 // 1 day ago (#3)
     }

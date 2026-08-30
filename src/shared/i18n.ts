@@ -66,35 +66,15 @@ export function applyLocalization() {
     const officialH2 = document.querySelector('.hub-container > h2');
     if (officialH2) officialH2.textContent = isEt ? 'Ametlikud simulaatorid' : 'Official Simulators';
 
-    // Game cards
-    const cards = document.querySelectorAll('.game-card');
-    if (cards.length >= 3) {
-        // Airplane
-        const p1 = cards[0].querySelector('p');
-        if (p1) p1.textContent = isEt
-            ? 'Lenda Cessna või Boeinguga üle 3D linna, maandu lennuradadele ja naudi realistlikku ilmastikku.'
-            : 'Fly a Cessna or Boeing over a realistic 3D city, land safely on runways, and navigate dynamic weather.';
-        const t1 = cards[0].querySelector('.reward-tag span:last-child');
-        if (t1) t1.textContent = isEt ? 'Realistlik lennusimulatsioon' : 'Realistic Flight Simulation';
-
-        // Racing
-        const p2 = cards[1].querySelector('p');
+    // Racing Game Card
+    const racingCard = document.getElementById('card-racing-game');
+    if (racingCard) {
+        const p2 = racingCard.querySelector('p');
         if (p2) p2.textContent = isEt
             ? 'Sõida kiirete sportautode ja mootorratastega ringradadel vastaste vastu.'
             : 'Race high-speed sports cars and motorcycles on challenging circuits against opponents.';
-        const t2 = cards[1].querySelector('.reward-tag span:last-child');
+        const t2 = racingCard.querySelector('.reward-tag span:last-child');
         if (t2) t2.textContent = isEt ? 'Ringraja võidusõit' : 'Circuit Racing Experience';
-
-        // Space
-        const spaceCard = document.querySelector('.game-card.disabled');
-        if (spaceCard) {
-            const p3 = spaceCard.querySelector('p');
-            if (p3) p3.textContent = isEt
-                ? 'Tähtedevaheline kosmoseuuring ja planeetide avastamine.'
-                : 'Interstellar planetary exploration & space flight simulation.';
-            const t3 = spaceCard.querySelector('.reward-tag span:last-child');
-            if (t3) t3.textContent = isEt ? 'Varsti tulekul' : 'Coming Soon';
-        }
     }
 
     // Cooking Game Card
@@ -106,6 +86,21 @@ export function applyLocalization() {
             : 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!';
         const tCook = cookingCard.querySelector('.reward-tag span:last-child');
         if (tCook) tCook.textContent = isEt ? '💎 TEENI SIIN JARDE (+20Y kuni +40Y tellimuselt)' : '💎 EARN YARDS HERE (+20Y to +40Y per order)';
+    }
+
+    // Train Game Card
+    const trainCard = document.getElementById('card-train-game');
+    if (trainCard) {
+        const h2 = trainCard.querySelector('h2');
+        if (h2) h2.textContent = isEt ? '🚂 Rongimäng' : '🚂 3D Train Simulator';
+        const pTrain = trainCard.querySelector('p');
+        if (pTrain) pTrain.textContent = isEt
+            ? 'Juhi võimsat 3D vedurit mööda maalilist raudteevõrku, vaheta pöörmeid, lase vilet, teeninda jaamu ja teeni Rongiraha!'
+            : 'Drive realistic 3D locomotives across scenic railway networks, switch tracks, blow the horn, stop at stations, and earn Train Money!';
+        const tTrain = trainCard.querySelector('.reward-tag span:last-child');
+        if (tTrain) tTrain.textContent = isEt ? '🪙 JAAMAPEATUSED (+50 € Rongiraha jaama kohta)' : '🪙 STATION STOPS (+50 € Train Money per stop)';
+        const ownerPill = trainCard.querySelector('.owner-badge-pill');
+        if (ownerPill) ownerPill.textContent = isEt ? '👑 PLAYARD OWNER' : '🔥 NEW 3D GAME';
     }
 
     // Community section

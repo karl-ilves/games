@@ -37,7 +37,7 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         warGameCard.style.display = isUserAdminEmail(emailToCheck) ? 'flex' : 'none';
     }
 
-    // Rongimäng on alguses nähtav AINULT Playardi Ownerile (1karl.ilves@gmail.com)
+    // Rongimäng on nähtav Playard Ownerile
     const trainGameCard = document.getElementById('card-train-game');
     if (trainGameCard) {
         trainGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
@@ -714,15 +714,6 @@ function setupGameCardTracking() {
             icon: '🚂',
             badgeText: '💎 +40Y kuni +100Y',
             badgeColor: '#00f2fe'
-        },
-        './games/creator/index.html': {
-            id: 'creator',
-            title: '🛠️ 3D Game Creator Studio',
-            description: 'Build custom 3D worlds, roads, cars, code interactive game logic with AI, and publish games.',
-            url: './games/creator/index.html',
-            icon: '🛠️',
-            badgeText: 'Studio & AI',
-            badgeColor: '#2ecc71'
         },
         './games/play/index.html': {
             id: 'play',

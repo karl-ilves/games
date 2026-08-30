@@ -3,26 +3,148 @@ import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
 import { yardService, YardData } from '../../shared/yardService';
 import { trainAudio } from './audio';
 
-console.log("3D Rongimäng (Train Simulator - 10 Trains Depot & In-Game Currency) Initialized.");
+console.log("3D Train Simulator / Rongimäng Initialized.");
 
-// --- Access Gating Check (Playard Owner Only) ---
+// --- Access Gating Check (Published to Everyone) ---
 function checkOwnerAccess(): boolean {
-    const prof = getCurrentUserProfile();
-    const isOwner = isPlayardOwner(prof?.email);
-    const testMode = isTestMode(prof?.email);
-
     const vipOverlay = document.getElementById('vip-restricted-overlay');
     if (vipOverlay) {
-        if (isOwner || testMode) {
-            vipOverlay.style.display = 'none';
-            return true;
-        } else {
-            vipOverlay.style.display = 'flex';
-            return false;
-        }
+        vipOverlay.style.display = 'none';
     }
     return true;
 }
+
+// User Profile & Language Determination
+const userProf = getCurrentUserProfile();
+const isOwner = isPlayardOwner(userProf?.email);
+
+// --- Dual Localization Dictionary (Estonian for Playard Owner, English for Everyone Else) ---
+export const I18N = {
+    et: {
+        gameTitle: 'RONGIMÄNG',
+        ownerPill: '👑 PLAYARD OWNER',
+        depotBtn: 'Rongide Valik (10 Rongi)',
+        targetStation: '🎯 Sihtjaam:',
+        passengers: '👥 Reisijaid:',
+        moneyTooltip: 'Rongimängu oma raha (teenid +50€ iga jaamaga)',
+        camModes: ['🎥 Tagaajam (3D)', '🎥 Kabiin (Juht)', '🎥 Kinovaade', '🎥 Pealtvaade'],
+        weatherModes: ['☀️ Päev', '🌅 Loojang', '🌙 Öö'],
+        sound: '🔊 Heli',
+        soundMuted: '🔇 Vaigistatud',
+        help: '❓ Abi',
+        hub: '🏠 Hub',
+        approachingJunction: 'Lähened pöörmele:',
+        switchTrackBtn: 'Vaheta Suunda (J / Tühik)',
+        branchMain: '[PÕHILIIN]',
+        branchMountain: '[MÄERING]',
+        stationStopTitle: 'PEATUS JAAMAS',
+        stationStopSubtext: 'Reisijate pealeminek ja kaubavahetus (+50 €)...',
+        skippedTitle: 'SA JÄTSID PEATUSE VAHELE!',
+        skippedDesc: (name: string) => `Jätsid vahele: "${name}". Sõit jätkub järgmise jaama poole!`,
+        rewardTitle: (name: string) => `🎉 ${name.toUpperCase()} EDUKALT LÄBITUD!`,
+        rewardDesc: (passengers: number) => `Reisijad (+${passengers} inimest) toimetati kohale. Teeni igal peatusel +50 € Rongiraha!`,
+        rewardBtn: '🚂 JÄTKA SÕITU',
+        rewardMoneyLabel: 'Teenitud Rongiraha:',
+        depotTitle: 'Rongide Depoo & Pood',
+        depotDesc: 'Vali oma rong või osta uusi ronge Rongiraha eest (teenid +50€ jaamaga) või Yardidega (Yardid = 5x mänguraha)!',
+        depotMoneyLabel: '🪙 Rongiraha:',
+        depotYardLabel: '💎 Yardid:',
+        depotStartDriving: '🚂 ALUSTA RONGISÕITU',
+        topSpeed: 'Tippkiirus:',
+        accel: 'Kiirendus:',
+        capacity: 'Mahutavus:',
+        passengersUnit: 'reisijat',
+        free: 'TASUTA',
+        or: 'või',
+        selected: '✅ VALITUD',
+        chooseTrain: '▶️ VALI RONG',
+        buyMoney: (price: number) => `🪙 OSTA (${price} €)`,
+        buyYard: (price: number) => `💎 OSTA (${price} Y)`,
+        boughtSuccessMoney: (name: string, price: number) => `🎉 Ostsid edukalt rongi "${name}" Rongiraha eest (${price} €)!`,
+        boughtSuccessYard: (name: string, price: number) => `🎉 Ostsid edukalt rongi "${name}" Yardide eest (${price} Y)!`,
+        notEnoughMoney: (price: number, cur: number) => `Sul pole piisavalt Rongiraha! Vajad ${price} € (sul on ${cur} €).`,
+        notEnoughYards: (price: number, cur: number) => `Sul pole piisavalt Yarde! Vajad ${price} Y (praegu ${cur} Y).`,
+        speedUnit: 'KM / H',
+        throttleLabel: 'KIIRENDUS',
+        btnPower: 'GAAS',
+        btnBrake: 'PIDUR',
+        btnHorn: 'VILE',
+        helpTitle: '🚂 Rongimäng - Juhtimisjuhised',
+        helpContent: `
+            <div><strong style="color: #00f2fe;">W / Nool Üles / [GAAS]:</strong> Kiirenda vedurit edasi</div>
+            <div><strong style="color: #ff4757;">S / Nool Alla / [PIDUR]:</strong> Pidurda või tagurda</div>
+            <div><strong style="color: #ffd32a;">H / Tühik / [VILE]:</strong> Lase rongivilet (Tuut-tuut!)</div>
+            <div><strong style="color: #ffd32a;">J / Tühik:</strong> Vaheta raudteepööret / suunda ristmikel</div>
+            <div><strong style="color: #00f2fe;">C:</strong> Vaheta kaameravaadet (Juhi kabiin, Tagaajamisvaade, Kinovaade, Pealtvaade)</div>
+            <div><strong style="color: #ffd32a;">N:</strong> Vaheta ilma ja kellaaega (Päev, Loojang, Öö)</div>
+            <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+            <div><strong style="color: #ffd32a;">🪙 Kuidas teenida Rongiraha:</strong> Peatu jaamatsoonis kiirusel 0 km/h, oota kuni reisijad peale lähevad ja teeni iga peatusega +50 €!</div>
+        `
+    },
+    en: {
+        gameTitle: '3D TRAIN SIMULATOR',
+        ownerPill: '🔥 3D SIMULATOR',
+        depotBtn: 'Train Selection (10 Trains)',
+        targetStation: '🎯 Target Station:',
+        passengers: '👥 Passengers:',
+        moneyTooltip: 'Train Money (earn +50€ per station stop)',
+        camModes: ['🎥 Chase (3D)', '🎥 Cab (Driver)', '🎥 Cinematic', '🎥 Top-Down'],
+        weatherModes: ['☀️ Day', '🌅 Sunset', '🌙 Night'],
+        sound: '🔊 Sound',
+        soundMuted: '🔇 Muted',
+        help: '❓ Help',
+        hub: '🏠 Hub',
+        approachingJunction: 'Approaching Junction:',
+        switchTrackBtn: 'Switch Track (J / Space)',
+        branchMain: '[MAIN LINE]',
+        branchMountain: '[MOUNTAIN LOOP]',
+        stationStopTitle: 'STATION STOP',
+        stationStopSubtext: 'Passenger boarding and cargo exchange (+50 €)...',
+        skippedTitle: 'YOU MISSED THE STATION!',
+        skippedDesc: (name: string) => `You missed: "${name}". Continuing towards next station!`,
+        rewardTitle: (name: string) => `🎉 ${name.toUpperCase()} ARRIVAL SUCCESS!`,
+        rewardDesc: (passengers: number) => `Passengers (+${passengers} people) delivered. Earn +50 € Train Money at every stop!`,
+        rewardBtn: '🚂 CONTINUE JOURNEY',
+        rewardMoneyLabel: 'Earned Train Money:',
+        depotTitle: 'Train Depot & Store',
+        depotDesc: 'Select your locomotive or unlock new trains with Train Money (+50€ per stop) or Yards (Yards = 5x train price)!',
+        depotMoneyLabel: '🪙 Train Money:',
+        depotYardLabel: '💎 Yards:',
+        depotStartDriving: '🚂 START DRIVING',
+        topSpeed: 'Top Speed:',
+        accel: 'Acceleration:',
+        capacity: 'Capacity:',
+        passengersUnit: 'passengers',
+        free: 'FREE',
+        or: 'or',
+        selected: '✅ SELECTED',
+        chooseTrain: '▶️ SELECT TRAIN',
+        buyMoney: (price: number) => `🪙 BUY (${price} €)`,
+        buyYard: (price: number) => `💎 BUY (${price} Y)`,
+        boughtSuccessMoney: (name: string, price: number) => `🎉 Successfully purchased "${name}" with Train Money (${price} €)!`,
+        boughtSuccessYard: (name: string, price: number) => `🎉 Successfully purchased "${name}" with Yards (${price} Y)!`,
+        notEnoughMoney: (price: number, cur: number) => `Not enough Train Money! You need ${price} € (you have ${cur} €).`,
+        notEnoughYards: (price: number, cur: number) => `Not enough Yards! You need ${price} Y (you have ${cur} Y).`,
+        speedUnit: 'KM / H',
+        throttleLabel: 'THROTTLE',
+        btnPower: 'POWER',
+        btnBrake: 'BRAKE',
+        btnHorn: 'HORN',
+        helpTitle: '🚂 Train Simulator Guide & Controls',
+        helpContent: `
+            <div><strong style="color: #00f2fe;">W / Up Arrow / [POWER]:</strong> Accelerate locomotive forward</div>
+            <div><strong style="color: #ff4757;">S / Down Arrow / [BRAKE]:</strong> Brake or reverse</div>
+            <div><strong style="color: #ffd32a;">H / Space / [HORN]:</strong> Sound train horn and steam burst</div>
+            <div><strong style="color: #ffd32a;">J / KeyJ:</strong> Switch track junction (Main line vs Mountain Loop)</div>
+            <div><strong style="color: #00f2fe;">C:</strong> Toggle camera view (Cab Driver, Chase 3D, Cinematic, Map)</div>
+            <div><strong style="color: #ffd32a;">N:</strong> Toggle weather & lighting (Day, Sunset, Night)</div>
+            <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+            <div><strong style="color: #ffd32a;">🪙 How to Earn Train Money:</strong> Stop inside station zone at 0 km/h, wait for boarding to finish, and earn +50 € at every station stop!</div>
+        `
+    }
+};
+
+const t = isOwner ? I18N.et : I18N.en;
 
 // --- In-Game Currency ("Rongiraha" / 🪙 €) ---
 const TRAIN_MONEY_KEY = 'playard_train_money';
@@ -62,13 +184,16 @@ function spendTrainMoney(amount: number): boolean {
 export interface TrainDef {
     id: string;
     name: string;
+    nameEn: string;
     icon: string;
     price: number; // 0 for default, 100 for cheapest purchasable (100€ / 100Y), up to 2000
     maxSpeed: number; // km/h
     acceleration: number; // multiplier
     passengers: number;
     description: string;
+    descriptionEn: string;
     special: string;
+    specialEn: string;
     style: 'classic_steam' | 'commuter_emu' | 'heavy_diesel' | 'forest_shunter' | 'bullet_shinkansen' | 'royal_orient' | 'alpine_climber' | 'cyber_bullet' | 'armored_dreadnought' | 'hyperloop_plasma';
     locoColor: number;
     trimColor: number;
@@ -79,13 +204,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'classic_steam',
         name: 'Klassikaline Auruvedur',
+        nameEn: 'Classic Steam Locomotive',
         icon: '🚂',
         price: 0, // Tasuta / Default
         maxSpeed: 90,
         acceleration: 1.0,
         passengers: 24,
         description: 'Autentne 19. sajandi auruvedur messingist viimistluse ja suitsukorstnaga.',
+        descriptionEn: 'Authentic 19th-century steam locomotive with brass trims and working smokestack.',
         special: 'Autentne auruheli & suitsupahvakud',
+        specialEn: 'Authentic steam audio & chimney puffs',
         style: 'classic_steam',
         locoColor: 0x1c2430,
         trimColor: 0xf59e0b,
@@ -94,13 +222,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'commuter_emu',
         name: 'Linnalähirong Express',
+        nameEn: 'City Commuter Express',
         icon: '🚆',
-        price: 100, // Kõige odavam ostetav rong (100€ või 100Y)
+        price: 100, // Kõige odavam ostetav rong (100€ või 500Y)
         maxSpeed: 120,
         acceleration: 1.4,
         passengers: 42,
         description: 'Kaasaegne voolujooneline reisirong kiireks linnalähiliikluseks.',
+        descriptionEn: 'Modern aerodynamic commuter train designed for rapid regional transit.',
         special: 'Kiire kiirendus & LED esituled',
+        specialEn: 'High acceleration & LED headlights',
         style: 'commuter_emu',
         locoColor: 0xdc2626,
         trimColor: 0xffffff,
@@ -109,13 +240,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'heavy_diesel',
         name: 'Raske Diisel Kaubavedur',
+        nameEn: 'Heavy Freight Diesel-Max',
         icon: '🚜',
         price: 150,
         maxSpeed: 105,
         acceleration: 1.2,
         passengers: 30,
         description: 'Võimas Ameerika stiilis tööstuslik diiselvedur topeltpasunatega.',
+        descriptionEn: 'Heavy-duty industrial diesel locomotive built for pulling long cargo freight.',
         special: 'Suur veojõud ja kaubaveo võimekus',
+        specialEn: 'Massive tractive power & dual air horns',
         style: 'heavy_diesel',
         locoColor: 0xd97706,
         trimColor: 0x111827,
@@ -124,13 +258,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'forest_shunter',
         name: 'Metsa Auru-Tankvedur',
+        nameEn: 'Woodland Steam Shunter',
         icon: '🌲',
         price: 250,
         maxSpeed: 95,
         acceleration: 1.3,
         passengers: 28,
         description: 'Kompaktne metsaveo tankvedur, spetsialiseerunud kurvilistele radadele.',
+        descriptionEn: 'Agile woodland tank locomotive specialized in winding forest tracks.',
         special: 'Suur stabiilsus mägikurvides',
+        specialEn: 'Extreme stability around sharp bends',
         style: 'forest_shunter',
         locoColor: 0x166534,
         trimColor: 0xfacc15,
@@ -139,13 +276,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'bullet_shinkansen',
         name: 'Super-Kiirrong Shinkansen',
+        nameEn: 'High-Speed Bullet Shinkansen',
         icon: '⚡',
         price: 400,
         maxSpeed: 180,
         acceleration: 1.9,
         passengers: 55,
         description: 'Jaapani tipptehnoloogiline terava aerodünaamilise ninaga kuulirong.',
+        descriptionEn: 'Japanese high-speed aerodynamic bullet train engineered for ultra-smooth velocity.',
         special: 'Aerodünaamiline nina & katuse pantograaf',
+        specialEn: 'Aerodynamic nose & pantographs',
         style: 'bullet_shinkansen',
         locoColor: 0xf8fafc,
         trimColor: 0x0284c7,
@@ -154,13 +294,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'royal_orient',
         name: 'Kuldne Kuninglik Express',
+        nameEn: 'Golden Royal Orient Express',
         icon: '🌌',
         price: 600,
         maxSpeed: 140,
         acceleration: 1.5,
         passengers: 48,
         description: 'Kuninglik luksusrong safiirsinise kere ja puhta kulla ornamentidega.',
+        descriptionEn: 'Prestigious royal luxury train with sapphire blue coaches and gold ornaments.',
         special: 'Luksuslik interjöör & kuldsed laternad',
+        specialEn: 'First-class luxury & gold lanterns',
         style: 'royal_orient',
         locoColor: 0x1e3a8a,
         trimColor: 0xfbbf24,
@@ -169,13 +312,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'alpine_climber',
         name: 'Alpi Mägironija',
+        nameEn: 'Alpine Mountain Climber',
         icon: '🏔️',
         price: 800,
         maxSpeed: 130,
         acceleration: 1.7,
         passengers: 36,
         description: 'Šveitsi mägiraudtee rong panoraamklaasist vaatevagunitega.',
+        descriptionEn: 'Swiss alpine railway train featuring full panoramic glass dome cars.',
         special: 'Panoraamvaade & mäeronimise võimekus',
+        specialEn: 'Panoramic dome & steep hill climbing',
         style: 'alpine_climber',
         locoColor: 0x991b1b,
         trimColor: 0xe2e8f0,
@@ -184,13 +330,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'cyber_bullet',
         name: 'Cyber-Kiirrong 2099',
+        nameEn: 'Cyber Bullet 2099',
         icon: '⚡',
         price: 1000,
         maxSpeed: 220,
         acceleration: 2.3,
         passengers: 60,
         description: 'Tulevikulinna mattmust küberrong neoonsinise põhjavalgustusega.',
+        descriptionEn: 'Futuristic matte-black bullet train with neon cybernetic glow.',
         special: 'Neoonvalgustus & küberkiirus',
+        specialEn: 'Underglow neon & hyper velocity',
         style: 'cyber_bullet',
         locoColor: 0x09090b,
         trimColor: 0x00f2fe,
@@ -199,13 +348,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'armored_dreadnought',
         name: 'Soomustatud Lahinguvedur',
+        nameEn: 'Armored Dreadnought Train',
         icon: '🌋',
         price: 1500,
         maxSpeed: 115,
         acceleration: 1.2,
         passengers: 50,
         description: 'Raskete terasplaatide, kaitserauast sahkade ja topeltkorstnatega kindlus.',
+        descriptionEn: 'Reinforced steel fortress train outfitted with battering plow and heavy plating.',
         special: 'Raske soomus & võimas prožektor',
+        specialEn: 'Heavy armor plating & high-beam spotlights',
         style: 'armored_dreadnought',
         locoColor: 0x3f3f46,
         trimColor: 0xb91c1c,
@@ -214,13 +366,16 @@ export const TRAINS_CATALOG: TrainDef[] = [
     {
         id: 'hyperloop_plasma',
         name: 'Hyperloop Plasma Rong 3000',
+        nameEn: 'Hyperloop Plasma Rail 3000',
         icon: '🚀',
         price: 2000,
         maxSpeed: 260,
         acceleration: 2.9,
         passengers: 80,
         description: 'Eksperimentaalne plasma-mootoriga monorail rong ulmelise kiirusega.',
+        descriptionEn: 'Experimental plasma-thruster monorail engineered for next-gen speeds.',
         special: 'Lillakas plasmajoa efekt & tippkiirus 260 km/h',
+        specialEn: 'Purple plasma thruster trail & 260 km/h top speed',
         style: 'hyperloop_plasma',
         locoColor: 0x581c87,
         trimColor: 0xd946ef,
@@ -260,7 +415,9 @@ function setActiveTrainId(id: string) {
 interface Station {
     id: string;
     name: string;
+    nameEn: string;
     description: string;
+    descriptionEn: string;
     trackU: number; // position on track [0..1]
     worldPos: THREE.Vector3;
     passengersWaiting: number;
@@ -271,7 +428,9 @@ const STATIONS: Station[] = [
     {
         id: 'central',
         name: 'Kesklinna Peajaam',
+        nameEn: 'Central Grand Station',
         description: 'Suur reisijate peajaam kellatorni ja reisijate perrooniga',
+        descriptionEn: 'Grand central terminal with iconic clock tower and long platforms',
         trackU: 0.04,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 28,
@@ -280,7 +439,9 @@ const STATIONS: Station[] = [
     {
         id: 'forest',
         name: 'Männimetsa Peatus',
+        nameEn: 'Pine Forest Station',
         description: 'Metsa vahel asuv puidust reisijate ooteplatvorm',
+        descriptionEn: 'Scenic wooden station platform surrounded by lush pine trees',
         trackU: 0.35,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 20,
@@ -289,7 +450,9 @@ const STATIONS: Station[] = [
     {
         id: 'harbor',
         name: 'Jõekalda Sadam',
+        nameEn: 'Riverside Harbor Station',
         description: 'Sadamadepoo jõe ääres kaubakraanade ja konteineritega',
+        descriptionEn: 'Bustling river terminal with cargo containers and ship docks',
         trackU: 0.62,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 25,
@@ -298,13 +461,27 @@ const STATIONS: Station[] = [
     {
         id: 'mountain',
         name: 'Mäejaam / Lumetipp',
+        nameEn: 'Mountain Summit Station',
         description: 'Mägine jaam vaatega orule ja avarale maastikule',
+        descriptionEn: 'High altitude mountain station overlooking the vast landscape',
         trackU: 0.85,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 35,
         moneyReward: 50
     }
 ];
+
+function getStationName(st: Station): string {
+    return isOwner ? st.name : st.nameEn;
+}
+
+function getTrainName(train: TrainDef): string {
+    return isOwner ? train.name : train.nameEn;
+}
+
+function getTrainDesc(train: TrainDef): string {
+    return isOwner ? train.description : train.descriptionEn;
+}
 
 // --- Track Switch Junctions ---
 interface Junction {
@@ -472,45 +649,45 @@ function renderDepotModal() {
 
         let priceBadgeHtml = '';
         if (train.price === 0) {
-            priceBadgeHtml = `<span class="train-price-badge badge-free">TASUTA</span>`;
+            priceBadgeHtml = `<span class="train-price-badge badge-free">${t.free}</span>`;
         } else {
-            priceBadgeHtml = `<span class="train-price-badge badge-price">🪙 ${train.price} €  või  💎 ${yardPrice} Y</span>`;
+            priceBadgeHtml = `<span class="train-price-badge badge-price">🪙 ${train.price} €  ${t.or}  💎 ${yardPrice} Y</span>`;
         }
 
         let actionBtnHtml = '';
         if (isActive) {
-            actionBtnHtml = `<button class="btn-train-select btn-selected" disabled>✅ VALITUD</button>`;
+            actionBtnHtml = `<button class="btn-train-select btn-selected" disabled>${t.selected}</button>`;
         } else if (isUnlocked) {
-            actionBtnHtml = `<button class="btn-train-select btn-choose" data-train-id="${train.id}">▶️ VALI RONG</button>`;
+            actionBtnHtml = `<button class="btn-train-select btn-choose" data-train-id="${train.id}">${t.chooseTrain}</button>`;
         } else {
             actionBtnHtml = `
                 <div style="display: flex; flex-direction: column; width: 100%; gap: 6px; margin-top: 8px;">
-                    <button class="btn-train-select btn-buy-money" data-train-id="${train.id}" data-price="${train.price}">🪙 OSTA (${train.price} €)</button>
-                    <button class="btn-train-select btn-buy-yard" data-train-id="${train.id}" data-price="${yardPrice}">💎 OSTA (${yardPrice} Y)</button>
+                    <button class="btn-train-select btn-buy-money" data-train-id="${train.id}" data-price="${train.price}">${t.buyMoney(train.price)}</button>
+                    <button class="btn-train-select btn-buy-yard" data-train-id="${train.id}" data-price="${yardPrice}">${t.buyYard(yardPrice)}</button>
                 </div>
             `;
         }
 
         card.innerHTML = `
             <div class="train-icon">${train.icon}</div>
-            <div class="train-title">${train.name}</div>
+            <div class="train-title">${getTrainName(train)}</div>
             ${priceBadgeHtml}
             <div style="width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px; margin-bottom: 8px;">
                 <div class="train-stat-row">
-                    <span>Tippkiirus:</span>
+                    <span>${t.topSpeed}</span>
                     <strong>${train.maxSpeed} km/h</strong>
                 </div>
                 <div class="train-stat-row">
-                    <span>Kiirendus:</span>
+                    <span>${t.accel}</span>
                     <strong>${train.acceleration}x</strong>
                 </div>
                 <div class="train-stat-row">
-                    <span>Mahutavus:</span>
-                    <strong>${train.passengers} reisijat</strong>
+                    <span>${t.capacity}</span>
+                    <strong>${train.passengers} ${t.passengersUnit}</strong>
                 </div>
             </div>
             <div style="font-size: 0.72rem; color: #64748b; line-height: 1.3; min-height: 28px; margin-bottom: 4px;">
-                ${train.description}
+                ${getTrainDesc(train)}
             </div>
             ${actionBtnHtml}
         `;
@@ -571,7 +748,7 @@ function buyTrainWithMoney(trainId: string, price: number) {
 
     const success = spendTrainMoney(price);
     if (!success) {
-        showDepotMessage(`Sul pole piisavalt Rongiraha! Vajad ${price} € (sul on ${getTrainMoney()} €). Teeni jaamapeatustega +50 €!`, true);
+        showDepotMessage(t.notEnoughMoney(price, getTrainMoney()), true);
         return;
     }
 
@@ -582,7 +759,7 @@ function buyTrainWithMoney(trainId: string, price: number) {
     }
 
     trainAudio.playCoinReward();
-    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}" Rongiraha eest (${price} €)!`, false);
+    showDepotMessage(t.boughtSuccessMoney(getTrainName(train), price), false);
     selectTrain(trainId);
 }
 
@@ -590,9 +767,9 @@ function buyTrainWithYards(trainId: string, yardPrice: number) {
     const train = TRAINS_CATALOG.find(t => t.id === trainId);
     if (!train) return;
 
-    const success = yardService.spendYards(yardPrice, train.id, `Rongimäng: Osteti ${train.name}`);
+    const success = yardService.spendYards(yardPrice, train.id, `Train purchase: ${getTrainName(train)}`);
     if (!success) {
-        showDepotMessage(`Sul pole piisavalt Yarde! Vajad ${yardPrice} Y (praegu ${yardService.getYards()} Y).`, true);
+        showDepotMessage(t.notEnoughYards(yardPrice, yardService.getYards()), true);
         return;
     }
 
@@ -603,7 +780,7 @@ function buyTrainWithYards(trainId: string, yardPrice: number) {
     }
 
     trainAudio.playCoinReward();
-    showDepotMessage(`🎉 Ostsid edukalt rongi "${train.name}" Yardide eest (${yardPrice} Y)!`, false);
+    showDepotMessage(t.boughtSuccessYard(getTrainName(train), yardPrice), false);
     selectTrain(trainId);
 }
 
@@ -1275,7 +1452,7 @@ function checkStationArrival(delta: number) {
             if (boardingPanel) {
                 boardingPanel.style.display = 'flex';
                 const title = document.getElementById('boarding-station-title');
-                if (title) title.innerText = `PEATUS: ${targetStation.name.toUpperCase()}`;
+                if (title) title.innerText = `${t.stationStopTitle}: ${getStationName(targetStation).toUpperCase()}`;
             }
         }
 
@@ -1287,7 +1464,7 @@ function checkStationArrival(delta: number) {
             isBoarding = false;
             if (boardingPanel) boardingPanel.style.display = 'none';
 
-            // Give +50€ in-game money (Rongiraha) per stop (no Yards earned in train game)
+            // Give +50€ in-game money (Train Money / Rongiraha) per stop
             const moneyReward = 50;
             totalPassengers += targetStation.passengersWaiting;
             
@@ -1299,7 +1476,7 @@ function checkStationArrival(delta: number) {
             currentStationIndex = (currentStationIndex + 1) % STATIONS.length;
             const nextSt = STATIONS[currentStationIndex];
             const nameEl = document.getElementById('target-station-name');
-            if (nameEl) nameEl.innerText = nextSt.name;
+            if (nameEl) nameEl.innerText = getStationName(nextSt);
         }
     } else {
         if (isBoarding && distMeters >= 40) {
@@ -1307,7 +1484,7 @@ function checkStationArrival(delta: number) {
             if (boardingPanel) boardingPanel.style.display = 'none';
         }
 
-        // Kui sõidetakse peatusest mööda ilma peatumata -> "Sa jätsid peatuse vahele" ja mäng läheb edasi!
+        // Kui sõidetakse peatusest mööda ilma peatumata -> "Sa jätsid peatuse vahele" / "You missed the station"
         if (distU < -0.015 && distU > -0.25 && !isBoarding && trainSpeed > 2.0) {
             showStationSkippedNotification(targetStation);
 
@@ -1315,7 +1492,7 @@ function checkStationArrival(delta: number) {
             currentStationIndex = (currentStationIndex + 1) % STATIONS.length;
             const nextSt = STATIONS[currentStationIndex];
             const nameEl = document.getElementById('target-station-name');
-            if (nameEl) nameEl.innerText = nextSt.name;
+            if (nameEl) nameEl.innerText = getStationName(nextSt);
         }
     }
 }
@@ -1323,12 +1500,12 @@ function checkStationArrival(delta: number) {
 let skippedBannerTimeout: any = null;
 function showStationSkippedNotification(station: Station) {
     const banner = document.getElementById('station-skipped-banner');
+    const title = document.getElementById('skipped-title');
     const desc = document.getElementById('skipped-desc');
     if (!banner) return;
 
-    if (desc) {
-        desc.innerText = `Jätsid vahele: "${station.name}". Sõit jätkub järgmise jaama poole!`;
-    }
+    if (title) title.innerText = t.skippedTitle;
+    if (desc) desc.innerText = t.skippedDesc(getStationName(station));
     banner.style.display = 'block';
 
     trainAudio.playBrakeSqueal();
@@ -1344,10 +1521,14 @@ function showStationRewardModal(station: Station, money: number) {
     const title = document.getElementById('reward-modal-title');
     const desc = document.getElementById('reward-modal-desc');
     const moneyTxt = document.getElementById('reward-money-text');
+    const moneyLabel = document.getElementById('reward-money-label');
+    const btn = document.getElementById('btn-next-station-continue');
 
-    if (title) title.innerText = `🎉 ${station.name.toUpperCase()} EDUKALT LÄBITUD!`;
-    if (desc) desc.innerText = `Reisijad (+${station.passengersWaiting} inimest) toimetati kohale. Teeni igal peatusel +50 € Rongiraha!`;
+    if (title) title.innerText = t.rewardTitle(getStationName(station));
+    if (desc) desc.innerText = t.rewardDesc(station.passengersWaiting);
     if (moneyTxt) moneyTxt.innerText = `+${money} € 🪙`;
+    if (moneyLabel) moneyLabel.innerText = t.rewardMoneyLabel;
+    if (btn) btn.innerText = t.rewardBtn;
     if (modal) modal.style.display = 'flex';
 }
 
@@ -1368,7 +1549,7 @@ function toggleTrackSwitch() {
     trainAudio.playSwitchTrack();
     const dirText = document.getElementById('junction-dir-text');
     if (dirText) {
-        dirText.innerText = JUNCTION.activeBranch === 'main' ? '[PÕHILIIN]' : '[MÄERING]';
+        dirText.innerText = JUNCTION.activeBranch === 'main' ? t.branchMain : t.branchMountain;
         dirText.style.color = JUNCTION.activeBranch === 'main' ? '#00f2fe' : '#ffd32a';
     }
 }
@@ -1415,7 +1596,7 @@ function toggleWeather() {
         dirLight.intensity = 1.3;
         ambientLight.intensity = 0.4;
         trainHeadlight.intensity = 3;
-        if (btn) btn.innerText = '☀️ Päev';
+        if (btn) btn.innerText = t.weatherModes[0];
     } else if (weatherMode === 1) {
         scene.background = new THREE.Color(0xf97316);
         scene.fog = new THREE.FogExp2(0xea580c, 0.003);
@@ -1423,7 +1604,7 @@ function toggleWeather() {
         dirLight.intensity = 1.1;
         ambientLight.intensity = 0.3;
         trainHeadlight.intensity = 6;
-        if (btn) btn.innerText = '🌅 Loojang';
+        if (btn) btn.innerText = t.weatherModes[1];
     } else if (weatherMode === 2) {
         scene.background = new THREE.Color(0x060b13);
         scene.fog = new THREE.FogExp2(0x060b13, 0.004);
@@ -1431,7 +1612,7 @@ function toggleWeather() {
         dirLight.intensity = 0.2;
         ambientLight.intensity = 0.15;
         trainHeadlight.intensity = 12;
-        if (btn) btn.innerText = '🌙 Öö';
+        if (btn) btn.innerText = t.weatherModes[2];
     }
 }
 
@@ -1538,7 +1719,7 @@ function setupControls() {
     if (soundBtn) {
         soundBtn.addEventListener('click', () => {
             const muted = trainAudio.toggleMute();
-            soundBtn.innerText = muted ? '🔇 Muted' : '🔊 Heli';
+            soundBtn.innerText = muted ? t.soundMuted : t.sound;
         });
     }
 
@@ -1554,17 +1735,105 @@ function setupControls() {
 
 function updateCameraBtnText() {
     const camBtn = document.getElementById('btn-camera-view');
-    const modes = ['🎥 Tagaajam (3D)', '🎥 Kabiin (Juht)', '🎥 Kinovaade', '🎥 Pealtvaade'];
-    if (camBtn) camBtn.innerText = modes[cameraMode];
+    if (camBtn) camBtn.innerText = t.camModes[cameraMode];
 }
 
 // --- Setup HUD & Currency Updates ---
 function setupHUD() {
+    applyTrainLocalization();
+
     const hudYardIcon = document.getElementById('hud-yard-icon');
     if (hudYardIcon) hudYardIcon.innerHTML = yardService.renderYardSvg(20);
 
     const initialYard = yardService.getYards();
     updateYardBalance({ yards: initialYard } as any);
+}
+
+function applyTrainLocalization() {
+    const logoTitle = document.getElementById('logo-title-text');
+    if (logoTitle) logoTitle.innerText = t.gameTitle;
+
+    const ownerPill = document.getElementById('owner-badge-pill');
+    if (ownerPill) ownerPill.innerText = t.ownerPill;
+
+    const btnOpenDepotText = document.getElementById('btn-open-depot-text');
+    if (btnOpenDepotText) btnOpenDepotText.innerText = t.depotBtn;
+
+    const targetStationLabel = document.getElementById('target-station-label');
+    if (targetStationLabel) targetStationLabel.innerText = t.targetStation;
+
+    const initialTargetStation = STATIONS[currentStationIndex];
+    const targetStationName = document.getElementById('target-station-name');
+    if (targetStationName && initialTargetStation) targetStationName.innerText = getStationName(initialTargetStation);
+
+    const passengersLabel = document.getElementById('passengers-label');
+    if (passengersLabel) passengersLabel.innerText = t.passengers;
+
+    const moneyBox = document.getElementById('train-money-box');
+    if (moneyBox) moneyBox.title = t.moneyTooltip;
+
+    const camBtn = document.getElementById('btn-camera-view');
+    if (camBtn) camBtn.innerText = t.camModes[cameraMode];
+
+    const weatherBtn = document.getElementById('btn-toggle-weather');
+    if (weatherBtn) weatherBtn.innerText = t.weatherModes[weatherMode];
+
+    const soundBtn = document.getElementById('btn-sound-toggle');
+    if (soundBtn) soundBtn.innerText = t.sound;
+
+    const helpBtn = document.getElementById('btn-open-help');
+    if (helpBtn) helpBtn.innerText = t.help;
+
+    const junctionNotice = document.getElementById('junction-notice-text');
+    if (junctionNotice) junctionNotice.innerText = t.approachingJunction;
+
+    const btnSwitchTrack = document.getElementById('btn-switch-track');
+    if (btnSwitchTrack) btnSwitchTrack.innerText = t.switchTrackBtn;
+
+    const junctionDir = document.getElementById('junction-dir-text');
+    if (junctionDir) junctionDir.innerText = JUNCTION.activeBranch === 'main' ? t.branchMain : t.branchMountain;
+
+    const boardingTitle = document.getElementById('boarding-station-title');
+    if (boardingTitle) boardingTitle.innerText = t.stationStopTitle;
+
+    const boardingSub = document.getElementById('boarding-subtext');
+    if (boardingSub) boardingSub.innerText = t.stationStopSubtext;
+
+    const skippedTitle = document.getElementById('skipped-title');
+    if (skippedTitle) skippedTitle.innerText = t.skippedTitle;
+
+    const throttleLabel = document.getElementById('throttle-label-text');
+    if (throttleLabel) throttleLabel.innerText = t.throttleLabel;
+
+    const btnPower = document.getElementById('btn-power-text');
+    if (btnPower) btnPower.innerText = t.btnPower;
+
+    const btnBrake = document.getElementById('btn-brake-text');
+    if (btnBrake) btnBrake.innerText = t.btnBrake;
+
+    const btnHorn = document.getElementById('btn-horn-text');
+    if (btnHorn) btnHorn.innerText = t.btnHorn;
+
+    const depotTitle = document.getElementById('depot-title-text');
+    if (depotTitle) depotTitle.innerText = t.depotTitle;
+
+    const depotDesc = document.getElementById('depot-desc-text');
+    if (depotDesc) depotDesc.innerText = t.depotDesc;
+
+    const depotMoneyLabel = document.getElementById('depot-money-label-text');
+    if (depotMoneyLabel) depotMoneyLabel.innerText = t.depotMoneyLabel;
+
+    const depotYardLabel = document.getElementById('depot-yard-label-text');
+    if (depotYardLabel) depotYardLabel.innerText = t.depotYardLabel;
+
+    const btnDepotStart = document.getElementById('btn-depot-start-driving');
+    if (btnDepotStart) btnDepotStart.innerText = t.depotStartDriving;
+
+    const helpTitle = document.getElementById('help-title');
+    if (helpTitle) helpTitle.innerText = t.helpTitle;
+
+    const helpContent = document.getElementById('help-content-box');
+    if (helpContent) helpContent.innerHTML = t.helpContent;
 }
 
 function updateYardBalance(data: YardData) {

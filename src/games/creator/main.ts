@@ -1003,16 +1003,6 @@ async function initStudio() {
     setupInspectorEvents();
     setupAiAssistantEvents();
 
-    yardService.recordPlayedGame({
-        id: 'creator',
-        title: '🛠️ 3D Game Creator Studio',
-        description: 'Build custom 3D worlds, roads, cars, code interactive game logic with AI, and publish games.',
-        url: './games/creator/index.html',
-        icon: '🛠️',
-        badgeText: 'Studio & AI',
-        badgeColor: '#2ecc71'
-    });
-
     window.addEventListener('resize', onWindowResize);
 
     // Initial Camera

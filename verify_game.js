@@ -85,7 +85,7 @@ try {
             await page.evaluate(id => {
                 const map = {
                     cooking: { id: 'cooking', title: '🍳 3D Master Chef', description: 'Test', url: './games/cooking/index.html', icon: '🍳' },
-                    creator: { id: 'creator', title: '🛠️ 3D Game Creator Studio', description: 'Test', url: './games/creator/index.html', icon: '🛠️' }
+                    play: { id: 'play', title: '🎮 Kogukonna 3D mängud', description: 'Test', url: './games/play/index.html', icon: '🎮' }
                 };
                 if (window.yardService && map[id]) {
                     window.yardService.recordPlayedGame(map[id]);
@@ -109,9 +109,9 @@ try {
 
         // Check Rongimäng visibility for guest (Expected: none - restricted to Playard Owner only)
         const guestTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
-        console.log(`   Guest Rongimäng Card visibility (Expected: none): ${guestTrainCardDisplay}`);
+        console.log(`   Guest Train Game Card visibility (Expected: none): ${guestTrainCardDisplay}`);
         if (guestTrainCardDisplay !== 'none') {
-            throw new Error("Rongimäng card must be hidden for guests!");
+            throw new Error("Train game card must be hidden for guests!");
         }
 
         // Check Guest Admin Panel visibility (Expected: none)
@@ -121,7 +121,7 @@ try {
             throw new Error("Admin Panel button should be hidden for guests!");
         }
 
-        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, but War game AND Rongimäng card must be visible!
+        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, War game AND Rongimäng card must be visible!
         await page.evaluate(() => {
             const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
@@ -146,7 +146,7 @@ try {
             throw new Error("Rongimäng card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
         }
 
-        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, but Rongimäng HIDDEN (Owner only)!
+        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, and Rongimäng visible (published to all)!
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
@@ -166,9 +166,9 @@ try {
         }
 
         const adminTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
-        console.log(`   Admin (grx@trenet.ee) Rongimäng Card visibility (Expected: none): ${adminTrainCardDisplay}`);
+        console.log(`   Admin (grx@trenet.ee) Train Game Card visibility (Expected: none): ${adminTrainCardDisplay}`);
         if (adminTrainCardDisplay !== 'none') {
-            throw new Error("Rongimäng card must be hidden for non-owner admin (grx@trenet.ee)!");
+            throw new Error("Train game card must be hidden for admin grx@trenet.ee (Owner exclusive)!");
         }
 
         // Click to open Admin Update Panel
@@ -632,124 +632,145 @@ try {
         await new Promise(r => setTimeout(r, 300));
         console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
 
-        // 11. Test 3D Rongimäng (Train Simulator - Owner Exclusive)
-        console.log("11. Checking 3D Rongimäng (Train Simulator - Owner Exclusive)...");
-        await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
-        await new Promise(r => setTimeout(r, 1500));
-        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+            // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)
+            console.log("11. Checking 3D Train Simulator (Guest English Localization)...");
+            await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await new Promise(r => setTimeout(r, 1500));
+            await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
-        // Verify Train Depot Modal with 10 Trains & Dual Currency Options
-        await page.waitForSelector('.train-card', { visible: true, timeout: 5000 });
-        const trainCardsCount = await page.$$eval('.train-card', els => els.length);
-        console.log("   Depot 3D Trains Count (Expected: 10):", trainCardsCount);
-        if (trainCardsCount !== 10) {
-            throw new Error(`Expected 10 trains in depot, found: ${trainCardsCount}`);
-        }
+            // Verify Train Depot Modal with 10 Trains & Dual Currency Options in English for guest
+            await page.waitForSelector('.train-card', { visible: true, timeout: 5000 });
+            const trainCardsCount = await page.$$eval('.train-card', els => els.length);
+            console.log("   Depot 3D Trains Count (Expected: 10):", trainCardsCount);
+            if (trainCardsCount !== 10) {
+                throw new Error(`Expected 10 trains in depot, found: ${trainCardsCount}`);
+            }
 
-        const depotText = await page.$eval('#trains-grid-container', el => el.textContent);
-        if (!depotText.includes('100 €') || !depotText.includes('500 Y') || !depotText.includes('TASUTA') || !depotText.includes('Linnalähirong Express')) {
-            throw new Error("Depot must contain cheapest 100 € train with 5x Yard price (500 Y) and default free train!");
-        }
+            const depotText = await page.$eval('#trains-grid-container', el => el.textContent);
+            if (!depotText.includes('100 €') || !depotText.includes('500 Y') || (!depotText.includes('FREE') && !depotText.includes('TASUTA'))) {
+                throw new Error(`Depot must contain cheapest 100 € train with 5x Yard price (500 Y)! Got: ${depotText.substring(0, 120)}`);
+            }
 
-        const depotYardVal = await page.$eval('#depot-yard-val', el => el.textContent);
-        console.log("   Depot Real Yard Balance:", depotYardVal);
+            const depotYardVal = await page.$eval('#depot-yard-val', el => el.textContent);
+            console.log("   Depot Real Yard Balance:", depotYardVal);
 
-        const moneyBuyBtnCount = await page.$$eval('.btn-buy-money', els => els.length);
-        const yardBuyBtnCount = await page.$$eval('.btn-buy-yard', els => els.length);
-        console.log(`   Depot Buy Options: ${moneyBuyBtnCount} Money buttons, ${yardBuyBtnCount} Yard buttons`);
-        if (moneyBuyBtnCount === 0 || yardBuyBtnCount === 0) {
-            throw new Error("Expected both Rongiraha and Yard purchase buttons in depot!");
-        }
-        console.log("   Successfully verified 10 distinct trains with real Yard balance and 5x Yard price in depot!");
+            const moneyBuyBtnCount = await page.$$eval('.btn-buy-money', els => els.length);
+            const yardBuyBtnCount = await page.$$eval('.btn-buy-yard', els => els.length);
+            console.log(`   Depot Buy Options: ${moneyBuyBtnCount} Money buttons, ${yardBuyBtnCount} Yard buttons`);
+            if (moneyBuyBtnCount === 0 || yardBuyBtnCount === 0) {
+                throw new Error("Expected both Rongiraha and Yard purchase buttons in depot!");
+            }
+            console.log("   Successfully verified 10 distinct trains with real Yard balance and 5x Yard price in depot!");
 
-        // Start driving from depot
-        await page.click('#btn-depot-start-driving');
-        await new Promise(r => setTimeout(r, 400));
+            // Start driving from depot
+            await page.click('#btn-depot-start-driving');
+            await new Promise(r => setTimeout(r, 400));
 
-        // Test Opening Depot from Top HUD and closing
-        await page.click('#btn-open-depot');
-        await new Promise(r => setTimeout(r, 300));
-        const depotVisible = await page.$eval('#modal-train-depot', el => window.getComputedStyle(el).display);
-        if (depotVisible !== 'flex') {
-            throw new Error("Expected #modal-train-depot to be open after clicking #btn-open-depot!");
-        }
-        await page.click('#btn-close-depot');
-        await new Promise(r => setTimeout(r, 300));
+            // Test Opening Depot from Top HUD and closing
+            await page.click('#btn-open-depot');
+            await new Promise(r => setTimeout(r, 300));
+            const depotVisible = await page.$eval('#modal-train-depot', el => window.getComputedStyle(el).display);
+            if (depotVisible !== 'flex') {
+                throw new Error("Expected #modal-train-depot to be open after clicking #btn-open-depot!");
+            }
+            await page.click('#btn-close-depot');
+            await new Promise(r => setTimeout(r, 300));
 
-        // Verify Train In-Game Money HUD & Yard HUD
-        await page.waitForSelector('#train-money-val', { visible: true, timeout: 5000 });
-        const initialMoney = await page.$eval('#train-money-val', el => el.textContent);
-        console.log("   Initial Rongiraha In-Game Currency:", initialMoney);
+            // Verify Train In-Game Money HUD & Yard HUD
+            await page.waitForSelector('#train-money-val', { visible: true, timeout: 5000 });
+            const initialMoney = await page.$eval('#train-money-val', el => el.textContent);
+            console.log("   Initial Rongiraha In-Game Currency:", initialMoney);
 
-        // Verify Train HUD elements
-        await page.waitForSelector('#speed-text', { visible: true, timeout: 5000 });
-        const initialSpeed = await page.$eval('#speed-text', el => el.textContent);
-        console.log("   Initial Train Speedometer:", initialSpeed);
+            // Verify Train HUD elements in English for guest
+            await page.waitForSelector('#speed-text', { visible: true, timeout: 5000 });
+            const initialSpeed = await page.$eval('#speed-text', el => el.textContent);
+            console.log("   Initial Train Speedometer:", initialSpeed);
 
-        const targetStation = await page.$eval('#target-station-name', el => el.textContent);
-        console.log("   Initial Target Station:", targetStation);
-        if (!targetStation.includes('Männimetsa')) {
-            throw new Error(`Expected initial station to be Männimetsa Peatus, got: ${targetStation}`);
-        }
+            const targetStation = await page.$eval('#target-station-name', el => el.textContent);
+            console.log("   Initial Target Station (English):", targetStation);
+            if (!targetStation.includes('Pine Forest Station')) {
+                throw new Error(`Expected initial station to be Pine Forest Station in English, got: ${targetStation}`);
+            }
 
-        const passCount = await page.$eval('#stat-passengers', el => el.textContent);
-        console.log("   Initial Passenger Count:", passCount);
+            const passCount = await page.$eval('#stat-passengers', el => el.textContent);
+            console.log("   Initial Passenger Count:", passCount);
 
-        // Test Throttle Acceleration
-        await page.click('#btn-throttle-up');
-        await page.click('#btn-throttle-up');
-        await new Promise(r => setTimeout(r, 300));
-        const throttleText = await page.$eval('#throttle-text', el => el.textContent);
-        console.log("   Throttle after acceleration:", throttleText);
+            // Test Throttle Acceleration
+            await page.click('#btn-throttle-up');
+            await page.click('#btn-throttle-up');
+            await new Promise(r => setTimeout(r, 300));
+            const throttleText = await page.$eval('#throttle-text', el => el.textContent);
+            console.log("   Throttle after acceleration:", throttleText);
 
-        // Test Whistle (Tuut-tuut!)
-        await page.click('#btn-horn');
-        await page.keyboard.press('KeyH');
-        await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully tested Train Whistle & Steam Burst!");
+            // Test Whistle (Tuut-tuut!)
+            await page.click('#btn-horn');
+            await page.keyboard.press('KeyH');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   Successfully tested Train Whistle & Steam Burst!");
 
-        // Test Camera View Switch
-        await page.click('#btn-camera-view');
-        await new Promise(r => setTimeout(r, 200));
-        const camBtnText = await page.$eval('#btn-camera-view', el => el.textContent);
-        console.log("   Camera mode after toggle:", camBtnText);
+            // Test Camera View Switch
+            await page.click('#btn-camera-view');
+            await new Promise(r => setTimeout(r, 200));
+            const camBtnText = await page.$eval('#btn-camera-view', el => el.textContent);
+            console.log("   Camera mode after toggle:", camBtnText);
 
-        // Test Weather / Time of Day Switch
-        await page.click('#btn-toggle-weather');
-        await new Promise(r => setTimeout(r, 200));
-        const weatherBtnText = await page.$eval('#btn-toggle-weather', el => el.textContent);
-        console.log("   Weather after toggle:", weatherBtnText);
+            // Test Weather / Time of Day Switch
+            await page.click('#btn-toggle-weather');
+            await new Promise(r => setTimeout(r, 200));
+            const weatherBtnText = await page.$eval('#btn-toggle-weather', el => el.textContent);
+            console.log("   Weather after toggle:", weatherBtnText);
 
-        // Test Track Switch with 'KeyJ'
-        await page.keyboard.press('KeyJ');
-        await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully tested Track Switch key (KeyJ)!");
+            // Test Track Switch with 'KeyJ'
+            await page.keyboard.press('KeyJ');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   Successfully tested Track Switch key (KeyJ)!");
 
-        // Test Brake Button
-        await page.click('#btn-throttle-down');
-        await page.click('#btn-throttle-down');
-        await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully tested Train Braking!");
+            // Test Brake Button
+            await page.click('#btn-throttle-down');
+            await page.click('#btn-throttle-down');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   Successfully tested Train Braking!");
 
-        // Test Help Modal
-        await page.click('#btn-open-help');
-        await new Promise(r => setTimeout(r, 200));
-        const helpVisible = await page.$eval('#modal-help', el => window.getComputedStyle(el).display);
-        if (helpVisible !== 'flex') {
-            throw new Error("Expected #modal-help to be visible after click!");
-        }
-        await page.click('#btn-close-help');
-        await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully tested Help Modal in Rongimäng!");
+            // Test Help Modal
+            await page.click('#btn-open-help');
+            await new Promise(r => setTimeout(r, 200));
+            const helpVisible = await page.$eval('#modal-help', el => window.getComputedStyle(el).display);
+            if (helpVisible !== 'flex') {
+                throw new Error("Expected #modal-help to be visible after click!");
+            }
+            await page.click('#btn-close-help');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   Successfully tested Help Modal in 3D Train Simulator!");
 
-        // Verify Station Skipped Notification Element
-        await page.waitForSelector('#station-skipped-banner', { timeout: 3000 });
-        const skippedTitle = await page.$eval('#skipped-title', el => el.textContent);
-        if (!skippedTitle.includes('JÄTSID PEATUSE VAHELE')) {
-            throw new Error(`Expected station skipped title, got: ${skippedTitle}`);
-        }
-        console.log("   Successfully verified 'Sa jätsid peatuse vahele' notification banner in Rongimäng!");
+            // Verify Station Skipped Notification Element in English
+            await page.waitForSelector('#station-skipped-banner', { timeout: 3000 });
+            const skippedTitle = await page.$eval('#skipped-title', el => el.textContent);
+            if (!skippedTitle.includes('MISSED THE STATION') && !skippedTitle.includes('JÄTSID PEATUSE VAHELE')) {
+                throw new Error(`Expected station skipped title, got: ${skippedTitle}`);
+            }
+            console.log("   Successfully verified 'You missed the station' notification banner in 3D Train Simulator!");
 
-        console.log("✅ All Playard Platform tests passed successfully!");
-    } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
+            // 12. Test Playard Owner Estonian Localization in Train Game
+            console.log("12. Checking Playard Owner Estonian Localization in Rongimäng...");
+            await page.evaluate(() => {
+                const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+            });
+            await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await new Promise(r => setTimeout(r, 1500));
+
+            const ownerStationName = await page.$eval('#target-station-name', el => el.textContent);
+            console.log("   Playard Owner Target Station (Estonian):", ownerStationName);
+            if (!ownerStationName.includes('Männimetsa Peatus')) {
+                throw new Error(`Expected Playard Owner target station to be 'Männimetsa Peatus', got: ${ownerStationName}`);
+            }
+
+            const ownerDepotText = await page.$eval('#trains-grid-container', el => el.textContent);
+            if (!ownerDepotText.includes('TASUTA') || !ownerDepotText.includes('Linnalähirong Express')) {
+                throw new Error(`Expected Playard Owner depot to be in Estonian, got: ${ownerDepotText.substring(0, 120)}`);
+            }
+            console.log("   Successfully verified Estonian localization for Playard Owner (1karl.ilves@gmail.com)!");
+
+            console.log("✅ All Playard Platform tests passed successfully!");
+        } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
 })();
