@@ -18,7 +18,7 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
     }
 
     const showAdminPanel = isUserAdmin(emailToCheck);
-    const isEstonian = isUserAdminEmail(emailToCheck);
+    const isEstonian = isPlayardOwner(emailToCheck);
 
     if (adminStreakControls) {
         adminStreakControls.style.display = showAdminPanel ? 'flex' : 'none';
@@ -37,13 +37,13 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         warGameCard.style.display = isUserAdminEmail(emailToCheck) ? 'flex' : 'none';
     }
 
-    // Rongimäng on nähtav Playard Ownerile
+    // Rongimäng on avaldatud KÕIKIDELE mängijatele (isegi neile, kes pole sisse loginud)
     const trainGameCard = document.getElementById('card-train-game');
     if (trainGameCard) {
-        trainGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+        trainGameCard.style.display = 'flex';
     }
 
-    // Switch language: Estonian for admin and owner, English for others!
+    // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
     setLanguage(isEstonian ? 'et' : 'en');
     renderRecentlyPlayed();
 }

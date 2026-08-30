@@ -154,11 +154,11 @@ try {
             throw new Error("War game card must be hidden for guests!");
         }
 
-        // Check Rongimäng visibility for guest (Expected: none - restricted to Playard Owner only)
+        // Check Rongimäng visibility for guest (Expected: flex - published to everyone, even not logged in)
         const guestTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
-        console.log(`   Guest Train Game Card visibility (Expected: none): ${guestTrainCardDisplay}`);
-        if (guestTrainCardDisplay !== 'none') {
-            throw new Error("Train game card must be hidden for guests!");
+        console.log(`   Guest Train Game Card visibility (Expected: flex): ${guestTrainCardDisplay}`);
+        if (guestTrainCardDisplay !== 'flex') {
+            throw new Error("Train game card must be visible to non-logged in guests on Hub!");
         }
 
         // Check Guest Admin Panel visibility (Expected: none)
@@ -221,9 +221,9 @@ try {
         }
 
         const adminTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
-        console.log(`   Admin (grx@trenet.ee) Train Game Card visibility (Expected: none): ${adminTrainCardDisplay}`);
-        if (adminTrainCardDisplay !== 'none') {
-            throw new Error("Train game card must be hidden for admin grx@trenet.ee (Owner exclusive)!");
+        console.log(`   Admin (grx@trenet.ee) Train Game Card visibility (Expected: flex): ${adminTrainCardDisplay}`);
+        if (adminTrainCardDisplay !== 'flex') {
+            throw new Error("Train game card must be visible to non-owner admin (grx@trenet.ee)!");
         }
 
         // Click to open Admin Update Panel
