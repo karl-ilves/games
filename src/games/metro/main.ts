@@ -1551,16 +1551,18 @@ export class LastMetroGame {
         this.state = 'player_free';
         this.playerPos.y = 1.6;
         this.playerPos.x = 0; // step into aisle
-        if (this.currentCarIndex === 0) {
-            this.cameraEuler.y = Math.PI; // Look forward down the aisle towards +Z
-        }
         const standBtn = document.getElementById('btn-stand-up');
         if (standBtn) standBtn.style.display = 'none';
         metroAudio.playFootstep();
-        this.showThought(
-            'Vali suund: kas minna ettepoole (PAREM) või tahapoole (VASAK)?',
-            'Choose a direction: head forward (RIGHT) or backward (LEFT)?'
-        );
+
+        // Only show direction choice thought in the very first carriage (Carriage 0)
+        if (this.currentCarIndex === 0) {
+            this.cameraEuler.y = Math.PI; // Look forward down the aisle towards +Z
+            this.showThought(
+                'Vali suund: kas minna ettepoole (PAREM) või tahapoole (VASAK)?',
+                'Choose a direction: head forward (RIGHT) or backward (LEFT)?'
+            );
+        }
     }
 
     // --- Input Handling & Player Movement ---
@@ -1569,8 +1571,9 @@ export class LastMetroGame {
         window.addEventListener('keydown', (e) => {
             this.moveKeys[e.code] = true;
 
-            // Stand up on WASD/Space/Arrows
-            if (this.state === 'player_free' && (e.code === 'KeyW' || e.code === 'KeyE' || e.code === 'Space' || e.code.startsWith('Arrow'))) {
+            // Stand up from initial seat if stand button is visible
+            const standBtn = document.getElementById('btn-stand-up');
+            if (standBtn && standBtn.style.display !== 'none' && (e.code === 'KeyW' || e.code === 'KeyE' || e.code === 'Space' || e.code.startsWith('Arrow'))) {
                 this.standUp();
             }
 
