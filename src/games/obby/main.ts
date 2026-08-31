@@ -187,6 +187,10 @@ interface MovingPlatform {
 interface RotatingHazard {
     mesh: THREE.Object3D;
     speed: number;
+    type: 'spinner' | 'hammer';
+    pos: THREE.Vector3;
+    radius?: number;
+    hammerHead?: THREE.Mesh;
 }
 
 interface CheckpointPad {
@@ -713,13 +717,19 @@ export class ParkourObbyGame {
         const hub = new THREE.Mesh(hubGeo, hubMat);
         group.add(hub);
 
-        const barGeo = new THREE.BoxGeometry(radius * 2, 0.4, 0.4);
+        const barGeo = new THREE.BoxGeometry(radius * 2, 0.35, 0.35);
         const barMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
         const bar = new THREE.Mesh(barGeo, barMat);
         group.add(bar);
 
         this.scene.add(group);
-        this.rotatingHazards.push({ mesh: group, speed });
+        this.rotatingHazards.push({
+            mesh: group,
+            speed,
+            type: 'spinner',
+            pos: pos.clone(),
+            radius
+        });
     }
 
     private createSwingingHammer(pos: THREE.Vector3, speed: number) {
@@ -737,14 +747,20 @@ export class ParkourObbyGame {
         arm.position.y = -2.75;
         group.add(arm);
 
-        const headGeo = new THREE.BoxGeometry(2.4, 1.4, 1.4);
+        const headGeo = new THREE.BoxGeometry(2.2, 1.3, 1.3);
         const headMat = new THREE.MeshLambertMaterial({ color: 0xff4757 });
         const head = new THREE.Mesh(headGeo, headMat);
         head.position.y = -5.5;
         group.add(head);
 
         this.scene.add(group);
-        this.rotatingHazards.push({ mesh: group, speed });
+        this.rotatingHazards.push({
+            mesh: group,
+            speed,
+            type: 'hammer',
+            pos: pos.clone(),
+            hammerHead: head
+        });
     }
 
     private createHazard(pos: THREE.Vector3, size: THREE.Vector3, type: 'lava' | 'laser') {
@@ -1261,9 +1277,13 @@ export class ParkourObbyGame {
             p.delta.subVectors(p.mesh.position, oldPos);
         });
 
-        // Rotating hazards
+        // Rotating hazards & Swinging Hammers
         this.rotatingHazards.forEach(h => {
-            h.mesh.rotation.y += h.speed * dt;
+            if (h.type === 'hammer') {
+                h.mesh.rotation.z = Math.sin(performance.now() * 0.002 * Math.abs(h.speed)) * 1.15;
+            } else {
+                h.mesh.rotation.y += h.speed * dt;
+            }
         });
 
         // Rotating Coins
@@ -1436,13 +1456,47 @@ export class ParkourObbyGame {
             }
         });
 
-        // Check Rotating Hazard Collisions
-        this.rotatingHazards.forEach(h => {
-            const hBox = new THREE.Box3().setFromObject(h.mesh);
-            if (pBox.intersectsBox(hBox)) {
-                this.respawnPlayer();
+        // Check Rotating Hazard / Laser Collisions
+        for (const h of this.rotatingHazards) {
+            if (h.type === 'spinner') {
+                const barY = h.pos.y;
+                const playerMinY = pPos.y;
+                const playerMaxY = pPos.y + 1.9;
+                // If player jumped over the laser or is well below it
+                if (playerMaxY < barY - 0.25 || playerMinY > barY + 0.25) {
+                    continue;
+                }
+
+                // Check 2D line segment distance in X-Z plane
+                const rotY = h.mesh.rotation.y;
+                const rad = h.radius || 3.5;
+                const dirX = Math.cos(rotY);
+                const dirZ = -Math.sin(rotY);
+
+                const px = pPos.x - h.pos.x;
+                const pz = pPos.z - h.pos.z;
+
+                // Project point onto line: t = dot(P, dir)
+                const proj = px * dirX + pz * dirZ;
+                const clampedT = Math.max(-rad, Math.min(rad, proj));
+
+                const closestX = clampedT * dirX;
+                const closestZ = clampedT * dirZ;
+
+                const distSq = (px - closestX) * (px - closestX) + (pz - closestZ) * (pz - closestZ);
+                const hitDist = 0.38 + 0.2; // player radius + bar half-thickness
+                if (distSq < hitDist * hitDist) {
+                    this.respawnPlayer();
+                    break;
+                }
+            } else if (h.type === 'hammer' && h.hammerHead) {
+                const hBox = new THREE.Box3().setFromObject(h.hammerHead);
+                if (pBox.intersectsBox(hBox)) {
+                    this.respawnPlayer();
+                    break;
+                }
             }
-        });
+        }
 
         // Check Coins Collection
         this.coinsList.forEach(c => {
