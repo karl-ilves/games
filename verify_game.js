@@ -1447,16 +1447,17 @@ try {
                 throw new Error("SA SURID death screen failed to display properly!");
             }
 
-            // Test Retry / Respawn button (Must reset completely back to Carriage 0 / beginning)
+            // Test Retry / Respawn button (Must reset completely and replay Intro sequence)
             await page.click('#btn-death-retry');
             await new Promise(r => setTimeout(r, 150));
             const respawnedModalDisplay = await page.$eval('#death-modal', el => window.getComputedStyle(el).display);
             const respawnedCarIndex = await page.evaluate(() => window.__lastMetro.currentCarIndex);
-            console.log(`   Death Modal after Retry: ${respawnedModalDisplay}, Reset to Car Index: ${respawnedCarIndex} (Expected: 0)`);
-            if (respawnedModalDisplay !== 'none' || respawnedCarIndex !== 0) {
-                throw new Error("Retry failed to reset game completely back to the beginning (Carriage 0)!");
+            const respawnedState = await page.evaluate(() => window.__lastMetro.state);
+            console.log(`   Death Modal after Retry: ${respawnedModalDisplay}, Reset to Car Index: ${respawnedCarIndex}, State: ${respawnedState}`);
+            if (respawnedModalDisplay !== 'none' || respawnedCarIndex !== 0 || respawnedState !== 'intro_station') {
+                throw new Error("Retry failed to reset game completely back to Intro (intro_station)!");
             }
-            console.log("   Successfully verified Single Void Shadow Hand, Instant Death, and Full Game Restart on Retry!");
+            console.log("   Successfully verified Single Void Shadow Hand, Instant Death, and Full Intro Replay on Retry!");
 
             // Carriage 10 (Major Glitch & Jump Scare)
             await page.evaluate(() => window.__lastMetro.loadCarriage(10, 'right'));

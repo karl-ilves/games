@@ -445,25 +445,58 @@ export class LastMetroGame {
         const carWidth = 3.4;
         const carHeight = 3.0;
 
-        // 1. Floor
+        // 1. Floor: Rubberized subway floor + Safety yellow tactile boundary stripe along aisle
         const floorMat = new THREE.MeshStandardMaterial({
-            color: theme === 'abandoned' ? 0x2d3436 : 0x485460,
-            roughness: 0.6,
-            metalness: 0.1
+            color: theme === 'abandoned' ? 0x222629 : 0x3d4852,
+            roughness: 0.75,
+            metalness: 0.15
         });
         const floor = new THREE.Mesh(new THREE.BoxGeometry(carWidth, 0.2, carLength), floorMat);
         floor.position.set(0, 0, 0);
         floor.receiveShadow = true;
         carGroup.add(floor);
 
-        // 2. Ceiling
+        // Tactile safety yellow boundary stripes along the aisle
+        const yellowStripeMat = new THREE.MeshStandardMaterial({
+            color: 0xf1c40f,
+            roughness: 0.55,
+            metalness: 0.1
+        });
+        [-0.85, 0.85].forEach(sx => {
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.202, carLength), yellowStripeMat);
+            stripe.position.set(sx, 0.001, 0);
+            carGroup.add(stripe);
+        });
+
+        // Stainless steel threshold floor plates at door entries (z = 0)
+        const thresholdMat = new THREE.MeshStandardMaterial({
+            color: 0xcccccc,
+            roughness: 0.25,
+            metalness: 0.9
+        });
+        [-carWidth / 2 + 0.15, carWidth / 2 - 0.15].forEach(tx => {
+            const threshold = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.203, 2.3), thresholdMat);
+            threshold.position.set(tx, 0.002, 0);
+            carGroup.add(threshold);
+        });
+
+        // 2. Ceiling: Ribbed architectural subway ceiling with recessed lighting channels
         const ceilingMat = new THREE.MeshStandardMaterial({
-            color: theme === 'lounge' ? 0x2f3542 : 0xd2dae2,
-            roughness: 0.5
+            color: theme === 'lounge' ? 0x242830 : 0xe8ecf1,
+            roughness: 0.45,
+            metalness: 0.15
         });
         const ceiling = new THREE.Mesh(new THREE.BoxGeometry(carWidth, 0.15, carLength), ceilingMat);
         ceiling.position.set(0, carHeight, 0);
         carGroup.add(ceiling);
+
+        // Air conditioning vents and emergency speakers in ceiling
+        const ventMat = new THREE.MeshStandardMaterial({ color: 0x333a42, roughness: 0.8 });
+        for (let vz = -8; vz <= 8; vz += 3.2) {
+            const vent = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 0.35), ventMat);
+            vent.position.set(0, carHeight - 0.08, vz);
+            carGroup.add(vent);
+        }
 
         // 3. Side Walls with Window Cutouts & Platform Sliding Doors
         const wallColor = theme === 'abandoned' ? 0x3d3d3d : theme === 'neon' ? 0x1e272e : 0xf1f2f6;
@@ -521,39 +554,91 @@ export class LastMetroGame {
             }
         });
 
-        // 4. Stainless Steel Grab Rails & Poles
-        const poleMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness: 0.9, roughness: 0.2 });
+        // 4. Stainless Steel Grab Rails & Overhead Hanging Grab Loops (Straps)
+        const poleMat = new THREE.MeshStandardMaterial({ color: 0xededed, metalness: 0.95, roughness: 0.15 });
+        const strapMat = new THREE.MeshStandardMaterial({ color: 0xf39c12, roughness: 0.6 });
         [-0.9, 0.9].forEach(x => {
             for (let z = -8; z <= 8; z += 4) {
-                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, carHeight), poleMat);
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, carHeight, 12), poleMat);
                 pole.position.set(x, carHeight / 2, z);
                 carGroup.add(pole);
             }
 
             // Overhead long rail
-            const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, carLength - 2), poleMat);
+            const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, carLength - 2, 12), poleMat);
             rail.rotation.x = Math.PI / 2;
             rail.position.set(x, 2.3, 0);
             carGroup.add(rail);
+
+            // Overhead hanging grab straps with handles
+            for (let sz = -7.5; sz <= 7.5; sz += 1.5) {
+                if (Math.abs(sz) < 1.4) continue; // clear above doorway
+                const strapBand = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.02), ventMat);
+                strapBand.position.set(x, 2.18, sz);
+                carGroup.add(strapBand);
+
+                const strapRing = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 8, 16), strapMat);
+                strapRing.rotation.y = Math.PI / 2;
+                strapRing.position.set(x, 2.04, sz);
+                carGroup.add(strapRing);
+            }
         });
 
-        // 5. Dual Row Passenger Bucket Seats
-        const seatColor = theme === 'lounge' ? 0x9b59b6 : theme === 'abandoned' ? 0x3e2723 : 0x0984e3;
-        const seatMat = new THREE.MeshStandardMaterial({ color: seatColor, roughness: 0.7 });
+        // 5. Glass Windscreen Partitions at ends of seat rows
+        const partitionGlassMat = new THREE.MeshStandardMaterial({
+            color: 0x99ccdd,
+            transparent: true,
+            opacity: 0.35,
+            roughness: 0.1,
+            metalness: 0.2
+        });
+        [-1.25, 1.25].forEach(px => {
+            [-1.8, 1.8].forEach(pz => {
+                const partitionFrame = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.3, 0.7), poleMat);
+                partitionFrame.position.set(px, 0.85, pz);
+                carGroup.add(partitionFrame);
+
+                const partitionGlass = new THREE.Mesh(new THREE.BoxGeometry(0.015, 1.1, 0.6), partitionGlassMat);
+                partitionGlass.position.set(px, 0.85, pz);
+                carGroup.add(partitionGlass);
+            });
+        });
+
+        // 6. Dual Row Passenger Bucket Seats with Padded Cushions and Dividers
+        const seatBaseColor = theme === 'lounge' ? 0x6c5ce7 : theme === 'abandoned' ? 0x2d3436 : 0x0984e3;
+        const seatBaseMat = new THREE.MeshStandardMaterial({ color: seatBaseColor, roughness: 0.65 });
+        const cushionMat = new THREE.MeshStandardMaterial({ color: 0x1e3799, roughness: 0.8 });
 
         [-1.3, 1.3].forEach(x => {
             for (let z = -7.5; z <= 7.5; z += 2.8) {
-                const seatBench = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 1.8), seatMat);
+                const seatBench = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 1.8), seatBaseMat);
                 seatBench.position.set(x, 0.35, z);
                 carGroup.add(seatBench);
 
-                const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.75, 1.8), seatMat);
+                const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 1.7), cushionMat);
+                seatCushion.position.set(x, 0.47, z);
+                carGroup.add(seatCushion);
+
+                const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.75, 1.8), seatBaseMat);
                 seatBack.position.set(x > 0 ? x + 0.3 : x - 0.3, 0.75, z);
                 carGroup.add(seatBack);
             }
         });
 
-        // 6. Fluorescent Ceiling Tube Lights
+        // 7. Cove Transit Posters & Warning Signs Above Windows
+        const adPalette = [0x0984e3, 0x00b894, 0xe17055, 0x6c5ce7, 0xfdcb6e];
+        [-carWidth / 2 + 0.08, carWidth / 2 - 0.08].forEach((ax, sideIdx) => {
+            for (let az = -6.5; az <= 6.5; az += 2.8) {
+                if (Math.abs(az) < 1.6) continue;
+                const adColor = adPalette[Math.abs(Math.floor(az * 3 + sideIdx)) % adPalette.length];
+                const adMat = new THREE.MeshStandardMaterial({ color: adColor, roughness: 0.4 });
+                const adMesh = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.28, 0.85), adMat);
+                adMesh.position.set(ax, 2.45, az);
+                carGroup.add(adMesh);
+            }
+        });
+
+        // 8. Fluorescent Ceiling Tube Lights
         for (let z = -6.5; z <= 6.5; z += 4.5) {
             const lightCoverMat = new THREE.MeshBasicMaterial({ color: theme === 'dark' ? 0xff4757 : 0xffffff });
             const lightCover = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 1.8), lightCoverMat);
@@ -573,7 +658,7 @@ export class LastMetroGame {
             lights.push(pLight);
         }
 
-        // 7. Interactive Metro Route Map on Interior Wall
+        // 9. Interactive Metro Route Map on Interior Wall
         let mapMesh: THREE.Mesh | undefined;
         const mapCanvas = document.createElement('canvas');
         mapCanvas.width = 512;
@@ -609,7 +694,7 @@ export class LastMetroGame {
         mapMesh.rotation.y = -Math.PI / 2;
         carGroup.add(mapMesh);
 
-        // 8. End Gangway Doors (Front = +Z / Right Branch, Back = -Z / Left Branch)
+        // 10. End Gangway Doors (Front = +Z / Right Branch, Back = -Z / Left Branch)
         const doorFront = this.buildGangwayDoor(carWidth, carHeight, 1, index, branch, theme);
         doorFront.position.set(0, 0, carLength / 2);
         carGroup.add(doorFront);
@@ -618,10 +703,7 @@ export class LastMetroGame {
         doorBack.position.set(0, 0, -carLength / 2);
         carGroup.add(doorBack);
 
-        // 9. Populate AI Passengers (rich in early carriages, sparse/creepy in later carriages)
-        this.populatePassengers(carGroup, index, theme, passengers);
-
-        // 10. Puzzle / Special Item setup for Carriage 6, 11+
+        // 11. Puzzle / Special Item setup for Carriage 6, 11+
         let inspectableItem: THREE.Group | undefined;
         let inspectableText: any;
         if (index === 6) {
@@ -649,10 +731,10 @@ export class LastMetroGame {
         }
 
         return {
+            group: carGroup,
             index,
             branch,
             theme,
-            group: carGroup,
             lights,
             lightMeshes,
             passengers,
@@ -667,96 +749,71 @@ export class LastMetroGame {
         };
     }
 
-    private buildGangwayDoor(carWidth: number, carHeight: number, dir: 1 | -1, carIndex: number, branch: DirectionBranch, theme: CarriageData['theme']): THREE.Group {
+    private buildGangwayDoor(carWidth: number, carHeight: number, dir: number, carIndex: number, branch: DirectionBranch, theme: CarriageData['theme']): THREE.Group {
         const doorGroup = new THREE.Group();
 
-        const isLockedBackDoor = (branch === 'right' && dir === -1) || 
-                                 (branch === 'left' && dir === 1);
+        // End Bulkhead Wall with centered door archway
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.6 });
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry((carWidth - 1.4) / 2, carHeight, 0.25), wallMat);
+        leftWall.position.set(-(carWidth + 1.4) / 4, carHeight / 2, 0);
+        doorGroup.add(leftWall);
 
+        const rightWall = new THREE.Mesh(new THREE.BoxGeometry((carWidth - 1.4) / 2, carHeight, 0.25), wallMat);
+        rightWall.position.set((carWidth + 1.4) / 4, carHeight / 2, 0);
+        doorGroup.add(rightWall);
+
+        const topWall = new THREE.Mesh(new THREE.BoxGeometry(1.4, carHeight - 2.2, 0.25), wallMat);
+        topWall.position.set(0, 2.2 + (carHeight - 2.2) / 2, 0);
+        doorGroup.add(topWall);
+
+        // Gangway Glass Door Frame
         const frameMat = new THREE.MeshStandardMaterial({
-            color: isLockedBackDoor ? 0x3d1414 : 0x1f242d,
-            metalness: 0.8,
+            color: theme === 'abandoned' ? 0x7f1d1d : 0x1e272e,
+            metalness: 0.7,
             roughness: 0.3
         });
-        const wallLeft = new THREE.Mesh(new THREE.BoxGeometry((carWidth - 1.2) / 2, carHeight, 0.2), frameMat);
-        wallLeft.position.set(-(carWidth + 1.2) / 4, carHeight / 2, 0);
-        doorGroup.add(wallLeft);
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.15, 0.08), frameMat);
+        frame.position.set(0, 1.1, 0);
+        doorGroup.add(frame);
 
-        const wallRight = new THREE.Mesh(new THREE.BoxGeometry((carWidth - 1.2) / 2, carHeight, 0.2), frameMat);
-        wallRight.position.set((carWidth + 1.2) / 4, carHeight / 2, 0);
-        doorGroup.add(wallRight);
-
-        const wallTop = new THREE.Mesh(new THREE.BoxGeometry(1.2, carHeight - 2.2, 0.2), frameMat);
-        wallTop.position.set(0, 2.2 + (carHeight - 2.2) / 2, 0);
-        doorGroup.add(wallTop);
-
-        // Sliding door panel
-        const doorPanelMat = new THREE.MeshStandardMaterial({
-            color: isLockedBackDoor ? 0x5a1818 : (theme === 'abandoned' ? 0x7f1d1d : 0x10ac84),
-            metalness: 0.6,
-            roughness: 0.35
+        // Glass Window in Gangway Door
+        const glassMat = new THREE.MeshStandardMaterial({
+            color: 0x111e2e,
+            transparent: true,
+            opacity: 0.6,
+            roughness: 0.1
         });
-        const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.15, 0.08), doorPanelMat);
-        doorPanel.position.set(0, 1.1, 0);
-        doorGroup.add(doorPanel);
+        const glass = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.25, 0.09), glassMat);
+        glass.position.set(0, 1.35, 0);
+        doorGroup.add(glass);
 
-        // Door Glass Window
-        const doorGlass = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 0.7, 0.1),
-            new THREE.MeshPhysicalMaterial({
-                color: isLockedBackDoor ? 0xff3838 : 0x00f2fe,
-                transmission: isLockedBackDoor ? 0.4 : 0.8,
-                roughness: 0.1
-            })
-        );
-        doorGlass.position.set(0, 1.4, 0);
-        doorGroup.add(doorGlass);
+        // Metallic Handle
+        const handleMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.9, roughness: 0.2 });
+        const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3), handleMat);
+        handle.position.set(0.48, 1.05, 0.08);
+        doorGroup.add(handle);
 
-        // Indicator Light above door (Red for locked back door, Green for forward path)
-        const lightMat = new THREE.MeshBasicMaterial({ color: isLockedBackDoor ? 0xff3838 : 0x2ecc71 });
-        const lightMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.04, 16), lightMat);
-        lightMesh.rotation.x = Math.PI / 2;
-        lightMesh.position.set(0, 2.32, -dir * 0.1);
-        doorGroup.add(lightMesh);
+        // Status Indicator above door
+        const isForwardDoor = (branch === 'right' && dir > 0) || (branch === 'left' && dir < 0) || (branch === 'undecided');
+        const isLockedBackDoor = !isForwardDoor && carIndex >= 1;
 
-        // Sign plate (e.g. "JÄRGMINE VAGUN ->" or "LUKUS / LOCKED")
-        const signCanvas = document.createElement('canvas');
-        signCanvas.width = 320;
-        signCanvas.height = 80;
-        const ctx = signCanvas.getContext('2d');
-        if (ctx) {
-            ctx.fillStyle = isLockedBackDoor ? '#c0392b' : '#27ae60';
-            ctx.fillRect(0, 0, 320, 80);
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            if (isLockedBackDoor) {
-                ctx.font = 'bold 22px sans-serif';
-                ctx.fillText('🔒 LUKUS / LOCKED', 160, 34);
-                ctx.font = '14px sans-serif';
-                ctx.fillText('TAGASITEE SULETUD', 160, 60);
-            } else if (branch === 'undecided') {
-                ctx.font = 'bold 22px sans-serif';
-                ctx.fillText(dir === 1 ? 'PAREM RADA ->' : '<- VASAK RADA', 160, 48);
-            } else {
-                ctx.font = 'bold 22px sans-serif';
-                ctx.fillText(dir === 1 ? 'JÄRGMINE VAGUN ->' : '<- JÄRGMINE VAGUN', 160, 48);
-            }
-        }
-        const signTex = new THREE.CanvasTexture(signCanvas);
-        const signMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(0.88, 0.22, 0.02),
-            new THREE.MeshBasicMaterial({ map: signTex })
-        );
-        signMesh.position.set(0, 2.12, -dir * 0.12);
-        doorGroup.add(signMesh);
+        const indColor = isLockedBackDoor ? 0xff4757 : 0x2ed573;
+        const indMat = new THREE.MeshBasicMaterial({ color: indColor });
+        const ind = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.06), indMat);
+        ind.position.set(0, 2.25, dir * 0.14);
+        doorGroup.add(ind);
 
-        // Creepy Red-Faced Entity Standing Behind Locked Back Door (iga vaguni taga punase näoga keegi vaatab)
+        // --- Creepy Red-Faced Entity in Every Locked Back Gangway Door ---
         if (isLockedBackDoor) {
             const redFaceGroup = new THREE.Group();
 
-            // Dark shadowy body silhouette
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x050507, roughness: 0.95 });
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 1.8), bodyMat);
+            // Dark Silhouette Body
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x050608,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.2, 0.35), bodyMat);
             body.position.set(0, 0.9, 0);
             redFaceGroup.add(body);
 
@@ -793,12 +850,6 @@ export class LastMetroGame {
     }
 
     private populatePassengers(carGroup: THREE.Group, carIndex: number, theme: CarriageData['theme'], passengers: AIPassenger[]) {
-        // Car 0: 6 passengers (normal)
-        // Car 1: 4 passengers
-        // Car 2: 3 passengers (includes uncanny staring passenger)
-        // Car 3-8: 1-2 passengers
-        // Car 9: 0 passengers (only ghost stalker)
-        // Car 10: 0 passengers (jumpscare)
         let count = 0;
         if (carIndex === 0) count = 6;
         else if (carIndex === 1) count = 4;
@@ -815,36 +866,153 @@ export class LastMetroGame {
             new THREE.Vector3(1.1, 0.5, 7)
         ];
 
+        const skinPalette = [0xf5cd79, 0xf7d794, 0xdfe6e9, 0xd1a374, 0x805533];
+        const outfitStyles = [
+            { top: 0x2c3e50, pants: 0x1e272e, coat: true, hair: 0x2d3436, hairType: 'short' },
+            { top: 0xe74c3c, pants: 0x2d3436, coat: false, hair: 0x8b4513, hairType: 'hoodie' },
+            { top: 0x16a085, pants: 0x34495e, coat: true, hair: 0x111111, hairType: 'ponytail' },
+            { top: 0x8e44ad, pants: 0x1b1464, coat: false, hair: 0xd63031, hairType: 'long' },
+            { top: 0xd35400, pants: 0x2f3640, coat: true, hair: 0x2d3436, hairType: 'beanie' },
+            { top: 0x27ae60, pants: 0x2c2c54, coat: false, hair: 0x636e72, hairType: 'headphones' }
+        ];
+
         for (let i = 0; i < count; i++) {
             const seatPos = seatPositions[i % seatPositions.length];
+            const style = outfitStyles[i % outfitStyles.length];
+            const skinColor = skinPalette[i % skinPalette.length];
+
             const pGroup = new THREE.Group();
             pGroup.position.copy(seatPos);
 
-            // Passenger Body (torso)
-            const shirtColor = [0x34495e, 0x16a085, 0x8e44ad, 0xd35400, 0x2c3e50][i % 5];
-            const bodyMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.7 });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.3), bodyMat);
-            body.position.set(0, 0.3, 0);
-            pGroup.add(body);
+            const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.55 });
+            const clothingTopMat = new THREE.MeshStandardMaterial({ color: style.top, roughness: 0.75 });
+            const clothingPantsMat = new THREE.MeshStandardMaterial({ color: style.pants, roughness: 0.8 });
+            const shoeMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.4 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: style.hair, roughness: 0.8 });
 
-            // Head
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xf5cd79, roughness: 0.5 });
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), skinMat);
-            head.position.set(0, 0.75, 0);
+            // 1. Torso & Jacket
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.52, 0.28), clothingTopMat);
+            torso.position.set(0, 0.32, 0);
+            pGroup.add(torso);
+
+            if (style.coat) {
+                const collar = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.3), clothingTopMat);
+                collar.position.set(0, 0.56, 0);
+                pGroup.add(collar);
+            }
+
+            // 2. Head, Neck & Hair / Accessories
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.12, 8), skinMat);
+            neck.position.set(0, 0.62, 0);
+            pGroup.add(neck);
+
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), skinMat);
+            head.position.set(0, 0.78, 0);
             pGroup.add(head);
 
-            // Hair
-            const hairMat = new THREE.MeshStandardMaterial({ color: 0x2d3436 });
-            const hair = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.34), hairMat);
-            hair.position.set(0, 0.86, 0);
-            pGroup.add(hair);
+            // Nose
+            const nose = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.05), skinMat);
+            nose.position.set(0, 0.77, 0.15);
+            head.add(nose);
 
-            // Phone or newspaper prop
+            // Hair Styles
+            if (style.hairType === 'short') {
+                const hair = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.32), hairMat);
+                hair.position.set(0, 0.88, -0.02);
+                pGroup.add(hair);
+            } else if (style.hairType === 'long') {
+                const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.32), hairMat);
+                hairTop.position.set(0, 0.88, -0.02);
+                pGroup.add(hairTop);
+                const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.35, 0.12), hairMat);
+                hairBack.position.set(0, 0.7, -0.14);
+                pGroup.add(hairBack);
+            } else if (style.hairType === 'ponytail') {
+                const hair = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), hairMat);
+                hair.position.set(0, 0.8, -0.04);
+                pGroup.add(hair);
+                const pony = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.02, 0.28, 6), hairMat);
+                pony.rotation.x = Math.PI / 4;
+                pony.position.set(0, 0.75, -0.2);
+                pGroup.add(pony);
+            } else if (style.hairType === 'beanie') {
+                const beanieMat = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.9 });
+                const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 14), beanieMat);
+                beanie.position.set(0, 0.84, 0);
+                pGroup.add(beanie);
+            } else if (style.hairType === 'headphones') {
+                const hpMat = new THREE.MeshStandardMaterial({ color: 0xd63031, metalness: 0.6, roughness: 0.3 });
+                const band = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.02, 6, 16, Math.PI), hpMat);
+                band.rotation.z = Math.PI / 2;
+                band.position.set(0, 0.8, 0);
+                pGroup.add(band);
+                [-0.16, 0.16].forEach(hx => {
+                    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 8), hpMat);
+                    cup.rotation.z = Math.PI / 2;
+                    cup.position.set(hx, 0.78, 0);
+                    pGroup.add(cup);
+                });
+            }
+
+            // 3. Seated Legs & Shoes
+            // Thighs (extending forward along local Z)
+            [-0.11, 0.11].forEach(lx => {
+                const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.38), clothingPantsMat);
+                thigh.position.set(lx, 0.08, 0.16);
+                pGroup.add(thigh);
+
+                // Calves (extending downward along local Y)
+                const calf = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.38, 0.13), clothingPantsMat);
+                calf.position.set(lx, -0.15, 0.32);
+                pGroup.add(calf);
+
+                // Shoes / Sneakers
+                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.08, 0.22), shoeMat);
+                shoe.position.set(lx, -0.34, 0.36);
+                pGroup.add(shoe);
+            });
+
+            // 4. Arms & Props (Smartphones, Newspapers, Books)
+            // Left & Right Upper Arms
+            [-0.22, 0.22].forEach(ax => {
+                const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.32, 6), clothingTopMat);
+                arm.position.set(ax, 0.32, 0.05);
+                pGroup.add(arm);
+            });
+
+            // Interactive Prop
             if (i % 2 === 0) {
+                // Smartphone with subtle glowing screen
                 const phoneMat = new THREE.MeshBasicMaterial({ color: 0x00d2d3 });
-                const phone = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.18), phoneMat);
-                phone.position.set(0, 0.35, 0.25);
+                const phone = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.015, 0.18), phoneMat);
+                phone.rotation.x = -Math.PI / 6;
+                phone.position.set(0, 0.32, 0.26);
                 pGroup.add(phone);
+
+                // Hands holding phone
+                [-0.08, 0.08].forEach(hx => {
+                    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.038, 6, 6), skinMat);
+                    hand.position.set(hx, 0.3, 0.25);
+                    pGroup.add(hand);
+                });
+
+                // Subtle blue screen light illuminating face
+                const screenLight = new THREE.PointLight(0x00d2d3, 0.45, 1.2);
+                screenLight.position.set(0, 0.42, 0.26);
+                pGroup.add(screenLight);
+            } else {
+                // Metro Newspaper
+                const paperMat = new THREE.MeshStandardMaterial({ color: 0xf5f6fa, roughness: 0.9 });
+                const paper = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.01), paperMat);
+                paper.rotation.x = -Math.PI / 4;
+                paper.position.set(0, 0.35, 0.24);
+                pGroup.add(paper);
+
+                [-0.12, 0.12].forEach(hx => {
+                    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.038, 6, 6), skinMat);
+                    hand.position.set(hx, 0.32, 0.22);
+                    pGroup.add(hand);
+                });
             }
 
             const baseRotY = seatPos.x > 0 ? -Math.PI / 2 : Math.PI / 2;
@@ -854,7 +1022,7 @@ export class LastMetroGame {
             passengers.push({
                 group: pGroup,
                 head,
-                body,
+                body: torso,
                 isSitting: true,
                 seatPos,
                 animType: isCreepy ? 'uncanny_stare' : i % 2 === 0 ? 'phone' : 'look_window',
@@ -1275,14 +1443,8 @@ export class LastMetroGame {
         const modal = document.getElementById('death-modal');
         if (modal) modal.style.display = 'none';
 
-        // Reset completely to the beginning (kui panen retry siis peab täiesti algusesse minema)
-        this.totalCarriagesExplored = 0;
-        this.branchDirection = 'undecided';
-        this.loadCarriage(0, 'undecided');
-        this.showThought(
-            'Ärkasin uuesti esimeses vagunis... Kõik algab otsast peale.',
-            'I awoke back in the first carriage... Everything begins from the start.'
-        );
+        // Replay full cinematic intro sequence from the beginning (kui panen retry siis peab ka intro tulema)
+        this.replayIntro();
     }
 
     private startCarriage10JumpScare() {
@@ -1818,9 +1980,14 @@ export class LastMetroGame {
             this.tunnelGroup.position.z = (this.tunnelOffsetZ % 12);
         }
 
-        // 2. Uncanny Passenger Logic in Carriage 2
-        if (this.currentCarIndex === 2 && this.currentCarriage) {
-            this.currentCarriage.passengers.forEach(p => {
+        // 2. Realistic Passenger Breathing & Staring Logic
+        if (this.currentCarriage) {
+            const time = performance.now() * 0.0015;
+            this.currentCarriage.passengers.forEach((p, pIdx) => {
+                // Subtle breathing chest expansion & head tilt
+                const breath = Math.sin(time * 2.0 + pIdx * 1.5) * 0.012;
+                p.body.position.y = 0.32 + breath;
+
                 if (p.isCreepy) {
                     const distToPlayer = this.playerPos.distanceTo(p.group.position);
                     if (distToPlayer < 4.0) {
@@ -1830,6 +1997,10 @@ export class LastMetroGame {
                     } else {
                         p.head.rotation.y = 0;
                     }
+                } else if (p.animType === 'phone') {
+                    p.head.rotation.x = 0.22 + Math.sin(time * 1.2 + pIdx) * 0.04;
+                } else if (p.animType === 'look_window') {
+                    p.head.rotation.y = Math.sin(time * 0.8 + pIdx) * 0.15;
                 }
             });
         }
