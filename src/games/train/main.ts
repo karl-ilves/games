@@ -628,13 +628,13 @@ interface Station {
     moneyReward: number; // Rongiraha (+50 € jaama kohta)
 }
 
-const STATIONS: Station[] = [
+const TRAIN_STATIONS: Station[] = [
     {
         id: 'central',
         name: 'Kesklinna Peajaam',
         nameEn: 'Central Grand Station',
-        description: 'Suur reisijate peajaam kellatorni ja reisijate perrooniga',
-        descriptionEn: 'Grand central terminal with iconic clock tower and long platforms',
+        description: 'Suur maapealne reisijate peajaam kellatorni ja reisijate perrooniga',
+        descriptionEn: 'Grand surface central terminal with iconic clock tower and long platforms',
         trackU: 0.04,
         worldPos: new THREE.Vector3(0, 0, 0),
         passengersWaiting: 28,
@@ -675,6 +675,57 @@ const STATIONS: Station[] = [
     }
 ];
 
+const METRO_STATIONS: Station[] = [
+    {
+        id: 'metro_central',
+        name: 'Kesklinna Maa-alune Metroojaam',
+        nameEn: 'Downtown Underground Subway Station',
+        description: 'Kaasaegne maa-alune metroojaam marmorperrooni ja LED ekraanidega',
+        descriptionEn: 'Modern subterranean subway station with marble platforms and LED displays',
+        trackU: 0.04,
+        worldPos: new THREE.Vector3(0, 0, 0),
+        passengersWaiting: 45,
+        moneyReward: 50
+    },
+    {
+        id: 'metro_tech',
+        name: 'Teaduspargi Tunnelijaam',
+        nameEn: 'Tech Park Tube Station',
+        description: 'Kõrgtehnoloogiline maa-alune metroojaam klaasuste ja neoonvalgusega',
+        descriptionEn: 'High-tech subterranean tube station with glass safety doors and neon glow',
+        trackU: 0.35,
+        worldPos: new THREE.Vector3(0, 0, 0),
+        passengersWaiting: 38,
+        moneyReward: 50
+    },
+    {
+        id: 'metro_harbor',
+        name: 'Sadama Maa-alune Terminal',
+        nameEn: 'Harbor Subway Terminal',
+        description: 'Sügavale kaljusse rajatud metroojaam mereäärse ühendusega',
+        descriptionEn: 'Deep-rock subterranean station connecting to harbor terminal',
+        trackU: 0.65,
+        worldPos: new THREE.Vector3(0, 0, 0),
+        passengersWaiting: 50,
+        moneyReward: 50
+    },
+    {
+        id: 'metro_airport',
+        name: 'Lennujaama Metrooliini Lõppjaam',
+        nameEn: 'Airport Express Underground Terminal',
+        description: 'Maa-alune kiirliini jaam automaatsete eskalaatorite ja kiirrongidega',
+        descriptionEn: 'Underground express subway hub with escalators and fast transit links',
+        trackU: 0.90,
+        worldPos: new THREE.Vector3(0, 0, 0),
+        passengersWaiting: 60,
+        moneyReward: 50
+    }
+];
+
+export function getActiveStations(): Station[] {
+    return activeTrain && activeTrain.category === 'metro' ? METRO_STATIONS : TRAIN_STATIONS;
+}
+
 // --- Track Junction (Põhiliin vs Mäering Harutee) ---
 interface JunctionState {
     activeBranch: 'main' | 'mountain';
@@ -707,6 +758,9 @@ let connectingRods: THREE.Mesh[] = [];
 
 let mainTrackCurve: THREE.CatmullRomCurve3;
 let mountainTrackCurve: THREE.CatmullRomCurve3;
+
+let aboveGroundGroup: THREE.Group;
+let undergroundSubwayGroup: THREE.Group;
 
 let trainU = 0.04; // Start at central station
 let currentThrottle = 0; // 0..100
@@ -1230,7 +1284,7 @@ function buildPineForest() {
 
 // --- Build 4 Detailed Stations ---
 function buildStations() {
-    STATIONS.forEach(st => {
+    TRAIN_STATIONS.forEach(st => {
         st.worldPos = mainTrackCurve.getPointAt(st.trackU);
         const tangent = mainTrackCurve.getTangentAt(st.trackU).normalize();
 
@@ -1746,7 +1800,8 @@ function positionTrainUnits() {
 
 // --- Station Passenger Pickup & In-Game Rongiraha Rewards (+50€ Per Stop, Yarde ei teeni) ---
 function checkStationArrival(delta: number) {
-    const targetStation = STATIONS[currentStationIndex];
+    const stations = getActiveStations();
+    const targetStation = stations[currentStationIndex];
     if (!targetStation) return;
 
     const totalLen = mainTrackCurve.getLength();
@@ -1793,8 +1848,8 @@ function checkStationArrival(delta: number) {
 
             showStationRewardModal(targetStation, moneyReward);
 
-            currentStationIndex = (currentStationIndex + 1) % STATIONS.length;
-            const nextSt = STATIONS[currentStationIndex];
+            currentStationIndex = (currentStationIndex + 1) % stations.length;
+            const nextSt = stations[currentStationIndex];
             const nameEl = document.getElementById('target-station-name');
             if (nameEl) nameEl.innerText = getStationName(nextSt);
         }
@@ -1809,8 +1864,8 @@ function checkStationArrival(delta: number) {
             showStationSkippedNotification(targetStation);
 
             // Mäng läheb edasi järgmisele jaamale
-            currentStationIndex = (currentStationIndex + 1) % STATIONS.length;
-            const nextSt = STATIONS[currentStationIndex];
+            currentStationIndex = (currentStationIndex + 1) % stations.length;
+            const nextSt = stations[currentStationIndex];
             const nameEl = document.getElementById('target-station-name');
             if (nameEl) nameEl.innerText = getStationName(nextSt);
         }
@@ -2230,7 +2285,8 @@ function applyTrainLocalization() {
     const targetStationLabel = document.getElementById('target-station-label');
     if (targetStationLabel) targetStationLabel.innerText = t.targetStation;
 
-    const initialTargetStation = STATIONS[currentStationIndex];
+    const stations = getActiveStations();
+    const initialTargetStation = stations[currentStationIndex];
     const targetStationName = document.getElementById('target-station-name');
     if (targetStationName && initialTargetStation) targetStationName.innerText = getStationName(initialTargetStation);
 

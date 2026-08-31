@@ -146,6 +146,21 @@ export function applyLocalization() {
         if (obbyPill) obbyPill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
     }
 
+    // LAST METRO (Viimane Metroo) Game Card
+    const metroCard = document.getElementById('card-metro-game');
+    if (metroCard) {
+        const h2 = metroCard.querySelector('h2');
+        if (h2) h2.textContent = isEt ? '🚇 LAST METRO (Viimane Metroo)' : '🚇 LAST METRO (3D Mystery)';
+        const pMetro = metroCard.querySelector('p');
+        if (pMetro) pMetro.textContent = isEt
+            ? 'Astuge metroosse, kus algab rahulik sõit, kuid iga läbitud vagun muutub aeglaselt järjest kummalisemaks ja salapärasemaks...'
+            : 'Board an ordinary subway train where every carriage you traverse slowly turns surreal, tense, and mysterious...';
+        const tMetro = metroCard.querySelector('.reward-tag span:last-child');
+        if (tMetro) tMetro.textContent = isEt ? '🔍 MÜSTEERIUM & LÕPUTUD VAGUNID' : '🔍 MYSTERY & INFINITE CARS';
+        const metroPill = metroCard.querySelector('.metro-owner-badge-pill');
+        if (metroPill) metroPill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
+    }
+
     // Community section
     const commH2 = document.querySelector('#btn-hub-create-game')?.previousElementSibling?.querySelector('h2');
     if (commH2) commH2.innerHTML = isEt ? '<span>🌐</span> Kogukonna loodud mängud' : '<span>🌐</span> Community Created Games';

@@ -49,6 +49,12 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         obbyGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
     }
 
+    // LAST METRO mäng on nähtav AINULT Playard Ownerile!
+    const metroGameCard = document.getElementById('card-metro-game');
+    if (metroGameCard) {
+        metroGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+    }
+
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
     setLanguage(isEstonian ? 'et' : 'en');
     renderRecentlyPlayed();
@@ -76,6 +82,9 @@ function setupIcons() {
 
     const cardObbyYardIcon = document.getElementById('card-obby-yard-icon');
     if (cardObbyYardIcon) cardObbyYardIcon.innerHTML = yardService.renderYardSvg(16);
+
+    const cardMetroYardIcon = document.getElementById('card-metro-yard-icon');
+    if (cardMetroYardIcon) cardMetroYardIcon.innerHTML = yardService.renderYardSvg(16);
 }
 
 // --- Live HMS Countdown Updater ---

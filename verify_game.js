@@ -169,6 +169,13 @@ try {
             throw new Error("Obby game card must be hidden for guests!");
         }
 
+        // Check LAST METRO visibility for guest (Expected: none - Owner exclusive)
+        const guestMetroCardDisplay = await page.$eval('#card-metro-game', el => window.getComputedStyle(el).display);
+        console.log(`   Guest LAST METRO Card visibility (Expected: none): ${guestMetroCardDisplay}`);
+        if (guestMetroCardDisplay !== 'none') {
+            throw new Error("LAST METRO game card must be hidden for guests!");
+        }
+
         // Check Guest Admin Panel visibility (Expected: none)
         const guestAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
         console.log(`   Guest Admin Panel visibility (Expected: none): ${guestAdminPanelDisplay}`);
@@ -215,7 +222,13 @@ try {
             throw new Error("Obby game card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
         }
 
-        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, Rongimäng visible, Obby hidden!
+        const ownerMetroCardDisplay = await page.$eval('#card-metro-game', el => window.getComputedStyle(el).display);
+        console.log(`   Playard Owner LAST METRO Card visibility (Expected: flex): ${ownerMetroCardDisplay}`);
+        if (ownerMetroCardDisplay !== 'flex') {
+            throw new Error("LAST METRO card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
+        }
+
+        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, Rongimäng visible, Obby & Metro hidden!
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
@@ -244,6 +257,12 @@ try {
         console.log(`   Admin (grx@trenet.ee) Obby Game Card visibility (Expected: none): ${adminObbyCardDisplay}`);
         if (adminObbyCardDisplay !== 'none') {
             throw new Error("Obby game card must be hidden for non-owner admin (grx@trenet.ee)!");
+        }
+
+        const adminMetroCardDisplay = await page.$eval('#card-metro-game', el => window.getComputedStyle(el).display);
+        console.log(`   Admin (grx@trenet.ee) LAST METRO Card visibility (Expected: none): ${adminMetroCardDisplay}`);
+        if (adminMetroCardDisplay !== 'none') {
+            throw new Error("LAST METRO game card must be hidden for non-owner admin (grx@trenet.ee)!");
         }
 
         // Click to open Admin Update Panel
@@ -1181,9 +1200,12 @@ try {
             await page.click('#btn-toggle-camera');
             await new Promise(r => setTimeout(r, 200));
 
-            // Test Jump Action via Space Key
+            // Test Jump & Double Jump Action via Space Key
             await page.keyboard.press('Space');
-            await new Promise(r => setTimeout(r, 200));
+            await new Promise(r => setTimeout(r, 100));
+            await page.keyboard.press('Space');
+            await new Promise(r => setTimeout(r, 150));
+            console.log("   Successfully tested Jump and Double Jump mechanics in 3D Obby!");
 
             // Test Respawn Button (R)
             await page.click('#btn-respawn');
@@ -1234,6 +1256,128 @@ try {
             await page.click('#btn-close-help');
 
             console.log("   Successfully verified 3D Parkour Obby Simulator (Takistusrada)!");
+
+            // 14. Checking LAST METRO (3D Mystery Adventure)...
+            console.log("14. Checking LAST METRO (3D Mystery Adventure)...");
+            
+            // A. Test Non-Owner VIP Restriction
+            await page.evaluate(() => {
+                window.__PLAYARD_TEST_MODE__ = false;
+                localStorage.removeItem('playard_current_user_profile');
+            });
+            await page.goto('http://localhost:4173/games/games/metro/index.html');
+            await new Promise(r => setTimeout(r, 600));
+
+            const guestVipDisplay = await page.$eval('#vip-restricted-overlay', el => window.getComputedStyle(el).display).catch(() => 'none');
+            console.log("   Guest VIP Restricted Overlay Display (Expected: flex):", guestVipDisplay);
+            if (guestVipDisplay !== 'flex') {
+                throw new Error("LAST METRO must be VIP-restricted for non-owners!");
+            }
+
+            // B. Test Playard Owner Access & Full Game Initialization
+            await page.evaluate(() => {
+                window.__PLAYARD_TEST_MODE__ = true;
+                const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+            });
+            await page.goto('http://localhost:4173/games/games/metro/index.html');
+            await new Promise(r => setTimeout(r, 800));
+
+            await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
+            console.log("   Successfully loaded 3D Canvas for LAST METRO!");
+
+            // Check HUD elements
+            const metroHudTitle = await page.$eval('#hud-game-title', el => el.textContent);
+            const metroCarLabel = await page.$eval('#hud-car-label', el => el.textContent);
+            console.log(`   LAST METRO HUD: Title="${metroHudTitle}", Initial Car="${metroCarLabel}"`);
+            if (!metroHudTitle.includes('LAST METRO') && !metroHudTitle.includes('VIIMANE METROO')) {
+                throw new Error(`Unexpected HUD Title: ${metroHudTitle}`);
+            }
+
+            // Test Stand Up
+            await page.evaluate(() => {
+                if (window.__lastMetro) window.__lastMetro.standUp();
+            });
+            await new Promise(r => setTimeout(r, 200));
+
+            // Test Flashlight Toggle
+            await page.click('#btn-toggle-flashlight');
+            await new Promise(r => setTimeout(r, 100));
+            console.log("   Successfully tested Flashlight Toggle!");
+
+            // Test Progression through Carriages 1 to 10 with Anomaly Events
+            console.log("   Testing story carriages 1 to 10 progression & anomalies...");
+            
+            // Carriage 1 (Whispers)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(1, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+            const car1Label = await page.$eval('#hud-car-label', el => el.textContent);
+            const branch1Label = await page.$eval('#hud-branch-label', el => el.textContent);
+            console.log(`   Carriage 1 HUD: Label="${car1Label}", Branch="${branch1Label}"`);
+            if (!car1Label.includes('1')) throw new Error("Expected Carriage 1 in HUD!");
+
+            // Carriage 2 (Uncanny Passenger)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(2, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+
+            // Carriage 3 (Metro Map Anomaly)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(3, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+
+            // Carriage 4 (Lights Flicker)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(4, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+
+            // Carriage 5 (Window Void Anomaly)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(5, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+
+            // Carriage 6 (Inspectable Lore Note)
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(6, 'right');
+                window.__lastMetro.openLoreModal();
+            });
+            await new Promise(r => setTimeout(r, 200));
+            const loreModalDisplay = await page.$eval('#lore-modal', el => window.getComputedStyle(el).display);
+            console.log("   Lore Note Inspection Modal Display (Expected: flex):", loreModalDisplay);
+            if (loreModalDisplay !== 'flex') throw new Error("Lore modal failed to open upon inspection in Carriage 6!");
+            await page.click('#btn-lore-close');
+            await new Promise(r => setTimeout(r, 150));
+
+            // Carriage 7 (Sealed Backway)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(7, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+
+            // Carriage 8 (Pneumatic Door Anomaly)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(8, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+
+            // Carriage 9 (Ghost Stalker)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(9, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+
+            // Carriage 10 (Major Glitch & Jump Scare)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(10, 'right'));
+            await new Promise(r => setTimeout(r, 200));
+            const car10Label = await page.$eval('#hud-car-label', el => el.textContent);
+            console.log("   Carriage 10 HUD Label (Expected: 10):", car10Label);
+            if (!car10Label.includes('10')) throw new Error("Expected Carriage 10 reached!");
+
+            // Test Infinite Procedural Carriages System (Vagun 11 -> 100)
+            console.log("   Testing Infinite Procedural Metro System...");
+            await page.evaluate(() => window.__lastMetro.loadCarriage(11, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+            const car11Label = await page.$eval('#hud-car-label', el => el.textContent);
+            console.log("   Procedural Carriage 11 HUD Label:", car11Label);
+            if (!car11Label.includes('11')) throw new Error("Expected Carriage 11 in HUD!");
+
+            await page.evaluate(() => window.__lastMetro.loadCarriage(100, 'left'));
+            await new Promise(r => setTimeout(r, 150));
+            const car100Label = await page.$eval('#hud-car-label', el => el.textContent);
+            console.log("   Procedural Carriage 100 HUD Label:", car100Label);
+            if (!car100Label.includes('100')) throw new Error("Expected Carriage 100 in HUD!");
+
+            console.log("   Successfully verified LAST METRO (3D Mystery Adventure)!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

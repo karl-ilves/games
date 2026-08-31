@@ -36,6 +36,24 @@ class ObbyAudio {
         osc.stop(this.ctx.currentTime + 0.15);
     }
 
+    public playDoubleJump() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(360, now);
+        osc.frequency.exponentialRampToValueAtTime(840, now + 0.18);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.18);
+    }
+
     public playBounce() {
         if (!this.soundEnabled) return;
         this.init();
@@ -212,6 +230,8 @@ export class ParkourObbyGame {
     private currentMovingPlatform: MovingPlatform | null = null;
     private lastPlatformDelta = new THREE.Vector3();
     private jumpForce = 14.5;
+    private jumpsRemaining = 2;
+    private doubleJumpRings: { mesh: THREE.Mesh; timer: number }[] = [];
     private moveSpeed = 11.0;
     private sprintMultiplier = 1.45;
     private currentStageIndex = 0;
@@ -798,13 +818,6 @@ export class ParkourObbyGame {
         const goldMat = new THREE.MeshLambertMaterial({ color: 0xffd32a });
         const cup = new THREE.Mesh(cupGeo, goldMat);
         cup.position.y = 1.8;
-        group.add(cup);
-
-        const starGeo = new THREE.OctahedronGeometry(0.8, 0);
-        const star = new THREE.Mesh(starGeo, goldMat);
-        star.position.y = 3.6;
-        group.add(star);
-
         this.scene.add(group);
     }
 
@@ -812,6 +825,9 @@ export class ParkourObbyGame {
     private setupInputs() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
+            if (e.code === 'Space' && !e.repeat) {
+                this.performJump();
+            }
             if (e.code === 'KeyR') this.respawnPlayer();
             if (e.code === 'KeyV') this.toggleCamera();
             if (!this.timerStarted && (e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyS' || e.code === 'KeyD' || e.code === 'Space')) {
@@ -894,7 +910,7 @@ export class ParkourObbyGame {
         if (touchJump) {
             touchJump.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                this.keys['Space'] = true;
+                this.performJump();
                 if (!this.timerStarted) { this.timerStarted = true; this.startTime = performance.now(); }
             });
             touchJump.addEventListener('touchend', () => { this.keys['Space'] = false; });
@@ -1139,6 +1155,8 @@ export class ParkourObbyGame {
     public respawnPlayer() {
         this.deaths++;
         this.velocity.set(0, 0, 0);
+        this.jumpsRemaining = 2;
+        this.isGrounded = false;
         const spawn = STAGES[this.currentCheckpointIndex].spawnPos;
         this.playerGroup.position.copy(spawn);
         this.playerTrailPoints = [];
@@ -1315,15 +1333,95 @@ export class ParkourObbyGame {
             this.playerLeftArm.rotation.x = 0;
             this.playerRightArm.rotation.x = 0;
         }
+    }
 
-        // Jump Handling
+    public performJump() {
         let effectiveJumpForce = this.jumpForce;
         if (this.equippedBoots === 'boots_moon') effectiveJumpForce *= 1.38;
 
-        if (this.keys['Space'] && this.isGrounded) {
+        if (this.isGrounded) {
             this.velocity.y = effectiveJumpForce;
             this.isGrounded = false;
+            this.jumpsRemaining = 1;
             this.audio.playJump();
+        } else if (this.jumpsRemaining > 0) {
+            // Double Jump!
+            this.velocity.y = effectiveJumpForce * 1.08;
+            this.jumpsRemaining = 0;
+            this.audio.playDoubleJump();
+            this.spawnDoubleJumpRing();
+        }
+    }
+
+    private spawnDoubleJumpRing() {
+        try {
+            const ringGeo = new THREE.RingGeometry(0.2, 1.3, 24);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.copy(this.playerGroup.position);
+            ring.position.y += 0.2;
+            this.scene.add(ring);
+            this.doubleJumpRings.push({ mesh: ring, timer: 0.35 });
+        } catch (e) {}
+    }
+
+    private updatePlayerPhysics(dt: number) {
+        // Horizontal Movement Input
+        let inputX = 0;
+        let inputZ = 0;
+
+        if (this.keys['KeyW'] || this.keys['ArrowUp']) inputZ -= 1;
+        if (this.keys['KeyS'] || this.keys['ArrowDown']) inputZ += 1;
+        if (this.keys['KeyA'] || this.keys['ArrowLeft']) inputX -= 1;
+        if (this.keys['KeyD'] || this.keys['ArrowRight']) inputX += 1;
+
+        // Add Touch Joystick Input
+        if (Math.abs(this.joystickInput.x) > 0.05 || Math.abs(this.joystickInput.y) > 0.05) {
+            inputX = this.joystickInput.x;
+            inputZ = this.joystickInput.y;
+        }
+
+        // Calculate Camera Relative Direction
+        const camYaw = this.cameraRotation.y;
+        const forward = new THREE.Vector3(-Math.sin(camYaw), 0, -Math.cos(camYaw));
+        const right = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
+
+        const moveDir = new THREE.Vector3();
+        moveDir.addScaledVector(forward, -inputZ);
+        moveDir.addScaledVector(right, inputX);
+
+        let speed = this.moveSpeed;
+        if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) speed *= this.sprintMultiplier;
+        if (this.equippedBoots === 'boots_speed') speed *= 1.3;
+
+        if (moveDir.lengthSq() > 0.001) {
+            moveDir.normalize();
+            this.velocity.x = moveDir.x * speed;
+            this.velocity.z = moveDir.z * speed;
+
+            // Rotate player body towards moving direction
+            const targetRotY = Math.atan2(moveDir.x, moveDir.z);
+            this.playerGroup.rotation.y = targetRotY;
+
+            // Running Limb Animation
+            const walkCycle = performance.now() * 0.015;
+            this.playerLeftLeg.rotation.x = Math.sin(walkCycle) * 0.6;
+            this.playerRightLeg.rotation.x = -Math.sin(walkCycle) * 0.6;
+            this.playerLeftArm.rotation.x = -Math.sin(walkCycle) * 0.6;
+            this.playerRightArm.rotation.x = Math.sin(walkCycle) * 0.6;
+        } else {
+            this.velocity.x *= 0.6;
+            this.velocity.z *= 0.6;
+            this.playerLeftLeg.rotation.x = 0;
+            this.playerRightLeg.rotation.x = 0;
+            this.playerLeftArm.rotation.x = 0;
+            this.playerRightArm.rotation.x = 0;
+        }
+
+        // Jump Handling
+        if (this.keys['Space'] && this.isGrounded) {
+            this.performJump();
         }
 
         // Gravity
@@ -1359,6 +1457,7 @@ export class ParkourObbyGame {
                     pPos.y = b.max.y;
                     this.velocity.y = 0;
                     this.isGrounded = true;
+                    this.jumpsRemaining = 2;
 
                     // Trigger Disappearing Platform if stepped on
                     const dis = this.disappearingPlatforms.find(dp => dp.mesh === mesh);
@@ -1379,6 +1478,7 @@ export class ParkourObbyGame {
             if (pBox.intersectsBox(bp.box)) {
                 this.velocity.y = 26.0;
                 this.isGrounded = false;
+                this.jumpsRemaining = 2;
                 this.audio.playBounce();
                 this.showToast(this.isOwner ? '🚀 SUPER HÜPE!' : '🚀 SUPER BOUNCE!');
             }
@@ -1499,6 +1599,18 @@ export class ParkourObbyGame {
     }
 
     private updateEffects(dt: number) {
+        // Double Jump Expanding Rings
+        for (let i = this.doubleJumpRings.length - 1; i >= 0; i--) {
+            const r = this.doubleJumpRings[i];
+            r.timer -= dt;
+            r.mesh.scale.addScalar(dt * 7.5);
+            (r.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, r.timer / 0.35);
+            if (r.timer <= 0) {
+                this.scene.remove(r.mesh);
+                this.doubleJumpRings.splice(i, 1);
+            }
+        }
+
         // Trail updating
         if (this.equippedTrail !== 'none') {
             this.playerTrailPoints.unshift(this.playerGroup.position.clone().add(new THREE.Vector3(0, 0.5, 0)));
