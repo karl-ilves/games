@@ -849,9 +849,15 @@
     <div id="modal-deploy-selection">
         <div class="deploy-card">
             <h2 id="deploy-modal-title" style="color: #ffd32a; font-size: 1.8rem; margin: 0 0 6px 0;">⚔️ SELECT TEAM & COMBAT CLASS</h2>
-            <p id="deploy-modal-desc" style="color: #a4b0be; margin-bottom: 20px; font-size: 0.9rem;">
+            <p id="deploy-modal-desc" style="color: #a4b0be; margin-bottom: 12px; font-size: 0.9rem;">
                 Choose your team and whether to command a battle tank, soldier, fighter jet or team missile silo!
             </p>
+
+            <!-- Player Money Balance Display in Modal -->
+            <div id="deploy-modal-money-bar" style="background: rgba(255, 211, 42, 0.12); border: 1px solid rgba(255, 211, 42, 0.35); border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+                <span id="deploy-money-label" style="font-size: 0.92rem; font-weight: 800; color: #a4b0be;">💰 SINU MÄNGURAHA:</span>
+                <span id="deploy-money-val" style="font-size: 1.3rem; font-weight: 900; color: #ffd32a; text-shadow: 0 0 10px rgba(255, 211, 42, 0.4);">200,000 €</span>
+            </div>
 
             <!-- 1. Team Choice -->
             <div id="deploy-step-1-label" style="text-align: left; font-weight: 800; color: #fff; font-size: 0.95rem; margin-bottom: 8px;">1. Select Team:</div>

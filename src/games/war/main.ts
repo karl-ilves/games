@@ -354,6 +354,9 @@ class WarGameEngine {
             ? 'Vali oma meeskond ja kas soovid juhtida rasket lahingutanki või liikuvat jalaväelast!'
             : 'Choose your team and whether to command a heavy battle tank or a nimble frontline soldier!';
 
+        const deployMoneyLabel = document.getElementById('deploy-money-label');
+        if (deployMoneyLabel) deployMoneyLabel.textContent = isEt ? '💰 SINU MÄNGURAHA:' : '💰 YOUR BALANCE:';
+
         const step1 = document.getElementById('deploy-step-1-label');
         if (step1) step1.textContent = isEt ? '1. Vali Tiim:' : '1. Select Team:';
 
@@ -459,7 +462,7 @@ class WarGameEngine {
         let chosenTeam: Team = 'blue';
         let chosenClass: UnitClass = 'tank';
 
-        const reloadMoney = () => {
+        const syncMoney = () => {
             const prof = getCurrentUserProfile();
             const userId = prof?.id || this.localPlayerId;
             const storageKey = `playard_war_data_${userId}`;
@@ -468,19 +471,25 @@ class WarGameEngine {
                 try {
                     if (localData.startsWith('{')) {
                         const parsed = JSON.parse(localData);
-                        if (parsed.money !== undefined) this.warMoney = parsed.money;
-                        if (parsed.isPlaneUnlocked !== undefined) this.isPlaneUnlocked = !!parsed.isPlaneUnlocked;
-                        if (parsed.isMissileUnlocked !== undefined) this.isMissileUnlocked = !!parsed.isMissileUnlocked;
+                        if (parsed.money !== undefined && parsed.money > this.warMoney) this.warMoney = parsed.money;
+                        if (parsed.isPlaneUnlocked !== undefined) this.isPlaneUnlocked = this.isPlaneUnlocked || !!parsed.isPlaneUnlocked;
+                        if (parsed.isMissileUnlocked !== undefined) this.isMissileUnlocked = this.isMissileUnlocked || !!parsed.isMissileUnlocked;
                     } else {
                         const num = parseInt(localData, 10);
-                        if (!isNaN(num)) this.warMoney = num;
+                        if (!isNaN(num) && num > this.warMoney) this.warMoney = num;
                     }
                 } catch (e) {}
             }
+            if (isPlayardOwner(prof?.email)) {
+                if (this.warMoney < 200000 && !this.isPlaneUnlocked && !this.isMissileUnlocked) {
+                    this.warMoney = 200000;
+                }
+            }
+            this.updateHUD();
         };
 
         const updateRoleBadgesUI = () => {
-            reloadMoney();
+            syncMoney();
             if (planeBadge) {
                 if (this.isPlaneUnlocked) {
                     planeBadge.style.background = 'rgba(46, 213, 115, 0.2)';
@@ -540,7 +549,7 @@ class WarGameEngine {
         });
 
         btnPlane?.addEventListener('click', () => {
-            reloadMoney();
+            syncMoney();
             if (!this.isPlaneUnlocked) {
                 if (this.warMoney < 50000) {
                     const warnMsg = this.isOwnerLang
@@ -569,7 +578,7 @@ class WarGameEngine {
         });
 
         btnMissile?.addEventListener('click', () => {
-            reloadMoney();
+            syncMoney();
             if (!this.isMissileUnlocked) {
                 if (this.warMoney < 100000) {
                     const warnMsg = this.isOwnerLang
@@ -3247,6 +3256,8 @@ class WarGameEngine {
 
         if (statKills) statKills.innerText = this.myKills.toString();
         if (statMoney) statMoney.innerText = this.warMoney.toLocaleString();
+        const deployMoneyVal = document.getElementById('deploy-money-val');
+        if (deployMoneyVal) deployMoneyVal.innerText = `${this.warMoney.toLocaleString()} €`;
         if (ammoMg) {
             ammoMg.innerText = this.localClass === 'tank'
                 ? `${this.mgAmmo} rds`

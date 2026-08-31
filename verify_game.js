@@ -866,6 +866,12 @@ try {
             throw new Error(`Expected Playard Owner War modal title to be in Estonian, got: ${ownerDeployTitle}`);
         }
 
+        const modalMoneyText = await page.$eval('#deploy-money-val', el => el.textContent);
+        console.log("   Playard Owner Modal Money Balance (Expected: 200,000 €):", modalMoneyText);
+        if (!modalMoneyText.includes('200,000')) {
+            throw new Error(`Expected modal money balance to show 200,000 €, got: ${modalMoneyText}`);
+        }
+
         await page.click('#btn-select-blue');
         await page.click('#btn-select-plane');
         await page.click('#btn-confirm-deploy');
