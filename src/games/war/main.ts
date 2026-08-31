@@ -482,22 +482,12 @@ class WarGameEngine {
             chosenTeam = 'blue';
             btnBlue.className = 'select-box selected-blue';
             btnRed!.className = 'select-box';
-            if (chosenClass === 'missile') {
-                chosenClass = 'tank';
-                btnTank!.className = 'select-box selected-class';
-                if (btnMissile) btnMissile.className = 'select-box';
-            }
         });
 
         btnRed?.addEventListener('click', () => {
             chosenTeam = 'red';
             btnRed.className = 'select-box selected-red';
             btnBlue!.className = 'select-box';
-            if (chosenClass === 'missile') {
-                chosenClass = 'tank';
-                btnTank!.className = 'select-box selected-class';
-                if (btnMissile) btnMissile.className = 'select-box';
-            }
         });
 
         btnTank?.addEventListener('click', () => {
@@ -506,8 +496,6 @@ class WarGameEngine {
             btnHuman!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
             if (btnMissile) btnMissile.className = 'select-box';
-            if (chosenTeam === 'blue' && btnBlue) btnBlue.className = 'select-box selected-blue';
-            if (chosenTeam === 'red' && btnRed) btnRed.className = 'select-box selected-red';
         });
 
         btnHuman?.addEventListener('click', () => {
@@ -516,8 +504,6 @@ class WarGameEngine {
             btnTank!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
             if (btnMissile) btnMissile.className = 'select-box';
-            if (chosenTeam === 'blue' && btnBlue) btnBlue.className = 'select-box selected-blue';
-            if (chosenTeam === 'red' && btnRed) btnRed.className = 'select-box selected-red';
         });
 
         btnPlane?.addEventListener('click', () => {
@@ -534,8 +520,6 @@ class WarGameEngine {
             btnTank!.className = 'select-box';
             btnHuman!.className = 'select-box';
             if (btnMissile) btnMissile.className = 'select-box';
-            if (chosenTeam === 'blue' && btnBlue) btnBlue.className = 'select-box selected-blue';
-            if (chosenTeam === 'red' && btnRed) btnRed.className = 'select-box selected-red';
         });
 
         btnMissile?.addEventListener('click', () => {
@@ -544,18 +528,11 @@ class WarGameEngine {
             btnTank!.className = 'select-box';
             btnHuman!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
-            if (btnBlue) btnBlue.className = 'select-box';
-            if (btnRed) btnRed.className = 'select-box';
         });
 
         btnConfirm?.addEventListener('click', () => {
-            if (chosenClass === 'missile') {
-                this.localTeam = 'missile';
-                this.localClass = 'missile';
-            } else {
-                this.localTeam = (chosenTeam === 'missile' || !chosenTeam) ? 'blue' : chosenTeam;
-                this.localClass = chosenClass;
-            }
+            this.localTeam = chosenTeam || 'blue';
+            this.localClass = chosenClass;
             if (deployModal) deployModal.style.display = 'none';
             this.deployLocalUnit();
             if (!this.isRosterSpawned) this.spawnBattleRoster();
@@ -567,20 +544,21 @@ class WarGameEngine {
                 : (this.localClass === 'missile'
                     ? (this.isOwnerLang ? 'RAKETITIIM' : 'MISSILE TEAM')
                     : (this.localClass === 'tank' ? 'TANK' : (this.isOwnerLang ? 'SÕDUR' : 'SOLDIER')));
-            const enteringMsg = this.localTeam === 'missile'
-                ? (this.isOwnerLang ? `🚀 Sisened lahingusse: War Server #1 (RAKETITIIM)` : `🚀 Entering battle: War Server #1 (MISSILE TEAM)`)
-                : (this.isOwnerLang ? `🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})` : `🚀 Entering battle: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`);
-            this.showToast(enteringMsg, this.localTeam === 'red' ? '#ff4757' : (this.localTeam === 'missile' ? '#2ed573' : '#00f2fe'));
+            const teamTitle = this.localTeam === 'red' ? (this.isOwnerLang ? 'PUNANE TIIM' : 'RED TEAM') : (this.isOwnerLang ? 'SININE TIIM' : 'BLUE TEAM');
+            const enteringMsg = this.isOwnerLang
+                ? `🚀 Sisened lahingusse: War Server #1 (${teamTitle} · ${classLabel})`
+                : `🚀 Entering battle: War Server #1 (${teamTitle} · ${classLabel})`;
+            this.showToast(enteringMsg, this.localTeam === 'red' ? '#ff4757' : '#00f2fe');
         });
 
         // Open loadout change button in navbar
         document.getElementById('btn-open-loadout')?.addEventListener('click', () => {
             updatePlaneBadgeUI();
-            chosenTeam = this.localTeam === 'missile' ? 'blue' : this.localTeam;
+            chosenTeam = this.localTeam;
             chosenClass = this.localClass;
             if (btnBlue && btnRed) {
-                btnBlue.className = (chosenClass !== 'missile' && chosenTeam === 'blue') ? 'select-box selected-blue' : 'select-box';
-                btnRed.className = (chosenClass !== 'missile' && chosenTeam === 'red') ? 'select-box selected-red' : 'select-box';
+                btnBlue.className = chosenTeam === 'blue' ? 'select-box selected-blue' : 'select-box';
+                btnRed.className = chosenTeam === 'red' ? 'select-box selected-red' : 'select-box';
             }
             if (btnTank && btnHuman && btnPlane && btnMissile) {
                 btnTank.className = chosenClass === 'tank' ? 'select-box selected-class' : 'select-box';
@@ -648,18 +626,20 @@ class WarGameEngine {
         if (youAreSpan) youAreSpan.innerText = youAreLabel;
 
         if (badge && nameEl) {
-            if (this.localClass === 'missile') {
-                badge.className = 'team-missile';
-                badge.style.borderColor = '#2ed573';
-                nameEl.innerText = `🚀 ${this.isOwnerLang ? 'RAKETITIIM' : 'MISSILE TEAM'} · ${this.localUsername}`;
-            } else if (this.localTeam === 'red') {
+            const teamLabel = this.localTeam === 'red' ? '🔴 RED TEAM' : '🔵 BLUE TEAM';
+            if (this.localTeam === 'red') {
                 badge.className = 'team-red';
                 badge.style.borderColor = '#e74c3c';
-                nameEl.innerText = `🔴 RED TEAM · ${roleIcon} · ${this.localUsername}`;
             } else {
                 badge.className = 'team-blue';
                 badge.style.borderColor = '#3498db';
-                nameEl.innerText = `🔵 BLUE TEAM · ${roleIcon} · ${this.localUsername}`;
+            }
+
+            if (this.localClass === 'missile') {
+                const missileRole = this.isOwnerLang ? '🚀 RAKETITIIM' : '🚀 MISSILE TEAM';
+                nameEl.innerText = `${teamLabel} · ${missileRole} · ${this.localUsername}`;
+            } else {
+                nameEl.innerText = `${teamLabel} · ${roleIcon} · ${this.localUsername}`;
             }
         }
 
@@ -2598,9 +2578,24 @@ class WarGameEngine {
     }
 
     private launchSatelliteStrike(targetPos: THREE.Vector3, type: 'missile' | 'nuke') {
-        this.stopSatelliteTargeting();
-
         const isNuke = type === 'nuke';
+
+        if (!isNuke && this.missileCooldown > 0) {
+            const cdMsg = this.isOwnerLang ? `⏳ Rakett laeb veel: ${Math.ceil(this.missileCooldown)}s!` : `⏳ Missile reloading: ${Math.ceil(this.missileCooldown)}s!`;
+            this.showToast(cdMsg, '#ffd32a');
+            return;
+        }
+
+        if (isNuke && this.nukeTimer > 0) {
+            const cdMsg = this.isOwnerLang ? `⏳ Tuumapomm laeb veel: ${Math.ceil(this.nukeTimer)}s!` : `⏳ Nuclear strike charging: ${Math.ceil(this.nukeTimer)}s!`;
+            this.showToast(cdMsg, '#ffd32a');
+            return;
+        }
+
+        if (this.localClass !== 'missile') {
+            this.stopSatelliteTargeting();
+        }
+
         const siloOrigin = this.missileSilos.get(this.localTeam) || this.localUnit.pos.clone().add(new THREE.Vector3(0, 10, 0));
 
         if (!isNuke) {

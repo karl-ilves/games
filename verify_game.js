@@ -743,9 +743,6 @@ try {
         if (!missileRoleBadgeText.includes('MISSILE') && !missileRoleBadgeText.includes('RAKETITIIM')) {
             throw new Error(`Expected badge to reflect MISSILE / RAKETITIIM, got: ${missileRoleBadgeText}`);
         }
-        if (missileRoleBadgeText.includes('RED TEAM') || missileRoleBadgeText.includes('BLUE TEAM')) {
-            throw new Error(`Raketitiim player must NOT be assigned to Red or Blue team! Badge: ${missileRoleBadgeText}`);
-        }
 
         // Test 10s Missile Strike & Satellite Targeting HUD for Raketitiim Role
         const missileCardDisplay = await page.$eval('#weapon-missile', el => window.getComputedStyle(el).display);
@@ -755,12 +752,31 @@ try {
             throw new Error("Missile and Nuke cards must be visible for Raketitiim role!");
         }
 
-        // Test opening Satellite Targeting Mode for Raketitiim Role
+        // Test opening Satellite Targeting Mode for Raketitiim Role and firing missile without exiting satellite view
         await page.click('#weapon-missile');
         await new Promise(r => setTimeout(r, 200));
+        
+        // Verify satellite targeting HUD is visible
+        const satHudDisplay = await page.$eval('#satellite-targeting-hud', el => window.getComputedStyle(el).display);
+        console.log("   Satellite Targeting HUD display (Expected: flex):", satHudDisplay);
+        if (satHudDisplay !== 'flex') {
+            throw new Error("Satellite targeting HUD must be open!");
+        }
+
+        // Fire missile with Space / click
+        await page.keyboard.press('Space');
+        await new Promise(r => setTimeout(r, 300));
+
+        // Verify still in satellite targeting view after launch (does not revert to walking soldier)
+        const satHudDisplayAfterLaunch = await page.$eval('#satellite-targeting-hud', el => window.getComputedStyle(el).display);
+        console.log("   Satellite Targeting HUD display after missile launch (Expected: flex):", satHudDisplayAfterLaunch);
+        if (satHudDisplayAfterLaunch !== 'flex') {
+            throw new Error("Missile Commander must stay in satellite targeting map view after launching missile!");
+        }
+
         await page.keyboard.press('Escape');
         await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully verified Raketitiim role exclusive 10s Missile Strike and 60s Nuke!");
+        console.log("   Successfully verified Raketitiim role exclusive 10s Missile Strike and satellite map persistence!");
 
         // Test Fighter Jet Unlock with 50,000 €
         console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");
