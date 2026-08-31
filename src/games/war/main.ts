@@ -135,6 +135,8 @@ class WarGameEngine {
     private missileSilos: Map<Team, THREE.Vector3> = new Map();
     private myKills = 0;
     private warMoney = parseInt(localStorage.getItem('playard_war_game_money') || '0', 10);
+    private isPlaneUnlocked = false;
+    private isMissileUnlocked = false;
     private matchMoneyEarned = 0;
 
     // Team Scores (Target: 100 Kills)
@@ -216,6 +218,8 @@ class WarGameEngine {
                 if (localData.startsWith('{')) {
                     const parsed = JSON.parse(localData);
                     if (parsed.money !== undefined) this.warMoney = parsed.money;
+                    if (parsed.isPlaneUnlocked !== undefined) this.isPlaneUnlocked = !!parsed.isPlaneUnlocked;
+                    if (parsed.isMissileUnlocked !== undefined) this.isMissileUnlocked = !!parsed.isMissileUnlocked;
                 } else {
                     const num = parseInt(localData, 10);
                     if (!isNaN(num)) this.warMoney = num;
@@ -240,9 +244,17 @@ class WarGameEngine {
         }
 
         if (isPlayardOwner(prof?.email)) {
-            this.warMoney = Math.max(this.warMoney, 100000);
+            this.warMoney = Math.max(this.warMoney, 200000);
             localStorage.setItem('playard_war_game_money', this.warMoney.toString());
-            localStorage.setItem(storageKey, JSON.stringify({ user_id: userId, username: this.localUsername, money: this.warMoney, kills: this.myKills, updated_at: new Date().toISOString() }));
+            localStorage.setItem(storageKey, JSON.stringify({
+                user_id: userId,
+                username: this.localUsername,
+                money: this.warMoney,
+                isPlaneUnlocked: this.isPlaneUnlocked,
+                isMissileUnlocked: this.isMissileUnlocked,
+                kills: this.myKills,
+                updated_at: new Date().toISOString()
+            }));
         }
 
         this.updateHUD();
@@ -257,6 +269,8 @@ class WarGameEngine {
             user_id: userId,
             username: this.localUsername,
             money: this.warMoney,
+            isPlaneUnlocked: this.isPlaneUnlocked,
+            isMissileUnlocked: this.isMissileUnlocked,
             kills: this.myKills,
             updated_at: new Date().toISOString()
         };
@@ -439,6 +453,7 @@ class WarGameEngine {
         const btnPlane = document.getElementById('btn-select-plane');
         const btnMissile = document.getElementById('btn-select-missile');
         const planeBadge = document.getElementById('plane-lock-badge');
+        const missileBadge = document.getElementById('missile-lock-badge');
         const btnConfirm = document.getElementById('btn-confirm-deploy');
 
         let chosenTeam: Team = 'blue';
@@ -454,6 +469,8 @@ class WarGameEngine {
                     if (localData.startsWith('{')) {
                         const parsed = JSON.parse(localData);
                         if (parsed.money !== undefined) this.warMoney = parsed.money;
+                        if (parsed.isPlaneUnlocked !== undefined) this.isPlaneUnlocked = !!parsed.isPlaneUnlocked;
+                        if (parsed.isMissileUnlocked !== undefined) this.isMissileUnlocked = !!parsed.isMissileUnlocked;
                     } else {
                         const num = parseInt(localData, 10);
                         if (!isNaN(num)) this.warMoney = num;
@@ -462,23 +479,37 @@ class WarGameEngine {
             }
         };
 
-        const updatePlaneBadgeUI = () => {
+        const updateRoleBadgesUI = () => {
             reloadMoney();
-            if (!planeBadge) return;
-            const isUnlocked = this.warMoney >= 50000;
-            if (isUnlocked) {
-                planeBadge.style.background = 'rgba(46, 213, 115, 0.2)';
-                planeBadge.style.borderColor = '#2ecc71';
-                planeBadge.style.color = '#2ecc71';
-                planeBadge.innerText = this.isOwnerLang ? '✨ AVATUD (50,000 €)' : '✨ UNLOCKED (50,000 €)';
-            } else {
-                planeBadge.style.background = 'rgba(255, 71, 87, 0.2)';
-                planeBadge.style.borderColor = '#ff4757';
-                planeBadge.style.color = '#ff6b81';
-                planeBadge.innerText = this.isOwnerLang ? '🔒 50,000 €' : '🔒 50,000 €';
+            if (planeBadge) {
+                if (this.isPlaneUnlocked) {
+                    planeBadge.style.background = 'rgba(46, 213, 115, 0.2)';
+                    planeBadge.style.borderColor = '#2ecc71';
+                    planeBadge.style.color = '#2ecc71';
+                    planeBadge.innerText = this.isOwnerLang ? '✨ AVATUD' : '✨ UNLOCKED';
+                } else {
+                    planeBadge.style.background = 'rgba(255, 71, 87, 0.2)';
+                    planeBadge.style.borderColor = '#ff4757';
+                    planeBadge.style.color = '#ff6b81';
+                    planeBadge.innerText = '🔒 50,000 €';
+                }
+            }
+
+            if (missileBadge) {
+                if (this.isMissileUnlocked) {
+                    missileBadge.style.background = 'rgba(46, 213, 115, 0.2)';
+                    missileBadge.style.borderColor = '#2ecc71';
+                    missileBadge.style.color = '#2ecc71';
+                    missileBadge.innerText = this.isOwnerLang ? '✨ AVATUD' : '✨ UNLOCKED';
+                } else {
+                    missileBadge.style.background = 'rgba(255, 71, 87, 0.2)';
+                    missileBadge.style.borderColor = '#ff4757';
+                    missileBadge.style.color = '#ff6b81';
+                    missileBadge.innerText = '🔒 100,000 €';
+                }
             }
         };
-        updatePlaneBadgeUI();
+        updateRoleBadgesUI();
 
         btnBlue?.addEventListener('click', () => {
             chosenTeam = 'blue';
@@ -510,13 +541,26 @@ class WarGameEngine {
 
         btnPlane?.addEventListener('click', () => {
             reloadMoney();
-            if (this.warMoney < 50000) {
-                const warnMsg = this.isOwnerLang
-                    ? `🔒 Vajad 50,000 € lahingulennuki avamiseks! Sul on: ${this.warMoney.toLocaleString()} €`
-                    : `🔒 Requires 50,000 € War Cash to unlock Fighter Jet! Current: ${this.warMoney.toLocaleString()} €`;
-                this.showToast(warnMsg, '#ff4757');
-                return;
+            if (!this.isPlaneUnlocked) {
+                if (this.warMoney < 50000) {
+                    const warnMsg = this.isOwnerLang
+                        ? `🔒 Vajad 50,000 € lahingulennuki ostmiseks! Sul on: ${this.warMoney.toLocaleString()} €`
+                        : `🔒 Requires 50,000 € War Cash to purchase Fighter Jet! Current: ${this.warMoney.toLocaleString()} €`;
+                    this.showToast(warnMsg, '#ff4757');
+                    return;
+                }
+                // Deduct 50,000 €
+                this.warMoney -= 50000;
+                this.isPlaneUnlocked = true;
+                this.saveUserDataToDb();
+                this.updateHUD();
+                updateRoleBadgesUI();
+                const buyMsg = this.isOwnerLang
+                    ? '✈️ Lahingulennuk edukalt ostetud! (-50,000 €)'
+                    : '✈️ Fighter Jet successfully purchased! (-50,000 €)';
+                this.showToast(buyMsg, '#2ecc71');
             }
+
             chosenClass = 'plane';
             btnPlane.className = 'select-box selected-class';
             btnTank!.className = 'select-box';
@@ -525,6 +569,27 @@ class WarGameEngine {
         });
 
         btnMissile?.addEventListener('click', () => {
+            reloadMoney();
+            if (!this.isMissileUnlocked) {
+                if (this.warMoney < 100000) {
+                    const warnMsg = this.isOwnerLang
+                        ? `🔒 Vajad 100,000 € Raketitiimi ostmiseks! Sul on: ${this.warMoney.toLocaleString()} €`
+                        : `🔒 Requires 100,000 € War Cash to purchase Missile Team! Current: ${this.warMoney.toLocaleString()} €`;
+                    this.showToast(warnMsg, '#ff4757');
+                    return;
+                }
+                // Deduct 100,000 €
+                this.warMoney -= 100000;
+                this.isMissileUnlocked = true;
+                this.saveUserDataToDb();
+                this.updateHUD();
+                updateRoleBadgesUI();
+                const buyMsg = this.isOwnerLang
+                    ? '🚀 Raketitiim edukalt ostetud! (-100,000 €)'
+                    : '🚀 Missile Team successfully purchased! (-100,000 €)';
+                this.showToast(buyMsg, '#2ecc71');
+            }
+
             chosenClass = 'missile';
             btnMissile.className = 'select-box selected-class';
             btnTank!.className = 'select-box';
@@ -555,7 +620,7 @@ class WarGameEngine {
 
         // Open loadout change button in navbar
         document.getElementById('btn-open-loadout')?.addEventListener('click', () => {
-            updatePlaneBadgeUI();
+            updateRoleBadgesUI();
             chosenTeam = this.localTeam;
             chosenClass = this.localClass;
             if (btnBlue && btnRed) {

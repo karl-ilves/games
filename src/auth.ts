@@ -141,7 +141,7 @@ function saveUserGameProgress(profile: UserProfile | null) {
     if (warMoney !== null) {
         const val = parseInt(warMoney, 10);
         if (!isNaN(val)) {
-            const finalWarVal = isPlayardOwner(profile.email) ? Math.max(val, 100000) : val;
+            const finalWarVal = isPlayardOwner(profile.email) ? Math.max(val, 200000) : val;
             if (profile.username) localStorage.setItem(`playard_war_data_${profile.username.toLowerCase()}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
             if (profile.id) localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
             if (profile.email) localStorage.setItem(`playard_war_data_${profile.email.toLowerCase()}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
@@ -210,7 +210,7 @@ function restoreUserGameProgress(profile: UserProfile) {
         }
 
         if (isPlayardOwner(profile.email)) {
-            val = Math.max(val, 100000);
+            val = Math.max(val, 200000);
         }
         localStorage.setItem('playard_war_game_money', val.toString());
         localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: val }));
@@ -218,7 +218,7 @@ function restoreUserGameProgress(profile: UserProfile) {
         profile.war_money = val;
         saveLocalProfile(profile);
     } else if (isPlayardOwner(profile.email)) {
-        const initialWarMoney = 100000;
+        const initialWarMoney = 200000;
         localStorage.setItem('playard_war_game_money', initialWarMoney.toString());
         localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: initialWarMoney }));
         profile.warmäng = initialWarMoney;

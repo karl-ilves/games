@@ -730,8 +730,15 @@ try {
             throw new Error("Missiles and Nukes must be hidden for regular soldiers/tanks!");
         }
 
-        // Test Deploying as Raketitiim Role
-        console.log("   Testing Raketitiim Role Exclusive Weapons & Satellite Targeting...");
+        // Test Deploying as Raketitiim Role (Purchase with 100,000 €)
+        console.log("   Testing Raketitiim Role Exclusive Weapons, 100,000 € Purchase & Satellite Targeting...");
+        await page.evaluate(() => {
+            localStorage.setItem('playard_war_game_money', '150000');
+            if ((window).warGameEngine) {
+                (window).warGameEngine.warMoney = 150000;
+                (window).warGameEngine.updateHUD();
+            }
+        });
         await page.click('#btn-open-loadout');
         await new Promise(r => setTimeout(r, 300));
         await page.click('#btn-select-missile');
@@ -814,11 +821,8 @@ try {
 
         console.log("   Successfully verified Raketitiim role is locked to missile/nuke operations, no yellow dot, and 5s nuclear siren works!");
 
-        // Test Fighter Jet Unlock with 50,000 €
-        console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");
-        await page.evaluate(() => {
-            localStorage.setItem('playard_war_game_money', '55000');
-        });
+        // Test Fighter Jet Unlock with 50,000 € (Remaining money: 50,000 €)
+        console.log("10a. Testing Fighter Jet Purchase with 50,000 € War Cash...");
         await page.click('#btn-open-loadout');
         await new Promise(r => setTimeout(r, 300));
         await page.click('#btn-select-plane');
@@ -846,11 +850,11 @@ try {
         console.log("   Successfully unlocked and deployed Fighter Jet with 50,000 €!");
 
         // 10b. Test Playard Owner Estonian Localization in War Game
-        console.log("10b. Checking Playard Owner Estonian Localization in War Game...");
+        console.log("10b. Checking Playard Owner Estonian Localization & 200,000 € in War Game...");
         await page.evaluate(() => {
             const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
-            localStorage.setItem('playard_war_game_money', '50000');
+            localStorage.setItem('playard_war_game_money', '200000');
         });
         await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
         await new Promise(r => setTimeout(r, 1500));
@@ -874,11 +878,11 @@ try {
         }
 
         const ownerWarMoneyText = await page.$eval('#stat-money', el => el.textContent);
-        console.log("   Playard Owner War Cash Balance (Expected: >= 100,000 €):", ownerWarMoneyText);
-        if (parseInt(ownerWarMoneyText.replace(/,/g, ''), 10) < 100000) {
-            throw new Error(`Expected Playard Owner to have 100,000 € War Cash, got: ${ownerWarMoneyText}`);
+        console.log("   Playard Owner War Cash Balance (Expected: >= 150,000 €):", ownerWarMoneyText);
+        if (parseInt(ownerWarMoneyText.replace(/,/g, ''), 10) < 150000) {
+            throw new Error(`Expected Playard Owner to have >= 150,000 € War Cash, got: ${ownerWarMoneyText}`);
         }
-        console.log("   Successfully tested Playard Owner Estonian Localization with 100,000 € and Fighter Jet in War Game!");
+        console.log("   Successfully tested Playard Owner Estonian Localization with 200,000 € initial balance in War Game!");
 
         // Test Out of Bounds Warning for Playard Owner
         await page.evaluate(() => {
