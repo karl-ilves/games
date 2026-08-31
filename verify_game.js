@@ -1320,17 +1320,30 @@ try {
             await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
             console.log("   Successfully loaded 3D Canvas for LAST METRO!");
 
-            // Check HUD elements
+            // Check HUD & Cinematic Intro elements
             const metroHudTitle = await page.$eval('#hud-game-title', el => el.textContent);
             const metroCarLabel = await page.$eval('#hud-car-label', el => el.textContent);
-            console.log(`   LAST METRO HUD: Title="${metroHudTitle}", Initial Car="${metroCarLabel}"`);
+            const introLocText = await page.$eval('#intro-loc-title', el => el.textContent);
+            console.log(`   LAST METRO HUD: Title="${metroHudTitle}", Initial Car="${metroCarLabel}", Intro Location="${introLocText}"`);
             if (!metroHudTitle.includes('LAST METRO') && !metroHudTitle.includes('VIIMANE METROO')) {
                 throw new Error(`Unexpected HUD Title: ${metroHudTitle}`);
             }
 
-            // Test Stand Up
+            // Test Skip Intro Button
+            await page.click('#btn-skip-intro');
+            await new Promise(r => setTimeout(r, 150));
+            console.log("   Successfully tested Skip Intro button!");
+
+            // Test Replay Intro Button
+            await page.click('#btn-replay-intro');
+            await new Promise(r => setTimeout(r, 150));
+            const replayedState = await page.evaluate(() => window.__lastMetro.state);
+            console.log(`   Replayed intro state (Expected: intro_station): ${replayedState}`);
+            if (replayedState !== 'intro_station') throw new Error("Replay intro failed to reset state to intro_station!");
+
+            // Fast forward / stand up to proceed with gameplay tests
             await page.evaluate(() => {
-                if (window.__lastMetro) window.__lastMetro.standUp();
+                if (window.__lastMetro) window.__lastMetro.skipIntro();
             });
             await new Promise(r => setTimeout(r, 200));
 

@@ -257,6 +257,57 @@
             z-index: 10;
         }
 
+        /* Cinematic Letterbox Bars */
+        .cinematic-bar-top, .cinematic-bar-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            background: #000;
+            z-index: 90;
+            transition: height 0.8s ease-in-out;
+            pointer-events: none;
+        }
+        .cinematic-bar-top { top: 0; height: 65px; }
+        .cinematic-bar-bottom { bottom: 0; height: 65px; }
+        .cinematic-hidden { height: 0 !important; }
+
+        /* Intro Location Badge */
+        #intro-location-card {
+            position: absolute;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(6, 8, 12, 0.88);
+            border: 1.5px solid rgba(0, 242, 254, 0.5);
+            border-radius: 14px;
+            padding: 12px 28px;
+            text-align: center;
+            z-index: 95;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+            transition: opacity 0.8s ease-in-out;
+        }
+        #btn-skip-intro {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            z-index: 100;
+            backdrop-filter: blur(6px);
+            transition: all 0.2s;
+        }
+        #btn-skip-intro:hover {
+            background: rgba(0, 242, 254, 0.3);
+            border-color: #00f2fe;
+        }
+
         /* VIP Restricted Overlay */
         #vip-restricted-overlay {
             position: fixed;
@@ -264,7 +315,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(6, 8, 12, 0.98);
+            background: radial-gradient(circle at center, #141a24 0%, #06080c 100%);
             display: none;
             justify-content: center;
             align-items: center;
@@ -288,6 +339,20 @@
     <div id="canvas-container"></div>
     <div class="crosshair"></div>
     <div id="scare-flash-overlay"></div>
+
+    <!-- Cinematic Letterbox for Intro -->
+    <div class="cinematic-bar-top" id="cinema-top"></div>
+    <div class="cinematic-bar-bottom" id="cinema-bottom"></div>
+
+    <!-- Intro Location Badge -->
+    <div id="intro-location-card">
+        <div style="font-size: 0.8rem; font-weight: 800; color: #ffd32a; letter-spacing: 1.5px; text-transform: uppercase;">🚇 LAST METRO</div>
+        <div style="font-size: 1.15rem; font-weight: 900; color: #00f2fe; margin-top: 3px;" id="intro-loc-title">📍 Kesklinna Metroojaam · 23:45</div>
+        <div style="font-size: 0.8rem; color: #a4b0be; margin-top: 2px;" id="intro-loc-sub">Viimane rong saabub peagi...</div>
+    </div>
+
+    <!-- Skip Intro Button -->
+    <button id="btn-skip-intro">⏭️ Jäta Intro Vahele / Skip</button>
 
     <!-- Top HUD Navigation -->
     <div class="top-hud">
@@ -313,6 +378,10 @@
             <div id="hud-controls-hint" style="font-size: 0.78rem; color: #a4b0be; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
                 🖱️ Hiir / ⌨️ Nooled: Vaade
             </div>
+            <button class="btn-hud-action" id="btn-replay-intro" title="Mängi intro uuesti">
+                <span>🎬</span>
+                <span>Intro</span>
+            </button>
             <button class="btn-hud-action" id="btn-toggle-flashlight" title="Taskulamp (F)">
                 <span>🔦</span>
                 <span>Lamp</span>

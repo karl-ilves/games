@@ -103,6 +103,14 @@ export class LastMetroGame {
     private touchStartY: number = 0;
     private lastLockedDoorSoundTime: number = 0;
 
+    // Intro Cutscene Timers & Animation State
+    private introSideDoorsOpen: boolean = false;
+    private introSideDoorsLeft: THREE.Mesh | null = null;
+    private introSideDoorsRight: THREE.Mesh | null = null;
+    private introTimeouts: any[] = [];
+    private introCameraTarget: THREE.Vector3 = new THREE.Vector3(3.8, 1.6, -3.5);
+    private introLookTarget: THREE.Vector3 = new THREE.Vector3(0, 1.2, -25);
+
     constructor() {
         const cont = document.getElementById('canvas-container');
         if (!cont) throw new Error("Canvas container not found!");
@@ -197,6 +205,18 @@ export class LastMetroGame {
             flashBtn.addEventListener('click', () => this.toggleFlashlight());
         }
 
+        // Skip intro button
+        const skipBtn = document.getElementById('btn-skip-intro');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', () => this.skipIntro());
+        }
+
+        // Replay intro button
+        const replayBtn = document.getElementById('btn-replay-intro');
+        if (replayBtn) {
+            replayBtn.addEventListener('click', () => this.replayIntro());
+        }
+
         // Stand up button for mobile
         const standBtn = document.getElementById('btn-stand-up');
         if (standBtn) {
@@ -285,14 +305,12 @@ export class LastMetroGame {
         }
     }
 
-    // --- Station Platform & Passing Tunnel Construction ---
-
     private buildStationPlatform() {
         this.stationPlatformGroup = new THREE.Group();
 
         // Platform floor
         const platMat = new THREE.MeshStandardMaterial({ color: 0x3a424e, roughness: 0.8 });
-        const platGeo = new THREE.BoxGeometry(10, 0.8, 45);
+        const platGeo = new THREE.BoxGeometry(10, 0.8, 55);
         const platform = new THREE.Mesh(platGeo, platMat);
         platform.position.set(4.5, -0.4, 0);
         platform.receiveShadow = true;
@@ -300,30 +318,71 @@ export class LastMetroGame {
 
         // Yellow safety edge line
         const edgeMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
-        const edge = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 45), edgeMat);
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 55), edgeMat);
         edge.position.set(0.65, 0.01, 0);
         this.stationPlatformGroup.add(edge);
 
         // Station wall & advertising posters
         const wallMat = new THREE.MeshStandardMaterial({ color: 0x222731, roughness: 0.9 });
-        const wall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 6, 45), wallMat);
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 6, 55), wallMat);
         wall.position.set(9.5, 2.6, 0);
         this.stationPlatformGroup.add(wall);
 
+        // Steel Rails & Ties on Track Bed
+        const railMat = new THREE.MeshStandardMaterial({ color: 0xa4b0be, metalness: 0.9, roughness: 0.2 });
+        const tieMat = new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.9 });
+        [-0.7, 0.7].forEach(rx => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 60), railMat);
+            rail.position.set(rx, -0.45, 0);
+            this.stationPlatformGroup.add(rail);
+        });
+        for (let tz = -30; tz <= 30; tz += 1.2) {
+            const tie = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.08, 0.25), tieMat);
+            tie.position.set(0, -0.52, tz);
+            this.stationPlatformGroup.add(tie);
+        }
+
         // Platform Pillars
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4b6584, roughness: 0.5 });
-        for (let z = -18; z <= 18; z += 9) {
+        for (let z = -20; z <= 20; z += 10) {
             const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5, 0.6), pillarMat);
             pillar.position.set(3.5, 2.1, z);
             this.stationPlatformGroup.add(pillar);
         }
 
         // Platform ceiling lights
-        for (let z = -16; z <= 16; z += 8) {
-            const pLight = new THREE.PointLight(0xfff1cf, 0.8, 12);
+        for (let z = -18; z <= 18; z += 9) {
+            const pLight = new THREE.PointLight(0xfff1cf, 0.9, 14);
             pLight.position.set(4, 4, z);
             this.stationPlatformGroup.add(pLight);
         }
+
+        // Digital Destination Board
+        const boardCanvas = document.createElement('canvas');
+        boardCanvas.width = 512;
+        boardCanvas.height = 128;
+        const bCtx = boardCanvas.getContext('2d');
+        if (bCtx) {
+            bCtx.fillStyle = '#0a0d14';
+            bCtx.fillRect(0, 0, 512, 128);
+            bCtx.strokeStyle = '#ffd32a';
+            bCtx.lineWidth = 4;
+            bCtx.strokeRect(4, 4, 504, 120);
+            bCtx.fillStyle = '#ffd32a';
+            bCtx.font = 'bold 26px monospace';
+            bCtx.textAlign = 'center';
+            bCtx.fillText('🚇 VIIMANE METROO', 256, 45);
+            bCtx.fillStyle = '#00f2fe';
+            bCtx.font = 'bold 22px monospace';
+            bCtx.fillText('23:45 · SAABUB KOHE', 256, 90);
+        }
+        const boardTex = new THREE.CanvasTexture(boardCanvas);
+        const boardMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.1, 0.6, 2.2),
+            new THREE.MeshBasicMaterial({ map: boardTex })
+        );
+        boardMesh.position.set(3.5, 3.2, 0);
+        this.stationPlatformGroup.add(boardMesh);
 
         this.scene.add(this.stationPlatformGroup);
     }
@@ -394,25 +453,64 @@ export class LastMetroGame {
         ceiling.position.set(0, carHeight, 0);
         carGroup.add(ceiling);
 
-        // 3. Side Walls with Window Cutouts
+        // 3. Side Walls with Window Cutouts & Platform Sliding Doors
         const wallColor = theme === 'abandoned' ? 0x3d3d3d : theme === 'neon' ? 0x1e272e : 0xf1f2f6;
         const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.7 });
 
-        [-carWidth / 2, carWidth / 2].forEach(x => {
-            const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, carLength), wallMat);
-            sideWall.position.set(x, carHeight / 2, 0);
-            carGroup.add(sideWall);
+        // Left Solid Wall (-carWidth/2)
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, carLength), wallMat);
+        leftWall.position.set(-carWidth / 2, carHeight / 2, 0);
+        carGroup.add(leftWall);
 
-            // Windows (semi-transparent glass)
-            const glassMat = new THREE.MeshPhysicalMaterial({
-                color: 0x111625,
-                transparent: true,
-                opacity: 0.45,
-                roughness: 0.1,
-                metalness: 0.8,
-                transmission: 0.7
-            });
+        // Right Wall with Central Entry Way (+carWidth/2)
+        const rightWallFront = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
+        rightWallFront.position.set(carWidth / 2, carHeight / 2, 5.6);
+        carGroup.add(rightWallFront);
+
+        const rightWallBack = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
+        rightWallBack.position.set(carWidth / 2, carHeight / 2, -5.6);
+        carGroup.add(rightWallBack);
+
+        const rightWallTop = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight - 2.2, 2.4), wallMat);
+        rightWallTop.position.set(carWidth / 2, 2.2 + (carHeight - 2.2) / 2, 0);
+        carGroup.add(rightWallTop);
+
+        // Pneumatic Sliding Side Doors on Platform Side
+        const doorLeafMat = new THREE.MeshStandardMaterial({
+            color: theme === 'abandoned' ? 0x7f1d1d : 0x10ac84,
+            metalness: 0.6,
+            roughness: 0.35
+        });
+        const doorGlassMat = new THREE.MeshPhysicalMaterial({ color: 0x00f2fe, transmission: 0.8, roughness: 0.1 });
+
+        const leftDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
+        const leftDoorWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
+        leftDoorWin.position.set(0, 0.25, 0);
+        leftDoorLeaf.add(leftDoorWin);
+        leftDoorLeaf.position.set(carWidth / 2, 1.1, -0.55);
+        carGroup.add(leftDoorLeaf);
+        this.introSideDoorsLeft = leftDoorLeaf;
+
+        const rightDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
+        const rightDoorWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
+        rightDoorWin.position.set(0, 0.25, 0);
+        rightDoorLeaf.add(rightDoorWin);
+        rightDoorLeaf.position.set(carWidth / 2, 1.1, 0.55);
+        carGroup.add(rightDoorLeaf);
+        this.introSideDoorsRight = rightDoorLeaf;
+
+        // Windows (semi-transparent glass)
+        const glassMat = new THREE.MeshPhysicalMaterial({
+            color: 0x111625,
+            transparent: true,
+            opacity: 0.45,
+            roughness: 0.1,
+            metalness: 0.8,
+            transmission: 0.7
+        });
+        [-carWidth / 2, carWidth / 2].forEach(x => {
             for (let z = -7; z <= 7; z += 4.5) {
+                if (x > 0 && Math.abs(z) < 2) continue; // skip door entry
                 const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.1, 2.5), glassMat);
                 windowPane.position.set(x, 1.6, z);
                 carGroup.add(windowPane);
@@ -985,30 +1083,134 @@ export class LastMetroGame {
 
     // --- Intro Sequence Flow ---
 
-    private startIntroSequence() {
+    public startIntroSequence() {
+        // Clear previous intro timeouts
+        this.introTimeouts.forEach(t => clearTimeout(t));
+        this.introTimeouts = [];
+
+        this.currentCarIndex = 0;
+        this.loadCarriage(0, 'undecided');
         this.state = 'intro_station';
         this.cutsceneTimer = 0;
         this.trainSpeed = 0;
+        this.introSideDoorsOpen = false;
 
-        // Camera starts outside on station platform looking at track
-        this.playerPos.set(3.2, 1.6, 0);
-        this.cameraEuler.set(0, -Math.PI / 2, 0);
+        // Position train deep in dark tunnel initially
+        if (this.currentCarriage) {
+            this.currentCarriage.group.position.set(0, 0, -65);
+        }
+        // Position platform at track level
+        this.stationPlatformGroup.position.set(0, 0, 0);
+
+        // Camera starts outside on station platform looking down the track at incoming tunnel
+        this.playerPos.set(3.8, 1.6, -3.5);
+        this.cameraEuler.set(0, -Math.PI / 1.55, 0);
+
+        // Show cinematic letterbox and intro location badge
+        const cTop = document.getElementById('cinema-top');
+        const cBottom = document.getElementById('cinema-bottom');
+        const locCard = document.getElementById('intro-location-card');
+        const skipBtn = document.getElementById('btn-skip-intro');
+        const standBtn = document.getElementById('btn-stand-up');
+
+        if (cTop) cTop.classList.remove('cinematic-hidden');
+        if (cBottom) cBottom.classList.remove('cinematic-hidden');
+        if (locCard) {
+            locCard.style.display = 'block';
+            locCard.style.opacity = '1';
+        }
+        if (skipBtn) skipBtn.style.display = 'block';
+        if (standBtn) standBtn.style.display = 'none';
 
         this.showThought(
-            'Ootan metrood. Kell on hilja ja jaam on peaaegu tühi.',
-            'Waiting for the metro. It is late and the station is nearly empty.'
+            'Ootan viimast metrood. Kell on hilja ja jaam on peaaegu tühi.',
+            'Waiting for the last metro. It is late and the station is nearly empty.',
+            4000
         );
 
-        // Train pulls into station after 2.5 seconds
-        setTimeout(() => {
+        // t = 1.2s: Distant subway train approaches with announcement chime
+        this.introTimeouts.push(setTimeout(() => {
             metroAudio.playAnnouncementChime();
+        }, 1200));
+
+        // t = 4.2s: Train arrives and stops at platform! Doors chime and slide open
+        this.introTimeouts.push(setTimeout(() => {
+            if (this.currentCarriage) this.currentCarriage.group.position.z = 0;
             metroAudio.playDoorChime();
             setTimeout(() => {
                 metroAudio.playDoorSlide(true);
-                // Walk player into train and sit down
-                this.sitInTrain();
-            }, 2000);
-        }, 2000);
+                this.introSideDoorsOpen = true;
+                this.state = 'intro_boarding';
+                this.showThought(
+                    'Metroorong saabus. Astun rongi ja otsin vaba istme.',
+                    'The subway train arrived. I step aboard and look for a free seat.',
+                    3500
+                );
+            }, 600);
+        }, 4200));
+
+        // t = 7.5s: Player walks into train and sits down on seat
+        this.introTimeouts.push(setTimeout(() => {
+            this.state = 'intro_riding';
+            metroAudio.playFootstep();
+            this.playerPos.set(1.1, 0.95, -1);
+            this.cameraEuler.set(0, -Math.PI / 2, 0);
+
+            // Hide location badge
+            if (locCard) locCard.style.opacity = '0';
+        }, 7500));
+
+        // t = 9.8s: Side doors close and train departs into dark tunnel
+        this.introTimeouts.push(setTimeout(() => {
+            metroAudio.playDoorChime();
+            setTimeout(() => {
+                metroAudio.playDoorSlide(false);
+                this.introSideDoorsOpen = false;
+                this.trainSpeed = 50;
+                metroAudio.setSpeedAudio(0.85);
+                this.stationPlatformGroup.position.set(0, -50, 0);
+
+                this.showThought(
+                    'Uksed sulgusid. Esimene peatus peaks varsti saabuma.',
+                    'Doors closed. The first stop should arrive shortly.',
+                    4500
+                );
+            }, 800);
+        }, 9800));
+
+        // t = 15.5s: Arrive at First Stop (Keskjaam / Central Station)
+        this.introTimeouts.push(setTimeout(() => {
+            this.arriveAtFirstStop();
+        }, 15500));
+    }
+
+    public skipIntro() {
+        this.introTimeouts.forEach(t => clearTimeout(t));
+        this.introTimeouts = [];
+
+        if (this.currentCarriage) {
+            this.currentCarriage.group.position.set(0, 0, 0);
+        }
+        this.stationPlatformGroup.position.set(0, -50, 0);
+        this.introSideDoorsOpen = false;
+        this.trainSpeed = 60;
+        metroAudio.setSpeedAudio(0.9);
+
+        const cTop = document.getElementById('cinema-top');
+        const cBottom = document.getElementById('cinema-bottom');
+        const locCard = document.getElementById('intro-location-card');
+        const skipBtn = document.getElementById('btn-skip-intro');
+
+        if (cTop) cTop.classList.add('cinematic-hidden');
+        if (cBottom) cBottom.classList.add('cinematic-hidden');
+        if (locCard) locCard.style.display = 'none';
+        if (skipBtn) skipBtn.style.display = 'none';
+
+        this.standUp();
+    }
+
+    public replayIntro() {
+        this.startIntroSequence();
     }
 
     private sitInTrain() {
@@ -1028,7 +1230,6 @@ export class LastMetroGame {
             'I sat down. The first stop should arrive shortly.'
         );
 
-        // Ride smoothly for 6 seconds then arrive at First Station
         setTimeout(() => {
             this.arriveAtFirstStop();
         }, 5500);
@@ -1044,7 +1245,10 @@ export class LastMetroGame {
 
         metroAudio.playAnnouncementChime();
         metroAudio.playDoorChime();
-        metroAudio.playDoorSlide(true);
+        setTimeout(() => {
+            metroAudio.playDoorSlide(true);
+            this.introSideDoorsOpen = true;
+        }, 500);
 
         this.showThought(
             'Esimene peatus: Keskjaam. Mõned reisijad lähevad maha, uued tulevad peale.',
@@ -1052,14 +1256,17 @@ export class LastMetroGame {
         );
 
         // Passenger shuffle animation & doors close
-        setTimeout(() => {
+        this.introTimeouts.push(setTimeout(() => {
             metroAudio.playDoorChime();
-            metroAudio.playDoorSlide(false);
-
             setTimeout(() => {
-                this.departFirstStop();
-            }, 1500);
-        }, 4000);
+                metroAudio.playDoorSlide(false);
+                this.introSideDoorsOpen = false;
+
+                setTimeout(() => {
+                    this.departFirstStop();
+                }, 1500);
+            }, 800);
+        }, 4000));
     }
 
     private departFirstStop() {
@@ -1068,8 +1275,15 @@ export class LastMetroGame {
         metroAudio.setSpeedAudio(0.85);
         this.stationPlatformGroup.position.set(0, -50, 0);
 
+        const cTop = document.getElementById('cinema-top');
+        const cBottom = document.getElementById('cinema-bottom');
+        const skipBtn = document.getElementById('btn-skip-intro');
+        if (cTop) cTop.classList.add('cinematic-hidden');
+        if (cBottom) cBottom.classList.add('cinematic-hidden');
+        if (skipBtn) skipBtn.style.display = 'none';
+
         // Unlock player movement!
-        setTimeout(() => {
+        this.introTimeouts.push(setTimeout(() => {
             this.state = 'player_free';
             const standBtn = document.getElementById('btn-stand-up');
             if (standBtn) standBtn.style.display = 'flex';
@@ -1078,7 +1292,7 @@ export class LastMetroGame {
                 'Rong hakkas uuesti sõitma. Nüüd saan püsti tõusta ja rongi uurida.',
                 'The train started moving again. I can now stand up and explore the train.'
             );
-        }, 1200);
+        }, 1200));
     }
 
     public standUp() {
@@ -1321,6 +1535,25 @@ export class LastMetroGame {
 
     private animate() {
         const delta = Math.min(this.clock.getDelta(), 0.1);
+
+        // 0. Intro Cinematic Animations
+        if (this.state === 'intro_station' && this.currentCarriage) {
+            // Train pulls smoothly into station from z = -65 to 0
+            this.currentCarriage.group.position.z = THREE.MathUtils.lerp(this.currentCarriage.group.position.z, 0, delta * 1.5);
+        } else if (this.state === 'intro_boarding') {
+            // Camera walks smoothly from platform (3.8, 1.6, -3.5) through doors (1.7, 1.6, 0) into aisle (0, 1.6, 0)
+            this.playerPos.x = THREE.MathUtils.lerp(this.playerPos.x, 0, delta * 2.2);
+            this.playerPos.z = THREE.MathUtils.lerp(this.playerPos.z, 0, delta * 2.2);
+            this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, -Math.PI / 2, delta * 2.0);
+        }
+
+        // Side sliding doors animation
+        if (this.introSideDoorsLeft && this.introSideDoorsRight) {
+            const targetLeft = this.introSideDoorsOpen ? -1.6 : -0.55;
+            const targetRight = this.introSideDoorsOpen ? 1.6 : 0.55;
+            this.introSideDoorsLeft.position.z = THREE.MathUtils.lerp(this.introSideDoorsLeft.position.z, targetLeft, delta * 6);
+            this.introSideDoorsRight.position.z = THREE.MathUtils.lerp(this.introSideDoorsRight.position.z, targetRight, delta * 6);
+        }
 
         // 1. Move passing tunnel for sense of forward subway speed
         if (this.trainSpeed > 0) {
