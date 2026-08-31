@@ -316,12 +316,11 @@ export class LastMetroGame {
             }, durationMs);
         }
     }
-
     private buildStationPlatform() {
         this.stationPlatformGroup = new THREE.Group();
 
         // Platform floor
-        const platMat = new THREE.MeshStandardMaterial({ color: 0x3a424e, roughness: 0.8 });
+        const platMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.7 });
         const platGeo = new THREE.BoxGeometry(10, 0.8, 55);
         const platform = new THREE.Mesh(platGeo, platMat);
         platform.position.set(4.5, -0.4, 0);
@@ -329,19 +328,19 @@ export class LastMetroGame {
         this.stationPlatformGroup.add(platform);
 
         // Yellow safety edge line
-        const edgeMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
-        const edge = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 55), edgeMat);
+        const edgeMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.3, emissive: 0xf1c40f, emissiveIntensity: 0.2 });
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 55), edgeMat);
         edge.position.set(0.65, 0.01, 0);
         this.stationPlatformGroup.add(edge);
 
         // Station wall & advertising posters
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x222731, roughness: 0.9 });
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.8 });
         const wall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 6, 55), wallMat);
         wall.position.set(9.5, 2.6, 0);
         this.stationPlatformGroup.add(wall);
 
         // Steel Rails & Ties on Track Bed
-        const railMat = new THREE.MeshStandardMaterial({ color: 0xa4b0be, metalness: 0.9, roughness: 0.2 });
+        const railMat = new THREE.MeshStandardMaterial({ color: 0xa4b0be, metalness: 0.95, roughness: 0.15 });
         const tieMat = new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.9 });
         [-0.7, 0.7].forEach(rx => {
             const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 60), railMat);
@@ -355,17 +354,27 @@ export class LastMetroGame {
         }
 
         // Platform Pillars
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4b6584, roughness: 0.5 });
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x718096, roughness: 0.4 });
         for (let z = -20; z <= 20; z += 10) {
             const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5, 0.6), pillarMat);
             pillar.position.set(3.5, 2.1, z);
             this.stationPlatformGroup.add(pillar);
         }
 
-        // Platform ceiling lights
-        for (let z = -18; z <= 18; z += 9) {
-            const pLight = new THREE.PointLight(0xfff1cf, 0.9, 14);
-            pLight.position.set(4, 4, z);
+        // Bright Platform Ceiling & Overhead Lights (selgelt nähtav metroojaam!)
+        const platformAmbient = new THREE.PointLight(0xfff8ee, 2.2, 35);
+        platformAmbient.position.set(4.5, 4.0, 0);
+        this.stationPlatformGroup.add(platformAmbient);
+
+        for (let z = -22; z <= 22; z += 7.5) {
+            // Bright fluorescent lamp strip fixture
+            const lampMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const lampFixture = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 2.2), lampMat);
+            lampFixture.position.set(3.5, 4.5, z);
+            this.stationPlatformGroup.add(lampFixture);
+
+            const pLight = new THREE.PointLight(0xfffaed, 1.6, 18);
+            pLight.position.set(3.5, 4.2, z);
             this.stationPlatformGroup.add(pLight);
         }
 
@@ -403,19 +412,46 @@ export class LastMetroGame {
         this.tunnelGroup = new THREE.Group();
 
         // Long tunnel tube segments
-        const tunnelMat = new THREE.MeshStandardMaterial({ color: 0x141820, roughness: 0.95, side: THREE.BackSide });
+        const tunnelMat = new THREE.MeshStandardMaterial({ color: 0x111620, roughness: 0.95, side: THREE.BackSide });
         const tunnelGeo = new THREE.CylinderGeometry(5.5, 5.5, 120, 24, 1, true);
         const tunnelMesh = new THREE.Mesh(tunnelGeo, tunnelMat);
         tunnelMesh.rotation.x = Math.PI / 2;
         tunnelMesh.position.set(0, 1.5, 0);
         this.tunnelGroup.add(tunnelMesh);
 
-        // Periodic tunnel emergency lights
-        for (let z = -50; z <= 50; z += 12) {
-            const lampMat = new THREE.MeshBasicMaterial({ color: 0xffa502 });
-            const lampMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 0.2), lampMat);
-            lampMesh.position.set(-4.5, 2.5, z);
-            this.tunnelGroup.add(lampMesh);
+        // Vivid Passing Subway Tunnel Lights (Metroo tuled akendest mööda tuhisemas!)
+        for (let z = -56; z <= 56; z += 6) {
+            // Wall fluorescent strip lamps (both left and right sides)
+            [-4.8, 4.8].forEach((lx, sIdx) => {
+                const isWarm = (Math.abs(z) + sIdx) % 3 === 0;
+                const lampMat = new THREE.MeshBasicMaterial({
+                    color: isWarm ? 0xffbe76 : 0x70a1ff
+                });
+                const lampMesh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.18, 1.8), lampMat);
+                lampMesh.position.set(lx, 1.8, z);
+                this.tunnelGroup.add(lampMesh);
+
+                const pointL = new THREE.PointLight(isWarm ? 0xffbe76 : 0x70a1ff, 1.1, 9);
+                pointL.position.set(lx * 0.85, 1.8, z);
+                this.tunnelGroup.add(pointL);
+            });
+
+            // Ceiling overhead light strips
+            const ceilLamp = new THREE.Mesh(
+                new THREE.BoxGeometry(0.4, 0.1, 1.2),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            ceilLamp.position.set(0, 4.2, z);
+            this.tunnelGroup.add(ceilLamp);
+
+            // Signal track lights (Red / Green / Amber dots)
+            if (z % 18 === 0) {
+                const sigColor = z % 36 === 0 ? 0x2ed573 : 0xff4757;
+                const sigMat = new THREE.MeshBasicMaterial({ color: sigColor });
+                const signalMesh = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), sigMat);
+                signalMesh.position.set(-3.2, 0.4, z);
+                this.tunnelGroup.add(signalMesh);
+            }
         }
 
         // Surreal exterior backdrop mesh (for Vagun 5 window anomaly)
@@ -543,12 +579,18 @@ export class LastMetroGame {
             this.sideDoorMeshes.push({ mesh: rightLeaf, baseZ: 0.55, dir: 1 });
         });
 
-        // Windows (Pure pitch-black void out of windows - "aknast pole midagi näha")
-        const blackGlassMat = new THREE.MeshBasicMaterial({ color: 0x010204 });
+        // Windows (Subway Tinted Glass - passing tunnel lights clearly visible outside!)
+        const windowGlassMat = new THREE.MeshPhysicalMaterial({
+            color: 0x1a2634,
+            transparent: true,
+            opacity: 0.35,
+            roughness: 0.1,
+            metalness: 0.25
+        });
         [-carWidth / 2, carWidth / 2].forEach(x => {
             for (let z = -7; z <= 7; z += 4.5) {
                 if (Math.abs(z) < 2) continue; // skip door entry
-                const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.1, 2.5), blackGlassMat);
+                const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.1, 2.5), windowGlassMat);
                 windowPane.position.set(x, 1.6, z);
                 carGroup.add(windowPane);
             }
@@ -1373,6 +1415,7 @@ export class LastMetroGame {
     public triggerShadowHandsEvent() {
         if (this.shadowHandsActive) return;
         this.shadowHandsActive = true;
+        this.shadowHandsTimer = 10.0; // Stays active for exactly 10s then disappears (kui käsi tuleb on se 10 sek siis läheb ära)
 
         // Doors vanish completely (uksi pole näha!)
         this.sideDoorMeshes.forEach(d => d.mesh.visible = false);
@@ -1396,8 +1439,35 @@ export class LastMetroGame {
         this.shadowHandsGroups.push(hand);
 
         this.showThought(
-            'Uksed kadusid ära... Tühjusest sirutub välja must varjukäsi! Ära mine selle lähedalegi!',
-            'The doors vanished into the void... A black shadow hand is reaching in! Do not go near it!'
+            'Uksed kadusid ära... Tühjusest sirutub välja must varjukäsi! Pea 10 sekundit vastu ja ära puuduta seda!',
+            'The doors vanished into the void... A black shadow hand is reaching in! Survive for 10 seconds and do not touch it!'
+        );
+    }
+
+    public dismissShadowHands() {
+        if (!this.shadowHandsActive) return;
+        this.shadowHandsActive = false;
+
+        // Remove shadow hand meshes from scene
+        this.shadowHandsGroups.forEach(hand => this.scene.remove(hand));
+        this.shadowHandsGroups = [];
+
+        // Restore sliding side doors
+        this.sideDoorMeshes.forEach(d => d.mesh.visible = true);
+
+        // Restore carriage lighting back to normal
+        if (this.currentCarriage) {
+            this.currentCarriage.lights.forEach(l => {
+                l.color.setHex(this.currentCarriage!.theme === 'dark' ? 0xff4757 : 0xffffff);
+                l.intensity = 0.85;
+            });
+        }
+
+        // Play door closing sound & victory thought
+        metroAudio.playDoorSlide(false);
+        this.showThought(
+            'Must varjukäsi tõmbus tagasi tühjusesse ja uksed taastusid... Oht on möödas!',
+            'The shadow hand retreated back into the void and the doors restored... The danger has passed!'
         );
     }
 
@@ -1516,9 +1586,9 @@ export class LastMetroGame {
         // Position platform at track level
         this.stationPlatformGroup.position.set(0, 0, 0);
 
-        // Camera starts outside on station platform looking down the track at incoming tunnel
-        this.playerPos.set(3.8, 1.6, -3.5);
-        this.cameraEuler.set(0, -Math.PI / 1.55, 0);
+        // Camera starts outside on station platform looking across the bright station towards approaching train track
+        this.playerPos.set(2.8, 1.6, -1.0);
+        this.cameraEuler.set(0, -Math.PI / 2.1, 0);
 
         // Show cinematic letterbox and intro location badge
         const cTop = document.getElementById('cinema-top');
@@ -2027,36 +2097,41 @@ export class LastMetroGame {
             }
         }
 
-        // 3b. Ultra-Realistic Shadow Hand Reaching & Instant Sensitive Death Collision
+        // 3b. Ultra-Realistic Shadow Hand Reaching & 10s Timer Dismissal
         if (this.shadowHandsActive && this.state === 'player_free') {
-            this.shadowHandsAnimTimer += delta * 4.5;
-            this.shadowHandsGroups.forEach((hand) => {
-                const wave = Math.sin(this.shadowHandsAnimTimer);
-                hand.position.y = 1.35 + wave * 0.14;
-                hand.rotation.x = Math.sin(this.shadowHandsAnimTimer * 0.7) * 0.22;
-                hand.rotation.y = Math.cos(this.shadowHandsAnimTimer * 0.5) * 0.28;
+            this.shadowHandsTimer -= delta;
+            if (this.shadowHandsTimer <= 0) {
+                this.dismissShadowHands();
+            } else {
+                this.shadowHandsAnimTimer += delta * 4.5;
+                this.shadowHandsGroups.forEach((hand) => {
+                    const wave = Math.sin(this.shadowHandsAnimTimer);
+                    hand.position.y = 1.35 + wave * 0.14;
+                    hand.rotation.x = Math.sin(this.shadowHandsAnimTimer * 0.7) * 0.22;
+                    hand.rotation.y = Math.cos(this.shadowHandsAnimTimer * 0.5) * 0.28;
 
-                // Animate articulated fingers flexing and grasping
-                hand.children.forEach(child => {
-                    if (child.name === 'finger') {
-                        child.rotation.z = Math.sin(this.shadowHandsAnimTimer * 2.0) * 0.28;
-                        child.rotation.x = Math.cos(this.shadowHandsAnimTimer * 1.6) * 0.18;
+                    // Animate articulated fingers flexing and grasping
+                    hand.children.forEach(child => {
+                        if (child.name === 'finger') {
+                            child.rotation.z = Math.sin(this.shadowHandsAnimTimer * 2.0) * 0.28;
+                            child.rotation.x = Math.cos(this.shadowHandsAnimTimer * 1.6) * 0.18;
+                        }
+                    });
+
+                    // Reach inwards toward center aisle
+                    const side = hand.position.x > 0 ? 1 : -1;
+                    hand.position.x = (side * 1.68) - (side * (0.65 + wave * 0.35));
+
+                    // Ultra-sensitive collision check: even slight contact or entering reach zone triggers instant death
+                    const handWorldPos = hand.position;
+                    const distToHand = this.playerPos.distanceTo(handWorldPos);
+                    const nearDoorWay = (side > 0 ? this.playerPos.x > 0.25 : this.playerPos.x < -0.25) && Math.abs(this.playerPos.z - handWorldPos.z) < 2.0;
+
+                    if (distToHand < 1.75 || nearDoorWay) {
+                        this.triggerDraggedDeath(side);
                     }
                 });
-
-                // Reach inwards toward center aisle
-                const side = hand.position.x > 0 ? 1 : -1;
-                hand.position.x = (side * 1.68) - (side * (0.65 + wave * 0.35));
-
-                // Ultra-sensitive collision check: even slight contact or entering reach zone triggers instant death
-                const handWorldPos = hand.position;
-                const distToHand = this.playerPos.distanceTo(handWorldPos);
-                const nearDoorWay = (side > 0 ? this.playerPos.x > 0.25 : this.playerPos.x < -0.25) && Math.abs(this.playerPos.z - handWorldPos.z) < 2.0;
-
-                if (distToHand < 1.75 || nearDoorWay) {
-                    this.triggerDraggedDeath(side);
-                }
-            });
+            }
         }
 
         // 3c. Dragged Out Death Cutscene Animation

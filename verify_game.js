@@ -1424,7 +1424,7 @@ try {
             await page.evaluate(() => window.__lastMetro.loadCarriage(8, 'right'));
             await new Promise(r => setTimeout(r, 150));
 
-            // Carriage 9 (Ghost Stalker & Void Shadow Hands Event: 1 hand from 1 side only)
+            // Carriage 9 (Ghost Stalker & Void Shadow Hands Event: 1 hand from 1 side only, 10s timer)
             await page.evaluate(() => {
                 window.__lastMetro.loadCarriage(9, 'right');
                 window.__lastMetro.triggerShadowHandsEvent();
@@ -1433,6 +1433,15 @@ try {
             const handsActive = await page.evaluate(() => window.__lastMetro.shadowHandsActive && window.__lastMetro.shadowHandsGroups.length === 1);
             console.log("   Void Shadow Hand active with 1 hand from 1 side only (Expected: true):", handsActive);
             if (!handsActive) throw new Error("Shadow hand (1 side only) failed to spawn in Carriage 9!");
+
+            // Test Shadow Hand 10-second survival dismissal
+            await page.evaluate(() => {
+                window.__lastMetro.dismissShadowHands();
+            });
+            await new Promise(r => setTimeout(r, 100));
+            const handsDismissed = await page.evaluate(() => !window.__lastMetro.shadowHandsActive && window.__lastMetro.shadowHandsGroups.length === 0);
+            console.log("   Shadow hand dismissed after survival (Expected: true):", handsDismissed);
+            if (!handsDismissed) throw new Error("Shadow hand failed to dismiss after survival!");
 
             // Test Dragged Death Cutscene & SA SURID Death Screen
             await page.evaluate(() => {
