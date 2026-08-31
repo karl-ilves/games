@@ -721,7 +721,23 @@ class WarGameEngine {
         this.scene.add(sunLight);
 
         this.radarCanvas = document.getElementById('radar-canvas') as HTMLCanvasElement;
-        if (this.radarCanvas) this.radarCtx = this.radarCanvas.getContext('2d');
+        if (this.radarCanvas) {
+            this.radarCtx = this.radarCanvas.getContext('2d');
+            this.radarCanvas.style.cursor = 'pointer';
+            this.radarCanvas.addEventListener('pointerdown', (e) => {
+                const rect = this.radarCanvas.getBoundingClientRect();
+                const clickX = (e.clientX - rect.left) / rect.width;
+                const clickY = (e.clientY - rect.top) / rect.height;
+                const nx = (clickX - 0.5) / 0.425;
+                const ny = (clickY - 0.5) / 0.425;
+                const worldX = nx * 380;
+                const worldZ = ny * 380;
+                if (this.isSatelliteTargeting) {
+                    this.satelliteCamCenter.x = THREE.MathUtils.clamp(worldX, -260, 260);
+                    this.satelliteCamCenter.z = THREE.MathUtils.clamp(worldZ, -380, 380);
+                }
+            });
+        }
     }
 
     // --- Battlefield Map & Explosive Barrels (2x Larger Battle Area: 1680x1680) ---
@@ -2194,7 +2210,21 @@ class WarGameEngine {
             }, 500);
         }, 12000);
 
-        // 3. Expanding Blast Shockwaves (Primary High-Velocity Ring + Dust Wavefront)
+        // 3. Immediate direct blast damage to all enemy units caught in epicenter radius
+        this.units.forEach(unit => {
+            if (!unit.isDead && unit.team !== team) {
+                const dx = unit.pos.x - epicenter.x;
+                const dz = unit.pos.z - epicenter.z;
+                const hDist = Math.sqrt(dx * dx + dz * dz);
+                if (hDist <= maxRadius) {
+                    const falloff = Math.max(0.4, 1.0 - (hDist / maxRadius));
+                    const actualDmg = Math.round(baseDamage * falloff);
+                    this.damageUnit(unit, actualDmg, shooterId, shooterName, team);
+                }
+            }
+        });
+
+        // 4. Expanding Blast Shockwaves (Primary High-Velocity Ring + Dust Wavefront)
         const ringGeo = new THREE.RingGeometry(0.2, 1.4, 32);
         const ringMat = new THREE.MeshBasicMaterial({
             color: team === 'red' ? 0xff4757 : 0xffa502,
@@ -2637,7 +2667,7 @@ class WarGameEngine {
 
                 if (t >= 1.0) {
                     this.scene.remove(rocketMesh);
-                    this.triggerSpreadingExplosion(endPos, 24.0, 125, this.localPlayerId, this.localUnit.name, this.localTeam);
+                    this.triggerSpreadingExplosion(endPos, 35.0, 300, this.localPlayerId, this.localUnit.name, this.localTeam);
                 } else {
                     requestAnimationFrame(() => rocketAnim(0.016));
                 }
@@ -2701,10 +2731,22 @@ class WarGameEngine {
     private triggerNuclearExplosion(epicenter: THREE.Vector3, shooterId: string, shooterName: string, team: Team) {
         warAudio.playNuclearBlast();
 
-        const nukeRadius = 88.0; // 4x standard 22m blast radius
+        const nukeRadius = 120.0; // 4x massive blast radius
 
-        // 1. Blinding Thermonuclear Flash Light
-        const flashLight = new THREE.PointLight(0xfff3a0, 40, 260);
+        // 1. Immediate massive nuclear vaporization for all enemy units in radius
+        this.units.forEach(unit => {
+            if (!unit.isDead && unit.team !== team) {
+                const dx = unit.pos.x - epicenter.x;
+                const dz = unit.pos.z - epicenter.z;
+                const hDist = Math.sqrt(dx * dx + dz * dz);
+                if (hDist <= nukeRadius) {
+                    this.damageUnit(unit, 1000, shooterId, shooterName, team);
+                }
+            }
+        });
+
+        // 2. Blinding Thermonuclear Flash Light
+        const flashLight = new THREE.PointLight(0xfff3a0, 40, 320);
         flashLight.position.copy(epicenter).add(new THREE.Vector3(0, 10, 0));
         this.scene.add(flashLight);
         let flashLife = 0.55;
@@ -2719,8 +2761,8 @@ class WarGameEngine {
         };
         setTimeout(fadeLight, 40);
 
-        // 2. Colossal Scorch Crater
-        const craterGeo = new THREE.RingGeometry(0.5, 36.0, 32);
+        // 3. Colossal Scorch Crater
+        const craterGeo = new THREE.RingGeometry(0.5, 48.0, 32);
         const craterMat = new THREE.MeshBasicMaterial({
             color: 0x05080a,
             side: THREE.DoubleSide,
@@ -2733,7 +2775,7 @@ class WarGameEngine {
         crater.rotation.x = -Math.PI / 2;
         this.scene.add(crater);
 
-        // 3. Massive Dual High-Velocity Blast Shockwaves
+        // 4. Massive Dual High-Velocity Blast Shockwaves
         const ringGeo = new THREE.RingGeometry(0.5, 3.5, 48);
         const ringMat = new THREE.MeshBasicMaterial({
             color: 0xff4757,
@@ -2751,10 +2793,10 @@ class WarGameEngine {
             mesh: shockMesh,
             currentRadius: 2.0,
             maxRadius: nukeRadius,
-            expansionSpeed: 48.0,
-            life: 1.8,
-            maxLife: 1.8,
-            damage: 350,
+            expansionSpeed: 52.0,
+            life: 2.0,
+            maxLife: 2.0,
+            damage: 1000,
             shooterId,
             shooterName,
             team,
@@ -3184,7 +3226,7 @@ class WarGameEngine {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        const mapMax = 640; // Maps -640..+640 world units (2x enlarged map) to radar
+        const mapMax = 380; // Maps -380..+380 world units to radar
 
         // Base zones
         const blueBaseY = cy + (-270 / mapMax) * (r * 0.85);
@@ -3200,6 +3242,17 @@ class WarGameEngine {
         ctx.arc(cx, redBaseY, 8, 0, Math.PI * 2);
         ctx.fill();
 
+        // Missile Silos markers on radar
+        const blueSiloX = cx + (-45 / mapMax) * (r * 0.85);
+        const blueSiloY = cy + (-270 / mapMax) * (r * 0.85);
+        ctx.fillStyle = '#00f2fe';
+        ctx.fillRect(blueSiloX - 3, blueSiloY - 3, 6, 6);
+
+        const redSiloX = cx + (45 / mapMax) * (r * 0.85);
+        const redSiloY = cy + (270 / mapMax) * (r * 0.85);
+        ctx.fillStyle = '#ff4757';
+        ctx.fillRect(redSiloX - 3, redSiloY - 3, 6, 6);
+
         // Rotating radar sweep line
         const prevAngle = this.radarSweepAngle;
         this.radarSweepAngle = (this.radarSweepAngle + 2.5 * dt) % (Math.PI * 2);
@@ -3212,6 +3265,21 @@ class WarGameEngine {
         ctx.moveTo(cx, cy);
         ctx.lineTo(sweepX, sweepY);
         ctx.stroke();
+
+        // If satellite targeting is active, render current satellite camera targeting box
+        if (this.isSatelliteTargeting) {
+            const camRx = cx + (this.satelliteCamCenter.x / mapMax) * (r * 0.85);
+            const camRy = cy + (this.satelliteCamCenter.z / mapMax) * (r * 0.85);
+            ctx.strokeStyle = '#2ed573';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(camRx - 7, camRy - 7, 14, 14);
+            ctx.fillStyle = 'rgba(46, 213, 115, 0.25)';
+            ctx.fillRect(camRx - 7, camRy - 7, 14, 14);
+            ctx.beginPath();
+            ctx.moveTo(camRx - 10, camRy); ctx.lineTo(camRx + 10, camRy);
+            ctx.moveTo(camRx, camRy - 10); ctx.lineTo(camRx, camRy + 10);
+            ctx.stroke();
+        }
 
         // Render all 20 units across battlefield
         this.units.forEach(unit => {

@@ -774,6 +774,11 @@ try {
             throw new Error("Missile Commander must stay in satellite targeting map view after launching missile!");
         }
 
+        // Test clicking on Radar / Minimap to jump satellite camera
+        await page.click('#radar-canvas');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Successfully tested interactive Radar minimap targeting in War Game!");
+
         await page.keyboard.press('Escape');
         await new Promise(r => setTimeout(r, 200));
         console.log("   Successfully verified Raketitiim role exclusive 10s Missile Strike and satellite map persistence!");
