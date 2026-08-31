@@ -43,6 +43,12 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         trainGameCard.style.display = 'flex';
     }
 
+    // Obby (Takistusrada) mäng on nähtav AINULT Playard Ownerile!
+    const obbyGameCard = document.getElementById('card-obby-game');
+    if (obbyGameCard) {
+        obbyGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+    }
+
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
     setLanguage(isEstonian ? 'et' : 'en');
     renderRecentlyPlayed();
@@ -67,6 +73,9 @@ function setupIcons() {
 
     const cardTrainYardIcon = document.getElementById('card-train-yard-icon');
     if (cardTrainYardIcon) cardTrainYardIcon.innerHTML = yardService.renderYardSvg(16);
+
+    const cardObbyYardIcon = document.getElementById('card-obby-yard-icon');
+    if (cardObbyYardIcon) cardObbyYardIcon.innerHTML = yardService.renderYardSvg(16);
 }
 
 // --- Live HMS Countdown Updater ---

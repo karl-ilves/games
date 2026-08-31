@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://karl-ilves.github.io/games/sitemap.xml

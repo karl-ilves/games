@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Playard Games - Rongimäng (3D Train Simulator)</title>
+    <title>Playard Games - 3D Train Simulator | Free Online Train Game</title>
+    <meta name="description" content="Play the 3D Train Simulator on Playard Games! Drive steam locomotives, passenger trains and cargo freight across realistic 3D railway tracks.">
+    <meta name="keywords" content="playard games train, 3d train simulator, train driver game, playard games">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://karl-ilves.github.io/games/games/train/index.html">
     <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -486,12 +490,66 @@
             box-shadow: 0 0 50px rgba(0, 242, 254, 0.3);
         }
         /* Train Depot & Store Modal */
+        .depot-tabs-bar {
+            display: flex;
+            gap: 10px;
+            margin: 16px 0 10px 0;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 6px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .depot-tab-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            font-weight: 800;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .depot-tab-btn:hover {
+            color: #f8fafc;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .depot-tab-btn.active {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff;
+            border-color: #38bdf8;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.35);
+        }
+
+        .depot-tab-btn.active.tab-metro {
+            background: linear-gradient(135deg, #059669, #047857);
+            border-color: #34d399;
+            box-shadow: 0 4px 15px rgba(52, 211, 153, 0.35);
+        }
+
+        .tab-badge {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
         .depot-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 14px;
-            margin: 20px 0;
-            max-height: 60vh;
+            margin: 12px 0 20px 0;
+            max-height: 56vh;
             overflow-y: auto;
             padding-right: 6px;
         }
@@ -788,12 +846,26 @@
                 </div>
             </div>
 
-            <!-- Depot Status Message -->
-            <div id="depot-msg" style="display: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; margin-top: 12px; text-align: center;"></div>
+            <!-- Vehicle Type Switcher Tabs: Trains (Rongid) vs Metros (Metrood) -->
+            <div class="depot-tabs-bar">
+                <button class="depot-tab-btn active" id="tab-btn-trains" data-category="train">
+                    <span>🚂</span>
+                    <span id="tab-trains-text">Trains (Rongid)</span>
+                    <span class="tab-badge" id="tab-trains-count">9</span>
+                </button>
+                <button class="depot-tab-btn" id="tab-btn-metros" data-category="metro">
+                    <span>🚇</span>
+                    <span id="tab-metros-text">Metros (Metrood)</span>
+                    <span class="tab-badge" id="tab-metros-count">6</span>
+                </button>
+            </div>
 
-            <!-- 10 Trains Grid -->
+            <!-- Depot Status Message -->
+            <div id="depot-msg" style="display: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; margin-top: 8px; text-align: center;"></div>
+
+            <!-- Trains / Metros Grid -->
             <div class="depot-grid" id="trains-grid-container">
-                <!-- Dynamically Rendered 10 Trains -->
+                <!-- Dynamically Rendered Trains or Metros -->
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">

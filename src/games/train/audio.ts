@@ -19,6 +19,10 @@ class TrainAudio {
         }
     }
 
+    public init() {
+        this.initCtx();
+    }
+
     public toggleMute(): boolean {
         this.isMuted = !this.isMuted;
         return this.isMuted;

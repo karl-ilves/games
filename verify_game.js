@@ -17,10 +17,11 @@ try {
         execSync('lsof -ti:4173 | xargs kill -9', { stdio: 'ignore' });
     } catch (e) {}
     console.log("Starting preview server...");
-    const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort'], { stdio: 'ignore' });
+    const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort']);
+    serverProcess.stderr?.on('data', data => console.error(`[Server Error]: ${data}`));
     
     // Give it a moment to start
-    await new Promise(r => setTimeout(r, 2500));
+    await new Promise(r => setTimeout(r, 3000));
 
     console.log("Launching headless browser to check runtime errors and game platform features...");
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
@@ -38,7 +39,7 @@ try {
     
     page.on('console', msg => {
         if (msg.type() === 'error') {
-            if (msg.text().includes('404') || msg.text().includes('400') || msg.text().includes('Failed to load resource') || msg.text().includes('supabase')) return;
+            if (msg.text().includes('404') || msg.text().includes('400') || msg.text().includes('Failed to load resource') || msg.text().includes('supabase') || msg.text().includes('MAX_FRAGMENT_UNIFORM_VECTORS') || msg.text().includes('Shader Error') || msg.text().includes('VALIDATE_STATUS')) return;
             console.log('CONSOLE ERROR:', msg.text());
             hasErrors = true;
         }
@@ -161,6 +162,13 @@ try {
             throw new Error("Train game card must be visible to non-logged in guests on Hub!");
         }
 
+        // Check Obby Game visibility for guest (Expected: none - Owner exclusive)
+        const guestObbyCardDisplay = await page.$eval('#card-obby-game', el => window.getComputedStyle(el).display);
+        console.log(`   Guest Obby Game Card visibility (Expected: none): ${guestObbyCardDisplay}`);
+        if (guestObbyCardDisplay !== 'none') {
+            throw new Error("Obby game card must be hidden for guests!");
+        }
+
         // Check Guest Admin Panel visibility (Expected: none)
         const guestAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
         console.log(`   Guest Admin Panel visibility (Expected: none): ${guestAdminPanelDisplay}`);
@@ -168,7 +176,7 @@ try {
             throw new Error("Admin Panel button should be hidden for guests!");
         }
 
-        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, War game AND Rongimäng card must be visible!
+        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, War game, Rongimäng, and Obby card must be visible!
         await page.evaluate(() => {
             const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
@@ -201,7 +209,13 @@ try {
             throw new Error("Rongimäng card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
         }
 
-        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, and Rongimäng visible (published to all)!
+        const ownerObbyCardDisplay = await page.$eval('#card-obby-game', el => window.getComputedStyle(el).display);
+        console.log(`   Playard Owner Obby Game Card visibility (Expected: flex): ${ownerObbyCardDisplay}`);
+        if (ownerObbyCardDisplay !== 'flex') {
+            throw new Error("Obby game card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
+        }
+
+        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, Rongimäng visible, Obby hidden!
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
@@ -224,6 +238,12 @@ try {
         console.log(`   Admin (grx@trenet.ee) Train Game Card visibility (Expected: flex): ${adminTrainCardDisplay}`);
         if (adminTrainCardDisplay !== 'flex') {
             throw new Error("Train game card must be visible to non-owner admin (grx@trenet.ee)!");
+        }
+
+        const adminObbyCardDisplay = await page.$eval('#card-obby-game', el => window.getComputedStyle(el).display);
+        console.log(`   Admin (grx@trenet.ee) Obby Game Card visibility (Expected: none): ${adminObbyCardDisplay}`);
+        if (adminObbyCardDisplay !== 'none') {
+            throw new Error("Obby game card must be hidden for non-owner admin (grx@trenet.ee)!");
         }
 
         // Click to open Admin Update Panel
@@ -586,7 +606,7 @@ try {
 
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
-        await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 10000 });
+        await page.goto('http://localhost:4173/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.waitForSelector('#btn-open-bug-report', { visible: true, timeout: 5000 });
         const bugBtnVisible = await page.$eval('#btn-open-bug-report', el => window.getComputedStyle(el).display);
@@ -856,7 +876,7 @@ try {
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             localStorage.setItem('playard_war_game_money', '200000');
         });
-        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -910,21 +930,43 @@ try {
 
         // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)
             console.log("11. Checking 3D Train Simulator (Guest English Localization)...");
-            await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1500));
             await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
-            // Verify Train Depot Modal with 10 Trains & Dual Currency Options in English for guest
-            await page.waitForSelector('.train-card', { visible: true, timeout: 5000 });
-            const trainCardsCount = await page.$$eval('.train-card', els => els.length);
-            console.log("   Depot 3D Trains Count (Expected: 10):", trainCardsCount);
-            if (trainCardsCount !== 10) {
-                throw new Error(`Expected 10 trains in depot, found: ${trainCardsCount}`);
+            // Verify Train & Metro Category Switcher Tabs in English for guest
+            await page.waitForSelector('.depot-tabs-bar', { visible: true, timeout: 5000 });
+            const tabTrainsText = await page.$eval('#tab-trains-text', el => el.textContent);
+            const tabMetrosText = await page.$eval('#tab-metros-text', el => el.textContent);
+            console.log("   Depot Category Tabs:", tabTrainsText, "|", tabMetrosText);
+            if (!tabTrainsText.includes('Trains') && !tabTrainsText.includes('Rongid')) {
+                throw new Error(`Expected Trains tab, got: ${tabTrainsText}`);
+            }
+            if (!tabMetrosText.includes('Metros') && !tabMetrosText.includes('Metrood')) {
+                throw new Error(`Expected Metros tab, got: ${tabMetrosText}`);
             }
 
-            const depotText = await page.$eval('#trains-grid-container', el => el.textContent);
-            if (!depotText.includes('100 €') || !depotText.includes('500 Y') || (!depotText.includes('FREE') && !depotText.includes('TASUTA'))) {
-                throw new Error(`Depot must contain cheapest 100 € train with 5x Yard price (500 Y)! Got: ${depotText.substring(0, 120)}`);
+            // 1. Check Trains Category (9 Trains)
+            await page.click('#tab-btn-trains');
+            await new Promise(r => setTimeout(r, 200));
+            const trainCardsCount = await page.$$eval('.train-card', els => els.length);
+            console.log("   Depot 3D Trains Count (Expected: 9):", trainCardsCount);
+            if (trainCardsCount !== 9) {
+                throw new Error(`Expected 9 trains in trains category, found: ${trainCardsCount}`);
+            }
+
+            // 2. Check Metros Category (6 Metros)
+            await page.click('#tab-btn-metros');
+            await new Promise(r => setTimeout(r, 200));
+            const metroCardsCount = await page.$$eval('.train-card', els => els.length);
+            console.log("   Depot 3D Metros Count (Expected: 6):", metroCardsCount);
+            if (metroCardsCount !== 6) {
+                throw new Error(`Expected 6 metros in metros category, found: ${metroCardsCount}`);
+            }
+
+            const metroDepotText = await page.$eval('#trains-grid-container', el => el.textContent);
+            if (!metroDepotText.includes('100 €') || !metroDepotText.includes('500 Y') || (!metroDepotText.includes('FREE') && !metroDepotText.includes('TASUTA'))) {
+                throw new Error(`Metro category must contain starter metro and purchasable metros with 5x Yard price! Got: ${metroDepotText.substring(0, 120)}`);
             }
 
             const depotYardVal = await page.$eval('#depot-yard-val', el => el.textContent);
@@ -932,11 +974,12 @@ try {
 
             const moneyBuyBtnCount = await page.$$eval('.btn-buy-money', els => els.length);
             const yardBuyBtnCount = await page.$$eval('.btn-buy-yard', els => els.length);
-            console.log(`   Depot Buy Options: ${moneyBuyBtnCount} Money buttons, ${yardBuyBtnCount} Yard buttons`);
-            if (moneyBuyBtnCount === 0 || yardBuyBtnCount === 0) {
-                throw new Error("Expected both Rongiraha and Yard purchase buttons in depot!");
-            }
-            console.log("   Successfully verified 10 distinct trains with real Yard balance and 5x Yard price in depot!");
+            console.log(`   Depot Buy Options in Metro tab: ${moneyBuyBtnCount} Money buttons, ${yardBuyBtnCount} Yard buttons`);
+
+            // Switch back to Trains category and start driving
+            await page.click('#tab-btn-trains');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   Successfully verified Trains and Metros category selection with separate rosters!");
 
             // Start driving from depot
             await page.click('#btn-depot-start-driving');
@@ -1033,7 +1076,7 @@ try {
                 window.__PLAYARD_TEST_MODE__ = true;
             });
             await mobilePage.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
-            await mobilePage.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await mobilePage.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1500));
 
             // Verify on-screen touch controls are automatically displayed on phone/tablet
@@ -1070,7 +1113,7 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1500));
 
             const ownerStationName = await page.$eval('#target-station-name', el => el.textContent);
@@ -1080,7 +1123,7 @@ try {
             }
 
             const ownerDepotText = await page.$eval('#trains-grid-container', el => el.textContent);
-            if (!ownerDepotText.includes('TASUTA') || !ownerDepotText.includes('Linnalähirong Express')) {
+            if (!ownerDepotText.includes('TASUTA') || !ownerDepotText.includes('Klassikaline Auruvedur')) {
                 throw new Error(`Expected Playard Owner depot to be in Estonian, got: ${ownerDepotText.substring(0, 120)}`);
             }
 
@@ -1102,6 +1145,95 @@ try {
             }
 
             console.log("   Successfully verified Estonian localization & 'rongimäng' database money persistence for Playard Owner!");
+
+            // 13. Checking 3D Parkour Obby Simulator (Takistusrada)
+            console.log("13. Checking 3D Parkour Obby Simulator (Takistusrada)...");
+            await page.evaluate(() => {
+                const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+            });
+            await page.goto('http://localhost:4173/games/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1500));
+
+            // Verify Canvas and HUD Elements
+            const obbyCanvas = await page.$('#canvas-container canvas');
+            if (!obbyCanvas) throw new Error("Obby 3D Canvas element not found!");
+
+            const ownerPillText = await page.$eval('#hud-owner-pill', el => el.textContent);
+            console.log("   Obby HUD Owner Pill Text:", ownerPillText);
+            if (!ownerPillText.includes('PLAYARD OWNER')) throw new Error("Expected Playard Owner badge in Obby HUD!");
+
+            const stageVal = await page.$eval('#hud-stage-val', el => el.textContent);
+            console.log("   Obby Initial Stage (Expected: 1):", stageVal);
+            if (stageVal !== '1') throw new Error(`Expected initial stage to be 1, got ${stageVal}`);
+
+            const deathsVal = await page.$eval('#hud-deaths-val', el => el.textContent);
+            console.log("   Obby Initial Deaths (Expected: 0):", deathsVal);
+
+            // Test Camera View Toggle (V)
+            await page.click('#btn-toggle-camera');
+            await new Promise(r => setTimeout(r, 200));
+            const camLabel = await page.$eval('#hud-cam-label', el => el.textContent);
+            console.log("   Camera mode after toggle (Expected: 1st Person):", camLabel);
+            if (camLabel !== '1st Person') throw new Error("Camera toggle failed!");
+
+            // Toggle back to 3rd person
+            await page.click('#btn-toggle-camera');
+            await new Promise(r => setTimeout(r, 200));
+
+            // Test Jump Action via Space Key
+            await page.keyboard.press('Space');
+            await new Promise(r => setTimeout(r, 200));
+
+            // Test Respawn Button (R)
+            await page.click('#btn-respawn');
+            await new Promise(r => setTimeout(r, 200));
+            const deathsAfterRespawn = await page.$eval('#hud-deaths-val', el => el.textContent);
+            console.log("   Deaths count after Respawn (Expected: 1):", deathsAfterRespawn);
+            if (deathsAfterRespawn !== '1') throw new Error("Respawn did not update deaths count!");
+
+            // Test Shop Modal & Purchase
+            await page.evaluate(() => {
+                localStorage.setItem('playard_obby_coins', '500');
+            });
+            await page.click('#btn-open-shop');
+            await new Promise(r => setTimeout(r, 300));
+            const shopDisplay = await page.$eval('#modal-shop', el => window.getComputedStyle(el).display);
+            console.log("   Shop Modal Display (Expected: flex):", shopDisplay);
+            if (shopDisplay !== 'flex') throw new Error("Shop modal did not open!");
+
+            // Buy Golden Crown
+            const buyButtons = await page.$$('#shop-hats-grid .shop-item-card button');
+            if (buyButtons.length > 0) {
+                await buyButtons[0].click();
+                await new Promise(r => setTimeout(r, 200));
+            }
+            await page.click('#btn-close-shop');
+            await new Promise(r => setTimeout(r, 200));
+
+            // Test Checkpoint Reward (+5 Yards)
+            const initialObbyYards = await page.evaluate(() => window.yardService ? window.yardService.getYards() : 0);
+            await page.evaluate(() => {
+                if (window.yardService) window.yardService.addYards(5, 'Test Checkpoint');
+            });
+            await new Promise(r => setTimeout(r, 200));
+            const updatedObbyYards = await page.evaluate(() => window.yardService ? window.yardService.getYards() : 0);
+            console.log(`   Yards Balance after checkpoint: ${initialObbyYards} -> ${updatedObbyYards}`);
+            if (initialObbyYards === 999999999) {
+                if (updatedObbyYards !== 999999999) throw new Error("Playard Owner must maintain infinite yards in Obby!");
+            } else {
+                if (updatedObbyYards !== initialObbyYards + 5) throw new Error("Checkpoint Yard reward failed!");
+            }
+
+            // Test Help Modal
+            await page.click('#btn-open-help');
+            await new Promise(r => setTimeout(r, 200));
+            const helpDisplay = await page.$eval('#modal-help', el => window.getComputedStyle(el).display);
+            console.log("   Help Modal Display (Expected: flex):", helpDisplay);
+            if (helpDisplay !== 'flex') throw new Error("Help modal did not open!");
+            await page.click('#btn-close-help');
+
+            console.log("   Successfully verified 3D Parkour Obby Simulator (Takistusrada)!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

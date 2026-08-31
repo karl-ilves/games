@@ -3,7 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Playard Games - Official Game Hub</title>
+    <title>Playard Games - Free 3D Games, Racing Simulator & Game Creator</title>
+    <meta name="description" content="Playard Games is the official 3D browser games hub. Play free online 3D games including 3D Racing Simulator, Cooking Simulator, Airplane Simulator, and create 3D worlds in Playard Game Creator!">
+    <meta name="keywords" content="playard games, playard, playard 3d, playard games hub, playard studio, playard racing, free 3d browser games, 3d racing simulator, game creator, online games, karl ilves games">
+    <meta name="author" content="Playard Games">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="theme-color" content="#00f2fe">
+    <link rel="canonical" href="https://karl-ilves.github.io/games/">
+
+    <!-- Open Graph / Facebook / Discord -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://karl-ilves.github.io/games/">
+    <meta property="og:title" content="Playard Games - Official Free 3D Game Hub">
+    <meta property="og:description" content="Play free 3D browser games, 3D racing simulator, cooking games, and build your own 3D multiplayer games in Playard Creator Studio!">
+    <meta property="og:image" content="https://karl-ilves.github.io/games/assets/playard_logo.svg">
+    <meta property="og:site_name" content="Playard Games">
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://karl-ilves.github.io/games/">
+    <meta name="twitter:title" content="Playard Games - Free 3D Browser Games">
+    <meta name="twitter:description" content="Play free 3D browser games, 3D racing simulator, and build your own 3D games in Playard Games!">
+    <meta name="twitter:image" content="https://karl-ilves.github.io/games/assets/playard_logo.svg">
+
+    <!-- Structured Data (Schema.org) for Search Engines -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Playard Games",
+      "alternateName": ["Playard", "Playard 3D Games", "Playard Hub"],
+      "url": "https://karl-ilves.github.io/games/",
+      "description": "Official 3D browser gaming hub featuring 3D Racing Simulator, Cooking Simulator, and Playard 3D Game Creator.",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Playard Games",
+        "logo": "https://karl-ilves.github.io/games/assets/playard_logo.svg"
+      }
+    }
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="./assets/playard_logo.svg">
     <style>
         * { box-sizing: border-box; }
@@ -542,6 +581,20 @@
                 </div>
             </a>
 
+            <!-- 3D Parkour Obby (Takistusrada) - Playard Owner Exclusive -->
+            <a href="./games/obby/index.html" class="game-card" id="card-obby-game" style="display: none; border-color: rgba(255, 75, 43, 0.7); box-shadow: 0 0 25px rgba(255, 65, 108, 0.4); background: linear-gradient(135deg, #1f1418 0%, #2a1520 100%);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span class="obby-owner-badge-pill" style="font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; color: #ff416c; background: rgba(255, 65, 108, 0.18); border: 1px solid rgba(255, 65, 108, 0.5); padding: 3px 8px; border-radius: 6px;">👑 PLAYARD OWNER EXCLUSIVE</span>
+                    <span style="font-size: 0.75rem; color: #ffd32a; font-weight: 800; animation: pulse 1.5s infinite;">● 10 STAGES OBBY</span>
+                </div>
+                <h2>🏃‍♂️ 3D Parkour Obby (Takistusrada)</h2>
+                <p>Hüppa üle laava, navigeeri kaduvatel ja liikuvatel platvormidel, väldi pöörlevaid takistusi ning teeni Jarde!</p>
+                <div class="reward-tag" style="border-color: #ff416c; color: #ff416c; background: rgba(255, 65, 108, 0.15); font-weight: 800;">
+                    <span id="card-obby-yard-icon"></span>
+                    <span>🏆 CHECKPOINT PREEMIAD (+5 Y / +100 Y võit)</span>
+                </div>
+            </a>
+
             <a href="#" class="game-card disabled">
                 <h2>🚀 Space Explorer</h2>
                 <p>Interstellar planetary exploration & space flight simulation.</p>
@@ -651,7 +704,7 @@
                     <textarea id="admin-update-content" placeholder="Kirjelda siin uusi funktsioone, parandusi või teadaandeid..." rows="5" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; resize: vertical; font-family: inherit; font-size: 0.9rem; line-height: 1.4;"></textarea>
                 </div>
 
-                <button id="btn-send-update-to-owner" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: none; border-radius: 8px; color: #111; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(255, 211, 42, 0.3);">
+                <button type="button" id="btn-send-update-to-owner" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: none; border-radius: 8px; color: #111; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(255, 211, 42, 0.3);">
                     <span>🚀</span> Saada Ownerile (Salvesta andmebaasi)
                 </button>
                 <div id="admin-update-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>

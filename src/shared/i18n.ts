@@ -131,6 +131,21 @@ export function applyLocalization() {
         if (ownerPill) ownerPill.textContent = isEt ? '👑 PLAYARD OWNER' : '🔥 NEW 3D GAME';
     }
 
+    // Obby (Takistusrada) Game Card
+    const obbyCard = document.getElementById('card-obby-game');
+    if (obbyCard) {
+        const h2 = obbyCard.querySelector('h2');
+        if (h2) h2.textContent = isEt ? '🏃‍♂️ 3D Parkour Obby (Takistusrada)' : '🏃‍♂️ 3D Parkour Obby (Obstacle Course)';
+        const pObby = obbyCard.querySelector('p');
+        if (pObby) pObby.textContent = isEt
+            ? 'Hüppa üle laava, navigeeri kaduvatel ja liikuvatel platvormidel, väldi pöörlevaid takistusi ning teeni Jarde!'
+            : 'Jump over lava, navigate disappearing & moving platforms, dodge spinning obstacles, and earn Yards!';
+        const tObby = obbyCard.querySelector('.reward-tag span:last-child');
+        if (tObby) tObby.textContent = isEt ? '🏆 CHECKPOINT PREEMIAD (+5 Y / +100 Y võit)' : '🏆 CHECKPOINT REWARDS (+5 Y / +100 Y win)';
+        const obbyPill = obbyCard.querySelector('.obby-owner-badge-pill');
+        if (obbyPill) obbyPill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
+    }
+
     // Community section
     const commH2 = document.querySelector('#btn-hub-create-game')?.previousElementSibling?.querySelector('h2');
     if (commH2) commH2.innerHTML = isEt ? '<span>🌐</span> Kogukonna loodud mängud' : '<span>🌐</span> Community Created Games';

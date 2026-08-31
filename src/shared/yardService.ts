@@ -399,7 +399,7 @@ class YardService {
 
     public getYards(): number {
         if (this.isOwnerUser()) {
-            return this.data.yards > 0 ? this.data.yards : 999999999;
+            return 999999999;
         }
         return this.data.yards;
     }

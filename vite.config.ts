@@ -12,7 +12,8 @@ export default defineConfig({
         play: resolve(__dirname, 'games/play/index.html'),
         cooking: resolve(__dirname, 'games/cooking/index.html'),
         war: resolve(__dirname, 'games/war/index.html'),
-        train: resolve(__dirname, 'games/train/index.html')
+        train: resolve(__dirname, 'games/train/index.html'),
+        obby: resolve(__dirname, 'games/obby/index.html')
       }
     }
   }

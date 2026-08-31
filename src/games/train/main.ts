@@ -15,15 +15,19 @@ function checkOwnerAccess(): boolean {
 }
 
 // User Profile & Language Determination
-const userProf = getCurrentUserProfile();
-const isOwner = isPlayardOwner(userProf?.email);
+export function checkIsOwner(): boolean {
+    const userProf = getCurrentUserProfile();
+    return isPlayardOwner(userProf?.email);
+}
 
 // --- Dual Localization Dictionary (Estonian for Playard Owner, English for Everyone Else) ---
 export const I18N = {
     et: {
         gameTitle: 'RONGIMÄNG',
         ownerPill: '👑 PLAYARD OWNER',
-        depotBtn: 'Rongide Valik (10 Rongi)',
+        depotBtn: 'Sõiduki Valik (Rongid & Metrood)',
+        tabTrains: '🚂 Rongid',
+        tabMetros: '🚇 Metrood',
         targetStation: '🎯 Sihtjaam:',
         passengers: '👥 Reisijaid:',
         moneyTooltip: 'Rongimängu oma raha (teenid +50€ iga jaamaga)',
@@ -45,11 +49,11 @@ export const I18N = {
         rewardDesc: (passengers: number) => `Reisijad (+${passengers} inimest) toimetati kohale. Teeni igal peatusel +50 € Rongiraha!`,
         rewardBtn: '🚂 JÄTKA SÕITU',
         rewardMoneyLabel: 'Teenitud Rongiraha:',
-        depotTitle: 'Rongide Depoo & Pood',
-        depotDesc: 'Vali oma rong või osta uusi ronge Rongiraha eest (teenid +50€ jaamaga) või Yardidega (Yardid = 5x mänguraha)!',
+        depotTitle: 'Depoo: Rongid & Metrood',
+        depotDesc: 'Vali oma rong või metroo ning ava uusi sõidukeid Rongiraha (+50€ jaamaga) või Yardidega (Yardid = 5x mänguraha)!',
         depotMoneyLabel: '🪙 Rongiraha:',
         depotYardLabel: '💎 Yardid:',
-        depotStartDriving: '🚂 ALUSTA RONGISÕITU',
+        depotStartDriving: '🚂 ALUSTA SÕITU',
         topSpeed: 'Tippkiirus:',
         accel: 'Kiirendus:',
         capacity: 'Mahutavus:',
@@ -57,11 +61,11 @@ export const I18N = {
         free: 'TASUTA',
         or: 'või',
         selected: '✅ VALITUD',
-        chooseTrain: '▶️ VALI RONG',
+        chooseTrain: '▶️ VALI SÕIDUK',
         buyMoney: (price: number) => `🪙 OSTA (${price} €)`,
         buyYard: (price: number) => `💎 OSTA (${price} Y)`,
-        boughtSuccessMoney: (name: string, price: number) => `🎉 Ostsid edukalt rongi "${name}" Rongiraha eest (${price} €)!`,
-        boughtSuccessYard: (name: string, price: number) => `🎉 Ostsid edukalt rongi "${name}" Yardide eest (${price} Y)!`,
+        boughtSuccessMoney: (name: string, price: number) => `🎉 Ostsid edukalt sõiduki "${name}" Rongiraha eest (${price} €)!`,
+        boughtSuccessYard: (name: string, price: number) => `🎉 Ostsid edukalt sõiduki "${name}" Yardide eest (${price} Y)!`,
         notEnoughMoney: (price: number, cur: number) => `Sul pole piisavalt Rongiraha! Vajad ${price} € (sul on ${cur} €).`,
         notEnoughYards: (price: number, cur: number) => `Sul pole piisavalt Yarde! Vajad ${price} Y (praegu ${cur} Y).`,
         speedUnit: 'KM / H',
@@ -77,9 +81,9 @@ export const I18N = {
         mWeather: 'ILM',
         helpTitle: '🚂 Rongimäng - Juhtimisjuhised',
         helpContent: `
-            <div><strong style="color: #00f2fe;">W / Nool Üles / [GAAS]:</strong> Kiirenda vedurit edasi</div>
+            <div><strong style="color: #00f2fe;">W / Nool Üles / [GAAS]:</strong> Kiirenda rongi/metrood edasi</div>
             <div><strong style="color: #ff4757;">S / Nool Alla / [PIDUR]:</strong> Pidurda või tagurda</div>
-            <div><strong style="color: #ffd32a;">H / Tühik / [VILE]:</strong> Lase rongivilet (Tuut-tuut!)</div>
+            <div><strong style="color: #ffd32a;">H / Tühik / [VILE]:</strong> Lase rongivilet või metroosignaali</div>
             <div><strong style="color: #ffd32a;">J / Tühik:</strong> Vaheta raudteepööret / suunda ristmikel</div>
             <div><strong style="color: #00f2fe;">C:</strong> Vaheta kaameravaadet (Juhi kabiin, Tagaajamisvaade, Kinovaade, Pealtvaade)</div>
             <div><strong style="color: #ffd32a;">N:</strong> Vaheta ilma ja kellaaega (Päev, Loojang, Öö)</div>
@@ -91,7 +95,9 @@ export const I18N = {
     en: {
         gameTitle: '3D TRAIN SIMULATOR',
         ownerPill: '🔥 3D SIMULATOR',
-        depotBtn: 'Train Selection (10 Trains)',
+        depotBtn: 'Vehicle Selection (Trains & Metros)',
+        tabTrains: '🚂 Trains',
+        tabMetros: '🚇 Metros',
         targetStation: '🎯 Target Station:',
         passengers: '👥 Passengers:',
         moneyTooltip: 'Train Money (earn +50€ per station stop)',
@@ -113,8 +119,8 @@ export const I18N = {
         rewardDesc: (passengers: number) => `Passengers (+${passengers} people) delivered. Earn +50 € Train Money at every stop!`,
         rewardBtn: '🚂 CONTINUE JOURNEY',
         rewardMoneyLabel: 'Earned Train Money:',
-        depotTitle: 'Train Depot & Store',
-        depotDesc: 'Select your locomotive or unlock new trains with Train Money (+50€ per stop) or Yards (Yards = 5x train price)!',
+        depotTitle: 'Depot: Trains & Metros',
+        depotDesc: 'Select your locomotive or metro train and unlock vehicles with Train Money (+50€ per stop) or Yards (Yards = 5x train price)!',
         depotMoneyLabel: '🪙 Train Money:',
         depotYardLabel: '💎 Yards:',
         depotStartDriving: '🚂 START DRIVING',
@@ -125,7 +131,7 @@ export const I18N = {
         free: 'FREE',
         or: 'or',
         selected: '✅ SELECTED',
-        chooseTrain: '▶️ SELECT TRAIN',
+        chooseTrain: '▶️ SELECT VEHICLE',
         buyMoney: (price: number) => `🪙 BUY (${price} €)`,
         buyYard: (price: number) => `💎 BUY (${price} Y)`,
         boughtSuccessMoney: (name: string, price: number) => `🎉 Successfully purchased "${name}" with Train Money (${price} €)!`,
@@ -145,9 +151,9 @@ export const I18N = {
         mWeather: 'DAY',
         helpTitle: '🚂 Train Simulator Guide & Controls',
         helpContent: `
-            <div><strong style="color: #00f2fe;">W / Up Arrow / [POWER]:</strong> Accelerate locomotive forward</div>
+            <div><strong style="color: #00f2fe;">W / Up Arrow / [POWER]:</strong> Accelerate train / metro forward</div>
             <div><strong style="color: #ff4757;">S / Down Arrow / [BRAKE]:</strong> Brake or reverse</div>
-            <div><strong style="color: #ffd32a;">H / Space / [HORN]:</strong> Sound train horn and steam burst</div>
+            <div><strong style="color: #ffd32a;">H / Space / [HORN]:</strong> Sound train horn / metro chime</div>
             <div><strong style="color: #ffd32a;">J / KeyJ:</strong> Switch track junction (Main line vs Mountain Loop)</div>
             <div><strong style="color: #00f2fe;">C:</strong> Toggle camera view (Cab Driver, Chase 3D, Cinematic, Map)</div>
             <div><strong style="color: #ffd32a;">N:</strong> Toggle weather & lighting (Day, Sunset, Night)</div>
@@ -158,9 +164,31 @@ export const I18N = {
     }
 };
 
-const t = isOwner ? I18N.et : I18N.en;
+export let isOwner = checkIsOwner();
+export let t = isOwner ? I18N.et : I18N.en;
 
-// --- In-Game Currency ("Rongiraha" / Database lahter: "rongimäng" / "ronginäng") ---
+export function updateLocalization() {
+    isOwner = checkIsOwner();
+    t = isOwner ? I18N.et : I18N.en;
+}
+
+export function getStationName(st: Station): string {
+    return isOwner ? st.name : st.nameEn;
+}
+
+export function getTrainName(train: TrainDef): string {
+    return isOwner ? train.name : train.nameEn;
+}
+
+export function getTrainDesc(train: TrainDef): string {
+    return isOwner ? train.description : train.descriptionEn;
+}
+
+export function getT() {
+    return isOwner ? I18N.et : I18N.en;
+}
+
+// --- In-Game Currency ---
 const TRAIN_MONEY_KEY = 'playard_train_money';
 const DB_RONGIMANG_KEY = 'rongimäng';
 const DB_RONGINANG_KEY = 'ronginäng';
@@ -168,7 +196,6 @@ const DB_RONGINANG_KEY = 'ronginäng';
 function getTrainMoney(): number {
     try {
         const prof = getCurrentUserProfile();
-        // 1. Check user profile field `rongimäng` or `ronginäng` in database
         if (prof?.rongimäng !== undefined && !isNaN(Number(prof.rongimäng))) {
             return Math.max(0, Math.round(Number(prof.rongimäng)));
         }
@@ -176,97 +203,81 @@ function getTrainMoney(): number {
             return Math.max(0, Math.round(Number(prof.ronginäng)));
         }
 
-        // 2. Check user-specific localStorage key
-        if (prof?.email) {
-            const userKey = `playard_train_money_user_${prof.email.toLowerCase()}`;
-            const userVal = localStorage.getItem(userKey);
-            if (userVal !== null) {
-                const parsed = parseInt(userVal, 10);
-                if (!isNaN(parsed)) return Math.max(0, parsed);
-            }
-        }
-        if (prof?.username) {
-            const userKey = `playard_train_money_user_${prof.username.toLowerCase()}`;
-            const userVal = localStorage.getItem(userKey);
-            if (userVal !== null) {
-                const parsed = parseInt(userVal, 10);
-                if (!isNaN(parsed)) return Math.max(0, parsed);
-            }
-        }
-
-        // 3. Check direct database fields 'rongimäng' or 'ronginäng' in localStorage
         const directDbVal = localStorage.getItem(DB_RONGIMANG_KEY) || localStorage.getItem(DB_RONGINANG_KEY);
         if (directDbVal !== null) {
             const parsed = parseInt(directDbVal, 10);
-            if (!isNaN(parsed)) return Math.max(0, parsed);
-        }
-
-        // 4. Check primary key
-        const raw = localStorage.getItem(TRAIN_MONEY_KEY);
-        if (raw !== null) {
-            let val = parseInt(raw, 10);
-            if (!isNaN(val)) {
-                if (isPlayardOwner(prof?.email)) val = Math.max(val, 100000);
-                return Math.max(0, val);
+            if (!isNaN(parsed)) {
+                if (prof && (prof.rongimäng === undefined || prof.ronginäng === undefined)) {
+                    prof.rongimäng = parsed;
+                    prof.ronginäng = parsed;
+                    saveLocalProfile(prof);
+                }
+                return Math.max(0, parsed);
             }
         }
 
-        // 5. If Playard Owner and uninitialized, start with a generous initial bonus (100,000 €)
-        if (isPlayardOwner(prof?.email)) {
-            const initialBonus = 100000;
-            saveTrainMoney(initialBonus);
-            return initialBonus;
+        // 4. Default global key
+        const raw = localStorage.getItem(TRAIN_MONEY_KEY);
+        if (raw !== null) {
+            const parsed = parseInt(raw, 10);
+            if (!isNaN(parsed)) return Math.max(0, parsed);
         }
     } catch (e) {}
-    return 0;
-}
 
-function saveTrainMoney(val: number) {
-    const cleanVal = Math.max(0, Math.round(val));
-    const strVal = cleanVal.toString();
-    try {
-        localStorage.setItem(TRAIN_MONEY_KEY, strVal);
-        localStorage.setItem(DB_RONGIMANG_KEY, strVal);
-        localStorage.setItem(DB_RONGINANG_KEY, strVal);
-
+    // Initial starting money (Playard Owner gets 100,000 € default for rongimäng)
+    if (checkIsOwner()) {
         const prof = getCurrentUserProfile();
         if (prof) {
-            if (prof.email) localStorage.setItem(`playard_train_money_user_${prof.email.toLowerCase()}`, strVal);
-            if (prof.username) localStorage.setItem(`playard_train_money_user_${prof.username.toLowerCase()}`, strVal);
-            if (prof.id) localStorage.setItem(`playard_train_money_user_${prof.id}`, strVal);
-
-            // Add/update column in user profile in local database
-            prof.rongimäng = cleanVal;
-            prof.ronginäng = cleanVal;
+            prof.rongimäng = 100000;
+            prof.ronginäng = 100000;
             localStorage.setItem('playard_current_user_profile', JSON.stringify(prof));
             saveLocalProfile(prof);
         }
-    } catch (e) {}
+        localStorage.setItem(DB_RONGIMANG_KEY, '100000');
+        localStorage.setItem(DB_RONGINANG_KEY, '100000');
+        localStorage.setItem(TRAIN_MONEY_KEY, '100000');
+        return 100000;
+    }
+    return 0;
 }
 
-function addTrainMoney(amount: number): number {
+function saveTrainMoney(amount: number) {
+    const clamped = Math.max(0, Math.round(amount));
+    localStorage.setItem(TRAIN_MONEY_KEY, clamped.toString());
+
+    // Sync with database fields 'rongimäng' and 'ronginäng'
+    localStorage.setItem(DB_RONGIMANG_KEY, clamped.toString());
+    localStorage.setItem(DB_RONGINANG_KEY, clamped.toString());
+
+    const prof = getCurrentUserProfile();
+    if (prof) {
+        if (prof.email) {
+            localStorage.setItem(`playard_train_money_user_${prof.email.toLowerCase()}`, clamped.toString());
+        }
+        if (prof.username) {
+            localStorage.setItem(`playard_train_money_user_${prof.username.toLowerCase()}`, clamped.toString());
+        }
+        prof.rongimäng = clamped;
+        prof.ronginäng = clamped;
+        localStorage.setItem('playard_current_user_profile', JSON.stringify(prof));
+        saveLocalProfile(prof);
+    }
+}
+
+function addTrainMoney(delta: number) {
     const current = getTrainMoney();
-    const updated = current + Math.max(0, Math.round(amount));
-    saveTrainMoney(updated);
-    updateHUD();
-    return updated;
+    const next = current + delta;
+    saveTrainMoney(next);
 }
 
-function spendTrainMoney(amount: number): boolean {
-    const current = getTrainMoney();
-    if (current < amount) return false;
-    saveTrainMoney(current - amount);
-    updateHUD();
-    return true;
-}
-
-// --- 10 Trains Catalog & Definitions ---
+// --- Train & Metro Catalog Definition ---
 export interface TrainDef {
     id: string;
+    category: 'train' | 'metro';
     name: string;
     nameEn: string;
     icon: string;
-    price: number; // 0 for default, 100 for cheapest purchasable (100€ / 100Y), up to 2000
+    price: number; // In-Game Train Money (0€ for default)
     maxSpeed: number; // km/h
     acceleration: number; // multiplier
     passengers: number;
@@ -274,19 +285,21 @@ export interface TrainDef {
     descriptionEn: string;
     special: string;
     specialEn: string;
-    style: 'classic_steam' | 'commuter_emu' | 'heavy_diesel' | 'forest_shunter' | 'bullet_shinkansen' | 'royal_orient' | 'alpine_climber' | 'cyber_bullet' | 'armored_dreadnought' | 'hyperloop_plasma';
+    style: 'classic_steam' | 'heavy_diesel' | 'forest_shunter' | 'bullet_shinkansen' | 'royal_orient' | 'alpine_climber' | 'cyber_bullet' | 'armored_dreadnought' | 'hyperloop_plasma' | 'metro_standard' | 'commuter_emu' | 'metro_tokyo' | 'metro_london' | 'metro_paris' | 'metro_futuristic';
     locoColor: number;
     trimColor: number;
     coachColor: number;
 }
 
 export const TRAINS_CATALOG: TrainDef[] = [
+    // --- 🚂 RONGID / TRAINS ---
     {
         id: 'classic_steam',
+        category: 'train',
         name: 'Klassikaline Auruvedur',
         nameEn: 'Classic Steam Locomotive',
         icon: '🚂',
-        price: 0, // Tasuta / Default
+        price: 0,
         maxSpeed: 90,
         acceleration: 1.0,
         passengers: 24,
@@ -300,25 +313,8 @@ export const TRAINS_CATALOG: TrainDef[] = [
         coachColor: 0xb91c1c
     },
     {
-        id: 'commuter_emu',
-        name: 'Linnalähirong Express',
-        nameEn: 'City Commuter Express',
-        icon: '🚆',
-        price: 100, // Kõige odavam ostetav rong (100€ või 500Y)
-        maxSpeed: 120,
-        acceleration: 1.4,
-        passengers: 42,
-        description: 'Kaasaegne voolujooneline reisirong kiireks linnalähiliikluseks.',
-        descriptionEn: 'Modern aerodynamic commuter train designed for rapid regional transit.',
-        special: 'Kiire kiirendus & LED esituled',
-        specialEn: 'High acceleration & LED headlights',
-        style: 'commuter_emu',
-        locoColor: 0xdc2626,
-        trimColor: 0xffffff,
-        coachColor: 0xe2e8f0
-    },
-    {
         id: 'heavy_diesel',
+        category: 'train',
         name: 'Raske Diisel Kaubavedur',
         nameEn: 'Heavy Freight Diesel-Max',
         icon: '🚜',
@@ -326,7 +322,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
         maxSpeed: 105,
         acceleration: 1.2,
         passengers: 30,
-        description: 'Võimas Ameerika stiilis tööstuslik diiselvedur topeltpasunatega.',
+        description: 'Võimas tööstuslik diiselvedur topeltpasunate ja suure veojõuga.',
         descriptionEn: 'Heavy-duty industrial diesel locomotive built for pulling long cargo freight.',
         special: 'Suur veojõud ja kaubaveo võimekus',
         specialEn: 'Massive tractive power & dual air horns',
@@ -337,6 +333,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
     },
     {
         id: 'forest_shunter',
+        category: 'train',
         name: 'Metsa Auru-Tankvedur',
         nameEn: 'Woodland Steam Shunter',
         icon: '🌲',
@@ -355,6 +352,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
     },
     {
         id: 'bullet_shinkansen',
+        category: 'train',
         name: 'Super-Kiirrong Shinkansen',
         nameEn: 'High-Speed Bullet Shinkansen',
         icon: '⚡',
@@ -373,6 +371,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
     },
     {
         id: 'royal_orient',
+        category: 'train',
         name: 'Kuldne Kuninglik Express',
         nameEn: 'Golden Royal Orient Express',
         icon: '🌌',
@@ -391,6 +390,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
     },
     {
         id: 'alpine_climber',
+        category: 'train',
         name: 'Alpi Mägironija',
         nameEn: 'Alpine Mountain Climber',
         icon: '🏔️',
@@ -409,6 +409,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
     },
     {
         id: 'cyber_bullet',
+        category: 'train',
         name: 'Cyber-Kiirrong 2099',
         nameEn: 'Cyber Bullet 2099',
         icon: '⚡',
@@ -427,6 +428,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
     },
     {
         id: 'armored_dreadnought',
+        category: 'train',
         name: 'Soomustatud Lahinguvedur',
         nameEn: 'Armored Dreadnought Train',
         icon: '🌋',
@@ -445,6 +447,7 @@ export const TRAINS_CATALOG: TrainDef[] = [
     },
     {
         id: 'hyperloop_plasma',
+        category: 'train',
         name: 'Hyperloop Plasma Rong 3000',
         nameEn: 'Hyperloop Plasma Rail 3000',
         icon: '🚀',
@@ -460,22 +463,143 @@ export const TRAINS_CATALOG: TrainDef[] = [
         locoColor: 0x581c87,
         trimColor: 0xd946ef,
         coachColor: 0x3b0764
+    },
+
+    // --- 🚇 METROOD / METROS ---
+    {
+        id: 'metro_standard',
+        category: 'metro',
+        name: 'Klassikaline Linna Metroo',
+        nameEn: 'Classic City Subway Metro',
+        icon: '🚇',
+        price: 0,
+        maxSpeed: 110,
+        acceleration: 1.6,
+        passengers: 50,
+        description: 'Klassikaline linnatranspordi metroorong kollase kiirustriibu ja topeltustega.',
+        descriptionEn: 'Classic city subway metro train with yellow speedline, double sliding doors and rapid departure.',
+        special: 'Kiire kiirendus ja lai reisijateruum',
+        specialEn: 'Rapid acceleration & wide passenger space',
+        style: 'metro_standard',
+        locoColor: 0x334155,
+        trimColor: 0xfacc15,
+        coachColor: 0x475569
+    },
+    {
+        id: 'commuter_emu',
+        category: 'metro',
+        name: 'Linnalähirong Metro-Express',
+        nameEn: 'City Commuter Metro Express',
+        icon: '🚆',
+        price: 100,
+        maxSpeed: 125,
+        acceleration: 1.5,
+        passengers: 45,
+        description: 'Voolujooneline reisirong kiireks linna- ja metrooliikluseks.',
+        descriptionEn: 'Modern aerodynamic rapid-transit commuter train for regional and metro lines.',
+        special: 'LED esituled & ergonoomiline salong',
+        specialEn: 'LED headlights & ergonomic cabin',
+        style: 'commuter_emu',
+        locoColor: 0xdc2626,
+        trimColor: 0xffffff,
+        coachColor: 0xe2e8f0
+    },
+    {
+        id: 'metro_tokyo',
+        category: 'metro',
+        name: 'Tokyo Yamanote Metroo',
+        nameEn: 'Tokyo High-Capacity Metro',
+        icon: '🎌',
+        price: 300,
+        maxSpeed: 130,
+        acceleration: 1.8,
+        passengers: 70,
+        description: 'Rohelise signatuurtriibuga Jaapani metroo ülisuure reisijatemahu ja sujuva sõiduga.',
+        descriptionEn: 'Japanese high-density metro with iconic lime green accents and ultra-smooth electric acceleration.',
+        special: 'Ülisuur mahutavus (70 reisijat)',
+        specialEn: 'Ultra high capacity (70 passengers)',
+        style: 'metro_tokyo',
+        locoColor: 0xe2e8f0,
+        trimColor: 0x16a34a,
+        coachColor: 0xcfdaf0
+    },
+    {
+        id: 'metro_london',
+        category: 'metro',
+        name: 'London Tube Metroo',
+        nameEn: 'London Underground Tube',
+        icon: '🇬🇧',
+        price: 500,
+        maxSpeed: 115,
+        acceleration: 1.7,
+        passengers: 55,
+        description: 'Ikooniline punase ninaga ja ümara profiiliga Londoni metroorong.',
+        descriptionEn: 'Iconic red-cab circular tunnel subway train engineered for tight subterranean radii.',
+        special: 'Ümar profiil & autentne helisignaal',
+        specialEn: 'Round tube profile & distinct subway chime',
+        style: 'metro_london',
+        locoColor: 0xb91c1c,
+        trimColor: 0x1d4ed8,
+        coachColor: 0xf1f5f9
+    },
+    {
+        id: 'metro_paris',
+        category: 'metro',
+        name: 'Pariisi Kummiratta Metroo',
+        nameEn: 'Paris Rapid Rubber Metro',
+        icon: '🇫🇷',
+        price: 750,
+        maxSpeed: 140,
+        acceleration: 2.0,
+        passengers: 65,
+        description: 'Pariisi kõrgtehnoloogiline panoraamakendega automaatne metroorong.',
+        descriptionEn: 'High-tech automated driverless Paris metro with panoramic glass front windshield.',
+        special: 'Panoraamaken ja ülisujuv kummiratas-veermik',
+        specialEn: 'Panoramic front glass & smooth rubber bogies',
+        style: 'metro_paris',
+        locoColor: 0x0284c7,
+        trimColor: 0x38bdf8,
+        coachColor: 0x0f172a
+    },
+    {
+        id: 'metro_futuristic',
+        category: 'metro',
+        name: 'Neo-Küber Metroo 2100',
+        nameEn: 'Neo Cyber-Metro 2100',
+        icon: '🌌',
+        price: 1200,
+        maxSpeed: 190,
+        acceleration: 2.5,
+        passengers: 85,
+        description: 'Magnetlevitatsioonil hõljuv neoonroheline tuleviku metroorong tehisintellekti juhtimisel.',
+        descriptionEn: 'Next-generation AI-driven maglev subway train with cybernetic neon illumination.',
+        special: 'Maglev hõljumine & 190 km/h tippkiirus',
+        specialEn: 'Maglev hover & 190 km/h top velocity',
+        style: 'metro_futuristic',
+        locoColor: 0x09090b,
+        trimColor: 0x10b981,
+        coachColor: 0x1e293b
     }
 ];
 
 // --- Unlocked Trains Storage & Active Train ---
 const UNLOCKED_TRAINS_KEY = 'playard_unlocked_trains';
 const ACTIVE_TRAIN_KEY = 'playard_active_train';
+let activeDepotCategory: 'train' | 'metro' = 'train';
 
 function getUnlockedTrainIds(): string[] {
     try {
         const raw = localStorage.getItem(UNLOCKED_TRAINS_KEY);
         if (raw) {
             const list = JSON.parse(raw);
-            if (Array.isArray(list) && list.includes('classic_steam')) return list;
+            if (Array.isArray(list)) {
+                if (!list.includes('classic_steam')) list.push('classic_steam');
+                if (!list.includes('metro_standard')) list.push('metro_standard');
+                return list;
+            }
         }
     } catch (e) {}
-    return ['classic_steam'];
+    return ['classic_steam', 'metro_standard'];
 }
 
 function saveUnlockedTrainIds(list: string[]) {
@@ -524,174 +648,167 @@ const STATIONS: Station[] = [
         descriptionEn: 'Scenic wooden station platform surrounded by lush pine trees',
         trackU: 0.35,
         worldPos: new THREE.Vector3(0, 0, 0),
-        passengersWaiting: 20,
+        passengersWaiting: 18,
         moneyReward: 50
     },
     {
         id: 'harbor',
         name: 'Jõekalda Sadam',
         nameEn: 'Riverside Harbor Station',
-        description: 'Sadamadepoo jõe ääres kaubakraanade ja konteineritega',
-        descriptionEn: 'Bustling river terminal with cargo containers and ship docks',
-        trackU: 0.62,
+        description: 'Kaubasadam ja reisijate terminal jõe kaldal',
+        descriptionEn: 'Freight dock and scenic passenger terminal on river bank',
+        trackU: 0.65,
         worldPos: new THREE.Vector3(0, 0, 0),
-        passengersWaiting: 25,
+        passengersWaiting: 24,
         moneyReward: 50
     },
     {
         id: 'mountain',
-        name: 'Mäejaam / Lumetipp',
-        nameEn: 'Mountain Summit Station',
-        description: 'Mägine jaam vaatega orule ja avarale maastikule',
-        descriptionEn: 'High altitude mountain station overlooking the vast landscape',
-        trackU: 0.85,
+        name: 'Mäejaam Lumetipp',
+        nameEn: 'Snow Peak Mountain Station',
+        description: 'Kõrgel mäeküljel asuv alpi stiilis lõppjaam',
+        descriptionEn: 'Alpine terminal located on scenic mountain ridge',
+        trackU: 0.90,
         worldPos: new THREE.Vector3(0, 0, 0),
-        passengersWaiting: 35,
+        passengersWaiting: 20,
         moneyReward: 50
     }
 ];
 
-function getStationName(st: Station): string {
-    return isOwner ? st.name : st.nameEn;
-}
-
-function getTrainName(train: TrainDef): string {
-    return isOwner ? train.name : train.nameEn;
-}
-
-function getTrainDesc(train: TrainDef): string {
-    return isOwner ? train.description : train.descriptionEn;
-}
-
-// --- Track Switch Junctions ---
-interface Junction {
-    id: string;
-    switchU: number;
-    description: string;
+// --- Track Junction (Põhiliin vs Mäering Harutee) ---
+interface JunctionState {
     activeBranch: 'main' | 'mountain';
+    inJunctionZone: boolean;
+    junctionStartU: number;
+    junctionEndU: number;
 }
 
-const JUNCTION: Junction = {
-    id: 'junc_1',
-    switchU: 0.76,
-    description: 'Põhiliin vs Mäering',
-    activeBranch: 'main'
+const JUNCTION: JunctionState = {
+    activeBranch: 'main',
+    inJunctionZone: false,
+    junctionStartU: 0.72,
+    junctionEndU: 0.82
 };
 
-// --- Game State ---
+// Three.js State Variables
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
 let renderer: THREE.WebGLRenderer;
 
-// Train motion state
-let activeTrain: TrainDef = getActiveTrainDef();
-let trainU = 0.04; // 0..1 along track spline
-let trainSpeed = 0; // km/h
-let targetThrottle = 0; // 0..100%
-let currentThrottle = 0;
-let isBraking = false;
-let totalPassengers = activeTrain.passengers;
-let currentStationIndex = 1; // start heading to station 1 (Männimetsa)
-let isBoarding = false;
-let boardingTimer = 0;
-let cameraMode = 0; // 0: 3rd person chase, 1: cab interior, 2: cinematic flyby, 3: top-down map
-let weatherMode = 0; // 0: day, 1: sunset, 2: night
-
-// 3D Objects & Hierarchy
-let mainTrackCurve: THREE.CatmullRomCurve3;
-let mountainTrackCurve: THREE.CatmullRomCurve3;
 let trainGroup: THREE.Group;
 let locomotiveGroup: THREE.Group;
 let tenderGroup: THREE.Group;
 let carriage1Group: THREE.Group;
 let carriage2Group: THREE.Group;
 let cargoGroup: THREE.Group;
+
 let wheels: THREE.Mesh[] = [];
 let connectingRods: THREE.Mesh[] = [];
+
+let mainTrackCurve: THREE.CatmullRomCurve3;
+let mountainTrackCurve: THREE.CatmullRomCurve3;
+
+let trainU = 0.04; // Start at central station
+let currentThrottle = 0; // 0..100
+let targetThrottle = 0;
+let trainSpeed = 0; // km/h
+let isBraking = false;
+
+let cameraMode: number = 0; // 0: Chase 3D, 1: Driver Cab, 2: Cinematic Trackside, 3: Top-Down Map
+let weatherMode: number = 0; // 0: Day, 1: Sunset, 2: Night
+
+let currentStationIndex = 1; // Target is Männimetsa
+let isBoarding = false;
+let boardingTimer = 0;
+let totalPassengers = 24;
+
+let activeTrain: TrainDef = getActiveTrainDef();
+
+let smokeParticles: { mesh: THREE.Mesh; life: number; maxLife: number; vx: number; vy: number; vz: number }[] = [];
+let smokeTimer = 0;
+
+let dirLight: THREE.DirectionalLight;
+let ambientLight: THREE.AmbientLight;
+let hemiLight: THREE.HemisphereLight;
 let trainHeadlight: THREE.SpotLight;
 let trainHeadlightMesh: THREE.Mesh;
-let smokeParticles: Array<{ mesh: THREE.Mesh; life: number; maxLife: number; vel: THREE.Vector3 }> = [];
 
-// Environment Lights & Sky
-let dirLight: THREE.DirectionalLight;
-let hemiLight: THREE.HemisphereLight;
-let ambientLight: THREE.AmbientLight;
+let clock = new THREE.Clock();
 
-// --- Initialize Scene & Canvas ---
+// --- Init Three.js Simulation Engine ---
 function initEngine() {
-    const container = document.getElementById('canvas-container');
+    if (!checkOwnerAccess()) return;
+    updateLocalization();
+
+    activeTrain = getActiveTrainDef();
+    if (activeTrain.category) {
+        activeDepotCategory = activeTrain.category;
+    }
+
+    const container = document.getElementById('canvas-container') || document.getElementById('game-container') || document.body;
     if (!container) return;
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.FogExp2(0x87ceeb, 0.0008);
+    scene.fog = new THREE.FogExp2(0x87ceeb, 0.0012);
 
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 5000);
-    camera.position.set(0, 15, 35);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.5, 3500);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = 1.05;
 
     container.appendChild(renderer.domElement);
 
-    window.addEventListener('resize', onWindowResize);
-
-    // Setup Lighting for 2x expansive landscape
-    ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
-    scene.add(ambientLight);
-
-    hemiLight = new THREE.HemisphereLight(0xddeeff, 0x334433, 0.45);
-    scene.add(hemiLight);
-
-    dirLight = new THREE.DirectionalLight(0xfffaed, 1.35);
-    dirLight.position.set(300, 500, 300);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 10;
-    dirLight.shadow.camera.far = 1800;
-    dirLight.shadow.camera.left = -900;
-    dirLight.shadow.camera.right = 900;
-    dirLight.shadow.camera.top = 900;
-    dirLight.shadow.camera.bottom = -900;
-    scene.add(dirLight);
-
+    setupLighting();
     buildRailwayTracks();
     buildTerrainAndScenery();
     buildStations();
-    
-    // Build initial train matching active train definition
     rebuildTrainModel(activeTrain);
 
     setupControls();
     setupHUD();
+
     renderDepotModal();
 
-    // Check access
-    checkOwnerAccess();
+    window.addEventListener('resize', onWindowResize);
+    trainAudio.init();
 
-    // Yard currency subscription
-    yardService.subscribe(updateYardBalance);
+    animate();
+}
 
-    // Render loop
-    let lastTime = performance.now();
-    function animate(currentTime: number) {
-        requestAnimationFrame(animate);
-        const delta = Math.min((currentTime - lastTime) / 1000, 0.1);
-        lastTime = currentTime;
+function setupLighting() {
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
 
-        updateTrainPhysics(delta);
-        updateParticles(delta);
-        updateCamera();
-        updateHUD();
+    hemiLight = new THREE.HemisphereLight(0xffffff, 0x3d7e35, 0.5);
+    scene.add(hemiLight);
 
-        renderer.render(scene, camera);
-    }
+    dirLight = new THREE.DirectionalLight(0xfff3d6, 1.4);
+    dirLight.position.set(250, 450, 200);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 10;
+    dirLight.shadow.camera.far = 1500;
+    dirLight.shadow.camera.left = -450;
+    dirLight.shadow.camera.right = 450;
+    dirLight.shadow.camera.top = 450;
+    dirLight.shadow.camera.bottom = -450;
+    scene.add(dirLight);
+}
+
+function animate() {
+    const delta = Math.min(clock.getDelta(), 0.1);
+    updateTrainPhysics(delta);
+    updateCamera();
+    updateParticles(delta);
+    updateHUD();
+
+    renderer.render(scene, camera);
     requestAnimationFrame(animate);
 }
 
@@ -702,8 +819,9 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// --- Train Depot & Store Modal Rendering (Rongiraha + Yardid) ---
+// --- Train & Metro Depot Modal Rendering (Category Tabs + Filter) ---
 function renderDepotModal() {
+    const t = getT();
     const gridContainer = document.getElementById('trains-grid-container');
     const depotYardVal = document.getElementById('depot-yard-val');
     const depotMoneyVal = document.getElementById('depot-money-val');
@@ -717,9 +835,34 @@ function renderDepotModal() {
     if (depotYardVal) depotYardVal.innerText = currentYards.toLocaleString();
     if (depotMoneyVal) depotMoneyVal.innerText = currentMoney.toLocaleString();
 
+    // Update Category Switcher Tabs UI
+    const tabTrains = document.getElementById('tab-btn-trains');
+    const tabMetros = document.getElementById('tab-btn-metros');
+    const tabTrainsCount = document.getElementById('tab-trains-count');
+    const tabMetrosCount = document.getElementById('tab-metros-count');
+
+    const totalTrains = TRAINS_CATALOG.filter(t => t.category === 'train');
+    const totalMetros = TRAINS_CATALOG.filter(t => t.category === 'metro');
+
+    if (tabTrainsCount) tabTrainsCount.innerText = totalTrains.length.toString();
+    if (tabMetrosCount) tabMetrosCount.innerText = totalMetros.length.toString();
+
+    if (tabTrains && tabMetros) {
+        if (activeDepotCategory === 'train') {
+            tabTrains.className = 'depot-tab-btn active';
+            tabMetros.className = 'depot-tab-btn';
+        } else {
+            tabTrains.className = 'depot-tab-btn';
+            tabMetros.className = 'depot-tab-btn active tab-metro';
+        }
+    }
+
     gridContainer.innerHTML = '';
 
-    TRAINS_CATALOG.forEach(train => {
+    // Filter vehicles by category: Trains vs Metros
+    const displayVehicles = TRAINS_CATALOG.filter(v => v.category === activeDepotCategory);
+
+    displayVehicles.forEach(train => {
         const isUnlocked = unlockedIds.includes(train.id);
         const isActive = train.id === currentActiveId;
         const yardPrice = train.price * 5; // Yardid maksavad 5 korda rohkem kui mänguraha
@@ -775,7 +918,7 @@ function renderDepotModal() {
         gridContainer.appendChild(card);
     });
 
-    // Attach Click Handlers for Choose
+    // Attach Click Handlers
     gridContainer.querySelectorAll('.btn-choose').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
@@ -785,7 +928,6 @@ function renderDepotModal() {
         });
     });
 
-    // Attach Click Handlers for Buying with Rongiraha (🪙 €)
     gridContainer.querySelectorAll('.btn-buy-money').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
@@ -796,7 +938,6 @@ function renderDepotModal() {
         });
     });
 
-    // Attach Click Handlers for Buying with Playard Yards (💎 Y - 5x hind)
     gridContainer.querySelectorAll('.btn-buy-yard').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
@@ -1122,8 +1263,8 @@ function buildStations() {
         canopy.castShadow = true;
         stationGroup.add(canopy);
 
-        const lamp = new THREE.PointLight(0xfff3bf, 1.2, 25);
-        lamp.position.set(6, 4, 0);
+        const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.4, 8), new THREE.MeshBasicMaterial({ color: 0xfff3bf }));
+        lamp.position.set(6, 4.2, 0);
         stationGroup.add(lamp);
 
         const passengerMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.7 });
@@ -1179,8 +1320,52 @@ function buildLocomotiveEngine(def: TrainDef): THREE.Group {
     const bodyMat = new THREE.MeshStandardMaterial({ color: def.locoColor, metalness: 0.6, roughness: 0.35 });
     const trimMat = new THREE.MeshStandardMaterial({ color: def.trimColor, metalness: 0.8, roughness: 0.2 });
     const windowMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfef08a, emissiveIntensity: 0.8, roughness: 0.1 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.85 });
 
-    if (def.style === 'bullet_shinkansen' || def.style === 'cyber_bullet' || def.style === 'hyperloop_plasma') {
+    if (def.category === 'metro') {
+        // --- 🚇 Sleek 3D Rapid-Transit Metro Subway Car ---
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.0, 7.8), bodyMat);
+        cab.position.set(0, 2.3, 0);
+        cab.castShadow = true;
+        group.add(cab);
+
+        // Front Aerodynamic Curved Glass Windshield
+        const winFront = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.3), glassMat);
+        winFront.position.set(0, 2.7, 3.92);
+        group.add(winFront);
+
+        // LED Destination Sign Board ([METRO EXPRESS] / [KESKLINN])
+        const signMat = new THREE.MeshBasicMaterial({ color: def.trimColor });
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.35, 0.08), signMat);
+        sign.position.set(0, 3.5, 3.92);
+        group.add(sign);
+
+        // Signature Color Side Livery Stripe
+        const stripeMat = new THREE.MeshBasicMaterial({ color: def.trimColor });
+        const stripeL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 7.8), stripeMat);
+        stripeL.position.set(-1.52, 1.8, 0);
+        const stripeR = stripeL.clone();
+        stripeR.position.set(1.52, 1.8, 0);
+        group.add(stripeL, stripeR);
+
+        // Subway Side Double Doors
+        [-1.8, 1.8].forEach(z => {
+            [-1.52, 1.52].forEach(x => {
+                const door = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.1), new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 }));
+                door.position.set(x, 2.1, z);
+                door.rotation.y = x > 0 ? Math.PI / 2 : -Math.PI / 2;
+                group.add(door);
+            });
+        });
+
+        // Rooftop AC & Ventilation Units
+        const ac1 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.35, 2.2), trimMat);
+        ac1.position.set(0, 3.95, -1.2);
+        const ac2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.35, 2.2), trimMat);
+        ac2.position.set(0, 3.95, 1.8);
+        group.add(ac1, ac2);
+
+    } else if (def.style === 'bullet_shinkansen' || def.style === 'cyber_bullet' || def.style === 'hyperloop_plasma') {
         // Futuristic Streamlined Bullet Train Nose
         const noseGeo = new THREE.ConeGeometry(1.6, 6.0, 16);
         const nose = new THREE.Mesh(noseGeo, bodyMat);
@@ -1203,7 +1388,6 @@ function buildLocomotiveEngine(def: TrainDef): THREE.Group {
         group.add(stripL, stripR);
 
         // Windshield Glass
-        const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.8 });
         const glass = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.9, 1.8), glassMat);
         glass.position.set(0, 2.8, 3.2);
         glass.rotation.x = -Math.PI / 8;
@@ -1315,14 +1499,29 @@ function buildTenderOrPowerUnit(def: TrainDef): THREE.Group {
     const bodyMat = new THREE.MeshStandardMaterial({ color: def.locoColor, metalness: 0.7, roughness: 0.4 });
     const trimMat = new THREE.MeshStandardMaterial({ color: def.trimColor, roughness: 0.5 });
 
-    const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.2, 4.5), bodyMat);
-    body.position.y = 2.0;
-    body.castShadow = true;
-    group.add(body);
+    if (def.category === 'metro') {
+        // Metro Intermediate Carriage
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2.9, 2.9, 6.0), bodyMat);
+        body.position.y = 2.3;
+        body.castShadow = true;
+        group.add(body);
 
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.3, 4.6), trimMat);
-    roof.position.y = 3.2;
-    group.add(roof);
+        const stripeMat = new THREE.MeshBasicMaterial({ color: def.trimColor });
+        const stripeL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 6.0), stripeMat);
+        stripeL.position.set(-1.47, 1.8, 0);
+        const stripeR = stripeL.clone();
+        stripeR.position.set(1.47, 1.8, 0);
+        group.add(stripeL, stripeR);
+    } else {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.2, 4.5), bodyMat);
+        body.position.y = 2.0;
+        body.castShadow = true;
+        group.add(body);
+
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.3, 4.6), trimMat);
+        roof.position.y = 3.2;
+        group.add(roof);
+    }
 
     [-1.3, 1.3].forEach(z => {
         [-1.3, 1.3].forEach(x => {
@@ -1377,26 +1576,43 @@ function buildPassengerCarriage(def: TrainDef, idx: number): THREE.Group {
 
 function buildRearOrCargoWagon(def: TrainDef): THREE.Group {
     const group = new THREE.Group();
-    const flatbedMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
-    const logMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
 
-    const bed = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.8, 6.5), flatbedMat);
-    bed.position.y = 1.4;
-    group.add(bed);
+    if (def.category === 'metro') {
+        // Rear Metro Cab with Red Tail-lights
+        const bodyMat = new THREE.MeshStandardMaterial({ color: def.locoColor, metalness: 0.6, roughness: 0.35 });
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(2.9, 2.9, 7.0), bodyMat);
+        cab.position.y = 2.3;
+        group.add(cab);
 
-    for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 3 - row; col++) {
-            const log = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 6.0, 8), logMat);
-            log.rotation.x = Math.PI / 2;
-            log.position.set((col - (2 - row) / 2) * 0.85, 2.1 + row * 0.75, 0);
-            log.castShadow = true;
-            group.add(log);
+        // Rear Red Warning Tail-Lights
+        const redLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+        const lightL = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), redLightMat);
+        lightL.position.set(-1.0, 2.5, -3.52);
+        const lightR = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), redLightMat);
+        lightR.position.set(1.0, 2.5, -3.52);
+        group.add(lightL, lightR);
+    } else {
+        const flatbedMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
+        const logMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+
+        const bed = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.8, 6.5), flatbedMat);
+        bed.position.y = 1.4;
+        group.add(bed);
+
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3 - row; col++) {
+                const log = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 6.0, 8), logMat);
+                log.rotation.x = Math.PI / 2;
+                log.position.set((col - (2 - row) / 2) * 0.85, 2.1 + row * 0.75, 0);
+                log.castShadow = true;
+                group.add(log);
+            }
         }
     }
 
     [-2.0, 2.0].forEach(z => {
         [-1.3, 1.3].forEach(x => {
-            const w = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.25, 12), flatbedMat);
+            const w = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.25, 12), new THREE.MeshStandardMaterial({ color: 0x1f2937 }));
             w.rotation.z = Math.PI / 2;
             w.position.set(x, 0.7, z);
             group.add(w);
@@ -1461,8 +1677,6 @@ function updateParticles(delta: number) {
 }
 
 // --- Train Physics & Track Following ---
-let smokeTimer = 0;
-
 function updateTrainPhysics(delta: number) {
     const accelRate = (activeTrain.acceleration || 1.0) * 2.0;
     const maxSpd = activeTrain.maxSpeed || 120;
@@ -1692,6 +1906,7 @@ function updateCamera() {
 
 // --- Weather & Time of Day Toggle (Day / Sunset / Night) ---
 function toggleWeather() {
+    const t = getT();
     weatherMode = (weatherMode + 1) % 3;
     const btn = document.getElementById('btn-toggle-weather');
 
@@ -1964,9 +2179,20 @@ function setupControls() {
     document.getElementById('btn-close-help')?.addEventListener('click', () => {
         if (helpModal) helpModal.style.display = 'none';
     });
+
+    // Vehicle Category Switcher Tabs (Rongid vs Metrood)
+    document.getElementById('tab-btn-trains')?.addEventListener('click', () => {
+        activeDepotCategory = 'train';
+        renderDepotModal();
+    });
+    document.getElementById('tab-btn-metros')?.addEventListener('click', () => {
+        activeDepotCategory = 'metro';
+        renderDepotModal();
+    });
 }
 
 function updateCameraBtnText() {
+    const t = getT();
     const camBtn = document.getElementById('btn-camera-view');
     if (camBtn) camBtn.innerText = t.camModes[cameraMode];
     const mCamLabel = document.getElementById('m-cam-label');
@@ -1985,6 +2211,7 @@ function setupHUD() {
 }
 
 function applyTrainLocalization() {
+    updateLocalization();
     const logoTitle = document.getElementById('logo-title-text');
     if (logoTitle) logoTitle.innerText = t.gameTitle;
 
@@ -1993,6 +2220,12 @@ function applyTrainLocalization() {
 
     const btnOpenDepotText = document.getElementById('btn-open-depot-text');
     if (btnOpenDepotText) btnOpenDepotText.innerText = t.depotBtn;
+
+    const tabTrainsText = document.getElementById('tab-trains-text');
+    if (tabTrainsText) tabTrainsText.innerText = t.tabTrains;
+
+    const tabMetrosText = document.getElementById('tab-metros-text');
+    if (tabMetrosText) tabMetrosText.innerText = t.tabMetros;
 
     const targetStationLabel = document.getElementById('target-station-label');
     if (targetStationLabel) targetStationLabel.innerText = t.targetStation;
@@ -2121,6 +2354,8 @@ function updateHUD() {
 }
 
 // Start
-window.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => initEngine());
+} else {
     initEngine();
-});
+}
