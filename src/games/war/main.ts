@@ -671,26 +671,30 @@ class WarGameEngine {
             weapon2Icon.innerText = this.localClass === 'plane' ? '💣' : this.localClass === 'missile' ? '☢️' : this.localClass === 'tank' ? '🔫' : '💣';
         }
 
+        const cannonCard = document.getElementById('weapon-cannon');
+        const mgCard = document.getElementById('weapon-mg');
         const airstrikeCard = document.getElementById('weapon-airstrike');
-        if (airstrikeCard) {
-            airstrikeCard.style.display = this.localClass === 'plane' ? 'none' : 'flex';
-        }
-
         const missileCard = document.getElementById('weapon-missile');
-        if (missileCard) {
-            missileCard.style.display = this.localClass === 'missile' ? 'flex' : 'none';
-        }
-
         const nukeCard = document.getElementById('weapon-nuke');
-        if (nukeCard) {
-            nukeCard.style.display = this.localClass === 'missile' ? 'flex' : 'none';
-        }
 
-        if (this.localClass === 'plane' && this.activeWeapon === 'airstrike') {
-            this.selectWeapon('cannon');
-        }
-        if (this.localClass !== 'missile' && (this.activeWeapon === 'missile' || this.activeWeapon === 'nuke')) {
-            this.selectWeapon('cannon');
+        if (this.localClass === 'missile') {
+            if (cannonCard) cannonCard.style.display = 'none';
+            if (mgCard) mgCard.style.display = 'none';
+            if (airstrikeCard) airstrikeCard.style.display = 'none';
+            if (missileCard) missileCard.style.display = 'flex';
+            if (nukeCard) nukeCard.style.display = 'flex';
+            if (this.activeWeapon !== 'missile' && this.activeWeapon !== 'nuke') {
+                this.selectWeapon('missile');
+            }
+        } else {
+            if (cannonCard) cannonCard.style.display = 'flex';
+            if (mgCard) mgCard.style.display = 'flex';
+            if (airstrikeCard) airstrikeCard.style.display = this.localClass === 'plane' ? 'none' : 'flex';
+            if (missileCard) missileCard.style.display = 'none';
+            if (nukeCard) nukeCard.style.display = 'none';
+            if (this.activeWeapon === 'missile' || this.activeWeapon === 'nuke') {
+                this.selectWeapon('cannon');
+            }
         }
     }
 
@@ -1773,14 +1777,22 @@ class WarGameEngine {
     private setupInputListeners() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            if (e.code === 'Digit1') this.selectWeapon('cannon');
-            if (e.code === 'Digit2') this.selectWeapon('mg');
+            if (e.code === 'Digit1') {
+                if (this.localClass === 'missile') this.selectWeapon('missile');
+                else this.selectWeapon('cannon');
+            }
+            if (e.code === 'Digit2') {
+                if (this.localClass === 'missile') this.selectWeapon('nuke');
+                else this.selectWeapon('mg');
+            }
             if (e.code === 'Digit3' || e.code === 'KeyF') {
-                if (this.localClass !== 'plane') this.selectWeapon('airstrike');
+                if (this.localClass !== 'plane' && this.localClass !== 'missile') this.selectWeapon('airstrike');
             }
             if (e.code === 'Digit4' || e.code === 'KeyR') this.selectWeapon('missile');
             if (e.code === 'Digit5' || e.code === 'KeyN') this.selectWeapon('nuke');
-            if (e.code === 'Escape' && this.isSatelliteTargeting) this.stopSatelliteTargeting();
+            if (e.code === 'Escape' && this.isSatelliteTargeting) {
+                if (this.localClass !== 'missile') this.stopSatelliteTargeting();
+            }
             if (e.code === 'Space' || e.code === 'KeyE') this.fireActiveWeapon();
         });
 
@@ -1802,8 +1814,10 @@ class WarGameEngine {
                 this.isMouseDown = true;
                 this.fireActiveWeapon();
             } else if (e.button === 2) {
-                // Secondary action: alternate fire or cancel satellite targeting
-                if (this.isSatelliteTargeting) {
+                // Secondary action: alternate fire or toggle missile/nuke in Raketitiim
+                if (this.localClass === 'missile') {
+                    this.selectWeapon(this.activeWeapon === 'missile' ? 'nuke' : 'missile');
+                } else if (this.isSatelliteTargeting) {
                     this.stopSatelliteTargeting();
                 } else if (this.activeWeapon === 'cannon') {
                     this.selectWeapon('mg');
@@ -1872,6 +1886,10 @@ class WarGameEngine {
     private selectWeapon(type: ActiveWeapon) {
         if (this.localClass === 'plane' && type === 'airstrike') {
             return;
+        }
+
+        if (this.localClass === 'missile' && (type === 'cannon' || type === 'mg' || type === 'airstrike')) {
+            return; // Raketitiim is strictly the missile commander and cannot use ground soldier weapons
         }
 
         if ((type === 'missile' || type === 'nuke') && this.localClass !== 'missile') {
@@ -3047,6 +3065,11 @@ class WarGameEngine {
         this.updateNameTag(unit.nameTagCanvas, unit.name, unit.team, unit.hp, unit.maxHp);
         (unit.nameTagSprite.material as THREE.SpriteMaterial).map!.needsUpdate = true;
         this.updateHUD();
+
+        if (unit.isLocalPlayer && this.localClass === 'missile') {
+            this.activeWeapon = 'missile';
+            this.startSatelliteTargeting('missile');
+        }
     }
 
     private endMatch(winningTeam: Team) {

@@ -777,11 +777,27 @@ try {
         // Test clicking on Radar / Minimap to jump satellite camera
         await page.click('#radar-canvas');
         await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully tested interactive Radar minimap targeting in War Game!");
+        // Verify soldier weapon cards are hidden for Raketitiim
+        const cannonHidden = await page.$eval('#weapon-cannon', el => window.getComputedStyle(el).display);
+        const mgHidden = await page.$eval('#weapon-mg', el => window.getComputedStyle(el).display);
+        console.log("   Raketitiim Soldier Weapon Cards (Expected: none):", cannonHidden, mgHidden);
+        if (cannonHidden !== 'none' || mgHidden !== 'none') {
+            throw new Error("Soldier/tank weapons must be completely hidden for Raketitiim!");
+        }
 
-        await page.keyboard.press('Escape');
+        // Test pressing 2 to switch to Nuke in Raketitiim mode
+        await page.keyboard.press('Digit2');
         await new Promise(r => setTimeout(r, 200));
-        console.log("   Successfully verified Raketitiim role exclusive 10s Missile Strike and satellite map persistence!");
+        const nukeActive = await page.$eval('#weapon-nuke', el => el.classList.contains('active'));
+        if (!nukeActive) throw new Error("Pressing 2 in Raketitiim must select Nuke!");
+
+        // Test pressing 1 to switch back to 10s Missile
+        await page.keyboard.press('Digit1');
+        await new Promise(r => setTimeout(r, 200));
+        const missileActive = await page.$eval('#weapon-missile', el => el.classList.contains('active'));
+        if (!missileActive) throw new Error("Pressing 1 in Raketitiim must select 10s Missile!");
+
+        console.log("   Successfully verified Raketitiim role is locked to missile/nuke operations and cannot become soldier!");
 
         // Test Fighter Jet Unlock with 50,000 €
         console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");
