@@ -368,24 +368,64 @@ class WarAudio {
         if (!this.ctx) return;
 
         const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
+        const duration = 5.0; // 5-second realistic siren alarm
+
+        // Dual detuned oscillators for realistic mechanical horn sound
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const subOsc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
 
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(400, now);
-        osc.frequency.linearRampToValueAtTime(800, now + 0.6);
-        osc.frequency.linearRampToValueAtTime(400, now + 1.2);
-        osc.frequency.linearRampToValueAtTime(800, now + 1.8);
-        osc.frequency.linearRampToValueAtTime(400, now + 2.4);
+        osc1.type = 'sawtooth';
+        osc2.type = 'triangle';
+        subOsc.type = 'sine';
 
+        // Acoustic horn body resonance
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1700, now);
+        filter.Q.setValueAtTime(3.5, now);
+
+        // 5-second cycling pitch wave (4 distinct wailing cycles across 5.0s)
+        const cycles = 4;
+        const cycleDuration = duration / cycles; // 1.25s per cycle
+        for (let i = 0; i < cycles; i++) {
+            const startT = now + i * cycleDuration;
+            const peakT = startT + cycleDuration * 0.5;
+            const endT = startT + cycleDuration;
+
+            osc1.frequency.setValueAtTime(420, startT);
+            osc1.frequency.linearRampToValueAtTime(780, peakT);
+            osc1.frequency.linearRampToValueAtTime(420, endT);
+
+            osc2.frequency.setValueAtTime(425, startT);
+            osc2.frequency.linearRampToValueAtTime(785, peakT);
+            osc2.frequency.linearRampToValueAtTime(425, endT);
+
+            subOsc.frequency.setValueAtTime(210, startT);
+            subOsc.frequency.linearRampToValueAtTime(390, peakT);
+            subOsc.frequency.linearRampToValueAtTime(210, endT);
+        }
+
+        // 5-second amplitude envelope: crescendo, sustained wail, decrescendo
         gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(0.4, now + 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 2.6);
+        gain.gain.linearRampToValueAtTime(0.45, now + 0.35);
+        gain.gain.setValueAtTime(0.45, now + duration - 0.5);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
-        osc.connect(gain);
+        osc1.connect(filter);
+        osc2.connect(filter);
+        subOsc.connect(filter);
+        filter.connect(gain);
         gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 2.7);
+
+        osc1.start(now);
+        osc2.start(now);
+        subOsc.start(now);
+
+        osc1.stop(now + duration + 0.05);
+        osc2.stop(now + duration + 0.05);
+        subOsc.stop(now + duration + 0.05);
     }
 
     public playNuclearBlast() {

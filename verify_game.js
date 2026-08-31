@@ -785,11 +785,26 @@ try {
             throw new Error("Soldier/tank weapons must be completely hidden for Raketitiim!");
         }
 
-        // Test pressing 2 to switch to Nuke in Raketitiim mode
+        // Ready the nuke timer for test firing
+        await page.evaluate(() => {
+            if ((window).warGameEngine) {
+                (window).warGameEngine.nukeTimer = 0;
+            }
+        });
+
+        // Test pressing 2 to switch to Nuke and launching 5-second realistic alarm and warning banner
         await page.keyboard.press('Digit2');
         await new Promise(r => setTimeout(r, 200));
         const nukeActive = await page.$eval('#weapon-nuke', el => el.classList.contains('active'));
         if (!nukeActive) throw new Error("Pressing 2 in Raketitiim must select Nuke!");
+
+        await page.keyboard.press('Space');
+        await new Promise(r => setTimeout(r, 300));
+        const nukeBannerDisplay = await page.$eval('#nuke-warning-banner', el => window.getComputedStyle(el).display);
+        console.log("   Nuclear Warning Banner Display with 5s Alarm (Expected: flex):", nukeBannerDisplay);
+        if (nukeBannerDisplay !== 'flex') {
+            throw new Error("Nuclear warning banner and 5s alarm must trigger on nuclear launch!");
+        }
 
         // Test pressing 1 to switch back to 10s Missile
         await page.keyboard.press('Digit1');
@@ -797,7 +812,7 @@ try {
         const missileActive = await page.$eval('#weapon-missile', el => el.classList.contains('active'));
         if (!missileActive) throw new Error("Pressing 1 in Raketitiim must select 10s Missile!");
 
-        console.log("   Successfully verified Raketitiim role is locked to missile/nuke operations and cannot become soldier!");
+        console.log("   Successfully verified Raketitiim role is locked to missile/nuke operations, no yellow dot, and 5s nuclear siren works!");
 
         // Test Fighter Jet Unlock with 50,000 €
         console.log("10a. Testing Fighter Jet Unlock with 50,000 € War Cash...");

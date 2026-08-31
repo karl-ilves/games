@@ -199,6 +199,8 @@ class WarGameEngine {
 
         window.addEventListener('beforeunload', () => this.saveUserDataToDb());
 
+        (window as any).warGameEngine = this;
+
         this.clock.start();
         this.animate();
     }
@@ -3312,6 +3314,10 @@ class WarGameEngine {
             const distFromCenter = Math.hypot(rx - cx, ry - cy);
 
             if (unit.isLocalPlayer) {
+                if (this.localClass === 'missile') {
+                    // Raketitiim commands remotely via satellite - no ground player dot
+                    return;
+                }
                 // Proximity danger warning pulse ring
                 if (this.radarPulseAlpha > 0) {
                     this.radarPulseAlpha = Math.max(0, this.radarPulseAlpha - dt * 2.2);
