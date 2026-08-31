@@ -1424,9 +1424,36 @@ try {
             await page.evaluate(() => window.__lastMetro.loadCarriage(8, 'right'));
             await new Promise(r => setTimeout(r, 150));
 
-            // Carriage 9 (Ghost Stalker)
-            await page.evaluate(() => window.__lastMetro.loadCarriage(9, 'right'));
+            // Carriage 9 (Ghost Stalker & Void Shadow Hands Event)
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(9, 'right');
+                window.__lastMetro.triggerShadowHandsEvent();
+            });
             await new Promise(r => setTimeout(r, 150));
+            const handsActive = await page.evaluate(() => window.__lastMetro.shadowHandsActive && window.__lastMetro.shadowHandsGroups.length >= 4);
+            console.log("   Void Shadow Hands active with 3D meshes (Expected: true):", handsActive);
+            if (!handsActive) throw new Error("Shadow hands failed to spawn in Carriage 9!");
+
+            // Test Dragged Death Cutscene & SA SURID Death Screen
+            await page.evaluate(() => {
+                window.__lastMetro.triggerDraggedDeath(1);
+                window.__lastMetro.openDeathModal();
+            });
+            await new Promise(r => setTimeout(r, 150));
+            const deathModalDisplay = await page.$eval('#death-modal', el => window.getComputedStyle(el).display);
+            const deathTitleText = await page.$eval('#death-title', el => el.textContent.trim());
+            console.log(`   Death Modal Display (Expected: flex): ${deathModalDisplay}, Title: "${deathTitleText}"`);
+            if (deathModalDisplay !== 'flex' || (!deathTitleText.includes('SURID') && !deathTitleText.includes('DIED'))) {
+                throw new Error("SA SURID death screen failed to display properly!");
+            }
+
+            // Test Retry / Respawn button
+            await page.click('#btn-death-retry');
+            await new Promise(r => setTimeout(r, 150));
+            const respawnedModalDisplay = await page.$eval('#death-modal', el => window.getComputedStyle(el).display);
+            console.log("   Death Modal Display after Respawn (Expected: none):", respawnedModalDisplay);
+            if (respawnedModalDisplay !== 'none') throw new Error("Death modal failed to close upon respawn!");
+            console.log("   Successfully verified Void Shadow Hands, Dragged Death & Respawn!");
 
             // Carriage 10 (Major Glitch & Jump Scare)
             await page.evaluate(() => window.__lastMetro.loadCarriage(10, 'right'));

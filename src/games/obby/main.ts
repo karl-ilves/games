@@ -161,7 +161,7 @@ const STAGES: StageInfo[] = [
     { id: 3, nameEt: 'Liikuvad Platvormid', nameEn: 'Moving Platforms', color: 0x2ed573, spawnPos: new THREE.Vector3(0, 2, -90) },
     { id: 4, nameEt: 'Punane Laavarada', nameEn: 'Lava Leap', color: 0xff4757, spawnPos: new THREE.Vector3(0, 2, -135) },
     { id: 5, nameEt: 'Super Batuudid', nameEn: 'Super Bounce Pads', color: 0x1e90ff, spawnPos: new THREE.Vector3(0, 2, -180) },
-    { id: 6, nameEt: 'Pöörlevad Talad', nameEn: 'Spinning Sweepers', color: 0x9b59b6, spawnPos: new THREE.Vector3(0, 2, -230) },
+    { id: 6, nameEt: 'Spiraalhüpped', nameEn: 'Neon Spiral Hop', color: 0x9b59b6, spawnPos: new THREE.Vector3(0, 2, -230) },
     { id: 7, nameEt: 'Kitsas Tasakaalutala', nameEn: 'Sky Balance Beams', color: 0x1abc9c, spawnPos: new THREE.Vector3(0, 2, -280) },
     { id: 8, nameEt: 'Libe Jääpalee', nameEn: 'Slippery Ice Palace', color: 0x70a1ff, spawnPos: new THREE.Vector3(0, 2, -330) },
     { id: 9, nameEt: 'Veerevad Hiidvasarad', nameEn: 'Swinging Hammers', color: 0xe67e22, spawnPos: new THREE.Vector3(0, 2, -380) },
@@ -614,13 +614,21 @@ export class ParkourObbyGame {
         this.createPlatform(new THREE.Vector3(0, 16.5, -220), new THREE.Vector3(5, 1, 5), 0x3742fa);
         this.createCoin(new THREE.Vector3(0, 12.0, -204), 25);
 
-        // Stage 6: Pöörlevad Talad / Spinning Sweepers
+        // Stage 6: Spiraalhüpped / Neon Spiral Hop
         this.createPlatform(new THREE.Vector3(0, 0, -230), new THREE.Vector3(8, 1, 8), 0x9b59b6);
-        this.createPlatform(new THREE.Vector3(0, 0, -245), new THREE.Vector3(7, 1, 7), 0x8e44ad);
-        this.createRotatingHazard(new THREE.Vector3(0, 1.0, -245), 7.0, 1.8);
-        this.createPlatform(new THREE.Vector3(0, 0.5, -260), new THREE.Vector3(7, 1, 7), 0x8e44ad);
-        this.createRotatingHazard(new THREE.Vector3(0, 1.5, -260), 7.0, -2.5);
-        this.createCoin(new THREE.Vector3(0, 2.8, -245), 15);
+        const spiralColors = [0x9b59b6, 0x8e44ad, 0xa55eea, 0xd980fa, 0x8e44ad, 0x9b59b6, 0xa55eea, 0xd980fa];
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * 0.75);
+            const radius = 3.6;
+            const px = Math.sin(angle) * radius;
+            const pz = -238 - (i * 4.8);
+            const py = (i <= 4 ? i * 0.75 : (8 - i) * 0.75);
+            const col = spiralColors[i % spiralColors.length];
+            this.createPlatform(new THREE.Vector3(px, py, pz), new THREE.Vector3(3.2, 0.75, 3.2), col);
+            if (i === 2 || i === 5) {
+                this.createCoin(new THREE.Vector3(px, py + 2.0, pz), 15);
+            }
+        }
 
         // Stage 7: Kitsas Tasakaalutala / Sky Balance Beams
         this.createPlatform(new THREE.Vector3(0, 0, -280), new THREE.Vector3(7, 1, 7), 0x1abc9c);

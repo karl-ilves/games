@@ -111,6 +111,13 @@ export class LastMetroGame {
     private introCameraTarget: THREE.Vector3 = new THREE.Vector3(3.8, 1.6, -3.5);
     private introLookTarget: THREE.Vector3 = new THREE.Vector3(0, 1.2, -25);
 
+    // Shadow Hands Void Anomaly State (Carriage 9 & Beyond)
+    public shadowHandsActive: boolean = false;
+    public shadowHandsGroups: THREE.Group[] = [];
+    private shadowHandsAnimTimer: number = 0;
+    private deathDragSide: number = 1;
+    private deathTimer: number = 0;
+
     constructor() {
         const cont = document.getElementById('canvas-container');
         if (!cont) throw new Error("Canvas container not found!");
@@ -264,6 +271,12 @@ export class LastMetroGame {
                 if (modal) modal.style.display = 'none';
                 this.state = 'player_free';
             });
+        }
+
+        // Death retry button
+        const deathRetry = document.getElementById('btn-death-retry');
+        if (deathRetry) {
+            deathRetry.addEventListener('click', () => this.respawnFromDeath());
         }
     }
 
@@ -865,6 +878,18 @@ export class LastMetroGame {
             this.scene.remove(this.currentCarriage.group);
         }
 
+        // Clean up previous anomalies (shadow hands, stalkers, modals)
+        this.shadowHandsGroups.forEach(h => this.scene.remove(h));
+        this.shadowHandsGroups = [];
+        this.shadowHandsActive = false;
+        if (this.stalkerMesh) {
+            this.scene.remove(this.stalkerMesh);
+            this.stalkerMesh = null;
+            this.stalkerActive = false;
+        }
+        const deathModal = document.getElementById('death-modal');
+        if (deathModal) deathModal.style.display = 'none';
+
         // Determine Theme based on story progression or infinite randomness
         let theme: CarriageData['theme'] = 'normal';
         if (index === 4) theme = 'flicker';
@@ -944,7 +969,7 @@ export class LastMetroGame {
                 break;
 
             case 9:
-                // Carriage 9: Ghost Stalker Encounter
+                // Carriage 9: Ghost Stalker & Void Shadow Hands Event
                 this.spawnStalkerEntity();
                 this.showThought('Seal ees seisab keegi... ta lihtsalt jälgib mind.', 'Someone is standing ahead... they are just watching me.');
                 break;
@@ -1004,7 +1029,7 @@ export class LastMetroGame {
         const stalkerMat = new THREE.MeshPhysicalMaterial({
             color: 0x00f2fe,
             transparent: true,
-            opacity: 0.45,
+            opacity: 0.55,
             roughness: 0.1,
             transmission: 0.6
         });
@@ -1031,6 +1056,138 @@ export class LastMetroGame {
         this.stalkerMesh = stalker;
         this.stalkerActive = true;
         this.stalkerDistZ = 8.5;
+    }
+
+    // --- Shadow Hands Void Emergence (Mustad Käed) ---
+
+    public createShadowHandMesh(side: number, zOffset: number): THREE.Group {
+        const handGroup = new THREE.Group();
+        const armMat = new THREE.MeshStandardMaterial({
+            color: 0x08090d,
+            roughness: 0.85,
+            metalness: 0.3
+        });
+        const clawMat = new THREE.MeshBasicMaterial({ color: 0x1f0b24 });
+        const tipMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
+
+        // Forearm reaching through doorway
+        const armGeo = new THREE.CylinderGeometry(0.06, 0.1, 1.35, 8);
+        const arm = new THREE.Mesh(armGeo, armMat);
+        arm.rotation.z = side > 0 ? -Math.PI / 2.6 : Math.PI / 2.6;
+        arm.position.set(-side * 0.55, 0, 0);
+        handGroup.add(arm);
+
+        // Palm / Hand base
+        const palm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.22), armMat);
+        palm.position.set(-side * 1.15, 0.08, 0);
+        handGroup.add(palm);
+
+        // 4 Elongated claw fingers reaching into aisle
+        for (let i = 0; i < 4; i++) {
+            const fingerBase = new THREE.Group();
+            const fingerGeo = new THREE.CylinderGeometry(0.02, 0.035, 0.45, 6);
+            const finger = new THREE.Mesh(fingerGeo, clawMat);
+            finger.rotation.z = side > 0 ? -Math.PI / 3 : Math.PI / 3;
+            finger.position.set(-side * 0.18, 0, (i - 1.5) * 0.07);
+            fingerBase.add(finger);
+
+            // Glowing claw tip
+            const tip = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.15, 6), tipMat);
+            tip.rotation.z = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+            tip.position.set(-side * 0.35, 0, (i - 1.5) * 0.07);
+            fingerBase.add(tip);
+
+            handGroup.add(fingerBase);
+        }
+
+        // Dark mist point light
+        const handGlow = new THREE.PointLight(0x8e44ad, 1.2, 3.5);
+        handGlow.position.set(-side * 0.9, 0.2, 0);
+        handGroup.add(handGlow);
+
+        handGroup.position.set(side * 1.68, 1.4, zOffset);
+        return handGroup;
+    }
+
+    public triggerShadowHandsEvent() {
+        if (this.shadowHandsActive) return;
+        this.shadowHandsActive = true;
+
+        // Doors vanish completely (uksi pole näha!)
+        if (this.introSideDoorsLeft) this.introSideDoorsLeft.visible = false;
+        if (this.introSideDoorsRight) this.introSideDoorsRight.visible = false;
+
+        // Play scary audio
+        metroAudio.playDoorSlide(true);
+        metroAudio.playShadowGrab();
+
+        // Flickering red lights in carriage
+        if (this.currentCarriage) {
+            this.currentCarriage.lights.forEach(l => {
+                l.color.setHex(0xff3838);
+                l.intensity = 1.3;
+            });
+        }
+
+        // Spawn multiple shadow hands on both sides reaching through empty doorways
+        [-1, 1].forEach(side => {
+            [-1.5, 0, 1.5].forEach(zOffset => {
+                const hand = this.createShadowHandMesh(side, zOffset);
+                this.scene.add(hand);
+                this.shadowHandsGroups.push(hand);
+            });
+        });
+
+        this.showThought(
+            'Uksed kadusid ära... Tühjusest sirutuvad välja mustad varjukäed! Hoia vahekäigu keskele!',
+            'The doors vanished into the void... Black shadow hands are reaching in! Stay in the center of the aisle!'
+        );
+    }
+
+    public triggerDraggedDeath(side: number) {
+        if (this.state === 'dragged_death' || this.state === 'dead') return;
+        this.state = 'dragged_death';
+        this.deathDragSide = side;
+        this.deathTimer = 0;
+
+        // Horror Audio
+        metroAudio.playShadowGrab();
+        metroAudio.playDeathScream();
+
+        // Red flash
+        const flashOverlay = document.getElementById('scare-flash-overlay');
+        if (flashOverlay) {
+            flashOverlay.style.display = 'block';
+            flashOverlay.style.opacity = '0.9';
+            setTimeout(() => {
+                flashOverlay.style.opacity = '0';
+                setTimeout(() => flashOverlay.style.display = 'none', 600);
+            }, 300);
+        }
+
+        this.showThought('Mind tõmmatakse rongist välja...!', 'I am being dragged out of the train...!');
+    }
+
+    public openDeathModal() {
+        this.state = 'dead';
+        const modal = document.getElementById('death-modal');
+        const title = document.getElementById('death-title');
+        const desc = document.getElementById('death-desc');
+        if (modal && title && desc) {
+            title.innerText = this.lang === 'et' ? 'SA SURID' : 'YOU DIED';
+            desc.innerText = this.lang === 'et'
+                ? 'Mustad varjukäed haarasid sinust ja tõmbasid su kihutavast rongist tühjusesse...'
+                : 'Dark shadow hands grabbed you and dragged you from the speeding train into the void...';
+            modal.style.display = 'flex';
+        }
+    }
+
+    public respawnFromDeath() {
+        const modal = document.getElementById('death-modal');
+        if (modal) modal.style.display = 'none';
+
+        // Reload current carriage safely
+        this.loadCarriage(this.currentCarIndex, this.branchDirection);
     }
 
     private startCarriage10JumpScare() {
@@ -1585,15 +1742,56 @@ export class LastMetroGame {
 
             if (dot < 0.2) {
                 // Looking away -> Stalker creeps closer!
-                this.stalkerDistZ -= 2.2 * delta;
+                this.stalkerDistZ -= 2.6 * delta;
                 this.stalkerMesh.position.z = this.stalkerDistZ;
                 metroAudio.playHeartbeat();
             }
 
-            // If player gets close to next door, stalker disappears
-            if (this.playerPos.z > 7.5 || this.stalkerDistZ < this.playerPos.z + 1.5) {
+            // When stalker gets close or player advances -> Stalker dissolves & triggers Void Shadow Hands!
+            if (this.playerPos.z > 3.0 || this.stalkerDistZ < this.playerPos.z + 2.0) {
                 this.scene.remove(this.stalkerMesh);
                 this.stalkerActive = false;
+                this.stalkerMesh = null;
+                this.triggerShadowHandsEvent();
+            }
+        }
+
+        // 3b. Shadow Hands Reaching Animation & Drag Death Trigger
+        if (this.shadowHandsActive && this.state === 'player_free') {
+            this.shadowHandsAnimTimer += delta * 4.5;
+            this.shadowHandsGroups.forEach((hand, idx) => {
+                const wave = Math.sin(this.shadowHandsAnimTimer + idx * 1.3);
+                hand.position.y = 1.35 + wave * 0.12;
+                hand.rotation.x = Math.sin(this.shadowHandsAnimTimer * 0.7 + idx) * 0.2;
+                hand.rotation.y = Math.cos(this.shadowHandsAnimTimer * 0.5 + idx) * 0.25;
+
+                // Reach inwards toward center aisle
+                const side = hand.position.x > 0 ? 1 : -1;
+                hand.position.x = (side * 1.68) - (side * (0.35 + wave * 0.3));
+
+                // Collision check with player (if player approaches reaching hands or side doorways)
+                const distToPlayer = this.playerPos.distanceTo(hand.position);
+                const nearDoorEdge = (Math.abs(this.playerPos.x) > 0.75 && Math.abs(this.playerPos.z - hand.position.z) < 1.3);
+                if (distToPlayer < 0.9 || nearDoorEdge) {
+                    this.triggerDraggedDeath(side);
+                }
+            });
+        }
+
+        // 3c. Dragged Out Death Cutscene Animation
+        if (this.state === 'dragged_death') {
+            this.deathTimer += delta;
+            // Drag violently sideways out through the open door into the dark rushing tunnel
+            const targetX = this.deathDragSide * 4.5;
+            this.playerPos.x = THREE.MathUtils.lerp(this.playerPos.x, targetX, delta * 5.0);
+            this.playerPos.y = THREE.MathUtils.lerp(this.playerPos.y, 0.4, delta * 2.5);
+
+            // Camera violent spin and tilt
+            this.cameraEuler.z += delta * (this.deathDragSide * 5.0);
+            this.cameraEuler.x += delta * 2.8;
+
+            if (this.deathTimer > 1.6) {
+                this.openDeathModal();
             }
         }
 

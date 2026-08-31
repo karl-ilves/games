@@ -437,6 +437,22 @@
         </div>
     </div>
 
+    <!-- Death Screen Overlay (Sa Surid) -->
+    <div class="modal-overlay" id="death-modal" style="background: radial-gradient(circle at center, rgba(139, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%); z-index: 3000;">
+        <div class="modal-box" style="border: 2px solid #ff4757; box-shadow: 0 0 50px rgba(255, 71, 87, 0.7); max-width: 500px; padding: 40px 25px;">
+            <div style="font-size: 4rem; margin-bottom: 10px; animation: pulse-btn 1.5s infinite;">☠️</div>
+            <h1 style="color: #ff4757; font-size: 2.4rem; font-weight: 900; letter-spacing: 3px; margin: 0 0 12px 0; text-transform: uppercase; text-shadow: 0 0 20px #ff4757;" id="death-title">
+                SA SURID
+            </h1>
+            <div style="color: #ffb8b8; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;" id="death-desc">
+                Mustad varjukäed haarasid sinust ja tõmbasid sind kihutavast rongist tühjusesse...
+            </div>
+            <button class="btn-modal-close" id="btn-death-retry" style="background: linear-gradient(135deg, #ff4757, #c0392b); color: white; font-size: 1.1rem; padding: 14px 32px; border-radius: 30px; box-shadow: 0 0 25px rgba(255, 71, 87, 0.6); cursor: pointer; border: none; font-weight: bold;">
+                🔄 Proovi Uuesti / Retry
+            </button>
+        </div>
+    </div>
+
     <!-- VIP Access Restricted Block Overlay (Non Playard Owner) -->
     <div id="vip-restricted-overlay">
         <div class="vip-card">
