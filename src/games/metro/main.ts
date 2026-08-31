@@ -95,10 +95,13 @@ export class LastMetroGame {
     private jumpScareMesh: THREE.Group | null = null;
     private jumpScareActive: boolean = false;
 
-    // Mobile Virtual Controls
+    // Mobile & Desktop Look Controls
+    private isMouseDown: boolean = false;
+    private lastMouseX: number = 0;
+    private lastMouseY: number = 0;
     private touchStartX: number = 0;
     private touchStartY: number = 0;
-    private touchMoveDir: THREE.Vector2 = new THREE.Vector2();
+    private lastLockedDoorSoundTime: number = 0;
 
     constructor() {
         const cont = document.getElementById('canvas-container');
@@ -505,11 +508,11 @@ export class LastMetroGame {
         carGroup.add(mapMesh);
 
         // 8. End Gangway Doors (Front = +Z / Right Branch, Back = -Z / Left Branch)
-        const doorFront = this.buildGangwayDoor(carWidth, carHeight, 1, index, theme);
+        const doorFront = this.buildGangwayDoor(carWidth, carHeight, 1, index, branch, theme);
         doorFront.position.set(0, 0, carLength / 2);
         carGroup.add(doorFront);
 
-        const doorBack = this.buildGangwayDoor(carWidth, carHeight, -1, index, theme);
+        const doorBack = this.buildGangwayDoor(carWidth, carHeight, -1, index, branch, theme);
         doorBack.position.set(0, 0, -carLength / 2);
         carGroup.add(doorBack);
 
@@ -562,11 +565,17 @@ export class LastMetroGame {
         };
     }
 
-    private buildGangwayDoor(carWidth: number, carHeight: number, dir: 1 | -1, carIndex: number, theme: CarriageData['theme']): THREE.Group {
+    private buildGangwayDoor(carWidth: number, carHeight: number, dir: 1 | -1, carIndex: number, branch: DirectionBranch, theme: CarriageData['theme']): THREE.Group {
         const doorGroup = new THREE.Group();
 
-        // Door frame
-        const frameMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.8, roughness: 0.3 });
+        const isLockedBackDoor = (branch === 'right' && dir === -1) || 
+                                 (branch === 'left' && dir === 1);
+
+        const frameMat = new THREE.MeshStandardMaterial({
+            color: isLockedBackDoor ? 0x3d1414 : 0x1f242d,
+            metalness: 0.8,
+            roughness: 0.3
+        });
         const wallLeft = new THREE.Mesh(new THREE.BoxGeometry((carWidth - 1.2) / 2, carHeight, 0.2), frameMat);
         wallLeft.position.set(-(carWidth + 1.2) / 4, carHeight / 2, 0);
         doorGroup.add(wallLeft);
@@ -581,9 +590,9 @@ export class LastMetroGame {
 
         // Sliding door panel
         const doorPanelMat = new THREE.MeshStandardMaterial({
-            color: theme === 'abandoned' ? 0x7f1d1d : 0x10ac84,
-            metalness: 0.5,
-            roughness: 0.4
+            color: isLockedBackDoor ? 0x5a1818 : (theme === 'abandoned' ? 0x7f1d1d : 0x10ac84),
+            metalness: 0.6,
+            roughness: 0.35
         });
         const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.15, 0.08), doorPanelMat);
         doorPanel.position.set(0, 1.1, 0);
@@ -592,30 +601,51 @@ export class LastMetroGame {
         // Door Glass Window
         const doorGlass = new THREE.Mesh(
             new THREE.BoxGeometry(0.5, 0.7, 0.1),
-            new THREE.MeshPhysicalMaterial({ color: 0x00f2fe, transmission: 0.8, roughness: 0.1 })
+            new THREE.MeshPhysicalMaterial({
+                color: isLockedBackDoor ? 0xff3838 : 0x00f2fe,
+                transmission: isLockedBackDoor ? 0.4 : 0.8,
+                roughness: 0.1
+            })
         );
         doorGlass.position.set(0, 1.4, 0);
         doorGroup.add(doorGlass);
 
-        // Sign plate (e.g. "JÄRGMINE VAGUN ->" or "TAGASITEE SULETUD")
+        // Indicator Light above door (Red for locked back door, Green for forward path)
+        const lightMat = new THREE.MeshBasicMaterial({ color: isLockedBackDoor ? 0xff3838 : 0x2ecc71 });
+        const lightMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.04, 16), lightMat);
+        lightMesh.rotation.x = Math.PI / 2;
+        lightMesh.position.set(0, 2.32, -dir * 0.1);
+        doorGroup.add(lightMesh);
+
+        // Sign plate (e.g. "JÄRGMINE VAGUN ->" or "LUKUS / LOCKED")
         const signCanvas = document.createElement('canvas');
-        signCanvas.width = 256;
-        signCanvas.height = 64;
+        signCanvas.width = 320;
+        signCanvas.height = 80;
         const ctx = signCanvas.getContext('2d');
         if (ctx) {
-            ctx.fillStyle = carIndex === 7 && dir === -1 ? '#e74c3c' : '#2ecc71';
-            ctx.fillRect(0, 0, 256, 64);
+            ctx.fillStyle = isLockedBackDoor ? '#c0392b' : '#27ae60';
+            ctx.fillRect(0, 0, 320, 80);
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 22px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(carIndex === 7 && dir === -1 ? 'SULETUD / LOCKED' : dir === 1 ? 'PAREM ->' : '<- VASAK', 128, 40);
+            if (isLockedBackDoor) {
+                ctx.font = 'bold 22px sans-serif';
+                ctx.fillText('🔒 LUKUS / LOCKED', 160, 34);
+                ctx.font = '14px sans-serif';
+                ctx.fillText('TAGASITEE SULETUD', 160, 60);
+            } else if (branch === 'undecided') {
+                ctx.font = 'bold 22px sans-serif';
+                ctx.fillText(dir === 1 ? 'PAREM RADA ->' : '<- VASAK RADA', 160, 48);
+            } else {
+                ctx.font = 'bold 22px sans-serif';
+                ctx.fillText(dir === 1 ? 'JÄRGMINE VAGUN ->' : '<- JÄRGMINE VAGUN', 160, 48);
+            }
         }
         const signTex = new THREE.CanvasTexture(signCanvas);
         const signMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(0.8, 0.2, 0.02),
+            new THREE.BoxGeometry(0.88, 0.22, 0.02),
             new THREE.MeshBasicMaterial({ map: signTex })
         );
-        signMesh.position.set(0, 2.25, dir * 0.12);
+        signMesh.position.set(0, 2.12, -dir * 0.12);
         doorGroup.add(signMesh);
 
         return doorGroup;
@@ -1070,8 +1100,8 @@ export class LastMetroGame {
         window.addEventListener('keydown', (e) => {
             this.moveKeys[e.code] = true;
 
-            // Stand up on WASD/Space
-            if (this.state === 'player_free' && (e.code === 'KeyW' || e.code === 'KeyE' || e.code === 'Space')) {
+            // Stand up on WASD/Space/Arrows
+            if (this.state === 'player_free' && (e.code === 'KeyW' || e.code === 'KeyE' || e.code === 'Space' || e.code.startsWith('Arrow'))) {
                 this.standUp();
             }
 
@@ -1090,51 +1120,88 @@ export class LastMetroGame {
             this.moveKeys[e.code] = false;
         });
 
-        // Mouse look / Pointer Lock
-        this.renderer.domElement.addEventListener('click', () => {
+        // Mouse click & drag / Pointer Lock for Camera Look
+        const handleStartLook = (clientX: number, clientY: number) => {
             metroAudio.enableAudio();
-            if (this.state === 'player_free' && !this.isPointerLocked) {
-                this.renderer.domElement.requestPointerLock();
+            this.isMouseDown = true;
+            this.lastMouseX = clientX;
+            this.lastMouseY = clientY;
+            if (this.state === 'player_free') {
+                this.checkInteractions();
             }
-            this.checkInteractions();
+        };
+
+        const handleMoveLook = (clientX: number, clientY: number, movementX?: number, movementY?: number) => {
+            if (this.state !== 'player_free') return;
+
+            if (this.isPointerLocked && movementX !== undefined && movementY !== undefined) {
+                const sensitivity = 0.0024;
+                this.cameraEuler.y -= movementX * sensitivity;
+                this.cameraEuler.x -= movementY * sensitivity;
+                this.cameraEuler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraEuler.x));
+            } else if (this.isMouseDown) {
+                const dx = clientX - this.lastMouseX;
+                const dy = clientY - this.lastMouseY;
+                this.lastMouseX = clientX;
+                this.lastMouseY = clientY;
+
+                const sensitivity = 0.0038;
+                this.cameraEuler.y -= dx * sensitivity;
+                this.cameraEuler.x -= dy * sensitivity;
+                this.cameraEuler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraEuler.x));
+            }
+        };
+
+        const handleEndLook = () => {
+            this.isMouseDown = false;
+        };
+
+        window.addEventListener('mousedown', (e) => {
+            if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box')) return;
+            handleStartLook(e.clientX, e.clientY);
+            if (this.state === 'player_free' && !this.isPointerLocked) {
+                this.renderer.domElement.requestPointerLock?.();
+            }
         });
+
+        window.addEventListener('mousemove', (e) => {
+            handleMoveLook(e.clientX, e.clientY, e.movementX, e.movementY);
+        });
+
+        window.addEventListener('mouseup', () => handleEndLook());
 
         document.addEventListener('pointerlockchange', () => {
             this.isPointerLocked = document.pointerLockElement === this.renderer.domElement;
         });
 
-        window.addEventListener('mousemove', (e) => {
-            if (this.isPointerLocked && this.state === 'player_free') {
-                const sensitivity = 0.0022;
-                this.cameraEuler.y -= e.movementX * sensitivity;
-                this.cameraEuler.x -= e.movementY * sensitivity;
+        // Touch controls on mobile/tablets
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box')) return;
+                metroAudio.enableAudio();
+                this.touchStartX = e.touches[0].clientX;
+                this.touchStartY = e.touches[0].clientY;
+                this.isMouseDown = true;
+                this.lastMouseX = e.touches[0].clientX;
+                this.lastMouseY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0 && this.state === 'player_free') {
+                const dx = e.touches[0].clientX - this.touchStartX;
+                const dy = e.touches[0].clientY - this.touchStartY;
+                this.touchStartX = e.touches[0].clientX;
+                this.touchStartY = e.touches[0].clientY;
+
+                const sensitivity = 0.0045;
+                this.cameraEuler.y -= dx * sensitivity;
+                this.cameraEuler.x -= dy * sensitivity;
                 this.cameraEuler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraEuler.x));
             }
-        });
+        }, { passive: true });
 
-        // Touch Controls for Mobile
-        const touchZone = document.getElementById('touch-look-zone');
-        if (touchZone) {
-            touchZone.addEventListener('touchstart', (e) => {
-                if (e.touches.length > 0) {
-                    this.touchStartX = e.touches[0].clientX;
-                    this.touchStartY = e.touches[0].clientY;
-                }
-            });
-            touchZone.addEventListener('touchmove', (e) => {
-                if (e.touches.length > 0) {
-                    const dx = e.touches[0].clientX - this.touchStartX;
-                    const dy = e.touches[0].clientY - this.touchStartY;
-                    this.touchStartX = e.touches[0].clientX;
-                    this.touchStartY = e.touches[0].clientY;
-
-                    const sensitivity = 0.004;
-                    this.cameraEuler.y -= dx * sensitivity;
-                    this.cameraEuler.x -= dy * sensitivity;
-                    this.cameraEuler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraEuler.x));
-                }
-            });
-        }
+        window.addEventListener('touchend', () => handleEndLook());
     }
 
     private toggleFlashlight() {
@@ -1162,17 +1229,45 @@ export class LastMetroGame {
         }
 
         // 2. Door Interactions (End Gangways)
-        if (this.playerPos.z > 8.0) {
-            // Front Door -> Forward / Right Track
-            this.loadCarriage(this.currentCarIndex + 1, 'right');
-        } else if (this.playerPos.z < -8.0) {
-            // Back Door -> Backward / Left Track
-            if (this.currentCarIndex === 0) {
-                this.loadCarriage(1, 'left');
-            } else if (this.currentCarIndex === 7) {
-                this.showThought('Uks on lukus ja kinni keevitatud.', 'The door is locked and welded shut.');
-            } else {
+        const now = performance.now();
+        if (this.branchDirection === 'right') {
+            if (this.playerPos.z > 8.0) {
+                // Front Door -> Forward
+                this.loadCarriage(this.currentCarIndex + 1, 'right');
+            } else if (this.playerPos.z < -7.5) {
+                // Back Door -> LOCKED (Previous Carriage)
+                this.playerPos.z = -7.4;
+                if (now - this.lastLockedDoorSoundTime > 1000) {
+                    this.lastLockedDoorSoundTime = now;
+                    metroAudio.playDoorLocked();
+                    this.showThought(
+                        'Uks on lukus. Tagasi eelmisesse vagunisse ei saa minna. Edasi liikumine on ainus võimalus.',
+                        'The door is locked. You cannot return to the previous carriage. Moving forward is the only way.'
+                    );
+                }
+            }
+        } else if (this.branchDirection === 'left') {
+            if (this.playerPos.z < -8.0) {
+                // Back Door -> Forward on left branch
                 this.loadCarriage(this.currentCarIndex + 1, 'left');
+            } else if (this.playerPos.z > 7.5) {
+                // Front Door -> LOCKED (Previous Carriage)
+                this.playerPos.z = 7.4;
+                if (now - this.lastLockedDoorSoundTime > 1000) {
+                    this.lastLockedDoorSoundTime = now;
+                    metroAudio.playDoorLocked();
+                    this.showThought(
+                        'Uks on lukus. Tagasi eelmisesse vagunisse ei saa minna. Edasi liikumine on ainus võimalus.',
+                        'The door is locked. You cannot return to the previous carriage. Moving forward is the only way.'
+                    );
+                }
+            }
+        } else {
+            // Undecided (Carriage 0)
+            if (this.playerPos.z > 8.0) {
+                this.loadCarriage(1, 'right');
+            } else if (this.playerPos.z < -8.0) {
+                this.loadCarriage(1, 'left');
             }
         }
     }
@@ -1251,7 +1346,6 @@ export class LastMetroGame {
 
         // 3. Ghost Stalker Creeping Logic in Carriage 9
         if (this.stalkerActive && this.stalkerMesh) {
-            // Check if player is looking towards or away from stalker
             const toStalker = new THREE.Vector3().subVectors(this.stalkerMesh.position, this.playerPos).normalize();
             const forward = new THREE.Vector3(0, 0, -1).applyEuler(this.cameraEuler);
             const dot = forward.dot(toStalker);
@@ -1270,15 +1364,33 @@ export class LastMetroGame {
             }
         }
 
-        // 4. Player Physics & Movement (when player_free)
+        // 4. Keyboard Camera Turning (Arrows & Q/E)
+        if (this.state === 'player_free') {
+            const rotSpeed = 1.9;
+            if (this.moveKeys['ArrowLeft'] || this.moveKeys['KeyQ']) {
+                this.cameraEuler.y += rotSpeed * delta;
+            }
+            if (this.moveKeys['ArrowRight']) {
+                this.cameraEuler.y -= rotSpeed * delta;
+            }
+            if (this.moveKeys['ArrowUp']) {
+                this.cameraEuler.x += rotSpeed * 0.75 * delta;
+            }
+            if (this.moveKeys['ArrowDown']) {
+                this.cameraEuler.x -= rotSpeed * 0.75 * delta;
+            }
+            this.cameraEuler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraEuler.x));
+        }
+
+        // 5. Player Physics & Movement (when player_free)
         if (this.state === 'player_free' && this.playerPos.y >= 1.4) {
             const speed = 3.6;
             const moveDir = new THREE.Vector3();
 
-            if (this.moveKeys['KeyW'] || this.moveKeys['ArrowUp']) moveDir.z -= 1;
-            if (this.moveKeys['KeyS'] || this.moveKeys['ArrowDown']) moveDir.z += 1;
-            if (this.moveKeys['KeyA'] || this.moveKeys['ArrowLeft']) moveDir.x -= 1;
-            if (this.moveKeys['KeyD'] || this.moveKeys['ArrowRight']) moveDir.x += 1;
+            if (this.moveKeys['KeyW']) moveDir.z -= 1;
+            if (this.moveKeys['KeyS']) moveDir.z += 1;
+            if (this.moveKeys['KeyA']) moveDir.x -= 1;
+            if (this.moveKeys['KeyD']) moveDir.x += 1;
 
             if (moveDir.lengthSq() > 0) {
                 moveDir.normalize();
@@ -1289,7 +1401,6 @@ export class LastMetroGame {
 
                 // Train carriage boundary collision
                 this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
-                this.playerPos.z = Math.max(-9.2, Math.min(9.2, this.playerPos.z));
 
                 // Head bob & footsteps
                 this.headBobTimer += delta * 12;
@@ -1298,17 +1409,57 @@ export class LastMetroGame {
                     this.stepTimer = 0;
                     metroAudio.playFootstep();
                 }
+            }
 
-                // Check auto-door walkthrough at ends
+            // Door Navigation & Locked Back Door Collision
+            const now = performance.now();
+            if (this.branchDirection === 'right') {
+                // Front Door (+Z) -> Open Next Carriage
                 if (this.playerPos.z > 8.8) {
                     this.loadCarriage(this.currentCarIndex + 1, 'right');
-                } else if (this.playerPos.z < -8.8 && this.currentCarIndex !== 7) {
+                }
+                // Back Door (-Z) -> LOCKED Previous Carriage
+                else if (this.playerPos.z < -7.8) {
+                    this.playerPos.z = -7.6; // bounce back
+                    if (now - this.lastLockedDoorSoundTime > 1200) {
+                        this.lastLockedDoorSoundTime = now;
+                        metroAudio.playDoorLocked();
+                        this.showThought(
+                            'Uks on lukus. Tagasi eelmisesse vagunisse ei saa minna. Edasi liikumine on ainus võimalus.',
+                            'The door is locked. You cannot return to the previous carriage. Moving forward is the only way.'
+                        );
+                    }
+                }
+            } else if (this.branchDirection === 'left') {
+                // Back Door (-Z) -> Open Next Carriage
+                if (this.playerPos.z < -8.8) {
                     this.loadCarriage(this.currentCarIndex + 1, 'left');
                 }
+                // Front Door (+Z) -> LOCKED Previous Carriage
+                else if (this.playerPos.z > 7.8) {
+                    this.playerPos.z = 7.6; // bounce back
+                    if (now - this.lastLockedDoorSoundTime > 1200) {
+                        this.lastLockedDoorSoundTime = now;
+                        metroAudio.playDoorLocked();
+                        this.showThought(
+                            'Uks on lukus. Tagasi eelmisesse vagunisse ei saa minna. Edasi liikumine on ainus võimalus.',
+                            'The door is locked. You cannot return to the previous carriage. Moving forward is the only way.'
+                        );
+                    }
+                }
+            } else {
+                // Undecided (Carriage 0 initial choice)
+                if (this.playerPos.z > 8.8) {
+                    this.loadCarriage(1, 'right');
+                } else if (this.playerPos.z < -8.8) {
+                    this.loadCarriage(1, 'left');
+                }
             }
+
+            this.playerPos.z = Math.max(-9.2, Math.min(9.2, this.playerPos.z));
         }
 
-        // 5. Update Camera
+        // 6. Update Camera
         const headBobOffset = Math.sin(this.headBobTimer) * 0.04;
         this.camera.position.set(
             this.playerPos.x,

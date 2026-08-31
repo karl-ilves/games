@@ -820,8 +820,9 @@ function initEngine() {
     setupLighting();
     buildRailwayTracks();
     buildTerrainAndScenery();
-    buildStations();
+    buildUndergroundSubwayWorld();
     rebuildTrainModel(activeTrain);
+    applyWorldEnvironment();
 
     setupControls();
     setupHUD();
@@ -1070,6 +1071,9 @@ function selectTrain(trainId: string) {
     // Rebuild 3D model
     rebuildTrainModel(activeTrain);
 
+    // Apply underground / surface world environment
+    applyWorldEnvironment();
+
     // Update HUD
     updateHUD();
     renderDepotModal();
@@ -1165,6 +1169,8 @@ function renderTrackMesh(curve: THREE.CatmullRomCurve3, samples: number) {
 
 // --- Build Scenic Terrain, River & Pine Forest (100% Maa Peal) ---
 function buildTerrainAndScenery() {
+    aboveGroundGroup = new THREE.Group();
+
     // 2x Suurem maastik (3600 x 3600), tasapinnaline maapind y = -0.1
     const groundGeo = new THREE.PlaneGeometry(3600, 3600, 32, 32);
     const groundMat = new THREE.MeshStandardMaterial({
@@ -1177,7 +1183,7 @@ function buildTerrainAndScenery() {
     groundMesh.rotation.x = -Math.PI / 2;
     groundMesh.position.y = -0.1;
     groundMesh.receiveShadow = true;
-    scene.add(groundMesh);
+    aboveGroundGroup.add(groundMesh);
 
     // River maa tasapinnal
     const riverGeo = new THREE.PlaneGeometry(160, 2600);
@@ -1193,7 +1199,7 @@ function buildTerrainAndScenery() {
     river.rotation.z = Math.PI / 12;
     river.position.set(200, -0.05, 1000);
     river.receiveShadow = true;
-    scene.add(river);
+    aboveGroundGroup.add(river);
 
     // Täpselt raudtee kurviga kohanduvad jõesillaposti- ja piirdemudelid
     const bridgeRiverUStart = 0.38;
@@ -1218,7 +1224,7 @@ function buildTerrainAndScenery() {
         postR.position.copy(pos).add(normal.clone().multiplyScalar(-2.2));
         postR.position.y += 0.45;
 
-        scene.add(postL, postR);
+        aboveGroundGroup.add(postL, postR);
 
         // Sillatoed / sambad vette
         if (i % 3 === 0) {
@@ -1227,11 +1233,13 @@ function buildTerrainAndScenery() {
             pier.position.copy(pos);
             pier.position.y -= 2.8;
             pier.receiveShadow = true;
-            scene.add(pier);
+            aboveGroundGroup.add(pier);
         }
     }
 
     buildPineForest();
+    buildStations();
+    scene.add(aboveGroundGroup);
 }
 
 function buildPineForest() {
@@ -1279,10 +1287,10 @@ function buildPineForest() {
 
         treeGroup.add(tree);
     }
-    scene.add(treeGroup);
+    aboveGroundGroup.add(treeGroup);
 }
 
-// --- Build 4 Detailed Stations ---
+// --- Build 4 Detailed Surface Stations (Rongidele maa peal) ---
 function buildStations() {
     TRAIN_STATIONS.forEach(st => {
         st.worldPos = mainTrackCurve.getPointAt(st.trackU);
@@ -1332,8 +1340,252 @@ function buildStations() {
             stationGroup.add(person);
         }
 
-        scene.add(stationGroup);
+        aboveGroundGroup.add(stationGroup);
     });
+}
+
+// --- Build Underground Subway World & Tunnels (Metroodele maa all) ---
+function buildUndergroundSubwayWorld() {
+    undergroundSubwayGroup = new THREE.Group();
+
+    // 1. Sügav subterranean bedrock põrand
+    const bedrockGeo = new THREE.PlaneGeometry(3600, 3600);
+    const bedrockMat = new THREE.MeshStandardMaterial({
+        color: 0x0a0d14,
+        roughness: 0.95
+    });
+    const bedrock = new THREE.Mesh(bedrockGeo, bedrockMat);
+    bedrock.rotation.x = -Math.PI / 2;
+    bedrock.position.y = -0.12;
+    bedrock.receiveShadow = true;
+    undergroundSubwayGroup.add(bedrock);
+
+    // 2. Betoonist tunnelite võrgustik mööda raudtee CatmullRomCurve3 kurve
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x1f242d, roughness: 0.9 });
+    const archMat = new THREE.MeshStandardMaterial({ color: 0x181c24, metalness: 0.4, roughness: 0.6 });
+    const conduitMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.2 });
+    const lightMatAmber = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+    const lightMatCyan = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+    const thirdRailMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.5 });
+
+    const mainLen = mainTrackCurve.getLength();
+    const numSegments = 120;
+    const stationPositions = METRO_STATIONS.map(s => s.trackU);
+
+    for (let i = 0; i < numSegments; i++) {
+        const u = i / numSegments;
+        
+        // Jäta jaamatsoonides tunneliseinad lahti, et jaamahall paistaks avar
+        const isNearStation = stationPositions.some(stU => {
+            let diff = Math.abs(u - stU);
+            if (diff > 0.5) diff = 1.0 - diff;
+            return diff * mainLen < 32;
+        });
+
+        if (isNearStation) continue;
+
+        const pos = mainTrackCurve.getPointAt(u);
+        const tangent = mainTrackCurve.getTangentAt(u).normalize();
+
+        const segGroup = new THREE.Group();
+        segGroup.position.copy(pos);
+        segGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
+
+        // Vasak ja parem betoonist tunnelisein
+        const wallGeo = new THREE.BoxGeometry(0.6, 6.4, 9.0);
+        const wallL = new THREE.Mesh(wallGeo, concreteMat);
+        wallL.position.set(-4.6, 3.2, 0);
+        const wallR = new THREE.Mesh(wallGeo, concreteMat);
+        wallR.position.set(4.6, 3.2, 0);
+        segGroup.add(wallL, wallR);
+
+        // Tunneli lagi
+        const ceilGeo = new THREE.BoxGeometry(9.8, 0.6, 9.0);
+        const ceiling = new THREE.Mesh(ceilGeo, concreteMat);
+        ceiling.position.set(0, 6.4, 0);
+        segGroup.add(ceiling);
+
+        // Tugevduskaar / arch rib
+        const archGeo = new THREE.BoxGeometry(10.2, 0.45, 0.7);
+        const arch = new THREE.Mesh(archGeo, archMat);
+        arch.position.set(0, 6.3, 0);
+        segGroup.add(arch);
+
+        // Kaablirenni torud seinal
+        const conduit = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 9.0, 6), conduitMat);
+        conduit.rotation.x = Math.PI / 2;
+        conduit.position.set(-4.2, 4.2, 0);
+        segGroup.add(conduit);
+
+        // Tunneli ohutuled seintel
+        if (i % 2 === 0) {
+            const lampHousing = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.35, 0.5), archMat);
+            lampHousing.position.set(-4.25, 4.8, 0);
+            const lampBulb = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.25, 0.35), (i % 4 === 0) ? lightMatCyan : lightMatAmber);
+            lampBulb.position.set(-4.15, 4.8, 0);
+            segGroup.add(lampHousing, lampBulb);
+        }
+
+        // 3. Elektritoiterööbas (Third Power Rail)
+        const thirdRail = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 9.0), thirdRailMat);
+        thirdRail.position.set(1.9, 0.45, 0);
+        segGroup.add(thirdRail);
+
+        undergroundSubwayGroup.add(segGroup);
+    }
+
+    // 3. Ehita maa-alused metroojaamad
+    buildUndergroundStations();
+
+    scene.add(undergroundSubwayGroup);
+}
+
+function buildUndergroundStations() {
+    const tilePlatformMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.3, metalness: 0.1 });
+    const tactileMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.5 });
+    const wallTileMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+    const columnMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.2 });
+    const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+    const neonLightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const signBoardMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+    const passengerMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.7 });
+
+    METRO_STATIONS.forEach(st => {
+        st.worldPos = mainTrackCurve.getPointAt(st.trackU);
+        const tangent = mainTrackCurve.getTangentAt(st.trackU).normalize();
+
+        const stationGroup = new THREE.Group();
+        stationGroup.position.copy(st.worldPos);
+        stationGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
+
+        // Lai ja valgusküllane maa-alune metrooperroon
+        const platform = new THREE.Mesh(new THREE.BoxGeometry(9.5, 0.8, 55), tilePlatformMat);
+        platform.position.set(6.2, 0.4, 0);
+        platform.receiveShadow = true;
+        stationGroup.add(platform);
+
+        // Kollane turvariba perrooni servas
+        const yellowStrip = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 55), tactileMat);
+        yellowStrip.position.set(1.7, 0.81, 0);
+        stationGroup.add(yellowStrip);
+
+        // Metroojaama tagasein plaatidega
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.8, 7.5, 60), wallTileMat);
+        backWall.position.set(11.2, 3.75, 0);
+        stationGroup.add(backWall);
+
+        // Vastassein teisel pool rööpaid
+        const oppWall = new THREE.Mesh(new THREE.BoxGeometry(0.8, 7.5, 60), wallTileMat);
+        oppWall.position.set(-4.5, 3.75, 0);
+        stationGroup.add(oppWall);
+
+        // Metroojaama lagi
+        const stCeiling = new THREE.Mesh(new THREE.BoxGeometry(17.0, 0.8, 60), ceilingMat);
+        stCeiling.position.set(3.5, 7.5, 0);
+        stationGroup.add(stCeiling);
+
+        // Roostevabast terasest ja betoonist toetavad sambad
+        for (let c = -20; c <= 20; c += 10) {
+            const col = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 7.0, 8), columnMat);
+            col.position.set(6.2, 3.9, c);
+            stationGroup.add(col);
+        }
+
+        // Lae LED-neoontorud ja valgusribad
+        for (let l = -20; l <= 20; l += 8) {
+            const lightBar = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.1, 0.4), neonLightMat);
+            lightBar.position.set(6.2, 7.0, l);
+            stationGroup.add(lightBar);
+        }
+
+        // Helendav metroojaama nimesilt seinal
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 12), signBoardMat);
+        sign.position.set(10.7, 4.0, 0);
+        stationGroup.add(sign);
+
+        // Ootavad metrooreisijad
+        for (let p = 0; p < 8; p++) {
+            const person = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 1.4, 6), passengerMat);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 6, 6), new THREE.MeshStandardMaterial({ color: 0xffedd5 }));
+            head.position.y = 0.95;
+            person.add(body, head);
+            person.position.set(5.5 + (Math.random() - 0.5) * 3.5, 1.5, (p - 3.5) * 5 + (Math.random() - 0.5) * 2);
+            stationGroup.add(person);
+        }
+
+        undergroundSubwayGroup.add(stationGroup);
+    });
+}
+
+// --- Dynamic Environment Switcher (Rong maa peal vs Metroo maa all) ---
+function applyWorldEnvironment() {
+    const isMetro = activeTrain && activeTrain.category === 'metro';
+    const isOwner = checkIsOwner();
+
+    if (aboveGroundGroup) aboveGroundGroup.visible = !isMetro;
+    if (undergroundSubwayGroup) undergroundSubwayGroup.visible = isMetro;
+
+    const envBadge = document.getElementById('environment-mode-badge');
+    if (envBadge) {
+        if (isMetro) {
+            envBadge.innerText = isOwner ? '🚇 MAA ALL (METROO)' : '🚇 UNDERGROUND (SUBWAY)';
+            envBadge.style.background = 'rgba(168, 85, 247, 0.25)';
+            envBadge.style.borderColor = 'rgba(168, 85, 247, 0.5)';
+            envBadge.style.color = '#c084fc';
+        } else {
+            envBadge.innerText = isOwner ? '🌲 MAA PEAL (RAUDTEE)' : '🌲 SURFACE (RAILWAY)';
+            envBadge.style.background = 'rgba(56, 189, 248, 0.2)';
+            envBadge.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+            envBadge.style.color = '#38bdf8';
+        }
+    }
+
+    if (isMetro) {
+        // Maa-alune salapärane ja dramaatiline metroo atmosfäär
+        if (scene) {
+            scene.background = new THREE.Color(0x06080e);
+            scene.fog = new THREE.FogExp2(0x06080e, 0.0055);
+        }
+        if (dirLight) {
+            dirLight.intensity = 0.2;
+            dirLight.color.setHex(0x38bdf8);
+        }
+        if (ambientLight) {
+            ambientLight.intensity = 0.25;
+            ambientLight.color.setHex(0x1e293b);
+        }
+        if (hemiLight) {
+            hemiLight.intensity = 0.2;
+            hemiLight.color.setHex(0x1e293b);
+            hemiLight.groundColor.setHex(0x090d16);
+        }
+        if (trainHeadlight) {
+            trainHeadlight.intensity = 16;
+            trainHeadlight.distance = 220;
+            trainHeadlight.angle = 0.5;
+        }
+    } else {
+        // Maapealne päikese- ja looduskeskkond
+        if (hemiLight) {
+            hemiLight.intensity = 0.5;
+            hemiLight.color.setHex(0xffffff);
+            hemiLight.groundColor.setHex(0x3d7e35);
+        }
+        if (trainHeadlight) {
+            trainHeadlight.distance = 120;
+            trainHeadlight.angle = Math.PI / 6;
+        }
+        applyWeatherMode();
+    }
+
+    // Uuenda sihtjaama teksti HUD-il vastavalt aktiivsele režiimile
+    const stations = getActiveStations();
+    const targetSt = stations[currentStationIndex % stations.length];
+    const nameEl = document.getElementById('target-station-name');
+    if (nameEl && targetSt) {
+        nameEl.innerText = getStationName(targetSt);
+    }
 }
 
 // --- Dynamic 3D Train Builder for 10 Train Types ---
@@ -1801,7 +2053,7 @@ function positionTrainUnits() {
 // --- Station Passenger Pickup & In-Game Rongiraha Rewards (+50€ Per Stop, Yarde ei teeni) ---
 function checkStationArrival(delta: number) {
     const stations = getActiveStations();
-    const targetStation = stations[currentStationIndex];
+    const targetStation = stations[currentStationIndex % stations.length];
     if (!targetStation) return;
 
     const totalLen = mainTrackCurve.getLength();
@@ -1961,34 +2213,59 @@ function updateCamera() {
 
 // --- Weather & Time of Day Toggle (Day / Sunset / Night) ---
 function toggleWeather() {
-    const t = getT();
     weatherMode = (weatherMode + 1) % 3;
+    if (activeTrain && activeTrain.category === 'metro') {
+        applyWorldEnvironment();
+    } else {
+        applyWeatherMode();
+    }
+}
+
+function applyWeatherMode() {
+    const t = getT();
     const btn = document.getElementById('btn-toggle-weather');
+    const mWeatherLabel = document.getElementById('m-weather-label');
+    const isOwner = checkIsOwner();
 
     if (weatherMode === 0) {
-        scene.background = new THREE.Color(0x87ceeb);
-        scene.fog = new THREE.FogExp2(0x87ceeb, 0.002);
-        dirLight.color.setHex(0xfffaed);
-        dirLight.intensity = 1.3;
-        ambientLight.intensity = 0.4;
-        trainHeadlight.intensity = 3;
+        if (scene) {
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.FogExp2(0x87ceeb, 0.0012);
+        }
+        if (dirLight) {
+            dirLight.color.setHex(0xfffaed);
+            dirLight.intensity = 1.3;
+        }
+        if (ambientLight) ambientLight.intensity = 0.4;
+        if (trainHeadlight) trainHeadlight.intensity = 3;
         if (btn) btn.innerText = t.weatherModes[0];
+        if (mWeatherLabel) mWeatherLabel.innerText = isOwner ? 'PÄEV' : 'DAY';
     } else if (weatherMode === 1) {
-        scene.background = new THREE.Color(0xf97316);
-        scene.fog = new THREE.FogExp2(0xea580c, 0.003);
-        dirLight.color.setHex(0xffaa5e);
-        dirLight.intensity = 1.1;
-        ambientLight.intensity = 0.3;
-        trainHeadlight.intensity = 6;
+        if (scene) {
+            scene.background = new THREE.Color(0xf97316);
+            scene.fog = new THREE.FogExp2(0xea580c, 0.0028);
+        }
+        if (dirLight) {
+            dirLight.color.setHex(0xffaa5e);
+            dirLight.intensity = 1.1;
+        }
+        if (ambientLight) ambientLight.intensity = 0.3;
+        if (trainHeadlight) trainHeadlight.intensity = 6;
         if (btn) btn.innerText = t.weatherModes[1];
+        if (mWeatherLabel) mWeatherLabel.innerText = isOwner ? 'LOOJANG' : 'SUNSET';
     } else if (weatherMode === 2) {
-        scene.background = new THREE.Color(0x060b13);
-        scene.fog = new THREE.FogExp2(0x060b13, 0.004);
-        dirLight.color.setHex(0x38bdf8);
-        dirLight.intensity = 0.2;
-        ambientLight.intensity = 0.15;
-        trainHeadlight.intensity = 12;
+        if (scene) {
+            scene.background = new THREE.Color(0x060b13);
+            scene.fog = new THREE.FogExp2(0x060b13, 0.0038);
+        }
+        if (dirLight) {
+            dirLight.color.setHex(0x38bdf8);
+            dirLight.intensity = 0.2;
+        }
+        if (ambientLight) ambientLight.intensity = 0.15;
+        if (trainHeadlight) trainHeadlight.intensity = 12;
         if (btn) btn.innerText = t.weatherModes[2];
+        if (mWeatherLabel) mWeatherLabel.innerText = isOwner ? 'ÖÖ' : 'NIGHT';
     }
 }
 
@@ -2286,9 +2563,10 @@ function applyTrainLocalization() {
     if (targetStationLabel) targetStationLabel.innerText = t.targetStation;
 
     const stations = getActiveStations();
-    const initialTargetStation = stations[currentStationIndex];
+    const initialTargetStation = stations[currentStationIndex % stations.length];
     const targetStationName = document.getElementById('target-station-name');
     if (targetStationName && initialTargetStation) targetStationName.innerText = getStationName(initialTargetStation);
+    applyWorldEnvironment();
 
     const passengersLabel = document.getElementById('passengers-label');
     if (passengersLabel) passengersLabel.innerText = t.passengers;

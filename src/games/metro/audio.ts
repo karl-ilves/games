@@ -348,6 +348,31 @@ export class MetroAudioEngine {
         osc.stop(now + 0.26);
     }
 
+    // Locked Door Rattle / Handle Jiggle Sound (Trying to open locked back door)
+    public playDoorLocked() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        // Two rapid metallic rattle impulses
+        [0, 0.09].forEach(delay => {
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(240, now + delay);
+            osc.frequency.exponentialRampToValueAtTime(60, now + delay + 0.07);
+
+            gain.gain.setValueAtTime(0.22, now + delay);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.08);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+
+            osc.start(now + delay);
+            osc.stop(now + delay + 0.09);
+        });
+    }
+
     // Keypad Beep (Correct / Press)
     public playKeypadBeep(success: boolean = false) {
         this.initContext();

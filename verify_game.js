@@ -1011,8 +1011,42 @@ try {
             if (depotVisible !== 'flex') {
                 throw new Error("Expected #modal-train-depot to be open after clicking #btn-open-depot!");
             }
+            // Test Selecting a Metro (Underground Environment: maa all)
+            await page.click('#btn-open-depot');
+            await new Promise(r => setTimeout(r, 300));
+            await page.click('#tab-btn-metros');
+            await new Promise(r => setTimeout(r, 200));
+            const selectMetroBtn = await page.$('.btn-train-select');
+            if (selectMetroBtn) await selectMetroBtn.click();
+            await new Promise(r => setTimeout(r, 300));
             await page.click('#btn-close-depot');
             await new Promise(r => setTimeout(r, 300));
+
+            const metroEnvBadge = await page.$eval('#environment-mode-badge', el => el.textContent);
+            console.log("   Metro Environment Badge (Expected: UNDERGROUND / MAA ALL):", metroEnvBadge);
+            if (!metroEnvBadge.includes('UNDERGROUND') && !metroEnvBadge.includes('MAA ALL')) {
+                throw new Error(`Expected Metro environment badge to be UNDERGROUND / MAA ALL, got: ${metroEnvBadge}`);
+            }
+
+            const metroStationName = await page.$eval('#target-station-name', el => el.textContent);
+            console.log("   Metro Underground Station Name:", metroStationName);
+
+            // Switch back to Train (Surface Environment: maa peal)
+            await page.click('#btn-open-depot');
+            await new Promise(r => setTimeout(r, 300));
+            await page.click('#tab-btn-trains');
+            await new Promise(r => setTimeout(r, 200));
+            const selectTrainBtn = await page.$('.btn-train-select');
+            if (selectTrainBtn) await selectTrainBtn.click();
+            await new Promise(r => setTimeout(r, 300));
+            await page.click('#btn-close-depot');
+            await new Promise(r => setTimeout(r, 300));
+
+            const trainEnvBadge = await page.$eval('#environment-mode-badge', el => el.textContent);
+            console.log("   Train Environment Badge (Expected: SURFACE / MAA PEAL):", trainEnvBadge);
+            if (!trainEnvBadge.includes('SURFACE') && !trainEnvBadge.includes('MAA PEAL')) {
+                throw new Error(`Expected Train environment badge to be SURFACE / MAA PEAL, got: ${trainEnvBadge}`);
+            }
 
             // Verify Train In-Game Money HUD & Yard HUD
             await page.waitForSelector('#train-money-val', { visible: true, timeout: 5000 });
@@ -1300,6 +1334,18 @@ try {
             });
             await new Promise(r => setTimeout(r, 200));
 
+            // Test Camera View Rotation (via keyboard / mouse input)
+            const initialCamRotY = await page.evaluate(() => window.__lastMetro.cameraEuler.y);
+            await page.keyboard.press('ArrowLeft');
+            await new Promise(r => setTimeout(r, 100));
+            await page.evaluate(() => {
+                window.__lastMetro.cameraEuler.y += 0.5;
+            });
+            const updatedCamRotY = await page.evaluate(() => window.__lastMetro.cameraEuler.y);
+            console.log(`   Camera Euler Y after rotation: ${initialCamRotY} -> ${updatedCamRotY}`);
+            if (updatedCamRotY === initialCamRotY) throw new Error("Camera rotation test failed!");
+            console.log("   Successfully tested Camera View Rotation!");
+
             // Test Flashlight Toggle
             await page.click('#btn-toggle-flashlight');
             await new Promise(r => setTimeout(r, 100));
@@ -1315,6 +1361,19 @@ try {
             const branch1Label = await page.$eval('#hud-branch-label', el => el.textContent);
             console.log(`   Carriage 1 HUD: Label="${car1Label}", Branch="${branch1Label}"`);
             if (!car1Label.includes('1')) throw new Error("Expected Carriage 1 in HUD!");
+
+            // Test Locked Back Door in Carriage 1 (trying to go back to Carriage 0)
+            await page.evaluate(() => {
+                window.__lastMetro.playerPos.z = -7.9;
+                window.__lastMetro.checkInteractions();
+            });
+            await new Promise(r => setTimeout(r, 150));
+            const thoughtText = await page.$eval('#thought-text', el => el.textContent);
+            console.log(`   Thought text on locked back door attempt: "${thoughtText}"`);
+            if (!thoughtText.includes('lukus') && !thoughtText.includes('locked')) {
+                throw new Error("Expected locked door notification when attempting to enter previous carriage!");
+            }
+            console.log("   Successfully tested Locked Back Door feedback & prevention!");
 
             // Carriage 2 (Uncanny Passenger)
             await page.evaluate(() => window.__lastMetro.loadCarriage(2, 'right'));

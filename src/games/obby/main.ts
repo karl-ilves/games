@@ -1280,61 +1280,6 @@ export class ParkourObbyGame {
         });
     }
 
-    private updatePlayerPhysics(dt: number) {
-        // Horizontal Movement Input
-        let inputX = 0;
-        let inputZ = 0;
-
-        if (this.keys['KeyW'] || this.keys['ArrowUp']) inputZ -= 1;
-        if (this.keys['KeyS'] || this.keys['ArrowDown']) inputZ += 1;
-        if (this.keys['KeyA'] || this.keys['ArrowLeft']) inputX -= 1;
-        if (this.keys['KeyD'] || this.keys['ArrowRight']) inputX += 1;
-
-        if (this.joystickInput.x !== 0 || this.joystickInput.y !== 0) {
-            inputX = this.joystickInput.x;
-            inputZ = this.joystickInput.y;
-        }
-
-        const inputLen = Math.hypot(inputX, inputZ);
-        if (inputLen > 1) { inputX /= inputLen; inputZ /= inputLen; }
-
-        let currentSpeed = this.moveSpeed;
-        if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) currentSpeed *= this.sprintMultiplier;
-        if (this.equippedBoots === 'boots_speed') currentSpeed *= 1.25;
-
-        // Camera aligned movement vector
-        const camForward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.cameraRotation.y);
-        const camRight = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.cameraRotation.y);
-
-        const moveDir = new THREE.Vector3()
-            .addScaledVector(camRight, inputX)
-            .addScaledVector(camForward, -inputZ);
-
-        if (moveDir.lengthSq() > 0.001) {
-            moveDir.normalize();
-            this.velocity.x = moveDir.x * currentSpeed;
-            this.velocity.z = moveDir.z * currentSpeed;
-            
-            // Rotate player body towards moving direction
-            const targetRotY = Math.atan2(moveDir.x, moveDir.z);
-            this.playerGroup.rotation.y = targetRotY;
-
-            // Running Limb Animation
-            const walkCycle = performance.now() * 0.015;
-            this.playerLeftLeg.rotation.x = Math.sin(walkCycle) * 0.6;
-            this.playerRightLeg.rotation.x = -Math.sin(walkCycle) * 0.6;
-            this.playerLeftArm.rotation.x = -Math.sin(walkCycle) * 0.6;
-            this.playerRightArm.rotation.x = Math.sin(walkCycle) * 0.6;
-        } else {
-            this.velocity.x *= 0.6;
-            this.velocity.z *= 0.6;
-            this.playerLeftLeg.rotation.x = 0;
-            this.playerRightLeg.rotation.x = 0;
-            this.playerLeftArm.rotation.x = 0;
-            this.playerRightArm.rotation.x = 0;
-        }
-    }
-
     public performJump() {
         let effectiveJumpForce = this.jumpForce;
         if (this.equippedBoots === 'boots_moon') effectiveJumpForce *= 1.38;
