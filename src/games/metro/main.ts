@@ -780,8 +780,9 @@ export class LastMetroGame {
         this.currentCarriage = this.createCarriageGeometry(index, this.branchDirection, theme);
         this.scene.add(this.currentCarriage.group);
 
-        // Position player at entrance door
-        this.playerPos.set(0, 1.6, branch === 'left' ? 8.5 : -8.5);
+        // Position player at entrance door and set free movement
+        this.state = 'player_free';
+        this.playerPos.set(0, 1.6, branch === 'left' ? 7.5 : -7.5);
         this.cameraEuler.y = branch === 'left' ? Math.PI : 0;
 
         // Play heavy door latch audio
@@ -1081,17 +1082,16 @@ export class LastMetroGame {
     }
 
     public standUp() {
-        if (this.state === 'player_free' && this.playerPos.y < 1.4) {
-            this.playerPos.y = 1.6;
-            this.playerPos.x = 0; // step into aisle
-            const standBtn = document.getElementById('btn-stand-up');
-            if (standBtn) standBtn.style.display = 'none';
-            metroAudio.playFootstep();
-            this.showThought(
-                'Vali suund: kas minna ettepoole (PAREM) või tahapoole (VASAK)?',
-                'Choose a direction: head forward (RIGHT) or backward (LEFT)?'
-            );
-        }
+        this.state = 'player_free';
+        this.playerPos.y = 1.6;
+        this.playerPos.x = 0; // step into aisle
+        const standBtn = document.getElementById('btn-stand-up');
+        if (standBtn) standBtn.style.display = 'none';
+        metroAudio.playFootstep();
+        this.showThought(
+            'Vali suund: kas minna ettepoole (PAREM) või tahapoole (VASAK)?',
+            'Choose a direction: head forward (RIGHT) or backward (LEFT)?'
+        );
     }
 
     // --- Input Handling & Player Movement ---
