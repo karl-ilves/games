@@ -1088,53 +1088,116 @@ export class LastMetroGame {
         this.stalkerDistZ = 8.5;
     }
 
-    // --- Shadow Hands Void Emergence (Mustad Käed) ---
+    // --- Ultra-Realistic Shadow Hand Void Emergence (Mustad Käed) ---
 
     public createShadowHandMesh(side: number, zOffset: number = 0): THREE.Group {
         const handGroup = new THREE.Group();
-        const armMat = new THREE.MeshStandardMaterial({
-            color: 0x050608,
+
+        const armSkinMat = new THREE.MeshStandardMaterial({
+            color: 0x030406,
             roughness: 0.85,
-            metalness: 0.3
+            metalness: 0.35
         });
-        const clawMat = new THREE.MeshBasicMaterial({ color: 0x1f0b24 });
-        const tipMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
+        const jointMat = new THREE.MeshStandardMaterial({
+            color: 0x08090d,
+            roughness: 0.7,
+            metalness: 0.5
+        });
+        const clawMat = new THREE.MeshStandardMaterial({
+            color: 0x14041b,
+            roughness: 0.25,
+            metalness: 0.75
+        });
+        const veinMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
 
-        // Forearm reaching directly out of the door frame
-        const armGeo = new THREE.CylinderGeometry(0.06, 0.1, 1.35, 8);
-        const arm = new THREE.Mesh(armGeo, armMat);
-        arm.rotation.z = side > 0 ? -Math.PI / 2.6 : Math.PI / 2.6;
-        arm.position.set(-side * 0.55, 0, 0);
-        handGroup.add(arm);
+        // 1. Shoulder Socket & Upper Arm
+        const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), jointMat);
+        shoulder.position.set(0, 0, 0);
+        handGroup.add(shoulder);
 
-        // Palm / Hand base
-        const palm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.22), armMat);
-        palm.position.set(-side * 1.15, 0.08, 0);
+        const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.75, 10), armSkinMat);
+        upperArm.rotation.z = side > 0 ? -Math.PI / 2.8 : Math.PI / 2.8;
+        upperArm.position.set(-side * 0.35, 0.05, 0);
+        handGroup.add(upperArm);
+
+        // 2. Elbow Joint
+        const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 10), jointMat);
+        elbow.position.set(-side * 0.7, 0.1, 0);
+        handGroup.add(elbow);
+
+        // 3. Forearm (reaching inward towards center of aisle)
+        const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.095, 0.85, 10), armSkinMat);
+        forearm.rotation.z = side > 0 ? -Math.PI / 2.3 : Math.PI / 2.3;
+        forearm.position.set(-side * 1.1, 0.12, 0);
+        handGroup.add(forearm);
+
+        // Pulsating vein ridges on forearm
+        [-0.03, 0.03].forEach(vOffset => {
+            const vein = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.7, 6), veinMat);
+            vein.rotation.z = side > 0 ? -Math.PI / 2.3 : Math.PI / 2.3;
+            vein.position.set(-side * 1.1, 0.12 + vOffset, vOffset);
+            handGroup.add(vein);
+        });
+
+        // 4. Wrist & Anatomical Palm
+        const wrist = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), jointMat);
+        wrist.position.set(-side * 1.5, 0.14, 0);
+        handGroup.add(wrist);
+
+        const palm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.28), armSkinMat);
+        palm.position.set(-side * 1.62, 0.14, 0);
         handGroup.add(palm);
 
-        // 4 Elongated claw fingers reaching into aisle
-        for (let i = 0; i < 4; i++) {
-            const fingerBase = new THREE.Group();
-            const fingerGeo = new THREE.CylinderGeometry(0.02, 0.035, 0.45, 6);
-            const finger = new THREE.Mesh(fingerGeo, clawMat);
-            finger.rotation.z = side > 0 ? -Math.PI / 3 : Math.PI / 3;
-            finger.position.set(-side * 0.18, 0, (i - 1.5) * 0.07);
-            fingerBase.add(finger);
+        // 5. Five Articulated Fingers (Thumb, Index, Middle, Ring, Pinky)
+        const fingerOffsets = [
+            { z: -0.11, len: 0.26, scale: 0.9, isThumb: true },
+            { z: -0.06, len: 0.38, scale: 1.0, isThumb: false },
+            { z: -0.00, len: 0.44, scale: 1.1, isThumb: false },
+            { z: 0.06, len: 0.38, scale: 1.0, isThumb: false },
+            { z: 0.11, len: 0.28, scale: 0.85, isThumb: false }
+        ];
+
+        fingerOffsets.forEach((f) => {
+            const fingerGroup = new THREE.Group();
+            fingerGroup.name = 'finger';
+
+            // Proximal Phalanx
+            const pPhalanx = new THREE.Mesh(new THREE.CylinderGeometry(0.018 * f.scale, 0.024 * f.scale, f.len * 0.5, 6), armSkinMat);
+            pPhalanx.rotation.z = side > 0 ? -Math.PI / 3 : Math.PI / 3;
+            pPhalanx.position.set(-side * (f.len * 0.2), 0, 0);
+            fingerGroup.add(pPhalanx);
+
+            // Knuckle Joint
+            const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.022 * f.scale, 6, 6), jointMat);
+            knuckle.position.set(-side * (f.len * 0.45), 0, 0);
+            fingerGroup.add(knuckle);
+
+            // Distal Phalanx & Curved Razor Claw
+            const dPhalanx = new THREE.Mesh(new THREE.CylinderGeometry(0.012 * f.scale, 0.018 * f.scale, f.len * 0.45, 6), armSkinMat);
+            dPhalanx.rotation.z = side > 0 ? -Math.PI / 2.4 : Math.PI / 2.4;
+            dPhalanx.position.set(-side * (f.len * 0.65), -0.02, 0);
+            fingerGroup.add(dPhalanx);
+
+            const claw = new THREE.Mesh(new THREE.ConeGeometry(0.025 * f.scale, 0.22 * f.scale, 6), clawMat);
+            claw.rotation.z = side > 0 ? -Math.PI / 1.8 : Math.PI / 1.8;
+            claw.position.set(-side * (f.len * 0.9), -0.05, 0);
+            fingerGroup.add(claw);
 
             // Glowing claw tip
-            const tip = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.15, 6), tipMat);
-            tip.rotation.z = side > 0 ? -Math.PI / 2 : Math.PI / 2;
-            tip.position.set(-side * 0.35, 0, (i - 1.5) * 0.07);
-            fingerBase.add(tip);
+            const tipGlow = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 6), veinMat);
+            tipGlow.position.set(-side * (f.len * 1.0), -0.06, 0);
+            fingerGroup.add(tipGlow);
 
-            handGroup.add(fingerBase);
-        }
+            fingerGroup.position.set(-side * 1.68, 0.14, f.z);
+            handGroup.add(fingerGroup);
+        });
 
-        // Glowing red mist point light
-        const handGlow = new THREE.PointLight(0xff1744, 1.8, 4.0);
-        handGlow.position.set(-side * 0.9, 0.2, 0);
-        handGroup.add(handGlow);
+        // 6. Eerie Red/Purple Volumetric Point Light from Palm
+        const palmLight = new THREE.PointLight(0xff1744, 2.5, 4.5);
+        palmLight.position.set(-side * 1.55, 0.2, 0);
+        handGroup.add(palmLight);
 
+        // Position hand right inside the doorway at x = side * 1.68, y = 1.35, z = zOffset
         handGroup.position.set(side * 1.68, 1.35, zOffset);
         return handGroup;
     }
@@ -1153,21 +1216,20 @@ export class LastMetroGame {
         // Flickering red lights in carriage
         if (this.currentCarriage) {
             this.currentCarriage.lights.forEach(l => {
-                l.color.setHex(0xff3838);
-                l.intensity = 1.3;
+                l.color.setHex(0xff1744);
+                l.intensity = 1.4;
             });
         }
 
-        // Exactly 1 hand per door (1 from left doorway at z=0, 1 from right doorway at z=0)
-        [-1, 1].forEach(side => {
-            const hand = this.createShadowHandMesh(side, 0);
-            this.scene.add(hand);
-            this.shadowHandsGroups.push(hand);
-        });
+        // Exactly 1 hand from 1 side only (ainult 1 pool tuleb käsi)
+        const activeSide = 1; // Reaching from right doorway
+        const hand = this.createShadowHandMesh(activeSide, 0);
+        this.scene.add(hand);
+        this.shadowHandsGroups.push(hand);
 
         this.showThought(
-            'Uksed kadusid ära... Tühjusest sirutuvad välja mustad varjukäed! Hoia vahekäigu keskele!',
-            'The doors vanished into the void... Black shadow hands are reaching in! Stay in the center of the aisle!'
+            'Uksed kadusid ära... Tühjusest sirutub välja must varjukäsi! Ära mine selle lähedalegi!',
+            'The doors vanished into the void... A black shadow hand is reaching in! Do not go near it!'
         );
     }
 
@@ -1203,8 +1265,8 @@ export class LastMetroGame {
         if (modal && title && desc) {
             title.innerText = this.lang === 'et' ? 'SA SURID' : 'YOU DIED';
             desc.innerText = this.lang === 'et'
-                ? 'Mustad varjukäed haarasid sinust ja tõmbasid su kihutavast rongist tühjusesse...'
-                : 'Dark shadow hands grabbed you and dragged you from the speeding train into the void...';
+                ? 'Must varjukäsi haaras sinust ja tõmbas su kihutavast rongist tühjusesse...'
+                : 'The dark shadow hand grabbed you and dragged you from the speeding train into the void...';
             modal.style.display = 'flex';
         }
     }
@@ -1213,8 +1275,14 @@ export class LastMetroGame {
         const modal = document.getElementById('death-modal');
         if (modal) modal.style.display = 'none';
 
-        // Reload current carriage safely
-        this.loadCarriage(this.currentCarIndex, this.branchDirection);
+        // Reset completely to the beginning (kui panen retry siis peab täiesti algusesse minema)
+        this.totalCarriagesExplored = 0;
+        this.branchDirection = 'undecided';
+        this.loadCarriage(0, 'undecided');
+        this.showThought(
+            'Ärkasin uuesti esimeses vagunis... Kõik algab otsast peale.',
+            'I awoke back in the first carriage... Everything begins from the start.'
+        );
     }
 
     private startCarriage10JumpScare() {
@@ -1785,23 +1853,33 @@ export class LastMetroGame {
             }
         }
 
-        // 3b. Shadow Hands Reaching Animation & Drag Death Trigger
+        // 3b. Ultra-Realistic Shadow Hand Reaching & Instant Sensitive Death Collision
         if (this.shadowHandsActive && this.state === 'player_free') {
             this.shadowHandsAnimTimer += delta * 4.5;
-            this.shadowHandsGroups.forEach((hand, idx) => {
-                const wave = Math.sin(this.shadowHandsAnimTimer + idx * 1.3);
-                hand.position.y = 1.35 + wave * 0.12;
-                hand.rotation.x = Math.sin(this.shadowHandsAnimTimer * 0.7 + idx) * 0.2;
-                hand.rotation.y = Math.cos(this.shadowHandsAnimTimer * 0.5 + idx) * 0.25;
+            this.shadowHandsGroups.forEach((hand) => {
+                const wave = Math.sin(this.shadowHandsAnimTimer);
+                hand.position.y = 1.35 + wave * 0.14;
+                hand.rotation.x = Math.sin(this.shadowHandsAnimTimer * 0.7) * 0.22;
+                hand.rotation.y = Math.cos(this.shadowHandsAnimTimer * 0.5) * 0.28;
+
+                // Animate articulated fingers flexing and grasping
+                hand.children.forEach(child => {
+                    if (child.name === 'finger') {
+                        child.rotation.z = Math.sin(this.shadowHandsAnimTimer * 2.0) * 0.28;
+                        child.rotation.x = Math.cos(this.shadowHandsAnimTimer * 1.6) * 0.18;
+                    }
+                });
 
                 // Reach inwards toward center aisle
                 const side = hand.position.x > 0 ? 1 : -1;
-                hand.position.x = (side * 1.68) - (side * (0.35 + wave * 0.3));
+                hand.position.x = (side * 1.68) - (side * (0.65 + wave * 0.35));
 
-                // Collision check with player (if player approaches reaching hands or side doorways)
-                const distToPlayer = this.playerPos.distanceTo(hand.position);
-                const nearDoorEdge = (Math.abs(this.playerPos.x) > 0.75 && Math.abs(this.playerPos.z - hand.position.z) < 1.3);
-                if (distToPlayer < 0.9 || nearDoorEdge) {
+                // Ultra-sensitive collision check: even slight contact or entering reach zone triggers instant death
+                const handWorldPos = hand.position;
+                const distToHand = this.playerPos.distanceTo(handWorldPos);
+                const nearDoorWay = (side > 0 ? this.playerPos.x > 0.25 : this.playerPos.x < -0.25) && Math.abs(this.playerPos.z - handWorldPos.z) < 2.0;
+
+                if (distToHand < 1.75 || nearDoorWay) {
                     this.triggerDraggedDeath(side);
                 }
             });

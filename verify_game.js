@@ -1424,15 +1424,15 @@ try {
             await page.evaluate(() => window.__lastMetro.loadCarriage(8, 'right'));
             await new Promise(r => setTimeout(r, 150));
 
-            // Carriage 9 (Ghost Stalker & Void Shadow Hands Event: 1 hand per door = 2 total)
+            // Carriage 9 (Ghost Stalker & Void Shadow Hands Event: 1 hand from 1 side only)
             await page.evaluate(() => {
                 window.__lastMetro.loadCarriage(9, 'right');
                 window.__lastMetro.triggerShadowHandsEvent();
             });
             await new Promise(r => setTimeout(r, 150));
-            const handsActive = await page.evaluate(() => window.__lastMetro.shadowHandsActive && window.__lastMetro.shadowHandsGroups.length === 2);
-            console.log("   Void Shadow Hands active with 1 hand per doorway (Expected: true):", handsActive);
-            if (!handsActive) throw new Error("Shadow hands (1 per door) failed to spawn in Carriage 9!");
+            const handsActive = await page.evaluate(() => window.__lastMetro.shadowHandsActive && window.__lastMetro.shadowHandsGroups.length === 1);
+            console.log("   Void Shadow Hand active with 1 hand from 1 side only (Expected: true):", handsActive);
+            if (!handsActive) throw new Error("Shadow hand (1 side only) failed to spawn in Carriage 9!");
 
             // Test Dragged Death Cutscene & SA SURID Death Screen
             await page.evaluate(() => {
@@ -1447,13 +1447,16 @@ try {
                 throw new Error("SA SURID death screen failed to display properly!");
             }
 
-            // Test Retry / Respawn button
+            // Test Retry / Respawn button (Must reset completely back to Carriage 0 / beginning)
             await page.click('#btn-death-retry');
             await new Promise(r => setTimeout(r, 150));
             const respawnedModalDisplay = await page.$eval('#death-modal', el => window.getComputedStyle(el).display);
-            console.log("   Death Modal Display after Respawn (Expected: none):", respawnedModalDisplay);
-            if (respawnedModalDisplay !== 'none') throw new Error("Death modal failed to close upon respawn!");
-            console.log("   Successfully verified Void Shadow Hands, Dragged Death & Respawn!");
+            const respawnedCarIndex = await page.evaluate(() => window.__lastMetro.currentCarIndex);
+            console.log(`   Death Modal after Retry: ${respawnedModalDisplay}, Reset to Car Index: ${respawnedCarIndex} (Expected: 0)`);
+            if (respawnedModalDisplay !== 'none' || respawnedCarIndex !== 0) {
+                throw new Error("Retry failed to reset game completely back to the beginning (Carriage 0)!");
+            }
+            console.log("   Successfully verified Single Void Shadow Hand, Instant Death, and Full Game Restart on Retry!");
 
             // Carriage 10 (Major Glitch & Jump Scare)
             await page.evaluate(() => window.__lastMetro.loadCarriage(10, 'right'));
