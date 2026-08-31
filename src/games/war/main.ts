@@ -482,12 +482,22 @@ class WarGameEngine {
             chosenTeam = 'blue';
             btnBlue.className = 'select-box selected-blue';
             btnRed!.className = 'select-box';
+            if (chosenClass === 'missile') {
+                chosenClass = 'tank';
+                btnTank!.className = 'select-box selected-class';
+                if (btnMissile) btnMissile.className = 'select-box';
+            }
         });
 
         btnRed?.addEventListener('click', () => {
             chosenTeam = 'red';
             btnRed.className = 'select-box selected-red';
             btnBlue!.className = 'select-box';
+            if (chosenClass === 'missile') {
+                chosenClass = 'tank';
+                btnTank!.className = 'select-box selected-class';
+                if (btnMissile) btnMissile.className = 'select-box';
+            }
         });
 
         btnTank?.addEventListener('click', () => {
@@ -496,6 +506,8 @@ class WarGameEngine {
             btnHuman!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
             if (btnMissile) btnMissile.className = 'select-box';
+            if (chosenTeam === 'blue' && btnBlue) btnBlue.className = 'select-box selected-blue';
+            if (chosenTeam === 'red' && btnRed) btnRed.className = 'select-box selected-red';
         });
 
         btnHuman?.addEventListener('click', () => {
@@ -504,6 +516,8 @@ class WarGameEngine {
             btnTank!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
             if (btnMissile) btnMissile.className = 'select-box';
+            if (chosenTeam === 'blue' && btnBlue) btnBlue.className = 'select-box selected-blue';
+            if (chosenTeam === 'red' && btnRed) btnRed.className = 'select-box selected-red';
         });
 
         btnPlane?.addEventListener('click', () => {
@@ -520,6 +534,8 @@ class WarGameEngine {
             btnTank!.className = 'select-box';
             btnHuman!.className = 'select-box';
             if (btnMissile) btnMissile.className = 'select-box';
+            if (chosenTeam === 'blue' && btnBlue) btnBlue.className = 'select-box selected-blue';
+            if (chosenTeam === 'red' && btnRed) btnRed.className = 'select-box selected-red';
         });
 
         btnMissile?.addEventListener('click', () => {
@@ -528,11 +544,18 @@ class WarGameEngine {
             btnTank!.className = 'select-box';
             btnHuman!.className = 'select-box';
             if (btnPlane) btnPlane.className = 'select-box';
+            if (btnBlue) btnBlue.className = 'select-box';
+            if (btnRed) btnRed.className = 'select-box';
         });
 
         btnConfirm?.addEventListener('click', () => {
-            this.localTeam = chosenTeam;
-            this.localClass = chosenClass;
+            if (chosenClass === 'missile') {
+                this.localTeam = 'missile';
+                this.localClass = 'missile';
+            } else {
+                this.localTeam = (chosenTeam === 'missile' || !chosenTeam) ? 'blue' : chosenTeam;
+                this.localClass = chosenClass;
+            }
             if (deployModal) deployModal.style.display = 'none';
             this.deployLocalUnit();
             if (!this.isRosterSpawned) this.spawnBattleRoster();
@@ -544,20 +567,20 @@ class WarGameEngine {
                 : (this.localClass === 'missile'
                     ? (this.isOwnerLang ? 'RAKETITIIM' : 'MISSILE TEAM')
                     : (this.localClass === 'tank' ? 'TANK' : (this.isOwnerLang ? 'SÕDUR' : 'SOLDIER')));
-            const enteringMsg = this.isOwnerLang
-                ? `🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`
-                : `🚀 Entering battle: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`;
-            this.showToast(enteringMsg, this.localTeam === 'red' ? '#ff4757' : '#00f2fe');
+            const enteringMsg = this.localTeam === 'missile'
+                ? (this.isOwnerLang ? `🚀 Sisened lahingusse: War Server #1 (RAKETITIIM)` : `🚀 Entering battle: War Server #1 (MISSILE TEAM)`)
+                : (this.isOwnerLang ? `🚀 Sisened lahingusse: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})` : `🚀 Entering battle: War Server #1 (${this.localTeam.toUpperCase()} ${classLabel})`);
+            this.showToast(enteringMsg, this.localTeam === 'red' ? '#ff4757' : (this.localTeam === 'missile' ? '#2ed573' : '#00f2fe'));
         });
 
         // Open loadout change button in navbar
         document.getElementById('btn-open-loadout')?.addEventListener('click', () => {
             updatePlaneBadgeUI();
-            chosenTeam = this.localTeam;
+            chosenTeam = this.localTeam === 'missile' ? 'blue' : this.localTeam;
             chosenClass = this.localClass;
             if (btnBlue && btnRed) {
-                btnBlue.className = chosenTeam === 'blue' ? 'select-box selected-blue' : 'select-box';
-                btnRed.className = chosenTeam === 'red' ? 'select-box selected-red' : 'select-box';
+                btnBlue.className = (chosenClass !== 'missile' && chosenTeam === 'blue') ? 'select-box selected-blue' : 'select-box';
+                btnRed.className = (chosenClass !== 'missile' && chosenTeam === 'red') ? 'select-box selected-red' : 'select-box';
             }
             if (btnTank && btnHuman && btnPlane && btnMissile) {
                 btnTank.className = chosenClass === 'tank' ? 'select-box selected-class' : 'select-box';
@@ -576,22 +599,25 @@ class WarGameEngine {
 
     private showToast(message: string, color = '#2ecc71') {
         const toast = document.createElement('div');
-        toast.style.position = 'fixed';
-        toast.style.top = '70px';
-        toast.style.left = '50%';
-        toast.style.transform = 'translateX(-50%)';
-        toast.style.background = 'rgba(10, 15, 25, 0.9)';
-        toast.style.border = `1.5px solid ${color}`;
-        toast.style.color = '#ffffff';
-        toast.style.padding = '10px 22px';
-        toast.style.borderRadius = '30px';
-        toast.style.fontWeight = 'bold';
-        toast.style.fontSize = '0.92rem';
-        toast.style.zIndex = '3000';
-        toast.style.boxShadow = `0 4px 20px ${color}44`;
-        toast.style.backdropFilter = 'blur(8px)';
-        toast.style.transition = 'all 0.3s ease';
+        toast.className = 'playard-toast';
         toast.innerText = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(13, 17, 23, 0.94);
+            border: 1.5px solid ${color};
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            z-index: 9999;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        `;
         document.body.appendChild(toast);
         setTimeout(() => {
             toast.style.opacity = '0';
@@ -622,14 +648,14 @@ class WarGameEngine {
         if (youAreSpan) youAreSpan.innerText = youAreLabel;
 
         if (badge && nameEl) {
-            if (this.localTeam === 'red') {
+            if (this.localClass === 'missile') {
+                badge.className = 'team-missile';
+                badge.style.borderColor = '#2ed573';
+                nameEl.innerText = `🚀 ${this.isOwnerLang ? 'RAKETITIIM' : 'MISSILE TEAM'} · ${this.localUsername}`;
+            } else if (this.localTeam === 'red') {
                 badge.className = 'team-red';
                 badge.style.borderColor = '#e74c3c';
                 nameEl.innerText = `🔴 RED TEAM · ${roleIcon} · ${this.localUsername}`;
-            } else if (this.localTeam === 'missile') {
-                badge.className = 'team-missile';
-                badge.style.borderColor = '#2ed573';
-                nameEl.innerText = `🚀 ${this.isOwnerLang ? 'RAKETITIIM' : 'MISSILE TEAM'} · ${roleIcon} · ${this.localUsername}`;
             } else {
                 badge.className = 'team-blue';
                 badge.style.borderColor = '#3498db';
@@ -1081,7 +1107,7 @@ class WarGameEngine {
     // --- Base Spawn Positioning ---
     private getRandomBaseSpawn(team: Team, unitClass: UnitClass): { pos: THREE.Vector3; rot: number } {
         const isRed = team === 'red';
-        const isMissileTeam = team === 'missile';
+        const isMissileTeam = team === 'missile' || unitClass === 'missile';
         const rot = isRed ? Math.PI : (isMissileTeam ? Math.PI / 2 : 0);
 
         if (isMissileTeam) {

@@ -743,6 +743,9 @@ try {
         if (!missileRoleBadgeText.includes('MISSILE') && !missileRoleBadgeText.includes('RAKETITIIM')) {
             throw new Error(`Expected badge to reflect MISSILE / RAKETITIIM, got: ${missileRoleBadgeText}`);
         }
+        if (missileRoleBadgeText.includes('RED TEAM') || missileRoleBadgeText.includes('BLUE TEAM')) {
+            throw new Error(`Raketitiim player must NOT be assigned to Red or Blue team! Badge: ${missileRoleBadgeText}`);
+        }
 
         // Test 10s Missile Strike & Satellite Targeting HUD for Raketitiim Role
         const missileCardDisplay = await page.$eval('#weapon-missile', el => window.getComputedStyle(el).display);
