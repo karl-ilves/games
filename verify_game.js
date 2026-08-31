@@ -1424,15 +1424,15 @@ try {
             await page.evaluate(() => window.__lastMetro.loadCarriage(8, 'right'));
             await new Promise(r => setTimeout(r, 150));
 
-            // Carriage 9 (Ghost Stalker & Void Shadow Hands Event)
+            // Carriage 9 (Ghost Stalker & Void Shadow Hands Event: 1 hand per door = 2 total)
             await page.evaluate(() => {
                 window.__lastMetro.loadCarriage(9, 'right');
                 window.__lastMetro.triggerShadowHandsEvent();
             });
             await new Promise(r => setTimeout(r, 150));
-            const handsActive = await page.evaluate(() => window.__lastMetro.shadowHandsActive && window.__lastMetro.shadowHandsGroups.length >= 4);
-            console.log("   Void Shadow Hands active with 3D meshes (Expected: true):", handsActive);
-            if (!handsActive) throw new Error("Shadow hands failed to spawn in Carriage 9!");
+            const handsActive = await page.evaluate(() => window.__lastMetro.shadowHandsActive && window.__lastMetro.shadowHandsGroups.length === 2);
+            console.log("   Void Shadow Hands active with 1 hand per doorway (Expected: true):", handsActive);
+            if (!handsActive) throw new Error("Shadow hands (1 per door) failed to spawn in Carriage 9!");
 
             // Test Dragged Death Cutscene & SA SURID Death Screen
             await page.evaluate(() => {

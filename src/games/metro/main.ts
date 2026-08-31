@@ -105,8 +105,7 @@ export class LastMetroGame {
 
     // Intro Cutscene Timers & Animation State
     private introSideDoorsOpen: boolean = false;
-    private introSideDoorsLeft: THREE.Mesh | null = null;
-    private introSideDoorsRight: THREE.Mesh | null = null;
+    private sideDoorMeshes: { mesh: THREE.Mesh; baseZ: number; dir: number }[] = [];
     private introTimeouts: any[] = [];
     private introCameraTarget: THREE.Vector3 = new THREE.Vector3(3.8, 1.6, -3.5);
     private introLookTarget: THREE.Vector3 = new THREE.Vector3(0, 1.2, -25);
@@ -470,61 +469,53 @@ export class LastMetroGame {
         const wallColor = theme === 'abandoned' ? 0x3d3d3d : theme === 'neon' ? 0x1e272e : 0xf1f2f6;
         const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.7 });
 
-        // Left Solid Wall (-carWidth/2)
-        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, carLength), wallMat);
-        leftWall.position.set(-carWidth / 2, carHeight / 2, 0);
-        carGroup.add(leftWall);
+        this.sideDoorMeshes = [];
 
-        // Right Wall with Central Entry Way (+carWidth/2)
-        const rightWallFront = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
-        rightWallFront.position.set(carWidth / 2, carHeight / 2, 5.6);
-        carGroup.add(rightWallFront);
+        // Build left and right walls with central door entryways at z = 0
+        [-carWidth / 2, carWidth / 2].forEach(x => {
+            const wallFront = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
+            wallFront.position.set(x, carHeight / 2, 5.6);
+            carGroup.add(wallFront);
 
-        const rightWallBack = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
-        rightWallBack.position.set(carWidth / 2, carHeight / 2, -5.6);
-        carGroup.add(rightWallBack);
+            const wallBack = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
+            wallBack.position.set(x, carHeight / 2, -5.6);
+            carGroup.add(wallBack);
 
-        const rightWallTop = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight - 2.2, 2.4), wallMat);
-        rightWallTop.position.set(carWidth / 2, 2.2 + (carHeight - 2.2) / 2, 0);
-        carGroup.add(rightWallTop);
+            const wallTop = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight - 2.2, 2.4), wallMat);
+            wallTop.position.set(x, 2.2 + (carHeight - 2.2) / 2, 0);
+            carGroup.add(wallTop);
 
-        // Pneumatic Sliding Side Doors on Platform Side
-        const doorLeafMat = new THREE.MeshStandardMaterial({
-            color: theme === 'abandoned' ? 0x7f1d1d : 0x10ac84,
-            metalness: 0.6,
-            roughness: 0.35
+            // Pneumatic Sliding Doors in each doorway
+            const doorLeafMat = new THREE.MeshStandardMaterial({
+                color: theme === 'abandoned' ? 0x7f1d1d : 0x10ac84,
+                metalness: 0.6,
+                roughness: 0.35
+            });
+            const doorGlassMat = new THREE.MeshBasicMaterial({ color: 0x010204 });
+
+            const leftLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
+            const leftWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
+            leftWin.position.set(0, 0.25, 0);
+            leftLeaf.add(leftWin);
+            leftLeaf.position.set(x, 1.1, -0.55);
+            carGroup.add(leftLeaf);
+            this.sideDoorMeshes.push({ mesh: leftLeaf, baseZ: -0.55, dir: -1 });
+
+            const rightLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
+            const rightWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
+            rightWin.position.set(0, 0.25, 0);
+            rightLeaf.add(rightWin);
+            rightLeaf.position.set(x, 1.1, 0.55);
+            carGroup.add(rightLeaf);
+            this.sideDoorMeshes.push({ mesh: rightLeaf, baseZ: 0.55, dir: 1 });
         });
-        const doorGlassMat = new THREE.MeshPhysicalMaterial({ color: 0x00f2fe, transmission: 0.8, roughness: 0.1 });
 
-        const leftDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
-        const leftDoorWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
-        leftDoorWin.position.set(0, 0.25, 0);
-        leftDoorLeaf.add(leftDoorWin);
-        leftDoorLeaf.position.set(carWidth / 2, 1.1, -0.55);
-        carGroup.add(leftDoorLeaf);
-        this.introSideDoorsLeft = leftDoorLeaf;
-
-        const rightDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
-        const rightDoorWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
-        rightDoorWin.position.set(0, 0.25, 0);
-        rightDoorLeaf.add(rightDoorWin);
-        rightDoorLeaf.position.set(carWidth / 2, 1.1, 0.55);
-        carGroup.add(rightDoorLeaf);
-        this.introSideDoorsRight = rightDoorLeaf;
-
-        // Windows (semi-transparent glass)
-        const glassMat = new THREE.MeshPhysicalMaterial({
-            color: 0x111625,
-            transparent: true,
-            opacity: 0.45,
-            roughness: 0.1,
-            metalness: 0.8,
-            transmission: 0.7
-        });
+        // Windows (Pure pitch-black void out of windows - "aknast pole midagi näha")
+        const blackGlassMat = new THREE.MeshBasicMaterial({ color: 0x010204 });
         [-carWidth / 2, carWidth / 2].forEach(x => {
             for (let z = -7; z <= 7; z += 4.5) {
-                if (x > 0 && Math.abs(z) < 2) continue; // skip door entry
-                const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.1, 2.5), glassMat);
+                if (Math.abs(z) < 2) continue; // skip door entry
+                const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.1, 2.5), blackGlassMat);
                 windowPane.position.set(x, 1.6, z);
                 carGroup.add(windowPane);
             }
@@ -759,6 +750,45 @@ export class LastMetroGame {
         signMesh.position.set(0, 2.12, -dir * 0.12);
         doorGroup.add(signMesh);
 
+        // Creepy Red-Faced Entity Standing Behind Locked Back Door (iga vaguni taga punase näoga keegi vaatab)
+        if (isLockedBackDoor) {
+            const redFaceGroup = new THREE.Group();
+
+            // Dark shadowy body silhouette
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x050507, roughness: 0.95 });
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 1.8), bodyMat);
+            body.position.set(0, 0.9, 0);
+            redFaceGroup.add(body);
+
+            // Glowing Crimson Red Face (Punane Nägu)
+            const faceMat = new THREE.MeshStandardMaterial({
+                color: 0xff1744,
+                emissive: 0xd50000,
+                emissiveIntensity: 0.85,
+                roughness: 0.25
+            });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), faceMat);
+            head.position.set(0, 1.46, 0);
+            redFaceGroup.add(head);
+
+            // Piercing Glowing Eyes
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            [-0.055, 0.055].forEach(ex => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), eyeMat);
+                eye.position.set(ex, 1.48, -dir * 0.16);
+                redFaceGroup.add(eye);
+            });
+
+            // Glowing Crimson Point Light to make the red face clearly visible
+            const redGlow = new THREE.PointLight(0xff1744, 2.2, 3.8);
+            redGlow.position.set(0, 1.48, -dir * 0.22);
+            redFaceGroup.add(redGlow);
+
+            // Position right behind the glass window of the locked door
+            redFaceGroup.position.set(0, 0, dir * 0.55);
+            doorGroup.add(redFaceGroup);
+        }
+
         return doorGroup;
     }
 
@@ -903,10 +933,10 @@ export class LastMetroGame {
         this.currentCarriage = this.createCarriageGeometry(index, this.branchDirection, theme);
         this.scene.add(this.currentCarriage.group);
 
-        // Position player at entrance door and set free movement
+        // Position player at entrance door and set free movement facing forward down the aisle
         this.state = 'player_free';
         this.playerPos.set(0, 1.6, branch === 'left' ? 7.5 : -7.5);
-        this.cameraEuler.y = branch === 'left' ? Math.PI : 0;
+        this.cameraEuler.y = branch === 'left' ? 0 : Math.PI;
 
         // Play heavy door latch audio
         metroAudio.playDoorLatch();
@@ -1060,17 +1090,17 @@ export class LastMetroGame {
 
     // --- Shadow Hands Void Emergence (Mustad Käed) ---
 
-    public createShadowHandMesh(side: number, zOffset: number): THREE.Group {
+    public createShadowHandMesh(side: number, zOffset: number = 0): THREE.Group {
         const handGroup = new THREE.Group();
         const armMat = new THREE.MeshStandardMaterial({
-            color: 0x08090d,
+            color: 0x050608,
             roughness: 0.85,
             metalness: 0.3
         });
         const clawMat = new THREE.MeshBasicMaterial({ color: 0x1f0b24 });
-        const tipMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
+        const tipMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
 
-        // Forearm reaching through doorway
+        // Forearm reaching directly out of the door frame
         const armGeo = new THREE.CylinderGeometry(0.06, 0.1, 1.35, 8);
         const arm = new THREE.Mesh(armGeo, armMat);
         arm.rotation.z = side > 0 ? -Math.PI / 2.6 : Math.PI / 2.6;
@@ -1100,12 +1130,12 @@ export class LastMetroGame {
             handGroup.add(fingerBase);
         }
 
-        // Dark mist point light
-        const handGlow = new THREE.PointLight(0x8e44ad, 1.2, 3.5);
+        // Glowing red mist point light
+        const handGlow = new THREE.PointLight(0xff1744, 1.8, 4.0);
         handGlow.position.set(-side * 0.9, 0.2, 0);
         handGroup.add(handGlow);
 
-        handGroup.position.set(side * 1.68, 1.4, zOffset);
+        handGroup.position.set(side * 1.68, 1.35, zOffset);
         return handGroup;
     }
 
@@ -1114,8 +1144,7 @@ export class LastMetroGame {
         this.shadowHandsActive = true;
 
         // Doors vanish completely (uksi pole näha!)
-        if (this.introSideDoorsLeft) this.introSideDoorsLeft.visible = false;
-        if (this.introSideDoorsRight) this.introSideDoorsRight.visible = false;
+        this.sideDoorMeshes.forEach(d => d.mesh.visible = false);
 
         // Play scary audio
         metroAudio.playDoorSlide(true);
@@ -1129,13 +1158,11 @@ export class LastMetroGame {
             });
         }
 
-        // Spawn multiple shadow hands on both sides reaching through empty doorways
+        // Exactly 1 hand per door (1 from left doorway at z=0, 1 from right doorway at z=0)
         [-1, 1].forEach(side => {
-            [-1.5, 0, 1.5].forEach(zOffset => {
-                const hand = this.createShadowHandMesh(side, zOffset);
-                this.scene.add(hand);
-                this.shadowHandsGroups.push(hand);
-            });
+            const hand = this.createShadowHandMesh(side, 0);
+            this.scene.add(hand);
+            this.shadowHandsGroups.push(hand);
         });
 
         this.showThought(
@@ -1456,6 +1483,9 @@ export class LastMetroGame {
         this.state = 'player_free';
         this.playerPos.y = 1.6;
         this.playerPos.x = 0; // step into aisle
+        if (this.currentCarIndex === 0) {
+            this.cameraEuler.y = Math.PI; // Look forward down the aisle towards +Z
+        }
         const standBtn = document.getElementById('btn-stand-up');
         if (standBtn) standBtn.style.display = 'none';
         metroAudio.playFootstep();
@@ -1705,12 +1735,11 @@ export class LastMetroGame {
         }
 
         // Side sliding doors animation
-        if (this.introSideDoorsLeft && this.introSideDoorsRight) {
-            const targetLeft = this.introSideDoorsOpen ? -1.6 : -0.55;
-            const targetRight = this.introSideDoorsOpen ? 1.6 : 0.55;
-            this.introSideDoorsLeft.position.z = THREE.MathUtils.lerp(this.introSideDoorsLeft.position.z, targetLeft, delta * 6);
-            this.introSideDoorsRight.position.z = THREE.MathUtils.lerp(this.introSideDoorsRight.position.z, targetRight, delta * 6);
-        }
+        const openOffset = this.introSideDoorsOpen ? 0.95 : 0;
+        this.sideDoorMeshes.forEach(door => {
+            const targetZ = door.baseZ + door.dir * openOffset;
+            door.mesh.position.z = THREE.MathUtils.lerp(door.mesh.position.z, targetZ, delta * 6);
+        });
 
         // 1. Move passing tunnel for sense of forward subway speed
         if (this.trainSpeed > 0) {
