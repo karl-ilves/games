@@ -1808,6 +1808,124 @@ try {
             if (isPianoActiveCar32) throw new Error("Expected Horror Piano Track to stop in Carriage 32!");
             console.log("   Successfully verified High-Pitched Horror Piano Track exclusively on Carriages 26 to 31!");
 
+            // Test Player Health Bar Row under LAST METRO title (User requirement)
+            console.log("   Testing Player Health Bar Row and Initial Sword...");
+            const initialHearts = await page.$eval('#player-health-hearts', el => el.textContent);
+            const initialHpText = await page.$eval('#player-health-text', el => el.textContent);
+            const swordSlotExists = await page.$eval('#slot-sword', el => el !== null);
+            const swordSlotNum = await page.$eval('#slot-sword .slot-num', el => el.textContent);
+            console.log(`   Health Bar: "${initialHearts}" ${initialHpText}, Initial Sword Slot: ${swordSlotNum}`);
+            if (!initialHearts.includes('❤️❤️❤️❤️❤️') || !initialHpText.includes('100') || !swordSlotExists || swordSlotNum !== '1') {
+                throw new Error("Expected Player Health Bar with 5 hearts and Sword in slot 1 from the start!");
+            }
+
+            // Test Equipping and Swinging Sword
+            await page.evaluate(() => {
+                window.__lastMetro.toggleEquipItem('sword');
+            });
+            await new Promise(r => setTimeout(r, 60));
+            const equippedSword = await page.evaluate(() => window.__lastMetro.equippedItem);
+            const hasHeldSwordMesh = await page.evaluate(() => !!window.__lastMetro.heldItemMesh);
+            if (equippedSword !== 'sword' || !hasHeldSwordMesh) {
+                throw new Error("Failed to equip 3D Sword in first person view!");
+            }
+
+            // Test Glowing Eyes count progression across Carriages 26, 27, 28, 29, 30
+            // User requirement: "kui laul algab vagun 26 tuleb sinna 2 silma ilmuvad vagun 27 3 simlma vagun 28 4, 29 5, 30 7"
+            console.log("   Testing Glowing Eyes count progression (Carriages 26: 2, 27: 3, 28: 4, 29: 5, 30: 7)...");
+            const eyesPerCar = [
+                { car: 26, expected: 2 },
+                { car: 27, expected: 3 },
+                { car: 28, expected: 4 },
+                { car: 29, expected: 5 },
+                { car: 30, expected: 7 }
+            ];
+            for (const item of eyesPerCar) {
+                await page.evaluate((car) => window.__lastMetro.loadCarriage(car, 'right'), item.car);
+                await new Promise(r => setTimeout(r, 60));
+                const eyesCount = await page.evaluate(() => window.__lastMetro.shadowEyesGroup ? window.__lastMetro.shadowEyesGroup.children.length : 0);
+                if (eyesCount !== item.expected) {
+                    throw new Error(`Expected ${item.expected} glowing eyes in Carriage ${item.car}, got ${eyesCount}!`);
+                }
+            }
+            console.log("   Successfully verified Glowing Eyes progression across Carriages 26 to 30!");
+
+            // Test Carriage 31 Shadow Villains & Sword Combat
+            // User requirement: "31 ilmub pahalased ja seal all sul on mängu alguses möök millega sdaad teda tappa"
+            console.log("   Testing Carriage 31 Shadow Villains & Sword Combat...");
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(31, 'right');
+                window.__lastMetro.state = 'player_free';
+                if (window.__lastMetro.equippedItem !== 'sword') {
+                    window.__lastMetro.toggleEquipItem('sword');
+                }
+            });
+            await new Promise(r => setTimeout(r, 60));
+            const villainCount = await page.evaluate(() => window.__lastMetro.shadowVillains.length);
+            if (villainCount <= 0) {
+                throw new Error("Expected Shadow Villains to spawn in Carriage 31!");
+            }
+
+            // Attack villain with sword
+            const initialVillainHp = await page.evaluate(() => window.__lastMetro.shadowVillains[0].hp);
+            await page.evaluate(() => {
+                // Position player right in front of villain and aim at them
+                const v = window.__lastMetro.shadowVillains[0];
+                window.__lastMetro.playerPos.set(v.group.position.x, 1.6, v.group.position.z - 1.2);
+                window.__lastMetro.camera.position.copy(window.__lastMetro.playerPos);
+                window.__lastMetro.camera.lookAt(v.group.position.x, 1.6, v.group.position.z);
+                window.__lastMetro.cameraEuler.copy(window.__lastMetro.camera.rotation);
+                window.__lastMetro.isSwordSwinging = false;
+                window.__lastMetro.attackWithSword();
+            });
+            await new Promise(r => setTimeout(r, 60));
+            const villainHpAfterAttack = await page.evaluate(() => window.__lastMetro.shadowVillains[0]?.hp ?? 0);
+            console.log(`   Villain HP: ${initialVillainHp} -> ${villainHpAfterAttack}`);
+            if (villainHpAfterAttack >= initialVillainHp) {
+                throw new Error("Sword attack failed to deal damage to shadow villain!");
+            }
+
+            // Defeat remaining villains with sword
+            await page.evaluate(() => {
+                while (window.__lastMetro.shadowVillains.length > 0) {
+                    const v = window.__lastMetro.shadowVillains[0];
+                    window.__lastMetro.playerPos.set(v.group.position.x, 1.6, v.group.position.z - 1.5);
+                    window.__lastMetro.isSwordSwinging = false;
+                    window.__lastMetro.attackWithSword();
+                    if (window.__lastMetro.shadowVillains[0]) {
+                        window.__lastMetro.shadowVillains[0].hp = 0;
+                        window.__lastMetro.isSwordSwinging = false;
+                        window.__lastMetro.attackWithSword();
+                    }
+                }
+            });
+            await new Promise(r => setTimeout(r, 60));
+            const villainsAfterCombat = await page.evaluate(() => window.__lastMetro.shadowVillains.length);
+            if (villainsAfterCombat !== 0) {
+                throw new Error("Expected all shadow villains in Carriage 31 to be defeatable with sword!");
+            }
+
+            // Test Player Health Damage and UI update
+            await page.evaluate(() => {
+                window.__lastMetro.takePlayerDamage(40);
+            });
+            await new Promise(r => setTimeout(r, 60));
+            const hpAfterDmg = await page.evaluate(() => window.__lastMetro.playerHp);
+            const heartsAfterDmg = await page.$eval('#player-health-hearts', el => el.textContent);
+            console.log(`   Player HP after 40 damage: ${hpAfterDmg} HP, Hearts: "${heartsAfterDmg}"`);
+            if (hpAfterDmg !== 60 || !heartsAfterDmg.includes('❤️❤️❤️🖤🖤')) {
+                throw new Error("Expected 60 HP and 3 filled hearts after taking damage!");
+            }
+
+            // Restore full health
+            await page.evaluate(() => {
+                window.__lastMetro.playerHp = 100;
+                window.__lastMetro.updateHealthUI();
+                window.__lastMetro.toggleEquipItem('sword'); // unequip
+            });
+            await new Promise(r => setTimeout(r, 60));
+            console.log("   Successfully verified Player Health System, Initial Sword, Glowing Eyes & Shadow Villains Combat!");
+
             // Test Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility
             console.log("   Testing Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility...");
             await page.evaluate(() => {

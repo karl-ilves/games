@@ -1174,6 +1174,101 @@ export class MetroAudioEngine {
         osc.stop(now + 0.18);
     }
 
+    // Sword Slash / Combat Swing Audio
+    public playSwordSlash() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const bufferSize = this.ctx.sampleRate * 0.22;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1400, now);
+        filter.frequency.exponentialRampToValueAtTime(320, now + 0.2);
+        filter.Q.setValueAtTime(3.0, now);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.35, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.21);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        noise.start(now);
+        noise.stop(now + 0.22);
+    }
+
+    public playMonsterHit() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(65, now + 0.18);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+
+    public playMonsterDeath() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.6);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.7);
+    }
+
+    public playPlayerHurt() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.28);
+    }
+
     public playStandUp() {
         this.initContext();
         if (!this.ctx || !this.masterGain || this.isMuted) return;

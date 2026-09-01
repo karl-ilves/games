@@ -561,12 +561,19 @@
 
     <!-- Top HUD Navigation -->
     <div class="top-hud">
-        <div class="hud-left">
-            <a href="../../index.html" class="logo-badge">
-                <span>🚇</span>
-                <span id="hud-game-title">LAST METRO</span>
-            </a>
-            <span class="owner-pill">👑 PLAYARD OWNER</span>
+        <div class="hud-left" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <a href="../../index.html" class="logo-badge">
+                    <span>🚇</span>
+                    <span id="hud-game-title">LAST METRO</span>
+                </a>
+                <span class="owner-pill">👑 PLAYARD OWNER</span>
+            </div>
+            <!-- Player Health Row (User requirement) -->
+            <div id="player-health-bar-container" style="display: flex; align-items: center; gap: 6px; background: rgba(0, 0, 0, 0.65); padding: 3px 10px; border-radius: 12px; border: 1.5px solid rgba(255, 71, 87, 0.45); backdrop-filter: blur(8px);">
+                <span id="player-health-hearts" style="font-size: 0.92rem; letter-spacing: 2px;">❤️❤️❤️❤️❤️</span>
+                <span id="player-health-text" style="font-size: 0.78rem; font-weight: 800; color: #ff4757;">100 HP</span>
+            </div>
         </div>
 
         <div class="hud-center">

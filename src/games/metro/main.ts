@@ -223,6 +223,18 @@ export class LastMetroGame {
     public shadowRushCountdown: number = 0;
     public carriage20EventTriggered: boolean = false;
 
+    // Player Health System (User requirement: "rida mis näitab su elusi vasakul üleval nurgas viimane metroo teksti all")
+    public playerHp: number = 100;
+    public maxPlayerHp: number = 100;
+
+    // Glowing Eyes Anomaly State (Carriages 26 - 30)
+    public shadowEyesGroup: THREE.Group | null = null;
+
+    // Shadow Villains State (Carriage 31 - "ilmub pahalased")
+    public shadowVillains: { group: THREE.Group; hp: number; maxHp: number; attackCooldown: number; bodyMesh: THREE.Mesh }[] = [];
+    public isSwordSwinging: boolean = false;
+    private swordSwingTimer: number = 0;
+
     constructor() {
         const cont = document.getElementById('canvas-container');
         if (!cont) throw new Error("Canvas container not found!");
@@ -282,6 +294,12 @@ export class LastMetroGame {
 
         // 4. Build Initial Carriage (Carriage 0)
         this.loadCarriage(0, 'undecided');
+
+        // Player starts with Sword in inventory & Full Health (User requirement)
+        this.inventory['sword'] = true;
+        this.playerHp = 100;
+        this.updateHealthUI();
+        this.updateHotbarUI();
 
         // 5. Input Listeners
         this.setupInputs();
@@ -2117,12 +2135,13 @@ export class LastMetroGame {
         hotbar.innerHTML = '';
 
         const itemDefs: { key: string; icon: string; nameEt: string; nameEn: string; slot: number }[] = [
-            { key: 'key', icon: '🗝️', nameEt: 'Võti', nameEn: 'Key', slot: 1 },
-            { key: 'night_vision', icon: '👓', nameEt: 'Ööprillid', nameEn: 'NV Goggles', slot: 2 },
-            { key: 'speed_boost', icon: '👟', nameEt: 'Kiirus', nameEn: 'Speed', slot: 3 },
-            { key: 'clue_detector', icon: '🔍', nameEt: 'Vihjeandur', nameEn: 'Detector', slot: 4 },
-            { key: 'secret_pass', icon: '🎟️', nameEt: 'Salapilet', nameEn: 'Secret Pass', slot: 5 },
-            { key: 'radio', icon: '📻', nameEt: 'Raadio', nameEn: 'Radio', slot: 6 }
+            { key: 'sword', icon: '⚔️', nameEt: 'Mõõk', nameEn: 'Sword', slot: 1 },
+            { key: 'key', icon: '🗝️', nameEt: 'Võti', nameEn: 'Key', slot: 2 },
+            { key: 'night_vision', icon: '👓', nameEt: 'Ööprillid', nameEn: 'NV Goggles', slot: 3 },
+            { key: 'speed_boost', icon: '👟', nameEt: 'Kiirus', nameEn: 'Speed', slot: 4 },
+            { key: 'clue_detector', icon: '🔍', nameEt: 'Vihjeandur', nameEn: 'Detector', slot: 5 },
+            { key: 'secret_pass', icon: '🎟️', nameEt: 'Salapilet', nameEn: 'Secret Pass', slot: 6 },
+            { key: 'radio', icon: '📻', nameEt: 'Raadio', nameEn: 'Radio', slot: 7 }
         ];
 
         itemDefs.forEach(def => {
@@ -2144,10 +2163,277 @@ export class LastMetroGame {
         });
     }
 
+    public updateHealthUI() {
+        const heartsEl = document.getElementById('player-health-hearts');
+        const textEl = document.getElementById('player-health-text');
+        if (!heartsEl || !textEl) return;
+
+        const hp = Math.max(0, Math.min(100, this.playerHp));
+        textEl.innerText = `${hp} HP`;
+
+        // 5 Hearts display
+        const filledHearts = Math.ceil(hp / 20);
+        let heartsStr = '';
+        for (let i = 0; i < 5; i++) {
+            heartsStr += (i < filledHearts) ? '❤️' : '🖤';
+        }
+        heartsEl.innerText = heartsStr;
+
+        if (hp <= 30) {
+            textEl.style.color = '#ff4757';
+        } else if (hp <= 60) {
+            textEl.style.color = '#ffd32a';
+        } else {
+            textEl.style.color = '#2ed573';
+        }
+    }
+
+    public takePlayerDamage(amount: number, reasonEt?: string, reasonEn?: string) {
+        if (this.state !== 'player_free') return;
+        this.playerHp = Math.max(0, this.playerHp - amount);
+        this.updateHealthUI();
+        metroAudio.playPlayerHurt();
+
+        const flashOverlay = document.getElementById('scare-flash-overlay');
+        if (flashOverlay) {
+            flashOverlay.style.display = 'block';
+            flashOverlay.style.opacity = '0.7';
+            setTimeout(() => {
+                flashOverlay.style.opacity = '0';
+                setTimeout(() => flashOverlay.style.display = 'none', 300);
+            }, 150);
+        }
+
+        if (this.playerHp <= 0) {
+            this.state = 'dead';
+            const deathModal = document.getElementById('death-modal');
+            const dTitle = document.getElementById('death-title');
+            const dDesc = document.getElementById('death-desc');
+            if (dTitle) dTitle.textContent = this.lang === 'et' ? 'SA SURID' : 'YOU DIED';
+            if (dDesc) {
+                dDesc.textContent = this.lang === 'et'
+                    ? (reasonEt || 'Must vari ja pahalased võtsid su elud!')
+                    : (reasonEn || 'Your health reached zero!');
+            }
+            if (deathModal) deathModal.style.display = 'flex';
+            this.updateCursorState();
+        }
+    }
+
+    public attackWithSword() {
+        if (this.equippedItem !== 'sword' || this.isSwordSwinging) return;
+        this.isSwordSwinging = true;
+        this.swordSwingTimer = 0.28;
+        metroAudio.playSwordSlash();
+
+        // Find closest villain in range
+        let closestVillain: typeof this.shadowVillains[0] | null = null;
+        let closestDist = Infinity;
+        let closestIndex = -1;
+        const playerPos = this.playerPos;
+
+        for (let i = 0; i < this.shadowVillains.length; i++) {
+            const v = this.shadowVillains[i];
+            const dx = v.group.position.x - playerPos.x;
+            const dz = v.group.position.z - playerPos.z;
+            const dist2D = Math.sqrt(dx * dx + dz * dz);
+
+            if (dist2D < 4.0 && dist2D < closestDist) {
+                closestDist = dist2D;
+                closestVillain = v;
+                closestIndex = i;
+            }
+        }
+
+        if (closestVillain && closestIndex >= 0) {
+            closestVillain.hp -= 40;
+            metroAudio.playMonsterHit();
+
+            const origMat = closestVillain.bodyMesh.material;
+            closestVillain.bodyMesh.material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            setTimeout(() => {
+                if (closestVillain?.bodyMesh) closestVillain.bodyMesh.material = origMat;
+            }, 120);
+
+            if (closestVillain.hp <= 0) {
+                metroAudio.playMonsterDeath();
+                this.scene.remove(closestVillain.group);
+                this.shadowVillains.splice(closestIndex, 1);
+                this.coins += 15;
+                this.updateCoinsUI();
+                this.showThought(
+                    '⚔️ Pahalane alistatud! (+15 Coini)',
+                    '⚔️ Shadow Villain Defeated! (+15 Coins)',
+                    3000
+                );
+            }
+        }
+    }
+
+    public spawnGlowingShadowEyes(count: number) {
+        if (this.shadowEyesGroup) {
+            this.scene.remove(this.shadowEyesGroup);
+            this.shadowEyesGroup = null;
+        }
+
+        const group = new THREE.Group();
+        group.name = 'shadow_eyes_group';
+
+        const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const smokeMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a, transparent: true, opacity: 0.6 });
+
+        // Positions along windows, roof corners, and aisle
+        const candidatePositions = [
+            new THREE.Vector3(-1.42, 1.7, -3.0),
+            new THREE.Vector3(1.42, 1.8, -1.0),
+            new THREE.Vector3(-1.42, 1.6, 2.5),
+            new THREE.Vector3(1.42, 1.75, 4.2),
+            new THREE.Vector3(0, 2.4, -4.5),
+            new THREE.Vector3(-1.3, 2.2, 0.5),
+            new THREE.Vector3(1.3, 2.3, -2.5)
+        ];
+
+        for (let i = 0; i < count; i++) {
+            const eyeGroup = new THREE.Group();
+            const pos = candidatePositions[i % candidatePositions.length];
+
+            // Pair of piercing red eyes
+            [-0.05, 0.05].forEach(ex => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), eyeGlowMat);
+                eye.position.set(ex, 0, 0);
+                eyeGroup.add(eye);
+
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 6), pupilMat);
+                pupil.position.set(ex, 0, 0.038);
+                eyeGroup.add(pupil);
+            });
+
+            // Surrounding dark shadow aura
+            const halo = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), smokeMat);
+            halo.scale.set(1.5, 0.8, 1.0);
+            eyeGroup.add(halo);
+
+            eyeGroup.position.copy(pos);
+            group.add(eyeGroup);
+        }
+
+        this.shadowEyesGroup = group;
+        this.scene.add(this.shadowEyesGroup);
+    }
+
+    public spawnShadowVillains(count: number = 2) {
+        // Clear existing villains
+        this.shadowVillains.forEach(v => this.scene.remove(v.group));
+        this.shadowVillains = [];
+
+        const villainMat = new THREE.MeshStandardMaterial({
+            color: 0x050508,
+            roughness: 0.8,
+            metalness: 0.2,
+            emissive: 0x220000,
+            emissiveIntensity: 0.7
+        });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+        const smokeMat = new THREE.MeshBasicMaterial({ color: 0x0a0000, transparent: true, opacity: 0.65 });
+
+        const startPositions = [
+            new THREE.Vector3(0, 0, 4.5),
+            new THREE.Vector3(-0.6, 0, 6.5)
+        ];
+
+        for (let i = 0; i < count; i++) {
+            const vGroup = new THREE.Group();
+            const pos = startPositions[i % startPositions.length];
+
+            // 1. Dark Menacing Body Torso
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.32, 1.3, 8), villainMat);
+            body.position.set(0, 0.85, 0);
+            vGroup.add(body);
+
+            // 2. Horned / Spiky Shadow Head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 10), villainMat);
+            head.position.set(0, 1.7, 0);
+            vGroup.add(head);
+
+            // Red glowing eyes
+            [-0.08, 0.08].forEach(ex => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
+                eye.position.set(ex, 1.72, 0.18);
+                vGroup.add(eye);
+            });
+
+            // Shadow Claws
+            [-0.38, 0.38].forEach(cx => {
+                const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.65, 0.1), villainMat);
+                arm.position.set(cx, 1.2, 0.2);
+                arm.rotation.x = Math.PI / 4;
+                vGroup.add(arm);
+            });
+
+            // Dark shadowy aura
+            const aura = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 8), smokeMat);
+            aura.position.set(0, 1.2, 0);
+            vGroup.add(aura);
+
+            vGroup.position.copy(pos);
+            this.scene.add(vGroup);
+
+            this.shadowVillains.push({
+                group: vGroup,
+                hp: 80,
+                maxHp: 80,
+                attackCooldown: 1.0,
+                bodyMesh: body
+            });
+        }
+    }
+
     private createHeldItemModel(itemKey: string): THREE.Group {
         const group = new THREE.Group();
 
-        if (itemKey === 'key') {
+        if (itemKey === 'sword') {
+            // Radiant Steel & Gold Mystery Sword (User requirement)
+            const hiltMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.8 });
+            const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.95, roughness: 0.2 });
+            const steelMat = new THREE.MeshStandardMaterial({ color: 0xdfe6e9, metalness: 0.95, roughness: 0.1, emissive: 0x00f2fe, emissiveIntensity: 0.15 });
+
+            // Grip / Handle
+            const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.16, 8), hiltMat);
+            grip.position.set(0, -0.06, 0);
+            group.add(grip);
+
+            // Pommel
+            const pommel = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), goldMat);
+            pommel.position.set(0, -0.15, 0);
+            group.add(pommel);
+
+            // Crossguard
+            const guard = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.025, 0.04), goldMat);
+            guard.position.set(0, 0.025, 0);
+            group.add(guard);
+
+            // Long Sharp Steel Blade
+            const blade = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.52, 0.01), steelMat);
+            blade.position.set(0, 0.28, 0);
+            group.add(blade);
+
+            // Blade Tip
+            const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.1, 4), steelMat);
+            tip.position.set(0, 0.59, 0);
+            tip.rotation.y = Math.PI / 4;
+            group.add(tip);
+
+            // Glowing Rune Core on Blade
+            const runeMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+            const rune = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.35, 0.014), runeMat);
+            rune.position.set(0, 0.26, 0);
+            group.add(rune);
+
+            group.rotation.x = Math.PI / 4;
+            group.rotation.y = -Math.PI / 6;
+            return group;
+        } else if (itemKey === 'key') {
             // Golden Skeleton Key
             const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.95, roughness: 0.15 });
             const ring = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.008, 8, 16), goldMat);
@@ -2402,7 +2688,7 @@ export class LastMetroGame {
             });
         }
 
-        // Clean up previous anomalies (shadow hands, stalkers, shadow entity, modals)
+        // Clean up previous anomalies (shadow hands, stalkers, shadow entity, shadow eyes, villains, modals)
         this.shadowHandsGroups.forEach(h => this.scene.remove(h));
         this.shadowHandsGroups = [];
         this.shadowHandsActive = false;
@@ -2416,6 +2702,12 @@ export class LastMetroGame {
             this.shadowEntityMesh = null;
             this.shadowRushActive = false;
         }
+        if (this.shadowEyesGroup) {
+            this.scene.remove(this.shadowEyesGroup);
+            this.shadowEyesGroup = null;
+        }
+        this.shadowVillains.forEach(v => this.scene.remove(v.group));
+        this.shadowVillains = [];
         this.shadowRushCountdown = 0;
         this.isSitting = false;
         const standBtn = document.getElementById('btn-stand-up');
@@ -2569,25 +2861,31 @@ export class LastMetroGame {
                 this.startShadowRushCarriageEvent(25);
                 break;
             case 26:
-                this.showThought('Vagunis on ainult üks reisija, kuid järgmises vagunis teda enam ei ole.', 'Only one passenger is here, but in the next carriage they are gone.');
+                this.showThought('Akendesse ja pimedusse ilmusid 2 helendavat punast silma... 👀', '2 glowing red eyes appeared in the windows and shadows... 👀');
+                this.spawnGlowingShadowEyes(2);
                 break;
             case 27:
-                this.showThought('Kõlaritest tuleb katkine, ragisev metrooteade.', 'A broken, crackling announcement comes over the speakers.');
+                this.showThought('Kõlaritest kostab ragin ja pimeduses jälgib sind juba 3 silma! 👀', 'Static crackles and 3 glowing eyes watch you from the shadows! 👀');
+                this.spawnGlowingShadowEyes(3);
                 break;
             case 28:
-                this.showThought('Üks uks ei avane, enne kui mängija leiab vagunist vihje. 🧩 (Uuri sedelit istme all)', 'The door will not open until you find the clue in the carriage. 🧩 (Inspect note under seat)');
+                this.showThought('Üks uks on lukus ja vagunis luurab juba 4 silma! 🧩 (Uuri sedelit istme all)', 'Bulkhead door is locked and 4 eyes lurk in the carriage! 🧩 (Inspect note under seat)');
+                this.spawnGlowingShadowEyes(4);
                 break;
             case 29:
-                this.showThought('Akna peegelduses on hetkeks näha midagi, mida vagunis tegelikult ei ole.', 'In the window reflection, something appears that is not in the carriage.');
+                this.showThought('5 punast silma jälgivad iga sinu sammu! Pimedus tiheneb... 👁️', '5 red eyes watch your every step! The darkness thickens... 👁️');
+                this.spawnGlowingShadowEyes(5);
                 break;
             case 30:
-                this.showThought('Mängija jõuab väga pika vagunini, mis tundub tavalisest palju suurem. 🚇', 'You reach a massive extended carriage that feels much larger than usual. 🚇');
+                this.showThought('7 silma vaatavad sind korraga pimedusest! Pinge aina kasvab... 👁️', '7 eyes stare at you simultaneously! Something dreadful is approaching... 👁️');
+                this.spawnGlowingShadowEyes(7);
                 this.triggerShadowHandsEvent();
                 break;
 
             // --- Vagunid 31–40 ---
             case 31:
-                this.showThought('Vagunis on kõik istmed vales suunas risti vahekäiguga.', 'All seats in the carriage are turned perpendicular in the wrong direction.');
+                this.showThought('⚠️ VAGUNIS ON PAHALASED! Kasuta Mõõka ⚔️ (klõpsa ekraani all), et neid rünnata!', '⚠️ SHADOW VILLAINS IN THE CARRIAGE! Use your Sword ⚔️ to fight them!');
+                this.spawnShadowVillains(2);
                 break;
             case 32:
                 this.showThought('Mängija leiab väikese kaardi, kus on märgitud vagun number 50. 🗺️', 'You find a small pocket map with Carriage number 50 circled. 🗺️');
@@ -3328,7 +3626,9 @@ export class LastMetroGame {
 
         // Reset all coins, inventory items, buffs & progress when returning to the beginning
         this.coins = 0;
-        this.inventory = {};
+        this.inventory = { sword: true };
+        this.playerHp = 100;
+        this.updateHealthUI();
         this.equippedItem = null;
         if (this.heldItemMesh) {
             this.camera.remove(this.heldItemMesh);
@@ -3641,13 +3941,14 @@ this.state = 'player_free';
                 this.checkInteractions();
             }
 
-            // Hotbar quick slot keys (1-6)
-            if (e.code === 'Digit1' && this.inventory['key']) this.toggleEquipItem('key');
-            if (e.code === 'Digit2' && this.inventory['night_vision']) this.toggleEquipItem('night_vision');
-            if (e.code === 'Digit3' && this.inventory['speed_boost']) this.toggleEquipItem('speed_boost');
-            if (e.code === 'Digit4' && this.inventory['clue_detector']) this.toggleEquipItem('clue_detector');
-            if (e.code === 'Digit5' && this.inventory['secret_pass']) this.toggleEquipItem('secret_pass');
-            if (e.code === 'Digit6' && this.inventory['radio']) this.toggleEquipItem('radio');
+            // Hotbar quick slot keys (1-7)
+            if (e.code === 'Digit1' && this.inventory['sword']) this.toggleEquipItem('sword');
+            if (e.code === 'Digit2' && this.inventory['key']) this.toggleEquipItem('key');
+            if (e.code === 'Digit3' && this.inventory['night_vision']) this.toggleEquipItem('night_vision');
+            if (e.code === 'Digit4' && this.inventory['speed_boost']) this.toggleEquipItem('speed_boost');
+            if (e.code === 'Digit5' && this.inventory['clue_detector']) this.toggleEquipItem('clue_detector');
+            if (e.code === 'Digit6' && this.inventory['secret_pass']) this.toggleEquipItem('secret_pass');
+            if (e.code === 'Digit7' && this.inventory['radio']) this.toggleEquipItem('radio');
 
             // Playard Owner Teleport Modal shortcut (F2)
             if (e.code === 'F2' && this.isOwner) {
@@ -3682,6 +3983,13 @@ this.state = 'player_free';
             this.lastMouseX = clientX;
             this.lastMouseY = clientY;
             hasInitializedMouse = true;
+
+            // Attack with sword if equipped
+            if (this.state === 'player_free' && this.equippedItem === 'sword') {
+                this.attackWithSword();
+                return;
+            }
+
             if (this.state === 'player_free' && this.aimedInteractable) {
                 this.checkInteractions();
             }
@@ -4427,6 +4735,51 @@ this.state = 'player_free';
             }
 
             this.playerPos.z = Math.max(-9.2, Math.min(9.2, this.playerPos.z));
+        }
+
+        // Glowing Shadow Eyes Animation (Pulsing / Breathing)
+        if (this.shadowEyesGroup) {
+            this.shadowEyesGroup.children.forEach((eyePair, idx) => {
+                const pulse = Math.sin(this.headBobTimer * 2 + idx) * 0.12;
+                eyePair.scale.set(1 + pulse, 1 + pulse, 1 + pulse);
+            });
+        }
+
+        // Shadow Villains AI & Combat Attack Logic (Carriage 31)
+        if (this.shadowVillains.length > 0 && this.state === 'player_free' && !this.isSitting) {
+            this.shadowVillains.forEach(v => {
+                const toPlayer = this.playerPos.clone().sub(v.group.position);
+                toPlayer.y = 0;
+                const dist = toPlayer.length();
+
+                v.group.lookAt(this.playerPos.x, v.group.position.y, this.playerPos.z);
+
+                if (dist > 1.3) {
+                    const moveStep = toPlayer.normalize().multiplyScalar(1.5 * delta);
+                    v.group.position.add(moveStep);
+                }
+
+                // Attack player when in melee range
+                v.attackCooldown -= delta;
+                if (dist <= 1.8 && v.attackCooldown <= 0) {
+                    v.attackCooldown = 1.6;
+                    this.takePlayerDamage(20, 'Pahalane ründas sind ja võttis sult elud!', 'Shadow villain struck you and dealt damage!');
+                }
+            });
+        }
+
+        // Sword Swing Animation
+        if (this.isSwordSwinging && this.heldItemMesh && this.equippedItem === 'sword') {
+            this.swordSwingTimer -= delta;
+            const progress = 1.0 - (this.swordSwingTimer / 0.28);
+            const swingAngle = Math.sin(progress * Math.PI);
+            this.heldItemMesh.rotation.x = Math.PI / 4 + swingAngle * 0.95;
+            this.heldItemMesh.rotation.z = -swingAngle * 0.7;
+            if (this.swordSwingTimer <= 0) {
+                this.isSwordSwinging = false;
+                this.heldItemMesh.rotation.x = Math.PI / 4;
+                this.heldItemMesh.rotation.z = 0;
+            }
         }
 
         // 6. Update Camera & Held Item Sway
