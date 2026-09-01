@@ -17,14 +17,18 @@ interface AnomalyEvent {
 
 interface AIPassenger {
     group: THREE.Group;
-    head: THREE.Mesh;
-    body: THREE.Mesh;
+    head: THREE.Object3D;
+    body: THREE.Object3D;
     isSitting: boolean;
     seatPos: THREE.Vector3;
     animType: 'phone' | 'look_window' | 'reading' | 'uncanny_stare' | 'chat';
     baseRotY: number;
     targetRotY: number;
     isCreepy: boolean;
+    phoneMesh?: THREE.Mesh;
+    headphones?: boolean;
+    thumbLeft?: THREE.Mesh;
+    thumbRight?: THREE.Mesh;
 }
 
 interface CarriageData {
@@ -786,21 +790,33 @@ export class LastMetroGame {
 
         // 5. Glass Windscreen Partitions at ends of seat rows
         const partitionGlassMat = new THREE.MeshStandardMaterial({
-            color: 0x99ccdd,
+            color: 0xddf0ff,
             transparent: true,
             opacity: 0.35,
-            roughness: 0.1,
-            metalness: 0.2
+            roughness: 0.05,
+            metalness: 0.1
         });
         [-1.25, 1.25].forEach(px => {
             [-1.8, 1.8].forEach(pz => {
-                const partitionFrame = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.3, 0.7), poleMat);
-                partitionFrame.position.set(px, 0.85, pz);
-                carGroup.add(partitionFrame);
-
-                const partitionGlass = new THREE.Mesh(new THREE.BoxGeometry(0.015, 1.1, 0.6), partitionGlassMat);
+                // Sleek transparent safety glass
+                const partitionGlass = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1.1, 0.62), partitionGlassMat);
                 partitionGlass.position.set(px, 0.85, pz);
                 carGroup.add(partitionGlass);
+
+                // Sleek vertical chrome edge pole on aisle side
+                const edgeX = px > 0 ? px - 0.31 : px + 0.31;
+                const edgePole = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.2, 12), poleMat);
+                edgePole.position.set(edgeX, 0.85, pz);
+                carGroup.add(edgePole);
+
+                // Top and bottom mounting rails
+                const topRail = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 0.64), poleMat);
+                topRail.position.set(px, 1.4, pz);
+                carGroup.add(topRail);
+
+                const bottomRail = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 0.64), poleMat);
+                bottomRail.position.set(px, 0.32, pz);
+                carGroup.add(bottomRail);
             });
         });
 
@@ -1115,6 +1131,9 @@ export class LastMetroGame {
         // 12. Scatter Collectible Rotating Golden Coins throughout the carriage
         this.spawnCollectibleCoins(carGroup, index === 100 ? 8 : 3);
 
+        // 13. Populate Realistic 3D AI Passengers
+        this.populatePassengers(carGroup, index, theme, passengers);
+
         return {
             group: carGroup,
             index,
@@ -1240,7 +1259,7 @@ export class LastMetroGame {
         else if (carIndex === 1) count = 4;
         else if (carIndex === 2) count = 3;
         else if (carIndex <= 8) count = Math.max(1, 4 - Math.floor(carIndex / 2));
-        else if (carIndex >= 11) count = Math.random() < 0.3 ? 1 : 0;
+        else if (carIndex >= 11) count = Math.random() < 0.35 ? 1 : 0;
 
         const seatPositions = [
             new THREE.Vector3(-1.1, 0.5, -6),
@@ -1251,150 +1270,478 @@ export class LastMetroGame {
             new THREE.Vector3(1.1, 0.5, 7)
         ];
 
-        const skinPalette = [0xf5cd79, 0xf7d794, 0xdfe6e9, 0xd1a374, 0x805533];
-        const outfitStyles = [
-            { top: 0x2c3e50, pants: 0x1e272e, coat: true, hair: 0x2d3436, hairType: 'short' },
-            { top: 0xe74c3c, pants: 0x2d3436, coat: false, hair: 0x8b4513, hairType: 'hoodie' },
-            { top: 0x16a085, pants: 0x34495e, coat: true, hair: 0x111111, hairType: 'ponytail' },
-            { top: 0x8e44ad, pants: 0x1b1464, coat: false, hair: 0xd63031, hairType: 'long' },
-            { top: 0xd35400, pants: 0x2f3640, coat: true, hair: 0x2d3436, hairType: 'beanie' },
-            { top: 0x27ae60, pants: 0x2c2c54, coat: false, hair: 0x636e72, hairType: 'headphones' }
+        // Realistic skin tones
+        const skinPalette = [0xf5cd79, 0xf7d794, 0xdfe6e9, 0xd1a374, 0x805533, 0xfad390, 0xaa7a53];
+        // Eye iris colors
+        const eyeColors = [0x2980b9, 0x833400, 0x27ae60, 0x3d271d, 0x16a085, 0x2c3e50];
+
+        // Detailed Passenger Character Archetypes
+        const archetypes = [
+            {
+                name: 'Business Commuter',
+                top: 0x2c3e50, pants: 0x1e272e, inner: 0xffffff, tie: 0xc0392b,
+                hair: 0x1e272e, hairType: 'side_part', coatStyle: 'suit', shoe: 0x111111,
+                prop: 'newspaper', glasses: false, headphones: false
+            },
+            {
+                name: 'Music Student',
+                top: 0xe74c3c, pants: 0x2c3e50, inner: 0x2d3436,
+                hair: 0x8b4513, hairType: 'headphones', coatStyle: 'hoodie', shoe: 0xffffff,
+                prop: 'phone', glasses: false, headphones: true
+            },
+            {
+                name: 'Winter Commuter',
+                top: 0x16a085, pants: 0x2f3640, inner: 0xdfe6e9,
+                hair: 0xd63031, hairType: 'long', coatStyle: 'puffer', shoe: 0x636e72,
+                prop: 'coffee', glasses: true, headphones: false
+            },
+            {
+                name: 'Casual Traveler',
+                top: 0xd35400, pants: 0x1b1464, inner: 0xffffff,
+                hair: 0x2d3436, hairType: 'beanie', coatStyle: 'puffer', shoe: 0xffffff,
+                prop: 'phone', glasses: false, headphones: false
+            },
+            {
+                name: 'Office Worker',
+                top: 0x8e44ad, pants: 0x34495e, inner: 0xf5f6fa,
+                hair: 0x111111, hairType: 'ponytail', coatStyle: 'trench', shoe: 0x2d3436,
+                prop: 'phone', glasses: false, headphones: false
+            },
+            {
+                name: 'Urban Explorer',
+                top: 0x27ae60, pants: 0x2c2c54, inner: 0x1e272e,
+                hair: 0x57606f, hairType: 'fade', coatStyle: 'hoodie', shoe: 0xffffff,
+                prop: 'newspaper', glasses: false, headphones: false
+            }
         ];
 
         for (let i = 0; i < count; i++) {
             const seatPos = seatPositions[i % seatPositions.length];
-            const style = outfitStyles[i % outfitStyles.length];
+            const arch = archetypes[i % archetypes.length];
             const skinColor = skinPalette[i % skinPalette.length];
+            const irisColor = eyeColors[i % eyeColors.length];
 
             const pGroup = new THREE.Group();
             pGroup.position.copy(seatPos);
 
-            const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.55 });
-            const clothingTopMat = new THREE.MeshStandardMaterial({ color: style.top, roughness: 0.75 });
-            const clothingPantsMat = new THREE.MeshStandardMaterial({ color: style.pants, roughness: 0.8 });
-            const shoeMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.4 });
-            const hairMat = new THREE.MeshStandardMaterial({ color: style.hair, roughness: 0.8 });
+            // Realistic PBR materials
+            const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6, metalness: 0.05 });
+            const clothingTopMat = new THREE.MeshStandardMaterial({ color: arch.top, roughness: 0.7 });
+            const clothingPantsMat = new THREE.MeshStandardMaterial({ color: arch.pants, roughness: 0.8 });
+            const innerMat = new THREE.MeshStandardMaterial({ color: arch.inner, roughness: 0.85 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: arch.hair, roughness: 0.85 });
+            const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa, roughness: 0.2 });
+            const irisMat = new THREE.MeshStandardMaterial({ color: irisColor, roughness: 0.3 });
+            const pupilMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+            const lipMat = new THREE.MeshStandardMaterial({ color: 0xd68172, roughness: 0.6 });
+            const shoeSoleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+            const shoeUpperMat = new THREE.MeshStandardMaterial({ color: arch.shoe, roughness: 0.6 });
 
-            // 1. Torso & Jacket
-            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.52, 0.28), clothingTopMat);
-            torso.position.set(0, 0.32, 0);
-            pGroup.add(torso);
+            // --- 1. Realistic Head & Face Anatomy ---
+            const pHead = new THREE.Group();
+            pHead.position.set(0, 0.78, 0);
 
-            if (style.coat) {
-                const collar = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.3), clothingTopMat);
-                collar.position.set(0, 0.56, 0);
-                pGroup.add(collar);
+            // Cranium & Jaw Structure
+            const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 14), skinMat);
+            cranium.scale.set(1.0, 1.15, 1.05);
+            pHead.add(cranium);
+
+            const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.11, 0.14), skinMat);
+            jaw.position.set(0, -0.06, 0.03);
+            pHead.add(jaw);
+
+            // Neck with collar contour
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.072, 0.13, 10), skinMat);
+            neck.position.set(0, -0.15, 0);
+            pHead.add(neck);
+
+            // 3D Realistic Eyes (Sclera + Iris + Pupil + Eyelids)
+            [-0.048, 0.048].forEach(ex => {
+                // Sclera (eyeball white)
+                const eyeball = new THREE.Mesh(new THREE.SphereGeometry(0.024, 10, 8), eyeWhiteMat);
+                eyeball.position.set(ex, 0.02, 0.12);
+                pHead.add(eyeball);
+
+                // Colored Iris
+                const iris = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 8), irisMat);
+                iris.position.set(ex, 0.02, 0.135);
+                pHead.add(iris);
+
+                // Dark Pupil
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.009, 6, 6), pupilMat);
+                pupil.position.set(ex, 0.02, 0.144);
+                pHead.add(pupil);
+
+                // Upper Eyelid crease
+                const eyelid = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.008, 0.02), skinMat);
+                eyelid.position.set(ex, 0.04, 0.132);
+                pHead.add(eyelid);
+
+                // Eyebrow matching hair color
+                const eyebrow = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.012, 0.015), hairMat);
+                eyebrow.rotation.z = (ex > 0 ? -1 : 1) * 0.08;
+                eyebrow.position.set(ex, 0.058, 0.135);
+                pHead.add(eyebrow);
+            });
+
+            // 3D Nose Bridge and Nostrils
+            const noseBridge = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.055, 0.045), skinMat);
+            noseBridge.rotation.x = -Math.PI / 16;
+            noseBridge.position.set(0, -0.015, 0.148);
+            pHead.add(noseBridge);
+
+            // 3D Expressive Lips
+            const lips = new THREE.Mesh(new THREE.BoxGeometry(0.058, 0.016, 0.022), lipMat);
+            lips.position.set(0, -0.072, 0.13);
+            pHead.add(lips);
+
+            // 3D Realistic Ears
+            [-0.142, 0.142].forEach(earX => {
+                const ear = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.065, 0.04), skinMat);
+                ear.position.set(earX, 0.01, -0.01);
+                pHead.add(ear);
+            });
+
+            // --- 2. Realistic Hairstyles & Headwear ---
+            if (arch.hairType === 'fade' || arch.hairType === 'short') {
+                // Layered Textured Short Hair
+                const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.152, 14, 12), hairMat);
+                hairTop.position.set(0, 0.06, -0.01);
+                hairTop.scale.set(1.02, 1.08, 1.05);
+                pHead.add(hairTop);
+
+                const bangs = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.045, 0.06), hairMat);
+                bangs.position.set(0, 0.095, 0.115);
+                pHead.add(bangs);
+            } else if (arch.hairType === 'long') {
+                // Long Cascading Wavy Hair
+                const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.155, 14, 12), hairMat);
+                hairTop.position.set(0, 0.05, -0.01);
+                hairTop.scale.set(1.04, 1.1, 1.06);
+                pHead.add(hairTop);
+
+                // Front shoulder-draping strands
+                [-0.12, 0.12].forEach(sx => {
+                    const strand = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.42, 0.08), hairMat);
+                    strand.position.set(sx, -0.16, 0.04);
+                    pHead.add(strand);
+                });
+
+                // Back voluminous flowing hair
+                const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.46, 0.12), hairMat);
+                hairBack.position.set(0, -0.18, -0.13);
+                pHead.add(hairBack);
+            } else if (arch.hairType === 'ponytail') {
+                // High Ponytail with Scrunchie
+                const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.152, 14, 12), hairMat);
+                hairCap.position.set(0, 0.05, -0.02);
+                pHead.add(hairCap);
+
+                const scrunchie = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.014, 8, 12), new THREE.MeshStandardMaterial({ color: 0xf39c12 }));
+                scrunchie.position.set(0, 0.08, -0.15);
+                scrunchie.rotation.x = Math.PI / 4;
+                pHead.add(scrunchie);
+
+                const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.02, 0.32, 8), hairMat);
+                tail.rotation.x = Math.PI / 3.5;
+                tail.position.set(0, -0.05, -0.22);
+                pHead.add(tail);
+            } else if (arch.hairType === 'beanie') {
+                // Ribbed Knit Winter Beanie with Folded Brim
+                const beanieMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.9 });
+                const beanieCrown = new THREE.Mesh(new THREE.SphereGeometry(0.162, 14, 14), beanieMat);
+                beanieCrown.position.set(0, 0.07, -0.01);
+                beanieCrown.scale.set(1.05, 1.15, 1.05);
+                pHead.add(beanieCrown);
+
+                const beanieBrim = new THREE.Mesh(new THREE.TorusGeometry(0.148, 0.028, 8, 16), beanieMat);
+                beanieBrim.rotation.x = Math.PI / 2;
+                beanieBrim.position.set(0, 0.02, 0);
+                pHead.add(beanieBrim);
+            } else if (arch.hairType === 'side_part') {
+                // Business Combed Side-Part
+                const hairPart = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.08, 0.28), hairMat);
+                hairPart.position.set(0, 0.11, -0.01);
+                pHead.add(hairPart);
+
+                const sideburns = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.18), hairMat);
+                sideburns.position.set(0, 0.02, -0.04);
+                pHead.add(sideburns);
             }
 
-            // 2. Head, Neck & Hair / Accessories
-            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.12, 8), skinMat);
-            neck.position.set(0, 0.62, 0);
-            pGroup.add(neck);
+            // High-End Studio Headphones with Glowing Audio LED
+            if (arch.headphones) {
+                const hpFrameMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 });
+                const hpPadMat = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.7 });
+                const hpLedMat = new THREE.MeshBasicMaterial({ color: 0x00d2d3 });
 
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), skinMat);
-            head.position.set(0, 0.78, 0);
-            pGroup.add(head);
-
-            // Nose
-            const nose = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.05), skinMat);
-            nose.position.set(0, 0.77, 0.15);
-            head.add(nose);
-
-            // Hair Styles
-            if (style.hairType === 'short') {
-                const hair = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.32), hairMat);
-                hair.position.set(0, 0.88, -0.02);
-                pGroup.add(hair);
-            } else if (style.hairType === 'long') {
-                const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.32), hairMat);
-                hairTop.position.set(0, 0.88, -0.02);
-                pGroup.add(hairTop);
-                const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.35, 0.12), hairMat);
-                hairBack.position.set(0, 0.7, -0.14);
-                pGroup.add(hairBack);
-            } else if (style.hairType === 'ponytail') {
-                const hair = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), hairMat);
-                hair.position.set(0, 0.8, -0.04);
-                pGroup.add(hair);
-                const pony = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.02, 0.28, 6), hairMat);
-                pony.rotation.x = Math.PI / 4;
-                pony.position.set(0, 0.75, -0.2);
-                pGroup.add(pony);
-            } else if (style.hairType === 'beanie') {
-                const beanieMat = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.9 });
-                const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 14), beanieMat);
-                beanie.position.set(0, 0.84, 0);
-                pGroup.add(beanie);
-            } else if (style.hairType === 'headphones') {
-                const hpMat = new THREE.MeshStandardMaterial({ color: 0xd63031, metalness: 0.6, roughness: 0.3 });
-                const band = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.02, 6, 16, Math.PI), hpMat);
+                const band = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.018, 8, 20, Math.PI), hpFrameMat);
                 band.rotation.z = Math.PI / 2;
-                band.position.set(0, 0.8, 0);
-                pGroup.add(band);
+                band.position.set(0, 0.03, 0);
+                pHead.add(band);
+
                 [-0.16, 0.16].forEach(hx => {
-                    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 8), hpMat);
-                    cup.rotation.z = Math.PI / 2;
-                    cup.position.set(hx, 0.78, 0);
-                    pGroup.add(cup);
+                    const earpad = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.035, 12), hpPadMat);
+                    earpad.rotation.z = Math.PI / 2;
+                    earpad.position.set(hx, 0.01, -0.01);
+                    pHead.add(earpad);
+
+                    const led = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.038, 8), hpLedMat);
+                    led.rotation.z = Math.PI / 2;
+                    led.position.set(hx > 0 ? hx + 0.002 : hx - 0.002, 0.01, -0.01);
+                    pHead.add(led);
                 });
             }
 
-            // 3. Seated Legs & Shoes
-            // Thighs (extending forward along local Z)
+            // Reading Glasses
+            if (arch.glasses) {
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.2 });
+                const lensMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, transparent: true, opacity: 0.4, roughness: 0.1 });
+                [-0.048, 0.048].forEach(gx => {
+                    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.024, 0.004, 6, 12), frameMat);
+                    rim.position.set(gx, 0.02, 0.14);
+                    pHead.add(rim);
+
+                    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.022, 10), lensMat);
+                    lens.position.set(gx, 0.02, 0.14);
+                    pHead.add(lens);
+                });
+                const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.004, 0.004), frameMat);
+                bridge.position.set(0, 0.02, 0.14);
+                pHead.add(bridge);
+            }
+
+            pGroup.add(pHead);
+
+            // --- 3. Layered Outfits & Torso ---
+            const pBody = new THREE.Group();
+            pBody.position.set(0, 0.32, 0);
+
+            // Inner Shirt / Collar / Tie
+            const innerChest = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.48, 0.25), innerMat);
+            innerChest.position.set(0, 0, 0.02);
+            pBody.add(innerChest);
+
+            if (arch.coatStyle === 'suit') {
+                // Business Suit Blazer with Lapels and Tie
+                const suitLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.52, 0.28), clothingTopMat);
+                suitLeft.position.set(-0.14, 0, 0);
+                pBody.add(suitLeft);
+
+                const suitRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.52, 0.28), clothingTopMat);
+                suitRight.position.set(0.14, 0, 0);
+                pBody.add(suitRight);
+
+                const suitBack = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.52, 0.1), clothingTopMat);
+                suitBack.position.set(0, 0, -0.09);
+                pBody.add(suitBack);
+
+                if (arch.tie) {
+                    const tieMat = new THREE.MeshStandardMaterial({ color: arch.tie, roughness: 0.5 });
+                    const tieMesh = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.32, 0.015), tieMat);
+                    tieMesh.position.set(0, 0.06, 0.146);
+                    pBody.add(tieMesh);
+                }
+            } else if (arch.coatStyle === 'puffer') {
+                // Segmented Winter Puffer Jacket with Horizontal Baffles
+                for (let b = 0; b < 3; b++) {
+                    const baffle = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.31), clothingTopMat);
+                    baffle.position.set(0, -0.15 + b * 0.16, 0);
+                    pBody.add(baffle);
+                }
+                const collar = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.29), clothingTopMat);
+                collar.position.set(0, 0.25, 0);
+                pBody.add(collar);
+
+                // Zipper Line
+                const zipMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.8, roughness: 0.3 });
+                const zipper = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.48, 0.012), zipMat);
+                zipper.position.set(0, 0, 0.158);
+                pBody.add(zipper);
+            } else if (arch.coatStyle === 'hoodie') {
+                // Relaxed Streetwear Hoodie with Kangaroo Pocket
+                const hoodieTorso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.52, 0.3), clothingTopMat);
+                hoodieTorso.position.set(0, 0, 0);
+                pBody.add(hoodieTorso);
+
+                const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.04), clothingTopMat);
+                pocket.position.set(0, -0.12, 0.16);
+                pBody.add(pocket);
+
+                // Drawstrings
+                const cordMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+                [-0.05, 0.05].forEach(cx => {
+                    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.16, 6), cordMat);
+                    cord.position.set(cx, 0.12, 0.155);
+                    pBody.add(cord);
+                });
+            } else {
+                // Classic Trench Coat
+                const trenchTorso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.54, 0.29), clothingTopMat);
+                trenchTorso.position.set(0, 0, 0);
+                pBody.add(trenchTorso);
+
+                const lapelLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.26, 0.03), clothingTopMat);
+                lapelLeft.rotation.z = -0.2;
+                lapelLeft.position.set(-0.08, 0.1, 0.15);
+                pBody.add(lapelLeft);
+
+                const lapelRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.26, 0.03), clothingTopMat);
+                lapelRight.rotation.z = 0.2;
+                lapelRight.position.set(0.08, 0.1, 0.15);
+                pBody.add(lapelRight);
+            }
+
+            pGroup.add(pBody);
+
+            // --- 4. Articulated Arms & Detailed Sculpted Hands ---
+            let leftThumbMesh: THREE.Mesh | undefined;
+            let rightThumbMesh: THREE.Mesh | undefined;
+            let phoneMesh: THREE.Mesh | undefined;
+
+            [-0.23, 0.23].forEach((ax, armIdx) => {
+                const armGroup = new THREE.Group();
+                armGroup.position.set(ax, 0.44, 0.02);
+
+                // Upper arm
+                const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.046, 0.24, 8), clothingTopMat);
+                upperArm.rotation.x = 0.35;
+                upperArm.position.set(0, -0.1, 0.04);
+                armGroup.add(upperArm);
+
+                // Sleeve Cuff
+                const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.04, 8), clothingTopMat);
+                cuff.rotation.x = 0.85;
+                cuff.position.set(0, -0.2, 0.12);
+                armGroup.add(cuff);
+
+                // Forearm extending towards lap / prop
+                const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.038, 0.22, 8), skinMat);
+                forearm.rotation.x = 0.95;
+                forearm.position.set(0, -0.23, 0.17);
+                armGroup.add(forearm);
+
+                // Detailed Sculpted Hand with Separate Thumb & Fingers
+                const palm = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.028, 0.075), skinMat);
+                palm.position.set(0, -0.26, 0.26);
+                armGroup.add(palm);
+
+                const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.018, 0.045), skinMat);
+                thumb.rotation.y = (ax > 0 ? -1 : 1) * 0.4;
+                thumb.position.set(ax > 0 ? -0.035 : 0.035, -0.25, 0.27);
+                armGroup.add(thumb);
+
+                if (armIdx === 0) leftThumbMesh = thumb;
+                else rightThumbMesh = thumb;
+
+                pGroup.add(armGroup);
+            });
+
+            // --- 5. Seated Legs & Detailed 3D Sneakers ---
             [-0.11, 0.11].forEach(lx => {
-                const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.38), clothingPantsMat);
+                // Thighs (resting horizontally forward on seat cushion)
+                const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.14, 0.38), clothingPantsMat);
                 thigh.position.set(lx, 0.08, 0.16);
                 pGroup.add(thigh);
 
-                // Calves (extending downward along local Y)
+                // Calves (extending downward to train floor)
                 const calf = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.38, 0.13), clothingPantsMat);
                 calf.position.set(lx, -0.15, 0.32);
                 pGroup.add(calf);
 
-                // Shoes / Sneakers
-                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.08, 0.22), shoeMat);
-                shoe.position.set(lx, -0.34, 0.36);
-                pGroup.add(shoe);
+                // Realistic 2-Tone Modern Sneaker / Shoe
+                const shoeGroup = new THREE.Group();
+                shoeGroup.position.set(lx, -0.34, 0.36);
+
+                // Midsole & Rubber Outsole
+                const sole = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.035, 0.24), shoeSoleMat);
+                sole.position.set(0, 0, 0.01);
+                shoeGroup.add(sole);
+
+                // Upper Body
+                const upper = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.07, 0.22), shoeUpperMat);
+                upper.position.set(0, 0.05, 0);
+                shoeGroup.add(upper);
+
+                // White Rubber Toe Cap
+                const toeCap = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.05, 0.06), shoeSoleMat);
+                toeCap.position.set(0, 0.04, 0.09);
+                shoeGroup.add(toeCap);
+
+                // Shoelaces Ridge
+                const laces = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.015, 0.1), shoeSoleMat);
+                laces.position.set(0, 0.086, 0.02);
+                laces.rotation.x = -Math.PI / 8;
+                shoeGroup.add(laces);
+
+                pGroup.add(shoeGroup);
             });
 
-            // 4. Arms & Props (Smartphones, Newspapers, Books)
-            // Left & Right Upper Arms
-            [-0.22, 0.22].forEach(ax => {
-                const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.32, 6), clothingTopMat);
-                arm.position.set(ax, 0.32, 0.05);
-                pGroup.add(arm);
-            });
+            // --- 6. Realistic Interactive Props (Smartphone, Newspaper, Coffee, Backpack) ---
+            if (arch.prop === 'phone') {
+                // Sleek OLED Smartphone with Glowing UI
+                const phoneBodyMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, metalness: 0.9, roughness: 0.1 });
+                const phoneScreenMat = new THREE.MeshBasicMaterial({ color: 0x00d2d3 });
 
-            // Interactive Prop
-            if (i % 2 === 0) {
-                // Smartphone with subtle glowing screen
-                const phoneMat = new THREE.MeshBasicMaterial({ color: 0x00d2d3 });
-                const phone = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.015, 0.18), phoneMat);
-                phone.rotation.x = -Math.PI / 6;
-                phone.position.set(0, 0.32, 0.26);
-                pGroup.add(phone);
+                phoneMesh = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.012, 0.2), phoneBodyMat);
+                phoneMesh.rotation.x = -Math.PI / 5.5;
+                phoneMesh.position.set(0, 0.24, 0.31);
+                pGroup.add(phoneMesh);
 
-                // Hands holding phone
-                [-0.08, 0.08].forEach(hx => {
-                    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.038, 6, 6), skinMat);
-                    hand.position.set(hx, 0.3, 0.25);
-                    pGroup.add(hand);
-                });
-
-
-            } else {
-                // Metro Newspaper
+                const screen = new THREE.Mesh(new THREE.BoxGeometry(0.098, 0.004, 0.18), phoneScreenMat);
+                screen.position.set(0, 0.007, 0);
+                phoneMesh.add(screen);
+            } else if (arch.prop === 'newspaper') {
+                // Broadsheet Metro Newspaper with Printed Layout
                 const paperMat = new THREE.MeshStandardMaterial({ color: 0xf5f6fa, roughness: 0.9 });
-                const paper = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.01), paperMat);
-                paper.rotation.x = -Math.PI / 4;
-                paper.position.set(0, 0.35, 0.24);
+                const inkMat = new THREE.MeshBasicMaterial({ color: 0x2f3640 });
+
+                const paper = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.24, 0.01), paperMat);
+                paper.rotation.x = -Math.PI / 3.8;
+                paper.position.set(0, 0.26, 0.32);
                 pGroup.add(paper);
 
-                [-0.12, 0.12].forEach(hx => {
-                    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.038, 6, 6), skinMat);
-                    hand.position.set(hx, 0.32, 0.22);
-                    pGroup.add(hand);
-                });
+                // Headline Bar & Image Frame
+                const headline = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.035, 0.002), inkMat);
+                headline.position.set(0, 0.08, 0.006);
+                paper.add(headline);
+
+                const articleCol1 = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.002), inkMat);
+                articleCol1.position.set(-0.08, -0.02, 0.006);
+                paper.add(articleCol1);
+
+                const articleCol2 = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.002), inkMat);
+                articleCol2.position.set(0.08, -0.02, 0.006);
+                paper.add(articleCol2);
+            } else if (arch.prop === 'coffee') {
+                // Paper Coffee Cup with Heat Cardboard Sleeve & Sip Lid
+                const cupMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+                const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x833400, roughness: 0.9 });
+                const lidMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa, roughness: 0.3 });
+
+                const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.11, 10), cupMat);
+                cup.position.set(0.06, 0.26, 0.3);
+                pGroup.add(cup);
+
+                const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.03, 0.05, 10), sleeveMat);
+                sleeve.position.set(0, 0, 0);
+                cup.add(sleeve);
+
+                const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.015, 10), lidMat);
+                lid.position.set(0, 0.058, 0);
+                cup.add(lid);
+            }
+
+            // Floor / Seat Commuter Backpack
+            if (i % 2 === 1) {
+                const packMat = new THREE.MeshStandardMaterial({ color: arch.top, roughness: 0.8 });
+                const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.32, 0.16), packMat);
+                backpack.position.set(seatPos.x > 0 ? -0.28 : 0.28, -0.22, 0.1);
+                pGroup.add(backpack);
+
+                const frontPocket = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.05), packMat);
+                frontPocket.position.set(0, -0.05, 0.1);
+                backpack.add(frontPocket);
             }
 
             const baseRotY = seatPos.x > 0 ? -Math.PI / 2 : Math.PI / 2;
@@ -1403,14 +1750,18 @@ export class LastMetroGame {
             const isCreepy = carIndex === 2 && i === 1; // Special uncanny staring passenger
             passengers.push({
                 group: pGroup,
-                head,
-                body: torso,
+                head: pHead,
+                body: pBody,
                 isSitting: true,
                 seatPos,
-                animType: isCreepy ? 'uncanny_stare' : i % 2 === 0 ? 'phone' : 'look_window',
+                animType: isCreepy ? 'uncanny_stare' : arch.prop === 'phone' ? 'phone' : 'look_window',
                 baseRotY,
                 targetRotY: baseRotY,
-                isCreepy
+                isCreepy,
+                phoneMesh,
+                headphones: arch.headphones,
+                thumbLeft: leftThumbMesh,
+                thumbRight: rightThumbMesh
             });
 
             carGroup.add(pGroup);
@@ -3134,27 +3485,48 @@ this.state = 'player_free';
             this.tunnelGroup.position.z = (this.tunnelOffsetZ % 12);
         }
 
-        // 2. Realistic Passenger Breathing & Staring Logic
+        // 2. Realistic Passenger Breathing, Awareness & Lifelike Animation Logic
         if (this.currentCarriage) {
             const time = performance.now() * 0.0015;
             this.currentCarriage.passengers.forEach((p, pIdx) => {
-                // Subtle breathing chest expansion & head tilt
-                const breath = Math.sin(time * 2.0 + pIdx * 1.5) * 0.012;
+                // Subtle rhythmic chest breathing expansion
+                const breath = Math.sin(time * 2.2 + pIdx * 1.6) * 0.008;
                 p.body.position.y = 0.32 + breath;
+                p.body.scale.set(1.0 + breath * 0.8, 1.0 + breath * 1.2, 1.0 + breath * 0.8);
 
-                if (p.isCreepy || this.currentCarIndex === 83) {
-                    const distToPlayer = this.playerPos.distanceTo(p.group.position);
-                    if (distToPlayer < 6.0) {
-                        // Turn head directly to stare at player
+                const distToPlayer = this.playerPos.distanceTo(p.group.position);
+
+                if (p.isCreepy || this.currentCarIndex === 83 || this.currentCarIndex === 71) {
+                    if (distToPlayer < 6.5) {
+                        // Creepy staring anomaly: head locks unblinkingly onto player
                         const angle = Math.atan2(this.playerPos.x - p.group.position.x, this.playerPos.z - p.group.position.z);
-                        p.head.rotation.y = angle - p.group.rotation.y;
+                        p.head.rotation.y = THREE.MathUtils.lerp(p.head.rotation.y, angle - p.group.rotation.y, delta * 5);
                     } else {
-                        p.head.rotation.y = 0;
+                        p.head.rotation.y = THREE.MathUtils.lerp(p.head.rotation.y, 0, delta * 3);
                     }
+                } else if (distToPlayer < 3.2 && this.playerPos.z > p.group.position.z - 2.5 && this.playerPos.z < p.group.position.z + 2.5) {
+                    // Natural commuter glance as player walks down the aisle
+                    const targetAngle = Math.atan2(this.playerPos.x - p.group.position.x, this.playerPos.z - p.group.position.z) - p.group.rotation.y;
+                    const clampedAngle = THREE.MathUtils.clamp(targetAngle, -0.65, 0.65);
+                    p.head.rotation.y = THREE.MathUtils.lerp(p.head.rotation.y, clampedAngle, delta * 3.5);
+                    p.head.rotation.x = THREE.MathUtils.lerp(p.head.rotation.x, 0.05, delta * 3.5);
                 } else if (p.animType === 'phone') {
-                    p.head.rotation.x = 0.22 + Math.sin(time * 1.2 + pIdx) * 0.04;
+                    // Looking at phone with subtle screen glow and thumb scrolling
+                    p.head.rotation.x = THREE.MathUtils.lerp(p.head.rotation.x, 0.28 + Math.sin(time * 1.5 + pIdx) * 0.03, delta * 4);
+                    p.head.rotation.y = THREE.MathUtils.lerp(p.head.rotation.y, (p.seatPos.x > 0 ? -1 : 1) * 0.06, delta * 4);
+                    if (p.thumbRight) {
+                        p.thumbRight.position.z = 0.27 + Math.sin(time * 5.0 + pIdx) * 0.005;
+                    }
                 } else if (p.animType === 'look_window') {
-                    p.head.rotation.y = (p.seatPos.x > 0 ? 1 : -1) * 0.85;
+                    // Gazing out the subway window watching passing tunnel lights
+                    const windowAngle = (p.seatPos.x > 0 ? 1 : -1) * (0.82 + Math.sin(time * 0.8 + pIdx) * 0.05);
+                    p.head.rotation.y = THREE.MathUtils.lerp(p.head.rotation.y, windowAngle, delta * 3);
+                    p.head.rotation.x = THREE.MathUtils.lerp(p.head.rotation.x, -0.04, delta * 3);
+                }
+
+                // Headphone wearer subtle rhythm head nod
+                if (p.headphones) {
+                    p.head.rotation.x += Math.sin(time * 4.2 + pIdx) * 0.025;
                 }
             });
         }

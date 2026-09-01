@@ -1403,6 +1403,17 @@ try {
             console.log(`   Carriage 1 HUD: Label="${car1Label}", Branch="${branch1Label}"`);
             if (!car1Label.includes('1')) throw new Error("Expected Carriage 1 in HUD!");
 
+            // Verify Realistic AI Passengers (3D Anatomy, Facial Features, Layered Outfits & Props)
+            const passengerCount = await page.evaluate(() => window.__lastMetro.currentCarriage.passengers.length);
+            const passengerHasFaceAndEyes = await page.evaluate(() => {
+                const p = window.__lastMetro.currentCarriage.passengers[0];
+                return p && p.head && p.head.children.length >= 8 && p.body && p.body.children.length >= 2;
+            });
+            console.log(`   Carriage 1 Realistic AI Passengers Count: ${passengerCount}, Detailed Facial/Anatomy Elements: ${passengerHasFaceAndEyes}`);
+            if (passengerCount < 1 || !passengerHasFaceAndEyes) {
+                throw new Error("Expected realistic 3D AI passengers with detailed faces, hairstyles, and outfits!");
+            }
+
             // Test Locked Back Door in Carriage 1 (trying to go back to Carriage 0)
             await page.evaluate(() => {
                 window.__lastMetro.playerPos.z = -7.9;
