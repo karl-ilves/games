@@ -4,7 +4,7 @@ import { yardService } from '../../shared/yardService';
 import { metroAudio } from './audio';
 
 // --- Types & Interfaces ---
-type GameState = 'intro_station' | 'intro_riding' | 'intro_first_stop' | 'intro_departing' | 'player_free' | 'inspecting' | 'keypad';
+type GameState = 'intro_station' | 'intro_riding' | 'intro_first_stop' | 'intro_departing' | 'player_free' | 'inspecting' | 'keypad' | 'dragged_death' | 'golden_shop';
 type DirectionBranch = 'right' | 'left' | 'undecided';
 
 interface AnomalyEvent {
@@ -30,7 +30,7 @@ interface AIPassenger {
 interface CarriageData {
     index: number;
     branch: DirectionBranch;
-    theme: 'normal' | 'flicker' | 'dark' | 'abandoned' | 'neon' | 'lounge' | 'archive' | 'anomaly';
+    theme: 'normal' | 'flicker' | 'dark' | 'abandoned' | 'neon' | 'lounge' | 'archive' | 'anomaly' | 'golden_shop';
     group: THREE.Group;
     lights: THREE.PointLight[];
     lightMeshes: THREE.Mesh[];
@@ -45,6 +45,70 @@ interface CarriageData {
     inspectableText?: { titleEt: string; descEt: string; titleEn: string; descEn: string };
 }
 
+export interface ShopItem {
+    id: string;
+    icon: string;
+    nameEt: string;
+    nameEn: string;
+    descEt: string;
+    descEn: string;
+    price: number;
+}
+
+export const GOLDEN_SHOP_ITEMS: ShopItem[] = [
+    {
+        id: 'night_vision',
+        icon: '👓',
+        nameEt: 'ÖÖPRILLID',
+        nameEn: 'NIGHT VISION GOGGLES',
+        descEt: 'Aitavad pimedates vagunites paremini näha ja toovad nähtavale salajased detailid.',
+        descEn: 'Helps see clearly in dark carriages and reveals hidden clues.',
+        price: 120
+    },
+    {
+        id: 'speed_boost',
+        icon: '👟',
+        nameEt: 'KIIRUSEBOONUS',
+        nameEn: 'SPEED BOOST',
+        descEt: 'Muudab mängija liikumise +50% kiiremaks, et ohtlikes olukordades kiiresti edasi liikuda.',
+        descEn: 'Increases player movement speed by +50%.',
+        price: 150
+    },
+    {
+        id: 'clue_detector',
+        icon: '🔍',
+        nameEt: 'VIHJEANDUR',
+        nameEn: 'CLUE DETECTOR',
+        descEt: 'Hakkab piiksuma ja märku andma, kui oled läheduses peidetud vihjetele või saladustele.',
+        descEn: 'Beeps and pulses when near hidden clues or lore objects.',
+        price: 225
+    },
+    {
+        id: 'secret_pass',
+        icon: '🎟️',
+        nameEt: 'SALAPILET',
+        nameEn: 'SECRET PASS',
+        descEt: 'Salapärane pilet, mis võib avada erilisi uksi ja salajasi kohti.',
+        descEn: 'A mysterious subway pass for special locked chambers.',
+        price: 300
+    },
+    {
+        id: 'radio',
+        icon: '📻',
+        nameEt: 'RAADIO',
+        nameEn: 'SUBWAY RADIO',
+        descEt: 'Mängib rahulikku muusikat ning võib püüda kinni kummalisi teateid ja sosinaid.',
+        descEn: 'Plays vintage tunes and picks up rare whispers and broadcasts.',
+        price: 175
+    }
+];
+
+// Module-level reusable scratch vectors for 60+ FPS zero-allocation performance
+const _scratchV1 = new THREE.Vector3();
+const _scratchV2 = new THREE.Vector3();
+const _moveDir = new THREE.Vector3();
+const _upAxis = new THREE.Vector3(0, 1, 0);
+
 export class LastMetroGame {
     private container: HTMLElement;
     private scene: THREE.Scene;
@@ -55,11 +119,37 @@ export class LastMetroGame {
     // Player State
     private isOwner: boolean = false;
     private lang: 'et' | 'en' = 'et';
-    private state: GameState = 'intro_station';
-    private currentCarIndex: number = 0; // 0 = start car, 1-10 = story, 11+ = infinite
+    public state: GameState = 'intro_station';
+    public currentCarIndex: number = 0; // 0 = start car, 1-100 = story & checkpoints, 101+ = infinite
     private branchDirection: DirectionBranch = 'undecided';
     private totalCarriagesExplored: number = 0;
     private cluesFound: number = 0;
+
+    // Coins Economy & Inventory (Roblox Style)
+    public coins: number = 0;
+    public collectibleCoins: { mesh: THREE.Mesh; value: number; collected: boolean }[] = [];
+    public inventory: { [itemKey: string]: boolean } = {};
+    public equippedItem: string | null = null;
+    public heldItemMesh: THREE.Group | null = null;
+
+    // Active Equipment Effects
+    public nightVisionActive: boolean = false;
+    public speedBoostActive: boolean = false;
+    public clueDetectorActive: boolean = false;
+    public radioActive: boolean = false;
+    public radarPingTimer: number = 0;
+
+    // Puzzle & Progression Flags
+    public hasUnlockedCarriage28WithClue: boolean = false;
+    public hasUnlockedCarriage64WithKey: boolean = false;
+    public hasUnlockedCarriage78WithHint: boolean = false;
+
+    // Dynamic Special Props & Timers
+    public reverseTunnelTimer: number = 0;
+    public soundCutoutTimer: number = 0;
+    public parallelTrainMesh: THREE.Group | null = null;
+    public parallelTrainActive: boolean = false;
+    public goldenShopKeeperMesh: THREE.Group | null = null;
 
     // FPS Controls
     private playerPos: THREE.Vector3 = new THREE.Vector3(0, 1.6, 0);
@@ -113,6 +203,7 @@ export class LastMetroGame {
     // Shadow Hands Void Anomaly State (Carriage 9 & Beyond)
     public shadowHandsActive: boolean = false;
     public shadowHandsGroups: THREE.Group[] = [];
+    public shadowHandsTimer: number = 0;
     private shadowHandsAnimTimer: number = 0;
     private deathDragSide: number = 1;
     private deathTimer: number = 0;
@@ -124,14 +215,13 @@ export class LastMetroGame {
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x06080c);
-        this.scene.fog = new THREE.FogExp2(0x06080c, 0.045);
+        this.scene.fog = new THREE.FogExp2(0x06080c, 0.04);
 
-        this.camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 150);
+        this.camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 120);
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+        this.renderer.shadowMap.enabled = false;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.05;
         this.container.appendChild(this.renderer.domElement);
@@ -277,6 +367,26 @@ export class LastMetroGame {
         if (deathRetry) {
             deathRetry.addEventListener('click', () => this.respawnFromDeath());
         }
+
+        // Golden Shop modal close button
+        const shopClose = document.getElementById('btn-shop-close');
+        if (shopClose) {
+            shopClose.addEventListener('click', () => {
+                const modal = document.getElementById('golden-shop-modal');
+                if (modal) modal.style.display = 'none';
+                this.state = 'player_free';
+            });
+        }
+
+        // Restore saved coins and inventory from checkpoint
+        try {
+            const savedCoins = localStorage.getItem('last_metro_coins');
+            if (savedCoins) this.coins = parseInt(savedCoins, 10) || 0;
+            const savedInv = localStorage.getItem('last_metro_inventory');
+            if (savedInv) this.inventory = { ...this.inventory, ...JSON.parse(savedInv) };
+            this.updateCoinsUI();
+            this.updateHotbarUI();
+        } catch (e) {}
     }
 
     private updateLanguageUI() {
@@ -361,22 +471,25 @@ export class LastMetroGame {
             this.stationPlatformGroup.add(pillar);
         }
 
-        // Bright Platform Ceiling & Overhead Lights (selgelt nähtav metroojaam!)
-        const platformAmbient = new THREE.PointLight(0xfff8ee, 2.2, 35);
+        // Bright Platform Ceiling & Overhead Lights (Optimized for 60+ FPS)
+        const platformAmbient = new THREE.PointLight(0xfff8ee, 2.4, 40);
         platformAmbient.position.set(4.5, 4.0, 0);
         this.stationPlatformGroup.add(platformAmbient);
 
         for (let z = -22; z <= 22; z += 7.5) {
-            // Bright fluorescent lamp strip fixture
+            // Bright fluorescent lamp strip fixture (glowing MeshBasicMaterial)
             const lampMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
             const lampFixture = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 2.2), lampMat);
             lampFixture.position.set(3.5, 4.5, z);
             this.stationPlatformGroup.add(lampFixture);
-
-            const pLight = new THREE.PointLight(0xfffaed, 1.6, 18);
-            pLight.position.set(3.5, 4.2, z);
-            this.stationPlatformGroup.add(pLight);
         }
+
+        // Two key point lights covering the platform ends smoothly
+        [-12, 12].forEach(pz => {
+            const pLight = new THREE.PointLight(0xfffaed, 1.8, 24);
+            pLight.position.set(3.5, 4.2, pz);
+            this.stationPlatformGroup.add(pLight);
+        });
 
         // Digital Destination Board
         const boardCanvas = document.createElement('canvas');
@@ -419,7 +532,7 @@ export class LastMetroGame {
         tunnelMesh.position.set(0, 1.5, 0);
         this.tunnelGroup.add(tunnelMesh);
 
-        // Vivid Passing Subway Tunnel Lights (Metroo tuled akendest mööda tuhisemas!)
+        // Vivid Passing Subway Tunnel Lights (Ultra-Fast GPU-efficient Glowing Meshes)
         for (let z = -56; z <= 56; z += 6) {
             // Wall fluorescent strip lamps (both left and right sides)
             [-4.8, 4.8].forEach((lx, sIdx) => {
@@ -430,10 +543,6 @@ export class LastMetroGame {
                 const lampMesh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.18, 1.8), lampMat);
                 lampMesh.position.set(lx, 1.8, z);
                 this.tunnelGroup.add(lampMesh);
-
-                const pointL = new THREE.PointLight(isWarm ? 0xffbe76 : 0x70a1ff, 1.1, 9);
-                pointL.position.set(lx * 0.85, 1.8, z);
-                this.tunnelGroup.add(pointL);
             });
 
             // Ceiling overhead light strips
@@ -453,6 +562,11 @@ export class LastMetroGame {
                 this.tunnelGroup.add(signalMesh);
             }
         }
+
+        // Single ambient tunnel light for smooth mood lighting
+        const tunnelAmbient = new THREE.PointLight(0x40739e, 0.6, 60);
+        tunnelAmbient.position.set(0, 2.5, 0);
+        this.tunnelGroup.add(tunnelAmbient);
 
         // Surreal exterior backdrop mesh (for Vagun 5 window anomaly)
         const skyGeo = new THREE.SphereGeometry(60, 32, 32);
@@ -694,8 +808,6 @@ export class LastMetroGame {
                 10
             );
             pLight.position.set(0, carHeight - 0.3, z);
-            pLight.castShadow = true;
-            pLight.shadow.bias = -0.001;
             carGroup.add(pLight);
             lights.push(pLight);
         }
@@ -745,20 +857,204 @@ export class LastMetroGame {
         doorBack.position.set(0, 0, -carLength / 2);
         carGroup.add(doorBack);
 
-        // 11. Puzzle / Special Item setup for Carriage 6, 11+
+        // 11. Golden Shop (Vagun 100 Checkpoint) Construction & Setup
         let inspectableItem: THREE.Group | undefined;
         let inspectableText: any;
-        if (index === 6) {
+
+        if (index === 100 || theme === 'golden_shop') {
+            // Golden Shop Luxury Counter & Pedestals
+            const counterMat = new THREE.MeshStandardMaterial({ color: 0x4a2810, roughness: 0.3, metalness: 0.2 });
+            const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.95, roughness: 0.15 });
+
+            // Long Sales Counter
+            const counter = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.95, 0.9), counterMat);
+            counter.position.set(0, 0.48, 1.5);
+            carGroup.add(counter);
+
+            const counterTop = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.08, 1.0), goldTrimMat);
+            counterTop.position.set(0, 0.98, 1.5);
+            carGroup.add(counterTop);
+
+            // Glowing 3D Neon Sign: ✨ GOLDEN SHOP ✨
+            const signCanvas = document.createElement('canvas');
+            signCanvas.width = 512;
+            signCanvas.height = 128;
+            const sCtx = signCanvas.getContext('2d');
+            if (sCtx) {
+                sCtx.fillStyle = '#0a0d14';
+                sCtx.fillRect(0, 0, 512, 128);
+                sCtx.strokeStyle = '#ffd32a';
+                sCtx.lineWidth = 6;
+                sCtx.strokeRect(6, 6, 500, 116);
+                sCtx.fillStyle = '#ffd32a';
+                sCtx.font = 'bold 36px sans-serif';
+                sCtx.textAlign = 'center';
+                sCtx.fillText('✨ GOLDEN SHOP ✨', 256, 58);
+                sCtx.fillStyle = '#ffffff';
+                sCtx.font = 'bold 20px sans-serif';
+                sCtx.fillText('VAGUN 100 CHECKPOINT', 256, 96);
+            }
+            const signTex = new THREE.CanvasTexture(signCanvas);
+            const signMesh = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.7, 0.05), new THREE.MeshBasicMaterial({ map: signTex }));
+            signMesh.position.set(0, 2.5, 1.5);
+            carGroup.add(signMesh);
+
+            // 5 Item display pedestals on counter
+            const itemPedestals = [
+                { id: 'night_vision', x: -0.9, icon: '👓', name: 'NV Goggles' },
+                { id: 'speed_boost', x: -0.45, icon: '👟', name: 'Speed' },
+                { id: 'clue_detector', x: 0.0, icon: '🔍', name: 'Detector' },
+                { id: 'secret_pass', x: 0.45, icon: '🎟️', name: 'Secret Pass' },
+                { id: 'radio', x: 0.9, icon: '📻', name: 'Radio' }
+            ];
+
+            itemPedestals.forEach(p => {
+                const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.12, 16), goldTrimMat);
+                ped.position.set(p.x, 1.05, 1.5);
+                carGroup.add(ped);
+
+                const itemMesh = this.createHeldItemModel(p.id);
+                itemMesh.position.set(p.x, 1.2, 1.5);
+                itemMesh.rotation.set(0, Math.PI, 0);
+                carGroup.add(itemMesh);
+            });
+
+            // Friendly AI Shopkeeper NPC behind counter
+            const shopkeeper = new THREE.Group();
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xf5cd79, roughness: 0.5 });
+            const uniformMat = new THREE.MeshStandardMaterial({ color: 0x1b1464, roughness: 0.6 });
+            const goldBadgeMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.9 });
+
+            // Torso
+            const sTorso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.65, 0.28), uniformMat);
+            sTorso.position.set(0, 1.3, 0);
+            shopkeeper.add(sTorso);
+
+            // Golden Epaulets & Badge
+            const badge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.02), goldBadgeMat);
+            badge.position.set(-0.1, 1.45, 0.15);
+            shopkeeper.add(badge);
+
+            // Head & Golden Cap
+            const sHead = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), skinMat);
+            sHead.position.set(0, 1.75, 0);
+            shopkeeper.add(sHead);
+
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 16), uniformMat);
+            cap.position.set(0, 1.86, 0);
+            shopkeeper.add(cap);
+
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.12), goldBadgeMat);
+            visor.position.set(0, 1.83, 0.14);
+            shopkeeper.add(visor);
+
+            shopkeeper.position.set(0, 0, 2.3);
+            carGroup.add(shopkeeper);
+            this.goldenShopKeeperMesh = shopkeeper;
+
+            // Interactive Shop Prompt Mesh on Counter
             inspectableItem = this.createInspectableNote();
-            inspectableItem.position.set(-1.1, 0.62, 2.5);
+            inspectableItem.position.set(0, 1.05, 1.1);
             carGroup.add(inspectableItem);
             inspectableText = {
-                titleEt: '📜 Vana Metroopilet ja Märkmik (1987)',
-                descEt: '„Rong nr 404 väljus viimast korda 14. oktoobril 1987. Peatusi ei registreeritud enam kunagi. Süsteem lukustus igaveseks ringiks...”',
-                titleEn: '📜 Vintage Subway Pass & Notebook (1987)',
-                descEn: '“Train No. 404 departed for the final time on October 14, 1987. No station arrivals were ever recorded again. The track sealed into an infinite loop...”'
+                titleEt: '🛒 KULDNE POOD (VAGUN 100)',
+                descEt: 'Astu leti juurde ja vali endale vajalikud esemed (Ööprillid, Kiirus, Vihjeandur, Salapilet, Raadio).',
+                titleEn: '🛒 GOLDEN SHOP (CARRIAGE 100)',
+                descEn: 'Step up to the counter and purchase equipment with your collected Metro Coins.'
             };
-        } else if (index >= 11 && index % 2 === 1) {
+        } else if (index === 6 || index === 14 || index === 25 || index === 28 || index === 32 || index === 39 || index === 42 || index === 50 || index === 55 || index === 70 || index === 78 || index === 80 || index === 87) {
+            // Story Inspectable Props
+            inspectableItem = this.createInspectableNote();
+            inspectableItem.position.set(index % 2 === 0 ? -1.1 : 1.1, 0.62, (index % 5) * 1.5 - 2.0);
+            carGroup.add(inspectableItem);
+
+            const storyClues: { [key: number]: { titleEt: string; descEt: string; titleEn: string; descEn: string } } = {
+                6: {
+                    titleEt: '📜 Vana Metroopilet ja Märkmik (1987)',
+                    descEt: '„Rong nr 404 väljus viimast korda 14. oktoobril 1987. Peatusi ei registreeritud enam kunagi. Süsteem lukustus igaveseks ringiks...”',
+                    titleEn: '📜 Vintage Subway Pass & Notebook (1987)',
+                    descEn: '“Train No. 404 departed for the final time on October 14, 1987. No station arrivals were ever recorded again. The track sealed into an infinite loop...”'
+                },
+                14: {
+                    titleEt: '🎫 Salapärane Metroopilet',
+                    descEt: 'Vana reljeefne pilet: „Rong 100 · Ühesuunapilet Tundmatusse”.',
+                    titleEn: '🎫 Mysterious Subway Ticket',
+                    descEn: 'An embossed ticket: „Train 100 · One-way ticket into the Unknown”.'
+                },
+                25: {
+                    titleEt: '🎫 Vana Metroopilet 1987',
+                    descEt: 'Kuupäev: 14.10.1987. Märge: „Projekt Viimane Metroo — Peatusi ei ole.”',
+                    titleEn: '🎫 Old Ticket 1987',
+                    descEn: 'Date: 14.10.1987. Note: „Project Last Metro — No scheduled stops.”'
+                },
+                28: {
+                    titleEt: '🧩 Peidetud Koodisedel (Vagun 28)',
+                    descEt: 'Sedel istme all: „Uksekood: 1987”. Uks on nüüd avatud!',
+                    titleEn: '🧩 Hidden Code Slip (Carriage 28)',
+                    descEn: 'Note under the seat: „Door code: 1987”. Bulkhead door is now unlocked!'
+                },
+                32: {
+                    titleEt: '🗺️ Märgistatud Metrookaart',
+                    descEt: 'Kaardil on punane ring: „Vagun 50 peidab tõde. Jätka liikumist.”',
+                    titleEn: '🗺️ Marked Transit Map',
+                    descEn: 'A red circle notes: „Carriage 50 holds the truth. Keep moving forward.”'
+                },
+                39: {
+                    titleEt: '📋 Hooldusraamatu Väljavõte',
+                    descEt: '„Tunnel 7C ei jõua kunagi pinnale. Rong sõidab suletud ajatsüklis.”',
+                    titleEn: '📋 Maintenance Log Excerpt',
+                    descEn: '„Tunnel 7C never surfaces. The train operates in a closed temporal loop.”'
+                },
+                42: {
+                    titleEt: '🎒 Mahajäetud Seljakott',
+                    descEt: 'Koti sees on märkmik: „Vagunis 50 saabub esimene suur vastus.”',
+                    titleEn: '🎒 Abandoned Backpack',
+                    descEn: 'Inside is a diary: „In Carriage 50, the first great answer awaits.”'
+                },
+                50: {
+                    titleEt: '⭐ Projekti „Igavene Metroo” Dokument (1987)',
+                    descEt: '„Rong 100 loodi 1987. aastal ruumi ja aja anomaalia testimiseks. Väljapääs asub Vagun 100 taga. Jätka liikumist!”',
+                    titleEn: '⭐ Project „Eternal Metro” Document (1987)',
+                    descEn: '„Train 100 was designed in 1987 to test temporal displacement. The gateway lies beyond Carriage 100. Keep going!”'
+                },
+                55: {
+                    titleEt: '🎫 Kuldne Pilet #100',
+                    descEt: '„Pilet Vagunisse 100 — Kuldne Checkpoint ja Pood”.',
+                    titleEn: '🎫 Golden Ticket #100',
+                    descEn: '„Ticket to Carriage 100 — Golden Checkpoint & Shop”.'
+                },
+                70: {
+                    titleEt: '⭐ Kadunud Reisija Päevik',
+                    descEt: '„Olen jõudnud vagunisse 70. Vagun 100 on checkpoint ja oaas. Ära anna alla!”',
+                    titleEn: '⭐ Lost Passenger\'s Journal',
+                    descEn: '„I have reached Carriage 70. Carriage 100 is a checkpoint and safe haven. Do not give up!”'
+                },
+                78: {
+                    titleEt: '🧩 Uksehoova Juhend (Vagun 78)',
+                    descEt: '„Tõmba kuldset hooba paremal. Teekond jätkub.” Uks on avatud!',
+                    titleEn: '🧩 Bulkhead Lever Guide (Carriage 78)',
+                    descEn: '„Pull the golden lever on the right. The journey continues.” Door unlocked!'
+                },
+                80: {
+                    titleEt: '⭐ Suur Metroo Peakaart',
+                    descEt: '„Vagun 80 läbitud. Vagun 100 (Kuldne Pood) asub vaid 20 vaguni kaugusel!”',
+                    titleEn: '⭐ Grand Master Transit Map',
+                    descEn: '„Carriage 80 reached. Carriage 100 (Golden Shop) is just 20 carriages ahead!”'
+                },
+                87: {
+                    titleEt: '💳 Kuldne Konduktori Kaart',
+                    descEt: '„Vagun 100 on avatud kõigile ränduritele. Pood võtab vastu Metro Coine.”',
+                    titleEn: '💳 Golden Conductor Keycard',
+                    descEn: '„Carriage 100 is open to all explorers. The Shop accepts Metro Coins.”'
+                }
+            };
+            inspectableText = storyClues[index] || {
+                titleEt: `📜 Dokument Vagunis ${index}`,
+                descEt: 'Metroo saladused süvenevad iga vaguniga.',
+                titleEn: `📜 Document in Carriage ${index}`,
+                descEn: 'The mysteries of the subway deepen with every carriage.'
+            };
+        } else if (index >= 11 && index % 5 === 1) {
             // Procedural Keypad Puzzle
             const code = `${Math.floor(1000 + Math.random() * 9000)}`;
             inspectableItem = this.createKeypadProp();
@@ -772,6 +1068,9 @@ export class LastMetroGame {
             };
         }
 
+        // 12. Scatter Collectible Rotating Golden Coins throughout the carriage
+        this.spawnCollectibleCoins(carGroup, index === 100 ? 8 : 3);
+
         return {
             group: carGroup,
             index,
@@ -783,9 +1082,9 @@ export class LastMetroGame {
             doorFront,
             doorBack,
             mapMesh,
-            puzzleSolved: index < 11,
+            puzzleSolved: index < 11 || (index === 28 && this.hasUnlockedCarriage28WithClue) || (index === 64 && (this.hasUnlockedCarriage64WithKey || !!this.inventory['key'])) || (index === 78 && this.hasUnlockedCarriage78WithHint),
             puzzleCode: index >= 11 ? '1987' : undefined,
-            hasKeypad: index >= 11 && index % 2 === 1,
+            hasKeypad: index >= 11 && index % 5 === 1,
             inspectableItem,
             inspectableText
         };
@@ -1038,10 +1337,7 @@ export class LastMetroGame {
                     pGroup.add(hand);
                 });
 
-                // Subtle blue screen light illuminating face
-                const screenLight = new THREE.PointLight(0x00d2d3, 0.45, 1.2);
-                screenLight.position.set(0, 0.42, 0.26);
-                pGroup.add(screenLight);
+
             } else {
                 // Metro Newspaper
                 const paperMat = new THREE.MeshStandardMaterial({ color: 0xf5f6fa, roughness: 0.9 });
@@ -1077,26 +1373,351 @@ export class LastMetroGame {
         }
     }
 
+    // --- Coins, Roblox-Style Hotbar & Equipment Models ---
+
+    public addCoins(amount: number) {
+        this.coins += amount;
+        this.updateCoinsUI();
+        try {
+            localStorage.setItem('last_metro_coins', String(this.coins));
+        } catch (e) {}
+    }
+
+    public spendCoins(amount: number): boolean {
+        if (this.coins < amount) return false;
+        this.coins -= amount;
+        this.updateCoinsUI();
+        try {
+            localStorage.setItem('last_metro_coins', String(this.coins));
+        } catch (e) {}
+        return true;
+    }
+
+    public updateCoinsUI() {
+        const isEt = this.lang === 'et';
+        const coinsLabel = document.getElementById('hud-coins-label');
+        if (coinsLabel) {
+            coinsLabel.innerText = isEt ? `${this.coins} COINI` : `${this.coins} COINS`;
+        }
+        const shopBal = document.getElementById('shop-coin-balance');
+        if (shopBal) {
+            shopBal.innerText = isEt ? `🪙 ${this.coins} COINI` : `🪙 ${this.coins} COINS`;
+        }
+    }
+
+    public unlockItem(itemKey: string) {
+        if (this.inventory[itemKey]) return;
+        this.inventory[itemKey] = true;
+        this.updateHotbarUI();
+        metroAudio.playItemEquip();
+
+        const isEt = this.lang === 'et';
+        if (itemKey === 'key') {
+            this.showThought('Sain VÕTME! 🗝️ (Klõpsa ekraani all olevale võtmele, et see kätte võtta nagu Robloxsis)', 'Acquired KEY! 🗝️ (Click the hotbar slot below to equip it like in Roblox)');
+        }
+        try {
+            localStorage.setItem('last_metro_inventory', JSON.stringify(this.inventory));
+        } catch (e) {}
+    }
+
+    public toggleEquipItem(itemKey: string) {
+        if (this.equippedItem === itemKey) {
+            // Unequip item ("nagu robloxsis")
+            this.equippedItem = null;
+            if (this.heldItemMesh) {
+                this.camera.remove(this.heldItemMesh);
+                this.heldItemMesh = null;
+            }
+            if (itemKey === 'night_vision') {
+                this.nightVisionActive = false;
+                const nvOverlay = document.getElementById('night-vision-overlay');
+                if (nvOverlay) nvOverlay.style.display = 'none';
+            } else if (itemKey === 'radio') {
+                this.radioActive = false;
+                metroAudio.stopRadioAudio();
+            } else if (itemKey === 'speed_boost') {
+                this.speedBoostActive = false;
+            } else if (itemKey === 'clue_detector') {
+                this.clueDetectorActive = false;
+            }
+            metroAudio.playItemEquip();
+            this.updateHotbarUI();
+        } else {
+            // Equip new item
+            this.equippedItem = itemKey;
+            metroAudio.playItemEquip();
+
+            if (this.heldItemMesh) {
+                this.camera.remove(this.heldItemMesh);
+                this.heldItemMesh = null;
+            }
+
+            // Create 3D held model on camera view
+            this.heldItemMesh = this.createHeldItemModel(itemKey);
+            if (this.heldItemMesh) {
+                this.heldItemMesh.position.set(0.26, -0.22, -0.45);
+                this.camera.add(this.heldItemMesh);
+            }
+
+            if (itemKey === 'night_vision') {
+                this.nightVisionActive = true;
+                const nvOverlay = document.getElementById('night-vision-overlay');
+                if (nvOverlay) nvOverlay.style.display = 'block';
+            } else if (itemKey === 'radio') {
+                this.radioActive = true;
+                metroAudio.playRadioAudio();
+            } else if (itemKey === 'speed_boost') {
+                this.speedBoostActive = true;
+            } else if (itemKey === 'clue_detector') {
+                this.clueDetectorActive = true;
+            }
+            this.updateHotbarUI();
+        }
+    }
+
+    public updateHotbarUI() {
+        const hotbar = document.getElementById('inventory-hotbar');
+        if (!hotbar) return;
+        hotbar.innerHTML = '';
+
+        const itemDefs: { key: string; icon: string; nameEt: string; nameEn: string; slot: number }[] = [
+            { key: 'key', icon: '🗝️', nameEt: 'Võti', nameEn: 'Key', slot: 1 },
+            { key: 'night_vision', icon: '👓', nameEt: 'Ööprillid', nameEn: 'NV Goggles', slot: 2 },
+            { key: 'speed_boost', icon: '👟', nameEt: 'Kiirus', nameEn: 'Speed', slot: 3 },
+            { key: 'clue_detector', icon: '🔍', nameEt: 'Vihjeandur', nameEn: 'Detector', slot: 4 },
+            { key: 'secret_pass', icon: '🎟️', nameEt: 'Salapilet', nameEn: 'Secret Pass', slot: 5 },
+            { key: 'radio', icon: '📻', nameEt: 'Raadio', nameEn: 'Radio', slot: 6 }
+        ];
+
+        itemDefs.forEach(def => {
+            if (this.inventory[def.key]) {
+                const slotDiv = document.createElement('div');
+                slotDiv.className = `hotbar-slot ${this.equippedItem === def.key ? 'equipped' : ''}`;
+                slotDiv.id = `slot-${def.key}`;
+                slotDiv.innerHTML = `
+                    <span class="slot-num">${def.slot}</span>
+                    <span class="slot-icon">${def.icon}</span>
+                    <span class="slot-name">${this.lang === 'et' ? def.nameEt : def.nameEn}</span>
+                `;
+                slotDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleEquipItem(def.key);
+                });
+                hotbar.appendChild(slotDiv);
+            }
+        });
+    }
+
+    private createHeldItemModel(itemKey: string): THREE.Group {
+        const group = new THREE.Group();
+
+        if (itemKey === 'key') {
+            // Golden Skeleton Key
+            const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.95, roughness: 0.15 });
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.008, 8, 16), goldMat);
+            ring.position.set(0, 0, 0);
+            group.add(ring);
+
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.14, 8), goldMat);
+            shaft.rotation.x = Math.PI / 2;
+            shaft.position.set(0, 0, -0.07);
+            group.add(shaft);
+
+            const bit1 = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.024, 0.015), goldMat);
+            bit1.position.set(0, -0.015, -0.12);
+            group.add(bit1);
+
+            const bit2 = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.018, 0.012), goldMat);
+            bit2.position.set(0, -0.012, -0.135);
+            group.add(bit2);
+        } else if (itemKey === 'radio') {
+            // Vintage Portable Subway Radio
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3d3d3d, roughness: 0.6 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.04), bodyMat);
+            group.add(body);
+
+            const dialMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+            const dial = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 0.005), dialMat);
+            dial.position.set(0, 0.03, 0.021);
+            group.add(dial);
+
+            const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.14, 6), new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.9 }));
+            antenna.position.set(0.03, 0.12, 0);
+            group.add(antenna);
+        } else if (itemKey === 'secret_pass') {
+            // Golden Secret Pass
+            const passMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.85, roughness: 0.25 });
+            const pass = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.06, 0.004), passMat);
+            group.add(pass);
+        } else if (itemKey === 'clue_detector') {
+            // Radar Clue Detector
+            const casingMat = new THREE.MeshStandardMaterial({ color: 0x2f3542, metalness: 0.7, roughness: 0.3 });
+            const casing = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.11, 0.03), casingMat);
+            group.add(casing);
+
+            const ledMat = new THREE.MeshBasicMaterial({ color: 0x2ed573 });
+            const led = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), ledMat);
+            led.position.set(0, 0.04, 0.016);
+            group.add(led);
+        } else if (itemKey === 'night_vision') {
+            // Goggles
+            const gMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.5 });
+            const lensMat = new THREE.MeshBasicMaterial({ color: 0x2ed573 });
+            [-0.03, 0.03].forEach(gx => {
+                const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.06, 8), gMat);
+                tube.rotation.x = Math.PI / 2;
+                tube.position.set(gx, 0, 0);
+                group.add(tube);
+
+                const lens = new THREE.Mesh(new THREE.CircleGeometry(0.018, 12), lensMat);
+                lens.position.set(gx, 0, -0.031);
+                group.add(lens);
+            });
+        }
+
+        group.rotation.set(0.1, -0.2, 0.05);
+        return group;
+    }
+
+    private spawnCollectibleCoins(carGroup: THREE.Group, count: number = 3) {
+        const coinMat = new THREE.MeshStandardMaterial({
+            color: 0xffd32a,
+            metalness: 0.95,
+            roughness: 0.12,
+            emissive: 0xffd32a,
+            emissiveIntensity: 0.35
+        });
+        const coinGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.025, 16);
+
+        const possiblePositions = [
+            new THREE.Vector3(-0.9, 0.55, -4.5),
+            new THREE.Vector3(0.9, 0.55, -2.0),
+            new THREE.Vector3(0, 0.15, 0.5),
+            new THREE.Vector3(-0.9, 0.55, 3.5),
+            new THREE.Vector3(0.9, 0.55, 6.0),
+            new THREE.Vector3(0, 0.15, -6.5)
+        ];
+
+        for (let i = 0; i < count; i++) {
+            const pos = possiblePositions[(i + this.currentCarIndex) % possiblePositions.length];
+            const coinMesh = new THREE.Mesh(coinGeo, coinMat);
+            coinMesh.rotation.x = Math.PI / 2;
+            coinMesh.position.copy(pos);
+            carGroup.add(coinMesh);
+
+            this.collectibleCoins.push({
+                mesh: coinMesh,
+                value: 2,
+                collected: false
+            });
+        }
+    }
+
+    public openGoldenShopModal() {
+        const modal = document.getElementById('golden-shop-modal');
+        if (!modal) return;
+        this.updateCoinsUI();
+
+        const grid = document.getElementById('shop-items-grid');
+        if (grid) {
+            grid.innerHTML = '';
+            GOLDEN_SHOP_ITEMS.forEach(item => {
+                const isOwned = this.inventory[item.id];
+                const canAfford = this.coins >= item.price;
+                const card = document.createElement('div');
+                card.className = 'shop-item-card';
+                card.innerHTML = `
+                    <div class="shop-item-header">
+                        <span style="font-size: 1.6rem;">${item.icon}</span>
+                        <div>
+                            <div class="shop-item-title">${this.lang === 'et' ? item.nameEt : item.nameEn}</div>
+                            <div class="shop-item-price">🪙 ${item.price} COINI</div>
+                        </div>
+                    </div>
+                    <div class="shop-item-desc">${this.lang === 'et' ? item.descEt : item.descEn}</div>
+                    <div class="shop-item-footer">
+                        <span style="font-size: 0.75rem; color: #a4b0be;">${isOwned ? '✅ OMATUD' : 'Saadaval'}</span>
+                        <button class="btn-shop-buy" id="btn-buy-${item.id}" ${isOwned ? 'disabled' : canAfford ? '' : 'disabled'}>
+                            ${isOwned ? '✅ OMAD' : '🛒 OSTA / BUY'}
+                        </button>
+                    </div>
+                `;
+
+                const buyBtn = card.querySelector(`#btn-buy-${item.id}`);
+                if (buyBtn && !isOwned) {
+                    buyBtn.addEventListener('click', () => {
+                        this.buyShopItem(item.id);
+                    });
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        modal.style.display = 'flex';
+        this.state = 'golden_shop';
+    }
+
+    public buyShopItem(itemId: string) {
+        const item = GOLDEN_SHOP_ITEMS.find(i => i.id === itemId);
+        if (!item) return;
+
+        if (this.spendCoins(item.price)) {
+            this.unlockItem(item.id);
+            metroAudio.playShopPurchase();
+            this.openGoldenShopModal(); // Refresh view
+            this.showThought(
+                `Ostsid eseme: ${this.lang === 'et' ? item.nameEt : item.nameEn}!`,
+                `Purchased item: ${item.nameEn}!`
+            );
+        } else {
+            this.showThought('Sul ei ole piisavalt coine!', 'You do not have enough coins!');
+        }
+    }
+
+    public triggerReverseTunnel(duration: number = 5.0) {
+        this.reverseTunnelTimer = duration;
+    }
+
+    public triggerSoundCutout(duration: number = 4.0) {
+        this.soundCutoutTimer = duration;
+        metroAudio.setVolume(0);
+        setTimeout(() => {
+            metroAudio.setVolume(0.7);
+        }, duration * 1000);
+    }
+
     private createInspectableNote(): THREE.Group {
-        const itemGroup = new THREE.Group();
-        const noteMat = new THREE.MeshStandardMaterial({ color: 0xf6e58d, roughness: 0.8 });
-        const note = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.02, 0.35), noteMat);
-        itemGroup.add(note);
+        const noteGroup = new THREE.Group();
 
-        // Pulsing glow indicator
-        const glow = new THREE.PointLight(0xffd32a, 0.6, 2.5);
-        glow.position.set(0, 0.3, 0);
-        itemGroup.add(glow);
+        // Leather notebook cover
+        const bookCoverMat = new THREE.MeshStandardMaterial({ color: 0x4a2810, roughness: 0.8 });
+        const bookCover = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 0.26), bookCoverMat);
+        noteGroup.add(bookCover);
 
-        return itemGroup;
+        // Yellowed paper pages
+        const paperMat = new THREE.MeshStandardMaterial({ color: 0xfae5bf, roughness: 0.9 });
+        const paper = new THREE.Mesh(new THREE.BoxGeometry(0.33, 0.045, 0.24), paperMat);
+        paper.position.y = 0.01;
+        noteGroup.add(paper);
+
+        // Interactive subtle pulse beacon
+        const beaconMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f });
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), beaconMat);
+        beacon.position.set(0, 0.1, 0);
+        noteGroup.add(beacon);
+
+        return noteGroup;
     }
 
     private createKeypadProp(): THREE.Group {
         const keypadGroup = new THREE.Group();
-        const boxMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, metalness: 0.8 });
-        const box = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.4, 0.08), boxMat);
-        keypadGroup.add(box);
 
+        // Metal mounting plate
+        const plateMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.8, roughness: 0.3 });
+        const plate = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.5, 0.08), plateMat);
+        keypadGroup.add(plate);
+
+        // Digital backlit LCD screen
         const screenMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
         const screen = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.09), screenMat);
         screen.position.set(0, 0.1, 0);
@@ -1107,15 +1728,44 @@ export class LastMetroGame {
 
     // --- Story & Anomaly Transitions ---
 
+    // --- Story & Anomaly Transitions ---
+
     public loadCarriage(index: number, branch: DirectionBranch) {
         console.log(`🚇 Loading Carriage ${index} (Branch: ${branch})`);
+        const prevIndex = this.currentCarIndex;
         this.currentCarIndex = index;
         this.totalCarriagesExplored++;
         if (branch !== 'undecided') this.branchDirection = branch;
 
-        // Remove previous carriage
+        // Reward +2 Coins for every new carriage gangway door crossed!
+        if (index > 0) {
+            this.addCoins(2);
+        }
+
+        // Stop or start Golden Shop calming music on transition
+        if (prevIndex === 100 && index !== 100) {
+            metroAudio.stopShopMusic();
+        } else if (index === 100) {
+            metroAudio.playShopMusic();
+            try {
+                localStorage.setItem('last_metro_checkpoint', JSON.stringify({
+                    carriage: 100,
+                    coins: this.coins,
+                    inventory: this.inventory
+                }));
+            } catch (e) {}
+        }
+
+        // Cleanly dispose and remove previous carriage to free GPU memory
         if (this.currentCarriage) {
             this.scene.remove(this.currentCarriage.group);
+            this.currentCarriage.group.traverse((child: any) => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach((m: any) => m.dispose());
+                    else child.material.dispose();
+                }
+            });
         }
 
         // Clean up previous anomalies (shadow hands, stalkers, modals)
@@ -1132,10 +1782,11 @@ export class LastMetroGame {
 
         // Determine Theme based on story progression or infinite randomness
         let theme: CarriageData['theme'] = 'normal';
-        if (index === 4) theme = 'flicker';
-        else if (index === 7 || index === 9) theme = 'dark';
-        else if (index === 10) theme = 'dark';
-        else if (index >= 11) {
+        if (index === 4 || index === 15 || index === 35 || index === 49 || index === 60 || index === 75 || index === 96) theme = 'flicker';
+        else if (index === 7 || index === 9 || index === 10 || index === 38 || index === 54 || index === 77) theme = 'dark';
+        else if (index === 23) theme = 'neon';
+        else if (index === 100) theme = 'golden_shop';
+        else if (index >= 101) {
             const themes: CarriageData['theme'][] = ['normal', 'flicker', 'dark', 'abandoned', 'neon', 'lounge', 'archive'];
             theme = themes[Math.floor(Math.random() * themes.length)];
         }
@@ -1153,18 +1804,19 @@ export class LastMetroGame {
 
         // Update UI
         this.updateLanguageUI();
+        this.updateCoinsUI();
+        this.updateHotbarUI();
 
         // Trigger story events per carriage index
         this.triggerCarriageStoryEvent(index);
     }
 
     private triggerCarriageStoryEvent(index: number) {
-        // Ramping eerie drone
-        metroAudio.setEerinessLevel(Math.min(1.0, index * 0.1));
+        // Ramping eerie drone (resets to peaceful 0 at checkpoint 100)
+        metroAudio.setEerinessLevel(index === 100 ? 0.0 : Math.min(1.0, index * 0.03));
 
         switch (index) {
             case 1:
-                // Carriage 1: Whispering anomaly
                 setTimeout(() => {
                     metroAudio.playWhisper(4.0);
                     setTimeout(() => {
@@ -1172,58 +1824,348 @@ export class LastMetroGame {
                     }, 4200);
                 }, 3000);
                 break;
-
             case 2:
-                // Carriage 2: Uncanny Passenger staring
                 this.showThought('See reisija ees... ta käitub imelikult.', 'That passenger ahead... they are behaving strangely.');
                 break;
-
             case 3:
-                // Carriage 3: Glitching Map
                 this.showThought('Metrookaart seinal... mis jaam see on?', 'The subway map on the wall... what station is that?');
                 break;
-
             case 4:
-                // Carriage 4: Flickering Lights
                 this.startLightFlickerAnomaly();
                 break;
-
             case 5:
-                // Carriage 5: Window void anomaly
                 this.showThought('Aknast välja vaadates... see ei ole linn.', 'Looking out the window... that is not the city.');
                 break;
-
             case 6:
-                // Carriage 6: Secret Clue Investigation
                 this.showThought('Istmel on midagi. Ma peaksin seda uurima.', 'There is something on the seat. I should inspect it.');
                 break;
-
             case 7:
-                // Carriage 7: Backway sealed
                 this.showThought('Tagasiteed enam ei ole. Ma pean edasi liikuma.', 'There is no way back. I must keep moving forward.');
                 break;
-
             case 8:
-                // Carriage 8: Exterior door burst
                 this.startDoorGlitchAnomaly();
                 break;
-
             case 9:
-                // Carriage 9: Ghost Stalker & Void Shadow Hands Event
                 this.spawnStalkerEntity();
                 this.showThought('Seal ees seisab keegi... ta lihtsalt jälgib mind.', 'Someone is standing ahead... they are just watching me.');
                 break;
-
             case 10:
-                // Carriage 10: Major Glitch & Jump Scare
                 this.startCarriage10JumpScare();
                 break;
 
+            // --- Vagunid 11–20 ---
+            case 11:
+                this.showThought('Kõik tundub täiesti normaalne, aga kõik AI-reisijad vaatavad korraga akna poole. 👀', 'Everything seems normal, but all AI passengers are staring out the window simultaneously. 👀');
+                if (this.currentCarriage) {
+                    this.currentCarriage.passengers.forEach(p => p.animType = 'look_window');
+                }
+                break;
+            case 12:
+                this.showThought('Metroo ekraan näitab peatust, mida metrookaardil ei eksisteeri.', 'The subway display shows a phantom station that does not exist on the map.');
+                break;
+            case 13:
+                this.showThought('Vagun on peaaegu tühi ja kuskilt kostab vaikne muusika. 🎵', 'The carriage is nearly empty and faint music echoes from somewhere. 🎵');
+                metroAudio.playRadioAudio();
+                setTimeout(() => metroAudio.stopRadioAudio(), 7000);
+                break;
+            case 14:
+                this.showThought('Üks AI-reisija annab sulle salapärase pileti. 🎫', 'An AI passenger reaches out and hands you a mysterious ticket. 🎫');
+                break;
+            case 15:
+                this.showThought('Tuled kustuvad korraks ja tagasi tulles on reisijad teistes kohtades.', 'Lights extinguish for a second, and passengers are in different seats upon return.');
+                this.startLightFlickerAnomaly();
+                break;
+            case 16:
+                this.showThought('Akna taga liigub linn ja tunnel tagurpidi!', 'Outside the window, the city and tunnel are moving backwards!');
+                this.triggerReverseTunnel(6.0);
+                break;
+            case 17:
+                this.showThought('Leiad seinalt kummalise noole, mis näitab edasi. ➡️', 'Found a strange arrow on the wall pointing forward. ➡️');
+                break;
+            case 18:
+                this.showThought('Vagunis on kell, mis liigub liiga kiiresti. 🕒', 'The clock in the carriage is spinning unnaturally fast. 🕒');
+                break;
+            case 19:
+                this.showThought('Kõik telefonid AI-reisijate käes hakkavad korraga helisema! 📱', 'All phones in the passengers\' hands start ringing simultaneously! 📱');
+                metroAudio.playPhoneRingingAll();
+                break;
+            case 20:
+                this.showThought('Täiesti vaikne vagun — isegi metroo heli kaob mõneks sekundiks.', 'Total silence — even the subway sound disappears for a few seconds.');
+                this.triggerSoundCutout(4.0);
+                break;
+
+            // --- Vagunid 21–30 ---
+            case 21:
+                this.showThought('Üks reisija küsib: „Kas sina tead, kus me oleme?” 🤔', 'A passenger asks: „Do you know where we are?” 🤔');
+                break;
+            case 22:
+                this.showThought('Vagunis olev metrookaart muutub iga kord, kui sellele otsa vaatad.', 'The subway map shifts every time you look at it.');
+                break;
+            case 23:
+                this.showThought('Akendest on näha täiesti tundmatu, helendavate kristallidega tunnel.', 'An unfamiliar tunnel filled with glowing crystals is visible outside.');
+                break;
+            case 24:
+                this.showThought('Tuled hakkavad liikuma nagu valguslaine läbi vaguni. 💡', 'Lights ripple like a wave of illumination through the carriage. 💡');
+                break;
+            case 25:
+                this.showThought('Leiad vana metroopileti, millel on kummaline kuupäev (14.10.1987).', 'Found an old subway ticket with a strange date (14.10.1987).');
+                break;
+            case 26:
+                this.showThought('Vagunis on ainult üks reisija, kuid järgmises vagunis teda enam ei ole.', 'Only one passenger is here, but in the next carriage they are gone.');
+                break;
+            case 27:
+                this.showThought('Kõlaritest tuleb katkine, ragisev metrooteade.', 'A broken, crackling announcement comes over the speakers.');
+                break;
+            case 28:
+                this.showThought('Üks uks ei avane, enne kui mängija leiab vagunist vihje. 🧩 (Uuri sedelit istme all)', 'The door will not open until you find the clue in the carriage. 🧩 (Inspect note under seat)');
+                break;
+            case 29:
+                this.showThought('Akna peegelduses on hetkeks näha midagi, mida vagunis tegelikult ei ole.', 'In the window reflection, something appears that is not in the carriage.');
+                break;
+            case 30:
+                this.showThought('Mängija jõuab väga pika vagunini, mis tundub tavalisest palju suurem. 🚇', 'You reach a massive extended carriage that feels much larger than usual. 🚇');
+                break;
+
+            // --- Vagunid 31–40 ---
+            case 31:
+                this.showThought('Vagunis on kõik istmed vales suunas risti vahekäiguga.', 'All seats in the carriage are turned perpendicular in the wrong direction.');
+                break;
+            case 32:
+                this.showThought('Mängija leiab väikese kaardi, kus on märgitud vagun number 50. 🗺️', 'You find a small pocket map with Carriage number 50 circled. 🗺️');
+                break;
+            case 33:
+                this.showThought('Metroo hakkab korraks sõitma väga aeglaselt... ja kiirendab siis uuesti.', 'The subway slows down to a crawl... then accelerates again.');
+                break;
+            case 34:
+                this.showThought('Kõik AI-reisijad on kadunud ja vagun on täiesti tühi.', 'All AI passengers have vanished and the carriage is completely empty.');
+                break;
+            case 35:
+                this.showThought('Tuled vilguvad ja üks reisija ilmub korraks vaguni teise otsa.', 'Lights flicker and a mysterious figure appears briefly at the far end.');
+                this.startLightFlickerAnomaly();
+                break;
+            case 36:
+                this.showThought('Vagunis on vana ekraan, mis näitab mängija läbitud vagunite numbreid: 36.', 'An old CRT screen displays the count of explored carriages: 36.');
+                break;
+            case 37:
+                this.showThought('Kõlaritest kostab mängija jaoks tundmatu salapärane teade.', 'An unknown, mysterious chime announcement plays from the speakers.');
+                break;
+            case 38:
+                this.showThought('Uks avaneb ja järgmine vagun tundub esialgu täiesti pime. (Kasuta taskulampi või ööprille!)', 'Door opens and the carriage is pitch black. (Use flashlight or night vision!)');
+                break;
+            case 39:
+                this.showThought('Mängija leiab uue vihje metroo salajase ehituse kohta.', 'You find a new classified document about the subway\'s secret construction.');
+                break;
+            case 40:
+                this.showThought('Kõik muutub korraks täiesti normaalseks, nagu mängu alguses.', 'Everything turns completely calm and normal for a moment, just like the beginning.');
+                break;
+
+            // --- Vagunid 41–50 ---
+            case 41:
+                this.showThought('Vagunis on jälle palju reisijaid, kuid keegi ei räägi ega liiguta.', 'Many passengers sit here again, but nobody speaks or moves.');
+                break;
+            case 42:
+                this.showThought('Üks reisija jätab maha salapärase koti, mille sees on vihje. 🎒', 'A passenger left behind a mysterious bag containing a clue. 🎒');
+                break;
+            case 43:
+                this.showThought('Metroo kaart näitab, et rong on jõudnud oma viimasesse peatusesse — kuid rong sõidab edasi!', 'The subway map shows the final stop has arrived — yet the train speeds on!');
+                break;
+            case 44:
+                this.showThought('Akna taga on korraks näha sama jaama, kust mäng algas kell 23:45!', 'Outside the window, the exact central station from 23:45 flashes past!');
+                break;
+            case 45:
+                this.showThought('Mängija leiab ukse, millel on number 0. Kas me alustasime uuesti?', 'Found a bulkhead plaque with number 0. Have we restarted?');
+                break;
+            case 46:
+                this.showThought('Vagunis on mitu kella ja kõik näitavad täiesti erinevat aega. 🕰️', 'There are several clocks in the carriage and each shows a different time. 🕰️');
+                break;
+            case 47:
+                this.showThought('Kõlaritest kostab sosin, mis ütleb ainult ühe sõna: „Edasi…” 🔈', 'A whisper resonates over the intercom saying just one word: „Forward...” 🔈');
+                metroAudio.playWhisper(3.0);
+                break;
+            case 48:
+                this.showThought('Vagunis on sein, millel on kriipsud nagu keegi oleks lugenud läbitud vaguneid.', 'Tally marks are scratched on the wall as if counting passing carriages.');
+                break;
+            case 49:
+                this.showThought('Tuled vilguvad ja mängija näeb korraks sama läbipaistvat jälitajat vaguni lõpus.', 'Lights flicker and the translucent shadow stalker glimpses at the far end.');
+                this.startLightFlickerAnomaly();
+                break;
+            case 50:
+                this.showThought('⭐ SUUR ERILINE VAGUN 50! Leidsid suure vihje selle kohta, miks metroo lõputult sõidab!', '⭐ MAJOR CARRIAGE 50! Found the classified blueprint revealing why the subway runs forever!');
+                break;
+
+            // --- Vagunid 51–60 ---
+            case 51:
+                this.showThought('Vagun on täiesti tühi, kuid kõlaritest kostab tavaline metrooteade.', 'Carriage is completely empty, yet a routine transit announcement plays.');
+                break;
+            case 52:
+                this.showThought('Üks AI-reisija küsib: „Mitmendas vagunis sa oled?” 👀', 'An AI passenger asks: „What carriage are you in?” 👀');
+                break;
+            case 53:
+                this.showThought('Metrookaardil on kõik peatused kadunud — jäänud on tühi joon.', 'All stations on the transit map have disappeared — leaving a blank line.');
+                break;
+            case 54:
+                this.showThought('Akna taga on väga pikk must tunnel, mille lõppu ei ole näha.', 'Outside is a vast dark tunnel with no visible end.');
+                break;
+            case 55:
+                this.showThought('Mängija leiab vana kuldse pileti, millel on number 100. 🎫', 'Found an antique golden ticket stamped with number 100. 🎫');
+                break;
+            case 56:
+                this.showThought('Kõik vaguni istmed on teises suunas kui tavaliselt.', 'All seats are positioned in reverse against the train motion.');
+                break;
+            case 57:
+                this.showThought('Üks reisija seisab ukse juures ja kaob, kui mängija lähemale jõuab!', 'A passenger stands by the door and vanishes as you approach!');
+                break;
+            case 58:
+                this.showThought('Metroo ekraan näitab korraks punaselt: „ÄRA PÖÖRDU TAGASI.” 🚫', 'Subway display flashes crimson: „DO NOT TURN BACK.” 🚫');
+                break;
+            case 59:
+                this.showThought('Vagun on täiesti normaalne ja midagi kummalist ei juhtu.', 'Carriage is peaceful and normal with nothing strange occurring.');
+                break;
+            case 60:
+                this.showThought('Tuled lähevad hetkeks välja ning tagasi tulles on vagun täiesti tühi.', 'Lights turn off for a moment, and returning, the carriage is completely empty.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            // --- Vagunid 61–70 ---
+            case 61:
+                this.showThought('Mängija kuuleb oma samme, kuid tundub, nagu kostaks veel üks sammude heli. 👣', 'You hear your own footsteps, but an extra pair of steps seems to echo behind you. 👣');
+                break;
+            case 62:
+                this.showThought('Akna peegelduses on näha tundmatu tume kuju.', 'A dark unfamiliar figure is seen in the window reflection.');
+                break;
+            case 63:
+                this.showThought('🗝️ AI-reisija annab sulle VÕTME! Klõpsa ekraani all olevale võtmeikoonile, et see kätte võtta nagu Robloxsis!', '🗝️ AI passenger hands you a KEY! Click the key icon on the hotbar below to equip it like in Roblox!');
+                this.unlockItem('key');
+                break;
+            case 64:
+                this.showThought('Järgmise vaguni uks on lukus ja võti aitab selle avada! (Võta võti kätte)', 'The next carriage door is locked! Equip the key from hotbar to open it!');
+                break;
+            case 65:
+                this.showThought('Vagunis on vana metrookaamera monitor, mis näitab mängija eelmist vagunit 64.', 'An old CCTV monitor on the wall shows a security feed of Carriage 64.');
+                break;
+            case 66:
+                this.showThought('Mängija näeb ekraanilt, et keegi liigub tema selja taga, kuid vagun on tühi!', 'On screen, someone is walking right behind you, yet the carriage is empty!');
+                break;
+            case 67:
+                this.showThought('Metroo heli muutub korraks täiesti vaikseks.', 'The subway audio goes into complete silence for a few seconds.');
+                this.triggerSoundCutout(3.5);
+                break;
+            case 68:
+                this.showThought('Kõik tuled muutuvad hetkeks väga nõrgaks ja siis taastuvad.', 'All lights dim to a faint glow and then restore.');
+                break;
+            case 69:
+                this.showThought('Leiad seinalt kirjutatud sõnumi: „Sa ei ole esimene.”', 'Found a scratched message on the bulkhead: „You are not the first.”');
+                break;
+            case 70:
+                this.showThought('⭐ SUUR VIHJE-VAGUN 70! Leidsid märkmiku, mis räägib inimesest, kes oli kunagi samas metroos.', '⭐ MAJOR CLUE CARRIAGE 70! Found the journal of an explorer who was trapped in this subway.');
+                break;
+
+            // --- Vagunid 71–80 ---
+            case 71:
+                this.showThought('Vagun tundub täiesti normaalne, kuid kellad ei liigu.', 'Carriage feels normal, but all clocks have frozen.');
+                break;
+            case 72:
+                this.showThought('Üks AI-reisija istub ja joonistab metrood, millel on lõpmatult vaguneid. ✏️', 'An AI passenger sits sketching an infinite subway train into a notebook. ✏️');
+                break;
+            case 73:
+                this.showThought('Metroo ekraan näitab: „JÄRGMINE PEATUS: ???”', 'The subway display shows: „NEXT STOP: ???”');
+                break;
+            case 74:
+                this.showThought('Akna taga on korraks näha mahajäetud 1980ndate metroojaama.', 'An abandoned 1980s station platform flashes past outside the window.');
+                break;
+            case 75:
+                this.showThought('Vagunis olevad tuled hakkavad järjest ükshaaval kustuma.', 'Lights in the carriage begin turning off one by one in sequence.');
+                this.startLightFlickerAnomaly();
+                break;
+            case 76:
+                this.showThought('Kõik istmed on tühjad, kuid õhus kajab selgelt reisijate juttu.', 'Seats are empty, yet distant crowd conversations echo clearly.');
+                break;
+            case 77:
+                this.showThought('Üks uks avaneb, kuid selle taga ei ole järgmine vagun — ainult tundmatu pime ruum.', 'Door opens into a dark observation chamber instead of a normal carriage.');
+                break;
+            case 78:
+                this.showThought('Mängija peab leidma vihje, et õige ukse kaudu edasi minna. 🧩', 'You must inspect the clue on the bulkhead to unlock the right path. 🧩');
+                break;
+            case 79:
+                this.showThought('Õige ukse leidmisel on järgmine vagun meeldivalt rahulik ja tavaline.', 'Having solved the door puzzle, this carriage is calm, clean and normal.');
+                break;
+            case 80:
+                this.showThought('⭐ VAGUN 80! Leidsid suure metrookaardi, millel on sinu asukoht: VAGUN 80. (Kuldne Pood läheneb!)', '⭐ CARRIAGE 80! Found the master transit map showing: Currently at Carriage 80. (Golden Shop approaches!)');
+                break;
+
+            // --- Vagunid 81–90 ---
+            case 81:
+                this.showThought('Mängija leiab taas ühe vana pileti, kuid sellel on tema enda vaguninumber: 81.', 'Found an old ticket printed with your exact carriage number: 81.');
+                break;
+            case 82:
+                this.showThought('Kõlaritest tuleb teade, mis tundub olevat mõeldud just sinule: „Reisija... oled peagi kohal.”', 'An announcement speaks directly to you: „Passenger... you are nearly there.”');
+                break;
+            case 83:
+                this.showThought('AI-reisijad vaatavad korraga kõik ühes suunas minu poole.', 'All AI passengers turn their heads in unison towards you.');
+                break;
+            case 84:
+                this.showThought('Mängija kuuleb kaugelt metrooukse avanemise kaja.', 'You hear the pneumatic hiss of a distant subway door opening.');
+                break;
+            case 85:
+                this.showThought('Vagunis on üks vana LED-ekraan, mis näitab numbreid 1–100.', 'An old LED board displays numbers 1 to 100.');
+                break;
+            case 86:
+                this.showThought('Number 86 on ekraanil eraldi ereda kullaga märgitud!', 'Number 86 is highlighted in bright gold on the display!');
+                break;
+            case 87:
+                this.showThought('Mängija leiab konduktori kuldse kaardi, mis aitab Vagun 100 poodi avada. 💳', 'Found the conductor\'s golden card for the Carriage 100 shop. 💳');
+                break;
+            case 88:
+                this.showThought('Akna taga liigub metroo kõrval korraks teine täpselt samasugune rong! 🚇', 'Outside the right window, an identical parallel subway train speeds alongside! 🚇');
+                break;
+            case 89:
+                this.showThought('Teises rongis olevad reisijad vaatavad aknast otse sinu poole.', 'Passengers in the parallel train are staring through the glass right at you.');
+                break;
+            case 90:
+                this.showThought('⭐ Mõlemad rongid lähevad eri suundades ja teine rong kaob tunnelisse.', '⭐ The trains diverge and the parallel train disappears into the dark tunnel.');
+                break;
+
+            // --- Vagunid 91–100 ---
+            case 91:
+                this.showThought('Mängija jõuab vagunisse, mis näeb välja täpselt nagu mängu alguse vagun 0.', 'You arrive at a carriage that looks identical to the very starting carriage 0.');
+                break;
+            case 92:
+                this.showThought('Seal istub üks AI-reisija, keda mängija nägi mängu alguses jaamas.', 'The very same AI passenger from the station intro sits right there.');
+                break;
+            case 93:
+                this.showThought('Reisija ütleb salapäraselt: „Sa oled juba väga kaugel.”', 'The passenger speaks mysteriously: „You have come very far.”');
+                break;
+            case 94:
+                this.showThought('Metrookaardil ei ole enam ühtegi normaalset peatust — ainult kummalised märgid.', 'All normal stations are gone from the map — replaced by glowing glyphs.');
+                break;
+            case 95:
+                this.showThought('Mängija leiab ukse numbriga 100.', 'You find a heavy door embossed with number 100.');
+                break;
+            case 96:
+                this.showThought('Enne seda ust hakkavad tuled aeglaselt ja soojalt vilkuma.', 'Before the door, lights begin to pulse slowly with a warm golden hue.');
+                break;
+            case 97:
+                this.showThought('Metrooheli muutub järjest vaiksemaks ja rahulikumaks.', 'The subway running sound softens into a calm, gentle hum.');
+                break;
+            case 98:
+                this.showThought('Kõlaritest kostab vana pühalik metrooteade: „Saabume Vagunisse 100.”', 'A solemn announcement chimes: „Arriving at Carriage 100 — The Golden Terminal.”');
+                break;
+            case 99:
+                this.showThought('Uks avaneb ja ees särab helge, soe ja kuldne valgus!', 'The door slides open revealing radiant, warm golden light ahead!');
+                break;
+            case 100:
+                this.showThought(
+                    '🌟 SUUR CHECKPOINT-VAGUN 100 — KULDNE POOD! Checkpoint salvestatud. Astu leti juurde ja osta varustust!',
+                    '🌟 GRAND CHECKPOINT CARRIAGE 100 — GOLDEN SHOP! Progress saved. Step up to the counter and purchase gear!'
+                );
+                this.openGoldenShopModal();
+                break;
+
             default:
-                if (index >= 11) {
+                if (index >= 101) {
                     this.showThought(
-                        `Vagun ${index}. Metroo ei lõpegi...`,
-                        `Carriage ${index}. The metro is endless...`
+                        `Vagun ${index}. Teekond jätkub lõputusse metroosse... (Kogutud: 🪙 ${this.coins} Coini)`,
+                        `Carriage ${index}. The journey continues into the endless subway... (Total: 🪙 ${this.coins} Coins)`
                     );
                 }
                 break;
@@ -1768,7 +2710,7 @@ export class LastMetroGame {
 
         // Unlock player movement!
         this.introTimeouts.push(setTimeout(() => {
-            this.state = 'player_free';
+this.state = 'player_free';
             const standBtn = document.getElementById('btn-stand-up');
             if (standBtn) standBtn.style.display = 'flex';
 
@@ -1818,6 +2760,14 @@ export class LastMetroGame {
             if (e.code === 'KeyE') {
                 this.checkInteractions();
             }
+
+            // Hotbar quick slot keys (1-6)
+            if (e.code === 'Digit1' && this.inventory['key']) this.toggleEquipItem('key');
+            if (e.code === 'Digit2' && this.inventory['night_vision']) this.toggleEquipItem('night_vision');
+            if (e.code === 'Digit3' && this.inventory['speed_boost']) this.toggleEquipItem('speed_boost');
+            if (e.code === 'Digit4' && this.inventory['clue_detector']) this.toggleEquipItem('clue_detector');
+            if (e.code === 'Digit5' && this.inventory['secret_pass']) this.toggleEquipItem('secret_pass');
+            if (e.code === 'Digit6' && this.inventory['radio']) this.toggleEquipItem('radio');
         });
 
         window.addEventListener('keyup', (e) => {
@@ -1861,7 +2811,7 @@ export class LastMetroGame {
         };
 
         window.addEventListener('mousedown', (e) => {
-            if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box')) return;
+            if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box, .hotbar-slot')) return;
             handleStartLook(e.clientX, e.clientY);
             if (this.state === 'player_free' && !this.isPointerLocked) {
                 this.renderer.domElement.requestPointerLock?.();
@@ -1881,7 +2831,7 @@ export class LastMetroGame {
         // Touch controls on mobile/tablets
         window.addEventListener('touchstart', (e) => {
             if (e.touches.length > 0) {
-                if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box')) return;
+                if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box, .hotbar-slot')) return;
                 metroAudio.enableAudio();
                 this.touchStartX = e.touches[0].clientX;
                 this.touchStartY = e.touches[0].clientY;
@@ -1919,10 +2869,21 @@ export class LastMetroGame {
     public checkInteractions() {
         if (!this.currentCarriage || this.state !== 'player_free') return;
 
+        // 0. Golden Shop Counter in Carriage 100
+        if (this.currentCarIndex === 100) {
+            if (Math.abs(this.playerPos.z - 1.5) < 3.5 && Math.abs(this.playerPos.x) < 2.0) {
+                this.openGoldenShopModal();
+                return;
+            }
+        }
+
         // 1. Inspectable Note / Clue
         if (this.currentCarriage.inspectableItem) {
             const dist = this.playerPos.distanceTo(this.currentCarriage.inspectableItem.position);
             if (dist < 4.5) {
+                if (this.currentCarIndex === 28) this.hasUnlockedCarriage28WithClue = true;
+                if (this.currentCarIndex === 78) this.hasUnlockedCarriage78WithHint = true;
+
                 if (this.currentCarriage.hasKeypad) {
                     this.openKeypadModal();
                 } else {
@@ -1977,28 +2938,28 @@ export class LastMetroGame {
     }
 
     public openLoreModal() {
+        if (!this.currentCarriage || !this.currentCarriage.inspectableText) return;
         this.state = 'inspecting';
-        metroAudio.playItemInspect();
         this.cluesFound++;
 
+        const isEt = this.lang === 'et';
         const modal = document.getElementById('lore-modal');
         const title = document.getElementById('lore-title');
         const desc = document.getElementById('lore-desc');
-        if (modal && title && desc && this.currentCarriage?.inspectableText) {
-            title.innerText = this.lang === 'et' ? this.currentCarriage.inspectableText.titleEt : this.currentCarriage.inspectableText.titleEn;
-            desc.innerText = this.lang === 'et' ? this.currentCarriage.inspectableText.descEt : this.currentCarriage.inspectableText.descEn;
+        if (modal && title && desc) {
+            title.innerText = isEt ? this.currentCarriage.inspectableText.titleEt : this.currentCarriage.inspectableText.titleEn;
+            desc.innerText = isEt ? this.currentCarriage.inspectableText.descEt : this.currentCarriage.inspectableText.descEn;
             modal.style.display = 'flex';
         }
+        metroAudio.playItemInspect();
     }
 
-    public openKeypadModal() {
+    private openKeypadModal() {
         this.state = 'keypad';
-        metroAudio.playKeypadBeep(false);
-
         const modal = document.getElementById('keypad-modal');
-        const codeDisplay = document.getElementById('keypad-display');
+        const codeDisplay = document.getElementById('keypad-input');
         if (modal && codeDisplay) {
-            codeDisplay.innerText = '____';
+            (codeDisplay as HTMLInputElement).value = '';
             modal.style.display = 'flex';
         }
     }
@@ -2044,8 +3005,12 @@ export class LastMetroGame {
             door.mesh.position.z = THREE.MathUtils.lerp(door.mesh.position.z, targetZ, delta * 6);
         });
 
-        // 1. Move passing tunnel for sense of forward subway speed
-        if (this.trainSpeed > 0) {
+        // 1. Move passing tunnel for sense of forward subway speed or reverse anomaly
+        if (this.reverseTunnelTimer > 0) {
+            this.reverseTunnelTimer -= delta;
+            this.tunnelOffsetZ -= (this.trainSpeed * 2.0) * delta;
+            this.tunnelGroup.position.z = (this.tunnelOffsetZ % 12);
+        } else if (this.trainSpeed > 0) {
             this.tunnelOffsetZ += this.trainSpeed * delta;
             this.tunnelGroup.position.z = (this.tunnelOffsetZ % 12);
         }
@@ -2058,9 +3023,9 @@ export class LastMetroGame {
                 const breath = Math.sin(time * 2.0 + pIdx * 1.5) * 0.012;
                 p.body.position.y = 0.32 + breath;
 
-                if (p.isCreepy) {
+                if (p.isCreepy || this.currentCarIndex === 83) {
                     const distToPlayer = this.playerPos.distanceTo(p.group.position);
-                    if (distToPlayer < 4.0) {
+                    if (distToPlayer < 6.0) {
                         // Turn head directly to stare at player
                         const angle = Math.atan2(this.playerPos.x - p.group.position.x, this.playerPos.z - p.group.position.z);
                         p.head.rotation.y = angle - p.group.rotation.y;
@@ -2070,16 +3035,48 @@ export class LastMetroGame {
                 } else if (p.animType === 'phone') {
                     p.head.rotation.x = 0.22 + Math.sin(time * 1.2 + pIdx) * 0.04;
                 } else if (p.animType === 'look_window') {
-                    p.head.rotation.y = Math.sin(time * 0.8 + pIdx) * 0.15;
+                    p.head.rotation.y = (p.seatPos.x > 0 ? 1 : -1) * 0.85;
                 }
             });
         }
 
+        // 2b. Collectible Coins Rotation & Proximity Collection Loop
+        for (let i = this.collectibleCoins.length - 1; i >= 0; i--) {
+            const coin = this.collectibleCoins[i];
+            if (!coin.collected) {
+                coin.mesh.rotation.z += delta * 3.5;
+                const dist = this.playerPos.distanceTo(coin.mesh.position);
+                if (dist < 1.35) {
+                    coin.collected = true;
+                    this.addCoins(coin.value);
+                    metroAudio.playCoinPickup();
+                    this.currentCarriage?.group.remove(coin.mesh);
+                    this.collectibleCoins.splice(i, 1);
+                    this.showThought(`+${coin.value} 🪙 Metro Coin!`, `+${coin.value} 🪙 Metro Coin!`, 1500);
+                }
+            }
+        }
+
+        // 2c. Clue Detector (Vihjeandur) Radar Proximity Ping
+        if (this.clueDetectorActive || this.equippedItem === 'clue_detector') {
+            if (this.currentCarriage?.inspectableItem) {
+                const dist = this.playerPos.distanceTo(this.currentCarriage.inspectableItem.position);
+                if (dist < 6.0) {
+                    this.radarPingTimer -= delta;
+                    const pingInterval = Math.max(0.25, dist * 0.28);
+                    if (this.radarPingTimer <= 0) {
+                        this.radarPingTimer = pingInterval;
+                        metroAudio.playRadarPing();
+                    }
+                }
+            }
+        }
+
         // 3. Ghost Stalker Creeping Logic in Carriage 9
         if (this.stalkerActive && this.stalkerMesh) {
-            const toStalker = new THREE.Vector3().subVectors(this.stalkerMesh.position, this.playerPos).normalize();
-            const forward = new THREE.Vector3(0, 0, -1).applyEuler(this.cameraEuler);
-            const dot = forward.dot(toStalker);
+            _scratchV1.subVectors(this.stalkerMesh.position, this.playerPos).normalize();
+            _scratchV2.set(0, 0, -1).applyEuler(this.cameraEuler);
+            const dot = _scratchV2.dot(_scratchV1);
 
             if (dot < 0.2) {
                 // Looking away -> Stalker creeps closer!
@@ -2171,35 +3168,55 @@ export class LastMetroGame {
 
         // 5. Player Physics & Movement (when player_free)
         if (this.state === 'player_free' && this.playerPos.y >= 1.4) {
-            const speed = 3.6;
-            const moveDir = new THREE.Vector3();
+            const baseSpeed = (this.speedBoostActive || this.equippedItem === 'speed_boost') ? 5.4 : 3.6;
+            _moveDir.set(0, 0, 0);
 
-            if (this.moveKeys['KeyW']) moveDir.z -= 1;
-            if (this.moveKeys['KeyS']) moveDir.z += 1;
-            if (this.moveKeys['KeyA']) moveDir.x -= 1;
-            if (this.moveKeys['KeyD']) moveDir.x += 1;
+            if (this.moveKeys['KeyW']) _moveDir.z -= 1;
+            if (this.moveKeys['KeyS']) _moveDir.z += 1;
+            if (this.moveKeys['KeyA']) _moveDir.x -= 1;
+            if (this.moveKeys['KeyD']) _moveDir.x += 1;
 
-            if (moveDir.lengthSq() > 0) {
-                moveDir.normalize();
-                moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.cameraEuler.y);
+            if (_moveDir.lengthSq() > 0) {
+                _moveDir.normalize();
+                _moveDir.applyAxisAngle(_upAxis, this.cameraEuler.y);
 
-                this.playerPos.x += moveDir.x * speed * delta;
-                this.playerPos.z += moveDir.z * speed * delta;
+                this.playerPos.x += _moveDir.x * baseSpeed * delta;
+                this.playerPos.z += _moveDir.z * baseSpeed * delta;
 
                 // Train carriage boundary collision
                 this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
 
                 // Head bob & footsteps
-                this.headBobTimer += delta * 12;
+                this.headBobTimer += delta * (baseSpeed > 4 ? 16 : 12);
                 this.stepTimer += delta;
-                if (this.stepTimer > 0.48) {
+                if (this.stepTimer > (baseSpeed > 4 ? 0.32 : 0.48)) {
                     this.stepTimer = 0;
                     metroAudio.playFootstep();
                 }
             }
 
-            // Door Navigation & Locked Back Door Collision
+            // Door Navigation & Locked Door Checks
             const now = performance.now();
+
+            // Carriage 64 Key Unlock Door Check
+            if (this.currentCarIndex === 64 && Math.abs(this.playerPos.z) > 8.0) {
+                if (this.equippedItem === 'key' || this.inventory['key']) {
+                    if (!this.hasUnlockedCarriage64WithKey) {
+                        this.hasUnlockedCarriage64WithKey = true;
+                        metroAudio.playDoorLatch();
+                        this.showThought('🗝️ Võti keeras luku lahti! Uks avanes.', '🗝️ Key unlocked the bulkhead door!');
+                    }
+                } else if (!this.hasUnlockedCarriage64WithKey) {
+                    this.playerPos.z = this.playerPos.z > 0 ? 7.6 : -7.6;
+                    if (now - this.lastLockedDoorSoundTime > 1200) {
+                        this.lastLockedDoorSoundTime = now;
+                        metroAudio.playDoorLocked();
+                        this.showThought('Uks on lukus! Vajad võtit (Vagun 63), et see avada.', 'Door is locked! You need the key (Carriage 63) to open it.');
+                    }
+                    return;
+                }
+            }
+
             if (this.branchDirection === 'right') {
                 // Front Door (+Z) -> Open Next Carriage
                 if (this.playerPos.z > 8.8) {
@@ -2246,7 +3263,7 @@ export class LastMetroGame {
             this.playerPos.z = Math.max(-9.2, Math.min(9.2, this.playerPos.z));
         }
 
-        // 6. Update Camera
+        // 6. Update Camera & Held Item Sway
         const headBobOffset = Math.sin(this.headBobTimer) * 0.04;
         this.camera.position.set(
             this.playerPos.x,

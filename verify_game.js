@@ -896,7 +896,8 @@ try {
             localStorage.setItem('playard_war_game_money', '200000');
         });
         await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 1500));
+        await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
+        await new Promise(r => setTimeout(r, 600));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
         const ownerDeployTitle = await page.$eval('#deploy-modal-title', el => el.textContent);
@@ -1289,7 +1290,33 @@ try {
             if (helpDisplay !== 'flex') throw new Error("Help modal did not open!");
             await page.click('#btn-close-help');
 
-            console.log("   Successfully verified 3D Parkour Obby Simulator (Takistusrada)!");
+            // Test Victory Modal & 24-Hour Cooldown Lock
+            await page.evaluate(() => {
+                const vicModal = document.getElementById('modal-victory');
+                if (vicModal) vicModal.style.display = 'flex';
+                const cooldownExpiry = Date.now() + 24 * 60 * 60 * 1000;
+                localStorage.setItem('playard_obby_cooldown_until', cooldownExpiry.toString());
+            });
+            await new Promise(r => setTimeout(r, 200));
+
+            const victoryHubBtn = await page.$('#btn-victory-hub');
+            if (!victoryHubBtn) throw new Error("Expected only 'To Hub' button in Victory Modal!");
+            const hubBtnText = await page.$eval('#btn-victory-hub', el => el.textContent.trim());
+            console.log("   Victory Modal Hub Button Text (Expected: To Hub):", hubBtnText);
+            if (!hubBtnText.includes('To Hub')) throw new Error(`Expected To Hub button text, got ${hubBtnText}`);
+
+            const replayBtn = await page.$('#btn-victory-replay');
+            if (replayBtn) throw new Error("Replay button must NOT exist in Victory Modal!");
+
+            // Test 24h Cooldown Lock
+            const cooldownSaved = await page.evaluate(() => {
+                const val = parseInt(localStorage.getItem('playard_obby_cooldown_until') || '0', 10);
+                return val > Date.now();
+            });
+            console.log("   24h Cooldown Lock active in localStorage:", cooldownSaved);
+            if (!cooldownSaved) throw new Error("24h cooldown was not saved in localStorage!");
+
+            console.log("   Successfully verified 3D Parkour Obby Simulator (Takistusrada) with 24h Cooldown Lock & To Hub!");
 
             // 14. Checking LAST METRO (3D Mystery Adventure)...
             console.log("14. Checking LAST METRO (3D Mystery Adventure)...");
@@ -1475,21 +1502,97 @@ try {
             console.log("   Carriage 10 HUD Label (Expected: 10):", car10Label);
             if (!car10Label.includes('10')) throw new Error("Expected Carriage 10 reached!");
 
-            // Test Infinite Procedural Carriages System (Vagun 11 -> 100)
-            console.log("   Testing Infinite Procedural Metro System...");
+            // Test Coin Economy & Roblox-Style Inventory Hotbar
+            console.log("   Testing Coin Economy & Roblox-Style Inventory Hotbar...");
+            const initialCoins = await page.evaluate(() => window.__lastMetro.coins);
+            console.log("   Initial Coins Balance:", initialCoins);
+
+            // Traverse door: +2 coins
             await page.evaluate(() => window.__lastMetro.loadCarriage(11, 'right'));
             await new Promise(r => setTimeout(r, 150));
-            const car11Label = await page.$eval('#hud-car-label', el => el.textContent);
-            console.log("   Procedural Carriage 11 HUD Label:", car11Label);
-            if (!car11Label.includes('11')) throw new Error("Expected Carriage 11 in HUD!");
+            const coinsAfterDoor = await page.evaluate(() => window.__lastMetro.coins);
+            console.log("   Coins after passing door to Vagun 11 (Expected +2):", coinsAfterDoor);
+            if (coinsAfterDoor !== initialCoins + 2) throw new Error(`Door traverse failed to award +2 coins! Expected ${initialCoins + 2}, got ${coinsAfterDoor}`);
 
-            await page.evaluate(() => window.__lastMetro.loadCarriage(100, 'left'));
+            // Test Key Pickup in Carriage 63 & Roblox Hotbar Slot
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(63, 'right');
+            });
             await new Promise(r => setTimeout(r, 150));
+            const hasKeyInInventory = await page.evaluate(() => !!window.__lastMetro.inventory['key']);
+            console.log("   Carriage 63 AI passenger gave Key (Expected: true):", hasKeyInInventory);
+            if (!hasKeyInInventory) throw new Error("Carriage 63 failed to unlock Key in inventory!");
+
+            const keySlotCount = await page.$$eval('#inventory-hotbar .hotbar-slot', els => els.length);
+            console.log("   Roblox Hotbar Slots Count (Expected: >= 1):", keySlotCount);
+            if (keySlotCount < 1) throw new Error("Roblox hotbar failed to render unlocked item slot!");
+
+            // Test Equip Key ("nagu robloxsis")
+            await page.click('#slot-key');
+            await new Promise(r => setTimeout(r, 100));
+            const equippedItem = await page.evaluate(() => window.__lastMetro.equippedItem);
+            const heldMeshExists = await page.evaluate(() => !!window.__lastMetro.heldItemMesh);
+            console.log(`   Equipped item (Expected: key): ${equippedItem}, 3D Held mesh in camera: ${heldMeshExists}`);
+            if (equippedItem !== 'key' || !heldMeshExists) throw new Error("Equipping item failed to create 3D held model on camera!");
+
+            // Test Unequip Key (clicking again puts it back in bag)
+            await page.click('#slot-key');
+            await new Promise(r => setTimeout(r, 100));
+            const unequippedItem = await page.evaluate(() => window.__lastMetro.equippedItem);
+            console.log(`   Unequipped item (Expected: null): ${unequippedItem}`);
+            if (unequippedItem !== null) throw new Error("Clicking equipped hotbar slot failed to unequip item!");
+
+            // Test Carriage 100 — Kuldne Pood (Golden Shop) Checkpoint
+            console.log("   Testing Carriage 100 — Golden Shop Checkpoint & Modal...");
+            await page.evaluate(() => {
+                window.__lastMetro.coins = 500; // Give coins for shop test
+                window.__lastMetro.loadCarriage(100, 'right');
+            });
+            await new Promise(r => setTimeout(r, 250));
+
             const car100Label = await page.$eval('#hud-car-label', el => el.textContent);
-            console.log("   Procedural Carriage 100 HUD Label:", car100Label);
+            console.log("   Carriage 100 HUD Label (Expected: 100):", car100Label);
             if (!car100Label.includes('100')) throw new Error("Expected Carriage 100 in HUD!");
 
-            console.log("   Successfully verified LAST METRO (3D Mystery Adventure)!");
+            const shopModalDisplay = await page.$eval('#golden-shop-modal', el => window.getComputedStyle(el).display);
+            const shopCardsCount = await page.$$eval('#shop-items-grid .shop-item-card', els => els.length);
+            console.log(`   Golden Shop Modal Display: ${shopModalDisplay}, Item Cards Count (Expected: 5): ${shopCardsCount}`);
+            if (shopModalDisplay !== 'flex' || shopCardsCount !== 5) {
+                throw new Error("Golden Shop modal failed to open with 5 items in Carriage 100!");
+            }
+
+            // Buy Night Vision Goggles (120 coins)
+            await page.click('#btn-buy-night_vision');
+            await new Promise(r => setTimeout(r, 150));
+            const hasNightVision = await page.evaluate(() => !!window.__lastMetro.inventory['night_vision']);
+            const coinsAfterPurchase = await page.evaluate(() => window.__lastMetro.coins);
+            console.log(`   Purchased Night Vision (Expected: true): ${hasNightVision}, Coins left: ${coinsAfterPurchase}`);
+            if (!hasNightVision || coinsAfterPurchase !== 382) {
+                throw new Error("Shop purchase failed to deduct coins or add Night Vision to inventory!");
+            }
+
+            // Close Golden Shop modal
+            await page.click('#btn-shop-close');
+            await new Promise(r => setTimeout(r, 100));
+            const shopClosedDisplay = await page.$eval('#golden-shop-modal', el => window.getComputedStyle(el).display);
+            console.log("   Golden Shop closed display (Expected: none):", shopClosedDisplay);
+            if (shopClosedDisplay !== 'none') throw new Error("Shop close button failed!");
+
+            // Test equip Night Vision Goggles & CRT overlay
+            await page.click('#slot-night_vision');
+            await new Promise(r => setTimeout(r, 100));
+            const nvOverlayDisplay = await page.$eval('#night-vision-overlay', el => window.getComputedStyle(el).display);
+            console.log("   Night Vision Green CRT Overlay Display (Expected: block):", nvOverlayDisplay);
+            if (nvOverlayDisplay !== 'block') throw new Error("Night Vision overlay failed to activate on equip!");
+
+            // Test Carriage 101 Continuation
+            await page.evaluate(() => window.__lastMetro.loadCarriage(101, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+            const car101Label = await page.$eval('#hud-car-label', el => el.textContent);
+            console.log("   Continuation Carriage 101 HUD Label (Expected: 101):", car101Label);
+            if (!car101Label.includes('101')) throw new Error("Carriage 101 continuation failed!");
+
+            console.log("   Successfully verified LAST METRO (3D Mystery Adventure, Carriages 1-100+, Coins, Roblox Hotbar & Golden Shop)!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

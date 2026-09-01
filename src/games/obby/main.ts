@@ -301,6 +301,11 @@ export class ParkourObbyGame {
             return;
         }
 
+        // Check 24h Cooldown Lock (if game completed within 24 hours)
+        if (!inTest && this.checkCooldown()) {
+            return;
+        }
+
         // Record played game to Playard recently played list
         yardService.recordPlayedGame({
             id: 'obby',
@@ -997,18 +1002,6 @@ export class ParkourObbyGame {
             if (modalHelp) modalHelp.style.display = 'none';
         });
 
-        // Victory Replay Button
-        document.getElementById('btn-victory-replay')?.addEventListener('click', () => {
-            const modalVic = document.getElementById('modal-victory');
-            if (modalVic) modalVic.style.display = 'none';
-            this.isVictory = false;
-            this.currentStageIndex = 0;
-            this.currentCheckpointIndex = 0;
-            this.timerStarted = false;
-            this.elapsedTime = 0;
-            this.respawnPlayer();
-        });
-
         // Yard Wallet subscription
         yardService.subscribe((data) => {
             const yardVal = document.getElementById('hud-yards-val');
@@ -1566,6 +1559,10 @@ export class ParkourObbyGame {
         // Award +100 Yards
         yardService.addYards(100, 'Parkour Obby Grand Victory 10/10');
 
+        // Set 24-Hour Cooldown Lock (no replay within 24h)
+        const cooldownExpiry = Date.now() + 24 * 60 * 60 * 1000;
+        localStorage.setItem('playard_obby_cooldown_until', cooldownExpiry.toString());
+
         // Check Personal Best Time
         if (this.bestTime === 0 || this.elapsedTime < this.bestTime) {
             this.bestTime = this.elapsedTime;
@@ -1579,6 +1576,39 @@ export class ParkourObbyGame {
         if (vicTime) vicTime.textContent = this.formatTime(this.elapsedTime);
         if (vicDeaths) vicDeaths.textContent = this.deaths.toString();
         if (vicModal) vicModal.style.display = 'flex';
+    }
+
+    private checkCooldown(): boolean {
+        const cooldownUntil = parseInt(localStorage.getItem('playard_obby_cooldown_until') || '0', 10);
+        const now = Date.now();
+        if (cooldownUntil > now) {
+            const overlay = document.getElementById('obby-cooldown-overlay');
+            if (overlay) overlay.style.display = 'flex';
+            this.updateCooldownTimer(cooldownUntil);
+            return true;
+        }
+        return false;
+    }
+
+    private updateCooldownTimer(cooldownUntil: number) {
+        const clock = document.getElementById('cooldown-timer-clock');
+        const update = () => {
+            const remaining = Math.max(0, cooldownUntil - Date.now());
+            if (remaining <= 0) {
+                const overlay = document.getElementById('obby-cooldown-overlay');
+                if (overlay) overlay.style.display = 'none';
+                localStorage.removeItem('playard_obby_cooldown_until');
+                return;
+            }
+            const hrs = Math.floor(remaining / (1000 * 60 * 60));
+            const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((remaining % (1000 * 60)) / 1000);
+            if (clock) {
+                clock.textContent = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        };
+        update();
+        setInterval(update, 1000);
     }
 
     private updateCamera() {

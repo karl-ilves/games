@@ -46,7 +46,23 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
     // Obby (Takistusrada) mäng on nähtav AINULT Playard Ownerile!
     const obbyGameCard = document.getElementById('card-obby-game');
     if (obbyGameCard) {
-        obbyGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+        const isOwner = isPlayardOwner(emailToCheck);
+        obbyGameCard.style.display = isOwner ? 'flex' : 'none';
+        if (isOwner) {
+            const cooldownUntil = parseInt(localStorage.getItem('playard_obby_cooldown_until') || '0', 10);
+            const cooldownBadge = document.getElementById('card-obby-cooldown-badge');
+            if (cooldownUntil > Date.now()) {
+                const remaining = cooldownUntil - Date.now();
+                const hrs = Math.floor(remaining / (1000 * 60 * 60));
+                const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                if (cooldownBadge) {
+                    cooldownBadge.textContent = `⏳ 24h Ooteaeg (${hrs}h ${mins}m)`;
+                    cooldownBadge.style.display = 'inline-block';
+                }
+            } else if (cooldownBadge) {
+                cooldownBadge.style.display = 'none';
+            }
+        }
     }
 
     // LAST METRO mäng on nähtav AINULT Playard Ownerile!

@@ -247,6 +247,124 @@
             font-size: 0.95rem;
         }
 
+        /* Roblox-Style Inventory Hotbar */
+        .hotbar-slot {
+            width: 68px;
+            height: 68px;
+            background: rgba(15, 23, 36, 0.88);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            backdrop-filter: blur(8px);
+            transition: all 0.15s ease-out;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+        }
+        .hotbar-slot:hover {
+            transform: translateY(-4px) scale(1.05);
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.18);
+        }
+        .hotbar-slot.equipped {
+            border-color: #ffd32a;
+            background: rgba(255, 211, 42, 0.25);
+            box-shadow: 0 0 18px rgba(255, 211, 42, 0.6);
+            transform: translateY(-6px) scale(1.08);
+        }
+        .hotbar-slot .slot-num {
+            position: absolute;
+            top: 3px;
+            left: 5px;
+            font-size: 0.7rem;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .hotbar-slot .slot-icon {
+            font-size: 1.6rem;
+            line-height: 1;
+        }
+        .hotbar-slot .slot-name {
+            font-size: 0.62rem;
+            font-weight: 800;
+            color: #d2dae2;
+            margin-top: 3px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 60px;
+        }
+
+        /* Shop Item Cards */
+        .shop-item-card {
+            background: rgba(20, 28, 42, 0.9);
+            border: 1.5px solid rgba(255, 211, 42, 0.35);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        .shop-item-card:hover {
+            border-color: #ffd32a;
+            background: rgba(30, 42, 60, 0.95);
+            transform: translateY(-2px);
+        }
+        .shop-item-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .shop-item-title {
+            color: #ffd32a;
+            font-weight: 800;
+            font-size: 0.95rem;
+        }
+        .shop-item-desc {
+            color: #a4b0be;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            margin-bottom: 10px;
+        }
+        .shop-item-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+        .shop-item-price {
+            color: #ffd32a;
+            font-weight: 900;
+            font-size: 0.9rem;
+        }
+        .btn-shop-buy {
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            color: #111;
+            font-weight: 900;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: all 0.15s;
+        }
+        .btn-shop-buy:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
+        }
+        .btn-shop-buy:disabled {
+            background: #485460;
+            color: #a4b0be;
+            cursor: not-allowed;
+        }
+
         /* Touch Look Zone */
         #touch-look-zone {
             position: absolute;
@@ -372,6 +490,10 @@
             <div class="hud-badge" id="hud-branch-badge" style="border-color: rgba(255, 211, 42, 0.4); color: #ffd32a;">
                 <span id="hud-branch-label">❓ SUUND VALIMATA</span>
             </div>
+            <div class="hud-badge" id="hud-coins-badge" style="border-color: #ffd32a; color: #ffd32a;">
+                <span>🪙</span>
+                <span id="hud-coins-label">0 COINS</span>
+            </div>
         </div>
 
         <div class="hud-right">
@@ -400,11 +522,21 @@
         </div>
     </div>
 
+    <!-- Night Vision Overlay -->
+    <div id="night-vision-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; display: none; z-index: 80; background: radial-gradient(circle, rgba(46, 213, 115, 0.18) 0%, rgba(10, 40, 20, 0.55) 100%); mix-blend-mode: screen; border: 4px solid rgba(46, 213, 115, 0.4);">
+        <div style="position: absolute; top: 75px; left: 20px; color: #2ed573; font-family: monospace; font-weight: bold; font-size: 0.9rem; letter-spacing: 2px;">🟢 ÖÖPRILLID AKTIIVSED [NVG 100%]</div>
+    </div>
+
     <!-- Stand Up Button -->
     <button id="btn-stand-up">
         <span>🧍‍♂️</span>
         <span>Tõuse Püsti / Stand Up (W / Tap)</span>
     </button>
+
+    <!-- Roblox-Style Hotbar Inventory (Bottom Center) -->
+    <div id="inventory-hotbar" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 100; pointer-events: auto;">
+        <!-- Dynamically managed slots -->
+    </div>
 
     <!-- Subtitle / Internal Monologue Bubble -->
     <div id="thought-bubble">
@@ -433,6 +565,25 @@
             <div style="display: flex; gap: 10px; justify-content: center;">
                 <button class="btn-modal-close" id="btn-keypad-submit">Sisesta / Unlock</button>
                 <button class="btn-modal-close" id="btn-keypad-close" style="background: #485460; color: white;">Sulge</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Golden Shop Modal (Vagun 100 Checkpoint) -->
+    <div class="modal-overlay" id="golden-shop-modal">
+        <div class="modal-box" style="border: 2px solid #ffd32a; max-width: 640px; box-shadow: 0 0 45px rgba(255, 211, 42, 0.4); background: #0e1219; padding: 25px;">
+            <div style="font-size: 2.4rem; margin-bottom: 4px;">✨ 🛒 ✨</div>
+            <h2 class="modal-title" style="color: #ffd32a; font-size: 1.75rem; letter-spacing: 2px; text-transform: uppercase; margin: 0;">GOLDEN SHOP</h2>
+            <p style="color: #a4b0be; font-size: 0.88rem; margin: 4px 0 16px 0;">Vagun 100 Checkpoint · Turvaline Oaas Lõputus Metroos</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 211, 42, 0.12); border: 1px solid rgba(255, 211, 42, 0.4); border-radius: 12px; padding: 10px 18px; margin-bottom: 16px;">
+                <span style="color: #d2dae2; font-weight: 700;">Sinu Müntide Saldo:</span>
+                <span style="color: #ffd32a; font-size: 1.3rem; font-weight: 900;" id="shop-coin-balance">🪙 0 COINI</span>
+            </div>
+            <div id="shop-items-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; max-height: 280px; overflow-y: auto; padding-right: 4px;">
+                <!-- Shop items injected dynamically -->
+            </div>
+            <div style="display: flex; justify-content: center; gap: 10px;">
+                <button class="btn-modal-close" id="btn-shop-close" style="background: linear-gradient(135deg, #ffd32a, #f39c12); color: #111; font-weight: 900; padding: 12px 30px;">🚪 Jätka Sõitu (Vagun 101) / Continue</button>
             </div>
         </div>
     </div>

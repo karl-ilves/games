@@ -570,6 +570,208 @@ export class MetroAudioEngine {
         sub.start(now);
         sub.stop(now + dur);
     }
+
+    // --- Coins & Golden Shop Audio ---
+
+    public playCoinPickup() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        [ { freq: 987.77, time: 0 }, { freq: 1318.51, time: 0.08 } ].forEach(tone => {
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(tone.freq, now + tone.time);
+            gain.gain.setValueAtTime(0.2, now + tone.time);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + tone.time + 0.25);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+            osc.start(now + tone.time);
+            osc.stop(now + tone.time + 0.3);
+        });
+    }
+
+    public playShopPurchase() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        // Cash register chime + magic shimmer arpeggio
+        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+        notes.forEach((freq, idx) => {
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+
+            gain.gain.setValueAtTime(0.18, now + idx * 0.06);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.4);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+            osc.start(now + idx * 0.06);
+            osc.stop(now + idx * 0.06 + 0.45);
+        });
+    }
+
+    // Calming Golden Shop Music (Procedural Ambient Chords & Gentle Bells)
+    private shopMusicInterval: any = null;
+    public playShopMusic() {
+        this.initContext();
+        if (this.shopMusicInterval) return;
+
+        const chordProgression = [
+            [261.63, 329.63, 392.00, 493.88], // Cmaj7
+            [220.00, 261.63, 329.63, 392.00], // Am7
+            [174.61, 220.00, 261.63, 329.63], // Fmaj7
+            [196.00, 246.94, 293.66, 392.00]  // G7
+        ];
+        let chordIdx = 0;
+
+        const playChord = () => {
+            if (!this.ctx || !this.masterGain || this.isMuted) return;
+            const now = this.ctx.currentTime;
+            const chord = chordProgression[chordIdx % chordProgression.length];
+            chordIdx++;
+
+            chord.forEach((freq, i) => {
+                const osc = this.ctx!.createOscillator();
+                const gain = this.ctx!.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq * 1.5, now + i * 0.12);
+
+                gain.gain.setValueAtTime(0.06, now + i * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 3.2);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain!);
+                osc.start(now + i * 0.12);
+                osc.stop(now + i * 0.12 + 3.4);
+            });
+        };
+
+        playChord();
+        this.shopMusicInterval = setInterval(playChord, 3500);
+    }
+
+    public stopShopMusic() {
+        if (this.shopMusicInterval) {
+            clearInterval(this.shopMusicInterval);
+            this.shopMusicInterval = null;
+        }
+    }
+
+    // Radio Music & Mystery Broadcast
+    private radioInterval: any = null;
+    public playRadioAudio() {
+        this.initContext();
+        if (this.radioInterval) return;
+
+        const lofiScale = [220, 261.6, 293.7, 329.6, 392.0, 440, 523.2];
+        const playLofiNote = () => {
+            if (!this.ctx || !this.masterGain || this.isMuted) return;
+            const now = this.ctx.currentTime;
+            const freq = lofiScale[Math.floor(Math.random() * lofiScale.length)];
+
+            const osc = this.ctx.createOscillator();
+            const filter = this.ctx.createBiquadFilter();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now);
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(800, now);
+            filter.Q.setValueAtTime(3.0, now);
+
+            gain.gain.setValueAtTime(0.07, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.masterGain);
+
+            osc.start(now);
+            osc.stop(now + 0.65);
+        };
+
+        playLofiNote();
+        this.radioInterval = setInterval(playLofiNote, 600);
+    }
+
+    public stopRadioAudio() {
+        if (this.radioInterval) {
+            clearInterval(this.radioInterval);
+            this.radioInterval = null;
+        }
+    }
+
+    // Phone Ringing (Carriage 19)
+    public playPhoneRingingAll() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        for (let ring = 0; ring < 3; ring++) {
+            const start = ring * 0.7;
+            [ 853, 960 ].forEach(f => {
+                const osc = this.ctx!.createOscillator();
+                const gain = this.ctx!.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(f, now + start);
+                gain.gain.setValueAtTime(0.12, now + start);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + start + 0.4);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain!);
+                osc.start(now + start);
+                osc.stop(now + start + 0.42);
+            });
+        }
+    }
+
+    // Radar Clue Detector Ping (Vihjeandur)
+    public playRadarPing() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1760, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.16);
+    }
+
+    // Item Equip Pop (Roblox style tool equip sound)
+    public playItemEquip() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.12);
+    }
 }
 
 export const metroAudio = new MetroAudioEngine();
