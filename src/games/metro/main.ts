@@ -820,25 +820,40 @@ export class LastMetroGame {
             });
         });
 
-        // 6. Dual Row Passenger Bucket Seats with Padded Cushions and Dividers
+        // 6. Dual Long Ergonomic Passenger Subway Benches with Sculpted Cushions & Dividers
         const seatBaseColor = theme === 'lounge' ? 0x6c5ce7 : theme === 'abandoned' ? 0x2d3436 : 0x0984e3;
         const seatBaseMat = new THREE.MeshStandardMaterial({ color: seatBaseColor, roughness: 0.65 });
-        const cushionMat = new THREE.MeshStandardMaterial({ color: 0x1e3799, roughness: 0.8 });
+        const cushionColor = theme === 'lounge' ? 0x574b90 : theme === 'abandoned' ? 0x1e272e : 0x1e3799;
+        const cushionMat = new THREE.MeshStandardMaterial({ color: cushionColor, roughness: 0.75 });
+        const dividerMat = new THREE.MeshStandardMaterial({ color: 0x718093, metalness: 0.8, roughness: 0.2 });
 
-        [-1.3, 1.3].forEach(x => {
-            for (let z = -7.5; z <= 7.5; z += 2.8) {
-                const seatBench = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 1.8), seatBaseMat);
-                seatBench.position.set(x, 0.35, z);
+        [-1.28, 1.28].forEach(x => {
+            // Rear Bench (z = -4.9, length 6.0m) and Front Bench (z = 4.9, length 6.0m)
+            [-4.9, 4.9].forEach(centerZ => {
+                // Bench Base Structure
+                const seatBench = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.44, 6.0), seatBaseMat);
+                seatBench.position.set(x, 0.22, centerZ);
                 carGroup.add(seatBench);
 
-                const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 1.7), cushionMat);
-                seatCushion.position.set(x, 0.47, z);
+                // Continuous Plush Cushion Surface (top surface at y = 0.48)
+                const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.08, 5.96), cushionMat);
+                seatCushion.position.set(x, 0.46, centerZ);
                 carGroup.add(seatCushion);
 
-                const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.75, 1.8), seatBaseMat);
-                seatBack.position.set(x > 0 ? x + 0.3 : x - 0.3, 0.75, z);
+                // Backrest against the subway wall
+                const backX = x > 0 ? 1.58 : -1.58;
+                const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.72, 5.96), cushionMat);
+                seatBack.position.set(backX, 0.8, centerZ);
                 carGroup.add(seatBack);
-            }
+
+                // Individual Seat Divider Bars / Armrests along the bench
+                for (let dz = -2.4; dz <= 2.4; dz += 1.2) {
+                    const divider = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.58, 8), dividerMat);
+                    divider.rotation.z = x > 0 ? -Math.PI / 8 : Math.PI / 8;
+                    divider.position.set(x, 0.62, centerZ + dz);
+                    carGroup.add(divider);
+                }
+            });
         });
 
         // 7. Cove Transit Posters & Warning Signs Above Windows
@@ -1262,12 +1277,12 @@ export class LastMetroGame {
         else if (carIndex >= 11) count = Math.random() < 0.35 ? 1 : 0;
 
         const seatPositions = [
-            new THREE.Vector3(-1.1, 0.5, -6),
-            new THREE.Vector3(1.1, 0.5, -4),
-            new THREE.Vector3(-1.1, 0.5, -1),
-            new THREE.Vector3(1.1, 0.5, 2),
-            new THREE.Vector3(-1.1, 0.5, 5),
-            new THREE.Vector3(1.1, 0.5, 7)
+            new THREE.Vector3(-1.22, 0.48, -6.2),
+            new THREE.Vector3( 1.22, 0.48, -4.8),
+            new THREE.Vector3(-1.22, 0.48, -3.2),
+            new THREE.Vector3( 1.22, 0.48,  3.2),
+            new THREE.Vector3(-1.22, 0.48,  4.8),
+            new THREE.Vector3( 1.22, 0.48,  6.2)
         ];
 
         // Realistic skin tones
