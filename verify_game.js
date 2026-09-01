@@ -1348,6 +1348,25 @@ try {
             await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
             console.log("   Successfully loaded 3D Canvas for LAST METRO!");
 
+            // Check Start Screen Overlay (User requirement: "kui sa hubis vajutad selle mängu pealle siis sinna mängu ilmud vajuta üks kõik kuhu et mängu alustada ja kui ta vajutab siis tuleb intro")
+            const startOverlayDisplay = await page.$eval('#start-game-overlay', el => window.getComputedStyle(el).display);
+            const startPromptText = await page.$eval('#start-game-prompt-text', el => el.textContent);
+            const initialState = await page.evaluate(() => window.__lastMetro.state);
+            console.log(`   Start Screen Overlay Display: ${startOverlayDisplay}, Prompt: "${startPromptText}", State: ${initialState}`);
+            if (startOverlayDisplay !== 'flex' || initialState !== 'start_screen') {
+                throw new Error("Expected start screen overlay with click-to-start prompt on initial game load!");
+            }
+
+            // Click anywhere on start screen to begin game and trigger intro sequence
+            await page.click('#start-game-overlay');
+            await new Promise(r => setTimeout(r, 200));
+            const stateAfterClick = await page.evaluate(() => window.__lastMetro.state);
+            console.log(`   State after clicking start screen (Expected: intro_station): ${stateAfterClick}`);
+            if (stateAfterClick !== 'intro_station') {
+                throw new Error("Clicking start overlay failed to transition to intro_station!");
+            }
+            console.log("   Successfully verified Start Screen Overlay & Click-to-Start Intro transition!");
+
             // Check HUD & Cinematic Intro elements
             const metroHudTitle = await page.$eval('#hud-game-title', el => el.textContent);
             const metroCarLabel = await page.$eval('#hud-car-label', el => el.textContent);

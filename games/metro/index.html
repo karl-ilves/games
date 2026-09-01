@@ -497,9 +497,45 @@
             text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,0.8);
         }
+        /* Start Game Overlay (Vajuta ükskõik kuhu et alustada) */
+        #start-game-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(15, 23, 42, 0.92), rgba(4, 7, 14, 0.99));
+            z-index: 1500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.5s ease-out;
+        }
+        @keyframes float-metro-title {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes pulse-metro-start {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 25px rgba(0, 242, 254, 0.35); border-color: rgba(0, 242, 254, 0.5); }
+            50% { transform: scale(1.04); box-shadow: 0 0 45px rgba(0, 242, 254, 0.7); border-color: #ffd32a; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Start Game Launch Screen Overlay -->
+    <div id="start-game-overlay">
+        <div style="font-size: 3.5rem; filter: drop-shadow(0 0 25px rgba(0, 242, 254, 0.6)); animation: float-metro-title 3s ease-in-out infinite;">🚇</div>
+        <h1 style="font-size: 2.6rem; font-weight: 900; letter-spacing: 4px; background: linear-gradient(135deg, #ffffff, #00f2fe, #ffd32a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 12px 0 6px 0; text-transform: uppercase;" id="start-game-title">VIIMANE METROO</h1>
+        <div style="font-size: 1.0rem; color: #00f2fe; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 34px;" id="start-game-sub">LAST METRO · 3D MYSTERY ADVENTURE</div>
+        <div id="start-game-prompt-box" style="padding: 16px 36px; border-radius: 40px; background: rgba(0, 242, 254, 0.12); border: 2px solid rgba(0, 242, 254, 0.5); box-shadow: 0 0 35px rgba(0, 242, 254, 0.35); animation: pulse-metro-start 1.8s infinite ease-in-out;">
+            <span style="font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 1px;" id="start-game-prompt-text">👆 Vajuta ükskõik kuhu, et mängu alustada</span>
+        </div>
+        <div style="position: absolute; bottom: 30px; font-size: 0.8rem; color: rgba(255, 255, 255, 0.4); letter-spacing: 1px;">🎮 Playard Experience</div>
+    </div>
 
     <!-- 3D Canvas Container -->
     <div id="canvas-container"></div>

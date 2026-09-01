@@ -292,8 +292,21 @@ export class LastMetroGame {
         window.addEventListener('resize', this.onWindowResize.bind(this));
         this.renderer.setAnimationLoop(this.animate.bind(this));
 
-        // Start Intro State
+        // User requirement: "kui sa hubis vajutad selle mängu pealle siis sinna mängu ilmud vajuta üks kõik kuhu et mängu alustada ja kui ta vajutab siis tuleb intro"
+        this.state = 'start_screen';
+    }
+
+    public startGameFromOverlay() {
+        const startOverlay = document.getElementById('start-game-overlay');
+        if (startOverlay) {
+            startOverlay.style.opacity = '0';
+            setTimeout(() => {
+                startOverlay.style.display = 'none';
+            }, 500);
+        }
+        metroAudio.enableAudio();
         this.startIntroSequence();
+        this.updateCursorState();
     }
 
     private setupLighting() {
@@ -311,6 +324,12 @@ export class LastMetroGame {
     }
 
     private setupUI() {
+        // Start screen click anywhere to begin listener
+        const startOverlay = document.getElementById('start-game-overlay');
+        if (startOverlay) {
+            startOverlay.addEventListener('click', () => this.startGameFromOverlay());
+        }
+
         // Flashlight toggle button
         const flashBtn = document.getElementById('btn-toggle-flashlight');
         if (flashBtn) {
@@ -462,6 +481,13 @@ export class LastMetroGame {
         const isEt = this.lang === 'et';
         const titleEl = document.getElementById('hud-game-title');
         if (titleEl) titleEl.innerText = isEt ? '🚇 VIIMANE METROO' : '🚇 LAST METRO';
+
+        const startTitle = document.getElementById('start-game-title');
+        const startSub = document.getElementById('start-game-sub');
+        const startPrompt = document.getElementById('start-game-prompt-text');
+        if (startTitle) startTitle.innerText = isEt ? 'VIIMANE METROO' : 'LAST METRO';
+        if (startSub) startSub.innerText = isEt ? 'LAST METRO · 3D MÜSTEERIUM' : 'LAST METRO · 3D MYSTERY ADVENTURE';
+        if (startPrompt) startPrompt.innerText = isEt ? '👆 Vajuta ükskõik kuhu, et mängu alustada' : '👆 Click anywhere to start the game';
 
         const carLabel = document.getElementById('hud-car-label');
         if (carLabel) {
@@ -3746,8 +3772,10 @@ this.state = 'player_free';
         const isLoreOpen = document.getElementById('lore-modal')?.style.display === 'flex';
         const isKeypadOpen = document.getElementById('keypad-modal')?.style.display === 'flex';
         const isOwnerOpen = document.getElementById('owner-teleport-modal')?.style.display === 'flex';
+        const startOverlay = document.getElementById('start-game-overlay');
+        const isStartOpen = !!startOverlay && startOverlay.style.display !== 'none' && startOverlay.style.opacity !== '0';
 
-        const isAnyModalOpen = isShopOpen || isDeathOpen || isLoreOpen || isKeypadOpen || isOwnerOpen;
+        const isAnyModalOpen = isShopOpen || isDeathOpen || isLoreOpen || isKeypadOpen || isOwnerOpen || isStartOpen;
 
         if (isAnyModalOpen) {
             document.body.classList.remove('metro-in-game');
