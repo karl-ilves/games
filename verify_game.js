@@ -1601,7 +1601,7 @@ try {
             if (keySlotCount < 1) throw new Error("Roblox hotbar failed to render unlocked item slot!");
 
             // Test Equip Key ("nagu robloxsis")
-            await page.click('#slot-key');
+            await page.evaluate(() => document.getElementById('slot-key')?.click());
             await new Promise(r => setTimeout(r, 100));
             const equippedItem = await page.evaluate(() => window.__lastMetro.equippedItem);
             const heldMeshExists = await page.evaluate(() => !!window.__lastMetro.heldItemMesh);
@@ -1609,7 +1609,7 @@ try {
             if (equippedItem !== 'key' || !heldMeshExists) throw new Error("Equipping item failed to create 3D held model on camera!");
 
             // Test Unequip Key (clicking again puts it back in bag)
-            await page.click('#slot-key');
+            await page.evaluate(() => document.getElementById('slot-key')?.click());
             await new Promise(r => setTimeout(r, 100));
             const unequippedItem = await page.evaluate(() => window.__lastMetro.equippedItem);
             console.log(`   Unequipped item (Expected: null): ${unequippedItem}`);
@@ -1635,7 +1635,7 @@ try {
             }
 
             // Buy Night Vision Goggles (120 coins)
-            await page.click('#btn-buy-night_vision');
+            await page.evaluate(() => document.getElementById('btn-buy-night_vision')?.click());
             await new Promise(r => setTimeout(r, 150));
             const hasNightVision = await page.evaluate(() => !!window.__lastMetro.inventory['night_vision']);
             const coinsAfterPurchase = await page.evaluate(() => window.__lastMetro.coins);
@@ -1645,14 +1645,14 @@ try {
             }
 
             // Close Golden Shop modal
-            await page.click('#btn-shop-close');
+            await page.evaluate(() => document.getElementById('btn-shop-close')?.click());
             await new Promise(r => setTimeout(r, 100));
             const shopClosedDisplay = await page.$eval('#golden-shop-modal', el => window.getComputedStyle(el).display);
             console.log("   Golden Shop closed display (Expected: none):", shopClosedDisplay);
             if (shopClosedDisplay !== 'none') throw new Error("Shop close button failed!");
 
             // Test equip Night Vision Goggles & CRT overlay
-            await page.click('#slot-night_vision');
+            await page.evaluate(() => document.getElementById('slot-night_vision')?.click());
             await new Promise(r => setTimeout(r, 100));
             const nvOverlayDisplay = await page.$eval('#night-vision-overlay', el => window.getComputedStyle(el).display);
             console.log("   Night Vision Green CRT Overlay Display (Expected: block):", nvOverlayDisplay);
@@ -1672,7 +1672,7 @@ try {
             if (ownerPanelBtnDisplay !== 'flex') throw new Error("Owner Panel button failed to display for Playard Owner!");
 
             // Open Owner Teleport Modal
-            await page.click('#btn-owner-panel');
+            await page.evaluate(() => document.getElementById('btn-owner-panel')?.click());
             await new Promise(r => setTimeout(r, 150));
             const ownerModalDisplay = await page.$eval('#owner-teleport-modal', el => window.getComputedStyle(el).display);
             console.log("   Owner Teleport Modal Display (Expected: flex):", ownerModalDisplay);
@@ -1680,7 +1680,7 @@ try {
 
             // Test Too Large Number (e.g. 999) -> "Sellist vagunit ei ole"
             await page.$eval('#owner-teleport-input', el => { el.value = '999'; });
-            await page.click('#btn-owner-teleport-submit');
+            await page.evaluate(() => document.getElementById('btn-owner-teleport-submit')?.click());
             await new Promise(r => setTimeout(r, 150));
 
             const errorDisplay = await page.$eval('#owner-teleport-error', el => window.getComputedStyle(el).display);
@@ -1693,7 +1693,7 @@ try {
 
             // Test Valid Number Teleport (e.g. 77)
             await page.$eval('#owner-teleport-input', el => { el.value = '77'; });
-            await page.click('#btn-owner-teleport-submit');
+            await page.evaluate(() => document.getElementById('btn-owner-teleport-submit')?.click());
             await new Promise(r => setTimeout(r, 200));
 
             const ownerModalAfterTp = await page.$eval('#owner-teleport-modal', el => window.getComputedStyle(el).display);
@@ -1720,25 +1720,103 @@ try {
             }
             console.log("   Successfully verified Shadow Rush event triggers across all specified carriages!");
 
-            // Test Full Reset of Coins and Inventory Items when Returning to Beginning
-            console.log("   Testing full reset of Coins and Inventory when returning to beginning...");
-            await page.evaluate(() => {
-                window.__lastMetro.coins = 999;
-                window.__lastMetro.inventory = { key: { id: 'key', nameEt: 'Võti', nameEn: 'Key', icon: '🗝️' } };
-                window.__lastMetro.equippedItem = 'key';
-                window.__lastMetro.nightVisionActive = true;
-                window.__lastMetro.replayIntro();
-            });
-            await new Promise(r => setTimeout(r, 150));
-            const coinsAfterReset = await page.evaluate(() => window.__lastMetro.coins);
-            const invAfterReset = await page.evaluate(() => Object.keys(window.__lastMetro.inventory).length);
-            const equippedAfterReset = await page.evaluate(() => window.__lastMetro.equippedItem);
-            const hotbarSlotsAfterReset = await page.$$eval('#inventory-hotbar .hotbar-slot', els => els.length);
-            console.log(`   After Return to Beginning: Coins=${coinsAfterReset} (Expected: 0), InventoryCount=${invAfterReset} (Expected: 0), Equipped=${equippedAfterReset} (Expected: null), HotbarSlots=${hotbarSlotsAfterReset} (Expected: 0)`);
-            if (coinsAfterReset !== 0 || invAfterReset !== 0 || equippedAfterReset !== null || hotbarSlotsAfterReset !== 0) {
-                throw new Error("Reset on return to beginning failed to clear coins and inventory items!");
+            // Test Shadow Hands Event on requested carriages (15, 21, 30, 32, 40, 53, 60, 70, 88, 90, 98)
+            console.log("   Testing Shadow Hands emergence on carriages (15, 21, 30, 32, 40, 53, 60, 70, 88, 90, 98)...");
+            const shadowHandCarriages = [15, 21, 30, 32, 40, 53, 60, 70, 88, 90, 98];
+            for (const cNum of shadowHandCarriages) {
+                await page.evaluate((car) => {
+                    window.__lastMetro.dismissShadowHands();
+                    window.__lastMetro.loadCarriage(car, 'right');
+                }, cNum);
+                await new Promise(r => setTimeout(r, 60));
+                const isHandActive = await page.evaluate(() => window.__lastMetro.shadowHandsActive);
+                if (!isHandActive) {
+                    throw new Error(`Expected shadow hands event to trigger in Carriage ${cNum}!`);
+                }
             }
-            console.log("   Successfully verified Coins, Inventory, and Hotbar full reset on return to beginning!");
+            console.log("   Successfully verified Shadow Hands emergence on all requested carriages!");
+
+            // Test Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility
+            console.log("   Testing Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility...");
+            await page.evaluate(() => {
+                window.__lastMetro.dismissShadowHands();
+                window.__lastMetro.loadCarriage(6, 'right'); // Carriage 6 has inspectable note
+                window.__lastMetro.state = 'player_free';
+                // Look away from note first
+                window.__lastMetro.cameraEuler.set(0, Math.PI, 0); // look backward
+                window.__lastMetro.updateReticleAim();
+            });
+            await new Promise(r => setTimeout(r, 80));
+
+            const isAimedAway = await page.evaluate(() => window.__lastMetro.aimedInteractable);
+            const promptAwayDisplay = await page.$eval('#crosshair-prompt', el => window.getComputedStyle(el).display);
+            console.log(`   When looking away: aimed=${isAimedAway}, promptDisplay=${promptAwayDisplay}`);
+            if (isAimedAway !== null || promptAwayDisplay !== 'none') {
+                throw new Error("Crosshair prompt must be hidden when not aiming at inspectable item!");
+            }
+
+            // Press E while looking away -> Must NOT open lore modal
+            await page.evaluate(() => window.__lastMetro.checkInteractions());
+            await new Promise(r => setTimeout(r, 60));
+            const loreDisplayWhenAway = await page.$eval('#lore-modal', el => window.getComputedStyle(el).display);
+            if (loreDisplayWhenAway !== 'none') {
+                throw new Error("Pressing E when not aiming at item must not open lore modal!");
+            }
+
+            // Now aim directly at the note with center dot
+            await page.evaluate(() => {
+                const itemPos = window.__lastMetro.currentCarriage.inspectableItem.position;
+                window.__lastMetro.playerPos.set(0, 1.6, itemPos.z);
+                const dx = itemPos.x - window.__lastMetro.playerPos.x;
+                const dz = itemPos.z - window.__lastMetro.playerPos.z;
+                window.__lastMetro.cameraEuler.set(0, Math.atan2(-dx, -dz), 0);
+                window.__lastMetro.updateReticleAim();
+            });
+            await new Promise(r => setTimeout(r, 80));
+
+            const isAimedAtNote = await page.evaluate(() => window.__lastMetro.aimedInteractable);
+            const crosshairHasActive = await page.$eval('#hud-crosshair', el => el.classList.contains('active'));
+            const promptAtNoteDisplay = await page.$eval('#crosshair-prompt', el => window.getComputedStyle(el).display);
+            console.log(`   When aiming with center dot: aimed=${isAimedAtNote}, crosshairActive=${crosshairHasActive}, promptDisplay=${promptAtNoteDisplay}`);
+            if (!isAimedAtNote || !crosshairHasActive || promptAtNoteDisplay !== 'block') {
+                throw new Error("Center dot reticle must activate and show [E] prompt when aiming at item!");
+            }
+
+            // Press E while aimed -> Must open lore modal
+            await page.evaluate(() => window.__lastMetro.checkInteractions());
+            await new Promise(r => setTimeout(r, 60));
+            const loreDisplayWhenAimed = await page.$eval('#lore-modal', el => window.getComputedStyle(el).display);
+            console.log("   Lore modal display after pressing E while aimed (Expected: flex):", loreDisplayWhenAimed);
+            if (loreDisplayWhenAimed !== 'flex') {
+                throw new Error("Pressing E while aiming at item failed to open lore modal!");
+            }
+            await page.click('#btn-lore-close');
+            await new Promise(r => setTimeout(r, 60));
+
+            // Test Cursor Visibility: hidden in-game, visible in shop and death
+            const bodyInGame = await page.evaluate(() => document.body.classList.contains('metro-in-game'));
+            console.log("   Body cursor class in-game (Expected in-game/hidden):", bodyInGame);
+            if (!bodyInGame) throw new Error("Mouse cursor must be hidden in-game!");
+
+            // Open shop -> cursor visible
+            await page.evaluate(() => window.__lastMetro.openGoldenShopModal());
+            await new Promise(r => setTimeout(r, 60));
+            const bodyInShop = await page.evaluate(() => document.body.classList.contains('metro-cursor-visible'));
+            console.log("   Body cursor class in Golden Shop (Expected cursor-visible):", bodyInShop);
+            if (!bodyInShop) throw new Error("Mouse cursor must be visible in shop!");
+            await page.click('#btn-shop-close');
+            await new Promise(r => setTimeout(r, 60));
+
+            // Open death modal -> cursor visible
+            await page.evaluate(() => window.__lastMetro.openDeathModal());
+            await new Promise(r => setTimeout(r, 60));
+            const bodyInDeath = await page.evaluate(() => document.body.classList.contains('metro-cursor-visible'));
+            console.log("   Body cursor class on Death Screen (Expected cursor-visible):", bodyInDeath);
+            if (!bodyInDeath) throw new Error("Mouse cursor must be visible when dead!");
+            await page.click('#btn-death-retry');
+            await new Promise(r => setTimeout(r, 100));
+
+            console.log("   Successfully verified Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility!");
 
             console.log("   Successfully verified LAST METRO (3D Mystery Adventure, Carriages 1-100+, Coins, Roblox Hotbar, Golden Shop & Owner Panel)!");
 

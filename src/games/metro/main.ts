@@ -161,6 +161,7 @@ export class LastMetroGame {
     private cameraEuler: THREE.Euler = new THREE.Euler(0, 0, 0, 'YXZ');
     private moveKeys: { [key: string]: boolean } = {};
     private isPointerLocked: boolean = false;
+    public aimedInteractable: 'inspectable' | 'keypad' | 'shop' | 'seat' | 'stand' | null = null;
     private stepTimer: number = 0;
     private headBobTimer: number = 0;
     private flashlightOn: boolean = false;
@@ -369,6 +370,7 @@ export class LastMetroGame {
                 const modal = document.getElementById('keypad-modal');
                 if (modal) modal.style.display = 'none';
                 this.state = 'player_free';
+                this.updateCursorState();
             });
         }
 
@@ -379,6 +381,7 @@ export class LastMetroGame {
                 const modal = document.getElementById('lore-modal');
                 if (modal) modal.style.display = 'none';
                 this.state = 'player_free';
+                this.updateCursorState();
             });
         }
 
@@ -395,6 +398,7 @@ export class LastMetroGame {
                 const modal = document.getElementById('golden-shop-modal');
                 if (modal) modal.style.display = 'none';
                 this.state = 'player_free';
+                this.updateCursorState();
             });
         }
 
@@ -2260,6 +2264,7 @@ export class LastMetroGame {
 
         modal.style.display = 'flex';
         this.state = 'golden_shop';
+        this.updateCursorState();
     }
 
     public buyShopItem(itemId: string) {
@@ -2490,6 +2495,7 @@ export class LastMetroGame {
             case 15:
                 this.showThought('Tuled kustuvad korraks ja tagasi tulles on reisijad teistes kohtades.', 'Lights extinguish for a second, and passengers are in different seats upon return.');
                 this.startLightFlickerAnomaly();
+                this.triggerShadowHandsEvent();
                 break;
             case 16:
                 this.showThought('Akna taga liigub linn ja tunnel tagurpidi!', 'Outside the window, the city and tunnel are moving backwards!');
@@ -2512,6 +2518,7 @@ export class LastMetroGame {
             // --- Vagunid 21–30 ---
             case 21:
                 this.showThought('Üks reisija küsib: „Kas sina tead, kus me oleme?” 🤔', 'A passenger asks: „Do you know where we are?” 🤔');
+                this.triggerShadowHandsEvent();
                 break;
             case 22:
                 this.showThought('Vagunis olev metrookaart muutub iga kord, kui sellele otsa vaatad.', 'The subway map shifts every time you look at it.');
@@ -2540,6 +2547,7 @@ export class LastMetroGame {
                 break;
             case 30:
                 this.showThought('Mängija jõuab väga pika vagunini, mis tundub tavalisest palju suurem. 🚇', 'You reach a massive extended carriage that feels much larger than usual. 🚇');
+                this.triggerShadowHandsEvent();
                 break;
 
             // --- Vagunid 31–40 ---
@@ -2549,6 +2557,7 @@ export class LastMetroGame {
             case 32:
                 this.showThought('Mängija leiab väikese kaardi, kus on märgitud vagun number 50. 🗺️', 'You find a small pocket map with Carriage number 50 circled. 🗺️');
                 this.startShadowRushCarriageEvent(32);
+                this.triggerShadowHandsEvent();
                 break;
             case 33:
                 this.showThought('Metroo hakkab korraks sõitma väga aeglaselt... ja kiirendab siis uuesti.', 'The subway slows down to a crawl... then accelerates again.');
@@ -2574,6 +2583,7 @@ export class LastMetroGame {
                 break;
             case 40:
                 this.showThought('Kõik muutub korraks täiesti normaalseks, nagu mängu alguses.', 'Everything turns completely calm and normal for a moment, just like the beginning.');
+                this.triggerShadowHandsEvent();
                 break;
 
             // --- Vagunid 41–50 ---
@@ -2621,6 +2631,7 @@ export class LastMetroGame {
                 break;
             case 53:
                 this.showThought('Metrookaardil on kõik peatused kadunud — jäänud on tühi joon.', 'All stations on the transit map have disappeared — leaving a blank line.');
+                this.triggerShadowHandsEvent();
                 break;
             case 54:
                 this.showThought('Akna taga on väga pikk must tunnel, mille lõppu ei ole näha.', 'Outside is a vast dark tunnel with no visible end.');
@@ -2644,6 +2655,7 @@ export class LastMetroGame {
             case 60:
                 this.showThought('Tuled lähevad hetkeks välja ning tagasi tulles on vagun täiesti tühi.', 'Lights turn off for a moment, and returning, the carriage is completely empty.');
                 this.startLightFlickerAnomaly();
+                this.triggerShadowHandsEvent();
                 break;
 
             // --- Vagunid 61–70 ---
@@ -2680,6 +2692,7 @@ export class LastMetroGame {
             case 70:
                 this.showThought('⭐ SUUR VIHJE-VAGUN 70! Leidsid märkmiku, mis räägib inimesest, kes oli kunagi samas metroos.', '⭐ MAJOR CLUE CARRIAGE 70! Found the journal of an explorer who was trapped in this subway.');
                 this.startShadowRushCarriageEvent(70);
+                this.triggerShadowHandsEvent();
                 break;
 
             // --- Vagunid 71–80 ---
@@ -2740,6 +2753,7 @@ export class LastMetroGame {
                 break;
             case 88:
                 this.showThought('Akna taga liigub metroo kõrval korraks teine täpselt samasugune rong! 🚇', 'Outside the right window, an identical parallel subway train speeds alongside! 🚇');
+                this.triggerShadowHandsEvent();
                 break;
             case 89:
                 this.showThought('Teises rongis olevad reisijad vaatavad aknast otse sinu poole.', 'Passengers in the parallel train are staring through the glass right at you.');
@@ -2747,6 +2761,7 @@ export class LastMetroGame {
             case 90:
                 this.showThought('⭐ Mõlemad rongid lähevad eri suundades ja teine rong kaob tunnelisse.', '⭐ The trains diverge and the parallel train disappears into the dark tunnel.');
                 this.startShadowRushCarriageEvent(90);
+                this.triggerShadowHandsEvent();
                 break;
 
             // --- Vagunid 91–100 ---
@@ -2774,6 +2789,7 @@ export class LastMetroGame {
                 break;
             case 98:
                 this.showThought('Kõlaritest kostab vana pühalik metrooteade: „Saabume Vagunisse 100.”', 'A solemn announcement chimes: „Arriving at Carriage 100 — The Golden Terminal.”');
+                this.triggerShadowHandsEvent();
                 break;
             case 99:
                 this.showThought('Uks avaneb ja ees särab helge, soe ja kuldne valgus!', 'The door slides open revealing radiant, warm golden light ahead!');
@@ -3194,6 +3210,9 @@ export class LastMetroGame {
         const modal = document.getElementById('death-modal');
         const title = document.getElementById('death-title');
         const desc = document.getElementById('death-desc');
+        const flashOverlay = document.getElementById('scare-flash-overlay');
+        if (flashOverlay) flashOverlay.style.display = 'none';
+
         if (modal && title && desc) {
             title.innerText = this.lang === 'et' ? 'SA SURID' : 'YOU DIED';
             desc.innerText = this.lang === 'et'
@@ -3201,6 +3220,7 @@ export class LastMetroGame {
                 : 'The dark shadow hand grabbed you and dragged you from the speeding train into the void...';
             modal.style.display = 'flex';
         }
+        this.updateCursorState();
     }
 
     public respawnFromDeath() {
@@ -3209,6 +3229,7 @@ export class LastMetroGame {
 
         // Replay full cinematic intro sequence from the beginning (kui panen retry siis peab ka intro tulema)
         this.replayIntro();
+        this.updateCursorState();
     }
 
     private startCarriage10JumpScare() {
@@ -3619,7 +3640,7 @@ this.state = 'player_free';
             this.isMouseDown = true;
             this.lastMouseX = clientX;
             this.lastMouseY = clientY;
-            if (this.state === 'player_free') {
+            if (this.state === 'player_free' && this.aimedInteractable) {
                 this.checkInteractions();
             }
         };
@@ -3652,9 +3673,7 @@ this.state = 'player_free';
         window.addEventListener('mousedown', (e) => {
             if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box, .hotbar-slot')) return;
             handleStartLook(e.clientX, e.clientY);
-            if (canRotateHead() && !this.isPointerLocked) {
-                this.renderer.domElement.requestPointerLock?.();
-            }
+            this.updateCursorState();
         });
 
         window.addEventListener('mousemove', (e) => {
@@ -3665,6 +3684,10 @@ this.state = 'player_free';
 
         document.addEventListener('pointerlockchange', () => {
             this.isPointerLocked = document.pointerLockElement === this.renderer.domElement;
+            if (this.isPointerLocked) {
+                document.body.classList.add('metro-in-game');
+                document.body.classList.remove('metro-cursor-visible');
+            }
         });
 
         // Touch controls on mobile/tablets
@@ -3697,6 +3720,131 @@ this.state = 'player_free';
         window.addEventListener('touchend', () => handleEndLook());
     }
 
+    // --- Cursor & Pointer Lock State Management ---
+    public updateCursorState() {
+        const isShopOpen = document.getElementById('golden-shop-modal')?.style.display === 'flex';
+        const isDeathOpen = document.getElementById('death-modal')?.style.display === 'flex';
+        const isLoreOpen = document.getElementById('lore-modal')?.style.display === 'flex';
+        const isKeypadOpen = document.getElementById('keypad-modal')?.style.display === 'flex';
+        const isOwnerOpen = document.getElementById('owner-teleport-modal')?.style.display === 'flex';
+
+        const isAnyModalOpen = isShopOpen || isDeathOpen || isLoreOpen || isKeypadOpen || isOwnerOpen;
+
+        if (isAnyModalOpen) {
+            document.body.classList.remove('metro-in-game');
+            document.body.classList.add('metro-cursor-visible');
+            if (document.pointerLockElement) {
+                document.exitPointerLock?.();
+            }
+        } else {
+            document.body.classList.add('metro-in-game');
+            document.body.classList.remove('metro-cursor-visible');
+            if (!this.isPointerLocked && (this.state === 'player_free' || this.state.startsWith('intro_') || this.isSitting)) {
+                this.renderer.domElement.requestPointerLock?.();
+            }
+        }
+    }
+
+    // --- Center Reticle / Dot Interaction Raycast Detection ---
+    public updateReticleAim() {
+        const crosshair = document.getElementById('hud-crosshair');
+        const prompt = document.getElementById('crosshair-prompt');
+        const promptText = document.getElementById('crosshair-prompt-text');
+
+        if (this.state !== 'player_free' && !this.isSitting) {
+            this.aimedInteractable = null;
+            if (crosshair) crosshair.classList.remove('active');
+            if (prompt) prompt.style.display = 'none';
+            return;
+        }
+
+        const isEt = this.lang === 'et';
+
+        if (this.isSitting) {
+            this.aimedInteractable = 'stand';
+            if (crosshair) crosshair.classList.add('active');
+            if (prompt && promptText) {
+                promptText.innerText = isEt ? 'Tõuse püsti / Stand Up' : 'Stand Up';
+                prompt.style.display = 'block';
+            }
+            return;
+        }
+
+        // Camera forward direction vector
+        const camDir = new THREE.Vector3(0, 0, -1).applyEuler(this.cameraEuler);
+        const playerHeadPos = new THREE.Vector3(this.playerPos.x, this.playerPos.y, this.playerPos.z);
+        let foundAim: 'inspectable' | 'keypad' | 'shop' | 'seat' | null = null;
+        let text = '';
+
+        // 1. Inspectable Note / Ticket / Clue / Keypad
+        if (this.currentCarriage?.inspectableItem) {
+            const itemPos = this.currentCarriage.inspectableItem.position;
+            const toItem = itemPos.clone().sub(playerHeadPos);
+            const dist = toItem.length();
+            if (dist < 5.5) {
+                const toItemDir = toItem.clone().normalize();
+                const dot3D = camDir.dot(toItemDir);
+                const camDir2D = new THREE.Vector2(camDir.x, camDir.z).normalize();
+                const toItem2D = new THREE.Vector2(toItem.x, toItem.z).normalize();
+                const dot2D = camDir2D.dot(toItem2D);
+
+                if (dot3D > 0.55 || dot2D > 0.70) {
+                    if (this.currentCarriage.hasKeypad) {
+                        foundAim = 'keypad';
+                        text = isEt ? 'Sisesta kood (Keypad)' : 'Enter Code (Keypad)';
+                    } else {
+                        foundAim = 'inspectable';
+                        const clue = this.currentCarriage.inspectableText;
+                        const title = isEt ? clue?.titleEt || 'Uuri piletit / vihjet' : clue?.titleEn || 'Inspect Note / Ticket';
+                        text = title;
+                    }
+                }
+            }
+        }
+
+        // 2. Golden Shop Counter in Carriage 100
+        if (!foundAim && this.currentCarIndex === 100) {
+            const counterPos = new THREE.Vector3(0, 1.0, 1.5);
+            const toCounter = counterPos.clone().sub(playerHeadPos);
+            const dist = toCounter.length();
+            if (dist < 4.5) {
+                const toCounterDir = toCounter.clone().normalize();
+                const dot = camDir.dot(toCounterDir);
+                if (dot > 0.70) {
+                    foundAim = 'shop';
+                    text = isEt ? 'Ava Kuldne Pood (Golden Shop)' : 'Open Golden Shop';
+                }
+            }
+        }
+
+        // 3. Seats / Benches
+        if (!foundAim && !this.isSitting) {
+            const leftSeatPos = new THREE.Vector3(-1.1, 0.6, this.playerPos.z);
+            const rightSeatPos = new THREE.Vector3(1.1, 0.6, this.playerPos.z);
+            const toLeft = leftSeatPos.clone().sub(playerHeadPos);
+            const toRight = rightSeatPos.clone().sub(playerHeadPos);
+            const dotL = camDir.dot(toLeft.clone().normalize());
+            const dotR = camDir.dot(toRight.clone().normalize());
+            if ((dotL > 0.70 && toLeft.length() < 3.2) || (dotR > 0.70 && toRight.length() < 3.2)) {
+                foundAim = 'seat';
+                text = isEt ? 'Istu toolile' : 'Sit Down';
+            }
+        }
+
+        this.aimedInteractable = foundAim;
+
+        if (foundAim) {
+            if (crosshair) crosshair.classList.add('active');
+            if (prompt && promptText) {
+                promptText.innerText = text;
+                prompt.style.display = 'block';
+            }
+        } else {
+            if (crosshair) crosshair.classList.remove('active');
+            if (prompt) prompt.style.display = 'none';
+        }
+    }
+
     private toggleFlashlight() {
         this.flashlightOn = !this.flashlightOn;
         if (this.flashlight) {
@@ -3706,83 +3854,35 @@ this.state = 'player_free';
     }
 
     public checkInteractions() {
-        if (!this.currentCarriage || this.state !== 'player_free') return;
+        if (!this.currentCarriage || (this.state !== 'player_free' && !this.isSitting)) return;
 
-        // 0. Golden Shop Counter in Carriage 100
-        if (this.currentCarIndex === 100) {
-            if (Math.abs(this.playerPos.z - 1.5) < 3.5 && Math.abs(this.playerPos.x) < 2.0) {
-                this.openGoldenShopModal();
-                return;
-            }
+        // User requirement: "se pilet või asjad tulevad sulle ette siis kui sse täpp mis on su ees on selle peal ja vajutad e"
+        if (this.isSitting) {
+            this.standUp();
+            return;
         }
 
-        // 1. Inspectable Note / Clue
-        if (this.currentCarriage.inspectableItem) {
-            const dist = this.playerPos.distanceTo(this.currentCarriage.inspectableItem.position);
-            if (dist < 4.5) {
-                if (this.currentCarIndex === 28) this.hasUnlockedCarriage28WithClue = true;
-                if (this.currentCarIndex === 78) this.hasUnlockedCarriage78WithHint = true;
-
-                if (this.currentCarriage.hasKeypad) {
-                    this.openKeypadModal();
-                } else {
-                    this.openLoreModal();
-                }
-                return;
-            }
+        if (this.aimedInteractable === 'inspectable') {
+            if (this.currentCarIndex === 28) this.hasUnlockedCarriage28WithClue = true;
+            if (this.currentCarIndex === 78) this.hasUnlockedCarriage78WithHint = true;
+            this.openLoreModal();
+            return;
         }
 
-        // 2. Door Interactions (End Gangways)
-        const now = performance.now();
-        if (this.branchDirection === 'right') {
-            if (this.playerPos.z > 7.5) {
-                // Front Door -> Forward
-                this.loadCarriage(this.currentCarIndex + 1, 'right');
-                return;
-            } else if (this.playerPos.z < -7.0) {
-                // Back Door -> LOCKED (Previous Carriage)
-                this.playerPos.z = -7.4;
-                if (now - this.lastLockedDoorSoundTime > 1000) {
-                    this.lastLockedDoorSoundTime = now;
-                    metroAudio.playDoorLocked();
-                    this.showThought(
-                        'Uks on lukus. Tagasi eelmisesse vagunisse ei saa minna. Edasi liikumine on ainus võimalus.',
-                        'The door is locked. You cannot return to the previous carriage. Moving forward is the only way.'
-                    );
-                }
-                return;
-            }
-        } else if (this.branchDirection === 'left') {
-            if (this.playerPos.z < -7.5) {
-                // Back Door -> Forward on left branch
-                this.loadCarriage(this.currentCarIndex + 1, 'left');
-                return;
-            } else if (this.playerPos.z > 7.0) {
-                // Front Door -> LOCKED (Previous Carriage)
-                this.playerPos.z = 7.4;
-                if (now - this.lastLockedDoorSoundTime > 1000) {
-                    this.lastLockedDoorSoundTime = now;
-                    metroAudio.playDoorLocked();
-                    this.showThought(
-                        'Uks on lukus. Tagasi eelmisesse vagunisse ei saa minna. Edasi liikumine on ainus võimalus.',
-                        'The door is locked. You cannot return to the previous carriage. Moving forward is the only way.'
-                    );
-                }
-                return;
-            }
-        } else {
-            // Undecided (Carriage 0)
-            if (this.playerPos.z > 7.5) {
-                this.loadCarriage(1, 'right');
-                return;
-            } else if (this.playerPos.z < -7.5) {
-                this.loadCarriage(1, 'left');
-                return;
-            }
+        if (this.aimedInteractable === 'keypad') {
+            this.openKeypadModal();
+            return;
         }
 
-        // 3. Toggle Sitting on Seat Bench
-        this.toggleSit();
+        if (this.aimedInteractable === 'shop') {
+            this.openGoldenShopModal();
+            return;
+        }
+
+        if (this.aimedInteractable === 'seat') {
+            this.sitDown();
+            return;
+        }
     }
 
     public openLoreModal() {
@@ -3800,6 +3900,7 @@ this.state = 'player_free';
             modal.style.display = 'flex';
         }
         metroAudio.playItemInspect();
+        this.updateCursorState();
     }
 
     private openKeypadModal() {
@@ -3810,6 +3911,7 @@ this.state = 'player_free';
             (codeDisplay as HTMLInputElement).value = '';
             modal.style.display = 'flex';
         }
+        this.updateCursorState();
     }
 
     private submitKeypad() {
@@ -3821,6 +3923,7 @@ this.state = 'player_free';
                 this.currentCarriage.puzzleSolved = true;
                 modal.style.display = 'none';
                 this.state = 'player_free';
+                this.updateCursorState();
                 this.showThought('Kood õige! Uks avanes.', 'Code correct! The door unlocked.');
             } else {
                 metroAudio.playKeypadBeep(false);
@@ -3842,6 +3945,7 @@ this.state = 'player_free';
         }
         if (modal) modal.style.display = 'flex';
         this.state = 'inspecting';
+        this.updateCursorState();
     }
 
     public closeOwnerTeleportModal() {
@@ -3850,6 +3954,7 @@ this.state = 'player_free';
         if (this.state === 'inspecting') {
             this.state = 'player_free';
         }
+        this.updateCursorState();
     }
 
     public teleportToCarriage(carNum: number): boolean {
@@ -4250,6 +4355,9 @@ this.state = 'player_free';
             this.playerPos.z
         );
         this.camera.quaternion.setFromEuler(this.cameraEuler);
+
+        // Update Center Reticle Raycast Aim
+        this.updateReticleAim();
 
         // Render Frame
         this.renderer.render(this.scene, this.camera);

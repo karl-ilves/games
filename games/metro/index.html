@@ -114,7 +114,7 @@
         /* Thought Bubble / Subtitle */
         #thought-bubble {
             position: absolute;
-            bottom: 30px;
+            bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(10, 14, 20, 0.88);
@@ -167,19 +167,67 @@
             50% { transform: translateX(-50%) scale(1.05); }
         }
 
-        /* Center Crosshair */
+        /* Pointer lock & cursor visibility */
+        body.metro-in-game, body.metro-in-game canvas, body.metro-in-game #canvas-container {
+            cursor: none !important;
+        }
+        body.metro-cursor-visible, body.metro-cursor-visible * {
+            cursor: default !important;
+        }
+
+        /* Center Crosshair Dot */
         .crosshair {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 8px;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.5);
+            width: 7px;
+            height: 7px;
+            background: rgba(255, 255, 255, 0.7);
             border-radius: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
             z-index: 50;
             box-shadow: 0 0 6px rgba(0, 242, 254, 0.8);
+            transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, width 0.15s, height 0.15s;
+        }
+        .crosshair.active {
+            width: 12px;
+            height: 12px;
+            background: #ffd32a;
+            box-shadow: 0 0 14px rgba(255, 211, 42, 1), 0 0 4px #ffffff;
+            border: 2px solid #ffffff;
+        }
+
+        /* Center Reticle Interaction Prompt */
+        #crosshair-prompt {
+            position: absolute;
+            top: calc(50% + 18px);
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.85rem;
+            background: rgba(10, 15, 25, 0.88);
+            padding: 5px 12px;
+            border-radius: 8px;
+            border: 1.5px solid #ffd32a;
+            display: none;
+            pointer-events: none;
+            z-index: 55;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6), 0 0 10px rgba(255, 211, 42, 0.3);
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+        #crosshair-prompt .key-badge {
+            background: #ffd32a;
+            color: #000000;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 900;
+            margin-right: 6px;
+            font-size: 0.82rem;
+            display: inline-block;
         }
 
         /* Jump Scare Flash Overlay */
@@ -191,7 +239,7 @@
             height: 100%;
             background: rgba(255, 71, 87, 0.7);
             display: none;
-            z-index: 999;
+            z-index: 90;
             pointer-events: none;
             transition: opacity 0.5s ease-out;
         }
@@ -208,7 +256,7 @@
             display: none;
             justify-content: center;
             align-items: center;
-            z-index: 500;
+            z-index: 2000;
             padding: 20px;
         }
 
@@ -455,7 +503,10 @@
 
     <!-- 3D Canvas Container -->
     <div id="canvas-container"></div>
-    <div class="crosshair"></div>
+    <div class="crosshair" id="hud-crosshair"></div>
+    <div id="crosshair-prompt">
+        <span class="key-badge">E</span><span id="crosshair-prompt-text">Uuri / Inspect</span>
+    </div>
     <div id="scare-flash-overlay"></div>
 
     <!-- Cinematic Letterbox for Intro -->
@@ -542,7 +593,7 @@
     </button>
 
     <!-- Roblox-Style Hotbar Inventory (Bottom Center) -->
-    <div id="inventory-hotbar" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 100; pointer-events: auto;">
+    <div id="inventory-hotbar" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 150; pointer-events: auto;">
         <!-- Dynamically managed slots -->
     </div>
 
