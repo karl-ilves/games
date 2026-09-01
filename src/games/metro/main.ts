@@ -1527,7 +1527,7 @@ export class LastMetroGame {
             {
                 name: 'Music Student',
                 top: 0xe74c3c, pants: 0x2c3e50, inner: 0x2d3436,
-                hair: 0x8b4513, hairType: 'headphones', coatStyle: 'hoodie', shoe: 0xffffff,
+                hair: 0x8b4513, hairType: 'fade', coatStyle: 'hoodie', shoe: 0xffffff,
                 prop: 'phone', glasses: false, headphones: true
             },
             {
@@ -1716,9 +1716,9 @@ export class LastMetroGame {
                 const hpPadMat = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.7 });
                 const hpLedMat = new THREE.MeshBasicMaterial({ color: 0x00d2d3 });
 
-                const band = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.018, 8, 20, Math.PI), hpFrameMat);
-                band.rotation.z = Math.PI / 2;
-                band.position.set(0, 0.03, 0);
+                // Symmetrical headband arch over top of head from ear to ear
+                const band = new THREE.Mesh(new THREE.TorusGeometry(0.162, 0.016, 8, 24, Math.PI), hpFrameMat);
+                band.position.set(0, 0.01, -0.01);
                 pHead.add(band);
 
                 [-0.16, 0.16].forEach(hx => {
@@ -3869,15 +3869,19 @@ this.state = 'player_free';
             }
         }
 
-        // 3. Seats / Benches
+        // 3. Seats / Benches (Only aim at empty seat cushions, not occupied by passengers)
         if (!foundAim && !this.isSitting) {
-            const leftSeatPos = new THREE.Vector3(-1.1, 0.6, this.playerPos.z);
-            const rightSeatPos = new THREE.Vector3(1.1, 0.6, this.playerPos.z);
+            const leftSeatPos = new THREE.Vector3(-1.1, 0.55, this.playerPos.z);
+            const rightSeatPos = new THREE.Vector3(1.1, 0.55, this.playerPos.z);
             const toLeft = leftSeatPos.clone().sub(playerHeadPos);
             const toRight = rightSeatPos.clone().sub(playerHeadPos);
             const dotL = camDir.dot(toLeft.clone().normalize());
             const dotR = camDir.dot(toRight.clone().normalize());
-            if ((dotL > 0.70 && toLeft.length() < 3.2) || (dotR > 0.70 && toRight.length() < 3.2)) {
+
+            const isPassengerNearLeft = this.currentCarriage?.passengers?.some(p => Math.abs(p.seatPos.x - (-1.1)) < 0.4 && Math.abs(p.seatPos.z - this.playerPos.z) < 0.85);
+            const isPassengerNearRight = this.currentCarriage?.passengers?.some(p => Math.abs(p.seatPos.x - 1.1) < 0.4 && Math.abs(p.seatPos.z - this.playerPos.z) < 0.85);
+
+            if ((dotL > 0.70 && toLeft.length() < 3.2 && !isPassengerNearLeft) || (dotR > 0.70 && toRight.length() < 3.2 && !isPassengerNearRight)) {
                 foundAim = 'seat';
                 text = isEt ? 'Istu toolile' : 'Sit Down';
             }
