@@ -881,29 +881,60 @@ export class MetroAudioEngine {
         });
     }
 
-    // Shadow Creature Rush Screech & Dark Wind (Must Olend Dashing through Carriage)
+    // Terrifying Shadow Creature Monster Roar & Violent Dark Storm Gust (Must Olend Dashing)
     public playShadowRushScreech() {
         this.initContext();
         if (!this.ctx || !this.masterGain || this.isMuted) return;
         const now = this.ctx.currentTime;
+        const dur = 3.5;
 
-        // 1. Demonic High Screech
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(600, now);
-        osc.frequency.exponentialRampToValueAtTime(180, now + 0.9);
+        // 1. Terrifying Demonic Screech / Howl Cluster (3 dissonant FM modulated oscillators)
+        const freqs = [740, 520, 310];
+        freqs.forEach((f, idx) => {
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = idx % 2 === 0 ? 'sawtooth' : 'triangle';
+            osc.frequency.setValueAtTime(f, now);
+            osc.frequency.linearRampToValueAtTime(f * 1.35, now + 0.8);
+            osc.frequency.exponentialRampToValueAtTime(f * 0.45, now + dur);
 
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+            // LFO frequency vibrato for terrifying warble
+            const lfo = this.ctx!.createOscillator();
+            const lfoGain = this.ctx!.createGain();
+            lfo.frequency.setValueAtTime(14 + idx * 3, now);
+            lfoGain.gain.setValueAtTime(35, now);
+            lfo.connect(osc.frequency);
+            lfo.start(now);
+            lfo.stop(now + dur);
 
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(now);
-        osc.stop(now + 1.1);
+            gain.gain.setValueAtTime(0.01, now);
+            gain.gain.linearRampToValueAtTime(0.28 / freqs.length, now + 0.4);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
-        // 2. Violent Rushing Gust / Whoosh
-        const dur = 1.2;
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+            osc.start(now);
+            osc.stop(now + dur + 0.1);
+        });
+
+        // 2. Guttural Sub-Bass Roar
+        const subOsc = this.ctx.createOscillator();
+        const subGain = this.ctx.createGain();
+        subOsc.type = 'sawtooth';
+        subOsc.frequency.setValueAtTime(65, now);
+        subOsc.frequency.linearRampToValueAtTime(95, now + 1.0);
+        subOsc.frequency.exponentialRampToValueAtTime(35, now + dur);
+
+        subGain.gain.setValueAtTime(0.01, now);
+        subGain.gain.linearRampToValueAtTime(0.35, now + 0.5);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        subOsc.connect(subGain);
+        subGain.connect(this.masterGain);
+        subOsc.start(now);
+        subOsc.stop(now + dur + 0.1);
+
+        // 3. Violent Roaring Wind Gust & Atmospheric Dark Storm
         const bufferSize = Math.floor(this.ctx.sampleRate * dur);
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -915,12 +946,14 @@ export class MetroAudioEngine {
         src.buffer = buffer;
 
         const filter = this.ctx.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.setValueAtTime(800, now);
-        filter.frequency.exponentialRampToValueAtTime(300, now + dur);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(600, now);
+        filter.frequency.linearRampToValueAtTime(1400, now + 1.2);
+        filter.frequency.exponentialRampToValueAtTime(200, now + dur);
 
         const gustGain = this.ctx.createGain();
-        gustGain.gain.setValueAtTime(0.3, now);
+        gustGain.gain.setValueAtTime(0.01, now);
+        gustGain.gain.linearRampToValueAtTime(0.38, now + 0.8);
         gustGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
         src.connect(filter);
@@ -929,6 +962,81 @@ export class MetroAudioEngine {
 
         src.start(now);
         src.stop(now + dur);
+    }
+
+    // Horrifying Horror Song / Atmospheric Music (Väga Hirmus Laul)
+    public playHorrorShadowSong() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        // Horrifying dissonant gothic chord progression:
+        // Chord 1 (0s): D minor augmented / cluster [146.8 (D3), 174.6 (F3), 220.0 (A3), 311.1 (Eb4)]
+        // Chord 2 (2.0s): Tritone suspense cluster [138.6 (C#3), 196.0 (G3), 261.6 (C4), 370.0 (F#4)]
+        const chords = [
+            { start: 0.0, len: 2.2, notes: [146.83, 174.61, 220.00, 311.13, 622.25] },
+            { start: 2.0, len: 2.8, notes: [138.59, 196.00, 261.63, 369.99, 739.99] }
+        ];
+
+        chords.forEach(chord => {
+            const chordStart = now + chord.start;
+            chord.notes.forEach((freq, nIdx) => {
+                const osc = this.ctx!.createOscillator();
+                const gain = this.ctx!.createGain();
+
+                // Mix sine/sawtooth for ghostly organ / dark string pad tone
+                osc.type = nIdx % 2 === 0 ? 'sine' : 'sawtooth';
+                osc.frequency.setValueAtTime(freq, chordStart);
+                // Subtle creepy pitch detuning
+                osc.frequency.linearRampToValueAtTime(freq * (1.0 + (Math.random() - 0.5) * 0.04), chordStart + chord.len);
+
+                // Chorus / Tremolo effect
+                const tremolo = this.ctx!.createOscillator();
+                const tremoloGain = this.ctx!.createGain();
+                tremolo.frequency.setValueAtTime(4.5 + nIdx, chordStart);
+                tremoloGain.gain.setValueAtTime(0.08, chordStart);
+                tremolo.connect(gain.gain);
+                tremolo.start(chordStart);
+                tremolo.stop(chordStart + chord.len);
+
+                gain.gain.setValueAtTime(0.01, chordStart);
+                gain.gain.linearRampToValueAtTime(0.18 / chord.notes.length, chordStart + 0.6);
+                gain.gain.exponentialRampToValueAtTime(0.001, chordStart + chord.len);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain!);
+
+                osc.start(chordStart);
+                osc.stop(chordStart + chord.len + 0.1);
+            });
+        });
+
+        // Creepy music box / high chime discordant notes
+        const melodyNotes = [
+            { time: 0.2, freq: 880.0 },   // A5
+            { time: 0.8, freq: 932.33 },  // Bb5
+            { time: 1.5, freq: 783.99 },  // G5
+            { time: 2.2, freq: 659.25 },  // E5
+            { time: 2.9, freq: 622.25 },  // Eb5
+            { time: 3.6, freq: 587.33 }   // D5
+        ];
+
+        melodyNotes.forEach(m => {
+            const t = now + m.time;
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(m.freq, t);
+
+            gain.gain.setValueAtTime(0.01, t);
+            gain.gain.linearRampToValueAtTime(0.12, t + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+            osc.start(t);
+            osc.stop(t + 0.75);
+        });
     }
 
     // Sit Down / Stand Up Cloth Rustle

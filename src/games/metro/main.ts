@@ -2731,9 +2731,9 @@ export class LastMetroGame {
             });
         });
 
-        // Rush through the full length of the carriage
+        // Rush slower through the carriage so the player can see the horrifying shadowy entity approaching
         const startZ = this.playerPos.z < 0 ? 9.5 : -9.5;
-        this.shadowRushSpeed = startZ > 0 ? -32.0 : 32.0;
+        this.shadowRushSpeed = startZ > 0 ? -7.0 : 7.0;
 
         group.position.set(0, 0, startZ);
         group.rotation.y = this.shadowRushSpeed < 0 ? Math.PI : 0;
@@ -2742,13 +2742,14 @@ export class LastMetroGame {
         this.scene.add(this.shadowEntityMesh);
         this.shadowRushActive = true;
 
-        // Play demonic rush screech sound and gust
+        // Play terrifying monster roar, dark wind storm AND horrifying horror song / music
         metroAudio.playShadowRushScreech();
+        metroAudio.playHorrorShadowSong();
 
         this.showThought(
-            '😱 MUST VARI SÖÖSTAB LÄBI VAGUNI!',
-            '😱 SHADOW CREATURE DASHES THROUGH THE CARRIAGE!',
-            2000
+            '😱 MUST OLEND LIIGUB AEGLASELT MÖÖDA VAGUNIT! ISTU TOOLIL, ET ELLU JÄÄDA!',
+            '😱 SHADOW CREATURE IS CREEPING DOWN THE AISLE! STAY SEATED TO SURVIVE!',
+            3500
         );
     }
 
@@ -3391,6 +3392,10 @@ this.state = 'player_free';
         });
 
         // Mouse click & drag / Pointer Lock for Camera Look
+        const canRotateHead = () => {
+            return this.state === 'player_free' || this.state.startsWith('intro_') || this.isSitting;
+        };
+
         const handleStartLook = (clientX: number, clientY: number) => {
             metroAudio.enableAudio();
             this.isMouseDown = true;
@@ -3402,7 +3407,7 @@ this.state = 'player_free';
         };
 
         const handleMoveLook = (clientX: number, clientY: number, movementX?: number, movementY?: number) => {
-            if (this.state !== 'player_free') return;
+            if (!canRotateHead()) return;
 
             if (this.isPointerLocked && movementX !== undefined && movementY !== undefined) {
                 const sensitivity = 0.0024;
@@ -3429,7 +3434,7 @@ this.state = 'player_free';
         window.addEventListener('mousedown', (e) => {
             if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box, .hotbar-slot')) return;
             handleStartLook(e.clientX, e.clientY);
-            if (this.state === 'player_free' && !this.isPointerLocked) {
+            if (canRotateHead() && !this.isPointerLocked) {
                 this.renderer.domElement.requestPointerLock?.();
             }
         });
@@ -3458,7 +3463,7 @@ this.state = 'player_free';
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 0 && this.state === 'player_free') {
+            if (e.touches.length > 0 && canRotateHead()) {
                 const dx = e.touches[0].clientX - this.touchStartX;
                 const dy = e.touches[0].clientY - this.touchStartY;
                 this.touchStartX = e.touches[0].clientX;
@@ -3680,7 +3685,9 @@ this.state = 'player_free';
             // Camera walks smoothly from platform (3.8, 1.6, -3.5) through doors (1.7, 1.6, 0) into aisle (0, 1.6, 0)
             this.playerPos.x = THREE.MathUtils.lerp(this.playerPos.x, 0, delta * 2.2);
             this.playerPos.z = THREE.MathUtils.lerp(this.playerPos.z, 0, delta * 2.2);
-            this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, -Math.PI / 2, delta * 2.0);
+            if (!this.isMouseDown && !this.moveKeys['ArrowLeft'] && !this.moveKeys['ArrowRight'] && !this.moveKeys['KeyQ']) {
+                this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, -Math.PI / 2, delta * 2.0);
+            }
         }
 
         // Side sliding doors animation
@@ -3903,7 +3910,7 @@ this.state = 'player_free';
         }
 
         // 4. Keyboard Camera Turning (Arrows & Q/E)
-        if (this.state === 'player_free') {
+        if (this.state === 'player_free' || this.state.startsWith('intro_') || this.isSitting) {
             const rotSpeed = 1.9;
             if (this.moveKeys['ArrowLeft'] || this.moveKeys['KeyQ']) {
                 this.cameraEuler.y += rotSpeed * delta;
