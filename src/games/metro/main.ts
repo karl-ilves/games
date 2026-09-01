@@ -2456,6 +2456,13 @@ export class LastMetroGame {
         this.updateCoinsUI();
         this.updateHotbarUI();
 
+        // User requirement: "uks 26 hakkb tulema kõrge kõlaga klaveri pala et oleka väga hirmulav kuni vagun 31"
+        if (index >= 26 && index <= 31) {
+            metroAudio.startEerieHighPianoTrack();
+        } else {
+            metroAudio.stopEerieHighPianoTrack();
+        }
+
         // Trigger story events per carriage index
         this.triggerCarriageStoryEvent(index);
     }
@@ -4447,5 +4454,6 @@ this.state = 'player_free';
 
 // Instantiate and expose globally for Playard tests
 window.addEventListener('DOMContentLoaded', () => {
+    (window as any).__metroAudio = metroAudio;
     (window as any).__lastMetro = new LastMetroGame();
 });

@@ -1039,6 +1039,120 @@ export class MetroAudioEngine {
         });
     }
 
+    // High-pitched eerie horror piano track (Vagun 26 - 31)
+    private isEeriePianoActive: boolean = false;
+    private eeriePianoInterval: any = null;
+    private eeriePianoMasterGain: GainNode | null = null;
+
+    public startEerieHighPianoTrack() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain) return;
+        if (this.isEeriePianoActive) return;
+
+        this.isEeriePianoActive = true;
+
+        if (!this.eeriePianoMasterGain) {
+            this.eeriePianoMasterGain = this.ctx.createGain();
+            this.eeriePianoMasterGain.connect(this.masterGain);
+        }
+        this.eeriePianoMasterGain.gain.setValueAtTime(0.32, this.ctx.currentTime);
+
+        const playPhrase = () => {
+            if (!this.isEeriePianoActive || !this.ctx || this.isMuted) return;
+            const now = this.ctx.currentTime;
+
+            // High haunting horror piano notes in octaves 5, 6 and 7 (frequencies between 800Hz and 2800Hz)
+            const horrorMotifs = [
+                // Phrase 1: Chilling Minor Second Descent & Gothic Leap
+                [
+                    { freq: 1318.51, delay: 0.0, dur: 2.2, vel: 0.28 }, // E6
+                    { freq: 1244.51, delay: 0.5, dur: 2.0, vel: 0.24 }, // D#6
+                    { freq: 1318.51, delay: 1.1, dur: 1.8, vel: 0.26 }, // E6
+                    { freq: 1567.98, delay: 1.7, dur: 2.4, vel: 0.30 }, // G6
+                    { freq: 1975.53, delay: 2.4, dur: 3.2, vel: 0.35 }, // B6
+                    { freq: 1864.66, delay: 3.2, dur: 3.5, vel: 0.32 }, // A#6
+                    { freq: 2093.00, delay: 4.0, dur: 3.8, vel: 0.36 }  // C7
+                ],
+                // Phrase 2: Unresolved Tension & High Discordant Tolls
+                [
+                    { freq: 1760.00, delay: 0.0, dur: 2.5, vel: 0.30 }, // A6
+                    { freq: 1661.22, delay: 0.6, dur: 2.2, vel: 0.28 }, // G#6
+                    { freq: 1479.98, delay: 1.3, dur: 2.0, vel: 0.26 }, // F#6
+                    { freq: 1396.91, delay: 1.9, dur: 2.8, vel: 0.32 }, // F6
+                    { freq: 2637.02, delay: 2.7, dur: 3.6, vel: 0.38 }, // E7 (piercing high note)
+                    { freq: 2489.02, delay: 3.6, dur: 4.0, vel: 0.34 }  // D#7
+                ],
+                // Phrase 3: Ghostly Slow Music Box Arpeggio
+                [
+                    { freq: 1108.73, delay: 0.0, dur: 2.0, vel: 0.25 }, // C#6
+                    { freq: 1318.51, delay: 0.45, dur: 2.2, vel: 0.27 }, // E6
+                    { freq: 1567.98, delay: 0.95, dur: 2.5, vel: 0.30 }, // G6
+                    { freq: 2217.46, delay: 1.5, dur: 3.2, vel: 0.35 }, // C#7
+                    { freq: 2093.00, delay: 2.3, dur: 3.5, vel: 0.33 }, // C7
+                    { freq: 1760.00, delay: 3.1, dur: 3.0, vel: 0.28 }  // A6
+                ]
+            ];
+
+            const phrase = horrorMotifs[Math.floor(Math.random() * horrorMotifs.length)];
+
+            phrase.forEach(note => {
+                const startTime = now + note.delay;
+                this.synthesizePianoNote(note.freq, startTime, note.dur, note.vel);
+            });
+        };
+
+        // Play immediately, then loop phrase every 5.5s
+        playPhrase();
+        if (this.eeriePianoInterval) clearInterval(this.eeriePianoInterval);
+        this.eeriePianoInterval = setInterval(playPhrase, 5500);
+    }
+
+    private synthesizePianoNote(freq: number, startTime: number, duration: number, velocity: number) {
+        if (!this.ctx || !this.eeriePianoMasterGain) return;
+
+        // Harmonic overtones (Fundamental + 2nd, 3rd, 4th harmonics for high piano wire ring)
+        const harmonics = [
+            { mult: 1.0, type: 'sine' as OscillatorType, gainMult: 0.75, decay: duration },
+            { mult: 2.0, type: 'sine' as OscillatorType, gainMult: 0.35, decay: duration * 0.75 },
+            { mult: 3.0, type: 'triangle' as OscillatorType, gainMult: 0.18, decay: duration * 0.5 },
+            { mult: 4.01, type: 'sine' as OscillatorType, gainMult: 0.09, decay: duration * 0.35 } // Slight inharmonicity
+        ];
+
+        const noteGain = this.ctx.createGain();
+        noteGain.connect(this.eeriePianoMasterGain);
+
+        harmonics.forEach(h => {
+            const osc = this.ctx!.createOscillator();
+            const hGain = this.ctx!.createGain();
+
+            osc.type = h.type;
+            osc.frequency.setValueAtTime(freq * h.mult, startTime);
+
+            // Fast piano hammer attack (0.012s) then realistic exponential wire resonance decay
+            hGain.gain.setValueAtTime(0.0001, startTime);
+            hGain.gain.linearRampToValueAtTime(velocity * h.gainMult, startTime + 0.012);
+            hGain.gain.exponentialRampToValueAtTime(0.0001, startTime + h.decay);
+
+            osc.connect(hGain);
+            hGain.connect(noteGain);
+
+            osc.start(startTime);
+            osc.stop(startTime + h.decay + 0.05);
+        });
+    }
+
+    public stopEerieHighPianoTrack() {
+        if (!this.isEeriePianoActive) return;
+        this.isEeriePianoActive = false;
+        if (this.eeriePianoInterval) {
+            clearInterval(this.eeriePianoInterval);
+            this.eeriePianoInterval = null;
+        }
+        if (this.eeriePianoMasterGain && this.ctx) {
+            this.eeriePianoMasterGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.6);
+        }
+    }
+
     // Sit Down / Stand Up Cloth Rustle
     public playSitDown() {
         this.initContext();

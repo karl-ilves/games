@@ -1782,6 +1782,32 @@ try {
             }
             console.log("   Successfully verified Shadow Hands emergence on all requested carriages!");
 
+            // Test Carriage 26 to 31 High-Pitched Horror Piano Track
+            // User requirement: "uks 26 hakkb tulema kõrge kõlaga klaveri pala et oleka väga hirmulav kuni vagun 31"
+            console.log("   Testing High-Pitched Horror Piano Track on Carriages 26 to 31...");
+            const pianoCarriages = [26, 27, 28, 29, 30, 31];
+            for (const cNum of pianoCarriages) {
+                await page.evaluate((car) => {
+                    window.__lastMetro.loadCarriage(car, 'right');
+                }, cNum);
+                await new Promise(r => setTimeout(r, 60));
+                const isPianoActive = await page.evaluate(() => window.__metroAudio?.isEeriePianoActive);
+                if (!isPianoActive) {
+                    throw new Error(`Expected High-Pitched Horror Piano Track to be active in Carriage ${cNum}!`);
+                }
+            }
+            // Test that Piano stops when outside carriages 26 to 31 (e.g. carriage 25 or 32)
+            await page.evaluate(() => window.__lastMetro.loadCarriage(25, 'right'));
+            await new Promise(r => setTimeout(r, 60));
+            const isPianoActiveCar25 = await page.evaluate(() => window.__metroAudio?.isEeriePianoActive);
+            if (isPianoActiveCar25) throw new Error("Expected Horror Piano Track to stop in Carriage 25!");
+
+            await page.evaluate(() => window.__lastMetro.loadCarriage(32, 'right'));
+            await new Promise(r => setTimeout(r, 60));
+            const isPianoActiveCar32 = await page.evaluate(() => window.__metroAudio?.isEeriePianoActive);
+            if (isPianoActiveCar32) throw new Error("Expected Horror Piano Track to stop in Carriage 32!");
+            console.log("   Successfully verified High-Pitched Horror Piano Track exclusively on Carriages 26 to 31!");
+
             // Test Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility
             console.log("   Testing Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility...");
             await page.evaluate(() => {
@@ -1813,9 +1839,9 @@ try {
             await page.evaluate(() => {
                 const itemPos = window.__lastMetro.currentCarriage.inspectableItem.position;
                 window.__lastMetro.playerPos.set(0, 1.6, itemPos.z);
-                const dx = itemPos.x - window.__lastMetro.playerPos.x;
-                const dz = itemPos.z - window.__lastMetro.playerPos.z;
-                window.__lastMetro.cameraEuler.set(0, Math.atan2(-dx, -dz), 0);
+                window.__lastMetro.camera.position.set(0, 1.6, itemPos.z);
+                window.__lastMetro.camera.lookAt(itemPos.x, itemPos.y, itemPos.z);
+                window.__lastMetro.cameraEuler.copy(window.__lastMetro.camera.rotation);
                 window.__lastMetro.updateReticleAim();
             });
             await new Promise(r => setTimeout(r, 80));
