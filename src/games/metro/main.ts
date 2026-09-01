@@ -4,7 +4,7 @@ import { yardService } from '../../shared/yardService';
 import { metroAudio } from './audio';
 
 // --- Types & Interfaces ---
-type GameState = 'intro_station' | 'intro_riding' | 'intro_first_stop' | 'intro_departing' | 'player_free' | 'inspecting' | 'keypad' | 'dragged_death' | 'golden_shop';
+type GameState = 'intro_station' | 'intro_riding' | 'intro_first_stop' | 'intro_departing' | 'player_free' | 'inspecting' | 'keypad' | 'dragged_death' | 'golden_shop' | 'dead' | 'start_screen';
 type DirectionBranch = 'right' | 'left' | 'undecided';
 
 interface AnomalyEvent {
@@ -234,6 +234,15 @@ export class LastMetroGame {
     public shadowVillains: { group: THREE.Group; hp: number; maxHp: number; attackCooldown: number; bodyMesh: THREE.Mesh }[] = [];
     public isSwordSwinging: boolean = false;
     private swordSwingTimer: number = 0;
+
+    // Ajapahalane (Time Villain) State — rare event when player stays too long in a carriage
+    public timeVillainActive: boolean = false;
+    public timeVillainCountdown: number = 0;
+    public carriageStayTimer: number = 0;
+    public timeVillainGroup: THREE.Group | null = null;
+    private timeVillainFlickerInterval: any = null;
+    private timeVillainShakeOffset: THREE.Vector3 = new THREE.Vector3();
+    private timeVillainTriggeredThisCarriage: boolean = false;
 
     constructor() {
         const cont = document.getElementById('canvas-container');
@@ -2709,6 +2718,11 @@ export class LastMetroGame {
         this.shadowVillains.forEach(v => this.scene.remove(v.group));
         this.shadowVillains = [];
         this.shadowRushCountdown = 0;
+
+        // Deactivate Ajapahalane if active (player escaped to next carriage!)
+        this.deactivateTimeVillain();
+        this.carriageStayTimer = 0;
+        this.timeVillainTriggeredThisCarriage = false;
         this.isSitting = false;
         const standBtn = document.getElementById('btn-stand-up');
         if (standBtn) standBtn.style.display = 'none';
@@ -3170,6 +3184,165 @@ export class LastMetroGame {
     public isShadowEventActive(): boolean {
         return this.shadowRushActive || this.shadowRushCountdown > 0 || this.shadowEntityMesh !== null;
     }
+
+    // --- Ajapahalane (Time Villain) — 10 Second Escape Event ---
+
+    public activateTimeVillain() {
+        if (this.timeVillainActive || this.state !== 'player_free' || this.currentCarIndex === 0 || this.currentCarIndex === 100) return;
+
+        this.timeVillainActive = true;
+        this.timeVillainCountdown = 10.0;
+        this.timeVillainTriggeredThisCarriage = true;
+
+        // 1. Start clock tower horror bells
+        metroAudio.startClockTowerBells();
+
+        // 2. Apply grayscale (black & white) filter to canvas
+        const canvas = this.renderer.domElement;
+        if (canvas) canvas.style.filter = 'grayscale(1) contrast(1.3)';
+
+        // 3. Rapid light flickering
+        this.timeVillainFlickerInterval = setInterval(() => {
+            if (!this.currentCarriage || !this.timeVillainActive) return;
+            const isOn = Math.random() > 0.4;
+            this.currentCarriage.lights.forEach(l => l.intensity = isOn ? 1.2 : 0.05);
+            this.currentCarriage.lightMeshes.forEach(m => (m.material as THREE.MeshBasicMaterial).color.setHex(isOn ? 0xffffff : 0x220000));
+        }, 80);
+
+        // 4. Spawn the Time Villain entity directly in front of player
+        const villainGroup = new THREE.Group();
+        villainGroup.name = 'time_villain';
+
+        // Tall dark cloaked humanoid figure with clock motifs
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9, metalness: 0.1 });
+        const clockMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+        // Tall body (cloaked)
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2.0, 0.5), bodyMat);
+        body.position.set(0, 1.0, 0);
+        villainGroup.add(body);
+
+        // Wide cloak bottom
+        const cloak = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 6), bodyMat);
+        cloak.position.set(0, 0.6, 0);
+        villainGroup.add(cloak);
+
+        // Head (dark sphere with burning red eyes)
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), bodyMat);
+        head.position.set(0, 2.2, 0);
+        villainGroup.add(head);
+
+        // Burning red eyes
+        const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), eyeMat);
+        leftEye.position.set(-0.08, 2.25, 0.2);
+        villainGroup.add(leftEye);
+        const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), eyeMat);
+        rightEye.position.set(0.08, 2.25, 0.2);
+        villainGroup.add(rightEye);
+
+        // Glowing clock face on chest
+        const clockFace = new THREE.Mesh(new THREE.CircleGeometry(0.18, 24), clockMat);
+        clockFace.position.set(0, 1.5, 0.26);
+        villainGroup.add(clockFace);
+
+        // Clock hands (pointing to XII)
+        const hourHand = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.12, 0.02), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        hourHand.position.set(0, 1.56, 0.28);
+        villainGroup.add(hourHand);
+        const minHand = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.02), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        minHand.position.set(0, 1.58, 0.28);
+        villainGroup.add(minHand);
+
+        // Red point lights on the villain for eerie glow
+        const glowLight = new THREE.PointLight(0xff0000, 2.5, 6);
+        glowLight.position.set(0, 1.6, 0);
+        villainGroup.add(glowLight);
+
+        // Position villain in front of the player
+        const camDir = new THREE.Vector3(0, 0, -1).applyEuler(this.cameraEuler);
+        villainGroup.position.set(
+            this.playerPos.x + camDir.x * 4,
+            0,
+            this.playerPos.z + camDir.z * 4
+        );
+        villainGroup.lookAt(this.playerPos.x, 1.6, this.playerPos.z);
+
+        this.scene.add(villainGroup);
+        this.timeVillainGroup = villainGroup;
+
+        // Roar sound
+        metroAudio.playTimeVillainRoar();
+
+        // 5. Show countdown overlay
+        const overlay = document.getElementById('time-villain-overlay');
+        if (overlay) overlay.style.display = 'block';
+
+        // 6. Show thought
+        this.showThought(
+            '👹 AJAPAHALANE! JOOKSE JÄRGMISSE VAGUNISSE! Sul on 10 SEKUNDIT!',
+            '👹 TIME VILLAIN! RUN TO THE NEXT CARRIAGE! You have 10 SECONDS!',
+            3000
+        );
+    }
+
+    public deactivateTimeVillain() {
+        if (!this.timeVillainActive) return;
+        this.timeVillainActive = false;
+        this.timeVillainCountdown = 0;
+
+        // Stop clock tower bells
+        metroAudio.stopClockTowerBells();
+
+        // Remove grayscale filter
+        const canvas = this.renderer.domElement;
+        if (canvas) canvas.style.filter = '';
+
+        // Stop rapid flickering
+        if (this.timeVillainFlickerInterval) {
+            clearInterval(this.timeVillainFlickerInterval);
+            this.timeVillainFlickerInterval = null;
+        }
+
+        // Restore normal lights
+        if (this.currentCarriage) {
+            this.currentCarriage.lights.forEach(l => l.intensity = 0.85);
+            this.currentCarriage.lightMeshes.forEach(m => (m.material as THREE.MeshBasicMaterial).color.setHex(0xffffff));
+        }
+
+        // Remove villain mesh
+        if (this.timeVillainGroup) {
+            this.scene.remove(this.timeVillainGroup);
+            this.timeVillainGroup = null;
+        }
+
+        // Reset shake offset
+        this.timeVillainShakeOffset.set(0, 0, 0);
+
+        // Hide countdown overlay
+        const overlay = document.getElementById('time-villain-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    public timeVillainKillPlayer() {
+        this.deactivateTimeVillain();
+        this.playerHp = 0;
+        this.updateHealthUI();
+        this.state = 'dead';
+
+        const deathModal = document.getElementById('death-modal');
+        const dTitle = document.getElementById('death-title');
+        const dDesc = document.getElementById('death-desc');
+        if (dTitle) dTitle.textContent = this.lang === 'et' ? 'SA SURID' : 'YOU DIED';
+        if (dDesc) {
+            dDesc.textContent = this.lang === 'et'
+                ? '👹 Ajapahalane jõudis sinuni! Sa ei jõudnud järgmisse vagunisse õigel ajal.'
+                : '👹 The Time Villain caught you! You did not reach the next carriage in time.';
+        }
+        if (deathModal) deathModal.style.display = 'flex';
+        this.updateCursorState();
+    }
+
 
     public startShadowRushCarriageEvent(index: number = this.currentCarIndex) {
         this.carriage20EventTriggered = true;
@@ -4782,12 +4955,67 @@ this.state = 'player_free';
             }
         }
 
+        // --- Ajapahalane (Time Villain) Timer & Chase Logic ---
+        // Increment carriage stay timer when player_free and not in special carriages
+        if (this.state === 'player_free' && this.currentCarIndex > 0 && this.currentCarIndex !== 100 && !this.timeVillainActive && !this.timeVillainTriggeredThisCarriage) {
+            this.carriageStayTimer += delta;
+
+            // Rare event: ~30% chance when staying > 20s in a carriage
+            if (this.carriageStayTimer >= 20 && !this.isShadowEventActive() && !this.shadowHandsActive) {
+                const rng = Math.random();
+                if (rng < 0.30) {
+                    this.activateTimeVillain();
+                } else {
+                    // Did not trigger, reset timer to check again later (at 35s, etc.)
+                    this.timeVillainTriggeredThisCarriage = true;
+                }
+            }
+        }
+
+        // Time Villain countdown update
+        if (this.timeVillainActive && this.state === 'player_free') {
+            this.timeVillainCountdown -= delta;
+
+            // Update countdown display
+            const countdownEl = document.getElementById('time-villain-countdown');
+            if (countdownEl) {
+                const seconds = Math.max(0, Math.ceil(this.timeVillainCountdown));
+                countdownEl.textContent = `⏱️ ${seconds}`;
+            }
+
+            // Camera shake effect (violent shaking)
+            this.timeVillainShakeOffset.set(
+                (Math.random() - 0.5) * 0.08,
+                (Math.random() - 0.5) * 0.06,
+                (Math.random() - 0.5) * 0.04
+            );
+
+            // Time Villain slowly chases the player
+            if (this.timeVillainGroup) {
+                this.timeVillainGroup.lookAt(this.playerPos.x, 1.6, this.playerPos.z);
+                const toPlayer = this.playerPos.clone().sub(this.timeVillainGroup.position);
+                toPlayer.y = 0;
+                const dist = toPlayer.length();
+                if (dist > 1.0) {
+                    const chaseSpeed = 1.8 * delta;
+                    this.timeVillainGroup.position.add(toPlayer.normalize().multiplyScalar(chaseSpeed));
+                }
+            }
+
+            // Time's up — kill player
+            if (this.timeVillainCountdown <= 0) {
+                this.timeVillainKillPlayer();
+            }
+        } else {
+            this.timeVillainShakeOffset.set(0, 0, 0);
+        }
+
         // 6. Update Camera & Held Item Sway
         const headBobOffset = Math.sin(this.headBobTimer) * 0.04;
         this.camera.position.set(
-            this.playerPos.x,
-            this.playerPos.y + (this.state === 'player_free' ? headBobOffset : 0),
-            this.playerPos.z
+            this.playerPos.x + this.timeVillainShakeOffset.x,
+            this.playerPos.y + (this.state === 'player_free' ? headBobOffset : 0) + this.timeVillainShakeOffset.y,
+            this.playerPos.z + this.timeVillainShakeOffset.z
         );
         this.camera.quaternion.setFromEuler(this.cameraEuler);
 

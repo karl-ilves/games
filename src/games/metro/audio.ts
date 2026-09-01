@@ -1288,6 +1288,121 @@ export class MetroAudioEngine {
         osc.start(now);
         osc.stop(now + 0.18);
     }
+
+    // --- Ajapahalane (Time Villain) Clock Tower Bells Horror Audio ---
+    private clockTowerBellInterval: any = null;
+    public isClockTowerBellsActive: boolean = false;
+
+    public startClockTowerBells() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        if (this.isClockTowerBellsActive) return;
+        this.isClockTowerBellsActive = true;
+
+        // Play repeating deep, reverberating horror bell strikes
+        const playBellStrike = () => {
+            if (!this.ctx || !this.masterGain || this.isMuted || !this.isClockTowerBellsActive) return;
+            const now = this.ctx.currentTime;
+
+            // Deep bell fundamental (church bell tone ~196 Hz G3)
+            const bell1 = this.ctx.createOscillator();
+            const bell1Gain = this.ctx.createGain();
+            bell1.type = 'sine';
+            bell1.frequency.setValueAtTime(196, now);
+            bell1.frequency.exponentialRampToValueAtTime(180, now + 1.8);
+            bell1Gain.gain.setValueAtTime(0.5, now);
+            bell1Gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+            bell1.connect(bell1Gain);
+            bell1Gain.connect(this.masterGain);
+            bell1.start(now);
+            bell1.stop(now + 2.1);
+
+            // Metallic overtone (eerie high partial ~587 Hz D5)
+            const bell2 = this.ctx.createOscillator();
+            const bell2Gain = this.ctx.createGain();
+            bell2.type = 'sine';
+            bell2.frequency.setValueAtTime(587, now);
+            bell2.frequency.exponentialRampToValueAtTime(550, now + 1.5);
+            bell2Gain.gain.setValueAtTime(0.25, now);
+            bell2Gain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+            bell2.connect(bell2Gain);
+            bell2Gain.connect(this.masterGain);
+            bell2.start(now);
+            bell2.stop(now + 1.7);
+
+            // Dissonant sub-harmonic rumble (~98 Hz)
+            const sub = this.ctx.createOscillator();
+            const subGain = this.ctx.createGain();
+            sub.type = 'triangle';
+            sub.frequency.setValueAtTime(98, now);
+            subGain.gain.setValueAtTime(0.3, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+            sub.connect(subGain);
+            subGain.connect(this.masterGain);
+            sub.start(now);
+            sub.stop(now + 2.3);
+
+            // Harsh metallic clang
+            const clang = this.ctx.createOscillator();
+            const clangGain = this.ctx.createGain();
+            clang.type = 'square';
+            clang.frequency.setValueAtTime(1800, now);
+            clang.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+            clangGain.gain.setValueAtTime(0.12, now);
+            clangGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            clang.connect(clangGain);
+            clangGain.connect(this.masterGain);
+            clang.start(now);
+            clang.stop(now + 0.22);
+        };
+
+        playBellStrike();
+        this.clockTowerBellInterval = setInterval(() => {
+            if (this.isClockTowerBellsActive) {
+                playBellStrike();
+            }
+        }, 1400);
+    }
+
+    public stopClockTowerBells() {
+        this.isClockTowerBellsActive = false;
+        if (this.clockTowerBellInterval) {
+            clearInterval(this.clockTowerBellInterval);
+            this.clockTowerBellInterval = null;
+        }
+    }
+
+    public playTimeVillainRoar() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        // Deep monstrous roar
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(60, now);
+        osc.frequency.exponentialRampToValueAtTime(35, now + 0.8);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.9);
+
+        // High screeching overtone
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(2200, now);
+        osc2.frequency.exponentialRampToValueAtTime(800, now + 0.5);
+        gain2.gain.setValueAtTime(0.15, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        osc2.connect(gain2);
+        gain2.connect(this.masterGain);
+        osc2.start(now);
+        osc2.stop(now + 0.6);
+    }
 }
 
 export const metroAudio = new MetroAudioEngine();

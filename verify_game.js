@@ -1926,6 +1926,88 @@ try {
             await new Promise(r => setTimeout(r, 60));
             console.log("   Successfully verified Player Health System, Initial Sword, Glowing Eyes & Shadow Villains Combat!");
 
+            // Test Ajapahalane (Time Villain) — 10 Second Escape Event
+            console.log("   Testing Ajapahalane (Time Villain) — Activation, Countdown & Escape...");
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(5, 'right');
+                window.__lastMetro.state = 'player_free';
+                window.__lastMetro.playerHp = 100;
+                window.__lastMetro.updateHealthUI();
+            });
+            await new Promise(r => setTimeout(r, 60));
+
+            // Manually activate the time villain
+            await page.evaluate(() => {
+                window.__lastMetro.activateTimeVillain();
+            });
+            await new Promise(r => setTimeout(r, 60));
+
+            const tvActive = await page.evaluate(() => window.__lastMetro.timeVillainActive);
+            const tvGroup = await page.evaluate(() => !!window.__lastMetro.timeVillainGroup);
+            const tvCountdown = await page.evaluate(() => window.__lastMetro.timeVillainCountdown);
+            const tvOverlay = await page.$eval('#time-villain-overlay', el => window.getComputedStyle(el).display);
+            const tvBells = await page.evaluate(() => window.__metroAudio?.isClockTowerBellsActive);
+            const tvGrayscale = await page.evaluate(() => {
+                const c = document.querySelector('canvas');
+                return c ? c.style.filter : '';
+            });
+            console.log(`   Time Villain: active=${tvActive}, group=${tvGroup}, countdown=${tvCountdown}, overlay=${tvOverlay}, bells=${tvBells}, grayscale="${tvGrayscale}"`);
+            if (!tvActive || !tvGroup || tvCountdown <= 0 || tvOverlay !== 'block' || !tvBells || !tvGrayscale.includes('grayscale')) {
+                throw new Error("Ajapahalane activation failed! Expected active villain with countdown, overlay, bells, and grayscale filter!");
+            }
+
+            // Test escape by loading next carriage (simulates player reaching the door)
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(6, 'right');
+            });
+            await new Promise(r => setTimeout(r, 60));
+
+            const tvActiveAfterEscape = await page.evaluate(() => window.__lastMetro.timeVillainActive);
+            const tvGroupAfterEscape = await page.evaluate(() => window.__lastMetro.timeVillainGroup);
+            const tvOverlayAfterEscape = await page.$eval('#time-villain-overlay', el => window.getComputedStyle(el).display);
+            const tvBellsAfterEscape = await page.evaluate(() => window.__metroAudio?.isClockTowerBellsActive);
+            const tvGrayscaleAfterEscape = await page.evaluate(() => {
+                const c = document.querySelector('canvas');
+                return c ? c.style.filter : '';
+            });
+            console.log(`   After escape: active=${tvActiveAfterEscape}, group=${tvGroupAfterEscape}, overlay=${tvOverlayAfterEscape}, bells=${tvBellsAfterEscape}, grayscale="${tvGrayscaleAfterEscape}"`);
+            if (tvActiveAfterEscape || tvGroupAfterEscape !== null || tvOverlayAfterEscape !== 'none' || tvBellsAfterEscape || tvGrayscaleAfterEscape.includes('grayscale')) {
+                throw new Error("Ajapahalane deactivation failed! All effects should stop when player escapes to next carriage!");
+            }
+
+            // Test time villain kill (countdown reaches 0)
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(8, 'right');
+                window.__lastMetro.state = 'player_free';
+                window.__lastMetro.playerHp = 100;
+                window.__lastMetro.updateHealthUI();
+                window.__lastMetro.activateTimeVillain();
+                // Simulate time running out
+                window.__lastMetro.timeVillainCountdown = 0;
+            });
+            await new Promise(r => setTimeout(r, 60));
+
+            // Trigger the kill path by manually calling (since animate won't tick in test)
+            await page.evaluate(() => {
+                window.__lastMetro.timeVillainKillPlayer();
+            });
+            await new Promise(r => setTimeout(r, 60));
+
+            const tvDeathHp = await page.evaluate(() => window.__lastMetro.playerHp);
+            const tvDeathModal = await page.$eval('#death-modal', el => window.getComputedStyle(el).display);
+            const tvDeathDesc = await page.$eval('#death-desc', el => el.textContent);
+            console.log(`   Time Villain death: HP=${tvDeathHp}, DeathModal=${tvDeathModal}, Desc="${tvDeathDesc}"`);
+            if (tvDeathHp !== 0 || tvDeathModal !== 'flex' || !tvDeathDesc.includes('Ajapahalane')) {
+                throw new Error("Ajapahalane death failed! Expected HP=0, death modal visible, and Ajapahalane death message!");
+            }
+
+            // Clean up
+            await page.evaluate(() => {
+                window.__lastMetro.respawnFromDeath();
+            });
+            await new Promise(r => setTimeout(r, 60));
+            console.log("   Successfully verified Ajapahalane (Time Villain) — Activation, Escape, and Death!");
+
             // Test Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility
             console.log("   Testing Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility...");
             await page.evaluate(() => {
