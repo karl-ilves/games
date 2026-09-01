@@ -1578,14 +1578,41 @@ try {
                 // Creature dashes past player
                 window.__lastMetro.shadowEntityMesh.position.z = window.__lastMetro.playerPos.z;
             });
-            await new Promise(r => setTimeout(r, 100));
-            const seatedStateAfterRush = await page.evaluate(() => window.__lastMetro.state);
-            const seatedDeathDisplay = await page.$eval('#death-modal', el => window.getComputedStyle(el).display);
-            console.log(`   Seated State after Shadow Rush (Expected: player_free): ${seatedStateAfterRush}, Death Modal: ${seatedDeathDisplay}`);
-            if (seatedStateAfterRush === 'game_over' || seatedDeathDisplay === 'flex') {
-                throw new Error("Sitting down failed to protect player from shadow creature rush!");
+            await new Promise(r => setTimeout(r, 60));
+            const isAliveSeated = await page.evaluate(() => window.__lastMetro.isSitting && window.__lastMetro.state !== 'game_over');
+            console.log("   Seated survival during creature rush (Expected: true):", isAliveSeated);
+            if (!isAliveSeated) throw new Error("Sitting on bench failed to survive shadow creature rush!");
+
+            // Test Door Lock Trap during Shadow Creature Event (ei saa minna teise vagunisse kuni laul/vari läbi)
+            console.log("   Testing door lock trap during Shadow Creature event...");
+            await page.evaluate(() => {
+                window.__lastMetro.startShadowRushCarriageEvent(20);
+                window.__lastMetro.state = 'player_free';
+                window.__lastMetro.playerPos.set(0, 1.6, 8.5); // try to walk through front door
+            });
+            await new Promise(r => setTimeout(r, 60));
+            const isEventActive = await page.evaluate(() => window.__lastMetro.isShadowEventActive());
+            const carDuringEvent = await page.evaluate(() => window.__lastMetro.currentCarIndex);
+            console.log(`   During Shadow Event: isShadowEventActive=${isEventActive}, Carriage=${carDuringEvent} (Expected: 20, trapped)`);
+            if (!isEventActive || carDuringEvent !== 20) {
+                throw new Error("Player must be trapped in carriage during shadow event!");
             }
-            console.log("   Successfully verified Carriage 20 Shadow Rush survival when sitting and death when standing!");
+
+            // Once shadow entity finishes and song ends, doors unlock and player can proceed
+            await page.evaluate(() => {
+                window.__lastMetro.shadowRushActive = false;
+                window.__lastMetro.shadowRushCountdown = 0;
+                if (window.__lastMetro.shadowEntityMesh) {
+                    window.__lastMetro.scene.remove(window.__lastMetro.shadowEntityMesh);
+                    window.__lastMetro.shadowEntityMesh = null;
+                }
+            });
+            const isUnlockedAfterEvent = await page.evaluate(() => !window.__lastMetro.isShadowEventActive());
+            console.log("   Doors unlocked after shadow event finishes (Expected: true):", isUnlockedAfterEvent);
+            if (!isUnlockedAfterEvent) {
+                throw new Error("Doors failed to unlock after shadow event finished!");
+            }
+            console.log("   Successfully verified Carriage 20 Shadow Rush survival and door lock trap until event ends!");
 
             // Test Key Pickup in Carriage 63 & Roblox Hotbar Slot
             await page.evaluate(() => {
@@ -1713,7 +1740,7 @@ try {
                 await page.evaluate((car) => window.__lastMetro.loadCarriage(car, 'right'), cNum);
                 await new Promise(r => setTimeout(r, 60));
                 const isCarFlickerOrDark = await page.evaluate(() => ['flicker', 'dark'].includes(window.__lastMetro.currentCarriage.theme));
-                const isShadowCountDownSet = await page.evaluate(() => window.__lastMetro.shadowRushCountdown === 5.0);
+                const isShadowCountDownSet = await page.evaluate(() => window.__lastMetro.shadowRushCountdown > 0 || window.__lastMetro.isShadowEventActive());
                 if (!isCarFlickerOrDark || !isShadowCountDownSet) {
                     throw new Error(`Expected shadow rush countdown and horror theme for Carriage ${cNum}!`);
                 }

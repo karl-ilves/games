@@ -2390,6 +2390,7 @@ export class LastMetroGame {
             this.shadowEntityMesh = null;
             this.shadowRushActive = false;
         }
+        this.shadowRushCountdown = 0;
         this.isSitting = false;
         const standBtn = document.getElementById('btn-stand-up');
         if (standBtn) standBtn.style.display = 'none';
@@ -2833,6 +2834,10 @@ export class LastMetroGame {
                 this.currentCarriage.lightMeshes.forEach(m => (m.material as THREE.MeshBasicMaterial).color.setHex(0xffffff));
             }
         }, 180);
+    }
+
+    public isShadowEventActive(): boolean {
+        return this.shadowRushActive || this.shadowRushCountdown > 0 || this.shadowEntityMesh !== null;
     }
 
     public startShadowRushCarriageEvent(index: number = this.currentCarIndex) {
@@ -4203,6 +4208,10 @@ this.state = 'player_free';
             }
         }
 
+        if (this.shadowRushCountdown > 0) {
+            this.shadowRushCountdown = Math.max(0, this.shadowRushCountdown - delta);
+        }
+
         // 3d. Carriage 20 Shadow Creature (Must Olend) Rush Logic & Seating Survival Check
         if (this.shadowRushActive && this.shadowEntityMesh) {
             this.shadowEntityMesh.position.z += this.shadowRushSpeed * delta;
@@ -4243,8 +4252,8 @@ this.state = 'player_free';
 
                 if (this.state !== 'game_over') {
                     this.showThought(
-                        'See läks napilt... Istumine päästis mu elu! Must vari kadus pimedusse. Võid nüüd püsti tõusta.',
-                        'That was close... Sitting down saved my life! The shadow vanished into darkness. You can stand up now.',
+                        'See läks napilt... Istumine päästis mu elu! Must vari kadus pimedusse ja uksed avanesid. Võid nüüd püsti tõusta.',
+                        'That was close... Sitting down saved my life! The shadow vanished into darkness and doors unlocked. You can stand up now.',
                         4500
                     );
                 }
@@ -4300,6 +4309,21 @@ this.state = 'player_free';
 
             // Door Navigation & Locked Door Checks
             const now = performance.now();
+
+            // Shadow Event Trap Check (Vagun 20, 25, 32, 48, 50, 57, 63, 70, 75, 82, 90, 97)
+            // User requirement: "kui tuleb se koll 20 uks ja 25 jne tuleb siis ei saa nii kaua minna teise vagunisse ehk oled kinni kuni se laul läbi saab"
+            if (this.isShadowEventActive() && Math.abs(this.playerPos.z) > 7.5) {
+                this.playerPos.z = this.playerPos.z > 0 ? 7.4 : -7.4;
+                if (now - this.lastLockedDoorSoundTime > 1200) {
+                    this.lastLockedDoorSoundTime = now;
+                    metroAudio.playDoorLocked();
+                    this.showThought(
+                        '⚠️ Uksed on anomaalia ajal lukus! Oled vagunis kinni, kuni must vari ja laul on möödas! ISTU TOOLILE!',
+                        '⚠️ Doors are locked during the anomaly! You are trapped until the shadow creature and song subside! SIT DOWN!'
+                    );
+                }
+                return;
+            }
 
             // Carriage 64 Key Unlock Door Check
             if (this.currentCarIndex === 64 && Math.abs(this.playerPos.z) > 8.0) {
