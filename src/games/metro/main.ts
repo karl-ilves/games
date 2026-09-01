@@ -1050,7 +1050,7 @@ export class LastMetroGame {
                     titleEn: '🎫 Mysterious Subway Ticket',
                     descEn: 'An embossed ticket: „Train 100 · One-way ticket into the Unknown”.'
                 },
-                25: {
+                26: {
                     titleEt: '🎫 Vana Metroopilet 1987',
                     descEt: 'Kuupäev: 14.10.1987. Märge: „Projekt Viimane Metroo — Peatusi ei ole.”',
                     titleEn: '🎫 Old Ticket 1987',
