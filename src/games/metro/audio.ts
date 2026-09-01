@@ -815,6 +815,163 @@ export class MetroAudioEngine {
         osc.start(now);
         osc.stop(now + 0.3);
     }
+
+    // Train Brakes Screech (Carriage 20 Sudden Deceleration & Friction)
+    public playTrainBrakesScreech(duration: number = 5.0) {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        // Friction squeal oscillator
+        const osc = this.ctx.createOscillator();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(2800, now);
+        osc.frequency.linearRampToValueAtTime(1900, now + duration * 0.4);
+        osc.frequency.linearRampToValueAtTime(950, now + duration);
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(2400, now);
+        filter.Q.setValueAtTime(5.0, now);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 1.5);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + duration + 0.1);
+    }
+
+    // Creepy Escalating 5-Second Drone (Carriage 20 Ominous Countdown)
+    public playCreepyDrone5s() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        [ { f: 65.4, type: 'sawtooth' as OscillatorType, q: 4.0 }, { f: 69.3, type: 'triangle' as OscillatorType, q: 2.0 } ].forEach(d => {
+            const osc = this.ctx!.createOscillator();
+            const filter = this.ctx!.createBiquadFilter();
+            const gain = this.ctx!.createGain();
+
+            osc.type = d.type;
+            osc.frequency.setValueAtTime(d.f, now);
+            osc.frequency.exponentialRampToValueAtTime(d.f * 2.8, now + 5.0);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(180, now);
+            filter.frequency.exponentialRampToValueAtTime(1600, now + 5.0);
+            filter.Q.setValueAtTime(d.q, now);
+
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.linearRampToValueAtTime(0.3, now + 4.5);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 5.2);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.masterGain!);
+
+            osc.start(now);
+            osc.stop(now + 5.3);
+        });
+    }
+
+    // Shadow Creature Rush Screech & Dark Wind (Must Olend Dashing through Carriage)
+    public playShadowRushScreech() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        // 1. Demonic High Screech
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.9);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 1.1);
+
+        // 2. Violent Rushing Gust / Whoosh
+        const dur = 1.2;
+        const bufferSize = Math.floor(this.ctx.sampleRate * dur);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.sin((i / bufferSize) * Math.PI);
+        }
+
+        const src = this.ctx.createBufferSource();
+        src.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(800, now);
+        filter.frequency.exponentialRampToValueAtTime(300, now + dur);
+
+        const gustGain = this.ctx.createGain();
+        gustGain.gain.setValueAtTime(0.3, now);
+        gustGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        src.connect(filter);
+        filter.connect(gustGain);
+        gustGain.connect(this.masterGain);
+
+        src.start(now);
+        src.stop(now + dur);
+    }
+
+    // Sit Down / Stand Up Cloth Rustle
+    public playSitDown() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.18);
+    }
+
+    public playStandUp() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.15);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.18);
+    }
 }
 
 export const metroAudio = new MetroAudioEngine();
+

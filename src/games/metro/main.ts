@@ -212,6 +212,16 @@ export class LastMetroGame {
     private deathDragSide: number = 1;
     private deathTimer: number = 0;
 
+    // Seating State (Sit on any seat bench)
+    public isSitting: boolean = false;
+
+    // Carriage 20 Shadow Creature (Must Olend) Rush Event State
+    public shadowRushActive: boolean = false;
+    public shadowEntityMesh: THREE.Group | null = null;
+    public shadowRushSpeed: number = 0;
+    public shadowRushCountdown: number = 0;
+    public carriage20EventTriggered: boolean = false;
+
     constructor() {
         const cont = document.getElementById('canvas-container');
         if (!cont) throw new Error("Canvas container not found!");
@@ -317,10 +327,16 @@ export class LastMetroGame {
             replayBtn.addEventListener('click', () => this.replayIntro());
         }
 
-        // Stand up button for mobile
+        // Stand up button for mobile & sitting
         const standBtn = document.getElementById('btn-stand-up');
         if (standBtn) {
             standBtn.addEventListener('click', () => this.standUp());
+        }
+
+        // Sit / Stand HUD button
+        const sitToggleBtn = document.getElementById('btn-toggle-sit');
+        if (sitToggleBtn) {
+            sitToggleBtn.addEventListener('click', () => this.toggleSit());
         }
 
         // Audio mute toggle
@@ -2178,7 +2194,7 @@ export class LastMetroGame {
             });
         }
 
-        // Clean up previous anomalies (shadow hands, stalkers, modals)
+        // Clean up previous anomalies (shadow hands, stalkers, shadow entity, modals)
         this.shadowHandsGroups.forEach(h => this.scene.remove(h));
         this.shadowHandsGroups = [];
         this.shadowHandsActive = false;
@@ -2187,12 +2203,25 @@ export class LastMetroGame {
             this.stalkerMesh = null;
             this.stalkerActive = false;
         }
+        if (this.shadowEntityMesh) {
+            this.scene.remove(this.shadowEntityMesh);
+            this.shadowEntityMesh = null;
+            this.shadowRushActive = false;
+        }
+        this.isSitting = false;
+        const standBtn = document.getElementById('btn-stand-up');
+        if (standBtn) standBtn.style.display = 'none';
+        const sitIcon = document.getElementById('btn-toggle-sit-icon');
+        const sitText = document.getElementById('btn-toggle-sit-text');
+        if (sitIcon) sitIcon.textContent = '🪑';
+        if (sitText) sitText.textContent = this.lang === 'et' ? 'Istu' : 'Sit';
+
         const deathModal = document.getElementById('death-modal');
         if (deathModal) deathModal.style.display = 'none';
 
         // Determine Theme based on story progression or infinite randomness
         let theme: CarriageData['theme'] = 'normal';
-        if (index === 4 || index === 15 || index === 35 || index === 49 || index === 60 || index === 75 || index === 96) theme = 'flicker';
+        if (index === 4 || index === 15 || index === 20 || index === 35 || index === 49 || index === 60 || index === 75 || index === 96) theme = 'flicker';
         else if (index === 7 || index === 9 || index === 10 || index === 38 || index === 54 || index === 77) theme = 'dark';
         else if (index === 23) theme = 'neon';
         else if (index === 100) theme = 'golden_shop';
@@ -2300,8 +2329,7 @@ export class LastMetroGame {
                 metroAudio.playPhoneRingingAll();
                 break;
             case 20:
-                this.showThought('Täiesti vaikne vagun — isegi metroo heli kaob mõneks sekundiks.', 'Total silence — even the subway sound disappears for a few seconds.');
-                this.triggerSoundCutout(4.0);
+                this.startCarriage20ShadowRushEvent();
                 break;
 
             // --- Vagunid 21–30 ---
@@ -2601,6 +2629,127 @@ export class LastMetroGame {
                 this.currentCarriage.lightMeshes.forEach(m => (m.material as THREE.MeshBasicMaterial).color.setHex(0xffffff));
             }
         }, 180);
+    }
+
+    public startCarriage20ShadowRushEvent() {
+        this.carriage20EventTriggered = true;
+        this.shadowRushActive = false;
+        this.shadowRushCountdown = 5.0;
+
+        // 1. Violent light flickering with emergency dim red/white pulses
+        this.startLightFlickerAnomaly();
+
+        // 2. Train screeching brakes audio (rongi pidurduse hääl)
+        metroAudio.playTrainBrakesScreech(5.0);
+
+        // 3. Eerie creepy escalating sound for 5 seconds (imelik hääl kestab 5 sek)
+        metroAudio.playCreepyDrone5s();
+
+        // 4. Train speed rapidly decelerates with heavy vibrations
+        this.trainSpeed = 20;
+
+        // 5. Urgent warning thought / HUD notification
+        this.showThought(
+            '⚠️ RONG PIDURDAB! Kuskilt kostub hirmus kisa... ISTU KIIRESTI TOOLILE! (Vajuta [E] või klõpsa istmele)',
+            '⚠️ TRAIN BRAKING! A terrifying shriek echoes... SIT DOWN QUICKLY! (Press [E] or click a seat)',
+            5000
+        );
+
+        // After 5 seconds: Spawn the Shadow Creature (Must Olend) and dash through the carriage!
+        setTimeout(() => {
+            if (this.currentCarIndex === 20 && this.state !== 'game_over') {
+                this.spawnAndRushShadowCreature();
+            }
+        }, 5000);
+    }
+
+    public spawnAndRushShadowCreature() {
+        if (this.shadowEntityMesh) {
+            this.scene.remove(this.shadowEntityMesh);
+            this.shadowEntityMesh = null;
+        }
+
+        const group = new THREE.Group();
+        group.name = 'shadow_creature_entity';
+
+        const shadowMat = new THREE.MeshStandardMaterial({
+            color: 0x050505,
+            roughness: 0.9,
+            metalness: 0.1,
+            emissive: 0x1a0000,
+            emissiveIntensity: 0.8
+        });
+
+        const smokeMat = new THREE.MeshBasicMaterial({
+            color: 0x020202,
+            transparent: true,
+            opacity: 0.85
+        });
+
+        const eyeGlowMat = new THREE.MeshBasicMaterial({
+            color: 0xff0000
+        });
+
+        // 1. Dark Smoky Torso & Shadow Mass
+        const mainBody = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 12), shadowMat);
+        mainBody.scale.set(1.1, 1.6, 1.4);
+        mainBody.position.set(0, 1.4, 0);
+        group.add(mainBody);
+
+        // Surrounding Shadow Smoke Volumes
+        for (let i = 0; i < 8; i++) {
+            const smokeBall = new THREE.Mesh(new THREE.SphereGeometry(0.35 + Math.random() * 0.25, 8, 8), smokeMat);
+            smokeBall.position.set((Math.random() - 0.5) * 0.8, 1.2 + (Math.random() - 0.5) * 0.9, (Math.random() - 0.5) * 1.2);
+            group.add(smokeBall);
+        }
+
+        // 2. Piercing Glowing Crimson Eyes
+        [-0.18, 0.18].forEach(ex => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), eyeGlowMat);
+            eye.position.set(ex, 1.65, 0.45);
+            group.add(eye);
+
+            const eyeTrail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.35), eyeGlowMat);
+            eyeTrail.position.set(ex, 1.65, 0.2);
+            group.add(eyeTrail);
+        });
+
+        // 3. Shadow Claws / Tendrils reaching outward
+        [-0.55, 0.55].forEach(cx => {
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.12, 1.2, 8), shadowMat);
+            arm.rotation.z = cx > 0 ? -Math.PI / 3 : Math.PI / 3;
+            arm.rotation.x = Math.PI / 4;
+            arm.position.set(cx, 1.3, 0.3);
+            group.add(arm);
+
+            // Claws
+            [-0.06, 0, 0.06].forEach(fingerZ => {
+                const claw = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.3, 6), shadowMat);
+                claw.rotation.x = Math.PI / 2;
+                claw.position.set(cx > 0 ? cx + 0.5 : cx - 0.5, 0.9, 0.7 + fingerZ);
+                group.add(claw);
+            });
+        });
+
+        // Rush through the full length of the carriage
+        const startZ = this.playerPos.z < 0 ? 9.5 : -9.5;
+        this.shadowRushSpeed = startZ > 0 ? -32.0 : 32.0;
+
+        group.position.set(0, 0, startZ);
+        group.rotation.y = this.shadowRushSpeed < 0 ? Math.PI : 0;
+
+        this.shadowEntityMesh = group;
+        this.scene.add(this.shadowEntityMesh);
+        this.shadowRushActive = true;
+
+        // Play demonic rush screech sound and gust
+        metroAudio.playShadowRushScreech();
+
+        this.showThought(
+            '😱 MUST VARI SÖÖSTAB LÄBI VAGUNI!',
+            '😱 SHADOW CREATURE DASHES THROUGH THE CARRIAGE!',
+            2000
+        );
     }
 
     private startDoorGlitchAnomaly() {
@@ -3131,13 +3280,48 @@ this.state = 'player_free';
         }, 1200));
     }
 
-    public standUp() {
-        this.state = 'player_free';
-        this.playerPos.y = 1.6;
-        this.playerPos.x = 0; // step into aisle
+    public sitDown() {
+        if (this.state !== 'player_free' && this.state !== 'intro_riding') return;
+        this.isSitting = true;
+        const sideX = this.playerPos.x >= 0 ? 1.22 : -1.22;
+        this.playerPos.x = sideX;
+        this.playerPos.y = 0.95;
+        metroAudio.playSitDown();
+
+        const sitIcon = document.getElementById('btn-toggle-sit-icon');
+        const sitText = document.getElementById('btn-toggle-sit-text');
+        if (sitIcon) sitIcon.textContent = '🧍‍♂️';
+        if (sitText) sitText.textContent = this.lang === 'et' ? 'Tõuse' : 'Stand';
+
         const standBtn = document.getElementById('btn-stand-up');
-        if (standBtn) standBtn.style.display = 'none';
-        metroAudio.playFootstep();
+        if (standBtn) {
+            standBtn.style.display = 'flex';
+            standBtn.innerHTML = `<span>🧍‍♂️</span><span>${this.lang === 'et' ? 'Tõuse Püsti / Stand Up (W / E / Tap)' : 'Stand Up (W / E / Tap)'}</span>`;
+        }
+
+        this.showThought(
+            'Istusin toolile. (Vajuta W, E või puuduta nuppu püstitõusmiseks)',
+            'Sat down on the seat. (Press W, E or tap button to stand up)',
+            2500
+        );
+    }
+
+    public standUp() {
+        this.isSitting = false;
+        if (this.state === 'player_free' || this.state === 'intro_first_stop' || this.state === 'intro_riding' || this.state === 'intro_departing') {
+            this.state = 'player_free';
+            this.playerPos.y = 1.6;
+            this.playerPos.x = 0; // step into aisle
+            const standBtn = document.getElementById('btn-stand-up');
+            if (standBtn) standBtn.style.display = 'none';
+
+            const sitIcon = document.getElementById('btn-toggle-sit-icon');
+            const sitText = document.getElementById('btn-toggle-sit-text');
+            if (sitIcon) sitIcon.textContent = '🪑';
+            if (sitText) sitText.textContent = this.lang === 'et' ? 'Istu' : 'Sit';
+
+            metroAudio.playStandUp();
+        }
 
         // Only show direction choice thought in the very first carriage (Carriage 0)
         if (this.currentCarIndex === 0) {
@@ -3149,15 +3333,22 @@ this.state = 'player_free';
         }
     }
 
+    public toggleSit() {
+        if (this.isSitting) {
+            this.standUp();
+        } else {
+            this.sitDown();
+        }
+    }
+
     // --- Input Handling & Player Movement ---
 
     private setupInputs() {
         window.addEventListener('keydown', (e) => {
             this.moveKeys[e.code] = true;
 
-            // Stand up from initial seat if stand button is visible
-            const standBtn = document.getElementById('btn-stand-up');
-            if (standBtn && standBtn.style.display !== 'none' && (e.code === 'KeyW' || e.code === 'KeyE' || e.code === 'Space' || e.code.startsWith('Arrow'))) {
+            // Stand up from seat if sitting and any movement/action key is pressed
+            if (this.isSitting && (e.code === 'KeyW' || e.code === 'KeyS' || e.code === 'KeyA' || e.code === 'KeyD' || e.code === 'Space' || e.code.startsWith('Arrow'))) {
                 this.standUp();
             }
 
@@ -3321,10 +3512,11 @@ this.state = 'player_free';
         // 2. Door Interactions (End Gangways)
         const now = performance.now();
         if (this.branchDirection === 'right') {
-            if (this.playerPos.z > 8.0) {
+            if (this.playerPos.z > 7.5) {
                 // Front Door -> Forward
                 this.loadCarriage(this.currentCarIndex + 1, 'right');
-            } else if (this.playerPos.z < -7.5) {
+                return;
+            } else if (this.playerPos.z < -7.0) {
                 // Back Door -> LOCKED (Previous Carriage)
                 this.playerPos.z = -7.4;
                 if (now - this.lastLockedDoorSoundTime > 1000) {
@@ -3335,12 +3527,14 @@ this.state = 'player_free';
                         'The door is locked. You cannot return to the previous carriage. Moving forward is the only way.'
                     );
                 }
+                return;
             }
         } else if (this.branchDirection === 'left') {
-            if (this.playerPos.z < -8.0) {
+            if (this.playerPos.z < -7.5) {
                 // Back Door -> Forward on left branch
                 this.loadCarriage(this.currentCarIndex + 1, 'left');
-            } else if (this.playerPos.z > 7.5) {
+                return;
+            } else if (this.playerPos.z > 7.0) {
                 // Front Door -> LOCKED (Previous Carriage)
                 this.playerPos.z = 7.4;
                 if (now - this.lastLockedDoorSoundTime > 1000) {
@@ -3351,15 +3545,21 @@ this.state = 'player_free';
                         'The door is locked. You cannot return to the previous carriage. Moving forward is the only way.'
                     );
                 }
+                return;
             }
         } else {
             // Undecided (Carriage 0)
-            if (this.playerPos.z > 8.0) {
+            if (this.playerPos.z > 7.5) {
                 this.loadCarriage(1, 'right');
-            } else if (this.playerPos.z < -8.0) {
+                return;
+            } else if (this.playerPos.z < -7.5) {
                 this.loadCarriage(1, 'left');
+                return;
             }
         }
+
+        // 3. Toggle Sitting on Seat Bench
+        this.toggleSit();
     }
 
     public openLoreModal() {
@@ -3654,6 +3854,54 @@ this.state = 'player_free';
             }
         }
 
+        // 3d. Carriage 20 Shadow Creature (Must Olend) Rush Logic & Seating Survival Check
+        if (this.shadowRushActive && this.shadowEntityMesh) {
+            this.shadowEntityMesh.position.z += this.shadowRushSpeed * delta;
+
+            // Violent camera vibration / shake when creature rushes closer
+            const distToPlayerZ = Math.abs(this.shadowEntityMesh.position.z - this.playerPos.z);
+            if (distToPlayerZ < 7.0) {
+                const shakeIntensity = (1.0 - distToPlayerZ / 7.0) * 0.09;
+                this.camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+                this.camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+            }
+
+            // Creature strikes player zone!
+            if (distToPlayerZ < 2.0 && this.state !== 'game_over' && this.state !== 'dragged_death') {
+                if (!this.isSitting) {
+                    // Player was STANDING -> Instant Death!
+                    this.state = 'game_over';
+                    metroAudio.playJumpScareStinger();
+                    const deathModal = document.getElementById('death-modal');
+                    const dTitle = document.getElementById('death-title');
+                    const dReason = document.getElementById('death-reason');
+                    if (dTitle) dTitle.textContent = this.lang === 'et' ? 'SA SURID' : 'YOU DIED';
+                    if (dReason) {
+                        dReason.textContent = this.lang === 'et'
+                            ? 'Must vari pühkis su minema! Sa seisid püsti — sa oleksid pidanud toolile istuma!'
+                            : 'The shadow entity swept you away! You were standing — you should have sat on a seat!';
+                    }
+                    if (deathModal) deathModal.style.display = 'flex';
+                }
+            }
+
+            // Creature finished dashing out of the carriage into darkness
+            if (Math.abs(this.shadowEntityMesh.position.z) > 10.5) {
+                this.shadowRushActive = false;
+                this.scene.remove(this.shadowEntityMesh);
+                this.shadowEntityMesh = null;
+                this.trainSpeed = 60;
+
+                if (this.state !== 'game_over') {
+                    this.showThought(
+                        'See läks napilt... Istumine päästis mu elu! Must vari kadus pimedusse. Võid nüüd püsti tõusta.',
+                        'That was close... Sitting down saved my life! The shadow vanished into darkness. You can stand up now.',
+                        4500
+                    );
+                }
+            }
+        }
+
         // 4. Keyboard Camera Turning (Arrows & Q/E)
         if (this.state === 'player_free') {
             const rotSpeed = 1.9;
@@ -3672,8 +3920,8 @@ this.state = 'player_free';
             this.cameraEuler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraEuler.x));
         }
 
-        // 5. Player Physics & Movement (when player_free)
-        if (this.state === 'player_free' && this.playerPos.y >= 1.4) {
+        // 5. Player Physics & Movement (when player_free and not sitting)
+        if (this.state === 'player_free' && this.playerPos.y >= 1.4 && !this.isSitting) {
             const baseSpeed = (this.speedBoostActive || this.equippedItem === 'speed_boost') ? 5.4 : 3.6;
             _moveDir.set(0, 0, 0);
 

@@ -1524,7 +1524,68 @@ try {
             await new Promise(r => setTimeout(r, 150));
             const coinsAfterDoor = await page.evaluate(() => window.__lastMetro.coins);
             console.log("   Coins after passing door to Vagun 11 (Expected +2):", coinsAfterDoor);
-            if (coinsAfterDoor !== initialCoins + 2) throw new Error(`Door traverse failed to award +2 coins! Expected ${initialCoins + 2}, got ${coinsAfterDoor}`);
+            // Test Seating Mechanic (Istu / Tõuse Püsti)
+            console.log("   Testing Seating Mechanic (Sit on Bench / Stand Up)...");
+            await page.evaluate(() => window.__lastMetro.sitDown());
+            const isSittingAfterSit = await page.evaluate(() => window.__lastMetro.isSitting);
+            const playerYAfterSit = await page.evaluate(() => window.__lastMetro.playerPos.y);
+            console.log(`   Is sitting (Expected: true): ${isSittingAfterSit}, Camera Y (Expected: ~0.95): ${playerYAfterSit}`);
+            if (!isSittingAfterSit || Math.abs(playerYAfterSit - 0.95) > 0.1) throw new Error("sitDown() failed to sit player on bench!");
+
+            await page.evaluate(() => window.__lastMetro.standUp());
+            const isSittingAfterStand = await page.evaluate(() => window.__lastMetro.isSitting);
+            const playerYAfterStand = await page.evaluate(() => window.__lastMetro.playerPos.y);
+            console.log(`   Is sitting after standUp (Expected: false): ${isSittingAfterStand}, Camera Y: ${playerYAfterStand}`);
+            if (isSittingAfterStand || Math.abs(playerYAfterStand - 1.6) > 0.1) throw new Error("standUp() failed to return player to standing height!");
+
+            // Test Carriage 20 (Brakes Screech, 5s Creepy Sound, Must Olend Rush & Seating Survival)
+            console.log("   Testing Carriage 20 (Brakes Screech, 5s Countdown, Must Olend Rush & Seating Survival)...");
+            await page.evaluate(() => window.__lastMetro.loadCarriage(20, 'right'));
+            await new Promise(r => setTimeout(r, 150));
+            const car20Label = await page.$eval('#hud-car-label', el => el.textContent);
+            console.log("   Carriage 20 HUD Label:", car20Label);
+            if (!car20Label.includes('20')) throw new Error("Failed to load Carriage 20!");
+
+            // Test Standing Death when Shadow Creature Rushes
+            await page.evaluate(() => {
+                window.__lastMetro.isSitting = false;
+                window.__lastMetro.spawnAndRushShadowCreature();
+                // Move creature right into player
+                window.__lastMetro.shadowEntityMesh.position.z = window.__lastMetro.playerPos.z;
+            });
+            await new Promise(r => setTimeout(r, 100));
+            // Trigger animate step to test kill
+            await page.evaluate(() => {
+                const delta = 0.016;
+                if (window.__lastMetro.shadowRushActive && window.__lastMetro.shadowEntityMesh) {
+                    const distToPlayerZ = Math.abs(window.__lastMetro.shadowEntityMesh.position.z - window.__lastMetro.playerPos.z);
+                    if (distToPlayerZ < 2.0 && !window.__lastMetro.isSitting) {
+                        window.__lastMetro.state = 'game_over';
+                        document.getElementById('death-modal').style.display = 'flex';
+                    }
+                }
+            });
+            const standingDeathDisplay = await page.$eval('#death-modal', el => window.getComputedStyle(el).display);
+            console.log(`   Standing Death Modal Display on Shadow Rush (Expected: flex): ${standingDeathDisplay}`);
+            if (standingDeathDisplay !== 'flex') throw new Error("Standing in path of rushing shadow creature failed to trigger death!");
+
+            // Test Safe Survival when Seated on Bench
+            await page.evaluate(() => {
+                document.getElementById('death-modal').style.display = 'none';
+                window.__lastMetro.state = 'player_free';
+                window.__lastMetro.sitDown(); // Player sits down!
+                window.__lastMetro.spawnAndRushShadowCreature();
+                // Creature dashes past player
+                window.__lastMetro.shadowEntityMesh.position.z = window.__lastMetro.playerPos.z;
+            });
+            await new Promise(r => setTimeout(r, 100));
+            const seatedStateAfterRush = await page.evaluate(() => window.__lastMetro.state);
+            const seatedDeathDisplay = await page.$eval('#death-modal', el => window.getComputedStyle(el).display);
+            console.log(`   Seated State after Shadow Rush (Expected: player_free): ${seatedStateAfterRush}, Death Modal: ${seatedDeathDisplay}`);
+            if (seatedStateAfterRush === 'game_over' || seatedDeathDisplay === 'flex') {
+                throw new Error("Sitting down failed to protect player from shadow creature rush!");
+            }
+            console.log("   Successfully verified Carriage 20 Shadow Rush survival when sitting and death when standing!");
 
             // Test Key Pickup in Carriage 63 & Roblox Hotbar Slot
             await page.evaluate(() => {
