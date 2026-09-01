@@ -4960,15 +4960,11 @@ this.state = 'player_free';
         if (this.state === 'player_free' && this.currentCarIndex > 0 && this.currentCarIndex !== 100 && !this.timeVillainActive && !this.timeVillainTriggeredThisCarriage) {
             this.carriageStayTimer += delta;
 
-            // Rare event: ~30% chance when staying > 20s in a carriage
+            // Deterministic event: trigger when staying >= 20 seconds, unless other anomalies are active
             if (this.carriageStayTimer >= 20 && !this.isShadowEventActive() && !this.shadowHandsActive) {
-                const rng = Math.random();
-                if (rng < 0.30) {
-                    this.activateTimeVillain();
-                } else {
-                    // Did not trigger, reset timer to check again later (at 35s, etc.)
-                    this.timeVillainTriggeredThisCarriage = true;
-                }
+                this.activateTimeVillain();
+                // Prevent re-triggering in the same carriage
+                this.timeVillainTriggeredThisCarriage = true;
             }
         }
 
