@@ -286,6 +286,7 @@ export class LastMetroGame {
         // 5. Input Listeners
         this.setupInputs();
         this.setupUI();
+        this.updateCursorState();
 
         // 6. Start Loop
         window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -3630,16 +3631,19 @@ this.state = 'player_free';
             this.moveKeys[e.code] = false;
         });
 
-        // Mouse click & drag / Pointer Lock for Camera Look
+        // Mouse Look / Pointer Lock for Camera (Active immediately from start without needing to press anything)
         const canRotateHead = () => {
             return this.state === 'player_free' || this.state.startsWith('intro_') || this.isSitting;
         };
+
+        let hasInitializedMouse = false;
 
         const handleStartLook = (clientX: number, clientY: number) => {
             metroAudio.enableAudio();
             this.isMouseDown = true;
             this.lastMouseX = clientX;
             this.lastMouseY = clientY;
+            hasInitializedMouse = true;
             if (this.state === 'player_free' && this.aimedInteractable) {
                 this.checkInteractions();
             }
@@ -3648,18 +3652,27 @@ this.state = 'player_free';
         const handleMoveLook = (clientX: number, clientY: number, movementX?: number, movementY?: number) => {
             if (!canRotateHead()) return;
 
+            // User requirement: "Sihikutäpiga vaatamine peab juba alguses olema isegi kui ma midagi ei vajuta"
+            // Immediate camera rotation upon mouse movement, whether pointer locked, hovering, or dragging
             if (this.isPointerLocked && movementX !== undefined && movementY !== undefined) {
                 const sensitivity = 0.0024;
                 this.cameraEuler.y -= movementX * sensitivity;
                 this.cameraEuler.x -= movementY * sensitivity;
                 this.cameraEuler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraEuler.x));
-            } else if (this.isMouseDown) {
-                const dx = clientX - this.lastMouseX;
-                const dy = clientY - this.lastMouseY;
+            } else {
+                if (!hasInitializedMouse) {
+                    this.lastMouseX = clientX;
+                    this.lastMouseY = clientY;
+                    hasInitializedMouse = true;
+                    return;
+                }
+
+                const dx = (movementX !== undefined && movementX !== 0) ? movementX : (clientX - this.lastMouseX);
+                const dy = (movementY !== undefined && movementY !== 0) ? movementY : (clientY - this.lastMouseY);
                 this.lastMouseX = clientX;
                 this.lastMouseY = clientY;
 
-                const sensitivity = 0.0038;
+                const sensitivity = 0.0028;
                 this.cameraEuler.y -= dx * sensitivity;
                 this.cameraEuler.x -= dy * sensitivity;
                 this.cameraEuler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraEuler.x));
@@ -3700,6 +3713,7 @@ this.state = 'player_free';
                 this.isMouseDown = true;
                 this.lastMouseX = e.touches[0].clientX;
                 this.lastMouseY = e.touches[0].clientY;
+                hasInitializedMouse = true;
             }
         }, { passive: true });
 
@@ -3734,13 +3748,18 @@ this.state = 'player_free';
             document.body.classList.remove('metro-in-game');
             document.body.classList.add('metro-cursor-visible');
             if (document.pointerLockElement) {
-                document.exitPointerLock?.();
+                try { document.exitPointerLock?.(); } catch (_) {}
             }
         } else {
             document.body.classList.add('metro-in-game');
             document.body.classList.remove('metro-cursor-visible');
             if (!this.isPointerLocked && (this.state === 'player_free' || this.state.startsWith('intro_') || this.isSitting)) {
-                this.renderer.domElement.requestPointerLock?.();
+                try {
+                    const p = this.renderer.domElement.requestPointerLock?.();
+                    if (p && typeof (p as any).catch === 'function') {
+                        (p as any).catch(() => {});
+                    }
+                } catch (_) {}
             }
         }
     }
