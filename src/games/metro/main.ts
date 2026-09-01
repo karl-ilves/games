@@ -2221,7 +2221,8 @@ export class LastMetroGame {
 
         // Determine Theme based on story progression or infinite randomness
         let theme: CarriageData['theme'] = 'normal';
-        if (index === 4 || index === 15 || index === 20 || index === 35 || index === 49 || index === 60 || index === 75 || index === 96) theme = 'flicker';
+        const shadowRushCarriages = [20, 25, 32, 48, 50, 57, 63, 70, 75, 82, 90, 97];
+        if (shadowRushCarriages.includes(index) || index === 4 || index === 15 || index === 35 || index === 49 || index === 60 || index === 96) theme = 'flicker';
         else if (index === 7 || index === 9 || index === 10 || index === 38 || index === 54 || index === 77) theme = 'dark';
         else if (index === 23) theme = 'neon';
         else if (index === 100) theme = 'golden_shop';
@@ -2329,7 +2330,7 @@ export class LastMetroGame {
                 metroAudio.playPhoneRingingAll();
                 break;
             case 20:
-                this.startCarriage20ShadowRushEvent();
+                this.startShadowRushCarriageEvent(20);
                 break;
 
             // --- Vagunid 21–30 ---
@@ -2347,6 +2348,7 @@ export class LastMetroGame {
                 break;
             case 25:
                 this.showThought('Leiad vana metroopileti, millel on kummaline kuupäev (14.10.1987).', 'Found an old subway ticket with a strange date (14.10.1987).');
+                this.startShadowRushCarriageEvent(25);
                 break;
             case 26:
                 this.showThought('Vagunis on ainult üks reisija, kuid järgmises vagunis teda enam ei ole.', 'Only one passenger is here, but in the next carriage they are gone.');
@@ -2370,6 +2372,7 @@ export class LastMetroGame {
                 break;
             case 32:
                 this.showThought('Mängija leiab väikese kaardi, kus on märgitud vagun number 50. 🗺️', 'You find a small pocket map with Carriage number 50 circled. 🗺️');
+                this.startShadowRushCarriageEvent(32);
                 break;
             case 33:
                 this.showThought('Metroo hakkab korraks sõitma väga aeglaselt... ja kiirendab siis uuesti.', 'The subway slows down to a crawl... then accelerates again.');
@@ -2422,6 +2425,7 @@ export class LastMetroGame {
                 break;
             case 48:
                 this.showThought('Vagunis on sein, millel on kriipsud nagu keegi oleks lugenud läbitud vaguneid.', 'Tally marks are scratched on the wall as if counting passing carriages.');
+                this.startShadowRushCarriageEvent(48);
                 break;
             case 49:
                 this.showThought('Tuled vilguvad ja mängija näeb korraks sama läbipaistvat jälitajat vaguni lõpus.', 'Lights flicker and the translucent shadow stalker glimpses at the far end.');
@@ -2429,6 +2433,7 @@ export class LastMetroGame {
                 break;
             case 50:
                 this.showThought('⭐ SUUR ERILINE VAGUN 50! Leidsid suure vihje selle kohta, miks metroo lõputult sõidab!', '⭐ MAJOR CARRIAGE 50! Found the classified blueprint revealing why the subway runs forever!');
+                this.startShadowRushCarriageEvent(50);
                 break;
 
             // --- Vagunid 51–60 ---
@@ -2452,6 +2457,7 @@ export class LastMetroGame {
                 break;
             case 57:
                 this.showThought('Üks reisija seisab ukse juures ja kaob, kui mängija lähemale jõuab!', 'A passenger stands by the door and vanishes as you approach!');
+                this.startShadowRushCarriageEvent(57);
                 break;
             case 58:
                 this.showThought('Metroo ekraan näitab korraks punaselt: „ÄRA PÖÖRDU TAGASI.” 🚫', 'Subway display flashes crimson: „DO NOT TURN BACK.” 🚫');
@@ -2474,6 +2480,7 @@ export class LastMetroGame {
             case 63:
                 this.showThought('🗝️ AI-reisija annab sulle VÕTME! Klõpsa ekraani all olevale võtmeikoonile, et see kätte võtta nagu Robloxsis!', '🗝️ AI passenger hands you a KEY! Click the key icon on the hotbar below to equip it like in Roblox!');
                 this.unlockItem('key');
+                this.startShadowRushCarriageEvent(63);
                 break;
             case 64:
                 this.showThought('Järgmise vaguni uks on lukus ja võti aitab selle avada! (Võta võti kätte)', 'The next carriage door is locked! Equip the key from hotbar to open it!');
@@ -2496,6 +2503,7 @@ export class LastMetroGame {
                 break;
             case 70:
                 this.showThought('⭐ SUUR VIHJE-VAGUN 70! Leidsid märkmiku, mis räägib inimesest, kes oli kunagi samas metroos.', '⭐ MAJOR CLUE CARRIAGE 70! Found the journal of an explorer who was trapped in this subway.');
+                this.startShadowRushCarriageEvent(70);
                 break;
 
             // --- Vagunid 71–80 ---
@@ -2513,7 +2521,7 @@ export class LastMetroGame {
                 break;
             case 75:
                 this.showThought('Vagunis olevad tuled hakkavad järjest ükshaaval kustuma.', 'Lights in the carriage begin turning off one by one in sequence.');
-                this.startLightFlickerAnomaly();
+                this.startShadowRushCarriageEvent(75);
                 break;
             case 76:
                 this.showThought('Kõik istmed on tühjad, kuid õhus kajab selgelt reisijate juttu.', 'Seats are empty, yet distant crowd conversations echo clearly.');
@@ -2537,6 +2545,7 @@ export class LastMetroGame {
                 break;
             case 82:
                 this.showThought('Kõlaritest tuleb teade, mis tundub olevat mõeldud just sinule: „Reisija... oled peagi kohal.”', 'An announcement speaks directly to you: „Passenger... you are nearly there.”');
+                this.startShadowRushCarriageEvent(82);
                 break;
             case 83:
                 this.showThought('AI-reisijad vaatavad korraga kõik ühes suunas minu poole.', 'All AI passengers turn their heads in unison towards you.');
@@ -2561,6 +2570,7 @@ export class LastMetroGame {
                 break;
             case 90:
                 this.showThought('⭐ Mõlemad rongid lähevad eri suundades ja teine rong kaob tunnelisse.', '⭐ The trains diverge and the parallel train disappears into the dark tunnel.');
+                this.startShadowRushCarriageEvent(90);
                 break;
 
             // --- Vagunid 91–100 ---
@@ -2584,6 +2594,7 @@ export class LastMetroGame {
                 break;
             case 97:
                 this.showThought('Metrooheli muutub järjest vaiksemaks ja rahulikumaks.', 'The subway running sound softens into a calm, gentle hum.');
+                this.startShadowRushCarriageEvent(97);
                 break;
             case 98:
                 this.showThought('Kõlaritest kostab vana pühalik metrooteade: „Saabume Vagunisse 100.”', 'A solemn announcement chimes: „Arriving at Carriage 100 — The Golden Terminal.”');
@@ -2631,7 +2642,7 @@ export class LastMetroGame {
         }, 180);
     }
 
-    public startCarriage20ShadowRushEvent() {
+    public startShadowRushCarriageEvent(index: number = this.currentCarIndex) {
         this.carriage20EventTriggered = true;
         this.shadowRushActive = false;
         this.shadowRushCountdown = 5.0;
@@ -2650,17 +2661,22 @@ export class LastMetroGame {
 
         // 5. Urgent warning thought / HUD notification
         this.showThought(
-            '⚠️ RONG PIDURDAB! Kuskilt kostub hirmus kisa... ISTU KIIRESTI TOOLILE! (Vajuta [E] või klõpsa istmele)',
-            '⚠️ TRAIN BRAKING! A terrifying shriek echoes... SIT DOWN QUICKLY! (Press [E] or click a seat)',
+            `⚠️ RONG PIDURDAB! (Vagun ${index}) Kuskilt kostub hirmus kisa... ISTU KIIRESTI TOOLILE! (Vajuta [E] või klõpsa istmele)`,
+            `⚠️ TRAIN BRAKING! (Carriage ${index}) A terrifying shriek echoes... SIT DOWN QUICKLY! (Press [E] or click a seat)`,
             5000
         );
 
         // After 5 seconds: Spawn the Shadow Creature (Must Olend) and dash through the carriage!
+        const triggerCar = this.currentCarIndex;
         setTimeout(() => {
-            if (this.currentCarIndex === 20 && this.state !== 'game_over') {
+            if (this.currentCarIndex === triggerCar && this.state !== 'game_over' && this.state !== 'dead') {
                 this.spawnAndRushShadowCreature();
             }
         }, 5000);
+    }
+
+    public startCarriage20ShadowRushEvent() {
+        this.startShadowRushCarriageEvent(20);
     }
 
     public spawnAndRushShadowCreature() {
@@ -3073,6 +3089,32 @@ export class LastMetroGame {
         // Clear previous intro timeouts
         this.introTimeouts.forEach(t => clearTimeout(t));
         this.introTimeouts = [];
+
+        // Reset all coins, inventory items, buffs & progress when returning to the beginning
+        this.coins = 0;
+        this.inventory = {};
+        this.equippedItem = null;
+        if (this.heldItemMesh) {
+            this.camera.remove(this.heldItemMesh);
+            this.heldItemMesh = null;
+        }
+        this.updateHotbarUI();
+        this.updateCoinsUI();
+
+        const nvOverlay = document.getElementById('night-vision-overlay');
+        if (nvOverlay) nvOverlay.style.display = 'none';
+        this.nightVisionActive = false;
+        this.speedBoostActive = false;
+        this.clueDetectorActive = false;
+
+        this.hasUnlockedCarriage28WithClue = false;
+        this.hasUnlockedCarriage64WithKey = false;
+        this.hasUnlockedCarriage78WithHint = false;
+        this.cluesFound = 0;
+
+        try {
+            localStorage.removeItem('last_metro_save');
+        } catch (e) {}
 
         this.currentCarIndex = 0;
         this.loadCarriage(0, 'undecided');

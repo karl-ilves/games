@@ -1705,6 +1705,41 @@ try {
             }
 
             console.log("   Successfully verified LAST METRO Playard Owner Teleport Panel & Error Validation!");
+
+            // Test Shadow Rush event activation on additional story carriages (25, 32, 48, 50, 57, 63, 70, 75, 82, 90, 97)
+            console.log("   Testing Shadow Rush event triggering on multiple story carriages...");
+            const shadowCarriagesToTest = [25, 32, 48, 50, 57, 63, 70, 75, 82, 90, 97];
+            for (const cNum of shadowCarriagesToTest) {
+                await page.evaluate((car) => window.__lastMetro.loadCarriage(car, 'right'), cNum);
+                await new Promise(r => setTimeout(r, 60));
+                const isCarFlickerOrDark = await page.evaluate(() => ['flicker', 'dark'].includes(window.__lastMetro.currentCarriage.theme));
+                const isShadowCountDownSet = await page.evaluate(() => window.__lastMetro.shadowRushCountdown === 5.0);
+                if (!isCarFlickerOrDark || !isShadowCountDownSet) {
+                    throw new Error(`Expected shadow rush countdown and horror theme for Carriage ${cNum}!`);
+                }
+            }
+            console.log("   Successfully verified Shadow Rush event triggers across all specified carriages!");
+
+            // Test Full Reset of Coins and Inventory Items when Returning to Beginning
+            console.log("   Testing full reset of Coins and Inventory when returning to beginning...");
+            await page.evaluate(() => {
+                window.__lastMetro.coins = 999;
+                window.__lastMetro.inventory = { key: { id: 'key', nameEt: 'Võti', nameEn: 'Key', icon: '🗝️' } };
+                window.__lastMetro.equippedItem = 'key';
+                window.__lastMetro.nightVisionActive = true;
+                window.__lastMetro.replayIntro();
+            });
+            await new Promise(r => setTimeout(r, 150));
+            const coinsAfterReset = await page.evaluate(() => window.__lastMetro.coins);
+            const invAfterReset = await page.evaluate(() => Object.keys(window.__lastMetro.inventory).length);
+            const equippedAfterReset = await page.evaluate(() => window.__lastMetro.equippedItem);
+            const hotbarSlotsAfterReset = await page.$$eval('#inventory-hotbar .hotbar-slot', els => els.length);
+            console.log(`   After Return to Beginning: Coins=${coinsAfterReset} (Expected: 0), InventoryCount=${invAfterReset} (Expected: 0), Equipped=${equippedAfterReset} (Expected: null), HotbarSlots=${hotbarSlotsAfterReset} (Expected: 0)`);
+            if (coinsAfterReset !== 0 || invAfterReset !== 0 || equippedAfterReset !== null || hotbarSlotsAfterReset !== 0) {
+                throw new Error("Reset on return to beginning failed to clear coins and inventory items!");
+            }
+            console.log("   Successfully verified Coins, Inventory, and Hotbar full reset on return to beginning!");
+
             console.log("   Successfully verified LAST METRO (3D Mystery Adventure, Carriages 1-100+, Coins, Roblox Hotbar, Golden Shop & Owner Panel)!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
