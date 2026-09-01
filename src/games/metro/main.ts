@@ -41,7 +41,7 @@ interface CarriageData {
     passengers: AIPassenger[];
     doorFront: THREE.Group;
     doorBack: THREE.Group;
-    mapMesh?: THREE.Mesh;
+    mapMesh?: THREE.Mesh | THREE.Group;
     puzzleSolved: boolean;
     puzzleCode?: string;
     hasKeypad?: boolean;
@@ -903,41 +903,19 @@ export class LastMetroGame {
             lights.push(pLight);
         }
 
-        // 9. Interactive Metro Route Map on Interior Wall
-        let mapMesh: THREE.Mesh | undefined;
-        const mapCanvas = document.createElement('canvas');
-        mapCanvas.width = 512;
-        mapCanvas.height = 128;
-        const ctx = mapCanvas.getContext('2d');
-        if (ctx) {
-            ctx.fillStyle = '#1e272e';
-            ctx.fillRect(0, 0, 512, 128);
-            ctx.strokeStyle = '#00f2fe';
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.moveTo(30, 64);
-            ctx.lineTo(480, 64);
-            ctx.stroke();
+        // 9. Interactive Dynamic Metro Route Map & Status Displays on Interior Walls
+        const isEt = this.lang === 'et';
+        const routeDisplayRight = this.buildMetroRouteDisplay(index, isEt);
+        routeDisplayRight.position.set(1.64, 1.82, 0);
+        routeDisplayRight.rotation.y = -Math.PI / 2;
+        carGroup.add(routeDisplayRight);
 
-            // Station dots
-            const stations = ['CENTRAL', 'PARK', 'RIVER', 'NORTH', 'TERMINUS'];
-            stations.forEach((st, idx) => {
-                const x = 50 + idx * 95;
-                ctx.fillStyle = '#ffd32a';
-                ctx.beginPath();
-                ctx.arc(x, 64, 8, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 16px monospace';
-                ctx.fillText(st, x - 25, 40);
-            });
-        }
-        const mapTexture = new THREE.CanvasTexture(mapCanvas);
-        const mapMat = new THREE.MeshStandardMaterial({ map: mapTexture, roughness: 0.4 });
-        mapMesh = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.6, 2.4), mapMat);
-        mapMesh.position.set(1.65, 1.8, 0);
-        mapMesh.rotation.y = -Math.PI / 2;
-        carGroup.add(mapMesh);
+        const routeDisplayLeft = this.buildMetroRouteDisplay(index, isEt);
+        routeDisplayLeft.position.set(-1.64, 1.82, 0);
+        routeDisplayLeft.rotation.y = Math.PI / 2;
+        carGroup.add(routeDisplayLeft);
+
+        let mapMesh: THREE.Group = routeDisplayRight;
 
         // 10. End Gangway Doors (Front = +Z / Right Branch, Back = -Z / Left Branch)
         const doorFront = this.buildGangwayDoor(carWidth, carHeight, 1, index, branch, theme);
@@ -1182,6 +1160,207 @@ export class LastMetroGame {
             inspectableItem,
             inspectableText
         };
+    }
+
+    private buildMetroRouteDisplay(index: number, isEt: boolean): THREE.Group {
+        const group = new THREE.Group();
+
+        // 1. High-resolution canvas for crystal clear LCD/LED route display
+        const mapCanvas = document.createElement('canvas');
+        mapCanvas.width = 1024;
+        mapCanvas.height = 256;
+        const ctx = mapCanvas.getContext('2d');
+        if (ctx) {
+            // Dark sleek subway display background
+            ctx.fillStyle = '#0a0e17';
+            ctx.fillRect(0, 0, 1024, 256);
+
+            // Subtle bezel border and grid
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(4, 4, 1016, 248);
+
+            // Header banner
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(8, 8, 1008, 48);
+
+            // Header line & title
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+            ctx.textAlign = 'left';
+            const lineTitle = isEt
+                ? '🚇 METROOLIIN M1 · SÜGAVTUNNEL'
+                : '🚇 METRO LINE M1 · DEEP TUNNEL';
+            ctx.fillText(lineTitle, 24, 40);
+
+            // Carriage indicator badge on top right
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
+            ctx.textAlign = 'right';
+            const carStatus = isEt
+                ? `📍 ASUKOHT: VAGUN ${index}`
+                : `📍 CURRENT: CARRIAGE ${index}`;
+            ctx.fillText(carStatus, 1000, 40);
+
+            // Route track line
+            const lineY = 145;
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 14;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(60, lineY);
+            ctx.lineTo(964, lineY);
+            ctx.stroke();
+
+            // Active / Completed track line portion
+            const progressRatio = Math.min(1.0, Math.max(0, index / 100));
+            const progressX = 60 + progressRatio * (964 - 60);
+
+            ctx.strokeStyle = '#10b981'; // Vibrant glowing green for traversed path
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.moveTo(60, lineY);
+            ctx.lineTo(progressX, lineY);
+            ctx.stroke();
+
+            // Story Anomaly custom states
+            if (index === 22) {
+                // Glitching shifting map
+                const glitchSymbols = ['[ ??! ]', '[ #&% ]', '[ 404 ]', '[ ERR ]', '[ ☠️ ]'];
+                glitchSymbols.forEach((sym, sIdx) => {
+                    const x = 90 + sIdx * 210;
+                    ctx.fillStyle = '#ef4444';
+                    ctx.font = 'bold 24px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(sym, x, lineY - 30);
+                    ctx.beginPath();
+                    ctx.arc(x, lineY, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.fillStyle = '#f87171';
+                ctx.font = 'bold 18px monospace';
+                ctx.fillText(isEt ? '⚠️ ANOMAALIA: KAART MUUTUB PIDEVALT!' : '⚠️ ANOMALY: MAP CONSTANTLY SHIFTING!', 512, 225);
+            } else if (index === 53) {
+                // All stations disappeared
+                ctx.fillStyle = '#64748b';
+                ctx.font = 'italic bold 22px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(isEt ? '⚠️ KÕIK PEATUSED ON KAARDILT KADUNUD — TÜHI JOON' : '⚠️ ALL STATIONS DISAPPEARED FROM MAP', 512, 100);
+                ctx.fillText(isEt ? 'Rong sõidab tundmatusse suunda...' : 'Train speeding into unknown...', 512, 210);
+            } else if (index === 94) {
+                // Alien / mystery glyphs
+                const glyphs = ['⍾ KESK', '⍝ SÜGAV', '⍲ TSOON', '⍿ VÄRAV', '⎔ KULD 100'];
+                glyphs.forEach((gl, gIdx) => {
+                    const x = 90 + gIdx * 210;
+                    ctx.fillStyle = '#c084fc';
+                    ctx.font = 'bold 22px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(gl, x, lineY - 30);
+                    ctx.beginPath();
+                    ctx.arc(x, lineY, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.fillStyle = '#e879f9';
+                ctx.font = 'bold 18px monospace';
+                ctx.fillText('⚡ ⍾ ⍝ ⍲ ⍿ ⎔ · ANOMAALIA TASE: MAXIMAALNE · ⎔ ⍿ ⍲ ⍝ ⍾', 512, 225);
+            } else {
+                // Standard Realistic Subway Line Key Milestones (0 -> 20 -> 50 -> 80 -> 100)
+                const milestones = [
+                    { num: 0, labelEt: 'KESKJAAM', labelEn: 'CENTRAL', sub: '23:45' },
+                    { num: 20, labelEt: 'VAGUN 20', labelEn: 'CARRIAGE 20', sub: 'Vari / Shadow' },
+                    { num: 50, labelEt: 'VAGUN 50', labelEn: 'CARRIAGE 50', sub: 'Tõde / Truth' },
+                    { num: 80, labelEt: 'VAGUN 80', labelEn: 'CARRIAGE 80', sub: 'Peakaart' },
+                    { num: 100, labelEt: 'KULDNE TERMINAL 100 ⭐', labelEn: 'GOLDEN TERMINAL 100 ⭐', sub: 'Checkpoint & Pood' }
+                ];
+
+                milestones.forEach((m, mIdx) => {
+                    const x = 90 + mIdx * 210;
+                    const isPassed = index >= m.num;
+                    const isCurrent = (mIdx === 0 && index === 0) || (index >= m.num && (mIdx === milestones.length - 1 || index < milestones[mIdx + 1].num));
+
+                    // Station Dot
+                    ctx.beginPath();
+                    ctx.arc(x, lineY, isCurrent ? 14 : 10, 0, Math.PI * 2);
+                    if (m.num === 100) {
+                        ctx.fillStyle = isPassed ? '#f59e0b' : '#78350f';
+                    } else {
+                        ctx.fillStyle = isPassed ? '#10b981' : '#334155';
+                    }
+                    ctx.fill();
+
+                    if (isCurrent) {
+                        ctx.strokeStyle = '#f59e0b';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.arc(x, lineY, 18, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+
+                    // Station Name
+                    ctx.fillStyle = isCurrent ? '#fef08a' : (isPassed ? '#ffffff' : '#94a3b8');
+                    ctx.font = isCurrent ? 'bold 18px "Segoe UI", Arial, sans-serif' : 'bold 16px "Segoe UI", Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    const mainLbl = isEt ? m.labelEt : m.labelEn;
+                    ctx.fillText(mainLbl, x, lineY - 26);
+
+                    // Subtitle / Milestone description
+                    ctx.fillStyle = isCurrent ? '#fbbf24' : (isPassed ? '#6ee7b7' : '#64748b');
+                    ctx.font = '13px "Segoe UI", Arial, sans-serif';
+                    ctx.fillText(m.sub, x, lineY + 36);
+                });
+
+                // Footer Status Message
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px "Segoe UI", Arial, sans-serif';
+                ctx.textAlign = 'center';
+                if (index < 100) {
+                    const remaining = 100 - index;
+                    ctx.fillText(
+                        isEt
+                            ? `Järgmise suure checkpointini (Vagun 100): veel ${remaining} vagunit`
+                            : `Distance to next major checkpoint (Carriage 100): ${remaining} carriages remaining`,
+                        512,
+                        228
+                    );
+                } else if (index === 100) {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 15px "Segoe UI", Arial, sans-serif';
+                    ctx.fillText(
+                        isEt ? '🌟 Oled jõudnud KULDSE TERMINALINI (Vagun 100)! Pood ja Checkpoint on avatud.' : '🌟 REACHED GOLDEN TERMINAL (Carriage 100)! Shop & Checkpoint active.',
+                        512,
+                        228
+                    );
+                } else {
+                    ctx.fillStyle = '#a855f7';
+                    ctx.fillText(
+                        isEt ? `Lõputu metroo tsoon: Vagun ${index} (Edasijõudnud sügavus)` : `Endless subway zone: Carriage ${index} (Advanced depth)`,
+                        512,
+                        228
+                    );
+                }
+            }
+        }
+
+        const mapTexture = new THREE.CanvasTexture(mapCanvas);
+        const mapMat = new THREE.MeshStandardMaterial({
+            map: mapTexture,
+            roughness: 0.3,
+            metalness: 0.1,
+            emissive: new THREE.Color(0x0a101f),
+            emissiveIntensity: 0.2
+        });
+
+        // Sleek frame backing
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0x181e29, metalness: 0.8, roughness: 0.2 });
+        const frameMesh = new THREE.Mesh(new THREE.BoxGeometry(2.34, 0.64, 0.04), frameMat);
+        group.add(frameMesh);
+
+        // Display panel face
+        const displayMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.6), mapMat);
+        displayMesh.position.z = 0.022;
+        group.add(displayMesh);
+
+        return group;
     }
 
     private buildGangwayDoor(carWidth: number, carHeight: number, dir: number, carIndex: number, branch: DirectionBranch, theme: CarriageData['theme']): THREE.Group {
