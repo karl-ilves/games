@@ -772,6 +772,49 @@ export class MetroAudioEngine {
         osc.start(now);
         osc.stop(now + 0.12);
     }
+
+    // Teleport Chime (Playard Owner Teleport)
+    public playTeleport() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, idx) => {
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+            gain.gain.setValueAtTime(0.15, now + idx * 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.35);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+            osc.start(now + idx * 0.05);
+            osc.stop(now + idx * 0.05 + 0.38);
+        });
+    }
+
+    // Error Buzzer (Invalid carriage / Sellist vagunit ei ole)
+    public playError() {
+        this.initContext();
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.setValueAtTime(120, now + 0.12);
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
 }
 
 export const metroAudio = new MetroAudioEngine();

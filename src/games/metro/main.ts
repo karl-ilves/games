@@ -378,6 +378,50 @@ export class LastMetroGame {
             });
         }
 
+        // Playard Owner Panel UI Wireup
+        const ownerPanelBtn = document.getElementById('btn-owner-panel');
+        if (ownerPanelBtn) {
+            if (this.isOwner) {
+                ownerPanelBtn.style.display = 'flex';
+                ownerPanelBtn.addEventListener('click', () => this.openOwnerTeleportModal());
+            } else {
+                ownerPanelBtn.style.display = 'none';
+            }
+        }
+
+        const ownerTpSubmit = document.getElementById('btn-owner-teleport-submit');
+        if (ownerTpSubmit) {
+            ownerTpSubmit.addEventListener('click', () => {
+                const input = document.getElementById('owner-teleport-input') as HTMLInputElement;
+                const carNum = parseInt(input?.value, 10);
+                this.teleportToCarriage(carNum);
+            });
+        }
+
+        const ownerTpInput = document.getElementById('owner-teleport-input') as HTMLInputElement;
+        if (ownerTpInput) {
+            ownerTpInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const carNum = parseInt(ownerTpInput.value, 10);
+                    this.teleportToCarriage(carNum);
+                }
+            });
+        }
+
+        const ownerTpClose = document.getElementById('btn-owner-teleport-close');
+        if (ownerTpClose) {
+            ownerTpClose.addEventListener('click', () => this.closeOwnerTeleportModal());
+        }
+
+        document.querySelectorAll('.btn-quick-tp').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = (e.currentTarget as HTMLElement).getAttribute('data-car');
+                if (target !== null) {
+                    this.teleportToCarriage(parseInt(target, 10));
+                }
+            });
+        });
+
         // Restore saved coins and inventory from checkpoint
         try {
             const savedCoins = localStorage.getItem('last_metro_coins');
@@ -2768,6 +2812,21 @@ this.state = 'player_free';
             if (e.code === 'Digit4' && this.inventory['clue_detector']) this.toggleEquipItem('clue_detector');
             if (e.code === 'Digit5' && this.inventory['secret_pass']) this.toggleEquipItem('secret_pass');
             if (e.code === 'Digit6' && this.inventory['radio']) this.toggleEquipItem('radio');
+
+            // Playard Owner Teleport Modal shortcut (F2)
+            if (e.code === 'F2' && this.isOwner) {
+                const modal = document.getElementById('owner-teleport-modal');
+                if (modal && modal.style.display === 'flex') {
+                    this.closeOwnerTeleportModal();
+                } else {
+                    this.openOwnerTeleportModal();
+                }
+            }
+
+            // Escape to close modals
+            if (e.code === 'Escape') {
+                this.closeOwnerTeleportModal();
+            }
         });
 
         window.addEventListener('keyup', (e) => {
@@ -2980,6 +3039,66 @@ this.state = 'player_free';
                 this.showThought('Vale kood. Proovi uuesti.', 'Wrong code. Try again.');
             }
         }
+    }
+
+    public openOwnerTeleportModal() {
+        if (!this.isOwner) return;
+        const modal = document.getElementById('owner-teleport-modal');
+        const errEl = document.getElementById('owner-teleport-error');
+        const input = document.getElementById('owner-teleport-input') as HTMLInputElement;
+        if (errEl) errEl.style.display = 'none';
+        if (input) {
+            input.value = '';
+            setTimeout(() => input.focus(), 60);
+        }
+        if (modal) modal.style.display = 'flex';
+        this.state = 'inspecting';
+    }
+
+    public closeOwnerTeleportModal() {
+        const modal = document.getElementById('owner-teleport-modal');
+        if (modal) modal.style.display = 'none';
+        if (this.state === 'inspecting') {
+            this.state = 'player_free';
+        }
+    }
+
+    public teleportToCarriage(carNum: number): boolean {
+        if (!this.isOwner) return false;
+
+        // User requirement: "kui panen liiga suure siis tuleb tekst sellist vagunit ei ole"
+        if (isNaN(carNum) || carNum < 0 || carNum > 100) {
+            const errEl = document.getElementById('owner-teleport-error');
+            if (errEl) {
+                errEl.innerText = this.lang === 'et' ? '❌ Sellist vagunit ei ole' : '❌ No such carriage exists';
+                errEl.style.display = 'block';
+            }
+            metroAudio.playError();
+            this.showThought(
+                'Sellist vagunit ei ole.',
+                'No such carriage exists.'
+            );
+            return false;
+        }
+
+        // If in intro, skip to active gameplay
+        if (this.state === 'intro_station' || this.state === 'intro_boarding' || this.state === 'intro_inside') {
+            this.skipIntro();
+        }
+
+        // Teleport to requested carriage
+        this.loadCarriage(carNum, 'right');
+        this.playerPos.set(0, 1.6, -6.5);
+        this.cameraEuler.y = 0;
+        this.state = 'player_free';
+        metroAudio.playTeleport();
+
+        this.closeOwnerTeleportModal();
+        this.showThought(
+            `⚡ Teleporditud vagunisse ${carNum}!`,
+            `⚡ Teleported to carriage ${carNum}!`
+        );
+        return true;
     }
 
     // --- Animation & Physics Loop ---

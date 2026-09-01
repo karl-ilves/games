@@ -1207,7 +1207,8 @@ try {
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
             await page.goto('http://localhost:4173/games/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await new Promise(r => setTimeout(r, 1500));
+            await page.waitForSelector('#hud-stage-val', { timeout: 10000 });
+            await new Promise(r => setTimeout(r, 600));
 
             // Verify Canvas and HUD Elements
             const obbyCanvas = await page.$('#canvas-container canvas');
@@ -1326,7 +1327,7 @@ try {
                 window.__PLAYARD_TEST_MODE__ = false;
                 localStorage.removeItem('playard_current_user_profile');
             });
-            await page.goto('http://localhost:4173/games/games/metro/index.html');
+            await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const guestVipDisplay = await page.$eval('#vip-restricted-overlay', el => window.getComputedStyle(el).display).catch(() => 'none');
@@ -1341,7 +1342,7 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('http://localhost:4173/games/games/metro/index.html');
+            await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 800));
 
             await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
@@ -1592,7 +1593,47 @@ try {
             console.log("   Continuation Carriage 101 HUD Label (Expected: 101):", car101Label);
             if (!car101Label.includes('101')) throw new Error("Carriage 101 continuation failed!");
 
-            console.log("   Successfully verified LAST METRO (3D Mystery Adventure, Carriages 1-100+, Coins, Roblox Hotbar & Golden Shop)!");
+            // Test Playard Owner Teleport Panel & Error Validation
+            console.log("   Testing Playard Owner Teleport Panel & Validation...");
+            const ownerPanelBtnDisplay = await page.$eval('#btn-owner-panel', el => window.getComputedStyle(el).display);
+            console.log("   Owner Panel Button Display (Expected: flex):", ownerPanelBtnDisplay);
+            if (ownerPanelBtnDisplay !== 'flex') throw new Error("Owner Panel button failed to display for Playard Owner!");
+
+            // Open Owner Teleport Modal
+            await page.click('#btn-owner-panel');
+            await new Promise(r => setTimeout(r, 150));
+            const ownerModalDisplay = await page.$eval('#owner-teleport-modal', el => window.getComputedStyle(el).display);
+            console.log("   Owner Teleport Modal Display (Expected: flex):", ownerModalDisplay);
+            if (ownerModalDisplay !== 'flex') throw new Error("Owner Teleport modal failed to open on click!");
+
+            // Test Too Large Number (e.g. 999) -> "Sellist vagunit ei ole"
+            await page.$eval('#owner-teleport-input', el => { el.value = '999'; });
+            await page.click('#btn-owner-teleport-submit');
+            await new Promise(r => setTimeout(r, 150));
+
+            const errorDisplay = await page.$eval('#owner-teleport-error', el => window.getComputedStyle(el).display);
+            const errorText = await page.$eval('#owner-teleport-error', el => el.textContent);
+            const thoughtTextOnInvalid = await page.$eval('#thought-text', el => el.textContent);
+            console.log(`   Invalid Car Error Display: ${errorDisplay}, Error text: "${errorText}", Thought text: "${thoughtTextOnInvalid}"`);
+            if (errorDisplay !== 'block' || !errorText.includes('Sellist vagunit ei ole') || !thoughtTextOnInvalid.includes('Sellist vagunit ei ole')) {
+                throw new Error("Expected 'Sellist vagunit ei ole' error text when entering an invalid/too large carriage number!");
+            }
+
+            // Test Valid Number Teleport (e.g. 77)
+            await page.$eval('#owner-teleport-input', el => { el.value = '77'; });
+            await page.click('#btn-owner-teleport-submit');
+            await new Promise(r => setTimeout(r, 200));
+
+            const ownerModalAfterTp = await page.$eval('#owner-teleport-modal', el => window.getComputedStyle(el).display);
+            const car77Label = await page.$eval('#hud-car-label', el => el.textContent);
+            const thoughtTextOnTp = await page.$eval('#thought-text', el => el.textContent);
+            console.log(`   Owner Modal after valid TP: ${ownerModalAfterTp}, HUD Label: "${car77Label}", Thought text: "${thoughtTextOnTp}"`);
+            if (ownerModalAfterTp !== 'none' || !car77Label.includes('77') || !thoughtTextOnTp.includes('77')) {
+                throw new Error("Owner Teleport failed to load carriage 77 and close modal!");
+            }
+
+            console.log("   Successfully verified LAST METRO Playard Owner Teleport Panel & Error Validation!");
+            console.log("   Successfully verified LAST METRO (3D Mystery Adventure, Carriages 1-100+, Coins, Roblox Hotbar, Golden Shop & Owner Panel)!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
