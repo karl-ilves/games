@@ -2342,10 +2342,7 @@ export class LastMetroGame {
         this.totalCarriagesExplored++;
         if (branch !== 'undecided') this.branchDirection = branch;
 
-        // Reward +2 Coins for every new carriage gangway door crossed!
-        if (index > 0) {
-            this.addCoins(2);
-        }
+        // Coins are now earned only from 3D pickups, not automatic door crossing
 
         // Stop or start Golden Shop calming music on transition
         if (prevIndex === 100 && index !== 100) {

@@ -1519,11 +1519,11 @@ try {
             const initialCoins = await page.evaluate(() => window.__lastMetro.coins);
             console.log("   Initial Coins Balance:", initialCoins);
 
-            // Traverse door: +2 coins
+            // Traverse door: coins no longer added automatically
             await page.evaluate(() => window.__lastMetro.loadCarriage(11, 'right'));
             await new Promise(r => setTimeout(r, 150));
             const coinsAfterDoor = await page.evaluate(() => window.__lastMetro.coins);
-            console.log("   Coins after passing door to Vagun 11 (Expected +2):", coinsAfterDoor);
+            console.log("   Coins after passing door to Vagun 11 (Expected same):", coinsAfterDoor);
             // Test Seating Mechanic (Istu / Tõuse Püsti)
             console.log("   Testing Seating Mechanic (Sit on Bench / Stand Up)...");
             await page.evaluate(() => window.__lastMetro.sitDown());
@@ -1640,7 +1640,7 @@ try {
             const hasNightVision = await page.evaluate(() => !!window.__lastMetro.inventory['night_vision']);
             const coinsAfterPurchase = await page.evaluate(() => window.__lastMetro.coins);
             console.log(`   Purchased Night Vision (Expected: true): ${hasNightVision}, Coins left: ${coinsAfterPurchase}`);
-            if (!hasNightVision || coinsAfterPurchase !== 382) {
+            if (!hasNightVision || coinsAfterPurchase !== 380) {
                 throw new Error("Shop purchase failed to deduct coins or add Night Vision to inventory!");
             }
 
