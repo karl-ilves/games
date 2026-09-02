@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Remove is_admin column if it previously existed
 ALTER TABLE public.profiles DROP COLUMN IF EXISTS is_admin;
 
+-- Add birthday / age columns (run once)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS birth_date date;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS age integer;
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;

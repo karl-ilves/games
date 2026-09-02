@@ -13,6 +13,8 @@ export interface UserProfile {
     ronginäng?: number;
     warmäng?: number;
     war_money?: number;
+    birthDate?: string; // ISO date: "YYYY-MM-DD"
+    age?: number;       // Arvutatud vanus
 }
 
 export const ADMIN_EMAILS = [
@@ -248,6 +250,10 @@ export function updateAuthDisplay(profile: UserProfile | null) {
             emailSpan.innerHTML = `<strong>${profile.displayName}</strong> <span style="font-size: 0.8rem; color: #718093;">(${profile.email})</span>`;
         }
         window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: profile }));
+        // Näita vanust kohe kui profiilil juba on vanus salvestatud
+        _renderAgeInUI(profile);
+        // Kuvame sünnipäeva modali asünkroonselt (ei blokeeri UI-d)
+        setTimeout(() => { showBirthdateModal(profile); }, 200);
     } else {
         if (loginForm) loginForm.style.display = 'block';
         if (userInfo) userInfo.style.display = 'none';
@@ -276,9 +282,142 @@ export function isTestMode(email?: string): boolean {
     return false;
 }
 
+// ── Vanuse arvutamine ──────────────────────────────────────────────────────────
+export function calculateAge(birthDateStr: string): number {
+    const today = new Date();
+    const birth = new Date(birthDateStr);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+// ── Sünnipäeva modal pärast sisselogimist ─────────────────────────────────────
+export async function showBirthdateModal(profile: UserProfile): Promise<void> {
+    // Playard Owner on alati 50-aastane — dialoogi ei kuvata
+    if (isPlayardOwner(profile.email)) {
+        profile.age = 50;
+        profile.birthDate = undefined;
+        saveLocalProfile(profile);
+        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+        _renderAgeInUI(profile);
+        return;
+    }
+
+    // Kui juba on sünnikuupäev salvestatud — lae see, ära kuvata dialoogi
+    if (profile.birthDate) {
+        profile.age = calculateAge(profile.birthDate);
+        saveLocalProfile(profile);
+        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+        _renderAgeInUI(profile);
+        return;
+    }
+
+    // Proovi laadida Supabase'ist
+    if (hasSupabase && !isTestMode(profile.email)) {
+        try {
+            const { data } = await supabase
+                .from('profiles')
+                .select('birth_date, age')
+                .eq('id', profile.id)
+                .single();
+            if (data?.birth_date) {
+                profile.birthDate = data.birth_date;
+                profile.age = calculateAge(data.birth_date);
+                saveLocalProfile(profile);
+                localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                _renderAgeInUI(profile);
+                return;
+            }
+        } catch (e) {}
+    }
+
+    // Kuvame sünnipäeva modali
+    const modal = document.getElementById('birthdate-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    const saveBtn = document.getElementById('btn-save-birthdate');
+    const skipBtn = document.getElementById('btn-skip-birthdate');
+    const yearInput = document.getElementById('birth-year') as HTMLInputElement;
+    const monthInput = document.getElementById('birth-month') as HTMLInputElement;
+    const dayInput = document.getElementById('birth-day') as HTMLInputElement;
+    const bdMsg = document.getElementById('birthdate-message');
+
+    const closeModal = () => { if (modal) modal.style.display = 'none'; };
+
+    const handleSave = async () => {
+        const year = parseInt(yearInput?.value || '0', 10);
+        const month = parseInt(monthInput?.value || '0', 10);
+        const day = parseInt(dayInput?.value || '0', 10);
+
+        const currentYear = new Date().getFullYear();
+        if (!year || !month || !day || year < 1900 || year > currentYear || month < 1 || month > 12 || day < 1 || day > 31) {
+            if (bdMsg) { bdMsg.style.color = '#e74c3c'; bdMsg.textContent = 'Palun sisesta korrektne sünnikuupäev!'; }
+            return;
+        }
+
+        const mm = String(month).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+        const birthDateStr = `${year}-${mm}-${dd}`;
+        const age = calculateAge(birthDateStr);
+
+        if (age < 0 || age > 120) {
+            if (bdMsg) { bdMsg.style.color = '#e74c3c'; bdMsg.textContent = 'Sünnikuupäev ei ole korrektne!'; }
+            return;
+        }
+
+        profile.birthDate = birthDateStr;
+        profile.age = age;
+        saveLocalProfile(profile);
+        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+
+        // Supabase upsert
+        if (hasSupabase && !isTestMode(profile.email)) {
+            try {
+                await supabase.from('profiles').upsert({
+                    id: profile.id,
+                    username: profile.username,
+                    email: profile.email,
+                    display_name: profile.displayName,
+                    birth_date: birthDateStr,
+                    age: age
+                });
+            } catch (e) { console.warn('Supabase birth_date upsert failed:', e); }
+        }
+
+        _renderAgeInUI(profile);
+        closeModal();
+    };
+
+    // Eemalda vanad listener'id
+    const newSaveBtn = saveBtn?.cloneNode(true) as HTMLElement;
+    const newSkipBtn = skipBtn?.cloneNode(true) as HTMLElement;
+    if (saveBtn?.parentNode) saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    if (skipBtn?.parentNode) skipBtn.parentNode.replaceChild(newSkipBtn, skipBtn);
+
+    newSaveBtn?.addEventListener('click', handleSave);
+    newSkipBtn?.addEventListener('click', closeModal);
+}
+
+function _renderAgeInUI(profile: UserProfile) {
+    const ageSpan = document.getElementById('user-age-display');
+    if (!ageSpan) return;
+    if (profile.age !== undefined) {
+        ageSpan.style.display = 'inline';
+        ageSpan.textContent = `🎂 ${profile.age} aastat`;
+    } else {
+        ageSpan.style.display = 'none';
+    }
+}
+
+
 export async function initAuth() {
     const authContainer = document.getElementById('auth-container');
     if (authContainer) authContainer.style.display = 'block';
+
 
     const loginBtn = document.getElementById('btn-login');
     const registerBtn = document.getElementById('btn-register');
@@ -413,6 +552,7 @@ export async function initAuth() {
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
                 updateAuthDisplay(adminProfile);
+                showBirthdateModal(adminProfile);
                 return;
             }
 
