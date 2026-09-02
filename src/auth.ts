@@ -414,7 +414,26 @@ function _renderAgeInUI(profile: UserProfile) {
 }
 
 
+function _getBirthDateFromForm(): { birthDate: string; age: number } | null {
+    const yearEl = document.getElementById('birth-year') as HTMLInputElement | null;
+    const monthEl = document.getElementById('birth-month') as HTMLInputElement | null;
+    const dayEl = document.getElementById('birth-day') as HTMLInputElement | null;
+    const year = parseInt(yearEl?.value || '', 10);
+    const month = parseInt(monthEl?.value || '', 10);
+    const day = parseInt(dayEl?.value || '', 10);
+    if (!year || !month || !day) return null;
+    const currentYear = new Date().getFullYear();
+    if (year < 1900 || year > currentYear || month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const mm = String(month).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    const birthDate = `${year}-${mm}-${dd}`;
+    const age = calculateAge(birthDate);
+    if (age < 0 || age > 120) return null;
+    return { birthDate, age };
+}
+
 export async function initAuth() {
+
     const authContainer = document.getElementById('auth-container');
     if (authContainer) authContainer.style.display = 'block';
 
@@ -425,6 +444,9 @@ export async function initAuth() {
     const emailInput = document.getElementById('auth-email') as HTMLInputElement | null;
     const usernameInput = document.getElementById('auth-username') as HTMLInputElement | null;
     const passwordInput = document.getElementById('auth-password') as HTMLInputElement | null;
+    const birthYearInput = document.getElementById('birth-year') as HTMLInputElement | null;
+    const birthMonthInput = document.getElementById('birth-month') as HTMLInputElement | null;
+    const birthDayInput = document.getElementById('birth-day') as HTMLInputElement | null;
 
     // 1. Check existing session
     const currentProf = getCurrentUserProfile();
@@ -533,13 +555,23 @@ export async function initAuth() {
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(adminProfile));
                 saveLocalProfile(adminProfile);
 
+                // Loe sünnipäev vormist
+                const adminBd = _getBirthDateFromForm();
+                if (adminBd && !isPlayardOwner(email)) {
+                    adminProfile.birthDate = adminBd.birthDate;
+                    adminProfile.age = adminBd.age;
+                    saveLocalProfile(adminProfile);
+                    localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(adminProfile));
+                }
+
                 if (hasSupabase && !isTestMode(email)) {
                     try {
                         await supabase.from('profiles').upsert({
                             id: adminProfile.id,
                             username: adminUsername,
                             email: email,
-                            display_name: adminTitle
+                            display_name: adminTitle,
+                            ...(adminBd && !isPlayardOwner(email) ? { birth_date: adminBd.birthDate, age: adminBd.age } : {})
                         });
                     } catch (e) {}
                 }
@@ -599,6 +631,10 @@ export async function initAuth() {
                         isAdmin: false
                     };
 
+                    // Loe sünnipäev vormist
+                    const loginBd = _getBirthDateFromForm();
+                    if (loginBd) { profile.birthDate = loginBd.birthDate; profile.age = loginBd.age; }
+
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                     saveLocalProfile(profile);
 
@@ -607,7 +643,8 @@ export async function initAuth() {
                             id: profile.id,
                             username: profile.username,
                             email: profile.email,
-                            display_name: profile.displayName
+                            display_name: profile.displayName,
+                            ...(loginBd ? { birth_date: loginBd.birthDate, age: loginBd.age } : {})
                         });
                     } catch (err) {
                         console.warn(err);
@@ -620,8 +657,12 @@ export async function initAuth() {
                     if (emailInput) emailInput.value = '';
                     if (usernameInput) usernameInput.value = '';
                     if (passwordInput) passwordInput.value = '';
+                    if (birthYearInput) birthYearInput.value = '';
+                    if (birthMonthInput) birthMonthInput.value = '';
+                    if (birthDayInput) birthDayInput.value = '';
                     updateAuthDisplay(profile);
                     return;
+
                 }
 
                 if (error) {
@@ -764,6 +805,10 @@ export async function initAuth() {
                     displayName: displayName,
                     isAdmin: isAdmin
                 };
+                // Loe sünnipäev vormist
+                const regBdTest = _getBirthDateFromForm();
+                if (regBdTest && !isPlayardOwner(email)) { profile.birthDate = regBdTest.birthDate; profile.age = regBdTest.age; }
+
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
                 await yardService.onUserLogin(profile.id, profile.username, profile.email);
@@ -773,9 +818,13 @@ export async function initAuth() {
                 if (emailInput) emailInput.value = '';
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
+                if (birthYearInput) birthYearInput.value = '';
+                if (birthMonthInput) birthMonthInput.value = '';
+                if (birthDayInput) birthDayInput.value = '';
                 updateAuthDisplay(profile);
                 return;
             }
+
 
             if (hasSupabase) {
                 try {
@@ -864,6 +913,11 @@ export async function initAuth() {
                     displayName: displayName,
                     isAdmin: isAdmin
                 };
+
+                // Loe sünnipäev vormist
+                const regBd = _getBirthDateFromForm();
+                if (regBd && !isPlayardOwner(email)) { profile.birthDate = regBd.birthDate; profile.age = regBd.age; }
+
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
 
@@ -872,7 +926,8 @@ export async function initAuth() {
                         id: profile.id,
                         username: profile.username,
                         email: profile.email,
-                        display_name: profile.displayName
+                        display_name: profile.displayName,
+                        ...(regBd && !isPlayardOwner(email) ? { birth_date: regBd.birthDate, age: regBd.age } : {})
                     });
                 } catch (err) {
                     console.warn(err);
@@ -885,7 +940,11 @@ export async function initAuth() {
                 if (emailInput) emailInput.value = '';
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
+                if (birthYearInput) birthYearInput.value = '';
+                if (birthMonthInput) birthMonthInput.value = '';
+                if (birthDayInput) birthDayInput.value = '';
                 updateAuthDisplay(profile);
+
             } else {
                 const displayName = isAdmin ? 'Admin✅' : `@${username}`;
                 const profile: UserProfile = {
