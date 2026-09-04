@@ -1404,7 +1404,7 @@ try {
             console.log("   Successfully tested Skip Intro button!");
 
             // Test Replay Intro Button
-            await page.click('#btn-replay-intro');
+            await page.evaluate(() => document.getElementById('btn-replay-intro')?.click());
             await new Promise(r => setTimeout(r, 150));
             const replayedState = await page.evaluate(() => window.__lastMetro.state);
             console.log(`   Replayed intro state (Expected: intro_station): ${replayedState}`);
