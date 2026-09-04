@@ -356,6 +356,8 @@ export class MurderMysteryGame {
 
     public adminForcedRole: Role | null = null;
     private lastHero: Character | null = null;
+    public wallMeshes: THREE.Mesh[] = [];
+    public hasSheriffWitnessedMurder: boolean = false;
 
     constructor() {
         this.container = document.getElementById('canvas-container') || document.body;
@@ -510,6 +512,7 @@ export class MurderMysteryGame {
         this.mansionGroup = new THREE.Group();
         this.mansionGroup.position.set(0, 0, 0);
         this.mapColliders = [];
+        this.wallMeshes = [];
 
         const createWall = (w: number, h: number, d: number, x: number, y: number, z: number, color = 0x241d24, hasCollider = true) => {
             const wallMat = new THREE.MeshStandardMaterial({ color, roughness: 0.65 });
@@ -518,6 +521,7 @@ export class MurderMysteryGame {
             wall.castShadow = true;
             wall.receiveShadow = true;
             this.mansionGroup.add(wall);
+            this.wallMeshes.push(wall);
 
             if (hasCollider) {
                 const box = new THREE.Box3().setFromObject(wall);
@@ -557,6 +561,7 @@ export class MurderMysteryGame {
             gate.position.set(0, 5, gz + dir * 0.4);
             gate.castShadow = true;
             this.mansionGroup.add(gate);
+            this.wallMeshes.push(gate);
             this.mapColliders.push(new THREE.Box3().setFromObject(gate));
 
             // Glowing Lock
@@ -577,6 +582,7 @@ export class MurderMysteryGame {
             pillar.position.set(px, 7, pz);
             pillar.castShadow = true;
             this.mansionGroup.add(pillar);
+            this.wallMeshes.push(pillar);
             this.mapColliders.push(new THREE.Box3().setFromObject(pillar));
         });
 
@@ -593,11 +599,13 @@ export class MurderMysteryGame {
         bs1.position.set(-34, 3.5, -43);
         bs1.castShadow = true;
         this.mansionGroup.add(bs1);
+        this.wallMeshes.push(bs1);
         this.mapColliders.push(new THREE.Box3().setFromObject(bs1));
 
         const libDesk = new THREE.Mesh(new THREE.BoxGeometry(7, 1.6, 3.5), new THREE.MeshStandardMaterial({ color: 0x5a3d28 }));
         libDesk.position.set(-34, 0.8, -32);
         this.mansionGroup.add(libDesk);
+        this.wallMeshes.push(libDesk);
         this.mapColliders.push(new THREE.Box3().setFromObject(libDesk));
 
         // --- Zone 2: Söögisaal & Kamin / Dining & Fireplace Zone (North-East) ---
@@ -609,12 +617,14 @@ export class MurderMysteryGame {
         diningTable.position.set(34, 0.9, -33);
         diningTable.castShadow = true;
         this.mansionGroup.add(diningTable);
+        this.wallMeshes.push(diningTable);
         this.mapColliders.push(new THREE.Box3().setFromObject(diningTable));
 
         // Stone Fireplace with warm fire glow
         const fireplace = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 2.5), new THREE.MeshStandardMaterial({ color: 0x2d2d2d }));
         fireplace.position.set(34, 3, -44);
         this.mansionGroup.add(fireplace);
+        this.wallMeshes.push(fireplace);
         this.mapColliders.push(new THREE.Box3().setFromObject(fireplace));
 
         const fireLight = new THREE.PointLight(0xff6622, 2.2, 22);
@@ -628,6 +638,7 @@ export class MurderMysteryGame {
             armor.position.set(ax, 1.6, -38);
             armor.castShadow = true;
             this.mansionGroup.add(armor);
+            this.wallMeshes.push(armor);
             this.mapColliders.push(new THREE.Box3().setFromObject(armor));
         });
 
@@ -639,12 +650,14 @@ export class MurderMysteryGame {
         const bed = new THREE.Mesh(new THREE.BoxGeometry(8, 2.2, 6.5), new THREE.MeshStandardMaterial({ color: 0x8e1b32 }));
         bed.position.set(-34, 1.1, 34);
         this.mansionGroup.add(bed);
+        this.wallMeshes.push(bed);
         this.mapColliders.push(new THREE.Box3().setFromObject(bed));
 
         // Open Wardrobe Closets
         const wardrobe = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 2.5), new THREE.MeshStandardMaterial({ color: 0x3d271d }));
         wardrobe.position.set(-42, 3, 30);
         this.mansionGroup.add(wardrobe);
+        this.wallMeshes.push(wardrobe);
         this.mapColliders.push(new THREE.Box3().setFromObject(wardrobe));
 
         // --- Zone 5: Köögi Tsoon / Kitchen Zone (South-East) ---
@@ -655,6 +668,7 @@ export class MurderMysteryGame {
         const kitchenIsland = new THREE.Mesh(new THREE.BoxGeometry(10, 1.9, 4), new THREE.MeshStandardMaterial({ color: 0xdcdde1, roughness: 0.2 }));
         kitchenIsland.position.set(34, 0.95, 33);
         this.mansionGroup.add(kitchenIsland);
+        this.wallMeshes.push(kitchenIsland);
         this.mapColliders.push(new THREE.Box3().setFromObject(kitchenIsland));
 
         // --- Zone 6: Salongi & Veinivaatide Tsoon (South Center) ---
@@ -664,6 +678,7 @@ export class MurderMysteryGame {
             barrel.position.set(bx, 1.25, bz);
             barrel.castShadow = true;
             this.mansionGroup.add(barrel);
+            this.wallMeshes.push(barrel);
             this.mapColliders.push(new THREE.Box3().setFromObject(barrel));
         });
 
@@ -915,6 +930,7 @@ export class MurderMysteryGame {
     public startRound() {
         this.state = 'role_reveal';
         this.lastHero = null;
+        this.hasSheriffWitnessedMurder = false;
         if (this.lobbyBanner) this.lobbyBanner.style.display = 'none';
 
         // Reset state for all characters
@@ -1115,23 +1131,50 @@ export class MurderMysteryGame {
         }
     }
 
+    // --- Line of Sight check: Cannot see or shoot through walls ---
+    public hasLineOfSight(from: THREE.Vector3 | { x: number; y: number; z: number }, to: THREE.Vector3 | { x: number; y: number; z: number }): boolean {
+        const origin = new THREE.Vector3(from.x, from.y + 1.8, from.z);
+        const target = new THREE.Vector3(to.x, to.y + 1.8, to.z);
+        const dir = target.clone().sub(origin);
+        const dist = dir.length();
+        if (dist < 0.2) return true;
+        dir.normalize();
+
+        const raycaster = new THREE.Raycaster(origin, dir, 0.2, dist);
+        const hits = raycaster.intersectObjects(this.wallMeshes, false);
+        if (hits.length > 0 && hits[0].distance < dist - 0.4) {
+            return false; // Obstructed by wall!
+        }
+        return true;
+    }
+
     private performSheriffShoot(shooter: Character) {
         audio.playGunshot();
 
-        // Raycast bullet from player
+        // Raycast bullet from player / AI
         const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), shooter.rotation);
         const rayOrigin = shooter.position.clone().add(new THREE.Vector3(0, 1.8, 0));
-        const raycaster = new THREE.Raycaster(rayOrigin, forward, 0.5, 60);
-        if (this.camera) raycaster.camera = this.camera;
+        const raycaster = new THREE.Raycaster(rayOrigin, forward, 0.5, 75);
+        if (this.camera && shooter.isPlayer) raycaster.camera = this.camera;
 
-        const meshes = this.characters.filter(c => c !== shooter && c.isAlive && c.mesh).map(c => c.mesh);
-        if (meshes.length === 0) return;
-        const hits = raycaster.intersectObjects(meshes, true);
+        const charMeshes = this.characters.filter(c => c !== shooter && c.isAlive && c.mesh).map(c => c.mesh);
+        // Include wall meshes so bullets CANNOT pass or hit through walls!
+        const allShootables = [...charMeshes, ...this.wallMeshes];
+        if (allShootables.length === 0) return;
+        const hits = raycaster.intersectObjects(allShootables, true);
 
         if (hits.length > 0 && hits[0]?.object) {
+            const hitObj = hits[0].object;
+            // Check if bullet struck a wall/barrier first
+            const hitWall = this.wallMeshes.some(w => w === hitObj || w === hitObj.parent);
+            if (hitWall) {
+                // Bullet hit a solid wall - cannot penetrate or hit through walls!
+                return;
+            }
+
             let hitTarget: Character | undefined;
             for (const c of this.characters) {
-                if (c.mesh && (c.mesh === hits[0].object.parent || c.mesh === hits[0].object.parent?.parent || c.mesh === hits[0].object)) {
+                if (c.mesh && (c.mesh === hitObj.parent || c.mesh === hitObj.parent?.parent || c.mesh === hitObj)) {
                     hitTarget = c;
                     break;
                 }
@@ -1164,6 +1207,19 @@ export class MurderMysteryGame {
             this.addIncidentFeed(`💀 Said surma! (${cause === 'knife' ? 'Mõrvar tabas sind' : 'Kuulitaba'})`);
         } else if (killer) {
             this.addIncidentFeed(`🔪 ${killer.name} elimineeris mängija ${target.name}!`);
+        }
+
+        // When murderer kills someone with a knife, check if any sheriff witnessed it!
+        if (killer && killer.role === 'murderer') {
+            const sheriff = this.characters.find(c => c.role === 'sheriff' && c.isAlive);
+            if (sheriff) {
+                const dist = sheriff.position.distanceTo(target.position);
+                const seesMurder = this.hasLineOfSight(sheriff.position, target.position) || this.hasLineOfSight(sheriff.position, killer.position);
+                if (seesMurder && dist < 36) {
+                    this.hasSheriffWitnessedMurder = true;
+                    this.addIncidentFeed(`👁️ Šerif nägi mõrva pealt! Mõrvar on paljastatud!`);
+                }
+            }
         }
 
         // If target was sheriff, drop the gun!
@@ -1358,6 +1414,7 @@ export class MurderMysteryGame {
 
         this.playerChar.coins = 0;
         if (this.hudCoinsVal) this.hudCoinsVal.textContent = '0';
+        this.hasSheriffWitnessedMurder = false;
 
         if (this.hudRoleIcon) this.hudRoleIcon.textContent = '⏳';
         if (this.hudRoleText) this.hudRoleText.textContent = 'LOBBY';
@@ -1676,13 +1733,42 @@ export class MurderMysteryGame {
                             if (c.knifeMesh) c.knifeMesh.visible = c.hasWeaponEquipped;
                         }
                     } else if (c.role === 'sheriff') {
-                        // Sheriff AI: Patrol and look for murderer
-                        if (murderer && murderer.hasWeaponEquipped && c.position.distanceTo(murderer.position) < 25) {
-                            c.aiTarget = murderer.position.clone();
-                            c.hasWeaponEquipped = true;
-                            if (c.gunMesh) c.gunMesh.visible = true;
+                        // Sheriff AI: CANNOT shoot murderer right away at round start!
+                        // Only pursues/shoots if sheriff has witnessed murder AND has direct line of sight!
+                        if (murderer && murderer.isAlive) {
+                            const canSee = this.hasLineOfSight(c.position, murderer.position);
+                            const dist = c.position.distanceTo(murderer.position);
+
+                            // Witnessing: if murderer has knife drawn right in front of sheriff without walls blocking
+                            if (canSee && dist < 24 && murderer.hasWeaponEquipped) {
+                                if (!this.hasSheriffWitnessedMurder) {
+                                    this.hasSheriffWitnessedMurder = true;
+                                    this.addIncidentFeed(`👁️ Šerif nägi mõrvarit noaga! Tuli avatud!`);
+                                }
+                            }
+
+                            if (this.hasSheriffWitnessedMurder) {
+                                if (canSee) {
+                                    // Clear sightline (not through walls) - pursue and ready revolver!
+                                    c.aiTarget = murderer.position.clone();
+                                    c.hasWeaponEquipped = true;
+                                    if (c.gunMesh) c.gunMesh.visible = true;
+                                } else {
+                                    // Blocked by wall: cannot see through wall, move towards last position without weapon drawn
+                                    c.aiTarget = murderer.position.clone();
+                                    c.hasWeaponEquipped = false;
+                                    if (c.gunMesh) c.gunMesh.visible = false;
+                                }
+                            } else {
+                                // Has NOT witnessed murder yet: does not know who murderer is, patrols casually like innocent!
+                                c.hasWeaponEquipped = false;
+                                if (c.gunMesh) c.gunMesh.visible = false;
+                                c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 75, 0, (Math.random() - 0.5) * 75);
+                            }
                         } else {
-                            c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 80, 0, (Math.random() - 0.5) * 80);
+                            c.hasWeaponEquipped = false;
+                            if (c.gunMesh) c.gunMesh.visible = false;
+                            c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 75, 0, (Math.random() - 0.5) * 75);
                         }
                     } else {
                         // Innocent AI: Seek dropped gun if active, or flee from murderer, or collect coins
@@ -1717,8 +1803,18 @@ export class MurderMysteryGame {
                 if (this.state === 'in_game') {
                     if (c.role === 'murderer' && dist < 3.2) {
                         this.performMurdererSlash(c);
-                    } else if (c.role === 'sheriff' && murderer && c.position.distanceTo(murderer.position) < 18) {
-                        this.performSheriffShoot(c);
+                    } else if (c.role === 'sheriff' && murderer && murderer.isAlive) {
+                        // AI Sheriff can ONLY shoot if:
+                        // 1. Sheriff has witnessed the murder
+                        // 2. In range (< 20)
+                        // 3. Has direct line of sight (CANNOT shoot through walls!)
+                        if (this.hasSheriffWitnessedMurder) {
+                            const distToMurderer = c.position.distanceTo(murderer.position);
+                            const hasClearLOS = this.hasLineOfSight(c.position, murderer.position);
+                            if (hasClearLOS && distToMurderer < 20) {
+                                this.performSheriffShoot(c);
+                            }
+                        }
                     }
                 }
 

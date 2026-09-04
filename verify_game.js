@@ -2531,6 +2531,30 @@ try {
             console.log(`   MMP1 In-Game Transformed Role (Expected: murderer): ${transformedRole}`);
             if (transformedRole !== 'murderer') throw new Error(`Role should have changed to murderer, got: ${transformedRole}`);
 
+            // Test Line of Sight & Wall Obstruction: cannot see or shoot through walls
+            const losTest = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                if (!game) return { open: false, blocked: false, wallsCount: 0 };
+                // Open sightline across center carpet: (0, 0, -10) to (0, 0, 10)
+                const openSight = game.hasLineOfSight({ x: 0, y: 0, z: -10 }, { x: 0, y: 0, z: 10 });
+                // Blocked sightline through library wall/partition: (-34, 0, -34) to (0, 0, 0)
+                const blockedSight = !game.hasLineOfSight({ x: -34, y: 0, z: -34 }, { x: 34, y: 0, z: 34 });
+                return {
+                    open: openSight,
+                    blocked: blockedSight,
+                    wallsCount: game.wallMeshes?.length || 0,
+                    witnessedInitial: game.hasSheriffWitnessedMurder
+                };
+            });
+            console.log(`   MMP1 Wall Meshes Count: ${losTest.wallsCount}, Open Sight: ${losTest.open}, Wall Blocked Sight: ${losTest.blocked}`);
+            if (losTest.wallsCount === 0) throw new Error('Wall meshes must be tracked for line-of-sight and bullet obstruction!');
+            if (!losTest.open) throw new Error('Open sightline should not be obstructed!');
+            if (!losTest.blocked) throw new Error('Sightline across rooms must be obstructed by walls!');
+
+            // Verify that Sheriff initially has NOT witnessed murder (cannot shoot murderer immediately)
+            console.log(`   Sheriff initially witnessed murder (Expected: false): ${losTest.witnessedInitial}`);
+            if (losTest.witnessedInitial !== false) throw new Error('AI Sheriff must NOT have witnessed murder at round start!');
+
             // Test Weapon toggle & perform action
             await page.evaluate(() => {
                 window.mmp1Game.toggleWeapon();
