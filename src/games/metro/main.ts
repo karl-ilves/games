@@ -2601,25 +2601,84 @@ export class LastMetroGame {
         if (!hotbar) return;
         hotbar.innerHTML = '';
 
-        const itemDefs: { key: string; icon: string; nameEt: string; nameEn: string; slot: number }[] = [
-            { key: 'sword', icon: '⚔️', nameEt: 'Mõõk', nameEn: 'Sword', slot: 1 },
-            { key: 'key', icon: '🗝️', nameEt: 'Võti', nameEn: 'Key', slot: 2 },
-            { key: 'night_vision', icon: '👓', nameEt: 'Ööprillid', nameEn: 'NV Goggles', slot: 3 },
-            { key: 'speed_boost', icon: '👟', nameEt: 'Kiirus', nameEn: 'Speed', slot: 4 },
-            { key: 'clue_detector', icon: '🔍', nameEt: 'Vihjeandur', nameEn: 'Detector', slot: 5 },
-            { key: 'secret_pass', icon: '🎟️', nameEt: 'Salapilet', nameEn: 'Secret Pass', slot: 6 },
-            { key: 'radio', icon: '📻', nameEt: 'Raadio', nameEn: 'Radio', slot: 7 }
+        const isEt = this.lang === 'et';
+        let currentSlot = 1;
+
+        // Slot 1: Sword (⚔️ Mõõk)
+        if (this.inventory['sword']) {
+            const slotNum = currentSlot++;
+            const slotDiv = document.createElement('div');
+            slotDiv.className = `hotbar-slot ${this.equippedItem === 'sword' ? 'equipped' : ''}`;
+            slotDiv.id = 'slot-sword';
+            slotDiv.innerHTML = `
+                <span class="slot-num">${slotNum}</span>
+                <span class="slot-icon">⚔️</span>
+                <span class="slot-name">${isEt ? 'Mõõk' : 'Sword'}</span>
+            `;
+            slotDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleEquipItem('sword');
+            });
+            hotbar.appendChild(slotDiv);
+        }
+
+        // Slot 2: Tuli / Taskulamp (🔦 Tuli / Flashlight) - User requirement: "kaust ja tuli peab olema seal"
+        {
+            const slotNum = currentSlot++;
+            const slotDiv = document.createElement('div');
+            slotDiv.className = `hotbar-slot ${this.flashlightOn ? 'equipped' : ''}`;
+            slotDiv.id = 'slot-flashlight';
+            slotDiv.innerHTML = `
+                <span class="slot-num">${slotNum}</span>
+                <span class="slot-icon">🔦</span>
+                <span class="slot-name">${isEt ? 'Tuli' : 'Light'}</span>
+            `;
+            slotDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleFlashlight();
+            });
+            hotbar.appendChild(slotDiv);
+        }
+
+        // Slot 3: Kaust / Seljakott (📁 Kaust / Folder) - User requirement: "kaust ja tuli peab olema seal"
+        {
+            const slotNum = currentSlot++;
+            const isFolderOpen = document.getElementById('clues-folder-modal')?.style.display === 'flex';
+            const slotDiv = document.createElement('div');
+            slotDiv.className = `hotbar-slot ${isFolderOpen ? 'equipped' : ''}`;
+            slotDiv.id = 'slot-clues_folder';
+            slotDiv.innerHTML = `
+                <span class="slot-num">${slotNum}</span>
+                <span class="slot-icon">📁</span>
+                <span class="slot-name">${isEt ? 'Kaust' : 'Folder'}</span>
+            `;
+            slotDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleCluesFolderModal();
+            });
+            hotbar.appendChild(slotDiv);
+        }
+
+        // Unlockable / Purchasable items in hotbar
+        const itemDefs: { key: string; icon: string; nameEt: string; nameEn: string }[] = [
+            { key: 'key', icon: '🗝️', nameEt: 'Võti', nameEn: 'Key' },
+            { key: 'night_vision', icon: '👓', nameEt: 'Ööprillid', nameEn: 'NV Goggles' },
+            { key: 'speed_boost', icon: '👟', nameEt: 'Kiirus', nameEn: 'Speed' },
+            { key: 'clue_detector', icon: '🔍', nameEt: 'Vihjeandur', nameEn: 'Detector' },
+            { key: 'secret_pass', icon: '🎟️', nameEt: 'Salapilet', nameEn: 'Secret Pass' },
+            { key: 'radio', icon: '📻', nameEt: 'Raadio', nameEn: 'Radio' }
         ];
 
         itemDefs.forEach(def => {
             if (this.inventory[def.key]) {
+                const slotNum = currentSlot++;
                 const slotDiv = document.createElement('div');
                 slotDiv.className = `hotbar-slot ${this.equippedItem === def.key ? 'equipped' : ''}`;
                 slotDiv.id = `slot-${def.key}`;
                 slotDiv.innerHTML = `
-                    <span class="slot-num">${def.slot}</span>
+                    <span class="slot-num">${slotNum}</span>
                     <span class="slot-icon">${def.icon}</span>
-                    <span class="slot-name">${this.lang === 'et' ? def.nameEt : def.nameEn}</span>
+                    <span class="slot-name">${isEt ? def.nameEt : def.nameEn}</span>
                 `;
                 slotDiv.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -3476,7 +3535,7 @@ export class LastMetroGame {
                     this.currentCarriage.inspectableItem = undefined;
                 }
 
-                // Update HUD backpack button counter
+                // Update HUD backpack button counter & hotbar
                 const countBadge = document.getElementById('backpack-btn-text');
                 if (countBadge) countBadge.innerText = `Kaust (${this.collectedClues.length})`;
 
@@ -3491,6 +3550,7 @@ export class LastMetroGame {
             this.state = 'player_free';
             // Return to normal in-game state & re-lock cursor seamlessly
             this.updateCursorState();
+            this.updateHotbarUI();
         }, 320);
     }
 
@@ -3534,6 +3594,7 @@ export class LastMetroGame {
 
         if (modal) modal.style.display = 'flex';
         this.updateCursorState();
+        this.updateHotbarUI();
     }
 
     public closeCluesFolderModal() {
@@ -3541,6 +3602,7 @@ export class LastMetroGame {
         if (modal) modal.style.display = 'none';
         this.state = 'player_free';
         this.updateCursorState();
+        this.updateHotbarUI();
     }
 
     public toggleCluesFolderModal() {
@@ -6395,14 +6457,16 @@ this.state = 'player_free';
                 this.checkInteractions();
             }
 
-            // Hotbar quick slot keys (1-7)
-            if (e.code === 'Digit1' && this.inventory['sword']) this.toggleEquipItem('sword');
-            if (e.code === 'Digit2' && this.inventory['key']) this.toggleEquipItem('key');
-            if (e.code === 'Digit3' && this.inventory['night_vision']) this.toggleEquipItem('night_vision');
-            if (e.code === 'Digit4' && this.inventory['speed_boost']) this.toggleEquipItem('speed_boost');
-            if (e.code === 'Digit5' && this.inventory['clue_detector']) this.toggleEquipItem('clue_detector');
-            if (e.code === 'Digit6' && this.inventory['secret_pass']) this.toggleEquipItem('secret_pass');
-            if (e.code === 'Digit7' && this.inventory['radio']) this.toggleEquipItem('radio');
+            // Hotbar quick slot keys (1-9)
+            if (e.code === 'Digit1') this.toggleEquipItem('sword');
+            if (e.code === 'Digit2') this.toggleFlashlight();
+            if (e.code === 'Digit3') this.toggleCluesFolderModal();
+            if (e.code === 'Digit4' && this.inventory['key']) this.toggleEquipItem('key');
+            if (e.code === 'Digit5' && this.inventory['night_vision']) this.toggleEquipItem('night_vision');
+            if (e.code === 'Digit6' && this.inventory['speed_boost']) this.toggleEquipItem('speed_boost');
+            if (e.code === 'Digit7' && this.inventory['clue_detector']) this.toggleEquipItem('clue_detector');
+            if (e.code === 'Digit8' && this.inventory['secret_pass']) this.toggleEquipItem('secret_pass');
+            if (e.code === 'Digit9' && this.inventory['radio']) this.toggleEquipItem('radio');
 
             // Backpack / Clues Folder shortcut (KeyB or KeyJ)
             if (e.code === 'KeyB' || e.code === 'KeyJ') {
@@ -6695,6 +6759,7 @@ this.state = 'player_free';
             this.flashlight.intensity = this.flashlightOn ? 2.5 : 0;
         }
         metroAudio.playFlashlightClick();
+        this.updateHotbarUI();
     }
 
     public checkInteractions() {

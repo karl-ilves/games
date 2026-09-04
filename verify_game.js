@@ -1664,6 +1664,20 @@ try {
             console.log(`   Unequipped item (Expected: null): ${unequippedItem}`);
             if (unequippedItem !== null) throw new Error("Clicking equipped hotbar slot failed to unequip item!");
 
+            // Test Hotbar Slot 2 (Tuli / Flashlight) and Slot 3 (Kaust / Folder)
+            const slotFlashlight = await page.$('#slot-flashlight');
+            const slotFolder = await page.$('#slot-clues_folder');
+            if (!slotFlashlight || !slotFolder) throw new Error("Hotbar must contain #slot-flashlight (Tuli) and #slot-clues_folder (Kaust)!");
+            console.log("   Hotbar contains #slot-sword, #slot-flashlight (Tuli), and #slot-clues_folder (Kaust): ✅");
+
+            // Test clicking hotbar slot 2 toggles flashlight
+            const initialFlashlight = await page.evaluate(() => window.__lastMetro.flashlightOn);
+            await page.evaluate(() => document.getElementById('slot-flashlight')?.click());
+            await new Promise(r => setTimeout(r, 60));
+            const toggledFlashlight = await page.evaluate(() => window.__lastMetro.flashlightOn);
+            if (toggledFlashlight === initialFlashlight) throw new Error("Clicking #slot-flashlight in hotbar must toggle flashlight!");
+            console.log("   Hotbar #slot-flashlight toggles flashlight: ✅");
+
             // Test Carriage 100 — Kuldne Pood (Golden Shop) Checkpoint
             console.log("   Testing Carriage 100 — Golden Shop Checkpoint & Modal...");
             await page.evaluate(() => {
