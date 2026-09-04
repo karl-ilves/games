@@ -355,6 +355,7 @@ export class MurderMysteryGame {
     private btnAdminPanel: HTMLElement | null = null;
 
     public adminForcedRole: Role | null = null;
+    private lastHero: Character | null = null;
 
     constructor() {
         this.container = document.getElementById('canvas-container') || document.body;
@@ -913,6 +914,7 @@ export class MurderMysteryGame {
     // --- Start Round: Assign Roles & Teleport into Mansion ---
     public startRound() {
         this.state = 'role_reveal';
+        this.lastHero = null;
         if (this.lobbyBanner) this.lobbyBanner.style.display = 'none';
 
         // Reset state for all characters
@@ -1137,9 +1139,10 @@ export class MurderMysteryGame {
 
             if (hitTarget) {
                 if (hitTarget.role === 'murderer') {
-                    // Sheriff shot murderer -> VICTORY!
+                    // Sheriff shot murderer -> VICTORY for Sheriff & Innocents!
+                    this.lastHero = shooter;
                     this.eliminateCharacter(hitTarget, shooter, 'gun');
-                    this.endRound('sheriff_win', `${shooter.name} laskis mõrvari maha!`);
+                    this.endRound('sheriff_win', `${shooter.name} laskis mõrvari maha! Süütud ja šerif võitsid!`);
                 } else {
                     // Sheriff made a mistake and shot an innocent -> Sheriff falls and drops gun!
                     this.eliminateCharacter(hitTarget, shooter, 'gun_mistake');
@@ -1183,21 +1186,20 @@ export class MurderMysteryGame {
         // Shiny golden gun mesh
         const gunGeo = new THREE.BoxGeometry(0.3, 0.4, 1.2);
         const gunMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.9, roughness: 0.1, emissive: 0x665500 });
-        const gun = new THREE.Mesh(gunGeo, gunMat);
-        gun.position.y = 0.5;
-        gunGroup.add(gun);
+        const gunMesh = new THREE.Mesh(gunGeo, gunMat);
+        gunMesh.position.set(0, 0.6, 0);
+        gunGroup.add(gunMesh);
 
-        // Golden vertical light beam
-        const beamGeo = new THREE.CylinderGeometry(0.3, 0.8, 15, 16);
-        const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd32a, transparent: true, opacity: 0.4 });
-        const beam = new THREE.Mesh(beamGeo, beamMat);
-        beam.position.y = 7.5;
-        gunGroup.add(beam);
+        // Light pillar beacon above dropped gun
+        const beaconGeo = new THREE.CylinderGeometry(0.15, 0.15, 12, 12);
+        const beaconMat = new THREE.MeshBasicMaterial({ color: 0xffd32a, transparent: true, opacity: 0.5 });
+        const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+        beacon.position.set(0, 6, 0);
+        gunGroup.add(beacon);
 
-        // Golden point light
-        const light = new THREE.PointLight(0xffd32a, 2, 10);
-        light.position.y = 1;
-        gunGroup.add(light);
+        const pointLight = new THREE.PointLight(0xffd32a, 2.0, 15);
+        pointLight.position.set(0, 2, 0);
+        gunGroup.add(pointLight);
 
         gunGroup.position.copy(pos);
         this.scene.add(gunGroup);
@@ -1209,12 +1211,12 @@ export class MurderMysteryGame {
         };
 
         if (this.gunDroppedBanner) this.gunDroppedBanner.style.display = 'flex';
-        this.addIncidentFeed(`⭐ Šerifi kuldne relv on maas! Süütud saavad selle võtta!`);
+        this.addIncidentFeed(`⚠️ Relv on maas! Süütud saavad selle [E] klahviga üles korjata!`);
     }
 
     public pickUpDroppedGun(char: Character) {
-        if (!this.droppedGun || !this.droppedGun.active || !char.isAlive) return;
-        
+        if (!this.droppedGun || !this.droppedGun.active) return;
+
         this.droppedGun.active = false;
         this.scene.remove(this.droppedGun.mesh);
         this.droppedGun = null;
@@ -1241,13 +1243,17 @@ export class MurderMysteryGame {
         if (this.state !== 'in_game') return;
 
         const murderer = this.characters.find(c => c.role === 'murderer');
-        const innocents = this.characters.filter(c => c.role !== 'murderer');
-        const aliveInnocents = innocents.filter(c => c.isAlive);
+        const innocentsAndSheriff = this.characters.filter(c => c.role !== 'murderer');
+        const aliveInnocentsAndSheriff = innocentsAndSheriff.filter(c => c.isAlive);
 
         if (murderer && !murderer.isAlive) {
-            this.endRound('sheriff_win', 'Mõrvar on elimineeritud! Süütud võitsid!');
-        } else if (aliveInnocents.length === 0) {
-            this.endRound('murderer_win', 'Mõrvar elimineeris kõik mängijad!');
+            // Sheriff shot Murderer -> Sheriff and Innocents win!
+            const hero = this.lastHero || this.characters.find(c => c.role === 'sheriff' && c.isAlive) || this.playerChar;
+            const heroName = hero ? hero.name : 'Šerif';
+            this.endRound('sheriff_win', `${heroName} laskis mõrvari maha! Süütud ja šerif võitsid!`);
+        } else if (aliveInnocentsAndSheriff.length === 0) {
+            // Murderer eliminated all innocents and sheriff -> Murderer wins!
+            this.endRound('murderer_win', 'Mõrvar kõrvaldas kõik süütud ja šerifi! Mõrvar võitis!');
         }
     }
 
@@ -1267,20 +1273,21 @@ export class MurderMysteryGame {
         const trophy = document.getElementById('end-trophy-icon');
 
         const murderer = this.characters.find(c => c.role === 'murderer');
-        const sheriff = this.characters.find(c => c.role === 'sheriff');
+        const hero = this.lastHero || this.characters.find(c => c.role === 'sheriff');
 
         if (endMurderer && murderer) endMurderer.textContent = murderer.name;
-        if (endHero && sheriff) endHero.textContent = sheriff.name;
+        if (endHero && hero) endHero.textContent = hero.name;
         if (endReason) endReason.textContent = reason;
 
         let rewardYards = 20; // base reward
         if (winner === 'sheriff_win') {
             if (endTitle) {
-                endTitle.textContent = 'SÜÜTUD VÕITSID! 🏆';
+                endTitle.textContent = 'SÜÜTUD JA ŠERIF VÕITSID! 🏆';
                 endTitle.style.color = '#00f2fe';
             }
             if (trophy) trophy.textContent = '🛡️';
             rewardYards = (this.playerChar.role !== 'murderer' && this.playerChar.isAlive) ? 100 : 40;
+            if (this.lastHero === this.playerChar) rewardYards = 150;
         } else if (winner === 'murderer_win') {
             if (endTitle) {
                 endTitle.textContent = 'MÕRVAR VÕITIS! 🔪';
@@ -1290,7 +1297,7 @@ export class MurderMysteryGame {
             rewardYards = (this.playerChar.role === 'murderer') ? 150 : 20;
         } else {
             if (endTitle) {
-                endTitle.textContent = 'AEG LÕPPES - SÜÜTUD VÕITSID! ⏱️';
+                endTitle.textContent = 'AEG LÕPPES - SÜÜTUD JA ŠERIF VÕITSID! ⏱️';
                 endTitle.style.color = '#2ecc71';
             }
             if (trophy) trophy.textContent = '🏆';

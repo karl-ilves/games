@@ -636,6 +636,7 @@ export class LastMetroGame {
     public kuuljaSpeed: number = 0;
     public kuuljaTargetPos: THREE.Vector3 = new THREE.Vector3();
     public stationStairsGroup: THREE.Group | null = null;
+    public carriage200CutsceneTimers: any[] = [];
 
     // ── Vagunid 201–250 Kanalisatsioon (Sewers) ────────────────────────────
     public sewerWaterSubmerged: boolean = false;
@@ -3896,7 +3897,11 @@ export class LastMetroGame {
         // Vagun 200 Music Track & Time Villain immunity
         if (prevIndex === 200 && index !== 200) {
             metroAudio.stopCarriage200Music();
+            this.carriage200CutsceneTimers.forEach(t => { clearInterval(t); clearTimeout(t); });
+            this.carriage200CutsceneTimers = [];
         } else if (index === 200) {
+            this.carriage200CutsceneTimers.forEach(t => { clearInterval(t); clearTimeout(t); });
+            this.carriage200CutsceneTimers = [];
             metroAudio.playCarriage200Music();
             this.deactivateTimeVillain();
         }
@@ -5396,33 +5401,19 @@ export class LastMetroGame {
             box.position.set(0, 0, 0.12);
             swGroup.add(box);
 
-            // 3. Glowing LED Indicator Dome (Red = Off, Green = On)
+            // 3. Glowing LED Indicator Dome on box (Red = Off, Green = On)
             const indicatorMat = new THREE.MeshBasicMaterial({ color: 0xff2222 });
-            const indicatorDome = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), indicatorMat);
-            indicatorDome.position.set(0, 0.48, 0.15);
+            const indicatorDome = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), indicatorMat);
+            indicatorDome.position.set(0, 0.20, 0.25);
             indicatorDome.name = 'switch_indicator_dome';
             swGroup.add(indicatorDome);
 
-            // 4. Bright Point Light for switch visibility
-            const light = new THREE.PointLight(0xff3333, 2.8, 8.0);
-            light.position.set(0, 0.48, 0.25);
+            // 4. Subtle Point Light for indicator glow
+            const light = new THREE.PointLight(0xff2222, 1.4, 3.5);
+            light.position.set(0, 0.20, 0.28);
             swGroup.add(light);
 
-            // 5. High-visibility glowing beam / light column above switch
-            const beamMat = new THREE.MeshBasicMaterial({ color: 0xff3838, transparent: true, opacity: 0.65 });
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.5, 8), beamMat);
-            beam.position.set(0, 1.8, 0.15);
-            beam.name = 'switch_beacon_beam';
-            swGroup.add(beam);
-
-            // 6. Pull-down Lever
-            const leverMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, roughness: 0.3, metalness: 0.7 });
-            const leverArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.32, 0.08), leverMat);
-            leverArm.position.set(0, 0.06, 0.26);
-            leverArm.name = 'switch_lever';
-            swGroup.add(leverArm);
-
-            // 7. Billboard text label above switch
+            // 5. Nameplate label mounted directly on control box
             const labelCanvas = document.createElement('canvas');
             labelCanvas.width = 256;
             labelCanvas.height = 128;
@@ -5434,17 +5425,24 @@ export class LastMetroGame {
                 lctx.lineWidth = 6;
                 lctx.strokeRect(6, 6, 244, 116);
                 lctx.fillStyle = '#ffd32a';
-                lctx.font = 'bold 34px monospace';
+                lctx.font = 'bold 36px monospace';
                 lctx.textAlign = 'center';
                 lctx.fillText(`⚡ LÜLITI ${item.label}`, 128, 75);
             }
             const labelTex = new THREE.CanvasTexture(labelCanvas);
             const labelMesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(0.9, 0.45),
-                new THREE.MeshBasicMaterial({ map: labelTex, transparent: true })
+                new THREE.PlaneGeometry(0.42, 0.16),
+                new THREE.MeshBasicMaterial({ map: labelTex })
             );
-            labelMesh.position.set(0, 0.9, 0.18);
+            labelMesh.position.set(0, 0.02, 0.25);
             swGroup.add(labelMesh);
+
+            // 6. Pull-down Lever on lower part of box
+            const leverMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, roughness: 0.3, metalness: 0.7 });
+            const leverArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.08), leverMat);
+            leverArm.position.set(0, -0.20, 0.26);
+            leverArm.name = 'switch_lever';
+            swGroup.add(leverArm);
 
             swGroup.position.copy(item.pos);
             this.scene.add(swGroup);
@@ -5524,15 +5522,12 @@ export class LastMetroGame {
         sw.activated = true;
         this.kuuljaSwitchesActivated++;
 
-        // Visual change to green for dome, beacon beam, and lever pull
+        // Visual change to green for dome, indicator light, and lever pull
         const pointLight = sw.mesh.children.find(c => c instanceof THREE.PointLight) as THREE.PointLight;
         if (pointLight) pointLight.color.setHex(0x2ed573);
 
         const dome = sw.mesh.getObjectByName('switch_indicator_dome') as THREE.Mesh;
         if (dome) (dome.material as THREE.MeshBasicMaterial).color.setHex(0x2ed573);
-
-        const beam = sw.mesh.getObjectByName('switch_beacon_beam') as THREE.Mesh;
-        if (beam) (beam.material as THREE.MeshBasicMaterial).color.setHex(0x2ed573);
 
         const lever = sw.mesh.getObjectByName('switch_lever');
         if (lever) lever.rotation.x = 0.6;
@@ -5563,8 +5558,8 @@ export class LastMetroGame {
     private _finishCarriage200Boss() {
         this.state = 'cutscene_carriage200' as any;
         this.showThought(
-            '🌟 KÕIK 3 LÜLITIT ON SEES! Tuled süttivad ja väljapääsu uks avaneb päikesevalguse kätte!',
-            '🌟 ALL 3 SWITCHES ACTIVATED! Station blast door opens to bright daylight!'
+            '🌟 KÕIK 3 LÜLITIT ON SEES! Tuled süttivad ja väljapääsu uks hakkab avanema!',
+            '🌟 ALL 3 SWITCHES ACTIVATED! Station lights turn on and blast exit door begins opening!'
         );
 
         // Power up all station lights
@@ -5572,89 +5567,130 @@ export class LastMetroGame {
             this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 1.8; });
         }
 
-        // Open Blast Exit Door & create glowing sunlight
+        // Blast Exit Door & glowing sunlight
         const blastDoor = this.currentCarriage?.group.getObjectByName('station_200_blast_door');
-        if (blastDoor) {
-            blastDoor.position.x += 2.6; // slide door open
-            const sunLight = new THREE.PointLight(0xfffae0, 6.0, 40);
-            sunLight.position.set(6.0, 2.5, 16.0);
-            this.scene.add(sunLight);
-        }
+        const sunLight = new THREE.PointLight(0xfff4d0, 0.1, 45);
+        sunLight.position.set(6.0, 2.5, 16.0);
+        this.scene.add(sunLight);
 
-        // Step 1: Player automatically sprints up towards the stairs (2.0s)
-        const startPos = this.playerPos.clone();
-        const midStairsPos = new THREE.Vector3(6.0, 2.0, 12.2);
-        const startTime = performance.now();
-        const runDuration = 2200;
+        // Sound of heavy sliding blast door
+        metroAudio.playDoorSlide(true);
 
-        const runInterval = setInterval(() => {
-            const elapsed = performance.now() - startTime;
-            const t = Math.min(1, elapsed / runDuration);
-            const easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-            this.playerPos.lerpVectors(startPos, midStairsPos, easeT);
-            this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, 0, 0.1);
-            this.cameraEuler.x = THREE.MathUtils.lerp(this.cameraEuler.x, 0.25, 0.1);
+        const doorTarget = new THREE.Vector3(6.0, 2.4, 15.05);
+        const initialDoorX = blastDoor ? blastDoor.position.x : 6.0;
+        const targetDoorX = initialDoorX + 2.8;
+        const doorDuration = 1400;
+        const doorStartTime = performance.now();
 
-            if (Math.floor(elapsed / 250) % 2 === 0) {
-                metroAudio.playFootstep();
+        // Step 1: Door smoothly slides open while camera turns to watch the exit (1.4s)
+        const doorInterval = setInterval(() => {
+            const elapsed = performance.now() - doorStartTime;
+            const t = Math.min(1, elapsed / doorDuration);
+            const easeT = t * (2 - t);
+
+            if (blastDoor) {
+                blastDoor.position.x = THREE.MathUtils.lerp(initialDoorX, targetDoorX, easeT);
             }
+            sunLight.intensity = THREE.MathUtils.lerp(0.1, 8.0, easeT);
+
+            // Turn camera towards blast door
+            const toDoor = doorTarget.clone().sub(this.playerPos);
+            const targetYaw = Math.atan2(-toDoor.x, -toDoor.z);
+            this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, targetYaw, 0.08);
+            this.cameraEuler.x = THREE.MathUtils.lerp(this.cameraEuler.x, -0.06, 0.08);
 
             if (t >= 1) {
-                clearInterval(runInterval);
-
-                // Step 2: Mid-stairs, Kuulja / Pahalane suddenly leaps down in front of player and smashes stairs!
-                if (this.kuuljaBossGroup) {
-                    this.kuuljaBossGroup.position.set(6.0, 2.4, 13.8);
-                    this.kuuljaBossGroup.lookAt(this.playerPos.x, 2.4, this.playerPos.z);
-                }
-
+                clearInterval(doorInterval);
                 this.showThought(
-                    '😱 Kuulja hüppab ette ja purustab trepi! Trepp variseb kokku ja sa kukud sügavasse kanalisatsiooni!',
-                    '😱 The Listener leaps in front and smashes the stairs! The staircase crumbles and you plummet into the sewers!'
+                    '🏃 Väljapääs on avatud! Jookse trepist üles päikesevalguse kätte!',
+                    '🏃 Exit is open! Sprint up the stairs into daylight!'
                 );
-                metroAudio.playShadowRushScreech();
 
-                // Break and collapse stairs
-                if (this.stationStairsGroup) {
-                    this.stationStairsGroup.children.forEach((step, sIdx) => {
-                        step.rotation.x = 0.4 + sIdx * 0.1;
-                        step.rotation.z = (sIdx % 2 === 0 ? 0.3 : -0.3);
-                        step.position.y -= 1.8;
-                    });
-                }
+                // Step 2: Player automatically sprints up towards the stairs (2.2s)
+                const startPos = this.playerPos.clone();
+                const midStairsPos = new THREE.Vector3(6.0, 1.9, 12.6);
+                const runStartTime = performance.now();
+                const runDuration = 2200;
 
-                // Step 3: Dramatic screen shake and rapid vertical fall
-                const fallStartTime = performance.now();
-                const fallInterval = setInterval(() => {
-                    const fallElapsed = performance.now() - fallStartTime;
-                    this.cameraEuler.x += (Math.random() - 0.5) * 0.18;
-                    this.cameraEuler.z = (Math.random() - 0.5) * 0.25;
-                    this.playerPos.y -= 0.65; // plunge downward
+                const runInterval = setInterval(() => {
+                    const runElapsed = performance.now() - runStartTime;
+                    const rt = Math.min(1, runElapsed / runDuration);
+                    const runEase = rt < 0.5 ? 2 * rt * rt : -1 + (4 - 2 * rt) * rt;
+                    this.playerPos.lerpVectors(startPos, midStairsPos, runEase);
 
-                    if (fallElapsed > 1800) {
-                        clearInterval(fallInterval);
-                        this.cameraEuler.z = 0;
+                    // Camera focuses straight ahead on the open daylight door
+                    const toDoorRun = doorTarget.clone().sub(this.playerPos);
+                    const runYaw = Math.atan2(-toDoorRun.x, -toDoorRun.z);
+                    this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, runYaw, 0.12);
+                    this.cameraEuler.x = THREE.MathUtils.lerp(this.cameraEuler.x, -0.12, 0.1);
 
-                        // Falling countdown through mystery levels
-                        let count = 0;
-                        const levels = [199, 150, 100, 50, 10, '002'];
-                        const levelInterval = setInterval(() => {
-                            if (count < levels.length) {
-                                this.showThought(`Kukkumine läbi tasemete... TASE ${levels[count]}`, `Plummeting through levels... LEVEL ${levels[count]}`);
-                                count++;
-                            } else {
-                                clearInterval(levelInterval);
-                                metroAudio.stopCarriage200Music();
-                                this.showThought('🌊 KUKKUSID KANALISATSIOONI (VAGUN 201)!', '🌊 FELL INTO THE SEWERS (CARRIAGE 201)!');
-                                setTimeout(() => {
-                                    this.loadCarriage(201, 'right');
-                                }, 1800);
-                            }
-                        }, 600);
+                    if (Math.floor(runElapsed / 220) % 2 === 0) {
+                        metroAudio.playFootstep();
                     }
-                }, 40);
+
+                    if (rt >= 1) {
+                        clearInterval(runInterval);
+
+                        // Step 3: Mid-stairs, Kuulja suddenly leaps down in front of player and smashes stairs!
+                        if (this.kuuljaBossGroup) {
+                            this.kuuljaBossGroup.position.set(6.0, 2.3, 14.0);
+                            this.kuuljaBossGroup.lookAt(this.playerPos.x, 2.3, this.playerPos.z);
+                        }
+
+                        this.showThought(
+                            '😱 Kuulja hüppab ette ja purustab trepi! Trepp variseb kokku ja sa kukud kanalisatsiooni!',
+                            '😱 The Listener leaps in front and smashes the stairs! The stairs collapse and you plummet into the sewers!'
+                        );
+                        metroAudio.playShadowRushScreech();
+
+                        // Break and collapse stairs
+                        if (this.stationStairsGroup) {
+                            this.stationStairsGroup.children.forEach((step, sIdx) => {
+                                step.rotation.x = 0.45 + sIdx * 0.12;
+                                step.rotation.z = (sIdx % 2 === 0 ? 0.35 : -0.35);
+                                step.position.y -= 2.0;
+                            });
+                        }
+
+                        // Step 4: Violent screen shake and rapid vertical fall
+                        const fallStartTime = performance.now();
+                        const fallInterval = setInterval(() => {
+                            const fallElapsed = performance.now() - fallStartTime;
+                            this.cameraEuler.x += (Math.random() - 0.5) * 0.22;
+                            this.cameraEuler.z = (Math.random() - 0.5) * 0.3;
+                            this.playerPos.y -= 0.65; // plunge downward
+
+                            if (fallElapsed > 1800) {
+                                clearInterval(fallInterval);
+                                this.cameraEuler.z = 0;
+
+                                // Falling countdown through mystery levels
+                                let count = 0;
+                                const levels = [199, 150, 100, 50, 10, '002'];
+                                const levelInterval = setInterval(() => {
+                                    if (count < levels.length) {
+                                        this.showThought(`Kukkumine läbi tasemete... TASE ${levels[count]}`, `Plummeting through levels... LEVEL ${levels[count]}`);
+                                        count++;
+                                    } else {
+                                        clearInterval(levelInterval);
+                                        metroAudio.stopCarriage200Music();
+                                        this.showThought('🌊 KUKKUSID KANALISATSIOONI (VAGUN 201)!', '🌊 FELL INTO THE SEWERS (CARRIAGE 201)!');
+                                        const endTimeout = setTimeout(() => {
+                                            this.loadCarriage(201, 'right');
+                                        }, 1800);
+                                        this.carriage200CutsceneTimers.push(endTimeout);
+                                    }
+                                }, 500);
+                                this.carriage200CutsceneTimers.push(levelInterval);
+                            }
+                        }, 40);
+                        this.carriage200CutsceneTimers.push(fallInterval);
+                    }
+                }, 30);
+                this.carriage200CutsceneTimers.push(runInterval);
             }
         }, 30);
+        this.carriage200CutsceneTimers.push(doorInterval);
     }
 
     // ── Kanalisatsiooni Sündmused (Vagunid 201–250) ──────────────────────────
@@ -6987,13 +7023,13 @@ this.state = 'player_free';
                 if (sw.activated) continue;
                 const toSw = sw.mesh.position.clone().sub(playerHeadPos);
                 const dist = toSw.length();
-                if (dist < 4.0) {
+                if (dist < 4.5) {
                     const toSwDir = toSw.clone().normalize();
                     const dot = camDir.dot(toSwDir);
-                    if (dot > 0.65) {
+                    if (dot > 0.45 || (dist < 2.5 && dot > 0.15)) {
                         foundAim = 'switch';
                         this.aimedSwitchIndex = i;
-                        text = isEt ? `⚡ Aktiveeri lüliti ${i + 1}/3` : `⚡ Activate Switch ${i + 1}/3`;
+                        text = isEt ? `⚡ Aktiveeri lüliti ${i + 1}/3 [E]` : `⚡ Activate Switch ${i + 1}/3 [E]`;
                         break;
                     }
                 }
@@ -7032,12 +7068,30 @@ this.state = 'player_free';
             return;
         }
 
-        if (this.aimedInteractable === 'switch') {
-            if (this.aimedSwitchIndex >= 0 && this.aimedSwitchIndex < this.kuuljaSwitches.length) {
-                this.activateKuuljaSwitch(this.aimedSwitchIndex);
-                this.aimedSwitchIndex = -1;
+        if (this.aimedInteractable === 'switch' || (this.currentCarIndex === 200 && this.kuuljaSwitches.length > 0)) {
+            let targetIdx = this.aimedSwitchIndex;
+            if (targetIdx < 0 || targetIdx >= this.kuuljaSwitches.length || this.kuuljaSwitches[targetIdx].activated) {
+                // Find closest unactivated switch within reach (3.5m)
+                let closestDist = 3.5;
+                let closestIdx = -1;
+                for (let i = 0; i < this.kuuljaSwitches.length; i++) {
+                    if (!this.kuuljaSwitches[i].activated) {
+                        const d = this.kuuljaSwitches[i].mesh.position.distanceTo(this.playerPos);
+                        if (d < closestDist) {
+                            closestDist = d;
+                            closestIdx = i;
+                        }
+                    }
+                }
+                targetIdx = closestIdx;
             }
-            return;
+
+            if (targetIdx >= 0 && targetIdx < this.kuuljaSwitches.length && !this.kuuljaSwitches[targetIdx].activated) {
+                this.activateKuuljaSwitch(targetIdx);
+                this.aimedSwitchIndex = -1;
+                return;
+            }
+            if (this.aimedInteractable === 'switch') return;
         }
 
         if (this.aimedInteractable === 'inspectable') {

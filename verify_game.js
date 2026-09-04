@@ -2255,6 +2255,15 @@ try {
                 throw new Error(`Player should be allowed to walk onto the station platform at x = 4.5, but got: ${playerXOnPlatform}`);
             }
 
+            // Verify weird glowing beam is removed from switch meshes
+            const hasBeaconBeam = await page.evaluate(() => {
+                return window.__lastMetro.kuuljaSwitches.some(s => !!s.mesh.getObjectByName('switch_beacon_beam'));
+            });
+            console.log(`   Carriage 200 Switch Glowing Beacon Beam Present (Expected: false): ${hasBeaconBeam}`);
+            if (hasBeaconBeam) {
+                throw new Error("Glowing beacon beam above switches should be removed!");
+            }
+
             // Test activating the 3 switches
             await page.evaluate(() => {
                 window.__lastMetro.activateKuuljaSwitch(0);
@@ -2262,9 +2271,10 @@ try {
                 window.__lastMetro.activateKuuljaSwitch(2);
             });
             const switchesActivated = await page.evaluate(() => window.__lastMetro.kuuljaSwitchesActivated);
-            console.log(`   Switches activated in Carriage 200 (Expected: 3): ${switchesActivated}`);
-            if (switchesActivated !== 3) {
-                throw new Error(`Expected all 3 switches to be activated, got: ${switchesActivated}`);
+            const cutsceneActive = await page.evaluate(() => window.__lastMetro.state === 'cutscene_carriage200');
+            console.log(`   Switches activated in Carriage 200 (Expected: 3): ${switchesActivated}, Cutscene Active: ${cutsceneActive}`);
+            if (switchesActivated !== 3 || !cutsceneActive) {
+                throw new Error(`Expected all 3 switches to be activated and cutscene triggered, got switches: ${switchesActivated}, cutscene: ${cutsceneActive}`);
             }
 
             const volumeMultiplier = await page.evaluate(() => window.__metroAudio?.carriage200VolumeMultiplier);
