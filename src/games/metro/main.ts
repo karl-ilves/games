@@ -107,6 +107,375 @@ export const GOLDEN_SHOP_ITEMS: ShopItem[] = [
     }
 ];
 
+export interface ClueItem {
+    id: string;
+    carIndex: number;
+    type: 'ticket' | 'photo' | 'document' | 'map' | 'plate' | 'list' | 'watch' | 'note' | 'item';
+    icon: string;
+    titleEt: string;
+    titleEn: string;
+    textEt: string;
+    textEn: string;
+    placement?: 'seat' | 'floor' | 'table' | 'wall' | 'door';
+    collected?: boolean;
+}
+
+export const CLUES_DATABASE: ClueItem[] = [
+    {
+        id: 'clue_101',
+        carIndex: 101,
+        type: 'ticket',
+        icon: '🎫',
+        titleEt: 'Vana Pilet (Vagun 101)',
+        titleEn: 'Vintage Ticket (Carriage 101)',
+        textEt: '„SEE RONG EI PEATUNUD KUNAGI.”',
+        textEn: '“THIS TRAIN NEVER STOPPED.”',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_103',
+        carIndex: 103,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Vana Foto (Vagun 103)',
+        titleEn: 'Old Photograph (Carriage 103)',
+        textEt: '[Hämar mustvalge polaroidfoto tühjast metroorongist ilma tekstita]',
+        textEn: '[Dim black & white polaroid of an empty metro carriage without text]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_105',
+        carIndex: 105,
+        type: 'map',
+        icon: '🗺️',
+        titleEt: 'Vana Metrookaart (Vagun 105)',
+        titleEn: 'Vintage Subway Map (Carriage 105)',
+        textEt: 'Kaardil on mustaks märgitud tunnel ja kiri:\n„SIIT ALGAS KÕIK.”',
+        textEn: 'A blacked-out tunnel is marked on the map with the note:\n“THIS IS WHERE IT ALL BEGAN.”',
+        placement: 'wall'
+    },
+    {
+        id: 'clue_108',
+        carIndex: 108,
+        type: 'note',
+        icon: '👁️',
+        titleEt: 'Salajane Märge (Vagun 108)',
+        titleEn: 'Secret Wall Inscription (Carriage 108)',
+        textEt: 'Ööprillidega seinal helendav kiri:\n„NAD JÄID SINNA.”',
+        textEn: 'Glowing wall inscription visible under night vision:\n“THEY STAYED BEHIND.”',
+        placement: 'wall'
+    },
+    {
+        id: 'clue_111',
+        carIndex: 111,
+        type: 'plate',
+        icon: '🛡️',
+        titleEt: 'Graveeritud Metallplaat (Vagun 111)',
+        titleEn: 'Engraved Metal Plate (Carriage 111)',
+        textEt: 'Raske metallplaat lauakesel:\n„ÄRA AVA VIIMAST UST.”',
+        textEn: 'Heavy metallic plate on the table:\n“DO NOT OPEN THE FINAL DOOR.”',
+        placement: 'table'
+    },
+    {
+        id: 'clue_113',
+        carIndex: 113,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Häguse Numbriga (Vagun 113)',
+        titleEn: 'Photo with Blurred Number (Carriage 113)',
+        textEt: '[Vana foto samast metroorongist, kuid vaguninumber on fotol kummaliselt hägune]',
+        textEn: '[Old photo of this very subway train, but the carriage number is eerily blurred out]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_114',
+        carIndex: 114,
+        type: 'document',
+        icon: '📄',
+        titleEt: 'Salajane Dokument (Vagun 114)',
+        titleEn: 'Confidential Document (Carriage 114)',
+        textEt: 'Ametlik pitsatiga dokument:\n„SIGNAAL TULEB RONGI LÕPUST.”',
+        textEn: 'Official stamped document:\n“THE SIGNAL ORIGINATES FROM THE END OF THE TRAIN.”',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_119',
+        carIndex: 119,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Kolmest Inimesest (Vagun 119)',
+        titleEn: 'Photo of Three People (Carriage 119)',
+        textEt: '[Kolm teadlast seisavad metroo perroonil, nägudel tõsine ilme]',
+        textEn: '[Three researchers standing on the subway platform with stern expressions]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_121',
+        carIndex: 121,
+        type: 'document',
+        icon: '📖',
+        titleEt: 'Päevikuleht (Vagun 121)',
+        titleEn: 'Diary Page (Carriage 121)',
+        textEt: 'Käsikirjaline päevikuleht:\n„ME ARVASIME, ET SEE JÄI TUNNELISSE.”',
+        textEn: 'Handwritten journal excerpt:\n“WE THOUGHT IT REMAINED IN THE TUNNEL.”',
+        placement: 'floor'
+    },
+    {
+        id: 'clue_123',
+        carIndex: 123,
+        type: 'map',
+        icon: '📊',
+        titleEt: 'Metroodiagramm (Vagun 123)',
+        titleEn: 'Subway Diagram (Carriage 123)',
+        textEt: 'Tehniline joonis punaste tulede all:\n„SEKTOR 200”',
+        textEn: 'Technical blueprint under red emergency lights:\n“SECTOR 200”',
+        placement: 'wall'
+    },
+    {
+        id: 'clue_126',
+        carIndex: 126,
+        type: 'list',
+        icon: '📋',
+        titleEt: 'Reisijate Nimekiri (Vagun 126)',
+        titleEn: 'Passenger Manifest (Carriage 126)',
+        textEt: 'Vana nimekiri 1987. aastast. Viimane rida:\n„PUUDUB.”',
+        textEn: 'Vintage manifest from 1987. The final entry:\n“MISSING.”',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_128',
+        carIndex: 128,
+        type: 'note',
+        icon: '📜',
+        titleEt: 'Seinale Kraabitud Hoiatus (Vagun 128)',
+        titleEn: 'Scratched Wall Warning (Carriage 128)',
+        textEt: 'Metalli kraabitud kiri:\n„NAD EI LÄINUD ÄRA.”',
+        textEn: 'Words scratched into the carriage metal:\n“THEY NEVER LEFT.”',
+        placement: 'wall'
+    },
+    {
+        id: 'clue_131',
+        carIndex: 131,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Tühjast Metroost (Vagun 131)',
+        titleEn: 'Photo of Abandoned Car (Carriage 131)',
+        textEt: '[Foto täiesti tühjast hämarast vagunist. Akendest paistab lõputu must sügavus]',
+        textEn: '[Photo of a completely empty carriage. Endless black void outside windows]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_133',
+        carIndex: 133,
+        type: 'note',
+        icon: '👁️',
+        titleEt: 'Ööprillide Vihje (Vagun 133)',
+        titleEn: 'Night Vision Clue (Carriage 133)',
+        textEt: 'Ööprillidega nähtav kiri seinal:\n„TUNNEL EI LÕPE.”',
+        textEn: 'Fluorescent wall inscription:\n“THE TUNNEL HAS NO END.”',
+        placement: 'wall'
+    },
+    {
+        id: 'clue_136',
+        carIndex: 136,
+        type: 'document',
+        icon: '📑',
+        titleEt: 'Uurimisraport (Vagun 136)',
+        titleEn: 'Research Dossier (Carriage 136)',
+        textEt: 'Protokoll nr 7-B:\n„OBJEKT VIIDI VAGUNISSE.”',
+        textEn: 'Protocol No. 7-B:\n“THE OBJECT WAS TRANSFERRED TO THE CARRIAGE.”',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_138',
+        carIndex: 138,
+        type: 'watch',
+        icon: '🕰️',
+        titleEt: 'Vana Kellamehhanism (Vagun 138)',
+        titleEn: 'Old Clockwork (Carriage 138)',
+        textEt: 'Tardunud messingist kellamehhanism. Seierid seisavad täpselt: 02:00.',
+        textEn: 'Frozen brass clockwork mechanism. Hands permanently set to 02:00.',
+        placement: 'table'
+    },
+    {
+        id: 'clue_141',
+        carIndex: 141,
+        type: 'note',
+        icon: '📜',
+        titleEt: 'Seinamärge (Vagun 141)',
+        titleEn: 'Wall Note (Carriage 141)',
+        textEt: 'Värviga kirjutatud hoiatus:\n„NAD JÕUAVAD 200-NI.”',
+        textEn: 'Warning painted across the wall:\n“THEY WILL REACH 200.”',
+        placement: 'wall'
+    },
+    {
+        id: 'clue_146',
+        carIndex: 146,
+        type: 'document',
+        icon: '📄',
+        titleEt: 'Paberleht Istmel (Vagun 146)',
+        titleEn: 'Slip on Seat (Carriage 146)',
+        textEt: 'Kollasel paberil kiri:\n„VIIMANE PEATUS EI OLE VÄLJAPÄÄS.”',
+        textEn: 'Note on aged yellow paper:\n“THE FINAL STATION IS NOT AN EXIT.”',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_148',
+        carIndex: 148,
+        type: 'document',
+        icon: '📑',
+        titleEt: 'Dokument Katse 10 (Vagun 148)',
+        titleEn: 'Document Experiment 10 (Carriage 148)',
+        textEt: 'Salastatud raport:\n„KATSE NR 10 ALGAB VAGUNIS 200.”',
+        textEn: 'Classified report:\n“EXPERIMENT NO. 10 COMMENCES IN CARRIAGE 200.”',
+        placement: 'table'
+    },
+    {
+        id: 'clue_161',
+        carIndex: 161,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Mahakriipsutatud Numbriga (Vagun 161)',
+        titleEn: 'Photo with Crossed-out Number (Carriage 161)',
+        textEt: '[Vana foto samast metroost. Vaguninumber on fotol musta tindiga läbi kriipsutatud]',
+        textEn: '[Old photo of this subway. The carriage number is violently crossed out with black ink]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_165',
+        carIndex: 165,
+        type: 'ticket',
+        icon: '🎫',
+        titleEt: 'Vana Pilet 002 (Vagun 165)',
+        titleEn: 'Vintage Ticket 002 (Carriage 165)',
+        textEt: 'Istme alt leitud reljeefne pilet numbriga: 002.',
+        textEn: 'Embossed ticket recovered from under the seat bearing number: 002.',
+        placement: 'floor'
+    },
+    {
+        id: 'clue_168',
+        carIndex: 168,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Tühjast Metroost (Vagun 168)',
+        titleEn: 'Photo of Void Subway (Carriage 168)',
+        textEt: '[Lihtsalt vana foto tühjast metroorongist. Tagaküljel pole mitte ühtegi kirja]',
+        textEn: '[Just an old photo of an empty subway. The back side is completely blank]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_172',
+        carIndex: 172,
+        type: 'document',
+        icon: '📄',
+        titleEt: 'Dokument Objekt 002 (Vagun 172)',
+        titleEn: 'Document Object 002 (Carriage 172)',
+        textEt: 'Laboratooriumi märge:\n„Objekt 002 reageeris teisele katsele.”',
+        textEn: 'Laboratory log:\n“Object 002 responded to the secondary experiment.”',
+        placement: 'table'
+    },
+    {
+        id: 'clue_173',
+        carIndex: 173,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Metroojaamast (Vagun 173)',
+        titleEn: 'Photo of Subway Station (Carriage 173)',
+        textEt: '[Vana foto mahajäetud maa-alusest jaamast. Jaama nimesildid on tühjad]',
+        textEn: '[Old photo of an abandoned underground terminal. The station signage is blank]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_176',
+        carIndex: 176,
+        type: 'watch',
+        icon: '⌚',
+        titleEt: 'Salapärane Käekell (Vagun 176)',
+        titleEn: 'Mysterious Wristwatch (Carriage 176)',
+        textEt: 'Vana käekell istmel. Selle sekundiseier liigub ainult siis, kui mängija ise liigub.',
+        textEn: 'Old wristwatch on seat. Its second hand only ticks while the player is moving.',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_178',
+        carIndex: 178,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Neljast Inimesest (Vagun 178)',
+        titleEn: 'Photo of Four (Carriage 178)',
+        textEt: '[Foto neljast inimesest perroonil. Üks inimene on fotolt terava kääridega välja lõigatud]',
+        textEn: '[Photo of four people on the platform. One person has been precisely cut out]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_182',
+        carIndex: 182,
+        type: 'list',
+        icon: '📋',
+        titleEt: 'Nimekiri Kadunutest (Vagun 182)',
+        titleEn: 'List of the Missing (Carriage 182)',
+        textEt: 'Ametlik leht nimedega. Peaaegu iga nime taga seisab punane tempel: „KADUNUD”.',
+        textEn: 'Official list of names. Nearly every name is stamped in red: “LOST”.',
+        placement: 'table'
+    },
+    {
+        id: 'clue_186',
+        carIndex: 186,
+        type: 'map',
+        icon: '🗺️',
+        titleEt: 'Käsitsi Märgitud Kaart (Vagun 186)',
+        titleEn: 'Hand-drawn Map (Carriage 186)',
+        textEt: 'Vana metrookaart, mille lõppu on pliiatsiga joonistatud salajane peatus: „200”.',
+        textEn: 'Transit map with a penciled terminal station at the very end: “200”.',
+        placement: 'wall'
+    },
+    {
+        id: 'clue_188',
+        carIndex: 188,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Rongist 200 (Vagun 188)',
+        titleEn: 'Photo of Train 200 (Carriage 188)',
+        textEt: '[Vana foto samast rongist. Esiklaasi kohal särab number 200]',
+        textEn: '[Vintage photo of this train. Number 200 glows above the front windshield]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_192',
+        carIndex: 192,
+        type: 'ticket',
+        icon: '🎫',
+        titleEt: 'Pilet 002 (Vagun 192)',
+        titleEn: 'Ticket 002 (Carriage 192)',
+        textEt: 'Põrandal lebav vana pilet reljeefse numbriga 002.',
+        textEn: 'Old ticket lying on the floor stamped with embossed 002.',
+        placement: 'floor'
+    },
+    {
+        id: 'clue_193',
+        carIndex: 193,
+        type: 'photo',
+        icon: '📷',
+        titleEt: 'Foto Vaguni 200 Ees (Vagun 193)',
+        titleEn: 'Photo in Front of 200 (Carriage 193)',
+        textEt: '[Kolm teadlast seisavad otse Vaguni 200 metallukse ees]',
+        textEn: '[Three researchers standing directly in front of the bulkhead of Carriage 200]',
+        placement: 'seat'
+    },
+    {
+        id: 'clue_198',
+        carIndex: 198,
+        type: 'document',
+        icon: '📄',
+        titleEt: 'Lõplik Dokument Katse 002 (Vagun 198)',
+        titleEn: 'Final Dossier Experiment 002 (Carriage 198)',
+        textEt: 'Viimane ametlik märge enne jaama 200:\n„Katse 002 andis tulemuse. Rong leidis tee.”',
+        textEn: 'Final official record before station 200:\n“Experiment 002 yielded results. The train found its passage.”',
+        placement: 'table'
+    }
+];
+
+
 // Module-level reusable scratch vectors for 60+ FPS zero-allocation performance
 const _scratchV1 = new THREE.Vector3();
 const _scratchV2 = new THREE.Vector3();
@@ -243,6 +612,39 @@ export class LastMetroGame {
     private timeVillainFlickerInterval: any = null;
     private timeVillainShakeOffset: THREE.Vector3 = new THREE.Vector3();
     private timeVillainTriggeredThisCarriage: boolean = false;
+
+    // ── Politsei Jälituse Sündmus (Vagunid 150–160) ─────────────────────────
+    public policeChaseActive: boolean = false;
+    public policeOfficers: THREE.Group[] = [];
+    public policeChaseTriggered: boolean = false;
+    public policeChaseAnimLocked: boolean = false; // mängija liikumine blokeeritud
+    public policeRemovedByGrip: number = 0; // mitu politseinikku on Grip eemaldanud
+    public policeChaseRunActive: boolean = false; // mängija jookseb animatsioon
+    public carriage150IntroPlayed: boolean = false;
+
+    // ── Vihjed & Seljakott (Clue Collectible System) ────────────────────────
+    public collectedClues: ClueItem[] = [];
+    public currentInspectedClue: ClueItem | null = null;
+    public activeClueMesh: THREE.Group | null = null;
+
+    // ── Vagun 200 Kuulja Boss & Switches ────────────────────────────────────
+    public kuuljaBossGroup: THREE.Group | null = null;
+    public kuuljaHearingAlert: boolean = false;
+    public kuuljaSwitchesActivated: number = 0;
+    public kuuljaSwitches: { mesh: THREE.Group; activated: boolean }[] = [];
+    public kuuljaSpeed: number = 0;
+    public kuuljaTargetPos: THREE.Vector3 = new THREE.Vector3();
+
+    // ── Vagunid 201–250 Kanalisatsioon (Sewers) ────────────────────────────
+    public sewerWaterSubmerged: boolean = false;
+    public sewerSubmergeTimer: number = 0;
+    public isCrouching: boolean = false;
+    public carriage201IntroPlayed: boolean = false;
+    public carriage250DoorOpened: boolean = false;
+
+    // ── Vagun 300 Finale ───────────────────────────────────────────────────
+    public carriage300ExitTriggered: boolean = false;
+
 
     constructor() {
         const cont = document.getElementById('canvas-container');
@@ -448,6 +850,33 @@ export class LastMetroGame {
                 this.updateCursorState();
             });
         }
+
+        // Backpack / Clues Folder button
+        const backpackBtn = document.getElementById('btn-backpack-folder');
+        if (backpackBtn) {
+            backpackBtn.addEventListener('click', () => this.toggleCluesFolderModal());
+        }
+
+        const cluesFolderClose = document.getElementById('btn-clues-folder-close');
+        if (cluesFolderClose) {
+            cluesFolderClose.addEventListener('click', () => this.closeCluesFolderModal());
+        }
+
+        // Pack Clue Button
+        const packClueBtn = document.getElementById('btn-pack-clue');
+        if (packClueBtn) {
+            packClueBtn.addEventListener('click', () => this.packCurrentInspectedClue());
+        }
+
+        const clueInspectModal = document.getElementById('clue-inspect-modal');
+        if (clueInspectModal) {
+            clueInspectModal.addEventListener('click', (e) => {
+                if (e.target === clueInspectModal) {
+                    this.packCurrentInspectedClue();
+                }
+            });
+        }
+
 
         // Playard Owner Panel UI Wireup
         const ownerPanelBtn = document.getElementById('btn-owner-panel');
@@ -1181,6 +1610,29 @@ export class LastMetroGame {
                 titleEn: `📜 Document in Carriage ${index}`,
                 descEn: 'The mysteries of the subway deepen with every carriage.'
             };
+        } else if (index >= 101) {
+            // Check CLUES_DATABASE for collectible items in carriages 101-200+
+            const dbClue = CLUES_DATABASE.find(c => c.carIndex === index && !this.collectedClues.some(cc => cc.id === c.id));
+            if (dbClue) {
+                inspectableItem = this.createClue3DMesh(dbClue);
+                if (dbClue.placement === 'floor') {
+                    inspectableItem.position.set(0.2, 0.08, 0);
+                } else if (dbClue.placement === 'table') {
+                    inspectableItem.position.set(0, 0.68, 1.2);
+                } else if (dbClue.placement === 'wall') {
+                    inspectableItem.position.set(index % 2 === 0 ? -1.62 : 1.62, 1.4, 0);
+                } else { // 'seat'
+                    inspectableItem.position.set(index % 2 === 0 ? -1.1 : 1.1, 0.58, (index % 5) * 1.5 - 2.0);
+                }
+                carGroup.add(inspectableItem);
+                this.activeClueMesh = inspectableItem;
+                inspectableText = {
+                    titleEt: dbClue.titleEt,
+                    descEt: dbClue.textEt,
+                    titleEn: dbClue.titleEn,
+                    descEn: dbClue.textEn
+                };
+            }
         } else if (index >= 11 && index % 5 === 1) {
             // Procedural Keypad Puzzle
             const code = `${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1194,6 +1646,7 @@ export class LastMetroGame {
                 descEn: 'Enter the 4-digit code to unlock the carriage bulkhead door.'
             };
         }
+
 
         // 12. Scatter Collectible Rotating Golden Coins throughout the carriage
         this.spawnCollectibleCoins(carGroup, index === 100 ? 8 : 3);
@@ -2658,6 +3111,264 @@ export class LastMetroGame {
         return keypadGroup;
     }
 
+    private createClue3DMesh(clue: ClueItem): THREE.Group {
+        const group = new THREE.Group();
+        group.name = 'clue_prop_' + clue.id;
+
+        if (clue.type === 'ticket') {
+            const mat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.6 });
+            const ticket = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.015, 0.16), mat);
+            group.add(ticket);
+            const light = new THREE.PointLight(0x00f2fe, 1.2, 2.5);
+            light.position.set(0, 0.2, 0);
+            group.add(light);
+            const dot = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00f2fe }));
+            dot.position.set(0, 0.04, 0);
+            group.add(dot);
+        } else if (clue.type === 'photo') {
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.8 });
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.015, 0.35), frameMat);
+            group.add(frame);
+            const photoMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+            const photo = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.24), photoMat);
+            photo.position.set(0, 0.005, -0.03);
+            group.add(photo);
+            const light = new THREE.PointLight(0xffffff, 1.0, 2.0);
+            light.position.set(0, 0.2, 0);
+            group.add(light);
+        } else if (clue.type === 'plate') {
+            const mat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.9, roughness: 0.2 });
+            const plate = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.02, 0.2), mat);
+            group.add(plate);
+            const light = new THREE.PointLight(0x00f2fe, 1.0, 2.0);
+            light.position.set(0, 0.2, 0);
+            group.add(light);
+        } else if (clue.type === 'watch') {
+            const mat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.3 });
+            const watch = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 16), mat);
+            group.add(watch);
+            const face = new THREE.Mesh(new THREE.CircleGeometry(0.1, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            face.rotation.x = -Math.PI / 2;
+            face.position.y = 0.022;
+            group.add(face);
+        } else if (clue.type === 'map') {
+            const mat = new THREE.MeshStandardMaterial({ color: 0xe8d8b5, roughness: 0.8 });
+            const map = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 0.3), mat);
+            group.add(map);
+            const light = new THREE.PointLight(0xf1c40f, 1.0, 2.0);
+            light.position.set(0, 0.2, 0);
+            group.add(light);
+        } else {
+            const mat = new THREE.MeshStandardMaterial({ color: 0xf7f1e3, roughness: 0.9 });
+            const doc = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.015, 0.42), mat);
+            group.add(doc);
+            const redSeal = new THREE.Mesh(new THREE.CircleGeometry(0.04, 12), new THREE.MeshBasicMaterial({ color: 0xc0392b }));
+            redSeal.rotation.x = -Math.PI / 2;
+            redSeal.position.set(0.08, 0.01, 0.12);
+            group.add(redSeal);
+            const light = new THREE.PointLight(0xf1c40f, 0.8, 2.0);
+            light.position.set(0, 0.2, 0);
+            group.add(light);
+        }
+
+        return group;
+    }
+
+    // --- Clue / Collectible System: 1st Click Inspect -> 2nd Click Pack ---
+
+    public openClueInspection(clue: ClueItem) {
+        this.state = 'inspecting';
+        this.currentInspectedClue = clue;
+
+        const isEt = this.lang === 'et';
+        const modal = document.getElementById('clue-inspect-modal');
+        const box = document.getElementById('clue-inspect-box');
+        const badge = document.getElementById('clue-badge-type');
+        const title = document.getElementById('clue-inspect-title');
+        const icon = document.getElementById('clue-card-icon');
+        const text = document.getElementById('clue-card-text');
+
+        if (box) {
+            box.style.transform = 'scale(1) translateY(0)';
+            box.style.opacity = '1';
+        }
+
+        if (badge) {
+            const typeLabels: { [key: string]: string } = {
+                ticket: '🎫 PILET',
+                photo: '📷 VANA FOTO',
+                document: '📄 DOKUMENT',
+                map: '🗺️ METROOKAART',
+                plate: '🛡️ METALLPLAAT',
+                list: '📋 NIMEKIRI',
+                watch: '🕰️ MEHHANISM',
+                note: '📜 SALAJANE MÄRGE'
+            };
+            badge.innerText = typeLabels[clue.type] || '📜 SALAJANE VIHJE';
+        }
+
+        if (title) title.innerText = isEt ? clue.titleEt : clue.titleEn;
+        if (icon) icon.innerText = clue.icon || '📜';
+        if (text) text.innerText = isEt ? clue.textEt : clue.textEn;
+
+        if (modal) modal.style.display = 'flex';
+        metroAudio.playItemInspect();
+        this.updateCursorState();
+    }
+
+    public packCurrentInspectedClue() {
+        const clue = this.currentInspectedClue;
+        const modal = document.getElementById('clue-inspect-modal');
+        const box = document.getElementById('clue-inspect-box');
+
+        if (box) {
+            // Smooth packing animation into backpack
+            box.style.transform = 'scale(0.15) translateY(350px)';
+            box.style.opacity = '0';
+        }
+
+        setTimeout(() => {
+            if (modal) modal.style.display = 'none';
+            if (box) {
+                box.style.transform = 'scale(1) translateY(0)';
+                box.style.opacity = '1';
+            }
+
+            if (clue) {
+                if (!this.collectedClues.some(c => c.id === clue.id)) {
+                    this.collectedClues.push(clue);
+                    clue.collected = true;
+                    this.cluesFound++;
+                }
+
+                // Remove 3D mesh from the current carriage
+                if (this.activeClueMesh) {
+                    this.scene.remove(this.activeClueMesh);
+                    if (this.currentCarriage?.group) this.currentCarriage.group.remove(this.activeClueMesh);
+                    this.activeClueMesh = null;
+                }
+                if (this.currentCarriage?.inspectableItem) {
+                    this.scene.remove(this.currentCarriage.inspectableItem);
+                    if (this.currentCarriage?.group) this.currentCarriage.group.remove(this.currentCarriage.inspectableItem);
+                    this.currentCarriage.inspectableItem = undefined;
+                }
+
+                // Update HUD backpack button counter
+                const countBadge = document.getElementById('backpack-btn-text');
+                if (countBadge) countBadge.innerText = `Kaust (${this.collectedClues.length})`;
+
+                this.showThought(
+                    `📦 „${clue.titleEt}” pandi seljakotti! (Ava [B] kaudu)`,
+                    `📦 “${clue.titleEn}” packed into backpack! (Press [B] to view)`
+                );
+                metroAudio.playDoorLatch();
+            }
+
+            this.currentInspectedClue = null;
+            this.state = 'player_free';
+            this.updateCursorState();
+        }, 320);
+    }
+
+    // --- Seljakott / Clues Folder Modal ---
+
+    public openCluesFolderModal() {
+        this.state = 'inspecting';
+        const modal = document.getElementById('clues-folder-modal');
+        const countText = document.getElementById('clues-folder-count');
+        const grid = document.getElementById('clues-folder-grid');
+        const emptyMsg = document.getElementById('clues-folder-empty');
+
+        if (countText) {
+            countText.innerText = `${this.collectedClues.length} eset kogutud`;
+        }
+
+        if (grid) {
+            grid.innerHTML = '';
+            if (this.collectedClues.length === 0) {
+                if (emptyMsg) emptyMsg.style.display = 'block';
+            } else {
+                if (emptyMsg) emptyMsg.style.display = 'none';
+                this.collectedClues.forEach(clue => {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: rgba(20, 28, 42, 0.9); border: 1.5px solid rgba(0, 242, 254, 0.35); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: all 0.2s;';
+                    card.innerHTML = `
+                        <div style="font-size: 2.2rem; margin-bottom: 6px;">${clue.icon}</div>
+                        <div style="color: #ffd32a; font-weight: 800; font-size: 0.8rem; margin-bottom: 4px; line-height: 1.2;">${clue.titleEt}</div>
+                        <div style="color: #747d8c; font-size: 0.68rem; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${clue.textEt}</div>
+                    `;
+                    card.onmouseenter = () => { card.style.borderColor = '#00f2fe'; card.style.transform = 'translateY(-3px)'; card.style.background = 'rgba(30, 42, 60, 0.95)'; };
+                    card.onmouseleave = () => { card.style.borderColor = 'rgba(0, 242, 254, 0.35)'; card.style.transform = 'none'; card.style.background = 'rgba(20, 28, 42, 0.9)'; };
+                    card.onclick = () => {
+                        this.closeCluesFolderModal();
+                        this.openClueInspection(clue);
+                    };
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        if (modal) modal.style.display = 'flex';
+        this.updateCursorState();
+    }
+
+    public closeCluesFolderModal() {
+        const modal = document.getElementById('clues-folder-modal');
+        if (modal) modal.style.display = 'none';
+        this.state = 'player_free';
+        this.updateCursorState();
+    }
+
+    public toggleCluesFolderModal() {
+        const modal = document.getElementById('clues-folder-modal');
+        if (modal && modal.style.display === 'flex') {
+            this.closeCluesFolderModal();
+        } else {
+            this.openCluesFolderModal();
+        }
+    }
+
+    public toggleCrouch() {
+        this.isCrouching = !this.isCrouching;
+        this.playerPos.y = this.isCrouching ? 0.95 : 1.6;
+        if (this.currentCarIndex === 217) {
+            if (this.isCrouching) this.submergeInSewerWater();
+            else this.emergeFromSewerWater();
+        }
+    }
+
+    public submergeInSewerWater() {
+        this.sewerWaterSubmerged = true;
+        this.playerPos.y = 0.5; // low in water
+        const overlay = document.getElementById('water-submerge-overlay');
+        if (overlay) overlay.style.display = 'block';
+    }
+
+    public emergeFromSewerWater() {
+        this.sewerWaterSubmerged = false;
+        this.playerPos.y = 1.6;
+        const overlay = document.getElementById('water-submerge-overlay');
+        if (overlay) overlay.style.display = 'none';
+        const canvas = this.renderer.domElement;
+        if (canvas) canvas.style.filter = '';
+    }
+
+    public triggerVictory300() {
+        if (this.carriage300ExitTriggered) return;
+        this.carriage300ExitTriggered = true;
+        this.state = 'dead'; // disable controls
+
+        // Give +1000 Yards to player
+        try {
+            yardService.awardYards(1000, 'Metro 300 Väljapääs');
+        } catch (e) {}
+
+        const victoryModal = document.getElementById('victory-300-modal');
+        if (victoryModal) victoryModal.style.display = 'flex';
+        this.updateCursorState();
+    }
+
+
     // --- Story & Anomaly Transitions ---
 
     // --- Story & Anomaly Transitions ---
@@ -3149,18 +3860,1364 @@ export class LastMetroGame {
                 this.openGoldenShopModal();
                 break;
 
+
+            // ── VAGUNID 101–160 ───────────────────────────────────────────────────
+
+            case 101:
+                this.showThought('Kõik reisijad vaatavad korraga mängija poole, siis pöörduvad tagasi.', 'All passengers turn to face you simultaneously — then look away.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.passengers.forEach(p => { p.animType = 'uncanny_stare'; p.targetRotY = Math.PI; });
+                    setTimeout(() => {
+                        if (this.currentCarriage) this.currentCarriage.passengers.forEach(p => { p.animType = 'look_window'; p.targetRotY = p.baseRotY; });
+                    }, 3000);
+                }
+                break;
+
+            case 102:
+                // Grip — must käsi ukse vahelt (10 sekundit)
+                this.showThought('Ukse vahelt sirutub välja must varjukäsi... kui ta sind puudutab, oled kadunud!', 'A black shadow hand reaches through the door... if it touches you, you are gone!');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 103:
+                // Shadow Dash
+                this.startShadowRushCarriageEvent(103);
+                break;
+
+            case 104:
+                this.showThought('Tühi iste liigub iseenesest... kui sa lähenesid, jäi see seisma.', 'An empty seat is moving by itself... it stopped when you approached.');
+                if (this.currentCarriage && this.currentCarriage.passengers.length > 0) {
+                    const seat = this.currentCarriage.passengers[0];
+                    if (seat.group) {
+                        const startZ = seat.group.position.z;
+                        let moving = true;
+                        const seatMoveInterval = setInterval(() => {
+                            if (!moving) { clearInterval(seatMoveInterval); return; }
+                            seat.group.position.z = startZ + Math.sin(Date.now() * 0.003) * 0.18;
+                            const dist = Math.abs(this.playerPos.z - seat.group.position.z);
+                            if (dist < 1.5) { moving = false; seat.group.position.z = startZ; clearInterval(seatMoveInterval); }
+                        }, 16);
+                        setTimeout(() => { moving = false; clearInterval(seatMoveInterval); seat.group.position.z = startZ; }, 8000);
+                    }
+                }
+                break;
+
+            case 105:
+                this.showThought('Kõlaritest kostab metrooteade — aga lõpus on vale vaguninumber: „Järgmine peatus: Vagun 4."', 'Speakers announce a stop — but the carriage number is wrong: "Next stop: Carriage 4."');
+                metroAudio.playRadioAudio();
+                setTimeout(() => metroAudio.stopRadioAudio(), 5000);
+                break;
+
+            case 106:
+                this.showThought('Akna peegelduses liigub üks reisija — aga ta seisab sinust teispool paigal.', 'In the window reflection, one passenger moves — yet they stand perfectly still.');
+                break;
+
+            case 107:
+                this.showThought('Reisija tõuseb aeglaselt püsti, vaatab sulle otsa... ja istub tagasi, nagu midagi ei juhtunud.', 'A passenger slowly rises, stares at you... then sits back as if nothing happened.');
+                if (this.currentCarriage && this.currentCarriage.passengers.length > 0) {
+                    const p = this.currentCarriage.passengers[0];
+                    setTimeout(() => { if (p?.group) p.group.position.y += 0.4; }, 1500);
+                    setTimeout(() => { if (p?.group) p.group.position.y -= 0.4; }, 4000);
+                }
+                break;
+
+            case 108:
+                this.showThought('Vaguni kell jääb täpselt kümneks sekundiks seisma... siis liigub jälle edasi.', 'The carriage clock freezes for exactly ten seconds... then ticks forward again.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 109:
+                // Grip
+                this.showThought('Ukse vahelt piilub sisse must varjukäsi...', 'A black shadow hand peers in through the door gap...');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 110:
+                this.showThought('Kõik tuled kustuvad hetkeks. Kui need tagasi tulevad — üks reisija on kadunud.', 'All lights go out for a moment. When they return — one passenger has vanished.');
+                this.startLightFlickerAnomaly();
+                if (this.currentCarriage && this.currentCarriage.passengers.length > 0) {
+                    setTimeout(() => {
+                        const p = this.currentCarriage?.passengers[0];
+                        if (p?.group) { p.group.visible = false; }
+                    }, 2200);
+                }
+                break;
+
+            case 111:
+                this.showThought('Ukse tagant kostab koputus... uks avaneb. Seal pole kedagi.', 'A knock echoes from behind the door... it slides open. No one is there.');
+                setTimeout(() => metroAudio.playDoorSlide(true), 1500);
+                setTimeout(() => metroAudio.playDoorSlide(false), 4000);
+                break;
+
+            case 112:
+                this.showThought('Reklaamiekraan muutub järsku mustaks. Ekraanil ei ole midagi.', 'The advertisement screen turns pitch black. Nothing on the display.');
+                break;
+
+            case 113:
+                this.showThought('Akna taga möödub teine metroorong — aga selle akendes pole mitte kedagi.', 'Another subway train passes the window — but its carriages are completely empty.');
+                this.startShadowRushCarriageEvent(113);
+                break;
+
+            case 114:
+                this.showThought('Kõik tuled muutuvad korraks siniseks — unenäoline ja rahutu tunne.', 'All lights shift to a cold blue — an unsettling, dreamlike atmosphere.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.lights.forEach(l => { l.color.setHex(0x3498db); });
+                    setTimeout(() => {
+                        if (this.currentCarriage) this.currentCarriage.lights.forEach(l => l.color.setHex(0xffffff));
+                    }, 6000);
+                }
+                break;
+
+            case 115:
+                this.showThought('Ühe reisija silmad on kinni — ta ei liigu. Ta ei hingagi.', 'One passenger has their eyes closed — motionless. Not even breathing.');
+                break;
+
+            case 116:
+                this.showThought('Vagunis on hästi külm. Hingates on näha aurupilv.', 'The air in the carriage is freezing cold. You can see your breath fog.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.lights.forEach(l => { l.color.setHex(0x88ccff); l.intensity = 0.6; });
+                    setTimeout(() => {
+                        if (this.currentCarriage) { this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 0.85; }); }
+                    }, 8000);
+                }
+                break;
+
+            case 117:
+                this.showThought('Üks reisija istub sinu kõrvale. Kui liigud — ta on kadunud.', 'A passenger sits right next to you. When you move — they are gone.');
+                break;
+
+            case 118:
+                this.showThought('Metroo pidurdab järsult — aga ühtegi jaama ei paista.', 'The train brakes sharply — but no station comes into view.');
+                metroAudio.playFlickerBuzz();
+                setTimeout(() => metroAudio.playFlickerBuzz(), 800);
+                break;
+
+            case 119:
+                this.showThought('Kõik aknad muutuvad korraks uduseks — nagu hingaks metroo ise.', 'Every window fogs over for a moment — as if the metro itself is breathing.');
+                break;
+
+            case 120:
+                this.showThought('Kõik helid kaovad. Absoluutne vaikus. Kümne sekundi pärast kõik taastub.', 'All sound disappears. Absolute silence. Ten seconds later — everything returns.');
+                metroAudio.stopRadioAudio();
+                setTimeout(() => metroAudio.playRadioAudio(), 10000);
+                setTimeout(() => metroAudio.stopRadioAudio(), 14000);
+                break;
+
+            case 121:
+                this.showThought('Üks lamp vilgub kindlas rütmis — nagu morses midagi edastades.', 'One lamp flickers in a precise rhythm — like transmitting morse code.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 122:
+                this.showThought('Kõik tuled muutuvad punaseks. Vagun on nagu veriseks muutunud.', 'All lights shift to a deep red. The carriage looks blood-soaked.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.lights.forEach(l => { l.color.setHex(0xff1744); l.intensity = 1.2; });
+                    setTimeout(() => {
+                        if (this.currentCarriage) this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 0.85; });
+                    }, 7000);
+                }
+                break;
+
+            case 123:
+                this.showThought('Näed aknas oma peegeldust — aga peegeldus liigub hiljem. 👤', 'You see your reflection in the window — but it moves a second after you do. 👤');
+                break;
+
+            case 124:
+                this.showThought('Üks uks avaneb — ja sulgub kohe. Seal polnud kedagi.', 'One door slides open — and immediately shuts. No one was there.');
+                setTimeout(() => metroAudio.playDoorSlide(true), 1000);
+                setTimeout(() => metroAudio.playDoorSlide(false), 2500);
+                break;
+
+            case 125:
+                this.showThought('Kõlaritest kostab vana rongijuhi hääl — aga rongijuhti pole olemas.', 'The speakers crackle with an old driver\'s voice — but there is no driver on this train.');
+                metroAudio.playRadioAudio();
+                setTimeout(() => metroAudio.stopRadioAudio(), 6000);
+                break;
+
+            case 126:
+                this.showThought('Üks reisija vaatab pidevalt ukse poole. Ta ei pöördu ära.', 'One passenger stares constantly at the door. They will not look away.');
+                this.startShadowRushCarriageEvent(126);
+                break;
+
+            case 127:
+                this.showThought('Reklaam seinal muutub — nüüd on seal üks sõnum: „ÄRA PEATU."', 'The wall advertisement changes — now it shows one message: "DO NOT STOP."');
+                break;
+
+            case 128:
+                this.showThought('Kõik reisijad kaovad ühe tule vilkumise ajal — ja ilmuvad siis tagasi.', 'All passengers vanish during a single light flicker — and reappear.');
+                this.startLightFlickerAnomaly();
+                if (this.currentCarriage) {
+                    const pax = [...this.currentCarriage.passengers];
+                    setTimeout(() => { pax.forEach(p => { if (p.group) p.group.visible = false; }); }, 1000);
+                    setTimeout(() => { pax.forEach(p => { if (p.group) p.group.visible = true; }); }, 2800);
+                }
+                break;
+
+            case 129:
+                // Grip
+                this.showThought('Uksest sirutub välja must varjukäsi...', 'A black shadow hand reaches through the door...');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 130:
+                this.showThought('Kuuled enda järel kummalisi samme — aga kui peatad, on kõik vaikne.', 'You hear strange footsteps trailing behind you — when you stop, silence.');
+                metroAudio.playShadowGrab();
+                break;
+
+            case 131:
+                this.showThought('Tuled vilguvad ja vaguni teises otsas on korraks näha tumedat varju.', 'Lights flicker — for a moment a dark silhouette is visible at the far end.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 132:
+                this.showThought('Kõlaritest kostab kaugelt kummaline naer — siis vaikus.', 'Strange laughter echoes distantly from the speakers — then silence.');
+                metroAudio.playFlickerBuzz();
+                break;
+
+            case 133:
+                this.showThought('Üks iste hakkab aeglaselt värisema — kuigi metroo sõidab sujuvalt.', 'One seat begins to tremble slowly — though the metro runs smoothly.');
+                break;
+
+            case 134:
+                this.showThought('Kõik tuled muutuvad korraks siniseks — unenäoline, rahutu tunne.', 'All lights shift briefly to blue — dreamlike and unsettling.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.lights.forEach(l => { l.color.setHex(0x4facfe); l.intensity = 0.9; });
+                    setTimeout(() => {
+                        if (this.currentCarriage) this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 0.85; });
+                    }, 5000);
+                }
+                break;
+
+            case 135:
+                this.showThought('Näed aknas oma peegeldust — aga peegeldus liigub iseseisvalt vaguni lõppu. 👤', 'Your window reflection moves independently — walking to the far end of the carriage. 👤');
+                break;
+
+            case 136:
+                this.showThought('Reisijad vaikivad korraks — vaatavad kõik korraga akna poole.', 'Passengers fall silent — every one of them turns to face the window simultaneously.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.passengers.forEach(p => { p.animType = 'look_window'; });
+                }
+                break;
+
+            case 137:
+                this.showThought('Kõik helid muutuvad väga vaikseks — jääb ainult sinu hingamine.', 'All sounds fade to near-silence — only your own breathing remains.');
+                break;
+
+            case 138:
+                this.showThought('Vagun hakkab aeglaselt peatuma — aga ühtegi jaama pole näha.', 'The carriage begins to slow — no station comes into view.');
+                metroAudio.playFlickerBuzz();
+                break;
+
+            case 139:
+                this.showThought('Akna taga vilgub korraks ere valgus — siis kaob.', 'A brilliant flash blazes outside the window — then vanishes.');
+                break;
+
+            case 140:
+                // Shadow Dash
+                this.startShadowRushCarriageEvent(140);
+                break;
+
+            case 141:
+                this.showThought('Tuled vilguvad kordamööda — vagun tundub kummaliselt pikaks veninud.', 'Lights flicker one by one — the carriage feels strangely, impossibly long.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 142:
+                this.showThought('„Ära jäta mind siia..." — sosin kõlaritest. Keegi räägib sinuga.', '"Do not leave me here..." — a whisper from the speakers. Someone is speaking to you.');
+                metroAudio.playWhisper(4.0);
+                break;
+
+            case 143:
+                this.showThought('Tuled muutuvad äkki kuldseks — ja näed korraks enda varju, mis pole päris sinu oma.', 'Lights turn golden — your shadow flickers into something not quite your own shape.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffd32a); l.intensity = 1.1; });
+                    setTimeout(() => {
+                        if (this.currentCarriage) this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 0.85; });
+                    }, 6000);
+                }
+                break;
+
+            case 144:
+                this.showThought('⚠️ Helisignaal kõlaritest — jookse kohe järgmise ukse juurde!', '⚠️ An alarm signal from the speakers — run to the next door immediately!');
+                metroAudio.playPhoneRingingAll();
+                setTimeout(() => metroAudio.stopRadioAudio(), 4000);
+                break;
+
+            case 145:
+                this.showThought('Akna taga liigub tume kuju — aga seal pole kedagi, keda näha oleks.', 'A dark shape moves past the window — but there is no one out there to be seen.');
+                break;
+
+            case 146:
+                // Grip — poole lühem käsi (nagu 151-157 sündmustes)
+                this.showThought('Ukse vahelt sirutub välja must varjukäsi — aga ta käsi on lühem. Sa saad sellest mööda minna!', 'A black shadow hand reaches through — but the arm is shorter. You can slip past it!');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 147:
+                this.showThought('Kõik reisijad on ootamatult kadunud. Vagun on tühi.', 'All passengers have vanished without a trace. The carriage is empty.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.passengers.forEach(p => { if (p.group) p.group.visible = false; });
+                }
+                break;
+
+            case 148:
+                this.showThought('...Kuuled enda nime sosinat kaugelt... aga sa oled siin üksi.', '...You hear your name whispered from far away... but you are alone here.');
+                metroAudio.playWhisper(5.0);
+                break;
+
+            case 149:
+                this.showThought('Akna taga vilgub valge valgus — siis kaob. Järgmine peatus on teistsugune.', 'White light blazes outside the window — then disappears. The next stop is different.');
+                break;
+
+            case 150:
+                // POLITSEI TAGAAJAMINE ALGAB
+                this.triggerPoliceChase150();
+                break;
+
+            case 151:
+                // Jooksmine jätkub — Grip tõmbab esimese politseiniku
+                if (this.policeChaseActive && this.policeRemovedByGrip === 0) {
+                    this.triggerGripRemoveOfficer(151);
+                }
+                this.showThought('Jookse! Politseinikud jõuavad sulle järele!', 'Run! The officers are gaining on you!');
+                break;
+
+            case 152:
+            case 153:
+                this.showThought(`Vagun ${index} — jookse edasi, ära peatu!`, `Carriage ${index} — keep running, don't stop!`);
+                break;
+
+            case 154:
+                // Grip tõmbab teise politseiniku
+                if (this.policeChaseActive && this.policeRemovedByGrip <= 1) {
+                    this.triggerGripRemoveOfficer(154);
+                }
+                this.showThought('Must käsi haarab ühe politseiniku — jookse edasi!', 'A black hand grabs one officer — keep running!');
+                break;
+
+            case 155:
+            case 156:
+                this.showThought(`Vagun ${index} — veel kaks politseinikku su kannul!`, `Carriage ${index} — two officers still on your heels!`);
+                break;
+
+            case 157:
+                // Grip tõmbab kolmanda politseiniku
+                if (this.policeChaseActive && this.policeRemovedByGrip <= 2) {
+                    this.triggerGripRemoveOfficer(157);
+                }
+                this.showThought('Must käsi ilmub taas — haarab veel ühe! Alles jääb 2 politseinikku!', 'The black hand strikes again — one more officer gone! Two remain!');
+                break;
+
+            case 158:
+                this.showThought('Vagun 158 — kaks politseinikku on endiselt su järel. Peaaegu käes!', 'Carriage 158 — two officers still pursue you. Almost there!');
+                break;
+
+            case 159:
+                this.showThought('Vagun 159 — lõpuuks sulgub su selja taga!', 'Carriage 159 — the final door seals behind you!');
+                this.triggerPoliceChaseEnding159();
+                break;
+
+            case 160:
+                this.triggerPoliceChaseEnd160();
+                break;
+
+            // ── VAGUNID 161–200 ───────────────────────────────────────────────────
+
+            case 161:
+                this.showThought('Metro sõidab jälle. Istmel on vana foto samast metroost, vaguninumber on ära kriipsutatud.', 'The metro speeds on. On the seat lies an old photo with the carriage number crossed out.');
+                break;
+
+            case 162:
+                this.showThought('Ekraan vilgutab korraks: „KATSE 002 LÕPP.”', 'The screen blinks briefly: “EXPERIMENT 002 CONCLUSION.”');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 163:
+            case 164:
+                this.showThought('Ukse vahelt ilmub must varjukäsi Grip! Hoidu sellest eemale!', 'A black shadow hand Grip emerges from the door gap! Keep your distance!');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 165:
+                this.showThought('Istme alt on leitav vana pilet numbriga 002.', 'Under the seat lies an old ticket stamped with number 002.');
+                break;
+
+            case 166:
+                this.showThought('Kõik kellad vagunis näitavad korraga 02:00.', 'Every clock in the carriage simultaneously reads 02:00.');
+                break;
+
+            case 167:
+                this.showThought('Raadio annab vihje: „Teine katse ei lõppenud siin.”', 'The radio crackles: “The second experiment did not conclude here.”');
+                metroAudio.playWhisper(4.0);
+                break;
+
+            case 168:
+                this.showThought('Istmel on vana foto tühjast metroost. Tagaküljel pole midagi.', 'On the seat is an old photo of an empty subway. The back is blank.');
+                break;
+
+            case 169:
+                this.showThought('Akna taga liigub korraks teine metroorong, kuigi tunnelis pole teist rööbast.', 'Another subway train flashes past the window, though there are no second tracks in the tunnel.');
+                break;
+
+            case 170:
+                this.showThought('Seinal on tume kiri: „ÄRA USU VAGUNIT 200.”', 'Dark words on the wall read: “DO NOT TRUST CARRIAGE 200.”');
+                break;
+
+            case 171:
+                this.showThought('Grip ilmub kaugemast uksest ja kaob kiiresti tühjusesse.', 'Grip appears at the far door and quickly withdraws into the void.');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 172:
+                this.showThought('Vana dokument lauakesel: „Objekt 002 reageeris teisele katsele.”', 'Old document on the table: “Object 002 responded to the second test.”');
+                break;
+
+            case 173:
+                this.showThought('Vana foto metroojaamast. Jaama nime pole näha.', 'An old photograph of a subway station. The station name is missing.');
+                break;
+
+            case 174:
+                this.showThought('Valgustus kustub. Ööprillidega on näha korraks vaguni lõpus siluetti.', 'The lights cut out. Under night vision, a silhouette is visible at the far end.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 175:
+                this.showThought('Raadio: „Nad ei ehitanud seda rongi. Nad leidsid selle.”', 'Radio: “They did not build this train. They found it.”');
+                metroAudio.playWhisper(4.5);
+                break;
+
+            case 176:
+                this.showThought('Istmel on vana käekell, mis liigub ainult siis, kui sa ise liigud.', 'An old wristwatch on the seat only ticks while you are moving.');
+                break;
+
+            case 177:
+                this.startShadowRushCarriageEvent(177);
+                this.showThought('Shadow Dash kihutab mööda! Pärast sündmust on vagun jälle täiesti tühi.', 'Shadow Dash screams past! The carriage falls completely silent afterwards.');
+                break;
+
+            case 178:
+                this.showThought('Vana foto neljast inimesest. Üks inimene on pildilt teravalt välja lõigatud.', 'An old photo of four people. One person has been sharply cut out.');
+                break;
+
+            case 179:
+                this.showThought('Metro peatub hetkeks, kuid uksed ei avane... Pinge tõuseb.', 'The metro halts for a brief moment, but doors remain shut... Tension rises.');
+                metroAudio.playFlickerBuzz();
+                break;
+
+            case 180:
+                this.showThought('Seinal vilgub number 002, seejärel muutub see numbriks 200.', 'Number 002 flashes on the bulkhead, shifting into number 200.');
+                break;
+
+            case 181:
+                this.showThought('Grip ilmub lühemalt ukse vahelt — sa jõuad sellest mööda joosta!', 'Grip reaches out briefly — you can sprint past it!');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 182:
+                this.showThought('Vana nimekiri, kus enamiku nimede kõrval on punane märge „kadunud”.', 'An old manifest where almost every name is stamped “missing”.');
+                break;
+
+            case 183:
+                this.showThought('Grip sirutub taas uksest välja!', 'Grip strikes again from the doorway!');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 184:
+                this.showThought('Raadio: „Katse 002 ei olnud esimene. See oli ainus, mis töötas.”', 'Radio: “Experiment 002 was not the first. It was the only one that worked.”');
+                metroAudio.playWhisper(5.0);
+                break;
+
+            case 185:
+                this.showThought('Kõik reisijad vaatavad korraga mängija poole, kuid keegi ei räägi.', 'Every passenger silently turns their head to face you simultaneously.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.passengers.forEach(p => p.animType = 'uncanny_stare');
+                }
+                break;
+
+            case 186:
+                this.showThought('Vana metrookaart, millele on käsitsi märgitud uus jaam: 200.', 'A transit map with a handwritten secret terminal: 200.');
+                break;
+
+            case 187:
+                this.startShadowRushCarriageEvent(187);
+                break;
+
+            case 188:
+                this.showThought('Vana foto samast rongist. Esiklaasi kohal on vaguninumber 200.', 'An old photo of this train. Carriage number 200 glows above the front.');
+                break;
+
+            case 189:
+                this.showThought('Raadio ütleb katkendlikult: „…nad ootavad…”', 'Radio statics intermittently: “…they are waiting…”');
+                metroAudio.playWhisper(3.5);
+                break;
+
+            case 190:
+                this.showThought('Metroo hakkab väga kiiresti sõitma! Kõik tuled muutuvad punaseks!', 'The metro accelerates violently! All lights blaze crimson!');
+                if (this.currentCarriage) {
+                    this.currentCarriage.lights.forEach(l => { l.color.setHex(0xff1744); l.intensity = 1.3; });
+                }
+                break;
+
+            case 191:
+                this.showThought('Ukse klaasile ilmub helendav tekst: „VIIMASED 10 VAGUNIT.”', 'Glowing text blazes across the door glass: “FINAL 10 CARRIAGES.”');
+                break;
+
+            case 192:
+                this.startShadowRushCarriageEvent(192);
+                this.showThought('Shadow Dash tormab mööda! Põrandale jääb pilet numbriga 002.', 'Shadow Dash sweeps through! Ticket 002 remains on the floor.');
+                break;
+
+            case 193:
+                this.showThought('Vana foto kolmest inimesest. Nad seisavad otse Vaguni 200 ukse ees.', 'An old photo of three people standing directly in front of Carriage 200.');
+                break;
+
+            case 194:
+                this.showThought('Raadio: „Kui uks avaneb, ära vaata, kes sind ootab.”', 'Radio: “When the door opens, do not look at who is waiting for you.”');
+                metroAudio.playWhisper(4.0);
+                break;
+
+            case 195:
+                this.showThought('Metro aeglustub ja kõik reisijad kaovad korraga ümbert ära.', 'The metro decelerates and all passengers instantly vanish.');
+                if (this.currentCarriage) {
+                    this.currentCarriage.passengers.forEach(p => { if (p.group) p.group.visible = false; });
+                }
+                break;
+
+            case 196:
+                this.showThought('Grip ilmub. Pärast selle kadumist jääb uksele hõõguma number 200.', 'Grip reaches out. After it withdraws, glowing number 200 remains on the door.');
+                this.triggerShadowHandsEvent();
+                break;
+
+            case 197:
+                this.showThought('Kõik aknad muutuvad mustaks. Mängija näeb ainult enda peegeldust.', 'All windows turn pitch black. You only see your own reflection in the glass.');
+                break;
+
+            case 198:
+                this.showThought('Vana dokument: „Katse 002 andis tulemuse. Rong leidis tee.”', 'Old dossier: “Experiment 002 yielded results. The train found its path.”');
+                break;
+
+            case 199:
+                this.showThought('Metro peatub. Uks vagunisse 200 avaneb aeglaselt. Raadio: „Nüüd saad teada.”', 'The metro halts. The heavy door to Carriage 200 slides open. Radio: “Now you will know.”');
+                metroAudio.playDoorSlide(true);
+                break;
+
+            case 200:
+                // ── VAGUN 200: MAHAJÄETUD METROOPEATUSE LÕPP & KUULJA BOSS ──
+                this.triggerCarriage200Boss();
+                break;
+
+            // ── VAGUNID 201–250 — KANALISATSIOON (THE CANALIZATION) ─────────────────
+
+            case 201:
+                this.triggerCarriage201SewerIntro();
+                break;
+
+            case 202:
+                this.showThought('Liigud mööda kitsast rada vee kõrval. Tunnel on väga pikk ja kaugelt on kuulda vee voolamist.', 'You walk along the narrow catwalk beside flowing water.');
+                break;
+
+            case 203:
+                this.showThought('Suur tühi ruum. Keskel voolab vesi läbi sügava kanali. Teisele poole viib väike metallist sild.', 'Vast chamber. Water rushes through a central canal. A narrow steel bridge crosses over.');
+                break;
+
+            case 204:
+                this.showThought('Metalluks on lukus. Leia kõrval asuv väike kang, mis ukse avab!', 'The metal door is locked. Find the wall lever nearby to open it!');
+                break;
+
+            case 205:
+                this.showThought('Pikk sirge tunnel. Vesi voolab sinu kõrval ja tuled vilguvad.', 'Long straight sewer conduit. Water flows beside you under flickering industrial lights.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 206:
+                this.showThought('Suured trellid blokeerivad ühe tunneli poole. Nende taga paistab teine sügav tunnel.', 'Heavy iron grates block one side of the conduit.');
+                break;
+
+            case 207:
+                this.showThought('Vesi hakkab järsku kiiremini voolama! Jõua kiiresti järgmise ukse juurde!', 'The water suddenly rushes faster! Hurry to the next doorway!');
+                break;
+
+            case 208:
+                this.showThought('Tühi hooldusruum. Seinad on märjad ja laest tilgub vett.', 'Empty maintenance vault. The concrete walls are wet and ceiling drips.');
+                break;
+
+            case 209:
+                this.showThought('Metalluks avaneb väga aeglaselt. Ukse taga laiub veelgi suurem tunnel.', 'The heavy floodgate grinds open revealing an even larger water cavern.');
+                break;
+
+            case 210:
+                this.showThought('Suur tunnel, mille keskel voolab vesi. Mõlemal pool on kitsad kõnniteed.', 'Large vaulted tunnel with a central torrent and narrow walkways on both flanks.');
+                break;
+
+            case 211:
+                this.showThought('Kaugelt kostab sammude moodi heli... aga kedagi pole näha.', 'Footstep-like echoes reverberate in the distance... yet no one is visible.');
+                break;
+
+            case 212:
+                this.showThought('⚠️ Tuleb Shadow Dash kanalisatsioonis!', '⚠️ Shadow Dash approaches through the sewer tunnels!');
+                this.startShadowRushCarriageEvent(212);
+                break;
+
+            case 213:
+                this.showThought('Pikk tunnel, kus kõik lambid kustuvad ükshaaval sinu selja taga...', 'Long conduit where floodlights shut off one by one behind you...');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 214:
+                this.showThought('Leia seinal olev nupp, mis avab järgmise metallukse!', 'Find the circuit button on the wall to open the next door!');
+                break;
+
+            case 215:
+                this.showThought('Suur tühi ruum. Vesi langeb kõrgemalt alla ja tekitab väga tugeva kaja.', 'Huge subterranean waterfall hall. Rushing water creates thunderous echoes.');
+                break;
+
+            case 216:
+                this.showThought('Üks tunnel on trellidega suletud. Mine mööda avatud tunnelit edasi.', 'One tunnel is barred with iron grates. Proceed along the open passage.');
+                break;
+
+            case 217:
+                // Shadow Dash + Water Submerge mechanic
+                this.triggerCarriage217SewerShadowDash();
+                break;
+
+            case 218:
+                this.showThought('Kõik jääb hetkeks täiesti vaikseks. Seejärel kostab kaugelt tugev metallikolin.', 'Everything falls dead silent. Then a sharp metallic clatter echoes from afar.');
+                break;
+
+            case 219:
+                this.showThought('Uks avaneb automaatselt, kui sellele lähened.', 'The pneumatic door slides open automatically as you approach.');
+                break;
+
+            case 220:
+                this.showThought('Väga pikk sirge tunnel. Kauguses paistab väike valgus.', 'An exceptionally long tunnel. A faint glimmer glows far in the distance.');
+                break;
+
+            case 221:
+                this.showThought('Jõuad valguseni — see on vana katkine lamp, mis vaevu särab.', 'You reach the light — only an old broken lamp flickering on the wall.');
+                break;
+
+            case 222:
+                this.showThought('Suur kanalisatsiooniruum mitme massiivse toruga. Mõnest torust voolab vett tunnelisse.', 'Massive sewer junction with giant rusted industrial pipes.');
+                break;
+
+            case 223:
+                this.showThought('Üks toru hakkab tugevalt värisema! Liigu sellest eemale!', 'One of the massive steam pipes vibrates violently! Step away from it!');
+                break;
+
+            case 224:
+                this.showThought('Trellidega suletud ala. Trellide taga laiub tühi pimedus.', 'Barred iron enclosure with vast darkness beyond.');
+                break;
+
+            case 225:
+                this.showThought('Metallist kõnnitee üle vee. Kõndides kostab tugev metallikaja.', 'Grated catwalk suspended above deep water. Footsteps echo loudly.');
+                break;
+
+            case 226:
+                this.showThought('Kõik tuled kustuvad... mõne sekundi pärast lähevad need uuesti põlema.', 'Total blackout... a few seconds later the lights pulse back on.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 227:
+                this.showThought('Kuuled enda taga vee pritsimist. Kui pöörad ümber — pole seal kedagi.', 'You hear water splashing behind you. When you turn — nothing is there.');
+                break;
+
+            case 228:
+                this.showThought('Suur uks avaneb ja pääsed järgmisse sügavasse tunnelisse.', 'The blast door rises, opening the way to the next deep conduit.');
+                break;
+
+            case 229:
+                this.showThought('Tunnel muutub kitsamaks. Mõlemal pool kõrguvad märjad betoonseinad.', 'The channel narrows between towering damp concrete walls.');
+                break;
+
+            case 230:
+                this.showThought('Vesi hakkab tunnelis kõrgemale tõusma! Liigu kiiresti edasi!', 'The water level is rising! Move forward quickly!');
+                break;
+
+            case 231:
+                this.showThought('Jõuad kõrgele kuivale platvormile. Vesi voolab selle all.', 'You step onto a high dry platform. Rushing water flows underneath.');
+                break;
+
+            case 232:
+                this.showThought('Platvormi kõrval on suured trellid, mis ulatuvad laeni.', 'Tall iron grates line the platform reaching all the way to the ceiling.');
+                break;
+
+            case 233:
+                this.showThought('Trellide taga kustub üks lamp ja kostab tugev kolks.', 'Beyond the grates a lamp snaps off followed by a heavy metallic thump.');
+                break;
+
+            case 234:
+                this.showThought('Pikk tühi tunnel. Ainult vee voolamise heli kajab laes.', 'Long deserted conduit. Only the sound of flowing water fills the space.');
+                break;
+
+            case 235:
+                this.showThought('Leiad vana juhtpaneeli. Nupu vajutamisel avaneb järgmine metalluks!', 'You find an old control console. Pressing the switch unlocks the next floodgate!');
+                break;
+
+            case 236:
+                this.showThought('Uks sulgub kohe pärast läbimist selja taga.', 'The steel door seals shut behind you as soon as you step through.');
+                break;
+
+            case 237:
+                this.showThought('Suur ruum, kus vesi voolab mitmes erinevas kanalis.', 'Large subterranean reservoir where water splits into multiple aqueducts.');
+                break;
+
+            case 238:
+                this.showThought('Üks kanal on trellidega blokeeritud. Teisel pool voolab vesi meeletu kiirusega.', 'One channel is barred by heavy grates with a roaring torrent behind.');
+                break;
+
+            case 239:
+                this.showThought('Liigu mööda kitsast rada suure veekanali kõrval.', 'Follow the narrow walkway bordering the roaring canal.');
+                break;
+
+            case 240:
+                this.showThought('Kauguses on näha suurt ümmargust betoontunnelit.', 'In the distance, a massive circular concrete aqueduct looms ahead.');
+                break;
+
+            case 241:
+                this.showThought('Sisenesid ümmargusse tunnelisse. Vesi voolab mööda selle keskosa.', 'You enter the giant circular conduit. Water rushes along its center.');
+                break;
+
+            case 242:
+                this.showThought('Tunnelis olevad lambid hakkavad järjest vilkuma.', 'The arched ceiling lights begin to flicker sequentially.');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 243:
+                this.showThought('Üks metalluks on lahti. Selle taga on täiesti pime ruum.', 'An open iron doorway leads into a pitch-black chamber.');
+                break;
+
+            case 244:
+                this.showThought('Lähed pimedast ruumist läbi ja jõuad tagasi suuremasse veetunnelisse.', 'You make your way through the darkness back into the main conduit.');
+                break;
+
+            case 245:
+                this.showThought('Suur trellidega värav blokeerib tee. Selle kõrval on vana roostes kang.', 'A massive portcullis blocks the way. A rusty iron lever sits beside it.');
+                break;
+
+            case 246:
+                this.showThought('Tõmbad kangi ja trellidega värav hakkab aeglaselt üles kerkima!', 'You pull the lever and the heavy iron gate grinds slowly upward!');
+                metroAudio.playDoorSlide(true);
+                break;
+
+            case 247:
+                this.showThought('Värava avanemise ajal hakkab vesi tugevalt lainetama. Oota, kuni tee vabaneb!', 'Surging water churns beneath the lifting gate. Wait for clear passage!');
+                break;
+
+            case 248:
+                this.showThought('Pärast väravat jätkub suur tunnel. Ees paistab tohutu metalluks!', 'Past the gate, the cavern opens up towards a massive steel blast door!');
+                break;
+
+            case 249:
+                this.showThought('Jõuad metallukse juurde. Ukse taga on kuulda väga nõrka metroorongi heli!', 'You reach the blast door. Faint subway train reverberations echo from beyond!');
+                break;
+
+            case 250:
+                // ── VAGUN 250: KANALISATSIOONI OSA LÕPP ──
+                this.triggerCarriage250SewerEnd();
+                break;
+
+            // ── VAGUNID 251–300 — SÜGAV METROO JA LÕPP ────────────────────────────
+
+            case 251:
+                this.showThought('Seisad maa-aluse metrooraja kõrval. Mõlemal pool on ainult pimedus. Kauguses vilgub üksik lamp.', 'You stand beside deep subterranean tracks. Pitch darkness all around, a single lamp blinking.');
+                break;
+
+            case 252:
+                this.showThought('Liigud mööda rööbaste kõrval olevat kitsast rada. Kaugelt kostab metrooheli, kuid rongi pole näha.', 'Walking along the railway bed. Distant train sounds rumble with no train in sight.');
+                break;
+
+            case 253:
+                this.showThought('Rööbaste kõrval seisab vana metroovagun. Selle uks on lahti, kuid sees pole mitte kedagi.', 'A derelict subway coach rests beside the track with open doors. Empty inside.');
+                break;
+
+            case 254:
+                this.showThought('Kui vagunist möödud, sulgub selle uks iseenesest!', 'As you walk past the derelict coach, its pneumatic doors slam shut on their own!');
+                metroAudio.playDoorSlide(false);
+                break;
+
+            case 255:
+                this.showThought('Vana ekraan seinal süttib ja näitab ainult: „002”.', 'An old display lights up on the bulkhead displaying solely: “002”.');
+                break;
+
+            case 256:
+                this.showThought('Kuuled enda selja taga samme. Kui pöörad ümber, pole seal kedagi.', 'You hear footsteps trailing behind. Turning around reveals nothing.');
+                break;
+
+            case 257:
+                // Shadow Dash + Maintenance Room Hideout
+                this.triggerCarriage257MaintenanceHideout();
+                break;
+
+            case 258:
+                this.showThought('Hooldusruumi seintele on kirjutatud palju kordi sama number: 002.', 'The maintenance room walls are etched hundreds of times with the number: 002.');
+                break;
+
+            case 259:
+                this.showThought('Väljud ruumist. Rööbastel seisab nüüd vana rong, mida enne seal ei olnud.', 'Exiting the room, an ancient ghost train now rests silently on the rails.');
+                break;
+
+            case 260:
+                this.showThought('Rong seisab täiesti vaikselt. Kõik selle aknad on pigimustad.', 'The ghost train rests in absolute stillness. All windows are opaque black.');
+                break;
+
+            case 261:
+                this.showThought('Rongist kostab korraks koputus vastu akent... keegi on sees.', 'A sharp tap on the window glass echoes from inside the phantom coach.');
+                metroAudio.playWhisper(3.0);
+                break;
+
+            case 262:
+                this.showThought('Möödud viimasest aknast — seal liigub korraks vari!', 'As you pass the final window, a dark silhouette shifts inside!');
+                break;
+
+            case 263:
+                this.showThought('Rööbaste kohal hakkavad lambid järjest kustuma, liikudes sinu suunas!', 'Tunnel floodlights snap off sequentially overhead, racing toward you!');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 264:
+                this.showThought('Jõuad suure metallukse juurde. Uks avaneb iseenesest.', 'You arrive at a giant bulkhead. The heavy door glides open on its own.');
+                metroAudio.playDoorSlide(true);
+                break;
+
+            case 265:
+                this.showThought('Ukse taga on pikk tunnel. Sealt kostab väga vaikne hingamise moodi heli.', 'Beyond is a cavernous conduit. A faint, rhythmic breathing sound echoes.');
+                break;
+
+            case 266:
+                this.showThought('Liigud edasi. Hingamise heli muutub iga sammuga valjemaks...', 'Moving forward. The breathing sound grows louder with each step...');
+                break;
+
+            case 267:
+                this.showThought('Järsku jääb kõik täiesti vaikseks.', 'Suddenly, utter and profound silence engulfs the tunnel.');
+                break;
+
+            case 268:
+                this.showThought('Sinu ees seisab vana metroovagun, mis blokeerib kogu tunneli.', 'A giant vintage subway carriage stands directly ahead, barring the tunnel.');
+                break;
+
+            case 269:
+                this.showThought('Vagun hakkab aeglaselt ise liikuma, kuigi selles pole juhti!', 'The empty carriage begins to roll forward on its own with no driver aboard!');
+                break;
+
+            case 270:
+                this.showThought('Kui vagun ära liigub, on selle taga ainult tühi ja lõputu tunnel.', 'As the coach rolls away, only a vast empty tunnel remains.');
+                break;
+
+            case 271:
+                this.showThought('Näed kauguses inimest meenutavat kuju. Kuju seisab täiesti liikumatult.', 'In the distance, a motionless humanoid silhouette stands in the gloom.');
+                break;
+
+            case 272:
+                this.showThought('Kui lähened, kustuvad tuled. Kui need tagasi süttivad, on kuju kadunud!', 'As you approach, lights extinguish. When they return, the figure is gone!');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 273:
+                this.showThought('Vana kõlar hakkab tööle: „Palun ärge lahkuge rongist.”', 'An antique PA speaker crackles: “Please do not leave the train.”');
+                metroAudio.playWhisper(4.0);
+                break;
+
+            case 274:
+                this.showThought('Kõlar ütleb sama lauset uuesti, aga seekord teise, moonutatud häälega.', 'The speaker repeats the announcement, but in a distorted, unnatural voice.');
+                break;
+
+            case 275:
+                this.showThought('Kõik metroouksed tunneli ääres avanevad korraga!', 'All subway doors along the tunnel wall snap open simultaneously!');
+                metroAudio.playDoorSlide(true);
+                break;
+
+            case 276:
+                this.showThought('Ühe ukse taga laiub ainult täielik ja põhjatu pimedus.', 'Beyond one of the open doorways lies only total, bottomless darkness.');
+                break;
+
+            case 277:
+                this.showThought('Jookse kiiresti järgmise valgustatud alani!', 'Hurry forward to the next illuminated station sector!');
+                break;
+
+            case 278:
+                this.showThought('Valgustatud alal on vana metrookaart. Sellel pole enam ühtegi tavalist jaama.', 'A vintage transit chart hangs on the wall. All normal stations are gone.');
+                break;
+
+            case 279:
+                this.showThought('Kaardi kõige all on üksainus uus märge: „300”.', 'At the bottom of the map is a single handwritten destination: “300”.');
+                break;
+
+            case 280:
+                this.showThought('Kuuled metroorongi lähenemist. Rongi tuled paistavad kauguses!', 'You hear a subway train approaching! Its twin headlights pierce the darkness!');
+                break;
+
+            case 281:
+                this.showThought('Rong sõidab sinust väga kiiresti mööda, kuid ei tee peaaegu üldse heli.', 'The ghost train rushes past at extreme speed, making almost no sound at all.');
+                break;
+
+            case 282:
+                this.showThought('Pärast rongi möödumist on rööbaste kõrval üks uus metalluks.', 'After the train passes, a new reinforced blast door appears beside the tracks.');
+                break;
+
+            case 283:
+                this.showThought('Uks avaneb, kui sellele lähened.', 'The heavy door slides open as you draw near.');
+                metroAudio.playDoorSlide(true);
+                break;
+
+            case 284:
+                this.showThought('Ukse taga on suur tühi metroohall. Lagi on nii kõrge, et seda pole näha.', 'Beyond lies a colossal vaulted metro cathedral hall.');
+                break;
+
+            case 285:
+                this.showThought('Halli keskel ripub vana ekraan. See näitab: „KATSE 002 – VIIMANE ETAPP.”', 'Suspended in the center, an old CRT screen flashes: “EXPERIMENT 002 – FINAL PHASE.”');
+                break;
+
+            case 286:
+                this.showThought('Ekraan kustub ja langeb pimedusse.', 'The display snaps off into complete darkness.');
+                break;
+
+            case 287:
+                this.showThought('Kõik uksed hallis sulguvad korraga!', 'All bulkhead doors in the grand hall slam shut simultaneously!');
+                metroAudio.playDoorSlide(false);
+                break;
+
+            case 288:
+                this.showThought('Leia juhtpaneel, et uksed uuesti avada!', 'Find the circuit console to restore power and reopen the doors!');
+                break;
+
+            case 289:
+                this.showThought('Juhtpaneeli leidmisel kostab sinu selja tagant tugev metallikolin!', 'As you locate the panel, a heavy metallic clang echoes behind your back!');
+                break;
+
+            case 290:
+                this.showThought('Sa ei näe midagi, kuid kuuled aeglaseid samme lähenemas...', 'You see nothing in the dark, but hear slow footsteps pacing closer...');
+                break;
+
+            case 291:
+                this.showThought('Sammud jäävad sinu lähedal seisma.', 'The footsteps stop just a few feet away.');
+                break;
+
+            case 292:
+                this.showThought('Tuled lähevad põlema. Kedagi pole!', 'The floodlights snap on! The hall is empty!');
+                this.startLightFlickerAnomaly();
+                break;
+
+            case 293:
+                this.showThought('Halli kaugemas otsas avaneb suur värav!', 'A giant arched gateway rumbles open at the far end of the hall!');
+                metroAudio.playDoorSlide(true);
+                break;
+
+            case 294:
+                this.showThought('Selle taga on taas metroorööpad, mis viivad sügavamale maa alla.', 'Beyond lie the deep railway tracks descending to the final terminal.');
+                break;
+
+            case 295:
+                this.showThought('Kõlar ütleb hoiatavalt: „Ära mine 300-ni.”', 'The speaker intones a final warning: “Do not proceed to 300.”');
+                metroAudio.playWhisper(4.0);
+                break;
+
+            case 296:
+                this.showThought('Metroorong ilmub pimedusest ja peatub sinu ees.', 'A metro train emerges from the black tunnel and halts before you.');
+                break;
+
+            case 297:
+                this.showThought('Rongi uksed avanevad. Sees on tühi vagun, mille ekraanil vilgub „300”.', 'The train doors slide open. Inside is an empty coach flashing “300”.');
+                break;
+
+            case 298:
+                this.showThought('Vagun seisab paigal — rongi sisse ei saa minna, pead minema mööda platvormi.', 'The train rests stationary — follow the platform alongside.');
+                break;
+
+            case 299:
+                this.showThought('Kõik vaguni tuled kustuvad. Ekraanile ilmub: „KATSE 002 EI LÕPPENUD.” Sosin: „Sa jõudsid liiga kaugele.”', 'Lights extinguish. Screen: “EXPERIMENT 002 DID NOT END.” Whisper: “You came too far.”');
+                metroAudio.playWhisper(5.0);
+                break;
+
+            case 300:
+                // ── VAGUN 300: METROOJAAM JA VÄLJAPÄÄS (GRAND FINALE) ──
+                this.triggerCarriage300Finale();
+                break;
+
             default:
-                if (index >= 101) {
+                if (index > 300) {
                     this.showThought(
-                        `Vagun ${index}. Teekond jätkub lõputusse metroosse... (Kogutud: 🪙 ${this.coins} Coini)`,
-                        `Carriage ${index}. The journey continues into the endless subway... (Total: 🪙 ${this.coins} Coins)`
+                        `Vagun ${index}. Metroo sõidab lõputusse... (🪙 ${this.coins} Coini)`,
+                        `Carriage ${index}. The metro rides on endlessly... (🪙 ${this.coins} Coins)`
                     );
                 }
                 break;
         }
     }
 
-    // --- Anomaly Mechanics ---
+    // ── Vagun 200 Kuulja Boss Sündmused ────────────────────────────────────────
+
+    private triggerCarriage200Boss() {
+        this.kuuljaSwitchesActivated = 0;
+        this.showThought(
+            '👹 MAHAJÄETUD METROOPEATUSE LÕPP (VAGUN 200)! Kuulja on lähedal — KÜKITA [C] ja liigu vaikselt! Aktiveeri 3 lülitit!',
+            '👹 ABANDONED METRO TERMINAL (CARRIAGE 200)! The Listener is near — CROUCH [C] and move silently! Activate 3 circuit switches!'
+        );
+
+        // Spawn 3 electrical circuit switches
+        this._spawnCarriage200Switches();
+
+        // Spawn Kuulja boss entity
+        this._spawnKuuljaBoss();
+    }
+
+    private _spawnCarriage200Switches() {
+        this.kuuljaSwitches = [];
+        const switchPositions = [
+            new THREE.Vector3(-4.5, 1.2, 5.0),
+            new THREE.Vector3(4.5, 1.2, -4.0),
+            new THREE.Vector3(0, 1.2, 10.0)
+        ];
+
+        const boxMat = new THREE.MeshStandardMaterial({ color: 0x333a42, metalness: 0.8 });
+        const leverMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, roughness: 0.4 });
+
+        switchPositions.forEach((pos, i) => {
+            const swGroup = new THREE.Group();
+            swGroup.name = `kuulja_switch_${i + 1}`;
+
+            const box = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.15), boxMat);
+            swGroup.add(box);
+
+            const lever = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.06), leverMat);
+            lever.position.set(0, 0.05, 0.1);
+            swGroup.add(lever);
+
+            const light = new THREE.PointLight(0xff4757, 1.5, 3.0);
+            light.position.set(0, 0.3, 0.1);
+            swGroup.add(light);
+
+            swGroup.position.copy(pos);
+            this.scene.add(swGroup);
+            this.kuuljaSwitches.push({ mesh: swGroup, activated: false });
+        });
+    }
+
+    private _spawnKuuljaBoss() {
+        if (this.kuuljaBossGroup) this.scene.remove(this.kuuljaBossGroup);
+
+        const kuulja = new THREE.Group();
+        kuulja.name = 'kuulja_boss';
+
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0x07090e, roughness: 0.95 });
+
+        // Tall very skinny body
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 2.0, 12), skinMat);
+        body.position.set(0, 1.1, 0);
+        kuulja.add(body);
+
+        // Large smooth head without eyes
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), skinMat);
+        head.position.set(0, 2.35, 0);
+        kuulja.add(head);
+
+        // Long jointed arms
+        [-0.32, 0.32].forEach(ax => {
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 1.8, 8), skinMat);
+            arm.position.set(ax, 1.2, 0);
+            arm.rotation.z = ax > 0 ? -0.25 : 0.25;
+            kuulja.add(arm);
+        });
+
+        kuulja.position.set(0, 0, -12);
+        this.scene.add(kuulja);
+        this.kuuljaBossGroup = kuulja;
+    }
+
+    public activateKuuljaSwitch(index: number) {
+        if (index < 0 || index >= this.kuuljaSwitches.length) return;
+        const sw = this.kuuljaSwitches[index];
+        if (sw.activated) return;
+        sw.activated = true;
+        this.kuuljaSwitchesActivated++;
+
+        // Visual change to green
+        const pointLight = sw.mesh.children.find(c => c instanceof THREE.PointLight) as THREE.PointLight;
+        if (pointLight) pointLight.color.setHex(0x2ed573);
+
+        metroAudio.playKeypadBeep(true);
+        this.showThought(
+            `⚡ Lüliti ${this.kuuljaSwitchesActivated}/3 aktiveeritud! Kuulja kuulis seda heli!`,
+            `⚡ Switch ${this.kuuljaSwitchesActivated}/3 activated! The Listener heard the sound!`
+        );
+
+        // Make Kuulja rush toward switch
+        if (this.kuuljaBossGroup) {
+            this.kuuljaHearingAlert = true;
+            const alertEl = document.getElementById('kuulja-alert-overlay');
+            if (alertEl) alertEl.style.display = 'block';
+            setTimeout(() => {
+                this.kuuljaHearingAlert = false;
+                if (alertEl) alertEl.style.display = 'none';
+            }, 3500);
+        }
+
+        if (this.kuuljaSwitchesActivated >= 3) {
+            this._finishCarriage200Boss();
+        }
+    }
+
+    private _finishCarriage200Boss() {
+        this.showThought(
+            '🌟 KÕIK 3 LÜLITIT ON AKTIIVSED! Tuled süttivad ja väljapääsu uks avaneb päikesevalguse kätte!',
+            '🌟 ALL 3 SWITCHES ACTIVATED! Station lights power up and the blast exit opens!'
+        );
+
+        if (this.currentCarriage) {
+            this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 1.4; });
+        }
+
+        // Cutscene: Run up stairs -> Kuulja breaks stairs -> Fall into Canalization
+        setTimeout(() => {
+            this.showThought('Jooksed treppidest üles valguse poole...', 'Running up the stairs toward daylight...');
+            setTimeout(() => {
+                this.showThought('😱 Kuulja purustab trepi! Trepp variseb ja sa kukud sügavasse kanalisatsiooni!', '😱 The Listener smashes the stairs! You plummet down through the levels into the sewers!');
+                metroAudio.playShadowRushScreech();
+
+                // Falling sequence through levels: 199 -> 150 -> 100 -> 50 -> 10 -> 002
+                let count = 0;
+                const levels = [199, 150, 100, 50, 10, '002'];
+                const fallInterval = setInterval(() => {
+                    if (count < levels.length) {
+                        this.showThought(`Kukkumine... TASE ${levels[count]}`, `Falling... LEVEL ${levels[count]}`);
+                        count++;
+                    } else {
+                        clearInterval(fallInterval);
+                        this.showThought('SA EI PIDANUD SIIA JÕUDMA.', 'YOU WERE NEVER MEANT TO REACH HERE.');
+                        setTimeout(() => {
+                            this.loadCarriage(201, 'right');
+                        }, 2500);
+                    }
+                }, 700);
+            }, 3000);
+        }, 2000);
+    }
+
+    // ── Kanalisatsiooni Sündmused (Vagunid 201–250) ──────────────────────────
+
+    private triggerCarriage201SewerIntro() {
+        this.carriage201IntroPlayed = true;
+        const titleOverlay = document.getElementById('canalization-title-overlay');
+        if (titleOverlay) {
+            titleOverlay.style.display = 'flex';
+            setTimeout(() => {
+                titleOverlay.style.display = 'none';
+                this.showThought(
+                    'Kukkusid vette... Tõused aeglaselt püsti. Ees on suur betoontunnel ja vesi.',
+                    'You plunged into water... Slowly getting up. A concrete sewer tunnel stretches ahead.'
+                );
+            }, 5000);
+        }
+    }
+
+    private triggerCarriage217SewerShadowDash() {
+        this.showThought(
+            '⚠️ SHADOW DASH TULEB! LAMA VEES [C / E], et peita! (Kuni 20s)',
+            '⚠️ SHADOW DASH INCOMING! SUBMERGE IN WATER [C / E] to hide! (Up to 20s)'
+        );
+
+        this.startShadowRushCarriageEvent(217);
+
+        // Track submerge survival in loop
+        let elapsed = 0;
+        const subCheck = setInterval(() => {
+            if (!this.shadowRushActive) {
+                clearInterval(subCheck);
+                this.emergeFromSewerWater();
+                return;
+            }
+            elapsed += 0.5;
+            if (this.sewerWaterSubmerged) {
+                if (elapsed >= 10) {
+                    const canvas = this.renderer.domElement;
+                    if (canvas) canvas.style.filter = 'grayscale(0.8)';
+                }
+                if (elapsed >= 20) {
+                    this.playerHp = Math.max(0, this.playerHp - 5);
+                    this.updateHealthUI();
+                }
+            } else {
+                // Standing during Shadow rush = death
+                if (Math.abs(this.playerPos.z) < 5.0) {
+                    clearInterval(subCheck);
+                    this.triggerDraggedDeath(1);
+                }
+            }
+        }, 500);
+    }
+
+    private triggerCarriage250SewerEnd() {
+        this.carriage250DoorOpened = true;
+        this.showThought(
+            '🌟 KANALISATSIOONI OSA LÕPP! Metalluks avaneb ja ees paistavad metroorööpad.',
+            '🌟 CANALIZATION COMPLETE! The blast door opens revealing deep subway tracks.'
+        );
+        metroAudio.playDoorSlide(true);
+    }
+
+    private triggerCarriage257MaintenanceHideout() {
+        this.showThought(
+            '🚨 SHADOW DASH LÄHENEB! MINE PEIDA HOOLDUSRUUMI! 🚨',
+            '🚨 SHADOW DASH INCOMING! HIDE INSIDE THE MAINTENANCE ROOM! 🚨'
+        );
+        this.startShadowRushCarriageEvent(257);
+    }
+
+    private triggerCarriage300Finale() {
+        this.showThought(
+            '☀️ VAGUN 300 — METROOJAAM JA VÄLJAPÄÄS! Astu mööda pikka platvormi metallukseni!',
+            '☀️ CARRIAGE 300 — SUBWAY TERMINAL & FINAL EXIT! Walk along the long platform to the blast door!'
+        );
+
+        setTimeout(() => {
+            this.triggerVictory300();
+        }, 5000);
+    }
+
+
+    // ── Politsei jälituse sündmused ────────────────────────────────────────────
+
+    private triggerPoliceChase150() {
+        if (this.policeChaseTriggered) return;
+        this.policeChaseTriggered = true;
+        this.policeChaseAnimLocked = true;
+
+        // 1. Metroo pidurdab järsult
+        this.showThought('Metroo pidurdab järsult ja jääb seisma! Uksed avanevad...', 'The metro brakes hard and stops! Doors slide open...');
+        metroAudio.playFlickerBuzz();
+
+        // 2. 5 politseinikku ilmub 3 sekundi pärast
+        setTimeout(() => {
+            this._spawnPoliceOfficers(5);
+            this.showThought('5 politseinikku astub sisse... nad tunduvad sõbralikud? Aga midagi on valesti.', '5 officers step in... they seem friendly? But something is wrong.');
+        }, 2500);
+
+        // 3. 10 sekundi pärast muutuvad vaenulikuks
+        setTimeout(() => {
+            this.policeChaseActive = true;
+            this.policeChaseAnimLocked = false;
+            this.policeChaseRunActive = true;
+            this.showThought('🚨 POLITSEINIKUD MUUTUVAD VAENULIKUKS — JOOKSE!!! 🚨', '🚨 THE OFFICERS TURN HOSTILE — RUN!!! 🚨');
+            metroAudio.playShadowRushScreech();
+
+            // Politseinikud hakkavad mängijale järele jooksma
+            this._startPoliceChaseAnimation();
+        }, 13000);
+    }
+
+    private _spawnPoliceOfficers(count: number) {
+        this.policeOfficers.forEach(p => this.scene.remove(p));
+        this.policeOfficers = [];
+
+        const officerMat = new THREE.MeshStandardMaterial({ color: 0x1a3a5c, roughness: 0.8 });
+        const badgeMat = new THREE.MeshBasicMaterial({ color: 0xffd32a });
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.9 });
+
+        for (let i = 0; i < count; i++) {
+            const group = new THREE.Group();
+
+            // Body
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.48, 1.0, 0.28), officerMat);
+            body.position.set(0, 0.9, 0);
+            group.add(body);
+
+            // Badge
+            const badge = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.02), badgeMat);
+            badge.position.set(0.12, 1.15, 0.15);
+            group.add(badge);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.34, 0.3), skinMat);
+            head.position.set(0, 1.6, 0);
+            group.add(head);
+
+            // Cap
+            const cap = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.1, 0.34), officerMat);
+            cap.position.set(0, 1.8, 0);
+            group.add(cap);
+
+            // Legs
+            [-0.12, 0.12].forEach((lx, li) => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.22), officerMat);
+                leg.position.set(lx, 0.35, 0);
+                group.add(leg);
+            });
+
+            // Position in line behind player
+            const zOffset = 2.5 + i * 0.85;
+            group.position.set((i % 2 === 0 ? -0.4 : 0.4) * (i < 2 ? 1 : -1), 0, zOffset);
+            group.rotation.y = Math.PI;
+
+            this.scene.add(group);
+            this.policeOfficers.push(group);
+        }
+    }
+
+    private _startPoliceChaseAnimation() {
+        // Politseinikud liiguvad mängija poole aeglaselt
+        const chaseInterval = setInterval(() => {
+            if (!this.policeChaseActive) { clearInterval(chaseInterval); return; }
+            this.policeOfficers.forEach(officer => {
+                if (!officer.parent) return;
+                const dx = this.playerPos.x - officer.position.x;
+                const dz = this.playerPos.z - officer.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist > 1.8) {
+                    officer.position.x += (dx / dist) * 0.025;
+                    officer.position.z += (dz / dist) * 0.025;
+                }
+            });
+        }, 16);
+    }
+
+    public triggerGripRemoveOfficer(carriageIndex: number) {
+        if (this.policeOfficers.length === 0) return;
+        const toRemove = this.policeOfficers.pop();
+        if (toRemove) {
+            // Animate the officer being pulled sideways (Grip haarab)
+            let t = 0;
+            const removeAnim = setInterval(() => {
+                t += 0.05;
+                if (toRemove.parent) {
+                    toRemove.position.x += 0.18;
+                    toRemove.position.y -= 0.04;
+                }
+                if (t >= 1.0) {
+                    clearInterval(removeAnim);
+                    this.scene.remove(toRemove);
+                }
+            }, 30);
+        }
+        this.policeRemovedByGrip++;
+        this.showThought(`Must varjukäsi haarab politseiniku ja tõmbab ta metroost välja! (Alles jääb ${this.policeOfficers.length})`, `The black hand grabs an officer and drags them out! (${this.policeOfficers.length} remain)`);
+    }
+
+    private triggerPoliceChaseEnding159() {
+        // Mängija jõuab Vagun 160 ja uks sulgub — vaatan Vagun 159 sündmust teisest vaatenurgast
+        setTimeout(() => {
+            this.showThought('Vagun 159 aknast on näha: Grip haarab ühe allesjäänud politseiniku ja tõmbab ta metroost välja! Alles jääb üks.', 'Through the window of Carriage 159: Grip seizes another officer and pulls them out! One remains.');
+            if (this.policeOfficers.length > 0) {
+                const last2 = this.policeOfficers.pop();
+                if (last2) this.scene.remove(last2);
+                this.policeRemovedByGrip++;
+            }
+        }, 2000);
+    }
+
+    private triggerPoliceChaseEnd160() {
+        // Viimane politseinik jõuab ukse juurde ja lööb seda
+        this.showThought('Metroo hakkab uuesti liikuma! Viimane politseinik jääb ukse taha — ta peksab raevu nägu ust, aga ei pääse sisse!', 'The metro starts moving again! The last officer is left behind the door — furiously hammering it — but cannot get in!');
+        metroAudio.playFlickerBuzz();
+        setTimeout(() => {
+            this.policeChaseActive = false;
+            this.policeChaseRunActive = false;
+            // Eemalda kõik allesjäänud politseinikud
+            this.policeOfficers.forEach(p => this.scene.remove(p));
+            this.policeOfficers = [];
+            this.showThought('Vagun 160 — metroo on jälle liikumas. Politseinikud on kadunud.', 'Carriage 160 — the metro is moving again. The officers are gone.');
+        }, 6000);
+    }
+
+    // ── Anomaly Mechanics ────────────────────────────────────────────────────
 
     private startLightFlickerAnomaly() {
         if (!this.currentCarriage) return;
@@ -4123,6 +6180,16 @@ this.state = 'player_free';
             if (e.code === 'Digit6' && this.inventory['secret_pass']) this.toggleEquipItem('secret_pass');
             if (e.code === 'Digit7' && this.inventory['radio']) this.toggleEquipItem('radio');
 
+            // Backpack / Clues Folder shortcut (KeyB or KeyJ)
+            if (e.code === 'KeyB' || e.code === 'KeyJ') {
+                this.toggleCluesFolderModal();
+            }
+
+            // Crouch / Sneak / Submerge in water toggle (KeyC)
+            if (e.code === 'KeyC') {
+                this.toggleCrouch();
+            }
+
             // Playard Owner Teleport Modal shortcut (F2)
             if (e.code === 'F2' && this.isOwner) {
                 const modal = document.getElementById('owner-teleport-modal');
@@ -4136,7 +6203,13 @@ this.state = 'player_free';
             // Escape to close modals
             if (e.code === 'Escape') {
                 this.closeOwnerTeleportModal();
+                this.closeCluesFolderModal();
+                const clueModal = document.getElementById('clue-inspect-modal');
+                if (clueModal && clueModal.style.display === 'flex') {
+                    this.packCurrentInspectedClue();
+                }
             }
+
         });
 
         window.addEventListener('keyup', (e) => {
@@ -4407,11 +6480,17 @@ this.state = 'player_free';
         }
 
         if (this.aimedInteractable === 'inspectable') {
+            const dbClue = CLUES_DATABASE.find(c => c.carIndex === this.currentCarIndex && !this.collectedClues.some(cc => cc.id === c.id));
+            if (dbClue) {
+                this.openClueInspection(dbClue);
+                return;
+            }
             if (this.currentCarIndex === 28) this.hasUnlockedCarriage28WithClue = true;
             if (this.currentCarIndex === 78) this.hasUnlockedCarriage78WithHint = true;
             this.openLoreModal();
             return;
         }
+
 
         if (this.aimedInteractable === 'keypad') {
             this.openKeypadModal();
@@ -4504,8 +6583,8 @@ this.state = 'player_free';
     public teleportToCarriage(carNum: number): boolean {
         if (!this.isOwner) return false;
 
-        // User requirement: "kui panen liiga suure siis tuleb tekst sellist vagunit ei ole"
-        if (isNaN(carNum) || carNum < 0 || carNum > 100) {
+        // Teleport supports all carriages from 0 to 300
+        if (isNaN(carNum) || carNum < 0 || carNum > 300) {
             const errEl = document.getElementById('owner-teleport-error');
             if (errEl) {
                 errEl.innerText = this.lang === 'et' ? '❌ Sellist vagunit ei ole' : '❌ No such carriage exists';
@@ -4518,6 +6597,7 @@ this.state = 'player_free';
             );
             return false;
         }
+
 
         // If in intro, skip to active gameplay
         if (this.state === 'intro_station' || this.state === 'intro_boarding' || this.state === 'intro_inside') {

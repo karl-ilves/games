@@ -594,6 +594,10 @@
             <div id="hud-controls-hint" style="font-size: 0.78rem; color: #a4b0be; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
                 🖱️ Hiir / ⌨️ Nooled: Vaade
             </div>
+            <button class="btn-hud-action" id="btn-backpack-folder" style="background: rgba(0, 242, 254, 0.15); border-color: #00f2fe; color: #00f2fe; font-weight: 800;" title="Seljakott / Vihjete Kaust (B / Klikk)">
+                <span>📁</span>
+                <span id="backpack-btn-text">Kaust (0)</span>
+            </button>
             <button class="btn-hud-action" id="btn-owner-panel" style="background: linear-gradient(135deg, rgba(255, 211, 42, 0.25), rgba(243, 156, 18, 0.35)); border: 1.5px solid #ffd32a; color: #ffd32a; font-weight: 800;" title="Playard Owner Teleport (F2 / Click)">
                 <span>👑</span>
                 <span id="owner-panel-btn-text">Owner Paneel</span>
@@ -676,12 +680,12 @@
         <div class="modal-box" style="border: 2px solid #ffd32a; max-width: 480px; box-shadow: 0 0 45px rgba(255, 211, 42, 0.4); background: #0c1017; padding: 25px;">
             <div style="font-size: 2.5rem; margin-bottom: 4px;">👑</div>
             <h2 class="modal-title" style="color: #ffd32a; font-size: 1.6rem; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 6px 0;">PLAYARD OWNER PANEEL</h2>
-            <p style="color: #a4b0be; font-size: 0.88rem; margin: 0 0 16px 0;">Telepordi vabalt valitud vagunisse (0–100)</p>
+            <p style="color: #a4b0be; font-size: 0.88rem; margin: 0 0 16px 0;">Telepordi vabalt valitud vagunisse (0–300)</p>
 
             <div style="background: rgba(255, 211, 42, 0.08); border: 1px solid rgba(255, 211, 42, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                <label for="owner-teleport-input" style="display: block; font-size: 0.85rem; font-weight: 800; color: #ffd32a; margin-bottom: 8px;">SISSESTA VAGUNI NUMBER (0–100):</label>
+                <label for="owner-teleport-input" style="display: block; font-size: 0.85rem; font-weight: 800; color: #ffd32a; margin-bottom: 8px;">SISSESTA VAGUNI NUMBER (0–300):</label>
                 <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-                    <input type="number" id="owner-teleport-input" min="0" max="100" placeholder="nt 63" style="font-size: 1.6rem; font-weight: 900; text-align: center; width: 140px; padding: 8px 12px; border-radius: 10px; border: 2px solid #ffd32a; background: #07090e; color: #ffd32a; outline: none;">
+                    <input type="number" id="owner-teleport-input" min="0" max="300" placeholder="nt 200" style="font-size: 1.6rem; font-weight: 900; text-align: center; width: 140px; padding: 8px 12px; border-radius: 10px; border: 2px solid #ffd32a; background: #07090e; color: #ffd32a; outline: none;">
                     <button class="btn-modal-close" id="btn-owner-teleport-submit" style="margin: 0; background: linear-gradient(135deg, #ffd32a, #f39c12); color: #000; font-weight: 900; padding: 10px 22px; font-size: 1rem; border-radius: 10px;">⚡ Telepordi</button>
                 </div>
                 <div id="owner-teleport-error" style="color: #ff4757; font-weight: 800; font-size: 0.92rem; margin-top: 10px; display: none;">❌ Sellist vagunit ei ole</div>
@@ -692,12 +696,16 @@
                 <div style="font-size: 0.78rem; font-weight: 800; color: #ffd32a; margin-bottom: 8px; letter-spacing: 0.5px;">⚡ KIIRVALIKUD:</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;">
                     <button class="btn-hud-action btn-quick-tp" data-car="1" style="font-size: 0.78rem; padding: 4px 10px;">Vagun 1</button>
-                    <button class="btn-hud-action btn-quick-tp" data-car="11" style="font-size: 0.78rem; padding: 4px 10px;">Vagun 11</button>
-                    <button class="btn-hud-action btn-quick-tp" data-car="63" style="font-size: 0.78rem; padding: 4px 10px;">Vagun 63 (🗝️ Võti)</button>
-                    <button class="btn-hud-action btn-quick-tp" data-car="64" style="font-size: 0.78rem; padding: 4px 10px;">Vagun 64 (Lukus)</button>
                     <button class="btn-hud-action btn-quick-tp" data-car="100" style="font-size: 0.78rem; padding: 4px 10px; border-color: #ffd32a; color: #ffd32a;">Vagun 100 (🌟 Pood)</button>
+                    <button class="btn-hud-action btn-quick-tp" data-car="150" style="font-size: 0.78rem; padding: 4px 10px; border-color: #ff4757; color: #ff4757;">Vagun 150 (🚨 Politsei)</button>
+                    <button class="btn-hud-action btn-quick-tp" data-car="200" style="font-size: 0.78rem; padding: 4px 10px; border-color: #a55eea; color: #a55eea;">Vagun 200 (👹 Kuulja)</button>
+                    <button class="btn-hud-action btn-quick-tp" data-car="201" style="font-size: 0.78rem; padding: 4px 10px; border-color: #00f2fe; color: #00f2fe;">Vagun 201 (🌊 Kanalisatsioon)</button>
+                    <button class="btn-hud-action btn-quick-tp" data-car="217" style="font-size: 0.78rem; padding: 4px 10px;">Vagun 217 (Vees peitmine)</button>
+                    <button class="btn-hud-action btn-quick-tp" data-car="250" style="font-size: 0.78rem; padding: 4px 10px;">Vagun 250 (Rööpad)</button>
+                    <button class="btn-hud-action btn-quick-tp" data-car="300" style="font-size: 0.78rem; padding: 4px 10px; border-color: #2ed573; color: #2ed573; font-weight: 900;">Vagun 300 (☀️ Lõpp)</button>
                 </div>
             </div>
+
 
             <div style="margin-top: 18px;">
                 <button class="btn-modal-close" id="btn-owner-teleport-close" style="background: #2f3640; color: #f5f6fa; padding: 8px 26px; font-size: 0.9rem; border-radius: 20px;">Sulge / Close (Esc)</button>
@@ -754,13 +762,107 @@
         </div>
     </div>
 
-    <!-- Ajapahalane (Time Villain) Countdown Timer Overlay -->
-    <div id="time-villain-overlay" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2500; text-align: center; pointer-events: none;">
-        <div id="time-villain-countdown" style="font-size: 5rem; font-weight: 900; color: #ff4757; text-shadow: 0 0 40px #ff4757, 0 0 80px rgba(255,71,87,0.5); font-family: monospace; letter-spacing: 6px; animation: pulse-btn 0.8s infinite;">
-            ⏱️ 10
+    <!-- Clue / Collectible Enlarged Inspection Modal (1st click: inspect, 2nd click / button: pack into backpack) -->
+    <div class="modal-overlay" id="clue-inspect-modal" style="z-index: 2800; backdrop-filter: blur(12px); background: rgba(3, 6, 12, 0.9);">
+        <div class="modal-box" id="clue-inspect-box" style="max-width: 560px; background: #0c111a; border: 2px solid #00f2fe; box-shadow: 0 0 50px rgba(0, 242, 254, 0.45); padding: 26px; text-align: center; position: relative; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;">
+            <div id="clue-badge-type" style="display: inline-block; background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; color: #00f2fe; padding: 3px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;">
+                📜 VIHJE LEITUD
+            </div>
+            <h2 id="clue-inspect-title" style="color: #ffd32a; font-size: 1.45rem; margin: 0 0 14px 0; letter-spacing: 0.5px;">Vana Pilet</h2>
+            
+            <!-- Graphic/Card presentation of the item -->
+            <div id="clue-card-container" style="background: #151d2a; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 14px; padding: 20px; margin-bottom: 20px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                <div id="clue-card-icon" style="font-size: 3.5rem; margin-bottom: 12px;">🎫</div>
+                <div id="clue-card-text" style="color: #f1f2f6; font-size: 1.15rem; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 1px; line-height: 1.5; white-space: pre-line; word-break: break-word;">
+                    „SEE RONG EI PEATUNUD KUNAGI.”
+                </div>
+            </div>
+
+            <p style="color: #a4b0be; font-size: 0.82rem; margin: 0 0 18px 0; font-style: italic;">
+                💡 Vajuta esemele uuesti või nupule, et see seljakotti panna.
+            </p>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn-modal-close" id="btn-pack-clue" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #050a12; font-weight: 900; font-size: 1.02rem; padding: 12px 28px; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);">
+                    <span>📦 Pane Seljakotti / Put in Backpack</span>
+                </button>
+            </div>
         </div>
-        <div style="font-size: 1.4rem; font-weight: 800; color: #ffcccc; text-shadow: 0 0 15px #ff4757; margin-top: 8px; letter-spacing: 2px;">
-            👹 AJAPAHALANE · PÕGENE JÄRGMISSE VAGUNISSE!
+    </div>
+
+    <!-- Seljakott / Clues & Pictures Folder Modal (Kaust) -->
+    <div class="modal-overlay" id="clues-folder-modal" style="z-index: 2700; backdrop-filter: blur(12px); background: rgba(3, 6, 12, 0.9);">
+        <div class="modal-box" style="max-width: 720px; width: 95%; background: #0c111a; border: 2px solid #ffd32a; box-shadow: 0 0 50px rgba(255, 211, 42, 0.35); padding: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 211, 42, 0.3); padding-bottom: 12px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 2rem;">📁</span>
+                    <div>
+                        <h2 style="color: #ffd32a; font-size: 1.4rem; margin: 0; text-transform: uppercase; letter-spacing: 1px;">SELJAKOTT · VIHJETE KAUST</h2>
+                        <span id="clues-folder-count" style="color: #a4b0be; font-size: 0.82rem; font-weight: 700;">0 eset kogutud</span>
+                    </div>
+                </div>
+                <button class="btn-modal-close" id="btn-clues-folder-close" style="padding: 6px 16px; font-size: 0.85rem; background: #2f3640; color: #f5f6fa;">✕ Sulge</button>
+            </div>
+
+            <div id="clues-folder-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; max-height: 380px; overflow-y: auto; padding: 8px; margin-bottom: 15px;">
+                <!-- Dynamically injected clue cards -->
+            </div>
+
+            <div id="clues-folder-empty" style="padding: 30px 10px; color: #747d8c; font-size: 0.95rem; display: none;">
+                Sul pole veel ühtegi vihjet ega fotot. Uuri vaguneid hoolega ja otsi istmetelt, põrandatelt ning seintelt!
+            </div>
+        </div>
+    </div>
+
+    <!-- The Canalization 5-Second Title Intro Overlay (Carriage 201) -->
+    <div id="canalization-title-overlay" style="display: none; position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 2900; justify-content: center; align-items: center; flex-direction: column;">
+        <h1 style="color: #00f2fe; font-size: 3.2rem; font-weight: 900; letter-spacing: 8px; text-shadow: 0 0 40px rgba(0,242,254,0.8); margin: 0; text-transform: uppercase; animation: pulse-btn 2s infinite ease-in-out;">
+            THE CANALIZATION
+        </h1>
+        <p style="color: #747d8c; font-size: 1.1rem; letter-spacing: 4px; margin-top: 15px; font-family: monospace;">
+            VAGUNID 201–250 · SÜGAV KANALISATSIOON
+        </p>
+    </div>
+
+    <!-- Sewer Water Breath / Laying Down Overlay (Carriage 217) -->
+    <div id="water-submerge-overlay" style="display: none; position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 85; background: radial-gradient(circle, rgba(0, 150, 200, 0.3) 0%, rgba(2, 20, 35, 0.85) 100%);">
+        <div style="position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); background: rgba(5, 15, 25, 0.9); border: 1.5px solid #00f2fe; border-radius: 20px; padding: 10px 24px; text-align: center;">
+            <div id="water-breath-text" style="color: #00f2fe; font-weight: 900; font-size: 1.1rem; letter-spacing: 1px;">🌊 LAMAD VEES [Hingamise aeg: 20s]</div>
+            <div style="color: #a4b0be; font-size: 0.78rem; margin-top: 3px;">Shadow Dash kihutab ülevalt mööda! Püsi paigal.</div>
+        </div>
+    </div>
+
+    <!-- Kuulja Noise / Alert Overlay (Carriage 200) -->
+    <div id="kuulja-alert-overlay" style="display: none; position: absolute; top: 75px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; background: rgba(255, 71, 87, 0.2); border: 1.5px solid #ff4757; border-radius: 14px; padding: 6px 18px; backdrop-filter: blur(6px);">
+        <span style="color: #ff4757; font-weight: 900; font-size: 0.88rem; letter-spacing: 1px; animation: pulse-btn 0.6s infinite;">👂 KUULJA KUULEB SIND! KÜKITA JA LIIGU VAIKSELT!</span>
+    </div>
+
+    <!-- Ajapahalane (Time Villain) Overlay -->
+    <div id="time-villain-overlay" style="display: none; position: absolute; top: 75px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; background: rgba(255, 71, 87, 0.25); border: 2px solid #ff4757; border-radius: 14px; padding: 8px 22px; backdrop-filter: blur(6px); text-align: center;">
+        <span style="color: #ff4757; font-weight: 900; font-size: 1rem; letter-spacing: 1px;">👹 AJAPAHALANE TULEB! JOOKSE: <span id="time-villain-countdown">10</span>s</span>
+    </div>
+
+    <!-- Vagun 300 Finale / Exit Real World Victory Modal -->
+    <div class="modal-overlay" id="victory-300-modal" style="background: radial-gradient(circle at center, rgba(20, 40, 60, 0.95) 0%, rgba(0, 0, 0, 0.99) 100%); z-index: 3500;">
+        <div class="modal-box" style="border: 3px solid #ffd32a; box-shadow: 0 0 60px rgba(255, 211, 42, 0.7); max-width: 580px; padding: 35px 25px; background: #080c14;">
+            <div style="font-size: 4.5rem; margin-bottom: 10px; animation: pulse-btn 1.5s infinite;">☀️ 🌍 🚪</div>
+            <h1 style="color: #ffd32a; font-size: 2.3rem; font-weight: 900; letter-spacing: 3px; margin: 0 0 10px 0; text-transform: uppercase; text-shadow: 0 0 25px #ffd32a;">
+                SA PÄÄSESID VÄLJA!
+            </h1>
+            <p style="color: #f1f2f6; font-size: 1.15rem; line-height: 1.6; margin: 0 0 20px 0;">
+                Astusid metalluksest läbi ja jõudsid päris maailma päikesevalguse kätte. Lõputu metroo ja salapärased katsed on seljatatud!
+            </p>
+            <div style="background: linear-gradient(135deg, rgba(255, 211, 42, 0.15), rgba(243, 156, 18, 0.25)); border: 2px solid #ffd32a; border-radius: 16px; padding: 14px 20px; margin-bottom: 25px;">
+                <div style="color: #ffd32a; font-weight: 900; font-size: 1.4rem; letter-spacing: 1px;">
+                    💰 SUUR AUTASU: +1000 Y (Yards)!
+                </div>
+                <div style="color: #d2dae2; font-size: 0.88rem; margin-top: 4px;">
+                    Sinu Yardsi saldo on uuendatud.
+                </div>
+            </div>
+            <a href="../../index.html" class="btn-modal-close" style="display: inline-block; background: linear-gradient(135deg, #ffd32a, #f39c12); color: #000; font-size: 1.15rem; padding: 14px 36px; text-decoration: none; border-radius: 30px; font-weight: 900; box-shadow: 0 0 25px rgba(255, 211, 42, 0.6);">
+                🏠 Tagasi Playard Hubi
+            </a>
         </div>
     </div>
 

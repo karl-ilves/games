@@ -1131,9 +1131,12 @@ try {
             });
             await mobilePage.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
             await mobilePage.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await new Promise(r => setTimeout(r, 1500));
+            await mobilePage.waitForSelector('#btn-depot-start-driving', { visible: true, timeout: 10000 });
+            await mobilePage.click('#btn-depot-start-driving');
+            await new Promise(r => setTimeout(r, 600));
 
             // Verify on-screen touch controls are automatically displayed on phone/tablet
+            await mobilePage.waitForSelector('#mobile-train-controls', { visible: true, timeout: 10000 });
             const mobileControlsDisplay = await mobilePage.$eval('#mobile-train-controls', el => window.getComputedStyle(el).display);
             console.log("   Mobile / Tablet Touch Controls Display (Expected: flex):", mobileControlsDisplay);
             if (mobileControlsDisplay !== 'flex') {
@@ -2089,6 +2092,53 @@ try {
             await new Promise(r => setTimeout(r, 100));
 
             console.log("   Successfully verified Center Reticle Aiming, [E] Key Interaction, and Cursor Visibility!");
+
+            // ── TEST: Last Metro Carriages 101-300, Clues System & Finale 300 ──────
+            console.log("\n--- Testing Last Metro Clues System, Backpack Folder & Carriages 101-300 ---");
+            // Check Backpack Folder button in HUD
+            const btnBackpackFolder = await page.$('#btn-backpack-folder');
+            if (!btnBackpackFolder) throw new Error('#btn-backpack-folder element missing in Last Metro HUD!');
+            console.log("   #btn-backpack-folder exists in HUD: ✅");
+
+            // Check Clues Folder Modal & Inspect Modal
+            const cluesFolderModal = await page.$('#clues-folder-modal');
+            if (!cluesFolderModal) throw new Error('#clues-folder-modal missing in Last Metro HTML!');
+            const clueInspectModal = await page.$('#clue-inspect-modal');
+            if (!clueInspectModal) throw new Error('#clue-inspect-modal missing in Last Metro HTML!');
+            console.log("   #clues-folder-modal & #clue-inspect-modal exist in HTML: ✅");
+
+            // Check Canalization overlay, Kuulja alert overlay, Victory 300 modal
+            const canalizationOverlay = await page.$('#canalization-title-overlay');
+            if (!canalizationOverlay) throw new Error('#canalization-title-overlay missing in HTML!');
+            const kuuljaOverlay = await page.$('#kuulja-alert-overlay');
+            if (!kuuljaOverlay) throw new Error('#kuulja-alert-overlay missing in HTML!');
+            const victory300Modal = await page.$('#victory-300-modal');
+            if (!victory300Modal) throw new Error('#victory-300-modal missing in HTML!');
+            console.log("   Canalization overlay, Kuulja alert overlay, and Victory 300 modal exist: ✅");
+
+            // Test opening and closing clues folder modal
+            await page.evaluate(() => {
+                if (window.__lastMetro?.openCluesFolderModal) {
+                    window.__lastMetro.openCluesFolderModal();
+                }
+            });
+            await new Promise(r => setTimeout(r, 60));
+            const cluesModalDisplay = await page.$eval('#clues-folder-modal', el => window.getComputedStyle(el).display);
+            console.log(`   Clues folder modal display when opened: ${cluesModalDisplay}`);
+            if (cluesModalDisplay === 'none') throw new Error('Clues folder modal should be visible when opened!');
+
+            await page.evaluate(() => {
+                if (window.__lastMetro?.closeCluesFolderModal) {
+                    window.__lastMetro.closeCluesFolderModal();
+                }
+            });
+            await new Promise(r => setTimeout(r, 60));
+
+            // Test Owner Teleport input range up to 300
+            const teleportMax = await page.$eval('#owner-teleport-input', el => el.getAttribute('max'));
+            console.log(`   Owner Teleport Max Car (Expected: 300): ${teleportMax}`);
+            if (teleportMax !== '300') throw new Error(`Teleport max input should be 300, got: ${teleportMax}`);
+
 
             // ── TEST: Sünnipäeva / Vanuse süsteem ──────────────────────────────────
             console.log("\n--- Testing Birthday / Age System ---");
