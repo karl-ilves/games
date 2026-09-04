@@ -530,7 +530,8 @@ export class LastMetroGame {
     private cameraEuler: THREE.Euler = new THREE.Euler(0, 0, 0, 'YXZ');
     private moveKeys: { [key: string]: boolean } = {};
     private isPointerLocked: boolean = false;
-    public aimedInteractable: 'inspectable' | 'keypad' | 'shop' | 'seat' | 'stand' | null = null;
+    public aimedInteractable: 'inspectable' | 'keypad' | 'shop' | 'seat' | 'stand' | 'switch' | null = null;
+    public aimedSwitchIndex: number = -1;
     private stepTimer: number = 0;
     private headBobTimer: number = 0;
     private flashlightOn: boolean = false;
@@ -1658,6 +1659,130 @@ export class LastMetroGame {
 
         // 13. Populate Realistic 3D AI Passengers
         this.populatePassengers(carGroup, index, theme, passengers);
+
+        // 14. Carriage 200 Abandoned Station Platform Area (Step Out Onto Platform)
+        if (index === 200) {
+            const platformGroup = new THREE.Group();
+            platformGroup.name = 'station_platform_200';
+
+            // Platform floor (x from 1.7 to 9.5 -> width 7.8, centered at x = 5.6, z from -16 to 16 -> length 32)
+            const platFloorMat = new THREE.MeshStandardMaterial({
+                color: 0x2b303a,
+                roughness: 0.85,
+                metalness: 0.1
+            });
+            const platFloor = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.2, 32), platFloorMat);
+            platFloor.position.set(5.6, 0, 0);
+            platFloor.receiveShadow = true;
+            platformGroup.add(platFloor);
+
+            // Tactile safety yellow warning edge along the track (x = 1.85)
+            const platEdgeMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.5 });
+            const platEdge = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.205, 32), platEdgeMat);
+            platEdge.position.set(1.85, 0.002, 0);
+            platformGroup.add(platEdge);
+
+            // Platform ceiling at y = 3.6
+            const platCeilingMat = new THREE.MeshStandardMaterial({ color: 0x1f242d, roughness: 0.9 });
+            const platCeiling = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.2, 32), platCeilingMat);
+            platCeiling.position.set(5.6, 3.6, 0);
+            platformGroup.add(platCeiling);
+
+            // Platform back wall at x = 9.5
+            const platWallMat = new THREE.MeshStandardMaterial({ color: 0x1a1e24, roughness: 0.8 });
+            const platBackWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.6, 32), platWallMat);
+            platBackWall.position.set(9.5, 1.8, 0);
+            platformGroup.add(platBackWall);
+
+            // Platform end walls (z = -16 and z = 16)
+            [-16, 16].forEach(wz => {
+                const platEndWall = new THREE.Mesh(new THREE.BoxGeometry(7.8, 3.6, 0.2), platWallMat);
+                platEndWall.position.set(5.6, 1.8, wz);
+                platformGroup.add(platEndWall);
+            });
+
+            // Support Pillars at x = 5.2 (z = -12, -6, 0, 6, 12)
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.7, metalness: 0.2 });
+            [-12, -6, 0, 6, 12].forEach(pz => {
+                const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.6, 0.5), pillarMat);
+                pillar.position.set(5.2, 1.8, pz);
+                platformGroup.add(pillar);
+
+                // Warning striped base on pillar
+                const pillarBaseMat = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.5 });
+                const pillarBase = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.6, 0.54), pillarBaseMat);
+                pillarBase.position.set(5.2, 0.3, pz);
+                platformGroup.add(pillarBase);
+            });
+
+            // Station Hanging Tube Lights & Point Lights along the platform
+            [-10, -4, 2, 8, 14].forEach(lz => {
+                const platLightMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 1.8), new THREE.MeshBasicMaterial({ color: 0xffeedd }));
+                platLightMesh.position.set(5.5, 3.5, lz);
+                platformGroup.add(platLightMesh);
+                lightMeshes.push(platLightMesh);
+
+                const platLight = new THREE.PointLight(0xffddaa, 0.8, 12);
+                platLight.position.set(5.5, 3.1, lz);
+                platformGroup.add(platLight);
+                lights.push(platLight);
+            });
+
+            // Station Signboard on Back Wall
+            const signGroup = new THREE.Group();
+            const signBoardMat = new THREE.MeshStandardMaterial({ color: 0x0a192f, metalness: 0.8 });
+            const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 5.0), signBoardMat);
+            signBoard.position.set(9.38, 2.4, 0);
+            signGroup.add(signBoard);
+
+            const signCanvas = document.createElement('canvas');
+            signCanvas.width = 512;
+            signCanvas.height = 128;
+            const sctx = signCanvas.getContext('2d');
+            if (sctx) {
+                sctx.fillStyle = '#0a192f';
+                sctx.fillRect(0, 0, 512, 128);
+                sctx.fillStyle = '#ff4757';
+                sctx.font = 'bold 34px monospace';
+                sctx.textAlign = 'center';
+                sctx.fillText('🚇 JAAM 200 · TERMINAL', 256, 50);
+                sctx.fillStyle = '#00d2d3';
+                sctx.font = '20px sans-serif';
+                sctx.fillText('SEKTOR 200 — LÕPPEATUSED', 256, 90);
+            }
+
+            const signTex = new THREE.CanvasTexture(signCanvas);
+            const signFaceMat = new THREE.MeshBasicMaterial({ map: signTex });
+            const signFace = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 0.75), signFaceMat);
+            signFace.rotation.y = -Math.PI / 2;
+            signFace.position.set(9.33, 2.4, 0);
+            signGroup.add(signFace);
+            platformGroup.add(signGroup);
+
+            // Station Exit Stairs & Blast Door at end (z = 13.0, x = 6.0)
+            const stairMat = new THREE.MeshStandardMaterial({ color: 0x3d4852, roughness: 0.8 });
+            for (let s = 0; s < 5; s++) {
+                const step = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.25, 0.6), stairMat);
+                step.position.set(6.0, 0.125 + s * 0.25, 11.5 + s * 0.6);
+                platformGroup.add(step);
+            }
+
+            // Blast Exit Door at top of stairs (z = 15.0, x = 6.0, y = 2.2)
+            const blastDoorFrame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.6, 0.3), new THREE.MeshStandardMaterial({ color: 0x11141a, metalness: 0.9 }));
+            blastDoorFrame.position.set(6.0, 2.3, 14.8);
+            platformGroup.add(blastDoorFrame);
+
+            const blastDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.3, 0.15), new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.4, metalness: 0.7 }));
+            blastDoorLeaf.position.set(6.0, 2.3, 14.75);
+            blastDoorLeaf.name = 'station_200_blast_door';
+            platformGroup.add(blastDoorLeaf);
+
+            const exitSignMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.4, 0.1), new THREE.MeshBasicMaterial({ color: 0x2ed573 }));
+            exitSignMesh.position.set(6.0, 3.6, 14.7);
+            platformGroup.add(exitSignMesh);
+
+            carGroup.add(platformGroup);
+        }
 
         return {
             group: carGroup,
@@ -3791,6 +3916,17 @@ export class LastMetroGame {
             metroAudio.stopEerieHighPianoTrack();
         }
 
+        // Stop train and open sliding doors at Carriage 200 terminal station
+        if (index === 200) {
+            this.trainSpeed = 0;
+            this.introSideDoorsOpen = true;
+            metroAudio.playBrakesScreech();
+            metroAudio.playDoorSlide(true);
+        } else if (index < 200) {
+            this.trainSpeed = 60;
+            this.introSideDoorsOpen = false;
+        }
+
         // Trigger story events per carriage index
         this.triggerCarriageStoryEvent(index);
     }
@@ -5136,23 +5272,23 @@ export class LastMetroGame {
     private triggerCarriage200Boss() {
         this.kuuljaSwitchesActivated = 0;
         this.showThought(
-            '👹 MAHAJÄETUD METROOPEATUSE LÕPP (VAGUN 200)! Kuulja on lähedal — KÜKITA [C] ja liigu vaikselt! Aktiveeri 3 lülitit!',
-            '👹 ABANDONED METRO TERMINAL (CARRIAGE 200)! The Listener is near — CROUCH [C] and move silently! Activate 3 circuit switches!'
+            '🚇 METROO PIDURDAS JA JÄI SEISMA! Uksed avanesid. Astu metroost välja jaamaplatvormile! Kuulja varitseb pimeduses — KÜKITA [C] ja aktiveeri 3 lülitit!',
+            '🚇 METRO HALTED TO A STOP! Doors opened. Step out onto the station platform! The Listener lurks in the dark — CROUCH [C] and activate 3 switches!'
         );
 
-        // Spawn 3 electrical circuit switches
+        // Spawn 3 electrical circuit switches on station platform
         this._spawnCarriage200Switches();
 
-        // Spawn Kuulja boss entity
+        // Spawn Kuulja boss entity on station platform
         this._spawnKuuljaBoss();
     }
 
     private _spawnCarriage200Switches() {
         this.kuuljaSwitches = [];
         const switchPositions = [
-            new THREE.Vector3(-4.5, 1.2, 5.0),
-            new THREE.Vector3(4.5, 1.2, -4.0),
-            new THREE.Vector3(0, 1.2, 10.0)
+            new THREE.Vector3(5.2, 1.3, -6.0), // On platform pillar
+            new THREE.Vector3(9.3, 1.3, 0.0),  // On platform back wall
+            new THREE.Vector3(6.5, 1.3, 8.0)   // Near blast exit stairs
         ];
 
         const boxMat = new THREE.MeshStandardMaterial({ color: 0x333a42, metalness: 0.8 });
@@ -5205,7 +5341,7 @@ export class LastMetroGame {
             kuulja.add(arm);
         });
 
-        kuulja.position.set(0, 0, -12);
+        kuulja.position.set(5.5, 0, -10.0);
         this.scene.add(kuulja);
         this.kuuljaBossGroup = kuulja;
     }
@@ -5230,6 +5366,7 @@ export class LastMetroGame {
         // Make Kuulja rush toward switch
         if (this.kuuljaBossGroup) {
             this.kuuljaHearingAlert = true;
+            this.kuuljaTargetPos.copy(sw.mesh.position);
             const alertEl = document.getElementById('kuulja-alert-overlay');
             if (alertEl) alertEl.style.display = 'block';
             setTimeout(() => {
@@ -6599,6 +6736,26 @@ this.state = 'player_free';
             }
         }
 
+        // 4. Kuulja Circuit Switches in Carriage 200 (Station Platform)
+        if (!foundAim && this.currentCarIndex === 200 && this.kuuljaSwitches.length > 0) {
+            for (let i = 0; i < this.kuuljaSwitches.length; i++) {
+                const sw = this.kuuljaSwitches[i];
+                if (sw.activated) continue;
+                const toSw = sw.mesh.position.clone().sub(playerHeadPos);
+                const dist = toSw.length();
+                if (dist < 4.0) {
+                    const toSwDir = toSw.clone().normalize();
+                    const dot = camDir.dot(toSwDir);
+                    if (dot > 0.65) {
+                        foundAim = 'switch';
+                        this.aimedSwitchIndex = i;
+                        text = isEt ? `⚡ Aktiveeri lüliti ${i + 1}/3` : `⚡ Activate Switch ${i + 1}/3`;
+                        break;
+                    }
+                }
+            }
+        }
+
         this.aimedInteractable = foundAim;
 
         if (foundAim) {
@@ -6628,6 +6785,14 @@ this.state = 'player_free';
         // User requirement: "se pilet või asjad tulevad sulle ette siis kui sse täpp mis on su ees on selle peal ja vajutad e"
         if (this.isSitting) {
             this.standUp();
+            return;
+        }
+
+        if (this.aimedInteractable === 'switch') {
+            if (this.aimedSwitchIndex >= 0 && this.aimedSwitchIndex < this.kuuljaSwitches.length) {
+                this.activateKuuljaSwitch(this.aimedSwitchIndex);
+                this.aimedSwitchIndex = -1;
+            }
             return;
         }
 
@@ -7014,6 +7179,46 @@ this.state = 'player_free';
             }
         }
 
+        // 3d. Vagun 200 Kuulja Boss Stalking & Hearing AI on Station Platform
+        if (this.currentCarIndex === 200 && this.kuuljaBossGroup && this.state === 'player_free') {
+            const kuuljaPos = this.kuuljaBossGroup.position;
+            const distToPlayer = kuuljaPos.distanceTo(this.playerPos);
+
+            // Subtle eerie breathing animation
+            const kTime = performance.now() * 0.002;
+            this.kuuljaBossGroup.position.y = Math.sin(kTime * 3) * 0.05;
+
+            // Kuulja hears footsteps if player moves loudly (not crouching) on the platform
+            const isPlayerMovingLoudly = _moveDir.lengthSq() > 0 && !this.isCrouching && this.playerPos.x > 1.4;
+
+            if (this.kuuljaHearingAlert) {
+                // Rushing to switch sound
+                const moveSpeed = 4.2 * delta;
+                kuuljaPos.x = THREE.MathUtils.lerp(kuuljaPos.x, this.kuuljaTargetPos.x, moveSpeed * 0.8);
+                kuuljaPos.z = THREE.MathUtils.lerp(kuuljaPos.z, this.kuuljaTargetPos.z, moveSpeed);
+                this.kuuljaBossGroup.lookAt(this.kuuljaTargetPos.x, this.kuuljaBossGroup.position.y, this.kuuljaTargetPos.z);
+            } else if (isPlayerMovingLoudly) {
+                // Stalking toward player footsteps
+                const moveSpeed = 2.4 * delta;
+                kuuljaPos.x = THREE.MathUtils.lerp(kuuljaPos.x, this.playerPos.x, moveSpeed * 0.7);
+                kuuljaPos.z = THREE.MathUtils.lerp(kuuljaPos.z, this.playerPos.z, moveSpeed);
+                this.kuuljaBossGroup.lookAt(this.playerPos.x, this.kuuljaBossGroup.position.y, this.playerPos.z);
+
+                if (distToPlayer < 1.4) {
+                    metroAudio.playShadowRushScreech();
+                    this.triggerGameOver(
+                        'Kuulja kuulis su samme ja ründas pimedusest! Kükita [C], et liikuda jaamal hääletult.',
+                        'The Listener heard your footsteps! Crouch [C] to sneak silently across the platform.'
+                    );
+                }
+            } else {
+                // Idle patrol along platform
+                const patrolZ = Math.sin(kTime * 0.5) * 8.0;
+                kuuljaPos.z = THREE.MathUtils.lerp(kuuljaPos.z, patrolZ, delta * 0.8);
+                kuuljaPos.x = THREE.MathUtils.lerp(kuuljaPos.x, 5.5, delta * 0.8);
+            }
+        }
+
         // 4. Keyboard Camera Turning (Arrows & Q/E)
         if (this.state === 'player_free' || this.state.startsWith('intro_') || this.isSitting) {
             const rotSpeed = 1.9;
@@ -7049,8 +7254,28 @@ this.state = 'player_free';
                 this.playerPos.x += _moveDir.x * baseSpeed * delta;
                 this.playerPos.z += _moveDir.z * baseSpeed * delta;
 
-                // Train carriage boundary collision
-                this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
+                // Train carriage boundary collision & platform exploration
+                if (this.currentCarIndex === 200) {
+                    if (this.playerPos.x > 1.4) {
+                        // Player is outside on the station platform
+                        this.playerPos.x = Math.max(1.4, Math.min(9.2, this.playerPos.x));
+                        this.playerPos.z = Math.max(-15.5, Math.min(15.5, this.playerPos.z));
+                    } else {
+                        // Player is inside the train
+                        if (Math.abs(this.playerPos.z) <= 1.8) {
+                            // In doorway threshold: can step out (x up to 9.2) or remain inside (x down to -1.4)
+                            this.playerPos.x = Math.max(-1.4, Math.min(9.2, this.playerPos.x));
+                        } else {
+                            // Inside main car body
+                            this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
+                        }
+                        this.playerPos.z = Math.max(-8.5, Math.min(8.5, this.playerPos.z));
+                    }
+                } else if (this.currentCarIndex >= 201) {
+                    this.playerPos.x = Math.max(-5.0, Math.min(5.0, this.playerPos.x));
+                } else {
+                    this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
+                }
 
                 // Head bob & footsteps
                 this.headBobTimer += delta * (baseSpeed > 4 ? 16 : 12);

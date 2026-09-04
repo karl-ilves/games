@@ -161,6 +161,21 @@ export function applyLocalization() {
         if (metroPill) metroPill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
     }
 
+    // MMP1 (Murder Mystery) Game Card
+    const mmp1Card = document.getElementById('card-mmp1-game');
+    if (mmp1Card) {
+        const h2 = mmp1Card.querySelector('h2');
+        if (h2) h2.textContent = isEt ? '🔪 MMP1 (Murder Mystery)' : '🔪 MMP1 (Murder Mystery 3D)';
+        const pMmp1 = mmp1Card.querySelector('p');
+        if (pMmp1) pMmp1.textContent = isEt
+            ? 'Alusta lobby\'st, saa Mõrvariks, Šerifiks või Süütuks. Mõrvar peab tapma teised, šerif peab mõrvari maha laskma ning süütud peavad ellu jääma ja vajadusel maast relva võtma!'
+            : 'Start in the lobby, get assigned as Murderer, Sheriff, or Innocent. Murderer eliminates everyone, Sheriff shoots the killer, and Innocents survive & pick up the fallen gun!';
+        const tMmp1 = mmp1Card.querySelector('.reward-tag span:last-child');
+        if (tMmp1) tMmp1.textContent = isEt ? '🏆 SURVIVE & SOLVE (+10 Y Mündid / +100 Y Võit)' : '🏆 SURVIVE & SOLVE (+10 Y Coins / +100 Y Win)';
+        const mmp1Pill = mmp1Card.querySelector('.mmp1-owner-badge-pill');
+        if (mmp1Pill) mmp1Pill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
+    }
+
     // Community section
     const commH2 = document.querySelector('#btn-hub-create-game')?.previousElementSibling?.querySelector('h2');
     if (commH2) commH2.innerHTML = isEt ? '<span>🌐</span> Kogukonna loodud mängud' : '<span>🌐</span> Community Created Games';

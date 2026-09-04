@@ -176,6 +176,13 @@ try {
             throw new Error("LAST METRO game card must be hidden for guests!");
         }
 
+        // Check MMP1 visibility for guest (Expected: none - Owner exclusive)
+        const guestMmp1CardDisplay = await page.$eval('#card-mmp1-game', el => window.getComputedStyle(el).display);
+        console.log(`   Guest MMP1 Card visibility (Expected: none): ${guestMmp1CardDisplay}`);
+        if (guestMmp1CardDisplay !== 'none') {
+            throw new Error("MMP1 game card must be hidden for guests!");
+        }
+
         // Check Guest Admin Panel visibility (Expected: none)
         const guestAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
         console.log(`   Guest Admin Panel visibility (Expected: none): ${guestAdminPanelDisplay}`);
@@ -183,7 +190,7 @@ try {
             throw new Error("Admin Panel button should be hidden for guests!");
         }
 
-        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, War game, Rongimäng, and Obby card must be visible!
+        // Test Owner login (1karl.ilves@gmail.com) -> Admin panel must be hidden, War game, Rongimäng, Obby, Metro, and MMP1 card must be visible!
         await page.evaluate(() => {
             const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
@@ -228,7 +235,13 @@ try {
             throw new Error("LAST METRO card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
         }
 
-        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, Rongimäng visible, Obby & Metro hidden!
+        const ownerMmp1CardDisplay = await page.$eval('#card-mmp1-game', el => window.getComputedStyle(el).display);
+        console.log(`   Playard Owner MMP1 Card visibility (Expected: flex): ${ownerMmp1CardDisplay}`);
+        if (ownerMmp1CardDisplay !== 'flex') {
+            throw new Error("MMP1 card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
+        }
+
+        // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, Rongimäng visible, Obby, Metro & MMP1 hidden!
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
@@ -263,6 +276,12 @@ try {
         console.log(`   Admin (grx@trenet.ee) LAST METRO Card visibility (Expected: none): ${adminMetroCardDisplay}`);
         if (adminMetroCardDisplay !== 'none') {
             throw new Error("LAST METRO game card must be hidden for non-owner admin (grx@trenet.ee)!");
+        }
+
+        const adminMmp1CardDisplay = await page.$eval('#card-mmp1-game', el => window.getComputedStyle(el).display);
+        console.log(`   Admin (grx@trenet.ee) MMP1 Card visibility (Expected: none): ${adminMmp1CardDisplay}`);
+        if (adminMmp1CardDisplay !== 'none') {
+            throw new Error("MMP1 game card must be hidden for non-owner admin (grx@trenet.ee)!");
         }
 
         // Click to open Admin Update Panel
@@ -2196,8 +2215,51 @@ try {
             if (isInspectClosed !== 'none' || !isCursorNormalAfterPack) {
                 throw new Error('After packing clue into backpack, modal must close and normal game cursor lock must be restored!');
             }
-            console.log("   Successfully verified Clue Photo visual rendering, mouse release, and seamless re-lock on pack!");
+            // Test Carriage 200 — Train Halt, Sliding Doors Open & Step Out onto Station Platform
+            console.log("   Testing Carriage 200 — Train Halt, Doors Open & Station Platform Exploration...");
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(200, 'right');
+            });
+            await new Promise(r => setTimeout(r, 150));
 
+            const car200Label = await page.$eval('#hud-car-label', el => el.textContent);
+            const trainSpeed200 = await page.evaluate(() => window.__lastMetro.trainSpeed);
+            const doorsOpen200 = await page.evaluate(() => window.__lastMetro.introSideDoorsOpen);
+            const hasPlatformMesh200 = await page.evaluate(() => {
+                const group = window.__lastMetro.currentCarriage?.group;
+                return !!group?.getObjectByName('station_platform_200');
+            });
+            const switchesCount200 = await page.evaluate(() => window.__lastMetro.kuuljaSwitches.length);
+            const hasKuuljaBoss200 = await page.evaluate(() => !!window.__lastMetro.kuuljaBossGroup);
+
+            console.log(`   Carriage 200: HUD="${car200Label}", TrainSpeed=${trainSpeed200} (Expected: 0), DoorsOpen=${doorsOpen200} (Expected: true), PlatformMesh=${hasPlatformMesh200}, Switches=${switchesCount200} (Expected: 3), KuuljaBoss=${hasKuuljaBoss200}`);
+
+            if (trainSpeed200 !== 0 || !doorsOpen200 || !hasPlatformMesh200 || switchesCount200 !== 3 || !hasKuuljaBoss200) {
+                throw new Error("Carriage 200 must stop train speed (0), open side doors, spawn 3D station platform, 3 switches, and Kuulja boss!");
+            }
+
+            // Test Player stepping out through side door onto the platform (x > 1.4)
+            await page.evaluate(() => {
+                window.__lastMetro.playerPos.set(4.5, 1.6, 0.0);
+            });
+            const playerXOnPlatform = await page.evaluate(() => window.__lastMetro.playerPos.x);
+            console.log(`   Player X on Station Platform (Expected: 4.5): ${playerXOnPlatform}`);
+            if (playerXOnPlatform < 4.0) {
+                throw new Error(`Player should be allowed to walk onto the station platform at x = 4.5, but got: ${playerXOnPlatform}`);
+            }
+
+            // Test activating the 3 switches
+            await page.evaluate(() => {
+                window.__lastMetro.activateKuuljaSwitch(0);
+                window.__lastMetro.activateKuuljaSwitch(1);
+                window.__lastMetro.activateKuuljaSwitch(2);
+            });
+            const switchesActivated = await page.evaluate(() => window.__lastMetro.kuuljaSwitchesActivated);
+            console.log(`   Switches activated in Carriage 200 (Expected: 3): ${switchesActivated}`);
+            if (switchesActivated !== 3) {
+                throw new Error(`Expected all 3 switches to be activated, got: ${switchesActivated}`);
+            }
+            console.log("   Successfully verified Carriage 200 halted train, open side doors, station platform step-out, switches & Kuulja!");
 
             // ── TEST: Sünnipäeva / Vanuse süsteem ──────────────────────────────────
             console.log("\n--- Testing Birthday / Age System ---");
@@ -2269,6 +2331,80 @@ try {
             console.log("✅ Sünnipäeva / Vanuse süsteem testid läbitud!");
 
             console.log("   Successfully verified LAST METRO (3D Mystery Adventure, Carriages 1-100+, Coins, Roblox Hotbar, Golden Shop & Owner Panel)!");
+
+            // ==========================================
+            // 7. MMP1 (3D Murder Mystery) MÄNGU TESTID
+            // ==========================================
+            console.log("7. Checking MMP1 (3D Murder Mystery) Game Page...");
+            await page.goto('http://localhost:4173/games/games/mmp1/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1200));
+
+            // Verify Canvas and 3D Scene Initialization
+            const mmp1Canvas = await page.$('#canvas-container canvas');
+            if (!mmp1Canvas) throw new Error('MMP1 Three.js canvas element was not created!');
+            console.log('   MMP1 Three.js Canvas initialized: ✅');
+
+            // Verify Lobby Banner & Countdown
+            const lobbyBannerDisplay = await page.$eval('#lobby-banner', el => window.getComputedStyle(el).display);
+            if (lobbyBannerDisplay === 'none') throw new Error('MMP1 Lobby Banner must be visible at start!');
+            console.log('   MMP1 Lobby Intermission Banner visible: ✅');
+
+            // Verify Initial Role HUD (LOBBY)
+            const roleText = await page.$eval('#hud-role-text', el => el.textContent);
+            console.log(`   MMP1 Initial Role (Expected: LOBBY): ${roleText}`);
+            if (roleText !== 'LOBBY') throw new Error('MMP1 Initial role state should be LOBBY!');
+
+            // Test Starting Round via Force Start button or game instance
+            await page.evaluate(() => {
+                if (window.mmp1Game) {
+                    window.mmp1Game.startRound();
+                }
+            });
+            await new Promise(r => setTimeout(r, 400));
+
+            // Verify Role Reveal Overlay appears
+            const roleRevealDisplay = await page.$eval('#role-reveal-overlay', el => window.getComputedStyle(el).display);
+            if (roleRevealDisplay !== 'flex') throw new Error('Role Reveal Overlay must appear upon round start!');
+            console.log('   MMP1 Role Reveal Overlay appeared: ✅');
+
+            // Close Role Reveal modal
+            await page.click('#btn-role-reveal-close');
+            await new Promise(r => setTimeout(r, 200));
+
+            // Verify in-game state and crosshair
+            const inGameState = await page.evaluate(() => window.mmp1Game?.state);
+            console.log(`   MMP1 Game State after starting round (Expected: in_game): ${inGameState}`);
+            if (inGameState !== 'in_game') throw new Error('MMP1 Game State should be in_game!');
+
+            const crosshairDisplay = await page.$eval('#crosshair', el => window.getComputedStyle(el).display);
+            if (crosshairDisplay !== 'block') throw new Error('Crosshair must be visible during round!');
+            console.log('   MMP1 Crosshair visible: ✅');
+
+            // Test Weapon toggle & perform action
+            await page.evaluate(() => {
+                window.mmp1Game.toggleWeapon();
+                window.mmp1Game.performAction();
+            });
+            console.log('   MMP1 Weapon toggle and action execution tested without errors: ✅');
+
+            // Test Round End & Rewards
+            await page.evaluate(() => {
+                window.mmp1Game.endRound('sheriff_win', 'Test võit: Šerif laskis mõrvari maha!');
+            });
+            await new Promise(r => setTimeout(r, 300));
+
+            const roundEndDisplay = await page.$eval('#round-end-overlay', el => window.getComputedStyle(el).display);
+            if (roundEndDisplay !== 'flex') throw new Error('Round End modal must display on round end!');
+            console.log('   MMP1 Round End modal visible with reward: ✅');
+
+            // Test Returning to Lobby
+            await page.click('#btn-next-round');
+            await new Promise(r => setTimeout(r, 200));
+            const backToLobbyState = await page.evaluate(() => window.mmp1Game?.state);
+            console.log(`   MMP1 State after returning to lobby (Expected: lobby): ${backToLobbyState}`);
+            if (backToLobbyState !== 'lobby') throw new Error('MMP1 should return to lobby state!');
+
+            console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

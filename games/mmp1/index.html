@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard Games - MMP1 | 3D Murder Mystery</title>
+    <meta name="description" content="Play MMP1: 3D Murder Mystery on Playard Games! Survive as Innocent, hunt as Murderer, or take down the killer as Sheriff.">
+    <meta name="keywords" content="mmp1, murder mystery 3d, roblox mm2, playard games, 3d game">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://karl-ilves.github.io/games/games/mmp1/index.html">
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0b090f;
+            color: #f1f2f6;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top HUD */
+        .top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(11, 9, 15, 0.92);
+            backdrop-filter: blur(14px);
+            border-bottom: 2px solid rgba(255, 46, 99, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 100;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.85);
+        }
+
+        .hud-left, .hud-center, .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 900;
+            font-size: 1.1rem;
+            color: #ff2e63;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(255, 46, 99, 0.5);
+            text-decoration: none;
+        }
+
+        .owner-pill {
+            background: linear-gradient(135deg, rgba(255, 211, 42, 0.2), rgba(243, 156, 18, 0.3));
+            border: 1px solid #ffd32a;
+            color: #ffd32a;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+        }
+
+        .hud-badge {
+            background: rgba(255, 46, 99, 0.12);
+            border: 1px solid rgba(255, 46, 99, 0.35);
+            border-radius: 20px;
+            padding: 5px 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #ff2e63;
+        }
+
+        .btn-hud-action {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-hud-action:hover {
+            background: rgba(255, 46, 99, 0.2);
+            border-color: #ff2e63;
+            transform: translateY(-1px);
+        }
+
+        /* Lobby Intermission Banner */
+        #lobby-banner {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(18, 12, 24, 0.9);
+            backdrop-filter: blur(10px);
+            border: 2px solid #ffd32a;
+            box-shadow: 0 0 20px rgba(255, 211, 42, 0.3);
+            border-radius: 20px;
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 90;
+            color: #fff;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        /* Role Reveal Splash Overlay */
+        #role-reveal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 3, 8, 0.92);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .role-card-anim {
+            background: rgba(20, 15, 28, 0.95);
+            border: 3px solid #ff2e63;
+            border-radius: 24px;
+            padding: 35px 50px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 46, 99, 0.6);
+            max-width: 450px;
+            transform: scale(0.9);
+            animation: popUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popUp {
+            to { transform: scale(1); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .role-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .role-desc {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #dcdde1;
+            margin-bottom: 20px;
+        }
+
+        /* Role Colors */
+        .role-murderer { color: #ff2e63; text-shadow: 0 0 20px rgba(255, 46, 99, 0.8); }
+        .role-sheriff { color: #00f2fe; text-shadow: 0 0 20px rgba(0, 242, 254, 0.8); }
+        .role-innocent { color: #2ecc71; text-shadow: 0 0 20px rgba(46, 204, 113, 0.8); }
+
+        /* Crosshair */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 80;
+            display: none;
+        }
+
+        /* Dropped Gun Alert Banner */
+        #gun-dropped-banner {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 211, 42, 0.2);
+            border: 2px solid #ffd32a;
+            box-shadow: 0 0 25px rgba(255, 211, 42, 0.5);
+            backdrop-filter: blur(8px);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 900;
+            font-size: 1rem;
+            color: #ffd32a;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 90;
+            animation: pulseBanner 1.5s infinite;
+        }
+        @keyframes pulseBanner {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.04); }
+        }
+
+        /* Incident Kill Feed */
+        #incident-feed {
+            position: absolute;
+            top: 75px;
+            right: 16px;
+            width: 260px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 85;
+            pointer-events: none;
+        }
+
+        .incident-item {
+            background: rgba(15, 10, 20, 0.85);
+            border-left: 3px solid #ff2e63;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #f5f6fa;
+            backdrop-filter: blur(4px);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Bottom Hotbar / Weapon Slots */
+        #hotbar-container {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 95;
+        }
+
+        .hotbar-slot {
+            width: 64px;
+            height: 64px;
+            background: rgba(20, 15, 28, 0.85);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .hotbar-slot.active {
+            border-color: #ffd32a;
+            box-shadow: 0 0 15px rgba(255, 211, 42, 0.4);
+            transform: translateY(-4px);
+        }
+        .hotbar-key {
+            position: absolute;
+            top: 3px;
+            left: 5px;
+            font-size: 0.65rem;
+            font-weight: 900;
+            color: rgba(255,255,255,0.6);
+        }
+        .hotbar-name {
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: #dcdde1;
+            margin-top: 2px;
+        }
+
+        /* Mobile Action Overlay */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: none;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 120;
+            pointer-events: none;
+        }
+
+        .mobile-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(255, 46, 99, 0.4);
+            border: 2px solid #ff2e63;
+            color: #fff;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            touch-action: manipulation;
+            font-weight: 900;
+            box-shadow: 0 0 15px rgba(255, 46, 99, 0.4);
+        }
+        .mobile-btn:active {
+            transform: scale(0.92);
+            background: rgba(255, 46, 99, 0.7);
+        }
+
+        /* Victory / Game Over Modal */
+        #round-end-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 3, 8, 0.9);
+            backdrop-filter: blur(12px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 350;
+        }
+
+        .victory-card {
+            background: linear-gradient(135deg, #1f1424, #2d182b);
+            border: 2px solid #ffd32a;
+            border-radius: 24px;
+            padding: 35px 45px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(255, 211, 42, 0.4);
+            max-width: 480px;
+        }
+
+        .btn-play-again {
+            background: linear-gradient(135deg, #ff2e63, #ff5722);
+            color: #fff;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1.05rem;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 0 20px rgba(255, 46, 99, 0.5);
+            transition: all 0.2s;
+        }
+        .btn-play-again:hover {
+            transform: scale(1.05);
+        }
+
+        /* Access Denied (If not Playard Owner) */
+        #access-denied-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0b090f;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Instruction prompt */
+        #interaction-prompt {
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(11, 9, 15, 0.9);
+            border: 1px solid #ffd32a;
+            border-radius: 20px;
+            padding: 8px 20px;
+            color: #ffd32a;
+            font-weight: 800;
+            font-size: 0.95rem;
+            display: none;
+            z-index: 90;
+            box-shadow: 0 0 15px rgba(255, 211, 42, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top HUD Navigation -->
+    <div class="top-hud">
+        <div class="hud-left">
+            <a href="../../index.html" class="logo-badge" id="btn-back-hub">
+                <span>◀</span>
+                <span>PLAYARD</span>
+            </a>
+            <span class="owner-pill">👑 PLAYARD OWNER</span>
+        </div>
+
+        <div class="hud-center">
+            <div class="hud-badge" id="hud-role-badge">
+                <span id="hud-role-icon">⏳</span>
+                <span id="hud-role-text">LOBBY</span>
+            </div>
+            <div class="hud-badge" id="hud-alive-badge" style="display: none; border-color: #2ecc71; color: #2ecc71;">
+                <span>👥 ELUS:</span>
+                <span id="hud-alive-count">8/8</span>
+            </div>
+            <div class="hud-badge" id="hud-timer-badge" style="border-color: #ffd32a; color: #ffd32a;">
+                <span>⏱️</span>
+                <span id="hud-timer-val">00:15</span>
+            </div>
+        </div>
+
+        <div class="hud-right">
+            <div class="hud-badge" style="border-color: #ffd32a; color: #ffd32a;">
+                <span id="game-yard-icon"></span>
+                <span id="game-yard-val">0</span>
+                <span>Y</span>
+            </div>
+            <div class="hud-badge" id="hud-coins-badge" style="border-color: #f1c40f; color: #f1c40f; display: none;">
+                <span>🪙</span>
+                <span id="hud-coins-val">0</span>
+            </div>
+            <button class="btn-hud-action" id="btn-sound-toggle" title="Heli sisse/välja">
+                <span id="sound-icon">🔊</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Center Crosshair -->
+    <div id="crosshair"></div>
+
+    <!-- Lobby Intermission Banner -->
+    <div id="lobby-banner">
+        <span>🕒 OOTESAAL · VOOR ALUSTAB:</span>
+        <span id="lobby-countdown-sec" style="color: #ffd32a; font-size: 1.3rem;">12s</span>
+        <button id="btn-force-start" class="btn-hud-action" style="margin-left: 10px; background: rgba(255, 211, 42, 0.2); border-color: #ffd32a; color: #ffd32a;">
+            ⚡ ALUSTA KOHE
+        </button>
+    </div>
+
+    <!-- Dropped Gun Alert Banner -->
+    <div id="gun-dropped-banner">
+        <span>⚠️</span>
+        <span id="gun-dropped-text">ŠERIF ON LANGENUD! RELV ON PÕRANDAL!</span>
+        <span>🔫</span>
+    </div>
+
+    <!-- Incident Kill Feed -->
+    <div id="incident-feed"></div>
+
+    <!-- Interaction Prompt (e.g. Press E to pick up Gun) -->
+    <div id="interaction-prompt">
+        <span id="interaction-prompt-text">[E] Võta maast šerifi relv</span>
+    </div>
+
+    <!-- Role Reveal Splash Modal -->
+    <div id="role-reveal-overlay">
+        <div class="role-card-anim" id="role-card-box">
+            <div style="font-size: 3.5rem; margin-bottom: 10px;" id="role-reveal-icon">🔪</div>
+            <div class="role-title" id="role-reveal-title">MÕRVAR</div>
+            <div class="role-desc" id="role-reveal-desc">Tapa salaja kõik süütud ja väldi šerifi kuule enne aja lõppu!</div>
+            <button class="btn-play-again" id="btn-role-reveal-close">MÕISTETUD! ⚔️</button>
+        </div>
+    </div>
+
+    <!-- Bottom Weapon Hotbar -->
+    <div id="hotbar-container">
+        <div class="hotbar-slot active" id="slot-weapon">
+            <span class="hotbar-key">1</span>
+            <span id="slot-weapon-icon">✊</span>
+            <span class="hotbar-name" id="slot-weapon-name">Käed</span>
+        </div>
+        <div class="hotbar-slot" id="slot-item">
+            <span class="hotbar-key">2</span>
+            <span>🪙</span>
+            <span class="hotbar-name">Mündid</span>
+        </div>
+    </div>
+
+    <!-- Mobile Virtual Action Controls -->
+    <div id="mobile-controls">
+        <button class="mobile-btn" id="btn-mobile-action" style="background: rgba(255, 46, 99, 0.5);">⚔️</button>
+        <button class="mobile-btn" id="btn-mobile-interact" style="background: rgba(255, 211, 42, 0.5); border-color: #ffd32a;">✋</button>
+    </div>
+
+    <!-- Round End & Victory Overlay -->
+    <div id="round-end-overlay">
+        <div class="victory-card">
+            <div style="font-size: 3.5rem;" id="end-trophy-icon">🏆</div>
+            <h2 id="end-title" style="font-size: 1.8rem; margin: 10px 0; color: #ffd32a;">SÜÜTUD VÕITSID!</h2>
+            <p id="end-reason" style="color: #dcdde1; font-size: 1rem; margin-bottom: 15px;">Šerif laskis mõrvari maha ja päästis häärberi!</p>
+            <div style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: 12px; margin-bottom: 15px;">
+                <div style="font-size: 0.9rem; color: #aaa;">Mõrvar oli: <strong id="end-murderer-name" style="color: #ff2e63;">Alex</strong></div>
+                <div style="font-size: 0.9rem; color: #aaa;">Kangelane: <strong id="end-hero-name" style="color: #00f2fe;">1karl.ilves</strong></div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #ffd32a; margin-top: 6px;">Preemia: +<span id="end-reward-yards">100</span> Jardi</div>
+            </div>
+            <button class="btn-play-again" id="btn-next-round">TAGASI LOBBYSSE 🔄</button>
+        </div>
+    </div>
+
+    <!-- Access Denied (If not Playard Owner) -->
+    <div id="access-denied-overlay">
+        <div style="font-size: 4rem; margin-bottom: 15px;">🔒</div>
+        <h1 style="color: #ff2e63; margin-bottom: 10px;">EKSKLUSIIVNE MÄNG</h1>
+        <p style="max-width: 450px; color: #ccc; line-height: 1.5; margin-bottom: 25px;">
+            MMP1 (Murder Mystery) on spetsiaalselt loodud ja ligipääsetav ainult Playard Omanikule (<strong>1karl.ilves@gmail.com</strong>).
+        </p>
+        <a href="../../index.html" class="btn-play-again" style="text-decoration: none;">Tagasi Pealehele 🏠</a>
+    </div>
+
+    <!-- Main Game Script -->
+    <script type="module" src="/src/games/mmp1/main.ts"></script>
+</body>
+</html>

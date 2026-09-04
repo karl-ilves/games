@@ -14,7 +14,8 @@ export default defineConfig({
         war: resolve(__dirname, 'games/war/index.html'),
         train: resolve(__dirname, 'games/train/index.html'),
         obby: resolve(__dirname, 'games/obby/index.html'),
-        metro: resolve(__dirname, 'games/metro/index.html')
+        metro: resolve(__dirname, 'games/metro/index.html'),
+        mmp1: resolve(__dirname, 'games/mmp1/index.html')
       }
     }
   }

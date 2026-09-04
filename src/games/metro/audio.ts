@@ -848,6 +848,10 @@ export class MetroAudioEngine {
         osc.stop(now + duration + 0.1);
     }
 
+    public playBrakesScreech(duration: number = 5.0) {
+        this.playTrainBrakesScreech(duration);
+    }
+
     // Creepy Escalating 5-Second Drone (Carriage 20 Ominous Countdown)
     public playCreepyDrone5s() {
         this.initContext();
