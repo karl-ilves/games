@@ -2271,10 +2271,21 @@ try {
                 window.__lastMetro.activateKuuljaSwitch(2);
             });
             const switchesActivated = await page.evaluate(() => window.__lastMetro.kuuljaSwitchesActivated);
-            const cutsceneActive = await page.evaluate(() => window.__lastMetro.state === 'cutscene_carriage200');
-            console.log(`   Switches activated in Carriage 200 (Expected: 3): ${switchesActivated}, Cutscene Active: ${cutsceneActive}`);
-            if (switchesActivated !== 3 || !cutsceneActive) {
-                throw new Error(`Expected all 3 switches to be activated and cutscene triggered, got switches: ${switchesActivated}, cutscene: ${cutsceneActive}`);
+            const switchesDone = await page.evaluate(() => window.__lastMetro.station200SwitchesDone);
+            console.log(`   Switches activated in Carriage 200 (Expected: 3): ${switchesActivated}, Switches Done: ${switchesDone}`);
+            if (switchesActivated !== 3 || !switchesDone) {
+                throw new Error(`Expected all 3 switches to be activated and switches done, got switches: ${switchesActivated}, switchesDone: ${switchesDone}`);
+            }
+
+            // Test returning to the metro train triggers train departure
+            await page.evaluate(() => {
+                window.__lastMetro.playerPos.set(0.5, 1.6, 0.0);
+                window.__lastMetro.triggerCarriage200TrainDeparture();
+            });
+            const departureActive = await page.evaluate(() => window.__lastMetro.station200Departing);
+            console.log(`   Carriage 200 Train Departure triggered on metro return (Expected: true): ${departureActive}`);
+            if (!departureActive) {
+                throw new Error("Returning to metro after switches must trigger train departure!");
             }
 
             const volumeMultiplier = await page.evaluate(() => window.__metroAudio?.carriage200VolumeMultiplier);
@@ -2343,23 +2354,37 @@ try {
                 throw new Error("Touching Kuulja must cause player death!");
             }
 
-            // Respawn back to test normal transitions
+            // Respawn back to test normal transitions & music continuity
             await page.evaluate(() => {
                 window.__lastMetro.loadCarriage(200, 'right');
             });
             await new Promise(r => setTimeout(r, 100));
 
-            // Test moving away from Carriage 200 stops the Carriage 200 music
+            // Test moving away from Carriage 200 into 201: music MUST KEEP PLAYING ("laul kestab kuni läbi saab")
             await page.evaluate(() => {
                 window.__lastMetro.loadCarriage(201, 'right');
             });
             const isMusicActive201 = await page.evaluate(() => window.__metroAudio?.isCarriage200MusicActive);
-            console.log(`   Carriage 201 Music Active after transition (Expected: false): ${isMusicActive201}`);
-            if (isMusicActive201) {
-                throw new Error("Carriage 200 music must stop when leaving Carriage 200!");
+            console.log(`   Carriage 201 Music Active after transition (Expected: true - plays until finishes): ${isMusicActive201}`);
+            if (!isMusicActive201) {
+                throw new Error("Carriage 200 music must continue playing in Carriage 201 until it finishes!");
             }
 
-            console.log("   Successfully verified Carriage 200 halted train, open side doors, station platform step-out, switches, Kuulja, lethal touch, wall bounds & 1.5x soundtrack playback!");
+            // Test Shadow Dash events up to Carriage 300 on carriages 210, 232, 233, 250, 260, 278, 280, 290
+            console.log("   Testing Shadow Dash on carriages 210, 232, 233, 250, 260, 278, 280, 290...");
+            const shadowDashCars = [210, 232, 233, 250, 260, 278, 280, 290];
+            for (const cNum of shadowDashCars) {
+                const isShadowDash = await page.evaluate((car) => {
+                    window.__lastMetro.loadCarriage(car, 'right');
+                    return window.__lastMetro.isShadowEventActive() || window.__lastMetro.shadowRushCountdown > 0;
+                }, cNum);
+                console.log(`   Carriage ${cNum} Shadow Dash active (Expected: true): ${isShadowDash}`);
+                if (!isShadowDash) {
+                    throw new Error(`Shadow Dash event must trigger on carriage ${cNum}!`);
+                }
+            }
+
+            console.log("   Successfully verified Carriage 200 switches, return to metro train, music persistence until end & Shadow Dash on carriages 210, 232, 233, 250, 260, 278, 280, 290!");
 
             // ── TEST: Sünnipäeva / Vanuse süsteem ──────────────────────────────────
             console.log("\n--- Testing Birthday / Age System ---");

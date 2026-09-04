@@ -1438,7 +1438,10 @@ export class MetroAudioEngine {
             const cleanBase = base.endsWith('/') ? base : base + '/';
             const audioUrl = `${cleanBase}audio/last_metro_200.mp3`;
             this.carriage200Audio = new Audio(audioUrl);
-            this.carriage200Audio.loop = true;
+            this.carriage200Audio.loop = false; // "laul kestab kuni läbi saab"
+            this.carriage200Audio.addEventListener('ended', () => {
+                this.isCarriage200MusicActive = false;
+            });
         }
 
         // Web Audio Routing for 1.5x Gain Boost

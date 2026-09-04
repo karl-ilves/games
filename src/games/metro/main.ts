@@ -637,6 +637,8 @@ export class LastMetroGame {
     public kuuljaTargetPos: THREE.Vector3 = new THREE.Vector3();
     public stationStairsGroup: THREE.Group | null = null;
     public carriage200CutsceneTimers: any[] = [];
+    public station200SwitchesDone: boolean = false;
+    public station200Departing: boolean = false;
 
     // ── Vagunid 201–250 Kanalisatsioon (Sewers) ────────────────────────────
     public sewerWaterSubmerged: boolean = false;
@@ -3896,12 +3898,14 @@ export class LastMetroGame {
 
         // Vagun 200 Music Track & Time Villain immunity
         if (prevIndex === 200 && index !== 200) {
-            metroAudio.stopCarriage200Music();
+            // User requirement: "laul kestab kuni läbi saab" - Do not stop music here, let it play until it ends!
             this.carriage200CutsceneTimers.forEach(t => { clearInterval(t); clearTimeout(t); });
             this.carriage200CutsceneTimers = [];
         } else if (index === 200) {
             this.carriage200CutsceneTimers.forEach(t => { clearInterval(t); clearTimeout(t); });
             this.carriage200CutsceneTimers = [];
+            this.station200SwitchesDone = false;
+            this.station200Departing = false;
             metroAudio.playCarriage200Music();
             this.deactivateTimeVillain();
         }
@@ -3994,9 +3998,11 @@ export class LastMetroGame {
         if (index === 200) {
             this.trainSpeed = 0;
             this.introSideDoorsOpen = true;
+            this.station200SwitchesDone = false;
+            this.station200Departing = false;
             metroAudio.playBrakesScreech();
             metroAudio.playDoorSlide(true);
-        } else if (index < 200) {
+        } else {
             this.trainSpeed = 60;
             this.introSideDoorsOpen = false;
         }
@@ -4008,6 +4014,12 @@ export class LastMetroGame {
     private triggerCarriageStoryEvent(index: number) {
         // Ramping eerie drone (resets to peaceful 0 at checkpoint 100)
         metroAudio.setEerinessLevel(index === 100 ? 0.0 : Math.min(1.0, index * 0.03));
+
+        // User requirement: Shadow Dash up to 300 on 210, 232, 233, 250, 260, 278, 280, 290
+        const shadowDashCarriages200_300 = [210, 232, 233, 250, 260, 278, 280, 290];
+        if (shadowDashCarriages200_300.includes(index)) {
+            this.startShadowRushCarriageEvent(index);
+        }
 
         switch (index) {
             case 1:
@@ -5551,146 +5563,60 @@ export class LastMetroGame {
         }
 
         if (this.kuuljaSwitchesActivated >= 3) {
-            this._finishCarriage200Boss();
+            this.station200SwitchesDone = true;
+            this.showThought(
+                '⚡ KÕIK 3 LÜLITIT ON SEES! Rongi toide on taastatud! Mine kiiresti tagasi metroosse enne kui Kuulja su kätte saab!',
+                '⚡ ALL 3 SWITCHES ACTIVATED! Metro power restored! Run back inside the train before the Listener catches you!'
+            );
+
+            // Power up all station and train lights
+            if (this.currentCarriage) {
+                this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 2.0; });
+            }
+            metroAudio.playAnnouncementChime();
         }
     }
 
-    private _finishCarriage200Boss() {
+    public triggerCarriage200TrainDeparture() {
+        if (this.station200Departing) return;
+        this.station200Departing = true;
         this.state = 'cutscene_carriage200' as any;
+        this.introSideDoorsOpen = false;
+        metroAudio.playDoorChime();
+        setTimeout(() => {
+            metroAudio.playDoorSlide(false);
+        }, 300);
+
         this.showThought(
-            '🌟 KÕIK 3 LÜLITIT ON SEES! Tuled süttivad ja väljapääsu uks hakkab avanema!',
-            '🌟 ALL 3 SWITCHES ACTIVATED! Station lights turn on and blast exit door begins opening!'
+            '🚇 JÕUDSID METROOSSE! Uksed sulgusid ja rong alustab sõitu järgmisse jaama!',
+            '🚇 YOU BOARDED THE METRO! Doors sealed shut and train departs into the tunnels!'
         );
 
-        // Power up all station lights
-        if (this.currentCarriage) {
-            this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 1.8; });
+        if (this.kuuljaBossGroup) {
+            this.kuuljaBossGroup.position.set(2.4, 0, this.playerPos.z);
+            this.kuuljaBossGroup.lookAt(this.playerPos.x, 0, this.playerPos.z);
+            metroAudio.playShadowRushScreech();
         }
 
-        // Blast Exit Door & glowing sunlight
-        const blastDoor = this.currentCarriage?.group.getObjectByName('station_200_blast_door');
-        const sunLight = new THREE.PointLight(0xfff4d0, 0.1, 45);
-        sunLight.position.set(6.0, 2.5, 16.0);
-        this.scene.add(sunLight);
-
-        // Sound of heavy sliding blast door
-        metroAudio.playDoorSlide(true);
-
-        const doorTarget = new THREE.Vector3(6.0, 2.4, 15.05);
-        const initialDoorX = blastDoor ? blastDoor.position.x : 6.0;
-        const targetDoorX = initialDoorX + 2.8;
-        const doorDuration = 1400;
-        const doorStartTime = performance.now();
-
-        // Step 1: Door smoothly slides open while camera turns to watch the exit (1.4s)
-        const doorInterval = setInterval(() => {
-            const elapsed = performance.now() - doorStartTime;
-            const t = Math.min(1, elapsed / doorDuration);
-            const easeT = t * (2 - t);
-
-            if (blastDoor) {
-                blastDoor.position.x = THREE.MathUtils.lerp(initialDoorX, targetDoorX, easeT);
+        // Camera shakes slightly and train accelerates
+        let departElapsed = 0;
+        const departInterval = setInterval(() => {
+            departElapsed += 50;
+            this.trainSpeed = Math.min(65, this.trainSpeed + 2.0);
+            this.cameraEuler.z = (Math.random() - 0.5) * 0.04;
+            if (departElapsed >= 2200) {
+                clearInterval(departInterval);
+                this.cameraEuler.z = 0;
+                this.state = 'player_free';
+                this.loadCarriage(201, 'right');
             }
-            sunLight.intensity = THREE.MathUtils.lerp(0.1, 8.0, easeT);
+        }, 50);
+        this.carriage200CutsceneTimers.push(departInterval);
+    }
 
-            // Turn camera towards blast door
-            const toDoor = doorTarget.clone().sub(this.playerPos);
-            const targetYaw = Math.atan2(-toDoor.x, -toDoor.z);
-            this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, targetYaw, 0.08);
-            this.cameraEuler.x = THREE.MathUtils.lerp(this.cameraEuler.x, -0.06, 0.08);
-
-            if (t >= 1) {
-                clearInterval(doorInterval);
-                this.showThought(
-                    '🏃 Väljapääs on avatud! Jookse trepist üles päikesevalguse kätte!',
-                    '🏃 Exit is open! Sprint up the stairs into daylight!'
-                );
-
-                // Step 2: Player automatically sprints up towards the stairs (2.2s)
-                const startPos = this.playerPos.clone();
-                const midStairsPos = new THREE.Vector3(6.0, 1.9, 12.6);
-                const runStartTime = performance.now();
-                const runDuration = 2200;
-
-                const runInterval = setInterval(() => {
-                    const runElapsed = performance.now() - runStartTime;
-                    const rt = Math.min(1, runElapsed / runDuration);
-                    const runEase = rt < 0.5 ? 2 * rt * rt : -1 + (4 - 2 * rt) * rt;
-                    this.playerPos.lerpVectors(startPos, midStairsPos, runEase);
-
-                    // Camera focuses straight ahead on the open daylight door
-                    const toDoorRun = doorTarget.clone().sub(this.playerPos);
-                    const runYaw = Math.atan2(-toDoorRun.x, -toDoorRun.z);
-                    this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, runYaw, 0.12);
-                    this.cameraEuler.x = THREE.MathUtils.lerp(this.cameraEuler.x, -0.12, 0.1);
-
-                    if (Math.floor(runElapsed / 220) % 2 === 0) {
-                        metroAudio.playFootstep();
-                    }
-
-                    if (rt >= 1) {
-                        clearInterval(runInterval);
-
-                        // Step 3: Mid-stairs, Kuulja suddenly leaps down in front of player and smashes stairs!
-                        if (this.kuuljaBossGroup) {
-                            this.kuuljaBossGroup.position.set(6.0, 2.3, 14.0);
-                            this.kuuljaBossGroup.lookAt(this.playerPos.x, 2.3, this.playerPos.z);
-                        }
-
-                        this.showThought(
-                            '😱 Kuulja hüppab ette ja purustab trepi! Trepp variseb kokku ja sa kukud kanalisatsiooni!',
-                            '😱 The Listener leaps in front and smashes the stairs! The stairs collapse and you plummet into the sewers!'
-                        );
-                        metroAudio.playShadowRushScreech();
-
-                        // Break and collapse stairs
-                        if (this.stationStairsGroup) {
-                            this.stationStairsGroup.children.forEach((step, sIdx) => {
-                                step.rotation.x = 0.45 + sIdx * 0.12;
-                                step.rotation.z = (sIdx % 2 === 0 ? 0.35 : -0.35);
-                                step.position.y -= 2.0;
-                            });
-                        }
-
-                        // Step 4: Violent screen shake and rapid vertical fall
-                        const fallStartTime = performance.now();
-                        const fallInterval = setInterval(() => {
-                            const fallElapsed = performance.now() - fallStartTime;
-                            this.cameraEuler.x += (Math.random() - 0.5) * 0.22;
-                            this.cameraEuler.z = (Math.random() - 0.5) * 0.3;
-                            this.playerPos.y -= 0.65; // plunge downward
-
-                            if (fallElapsed > 1800) {
-                                clearInterval(fallInterval);
-                                this.cameraEuler.z = 0;
-
-                                // Falling countdown through mystery levels
-                                let count = 0;
-                                const levels = [199, 150, 100, 50, 10, '002'];
-                                const levelInterval = setInterval(() => {
-                                    if (count < levels.length) {
-                                        this.showThought(`Kukkumine läbi tasemete... TASE ${levels[count]}`, `Plummeting through levels... LEVEL ${levels[count]}`);
-                                        count++;
-                                    } else {
-                                        clearInterval(levelInterval);
-                                        metroAudio.stopCarriage200Music();
-                                        this.showThought('🌊 KUKKUSID KANALISATSIOONI (VAGUN 201)!', '🌊 FELL INTO THE SEWERS (CARRIAGE 201)!');
-                                        const endTimeout = setTimeout(() => {
-                                            this.loadCarriage(201, 'right');
-                                        }, 1800);
-                                        this.carriage200CutsceneTimers.push(endTimeout);
-                                    }
-                                }, 500);
-                                this.carriage200CutsceneTimers.push(levelInterval);
-                            }
-                        }, 40);
-                        this.carriage200CutsceneTimers.push(fallInterval);
-                    }
-                }, 30);
-                this.carriage200CutsceneTimers.push(runInterval);
-            }
-        }, 30);
-        this.carriage200CutsceneTimers.push(doorInterval);
+    public _finishCarriage200Boss() {
+        this.station200SwitchesDone = true;
+        this.triggerCarriage200TrainDeparture();
     }
 
     // ── Kanalisatsiooni Sündmused (Vagunid 201–250) ──────────────────────────
@@ -7094,6 +7020,14 @@ this.state = 'player_free';
             if (this.aimedInteractable === 'switch') return;
         }
 
+        // Return to metro in Carriage 200
+        if (this.currentCarIndex === 200 && this.station200SwitchesDone && !this.station200Departing) {
+            if (this.playerPos.x <= 2.2) {
+                this.triggerCarriage200TrainDeparture();
+                return;
+            }
+        }
+
         if (this.aimedInteractable === 'inspectable') {
             const dbClue = CLUES_DATABASE.find(c => c.carIndex === this.currentCarIndex && !this.collectedClues.some(cc => cc.id === c.id));
             if (dbClue) {
@@ -7609,6 +7543,11 @@ this.state = 'player_free';
                             this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
                         }
                         this.playerPos.z = Math.max(-8.5, Math.min(8.5, this.playerPos.z));
+
+                        // User requirement: "ja kui ma panen lüliti tõõle siis pean ma metroose tagasi minema"
+                        if (this.station200SwitchesDone && !this.station200Departing && this.playerPos.x <= 1.35) {
+                            this.triggerCarriage200TrainDeparture();
+                        }
                     }
                 } else if (this.currentCarIndex >= 201) {
                     this.playerPos.x = Math.max(-5.0, Math.min(5.0, this.playerPos.x));
