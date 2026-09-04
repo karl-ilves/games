@@ -417,6 +417,99 @@
             z-index: 90;
             box-shadow: 0 0 15px rgba(255, 211, 42, 0.3);
         }
+        /* Admin Role Modal */
+        #admin-role-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 3, 8, 0.88);
+            backdrop-filter: blur(14px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 400;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .admin-modal-card {
+            background: linear-gradient(145deg, #181224, #241630);
+            border: 2px solid #ffd32a;
+            border-radius: 24px;
+            padding: 28px 36px;
+            max-width: 620px;
+            width: 90%;
+            box-shadow: 0 0 50px rgba(255, 211, 42, 0.35);
+            text-align: center;
+        }
+
+        .admin-role-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 14px;
+            margin: 22px 0;
+        }
+
+        .admin-role-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 16px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            position: relative;
+        }
+        .admin-role-btn:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.12);
+        }
+        .admin-role-btn.active-role {
+            border-color: #ffd32a;
+            box-shadow: 0 0 20px rgba(255, 211, 42, 0.5);
+            background: rgba(255, 211, 42, 0.15);
+        }
+
+        .admin-role-murderer {
+            border-color: rgba(255, 46, 99, 0.4);
+        }
+        .admin-role-murderer:hover, .admin-role-murderer.active-role {
+            border-color: #ff2e63;
+            box-shadow: 0 0 20px rgba(255, 46, 99, 0.5);
+            background: rgba(255, 46, 99, 0.15);
+        }
+
+        .admin-role-sheriff {
+            border-color: rgba(0, 242, 254, 0.4);
+        }
+        .admin-role-sheriff:hover, .admin-role-sheriff.active-role {
+            border-color: #00f2fe;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.5);
+            background: rgba(0, 242, 254, 0.15);
+        }
+
+        .admin-role-innocent {
+            border-color: rgba(46, 204, 113, 0.4);
+        }
+        .admin-role-innocent:hover, .admin-role-innocent.active-role {
+            border-color: #2ecc71;
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
+            background: rgba(46, 204, 113, 0.15);
+        }
+
+        .admin-quick-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
@@ -428,6 +521,10 @@
                 <span>PLAYARD</span>
             </a>
             <span class="owner-pill">👑 PLAYARD OWNER</span>
+            <button class="btn-hud-action" id="btn-admin-panel" style="background: rgba(255, 211, 42, 0.2); border-color: #ffd32a; color: #ffd32a; font-weight: 800;" title="Ava Playard Admin Rollivalik (P)">
+                <span>👑</span>
+                <span>ADMIN ROLLID</span>
+            </button>
         </div>
 
         <div class="hud-center">
@@ -489,6 +586,50 @@
     <!-- Interaction Prompt (e.g. Press E to pick up Gun) -->
     <div id="interaction-prompt">
         <span id="interaction-prompt-text">[E] Võta maast šerifi relv</span>
+    </div>
+
+    <!-- Playard Admin / Owner Role Selection Modal -->
+    <div id="admin-role-modal">
+        <div class="admin-modal-card">
+            <div style="font-size: 2.5rem; margin-bottom: 6px;">👑</div>
+            <h2 style="color: #ffd32a; margin: 0 0 6px 0; font-size: 1.6rem; letter-spacing: 1px;">PLAYARD ADMIN PANEEL</h2>
+            <p style="color: #dcdde1; font-size: 0.95rem; margin: 0 0 16px 0;">Vali oma roll (rakendub koheselt või järgmiseks raundiks):</p>
+            
+            <div class="admin-role-grid">
+                <!-- Murderer -->
+                <button class="admin-role-btn admin-role-murderer" id="btn-admin-role-murderer">
+                    <span style="font-size: 2.4rem;">🔪</span>
+                    <strong style="color: #ff2e63; font-size: 1.15rem;">MÕRVAR</strong>
+                    <span style="font-size: 0.78rem; color: #ccc;">Nuga · 1-löök tapmine · +150 Y</span>
+                </button>
+
+                <!-- Sheriff -->
+                <button class="admin-role-btn admin-role-sheriff" id="btn-admin-role-sheriff">
+                    <span style="font-size: 2.4rem;">🔫</span>
+                    <strong style="color: #00f2fe; font-size: 1.15rem;">ŠERIF</strong>
+                    <span style="font-size: 0.78rem; color: #ccc;">Revolver · Lase mõrvarit · +100 Y</span>
+                </button>
+
+                <!-- Innocent -->
+                <button class="admin-role-btn admin-role-innocent" id="btn-admin-role-innocent">
+                    <span style="font-size: 2.4rem;">🛡️</span>
+                    <strong style="color: #2ecc71; font-size: 1.15rem;">SÜÜTU</strong>
+                    <span style="font-size: 0.78rem; color: #ccc;">Käed · Kogu münte · Jää ellu</span>
+                </button>
+            </div>
+
+            <div class="admin-quick-actions">
+                <button id="btn-admin-force-start" class="btn-hud-action" style="background: rgba(255, 211, 42, 0.2); border-color: #ffd32a; color: #ffd32a; font-weight: 800;">
+                    ⚡ Käivita Raund
+                </button>
+                <button id="btn-admin-add-yards" class="btn-hud-action" style="background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71; font-weight: 800;">
+                    💰 +500 Jardi
+                </button>
+                <button id="btn-admin-close" class="btn-hud-action" style="background: rgba(255, 255, 255, 0.1); border-color: #aaa; color: #fff; font-weight: 800;">
+                    ✕ Sulge
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Role Reveal Splash Modal -->

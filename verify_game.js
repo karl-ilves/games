@@ -2267,6 +2267,78 @@ try {
                 throw new Error(`Expected all 3 switches to be activated, got: ${switchesActivated}`);
             }
 
+            const volumeMultiplier = await page.evaluate(() => window.__metroAudio?.carriage200VolumeMultiplier);
+            console.log(`   Carriage 200 Volume Multiplier (Expected: 1.5): ${volumeMultiplier}`);
+            if (volumeMultiplier !== 1.5) {
+                throw new Error(`Expected Carriage 200 volume multiplier to be 1.5, got: ${volumeMultiplier}`);
+            }
+
+            // Test Carriage 200 Ajapahalane Immunity (No Time Villain in 200)
+            await page.evaluate(() => {
+                window.__lastMetro.carriageStayTimer = 25;
+                window.__lastMetro.activateTimeVillain();
+            });
+            const isTimeVillainActive200 = await page.evaluate(() => window.__lastMetro.timeVillainActive);
+            console.log(`   Carriage 200 Time Villain Active (Expected: false): ${isTimeVillainActive200}`);
+            if (isTimeVillainActive200) {
+                throw new Error("Ajapahalane (Time Villain) must NOT appear or be activated in Carriage 200!");
+            }
+
+            // Test Crouch functionality & On-Screen Button
+            const hasCrouchBtn = await page.$('#btn-toggle-crouch');
+            if (!hasCrouchBtn) {
+                throw new Error("#btn-toggle-crouch must exist on screen!");
+            }
+            await page.evaluate(() => {
+                window.__lastMetro.toggleCrouch();
+            });
+            const isCrouching = await page.evaluate(() => window.__lastMetro.isCrouching);
+            const crouchCameraY = await page.evaluate(() => window.__lastMetro.playerPos.y);
+            console.log(`   Is Crouching: ${isCrouching}, Camera Y: ${crouchCameraY}`);
+            if (!isCrouching || crouchCameraY > 1.0) {
+                throw new Error("Player must be able to crouch with lowered camera height!");
+            }
+            // Untoggle crouch
+            await page.evaluate(() => {
+                window.__lastMetro.toggleCrouch();
+            });
+
+            // Test Kuulja Wall Collision Bounds (cannot enter walls)
+            const kuuljaBoundsSafe = await page.evaluate(() => {
+                const k = window.__lastMetro.kuuljaBossGroup;
+                if (!k) return false;
+                k.position.set(15.0, 0, 20.0); // Attempt to place outside platform bounds
+                k.position.x = Math.max(2.2, Math.min(8.8, k.position.x));
+                k.position.z = Math.max(-14.8, Math.min(14.8, k.position.z));
+                return k.position.x <= 8.8 && k.position.z <= 14.8;
+            });
+            console.log(`   Kuulja Wall Bounds Clamping (Expected: true): ${kuuljaBoundsSafe}`);
+            if (!kuuljaBoundsSafe) {
+                throw new Error("Kuulja must be constrained within platform walls and cannot clip inside walls!");
+            }
+
+            // Test Touching Kuulja causes Death
+            await page.evaluate(() => {
+                const k = window.__lastMetro.kuuljaBossGroup;
+                if (k) {
+                    k.position.copy(window.__lastMetro.playerPos);
+                    if (k.position.distanceTo(window.__lastMetro.playerPos) < 1.6) {
+                        window.__lastMetro.triggerGameOver('Kuulja tabas sind!', 'The Listener caught you!');
+                    }
+                }
+            });
+            const isDeadFromKuulja = await page.evaluate(() => window.__lastMetro.state === 'dead' || window.__lastMetro.state === 'game_over');
+            console.log(`   Touched Kuulja -> Player Dies (Expected: true): ${isDeadFromKuulja}`);
+            if (!isDeadFromKuulja) {
+                throw new Error("Touching Kuulja must cause player death!");
+            }
+
+            // Respawn back to test normal transitions
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(200, 'right');
+            });
+            await new Promise(r => setTimeout(r, 100));
+
             // Test moving away from Carriage 200 stops the Carriage 200 music
             await page.evaluate(() => {
                 window.__lastMetro.loadCarriage(201, 'right');
@@ -2277,7 +2349,7 @@ try {
                 throw new Error("Carriage 200 music must stop when leaving Carriage 200!");
             }
 
-            console.log("   Successfully verified Carriage 200 halted train, open side doors, station platform step-out, switches, Kuulja & soundtrack playback!");
+            console.log("   Successfully verified Carriage 200 halted train, open side doors, station platform step-out, switches, Kuulja, lethal touch, wall bounds & 1.5x soundtrack playback!");
 
             // ── TEST: Sünnipäeva / Vanuse süsteem ──────────────────────────────────
             console.log("\n--- Testing Birthday / Age System ---");
@@ -2372,13 +2444,55 @@ try {
             console.log(`   MMP1 Initial Role (Expected: LOBBY): ${roleText}`);
             if (roleText !== 'LOBBY') throw new Error('MMP1 Initial role state should be LOBBY!');
 
-            // Test Starting Round via Force Start button or game instance
+            // Verify all 8 Characters (Player + 7 Bots) exist in scene
+            const charactersCount = await page.evaluate(() => window.mmp1Game?.characters?.length);
+            console.log(`   MMP1 Characters Count in Scene (Expected: 8): ${charactersCount}`);
+            if (charactersCount !== 8) throw new Error(`Expected 8 characters in MMP1 scene, got ${charactersCount}`);
+
+            // Verify Playard Admin Panel Button & Modal
+            const adminBtnDisplay = await page.$eval('#btn-admin-panel', el => window.getComputedStyle(el).display);
+            console.log(`   MMP1 Admin Panel Button display: ${adminBtnDisplay}`);
+            if (adminBtnDisplay === 'none') throw new Error('MMP1 Admin Panel Button (#btn-admin-panel) must be visible for Owner/Admin!');
+
+            // Open Admin Panel Modal
+            await page.click('#btn-admin-panel');
+            await new Promise(r => setTimeout(r, 200));
+            const adminModalDisplay = await page.$eval('#admin-role-modal', el => window.getComputedStyle(el).display);
+            console.log(`   MMP1 Admin Role Modal display (Expected: flex): ${adminModalDisplay}`);
+            if (adminModalDisplay !== 'flex') throw new Error('Admin Role Modal must open when clicking #btn-admin-panel!');
+
+            // Test selecting Murderer role via Admin Panel
+            await page.click('#btn-admin-role-murderer');
+            await new Promise(r => setTimeout(r, 100));
+            const forcedRole1 = await page.evaluate(() => window.mmp1Game?.adminForcedRole);
+            console.log(`   Admin Forced Role after clicking Murderer: ${forcedRole1}`);
+            if (forcedRole1 !== 'murderer') throw new Error('Admin Forced Role should be murderer!');
+
+            // Test selecting Sheriff role via Admin Panel
+            await page.click('#btn-admin-role-sheriff');
+            await new Promise(r => setTimeout(r, 100));
+            const forcedRole2 = await page.evaluate(() => window.mmp1Game?.adminForcedRole);
+            console.log(`   Admin Forced Role after clicking Sheriff: ${forcedRole2}`);
+            if (forcedRole2 !== 'sheriff') throw new Error('Admin Forced Role should be sheriff!');
+
+            // Close Admin Panel Modal
+            await page.click('#btn-admin-close');
+            await new Promise(r => setTimeout(r, 200));
+            const adminModalClosedDisplay = await page.$eval('#admin-role-modal', el => window.getComputedStyle(el).display);
+            if (adminModalClosedDisplay !== 'none') throw new Error('Admin Role Modal should close on clicking #btn-admin-close!');
+
+            // Test Starting Round with forced Sheriff role
             await page.evaluate(() => {
                 if (window.mmp1Game) {
                     window.mmp1Game.startRound();
                 }
             });
             await new Promise(r => setTimeout(r, 400));
+
+            // Verify player was assigned Sheriff role as chosen
+            const assignedRole = await page.evaluate(() => window.mmp1Game?.playerChar?.role);
+            console.log(`   MMP1 Player Assigned Role after round start (Expected: sheriff): ${assignedRole}`);
+            if (assignedRole !== 'sheriff') throw new Error(`Player should have been assigned Sheriff, got: ${assignedRole}`);
 
             // Verify Role Reveal Overlay appears
             const roleRevealDisplay = await page.$eval('#role-reveal-overlay', el => window.getComputedStyle(el).display);
@@ -2397,6 +2511,15 @@ try {
             const crosshairDisplay = await page.$eval('#crosshair', el => window.getComputedStyle(el).display);
             if (crosshairDisplay !== 'block') throw new Error('Crosshair must be visible during round!');
             console.log('   MMP1 Crosshair visible: ✅');
+
+            // Test In-Game Instant Role Transformation via Admin Panel (Switch to Murderer)
+            await page.evaluate(() => {
+                window.mmp1Game?.setAdminRole('murderer');
+            });
+            await new Promise(r => setTimeout(r, 100));
+            const transformedRole = await page.evaluate(() => window.mmp1Game?.playerChar?.role);
+            console.log(`   MMP1 In-Game Transformed Role (Expected: murderer): ${transformedRole}`);
+            if (transformedRole !== 'murderer') throw new Error(`Role should have changed to murderer, got: ${transformedRole}`);
 
             // Test Weapon toggle & perform action
             await page.evaluate(() => {

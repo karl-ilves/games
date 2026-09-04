@@ -15,7 +15,10 @@ export class MetroAudioEngine {
     private droneOsc2: OscillatorNode | null = null;
 
     private carriage200Audio: HTMLAudioElement | null = null;
+    private carriage200Source: MediaElementAudioSourceNode | null = null;
+    private carriage200Gain: GainNode | null = null;
     public isCarriage200MusicActive: boolean = false;
+    public carriage200VolumeMultiplier: number = 1.5;
 
     constructor() {
         // AudioContext will be initialized on first user interaction
@@ -49,6 +52,9 @@ export class MetroAudioEngine {
         if (this.masterGain && this.ctx) {
             this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.7, this.ctx.currentTime);
         }
+        if (this.carriage200Gain && this.ctx) {
+            this.carriage200Gain.gain.setValueAtTime(this.isMuted ? 0 : 1.5, this.ctx.currentTime);
+        }
         if (this.carriage200Audio) {
             this.carriage200Audio.muted = this.isMuted;
         }
@@ -58,6 +64,9 @@ export class MetroAudioEngine {
     public setVolume(val: number) {
         if (this.masterGain && this.ctx && !this.isMuted) {
             this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, val)), this.ctx.currentTime);
+        }
+        if (this.carriage200Gain && this.ctx && !this.isMuted) {
+            this.carriage200Gain.gain.setValueAtTime(val * 1.5, this.ctx.currentTime);
         }
         if (this.carriage200Audio && !this.isMuted) {
             this.carriage200Audio.volume = Math.max(0, Math.min(1, val));
@@ -1420,7 +1429,7 @@ export class MetroAudioEngine {
         osc2.stop(now + 0.6);
     }
 
-    // --- Vagun 200 Music Track (Last Metro Soundtrack) ---
+    // --- Vagun 200 Music Track (Last Metro Soundtrack - 1.5x Boosted Volume) ---
     public playCarriage200Music() {
         this.initContext();
         this.isCarriage200MusicActive = true;
@@ -1431,8 +1440,26 @@ export class MetroAudioEngine {
             this.carriage200Audio = new Audio(audioUrl);
             this.carriage200Audio.loop = true;
         }
+
+        // Web Audio Routing for 1.5x Gain Boost
+        if (!this.carriage200Source && this.ctx && this.carriage200Audio) {
+            try {
+                this.carriage200Source = this.ctx.createMediaElementSource(this.carriage200Audio);
+                this.carriage200Gain = this.ctx.createGain();
+                this.carriage200Gain.gain.setValueAtTime(this.isMuted ? 0 : 1.5, this.ctx.currentTime);
+                this.carriage200Source.connect(this.carriage200Gain);
+                this.carriage200Gain.connect(this.ctx.destination);
+            } catch (e) {
+                console.warn('[Metro Audio] MediaElementSource creation notice:', e);
+            }
+        }
+
+        if (this.carriage200Gain && this.ctx) {
+            this.carriage200Gain.gain.setValueAtTime(this.isMuted ? 0 : 1.5, this.ctx.currentTime);
+        }
+
         this.carriage200Audio.muted = this.isMuted;
-        this.carriage200Audio.volume = this.isMuted ? 0 : 0.8;
+        this.carriage200Audio.volume = this.isMuted ? 0 : 1.0;
         this.carriage200Audio.play().catch(e => {
             console.warn('[Metro Audio] Carriage 200 music autoplay prevented or waiting for interaction:', e);
         });

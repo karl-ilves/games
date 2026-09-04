@@ -791,6 +791,12 @@ export class LastMetroGame {
             sitToggleBtn.addEventListener('click', () => this.toggleSit());
         }
 
+        // Crouch / Sneak toggle button
+        const crouchToggleBtn = document.getElementById('btn-toggle-crouch');
+        if (crouchToggleBtn) {
+            crouchToggleBtn.addEventListener('click', () => this.toggleCrouch());
+        }
+
         // Audio mute toggle
         const audioBtn = document.getElementById('btn-toggle-audio');
         if (audioBtn) {
@@ -966,6 +972,13 @@ export class LastMetroGame {
             if (this.branchDirection === 'right') branchLabel.innerText = isEt ? '➡️ PAREM RADA' : '➡️ RIGHT TRACK';
             else if (this.branchDirection === 'left') branchLabel.innerText = isEt ? '⬅️ VASAK RADA' : '⬅️ LEFT TRACK';
             else branchLabel.innerText = isEt ? '❓ SUUND VALIMATA' : '❓ NO DIRECTION';
+        }
+
+        const crouchText = document.getElementById('btn-toggle-crouch-text');
+        if (crouchText) {
+            crouchText.innerText = this.isCrouching
+                ? (isEt ? 'Püsti [C]' : 'Stand [C]')
+                : (isEt ? 'Kükita [C]' : 'Crouch [C]');
         }
     }
 
@@ -2910,6 +2923,23 @@ export class LastMetroGame {
         }
     }
 
+    public triggerGameOver(reasonEt?: string, reasonEn?: string) {
+        this.playerHp = 0;
+        this.updateHealthUI();
+        this.state = 'dead';
+        const deathModal = document.getElementById('death-modal');
+        const dTitle = document.getElementById('death-title');
+        const dDesc = document.getElementById('death-desc');
+        if (dTitle) dTitle.textContent = this.lang === 'et' ? 'SA SURID' : 'YOU DIED';
+        if (dDesc) {
+            dDesc.textContent = this.lang === 'et'
+                ? (reasonEt || 'Must vari ja pahalased võtsid su elud!')
+                : (reasonEn || 'Your health reached zero!');
+        }
+        if (deathModal) deathModal.style.display = 'flex';
+        this.updateCursorState();
+    }
+
     public attackWithSword() {
         if (this.equippedItem !== 'sword' || this.isSwordSwinging) return;
         this.isSwordSwinging = true;
@@ -3781,6 +3811,23 @@ export class LastMetroGame {
     public toggleCrouch() {
         this.isCrouching = !this.isCrouching;
         this.playerPos.y = this.isCrouching ? 0.95 : 1.6;
+
+        const crouchBtn = document.getElementById('btn-toggle-crouch');
+        const crouchText = document.getElementById('btn-toggle-crouch-text');
+        const crouchIcon = document.getElementById('btn-toggle-crouch-icon');
+        if (crouchBtn) {
+            crouchBtn.style.background = this.isCrouching ? 'rgba(0, 242, 254, 0.35)' : 'rgba(10, 15, 25, 0.85)';
+            crouchBtn.style.borderColor = this.isCrouching ? '#00f2fe' : 'rgba(0, 242, 254, 0.5)';
+        }
+        if (crouchIcon) {
+            crouchIcon.textContent = this.isCrouching ? '🧍‍♂️' : '🧎‍♂️';
+        }
+        if (crouchText) {
+            crouchText.textContent = this.isCrouching
+                ? (this.lang === 'et' ? 'Püsti [C]' : 'Stand [C]')
+                : (this.lang === 'et' ? 'Kükita [C]' : 'Crouch [C]');
+        }
+
         if (this.currentCarIndex === 217) {
             if (this.isCrouching) this.submergeInSewerWater();
             else this.emergeFromSewerWater();
@@ -3846,11 +3893,12 @@ export class LastMetroGame {
             } catch (e) {}
         }
 
-        // Vagun 200 Music Track
+        // Vagun 200 Music Track & Time Villain immunity
         if (prevIndex === 200 && index !== 200) {
             metroAudio.stopCarriage200Music();
         } else if (index === 200) {
             metroAudio.playCarriage200Music();
+            this.deactivateTimeVillain();
         }
 
         // Cleanly dispose and remove previous carriage to free GPU memory
@@ -5721,7 +5769,7 @@ export class LastMetroGame {
     // --- Ajapahalane (Time Villain) — 10 Second Escape Event ---
 
     public activateTimeVillain() {
-        if (this.timeVillainActive || this.state !== 'player_free' || this.currentCarIndex === 0 || this.currentCarIndex === 100) return;
+        if (this.timeVillainActive || this.state !== 'player_free' || this.currentCarIndex === 0 || this.currentCarIndex === 100 || this.currentCarIndex === 200) return;
 
         this.timeVillainActive = true;
         this.timeVillainCountdown = 10.0;
@@ -7295,7 +7343,7 @@ this.state = 'player_free';
                     hand.position.x = (side * 1.68) - (side * (0.65 + wave * 0.35));
 
                     // Ultra-sensitive collision check: even slight contact or entering reach zone triggers instant death
-                    const handWorldPos = hand.position;
+            const handWorldPos = hand.position;
                     const distToHand = this.playerPos.distanceTo(handWorldPos);
                     const nearDoorWay = (side > 0 ? this.playerPos.x > 0.25 : this.playerPos.x < -0.25) && Math.abs(this.playerPos.z - handWorldPos.z) < 2.0;
 
@@ -7380,6 +7428,16 @@ this.state = 'player_free';
             const kuuljaPos = this.kuuljaBossGroup.position;
             const distToPlayer = kuuljaPos.distanceTo(this.playerPos);
 
+            // Touching Kuulja / kuulmispahalane: ALWAYS causes instant death!
+            if (distToPlayer < 1.6 && this.state === 'player_free') {
+                metroAudio.playShadowRushScreech();
+                this.triggerGameOver(
+                    'Kuulja tabas sind! Kuulmispahalase puudutus oli surmav.',
+                    'The Listener caught you! Touching the hearing villain was fatal.'
+                );
+                return;
+            }
+
             // Subtle eerie breathing animation
             const kTime = performance.now() * 0.002;
             this.kuuljaBossGroup.position.y = Math.sin(kTime * 3) * 0.05;
@@ -7413,6 +7471,30 @@ this.state = 'player_free';
                 kuuljaPos.z = THREE.MathUtils.lerp(kuuljaPos.z, patrolZ, delta * 0.8);
                 kuuljaPos.x = THREE.MathUtils.lerp(kuuljaPos.x, 5.5, delta * 0.8);
             }
+
+            // Kuulja Wall Collisions: Kuulja cannot enter or clip through walls
+            if (kuuljaPos.x > 1.8) {
+                // Platform boundaries: back wall at x = 9.5, train boundary at x = 2.0, end walls at z = +/- 16.0
+                kuuljaPos.x = Math.max(2.2, Math.min(8.8, kuuljaPos.x));
+                kuuljaPos.z = Math.max(-14.8, Math.min(14.8, kuuljaPos.z));
+
+                // Platform support pillars collision (x = 5.2, z in [-12, -6, 0, 6, 12])
+                const pillarsZ = [-12, -6, 0, 6, 12];
+                for (const pz of pillarsZ) {
+                    const dx = kuuljaPos.x - 5.2;
+                    const dz = kuuljaPos.z - pz;
+                    const distSq = dx * dx + dz * dz;
+                    if (distSq < 0.64) {
+                        const dist = Math.sqrt(distSq) || 0.001;
+                        kuuljaPos.x = 5.2 + (dx / dist) * 0.8;
+                        kuuljaPos.z = pz + (dz / dist) * 0.8;
+                    }
+                }
+            } else {
+                // Inside train car threshold
+                kuuljaPos.x = Math.max(-1.1, Math.min(1.8, kuuljaPos.x));
+                kuuljaPos.z = Math.max(-1.5, Math.min(1.5, kuuljaPos.z));
+            }
         }
 
         // 4. Keyboard Camera Turning (Arrows & Q/E)
@@ -7434,8 +7516,15 @@ this.state = 'player_free';
         }
 
         // 5. Player Physics & Movement (when player_free and not sitting)
-        if (this.state === 'player_free' && this.playerPos.y >= 1.4 && !this.isSitting) {
-            const baseSpeed = (this.speedBoostActive || this.equippedItem === 'speed_boost') ? 5.4 : 3.6;
+        if (this.state === 'player_free' && !this.isSitting) {
+            let baseSpeed = (this.speedBoostActive || this.equippedItem === 'speed_boost') ? 5.4 : 3.6;
+            if (this.isCrouching) {
+                baseSpeed *= 0.65; // Sneak movement speed while crouched
+                this.playerPos.y = 0.95;
+            } else if (this.currentCarIndex !== 217 || !this.sewerWaterSubmerged) {
+                this.playerPos.y = 1.6;
+            }
+
             _moveDir.set(0, 0, 0);
 
             if (this.moveKeys['KeyW']) _moveDir.z -= 1;
@@ -7473,12 +7562,14 @@ this.state = 'player_free';
                     this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
                 }
 
-                // Head bob & footsteps
+                // Head bob & footsteps (footsteps silent while crouching)
                 this.headBobTimer += delta * (baseSpeed > 4 ? 16 : 12);
-                this.stepTimer += delta;
-                if (this.stepTimer > (baseSpeed > 4 ? 0.32 : 0.48)) {
-                    this.stepTimer = 0;
-                    metroAudio.playFootstep();
+                if (!this.isCrouching) {
+                    this.stepTimer += delta;
+                    if (this.stepTimer > (baseSpeed > 4 ? 0.32 : 0.48)) {
+                        this.stepTimer = 0;
+                        metroAudio.playFootstep();
+                    }
                 }
             }
 
@@ -7612,7 +7703,7 @@ this.state = 'player_free';
 
         // --- Ajapahalane (Time Villain) Timer & Chase Logic ---
         // Increment carriage stay timer when player_free and not in special carriages
-        if (this.state === 'player_free' && this.currentCarIndex > 0 && this.currentCarIndex !== 100 && !this.timeVillainActive && !this.timeVillainTriggeredThisCarriage) {
+        if (this.state === 'player_free' && this.currentCarIndex > 0 && this.currentCarIndex !== 100 && this.currentCarIndex !== 200 && !this.timeVillainActive && !this.timeVillainTriggeredThisCarriage) {
             this.carriageStayTimer += delta;
 
             // Deterministic event: trigger when staying >= 20 seconds, unless other anomalies are active

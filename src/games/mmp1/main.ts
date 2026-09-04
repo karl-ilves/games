@@ -351,12 +351,16 @@ export class MurderMysteryGame {
     private slotWeapon: HTMLElement | null = null;
     private slotWeaponIcon: HTMLElement | null = null;
     private slotWeaponName: HTMLElement | null = null;
+    private adminModal: HTMLElement | null = null;
+    private btnAdminPanel: HTMLElement | null = null;
+
+    public adminForcedRole: Role | null = null;
 
     constructor() {
         this.container = document.getElementById('canvas-container') || document.body;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0810);
-        this.scene.fog = new THREE.FogExp2(0x0a0810, 0.025);
+        this.scene.fog = new THREE.FogExp2(0x0a0810, 0.015);
 
         this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -403,6 +407,8 @@ export class MurderMysteryGame {
         this.slotWeapon = document.getElementById('slot-weapon');
         this.slotWeaponIcon = document.getElementById('slot-weapon-icon');
         this.slotWeaponName = document.getElementById('slot-weapon-name');
+        this.adminModal = document.getElementById('admin-role-modal');
+        this.btnAdminPanel = document.getElementById('btn-admin-panel');
 
         const gameYardIcon = document.getElementById('game-yard-icon');
         if (gameYardIcon) gameYardIcon.innerHTML = yardService.renderYardSvg(18);
@@ -417,6 +423,10 @@ export class MurderMysteryGame {
         if (!owner && !testMode) {
             const denied = document.getElementById('access-denied-overlay');
             if (denied) denied.style.display = 'flex';
+        }
+
+        if (this.btnAdminPanel) {
+            this.btnAdminPanel.style.display = (owner || testMode) ? 'flex' : 'none';
         }
     }
 
@@ -677,116 +687,128 @@ export class MurderMysteryGame {
     }
 
     // --- Create 3D Character Model ---
-    private createCharacterMesh(name: string, colorHex: number): { group: THREE.Group; knife: THREE.Mesh; gun: THREE.Group; body: THREE.Mesh; head: THREE.Mesh } {
+    private createCharacterMesh(name: string, colorHex: number, isPlayer: boolean = false): { group: THREE.Group; knife: THREE.Mesh; gun: THREE.Group; body: THREE.Mesh; head: THREE.Mesh } {
         const group = new THREE.Group();
 
         // 1. Torso
-        const bodyGeo = new THREE.BoxGeometry(1.2, 1.6, 0.8);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
+        const bodyGeo = new THREE.BoxGeometry(1.3, 1.7, 0.9);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.35, metalness: 0.1 });
         const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 1.6;
+        body.position.y = 1.65;
         body.castShadow = true;
         group.add(body);
 
         // 2. Head & Eyes
-        const headGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
-        const headMat = new THREE.MeshStandardMaterial({ color: 0xffdfba, roughness: 0.5 });
+        const headGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0);
+        const headMat = new THREE.MeshStandardMaterial({ color: 0xffdfba, roughness: 0.4 });
         const head = new THREE.Mesh(headGeo, headMat);
-        head.position.y = 2.8;
+        head.position.y = 2.95;
         head.castShadow = true;
         group.add(head);
 
         // Eyes
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.1), eyeMat);
-        eyeL.position.set(-0.22, 2.85, 0.45);
+        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.1), eyeMat);
+        eyeL.position.set(-0.25, 3.0, 0.52);
         group.add(eyeL);
-        const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.1), eyeMat);
-        eyeR.position.set(0.22, 2.85, 0.45);
+        const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.1), eyeMat);
+        eyeR.position.set(0.25, 3.0, 0.52);
         group.add(eyeR);
 
-        // Hair / Hat
-        const hatMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-        const hat = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.35, 1.0), hatMat);
-        hat.position.y = 3.3;
+        // Hair / Hat / Crown for player
+        const hatMat = new THREE.MeshStandardMaterial({ color: isPlayer ? 0xffd32a : 0x222222, roughness: 0.3 });
+        const hat = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.4, 1.15), hatMat);
+        hat.position.y = 3.55;
         group.add(hat);
 
         // 3. Legs
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x202028 });
-        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.5), legMat);
-        legL.position.set(-0.35, 0.55, 0);
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x1e1e24, roughness: 0.6 });
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.55), legMat);
+        legL.position.set(-0.38, 0.58, 0);
         legL.castShadow = true;
         group.add(legL);
 
-        const legR = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.5), legMat);
-        legR.position.set(0.35, 0.55, 0);
+        const legR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.55), legMat);
+        legR.position.set(0.38, 0.58, 0);
         legR.castShadow = true;
         group.add(legR);
 
         // 4. Arms
-        const armMat = new THREE.MeshStandardMaterial({ color: colorHex });
-        const armL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.3, 0.4), armMat);
-        armL.position.set(-0.85, 1.6, 0);
+        const armMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
+        const armL = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.45), armMat);
+        armL.position.set(-0.95, 1.65, 0);
         armL.castShadow = true;
         group.add(armL);
 
-        const armR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.3, 0.4), armMat);
-        armR.position.set(0.85, 1.6, 0);
+        const armR = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.45), armMat);
+        armR.position.set(0.95, 1.65, 0);
         armR.castShadow = true;
         group.add(armR);
 
         // 5. Knife (Attached to right hand, initially hidden)
-        const knifeGeo = new THREE.BoxGeometry(0.12, 0.8, 0.2);
-        const knifeMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, metalness: 0.9, roughness: 0.1 });
+        const knifeGeo = new THREE.BoxGeometry(0.14, 0.9, 0.25);
+        const knifeMat = new THREE.MeshStandardMaterial({ color: 0xff2e63, metalness: 0.9, roughness: 0.1, emissive: 0x440011 });
         const knife = new THREE.Mesh(knifeGeo, knifeMat);
-        knife.position.set(0.85, 1.2, 0.5);
+        knife.position.set(0.95, 1.2, 0.55);
         knife.rotation.x = Math.PI / 4;
         knife.visible = false;
         group.add(knife);
 
         // 6. Revolver / Gun (Attached to right hand, initially hidden)
         const gunGroup = new THREE.Group();
-        const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.2, 0.6), new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.8, roughness: 0.2 }));
-        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 0.2), new THREE.MeshStandardMaterial({ color: 0x5a3d28 }));
-        barrel.position.set(0, 0.1, 0.2);
+        const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.24, 0.7), new THREE.MeshStandardMaterial({ color: 0x00f2fe, metalness: 0.8, roughness: 0.2, emissive: 0x003344 }));
+        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.45, 0.25), new THREE.MeshStandardMaterial({ color: 0x5a3d28 }));
+        barrel.position.set(0, 0.1, 0.25);
         grip.position.set(0, -0.1, 0);
         gunGroup.add(barrel);
         gunGroup.add(grip);
-        gunGroup.position.set(0.85, 1.4, 0.4);
+        gunGroup.position.set(0.95, 1.45, 0.45);
         gunGroup.visible = false;
         group.add(gunGroup);
 
-        // Name tag canvas sprite
+        // Large, sharp, prominent Name Tag Canvas Billboard (depthTest = false so always crystal clear)
         const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 64;
+        canvas.width = 300;
+        canvas.height = 75;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.roundRect(10, 10, 236, 44, 10);
+            ctx.fillStyle = isPlayer ? 'rgba(30, 20, 10, 0.88)' : 'rgba(15, 10, 25, 0.88)';
+            ctx.beginPath();
+            ctx.roundRect(8, 8, 284, 59, 14);
             ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 24px sans-serif';
+            ctx.strokeStyle = isPlayer ? '#ffd32a' : '#00f2fe';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.fillStyle = isPlayer ? '#ffd32a' : '#ffffff';
+            ctx.font = 'bold 26px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(name, 128, 40);
+            ctx.textBaseline = 'middle';
+            ctx.fillText(name, 150, 38);
         }
         const tex = new THREE.CanvasTexture(canvas);
-        const spriteMat = new THREE.SpriteMaterial({ map: tex });
+        const spriteMat = new THREE.SpriteMaterial({ 
+            map: tex, 
+            depthTest: false, 
+            depthWrite: false, 
+            transparent: true 
+        });
         const sprite = new THREE.Sprite(spriteMat);
-        sprite.position.y = 4.2;
-        sprite.scale.set(3, 0.8, 1);
+        sprite.renderOrder = 999;
+        sprite.position.y = 4.4;
+        sprite.scale.set(3.8, 0.95, 1);
         group.add(sprite);
 
         return { group, knife, gun: gunGroup, body, head };
     }
 
-    // --- Initialize 8 Characters (Player + 7 AI) ---
+    // --- Initialize 8 Characters (Player + 7 AI in clear view in Lobby) ---
     private initCharacters() {
         const botNames = ['Alex', 'Sam', 'Jordan', 'Charlie', 'Taylor', 'Morgan', 'Riley'];
-        const colors = [0x3498db, 0xe67e22, 0x9b59b6, 0x1abc9c, 0xf39c12, 0x34495e, 0xd35400];
+        const colors = [0x3498db, 0xe67e22, 0x9b59b6, 0x1abc9c, 0xf39c12, 0xe74c3c, 0x00cec9];
 
-        // 1. Player
-        const pModel = this.createCharacterMesh('Karl (You)', 0x2ecc71);
+        // 1. Player (Spawned at center 0, 0, 150)
+        const pModel = this.createCharacterMesh('Karl (Sina) 👑', 0x2ecc71, true);
         this.playerChar = {
             id: 'player',
             name: 'Karl',
@@ -809,13 +831,16 @@ export class MurderMysteryGame {
         this.scene.add(this.playerChar.mesh);
         this.characters.push(this.playerChar);
 
-        // 2. Bots
+        // 2. Bots (Arranged in a clear arc in front of the player so you immediately see them!)
         botNames.forEach((name, i) => {
-            const botModel = this.createCharacterMesh(name, colors[i % colors.length]);
+            const botModel = this.createCharacterMesh(`${name} 👤`, colors[i % colors.length], false);
+            // Semicircle arc in front of player (facing player at 0, 0, 150)
+            const angle = -Math.PI * 0.7 + (i / (botNames.length - 1)) * (Math.PI * 1.4);
+            const radius = 7.0 + (i % 2) * 1.2;
             const spawnPos = new THREE.Vector3(
-                (Math.random() - 0.5) * 25,
+                Math.sin(angle) * radius,
                 0,
-                150 + (Math.random() - 0.5) * 25
+                150 - Math.cos(angle) * radius
             );
             const bot: Character = {
                 id: `bot_${i}`,
@@ -827,7 +852,7 @@ export class MurderMysteryGame {
                 mesh: botModel.group,
                 position: spawnPos,
                 velocity: new THREE.Vector3(),
-                rotation: Math.random() * Math.PI * 2,
+                rotation: Math.atan2(-spawnPos.x, 150 - spawnPos.z), // face center
                 knifeMesh: botModel.knife,
                 gunMesh: botModel.gun,
                 bodyMesh: botModel.body,
@@ -836,6 +861,7 @@ export class MurderMysteryGame {
                 coins: 0
             };
             bot.mesh.position.copy(bot.position);
+            bot.mesh.rotation.y = bot.rotation;
             this.scene.add(bot.mesh);
             this.characters.push(bot);
         });
@@ -889,11 +915,7 @@ export class MurderMysteryGame {
         this.state = 'role_reveal';
         if (this.lobbyBanner) this.lobbyBanner.style.display = 'none';
 
-        // Assign Roles: 1 Murderer, 1 Sheriff, 6 Innocents
-        const shuffled = [...this.characters].sort(() => Math.random() - 0.5);
-        const murderer = shuffled[0];
-        const sheriff = shuffled[1];
-
+        // Reset state for all characters
         this.characters.forEach(c => {
             c.role = 'innocent';
             c.isAlive = true;
@@ -903,24 +925,37 @@ export class MurderMysteryGame {
             if (c.gunMesh) c.gunMesh.visible = false;
         });
 
-        murderer.role = 'murderer';
-        sheriff.role = 'sheriff';
+        // Assign Roles: If Admin forced role, honor it; otherwise random
+        if (this.adminForcedRole) {
+            this.playerChar.role = this.adminForcedRole;
+            const livingBots = this.characters.filter(c => !c.isPlayer).sort(() => Math.random() - 0.5);
+            if (this.adminForcedRole === 'murderer') {
+                livingBots[0].role = 'sheriff';
+            } else if (this.adminForcedRole === 'sheriff') {
+                livingBots[0].role = 'murderer';
+            } else {
+                livingBots[0].role = 'murderer';
+                livingBots[1].role = 'sheriff';
+            }
+        } else {
+            const shuffled = [...this.characters].sort(() => Math.random() - 0.5);
+            shuffled[0].role = 'murderer';
+            shuffled[1].role = 'sheriff';
+        }
 
-        // Teleport characters to open visible spots across the grand room
-        const mansionSpawns = [
-            new THREE.Vector3(0, 0, 0),        // Central Hall
-            new THREE.Vector3(-32, 0, -32),    // Raamatukogu
-            new THREE.Vector3(32, 0, -32),     // Söögisaal
-            new THREE.Vector3(0, 0, -34),      // Relvakamber
-            new THREE.Vector3(-32, 0, 32),     // Magamistuba
-            new THREE.Vector3(32, 0, 32),      // Köök
-            new THREE.Vector3(0, 0, 34),       // Salong
-            new THREE.Vector3(12, 0, 0)        // Fuajee
-        ];
-
+        // Teleport characters to central Grand Hall in clear view of each other
+        // Player in center, bots in a circle around center (radius 7m) on red carpet
         this.characters.forEach((c, i) => {
-            c.position.copy(mansionSpawns[i % mansionSpawns.length]);
+            if (c.isPlayer) {
+                c.position.set(0, 0, 0);
+            } else {
+                const angle = (i / (this.characters.length - 1)) * Math.PI * 2;
+                const r = 7.5;
+                c.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+            }
             c.mesh.position.copy(c.position);
+            c.rotation = Math.atan2(-c.position.x, -c.position.z);
+            c.mesh.rotation.y = c.rotation;
         });
 
         // Respawn coins
@@ -944,7 +979,7 @@ export class MurderMysteryGame {
         this.updateAliveCount();
 
         this.roundTimer = 180;
-        this.addIncidentFeed(`🏛️ Mängijad teleportiti mõisasse!`);
+        this.addIncidentFeed(`🏛️ Mängijad teleportiti mõisasse! Kõik näevad üksteist!`);
     }
 
     private showRoleRevealModal(role: Role) {
@@ -1292,7 +1327,11 @@ export class MurderMysteryGame {
         if (this.hudAliveBadge) this.hudAliveBadge.style.display = 'none';
         if (this.hudCoinsBadge) this.hudCoinsBadge.style.display = 'none';
 
-        // Teleport characters back to lobby
+        // Teleport player and characters back to lobby in front of each other
+        this.playerChar.position.set(0, 0, 150);
+        this.playerChar.mesh.position.copy(this.playerChar.position);
+
+        const botNames = ['Alex', 'Sam', 'Jordan', 'Charlie', 'Taylor', 'Morgan', 'Riley'];
         this.characters.forEach((c, i) => {
             c.role = 'innocent';
             c.isAlive = true;
@@ -1300,8 +1339,14 @@ export class MurderMysteryGame {
             c.mesh.visible = true;
             if (c.knifeMesh) c.knifeMesh.visible = false;
             if (c.gunMesh) c.gunMesh.visible = false;
-            c.position.set((Math.random() - 0.5) * 20, 0, 150 + (Math.random() - 0.5) * 20);
-            c.mesh.position.copy(c.position);
+            if (!c.isPlayer) {
+                const angle = -Math.PI * 0.7 + ((i - 1) / (botNames.length - 1)) * (Math.PI * 1.4);
+                const radius = 7.0 + (i % 2) * 1.2;
+                c.position.set(Math.sin(angle) * radius, 0, 150 - Math.cos(angle) * radius);
+                c.mesh.position.copy(c.position);
+                c.rotation = Math.atan2(-c.position.x, 150 - c.position.z);
+                c.mesh.rotation.y = c.rotation;
+            }
         });
 
         this.playerChar.coins = 0;
@@ -1312,6 +1357,95 @@ export class MurderMysteryGame {
         if (this.hudRoleBadge) {
             this.hudRoleBadge.style.borderColor = '#ffd32a';
             this.hudRoleBadge.style.color = '#ffd32a';
+        }
+    }
+
+    public openAdminPanel() {
+        if (!this.adminModal) return;
+        if (this.isPointerLocked) {
+            document.exitPointerLock?.();
+        }
+        this.adminModal.style.display = 'flex';
+        this.updateAdminModalActiveState();
+    }
+
+    public closeAdminPanel() {
+        if (this.adminModal) this.adminModal.style.display = 'none';
+    }
+
+    public updateAdminModalActiveState() {
+        const current = (this.state === 'in_game') ? this.playerChar.role : (this.adminForcedRole || 'innocent');
+        ['murderer', 'sheriff', 'innocent'].forEach(r => {
+            const btn = document.getElementById(`btn-admin-role-${r}`);
+            if (btn) {
+                if (r === current) {
+                    btn.classList.add('active-role');
+                } else {
+                    btn.classList.remove('active-role');
+                }
+            }
+        });
+    }
+
+    public setAdminRole(role: Role) {
+        this.adminForcedRole = role;
+        this.updateAdminModalActiveState();
+
+        const roleNames: Record<Role, string> = {
+            'murderer': 'MÕRVAR 🔪',
+            'sheriff': 'ŠERIF 🔫',
+            'innocent': 'SÜÜTU 🛡️'
+        };
+
+        if (this.state === 'lobby') {
+            this.addIncidentFeed(`👑 Admin valis oma rolliks: ${roleNames[role]}`);
+        } else if (this.state === 'in_game' && this.playerChar.isAlive) {
+            const oldRole = this.playerChar.role;
+            this.playerChar.role = role;
+            this.playerChar.hasWeaponEquipped = false;
+            if (this.playerChar.knifeMesh) this.playerChar.knifeMesh.visible = false;
+            if (this.playerChar.gunMesh) this.playerChar.gunMesh.visible = false;
+
+            if (role === 'murderer') {
+                this.characters.forEach(c => {
+                    if (!c.isPlayer && c.role === 'murderer') {
+                        c.role = 'innocent';
+                        c.hasWeaponEquipped = false;
+                        if (c.knifeMesh) c.knifeMesh.visible = false;
+                    }
+                });
+                const hasSheriff = this.characters.some(c => !c.isPlayer && c.isAlive && c.role === 'sheriff');
+                if (!hasSheriff) {
+                    const livingBot = this.characters.find(c => !c.isPlayer && c.isAlive);
+                    if (livingBot) livingBot.role = 'sheriff';
+                }
+            } else if (role === 'sheriff') {
+                this.characters.forEach(c => {
+                    if (!c.isPlayer && c.role === 'sheriff') {
+                        c.role = 'innocent';
+                        c.hasWeaponEquipped = false;
+                        if (c.gunMesh) c.gunMesh.visible = false;
+                    }
+                });
+                const hasMurderer = this.characters.some(c => !c.isPlayer && c.isAlive && c.role === 'murderer');
+                if (!hasMurderer) {
+                    const livingBot = this.characters.find(c => !c.isPlayer && c.isAlive);
+                    if (livingBot) livingBot.role = 'murderer';
+                }
+            } else if (role === 'innocent') {
+                if (oldRole === 'murderer') {
+                    const livingBot = this.characters.find(c => !c.isPlayer && c.isAlive && c.role === 'innocent');
+                    if (livingBot) livingBot.role = 'murderer';
+                }
+                if (oldRole === 'sheriff') {
+                    const livingBot = this.characters.find(c => !c.isPlayer && c.isAlive && c.role === 'innocent');
+                    if (livingBot) livingBot.role = 'sheriff';
+                }
+            }
+
+            this.updateRoleHud();
+            audio.playRoleReveal(role);
+            this.addIncidentFeed(`👑 Sinu roll on nüüd: ${roleNames[role]}!`);
         }
     }
 
@@ -1347,6 +1481,13 @@ export class MurderMysteryGame {
                 this.toggleWeapon();
             } else if (e.code === 'Space') {
                 this.performAction();
+            } else if (e.code === 'KeyP') {
+                // Toggle Playard Admin Panel
+                if (this.adminModal && this.adminModal.style.display === 'flex') {
+                    this.closeAdminPanel();
+                } else {
+                    this.openAdminPanel();
+                }
             } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
                 this.isSprinting = true;
             }
@@ -1450,6 +1591,32 @@ export class MurderMysteryGame {
             audio.soundEnabled = !audio.soundEnabled;
             const soundIcon = document.getElementById('sound-icon');
             if (soundIcon) soundIcon.textContent = audio.soundEnabled ? '🔊' : '🔇';
+        });
+
+        // Admin Panel Button Listeners
+        document.getElementById('btn-admin-panel')?.addEventListener('click', () => {
+            this.openAdminPanel();
+        });
+        document.getElementById('btn-admin-close')?.addEventListener('click', () => {
+            this.closeAdminPanel();
+        });
+        document.getElementById('btn-admin-role-murderer')?.addEventListener('click', () => {
+            this.setAdminRole('murderer');
+        });
+        document.getElementById('btn-admin-role-sheriff')?.addEventListener('click', () => {
+            this.setAdminRole('sheriff');
+        });
+        document.getElementById('btn-admin-role-innocent')?.addEventListener('click', () => {
+            this.setAdminRole('innocent');
+        });
+        document.getElementById('btn-admin-force-start')?.addEventListener('click', () => {
+            this.closeAdminPanel();
+            this.startRound();
+        });
+        document.getElementById('btn-admin-add-yards')?.addEventListener('click', () => {
+            yardService.addYards(500, 'Admin bonus');
+            this.updateYardDisplay();
+            this.addIncidentFeed('💰 Admin lisas +500 Jardi!');
         });
 
         // Mobile touch buttons
