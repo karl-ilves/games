@@ -917,14 +917,28 @@ export class MurderMysteryGame {
         const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.2, emissive: 0x443300 });
 
         const positions = [
-            [0, 1, 0], [-25, 1, -25], [25, 1, -25], [-25, 1, 25], [25, 1, 25],
-            [-15, 1, 0], [15, 1, 0], [0, 1, -30], [0, 1, 30], [-35, 1, -15],
-            [35, 1, 15], [20, 1, -35], [-20, 1, 35]
+            // Central Hall Ground & Carpet
+            [0, 1, 0], [0, 1, -15], [0, 1, 15], [-12, 1, 0], [12, 1, 0],
+            // Room 1: Raamatukogu / Library
+            [-45, 1, -35], [-45, 1, -48], [-35, 1, -40],
+            // Room 2: Söögisaal / Banquet Dining
+            [45, 1, -35], [45, 1, -48], [35, 1, -40],
+            // Room 3: Relvakamber / Armory & Vault
+            [0, 1, -50], [-8, 1, -52], [8, 1, -52],
+            // Room 4: Magamistuba / Bedroom
+            [-45, 1, 35], [-52, 1, 45], [-35, 1, 40],
+            // Room 5: Köök / Kitchen
+            [45, 1, 35], [52, 1, 45], [35, 1, 40],
+            // Room 6: Kelder / Dungeon
+            [0, 1, 48], [-6, 1, 52], [6, 1, 52],
+            // 2nd Floor Mezzanine Gallery & Balconies
+            [0, 7.5, -34], [0, 7.5, 34], [-34, 7.5, 0], [34, 7.5, 0],
+            [-25, 7.5, -34], [25, 7.5, -34], [-25, 7.5, 34], [25, 7.5, 34]
         ];
 
         positions.forEach(([x, y, z]) => {
             const coinMesh = new THREE.Mesh(coinGeo, coinMat);
-            coinMesh.position.set(x, y, z);
+            coinMesh.position.set(0, 0, 0);
             coinMesh.rotation.x = Math.PI / 2;
             const coinGroup = new THREE.Group();
             coinGroup.add(coinMesh);
@@ -961,16 +975,16 @@ export class MurderMysteryGame {
         murderer.role = 'murderer';
         sheriff.role = 'sheriff';
 
-        // Teleport characters to scattered mansion spots
+        // Teleport characters to scattered mansion spots across rooms
         const mansionSpawns = [
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(-25, 0, -25),
-            new THREE.Vector3(25, 0, -25),
-            new THREE.Vector3(-25, 0, 25),
-            new THREE.Vector3(25, 0, 25),
-            new THREE.Vector3(-15, 0, 0),
-            new THREE.Vector3(15, 0, 0),
-            new THREE.Vector3(0, 0, -20)
+            new THREE.Vector3(0, 0, 0),       // Central Hall
+            new THREE.Vector3(-45, 0, -40),   // Library
+            new THREE.Vector3(45, 0, -40),    // Dining Banquet
+            new THREE.Vector3(0, 0, -50),     // Armory Vault
+            new THREE.Vector3(-45, 0, 40),    // Master Bedroom
+            new THREE.Vector3(45, 0, 40),     // Kitchen
+            new THREE.Vector3(0, 0, 48),      // Dungeon
+            new THREE.Vector3(0, 7, -34)      // 2nd Floor Balcony
         ];
 
         this.characters.forEach((c, i) => {
@@ -1414,7 +1428,16 @@ export class MurderMysteryGame {
             }
         });
 
-        // Mouse Controls & Pointer Lock
+        // Mouse Controls: Click-Drag to look around, or Click for Pointer Lock / Action
+        this.container.addEventListener('mousedown', (e: MouseEvent) => {
+            this.isDraggingMouse = true;
+            this.lastMousePos = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mouseup', () => {
+            this.isDraggingMouse = false;
+        });
+
         this.container.addEventListener('click', () => {
             if (this.state === 'in_game' && this.playerChar.isAlive) {
                 if (!this.isPointerLocked) {
@@ -1429,14 +1452,54 @@ export class MurderMysteryGame {
             this.isPointerLocked = document.pointerLockElement === this.container;
         });
 
-        window.addEventListener('mousemove', e => {
+        window.addEventListener('mousemove', (e: MouseEvent) => {
             if (this.isPointerLocked) {
                 const sens = 0.0025;
                 this.cameraYaw -= e.movementX * sens;
                 this.cameraPitch -= e.movementY * sens;
                 this.cameraPitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 3, this.cameraPitch));
                 this.playerChar.rotation = this.cameraYaw;
+            } else if (this.isDraggingMouse) {
+                const dx = e.clientX - this.lastMousePos.x;
+                const dy = e.clientY - this.lastMousePos.y;
+                this.lastMousePos = { x: e.clientX, y: e.clientY };
+                const sens = 0.004;
+                this.cameraYaw -= dx * sens;
+                this.cameraPitch -= dy * sens;
+                this.cameraPitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 3, this.cameraPitch));
+                this.playerChar.rotation = this.cameraYaw;
             }
+        });
+
+        // Mouse Wheel Zoom (First person to 3rd person)
+        this.container.addEventListener('wheel', (e: WheelEvent) => {
+            e.preventDefault();
+            this.cameraDistance = THREE.MathUtils.clamp(this.cameraDistance + e.deltaY * 0.006, 0.5, 14.0);
+        }, { passive: false });
+
+        // Touch Drag for Mobile / Tablet View Rotation
+        this.container.addEventListener('touchstart', (e: TouchEvent) => {
+            if (e.touches.length === 1) {
+                this.isTouchDragging = true;
+                this.touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        }, { passive: true });
+
+        this.container.addEventListener('touchmove', (e: TouchEvent) => {
+            if (this.isTouchDragging && e.touches.length === 1) {
+                const dx = e.touches[0].clientX - this.touchStartPos.x;
+                const dy = e.touches[0].clientY - this.touchStartPos.y;
+                this.touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                const sens = 0.005;
+                this.cameraYaw -= dx * sens;
+                this.cameraPitch -= dy * sens;
+                this.cameraPitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 3, this.cameraPitch));
+                this.playerChar.rotation = this.cameraYaw;
+            }
+        }, { passive: true });
+
+        this.container.addEventListener('touchend', () => {
+            this.isTouchDragging = false;
         });
 
         // UI Buttons
@@ -1514,7 +1577,7 @@ export class MurderMysteryGame {
                             c.hasWeaponEquipped = true;
                             if (c.gunMesh) c.gunMesh.visible = true;
                         } else {
-                            c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 60, 0, (Math.random() - 0.5) * 60);
+                            c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 80, 0, (Math.random() - 0.5) * 80);
                         }
                     } else {
                         // Innocent AI: Seek dropped gun if active, or flee from murderer, or collect coins
@@ -1525,7 +1588,7 @@ export class MurderMysteryGame {
                             const away = c.position.clone().sub(murderer.position).normalize().multiplyScalar(20);
                             c.aiTarget = c.position.clone().add(away);
                         } else {
-                            c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 60, 0, (Math.random() - 0.5) * 60);
+                            c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 80, 0, (Math.random() - 0.5) * 80);
                         }
                     }
                 }
@@ -1564,15 +1627,33 @@ export class MurderMysteryGame {
         });
     }
 
-    // --- Player Movement & Physics ---
+    // --- Player Movement, Camera View Look & Physics ---
     private updatePlayer(delta: number) {
         if (!this.playerChar.isAlive) return;
 
+        // 1. Keyboard Camera View Look (Arrow keys or I/J/K/L)
+        const lookSpeed = 3.0;
+        if (this.keys['ArrowLeft'] || this.keys['KeyJ']) {
+            this.cameraYaw += lookSpeed * delta;
+            this.playerChar.rotation = this.cameraYaw;
+        }
+        if (this.keys['ArrowRight'] || this.keys['KeyL']) {
+            this.cameraYaw -= lookSpeed * delta;
+            this.playerChar.rotation = this.cameraYaw;
+        }
+        if (this.keys['ArrowUp'] || this.keys['KeyI']) {
+            this.cameraPitch = Math.min(Math.PI / 3, this.cameraPitch + 2.2 * delta);
+        }
+        if (this.keys['ArrowDown'] || this.keys['KeyK']) {
+            this.cameraPitch = Math.max(-Math.PI / 4, this.cameraPitch - 2.2 * delta);
+        }
+
+        // 2. Keyboard Movement (WASD)
         const moveDir = new THREE.Vector3();
-        if (this.keys['KeyW'] || this.keys['ArrowUp']) moveDir.z -= 1;
-        if (this.keys['KeyS'] || this.keys['ArrowDown']) moveDir.z += 1;
-        if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveDir.x -= 1;
-        if (this.keys['KeyD'] || this.keys['ArrowRight']) moveDir.x += 1;
+        if (this.keys['KeyW']) moveDir.z -= 1;
+        if (this.keys['KeyS']) moveDir.z += 1;
+        if (this.keys['KeyA']) moveDir.x -= 1;
+        if (this.keys['KeyD']) moveDir.x += 1;
 
         if (moveDir.lengthSq() > 0) {
             moveDir.normalize();
@@ -1641,13 +1722,18 @@ export class MurderMysteryGame {
             }
         }
 
-        // Update Camera Position (Smooth 3rd Person Follow)
-        const camOffset = new THREE.Vector3(0, 2.5, 6.5);
+        // Update Camera Position & Orbit (Supports Zoom from 1st person to 3rd person)
+        const camOffset = new THREE.Vector3(0, this.cameraDistance < 1.0 ? 2.8 : 2.5, this.cameraDistance);
         camOffset.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.cameraPitch);
         camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.cameraYaw);
 
         this.camera.position.copy(this.playerChar.position).add(camOffset);
         this.camera.lookAt(this.playerChar.position.clone().add(new THREE.Vector3(0, 1.8, 0)));
+
+        // Hide player mesh in true first person view
+        if (this.playerChar.mesh) {
+            this.playerChar.mesh.visible = this.cameraDistance > 1.2;
+        }
     }
 
     // --- Main Game Loop ---

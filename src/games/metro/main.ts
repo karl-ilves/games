@@ -635,6 +635,7 @@ export class LastMetroGame {
     public kuuljaSwitches: { mesh: THREE.Group; activated: boolean }[] = [];
     public kuuljaSpeed: number = 0;
     public kuuljaTargetPos: THREE.Vector3 = new THREE.Vector3();
+    public stationStairsGroup: THREE.Group | null = null;
 
     // ── Vagunid 201–250 Kanalisatsioon (Sewers) ────────────────────────────
     public sewerWaterSubmerged: boolean = false;
@@ -1715,17 +1716,25 @@ export class LastMetroGame {
                 platformGroup.add(pillarBase);
             });
 
-            // Station Hanging Tube Lights & Point Lights along the platform
-            [-10, -4, 2, 8, 14].forEach(lz => {
-                const platLightMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 1.8), new THREE.MeshBasicMaterial({ color: 0xffeedd }));
+            // Station Hanging Tube Lights & Point Lights along the platform (Fully Bright and Illuminated)
+            [-12, -6, 0, 6, 12].forEach(lz => {
+                const platLightMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 2.2), new THREE.MeshBasicMaterial({ color: 0xffffff }));
                 platLightMesh.position.set(5.5, 3.5, lz);
                 platformGroup.add(platLightMesh);
                 lightMeshes.push(platLightMesh);
 
-                const platLight = new THREE.PointLight(0xffddaa, 0.8, 12);
+                const platLight = new THREE.PointLight(0xffeedd, 1.4, 18);
                 platLight.position.set(5.5, 3.1, lz);
                 platformGroup.add(platLight);
                 lights.push(platLight);
+            });
+
+            // Train interior bright floodlights for Carriage 200
+            [-6, 0, 6].forEach(tz => {
+                const carInteriorLight = new THREE.PointLight(0xffffff, 1.3, 12);
+                carInteriorLight.position.set(0, 2.7, tz);
+                carGroup.add(carInteriorLight);
+                lights.push(carInteriorLight);
             });
 
             // Station Signboard on Back Wall
@@ -1759,26 +1768,31 @@ export class LastMetroGame {
             signGroup.add(signFace);
             platformGroup.add(signGroup);
 
-            // Station Exit Stairs & Blast Door at end (z = 13.0, x = 6.0)
-            const stairMat = new THREE.MeshStandardMaterial({ color: 0x3d4852, roughness: 0.8 });
-            for (let s = 0; s < 5; s++) {
-                const step = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.25, 0.6), stairMat);
-                step.position.set(6.0, 0.125 + s * 0.25, 11.5 + s * 0.6);
-                platformGroup.add(step);
-            }
+            // Station Exit Stairs Group (saved for cutscene collapse animation)
+            const stairsGroup = new THREE.Group();
+            stairsGroup.name = 'station_stairs_group';
+            this.stationStairsGroup = stairsGroup;
 
-            // Blast Exit Door at top of stairs (z = 15.0, x = 6.0, y = 2.2)
-            const blastDoorFrame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.6, 0.3), new THREE.MeshStandardMaterial({ color: 0x11141a, metalness: 0.9 }));
-            blastDoorFrame.position.set(6.0, 2.3, 14.8);
+            const stairMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.7, metalness: 0.3 });
+            for (let s = 0; s < 7; s++) {
+                const step = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.28, 0.65), stairMat);
+                step.position.set(6.0, 0.14 + s * 0.28, 10.5 + s * 0.65);
+                stairsGroup.add(step);
+            }
+            platformGroup.add(stairsGroup);
+
+            // Blast Exit Door at top of stairs (z = 15.2, x = 6.0, y = 2.4)
+            const blastDoorFrame = new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.8, 0.3), new THREE.MeshStandardMaterial({ color: 0x11141a, metalness: 0.9 }));
+            blastDoorFrame.position.set(6.0, 2.4, 15.1);
             platformGroup.add(blastDoorFrame);
 
-            const blastDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.3, 0.15), new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.4, metalness: 0.7 }));
-            blastDoorLeaf.position.set(6.0, 2.3, 14.75);
+            const blastDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(3.0, 2.5, 0.15), new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.4, metalness: 0.7 }));
+            blastDoorLeaf.position.set(6.0, 2.4, 15.05);
             blastDoorLeaf.name = 'station_200_blast_door';
             platformGroup.add(blastDoorLeaf);
 
-            const exitSignMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.4, 0.1), new THREE.MeshBasicMaterial({ color: 0x2ed573 }));
-            exitSignMesh.position.set(6.0, 3.6, 14.7);
+            const exitSignMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.45, 0.1), new THREE.MeshBasicMaterial({ color: 0x2ed573 }));
+            exitSignMesh.position.set(6.0, 3.8, 15.0);
             platformGroup.add(exitSignMesh);
 
             carGroup.add(platformGroup);
@@ -5286,30 +5300,97 @@ export class LastMetroGame {
     private _spawnCarriage200Switches() {
         this.kuuljaSwitches = [];
         const switchPositions = [
-            new THREE.Vector3(5.2, 1.3, -6.0), // On platform pillar
-            new THREE.Vector3(9.3, 1.3, 0.0),  // On platform back wall
-            new THREE.Vector3(6.5, 1.3, 8.0)   // Near blast exit stairs
+            { pos: new THREE.Vector3(5.2, 1.4, -6.0), label: '1/3' }, // On platform pillar
+            { pos: new THREE.Vector3(9.2, 1.4, 0.0), label: '2/3' },  // On platform back wall
+            { pos: new THREE.Vector3(6.5, 1.4, 8.0), label: '3/3' }   // Near blast exit stairs
         ];
 
-        const boxMat = new THREE.MeshStandardMaterial({ color: 0x333a42, metalness: 0.8 });
-        const leverMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, roughness: 0.4 });
-
-        switchPositions.forEach((pos, i) => {
+        switchPositions.forEach((item, i) => {
             const swGroup = new THREE.Group();
             swGroup.name = `kuulja_switch_${i + 1}`;
 
-            const box = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.15), boxMat);
+            // 1. High-visibility yellow/black hazard backplate
+            const hazardCanvas = document.createElement('canvas');
+            hazardCanvas.width = 128;
+            hazardCanvas.height = 128;
+            const hctx = hazardCanvas.getContext('2d');
+            if (hctx) {
+                hctx.fillStyle = '#ffd32a';
+                hctx.fillRect(0, 0, 128, 128);
+                hctx.fillStyle = '#111111';
+                for (let x = -128; x < 256; x += 32) {
+                    hctx.beginPath();
+                    hctx.moveTo(x, 0);
+                    hctx.lineTo(x + 16, 0);
+                    hctx.lineTo(x + 16 + 128, 128);
+                    hctx.lineTo(x + 128, 128);
+                    hctx.fill();
+                }
+            }
+            const hazardTex = new THREE.CanvasTexture(hazardCanvas);
+            const hazardPlate = new THREE.Mesh(
+                new THREE.BoxGeometry(0.7, 1.1, 0.04),
+                new THREE.MeshStandardMaterial({ map: hazardTex, roughness: 0.5 })
+            );
+            swGroup.add(hazardPlate);
+
+            // 2. Industrial Control Box
+            const boxMat = new THREE.MeshStandardMaterial({ color: 0x22272e, metalness: 0.8, roughness: 0.3 });
+            const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.25), boxMat);
+            box.position.set(0, 0, 0.12);
             swGroup.add(box);
 
-            const lever = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.06), leverMat);
-            lever.position.set(0, 0.05, 0.1);
-            swGroup.add(lever);
+            // 3. Glowing LED Indicator Dome (Red = Off, Green = On)
+            const indicatorMat = new THREE.MeshBasicMaterial({ color: 0xff2222 });
+            const indicatorDome = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), indicatorMat);
+            indicatorDome.position.set(0, 0.48, 0.15);
+            indicatorDome.name = 'switch_indicator_dome';
+            swGroup.add(indicatorDome);
 
-            const light = new THREE.PointLight(0xff4757, 1.5, 3.0);
-            light.position.set(0, 0.3, 0.1);
+            // 4. Bright Point Light for switch visibility
+            const light = new THREE.PointLight(0xff3333, 2.8, 8.0);
+            light.position.set(0, 0.48, 0.25);
             swGroup.add(light);
 
-            swGroup.position.copy(pos);
+            // 5. High-visibility glowing beam / light column above switch
+            const beamMat = new THREE.MeshBasicMaterial({ color: 0xff3838, transparent: true, opacity: 0.65 });
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.5, 8), beamMat);
+            beam.position.set(0, 1.8, 0.15);
+            beam.name = 'switch_beacon_beam';
+            swGroup.add(beam);
+
+            // 6. Pull-down Lever
+            const leverMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, roughness: 0.3, metalness: 0.7 });
+            const leverArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.32, 0.08), leverMat);
+            leverArm.position.set(0, 0.06, 0.26);
+            leverArm.name = 'switch_lever';
+            swGroup.add(leverArm);
+
+            // 7. Billboard text label above switch
+            const labelCanvas = document.createElement('canvas');
+            labelCanvas.width = 256;
+            labelCanvas.height = 128;
+            const lctx = labelCanvas.getContext('2d');
+            if (lctx) {
+                lctx.fillStyle = '#0a0d14';
+                lctx.fillRect(0, 0, 256, 128);
+                lctx.strokeStyle = '#ffd32a';
+                lctx.lineWidth = 6;
+                lctx.strokeRect(6, 6, 244, 116);
+                lctx.fillStyle = '#ffd32a';
+                lctx.font = 'bold 34px monospace';
+                lctx.textAlign = 'center';
+                lctx.fillText(`⚡ LÜLITI ${item.label}`, 128, 75);
+            }
+            const labelTex = new THREE.CanvasTexture(labelCanvas);
+            const labelMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.9, 0.45),
+                new THREE.MeshBasicMaterial({ map: labelTex, transparent: true })
+            );
+            labelMesh.position.set(0, 0.9, 0.18);
+            swGroup.add(labelMesh);
+
+            swGroup.position.copy(item.pos);
             this.scene.add(swGroup);
             this.kuuljaSwitches.push({ mesh: swGroup, activated: false });
         });
@@ -5321,24 +5402,58 @@ export class LastMetroGame {
         const kuulja = new THREE.Group();
         kuulja.name = 'kuulja_boss';
 
-        const skinMat = new THREE.MeshStandardMaterial({ color: 0x07090e, roughness: 0.95 });
+        const skinMat = new THREE.MeshStandardMaterial({
+            color: 0x111620,
+            roughness: 0.35,
+            metalness: 0.6
+        });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+        const clawMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.9 });
 
-        // Tall very skinny body
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 2.0, 12), skinMat);
-        body.position.set(0, 1.1, 0);
+        // Tall very skinny body (2.7m tall)
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 2.2, 12), skinMat);
+        body.position.set(0, 1.2, 0);
         kuulja.add(body);
 
-        // Large smooth head without eyes
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), skinMat);
-        head.position.set(0, 2.35, 0);
+        // Highlighted metallic ribcage
+        for (let r = 0; r < 4; r++) {
+            const rib = new THREE.Mesh(new THREE.TorusGeometry(0.24 + r * 0.01, 0.025, 8, 16), skinMat);
+            rib.rotation.x = Math.PI / 2;
+            rib.position.set(0, 1.0 + r * 0.28, 0);
+            kuulja.add(rib);
+        }
+
+        // Large smooth head
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 16), skinMat);
+        head.position.set(0, 2.45, 0);
         kuulja.add(head);
 
-        // Long jointed arms
-        [-0.32, 0.32].forEach(ax => {
-            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 1.8, 8), skinMat);
-            arm.position.set(ax, 1.2, 0);
+        // Glowing red eyes (clearly visible in the dark and light)
+        [-0.1, 0.1].forEach(ex => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), eyeMat);
+            eye.position.set(ex, 2.5, 0.3);
+            kuulja.add(eye);
+        });
+
+        // Red light emitted from head for eerie silhouette visibility
+        const headLight = new THREE.PointLight(0xff0033, 2.4, 8.0);
+        headLight.position.set(0, 2.5, 0.4);
+        kuulja.add(headLight);
+
+        // Long jointed arms with sharp claws
+        [-0.38, 0.38].forEach(ax => {
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 2.0, 8), skinMat);
+            arm.position.set(ax, 1.3, 0);
             arm.rotation.z = ax > 0 ? -0.25 : 0.25;
             kuulja.add(arm);
+
+            // Claws on hands
+            for (let c = -0.04; c <= 0.04; c += 0.04) {
+                const claw = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.25, 6), clawMat);
+                claw.rotation.x = Math.PI / 2;
+                claw.position.set(ax + c, 0.2, 0.1);
+                kuulja.add(claw);
+            }
         });
 
         kuulja.position.set(5.5, 0, -10.0);
@@ -5353,9 +5468,18 @@ export class LastMetroGame {
         sw.activated = true;
         this.kuuljaSwitchesActivated++;
 
-        // Visual change to green
+        // Visual change to green for dome, beacon beam, and lever pull
         const pointLight = sw.mesh.children.find(c => c instanceof THREE.PointLight) as THREE.PointLight;
         if (pointLight) pointLight.color.setHex(0x2ed573);
+
+        const dome = sw.mesh.getObjectByName('switch_indicator_dome') as THREE.Mesh;
+        if (dome) (dome.material as THREE.MeshBasicMaterial).color.setHex(0x2ed573);
+
+        const beam = sw.mesh.getObjectByName('switch_beacon_beam') as THREE.Mesh;
+        if (beam) (beam.material as THREE.MeshBasicMaterial).color.setHex(0x2ed573);
+
+        const lever = sw.mesh.getObjectByName('switch_lever');
+        if (lever) lever.rotation.x = 0.6;
 
         metroAudio.playKeypadBeep(true);
         this.showThought(
@@ -5381,39 +5505,99 @@ export class LastMetroGame {
     }
 
     private _finishCarriage200Boss() {
+        this.state = 'cutscene_carriage200' as any;
         this.showThought(
-            '🌟 KÕIK 3 LÜLITIT ON AKTIIVSED! Tuled süttivad ja väljapääsu uks avaneb päikesevalguse kätte!',
-            '🌟 ALL 3 SWITCHES ACTIVATED! Station lights power up and the blast exit opens!'
+            '🌟 KÕIK 3 LÜLITIT ON SEES! Tuled süttivad ja väljapääsu uks avaneb päikesevalguse kätte!',
+            '🌟 ALL 3 SWITCHES ACTIVATED! Station blast door opens to bright daylight!'
         );
 
+        // Power up all station lights
         if (this.currentCarriage) {
-            this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 1.4; });
+            this.currentCarriage.lights.forEach(l => { l.color.setHex(0xffffff); l.intensity = 1.8; });
         }
 
-        // Cutscene: Run up stairs -> Kuulja breaks stairs -> Fall into Canalization
-        setTimeout(() => {
-            this.showThought('Jooksed treppidest üles valguse poole...', 'Running up the stairs toward daylight...');
-            setTimeout(() => {
-                this.showThought('😱 Kuulja purustab trepi! Trepp variseb ja sa kukud sügavasse kanalisatsiooni!', '😱 The Listener smashes the stairs! You plummet down through the levels into the sewers!');
+        // Open Blast Exit Door & create glowing sunlight
+        const blastDoor = this.currentCarriage?.group.getObjectByName('station_200_blast_door');
+        if (blastDoor) {
+            blastDoor.position.x += 2.6; // slide door open
+            const sunLight = new THREE.PointLight(0xfffae0, 6.0, 40);
+            sunLight.position.set(6.0, 2.5, 16.0);
+            this.scene.add(sunLight);
+        }
+
+        // Step 1: Player automatically sprints up towards the stairs (2.0s)
+        const startPos = this.playerPos.clone();
+        const midStairsPos = new THREE.Vector3(6.0, 2.0, 12.2);
+        const startTime = performance.now();
+        const runDuration = 2200;
+
+        const runInterval = setInterval(() => {
+            const elapsed = performance.now() - startTime;
+            const t = Math.min(1, elapsed / runDuration);
+            const easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+            this.playerPos.lerpVectors(startPos, midStairsPos, easeT);
+            this.cameraEuler.y = THREE.MathUtils.lerp(this.cameraEuler.y, 0, 0.1);
+            this.cameraEuler.x = THREE.MathUtils.lerp(this.cameraEuler.x, 0.25, 0.1);
+
+            if (Math.floor(elapsed / 250) % 2 === 0) {
+                metroAudio.playFootstep();
+            }
+
+            if (t >= 1) {
+                clearInterval(runInterval);
+
+                // Step 2: Mid-stairs, Kuulja / Pahalane suddenly leaps down in front of player and smashes stairs!
+                if (this.kuuljaBossGroup) {
+                    this.kuuljaBossGroup.position.set(6.0, 2.4, 13.8);
+                    this.kuuljaBossGroup.lookAt(this.playerPos.x, 2.4, this.playerPos.z);
+                }
+
+                this.showThought(
+                    '😱 Kuulja hüppab ette ja purustab trepi! Trepp variseb kokku ja sa kukud sügavasse kanalisatsiooni!',
+                    '😱 The Listener leaps in front and smashes the stairs! The staircase crumbles and you plummet into the sewers!'
+                );
                 metroAudio.playShadowRushScreech();
 
-                // Falling sequence through levels: 199 -> 150 -> 100 -> 50 -> 10 -> 002
-                let count = 0;
-                const levels = [199, 150, 100, 50, 10, '002'];
+                // Break and collapse stairs
+                if (this.stationStairsGroup) {
+                    this.stationStairsGroup.children.forEach((step, sIdx) => {
+                        step.rotation.x = 0.4 + sIdx * 0.1;
+                        step.rotation.z = (sIdx % 2 === 0 ? 0.3 : -0.3);
+                        step.position.y -= 1.8;
+                    });
+                }
+
+                // Step 3: Dramatic screen shake and rapid vertical fall
+                const fallStartTime = performance.now();
                 const fallInterval = setInterval(() => {
-                    if (count < levels.length) {
-                        this.showThought(`Kukkumine... TASE ${levels[count]}`, `Falling... LEVEL ${levels[count]}`);
-                        count++;
-                    } else {
+                    const fallElapsed = performance.now() - fallStartTime;
+                    this.cameraEuler.x += (Math.random() - 0.5) * 0.18;
+                    this.cameraEuler.z = (Math.random() - 0.5) * 0.25;
+                    this.playerPos.y -= 0.65; // plunge downward
+
+                    if (fallElapsed > 1800) {
                         clearInterval(fallInterval);
-                        this.showThought('SA EI PIDANUD SIIA JÕUDMA.', 'YOU WERE NEVER MEANT TO REACH HERE.');
-                        setTimeout(() => {
-                            this.loadCarriage(201, 'right');
-                        }, 2500);
+                        this.cameraEuler.z = 0;
+
+                        // Falling countdown through mystery levels
+                        let count = 0;
+                        const levels = [199, 150, 100, 50, 10, '002'];
+                        const levelInterval = setInterval(() => {
+                            if (count < levels.length) {
+                                this.showThought(`Kukkumine läbi tasemete... TASE ${levels[count]}`, `Plummeting through levels... LEVEL ${levels[count]}`);
+                                count++;
+                            } else {
+                                clearInterval(levelInterval);
+                                this.showThought('🌊 KUKKUSID KANALISATSIOONI (VAGUN 201)!', '🌊 FELL INTO THE SEWERS (CARRIAGE 201)!');
+                                setTimeout(() => {
+                                    this.loadCarriage(201, 'right');
+                                }, 1800);
+                            }
+                        }, 600);
                     }
-                }, 700);
-            }, 3000);
-        }, 2000);
+                }, 40);
+            }
+        }, 30);
     }
 
     // ── Kanalisatsiooni Sündmused (Vagunid 201–250) ──────────────────────────

@@ -18,6 +18,7 @@ try {
     } catch (e) {}
     console.log("Starting preview server...");
     const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort']);
+    serverProcess.stdout?.resume();
     serverProcess.stderr?.on('data', data => console.error(`[Server Error]: ${data}`));
     
     // Give it a moment to start
