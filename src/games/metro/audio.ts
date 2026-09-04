@@ -14,6 +14,9 @@ export class MetroAudioEngine {
     private droneOsc1: OscillatorNode | null = null;
     private droneOsc2: OscillatorNode | null = null;
 
+    private carriage200Audio: HTMLAudioElement | null = null;
+    public isCarriage200MusicActive: boolean = false;
+
     constructor() {
         // AudioContext will be initialized on first user interaction
     }
@@ -36,6 +39,9 @@ export class MetroAudioEngine {
 
     public enableAudio() {
         this.initContext();
+        if (this.isCarriage200MusicActive && this.carriage200Audio && this.carriage200Audio.paused) {
+            this.carriage200Audio.play().catch(() => {});
+        }
     }
 
     public toggleMute(): boolean {
@@ -43,12 +49,18 @@ export class MetroAudioEngine {
         if (this.masterGain && this.ctx) {
             this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.7, this.ctx.currentTime);
         }
+        if (this.carriage200Audio) {
+            this.carriage200Audio.muted = this.isMuted;
+        }
         return this.isMuted;
     }
 
     public setVolume(val: number) {
         if (this.masterGain && this.ctx && !this.isMuted) {
             this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, val)), this.ctx.currentTime);
+        }
+        if (this.carriage200Audio && !this.isMuted) {
+            this.carriage200Audio.volume = Math.max(0, Math.min(1, val));
         }
     }
 
@@ -1406,6 +1418,32 @@ export class MetroAudioEngine {
         gain2.connect(this.masterGain);
         osc2.start(now);
         osc2.stop(now + 0.6);
+    }
+
+    // --- Vagun 200 Music Track (Last Metro Soundtrack) ---
+    public playCarriage200Music() {
+        this.initContext();
+        this.isCarriage200MusicActive = true;
+        if (!this.carriage200Audio) {
+            const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) ? import.meta.env.BASE_URL : '/games/';
+            const cleanBase = base.endsWith('/') ? base : base + '/';
+            const audioUrl = `${cleanBase}audio/last_metro_200.mp3`;
+            this.carriage200Audio = new Audio(audioUrl);
+            this.carriage200Audio.loop = true;
+        }
+        this.carriage200Audio.muted = this.isMuted;
+        this.carriage200Audio.volume = this.isMuted ? 0 : 0.8;
+        this.carriage200Audio.play().catch(e => {
+            console.warn('[Metro Audio] Carriage 200 music autoplay prevented or waiting for interaction:', e);
+        });
+    }
+
+    public stopCarriage200Music() {
+        this.isCarriage200MusicActive = false;
+        if (this.carriage200Audio) {
+            this.carriage200Audio.pause();
+            this.carriage200Audio.currentTime = 0;
+        }
     }
 }
 

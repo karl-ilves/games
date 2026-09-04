@@ -494,7 +494,7 @@ export class MurderMysteryGame {
         this.scene.add(this.lobbyGroup);
     }
 
-    // --- Expansive Grand Mystery Mansion 3D Builder ---
+    // --- Unified Grand Chamber 3D Builder (One big room with visible room zones & locked exits) ---
     private buildMansion() {
         this.mansionGroup = new THREE.Group();
         this.mansionGroup.position.set(0, 0, 0);
@@ -515,229 +515,163 @@ export class MurderMysteryGame {
             return wall;
         };
 
-        // 1. Grand Ground Floor (120x120 units) - Polished Wood & Marble Parquet
-        const floorGeo = new THREE.BoxGeometry(120, 1, 120);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x35231c, roughness: 0.35, metalness: 0.1 });
+        // 1. One Grand Shared Floor (90x90 units) - Polished Wood & Marble
+        const floorGeo = new THREE.BoxGeometry(92, 1, 92);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x3d271d, roughness: 0.35, metalness: 0.1 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.y = -0.5;
         floor.receiveShadow = true;
         this.mansionGroup.add(floor);
 
-        // Center Red Velvet Carpet in Grand Central Hall
-        const carpetGeo = new THREE.BoxGeometry(14, 0.08, 60);
-        const carpetMat = new THREE.MeshStandardMaterial({ color: 0x96132a, roughness: 0.8 });
+        // Center Red Velvet Carpet across the whole room
+        const carpetGeo = new THREE.BoxGeometry(12, 0.08, 65);
+        const carpetMat = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.8 });
         const carpet = new THREE.Mesh(carpetGeo, carpetMat);
         carpet.position.set(0, 0.05, 0);
         carpet.receiveShadow = true;
         this.mansionGroup.add(carpet);
 
-        // Outer Perimeter Walls (120x120, Height 16)
-        createWall(120, 16, 2, 0, 8, -60, 0x1d1722);
-        createWall(120, 16, 2, 0, 8, 60, 0x1d1722);
-        createWall(2, 16, 120, -60, 8, 0, 0x1d1722);
-        createWall(2, 16, 120, 60, 8, 0, 0x1d1722);
+        // 2. Impassable Locked Outer Perimeter Walls (90x90, Height 14) - "Sealt lahkuda ei saa"
+        createWall(92, 14, 2, 0, 7, -46, 0x1a1520);
+        createWall(92, 14, 2, 0, 7, 46, 0x1a1520);
+        createWall(2, 14, 92, -46, 7, 0, 0x1a1520);
+        createWall(2, 14, 92, 46, 7, 0, 0x1a1520);
 
-        // 2. Grand 2nd Floor Mezzanine / Balcony Walkway (Wraps around the central hall at Y: 6.5)
-        const upperFloorMat = new THREE.MeshStandardMaterial({ color: 0x2e1e17, roughness: 0.4 });
-        // North & South upper walkways
-        const upperN = new THREE.Mesh(new THREE.BoxGeometry(116, 0.8, 12), upperFloorMat);
-        upperN.position.set(0, 6.5, -34);
-        upperN.receiveShadow = true;
-        this.mansionGroup.add(upperN);
+        // Locked Massive Iron Exit Gates on North & South Walls
+        const ironGateMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
+        const lockMat = new THREE.MeshStandardMaterial({ color: 0xff2e63, emissive: 0x550011 });
 
-        const upperS = new THREE.Mesh(new THREE.BoxGeometry(116, 0.8, 12), upperFloorMat);
-        upperS.position.set(0, 6.5, 34);
-        upperS.receiveShadow = true;
-        this.mansionGroup.add(upperS);
+        [[-46, 1], [46, -1]].forEach(([gz, dir]) => {
+            const gate = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 1.2), ironGateMat);
+            gate.position.set(0, 5, gz + dir * 0.4);
+            gate.castShadow = true;
+            this.mansionGroup.add(gate);
+            this.mapColliders.push(new THREE.Box3().setFromObject(gate));
 
-        // West & East upper walkways
-        const upperW = new THREE.Mesh(new THREE.BoxGeometry(12, 0.8, 56), upperFloorMat);
-        upperW.position.set(-34, 6.5, 0);
-        upperW.receiveShadow = true;
-        this.mansionGroup.add(upperW);
+            // Glowing Lock
+            const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.4, 12), lockMat);
+            lock.position.set(0, 5, gz + dir * 1.2);
+            lock.rotation.x = Math.PI / 2;
+            this.mansionGroup.add(lock);
+        });
 
-        const upperE = new THREE.Mesh(new THREE.BoxGeometry(12, 0.8, 56), upperFloorMat);
-        upperE.position.set(34, 6.5, 0);
-        upperE.receiveShadow = true;
-        this.mansionGroup.add(upperE);
-
-        // Balcony Railings overlooking Central Hall
-        const railMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.2 });
-        const createRailing = (w: number, d: number, x: number, z: number) => {
-            const rail = new THREE.Mesh(new THREE.BoxGeometry(w, 1.3, d), railMat);
-            rail.position.set(x, 7.5, z);
-            rail.castShadow = true;
-            this.mansionGroup.add(rail);
-            this.mapColliders.push(new THREE.Box3().setFromObject(rail));
-        };
-        createRailing(56, 0.4, 0, -28);
-        createRailing(56, 0.4, 0, 28);
-        createRailing(0.4, 56, -28, 0);
-        createRailing(0.4, 56, 28, 0);
-
-        // Grand Dual Staircases in Central Hall
-        const stairMat = new THREE.MeshStandardMaterial({ color: 0x5a3e2b, roughness: 0.4 });
-        for (let i = 0; i < 14; i++) {
-            const stepH = 0.48;
-            const stepY = i * stepH;
-            const stepZ = -26 + i * 1.6;
-            // West Staircase
-            const stepW = new THREE.Mesh(new THREE.BoxGeometry(5, stepH, 1.8), stairMat);
-            stepW.position.set(-18, stepY + stepH / 2, stepZ);
-            stepW.castShadow = true;
-            stepW.receiveShadow = true;
-            this.mansionGroup.add(stepW);
-            this.mapColliders.push(new THREE.Box3().setFromObject(stepW));
-
-            // East Staircase
-            const stepE = new THREE.Mesh(new THREE.BoxGeometry(5, stepH, 1.8), stairMat);
-            stepE.position.set(18, stepY + stepH / 2, stepZ);
-            stepE.castShadow = true;
-            stepE.receiveShadow = true;
-            this.mansionGroup.add(stepE);
-            this.mapColliders.push(new THREE.Box3().setFromObject(stepE));
-        }
-
-        // Grand Central Hall Pillars (8 tall marble columns with golden crowns)
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x47384a, roughness: 0.35 });
-        const pillarGeo = new THREE.CylinderGeometry(1.4, 1.6, 16, 16);
+        // 3. Central Marble Columns (Tall open pillars with clear sightlines between all players)
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4d3e52, roughness: 0.3 });
+        const pillarGeo = new THREE.CylinderGeometry(1.2, 1.4, 14, 16);
         [
-            [-22, -18], [22, -18], [-22, 18], [22, 18],
-            [-22, 0], [22, 0], [-10, -26], [10, -26]
+            [-18, -18], [18, -18], [-18, 18], [18, 18],
+            [-18, 0], [18, 0], [0, -18], [0, 18]
         ].forEach(([px, pz]) => {
             const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-            pillar.position.set(px, 8, pz);
+            pillar.position.set(px, 7, pz);
             pillar.castShadow = true;
             this.mansionGroup.add(pillar);
             this.mapColliders.push(new THREE.Box3().setFromObject(pillar));
         });
 
-        // 3. INTERCONNECTED THEMED ROOMS
+        // 4. DISTINCT OPEN ROOM ZONES (Low visual partitions so everyone sees each other)
 
-        // --- Room 1: Raamatukogu / Grand Library (North-West) ---
-        // Dividing walls with open doorway
-        createWall(26, 16, 2, -47, 8, -28);
-        createWall(2, 16, 26, -28, 8, -47);
-        // Doorway frame
-        createWall(6, 4, 2, -31, 14, -28);
+        // --- Zone 1: Raamatukogu / Library Zone (North-West) ---
+        // Low decorative half-walls with wide arch openings
+        createWall(18, 3.5, 1, -34, 1.75, -22, 0x3d271d);
+        createWall(1, 3.5, 18, -22, 1.75, -34, 0x3d271d);
 
-        // Bookshelves (tall double-height library shelves with ladders)
-        const bookMat = new THREE.MeshStandardMaterial({ color: 0x3d1f11, roughness: 0.7 });
-        for (let b = 0; b < 3; b++) {
-            const bs = new THREE.Mesh(new THREE.BoxGeometry(18, 12, 2.5), bookMat);
-            bs.position.set(-44, 6, -36 - b * 7);
-            bs.castShadow = true;
-            this.mansionGroup.add(bs);
-            this.mapColliders.push(new THREE.Box3().setFromObject(bs));
-        }
-        // Reading desk & chairs
-        const desk = new THREE.Mesh(new THREE.BoxGeometry(8, 1.6, 4), new THREE.MeshStandardMaterial({ color: 0x54321d }));
-        desk.position.set(-45, 0.8, -50);
-        this.mansionGroup.add(desk);
-        this.mapColliders.push(new THREE.Box3().setFromObject(desk));
+        // Bookshelves & Reading Furniture
+        const bookMat = new THREE.MeshStandardMaterial({ color: 0x4a2a16, roughness: 0.6 });
+        const bs1 = new THREE.Mesh(new THREE.BoxGeometry(16, 7, 2), bookMat);
+        bs1.position.set(-34, 3.5, -43);
+        bs1.castShadow = true;
+        this.mansionGroup.add(bs1);
+        this.mapColliders.push(new THREE.Box3().setFromObject(bs1));
 
-        // --- Room 2: Söögituba & Kaminasaal / Banquet Hall & Fireplace (North-East) ---
-        createWall(26, 16, 2, 47, 8, -28);
-        createWall(2, 16, 26, 28, 8, -47);
-        createWall(6, 4, 2, 31, 14, -28);
+        const libDesk = new THREE.Mesh(new THREE.BoxGeometry(7, 1.6, 3.5), new THREE.MeshStandardMaterial({ color: 0x5a3d28 }));
+        libDesk.position.set(-34, 0.8, -32);
+        this.mansionGroup.add(libDesk);
+        this.mapColliders.push(new THREE.Box3().setFromObject(libDesk));
 
-        // Long banquet dining table (18x5 meters)
-        const banquetTable = new THREE.Mesh(new THREE.BoxGeometry(18, 1.8, 5.5), new THREE.MeshStandardMaterial({ color: 0x4a2a16 }));
-        banquetTable.position.set(44, 0.9, -44);
-        banquetTable.castShadow = true;
-        this.mansionGroup.add(banquetTable);
-        this.mapColliders.push(new THREE.Box3().setFromObject(banquetTable));
+        // --- Zone 2: Söögisaal & Kamin / Dining & Fireplace Zone (North-East) ---
+        createWall(18, 3.5, 1, 34, 1.75, -22, 0x3d271d);
+        createWall(1, 3.5, 18, 22, 1.75, -34, 0x3d271d);
 
-        // Stone Fireplace with warm glowing light
-        const fireplace = new THREE.Mesh(new THREE.BoxGeometry(10, 8, 3), new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.9 }));
-        fireplace.position.set(44, 4, -58);
+        // Long banquet dining table in open view
+        const diningTable = new THREE.Mesh(new THREE.BoxGeometry(16, 1.8, 4.5), new THREE.MeshStandardMaterial({ color: 0x5c3a21 }));
+        diningTable.position.set(34, 0.9, -33);
+        diningTable.castShadow = true;
+        this.mansionGroup.add(diningTable);
+        this.mapColliders.push(new THREE.Box3().setFromObject(diningTable));
+
+        // Stone Fireplace with warm fire glow
+        const fireplace = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 2.5), new THREE.MeshStandardMaterial({ color: 0x2d2d2d }));
+        fireplace.position.set(34, 3, -44);
         this.mansionGroup.add(fireplace);
         this.mapColliders.push(new THREE.Box3().setFromObject(fireplace));
 
-        const fireLight = new THREE.PointLight(0xff5511, 2.5, 25);
-        fireLight.position.set(44, 2.5, -56);
+        const fireLight = new THREE.PointLight(0xff6622, 2.2, 22);
+        fireLight.position.set(34, 2.5, -42);
         this.mansionGroup.add(fireLight);
 
-        // --- Room 3: Relvakamber & Seif / Armory & Vault (North Center) ---
-        createWall(16, 16, 2, -6, 8, -42);
-        createWall(16, 16, 2, 6, 8, -42);
-        // Knight Armors & Weapon Cabinets
+        // --- Zone 3: Relvakamber / Armory Zone (North Center) ---
         const armorMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.9, roughness: 0.2 });
         [-8, 8].forEach(ax => {
-            const armor = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 3.5, 8), armorMat);
-            armor.position.set(ax, 1.75, -50);
+            const armor = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 3.2, 8), armorMat);
+            armor.position.set(ax, 1.6, -38);
             armor.castShadow = true;
             this.mansionGroup.add(armor);
             this.mapColliders.push(new THREE.Box3().setFromObject(armor));
         });
-        // Big Steel Vault Door / Safe
-        const vault = new THREE.Mesh(new THREE.BoxGeometry(6, 5, 3), new THREE.MeshStandardMaterial({ color: 0x7f8c8d, metalness: 0.8 }));
-        vault.position.set(0, 2.5, -57);
-        this.mansionGroup.add(vault);
-        this.mapColliders.push(new THREE.Box3().setFromObject(vault));
 
-        // --- Room 4: Luksuslik Magamistuba & Garderoob / Master Bedroom (South-West) ---
-        createWall(26, 16, 2, -47, 8, 28);
-        createWall(2, 16, 26, -28, 8, 47);
-        createWall(6, 4, 2, -31, 14, 28);
+        // --- Zone 4: Magamistoa Tsoon / Master Bedroom Zone (South-West) ---
+        createWall(18, 3.5, 1, -34, 1.75, 22, 0x3d271d);
+        createWall(1, 3.5, 18, -22, 1.75, 34, 0x3d271d);
 
-        // Grand Four-Poster King Bed with Canopy
-        const bed = new THREE.Mesh(new THREE.BoxGeometry(10, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0x8e1b32 }));
-        bed.position.set(-45, 1.25, 45);
+        // Open Canopy Bed
+        const bed = new THREE.Mesh(new THREE.BoxGeometry(8, 2.2, 6.5), new THREE.MeshStandardMaterial({ color: 0x8e1b32 }));
+        bed.position.set(-34, 1.1, 34);
         this.mansionGroup.add(bed);
         this.mapColliders.push(new THREE.Box3().setFromObject(bed));
 
-        // Walk-in Wardrobe Closets (Hiding spots!)
-        const wardrobe1 = new THREE.Mesh(new THREE.BoxGeometry(6, 7, 3), new THREE.MeshStandardMaterial({ color: 0x3d271d }));
-        wardrobe1.position.set(-56, 3.5, 35);
-        this.mansionGroup.add(wardrobe1);
-        this.mapColliders.push(new THREE.Box3().setFromObject(wardrobe1));
+        // Open Wardrobe Closets
+        const wardrobe = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 2.5), new THREE.MeshStandardMaterial({ color: 0x3d271d }));
+        wardrobe.position.set(-42, 3, 30);
+        this.mansionGroup.add(wardrobe);
+        this.mapColliders.push(new THREE.Box3().setFromObject(wardrobe));
 
-        // --- Room 5: Köök & Sahver / Kitchen & Storage (South-East) ---
-        createWall(26, 16, 2, 47, 8, 28);
-        createWall(2, 16, 26, 28, 8, 47);
-        createWall(6, 4, 2, 31, 14, 28);
+        // --- Zone 5: Köögi Tsoon / Kitchen Zone (South-East) ---
+        createWall(18, 3.5, 1, 34, 1.75, 22, 0x3d271d);
+        createWall(1, 3.5, 18, 22, 1.75, 34, 0x3d271d);
 
-        // Marble Kitchen Islands
-        const island = new THREE.Mesh(new THREE.BoxGeometry(12, 2, 5), new THREE.MeshStandardMaterial({ color: 0xecf0f1, roughness: 0.2 }));
-        island.position.set(44, 1.0, 44);
-        island.castShadow = true;
-        this.mansionGroup.add(island);
-        this.mapColliders.push(new THREE.Box3().setFromObject(island));
+        // Kitchen Island
+        const kitchenIsland = new THREE.Mesh(new THREE.BoxGeometry(10, 1.9, 4), new THREE.MeshStandardMaterial({ color: 0xdcdde1, roughness: 0.2 }));
+        kitchenIsland.position.set(34, 0.95, 33);
+        this.mansionGroup.add(kitchenIsland);
+        this.mapColliders.push(new THREE.Box3().setFromObject(kitchenIsland));
 
-        // --- Room 6: Salajane Kelder / Veinikelder / Dungeon (South Center) ---
-        createWall(16, 16, 2, -6, 8, 42);
-        createWall(16, 16, 2, 6, 8, 42);
-        // Wine Barrels and Crates
-        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x6e4726 });
-        [[-4, 50], [4, 52], [-6, 54], [6, 50]].forEach(([bx, bz]) => {
-            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2.8, 12), barrelMat);
-            barrel.position.set(bx, 1.4, bz);
+        // --- Zone 6: Salongi & Veinivaatide Tsoon (South Center) ---
+        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28 });
+        [[-6, 38], [6, 38], [-4, 42], [4, 42]].forEach(([bx, bz]) => {
+            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 2.5, 12), barrelMat);
+            barrel.position.set(bx, 1.25, bz);
             barrel.castShadow = true;
             this.mansionGroup.add(barrel);
             this.mapColliders.push(new THREE.Box3().setFromObject(barrel));
         });
 
-        // Atmosphere Lighting: Grand Central Chandeliers & Atmospheric Room Lanterns
-        const mainChandelier = new THREE.PointLight(0xffdd99, 2.5, 55);
-        mainChandelier.position.set(0, 13, 0);
-        this.mansionGroup.add(mainChandelier);
+        // 5. Illumination - Bright chandeliers so everyone can see everyone clearly
+        const centerChandelier = new THREE.PointLight(0xffeedd, 2.8, 60);
+        centerChandelier.position.set(0, 10, 0);
+        this.mansionGroup.add(centerChandelier);
 
-        const libGlow = new THREE.PointLight(0x00f2fe, 1.8, 35);
-        libGlow.position.set(-45, 9, -45);
+        const libGlow = new THREE.PointLight(0x00f2fe, 1.8, 30);
+        libGlow.position.set(-34, 7, -34);
         this.mansionGroup.add(libGlow);
 
-        const bedGlow = new THREE.PointLight(0xff7799, 1.6, 35);
-        bedGlow.position.set(-45, 9, 45);
+        const bedGlow = new THREE.PointLight(0xff7799, 1.8, 30);
+        bedGlow.position.set(-34, 7, 34);
         this.mansionGroup.add(bedGlow);
 
-        const kitchenGlow = new THREE.PointLight(0xffaa44, 1.7, 35);
-        kitchenGlow.position.set(45, 9, 45);
+        const kitchenGlow = new THREE.PointLight(0xffaa44, 1.8, 30);
+        kitchenGlow.position.set(34, 7, 34);
         this.mansionGroup.add(kitchenGlow);
-
-        const dungeonGlow = new THREE.PointLight(0x2ecc71, 1.6, 30);
-        dungeonGlow.position.set(0, 8, 48);
-        this.mansionGroup.add(dungeonGlow);
 
         this.scene.add(this.mansionGroup);
     }
@@ -917,23 +851,20 @@ export class MurderMysteryGame {
         const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.2, emissive: 0x443300 });
 
         const positions = [
-            // Central Hall Ground & Carpet
-            [0, 1, 0], [0, 1, -15], [0, 1, 15], [-12, 1, 0], [12, 1, 0],
-            // Room 1: Raamatukogu / Library
-            [-45, 1, -35], [-45, 1, -48], [-35, 1, -40],
-            // Room 2: Söögisaal / Banquet Dining
-            [45, 1, -35], [45, 1, -48], [35, 1, -40],
-            // Room 3: Relvakamber / Armory & Vault
-            [0, 1, -50], [-8, 1, -52], [8, 1, -52],
-            // Room 4: Magamistuba / Bedroom
-            [-45, 1, 35], [-52, 1, 45], [-35, 1, 40],
-            // Room 5: Köök / Kitchen
-            [45, 1, 35], [52, 1, 45], [35, 1, 40],
-            // Room 6: Kelder / Dungeon
-            [0, 1, 48], [-6, 1, 52], [6, 1, 52],
-            // 2nd Floor Mezzanine Gallery & Balconies
-            [0, 7.5, -34], [0, 7.5, 34], [-34, 7.5, 0], [34, 7.5, 0],
-            [-25, 7.5, -34], [25, 7.5, -34], [-25, 7.5, 34], [25, 7.5, 34]
+            // Center Grand Hall & Carpet
+            [0, 1, 0], [0, 1, -12], [0, 1, 12], [-10, 1, 0], [10, 1, 0],
+            // Zone 1: Raamatukogu / Library (NW)
+            [-34, 1, -34], [-34, 1, -25], [-25, 1, -34],
+            // Zone 2: Söögisaal / Dining (NE)
+            [34, 1, -34], [34, 1, -25], [25, 1, -34],
+            // Zone 3: Relvakamber / Armory (N)
+            [0, 1, -36], [-8, 1, -36], [8, 1, -36],
+            // Zone 4: Magamistuba / Bedroom (SW)
+            [-34, 1, 34], [-34, 1, 25], [-25, 1, 34],
+            // Zone 5: Köök / Kitchen (SE)
+            [34, 1, 34], [34, 1, 25], [25, 1, 34],
+            // Zone 6: Salong / Dungeon (S)
+            [0, 1, 36], [-6, 1, 36], [6, 1, 36]
         ];
 
         positions.forEach(([x, y, z]) => {
@@ -975,16 +906,16 @@ export class MurderMysteryGame {
         murderer.role = 'murderer';
         sheriff.role = 'sheriff';
 
-        // Teleport characters to scattered mansion spots across rooms
+        // Teleport characters to open visible spots across the grand room
         const mansionSpawns = [
-            new THREE.Vector3(0, 0, 0),       // Central Hall
-            new THREE.Vector3(-45, 0, -40),   // Library
-            new THREE.Vector3(45, 0, -40),    // Dining Banquet
-            new THREE.Vector3(0, 0, -50),     // Armory Vault
-            new THREE.Vector3(-45, 0, 40),    // Master Bedroom
-            new THREE.Vector3(45, 0, 40),     // Kitchen
-            new THREE.Vector3(0, 0, 48),      // Dungeon
-            new THREE.Vector3(0, 7, -34)      // 2nd Floor Balcony
+            new THREE.Vector3(0, 0, 0),        // Central Hall
+            new THREE.Vector3(-32, 0, -32),    // Raamatukogu
+            new THREE.Vector3(32, 0, -32),     // Söögisaal
+            new THREE.Vector3(0, 0, -34),      // Relvakamber
+            new THREE.Vector3(-32, 0, 32),     // Magamistuba
+            new THREE.Vector3(32, 0, 32),      // Köök
+            new THREE.Vector3(0, 0, 34),       // Salong
+            new THREE.Vector3(12, 0, 0)        // Fuajee
         ];
 
         this.characters.forEach((c, i) => {

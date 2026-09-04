@@ -2233,6 +2233,12 @@ try {
             const switchesCount200 = await page.evaluate(() => window.__lastMetro.kuuljaSwitches.length);
             const hasKuuljaBoss200 = await page.evaluate(() => !!window.__lastMetro.kuuljaBossGroup);
 
+            const isMusicActive200 = await page.evaluate(() => window.__metroAudio?.isCarriage200MusicActive);
+            console.log(`   Carriage 200 Music Active (Expected: true): ${isMusicActive200}`);
+            if (!isMusicActive200) {
+                throw new Error("Carriage 200 music must start playing when entering Carriage 200!");
+            }
+
             console.log(`   Carriage 200: HUD="${car200Label}", TrainSpeed=${trainSpeed200} (Expected: 0), DoorsOpen=${doorsOpen200} (Expected: true), PlatformMesh=${hasPlatformMesh200}, Switches=${switchesCount200} (Expected: 3), KuuljaBoss=${hasKuuljaBoss200}`);
 
             if (trainSpeed200 !== 0 || !doorsOpen200 || !hasPlatformMesh200 || switchesCount200 !== 3 || !hasKuuljaBoss200) {
@@ -2260,7 +2266,18 @@ try {
             if (switchesActivated !== 3) {
                 throw new Error(`Expected all 3 switches to be activated, got: ${switchesActivated}`);
             }
-            console.log("   Successfully verified Carriage 200 halted train, open side doors, station platform step-out, switches & Kuulja!");
+
+            // Test moving away from Carriage 200 stops the Carriage 200 music
+            await page.evaluate(() => {
+                window.__lastMetro.loadCarriage(201, 'right');
+            });
+            const isMusicActive201 = await page.evaluate(() => window.__metroAudio?.isCarriage200MusicActive);
+            console.log(`   Carriage 201 Music Active after transition (Expected: false): ${isMusicActive201}`);
+            if (isMusicActive201) {
+                throw new Error("Carriage 200 music must stop when leaving Carriage 200!");
+            }
+
+            console.log("   Successfully verified Carriage 200 halted train, open side doors, station platform step-out, switches, Kuulja & soundtrack playback!");
 
             // ── TEST: Sünnipäeva / Vanuse süsteem ──────────────────────────────────
             console.log("\n--- Testing Birthday / Age System ---");

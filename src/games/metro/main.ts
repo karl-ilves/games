@@ -3846,6 +3846,13 @@ export class LastMetroGame {
             } catch (e) {}
         }
 
+        // Vagun 200 Music Track
+        if (prevIndex === 200 && index !== 200) {
+            metroAudio.stopCarriage200Music();
+        } else if (index === 200) {
+            metroAudio.playCarriage200Music();
+        }
+
         // Cleanly dispose and remove previous carriage to free GPU memory
         if (this.currentCarriage) {
             this.scene.remove(this.currentCarriage.group);
@@ -4840,6 +4847,7 @@ export class LastMetroGame {
 
             case 200:
                 // ── VAGUN 200: MAHAJÄETUD METROOPEATUSE LÕPP & KUULJA BOSS ──
+                metroAudio.playCarriage200Music();
                 this.triggerCarriage200Boss();
                 break;
 
@@ -5588,6 +5596,7 @@ export class LastMetroGame {
                                 count++;
                             } else {
                                 clearInterval(levelInterval);
+                                metroAudio.stopCarriage200Music();
                                 this.showThought('🌊 KUKKUSID KANALISATSIOONI (VAGUN 201)!', '🌊 FELL INTO THE SEWERS (CARRIAGE 201)!');
                                 setTimeout(() => {
                                     this.loadCarriage(201, 'right');
@@ -6320,6 +6329,9 @@ export class LastMetroGame {
         // Clear previous intro timeouts
         this.introTimeouts.forEach(t => clearTimeout(t));
         this.introTimeouts = [];
+
+        metroAudio.stopCarriage200Music();
+        metroAudio.stopShopMusic();
 
         // Reset all coins, inventory items, buffs & progress when returning to the beginning
         this.coins = 0;
