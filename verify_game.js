@@ -2139,6 +2139,50 @@ try {
             console.log(`   Owner Teleport Max Car (Expected: 300): ${teleportMax}`);
             if (teleportMax !== '300') throw new Error(`Teleport max input should be 300, got: ${teleportMax}`);
 
+            // Test Clue Picture / Photo Inspection & Cursor Free / Re-lock Behavior
+            console.log("   Testing Clue Photo Inspection with Visual Image & Cursor Release/Lock...");
+            await page.evaluate(() => {
+                const samplePhotoClue = {
+                    id: 'test_photo_103',
+                    carIndex: 103,
+                    type: 'photo',
+                    icon: '📷',
+                    titleEt: 'Vana Foto (Vagun 103)',
+                    titleEn: 'Old Photograph (Carriage 103)',
+                    textEt: 'Hämar mustvalge polaroidfoto tühjast metroorongist',
+                    textEn: 'Dim black & white polaroid of an empty metro carriage',
+                    placement: 'seat'
+                };
+                window.__lastMetro.openClueInspection(samplePhotoClue);
+            });
+            await new Promise(r => setTimeout(r, 60));
+
+            // Verify Inspect Modal is open
+            const inspectDisplay = await page.$eval('#clue-inspect-modal', el => window.getComputedStyle(el).display);
+            if (inspectDisplay !== 'flex') throw new Error('Clue inspect modal must be open!');
+
+            // Verify rendered photo image / SVG is present in clue-card-container
+            const svgPhotoExists = await page.$('#clue-card-container svg');
+            if (!svgPhotoExists) throw new Error('Clue card must contain a rendered SVG photo image!');
+            console.log("   Rendered Polaroid Photo SVG Image exists: ✅");
+
+            // Verify mouse cursor is free to move (metro-cursor-visible is active)
+            const isCursorFreeOnInspect = await page.evaluate(() => document.body.classList.contains('metro-cursor-visible'));
+            console.log(`   Mouse cursor free during Clue Inspection (Expected: true): ${isCursorFreeOnInspect}`);
+            if (!isCursorFreeOnInspect) throw new Error('Mouse cursor must be free during clue inspection!');
+
+            // Test Packing Clue into Backpack (2nd action / button click)
+            await page.click('#btn-pack-clue');
+            await new Promise(r => setTimeout(r, 450));
+
+            const isInspectClosed = await page.$eval('#clue-inspect-modal', el => window.getComputedStyle(el).display);
+            const isCursorNormalAfterPack = await page.evaluate(() => !document.body.classList.contains('metro-cursor-visible') && document.body.classList.contains('metro-in-game'));
+            console.log(`   Modal closed after pack: ${isInspectClosed === 'none'}, Normal in-game cursor restored: ${isCursorNormalAfterPack}`);
+            if (isInspectClosed !== 'none' || !isCursorNormalAfterPack) {
+                throw new Error('After packing clue into backpack, modal must close and normal game cursor lock must be restored!');
+            }
+            console.log("   Successfully verified Clue Photo visual rendering, mouse release, and seamless re-lock on pack!");
+
 
             // ── TEST: Sünnipäeva / Vanuse süsteem ──────────────────────────────────
             console.log("\n--- Testing Birthday / Age System ---");
