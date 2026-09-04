@@ -1409,8 +1409,8 @@ try {
             if (updatedCamRotY === initialCamRotY) throw new Error("Camera rotation test failed!");
             console.log("   Successfully tested Camera View Rotation!");
 
-            // Test Flashlight Toggle
-            await page.click('#btn-toggle-flashlight');
+            // Test Flashlight Toggle (Hotbar Slot 2)
+            await page.click('#slot-flashlight');
             await new Promise(r => setTimeout(r, 100));
             console.log("   Successfully tested Flashlight Toggle!");
 
@@ -1664,11 +1664,12 @@ try {
             console.log(`   Unequipped item (Expected: null): ${unequippedItem}`);
             if (unequippedItem !== null) throw new Error("Clicking equipped hotbar slot failed to unequip item!");
 
-            // Test Hotbar Slot 2 (Tuli / Flashlight) and Slot 3 (Kaust / Folder)
+            // Test Hotbar Slot 2 (Tuli / Flashlight), Slot 3 (Kaust / Folder), and Slot 4 (Owner Panel)
             const slotFlashlight = await page.$('#slot-flashlight');
             const slotFolder = await page.$('#slot-clues_folder');
-            if (!slotFlashlight || !slotFolder) throw new Error("Hotbar must contain #slot-flashlight (Tuli) and #slot-clues_folder (Kaust)!");
-            console.log("   Hotbar contains #slot-sword, #slot-flashlight (Tuli), and #slot-clues_folder (Kaust): ✅");
+            const slotOwner = await page.$('#slot-owner_panel');
+            if (!slotFlashlight || !slotFolder || !slotOwner) throw new Error("Hotbar must contain #slot-flashlight (Tuli), #slot-clues_folder (Kaust), and #slot-owner_panel (Admin)!");
+            console.log("   Hotbar contains #slot-sword, #slot-flashlight (Tuli), #slot-clues_folder (Kaust), and #slot-owner_panel (Admin): ✅");
 
             // Test clicking hotbar slot 2 toggles flashlight
             const initialFlashlight = await page.evaluate(() => window.__lastMetro.flashlightOn);

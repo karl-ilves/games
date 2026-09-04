@@ -2659,6 +2659,31 @@ export class LastMetroGame {
             hotbar.appendChild(slotDiv);
         }
 
+        // Slot 4: Admin / Owner Paneel (👑 Admin) - User requirement: "admini paneel läheb kausta kõrvale"
+        if (this.isOwner) {
+            const slotNum = currentSlot++;
+            const isOwnerOpen = document.getElementById('owner-teleport-modal')?.style.display === 'flex';
+            const slotDiv = document.createElement('div');
+            slotDiv.className = `hotbar-slot ${isOwnerOpen ? 'equipped' : ''}`;
+            slotDiv.id = 'slot-owner_panel';
+            slotDiv.style.borderColor = 'rgba(255, 211, 42, 0.6)';
+            slotDiv.innerHTML = `
+                <span class="slot-num">${slotNum}</span>
+                <span class="slot-icon">👑</span>
+                <span class="slot-name">${isEt ? 'Admin' : 'Owner'}</span>
+            `;
+            slotDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const modal = document.getElementById('owner-teleport-modal');
+                if (modal && modal.style.display === 'flex') {
+                    this.closeOwnerTeleportModal();
+                } else {
+                    this.openOwnerTeleportModal();
+                }
+            });
+            hotbar.appendChild(slotDiv);
+        }
+
         // Unlockable / Purchasable items in hotbar
         const itemDefs: { key: string; icon: string; nameEt: string; nameEn: string }[] = [
             { key: 'key', icon: '🗝️', nameEt: 'Võti', nameEn: 'Key' },
@@ -6861,6 +6886,7 @@ this.state = 'player_free';
         if (modal) modal.style.display = 'flex';
         this.state = 'inspecting';
         this.updateCursorState();
+        this.updateHotbarUI();
     }
 
     public closeOwnerTeleportModal() {
@@ -6870,6 +6896,7 @@ this.state = 'player_free';
             this.state = 'player_free';
         }
         this.updateCursorState();
+        this.updateHotbarUI();
     }
 
     public teleportToCarriage(carNum: number): boolean {
