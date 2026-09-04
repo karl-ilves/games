@@ -4481,55 +4481,31 @@ export class LastMetroGame {
                 break;
 
             case 150:
-                // POLITSEI TAGAAJAMINE ALGAB
-                this.triggerPoliceChase150();
+                this.showThought('Metroo pidurdab korraks järsult — tuled vilguvad ja koridori tekib paks udu...', 'The metro brakes sharply for a moment — lights flicker and thick fog fills the aisle...');
+                this.startLightFlickerAnomaly();
                 break;
 
             case 151:
-                // Jooksmine jätkub — Grip tõmbab esimese politseiniku
-                if (this.policeChaseActive && this.policeRemovedByGrip === 0) {
-                    this.triggerGripRemoveOfficer(151);
-                }
-                this.showThought('Jookse! Politseinikud jõuavad sulle järele!', 'Run! The officers are gaining on you!');
-                break;
-
             case 152:
             case 153:
-                this.showThought(`Vagun ${index} — jookse edasi, ära peatu!`, `Carriage ${index} — keep running, don't stop!`);
+                this.showThought(`Vagun ${index} — pimedus ja vaikus tunnelis süvenevad.`, `Carriage ${index} — darkness and silence in the tunnel deepen.`);
                 break;
 
             case 154:
-                // Grip tõmbab teise politseiniku
-                if (this.policeChaseActive && this.policeRemovedByGrip <= 1) {
-                    this.triggerGripRemoveOfficer(154);
-                }
-                this.showThought('Must käsi haarab ühe politseiniku — jookse edasi!', 'A black hand grabs one officer — keep running!');
+                this.showThought('Ukse vahelt libiseb mööda must vari Grip. Liigu ettevaatlikult edasi.', 'A black shadow Grip slithers past the door. Proceed carefully.');
+                this.triggerShadowHandsEvent();
                 break;
 
             case 155:
             case 156:
-                this.showThought(`Vagun ${index} — veel kaks politseinikku su kannul!`, `Carriage ${index} — two officers still on your heels!`);
-                break;
-
             case 157:
-                // Grip tõmbab kolmanda politseiniku
-                if (this.policeChaseActive && this.policeRemovedByGrip <= 2) {
-                    this.triggerGripRemoveOfficer(157);
-                }
-                this.showThought('Must käsi ilmub taas — haarab veel ühe! Alles jääb 2 politseinikku!', 'The black hand strikes again — one more officer gone! Two remain!');
-                break;
-
             case 158:
-                this.showThought('Vagun 158 — kaks politseinikku on endiselt su järel. Peaaegu käes!', 'Carriage 158 — two officers still pursue you. Almost there!');
-                break;
-
             case 159:
-                this.showThought('Vagun 159 — lõpuuks sulgub su selja taga!', 'Carriage 159 — the final door seals behind you!');
-                this.triggerPoliceChaseEnding159();
+                this.showThought(`Vagun ${index} — metallkest nagiseb survetundlikult.`, `Carriage ${index} — the metallic hull groans under pressure.`);
                 break;
 
             case 160:
-                this.triggerPoliceChaseEnd160();
+                this.showThought('Vagun 160 — metroo kihutab läbi pimeda tühjuse järgmiste katsete poole.', 'Carriage 160 — the metro speeds through dark void towards the next trials.');
                 break;
 
             // ── VAGUNID 161–200 ───────────────────────────────────────────────────
@@ -5386,147 +5362,6 @@ export class LastMetroGame {
 
 
     // ── Politsei jälituse sündmused ────────────────────────────────────────────
-
-    private triggerPoliceChase150() {
-        if (this.policeChaseTriggered) return;
-        this.policeChaseTriggered = true;
-        this.policeChaseAnimLocked = true;
-
-        // 1. Metroo pidurdab järsult
-        this.showThought('Metroo pidurdab järsult ja jääb seisma! Uksed avanevad...', 'The metro brakes hard and stops! Doors slide open...');
-        metroAudio.playFlickerBuzz();
-
-        // 2. 5 politseinikku ilmub 3 sekundi pärast
-        setTimeout(() => {
-            this._spawnPoliceOfficers(5);
-            this.showThought('5 politseinikku astub sisse... nad tunduvad sõbralikud? Aga midagi on valesti.', '5 officers step in... they seem friendly? But something is wrong.');
-        }, 2500);
-
-        // 3. 10 sekundi pärast muutuvad vaenulikuks
-        setTimeout(() => {
-            this.policeChaseActive = true;
-            this.policeChaseAnimLocked = false;
-            this.policeChaseRunActive = true;
-            this.showThought('🚨 POLITSEINIKUD MUUTUVAD VAENULIKUKS — JOOKSE!!! 🚨', '🚨 THE OFFICERS TURN HOSTILE — RUN!!! 🚨');
-            metroAudio.playShadowRushScreech();
-
-            // Politseinikud hakkavad mängijale järele jooksma
-            this._startPoliceChaseAnimation();
-        }, 13000);
-    }
-
-    private _spawnPoliceOfficers(count: number) {
-        this.policeOfficers.forEach(p => this.scene.remove(p));
-        this.policeOfficers = [];
-
-        const officerMat = new THREE.MeshStandardMaterial({ color: 0x1a3a5c, roughness: 0.8 });
-        const badgeMat = new THREE.MeshBasicMaterial({ color: 0xffd32a });
-        const skinMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.9 });
-
-        for (let i = 0; i < count; i++) {
-            const group = new THREE.Group();
-
-            // Body
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.48, 1.0, 0.28), officerMat);
-            body.position.set(0, 0.9, 0);
-            group.add(body);
-
-            // Badge
-            const badge = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.02), badgeMat);
-            badge.position.set(0.12, 1.15, 0.15);
-            group.add(badge);
-
-            // Head
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.34, 0.3), skinMat);
-            head.position.set(0, 1.6, 0);
-            group.add(head);
-
-            // Cap
-            const cap = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.1, 0.34), officerMat);
-            cap.position.set(0, 1.8, 0);
-            group.add(cap);
-
-            // Legs
-            [-0.12, 0.12].forEach((lx, li) => {
-                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.22), officerMat);
-                leg.position.set(lx, 0.35, 0);
-                group.add(leg);
-            });
-
-            // Position in line behind player
-            const zOffset = 2.5 + i * 0.85;
-            group.position.set((i % 2 === 0 ? -0.4 : 0.4) * (i < 2 ? 1 : -1), 0, zOffset);
-            group.rotation.y = Math.PI;
-
-            this.scene.add(group);
-            this.policeOfficers.push(group);
-        }
-    }
-
-    private _startPoliceChaseAnimation() {
-        // Politseinikud liiguvad mängija poole aeglaselt
-        const chaseInterval = setInterval(() => {
-            if (!this.policeChaseActive) { clearInterval(chaseInterval); return; }
-            this.policeOfficers.forEach(officer => {
-                if (!officer.parent) return;
-                const dx = this.playerPos.x - officer.position.x;
-                const dz = this.playerPos.z - officer.position.z;
-                const dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist > 1.8) {
-                    officer.position.x += (dx / dist) * 0.025;
-                    officer.position.z += (dz / dist) * 0.025;
-                }
-            });
-        }, 16);
-    }
-
-    public triggerGripRemoveOfficer(carriageIndex: number) {
-        if (this.policeOfficers.length === 0) return;
-        const toRemove = this.policeOfficers.pop();
-        if (toRemove) {
-            // Animate the officer being pulled sideways (Grip haarab)
-            let t = 0;
-            const removeAnim = setInterval(() => {
-                t += 0.05;
-                if (toRemove.parent) {
-                    toRemove.position.x += 0.18;
-                    toRemove.position.y -= 0.04;
-                }
-                if (t >= 1.0) {
-                    clearInterval(removeAnim);
-                    this.scene.remove(toRemove);
-                }
-            }, 30);
-        }
-        this.policeRemovedByGrip++;
-        this.showThought(`Must varjukäsi haarab politseiniku ja tõmbab ta metroost välja! (Alles jääb ${this.policeOfficers.length})`, `The black hand grabs an officer and drags them out! (${this.policeOfficers.length} remain)`);
-    }
-
-    private triggerPoliceChaseEnding159() {
-        // Mängija jõuab Vagun 160 ja uks sulgub — vaatan Vagun 159 sündmust teisest vaatenurgast
-        setTimeout(() => {
-            this.showThought('Vagun 159 aknast on näha: Grip haarab ühe allesjäänud politseiniku ja tõmbab ta metroost välja! Alles jääb üks.', 'Through the window of Carriage 159: Grip seizes another officer and pulls them out! One remains.');
-            if (this.policeOfficers.length > 0) {
-                const last2 = this.policeOfficers.pop();
-                if (last2) this.scene.remove(last2);
-                this.policeRemovedByGrip++;
-            }
-        }, 2000);
-    }
-
-    private triggerPoliceChaseEnd160() {
-        // Viimane politseinik jõuab ukse juurde ja lööb seda
-        this.showThought('Metroo hakkab uuesti liikuma! Viimane politseinik jääb ukse taha — ta peksab raevu nägu ust, aga ei pääse sisse!', 'The metro starts moving again! The last officer is left behind the door — furiously hammering it — but cannot get in!');
-        metroAudio.playFlickerBuzz();
-        setTimeout(() => {
-            this.policeChaseActive = false;
-            this.policeChaseRunActive = false;
-            // Eemalda kõik allesjäänud politseinikud
-            this.policeOfficers.forEach(p => this.scene.remove(p));
-            this.policeOfficers = [];
-            this.showThought('Vagun 160 — metroo on jälle liikumas. Politseinikud on kadunud.', 'Carriage 160 — the metro is moving again. The officers are gone.');
-        }, 6000);
-    }
 
     // ── Anomaly Mechanics ────────────────────────────────────────────────────
 
