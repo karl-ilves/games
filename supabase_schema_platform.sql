@@ -138,3 +138,65 @@ CREATE POLICY "Public can insert war_game_stats" ON public.war_game_stats FOR IN
 DROP POLICY IF EXISTS "Public can update war_game_stats" ON public.war_game_stats;
 CREATE POLICY "Public can update war_game_stats" ON public.war_game_stats FOR UPDATE USING (true);
 
+-- 7. AVATAR ITEMS CATALOG TABLE
+CREATE TABLE IF NOT EXISTS public.avatar_items (
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  category text NOT NULL CHECK (category IN ('body', 'skin', 'face', 'hair', 'tops', 'pants', 'shoes', 'hats', 'accessories', 'back', 'emotes')),
+  rarity text NOT NULL CHECK (rarity IN ('Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic')),
+  price integer NOT NULL DEFAULT 0,
+  currency text NOT NULL DEFAULT 'Yard',
+  attachment_socket text NOT NULL,
+  colorable boolean DEFAULT false,
+  default_color text DEFAULT '#ffffff',
+  asset_url text DEFAULT '',
+  thumbnail_url text DEFAULT '',
+  description text DEFAULT '',
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.avatar_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can read avatar_items" ON public.avatar_items;
+CREATE POLICY "Public can read avatar_items" ON public.avatar_items FOR SELECT USING (true);
+
+-- 8. USER AVATAR CONFIGURATION TABLE
+CREATE TABLE IF NOT EXISTS public.user_avatars (
+  user_id text PRIMARY KEY,
+  body_id text DEFAULT 'body_standard',
+  skin_color text DEFAULT '#f5d0b5',
+  face_id text DEFAULT 'face_smile',
+  hair_id text DEFAULT 'hair_classic',
+  hair_color text DEFAULT '#221812',
+  top_id text DEFAULT 'top_hoodie_cyan',
+  pants_id text DEFAULT 'pants_jeans_dark',
+  shoes_id text DEFAULT 'shoes_sneakers_white',
+  hat_id text DEFAULT NULL,
+  accessory_id text DEFAULT NULL,
+  back_accessory_id text DEFAULT NULL,
+  active_emote text DEFAULT 'idle',
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.user_avatars ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can read user_avatars" ON public.user_avatars;
+CREATE POLICY "Public can read user_avatars" ON public.user_avatars FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public can upsert user_avatars" ON public.user_avatars;
+CREATE POLICY "Public can upsert user_avatars" ON public.user_avatars FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. USER AVATAR INVENTORY TABLE
+CREATE TABLE IF NOT EXISTS public.user_avatar_inventory (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id text NOT NULL,
+  item_id text NOT NULL,
+  acquired_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  UNIQUE(user_id, item_id)
+);
+
+ALTER TABLE public.user_avatar_inventory ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can read user_avatar_inventory" ON public.user_avatar_inventory;
+CREATE POLICY "Public can read user_avatar_inventory" ON public.user_avatar_inventory FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public can insert user_avatar_inventory" ON public.user_avatar_inventory;
+CREATE POLICY "Public can insert user_avatar_inventory" ON public.user_avatar_inventory FOR INSERT WITH CHECK (true);
+
+

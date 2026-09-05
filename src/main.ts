@@ -2,6 +2,9 @@ import { supabase } from './lib/supabase';
 import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner, canAccessMmp1 } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
 import { setLanguage, applyLocalization, getLanguage } from './shared/i18n';
+import { AvatarWidget } from './components/AvatarWidget';
+import { AvatarShopEditorModal } from './components/AvatarShopEditorModal';
+import { avatarService } from './shared/avatar/AvatarService';
 
 console.log("Playard Hub & Platform Loaded.");
 initAuth();
@@ -907,8 +910,25 @@ window.addEventListener('playard_games_updated', () => {
     renderAdminReviewGames();
 });
 
+// 3D Avatar System Initialization
+let avatarShopModal: AvatarShopEditorModal | null = null;
+let avatarWidget: AvatarWidget | null = null;
+
+try {
+    avatarShopModal = new AvatarShopEditorModal();
+    avatarWidget = new AvatarWidget('playard-avatar-widget-container', () => {
+        if (avatarShopModal) avatarShopModal.open();
+    });
+    (window as any).playardAvatarWidget = avatarWidget;
+    (window as any).playardAvatarShop = avatarShopModal;
+} catch (e) {
+    console.warn('Avatar widget initialization error:', e);
+}
+
 window.addEventListener('playard_auth_changed', (e: any) => {
     const profile = e.detail?.profile || e.detail;
     updateAdminControlsVisibility(profile?.email, profile?.username);
     renderRecentlyPlayed();
+    if (avatarWidget) avatarWidget.updateProfileUI();
 });
+

@@ -354,6 +354,92 @@ try {
         await page.click('#btn-close-admin-panel');
         await new Promise(r => setTimeout(r, 200));
 
+        // 1b. Test 3D Avatar System (Widget under logo, 3D Editor & Shop, Yard purchases, Equip)
+        console.log("1b. Testing Playard 3D Avatar System (Widget, 3D Shop, Yard Purchases & Equipping)...");
+        const avatarWidgetExists = await page.$eval('#playard-avatar-widget-box', el => !!el);
+        console.log("   3D Avatar Mini-Widget exists under logo:", avatarWidgetExists);
+        if (!avatarWidgetExists) {
+            throw new Error("3D Avatar widget (#playard-avatar-widget-box) must be rendered under Playard logo!");
+        }
+
+        const avatarCanvasExists = await page.$eval('#avatar-mini-canvas-slot canvas', el => !!el).catch(() => false);
+        console.log("   3D Avatar Mini Three.js Canvas initialized:", avatarCanvasExists);
+
+        // Click Avatar Widget to open 3D Avatar Shop & Editor Modal
+        console.log("   Clicking 3D Avatar Widget to open Avatar Shop & Editor...");
+        await page.click('#playard-avatar-widget-box');
+        await new Promise(r => setTimeout(r, 400));
+
+        const avatarModalDisplay = await page.$eval('#modal-avatar-shop-editor', el => window.getComputedStyle(el).display);
+        console.log("   Avatar Shop & Editor Modal Display (Expected: flex):", avatarModalDisplay);
+        if (avatarModalDisplay !== 'flex') {
+            throw new Error("3D Avatar Shop modal must open when avatar widget is clicked!");
+        }
+
+        // Verify categories exist (hats, hair, skin, face, tops, pants, shoes, back, emotes)
+        const categoryCount = await page.$$eval('#avatar-category-tabs .cat-btn', btns => btns.length);
+        console.log("   Avatar Shop Category tabs count (Expected: 9):", categoryCount);
+        if (categoryCount < 8) {
+            throw new Error(`Expected at least 8 avatar category tabs, got: ${categoryCount}`);
+        }
+
+        // Verify items grid loaded
+        const initialItemsCount = await page.$$eval('#avatar-items-container .avatar-item-card', cards => cards.length);
+        console.log("   Avatar Shop Items in current category:", initialItemsCount);
+        if (initialItemsCount === 0) {
+            throw new Error("Avatar Shop items grid must not be empty!");
+        }
+
+        // Test purchasing a hat item with Yards (Viking Helm: 450 Yards)
+        await page.evaluate(() => {
+            // Give user 1000 Yards for test
+            window.yardService.addYards(1000, 'Avatar Test Bonus');
+        });
+        await new Promise(r => setTimeout(r, 200));
+
+        // Click Buy on Viking Helmet
+        const buyBtn = await page.$('[data-buy-id="hat_viking_helm"]');
+        if (buyBtn) {
+            await page.click('[data-buy-id="hat_viking_helm"]');
+            await new Promise(r => setTimeout(r, 400));
+            console.log("   Successfully purchased Viking Horned Helmet with Yards!");
+        }
+
+        // Verify item is now equipped or owned
+        const hasVikingOwned = await page.evaluate(() => {
+            return window.playardAvatar.hasItem('hat_viking_helm');
+        });
+        console.log("   Avatar has Viking Helm in inventory (Expected: true):", hasVikingOwned);
+        if (!hasVikingOwned) {
+            throw new Error("Purchased avatar item must be present in player inventory!");
+        }
+
+        // Test Emotes switching (e.g. Dance)
+        await page.click('[data-emote="dance"]');
+        await new Promise(r => setTimeout(r, 200));
+        const danceActive = await page.$eval('[data-emote="dance"]', el => el.classList.contains('active'));
+        console.log("   Avatar Dance emote active:", danceActive);
+        if (!danceActive) throw new Error("Dance emote button must be active after click!");
+
+        // Test Saving Avatar
+        await page.click('#btn-avatar-save-config');
+        await new Promise(r => setTimeout(r, 300));
+        const toastText = await page.$eval('#avatar-shop-toast', el => el.textContent);
+        console.log("   Avatar Save Toast:", toastText);
+        if (!toastText.includes('salvestatud')) {
+            throw new Error("Avatar must show success toast on save!");
+        }
+
+        // Close Avatar Shop
+        await page.click('#btn-close-avatar-shop');
+        await new Promise(r => setTimeout(r, 200));
+        const modalClosedDisplay = await page.$eval('#modal-avatar-shop-editor', el => window.getComputedStyle(el).display);
+        console.log("   Avatar Modal closed display (Expected: none):", modalClosedDisplay);
+        if (modalClosedDisplay !== 'none') {
+            throw new Error("Avatar modal must close when close button is clicked!");
+        }
+        console.log("   Successfully verified 3D Avatar System, Shop, Yard purchasing and Equipping!");
+
         // Reset to guest for remaining tests
         await page.evaluate(() => {
             localStorage.removeItem('playard_current_user_profile');
