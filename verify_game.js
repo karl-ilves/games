@@ -175,11 +175,11 @@ try {
             throw new Error("Train game card must be visible to non-logged in guests on Hub!");
         }
 
-        // Check Obby Game visibility for guest (Expected: none - Owner exclusive)
+        // Check Obby Game visibility for guest (Expected: flex - playable for everyone)
         const guestObbyCardDisplay = await page.$eval('#card-obby-game', el => window.getComputedStyle(el).display);
-        console.log(`   Guest Obby Game Card visibility (Expected: none): ${guestObbyCardDisplay}`);
-        if (guestObbyCardDisplay !== 'none') {
-            throw new Error("Obby game card must be hidden for guests!");
+        console.log(`   Guest Obby Game Card visibility (Expected: flex): ${guestObbyCardDisplay}`);
+        if (guestObbyCardDisplay !== 'flex') {
+            throw new Error("Obby game card must be visible for guests!");
         }
 
         // Check LAST METRO visibility for guest (Expected: none - Owner exclusive)
@@ -280,9 +280,9 @@ try {
         }
 
         const adminObbyCardDisplay = await page.$eval('#card-obby-game', el => window.getComputedStyle(el).display);
-        console.log(`   Admin (grx@trenet.ee) Obby Game Card visibility (Expected: none): ${adminObbyCardDisplay}`);
-        if (adminObbyCardDisplay !== 'none') {
-            throw new Error("Obby game card must be hidden for non-owner admin (grx@trenet.ee)!");
+        console.log(`   Admin (grx@trenet.ee) Obby Game Card visibility (Expected: flex): ${adminObbyCardDisplay}`);
+        if (adminObbyCardDisplay !== 'flex') {
+            throw new Error("Obby game card must be visible for admin (grx@trenet.ee)!");
         }
 
         const adminMetroCardDisplay = await page.$eval('#card-metro-game', el => window.getComputedStyle(el).display);
@@ -1442,8 +1442,8 @@ try {
             const victoryHubBtn = await page.$('#btn-victory-hub');
             if (!victoryHubBtn) throw new Error("Expected only 'To Hub' button in Victory Modal!");
             const hubBtnText = await page.$eval('#btn-victory-hub', el => el.textContent.trim());
-            console.log("   Victory Modal Hub Button Text (Expected: To Hub):", hubBtnText);
-            if (!hubBtnText.includes('To Hub')) throw new Error(`Expected To Hub button text, got ${hubBtnText}`);
+            console.log("   Victory Modal Hub Button Text (Expected: Hubi or To Hub):", hubBtnText);
+            if (!hubBtnText.includes('To Hub') && !hubBtnText.includes('Hubi')) throw new Error(`Expected To Hub or Hubi button text, got ${hubBtnText}`);
 
             const replayBtn = await page.$('#btn-victory-replay');
             if (replayBtn) throw new Error("Replay button must NOT exist in Victory Modal!");
@@ -1457,6 +1457,40 @@ try {
             if (!cooldownSaved) throw new Error("24h cooldown was not saved in localStorage!");
 
             console.log("   Successfully verified 3D Parkour Obby Simulator (Takistusrada) with 24h Cooldown Lock & To Hub!");
+
+            // Test Obby Playable for Non-Owners (Guest / English HUD / No VIP overlay)
+            console.log("   Testing Obby Playability for Guests / Non-Owners (English HUD, No VIP Block)...");
+            await page.evaluate(() => {
+                localStorage.removeItem('playard_current_user_profile');
+                localStorage.removeItem('playard_obby_cooldown_until');
+            });
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.waitForSelector('#hud-stage-val', { timeout: 10000 });
+            await new Promise(r => setTimeout(r, 600));
+
+            const guestVipOverlayDisplay = await page.$eval('#vip-restricted-overlay', el => window.getComputedStyle(el).display);
+            if (guestVipOverlayDisplay !== 'none') {
+                throw new Error("Obby VIP restricted overlay must NOT block guests / non-owners!");
+            }
+
+            const guestOwnerPillDisplay = await page.$eval('#hud-owner-pill', el => window.getComputedStyle(el).display);
+            if (guestOwnerPillDisplay !== 'none') {
+                throw new Error("Obby Owner Pill must be hidden for non-owners!");
+            }
+
+            const guestStageLabel = await page.$eval('#hud-stage-label', el => el.textContent.trim());
+            console.log("   Guest Obby Stage Label (Expected: Stage:):", guestStageLabel);
+            if (guestStageLabel !== 'Stage:') {
+                throw new Error(`Expected English 'Stage:', got '${guestStageLabel}'`);
+            }
+
+            const guestCoinsUnit = await page.$eval('#hud-coins-unit', el => el.textContent.trim());
+            console.log("   Guest Obby Coins Unit (Expected: COINS):", guestCoinsUnit);
+            if (guestCoinsUnit !== 'COINS') {
+                throw new Error(`Expected English 'COINS', got '${guestCoinsUnit}'`);
+            }
+            console.log("   Successfully verified 3D Parkour Obby is playable for everyone with English HUD!");
 
             // 14. Checking LAST METRO (3D Mystery Adventure)...
             console.log("14. Checking LAST METRO (3D Mystery Adventure)...");

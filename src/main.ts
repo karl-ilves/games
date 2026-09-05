@@ -43,10 +43,10 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         trainGameCard.style.display = 'flex';
     }
 
-    // Obby (Takistusrada) mäng on nähtav AINULT Playard Ownerile!
+    // Obby (Takistusrada) mäng on avaldatud KÕIKIDELE mängijatele!
     const obbyGameCard = document.getElementById('card-obby-game');
     if (obbyGameCard) {
-        obbyGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+        obbyGameCard.style.display = 'flex';
         const cooldownUntil = parseInt(localStorage.getItem('playard_obby_cooldown_until') || '0', 10);
         const cooldownBadge = document.getElementById('card-obby-cooldown-badge');
         if (cooldownUntil > Date.now()) {
