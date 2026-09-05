@@ -2986,6 +2986,43 @@ try {
             console.log(`   MMP1 Characters Count in Scene (Expected: 8): ${charactersCount}`);
             if (charactersCount !== 8) throw new Error(`Expected 8 characters in MMP1 scene, got ${charactersCount}`);
 
+            // Verify Player can move smoothly in lobby (WASD, Arrow keys, and virtual joystick)
+            console.log("   Testing Player movement in lobby (WASD & Joystick)...");
+            const initialLobbyPos = await page.evaluate(() => ({
+                x: window.mmp1Game.playerChar.position.x,
+                z: window.mmp1Game.playerChar.position.z
+            }));
+            // Simulate pressing KeyW
+            await page.keyboard.down('KeyW');
+            await new Promise(r => setTimeout(r, 200));
+            await page.keyboard.up('KeyW');
+            const posAfterW = await page.evaluate(() => ({
+                x: window.mmp1Game.playerChar.position.x,
+                z: window.mmp1Game.playerChar.position.z
+            }));
+            const movedByW = Math.hypot(posAfterW.x - initialLobbyPos.x, posAfterW.z - initialLobbyPos.z);
+            console.log(`   Lobby movement with KeyW: distance moved = ${movedByW.toFixed(2)}m`);
+            if (movedByW < 0.1) {
+                throw new Error("Player should be able to move in lobby using KeyW!");
+            }
+
+            // Simulate virtual joystick movement
+            await page.evaluate(() => {
+                window.mmp1Game.joystickInput = { x: 0.8, y: 0.5 };
+            });
+            await new Promise(r => setTimeout(r, 200));
+            const posAfterJoy = await page.evaluate(() => {
+                const p = { x: window.mmp1Game.playerChar.position.x, z: window.mmp1Game.playerChar.position.z };
+                window.mmp1Game.joystickInput = { x: 0, y: 0 };
+                return p;
+            });
+            const movedByJoy = Math.hypot(posAfterJoy.x - posAfterW.x, posAfterJoy.z - posAfterW.z);
+            console.log(`   Lobby movement with virtual joystick: distance moved = ${movedByJoy.toFixed(2)}m`);
+            if (movedByJoy < 0.1) {
+                throw new Error("Player should be able to move in lobby using virtual joystick!");
+            }
+            console.log("   MMP1 Lobby Movement (WASD + Joystick): ✅");
+
             // Verify Playard Admin Panel Button & Modal
             const adminBtnDisplay = await page.$eval('#btn-admin-panel', el => window.getComputedStyle(el).display);
             console.log(`   MMP1 Admin Panel Button display: ${adminBtnDisplay}`);

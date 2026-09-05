@@ -446,6 +446,7 @@ export class MurderMysteryGame {
     private lastMousePos: { x: number; y: number } = { x: 0, y: 0 };
     private touchStartPos: { x: number; y: number } = { x: 0, y: 0 };
     private isTouchDragging: boolean = false;
+    private joystickInput = { x: 0, y: 0 };
 
     // UI Cache
     private hudTimerVal: HTMLElement | null = null;
@@ -622,14 +623,15 @@ export class MurderMysteryGame {
         wallE.position.set(20, 5, 0);
         this.lobbyGroup.add(wallE);
 
-        // Center Hologram Pillar / Pedestal
-        const pedGeo = new THREE.CylinderGeometry(3, 3.5, 1, 16);
+        // Center Hologram Decorative Floor Ring (Flush with floor so players and bots walk freely)
+        const pedGeo = new THREE.CylinderGeometry(3.5, 3.8, 0.08, 32);
         const pedMat = new THREE.MeshStandardMaterial({ color: 0xff2e63, emissive: 0x330011, roughness: 0.2 });
         const pedestal = new THREE.Mesh(pedGeo, pedMat);
-        pedestal.position.set(0, 0.5, 0);
+        pedestal.position.set(0, 0.04, 0);
+        pedestal.receiveShadow = true;
         this.lobbyGroup.add(pedestal);
 
-        // Floating Logo / Knife Icon above pedestal
+        // Floating Logo / Knife Icon above center platform
         const holoGeo = new THREE.OctahedronGeometry(1.2, 0);
         const holoMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xff9f1a, wireframe: true });
         const holo = new THREE.Mesh(holoGeo, holoMat);
@@ -2885,6 +2887,22 @@ export class MurderMysteryGame {
             }
         });
 
+        // Reset inputs on blur or visibility change to avoid stuck keys
+        window.addEventListener('blur', () => {
+            this.keys = {};
+            this.isSprinting = false;
+            this.isDraggingMouse = false;
+            this.joystickInput = { x: 0, y: 0 };
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.keys = {};
+                this.isSprinting = false;
+                this.isDraggingMouse = false;
+                this.joystickInput = { x: 0, y: 0 };
+            }
+        });
+
         // Mouse Controls: Click-Drag to look around, or Click for Pointer Lock / Action
         let mouseDownPos = { x: 0, y: 0 };
         let hasMovedMouseSignificantly = false;
@@ -3073,7 +3091,48 @@ export class MurderMysteryGame {
             this.addIncidentFeed('💰 Admin lisas +500 Jardi!');
         });
 
-        // Mobile touch buttons
+        // Mobile touch joystick
+        const joystickZone = document.getElementById('touch-joystick-zone');
+        const joystickKnob = document.getElementById('touch-joystick-knob');
+        if (joystickZone && joystickKnob) {
+            let touchId: number | null = null;
+            let center = { x: 0, y: 0 };
+
+            joystickZone.addEventListener('touchstart', (e: TouchEvent) => {
+                const t = e.changedTouches[0];
+                touchId = t.identifier;
+                const rect = joystickZone.getBoundingClientRect();
+                center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+            }, { passive: false });
+
+            joystickZone.addEventListener('touchmove', (e: TouchEvent) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const t = e.changedTouches[i];
+                    if (t.identifier === touchId) {
+                        const dx = t.clientX - center.x;
+                        const dy = t.clientY - center.y;
+                        const maxDist = 42;
+                        const dist = Math.min(maxDist, Math.hypot(dx, dy));
+                        const angle = Math.atan2(dy, dx);
+                        const kx = Math.cos(angle) * dist;
+                        const ky = Math.sin(angle) * dist;
+                        joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`;
+                        this.joystickInput.x = kx / maxDist;
+                        this.joystickInput.y = ky / maxDist;
+                    }
+                }
+            }, { passive: false });
+
+            const resetJoystick = () => {
+                touchId = null;
+                joystickKnob.style.transform = 'translate(0px, 0px)';
+                this.joystickInput = { x: 0, y: 0 };
+            };
+            joystickZone.addEventListener('touchend', resetJoystick);
+            joystickZone.addEventListener('touchcancel', resetJoystick);
+        }
+
+        // Mobile touch action buttons
         const btnMobileAction = document.getElementById('btn-mobile-action');
         if (btnMobileAction) {
             btnMobileAction.addEventListener('touchstart', e => {
@@ -3091,6 +3150,12 @@ export class MurderMysteryGame {
                     }
                 }
             });
+        }
+
+        // Detect touch device to show mobile controls layer
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            const mobileLayer = document.getElementById('mobile-controls-layer');
+            if (mobileLayer) mobileLayer.style.display = 'block';
         }
     }
 
@@ -3243,32 +3308,44 @@ export class MurderMysteryGame {
     private updatePlayer(delta: number) {
         if (!this.playerChar.isAlive) return;
 
-        // 1. Keyboard Camera View Look (Arrow keys or I/J/K/L)
+        // 1. Keyboard Camera View Look (I/J/K/L or Arrow keys when not moving)
         const lookSpeed = 3.0;
-        if (this.keys['ArrowLeft'] || this.keys['KeyJ']) {
+        if (this.keys['KeyJ']) {
             this.cameraYaw += lookSpeed * delta;
             this.playerChar.rotation = this.cameraYaw;
         }
-        if (this.keys['ArrowRight'] || this.keys['KeyL']) {
+        if (this.keys['KeyL']) {
             this.cameraYaw -= lookSpeed * delta;
             this.playerChar.rotation = this.cameraYaw;
         }
-        if (this.keys['ArrowUp'] || this.keys['KeyI']) {
+        if (this.keys['KeyI']) {
             this.cameraPitch = Math.min(Math.PI / 3, this.cameraPitch + 2.2 * delta);
         }
-        if (this.keys['ArrowDown'] || this.keys['KeyK']) {
+        if (this.keys['KeyK']) {
             this.cameraPitch = Math.max(-Math.PI / 4, this.cameraPitch - 2.2 * delta);
         }
 
-        // 2. Keyboard Movement (WASD)
-        const moveDir = new THREE.Vector3();
-        if (this.keys['KeyW']) moveDir.z -= 1;
-        if (this.keys['KeyS']) moveDir.z += 1;
-        if (this.keys['KeyA']) moveDir.x -= 1;
-        if (this.keys['KeyD']) moveDir.x += 1;
+        // 2. Player Movement (WASD + Arrow Keys + Touch Joystick)
+        let inputX = 0;
+        let inputZ = 0;
 
-        if (moveDir.lengthSq() > 0) {
-            moveDir.normalize();
+        if (this.keys['KeyW'] || this.keys['ArrowUp']) inputZ -= 1;
+        if (this.keys['KeyS'] || this.keys['ArrowDown']) inputZ += 1;
+        if (this.keys['KeyA'] || this.keys['ArrowLeft']) inputX -= 1;
+        if (this.keys['KeyD'] || this.keys['ArrowRight']) inputX += 1;
+
+        // Virtual Touch Joystick input
+        if (Math.abs(this.joystickInput.x) > 0.05 || Math.abs(this.joystickInput.y) > 0.05) {
+            inputX = this.joystickInput.x;
+            inputZ = this.joystickInput.y;
+        }
+
+        const moveDir = new THREE.Vector3(inputX, 0, inputZ);
+
+        if (moveDir.lengthSq() > 0.001) {
+            if (moveDir.lengthSq() > 1) {
+                moveDir.normalize();
+            }
             moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.cameraYaw);
 
             const speed = this.isSprinting ? 12 : 7;

@@ -312,22 +312,59 @@
             margin-top: 2px;
         }
 
-        /* Mobile Action Overlay */
-        #mobile-controls {
-            position: absolute;
-            bottom: 20px;
+        /* Mobile Virtual Touch Controls */
+        #mobile-controls-layer {
+            position: fixed;
+            top: 0;
             left: 0;
             right: 0;
+            bottom: 0;
+            z-index: 130;
+            pointer-events: none;
             display: none;
-            justify-content: space-between;
-            padding: 0 24px;
-            z-index: 120;
+        }
+
+        .touch-joystick-zone {
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px dashed rgba(255, 255, 255, 0.35);
+            border-radius: 50%;
+            pointer-events: auto;
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .touch-joystick-knob {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ff2e63, #ff5722);
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 46, 99, 0.8);
+            pointer-events: none;
+            transition: transform 0.05s linear;
+        }
+
+        .touch-action-buttons {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             pointer-events: none;
         }
 
         .mobile-btn {
-            width: 70px;
-            height: 70px;
+            width: 65px;
+            height: 65px;
             border-radius: 50%;
             background: rgba(255, 46, 99, 0.4);
             border: 2px solid #ff2e63;
@@ -344,6 +381,13 @@
         .mobile-btn:active {
             transform: scale(0.92);
             background: rgba(255, 46, 99, 0.7);
+        }
+
+        /* Responsive display for touch & mobile */
+        @media (max-width: 900px), (pointer: coarse) {
+            #mobile-controls-layer {
+                display: block;
+            }
         }
 
         /* Victory / Game Over Modal */
@@ -815,10 +859,15 @@
         </div>
     </div>
 
-    <!-- Mobile Virtual Action Controls -->
-    <div id="mobile-controls">
-        <button class="mobile-btn" id="btn-mobile-action" style="background: rgba(255, 46, 99, 0.5);">⚔️</button>
-        <button class="mobile-btn" id="btn-mobile-interact" style="background: rgba(255, 211, 42, 0.5); border-color: #ffd32a;">✋</button>
+    <!-- Mobile Virtual Controls (Touch Joystick & Buttons) -->
+    <div id="mobile-controls-layer">
+        <div class="touch-joystick-zone" id="touch-joystick-zone">
+            <div class="touch-joystick-knob" id="touch-joystick-knob"></div>
+        </div>
+        <div class="touch-action-buttons">
+            <button class="mobile-btn" id="btn-mobile-action" style="background: rgba(255, 46, 99, 0.65);" title="Attack / Shoot">⚔️</button>
+            <button class="mobile-btn" id="btn-mobile-interact" style="background: rgba(255, 211, 42, 0.65); border-color: #ffd32a;" title="Interact / Pick up Gun">✋</button>
+        </div>
     </div>
 
     <!-- Round End & Victory Overlay -->
