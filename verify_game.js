@@ -2884,6 +2884,38 @@ try {
             if (!clickToKillResults.bot1DiedInProximity) throw new Error('Clicking player directly in close range must eliminate them!');
             console.log('   MMP1 Murderer Proximity Click-to-Kill verified: ✅');
 
+            // Verify Murderer Name is NOT revealed in the top-right incident feed
+            const feedText = await page.$eval('#incident-feed', el => el.textContent);
+            console.log(`   Top-right Incident Feed text: "${feedText}"`);
+            const murdererCharName = await page.evaluate(() => window.mmp1Game?.playerChar?.name || 'Karl');
+            if (feedText.includes(`${murdererCharName} elimineeris`)) {
+                throw new Error(`Murderer name (${murdererCharName}) was revealed in the incident feed!`);
+            }
+            if (!feedText.includes('elimineeriti') && !feedText.includes('langes')) {
+                throw new Error(`Incident feed should show victim eliminated without murderer name, got: "${feedText}"`);
+            }
+            console.log('   Incident Feed keeps murderer identity secret (name not shown in top right): ✅');
+
+            // Verify Ultra-Realistic Human Models & Ultra-Realistic Weapons
+            const realismCheck = await page.evaluate(() => {
+                const p = window.mmp1Game?.playerChar;
+                const hasLimbs = !!(p?.leftLeg && p?.rightLeg && p?.leftArm && p?.rightArm);
+                const knifeChildrenCount = p?.knifeMesh?.children?.length || 0;
+                const gunChildrenCount = p?.gunMesh?.children?.length || 0;
+                return {
+                    hasLimbs,
+                    knifeChildrenCount,
+                    gunChildrenCount
+                };
+            });
+            console.log(`   Human Character Limbs (Expected: true): ${realismCheck.hasLimbs}`);
+            console.log(`   Ultra-Realistic Knife detail parts count (Expected: >= 6): ${realismCheck.knifeChildrenCount}`);
+            console.log(`   Ultra-Realistic Gun detail parts count (Expected: >= 8): ${realismCheck.gunChildrenCount}`);
+            if (!realismCheck.hasLimbs) throw new Error('Player character must have realistic humanoid limbs!');
+            if (realismCheck.knifeChildrenCount < 6) throw new Error('Knife must be an ultra-realistic composite 3D weapon model!');
+            if (realismCheck.gunChildrenCount < 8) throw new Error('Gun must be an ultra-realistic composite 3D revolver model!');
+            console.log('   Ultra-realistic humans and weapons verified: ✅');
+
             // Test Round End & Rewards
             await page.evaluate(() => {
                 window.mmp1Game.endRound('sheriff_win', 'Test võit: Šerif laskis mõrvari maha!');

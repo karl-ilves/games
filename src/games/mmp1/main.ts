@@ -277,13 +277,18 @@ interface Character {
     position: THREE.Vector3;
     velocity: THREE.Vector3;
     rotation: number;
-    knifeMesh?: THREE.Mesh;
+    knifeMesh?: THREE.Group | THREE.Mesh;
     gunMesh?: THREE.Group;
     bodyMesh?: THREE.Mesh;
     headMesh?: THREE.Mesh;
+    leftLeg?: THREE.Group;
+    rightLeg?: THREE.Group;
+    leftArm?: THREE.Group;
+    rightArm?: THREE.Group;
     aiTarget?: THREE.Vector3;
     aiTimer: number;
     coins: number;
+    walkAnimTimer?: number;
 }
 
 interface DroppedGun {
@@ -703,87 +708,566 @@ export class MurderMysteryGame {
         this.scene.add(this.mansionGroup);
     }
 
-    // --- Create 3D Character Model ---
-    private createCharacterMesh(name: string, colorHex: number, isPlayer: boolean = false): { group: THREE.Group; knife: THREE.Mesh; gun: THREE.Group; body: THREE.Mesh; head: THREE.Mesh } {
+    // --- Create Ultra-Realistic Weapons ---
+    private createUltraRealisticKnife(): THREE.Group {
         const group = new THREE.Group();
 
-        // 1. Torso
-        const bodyGeo = new THREE.BoxGeometry(1.3, 1.7, 0.9);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.35, metalness: 0.1 });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 1.65;
+        // 1. Ergonomic Tactical Handle
+        const handleMat = new THREE.MeshStandardMaterial({ color: 0x181a1d, roughness: 0.65, metalness: 0.25 });
+        const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.65, 12), handleMat);
+        handle.scale.set(0.65, 1.0, 1.2);
+        handle.position.set(0, -0.32, 0);
+        group.add(handle);
+
+        // Tactical Grip Finger Grooves
+        const grooveMat = new THREE.MeshStandardMaterial({ color: 0x0f1012, roughness: 0.85 });
+        for (let i = 0; i < 3; i++) {
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.015, 8, 16), grooveMat);
+            ring.position.set(0, -0.18 - i * 0.12, 0);
+            ring.rotation.x = Math.PI / 2;
+            group.add(ring);
+        }
+
+        // Brass Rivet Pins
+        const pinMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.95, roughness: 0.2 });
+        for (let i = 0; i < 3; i++) {
+            const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.14, 8), pinMat);
+            pin.position.set(0, -0.18 - i * 0.12, 0);
+            pin.rotation.z = Math.PI / 2;
+            group.add(pin);
+        }
+
+        // Solid Steel Pommel Skull-Crusher
+        const pommelMat = new THREE.MeshStandardMaterial({ color: 0x3a3e42, metalness: 0.95, roughness: 0.25 });
+        const pommel = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.05, 0.12, 10), pommelMat);
+        pommel.position.set(0, -0.68, 0);
+        group.add(pommel);
+        const pommelTip = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 8), pommelMat);
+        pommelTip.position.set(0, -0.76, 0);
+        pommelTip.rotation.x = Math.PI;
+        group.add(pommelTip);
+
+        // Guard / Quillon
+        const guardMat = new THREE.MeshStandardMaterial({ color: 0x4a4f55, metalness: 0.95, roughness: 0.2 });
+        const guard = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.38), guardMat);
+        guard.position.set(0, 0.06, 0);
+        group.add(guard);
+
+        // High Carbon Steel Bowie Blade
+        const bladeMat = new THREE.MeshStandardMaterial({
+            color: 0xe8ecf2,
+            metalness: 0.98,
+            roughness: 0.12
+        });
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.92, 0.2), bladeMat);
+        blade.position.set(0, 0.54, 0.02);
+        group.add(blade);
+
+        // Razor Sharp Beveled Cutting Edge
+        const edgeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.99, roughness: 0.04 });
+        const edge = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.9, 4), edgeMat);
+        edge.position.set(0, 0.54, 0.12);
+        edge.scale.set(1.0, 1.0, 3.8);
+        group.add(edge);
+
+        // Clip-point Bowie Tip
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.34, 4), bladeMat);
+        tip.position.set(0, 1.1, 0.02);
+        tip.rotation.y = Math.PI / 4;
+        group.add(tip);
+
+        // Blood Fuller (Groove)
+        const fullerMat = new THREE.MeshStandardMaterial({ color: 0x25282c, roughness: 0.7, metalness: 0.7 });
+        const fuller = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.55, 0.03), fullerMat);
+        fuller.position.set(0, 0.52, 0);
+        group.add(fuller);
+
+        // Serrated Spine
+        for (let i = 0; i < 4; i++) {
+            const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.04, 3), bladeMat);
+            tooth.position.set(0, 0.2 + i * 0.06, -0.09);
+            tooth.rotation.z = Math.PI / 2;
+            group.add(tooth);
+        }
+
+        group.scale.set(1.15, 1.15, 1.15);
+        return group;
+    }
+
+    private createUltraRealisticRevolver(isGolden = false): THREE.Group {
+        const group = new THREE.Group();
+
+        const metalMat = new THREE.MeshStandardMaterial({
+            color: isGolden ? 0xffd700 : 0x24282e,
+            metalness: isGolden ? 0.98 : 0.94,
+            roughness: isGolden ? 0.14 : 0.22,
+            emissive: isGolden ? 0x443300 : 0x05080c
+        });
+
+        const polishedSteel = new THREE.MeshStandardMaterial({
+            color: isGolden ? 0xffea70 : 0xd8dde3,
+            metalness: 0.98,
+            roughness: 0.12
+        });
+
+        const gripWoodMat = new THREE.MeshStandardMaterial({
+            color: isGolden ? 0x2b1810 : 0x4a2c17,
+            roughness: 0.45,
+            metalness: 0.1
+        });
+
+        // Frame
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.32, 0.52), metalMat);
+        frame.position.set(0, 0.1, 0.05);
+        group.add(frame);
+
+        // Top Strap Sight Notch
+        const topStrap = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.62), metalMat);
+        topStrap.position.set(0, 0.27, 0.1);
+        group.add(topStrap);
+
+        // 6-Shot Cylinder
+        const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.32, 16), metalMat);
+        cylinder.rotation.x = Math.PI / 2;
+        cylinder.position.set(0, 0.1, 0.05);
+        group.add(cylinder);
+
+        // Cylinder Flutes
+        const fluteMat = new THREE.MeshStandardMaterial({
+            color: isGolden ? 0xb8860b : 0x16181b,
+            metalness: 0.9,
+            roughness: 0.4
+        });
+        for (let i = 0; i < 6; i++) {
+            const ang = (i / 6) * Math.PI * 2;
+            const flute = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.24, 8), fluteMat);
+            flute.rotation.x = Math.PI / 2;
+            flute.position.set(Math.cos(ang) * 0.12, 0.1 + Math.sin(ang) * 0.12, 0.05);
+            group.add(flute);
+        }
+
+        // Cartridge rims
+        const brassMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.95, roughness: 0.2 });
+        for (let i = 0; i < 6; i++) {
+            const ang = (i / 6) * Math.PI * 2;
+            const primer = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 8), brassMat);
+            primer.rotation.x = Math.PI / 2;
+            primer.position.set(Math.cos(ang) * 0.08, 0.1 + Math.sin(ang) * 0.08, -0.11);
+            group.add(primer);
+        }
+
+        // Ventilated Barrel
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.75, 14), metalMat);
+        barrel.rotation.x = Math.PI / 2;
+        barrel.position.set(0, 0.19, 0.62);
+        group.add(barrel);
+
+        // Muzzle Bore
+        const bore = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.05, 12), new THREE.MeshBasicMaterial({ color: 0x050505 }));
+        bore.rotation.x = Math.PI / 2;
+        bore.position.set(0, 0.19, 1.0);
+        group.add(bore);
+
+        // Under-barrel Lug
+        const lug = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.68), metalMat);
+        lug.position.set(0, 0.09, 0.58);
+        group.add(lug);
+
+        // Front Sight Blade
+        const sightMat = new THREE.MeshStandardMaterial({ color: isGolden ? 0xffffff : 0xff3838, roughness: 0.3 });
+        const frontSight = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.08, 0.12), sightMat);
+        frontSight.position.set(0, 0.29, 0.94);
+        group.add(frontSight);
+
+        // Cocked Hammer
+        const hammer = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.1), polishedSteel);
+        hammer.position.set(0, 0.24, -0.22);
+        hammer.rotation.x = -Math.PI / 4;
+        group.add(hammer);
+
+        // Trigger Guard & Trigger
+        const triggerGuard = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.025, 8, 16, Math.PI), metalMat);
+        triggerGuard.position.set(0, -0.06, 0.08);
+        triggerGuard.rotation.y = Math.PI / 2;
+        triggerGuard.rotation.x = Math.PI;
+        group.add(triggerGuard);
+
+        const trigger = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.1, 8), polishedSteel);
+        trigger.position.set(0, -0.05, 0.08);
+        trigger.rotation.x = -Math.PI / 6;
+        group.add(trigger);
+
+        // Walnut Grip
+        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.55, 0.28), gripWoodMat);
+        grip.position.set(0, -0.24, -0.12);
+        grip.rotation.x = -Math.PI / 8;
+        group.add(grip);
+
+        // Sheriff Star Badge Medallion
+        const starMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.98, roughness: 0.15 });
+        const starL = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 5), starMat);
+        starL.rotation.z = Math.PI / 2;
+        starL.position.set(-0.08, -0.2, -0.1);
+        group.add(starL);
+
+        const starR = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 5), starMat);
+        starR.rotation.z = Math.PI / 2;
+        starR.position.set(0.08, -0.2, -0.1);
+        group.add(starR);
+
+        group.scale.set(1.15, 1.15, 1.15);
+        return group;
+    }
+
+    // --- Create 3D Ultra-Realistic Human Character Model ---
+    private createCharacterMesh(name: string, colorHex: number, isPlayer: boolean = false): {
+        group: THREE.Group;
+        knife: THREE.Group;
+        gun: THREE.Group;
+        body: THREE.Mesh;
+        head: THREE.Mesh;
+        leftLeg: THREE.Group;
+        rightLeg: THREE.Group;
+        leftArm: THREE.Group;
+        rightArm: THREE.Group;
+    } {
+        const group = new THREE.Group();
+
+        // 1. Natural Human Skin Tones
+        const skinPalette = [0xf5d0b5, 0xf0c8a6, 0xdfb190, 0xd49a6a, 0xb87333, 0x8d5524, 0xecd0b9, 0xc68652];
+        const skinColor = isPlayer ? 0xf5d0b5 : skinPalette[Math.abs(colorHex) % skinPalette.length];
+        const skinMat = new THREE.MeshStandardMaterial({
+            color: skinColor,
+            roughness: 0.55,
+            metalness: 0.04
+        });
+
+        // 2. Stylish Tailored Suit / Detective Clothing Materials
+        const jacketMat = new THREE.MeshStandardMaterial({
+            color: colorHex,
+            roughness: 0.62,
+            metalness: 0.12
+        });
+        const lapelMat = new THREE.MeshStandardMaterial({
+            color: 0x181b20,
+            roughness: 0.55,
+            metalness: 0.18
+        });
+        const shirtMat = new THREE.MeshStandardMaterial({
+            color: 0xf8f9fa,
+            roughness: 0.75
+        });
+        const pantsMat = new THREE.MeshStandardMaterial({
+            color: 0x22262a,
+            roughness: 0.7
+        });
+        const tieMat = new THREE.MeshStandardMaterial({
+            color: isPlayer ? 0x990022 : (colorHex === 0xe74c3c ? 0x0f2042 : 0x8b0000),
+            roughness: 0.35
+        });
+        const shoeMat = new THREE.MeshStandardMaterial({
+            color: 0x141210,
+            roughness: 0.25,
+            metalness: 0.2
+        });
+        const goldBtnMat = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            metalness: 0.95,
+            roughness: 0.2
+        });
+
+        // --- LEGS with Hip Pivots ---
+        const legLGroup = new THREE.Group();
+        legLGroup.position.set(-0.32, 1.35, 0);
+
+        const thighL = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.17, 0.72, 14), pantsMat);
+        thighL.position.set(0, -0.36, 0);
+        thighL.castShadow = true;
+        legLGroup.add(thighL);
+
+        const calfL = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.65, 14), pantsMat);
+        calfL.position.set(0, -0.92, 0);
+        calfL.castShadow = true;
+        legLGroup.add(calfL);
+
+        // Oxford Dress Shoe Left
+        const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.52), shoeMat);
+        shoeL.position.set(0, -1.28, 0.08);
+        shoeL.castShadow = true;
+        legLGroup.add(shoeL);
+        const shoeSoleL = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.05, 0.56), new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.9 }));
+        shoeSoleL.position.set(0, -1.35, 0.08);
+        legLGroup.add(shoeSoleL);
+        group.add(legLGroup);
+
+        const legRGroup = new THREE.Group();
+        legRGroup.position.set(0.32, 1.35, 0);
+
+        const thighR = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.17, 0.72, 14), pantsMat);
+        thighR.position.set(0, -0.36, 0);
+        thighR.castShadow = true;
+        legRGroup.add(thighR);
+
+        const calfR = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.65, 14), pantsMat);
+        calfR.position.set(0, -0.92, 0);
+        calfR.castShadow = true;
+        legRGroup.add(calfR);
+
+        // Oxford Dress Shoe Right
+        const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.52), shoeMat);
+        shoeR.position.set(0, -1.28, 0.08);
+        shoeR.castShadow = true;
+        legRGroup.add(shoeR);
+        const shoeSoleR = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.05, 0.56), new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.9 }));
+        shoeSoleR.position.set(0, -1.35, 0.08);
+        legRGroup.add(shoeSoleR);
+        group.add(legRGroup);
+
+        // --- TORSO (Waist, Chest, Jacket, Collar, Tie) ---
+        // Leather Belt & Metallic Buckle
+        const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.56, 0.14, 16), new THREE.MeshStandardMaterial({ color: 0x1f1915, roughness: 0.6 }));
+        belt.position.set(0, 1.42, 0);
+        group.add(belt);
+
+        const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.08), goldBtnMat);
+        buckle.position.set(0, 1.42, 0.54);
+        group.add(buckle);
+
+        // Abdomen
+        const abdomen = new THREE.Mesh(new THREE.CylinderGeometry(0.54, 0.56, 0.45, 16), jacketMat);
+        abdomen.position.set(0, 1.68, 0);
+        abdomen.scale.set(1.0, 1.0, 0.78);
+        group.add(abdomen);
+
+        // Main Torso / Upper Chest (bodyMesh)
+        const bodyGeo = new THREE.CylinderGeometry(0.66, 0.54, 0.85, 16);
+        const body = new THREE.Mesh(bodyGeo, jacketMat);
+        body.position.set(0, 2.25, 0);
+        body.scale.set(1.0, 1.0, 0.76);
         body.castShadow = true;
         group.add(body);
 
-        // 2. Head & Eyes
-        const headGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0);
-        const headMat = new THREE.MeshStandardMaterial({ color: 0xffdfba, roughness: 0.4 });
-        const head = new THREE.Mesh(headGeo, headMat);
-        head.position.y = 2.95;
+        // Inner White Shirt & Lapel V-opening
+        const innerShirt = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.65, 0.06), shirtMat);
+        innerShirt.position.set(0, 2.32, 0.38);
+        group.add(innerShirt);
+
+        // Silk Tie
+        const tie = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.46, 0.05), tieMat);
+        tie.position.set(0, 2.22, 0.42);
+        group.add(tie);
+
+        // Lapels Left & Right
+        const lapelL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.58, 0.06), lapelMat);
+        lapelL.position.set(-0.20, 2.34, 0.40);
+        lapelL.rotation.z = -0.15;
+        group.add(lapelL);
+
+        const lapelR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.58, 0.06), lapelMat);
+        lapelR.position.set(0.20, 2.34, 0.40);
+        lapelR.rotation.z = 0.15;
+        group.add(lapelR);
+
+        // 3 Gold Buttons down front
+        for (let i = 0; i < 3; i++) {
+            const btn = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), goldBtnMat);
+            btn.position.set(0, 1.62 + i * 0.22, 0.44);
+            group.add(btn);
+        }
+
+        // --- NECK & HEAD ---
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.23, 0.42, 16), skinMat);
+        neck.position.set(0, 2.74, 0);
+        group.add(neck);
+
+        // Cranium / Head (headMesh)
+        const headGeo = new THREE.SphereGeometry(0.44, 24, 24);
+        const head = new THREE.Mesh(headGeo, skinMat);
+        head.position.set(0, 3.12, 0);
+        head.scale.set(0.92, 1.08, 0.98);
         head.castShadow = true;
         group.add(head);
 
-        // Eyes
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.1), eyeMat);
-        eyeL.position.set(-0.25, 3.0, 0.52);
-        group.add(eyeL);
-        const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.1), eyeMat);
-        eyeR.position.set(0.25, 3.0, 0.52);
-        group.add(eyeR);
+        // Jaw & Chin
+        const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.32, 0.42), skinMat);
+        jaw.position.set(0, 2.92, 0.12);
+        group.add(jaw);
 
-        // Hair / Hat / Crown for player
-        const hatMat = new THREE.MeshStandardMaterial({ color: isPlayer ? 0xffd32a : 0x222222, roughness: 0.3 });
-        const hat = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.4, 1.15), hatMat);
-        hat.position.y = 3.55;
-        group.add(hat);
+        // Ears Left & Right
+        const earGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.16, 10);
+        const earL = new THREE.Mesh(earGeo, skinMat);
+        earL.position.set(-0.43, 3.12, 0);
+        earL.rotation.z = 0.15;
+        group.add(earL);
 
-        // 3. Legs
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x1e1e24, roughness: 0.6 });
-        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.55), legMat);
-        legL.position.set(-0.38, 0.58, 0);
-        legL.castShadow = true;
-        group.add(legL);
+        const earR = new THREE.Mesh(earGeo, skinMat);
+        earR.position.set(0.43, 3.12, 0);
+        earR.rotation.z = -0.15;
+        group.add(earR);
 
-        const legR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.55), legMat);
-        legR.position.set(0.38, 0.58, 0);
-        legR.castShadow = true;
-        group.add(legR);
+        // 3D Sculpted Nose
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.18, 4), skinMat);
+        nose.position.set(0, 3.08, 0.46);
+        nose.rotation.x = Math.PI / 2;
+        group.add(nose);
 
-        // 4. Arms
-        const armMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
-        const armL = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.45), armMat);
-        armL.position.set(-0.95, 1.65, 0);
-        armL.castShadow = true;
-        group.add(armL);
+        // Lips
+        const lipMat = new THREE.MeshStandardMaterial({ color: 0xc87d7d, roughness: 0.55 });
+        const lips = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, 0.06), lipMat);
+        lips.position.set(0, 2.92, 0.43);
+        group.add(lips);
 
-        const armR = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.45), armMat);
-        armR.position.set(0.95, 1.65, 0);
-        armR.castShadow = true;
-        group.add(armR);
+        // Eyes & Eyebrows
+        const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xf6f8fa });
+        const irisColors = [0x634e34, 0x2e8b57, 0x3d2314, 0x1f3c88];
+        const irisColor = isPlayer ? 0x2a52be : irisColors[Math.abs(colorHex) % irisColors.length];
+        const irisMat = new THREE.MeshStandardMaterial({
+            color: irisColor,
+            roughness: 0.2
+        });
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+        const browMat = new THREE.MeshStandardMaterial({ color: 0x221a14, roughness: 0.9 });
 
-        // 5. Knife (Attached to right hand, initially hidden)
-        const knifeGeo = new THREE.BoxGeometry(0.14, 0.9, 0.25);
-        const knifeMat = new THREE.MeshStandardMaterial({ color: 0xff2e63, metalness: 0.9, roughness: 0.1, emissive: 0x440011 });
-        const knife = new THREE.Mesh(knifeGeo, knifeMat);
-        knife.position.set(0.95, 1.2, 0.55);
-        knife.rotation.x = Math.PI / 4;
-        knife.visible = false;
-        group.add(knife);
+        // Left Eye
+        const eyeWhiteL = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), eyeWhiteMat);
+        eyeWhiteL.position.set(-0.18, 3.16, 0.38);
+        group.add(eyeWhiteL);
+        const irisL = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 12), irisMat);
+        irisL.rotation.x = Math.PI / 2;
+        irisL.position.set(-0.18, 3.16, 0.44);
+        group.add(irisL);
+        const pupilL = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.025, 8), pupilMat);
+        pupilL.rotation.x = Math.PI / 2;
+        pupilL.position.set(-0.18, 3.16, 0.45);
+        group.add(pupilL);
+        const browL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.06), browMat);
+        browL.position.set(-0.18, 3.25, 0.42);
+        browL.rotation.z = 0.08;
+        group.add(browL);
 
-        // 6. Revolver / Gun (Attached to right hand, initially hidden)
-        const gunGroup = new THREE.Group();
-        const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.24, 0.7), new THREE.MeshStandardMaterial({ color: 0x00f2fe, metalness: 0.8, roughness: 0.2, emissive: 0x003344 }));
-        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.45, 0.25), new THREE.MeshStandardMaterial({ color: 0x5a3d28 }));
-        barrel.position.set(0, 0.1, 0.25);
-        grip.position.set(0, -0.1, 0);
-        gunGroup.add(barrel);
-        gunGroup.add(grip);
-        gunGroup.position.set(0.95, 1.45, 0.45);
+        // Right Eye
+        const eyeWhiteR = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), eyeWhiteMat);
+        eyeWhiteR.position.set(0.18, 3.16, 0.38);
+        group.add(eyeWhiteR);
+        const irisR = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 12), irisMat);
+        irisR.rotation.x = Math.PI / 2;
+        irisR.position.set(0.18, 3.16, 0.44);
+        group.add(irisR);
+        const pupilR = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.025, 8), pupilMat);
+        pupilR.rotation.x = Math.PI / 2;
+        pupilR.position.set(0.18, 3.16, 0.45);
+        group.add(pupilR);
+        const browR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.06), browMat);
+        browR.position.set(0.18, 3.25, 0.42);
+        browR.rotation.z = -0.08;
+        group.add(browR);
+
+        // --- HAIR & CROWN ---
+        const hairPalette = [0x1a1a1a, 0x3d2719, 0x5c4033, 0x8b5a2b, 0x2a1e17];
+        const hairColor = isPlayer ? 0x221812 : hairPalette[Math.abs(colorHex) % hairPalette.length];
+        const hairMat = new THREE.MeshStandardMaterial({
+            color: hairColor,
+            roughness: 0.85
+        });
+        const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.48, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat);
+        hairTop.position.set(0, 3.24, -0.02);
+        hairTop.scale.set(0.96, 1.05, 1.02);
+        group.add(hairTop);
+
+        const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.55, 0.28), hairMat);
+        hairBack.position.set(0, 3.08, -0.32);
+        group.add(hairBack);
+
+        if (isPlayer) {
+            // Masterpiece 3D Royal Crown for Player
+            const crownGold = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.98, roughness: 0.12 });
+            const crownBand = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.47, 0.15, 24, 1, true), crownGold);
+            crownBand.position.set(0, 3.56, 0);
+            group.add(crownBand);
+
+            // Velvet Inner Crown Cap
+            const velvetCap = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.MeshStandardMaterial({ color: 0x800020, roughness: 0.85 }));
+            velvetCap.position.set(0, 3.55, 0);
+            group.add(velvetCap);
+
+            // 8 Crown Peaks with Jewels
+            const rubyMat = new THREE.MeshStandardMaterial({ color: 0xff1133, roughness: 0.1, metalness: 0.9 });
+            const saphMat = new THREE.MeshStandardMaterial({ color: 0x1166ff, roughness: 0.1, metalness: 0.9 });
+            for (let i = 0; i < 8; i++) {
+                const ang = (i / 8) * Math.PI * 2;
+                const peak = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 4), crownGold);
+                peak.position.set(Math.sin(ang) * 0.46, 3.72, Math.cos(ang) * 0.46);
+                group.add(peak);
+
+                const gem = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 8), i % 2 === 0 ? rubyMat : saphMat);
+                gem.position.set(Math.sin(ang) * 0.47, 3.56, Math.cos(ang) * 0.47);
+                group.add(gem);
+            }
+        }
+
+        // --- ARMS (Shoulder Pivots) ---
+        const armLGroup = new THREE.Group();
+        armLGroup.position.set(-0.84, 2.55, 0);
+
+        const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), jacketMat);
+        armLGroup.add(shoulderL);
+        const bicepL = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.65, 14), jacketMat);
+        bicepL.position.set(0, -0.38, 0);
+        bicepL.castShadow = true;
+        armLGroup.add(bicepL);
+        const forearmL = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.62, 14), jacketMat);
+        forearmL.position.set(0, -0.85, 0);
+        forearmL.castShadow = true;
+        armLGroup.add(forearmL);
+        // Shirt Cuff
+        const cuffL = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 12), shirtMat);
+        cuffL.position.set(0, -1.14, 0);
+        armLGroup.add(cuffL);
+        // Sculpted Hand
+        const handL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.20), skinMat);
+        handL.position.set(0, -1.26, 0.04);
+        armLGroup.add(handL);
+        group.add(armLGroup);
+
+        const armRGroup = new THREE.Group();
+        armRGroup.position.set(0.84, 2.55, 0);
+
+        const shoulderR = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), jacketMat);
+        armRGroup.add(shoulderR);
+        const bicepR = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.65, 14), jacketMat);
+        bicepR.position.set(0, -0.38, 0);
+        bicepR.castShadow = true;
+        armRGroup.add(bicepR);
+        const forearmR = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.62, 14), jacketMat);
+        forearmR.position.set(0, -0.85, 0);
+        forearmR.castShadow = true;
+        armRGroup.add(forearmR);
+        // Shirt Cuff
+        const cuffR = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 12), shirtMat);
+        cuffR.position.set(0, -1.14, 0);
+        armRGroup.add(cuffR);
+        // Sculpted Hand
+        const handR = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.20), skinMat);
+        handR.position.set(0, -1.26, 0.04);
+        armRGroup.add(handR);
+
+        // --- ULTRA-REALISTIC WEAPONS (Held in Right Hand) ---
+        const knifeGroup = this.createUltraRealisticKnife();
+        knifeGroup.position.set(0.1, -1.28, 0.22);
+        knifeGroup.rotation.x = Math.PI / 3;
+        knifeGroup.rotation.y = -Math.PI / 8;
+        knifeGroup.visible = false;
+        armRGroup.add(knifeGroup);
+
+        const gunGroup = this.createUltraRealisticRevolver(false);
+        gunGroup.position.set(0.08, -1.22, 0.26);
+        gunGroup.rotation.x = 0;
         gunGroup.visible = false;
-        group.add(gunGroup);
+        armRGroup.add(gunGroup);
 
-        // Large, sharp, prominent Name Tag Canvas Billboard (depthTest = false so always crystal clear)
+        group.add(armRGroup);
+
+        // Large, sharp, prominent Name Tag Canvas Billboard
         const canvas = document.createElement('canvas');
         canvas.width = 300;
         canvas.height = 75;
@@ -816,7 +1300,17 @@ export class MurderMysteryGame {
         sprite.scale.set(3.8, 0.95, 1);
         group.add(sprite);
 
-        return { group, knife, gun: gunGroup, body, head };
+        return {
+            group,
+            knife: knifeGroup,
+            gun: gunGroup,
+            body,
+            head,
+            leftLeg: legLGroup,
+            rightLeg: legRGroup,
+            leftArm: armLGroup,
+            rightArm: armRGroup
+        };
     }
 
     // --- Initialize 8 Characters (Player + 7 AI in clear view in Lobby) ---
@@ -841,6 +1335,10 @@ export class MurderMysteryGame {
             gunMesh: pModel.gun,
             bodyMesh: pModel.body,
             headMesh: pModel.head,
+            leftLeg: pModel.leftLeg,
+            rightLeg: pModel.rightLeg,
+            leftArm: pModel.leftArm,
+            rightArm: pModel.rightArm,
             aiTimer: 0,
             coins: 0
         };
@@ -876,6 +1374,10 @@ export class MurderMysteryGame {
                 gunMesh: botModel.gun,
                 bodyMesh: botModel.body,
                 headMesh: botModel.head,
+                leftLeg: botModel.leftLeg,
+                rightLeg: botModel.rightLeg,
+                leftArm: botModel.leftArm,
+                rightArm: botModel.rightArm,
                 aiTimer: 0,
                 coins: 0
             };
@@ -1272,7 +1774,7 @@ export class MurderMysteryGame {
                     this.eliminateCharacter(hitTarget, shooter, 'gun_mistake');
                     this.eliminateCharacter(shooter, null, 'sheriff_guilt');
                     this.spawnDroppedGun(shooter.position.clone());
-                    this.addIncidentFeed(`⚠️ ${shooter.name} eksis ja lasi süütu! Šerif langes!`);
+                    this.addIncidentFeed(`⚠️ Šerif eksis ja lasi süütu! Šerif langes!`);
                 }
             }
         }
@@ -1286,8 +1788,13 @@ export class MurderMysteryGame {
 
         if (target.isPlayer) {
             this.addIncidentFeed(`💀 Said surma! (${cause === 'knife' ? 'Mõrvar tabas sind' : 'Kuulitaba'})`);
-        } else if (killer) {
-            this.addIncidentFeed(`🔪 ${killer.name} elimineeris mängija ${target.name}!`);
+        } else if (cause === 'knife' || (killer && killer.role === 'murderer')) {
+            // Murderer kills someone -> DO NOT show murderer's name in top right feed!
+            this.addIncidentFeed(`💀 Mängija ${target.name} elimineeriti!`);
+        } else if (cause === 'gun') {
+            this.addIncidentFeed(`⭐ Šerif tabas märki! ${target.name} langes!`);
+        } else {
+            this.addIncidentFeed(`💀 Mängija ${target.name} langes!`);
         }
 
         // When murderer kills someone with a knife, check if any sheriff witnessed it!
@@ -1320,12 +1827,12 @@ export class MurderMysteryGame {
 
         const gunGroup = new THREE.Group();
         
-        // Shiny golden gun mesh
-        const gunGeo = new THREE.BoxGeometry(0.3, 0.4, 1.2);
-        const gunMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.9, roughness: 0.1, emissive: 0x665500 });
-        const gunMesh = new THREE.Mesh(gunGeo, gunMat);
-        gunMesh.position.set(0, 0.6, 0);
-        gunGroup.add(gunMesh);
+        // Shiny golden ultra-realistic magnum revolver
+        const goldenRevolver = this.createUltraRealisticRevolver(true);
+        goldenRevolver.position.set(0, 0.75, 0);
+        goldenRevolver.rotation.x = Math.PI / 8;
+        goldenRevolver.scale.set(1.4, 1.4, 1.4);
+        gunGroup.add(goldenRevolver);
 
         // Light pillar beacon above dropped gun
         const beaconGeo = new THREE.CylinderGeometry(0.15, 0.15, 12, 12);
@@ -1912,6 +2419,27 @@ export class MurderMysteryGame {
                     c.rotation = Math.atan2(-dir.x, -dir.z);
                     c.mesh.position.copy(c.position);
                     c.mesh.rotation.y = c.rotation;
+
+                    // Realistic human walking gait
+                    c.walkAnimTimer = (c.walkAnimTimer || 0) + delta * 9;
+                    if (c.leftLeg && c.rightLeg) {
+                        c.leftLeg.rotation.x = Math.sin(c.walkAnimTimer) * 0.45;
+                        c.rightLeg.rotation.x = -Math.sin(c.walkAnimTimer) * 0.45;
+                    }
+                    if (c.leftArm && c.rightArm) {
+                        c.leftArm.rotation.x = -Math.sin(c.walkAnimTimer) * 0.38;
+                        if (!c.hasWeaponEquipped) {
+                            c.rightArm.rotation.x = Math.sin(c.walkAnimTimer) * 0.38;
+                        } else {
+                            c.rightArm.rotation.x = -0.35;
+                        }
+                    }
+                } else {
+                    const idle = Math.sin(Date.now() * 0.0025 + (c.walkAnimTimer || 0)) * 0.03;
+                    if (c.leftLeg) c.leftLeg.rotation.x = 0;
+                    if (c.rightLeg) c.rightLeg.rotation.x = 0;
+                    if (c.leftArm) c.leftArm.rotation.x = idle;
+                    if (c.rightArm && !c.hasWeaponEquipped) c.rightArm.rotation.x = -idle;
                 }
 
                 // AI combat triggers
@@ -2000,6 +2528,28 @@ export class MurderMysteryGame {
 
             this.playerChar.mesh.position.copy(this.playerChar.position);
             this.playerChar.mesh.rotation.y = this.playerChar.rotation;
+
+            // Realistic player walking animation
+            this.playerChar.walkAnimTimer = (this.playerChar.walkAnimTimer || 0) + delta * 11;
+            if (this.playerChar.leftLeg && this.playerChar.rightLeg) {
+                this.playerChar.leftLeg.rotation.x = Math.sin(this.playerChar.walkAnimTimer) * 0.45;
+                this.playerChar.rightLeg.rotation.x = -Math.sin(this.playerChar.walkAnimTimer) * 0.45;
+            }
+            if (this.playerChar.leftArm && this.playerChar.rightArm) {
+                this.playerChar.leftArm.rotation.x = -Math.sin(this.playerChar.walkAnimTimer) * 0.4;
+                if (!this.playerChar.hasWeaponEquipped) {
+                    this.playerChar.rightArm.rotation.x = Math.sin(this.playerChar.walkAnimTimer) * 0.4;
+                } else {
+                    this.playerChar.rightArm.rotation.x = -0.35;
+                }
+            }
+        } else {
+            // Player stationary idle breathing
+            const idle = Math.sin(Date.now() * 0.0025) * 0.03;
+            if (this.playerChar.leftLeg) this.playerChar.leftLeg.rotation.x = 0;
+            if (this.playerChar.rightLeg) this.playerChar.rightLeg.rotation.x = 0;
+            if (this.playerChar.leftArm) this.playerChar.leftArm.rotation.x = idle;
+            if (this.playerChar.rightArm && !this.playerChar.hasWeaponEquipped) this.playerChar.rightArm.rotation.x = -idle;
         }
 
         // Check dropped gun proximity prompt
