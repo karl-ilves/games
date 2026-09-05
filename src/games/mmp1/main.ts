@@ -1149,6 +1149,7 @@ export class MurderMysteryGame {
 
         // 2. If Player attacker: ONLY eliminates when clicked directly on a living player in close proximity ("läheduses")!
         const coords = screenPos ?? { x: 0, y: 0 };
+        this.camera.updateMatrixWorld(true);
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(new THREE.Vector2(coords.x, coords.y), this.camera);
 
@@ -1159,6 +1160,7 @@ export class MurderMysteryGame {
             }
         }
         if (targetMeshes.length === 0) return;
+        targetMeshes.forEach(m => m.updateMatrixWorld(true));
 
         // Check intersections with target meshes and walls (walls block clicks)
         const allShootables = [...targetMeshes, ...this.wallMeshes];
@@ -1227,6 +1229,7 @@ export class MurderMysteryGame {
         let raycaster: THREE.Raycaster;
         if (shooter.isPlayer) {
             const coords = screenPos ?? { x: 0, y: 0 };
+            this.camera.updateMatrixWorld(true);
             raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(coords.x, coords.y), this.camera);
             raycaster.far = 100;
@@ -2119,6 +2122,7 @@ export class MurderMysteryGame {
 
 // Instantiate game upon load
 function initMmp1() {
+    (window as any).THREE = THREE;
     if (!(window as any).mmp1Game) {
         (window as any).mmp1Game = new MurderMysteryGame();
     }

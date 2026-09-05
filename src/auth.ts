@@ -143,7 +143,7 @@ function saveUserGameProgress(profile: UserProfile | null) {
     if (warMoney !== null) {
         const val = parseInt(warMoney, 10);
         if (!isNaN(val)) {
-            const finalWarVal = isPlayardOwner(profile.email) ? Math.max(val, 200000) : val;
+            const finalWarVal = val;
             if (profile.username) localStorage.setItem(`playard_war_data_${profile.username.toLowerCase()}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
             if (profile.id) localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
             if (profile.email) localStorage.setItem(`playard_war_data_${profile.email.toLowerCase()}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: finalWarVal }));
@@ -200,10 +200,14 @@ function restoreUserGameProgress(profile: UserProfile) {
 
     if (savedWarMoney !== null) {
         let val = 0;
+        let isPlaneUnlocked = false;
+        let isMissileUnlocked = false;
         try {
             if (savedWarMoney.startsWith('{')) {
                 const parsed = JSON.parse(savedWarMoney);
                 if (parsed.money !== undefined) val = parsed.money;
+                if (parsed.isPlaneUnlocked !== undefined) isPlaneUnlocked = !!parsed.isPlaneUnlocked;
+                if (parsed.isMissileUnlocked !== undefined) isMissileUnlocked = !!parsed.isMissileUnlocked;
             } else {
                 val = parseInt(savedWarMoney, 10);
             }
@@ -211,20 +215,35 @@ function restoreUserGameProgress(profile: UserProfile) {
             val = parseInt(savedWarMoney, 10) || 0;
         }
 
-        if (isPlayardOwner(profile.email)) {
-            val = Math.max(val, 200000);
-        }
         localStorage.setItem('playard_war_game_money', val.toString());
-        localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: val }));
+        const warPayload = { user_id: profile.id, username: profile.displayName || profile.username, money: val, isPlaneUnlocked, isMissileUnlocked };
+        localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify(warPayload));
+        if (profile.username) localStorage.setItem(`playard_war_data_${profile.username.toLowerCase()}`, JSON.stringify(warPayload));
+        if (profile.email) localStorage.setItem(`playard_war_data_${profile.email.toLowerCase()}`, JSON.stringify(warPayload));
         profile.warmäng = val;
         profile.war_money = val;
         saveLocalProfile(profile);
     } else if (isPlayardOwner(profile.email)) {
+        // Initial 200,000 € only for Playard Owner on first ever launch
         const initialWarMoney = 200000;
         localStorage.setItem('playard_war_game_money', initialWarMoney.toString());
-        localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify({ user_id: profile.id, username: profile.displayName || profile.username, money: initialWarMoney }));
+        const warPayload = { user_id: profile.id, username: profile.displayName || profile.username, money: initialWarMoney, isPlaneUnlocked: false, isMissileUnlocked: false };
+        localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify(warPayload));
+        if (profile.username) localStorage.setItem(`playard_war_data_${profile.username.toLowerCase()}`, JSON.stringify(warPayload));
+        if (profile.email) localStorage.setItem(`playard_war_data_${profile.email.toLowerCase()}`, JSON.stringify(warPayload));
         profile.warmäng = initialWarMoney;
         profile.war_money = initialWarMoney;
+        saveLocalProfile(profile);
+    } else {
+        // Others start with 0 €
+        const initialZeroMoney = 0;
+        localStorage.setItem('playard_war_game_money', initialZeroMoney.toString());
+        const warPayload = { user_id: profile.id, username: profile.displayName || profile.username, money: initialZeroMoney, isPlaneUnlocked: false, isMissileUnlocked: false };
+        localStorage.setItem(`playard_war_data_${profile.id}`, JSON.stringify(warPayload));
+        if (profile.username) localStorage.setItem(`playard_war_data_${profile.username.toLowerCase()}`, JSON.stringify(warPayload));
+        if (profile.email) localStorage.setItem(`playard_war_data_${profile.email.toLowerCase()}`, JSON.stringify(warPayload));
+        profile.warmäng = initialZeroMoney;
+        profile.war_money = initialZeroMoney;
         saveLocalProfile(profile);
     }
 }
@@ -355,7 +374,7 @@ export async function showBirthdateModal(profile: UserProfile): Promise<void> {
 
         const currentYear = new Date().getFullYear();
         if (!year || !month || !day || year < 1900 || year > currentYear || month < 1 || month > 12 || day < 1 || day > 31) {
-            if (bdMsg) { bdMsg.style.color = '#e74c3c'; bdMsg.textContent = 'Palun sisesta korrektne sünnikuupäev!'; }
+            if (bdMsg) { bdMsg.style.color = '#e74c3c'; bdMsg.textContent = 'Please enter a valid birthdate!'; }
             return;
         }
 
@@ -365,7 +384,7 @@ export async function showBirthdateModal(profile: UserProfile): Promise<void> {
         const age = calculateAge(birthDateStr);
 
         if (age < 0 || age > 120) {
-            if (bdMsg) { bdMsg.style.color = '#e74c3c'; bdMsg.textContent = 'Sünnikuupäev ei ole korrektne!'; }
+            if (bdMsg) { bdMsg.style.color = '#e74c3c'; bdMsg.textContent = 'Birthdate is not valid!'; }
             return;
         }
 
@@ -407,7 +426,7 @@ function _renderAgeInUI(profile: UserProfile) {
     if (!ageSpan) return;
     if (profile.age !== undefined) {
         ageSpan.style.display = 'inline';
-        ageSpan.textContent = `🎂 ${profile.age} aastat`;
+        ageSpan.textContent = `🎂 ${profile.age} years old`;
     } else {
         ageSpan.style.display = 'none';
     }

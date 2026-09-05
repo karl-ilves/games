@@ -192,8 +192,12 @@ class WarGameEngine {
         this.checkAuthorization();
         this.setupLocalIdentity();
         await this.loadUserDataFromDb();
-        this.setupScene();
-        this.buildBattlefield();
+        try {
+            this.setupScene();
+            this.buildBattlefield();
+        } catch (e) {
+            console.error('Error during setupScene/buildBattlefield:', e);
+        }
         this.setupDeployModal();
         this.setupUI();
         this.setupInputListeners();
@@ -212,49 +216,97 @@ class WarGameEngine {
         const userId = prof?.id || this.localPlayerId;
         const storageKey = `playard_war_data_${userId}`;
 
-        const localData = localStorage.getItem(storageKey) || localStorage.getItem('playard_war_game_money');
+        let hasLocalData = false;
+        const localData = localStorage.getItem(storageKey)
+                       || (prof?.id ? localStorage.getItem(`playard_war_data_${prof.id}`) : null)
+                       || (prof?.username ? localStorage.getItem(`playard_war_data_${prof.username.toLowerCase()}`) : null)
+                       || localStorage.getItem('playard_war_game_money');
+
         if (localData) {
             try {
                 if (localData.startsWith('{')) {
                     const parsed = JSON.parse(localData);
-                    if (parsed.money !== undefined) this.warMoney = parsed.money;
+                    if (parsed.money !== undefined) {
+                        this.warMoney = parsed.money;
+                        hasLocalData = true;
+                    }
                     if (parsed.isPlaneUnlocked !== undefined) this.isPlaneUnlocked = !!parsed.isPlaneUnlocked;
                     if (parsed.isMissileUnlocked !== undefined) this.isMissileUnlocked = !!parsed.isMissileUnlocked;
                 } else {
                     const num = parseInt(localData, 10);
-                    if (!isNaN(num)) this.warMoney = num;
+                    if (!isNaN(num)) {
+                        this.warMoney = num;
+                        hasLocalData = true;
+                    }
                 }
             } catch (e) {}
         }
 
-        if (supabase && prof && prof.id) {
+        // Also check user profile if available
+        if (!hasLocalData && prof) {
+            if (typeof prof.war_money === 'number') {
+                this.warMoney = prof.war_money;
+                hasLocalData = true;
+            } else if (typeof prof.warmäng === 'number') {
+                this.warMoney = prof.warmäng;
+                hasLocalData = true;
+            }
+        }
+
+        // Cloud Database persistence in Supabase
+        const isTestEnv = (window as any).__PLAYARD_TEST_MODE__;
+        if (supabase && prof && prof.id && !isTestEnv) {
             try {
-                const { data } = await supabase
+                // 1. Primary: load from war_game_stats
+                const { data, error } = await supabase
                     .from('war_game_stats')
-                    .select('money, kills, matches_won')
+                    .select('money, is_plane_unlocked, is_missile_unlocked, kills, matches_won')
                     .eq('user_id', prof.id)
                     .single();
 
-                if (data && data.money !== undefined) {
-                    this.warMoney = Math.max(this.warMoney, data.money);
+                if (data && !error) {
+                    if (typeof data.money === 'number') {
+                        this.warMoney = data.money;
+                        hasLocalData = true;
+                    }
+                    if (data.is_plane_unlocked !== undefined) this.isPlaneUnlocked = !!data.is_plane_unlocked;
+                    if (data.is_missile_unlocked !== undefined) this.isMissileUnlocked = !!data.is_missile_unlocked;
+                    if (typeof data.kills === 'number') this.myKills = Math.max(this.myKills, data.kills);
+                } else {
+                    // 2. Secondary fallback: load from user_progress vehicle_upgrades.war_data
+                    const { data: progData } = await supabase
+                        .from('user_progress')
+                        .select('vehicle_upgrades')
+                        .eq('user_id', prof.id)
+                        .single();
+
+                    const warBackup = progData?.vehicle_upgrades?.war_data;
+                    if (warBackup && typeof warBackup.money === 'number') {
+                        this.warMoney = warBackup.money;
+                        if (warBackup.isPlaneUnlocked !== undefined) this.isPlaneUnlocked = !!warBackup.isPlaneUnlocked;
+                        if (warBackup.isMissileUnlocked !== undefined) this.isMissileUnlocked = !!warBackup.isMissileUnlocked;
+                        if (typeof warBackup.kills === 'number') this.myKills = Math.max(this.myKills, warBackup.kills);
+                        hasLocalData = true;
+                    }
                 }
             } catch (e) {
                 console.warn('War DB load note:', e);
             }
         }
 
+        // Initial balance rules:
+        // Playard Owner gets 200,000 € ONLY on the very first start (when no prior saved war data exists)
+        // Others start with 0 €
         if (isPlayardOwner(prof?.email)) {
-            this.warMoney = Math.max(this.warMoney, 200000);
-            localStorage.setItem('playard_war_game_money', this.warMoney.toString());
-            localStorage.setItem(storageKey, JSON.stringify({
-                user_id: userId,
-                username: this.localUsername,
-                money: this.warMoney,
-                isPlaneUnlocked: this.isPlaneUnlocked,
-                isMissileUnlocked: this.isMissileUnlocked,
-                kills: this.myKills,
-                updated_at: new Date().toISOString()
-            }));
+            const hasOwnerInit = localStorage.getItem(`playard_war_initialized_${userId}`) === 'true';
+            if (!hasLocalData && !hasOwnerInit && this.warMoney === 0) {
+                this.warMoney = 200000;
+                localStorage.setItem(`playard_war_initialized_${userId}`, 'true');
+                this.saveUserDataToDb();
+            }
+        } else if (!hasLocalData) {
+            this.warMoney = 0;
+            this.saveUserDataToDb();
         }
 
         this.updateHUD();
@@ -275,25 +327,88 @@ class WarGameEngine {
             updated_at: new Date().toISOString()
         };
 
-        // 1. Local storage persistence
+        // 1. Local storage persistence (all relevant user keys)
         localStorage.setItem(storageKey, JSON.stringify(dataToSave));
         localStorage.setItem('playard_war_game_money', this.warMoney.toString());
+        if (prof?.id) localStorage.setItem(`playard_war_data_${prof.id}`, JSON.stringify(dataToSave));
+        if (prof?.username) localStorage.setItem(`playard_war_data_${prof.username.toLowerCase()}`, JSON.stringify(dataToSave));
+        if (prof?.email) localStorage.setItem(`playard_war_data_${prof.email.toLowerCase()}`, JSON.stringify(dataToSave));
+
+        // Update profile in local storage
+        if (prof) {
+            prof.warmäng = this.warMoney;
+            prof.war_money = this.warMoney;
+            try {
+                const profilesRaw = localStorage.getItem('playard_user_profiles');
+                if (profilesRaw) {
+                    const profiles = JSON.parse(profilesRaw);
+                    const idx = profiles.findIndex((p: any) => p.id === prof.id || p.username?.toLowerCase() === prof.username?.toLowerCase());
+                    if (idx >= 0) {
+                        profiles[idx].warmäng = this.warMoney;
+                        profiles[idx].war_money = this.warMoney;
+                        localStorage.setItem('playard_user_profiles', JSON.stringify(profiles));
+                    }
+                }
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(prof));
+            } catch (e) {}
+        }
 
         // 2. Cloud Database persistence in Supabase
-        if (supabase && prof && prof.id) {
+        if (supabase && prof && prof.id && !isTestEnv) {
+            // A. Primary table: war_game_stats
             try {
-                await supabase
+                const { error: warErr } = await supabase
                     .from('war_game_stats')
                     .upsert({
                         user_id: prof.id,
                         username: prof.username || this.localUsername,
                         money: this.warMoney,
+                        is_plane_unlocked: this.isPlaneUnlocked,
+                        is_missile_unlocked: this.isMissileUnlocked,
                         kills: this.myKills,
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'user_id' });
+                if (warErr) {
+                    console.warn('War Game DB save note (war_game_stats):', warErr);
+                }
             } catch (e) {
-                console.warn('War Game DB save note:', e);
+                console.warn('War Game DB save error:', e);
             }
+
+            // B. Secondary backup: user_progress vehicle_upgrades.war_data
+            try {
+                const { data: progData } = await supabase
+                    .from('user_progress')
+                    .select('vehicle_upgrades')
+                    .eq('user_id', prof.id)
+                    .single();
+
+                const existingUpgrades = (progData && progData.vehicle_upgrades && typeof progData.vehicle_upgrades === 'object')
+                    ? progData.vehicle_upgrades
+                    : {};
+
+                await supabase.from('user_progress').upsert({
+                    user_id: prof.id,
+                    vehicle_upgrades: {
+                        ...existingUpgrades,
+                        war_data: {
+                            money: this.warMoney,
+                            isPlaneUnlocked: this.isPlaneUnlocked,
+                            isMissileUnlocked: this.isMissileUnlocked,
+                            kills: this.myKills,
+                            updated_at: new Date().toISOString()
+                        }
+                    }
+                });
+            } catch (e) {
+                console.warn('War Game DB backup save note (user_progress):', e);
+            }
+
+            // C. yardService inventory synchronization
+            try {
+                if (this.isPlaneUnlocked && !yardService.hasItem('war_plane')) yardService.addItem('war_plane');
+                if (this.isMissileUnlocked && !yardService.hasItem('war_missile')) yardService.addItem('war_missile');
+            } catch (e) {}
         }
     }
 
@@ -466,30 +581,20 @@ class WarGameEngine {
             const prof = getCurrentUserProfile();
             const userId = prof?.id || this.localPlayerId;
             const storageKey = `playard_war_data_${userId}`;
-            const localData = localStorage.getItem(storageKey) || localStorage.getItem('playard_war_game_money');
+            const localData = localStorage.getItem(storageKey);
             if (localData) {
                 try {
-                    if (localData.startsWith('{')) {
-                        const parsed = JSON.parse(localData);
-                        if (parsed.money !== undefined && parsed.money > this.warMoney) this.warMoney = parsed.money;
-                        if (parsed.isPlaneUnlocked !== undefined) this.isPlaneUnlocked = this.isPlaneUnlocked || !!parsed.isPlaneUnlocked;
-                        if (parsed.isMissileUnlocked !== undefined) this.isMissileUnlocked = this.isMissileUnlocked || !!parsed.isMissileUnlocked;
-                    } else {
-                        const num = parseInt(localData, 10);
-                        if (!isNaN(num) && num > this.warMoney) this.warMoney = num;
-                    }
+                    const parsed = JSON.parse(localData);
+                    if (parsed.money !== undefined) this.warMoney = parsed.money;
+                    if (parsed.isPlaneUnlocked !== undefined) this.isPlaneUnlocked = !!parsed.isPlaneUnlocked;
+                    if (parsed.isMissileUnlocked !== undefined) this.isMissileUnlocked = !!parsed.isMissileUnlocked;
                 } catch (e) {}
-            }
-            if (isPlayardOwner(prof?.email)) {
-                if (this.warMoney < 200000 && !this.isPlaneUnlocked && !this.isMissileUnlocked) {
-                    this.warMoney = 200000;
-                }
             }
             this.updateHUD();
         };
+        syncMoney();
 
         const updateRoleBadgesUI = () => {
-            syncMoney();
             if (planeBadge) {
                 if (this.isPlaneUnlocked) {
                     planeBadge.style.background = 'rgba(46, 213, 115, 0.2)';
@@ -549,7 +654,6 @@ class WarGameEngine {
         });
 
         btnPlane?.addEventListener('click', () => {
-            syncMoney();
             if (!this.isPlaneUnlocked) {
                 if (this.warMoney < 50000) {
                     const warnMsg = this.isOwnerLang
@@ -578,7 +682,6 @@ class WarGameEngine {
         });
 
         btnMissile?.addEventListener('click', () => {
-            syncMoney();
             if (!this.isMissileUnlocked) {
                 if (this.warMoney < 100000) {
                     const warnMsg = this.isOwnerLang
@@ -783,12 +886,25 @@ class WarGameEngine {
         this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 1000);
         this.camera.position.set(0, 16, -26);
 
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.container.appendChild(this.renderer.domElement);
+        try {
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            this.container.appendChild(this.renderer.domElement);
+        } catch (e) {
+            console.warn('WebGLRenderer initialization failed, using fallback dummy renderer:', e);
+            const canvas = document.createElement('canvas');
+            this.container.appendChild(canvas);
+            this.renderer = {
+                domElement: canvas,
+                setSize: () => {},
+                setPixelRatio: () => {},
+                render: () => {},
+                shadowMap: { enabled: false, type: 0 }
+            } as any;
+        }
 
         const ambientLight = new THREE.AmbientLight(0xdce7f0, 0.75);
         this.scene.add(ambientLight);

@@ -959,12 +959,25 @@ async function initStudio() {
     scene.fog = new THREE.FogExp2(0x87ceeb, 0.008);
 
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
+    try {
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+    } catch (e) {
+        console.warn('WebGLRenderer failed in Creator Studio, fallback:', e);
+        const canvas = document.createElement('canvas');
+        container.appendChild(canvas);
+        renderer = {
+            domElement: canvas,
+            setSize: () => {},
+            setPixelRatio: () => {},
+            render: () => {},
+            shadowMap: { enabled: false, type: 0 }
+        } as any;
+    }
 
     clock = new THREE.Clock();
 

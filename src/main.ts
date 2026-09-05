@@ -43,25 +43,22 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         trainGameCard.style.display = 'flex';
     }
 
-    // Obby (Takistusrada) mäng on nähtav AINULT Playard Ownerile!
+    // Obby (Takistusrada) mäng on nüüd avaldatud KÕIKIDELE mängijatele!
     const obbyGameCard = document.getElementById('card-obby-game');
     if (obbyGameCard) {
-        const isOwner = isPlayardOwner(emailToCheck);
-        obbyGameCard.style.display = isOwner ? 'flex' : 'none';
-        if (isOwner) {
-            const cooldownUntil = parseInt(localStorage.getItem('playard_obby_cooldown_until') || '0', 10);
-            const cooldownBadge = document.getElementById('card-obby-cooldown-badge');
-            if (cooldownUntil > Date.now()) {
-                const remaining = cooldownUntil - Date.now();
-                const hrs = Math.floor(remaining / (1000 * 60 * 60));
-                const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-                if (cooldownBadge) {
-                    cooldownBadge.textContent = `⏳ 24h Ooteaeg (${hrs}h ${mins}m)`;
-                    cooldownBadge.style.display = 'inline-block';
-                }
-            } else if (cooldownBadge) {
-                cooldownBadge.style.display = 'none';
+        obbyGameCard.style.display = 'flex';
+        const cooldownUntil = parseInt(localStorage.getItem('playard_obby_cooldown_until') || '0', 10);
+        const cooldownBadge = document.getElementById('card-obby-cooldown-badge');
+        if (cooldownUntil > Date.now()) {
+            const remaining = cooldownUntil - Date.now();
+            const hrs = Math.floor(remaining / (1000 * 60 * 60));
+            const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            if (cooldownBadge) {
+                cooldownBadge.textContent = isEstonian ? `⏳ 24h Ooteaeg (${hrs}h ${mins}m)` : `⏳ 24h Cooldown (${hrs}h ${mins}m)`;
+                cooldownBadge.style.display = 'inline-block';
             }
+        } else if (cooldownBadge) {
+            cooldownBadge.style.display = 'none';
         }
     }
 
@@ -738,6 +735,10 @@ function renderRecentlyPlayed() {
                 gameTitle = '🎮 Community 3D Games';
                 gameDesc = 'Play 3D worlds created by players and approved by admins.';
                 badgeText = 'Community Play';
+            } else if (game.id === 'obby') {
+                gameTitle = '🏃‍♂️ 3D Parkour Obby';
+                gameDesc = 'Challenging 10-stage obstacle course with moving platforms and hazards.';
+                badgeText = '🏆 10 Stages Obby';
             }
         } else {
             if (game.id === 'racing') {
@@ -760,6 +761,10 @@ function renderRecentlyPlayed() {
                 gameTitle = '🎮 Kogukonna 3D mängud';
                 gameDesc = 'Mängi teiste mängijate poolt loodud ja administraatori poolt heaks kiidetud 3D mänge.';
                 badgeText = 'Kogukonnamängud';
+            } else if (game.id === 'obby') {
+                gameTitle = '🏃‍♂️ 3D Parkour Obby';
+                gameDesc = 'Väljakutsuv 10-tasemeline takistusrada ja parkour.';
+                badgeText = '🏆 10-Tasemeline Obby';
             }
         }
 

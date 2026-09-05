@@ -14,21 +14,33 @@ try {
 // 2. Load Check
 (async () => {
     try {
-        execSync('lsof -ti:4173 | xargs kill -9', { stdio: 'ignore' });
+        execSync('kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
     } catch (e) {}
     console.log("Starting preview server...");
-    const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort']);
+    const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort', '--host', '0.0.0.0']);
     serverProcess.stdout?.resume();
     serverProcess.stderr?.on('data', data => console.error(`[Server Error]: ${data}`));
     
-    // Give it a moment to start
-    await new Promise(r => setTimeout(r, 3000));
+    // Wait for preview server to be responsive
+    for (let i = 0; i < 30; i++) {
+        try {
+            const res = await fetch('http://localhost:4173/games/');
+            if (res.ok) break;
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 300));
+    }
 
     console.log("Launching headless browser to check runtime errors and game platform features...");
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
     const page = await browser.newPage();
     await page.evaluateOnNewDocument(() => {
         window.__PLAYARD_TEST_MODE__ = true;
+        window.alert = () => {};
+        window.confirm = () => true;
+        window.prompt = () => 'Test';
     });
     await page.setViewport({ width: 1400, height: 900 });
     
@@ -343,7 +355,7 @@ try {
         // Click first object to spawn into scene
         const firstObjCard = await page.$('.object-card');
         if (firstObjCard) {
-            await firstObjCard.click();
+            await page.click('.object-card');
             await new Promise(r => setTimeout(r, 500));
             console.log("   Successfully spawned object into 3D Creator scene!");
 
@@ -363,7 +375,7 @@ try {
             console.log("   Successfully tested Object Deletion with 'D' key!");
 
             // Re-spawn an object for subsequent tests
-            await firstObjCard.click();
+            await page.click('.object-card');
             await new Promise(r => setTimeout(r, 400));
 
             // Test AI Game Assistant with Roads & Drivable Cars Prompt
@@ -381,7 +393,7 @@ try {
                     if (inp) inp.value = val;
                 }, prompt);
                 await page.click('#btn-ai-submit');
-                await new Promise(r => setTimeout(r, 350));
+                await new Promise(r => setTimeout(r, 600));
             };
 
             await submitAi('add roads and drivable cars');
@@ -530,6 +542,8 @@ try {
             // Test Exact Quantity Scatter ("pane 30 autot tervesse kaarti")
             console.log("   Testing Exact Quantity Scatter ('pane 30 autot tervesse kaarti')...");
             await submitAi('pane 30 autot tervesse kaarti');
+            await page.click('#btn-new-game');
+            await new Promise(r => setTimeout(r, 400));
 
             // Test Pahalane (Bad Guy Villain) Creation ("lisa pahalane")
             console.log("   Testing Pahalane (Bad Guy Villain) Creation ('lisa pahalane')...");
@@ -645,15 +659,17 @@ try {
         // Test Submit for Review
         console.log("   Submitting created game for admin review...");
         // Auto-dismiss any alert/confirm dialogs from submit
-        page.on('dialog', async dialog => { await dialog.dismiss(); });
+        page.removeAllListeners('dialog');
+        page.on('dialog', async dialog => { try { await dialog.dismiss(); } catch(e){} });
         await page.click('#btn-save-draft');
         await new Promise(r => setTimeout(r, 400));
         await page.click('#btn-submit-review');
         await new Promise(r => setTimeout(r, 1500));
+        page.removeAllListeners('dialog');
 
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
-        await page.goto('http://localhost:4173/index.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await page.goto('http://localhost:4173/games/', { waitUntil: 'domcontentloaded', timeout: 15000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.waitForSelector('#btn-open-bug-report', { visible: true, timeout: 5000 });
         const bugBtnVisible = await page.$eval('#btn-open-bug-report', el => window.getComputedStyle(el).display);
@@ -921,7 +937,13 @@ try {
         await page.evaluate(() => {
             const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+            localStorage.setItem('playard_war_data_owner_1', JSON.stringify({ money: 200000, isPlaneUnlocked: false, isMissileUnlocked: false }));
             localStorage.setItem('playard_war_game_money', '200000');
+            if (window.warGameEngine) {
+                window.warGameEngine.warMoney = 200000;
+                window.warGameEngine.isPlaneUnlocked = false;
+                window.warGameEngine.isMissileUnlocked = false;
+            }
         });
         await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
@@ -940,26 +962,110 @@ try {
             throw new Error(`Expected modal money balance to show 200,000 €, got: ${modalMoneyText}`);
         }
 
+        // 1. Buy Fighter Jet (50,000 €)
         await page.click('#btn-select-blue');
         await page.click('#btn-select-plane');
-        await page.click('#btn-confirm-deploy');
-        await new Promise(r => setTimeout(r, 4000)); // Wait for countdown
+        await new Promise(r => setTimeout(r, 400));
 
+        // Verify Fighter Jet purchased & money deducted to 150,000 €
+        const moneyAfterPlane = await page.$eval('#deploy-money-val', el => el.textContent);
+        console.log("   War Money after Fighter Jet purchase (-50,000 €):", moneyAfterPlane);
+        if (!moneyAfterPlane.includes('150,000')) {
+            throw new Error(`Expected War Cash to be 150,000 € after Fighter Jet purchase, got: ${moneyAfterPlane}`);
+        }
+
+        const planeBadgeUnlocked = await page.$eval('#plane-lock-badge', el => el.textContent);
+        console.log("   Fighter Jet Badge status (Expected: AVATUD):", planeBadgeUnlocked);
+        if (!planeBadgeUnlocked.includes('AVATUD')) {
+            throw new Error(`Expected Fighter Jet badge to be AVATUD, got: ${planeBadgeUnlocked}`);
+        }
+
+        // 2. Buy Missile Team (100,000 €)
+        console.log("   Testing Missile Team Purchase with 100,000 € War Cash...");
+        await page.click('#btn-select-missile');
+        await new Promise(r => setTimeout(r, 400));
+
+        const moneyAfterMissile = await page.$eval('#deploy-money-val', el => el.textContent);
+        console.log("   War Money after Missile Team purchase (-100,000 €):", moneyAfterMissile);
+        if (!moneyAfterMissile.includes('50,000')) {
+            throw new Error(`Expected War Cash to be 50,000 € after Missile Team purchase, got: ${moneyAfterMissile}`);
+        }
+
+        const missileBadgeUnlocked = await page.$eval('#missile-lock-badge', el => el.textContent);
+        console.log("   Missile Team Badge status (Expected: AVATUD):", missileBadgeUnlocked);
+        if (!missileBadgeUnlocked.includes('AVATUD')) {
+            throw new Error(`Expected Missile Team badge to be AVATUD, got: ${missileBadgeUnlocked}`);
+        }
+
+        // 3. Verify LocalStorage and DB payload has been saved properly
+        const savedWarData = await page.evaluate(() => {
+            return {
+                localMoney: localStorage.getItem('playard_war_game_money'),
+                userData: JSON.parse(localStorage.getItem('playard_war_data_owner_1') || '{}')
+            };
+        });
+        console.log("   Saved War Data in Storage:", savedWarData);
+        if (savedWarData.localMoney !== '50000' || savedWarData.userData.money !== 50000 || !savedWarData.userData.isPlaneUnlocked || !savedWarData.userData.isMissileUnlocked) {
+            throw new Error(`Saved war data verification failed: ${JSON.stringify(savedWarData)}`);
+        }
+
+        // 4. Deploy and check in-game HUD
+        await page.click('#btn-confirm-deploy');
+        await new Promise(r => setTimeout(r, 600));
+        await page.waitForSelector('#player-team-name', { visible: true, timeout: 5000 });
         const ownerBadgeText = await page.$eval('#player-team-name', el => el.textContent);
         console.log("   Playard Owner Team Badge (Estonian):", ownerBadgeText);
-        if (!ownerBadgeText.includes('LAHINGULENNUK')) {
-            throw new Error(`Expected Playard Owner badge to say LAHINGULENNUK, got: ${ownerBadgeText}`);
+        if (!ownerBadgeText.includes('RAKETITIIM') && !ownerBadgeText.includes('LENNUK')) {
+            throw new Error(`Expected Playard Owner badge to reflect chosen class, got: ${ownerBadgeText}`);
         }
 
         const ownerWarMoneyText = await page.$eval('#stat-money', el => el.textContent);
-        console.log("   Playard Owner War Cash Balance (Expected: >= 150,000 €):", ownerWarMoneyText);
-        if (parseInt(ownerWarMoneyText.replace(/,/g, ''), 10) < 150000) {
-            throw new Error(`Expected Playard Owner to have >= 150,000 € War Cash, got: ${ownerWarMoneyText}`);
+        console.log("   Playard Owner In-Game War Cash HUD Balance (Expected: 50,000):", ownerWarMoneyText);
+        if (ownerWarMoneyText.replace(/,/g, '') !== '50000') {
+            throw new Error(`Expected Playard Owner in-game HUD to show 50,000, got: ${ownerWarMoneyText}`);
         }
-        console.log("   Successfully tested Playard Owner Estonian Localization with 200,000 € initial balance in War Game!");
+
+        // 5. Test Persistence on Page Reload (Must NOT reset to 200,000 €!)
+        console.log("   Testing War Cash and Unlocks Persistence across Page Reload (No reset to 200k)...");
+        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
+        await new Promise(r => setTimeout(r, 600));
+
+        const reloadedMoney = await page.$eval('#deploy-money-val', el => el.textContent);
+        console.log("   Reloaded War Cash Balance (Expected: 50,000 €):", reloadedMoney);
+        if (!reloadedMoney.includes('50,000')) {
+            throw new Error(`Expected War Cash to stay 50,000 € after reload, got: ${reloadedMoney}`);
+        }
+
+        const reloadedPlaneBadge = await page.$eval('#plane-lock-badge', el => el.textContent);
+        const reloadedMissileBadge = await page.$eval('#missile-lock-badge', el => el.textContent);
+        if (!reloadedPlaneBadge.includes('AVATUD') || !reloadedMissileBadge.includes('AVATUD')) {
+            throw new Error(`Expected both units to stay unlocked after reload, got plane: ${reloadedPlaneBadge}, missile: ${reloadedMissileBadge}`);
+        }
+        console.log("   Successfully verified purchase deduction, database/local persistence and reload retention!");
+
+        // 6. Test that Other Users / Guests Start with 0 € ("teised alustavad 0€")
+        console.log("   Testing that non-owner players / guests start with 0 € War Cash...");
+        await page.evaluate(() => {
+            localStorage.clear();
+            const guestUser = { id: 'guest_player_99', username: 'combat_warrior', email: 'warrior@gmail.com', displayName: 'Warrior', isAdmin: false };
+            localStorage.setItem('playard_current_user_profile', JSON.stringify(guestUser));
+        });
+        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
+        await new Promise(r => setTimeout(r, 600));
+
+        const guestMoneyText = await page.$eval('#deploy-money-val', el => el.textContent);
+        console.log("   Other player initial War Cash (Expected: 0 €):", guestMoneyText);
+        if (!guestMoneyText.includes('0 €') && !guestMoneyText.includes('0€')) {
+            throw new Error(`Expected other users to start with 0 €, got: ${guestMoneyText}`);
+        }
+        console.log("   Successfully confirmed other players start with 0 €!");
 
         // Test Out of Bounds Warning for Playard Owner
         await page.evaluate(() => {
+            const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
+            localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             const el = document.getElementById('out-of-bounds-overlay');
             if (el) el.style.display = 'flex';
         });
@@ -978,6 +1084,7 @@ try {
 
         // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)
             console.log("11. Checking 3D Train Simulator (Guest English Localization)...");
+            await page.goto('about:blank');
             await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1500));
             await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -1237,6 +1344,7 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
+            await page.goto('about:blank');
             await page.goto('http://localhost:4173/games/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await page.waitForSelector('#hud-stage-val', { timeout: 10000 });
             await new Promise(r => setTimeout(r, 600));
@@ -1358,6 +1466,7 @@ try {
                 window.__PLAYARD_TEST_MODE__ = false;
                 localStorage.removeItem('playard_current_user_profile');
             });
+            await page.goto('about:blank');
             await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
@@ -1373,6 +1482,7 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
+            await page.goto('about:blank');
             await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 800));
 
@@ -2467,6 +2577,7 @@ try {
             // 7. MMP1 (3D Murder Mystery) MÄNGU TESTID
             // ==========================================
             console.log("7. Checking MMP1 (3D Murder Mystery) Game Page...");
+            await page.goto('about:blank');
             await page.goto('http://localhost:4173/games/games/mmp1/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1200));
 
@@ -2611,27 +2722,57 @@ try {
                 // Case 2: Player aims at distant bot (dist = 15m) -> should NOT die
                 bot1.position.set(0, 0, -15);
                 bot1.mesh.position.copy(bot1.position);
+                bot1.mesh.updateMatrixWorld(true);
                 game.playerChar.position.set(0, 0, 0);
                 game.playerChar.mesh.position.set(0, 0, 0);
+                game.playerChar.mesh.updateMatrixWorld(true);
                 game.camera.position.set(0, 2.5, 5);
                 game.camera.lookAt(0, 1.8, -15);
+                game.camera.updateMatrixWorld(true);
                 game.performAction({ x: 0, y: 0 }); // aimed at distant bot
                 const bot1SurvivedDistant = bot1.isAlive === true;
 
                 // Case 3: Player aims at bot in close proximity (dist = 2.5m, directly ahead) -> bot SHOULD die!
+                game.cameraDistance = 1.0; // Close camera
+                game.cameraYaw = 0;
+                game.cameraPitch = 0;
+                game.playerChar.position.set(0, 0, 0);
+                game.playerChar.mesh.position.set(0, 0, 0);
+                game.playerChar.mesh.updateMatrixWorld(true);
+
                 bot1.position.set(0, 0, -2.5);
                 bot1.mesh.position.copy(bot1.position);
-                game.camera.position.set(0, 2.0, 2.0);
+                bot1.mesh.updateMatrixWorld(true);
+
+                // Update camera matrices
+                game.camera.position.set(0, 1.8, 2.0);
                 game.camera.lookAt(0, 1.8, -2.5);
+                game.camera.updateMatrixWorld(true);
+
+                // Check raycast before action
+                const testRay = new THREE.Raycaster();
+                testRay.setFromCamera(new THREE.Vector2(0, 0), game.camera);
+                const testTargets = game.characters.filter(c => c !== game.playerChar && c.isAlive && c.mesh).map(c => c.mesh);
+                const rawHits = testRay.intersectObjects([...testTargets, ...game.wallMeshes], true);
+                const debugFirstHit = rawHits[0]?.object ? game.getCharacterFromObject(rawHits[0].object)?.name : 'none';
+                const debugDist = game.playerChar.position.distanceTo(bot1.position);
+                const debugLOS = game.hasLineOfSight(game.playerChar.position, bot1.position);
+
                 game.performAction({ x: 0, y: 0 }); // aimed directly at nearby bot
                 const bot1DiedInProximity = bot1.isAlive === false;
 
                 return {
                     airSlashSafe,
                     bot1SurvivedDistant,
-                    bot1DiedInProximity
+                    bot1DiedInProximity,
+                    debugFirstHit,
+                    debugDist,
+                    debugLOS,
+                    rawHitsCount: rawHits.length
                 };
             });
+
+            console.log(`   Debug Case 3: firstHit=${clickToKillResults.debugFirstHit}, dist=${clickToKillResults.debugDist}, LOS=${clickToKillResults.debugLOS}, hitsCount=${clickToKillResults.rawHitsCount}`);
 
             console.log(`   Murderer Click-to-Kill: AirSlashSafe=${clickToKillResults.airSlashSafe}, DistantSurvived=${clickToKillResults.bot1SurvivedDistant}, ProximityKilled=${clickToKillResults.bot1DiedInProximity}`);
             if (!clickToKillResults.airSlashSafe) throw new Error('Slashing empty air must not eliminate any player!');
