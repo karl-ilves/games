@@ -248,6 +248,10 @@ class AvatarService {
             console.warn('Avatar cloud save error:', e);
         }
     }
+
+    public get catalog(): AvatarItem[] {
+        return AVATAR_CATALOG;
+    }
 }
 
 export const avatarService = new AvatarService();

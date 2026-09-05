@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { yardService } from '../../shared/yardService';
 import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
+import { avatarService } from '../../shared/avatar/AvatarService';
+import { getItemById } from '../../shared/avatar/catalog';
 
 (window as any).yardService = yardService;
 
@@ -451,23 +453,26 @@ export class ParkourObbyGame {
     private buildPlayerCharacter() {
         this.playerGroup = new THREE.Group();
 
-        const skinColor = this.getSkinHex();
+        const avatarCfg = avatarService.getConfig();
+        const skinColor = avatarCfg?.skinColor || this.getSkinHex();
+        const topColor = avatarCfg?.topId ? (getItemById(avatarCfg.topId)?.defaultColor || 0x00f2fe) : this.getSkinHex();
+        const pantsColor = avatarCfg?.pantsId ? (getItemById(avatarCfg.pantsId)?.defaultColor || 0x1e293b) : 0x1e293b;
 
         // Body / Torso
         const bodyGeo = new THREE.BoxGeometry(0.8, 1.0, 0.5);
-        const bodyMat = new THREE.MeshLambertMaterial({ color: skinColor });
+        const bodyMat = new THREE.MeshLambertMaterial({ color: topColor });
         this.playerBodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
         this.playerBodyMesh.position.y = 1.0;
         this.playerGroup.add(this.playerBodyMesh);
 
         // Head
         const headGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-        const headMat = new THREE.MeshLambertMaterial({ color: 0xffdbac });
+        const headMat = new THREE.MeshLambertMaterial({ color: skinColor });
         this.playerHeadMesh = new THREE.Mesh(headGeo, headMat);
         this.playerHeadMesh.position.y = 1.8;
         this.playerGroup.add(this.playerHeadMesh);
 
-        // Visor / Eyes
+        // Visor / Eyes / Face
         const visorGeo = new THREE.BoxGeometry(0.44, 0.18, 0.1);
         const visorMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
         const visor = new THREE.Mesh(visorGeo, visorMat);
@@ -487,7 +492,7 @@ export class ParkourObbyGame {
 
         // Left & Right Legs
         const legGeo = new THREE.BoxGeometry(0.28, 0.8, 0.28);
-        const legMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+        const legMat = new THREE.MeshLambertMaterial({ color: pantsColor });
         this.playerLeftLeg = new THREE.Mesh(legGeo, legMat);
         this.playerLeftLeg.position.set(-0.25, 0.35, 0);
         this.playerGroup.add(this.playerLeftLeg);
@@ -495,6 +500,28 @@ export class ParkourObbyGame {
         this.playerRightLeg = new THREE.Mesh(legGeo, legMat);
         this.playerRightLeg.position.set(0.25, 0.35, 0);
         this.playerGroup.add(this.playerRightLeg);
+
+        // Back Wings or Katana if equipped
+        if (avatarCfg?.backId) {
+            const backId = avatarCfg.backId;
+            if (backId.includes('wings')) {
+                const wingColor = backId.includes('golden') ? 0xffd700 : (backId.includes('demon') ? 0x9b59b6 : 0x00f2fe);
+                const wingMat = new THREE.MeshBasicMaterial({ color: wingColor });
+                [-1, 1].forEach(side => {
+                    const wing = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 0.04), wingMat);
+                    wing.position.set(side * 0.6, 1.2, 0.3);
+                    wing.rotation.z = side * 0.3;
+                    this.playerGroup.add(wing);
+                });
+            } else if (backId === 'back_ninja_katana') {
+                [-0.35, 0.35].forEach(rot => {
+                    const scabbard = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.1, 0.07), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+                    scabbard.rotation.z = rot;
+                    scabbard.position.set(0, 1.2, 0.3);
+                    this.playerGroup.add(scabbard);
+                });
+            }
+        }
 
         // Hat Attachment Anchor
         this.playerHatGroup = new THREE.Group();
@@ -532,12 +559,15 @@ export class ParkourObbyGame {
             this.playerHatGroup.remove(this.playerHatGroup.children[0]);
         }
 
-        if (this.equippedHat === 'hat_crown') {
+        const avatarCfg = avatarService.getConfig();
+        const effectiveHat = this.equippedHat !== 'none' ? this.equippedHat : (avatarCfg?.hatId || 'none');
+
+        if (effectiveHat === 'hat_crown' || effectiveHat === 'hat_royal_crown') {
             const crownGeo = new THREE.CylinderGeometry(0.35, 0.28, 0.25, 8);
             const crownMat = new THREE.MeshLambertMaterial({ color: 0xffd32a });
             const crown = new THREE.Mesh(crownGeo, crownMat);
             this.playerHatGroup.add(crown);
-        } else if (this.equippedHat === 'hat_viking') {
+        } else if (effectiveHat === 'hat_viking' || effectiveHat === 'hat_viking_helm') {
             const helmGeo = new THREE.SphereGeometry(0.34, 12, 12);
             const helmMat = new THREE.MeshLambertMaterial({ color: 0x747d8c });
             const helm = new THREE.Mesh(helmGeo, helmMat);

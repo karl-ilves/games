@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { yardService } from '../../shared/yardService';
 import { getCurrentUserProfile, isPlayardOwner, isTestMode, canAccessMmp1 } from '../../auth';
+import { avatarService } from '../../shared/avatar/AvatarService';
+import { getItemById } from '../../shared/avatar/catalog';
 
 (window as any).yardService = yardService;
 
@@ -1374,9 +1376,10 @@ export class MurderMysteryGame {
     } {
         const group = new THREE.Group();
 
-        // 1. Natural Human Skin Tones
+        // 1. Natural Human Skin Tones (Uses customized AvatarConfig for player!)
+        const avatarCfg = isPlayer ? avatarService.getConfig() : null;
         const skinPalette = [0xf5d0b5, 0xf0c8a6, 0xdfb190, 0xd49a6a, 0xb87333, 0x8d5524, 0xecd0b9, 0xc68652];
-        const skinColor = isPlayer ? 0xf5d0b5 : skinPalette[Math.abs(colorHex) % skinPalette.length];
+        const skinColor = (isPlayer && avatarCfg?.skinColor) ? avatarCfg.skinColor : skinPalette[Math.abs(colorHex) % skinPalette.length];
         const skinMat = new THREE.MeshStandardMaterial({
             color: skinColor,
             roughness: 0.55,
@@ -1384,8 +1387,11 @@ export class MurderMysteryGame {
         });
 
         // 2. Stylish Tailored Suit / Detective Clothing Materials
+        const jacketColor = (isPlayer && avatarCfg?.topId) 
+            ? (getItemById(avatarCfg.topId)?.defaultColor || colorHex) 
+            : colorHex;
         const jacketMat = new THREE.MeshStandardMaterial({
-            color: colorHex,
+            color: jacketColor,
             roughness: 0.62,
             metalness: 0.12
         });
@@ -1398,16 +1404,22 @@ export class MurderMysteryGame {
             color: 0xf8f9fa,
             roughness: 0.75
         });
+        const pantsColor = (isPlayer && avatarCfg?.pantsId)
+            ? (getItemById(avatarCfg.pantsId)?.defaultColor || 0x22262a)
+            : 0x22262a;
         const pantsMat = new THREE.MeshStandardMaterial({
-            color: 0x22262a,
+            color: pantsColor,
             roughness: 0.7
         });
         const tieMat = new THREE.MeshStandardMaterial({
             color: isPlayer ? 0x990022 : (colorHex === 0xe74c3c ? 0x0f2042 : 0x8b0000),
             roughness: 0.35
         });
+        const shoeColor = (isPlayer && avatarCfg?.shoesId)
+            ? (getItemById(avatarCfg.shoesId)?.defaultColor || 0x141210)
+            : 0x141210;
         const shoeMat = new THREE.MeshStandardMaterial({
-            color: 0x141210,
+            color: shoeColor,
             roughness: 0.25,
             metalness: 0.2
         });
@@ -1603,9 +1615,9 @@ export class MurderMysteryGame {
         browR.rotation.z = -0.08;
         group.add(browR);
 
-        // --- HAIR & CROWN ---
+        // --- HAIR & CROWN & ACCESSORIES ---
         const hairPalette = [0x1a1a1a, 0x3d2719, 0x5c4033, 0x8b5a2b, 0x2a1e17];
-        const hairColor = isPlayer ? 0x221812 : hairPalette[Math.abs(colorHex) % hairPalette.length];
+        const hairColor = (isPlayer && avatarCfg?.hairColor) ? avatarCfg.hairColor : (isPlayer ? 0x221812 : hairPalette[Math.abs(colorHex) % hairPalette.length]);
         const hairMat = new THREE.MeshStandardMaterial({
             color: hairColor,
             roughness: 0.85
@@ -1620,29 +1632,71 @@ export class MurderMysteryGame {
         group.add(hairBack);
 
         if (isPlayer) {
-            // Masterpiece 3D Royal Crown for Player
-            const crownGold = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.98, roughness: 0.12 });
-            const crownBand = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.47, 0.15, 24, 1, true), crownGold);
-            crownBand.position.set(0, 3.56, 0);
-            group.add(crownBand);
+            // Masterpiece 3D Royal Crown (or custom equipped hat)
+            const hatId = avatarCfg?.hatId || 'hat_royal_crown';
+            if (hatId === 'hat_royal_crown') {
+                const crownGold = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.98, roughness: 0.12 });
+                const crownBand = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.47, 0.15, 24, 1, true), crownGold);
+                crownBand.position.set(0, 3.56, 0);
+                group.add(crownBand);
 
-            // Velvet Inner Crown Cap
-            const velvetCap = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.MeshStandardMaterial({ color: 0x800020, roughness: 0.85 }));
-            velvetCap.position.set(0, 3.55, 0);
-            group.add(velvetCap);
+                const velvetCap = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.MeshStandardMaterial({ color: 0x800020, roughness: 0.85 }));
+                velvetCap.position.set(0, 3.55, 0);
+                group.add(velvetCap);
 
-            // 8 Crown Peaks with Jewels
-            const rubyMat = new THREE.MeshStandardMaterial({ color: 0xff1133, roughness: 0.1, metalness: 0.9 });
-            const saphMat = new THREE.MeshStandardMaterial({ color: 0x1166ff, roughness: 0.1, metalness: 0.9 });
-            for (let i = 0; i < 8; i++) {
-                const ang = (i / 8) * Math.PI * 2;
-                const peak = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 4), crownGold);
-                peak.position.set(Math.sin(ang) * 0.46, 3.72, Math.cos(ang) * 0.46);
-                group.add(peak);
+                const rubyMat = new THREE.MeshStandardMaterial({ color: 0xff1133, roughness: 0.1, metalness: 0.9 });
+                const saphMat = new THREE.MeshStandardMaterial({ color: 0x1166ff, roughness: 0.1, metalness: 0.9 });
+                for (let i = 0; i < 8; i++) {
+                    const ang = (i / 8) * Math.PI * 2;
+                    const peak = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 4), crownGold);
+                    peak.position.set(Math.sin(ang) * 0.46, 3.72, Math.cos(ang) * 0.46);
+                    group.add(peak);
 
-                const gem = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 8), i % 2 === 0 ? rubyMat : saphMat);
-                gem.position.set(Math.sin(ang) * 0.47, 3.56, Math.cos(ang) * 0.47);
-                group.add(gem);
+                    const gem = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 8), i % 2 === 0 ? rubyMat : saphMat);
+                    gem.position.set(Math.sin(ang) * 0.47, 3.56, Math.cos(ang) * 0.47);
+                    group.add(gem);
+                }
+            } else if (hatId === 'hat_viking_helm') {
+                const helmMat = new THREE.MeshStandardMaterial({ color: 0x747d8c, roughness: 0.5 });
+                const helm = new THREE.Mesh(new THREE.SphereGeometry(0.48, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), helmMat);
+                helm.position.set(0, 3.42, 0);
+                group.add(helm);
+                [-1, 1].forEach(side => {
+                    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.35, 8), new THREE.MeshStandardMaterial({ color: 0xefefef }));
+                    horn.position.set(side * 0.44, 3.62, 0);
+                    horn.rotation.z = -side * 0.6;
+                    group.add(horn);
+                });
+            } else if (hatId === 'hat_cap_snapback') {
+                const capMat = new THREE.MeshStandardMaterial({ color: 0x2ed573, roughness: 0.6 });
+                const capDome = new THREE.Mesh(new THREE.SphereGeometry(0.47, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), capMat);
+                capDome.position.set(0, 3.42, 0);
+                group.add(capDome);
+                const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.04, 16, 1, false, 0, Math.PI), capMat);
+                brim.position.set(0, 3.42, 0.22);
+                group.add(brim);
+            }
+
+            // Back Accessory for player (Wings, Katanas, Jetpack)
+            if (avatarCfg?.backId) {
+                const backId = avatarCfg.backId;
+                if (backId.includes('wings')) {
+                    const wingColor = backId.includes('golden') ? 0xffd700 : (backId.includes('demon') ? 0x9b59b6 : 0x00f2fe);
+                    const wingMat = new THREE.MeshBasicMaterial({ color: wingColor });
+                    [-1, 1].forEach(side => {
+                        const wing = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.55, 0.04), wingMat);
+                        wing.position.set(side * 0.8, 2.3, -0.42);
+                        wing.rotation.z = side * 0.35;
+                        group.add(wing);
+                    });
+                } else if (backId === 'back_ninja_katana') {
+                    [-0.35, 0.35].forEach(rot => {
+                        const scabbard = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.4, 0.08), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 }));
+                        scabbard.rotation.z = rot;
+                        scabbard.position.set(0, 2.3, -0.42);
+                        group.add(scabbard);
+                    });
+                }
             }
         }
 

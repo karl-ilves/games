@@ -4,6 +4,8 @@ import { getCurrentUserProfile, isUserAdminEmail, isPlayardOwner } from '../../a
 import { yardService } from '../../shared/yardService';
 import { warAudio } from './audio';
 import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
+import { avatarService } from '../../shared/avatar/AvatarService';
+import { getItemById } from '../../shared/avatar/catalog';
 
 // --- Types & Interfaces ---
 type Team = 'red' | 'blue' | 'missile';
@@ -1632,31 +1634,84 @@ class WarGameEngine {
         root.rotation.y = rot;
 
         const isRed = team === 'red';
-        const suitColor = isRed ? 0x7f1d1d : 0x1e3a8a;
-        const gearColor = isRed ? 0xef4444 : 0x38bdf8;
+        const teamColor = isRed ? 0xef4444 : 0x38bdf8;
+        const avatarCfg = isLocal ? avatarService.getConfig() : null;
 
-        const torsoMat = new THREE.MeshStandardMaterial({ color: suitColor, roughness: 0.8 });
+        const suitColor = (isLocal && avatarCfg?.topId)
+            ? (getItemById(avatarCfg.topId)?.defaultColor || (isRed ? 0x7f1d1d : 0x1e3a8a))
+            : (isRed ? 0x7f1d1d : 0x1e3a8a);
+        const gearColor = teamColor;
+
+        const torsoMat = new THREE.MeshStandardMaterial({ color: suitColor, roughness: 0.7 });
         const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.5), torsoMat);
         torso.position.y = 1.35;
         torso.castShadow = true;
         root.add(torso);
 
+        // Tactical Team Armband / Vest
         const vestMat = new THREE.MeshStandardMaterial({ color: gearColor, roughness: 0.6 });
         const vest = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.7, 0.55), vestMat);
         vest.position.y = 1.4;
         root.add(vest);
 
-        const headMat = new THREE.MeshStandardMaterial({ color: 0xe0ac69 });
+        // Head with Avatar Skin Tone
+        const headColor = (isLocal && avatarCfg?.skinColor) ? avatarCfg.skinColor : 0xe0ac69;
+        const headMat = new THREE.MeshStandardMaterial({ color: headColor, roughness: 0.55 });
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 12), headMat);
         head.position.y = 2.15;
         root.add(head);
 
-        const helmetMat = new THREE.MeshStandardMaterial({ color: gearColor });
-        const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.36, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), helmetMat);
-        helmet.position.y = 2.25;
-        root.add(helmet);
+        // Helmet or User Hat
+        const hatId = (isLocal && avatarCfg?.hatId) ? avatarCfg.hatId : 'helmet';
+        if (hatId === 'hat_royal_crown') {
+            const crownMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.15 });
+            const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.12, 16, 1, true), crownMat);
+            crown.position.y = 2.4;
+            root.add(crown);
+        } else if (hatId === 'hat_viking_helm') {
+            const vHelm = new THREE.Mesh(new THREE.SphereGeometry(0.36, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x747d8c }));
+            vHelm.position.y = 2.25;
+            root.add(vHelm);
+            [-1, 1].forEach(side => {
+                const horn = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.28, 6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                horn.position.set(side * 0.35, 2.4, 0);
+                horn.rotation.z = -side * 0.6;
+                root.add(horn);
+            });
+        } else {
+            const helmetMat = new THREE.MeshStandardMaterial({ color: gearColor });
+            const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.36, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), helmetMat);
+            helmet.position.y = 2.25;
+            root.add(helmet);
+        }
 
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x1f2937 });
+        // Back Wings or Katana if equipped
+        if (isLocal && avatarCfg?.backId) {
+            const backId = avatarCfg.backId;
+            if (backId.includes('wings')) {
+                const wingColor = backId.includes('golden') ? 0xffd700 : (backId.includes('demon') ? 0x9b59b6 : 0x00f2fe);
+                const wingMat = new THREE.MeshBasicMaterial({ color: wingColor });
+                [-1, 1].forEach(side => {
+                    const wing = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 0.04), wingMat);
+                    wing.position.set(side * 0.6, 1.65, -0.32);
+                    wing.rotation.z = side * 0.3;
+                    root.add(wing);
+                });
+            } else if (backId === 'back_ninja_katana') {
+                [-0.35, 0.35].forEach(rot => {
+                    const scabbard = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.1, 0.07), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+                    scabbard.rotation.z = rot;
+                    scabbard.position.set(0, 1.6, -0.32);
+                    root.add(scabbard);
+                });
+            }
+        }
+
+        // Pants / Legs with Avatar Pants Color
+        const pantsColor = (isLocal && avatarCfg?.pantsId)
+            ? (getItemById(avatarCfg.pantsId)?.defaultColor || 0x1f2937)
+            : 0x1f2937;
+        const legMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.7 });
         const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, 0.3), legMat);
         leftLeg.position.set(-0.25, 0.45, 0);
         root.add(leftLeg);

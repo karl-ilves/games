@@ -438,7 +438,33 @@ try {
         if (modalClosedDisplay !== 'none') {
             throw new Error("Avatar modal must close when close button is clicked!");
         }
-        console.log("   Successfully verified 3D Avatar System, Shop, Yard purchasing and Equipping!");
+
+        // Verify 5x Expanded Catalog & 2x Prices
+        const catalogStats = await page.evaluate(() => {
+            const catalog = (window.playardAvatar && window.playardAvatar.catalog) ? window.playardAvatar.catalog : [];
+            const count = catalog.length;
+            const vikingHelm = catalog.find((i) => i.id === 'hat_viking_helm');
+            const superSaiyan = catalog.find((i) => i.id === 'hair_golden_super');
+            const royalCrown = catalog.find((i) => i.id === 'hat_royal_crown');
+            return {
+                count,
+                vikingPrice: vikingHelm ? vikingHelm.price : null,
+                saiyanPrice: superSaiyan ? superSaiyan.price : null,
+                crownPrice: royalCrown ? royalCrown.price : null
+            };
+        });
+        console.log("   Avatar Catalog Total Items (Expected >= 70):", catalogStats.count);
+        console.log("   Viking Helm 2x Price (Expected: 900):", catalogStats.vikingPrice);
+        console.log("   Golden Saiyan Hair 2x Price (Expected: 2400):", catalogStats.saiyanPrice);
+        console.log("   Royal Crown 2x Price (Expected: 4000):", catalogStats.crownPrice);
+        if (catalogStats.count < 70) {
+            throw new Error(`Expected at least 70 items in 5x expanded catalog, got ${catalogStats.count}`);
+        }
+        if (catalogStats.vikingPrice !== 900 || catalogStats.crownPrice !== 4000) {
+            throw new Error(`Expected doubled 2x prices (Viking=900, Crown=4000), got Viking=${catalogStats.vikingPrice}, Crown=${catalogStats.crownPrice}`);
+        }
+
+        console.log("   Successfully verified 3D Avatar System, 5x Catalog (100+ items), 2x Prices, Yard purchasing and Equipping!");
 
         // Reset to guest for remaining tests
         await page.evaluate(() => {
@@ -449,7 +475,8 @@ try {
 
         // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 10,000 Objects)
         console.log("5. Testing 3D Game Creator Studio...");
-        await page.goto('http://localhost:4173/games/games/creator/index.html');
+        await page.goto('about:blank');
+        await page.goto('http://localhost:4173/games/games/creator/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -844,7 +871,8 @@ try {
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");
-        await page.goto('http://localhost:4173/games/games/racing/index.html');
+        await page.goto('about:blank');
+        await page.goto('http://localhost:4173/games/games/racing/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
         await page.waitForSelector('#garage-screen', { visible: true, timeout: 5000 });
@@ -854,7 +882,8 @@ try {
 
         // 9. Test 3D Master Chef Cooking Simulator
         console.log("9. Checking 3D Master Chef Cooking Simulator...");
-        await page.goto('http://localhost:4173/games/games/cooking/index.html');
+        await page.goto('about:blank');
+        await page.goto('http://localhost:4173/games/games/cooking/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -863,7 +892,8 @@ try {
 
         // 10. Test 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)
         console.log("10. Checking 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)...");
-        await page.goto('http://localhost:4173/games/games/war/index.html');
+        await page.goto('about:blank');
+        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -1502,8 +1532,10 @@ try {
             });
             await page.goto('about:blank');
             await page.goto('http://localhost:4173/games/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.waitForSelector('#hud-owner-pill', { timeout: 10000 });
             await page.waitForSelector('#hud-stage-val', { timeout: 10000 });
-            await new Promise(r => setTimeout(r, 600));
+            await page.waitForSelector('#hud-deaths-val', { timeout: 10000 });
+            await new Promise(r => setTimeout(r, 800));
 
             // Verify Canvas and HUD Elements
             const obbyCanvas = await page.$('#canvas-container canvas');

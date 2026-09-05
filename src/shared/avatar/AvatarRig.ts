@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { AvatarConfig } from './types';
-import { DEFAULT_AVATAR_CONFIG } from './catalog';
+import { DEFAULT_AVATAR_CONFIG, getItemById } from './catalog';
 
 export class AvatarRig {
     public rootGroup: THREE.Group;
@@ -202,6 +202,14 @@ export class AvatarRig {
         };
     }
 
+    public getSocket(socketName: 'head' | 'hair' | 'face' | 'torso' | 'pants' | 'shoes' | 'back' | 'handL' | 'handR'): THREE.Group {
+        return this.sockets[socketName];
+    }
+
+    public getHandSocket(side: 'left' | 'right' = 'right'): THREE.Group {
+        return side === 'right' ? this.sockets.handR : this.sockets.handL;
+    }
+
     private buildBaseCharacterMesh() {
         // 1. Head Cranium
         const headGeo = new THREE.SphereGeometry(0.38, 20, 20);
@@ -333,7 +341,10 @@ export class AvatarRig {
         }
 
         // 6. Top / Clothing Colors
-        if (config.topId === 'top_hoodie_cyan') {
+        const topItem = getItemById(config.topId);
+        if (topItem && topItem.defaultColor) {
+            this.materials.top.color.set(topItem.defaultColor);
+        } else if (config.topId === 'top_hoodie_cyan') {
             this.materials.top.color.set(0x00f2fe);
         } else if (config.topId === 'top_leather_jacket') {
             this.materials.top.color.set(0x181b20);
@@ -344,7 +355,10 @@ export class AvatarRig {
         }
 
         // 7. Pants Colors
-        if (config.pantsId === 'pants_jeans_dark') {
+        const pantsItem = getItemById(config.pantsId);
+        if (pantsItem && pantsItem.defaultColor) {
+            this.materials.pants.color.set(pantsItem.defaultColor);
+        } else if (config.pantsId === 'pants_jeans_dark') {
             this.materials.pants.color.set(0x1e272e);
         } else if (config.pantsId === 'pants_cargo_tactical') {
             this.materials.pants.color.set(0x485460);
@@ -353,7 +367,10 @@ export class AvatarRig {
         }
 
         // 8. Shoes
-        if (config.shoesId === 'shoes_sneakers_white') {
+        const shoesItem = getItemById(config.shoesId);
+        if (shoesItem && shoesItem.defaultColor) {
+            this.materials.shoes.color.set(shoesItem.defaultColor);
+        } else if (config.shoesId === 'shoes_sneakers_white') {
             this.materials.shoes.color.set(0xf1f2f6);
         } else if (config.shoesId === 'shoes_combat_boots') {
             this.materials.shoes.color.set(0x1e272e);
@@ -395,6 +412,35 @@ export class AvatarRig {
             const afroMesh = new THREE.Mesh(new THREE.SphereGeometry(0.46, 16, 16), this.materials.hair);
             afroMesh.position.set(0, 0.12, -0.05);
             hairGroup.add(afroMesh);
+        } else if (hairId === 'hair_mohawk_flame') {
+            const mohawkBase = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.42, 0.65), this.materials.hair);
+            mohawkBase.position.set(0, 0.28, 0);
+            hairGroup.add(mohawkBase);
+        } else if (hairId === 'hair_long_samurai') {
+            const bun = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), this.materials.hair);
+            bun.position.set(0, 0.38, -0.22);
+            hairGroup.add(bun);
+            const pony = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.45, 8), this.materials.hair);
+            pony.position.set(0, 0.18, -0.32);
+            pony.rotation.x = -0.4;
+            hairGroup.add(pony);
+        } else if (hairId === 'hair_dreadlocks_tech') {
+            for (let i = 0; i < 8; i++) {
+                const dread = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.5, 6), this.materials.hair);
+                const a = (i / 8) * Math.PI * 2;
+                dread.position.set(Math.sin(a) * 0.32, -0.05, Math.cos(a) * 0.32);
+                dread.rotation.x = Math.cos(a) * 0.3;
+                hairGroup.add(dread);
+            }
+        } else if (hairId === 'hair_buzz_cut') {
+            const buzz = new THREE.Mesh(new THREE.SphereGeometry(0.39, 14, 14, 0, Math.PI * 2, 0, Math.PI * 0.52), this.materials.hair);
+            buzz.position.set(0, 0.04, 0);
+            hairGroup.add(buzz);
+        } else {
+            // Default top sweep fallback
+            const topSweep = new THREE.Mesh(new THREE.SphereGeometry(0.40, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), this.materials.hair);
+            topSweep.position.set(0, 0.06, -0.02);
+            hairGroup.add(topSweep);
         }
         this.attachToSocket('hair', hairGroup);
     }
@@ -452,11 +498,19 @@ export class AvatarRig {
             const shades = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.15, 0.12), glassMat);
             shades.position.set(0, 0.08, 0.08);
             faceGroup.add(shades);
-        } else if (faceId === 'face_cyborg_visor') {
+        } else if (faceId === 'face_cyborg_visor' || faceId === 'face_vr_headset') {
             const neonMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
-            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.12, 0.15), neonMat);
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.14, 0.15), neonMat);
             visor.position.set(0, 0.08, 0.08);
             faceGroup.add(visor);
+        } else if (faceId === 'face_ninja_mask') {
+            const mask = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.22, 0.12), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+            mask.position.set(0, -0.08, 0.06);
+            faceGroup.add(mask);
+        } else if (faceId === 'face_gold_monocle') {
+            const monocle = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 8, 16), this.materials.gold);
+            monocle.position.set(0.14, 0.06, 0.07);
+            faceGroup.add(monocle);
         }
 
         this.attachToSocket('face', faceGroup);
@@ -490,6 +544,35 @@ export class AvatarRig {
                 horn.rotation.z = -side * 0.6;
                 hatGroup.add(horn);
             });
+        } else if (hatId === 'hat_cowboy_leather') {
+            const stetsonDome = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.25, 16), new THREE.MeshStandardMaterial({ color: 0x533c2a }));
+            stetsonDome.position.set(0, 0.14, 0);
+            hatGroup.add(stetsonDome);
+            const stetsonBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.03, 20), new THREE.MeshStandardMaterial({ color: 0x533c2a }));
+            stetsonBrim.position.set(0, 0.02, 0);
+            hatGroup.add(stetsonBrim);
+        } else if (hatId === 'hat_top_hat_gentleman') {
+            const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.55, 20), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+            cylinder.position.set(0, 0.28, 0);
+            hatGroup.add(cylinder);
+            const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.03, 20), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+            brim.position.set(0, 0.02, 0);
+            hatGroup.add(brim);
+        } else if (hatId === 'hat_halo_angel') {
+            const halo = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.035, 12, 32), new THREE.MeshBasicMaterial({ color: 0xffd700 }));
+            halo.rotation.x = Math.PI / 2;
+            halo.position.set(0, 0.45, 0);
+            hatGroup.add(halo);
+        } else if (hatId === 'hat_tactical_beret') {
+            const beret = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.38, 0.12, 16), new THREE.MeshStandardMaterial({ color: 0xeb2f06 }));
+            beret.position.set(0.06, 0.12, 0);
+            beret.rotation.z = -0.2;
+            hatGroup.add(beret);
+        } else {
+            // Default cap
+            const capDome = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), this.materials.hat);
+            capDome.position.set(0, 0.02, 0);
+            hatGroup.add(capDome);
         }
         this.attachToSocket('head', hatGroup);
     }
@@ -506,14 +589,32 @@ export class AvatarRig {
                 hilt.rotation.z = rot;
                 backGroup.add(hilt);
             });
-        } else if (backId === 'back_cyber_wings') {
-            const wingMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, wireframe: false });
+        } else if (backId === 'back_cyber_wings' || backId === 'back_demon_wings' || backId === 'back_golden_wings') {
+            const wingColor = backId === 'back_golden_wings' ? 0xffd700 : (backId === 'back_demon_wings' ? 0x9b59b6 : 0x00f2fe);
+            const wingMat = new THREE.MeshBasicMaterial({ color: wingColor, wireframe: false });
             [-1, 1].forEach(side => {
-                const wing = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.35, 0.04), wingMat);
-                wing.position.set(side * 0.55, 0.2, 0);
-                wing.rotation.z = side * 0.25;
+                const wing = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.42, 0.04), wingMat);
+                wing.position.set(side * 0.6, 0.25, 0);
+                wing.rotation.z = side * 0.3;
                 backGroup.add(wing);
             });
+        } else if (backId === 'back_golden_shield') {
+            const shield = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.9, 0.08), this.materials.gold);
+            shield.position.set(0, 0.2, 0.05);
+            backGroup.add(shield);
+        } else if (backId === 'back_cyber_jetpack') {
+            const jetpack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.2), new THREE.MeshStandardMaterial({ color: 0x2f3542 }));
+            jetpack.position.set(0, 0.2, 0.05);
+            backGroup.add(jetpack);
+            [-0.18, 0.18].forEach(x => {
+                const thruster = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.3, 12), new THREE.MeshBasicMaterial({ color: 0x00f2fe }));
+                thruster.position.set(x, -0.15, 0.05);
+                backGroup.add(thruster);
+            });
+        } else {
+            const genericBack = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.12), this.materials.hat);
+            genericBack.position.set(0, 0.2, 0.05);
+            backGroup.add(genericBack);
         }
         this.attachToSocket('back', backGroup);
     }
@@ -551,6 +652,16 @@ export class AvatarRig {
             this.bones.rightLeg.rotation.x = -0.4;
             this.bones.leftArm.rotation.z = -1.5;
             this.bones.rightArm.rotation.z = 1.5;
+        } else if (emote === 'walk' || emote === 'run') {
+            const speed = emote === 'run' ? 12 : 8;
+            const stride = emote === 'run' ? 0.75 : 0.5;
+            const swing = Math.sin(time * speed);
+            this.bones.leftLeg.rotation.x = swing * stride;
+            this.bones.rightLeg.rotation.x = -swing * stride;
+            this.bones.leftArm.rotation.x = -swing * stride * 0.8;
+            this.bones.rightArm.rotation.x = swing * stride * 0.8;
+            this.bones.hips.position.y = 1.25 + Math.abs(Math.sin(time * speed)) * 0.06;
+            this.bones.chest.rotation.y = swing * 0.1;
         }
     }
 }
