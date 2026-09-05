@@ -533,6 +533,16 @@ try {
             throw new Error(`Expected catalog badge to have 10,000 items, got: ${catalogCountText}`);
         }
 
+        // Verify Creator Player Character is the Playard 3D AvatarRig
+        const creatorAvatar = await page.evaluate(() => {
+            const hasAvatar = !!(window.creatorStudio?.playerAvatarRig || window.creatorStudio?.humanCharacter?.name === 'Creator_Player_AvatarRig');
+            return hasAvatar;
+        });
+        console.log("   Creator 3D Player uses Playard AvatarRig:", creatorAvatar);
+        if (!creatorAvatar) {
+            throw new Error("Expected 3D Creator Studio to use standard Playard AvatarRig for player character!");
+        }
+
         // Click first object to spawn into scene
         const firstObjCard = await page.$('.object-card');
         if (firstObjCard) {
@@ -3122,6 +3132,20 @@ try {
             if (realismCheck.knifeChildrenCount < 6) throw new Error('Knife must be an ultra-realistic composite 3D weapon model!');
             if (realismCheck.gunChildrenCount < 8) throw new Error('Gun must be an ultra-realistic composite 3D revolver model!');
             console.log('   Ultra-realistic humans and weapons verified: ✅');
+
+            // Verify MMP1 Player uses standard Playard AvatarRig
+            const mmp1AvatarCheck = await page.evaluate(() => {
+                const p = window.mmp1Game?.playerChar;
+                return {
+                    hasAvatarRig: !!p?.avatarRig,
+                    meshName: p?.mesh?.name
+                };
+            });
+            console.log(`   MMP1 Player uses Playard AvatarRig: ${mmp1AvatarCheck.hasAvatarRig} (Name: ${mmp1AvatarCheck.meshName})`);
+            if (!mmp1AvatarCheck.hasAvatarRig || mmp1AvatarCheck.meshName !== 'MMP1_Player_AvatarRig') {
+                throw new Error('Expected MMP1 player character to use standard Playard AvatarRig!');
+            }
+            console.log('   MMP1 Playard AvatarRig verified: ✅');
 
             // Test Round End & Victory Announcements
             await page.evaluate(() => {

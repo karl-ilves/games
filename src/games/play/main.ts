@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { yardService, CreatedGame } from '../../shared/yardService';
 import { getCurrentUserProfile } from '../../auth';
+import { avatarService } from '../../shared/avatar/AvatarService';
+import { AvatarRig } from '../../shared/avatar/AvatarRig';
 
 console.log("Community Game Player Loading...");
 
@@ -68,69 +70,21 @@ function createUltraGrass() {
     scene.add(grassBlades);
 }
 
-// --- Create Ultra Human Character ---
+// --- Playard Standard 3D Avatar Character ---
+let playerAvatarRig: AvatarRig | null = null;
+
 function createUltraHuman() {
-    humanCharacter = new THREE.Group();
-
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xe0ac69, roughness: 0.6 });
-    const hairMat = new THREE.MeshStandardMaterial({ color: 0x2c1a0e, roughness: 0.9 });
-    const shirtMat = new THREE.MeshStandardMaterial({ color: 0x0984e3, roughness: 0.7 });
-    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.8 });
-    const shoesMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
-
-    // Torso
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.34, 0.9, 12), shirtMat);
-    torso.position.y = 1.35;
-    torso.castShadow = true;
-    humanCharacter.add(torso);
-
-    // Head
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), skinMat);
-    head.position.y = 2.05;
-    head.castShadow = true;
-    humanCharacter.add(head);
-
-    // Hair
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.6), hairMat);
-    hair.position.y = 2.1;
-    humanCharacter.add(hair);
-
-    // Arms
-    const armGeo = new THREE.CylinderGeometry(0.1, 0.09, 0.75, 8);
-    const leftArm = new THREE.Mesh(armGeo, shirtMat);
-    leftArm.position.set(-0.52, 1.4, 0);
-    leftArm.castShadow = true;
-    humanCharacter.add(leftArm);
-
-    const rightArm = new THREE.Mesh(armGeo, shirtMat);
-    rightArm.position.set(0.52, 1.4, 0);
-    rightArm.castShadow = true;
-    humanCharacter.add(rightArm);
-
-    // Legs
-    const legGeo = new THREE.CylinderGeometry(0.14, 0.12, 0.85, 8);
-    const leftLeg = new THREE.Mesh(legGeo, pantsMat);
-    leftLeg.position.set(-0.2, 0.5, 0);
-    leftLeg.castShadow = true;
-    humanCharacter.add(leftLeg);
-
-    const rightLeg = new THREE.Mesh(legGeo, pantsMat);
-    rightLeg.position.set(0.2, 0.5, 0);
-    rightLeg.castShadow = true;
-    humanCharacter.add(rightLeg);
-
-    // Shoes
-    const shoeGeo = new THREE.BoxGeometry(0.2, 0.12, 0.35);
-    const leftShoe = new THREE.Mesh(shoeGeo, shoesMat);
-    leftShoe.position.set(-0.2, 0.06, 0.05);
-    humanCharacter.add(leftShoe);
-
-    const rightShoe = new THREE.Mesh(shoeGeo, shoesMat);
-    rightShoe.position.set(0.2, 0.06, 0.05);
-    humanCharacter.add(rightShoe);
-
+    playerAvatarRig = new AvatarRig(avatarService.getConfig());
+    humanCharacter = playerAvatarRig.rootGroup;
+    humanCharacter.name = 'Play_Player_AvatarRig';
     humanCharacter.position.set(0, 0, 0);
     scene.add(humanCharacter);
+
+    avatarService.subscribe(cfg => {
+        if (playerAvatarRig) {
+            playerAvatarRig.applyConfig(cfg);
+        }
+    });
 }
 
 // --- Build Scene from Game Data ---
@@ -344,6 +298,18 @@ function animate() {
 
         humanCharacter.position.x += moveDir.x * moveSpeed * delta;
         humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+
+        if (playerAvatarRig) {
+            playerAvatarRig.updateAnimation(performance.now() * 0.001, 'run');
+        }
+    } else {
+        if (playerAvatarRig) {
+            if (!isGrounded) {
+                playerAvatarRig.updateAnimation(performance.now() * 0.001, 'jump');
+            } else {
+                playerAvatarRig.updateAnimation(performance.now() * 0.001, 'idle');
+            }
+        }
     }
 
     if (keys['Space'] && isGrounded) {

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { yardService } from '../../shared/yardService';
 import { getCurrentUserProfile, isPlayardOwner, isTestMode, canAccessMmp1 } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
+import { AvatarRig } from '../../shared/avatar/AvatarRig';
 import { getItemById } from '../../shared/avatar/catalog';
 
 (window as any).yardService = yardService;
@@ -393,6 +394,7 @@ interface Character {
     rightLeg?: THREE.Group;
     leftArm?: THREE.Group;
     rightArm?: THREE.Group;
+    avatarRig?: AvatarRig;
     aiTarget?: THREE.Vector3;
     aiTimer: number;
     coins: number;
@@ -1373,7 +1375,86 @@ export class MurderMysteryGame {
         rightLeg: THREE.Group;
         leftArm: THREE.Group;
         rightArm: THREE.Group;
+        avatarRig?: AvatarRig;
     } {
+        if (isPlayer) {
+            const avatarRig = new AvatarRig(avatarService.getConfig());
+            avatarRig.rootGroup.name = 'MMP1_Player_AvatarRig';
+
+            // Attach ultra-realistic knife and gun to right arm bone / hand
+            const knifeGroup = this.createUltraRealisticKnife();
+            knifeGroup.position.set(0.08, -0.65, 0.22);
+            knifeGroup.rotation.x = Math.PI / 3;
+            knifeGroup.rotation.y = -Math.PI / 8;
+            knifeGroup.visible = false;
+            avatarRig.bones.rightArm.add(knifeGroup);
+
+            const gunGroup = this.createUltraRealisticRevolver(false);
+            gunGroup.position.set(0.06, -0.62, 0.26);
+            gunGroup.rotation.x = 0;
+            gunGroup.visible = false;
+            avatarRig.bones.rightArm.add(gunGroup);
+
+            // Add player name tag above head
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 75;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = 'rgba(30, 20, 10, 0.88)';
+                ctx.beginPath();
+                ctx.roundRect(8, 8, 284, 59, 14);
+                ctx.fill();
+                ctx.strokeStyle = '#ffd32a';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffd32a';
+                ctx.font = 'bold 26px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(name, 150, 38);
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ 
+                map: tex, 
+                depthTest: false, 
+                depthWrite: false, 
+                transparent: true 
+            });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.renderOrder = 999;
+            sprite.position.y = 4.4;
+            sprite.scale.set(3.8, 0.95, 1);
+            avatarRig.rootGroup.add(sprite);
+
+            avatarService.subscribe(cfg => {
+                avatarRig.applyConfig(cfg);
+            });
+
+            let bodyMesh: THREE.Mesh = new THREE.Mesh();
+            let headMesh: THREE.Mesh = new THREE.Mesh();
+            avatarRig.bones.torso.traverse(c => {
+                if (!bodyMesh.geometry && (c as THREE.Mesh).isMesh) bodyMesh = c as THREE.Mesh;
+            });
+            avatarRig.bones.head.traverse(c => {
+                if (!headMesh.geometry && (c as THREE.Mesh).isMesh) headMesh = c as THREE.Mesh;
+            });
+
+            return {
+                group: avatarRig.rootGroup,
+                knife: knifeGroup,
+                gun: gunGroup,
+                body: bodyMesh,
+                head: headMesh,
+                leftLeg: avatarRig.bones.leftLeg,
+                rightLeg: avatarRig.bones.rightLeg,
+                leftArm: avatarRig.bones.leftArm,
+                rightArm: avatarRig.bones.rightArm,
+                avatarRig
+            };
+        }
+
         const group = new THREE.Group();
 
         // 1. Natural Human Skin Tones (Uses customized AvatarConfig for player!)
@@ -1882,6 +1963,7 @@ export class MurderMysteryGame {
             rightLeg: pModel.rightLeg,
             leftArm: pModel.leftArm,
             rightArm: pModel.rightArm,
+            avatarRig: pModel.avatarRig,
             aiTimer: 0,
             coins: 0
         };
@@ -3209,26 +3291,43 @@ export class MurderMysteryGame {
             this.playerChar.mesh.rotation.y = this.playerChar.rotation;
 
             // Realistic player walking animation
-            this.playerChar.walkAnimTimer = (this.playerChar.walkAnimTimer || 0) + delta * 11;
-            if (this.playerChar.leftLeg && this.playerChar.rightLeg) {
-                this.playerChar.leftLeg.rotation.x = Math.sin(this.playerChar.walkAnimTimer) * 0.45;
-                this.playerChar.rightLeg.rotation.x = -Math.sin(this.playerChar.walkAnimTimer) * 0.45;
-            }
-            if (this.playerChar.leftArm && this.playerChar.rightArm) {
-                this.playerChar.leftArm.rotation.x = -Math.sin(this.playerChar.walkAnimTimer) * 0.4;
-                if (!this.playerChar.hasWeaponEquipped) {
-                    this.playerChar.rightArm.rotation.x = Math.sin(this.playerChar.walkAnimTimer) * 0.4;
-                } else {
+            if (this.playerChar.avatarRig) {
+                const now = performance.now() * 0.001;
+                this.playerChar.avatarRig.updateAnimation(now, 'run');
+                if (this.playerChar.hasWeaponEquipped && this.playerChar.rightArm) {
                     this.playerChar.rightArm.rotation.x = -0.35;
+                }
+            } else {
+                this.playerChar.walkAnimTimer = (this.playerChar.walkAnimTimer || 0) + delta * 11;
+                if (this.playerChar.leftLeg && this.playerChar.rightLeg) {
+                    this.playerChar.leftLeg.rotation.x = Math.sin(this.playerChar.walkAnimTimer) * 0.45;
+                    this.playerChar.rightLeg.rotation.x = -Math.sin(this.playerChar.walkAnimTimer) * 0.45;
+                }
+                if (this.playerChar.leftArm && this.playerChar.rightArm) {
+                    this.playerChar.leftArm.rotation.x = -Math.sin(this.playerChar.walkAnimTimer) * 0.4;
+                    if (!this.playerChar.hasWeaponEquipped) {
+                        this.playerChar.rightArm.rotation.x = Math.sin(this.playerChar.walkAnimTimer) * 0.4;
+                    } else {
+                        this.playerChar.rightArm.rotation.x = -0.35;
+                    }
                 }
             }
         } else {
-            // Player stationary idle breathing
-            const idle = Math.sin(Date.now() * 0.0025) * 0.03;
-            if (this.playerChar.leftLeg) this.playerChar.leftLeg.rotation.x = 0;
-            if (this.playerChar.rightLeg) this.playerChar.rightLeg.rotation.x = 0;
-            if (this.playerChar.leftArm) this.playerChar.leftArm.rotation.x = idle;
-            if (this.playerChar.rightArm && !this.playerChar.hasWeaponEquipped) this.playerChar.rightArm.rotation.x = -idle;
+            // Player stationary idle
+            if (this.playerChar.avatarRig) {
+                const now = performance.now() * 0.001;
+                const activeEmote = avatarService.getConfig()?.activeEmote || 'idle';
+                this.playerChar.avatarRig.updateAnimation(now, activeEmote === 'wave' ? 'idle' : activeEmote);
+                if (this.playerChar.hasWeaponEquipped && this.playerChar.rightArm) {
+                    this.playerChar.rightArm.rotation.x = -0.35;
+                }
+            } else {
+                const idle = Math.sin(Date.now() * 0.0025) * 0.03;
+                if (this.playerChar.leftLeg) this.playerChar.leftLeg.rotation.x = 0;
+                if (this.playerChar.rightLeg) this.playerChar.rightLeg.rotation.x = 0;
+                if (this.playerChar.leftArm) this.playerChar.leftArm.rotation.x = idle;
+                if (this.playerChar.rightArm && !this.playerChar.hasWeaponEquipped) this.playerChar.rightArm.rotation.x = -idle;
+            }
         }
 
         // Check dropped gun proximity prompt
