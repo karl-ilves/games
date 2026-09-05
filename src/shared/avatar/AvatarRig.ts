@@ -1135,7 +1135,46 @@ export class AvatarRig {
         this.attachToSocket('back', backGroup);
     }
 
+    public resetBonesToRestPose() {
+        this.bones.root.position.set(0, 0, 0);
+        this.bones.root.rotation.set(0, 0, 0);
+
+        this.bones.hips.position.set(0, 1.25, 0);
+        this.bones.hips.rotation.set(0, 0, 0);
+
+        this.bones.torso.position.set(0, 0.35, 0);
+        this.bones.torso.rotation.set(0, 0, 0);
+
+        this.bones.chest.position.set(0, 0.45, 0);
+        this.bones.chest.rotation.set(0, 0, 0);
+
+        this.bones.neck.position.set(0, 0.45, 0);
+        this.bones.neck.rotation.set(0, 0, 0);
+
+        this.bones.head.position.set(0, 0.35, 0);
+        this.bones.head.rotation.set(0, 0, 0);
+
+        this.bones.leftArm.position.set(-0.65, 0.35, 0);
+        this.bones.leftArm.rotation.set(0, 0, 0);
+
+        this.bones.rightArm.position.set(0.65, 0.35, 0);
+        this.bones.rightArm.rotation.set(0, 0, 0);
+
+        this.bones.leftLeg.position.set(-0.25, -0.1, 0);
+        this.bones.leftLeg.rotation.set(0, 0, 0);
+
+        this.bones.rightLeg.position.set(0.25, -0.1, 0);
+        this.bones.rightLeg.rotation.set(0, 0, 0);
+
+        this.bones.leftFoot.position.set(0, -1.05, 0);
+        this.bones.leftFoot.rotation.set(0, 0, 0);
+
+        this.bones.rightFoot.position.set(0, -1.05, 0);
+        this.bones.rightFoot.rotation.set(0, 0, 0);
+    }
+
     public updateAnimation(time: number, emote: string = 'idle') {
+        this.resetBonesToRestPose();
         if (emote === 'idle') {
             // Natural breathing and subtle idle sway
             const breathe = Math.sin(time * 2.5) * 0.025;
@@ -1182,20 +1221,22 @@ export class AvatarRig {
             // Acrobatic Ninja Backflip
             const spin = (time * 4) % (Math.PI * 2);
             this.bones.hips.rotation.x = -spin;
-            this.bones.hips.position.y = 1.25 + Math.sin(spin * 0.5) * 0.6;
-            this.bones.leftArm.rotation.z = -2.2;
-            this.bones.rightArm.rotation.z = 2.2;
-            this.bones.leftLeg.rotation.x = -0.8;
-            this.bones.rightLeg.rotation.x = -0.8;
+            this.bones.hips.position.y = 1.25 + Math.sin(spin * 0.5) * 0.5;
+            this.bones.leftArm.rotation.z = -1.2;
+            this.bones.rightArm.rotation.z = 1.2;
+            this.bones.leftLeg.rotation.x = -0.4;
+            this.bones.rightLeg.rotation.x = -0.4;
         } else if (emote === 'breakdance') {
-            // Windmill Breakdance
-            this.bones.hips.position.y = 0.75;
-            this.bones.hips.rotation.x = 1.2;
-            this.bones.hips.rotation.y = time * 7;
-            this.bones.leftLeg.rotation.x = Math.sin(time * 7) * 0.9;
-            this.bones.rightLeg.rotation.x = -Math.sin(time * 7) * 0.9;
-            this.bones.leftArm.rotation.z = -1.8;
-            this.bones.rightArm.rotation.z = 1.8;
+            // Rhythmic Windmill Breakdance Groove
+            const sway = Math.sin(time * 6);
+            this.bones.hips.position.y = 1.15 + Math.abs(Math.sin(time * 6)) * 0.15;
+            this.bones.hips.rotation.y = time * 5;
+            this.bones.leftLeg.rotation.x = Math.sin(time * 5) * 0.6;
+            this.bones.rightLeg.rotation.x = -Math.sin(time * 5) * 0.6;
+            this.bones.leftLeg.rotation.z = 0.25;
+            this.bones.rightLeg.rotation.z = -0.25;
+            this.bones.leftArm.rotation.z = -1.2 + sway * 0.3;
+            this.bones.rightArm.rotation.z = 1.2 - sway * 0.3;
         } else if (emote === 'laugh') {
             // Triumphant hearty laughter
             const chuck = Math.sin(time * 12) * 0.05;
@@ -1217,17 +1258,18 @@ export class AvatarRig {
             this.bones.leftLeg.rotation.z = -0.15;
             this.bones.rightLeg.rotation.z = 0.15;
         } else if (emote === 'levitate') {
-            // Mystic Zen Levitation in Lotus Pose
-            const floatY = Math.sin(time * 2.5) * 0.18;
-            this.bones.hips.position.y = 1.65 + floatY;
-            this.bones.leftLeg.rotation.x = -1.2;
-            this.bones.rightLeg.rotation.x = -1.2;
-            this.bones.leftLeg.rotation.z = 0.6;
-            this.bones.rightLeg.rotation.z = -0.6;
-            this.bones.leftArm.rotation.z = -0.8;
-            this.bones.rightArm.rotation.z = 0.8;
-            this.bones.leftArm.rotation.x = 0.4;
-            this.bones.rightArm.rotation.x = 0.4;
+            // Mystic Zen Lotus Pose Levitation
+            const floatY = Math.sin(time * 2.5) * 0.15;
+            this.bones.hips.position.y = 1.45 + floatY;
+            this.bones.leftLeg.rotation.x = -0.6;
+            this.bones.rightLeg.rotation.x = -0.6;
+            this.bones.leftLeg.rotation.z = 0.45;
+            this.bones.rightLeg.rotation.z = -0.45;
+            this.bones.leftArm.rotation.z = -0.7;
+            this.bones.rightArm.rotation.z = 0.7;
+            this.bones.leftArm.rotation.x = 0.3;
+            this.bones.rightArm.rotation.x = 0.3;
+            this.bones.head.rotation.x = -0.05;
         } else if (emote === 'zombie') {
             // Spooky Zombie Walk
             const sway = Math.sin(time * 2.5);

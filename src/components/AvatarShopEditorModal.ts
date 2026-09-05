@@ -340,17 +340,47 @@ export class AvatarShopEditorModal {
         if (!item) return;
 
         switch (item.category) {
-            case 'skin': if (item.defaultColor) this.previewConfig.skinColor = item.defaultColor; break;
+            case 'skin': 
+                if (item.defaultColor) this.previewConfig.skinColor = item.defaultColor; 
+                this.previewConfig.activeEmote = 'idle' as any;
+                if (this.viewer) this.viewer.setEmote('idle');
+                break;
             case 'hair':
                 this.previewConfig.hairId = item.id;
                 if (item.defaultColor) this.previewConfig.hairColor = item.defaultColor;
+                this.previewConfig.activeEmote = 'idle' as any;
+                if (this.viewer) this.viewer.setEmote('idle');
                 break;
-            case 'face': this.previewConfig.faceId = item.id; break;
-            case 'tops': this.previewConfig.topId = item.id; break;
-            case 'pants': this.previewConfig.pantsId = item.id; break;
-            case 'shoes': this.previewConfig.shoesId = item.id; break;
-            case 'hats': this.previewConfig.hatId = item.id; break;
-            case 'back': this.previewConfig.backId = item.id; break;
+            case 'face': 
+                this.previewConfig.faceId = item.id; 
+                this.previewConfig.activeEmote = 'idle' as any;
+                if (this.viewer) this.viewer.setEmote('idle');
+                break;
+            case 'tops': 
+                this.previewConfig.topId = item.id; 
+                this.previewConfig.activeEmote = 'idle' as any;
+                if (this.viewer) this.viewer.setEmote('idle');
+                break;
+            case 'pants': 
+                this.previewConfig.pantsId = item.id; 
+                this.previewConfig.activeEmote = 'idle' as any;
+                if (this.viewer) this.viewer.setEmote('idle');
+                break;
+            case 'shoes': 
+                this.previewConfig.shoesId = item.id; 
+                this.previewConfig.activeEmote = 'idle' as any;
+                if (this.viewer) this.viewer.setEmote('idle');
+                break;
+            case 'hats': 
+                this.previewConfig.hatId = item.id; 
+                this.previewConfig.activeEmote = 'idle' as any;
+                if (this.viewer) this.viewer.setEmote('idle');
+                break;
+            case 'back': 
+                this.previewConfig.backId = item.id; 
+                this.previewConfig.activeEmote = 'idle' as any;
+                if (this.viewer) this.viewer.setEmote('idle');
+                break;
             case 'emotes': {
                 const emoteMap: Record<string, string> = {
                     emote_wave: 'wave',
@@ -365,8 +395,10 @@ export class AvatarShopEditorModal {
                     emote_guitar_solo: 'guitar'
                 };
                 const emote = emoteMap[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
-                this.previewConfig.activeEmote = emote as any;
-                if (this.viewer) this.viewer.setEmote(emote);
+                // Toggle off to idle if clicking the same active emote
+                const nextEmote = this.previewConfig.activeEmote === emote ? 'idle' : emote;
+                this.previewConfig.activeEmote = nextEmote as any;
+                if (this.viewer) this.viewer.setEmote(nextEmote);
                 break;
             }
         }

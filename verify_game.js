@@ -467,6 +467,35 @@ try {
             throw new Error("Breakdance emote must show Buy button with 2600 Y!");
         }
 
+        // Test switching between complex emotes (Levitate -> Breakdance -> Wave) and verify clean bone reset
+        const levitatePreview = await page.$('[data-preview-id="emote_levitate_zen"]');
+        if (levitatePreview) {
+            await page.click('[data-preview-id="emote_levitate_zen"]');
+            await new Promise(r => setTimeout(r, 200));
+            const levitateY = await page.evaluate(() => window.playardAvatarShop?.viewer?.avatarRig?.bones?.hips?.position?.y);
+            console.log("   Levitate hips Y (Expected > 1.3):", levitateY);
+
+            // Now switch to Breakdance
+            await page.click('[data-preview-id="emote_breakdance"]');
+            await new Promise(r => setTimeout(r, 200));
+
+            // Now switch to Wave
+            await page.click('[data-preview-id="emote_wave"]');
+            await new Promise(r => setTimeout(r, 200));
+
+            const resetCheck = await page.evaluate(() => {
+                const rig = window.playardAvatarShop?.viewer?.avatarRig;
+                const hipsY = rig?.bones?.hips?.position?.y;
+                const legZ = rig?.bones?.leftLeg?.rotation?.z;
+                return { hipsY, legZ };
+            });
+            console.log("   Reset rest pose check (hips Y expected ~1.25, leg Z expected 0):", resetCheck);
+            if (Math.abs(resetCheck.hipsY - 1.25) > 0.05 || Math.abs(resetCheck.legZ) > 0.05) {
+                throw new Error("Emote switching must not leave residual bone offsets or stuck poses!");
+            }
+            console.log("   Emote switching clean rest pose reset verified: ✅");
+        }
+
         // Test Saving Avatar
         await page.click('#btn-avatar-save-config');
         await new Promise(r => setTimeout(r, 300));
