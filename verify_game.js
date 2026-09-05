@@ -550,7 +550,6 @@ try {
 
         // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 10,000 Objects)
         console.log("5. Testing 3D Game Creator Studio...");
-        await page.goto('about:blank');
         await page.goto('http://localhost:4173/games/games/creator/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -571,6 +570,11 @@ try {
         if (!creatorAvatar) {
             throw new Error("Expected 3D Creator Studio to use standard Playard AvatarRig for player character!");
         }
+
+        // Verify In-Game Emotes Widget in Creator Studio
+        const creatorEmotesBar = await page.$('#playard-in-game-emotes-bar');
+        console.log("   Creator In-Game Emotes Bar exists in top-left:", !!creatorEmotesBar);
+        if (!creatorEmotesBar) throw new Error("Expected In-Game Emotes Widget in Creator Studio!");
 
         // Click first object to spawn into scene
         const firstObjCard = await page.$('.object-card');
@@ -3175,6 +3179,36 @@ try {
                 throw new Error('Expected MMP1 player character to use standard Playard AvatarRig!');
             }
             console.log('   MMP1 Playard AvatarRig verified: ✅');
+
+            // Test In-Game Emotes Widget in Top-Left under PLAYARD
+            const inGameEmotesBar = await page.$('#playard-in-game-emotes-bar');
+            if (!inGameEmotesBar) throw new Error("Expected #playard-in-game-emotes-bar in top-left under PLAYARD!");
+            const toggleBtn = await page.$('#btn-toggle-in-game-emotes');
+            if (!toggleBtn) throw new Error("Expected #btn-toggle-in-game-emotes in top-left HUD!");
+
+            // Open Emotes menu
+            await page.click('#btn-toggle-in-game-emotes');
+            await new Promise(r => setTimeout(r, 200));
+            const menuDisplay = await page.$eval('#playard-in-game-emotes-menu', el => window.getComputedStyle(el).display);
+            console.log(`   In-Game Emotes Menu display (Expected: flex): ${menuDisplay}`);
+            if (menuDisplay !== 'flex') throw new Error("In-Game Emotes menu must open on toggle click!");
+
+            // Trigger Dance emote
+            const danceBtn = await page.$('#playard-in-game-emotes-menu [data-emote-action="dance"]');
+            if (!danceBtn) throw new Error("Expected Dance emote in in-game emotes list!");
+            await page.click('#playard-in-game-emotes-menu [data-emote-action="dance"]');
+            await new Promise(r => setTimeout(r, 200));
+
+            const activeEmoteVal = await page.evaluate(() => window.mmp1Game?.emotesWidget?.getActiveEmote());
+            console.log(`   Active In-Game Emote (Expected: dance): ${activeEmoteVal}`);
+            if (activeEmoteVal !== 'dance') throw new Error("Expected active in-game emote to be 'dance'!");
+
+            // Stop emote via Escape or toggle
+            await page.evaluate(() => window.mmp1Game?.emotesWidget?.triggerEmote('idle'));
+            const stoppedEmoteVal = await page.evaluate(() => window.mmp1Game?.emotesWidget?.getActiveEmote());
+            console.log(`   Stopped In-Game Emote (Expected: idle): ${stoppedEmoteVal}`);
+            if (stoppedEmoteVal !== 'idle') throw new Error("Expected stopped in-game emote to be 'idle'!");
+            console.log('   In-Game Emotes Widget in top-left verified: ✅');
 
             // Test Round End & Victory Announcements
             await page.evaluate(() => {

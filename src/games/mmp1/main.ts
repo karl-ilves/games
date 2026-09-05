@@ -3,6 +3,7 @@ import { yardService } from '../../shared/yardService';
 import { getCurrentUserProfile, isPlayardOwner, isTestMode, canAccessMmp1 } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
+import { InGameEmotesWidget } from '../../shared/avatar/InGameEmotesWidget';
 import { getItemById } from '../../shared/avatar/catalog';
 
 (window as any).yardService = yardService;
@@ -482,6 +483,7 @@ export class MurderMysteryGame {
     private mapVoteCountdown: number = 5;
     private playerVotedMap: MapId | null = null;
     private mapVotes: Record<MapId, number> = { hotel2: 0, milbase: 0, office: 0, vacation: 0, yatchy: 0 };
+    public emotesWidget: InGameEmotesWidget | null = null;
 
     constructor() {
         this.container = document.getElementById('canvas-container') || document.body;
@@ -505,6 +507,11 @@ export class MurderMysteryGame {
         this.buildLobby();
         this.buildMansion();
         this.initCharacters();
+        this.emotesWidget = new InGameEmotesWidget({
+            getAvatarRig: () => this.playerChar?.avatarRig,
+            topOffset: 70,
+            leftOffset: 16
+        });
         this.spawnCoins();
         this.bindEvents();
         this.updateYardDisplay();
@@ -3291,6 +3298,9 @@ export class MurderMysteryGame {
             this.playerChar.mesh.rotation.y = this.playerChar.rotation;
 
             // Realistic player walking animation
+            if (this.emotesWidget && this.emotesWidget.getActiveEmote() !== 'idle') {
+                this.emotesWidget.stopEmoteQuietly();
+            }
             if (this.playerChar.avatarRig) {
                 const now = performance.now() * 0.001;
                 this.playerChar.avatarRig.updateAnimation(now, 'run');
@@ -3313,11 +3323,11 @@ export class MurderMysteryGame {
                 }
             }
         } else {
-            // Player stationary idle
+            // Player stationary idle or playing selected in-game emote
             if (this.playerChar.avatarRig) {
                 const now = performance.now() * 0.001;
-                const activeEmote = avatarService.getConfig()?.activeEmote || 'idle';
-                this.playerChar.avatarRig.updateAnimation(now, activeEmote === 'wave' ? 'idle' : activeEmote);
+                const activeEmote = this.emotesWidget ? this.emotesWidget.getActiveEmote() : (avatarService.getConfig()?.activeEmote || 'idle');
+                this.playerChar.avatarRig.updateAnimation(now, activeEmote);
                 if (this.playerChar.hasWeaponEquipped && this.playerChar.rightArm) {
                     this.playerChar.rightArm.rotation.x = -0.35;
                 }

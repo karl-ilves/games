@@ -3,6 +3,7 @@ import { yardService } from '../../shared/yardService';
 import { getCurrentUserProfile, isUserAdminEmail, isPlayardOwner } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
+import { InGameEmotesWidget } from '../../shared/avatar/InGameEmotesWidget';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -352,6 +353,7 @@ function createUltraRealisticGrass() {
 
 // --- Playard Standard 3D Avatar Character ---
 let playerAvatarRig: AvatarRig | null = null;
+let emotesWidget: InGameEmotesWidget | null = null;
 
 function createUltraRealisticHuman() {
     playerAvatarRig = new AvatarRig(avatarService.getConfig());
@@ -359,6 +361,12 @@ function createUltraRealisticHuman() {
     humanCharacter.name = 'Creator_Player_AvatarRig';
     humanCharacter.position.set(0, 0, 0);
     scene.add(humanCharacter);
+
+    emotesWidget = new InGameEmotesWidget({
+        getAvatarRig: () => playerAvatarRig,
+        topOffset: 70,
+        leftOffset: 20
+    });
 
     avatarService.subscribe(cfg => {
         if (playerAvatarRig) {
@@ -953,7 +961,8 @@ async function initStudio() {
     (window as any).creatorStudio = {
         get scene() { return scene; },
         get humanCharacter() { return humanCharacter; },
-        get playerAvatarRig() { return playerAvatarRig; }
+        get playerAvatarRig() { return playerAvatarRig; },
+        get emotesWidget() { return emotesWidget; }
     };
 
     // Generate 10,000 Objects in Catalog
@@ -5139,6 +5148,9 @@ function animate() {
                 humanCharacter.position.x += moveDir.x * moveSpeed * delta;
                 humanCharacter.position.z += moveDir.z * moveSpeed * delta;
 
+                if (emotesWidget && emotesWidget.getActiveEmote() !== 'idle') {
+                    emotesWidget.stopEmoteQuietly();
+                }
                 if (playerAvatarRig) {
                     playerAvatarRig.updateAnimation(performance.now() * 0.001, 'run');
                 }
@@ -5147,7 +5159,8 @@ function animate() {
                     if (!isGrounded) {
                         playerAvatarRig.updateAnimation(performance.now() * 0.001, 'jump');
                     } else {
-                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'idle');
+                        const activeEm = emotesWidget ? emotesWidget.getActiveEmote() : 'idle';
+                        playerAvatarRig.updateAnimation(performance.now() * 0.001, activeEm);
                     }
                 }
             }
@@ -5388,7 +5401,8 @@ function animate() {
 
         // Idle animation in edit mode
         if (playerAvatarRig) {
-            playerAvatarRig.updateAnimation(performance.now() * 0.001, 'idle');
+            const activeEm = emotesWidget ? emotesWidget.getActiveEmote() : 'idle';
+            playerAvatarRig.updateAnimation(performance.now() * 0.001, activeEm);
         } else if (humanCharacter) {
             humanCharacter.position.y = Math.sin(Date.now() * 0.003) * 0.04;
         }
