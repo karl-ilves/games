@@ -294,11 +294,10 @@ export class ParkourObbyGame {
         this.isOwner = isPlayardOwner(userProf?.email);
         const inTest = isTestMode() || (window as any).__PLAYARD_TEST_MODE__;
 
-        // If not owner and not test mode, show VIP Restricted overlay
+        // VIP Restricted overlay is hidden so Obby is playable for everyone
         const vipOverlay = document.getElementById('vip-restricted-overlay');
-        if (!this.isOwner && !inTest && vipOverlay) {
-            vipOverlay.style.display = 'flex';
-            return;
+        if (vipOverlay) {
+            vipOverlay.style.display = 'none';
         }
 
         // Check 24h Cooldown Lock (if game completed within 24 hours)
