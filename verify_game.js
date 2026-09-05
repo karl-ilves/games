@@ -442,12 +442,30 @@ try {
             console.log("   Successfully tested changing face to Anime Starlight Eyes!");
         }
 
-        // Test Emotes switching (e.g. Dance)
-        await page.click('[data-emote="dance"]');
-        await new Promise(r => setTimeout(r, 200));
-        const danceActive = await page.$eval('[data-emote="dance"]', el => el.classList.contains('active'));
-        console.log("   Avatar Dance emote active:", danceActive);
-        if (!danceActive) throw new Error("Dance emote button must be active after click!");
+        // Test Emotes category in Catalog
+        await page.click('[data-category="emotes"]');
+        await new Promise(r => setTimeout(r, 250));
+        const emoteCardsCount = await page.$$eval('#avatar-items-container .avatar-item-card', cards => cards.length);
+        console.log("   Avatar Emotes category items count:", emoteCardsCount);
+        if (emoteCardsCount < 4) throw new Error("Expected multiple emotes in emotes category!");
+
+        // Verify unowned paid emote has Buy button and NOT 'Varustatud'
+        const saluteBuyBtn = await page.$('[data-buy-id="emote_salute_military"]');
+        if (!saluteBuyBtn) throw new Error("Unowned emote 'emote_salute_military' must have a Buy button!");
+        const saluteBtnText = await page.$eval('[data-buy-id="emote_salute_military"]', el => el.textContent);
+        console.log("   Unowned Military Salute button text (Expected: Osta 400 Y):", saluteBtnText);
+        if (!saluteBtnText.includes('Osta') || saluteBtnText.includes('Varustatud')) {
+            throw new Error("Unowned paid emote must show Buy button with price, not 'Varustatud'!");
+        }
+
+        // Verify breakdance emote has Buy button with 2600 Y
+        const breakdanceBuyBtn = await page.$('[data-buy-id="emote_breakdance"]');
+        if (!breakdanceBuyBtn) throw new Error("Unowned emote 'emote_breakdance' must have a Buy button!");
+        const breakdanceBtnText = await page.$eval('[data-buy-id="emote_breakdance"]', el => el.textContent);
+        console.log("   Unowned Breakdance button text (Expected: Osta 2600 Y):", breakdanceBtnText);
+        if (!breakdanceBtnText.includes('2600 Y') || breakdanceBtnText.includes('Varustatud')) {
+            throw new Error("Breakdance emote must show Buy button with 2600 Y!");
+        }
 
         // Test Saving Avatar
         await page.click('#btn-avatar-save-config');

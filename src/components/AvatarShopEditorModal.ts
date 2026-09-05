@@ -204,6 +204,23 @@ export class AvatarShopEditorModal {
     }
 
     private isItemEquipped(item: AvatarItem): boolean {
+        // Can ONLY be equipped if user owns it or if it's free/default!
+        const isOwned = avatarService.hasItem(item.id) || item.price === 0 || !!item.isDefault;
+        if (!isOwned) return false;
+
+        const emoteMap: Record<string, string> = {
+            emote_wave: 'wave',
+            emote_dance_spin: 'dance',
+            emote_salute_military: 'salute',
+            emote_backflip: 'backflip',
+            emote_breakdance: 'breakdance',
+            emote_laugh_triumph: 'laugh',
+            emote_flex_muscles: 'flex',
+            emote_levitate_zen: 'levitate',
+            emote_zombie_groan: 'zombie',
+            emote_guitar_solo: 'guitar'
+        };
+
         switch (item.category) {
             case 'skin': return this.previewConfig.skinColor === item.defaultColor;
             case 'hair': return this.previewConfig.hairId === item.id;
@@ -213,7 +230,10 @@ export class AvatarShopEditorModal {
             case 'shoes': return this.previewConfig.shoesId === item.id;
             case 'hats': return this.previewConfig.hatId === item.id;
             case 'back': return this.previewConfig.backId === item.id;
-            case 'emotes': return this.previewConfig.activeEmote === (item.id === 'emote_dance_spin' ? 'dance' : 'wave');
+            case 'emotes': {
+                const targetAction = emoteMap[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
+                return this.previewConfig.activeEmote === targetAction;
+            }
         }
         return false;
     }
@@ -226,7 +246,7 @@ export class AvatarShopEditorModal {
         const userYards = yardService.getYards();
 
         container.innerHTML = items.map(item => {
-            const owned = avatarService.hasItem(item.id);
+            const owned = avatarService.hasItem(item.id) || item.price === 0 || !!item.isDefault;
             const equipped = this.isItemEquipped(item);
             const canAfford = userYards >= item.price;
 
@@ -331,11 +351,24 @@ export class AvatarShopEditorModal {
             case 'shoes': this.previewConfig.shoesId = item.id; break;
             case 'hats': this.previewConfig.hatId = item.id; break;
             case 'back': this.previewConfig.backId = item.id; break;
-            case 'emotes':
-                const emote = item.id === 'emote_dance_spin' ? 'dance' : 'wave';
-                this.previewConfig.activeEmote = emote;
+            case 'emotes': {
+                const emoteMap: Record<string, string> = {
+                    emote_wave: 'wave',
+                    emote_dance_spin: 'dance',
+                    emote_salute_military: 'salute',
+                    emote_backflip: 'backflip',
+                    emote_breakdance: 'breakdance',
+                    emote_laugh_triumph: 'laugh',
+                    emote_flex_muscles: 'flex',
+                    emote_levitate_zen: 'levitate',
+                    emote_zombie_groan: 'zombie',
+                    emote_guitar_solo: 'guitar'
+                };
+                const emote = emoteMap[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
+                this.previewConfig.activeEmote = emote as any;
                 if (this.viewer) this.viewer.setEmote(emote);
                 break;
+            }
         }
 
         if (this.viewer) this.viewer.updateConfig(this.previewConfig);

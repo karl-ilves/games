@@ -491,6 +491,164 @@ function generateItemSvg(item: AvatarItem): string {
 
     // 9. EMOTES
     if (category === 'emotes') {
+        if (id.includes('wave')) {
+            return wrapSvg(`
+                <!-- Friendly 3D Hand Wave -->
+                <ellipse cx="80" cy="120" rx="30" ry="10" fill="rgba(0,0,0,0.4)" />
+                <path d="M 68 126 L 68 96 L 52 82 C 48 78, 44 84, 48 88 L 60 100 L 60 72 C 60 66, 68 66, 68 72 L 68 62 C 68 56, 76 56, 76 62 L 76 66 C 76 60, 84 60, 84 66 L 84 74 C 84 68, 92 68, 92 74 L 92 98 Q 92 118, 80 126 Z" fill="url(#goldGrad)" stroke="#b8860b" stroke-width="2.5" />
+                <!-- Motion Wave Arcs -->
+                <path d="M 102 60 Q 118 78 102 96" fill="none" stroke="#00f2fe" stroke-width="3" stroke-linecap="round" filter="url(#neonGlow)" />
+                <path d="M 112 52 Q 132 78 112 104" fill="none" stroke="#00f2fe" stroke-width="2" stroke-linecap="round" opacity="0.6" />
+                <text x="32" y="52" font-size="20" fill="#ffd700">✨</text>
+            `);
+        }
+
+        if (id.includes('dance')) {
+            return wrapSvg(`
+                <!-- Victory Spin Dance - Disco Suit & Rhythm Ring -->
+                <ellipse cx="80" cy="88" rx="55" ry="18" fill="none" stroke="#00f2fe" stroke-width="2" stroke-dasharray="6,4" filter="url(#neonGlow)" />
+                <circle cx="80" cy="40" r="14" fill="#ffd700" filter="url(#neonGlow)" />
+                <!-- Torso in Stylish Purple Suit -->
+                <polygon points="68,54 92,54 88,96 72,96" fill="#8e44ad" stroke="#2c3e50" stroke-width="2" />
+                <!-- Raised Dancing Arms -->
+                <path d="M 68 60 L 44 42 L 36 28" fill="none" stroke="#8e44ad" stroke-width="8" stroke-linecap="round" />
+                <path d="M 92 60 L 116 78 L 126 94" fill="none" stroke="#8e44ad" stroke-width="8" stroke-linecap="round" />
+                <!-- Grooving Legs -->
+                <path d="M 74 96 L 60 134" fill="none" stroke="#2c3e50" stroke-width="8" stroke-linecap="round" />
+                <path d="M 86 96 L 104 130" fill="none" stroke="#2c3e50" stroke-width="8" stroke-linecap="round" />
+                <text x="30" y="40" font-size="18">🕺</text>
+                <text x="115" y="44" font-size="18" fill="#ffd700">🎵</text>
+            `);
+        }
+
+        if (id.includes('salute')) {
+            return wrapSvg(`
+                <!-- Honorary Military Salute -->
+                <circle cx="80" cy="40" r="14" fill="url(#goldGrad)" />
+                <rect x="66" y="54" width="28" height="42" rx="4" fill="#1e3a8a" stroke="#d4af37" stroke-width="2" />
+                <!-- Right Arm at Crisp Brow Salute -->
+                <path d="M 94 60 L 118 72 L 96 46" fill="none" stroke="#1e3a8a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 66 60 L 60 98" fill="none" stroke="#1e3a8a" stroke-width="8" stroke-linecap="round" />
+                <!-- Chevron Rank Badge -->
+                <polygon points="80,62 86,68 80,74 74,68" fill="url(#goldGrad)" />
+                <polygon points="80,72 86,78 80,84 74,78" fill="url(#goldGrad)" />
+                <rect x="70" y="96" width="8" height="38" fill="#111" />
+                <rect x="82" y="96" width="8" height="38" fill="#111" />
+                <text x="26" y="44" font-size="20">🎖️</text>
+            `);
+        }
+
+        if (id.includes('backflip')) {
+            return wrapSvg(`
+                <!-- Acrobatic Ninja Backflip -->
+                <!-- 360 Velocity Arc -->
+                <path d="M 32 100 A 48 48 0 1 1 128 100" fill="none" stroke="#00f2fe" stroke-width="4" stroke-dasharray="8,6" filter="url(#neonGlow)" />
+                <circle cx="80" cy="46" r="13" fill="#111" stroke="#00f2fe" stroke-width="2" />
+                <circle cx="80" cy="74" r="16" fill="#111" />
+                <path d="M 70 70 Q 52 64 42 78" fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" />
+                <path d="M 90 70 Q 108 64 118 78" fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" />
+                <path d="M 72 88 Q 60 106 48 116" fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" />
+                <path d="M 88 88 Q 100 106 112 116" fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" />
+                <text x="120" y="40" font-size="18">🌀</text>
+            `);
+        }
+
+        if (id.includes('breakdance')) {
+            return wrapSvg(`
+                <!-- Windmill Breakdance -->
+                <circle cx="60" cy="118" r="12" fill="#e74c3c" />
+                <path d="M 60 106 L 86 94" stroke="#e74c3c" stroke-width="12" stroke-linecap="round" />
+                <!-- Flying Windmill Legs -->
+                <path d="M 86 94 L 126 62" stroke="#2c3e50" stroke-width="10" stroke-linecap="round" />
+                <path d="M 86 94 L 46 54" stroke="#2c3e50" stroke-width="10" stroke-linecap="round" />
+                <!-- Ground Soundwave Ripples -->
+                <ellipse cx="80" cy="132" rx="55" ry="12" fill="none" stroke="#ffd700" stroke-width="2" filter="url(#neonGlow)" />
+                <text x="110" y="48" font-size="20">⚡</text>
+                <text x="24" y="52" font-size="20">🔥</text>
+            `);
+        }
+
+        if (id.includes('laugh')) {
+            return wrapSvg(`
+                <!-- Triumphant Laugh & Golden Trophy -->
+                <!-- Golden Trophy -->
+                <path d="M 64 70 L 64 92 Q 64 114 80 114 Q 96 114 96 92 L 96 70 Z" fill="url(#goldGrad)" stroke="#d4af37" stroke-width="2" />
+                <rect x="74" y="114" width="12" height="18" fill="url(#goldGrad)" />
+                <rect x="62" y="132" width="36" height="10" rx="3" fill="#111" />
+                <!-- Trophy Handles -->
+                <path d="M 64 76 C 48 76 48 98 64 98" fill="none" stroke="url(#goldGrad)" stroke-width="4" />
+                <path d="M 96 76 C 112 76 112 98 96 98" fill="none" stroke="url(#goldGrad)" stroke-width="4" />
+                <!-- Laughing Emoji above Trophy -->
+                <circle cx="80" cy="42" r="20" fill="#ffd700" stroke="#f39c12" stroke-width="2" />
+                <path d="M 70 38 Q 74 32 78 38" fill="none" stroke="#2d3436" stroke-width="2.5" />
+                <path d="M 82 38 Q 86 32 90 38" fill="none" stroke="#2d3436" stroke-width="2.5" />
+                <path d="M 70 46 Q 80 62 90 46 Z" fill="#78281f" />
+                <text x="116" y="40" font-size="18">🎉</text>
+            `);
+        }
+
+        if (id.includes('flex')) {
+            return wrapSvg(`
+                <!-- Bodybuilder Muscle Flex -->
+                <circle cx="80" cy="42" r="14" fill="url(#goldGrad)" />
+                <polygon points="66,56 94,56 88,96 72,96" fill="#e67e22" stroke="#d35400" stroke-width="2" />
+                <!-- Double Bicep Arms -->
+                <path d="M 66 64 L 42 64 L 42 42" fill="none" stroke="#e67e22" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 94 64 L 118 64 L 118 42" fill="none" stroke="#e67e22" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="42" cy="50" r="10" fill="#f39c12" />
+                <circle cx="118" cy="50" r="10" fill="#f39c12" />
+                <rect x="68" y="96" width="10" height="38" fill="#111" />
+                <rect x="82" y="96" width="10" height="38" fill="#111" />
+                <text x="70" y="32" font-size="20">💪</text>
+            `);
+        }
+
+        if (id.includes('levitate')) {
+            return wrapSvg(`
+                <!-- Mystic Zen Levitation in Lotus Pose -->
+                <!-- Glowing Aura Ring -->
+                <circle cx="80" cy="74" r="50" fill="none" stroke="#9b59b6" stroke-width="2" filter="url(#neonGlow)" />
+                <ellipse cx="80" cy="132" rx="42" ry="8" fill="rgba(155, 89, 182, 0.4)" filter="url(#neonGlow)" />
+                <circle cx="80" cy="46" r="13" fill="#ffffff" filter="url(#neonGlow)" />
+                <path d="M 68 62 L 92 62 L 88 94 L 72 94 Z" fill="#8e44ad" />
+                <!-- Crossed Lotus Legs -->
+                <path d="M 64 94 Q 80 110 96 94 Q 104 102 80 106 Q 56 102 64 94 Z" fill="#9b59b6" />
+                <!-- Resting Arms -->
+                <path d="M 68 66 L 52 86 L 68 92" fill="none" stroke="#8e44ad" stroke-width="6" stroke-linecap="round" />
+                <path d="M 92 66 L 108 86 L 92 92" fill="none" stroke="#8e44ad" stroke-width="6" stroke-linecap="round" />
+                <text x="70" y="32" font-size="18">🧘</text>
+            `);
+        }
+
+        if (id.includes('zombie')) {
+            return wrapSvg(`
+                <!-- Spooky Zombie Walk -->
+                <circle cx="80" cy="40" r="14" fill="#27ae60" />
+                <rect x="68" y="54" width="24" height="42" fill="#2d3436" />
+                <!-- Outstretched Undead Arms -->
+                <line x1="68" y1="62" x2="34" y2="62" stroke="#27ae60" stroke-width="8" stroke-linecap="round" />
+                <line x1="92" y1="62" x2="126" y2="62" stroke="#27ae60" stroke-width="8" stroke-linecap="round" />
+                <!-- Tattered Legs -->
+                <rect x="70" y="96" width="9" height="38" fill="#1e272e" />
+                <rect x="81" y="96" width="9" height="38" fill="#1e272e" />
+                <text x="70" y="30" font-size="18">🧟</text>
+            `);
+        }
+
+        if (id.includes('guitar')) {
+            return wrapSvg(`
+                <!-- Air Guitar Shred Solo -->
+                <!-- Rock Guitar Body -->
+                <polygon points="50,96 74,80 88,104 64,120" fill="#e74c3c" stroke="#c0392b" stroke-width="2" />
+                <!-- Guitar Neck -->
+                <line x1="64" y1="90" x2="120" y2="34" stroke="url(#chromeGrad)" stroke-width="6" stroke-linecap="round" />
+                <!-- Lightning & Rock Notes -->
+                <polygon points="126,24 136,36 128,38 138,50 122,44 128,34" fill="#ffd700" filter="url(#neonGlow)" />
+                <text x="24" y="60" font-size="20">🎸</text>
+                <text x="110" y="80" font-size="20">🔥</text>
+            `);
+        }
+
         return wrapSvg(`
             <!-- Dynamic Action Silhouette & Music/Motion Sparkles -->
             <circle cx="80" cy="44" r="14" fill="#00f2fe" filter="url(#neonGlow)" />

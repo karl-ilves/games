@@ -161,10 +161,22 @@ class AvatarService {
             case 'back':
                 update.backId = item.id;
                 break;
-            case 'emotes':
-                if (item.id === 'emote_dance_spin') update.activeEmote = 'dance';
-                else if (item.id === 'emote_wave') update.activeEmote = 'wave';
+            case 'emotes': {
+                const emoteActionMap: Record<string, string> = {
+                    emote_wave: 'wave',
+                    emote_dance_spin: 'dance',
+                    emote_salute_military: 'salute',
+                    emote_backflip: 'backflip',
+                    emote_breakdance: 'breakdance',
+                    emote_laugh_triumph: 'laugh',
+                    emote_flex_muscles: 'flex',
+                    emote_levitate_zen: 'levitate',
+                    emote_zombie_groan: 'zombie',
+                    emote_guitar_solo: 'guitar'
+                };
+                update.activeEmote = emoteActionMap[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
                 break;
+            }
         }
 
         this.saveAvatar(update);

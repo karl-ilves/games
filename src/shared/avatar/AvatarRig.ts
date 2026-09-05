@@ -1168,6 +1168,87 @@ export class AvatarRig {
             this.bones.rightLeg.rotation.x = -0.4;
             this.bones.leftArm.rotation.z = -1.5;
             this.bones.rightArm.rotation.z = 1.5;
+        } else if (emote === 'salute') {
+            // Military salute
+            this.bones.rightArm.rotation.z = 2.1;
+            this.bones.rightArm.rotation.x = 0.55;
+            this.bones.leftArm.rotation.z = -0.15;
+            this.bones.leftArm.rotation.x = 0;
+            this.bones.chest.rotation.x = -0.08;
+            this.bones.head.rotation.set(0, 0, 0);
+            this.bones.leftLeg.rotation.x = 0;
+            this.bones.rightLeg.rotation.x = 0;
+        } else if (emote === 'backflip') {
+            // Acrobatic Ninja Backflip
+            const spin = (time * 4) % (Math.PI * 2);
+            this.bones.hips.rotation.x = -spin;
+            this.bones.hips.position.y = 1.25 + Math.sin(spin * 0.5) * 0.6;
+            this.bones.leftArm.rotation.z = -2.2;
+            this.bones.rightArm.rotation.z = 2.2;
+            this.bones.leftLeg.rotation.x = -0.8;
+            this.bones.rightLeg.rotation.x = -0.8;
+        } else if (emote === 'breakdance') {
+            // Windmill Breakdance
+            this.bones.hips.position.y = 0.75;
+            this.bones.hips.rotation.x = 1.2;
+            this.bones.hips.rotation.y = time * 7;
+            this.bones.leftLeg.rotation.x = Math.sin(time * 7) * 0.9;
+            this.bones.rightLeg.rotation.x = -Math.sin(time * 7) * 0.9;
+            this.bones.leftArm.rotation.z = -1.8;
+            this.bones.rightArm.rotation.z = 1.8;
+        } else if (emote === 'laugh') {
+            // Triumphant hearty laughter
+            const chuck = Math.sin(time * 12) * 0.05;
+            this.bones.chest.position.y = 0.45 + chuck;
+            this.bones.head.rotation.x = -0.28 + chuck * 0.8;
+            this.bones.leftArm.rotation.z = -0.55;
+            this.bones.rightArm.rotation.z = 0.55;
+            this.bones.leftArm.rotation.x = 0.4;
+            this.bones.rightArm.rotation.x = 0.4;
+        } else if (emote === 'flex') {
+            // Bodybuilder Muscle Flex
+            const flexPulse = Math.sin(time * 4) * 0.1;
+            this.bones.leftArm.rotation.z = -1.7 + flexPulse;
+            this.bones.rightArm.rotation.z = 1.7 - flexPulse;
+            this.bones.leftArm.rotation.x = -0.5;
+            this.bones.rightArm.rotation.x = -0.5;
+            this.bones.chest.rotation.x = -0.12;
+            this.bones.hips.position.y = 1.25;
+            this.bones.leftLeg.rotation.z = -0.15;
+            this.bones.rightLeg.rotation.z = 0.15;
+        } else if (emote === 'levitate') {
+            // Mystic Zen Levitation in Lotus Pose
+            const floatY = Math.sin(time * 2.5) * 0.18;
+            this.bones.hips.position.y = 1.65 + floatY;
+            this.bones.leftLeg.rotation.x = -1.2;
+            this.bones.rightLeg.rotation.x = -1.2;
+            this.bones.leftLeg.rotation.z = 0.6;
+            this.bones.rightLeg.rotation.z = -0.6;
+            this.bones.leftArm.rotation.z = -0.8;
+            this.bones.rightArm.rotation.z = 0.8;
+            this.bones.leftArm.rotation.x = 0.4;
+            this.bones.rightArm.rotation.x = 0.4;
+        } else if (emote === 'zombie') {
+            // Spooky Zombie Walk
+            const sway = Math.sin(time * 2.5);
+            this.bones.leftArm.rotation.x = -1.55;
+            this.bones.rightArm.rotation.x = -1.55;
+            this.bones.leftArm.rotation.z = -0.1 + sway * 0.05;
+            this.bones.rightArm.rotation.z = 0.1 + sway * 0.05;
+            this.bones.head.rotation.z = sway * 0.15;
+            this.bones.head.rotation.y = sway * 0.1;
+            this.bones.leftLeg.rotation.x = sway * 0.35;
+            this.bones.rightLeg.rotation.x = -sway * 0.35;
+        } else if (emote === 'guitar') {
+            // Air Guitar Shred Solo
+            this.bones.leftArm.rotation.z = -1.4;
+            this.bones.leftArm.rotation.x = 0.6;
+            this.bones.rightArm.rotation.z = 0.8 + Math.sin(time * 14) * 0.35;
+            this.bones.rightArm.rotation.x = -0.2;
+            this.bones.head.rotation.x = Math.sin(time * 7) * 0.15;
+            this.bones.hips.position.y = 1.15;
+            this.bones.leftLeg.rotation.x = 0.3;
+            this.bones.rightLeg.rotation.x = -0.4;
         } else if (emote === 'walk' || emote === 'run') {
             const speed = emote === 'run' ? 12 : 8;
             const stride = emote === 'run' ? 0.75 : 0.5;

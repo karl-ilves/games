@@ -57,7 +57,7 @@ export interface AvatarConfig {
     hatId: string | null;
     accessoryId: string | null;
     backId: string | null;
-    activeEmote: 'idle' | 'wave' | 'dance' | 'jump';
+    activeEmote: 'idle' | 'wave' | 'dance' | 'jump' | 'salute' | 'backflip' | 'breakdance' | 'laugh' | 'flex' | 'levitate' | 'zombie' | 'guitar' | string;
     updatedAt?: string;
 }
 
