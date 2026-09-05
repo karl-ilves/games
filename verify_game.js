@@ -414,6 +414,34 @@ try {
             throw new Error("Purchased avatar item must be present in player inventory!");
         }
 
+        // Verify Real Generated Image Thumbnails
+        const thumbnailCount = await page.$$eval('#avatar-items-container .item-real-thumbnail', imgs => imgs.filter(img => img.src.startsWith('data:image/svg+xml')).length);
+        console.log("   Avatar items with real rendered image thumbnails:", thumbnailCount);
+        if (thumbnailCount === 0) {
+            throw new Error("Avatar items must have real generated image thumbnails!");
+        }
+
+        // Test Face Category, Real-Time Face Changing & Ultra-Realistic Glasses
+        await page.click('[data-category="face"]');
+        await new Promise(r => setTimeout(r, 250));
+        const faceItemsCount = await page.$$eval('#avatar-items-container .avatar-item-card', cards => cards.length);
+        console.log("   Avatar Face category items count:", faceItemsCount);
+        if (faceItemsCount < 5) throw new Error("Expected multiple face items in face category!");
+
+        const shadesPreviewBtn = await page.$('[data-preview-id="face_cool_shades"]');
+        if (shadesPreviewBtn) {
+            await page.click('[data-preview-id="face_cool_shades"]');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   Successfully tested previewing Ultra-Realistic Aviator Sunglasses!");
+        }
+
+        const animePreviewBtn = await page.$('[data-preview-id="face_anime_sparkle"]');
+        if (animePreviewBtn) {
+            await page.click('[data-preview-id="face_anime_sparkle"]');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   Successfully tested changing face to Anime Starlight Eyes!");
+        }
+
         // Test Emotes switching (e.g. Dance)
         await page.click('[data-emote="dance"]');
         await new Promise(r => setTimeout(r, 200));

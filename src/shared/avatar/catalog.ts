@@ -301,7 +301,37 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         price: 400, // 2x from 200
         currency: 'Yard',
         attachmentSocket: 'face',
-        description: 'Glossy dark aviator shades with metal rims.'
+        description: 'Ultra-realistic gold aviator shades with glossy polarized teardrop lenses.'
+    },
+    {
+        id: 'face_sunglasses_luxury',
+        name: 'Monaco Luxury Black Shades',
+        category: 'face',
+        rarity: 'Epic',
+        price: 900,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Ultra-realistic designer acetate sunglasses with reflective smoke lenses.'
+    },
+    {
+        id: 'face_retro_round',
+        name: 'Vintage Gold Round Spectacles',
+        category: 'face',
+        rarity: 'Rare',
+        price: 600,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Ultra-realistic circular 24K gold wireframe glasses with anti-reflective crystal glass.'
+    },
+    {
+        id: 'face_cyber_matrix_shades',
+        name: 'Matrix Cyber Edge Shades',
+        category: 'face',
+        rarity: 'Legendary',
+        price: 1800,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Ultra-realistic rimless obsidian micro-shades with high-gloss mirror reflections.'
     },
     {
         id: 'face_cyborg_visor',

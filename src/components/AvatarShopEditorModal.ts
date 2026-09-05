@@ -2,6 +2,7 @@ import { avatarService } from '../shared/avatar/AvatarService';
 import { AvatarViewer } from '../shared/avatar/AvatarViewer';
 import { AVATAR_CATALOG, getItemById, getItemsByCategory } from '../shared/avatar/catalog';
 import { AvatarItem, AvatarCategory, AvatarConfig } from '../shared/avatar/types';
+import { getItemThumbnailUrl } from '../shared/avatar/thumbnailGenerator';
 import { yardService } from '../shared/yardService';
 
 export class AvatarShopEditorModal {
@@ -260,7 +261,7 @@ export class AvatarShopEditorModal {
                     </div>
 
                     <div class="item-preview-visual">
-                        <div class="item-icon-symbol">${this.getItemIcon(item)}</div>
+                        <img class="item-real-thumbnail" src="${getItemThumbnailUrl(item)}" alt="${item.name}" loading="lazy" />
                     </div>
 
                     <div class="item-title">${item.name}</div>

@@ -1615,6 +1615,54 @@ export class MurderMysteryGame {
         browR.rotation.z = -0.08;
         group.add(browR);
 
+        // 3D Equipped Face Accessory for Player (Ultra-Realistic Sunglasses, Visor, Mask, Monocle, Goggles, etc.)
+        if (isPlayer && avatarCfg?.faceId) {
+            const fId = avatarCfg.faceId;
+            if (fId === 'face_cool_shades' || fId.includes('shades') || fId.includes('sunglasses') || fId.includes('retro_round') || fId.includes('matrix')) {
+                // Ultra-Realistic Aviator Sunglasses on Player Head
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.96, roughness: 0.12 });
+                const lensMat = new THREE.MeshStandardMaterial({ color: 0x07111c, metalness: 0.35, roughness: 0.03, transparent: true, opacity: 0.84 });
+                const browBar = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.44, 12), frameMat);
+                browBar.rotation.z = Math.PI * 0.5;
+                browBar.position.set(0, 3.24, 0.47);
+                group.add(browBar);
+                [-1, 1].forEach(side => {
+                    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.01, 8, 24), frameMat);
+                    rim.scale.set(1.08, 1.25, 0.5);
+                    rim.position.set(side * 0.18, 3.16, 0.47);
+                    group.add(rim);
+                    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.01, 20), lensMat);
+                    lens.rotation.x = Math.PI * 0.5;
+                    lens.scale.set(1.06, 0.5, 1.22);
+                    lens.position.set(side * 0.18, 3.16, 0.47);
+                    group.add(lens);
+                    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.5, 8), frameMat);
+                    arm.rotation.x = Math.PI * 0.5;
+                    arm.position.set(side * 0.32, 3.18, 0.22);
+                    group.add(arm);
+                });
+            } else if (fId === 'face_cyborg_visor') {
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.14, 0.16), new THREE.MeshBasicMaterial({ color: 0x00f2fe }));
+                visor.position.set(0, 3.16, 0.46);
+                group.add(visor);
+            } else if (fId === 'face_ninja_mask') {
+                const mask = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.32, 0.22), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+                mask.position.set(0, 2.95, 0.42);
+                group.add(mask);
+            } else if (fId === 'face_gold_monocle') {
+                const monocle = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.012, 8, 16), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95 }));
+                monocle.position.set(0.18, 3.16, 0.46);
+                group.add(monocle);
+            } else if (fId === 'face_steampunk_goggles') {
+                [-1, 1].forEach(side => {
+                    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.08, 16), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9 }));
+                    cup.rotation.x = Math.PI * 0.5;
+                    cup.position.set(side * 0.18, 3.16, 0.48);
+                    group.add(cup);
+                });
+            }
+        }
+
         // --- HAIR & CROWN & ACCESSORIES ---
         const hairPalette = [0x1a1a1a, 0x3d2719, 0x5c4033, 0x8b5a2b, 0x2a1e17];
         const hairColor = (isPlayer && avatarCfg?.hairColor) ? avatarCfg.hairColor : (isPlayer ? 0x221812 : hairPalette[Math.abs(colorHex) % hairPalette.length]);

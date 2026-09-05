@@ -472,12 +472,55 @@ export class ParkourObbyGame {
         this.playerHeadMesh.position.y = 1.8;
         this.playerGroup.add(this.playerHeadMesh);
 
-        // Visor / Eyes / Face
-        const visorGeo = new THREE.BoxGeometry(0.44, 0.18, 0.1);
-        const visorMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
-        const visor = new THREE.Mesh(visorGeo, visorMat);
-        visor.position.set(0, 1.85, -0.28);
-        this.playerGroup.add(visor);
+        // 3D Equipped Face Accessory for Player (Ultra-Realistic Sunglasses, Visor, Mask, Monocle, Goggles)
+        const faceId = avatarCfg?.faceId || 'face_smile';
+        if (faceId === 'face_cool_shades' || faceId.includes('shades') || faceId.includes('sunglasses') || faceId.includes('retro_round') || faceId.includes('matrix')) {
+            // Ultra-Realistic Aviator Sunglasses on Obby Character
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.96, roughness: 0.12 });
+            const lensMat = new THREE.MeshStandardMaterial({ color: 0x07111c, metalness: 0.35, roughness: 0.03, transparent: true, opacity: 0.84 });
+            const browBar = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.44, 10), frameMat);
+            browBar.rotation.z = Math.PI * 0.5;
+            browBar.position.set(0, 1.92, -0.32);
+            this.playerGroup.add(browBar);
+            [-1, 1].forEach(side => {
+                const rim = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.009, 8, 20), frameMat);
+                rim.scale.set(1.08, 1.25, 0.5);
+                rim.position.set(side * 0.15, 1.85, -0.32);
+                this.playerGroup.add(rim);
+                const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.008, 16), lensMat);
+                lens.rotation.x = Math.PI * 0.5;
+                lens.scale.set(1.06, 0.5, 1.22);
+                lens.position.set(side * 0.15, 1.85, -0.32);
+                this.playerGroup.add(lens);
+            });
+        } else if (faceId === 'face_cyborg_visor' || faceId === 'face_vr_headset') {
+            const visorGeo = new THREE.BoxGeometry(0.48, 0.16, 0.1);
+            const visorMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+            const visor = new THREE.Mesh(visorGeo, visorMat);
+            visor.position.set(0, 1.85, -0.30);
+            this.playerGroup.add(visor);
+        } else if (faceId === 'face_ninja_mask') {
+            const mask = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.22, 0.14), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+            mask.position.set(0, 1.72, -0.28);
+            this.playerGroup.add(mask);
+        } else if (faceId === 'face_steampunk_goggles') {
+            [-1, 1].forEach(side => {
+                const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.075, 0.06, 16), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9 }));
+                cup.rotation.x = Math.PI * 0.5;
+                cup.position.set(side * 0.14, 1.85, -0.32);
+                this.playerGroup.add(cup);
+            });
+        } else {
+            // Stylized Expressive Face Eyes & Smile
+            [-1, 1].forEach(side => {
+                const eye = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.04), new THREE.MeshBasicMaterial({ color: 0x111111 }));
+                eye.position.set(side * 0.14, 1.86, -0.31);
+                this.playerGroup.add(eye);
+            });
+            const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.02), new THREE.MeshBasicMaterial({ color: 0x78281f }));
+            mouth.position.set(0, 1.68, -0.31);
+            this.playerGroup.add(mouth);
+        }
 
         // Left & Right Arms
         const armGeo = new THREE.BoxGeometry(0.24, 0.8, 0.24);

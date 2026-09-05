@@ -1661,6 +1661,46 @@ class WarGameEngine {
         head.position.y = 2.15;
         root.add(head);
 
+        // Equipped Face Item for local soldier (Ultra-realistic sunglasses, goggles, visor, mask, monocle)
+        if (isLocal && avatarCfg?.faceId) {
+            const fId = avatarCfg.faceId;
+            if (fId === 'face_cool_shades' || fId.includes('shades') || fId.includes('sunglasses') || fId.includes('retro_round') || fId.includes('matrix')) {
+                // Ultra-Realistic Aviator Sunglasses on Soldier
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.96, roughness: 0.12 });
+                const lensMat = new THREE.MeshStandardMaterial({ color: 0x07111c, metalness: 0.35, roughness: 0.03, transparent: true, opacity: 0.84 });
+                const browBar = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.32, 10), frameMat);
+                browBar.rotation.z = Math.PI * 0.5;
+                browBar.position.set(0, 2.22, 0.32);
+                root.add(browBar);
+                [-1, 1].forEach(side => {
+                    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.008, 8, 20), frameMat);
+                    rim.scale.set(1.08, 1.25, 0.5);
+                    rim.position.set(side * 0.13, 2.16, 0.32);
+                    root.add(rim);
+                    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.008, 16), lensMat);
+                    lens.rotation.x = Math.PI * 0.5;
+                    lens.scale.set(1.06, 0.5, 1.22);
+                    lens.position.set(side * 0.13, 2.16, 0.32);
+                    root.add(lens);
+                });
+            } else if (fId === 'face_cyborg_visor') {
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.12, 0.12), new THREE.MeshBasicMaterial({ color: 0x00f2fe }));
+                visor.position.set(0, 2.16, 0.30);
+                root.add(visor);
+            } else if (fId === 'face_ninja_mask') {
+                const mask = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.18), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+                mask.position.set(0, 2.02, 0.26);
+                root.add(mask);
+            } else if (fId === 'face_steampunk_goggles') {
+                [-1, 1].forEach(side => {
+                    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.075, 0.06, 16), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9 }));
+                    cup.rotation.x = Math.PI * 0.5;
+                    cup.position.set(side * 0.13, 2.16, 0.32);
+                    root.add(cup);
+                });
+            }
+        }
+
         // Helmet or User Hat
         const hatId = (isLocal && avatarCfg?.hatId) ? avatarCfg.hatId : 'helmet';
         if (hatId === 'hat_royal_crown') {
