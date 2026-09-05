@@ -538,6 +538,10 @@
                 <span id="hud-role-icon">⏳</span>
                 <span id="hud-role-text">LOBBY</span>
             </div>
+            <div class="hud-badge" id="hud-map-badge" style="border-color: #00cec9; color: #00cec9; display: none;">
+                <span id="hud-map-icon">🗺️</span>
+                <span id="hud-map-name">HOTEL 2</span>
+            </div>
             <div class="hud-badge" id="hud-alive-badge" style="display: none; border-color: #2ecc71; color: #2ecc71;">
                 <span>👥 ELUS:</span>
                 <span id="hud-alive-count">8/8</span>
@@ -582,7 +586,7 @@
     <!-- Dropped Gun Alert Banner -->
     <div id="gun-dropped-banner">
         <span>⚠️</span>
-        <span id="gun-dropped-text">ŠERIF ON LANGENUD! RELV ON PÕRANDAL!</span>
+        <span id="gun-dropped-text">DETEKTIIV ON LANGENUD! RELV ON PÕRANDAL!</span>
         <span>🔫</span>
     </div>
 
@@ -591,15 +595,15 @@
 
     <!-- Interaction Prompt (e.g. Press E to pick up Gun) -->
     <div id="interaction-prompt">
-        <span id="interaction-prompt-text">[E] Võta maast šerifi relv</span>
+        <span id="interaction-prompt-text">[E] Võta maast detektiivi relv</span>
     </div>
 
     <!-- Playard Admin / Owner Role Selection Modal -->
     <div id="admin-role-modal">
-        <div class="admin-modal-card">
+        <div class="admin-modal-card" style="max-width: 540px;">
             <div style="font-size: 2.5rem; margin-bottom: 6px;">👑</div>
             <h2 style="color: #ffd32a; margin: 0 0 6px 0; font-size: 1.6rem; letter-spacing: 1px;">PLAYARD ADMIN PANEEL</h2>
-            <p style="color: #dcdde1; font-size: 0.95rem; margin: 0 0 16px 0;">Vali oma roll (rakendub koheselt või järgmiseks raundiks):</p>
+            <p style="color: #dcdde1; font-size: 0.95rem; margin: 0 0 14px 0;">Vali oma roll ja soovitud 3D kaart:</p>
             
             <div class="admin-role-grid">
                 <!-- Murderer -->
@@ -609,10 +613,10 @@
                     <span style="font-size: 0.78rem; color: #ccc;">Nuga · 1-löök tapmine · +150 Y</span>
                 </button>
 
-                <!-- Sheriff -->
+                <!-- Detective -->
                 <button class="admin-role-btn admin-role-sheriff" id="btn-admin-role-sheriff">
                     <span style="font-size: 2.4rem;">🔫</span>
-                    <strong style="color: #00f2fe; font-size: 1.15rem;">ŠERIF</strong>
+                    <strong style="color: #00f2fe; font-size: 1.15rem;">DETEKTIIV</strong>
                     <span style="font-size: 0.78rem; color: #ccc;">Revolver · Lase mõrvarit · +100 Y</span>
                 </button>
 
@@ -622,6 +626,21 @@
                     <strong style="color: #2ecc71; font-size: 1.15rem;">SÜÜTU</strong>
                     <span style="font-size: 0.78rem; color: #ccc;">Käed · Kogu münte · Jää ellu</span>
                 </button>
+            </div>
+
+            <!-- Map Selection Grid in Admin Panel -->
+            <div style="margin: 15px 0 10px 0; text-align: left;">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #ffd32a; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">
+                    🗺️ Vali 3D Kaart (Täpselt 5 klassikalist kaarti):
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;" id="admin-map-select-grid">
+                    <button class="btn-hud-action admin-map-btn active" data-map="random" style="justify-content: center; font-size: 0.8rem; border-color: #ffd32a; color: #ffd32a;">🎲 JUHUSLIK</button>
+                    <button class="btn-hud-action admin-map-btn" data-map="hotel2" style="justify-content: center; font-size: 0.8rem;">🏨 HOTEL 2</button>
+                    <button class="btn-hud-action admin-map-btn" data-map="milbase" style="justify-content: center; font-size: 0.8rem;">🪖 MIL BASE</button>
+                    <button class="btn-hud-action admin-map-btn" data-map="office" style="justify-content: center; font-size: 0.8rem;">🏢 OFFICE</button>
+                    <button class="btn-hud-action admin-map-btn" data-map="vacation" style="justify-content: center; font-size: 0.8rem;">🌴 VACATION</button>
+                    <button class="btn-hud-action admin-map-btn" data-map="yatchy" style="justify-content: center; font-size: 0.8rem;">🛥️ YATCHY</button>
+                </div>
             </div>
 
             <div class="admin-quick-actions">
@@ -643,7 +662,7 @@
         <div class="role-card-anim" id="role-card-box">
             <div style="font-size: 3.5rem; margin-bottom: 10px;" id="role-reveal-icon">🔪</div>
             <div class="role-title" id="role-reveal-title">MÕRVAR</div>
-            <div class="role-desc" id="role-reveal-desc">Tapa salaja kõik süütud ja väldi šerifi kuule enne aja lõppu!</div>
+            <div class="role-desc" id="role-reveal-desc">Tapa salaja kõik süütud ja väldi detektiivi kuule enne aja lõppu!</div>
             <button class="btn-play-again" id="btn-role-reveal-close">MÕISTETUD! ⚔️</button>
         </div>
     </div>
@@ -671,13 +690,14 @@
     <!-- Round End & Victory Overlay -->
     <div id="round-end-overlay">
         <div class="victory-card">
-            <div style="font-size: 3.5rem;" id="end-trophy-icon">🏆</div>
-            <h2 id="end-title" style="font-size: 1.8rem; margin: 10px 0; color: #00f2fe;">SÜÜTUD JA ŠERIF VÕITSID! 🏆</h2>
-            <p id="end-reason" style="color: #dcdde1; font-size: 1rem; margin-bottom: 15px;">Šerif laskis mõrvari maha ja päästis häärberi!</p>
-            <div style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: 12px; margin-bottom: 15px;">
-                <div style="font-size: 0.9rem; color: #aaa;">Mõrvar oli: <strong id="end-murderer-name" style="color: #ff2e63;">Alex</strong></div>
-                <div style="font-size: 0.9rem; color: #aaa;">Kangelane: <strong id="end-hero-name" style="color: #00f2fe;">1karl.ilves</strong></div>
-                <div style="font-size: 1.1rem; font-weight: 800; color: #ffd32a; margin-top: 6px;">Preemia: +<span id="end-reward-yards">100</span> Jardi</div>
+            <div style="font-size: 3.8rem;" id="end-trophy-icon">🏆</div>
+            <h2 id="end-title" style="font-size: 2.2rem; margin: 12px 0; color: #00f2fe; letter-spacing: 2px; text-transform: uppercase;">DETECTIVE WINS 🔫</h2>
+            <p id="end-reason" style="color: #dcdde1; font-size: 1.05rem; margin-bottom: 15px;">Detektiiv laskis mõrvari maha!</p>
+            <div style="background: rgba(0,0,0,0.4); padding: 14px; border-radius: 14px; margin-bottom: 16px;">
+                <div style="font-size: 0.95rem; color: #aaa;">Mõrvar oli: <strong id="end-murderer-name" style="color: #ff2e63;">Alex</strong></div>
+                <div style="font-size: 0.95rem; color: #aaa;">Kangelane: <strong id="end-hero-name" style="color: #00f2fe;">Karl</strong></div>
+                <div style="font-size: 0.95rem; color: #aaa;">Kaart: <strong id="end-map-name" style="color: #ffd32a;">🏨 HOTEL 2</strong></div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #ffd32a; margin-top: 8px;">Preemia: +<span id="end-reward-yards">100</span> Jardi</div>
             </div>
             <button class="btn-play-again" id="btn-next-round">TAGASI LOBBYSSE 🔄</button>
         </div>

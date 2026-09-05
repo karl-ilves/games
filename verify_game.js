@@ -2731,6 +2731,21 @@ try {
             console.log(`   Admin Forced Role after clicking Sheriff: ${forcedRole2}`);
             if (forcedRole2 !== 'sheriff') throw new Error('Admin Forced Role should be sheriff!');
 
+            // Test selecting 5 distinct maps via Admin Panel
+            console.log('   Testing 5 distinct MMP1 Maps via Admin Panel:');
+            const mapsToTest = ['hotel2', 'milbase', 'office', 'vacation', 'yatchy'];
+            for (const mapKey of mapsToTest) {
+                await page.click(`.admin-map-btn[data-map="${mapKey}"]`);
+                await new Promise(r => setTimeout(r, 60));
+                const selMap = await page.evaluate(() => window.mmp1Game?.adminSelectedMap);
+                if (selMap !== mapKey) throw new Error(`Expected adminSelectedMap to be ${mapKey}, got ${selMap}`);
+            }
+            console.log('   All 5 maps selectable in Admin Panel: ✅');
+
+            // Set map to hotel2 for consistent round tests
+            await page.click('.admin-map-btn[data-map="hotel2"]');
+            await new Promise(r => setTimeout(r, 60));
+
             // Close Admin Panel Modal
             await page.click('#btn-admin-close');
             await new Promise(r => setTimeout(r, 200));
@@ -2916,15 +2931,42 @@ try {
             if (realismCheck.gunChildrenCount < 8) throw new Error('Gun must be an ultra-realistic composite 3D revolver model!');
             console.log('   Ultra-realistic humans and weapons verified: ✅');
 
-            // Test Round End & Rewards
+            // Test Round End & Victory Announcements
             await page.evaluate(() => {
-                window.mmp1Game.endRound('sheriff_win', 'Test võit: Šerif laskis mõrvari maha!');
+                window.mmp1Game.endRound('sheriff_win', 'Test võit: Detektiiv laskis mõrvari maha!');
             });
             await new Promise(r => setTimeout(r, 300));
 
             const roundEndDisplay = await page.$eval('#round-end-overlay', el => window.getComputedStyle(el).display);
             if (roundEndDisplay !== 'flex') throw new Error('Round End modal must display on round end!');
-            console.log('   MMP1 Round End modal visible with reward: ✅');
+            const endTitleText = await page.$eval('#end-title', el => el.textContent);
+            console.log(`   MMP1 Round End Victory Title: ${endTitleText}`);
+            if (!endTitleText.includes('DETECTIVE WINS') && !endTitleText.includes('INNOCENTS WIN')) {
+                throw new Error(`Expected DETECTIVE WINS or INNOCENTS WIN on sheriff_win, got: ${endTitleText}`);
+            }
+            const endMapText = await page.$eval('#end-map-name', el => el.textContent);
+            console.log(`   MMP1 End Map display: ${endMapText}`);
+            if (!endMapText.includes('HOTEL 2')) {
+                throw new Error(`Expected HOTEL 2 in end-map-name, got: ${endMapText}`);
+            }
+            console.log('   MMP1 Round End modal visible with reward and victory header: ✅');
+
+            // Test building all 5 distinct 3D maps directly
+            console.log('   Testing runtime 3D rendering for all 5 maps:');
+            for (const mapKey of ['hotel2', 'milbase', 'office', 'vacation', 'yatchy']) {
+                const mapRes = await page.evaluate((m) => {
+                    window.mmp1Game?.buildMap(m);
+                    return {
+                        currentMap: window.mmp1Game?.currentMapId,
+                        wallsCount: window.mmp1Game?.wallMeshes?.length || 0,
+                        collidersCount: window.mmp1Game?.mapColliders?.length || 0
+                    };
+                }, mapKey);
+                if (mapRes.currentMap !== mapKey || mapRes.wallsCount === 0 || mapRes.collidersCount === 0) {
+                    throw new Error(`Failed to build map ${mapKey}: walls=${mapRes.wallsCount}, colliders=${mapRes.collidersCount}`);
+                }
+                console.log(`     - Map ${mapKey}: ✅ (${mapRes.wallsCount} walls, ${mapRes.collidersCount} colliders)`);
+            }
 
             // Test Returning to Lobby
             await page.click('#btn-next-round');

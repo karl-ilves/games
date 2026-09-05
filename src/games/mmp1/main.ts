@@ -263,8 +263,96 @@ class MmpAudio {
 const audio = new MmpAudio();
 
 // --- Types & Interfaces ---
-type Role = 'murderer' | 'sheriff' | 'innocent';
-type GameState = 'lobby' | 'role_reveal' | 'in_game' | 'round_end';
+export type Role = 'murderer' | 'sheriff' | 'innocent';
+export type GameState = 'lobby' | 'role_reveal' | 'in_game' | 'round_end';
+export type MapId = 'hotel2' | 'milbase' | 'office' | 'vacation' | 'yatchy';
+
+export interface MapConfig {
+    id: MapId;
+    name: string;
+    icon: string;
+    description: string;
+    spawnPoints: [number, number, number][];
+    coinSpawns: [number, number, number][];
+}
+
+export const MAP_CATALOG: Record<MapId, MapConfig> = {
+    hotel2: {
+        id: 'hotel2',
+        name: 'HOTEL 2',
+        icon: '🏨',
+        description: 'Luksuslik kahekorruseline hotell fuajee, tubade, koridoride ja rõdudega.',
+        spawnPoints: [
+            [0, 0, 0], [-10, 0, -8], [10, 0, -8], [-12, 0, 10], [12, 0, 10],
+            [-22, 0, -2], [22, 0, -2], [0, 0, -18]
+        ],
+        coinSpawns: [
+            [0, 1, 0], [-8, 1, -12], [8, 1, -12], [-14, 1, 8], [14, 1, 8],
+            [-24, 1, -18], [24, 1, -18], [-24, 1, 18], [24, 1, 18],
+            [0, 1, 20], [-16, 1, 0], [16, 1, 0], [0, 1, -26]
+        ]
+    },
+    milbase: {
+        id: 'milbase',
+        name: 'MIL BASE',
+        icon: '🪖',
+        description: 'Militaarbaas kasarmute, radaripunkri, varustuse angaari ja siseõuega.',
+        spawnPoints: [
+            [0, 0, 0], [-14, 0, -10], [14, 0, -10], [-14, 0, 12], [14, 0, 12],
+            [-24, 0, 0], [24, 0, 0], [0, 0, -22]
+        ],
+        coinSpawns: [
+            [0, 1, 0], [-12, 1, -14], [12, 1, -14], [-16, 1, 12], [16, 1, 12],
+            [-26, 1, -20], [26, 1, -20], [-26, 1, 20], [26, 1, 20],
+            [0, 1, 22], [-20, 1, 0], [20, 1, 0], [0, 1, -28]
+        ]
+    },
+    office: {
+        id: 'office',
+        name: 'OFFICE',
+        icon: '🏢',
+        description: 'Suur büroohoone boksikontorite, koosolekuruumi, serveriruumi ja puhkealaga.',
+        spawnPoints: [
+            [0, 0, 0], [-12, 0, -10], [12, 0, -10], [-12, 0, 12], [12, 0, 12],
+            [-22, 0, 0], [22, 0, 0], [0, 0, -18]
+        ],
+        coinSpawns: [
+            [0, 1, 0], [-10, 1, -10], [10, 1, -10], [-14, 1, 14], [14, 1, 14],
+            [-25, 1, -18], [25, 1, -18], [-25, 1, 18], [25, 1, 18],
+            [0, 1, 22], [-18, 1, 0], [18, 1, 0], [0, 1, -24]
+        ]
+    },
+    vacation: {
+        id: 'vacation',
+        name: 'VACATION',
+        icon: '🌴',
+        description: 'Rannakuurort kuldse liiva, palmide, bangalote, tiki-baari ja vaateplatvormiga.',
+        spawnPoints: [
+            [0, 0, 0], [-14, 0, -8], [14, 0, -8], [-12, 0, 14], [12, 0, 14],
+            [-22, 0, 0], [22, 0, 0], [0, 0, -20]
+        ],
+        coinSpawns: [
+            [0, 1, 0], [-12, 1, -12], [12, 1, -12], [-16, 1, 12], [16, 1, 12],
+            [-24, 1, -18], [24, 1, -18], [-24, 1, 18], [24, 1, 18],
+            [0, 1, 20], [-18, 1, 0], [18, 1, 0], [0, 1, -26]
+        ]
+    },
+    yatchy: {
+        id: 'yatchy',
+        name: 'YATCHY',
+        icon: '🛥️',
+        description: 'Mitmetasandiline luksusjaht salongi, kajutite, kaptenisilla ja mullivanniga.',
+        spawnPoints: [
+            [0, 0, 0], [-8, 0, -12], [8, 0, -12], [-8, 0, 14], [8, 0, 14],
+            [-14, 0, 0], [14, 0, 0], [0, 0, -22]
+        ],
+        coinSpawns: [
+            [0, 1, 0], [-8, 1, -10], [8, 1, -10], [-8, 1, 12], [8, 1, 12],
+            [-16, 1, -20], [16, 1, -20], [-16, 1, 20], [16, 1, 20],
+            [0, 1, 22], [-12, 1, 0], [12, 1, 0], [0, 1, -28]
+        ]
+    }
+};
 
 interface Character {
     id: string;
@@ -358,11 +446,15 @@ export class MurderMysteryGame {
     private slotWeaponName: HTMLElement | null = null;
     private adminModal: HTMLElement | null = null;
     private btnAdminPanel: HTMLElement | null = null;
-
     public adminForcedRole: Role | null = null;
+    public currentMapId: MapId = 'hotel2';
+    public adminSelectedMap: MapId | 'random' = 'random';
     private lastHero: Character | null = null;
     public wallMeshes: THREE.Mesh[] = [];
     public hasSheriffWitnessedMurder: boolean = false;
+    private hudMapBadge: HTMLElement | null = null;
+    private hudMapText: HTMLElement | null = null;
+    private endMapName: HTMLElement | null = null;
 
     constructor() {
         this.container = document.getElementById('canvas-container') || document.body;
@@ -417,6 +509,9 @@ export class MurderMysteryGame {
         this.slotWeaponName = document.getElementById('slot-weapon-name');
         this.adminModal = document.getElementById('admin-role-modal');
         this.btnAdminPanel = document.getElementById('btn-admin-panel');
+        this.hudMapBadge = document.getElementById('hud-map-badge');
+        this.hudMapText = document.getElementById('hud-map-text');
+        this.endMapName = document.getElementById('end-map-name');
 
         const gameYardIcon = document.getElementById('game-yard-icon');
         if (gameYardIcon) gameYardIcon.innerHTML = yardService.renderYardSvg(18);
@@ -513,30 +608,72 @@ export class MurderMysteryGame {
         this.scene.add(this.lobbyGroup);
     }
 
-    // --- Unified Grand Chamber 3D Builder (One big room with visible room zones & locked exits) ---
-    private buildMansion() {
+    // --- Modular 3D Map Architecture (5 Distinct MM Maps) ---
+    public buildMap(mapId: MapId) {
+        this.currentMapId = mapId;
+        const config = MAP_CATALOG[mapId];
+
+        // Clean up old map
+        if (this.mansionGroup) {
+            this.scene.remove(this.mansionGroup);
+        }
         this.mansionGroup = new THREE.Group();
         this.mansionGroup.position.set(0, 0, 0);
         this.mapColliders = [];
         this.wallMeshes = [];
 
-        const createWall = (w: number, h: number, d: number, x: number, y: number, z: number, color = 0x241d24, hasCollider = true) => {
-            const wallMat = new THREE.MeshStandardMaterial({ color, roughness: 0.65 });
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-            wall.position.set(x, y, z);
-            wall.castShadow = true;
-            wall.receiveShadow = true;
-            this.mansionGroup.add(wall);
-            this.wallMeshes.push(wall);
+        // Update HUD Badge
+        if (this.hudMapText) {
+            this.hudMapText.textContent = `${config.icon} ${config.name}`;
+        }
+        if (this.endMapName) {
+            this.endMapName.textContent = `${config.icon} ${config.name}`;
+        }
 
-            if (hasCollider) {
-                const box = new THREE.Box3().setFromObject(wall);
-                this.mapColliders.push(box);
-            }
-            return wall;
-        };
+        switch (mapId) {
+            case 'hotel2':
+                this.buildHotel2Map();
+                break;
+            case 'milbase':
+                this.buildMilBaseMap();
+                break;
+            case 'office':
+                this.buildOfficeMap();
+                break;
+            case 'vacation':
+                this.buildVacationMap();
+                break;
+            case 'yatchy':
+                this.buildYatchyMap();
+                break;
+            default:
+                this.buildHotel2Map();
+                break;
+        }
 
-        // 1. One Grand Shared Floor (90x90 units) - Polished Wood & Marble
+        this.scene.add(this.mansionGroup);
+    }
+
+    // Helper to create walls with collisions and raycasting tracking
+    private createMapWall(w: number, h: number, d: number, x: number, y: number, z: number, color = 0x241d24, hasCollider = true): THREE.Mesh {
+        const wallMat = new THREE.MeshStandardMaterial({ color, roughness: 0.65 });
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+        wall.position.set(x, y, z);
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        this.mansionGroup.add(wall);
+        this.wallMeshes.push(wall);
+
+        if (hasCollider) {
+            const box = new THREE.Box3().setFromObject(wall);
+            this.mapColliders.push(box);
+        }
+        return wall;
+    }
+
+    // 1. HOTEL 2: Multi-floor grand hotel with lobby, reception, rooms, and mezzanine
+    private buildHotel2Map() {
+        // Floor: Polished hotel marble & dark oak
         const floorGeo = new THREE.BoxGeometry(92, 1, 92);
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x3d271d, roughness: 0.35, metalness: 0.1 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -544,7 +681,7 @@ export class MurderMysteryGame {
         floor.receiveShadow = true;
         this.mansionGroup.add(floor);
 
-        // Center Red Velvet Carpet across the whole room
+        // Center Red Velvet Carpet across grand lobby
         const carpetGeo = new THREE.BoxGeometry(12, 0.08, 65);
         const carpetMat = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.8 });
         const carpet = new THREE.Mesh(carpetGeo, carpetMat);
@@ -552,38 +689,27 @@ export class MurderMysteryGame {
         carpet.receiveShadow = true;
         this.mansionGroup.add(carpet);
 
-        // 2. Impassable Locked Outer Perimeter Walls (90x90, Height 14) - "Sealt lahkuda ei saa"
-        createWall(92, 14, 2, 0, 7, -46, 0x1a1520);
-        createWall(92, 14, 2, 0, 7, 46, 0x1a1520);
-        createWall(2, 14, 92, -46, 7, 0, 0x1a1520);
-        createWall(2, 14, 92, 46, 7, 0, 0x1a1520);
+        // Perimeter Walls
+        this.createMapWall(92, 14, 2, 0, 7, -46, 0x1f1924);
+        this.createMapWall(92, 14, 2, 0, 7, 46, 0x1f1924);
+        this.createMapWall(2, 14, 92, -46, 7, 0, 0x1f1924);
+        this.createMapWall(2, 14, 92, 46, 7, 0, 0x1f1924);
 
-        // Locked Massive Iron Exit Gates on North & South Walls
-        const ironGateMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
-        const lockMat = new THREE.MeshStandardMaterial({ color: 0xff2e63, emissive: 0x550011 });
+        // Hotel Reception Desk (North Center)
+        const desk = new THREE.Mesh(new THREE.BoxGeometry(18, 2.2, 4), new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.3 }));
+        desk.position.set(0, 1.1, -36);
+        desk.castShadow = true;
+        this.mansionGroup.add(desk);
+        this.wallMeshes.push(desk);
+        this.mapColliders.push(new THREE.Box3().setFromObject(desk));
 
-        [[-46, 1], [46, -1]].forEach(([gz, dir]) => {
-            const gate = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 1.2), ironGateMat);
-            gate.position.set(0, 5, gz + dir * 0.4);
-            gate.castShadow = true;
-            this.mansionGroup.add(gate);
-            this.wallMeshes.push(gate);
-            this.mapColliders.push(new THREE.Box3().setFromObject(gate));
+        // Hotel Key Rack / Back Wall
+        this.createMapWall(22, 6, 1.5, 0, 3, -42, 0x2b1c11);
 
-            // Glowing Lock
-            const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.4, 12), lockMat);
-            lock.position.set(0, 5, gz + dir * 1.2);
-            lock.rotation.x = Math.PI / 2;
-            this.mansionGroup.add(lock);
-        });
-
-        // 3. Central Marble Columns (Tall open pillars with clear sightlines between all players)
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4d3e52, roughness: 0.3 });
+        // Hotel Grand Pillars
         const pillarGeo = new THREE.CylinderGeometry(1.2, 1.4, 14, 16);
-        [
-            [-18, -18], [18, -18], [-18, 18], [18, 18],
-            [-18, 0], [18, 0], [0, -18], [0, 18]
-        ].forEach(([px, pz]) => {
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4d3e52, roughness: 0.3 });
+        [[-18, -18], [18, -18], [-18, 18], [18, 18], [-18, 0], [18, 0], [0, -18], [0, 18]].forEach(([px, pz]) => {
             const pillar = new THREE.Mesh(pillarGeo, pillarMat);
             pillar.position.set(px, 7, pz);
             pillar.castShadow = true;
@@ -592,120 +718,410 @@ export class MurderMysteryGame {
             this.mapColliders.push(new THREE.Box3().setFromObject(pillar));
         });
 
-        // 4. DISTINCT OPEN ROOM ZONES (Low visual partitions so everyone sees each other)
+        // Hotel Suite 101 (North-West)
+        this.createMapWall(18, 4, 1, -34, 2, -22, 0x443322);
+        this.createMapWall(1, 4, 18, -22, 2, -34, 0x443322);
+        const bed1 = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 6), new THREE.MeshStandardMaterial({ color: 0x8e1b32 }));
+        bed1.position.set(-34, 1, -34);
+        this.mansionGroup.add(bed1);
+        this.wallMeshes.push(bed1);
+        this.mapColliders.push(new THREE.Box3().setFromObject(bed1));
 
-        // --- Zone 1: Raamatukogu / Library Zone (North-West) ---
-        // Low decorative half-walls with wide arch openings
-        createWall(18, 3.5, 1, -34, 1.75, -22, 0x3d271d);
-        createWall(1, 3.5, 18, -22, 1.75, -34, 0x3d271d);
-
-        // Bookshelves & Reading Furniture
-        const bookMat = new THREE.MeshStandardMaterial({ color: 0x4a2a16, roughness: 0.6 });
-        const bs1 = new THREE.Mesh(new THREE.BoxGeometry(16, 7, 2), bookMat);
-        bs1.position.set(-34, 3.5, -43);
-        bs1.castShadow = true;
-        this.mansionGroup.add(bs1);
-        this.wallMeshes.push(bs1);
-        this.mapColliders.push(new THREE.Box3().setFromObject(bs1));
-
-        const libDesk = new THREE.Mesh(new THREE.BoxGeometry(7, 1.6, 3.5), new THREE.MeshStandardMaterial({ color: 0x5a3d28 }));
-        libDesk.position.set(-34, 0.8, -32);
-        this.mansionGroup.add(libDesk);
-        this.wallMeshes.push(libDesk);
-        this.mapColliders.push(new THREE.Box3().setFromObject(libDesk));
-
-        // --- Zone 2: Söögisaal & Kamin / Dining & Fireplace Zone (North-East) ---
-        createWall(18, 3.5, 1, 34, 1.75, -22, 0x3d271d);
-        createWall(1, 3.5, 18, 22, 1.75, -34, 0x3d271d);
-
-        // Long banquet dining table in open view
+        // Hotel Restaurant & Dining (North-East)
+        this.createMapWall(18, 4, 1, 34, 2, -22, 0x443322);
+        this.createMapWall(1, 4, 18, 22, 2, -34, 0x443322);
         const diningTable = new THREE.Mesh(new THREE.BoxGeometry(16, 1.8, 4.5), new THREE.MeshStandardMaterial({ color: 0x5c3a21 }));
         diningTable.position.set(34, 0.9, -33);
-        diningTable.castShadow = true;
         this.mansionGroup.add(diningTable);
         this.wallMeshes.push(diningTable);
         this.mapColliders.push(new THREE.Box3().setFromObject(diningTable));
 
-        // Stone Fireplace with warm fire glow
-        const fireplace = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 2.5), new THREE.MeshStandardMaterial({ color: 0x2d2d2d }));
-        fireplace.position.set(34, 3, -44);
-        this.mansionGroup.add(fireplace);
-        this.wallMeshes.push(fireplace);
-        this.mapColliders.push(new THREE.Box3().setFromObject(fireplace));
+        // Hotel Suite 102 (South-West)
+        this.createMapWall(18, 4, 1, -34, 2, 22, 0x443322);
+        this.createMapWall(1, 4, 18, -22, 2, 34, 0x443322);
+        const bed2 = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 6), new THREE.MeshStandardMaterial({ color: 0x27ae60 }));
+        bed2.position.set(-34, 1, 34);
+        this.mansionGroup.add(bed2);
+        this.wallMeshes.push(bed2);
+        this.mapColliders.push(new THREE.Box3().setFromObject(bed2));
 
-        const fireLight = new THREE.PointLight(0xff6622, 2.2, 22);
-        fireLight.position.set(34, 2.5, -42);
-        this.mansionGroup.add(fireLight);
+        // Hotel Lounge & Bar (South-East)
+        this.createMapWall(18, 4, 1, 34, 2, 22, 0x443322);
+        this.createMapWall(1, 4, 18, 22, 2, 34, 0x443322);
+        const barCounter = new THREE.Mesh(new THREE.BoxGeometry(12, 2.2, 3), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.3 }));
+        barCounter.position.set(34, 1.1, 33);
+        this.mansionGroup.add(barCounter);
+        this.wallMeshes.push(barCounter);
+        this.mapColliders.push(new THREE.Box3().setFromObject(barCounter));
 
-        // --- Zone 3: Relvakamber / Armory Zone (North Center) ---
-        const armorMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.9, roughness: 0.2 });
-        [-8, 8].forEach(ax => {
-            const armor = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 3.2, 8), armorMat);
-            armor.position.set(ax, 1.6, -38);
-            armor.castShadow = true;
-            this.mansionGroup.add(armor);
-            this.wallMeshes.push(armor);
-            this.mapColliders.push(new THREE.Box3().setFromObject(armor));
+        // Hotel Mezzanine Balcony Walkway (2nd Floor visual structure)
+        const balconyGeo = new THREE.BoxGeometry(70, 0.8, 6);
+        const balconyMat = new THREE.MeshStandardMaterial({ color: 0x2e1f14, roughness: 0.5 });
+        const balcony = new THREE.Mesh(balconyGeo, balconyMat);
+        balcony.position.set(0, 6.5, -20);
+        this.mansionGroup.add(balcony);
+
+        // Lighting: Warm luxury hotel chandelier
+        const chandelier = new THREE.PointLight(0xffeedd, 2.8, 65);
+        chandelier.position.set(0, 11, 0);
+        this.mansionGroup.add(chandelier);
+
+        const warmLight = new THREE.PointLight(0xff9944, 1.6, 35);
+        warmLight.position.set(0, 5, -34);
+        this.mansionGroup.add(warmLight);
+    }
+
+    // 2. MIL BASE: Military fortified base with hangar, barracks, radar bunker, crates
+    private buildMilBaseMap() {
+        // Floor: Concrete military asphalt
+        const floorGeo = new THREE.BoxGeometry(92, 1, 92);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x2c3539, roughness: 0.85 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.position.y = -0.5;
+        floor.receiveShadow = true;
+        this.mansionGroup.add(floor);
+
+        // Perimeter Heavy Blast Walls (Camouflage olive/slate)
+        this.createMapWall(92, 14, 2.5, 0, 7, -46, 0x1e272c);
+        this.createMapWall(92, 14, 2.5, 0, 7, 46, 0x1e272c);
+        this.createMapWall(2.5, 14, 92, -46, 7, 0, 0x1e272c);
+        this.createMapWall(2.5, 14, 92, 46, 7, 0, 0x1e272c);
+
+        // Central Helicopter Landing Helipad Ring
+        const padGeo = new THREE.CylinderGeometry(10, 10, 0.1, 32);
+        const padMat = new THREE.MeshStandardMaterial({ color: 0x3d4b52, roughness: 0.7 });
+        const pad = new THREE.Mesh(padGeo, padMat);
+        pad.position.set(0, 0.05, 0);
+        this.mansionGroup.add(pad);
+
+        // North-West: Supply Hangar
+        this.createMapWall(22, 6, 1.5, -30, 3, -22, 0x3b444b);
+        this.createMapWall(1.5, 6, 22, -19, 3, -33, 0x3b444b);
+        // Military Ammo Crates
+        const crateMat = new THREE.MeshStandardMaterial({ color: 0x4b5320, roughness: 0.6 });
+        [[-32, -32], [-35, -32], [-32, -35], [-35, -35]].forEach(([cx, cz]) => {
+            const crate = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.4, 2.4), crateMat);
+            crate.position.set(cx, 1.2, cz);
+            this.mansionGroup.add(crate);
+            this.wallMeshes.push(crate);
+            this.mapColliders.push(new THREE.Box3().setFromObject(crate));
         });
 
-        // --- Zone 4: Magamistoa Tsoon / Master Bedroom Zone (South-West) ---
-        createWall(18, 3.5, 1, -34, 1.75, 22, 0x3d271d);
-        createWall(1, 3.5, 18, -22, 1.75, 34, 0x3d271d);
+        // North-East: Command / Radar Bunker
+        this.createMapWall(22, 6, 1.5, 30, 3, -22, 0x2f353b);
+        this.createMapWall(1.5, 6, 22, 19, 3, -33, 0x2f353b);
+        const radarConsole = new THREE.Mesh(new THREE.BoxGeometry(10, 2, 3), new THREE.MeshStandardMaterial({ color: 0x111e1e }));
+        radarConsole.position.set(30, 1, -33);
+        this.mansionGroup.add(radarConsole);
+        this.wallMeshes.push(radarConsole);
+        this.mapColliders.push(new THREE.Box3().setFromObject(radarConsole));
 
-        // Open Canopy Bed
-        const bed = new THREE.Mesh(new THREE.BoxGeometry(8, 2.2, 6.5), new THREE.MeshStandardMaterial({ color: 0x8e1b32 }));
-        bed.position.set(-34, 1.1, 34);
-        this.mansionGroup.add(bed);
-        this.wallMeshes.push(bed);
-        this.mapColliders.push(new THREE.Box3().setFromObject(bed));
-
-        // Open Wardrobe Closets
-        const wardrobe = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 2.5), new THREE.MeshStandardMaterial({ color: 0x3d271d }));
-        wardrobe.position.set(-42, 3, 30);
-        this.mansionGroup.add(wardrobe);
-        this.wallMeshes.push(wardrobe);
-        this.mapColliders.push(new THREE.Box3().setFromObject(wardrobe));
-
-        // --- Zone 5: Köögi Tsoon / Kitchen Zone (South-East) ---
-        createWall(18, 3.5, 1, 34, 1.75, 22, 0x3d271d);
-        createWall(1, 3.5, 18, 22, 1.75, 34, 0x3d271d);
-
-        // Kitchen Island
-        const kitchenIsland = new THREE.Mesh(new THREE.BoxGeometry(10, 1.9, 4), new THREE.MeshStandardMaterial({ color: 0xdcdde1, roughness: 0.2 }));
-        kitchenIsland.position.set(34, 0.95, 33);
-        this.mansionGroup.add(kitchenIsland);
-        this.wallMeshes.push(kitchenIsland);
-        this.mapColliders.push(new THREE.Box3().setFromObject(kitchenIsland));
-
-        // --- Zone 6: Salongi & Veinivaatide Tsoon (South Center) ---
-        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28 });
-        [[-6, 38], [6, 38], [-4, 42], [4, 42]].forEach(([bx, bz]) => {
-            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 2.5, 12), barrelMat);
-            barrel.position.set(bx, 1.25, bz);
-            barrel.castShadow = true;
-            this.mansionGroup.add(barrel);
-            this.wallMeshes.push(barrel);
-            this.mapColliders.push(new THREE.Box3().setFromObject(barrel));
+        // South-West: Soldiers' Barracks (Bunk Beds)
+        this.createMapWall(22, 6, 1.5, -30, 3, 22, 0x3b444b);
+        this.createMapWall(1.5, 6, 22, -19, 3, 33, 0x3b444b);
+        const bunkMat = new THREE.MeshStandardMaterial({ color: 0x2d382e });
+        [-34, -28].forEach(bx => {
+            const bunk = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 7), bunkMat);
+            bunk.position.set(bx, 1.5, 34);
+            this.mansionGroup.add(bunk);
+            this.wallMeshes.push(bunk);
+            this.mapColliders.push(new THREE.Box3().setFromObject(bunk));
         });
 
-        // 5. Illumination - Bright chandeliers so everyone can see everyone clearly
-        const centerChandelier = new THREE.PointLight(0xffeedd, 2.8, 60);
-        centerChandelier.position.set(0, 10, 0);
-        this.mansionGroup.add(centerChandelier);
+        // South-East: Armory & Weapons Depot
+        this.createMapWall(22, 6, 1.5, 30, 3, 22, 0x2f353b);
+        this.createMapWall(1.5, 6, 22, 19, 3, 33, 0x2f353b);
+        const weaponRack = new THREE.Mesh(new THREE.BoxGeometry(12, 3.5, 2), new THREE.MeshStandardMaterial({ color: 0x15181a, metalness: 0.8 }));
+        weaponRack.position.set(30, 1.75, 34);
+        this.mansionGroup.add(weaponRack);
+        this.wallMeshes.push(weaponRack);
+        this.mapColliders.push(new THREE.Box3().setFromObject(weaponRack));
 
-        const libGlow = new THREE.PointLight(0x00f2fe, 1.8, 30);
-        libGlow.position.set(-34, 7, -34);
-        this.mansionGroup.add(libGlow);
+        // Military Sandbag Fortifications around center
+        const sandbagMat = new THREE.MeshStandardMaterial({ color: 0x827b60, roughness: 0.9 });
+        [[-8, 8], [8, 8], [-8, -8], [8, -8]].forEach(([sx, sz]) => {
+            const bag = new THREE.Mesh(new THREE.BoxGeometry(6, 1.4, 1.6), sandbagMat);
+            bag.position.set(sx, 0.7, sz);
+            this.mansionGroup.add(bag);
+            this.wallMeshes.push(bag);
+            this.mapColliders.push(new THREE.Box3().setFromObject(bag));
+        });
 
-        const bedGlow = new THREE.PointLight(0xff7799, 1.8, 30);
-        bedGlow.position.set(-34, 7, 34);
-        this.mansionGroup.add(bedGlow);
+        // Harsh Tactical Floodlights
+        const tacticalLight = new THREE.PointLight(0xaaccff, 2.6, 65);
+        tacticalLight.position.set(0, 12, 0);
+        this.mansionGroup.add(tacticalLight);
 
-        const kitchenGlow = new THREE.PointLight(0xffaa44, 1.8, 30);
-        kitchenGlow.position.set(34, 7, 34);
-        this.mansionGroup.add(kitchenGlow);
+        const radarGlow = new THREE.PointLight(0x00ff88, 1.8, 25);
+        radarGlow.position.set(30, 4, -33);
+        this.mansionGroup.add(radarGlow);
+    }
 
-        this.scene.add(this.mansionGroup);
+    // 3. OFFICE: Modern corporate office building with cubicles, boardroom, server room
+    private buildOfficeMap() {
+        // Floor: Commercial grey carpet tiles
+        const floorGeo = new THREE.BoxGeometry(92, 1, 92);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.7 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.position.y = -0.5;
+        floor.receiveShadow = true;
+        this.mansionGroup.add(floor);
+
+        // Modern White Drywall Outer Perimeter
+        this.createMapWall(92, 14, 2, 0, 7, -46, 0x2c3e50);
+        this.createMapWall(92, 14, 2, 0, 7, 46, 0x2c3e50);
+        this.createMapWall(2, 14, 92, -46, 7, 0, 0x2c3e50);
+        this.createMapWall(2, 14, 92, 46, 7, 0, 0x2c3e50);
+
+        // Center Executive Cubicle Clusters (Partitions with desks)
+        const cubicleMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.5 });
+        const deskMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, roughness: 0.3 });
+        const monitorMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5 });
+
+        [[-8, -6], [8, -6], [-8, 6], [8, 6]].forEach(([cx, cz]) => {
+            // Partition
+            const part = new THREE.Mesh(new THREE.BoxGeometry(8, 2.8, 0.4), cubicleMat);
+            part.position.set(cx, 1.4, cz);
+            this.mansionGroup.add(part);
+            this.wallMeshes.push(part);
+            this.mapColliders.push(new THREE.Box3().setFromObject(part));
+
+            // Desk
+            const desk = new THREE.Mesh(new THREE.BoxGeometry(6, 1.4, 2.5), deskMat);
+            desk.position.set(cx, 0.7, cz + (cz < 0 ? -1.5 : 1.5));
+            this.mansionGroup.add(desk);
+            this.wallMeshes.push(desk);
+            this.mapColliders.push(new THREE.Box3().setFromObject(desk));
+
+            // Computer monitor
+            const mon = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 0.2), monitorMat);
+            mon.position.set(cx, 1.8, cz + (cz < 0 ? -1.5 : 1.5));
+            this.mansionGroup.add(mon);
+        });
+
+        // North-West: Executive Boardroom
+        this.createMapWall(22, 5, 1.2, -30, 2.5, -20, 0x1a252f);
+        this.createMapWall(1.2, 5, 22, -19, 2.5, -31, 0x1a252f);
+        const boardTable = new THREE.Mesh(new THREE.BoxGeometry(14, 1.6, 5), new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.2 }));
+        boardTable.position.set(-31, 0.8, -31);
+        this.mansionGroup.add(boardTable);
+        this.wallMeshes.push(boardTable);
+        this.mapColliders.push(new THREE.Box3().setFromObject(boardTable));
+
+        // North-East: High-Tech Server Room (Glowing server racks)
+        this.createMapWall(22, 5, 1.2, 30, 2.5, -20, 0x1a252f);
+        this.createMapWall(1.2, 5, 22, 19, 2.5, -31, 0x1a252f);
+        const serverMat = new THREE.MeshStandardMaterial({ color: 0x111820, metalness: 0.8 });
+        [26, 31, 36].forEach(sx => {
+            const rack = new THREE.Mesh(new THREE.BoxGeometry(2.5, 4.5, 10), serverMat);
+            rack.position.set(sx, 2.25, -32);
+            this.mansionGroup.add(rack);
+            this.wallMeshes.push(rack);
+            this.mapColliders.push(new THREE.Box3().setFromObject(rack));
+        });
+        const serverLight = new THREE.PointLight(0x00d2d3, 2.2, 22);
+        serverLight.position.set(31, 3, -31);
+        this.mansionGroup.add(serverLight);
+
+        // South-West: Breakroom & Coffee Bar
+        this.createMapWall(22, 5, 1.2, -30, 2.5, 20, 0x1a252f);
+        this.createMapWall(1.2, 5, 22, -19, 2.5, 31, 0x1a252f);
+        const snackBar = new THREE.Mesh(new THREE.BoxGeometry(10, 1.8, 3), new THREE.MeshStandardMaterial({ color: 0xecf0f1 }));
+        snackBar.position.set(-30, 0.9, 31);
+        this.mansionGroup.add(snackBar);
+        this.wallMeshes.push(snackBar);
+        this.mapColliders.push(new THREE.Box3().setFromObject(snackBar));
+
+        // South-East: CEO Corner Office
+        this.createMapWall(22, 5, 1.2, 30, 2.5, 20, 0x1a252f);
+        this.createMapWall(1.2, 5, 22, 19, 2.5, 31, 0x1a252f);
+        const ceoDesk = new THREE.Mesh(new THREE.BoxGeometry(8, 1.6, 4), new THREE.MeshStandardMaterial({ color: 0x3d271d, roughness: 0.1 }));
+        ceoDesk.position.set(30, 0.8, 31);
+        this.mansionGroup.add(ceoDesk);
+        this.wallMeshes.push(ceoDesk);
+        this.mapColliders.push(new THREE.Box3().setFromObject(ceoDesk));
+
+        // Office Overhead Fluorescent Lights
+        const officeCeilingLight = new THREE.PointLight(0xf5f6fa, 2.7, 65);
+        officeCeilingLight.position.set(0, 11, 0);
+        this.mansionGroup.add(officeCeilingLight);
+    }
+
+    // 4. VACATION: Tropical island resort with golden sand, palm trees, bungalows, tiki-bar
+    private buildVacationMap() {
+        // Floor: Golden sand beach
+        const floorGeo = new THREE.BoxGeometry(92, 1, 92);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0xe5c07b, roughness: 0.9 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.position.y = -0.5;
+        floor.receiveShadow = true;
+        this.mansionGroup.add(floor);
+
+        // Ocean Water Border Strip (North edge)
+        const waterGeo = new THREE.BoxGeometry(92, 0.8, 12);
+        const waterMat = new THREE.MeshPhysicalMaterial({ color: 0x0abde3, transmission: 0.7, opacity: 0.85, transparent: true, roughness: 0.1 });
+        const water = new THREE.Mesh(waterGeo, waterMat);
+        water.position.set(0, -0.2, -40);
+        this.mansionGroup.add(water);
+
+        // Resort Cliffside Perimeter Walls (Sandstone texture)
+        this.createMapWall(92, 14, 2, 0, 7, -46, 0x574b90);
+        this.createMapWall(92, 14, 2, 0, 7, 46, 0x8a795d);
+        this.createMapWall(2, 14, 92, -46, 7, 0, 0x8a795d);
+        this.createMapWall(2, 14, 92, 46, 7, 0, 0x8a795d);
+
+        // Palm Trees (Trunk + Palm Canopy)
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6e4726, roughness: 0.8 });
+        const palmLeafMat = new THREE.MeshStandardMaterial({ color: 0x2ed573, roughness: 0.5 });
+        [
+            [-12, -8], [12, -8], [-12, 12], [12, 12],
+            [-28, -2], [28, -2], [0, 18], [0, -22]
+        ].forEach(([tx, tz]) => {
+            // Trunk
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 7, 8), trunkMat);
+            trunk.position.set(tx, 3.5, tz);
+            trunk.castShadow = true;
+            this.mansionGroup.add(trunk);
+            this.wallMeshes.push(trunk);
+            this.mapColliders.push(new THREE.Box3().setFromObject(trunk));
+
+            // Canopy
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(3.5, 2.5, 8), palmLeafMat);
+            leaves.position.set(tx, 7.5, tz);
+            this.mansionGroup.add(leaves);
+        });
+
+        // Beach Bungalow 1 (North-West)
+        this.createMapWall(18, 4.5, 1.2, -32, 2.25, -20, 0xa0522d);
+        this.createMapWall(1.2, 4.5, 18, -21, 2.25, -31, 0xa0522d);
+        const roof1 = new THREE.Mesh(new THREE.BoxGeometry(20, 1.2, 20), new THREE.MeshStandardMaterial({ color: 0xd4a373 }));
+        roof1.position.set(-32, 5, -31);
+        this.mansionGroup.add(roof1);
+
+        // Beach Bungalow 2 (South-West)
+        this.createMapWall(18, 4.5, 1.2, -32, 2.25, 20, 0xa0522d);
+        this.createMapWall(1.2, 4.5, 18, -21, 2.25, 31, 0xa0522d);
+        const roof2 = new THREE.Mesh(new THREE.BoxGeometry(20, 1.2, 20), new THREE.MeshStandardMaterial({ color: 0xd4a373 }));
+        roof2.position.set(-32, 5, 31);
+        this.mansionGroup.add(roof2);
+
+        // Central Tiki Bar & Coconut Cocktails (East)
+        this.createMapWall(18, 3.5, 1.2, 30, 1.75, 10, 0x8b5a2b);
+        this.createMapWall(1.2, 3.5, 18, 21, 1.75, 21, 0x8b5a2b);
+        const tikiCounter = new THREE.Mesh(new THREE.BoxGeometry(10, 2, 4), new THREE.MeshStandardMaterial({ color: 0xcd853f }));
+        tikiCounter.position.set(30, 1, 21);
+        this.mansionGroup.add(tikiCounter);
+        this.wallMeshes.push(tikiCounter);
+        this.mapColliders.push(new THREE.Box3().setFromObject(tikiCounter));
+
+        // Sun Loungers & Umbrellas
+        const umbrellaMat = new THREE.MeshStandardMaterial({ color: 0xff4757 });
+        [[-4, -14], [4, -14], [-4, 4], [4, 4]].forEach(([ux, uz]) => {
+            const lounger = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 3.8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            lounger.position.set(ux, 0.25, uz);
+            this.mansionGroup.add(lounger);
+            this.wallMeshes.push(lounger);
+            this.mapColliders.push(new THREE.Box3().setFromObject(lounger));
+
+            const umbPole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.5, 8), trunkMat);
+            umbPole.position.set(ux + 1.2, 1.75, uz);
+            this.mansionGroup.add(umbPole);
+            const umbTop = new THREE.Mesh(new THREE.ConeGeometry(1.8, 0.8, 8), umbrellaMat);
+            umbTop.position.set(ux + 1.2, 3.6, uz);
+            this.mansionGroup.add(umbTop);
+        });
+
+        // Warm Tropical Sunlight & Lanterns
+        const sunLight = new THREE.PointLight(0xfff3a0, 2.9, 70);
+        sunLight.position.set(0, 14, 0);
+        this.mansionGroup.add(sunLight);
+
+        const tikiLantern = new THREE.PointLight(0xff6b6b, 1.9, 30);
+        tikiLantern.position.set(30, 4, 21);
+        this.mansionGroup.add(tikiLantern);
+    }
+
+    // 5. YATCHY: Luxury multi-deck superyacht with bridge, dining salon, cabins, and jacuzzi
+    private buildYatchyMap() {
+        // Floor: Polished teak yacht decking
+        const floorGeo = new THREE.BoxGeometry(92, 1, 92);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 0.4 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.position.y = -0.5;
+        floor.receiveShadow = true;
+        this.mansionGroup.add(floor);
+
+        // Ocean Sea Water all around the mega-yacht hull
+        const oceanGeo = new THREE.BoxGeometry(140, 0.5, 140);
+        const oceanMat = new THREE.MeshStandardMaterial({ color: 0x004e92, roughness: 0.2, metalness: 0.3 });
+        const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+        ocean.position.y = -1.0;
+        this.mansionGroup.add(ocean);
+
+        // Sleek White Yacht Hull & Stainless Steel Guard Rails
+        this.createMapWall(92, 14, 2, 0, 7, -46, 0xecf0f1);
+        this.createMapWall(92, 14, 2, 0, 7, 46, 0xecf0f1);
+        this.createMapWall(2, 14, 92, -46, 7, 0, 0xecf0f1);
+        this.createMapWall(2, 14, 92, 46, 7, 0, 0xecf0f1);
+
+        // Captain's Bridge (North Wheelhouse with radar and helm)
+        this.createMapWall(26, 5, 1.5, 0, 2.5, -30, 0x2c3e50);
+        const helmConsole = new THREE.Mesh(new THREE.BoxGeometry(12, 1.8, 3), new THREE.MeshStandardMaterial({ color: 0x1e272e, metalness: 0.6 }));
+        helmConsole.position.set(0, 0.9, -36);
+        this.mansionGroup.add(helmConsole);
+        this.wallMeshes.push(helmConsole);
+        this.mapColliders.push(new THREE.Box3().setFromObject(helmConsole));
+
+        // Central VIP Jacuzzi Pool
+        const poolBorder = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.8, 24), new THREE.MeshStandardMaterial({ color: 0xdcdde1, roughness: 0.2 }));
+        poolBorder.position.set(0, 0.4, 0);
+        this.mansionGroup.add(poolBorder);
+        this.wallMeshes.push(poolBorder);
+        this.mapColliders.push(new THREE.Box3().setFromObject(poolBorder));
+
+        const poolWater = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 0.82, 24), new THREE.MeshStandardMaterial({ color: 0x00d2d3, roughness: 0.1, transparent: true, opacity: 0.7 }));
+        poolWater.position.set(0, 0.42, 0);
+        this.mansionGroup.add(poolWater);
+
+        // VIP Suite Cabin A (West)
+        this.createMapWall(16, 4.5, 1.2, -28, 2.25, -12, 0x34495e);
+        this.createMapWall(1.2, 4.5, 16, -20, 2.25, -20, 0x34495e);
+        const yachtBed1 = new THREE.Mesh(new THREE.BoxGeometry(6, 1.8, 7), new THREE.MeshStandardMaterial({ color: 0x2980b9 }));
+        yachtBed1.position.set(-30, 0.9, -20);
+        this.mansionGroup.add(yachtBed1);
+        this.wallMeshes.push(yachtBed1);
+        this.mapColliders.push(new THREE.Box3().setFromObject(yachtBed1));
+
+        // VIP Suite Cabin B (East)
+        this.createMapWall(16, 4.5, 1.2, 28, 2.25, -12, 0x34495e);
+        this.createMapWall(1.2, 4.5, 16, 20, 2.25, -20, 0x34495e);
+        const yachtBed2 = new THREE.Mesh(new THREE.BoxGeometry(6, 1.8, 7), new THREE.MeshStandardMaterial({ color: 0x8e44ad }));
+        yachtBed2.position.set(30, 0.9, -20);
+        this.mansionGroup.add(yachtBed2);
+        this.wallMeshes.push(yachtBed2);
+        this.mapColliders.push(new THREE.Box3().setFromObject(yachtBed2));
+
+        // Aft Dining Salon (South Deck)
+        this.createMapWall(30, 4.5, 1.2, 0, 2.25, 24, 0x2c3e50);
+        const yachtTable = new THREE.Mesh(new THREE.BoxGeometry(16, 1.6, 5), new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.15 }));
+        yachtTable.position.set(0, 0.8, 34);
+        this.mansionGroup.add(yachtTable);
+        this.wallMeshes.push(yachtTable);
+        this.mapColliders.push(new THREE.Box3().setFromObject(yachtTable));
+
+        // Yacht Deck Illumination
+        const yachtLight = new THREE.PointLight(0xe0f7fa, 2.7, 65);
+        yachtLight.position.set(0, 11, 0);
+        this.mansionGroup.add(yachtLight);
+
+        const jacuzziLight = new THREE.PointLight(0x00f2fe, 1.9, 18);
+        jacuzziLight.position.set(0, 2.5, 0);
+        this.mansionGroup.add(jacuzziLight);
+    }
+
+    // Backward-compatibility wrapper for existing test suites
+    public buildMansion() {
+        this.buildMap('hotel2');
     }
 
     // --- Create Ultra-Realistic Weapons ---
@@ -1390,7 +1806,7 @@ export class MurderMysteryGame {
         });
     }
 
-    // --- Gold Coins Spawning in Mansion ---
+    // --- Gold Coins Spawning in Selected Map ---
     private spawnCoins() {
         // Clear existing
         this.coins.forEach(c => this.scene.remove(c.mesh));
@@ -1399,22 +1815,8 @@ export class MurderMysteryGame {
         const coinGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.15, 12);
         const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.2, emissive: 0x443300 });
 
-        const positions = [
-            // Center Grand Hall & Carpet
-            [0, 1, 0], [0, 1, -12], [0, 1, 12], [-10, 1, 0], [10, 1, 0],
-            // Zone 1: Raamatukogu / Library (NW)
-            [-34, 1, -34], [-34, 1, -25], [-25, 1, -34],
-            // Zone 2: Söögisaal / Dining (NE)
-            [34, 1, -34], [34, 1, -25], [25, 1, -34],
-            // Zone 3: Relvakamber / Armory (N)
-            [0, 1, -36], [-8, 1, -36], [8, 1, -36],
-            // Zone 4: Magamistuba / Bedroom (SW)
-            [-34, 1, 34], [-34, 1, 25], [-25, 1, 34],
-            // Zone 5: Köök / Kitchen (SE)
-            [34, 1, 34], [34, 1, 25], [25, 1, 34],
-            // Zone 6: Salong / Dungeon (S)
-            [0, 1, 36], [-6, 1, 36], [6, 1, 36]
-        ];
+        const config = MAP_CATALOG[this.currentMapId] || MAP_CATALOG['hotel2'];
+        const positions = config.coinSpawns;
 
         positions.forEach(([x, y, z]) => {
             const coinMesh = new THREE.Mesh(coinGeo, coinMat);
@@ -1433,12 +1835,24 @@ export class MurderMysteryGame {
         });
     }
 
-    // --- Start Round: Assign Roles & Teleport into Mansion ---
+    // --- Start Round: Assign Roles & Teleport into Map ---
     public startRound() {
         this.state = 'role_reveal';
         this.lastHero = null;
         this.hasSheriffWitnessedMurder = false;
         if (this.lobbyBanner) this.lobbyBanner.style.display = 'none';
+
+        // Select Map: If admin forced map, use it; otherwise pick randomly among the 5 maps
+        const mapKeys: MapId[] = ['hotel2', 'milbase', 'office', 'vacation', 'yatchy'];
+        let chosenMap: MapId = 'hotel2';
+        if (this.adminSelectedMap && this.adminSelectedMap !== 'random') {
+            chosenMap = this.adminSelectedMap;
+        } else {
+            chosenMap = mapKeys[Math.floor(Math.random() * mapKeys.length)];
+        }
+
+        // Build the selected 3D map
+        this.buildMap(chosenMap);
 
         // Reset state for all characters
         this.characters.forEach(c => {
@@ -1468,22 +1882,18 @@ export class MurderMysteryGame {
             shuffled[1].role = 'sheriff';
         }
 
-        // Teleport characters to central Grand Hall in clear view of each other
-        // Player in center, bots in a circle around center (radius 7m) on red carpet
+        // Teleport characters to the map's designated spawn points
+        const mapConfig = MAP_CATALOG[chosenMap];
+        const spawns = mapConfig.spawnPoints;
         this.characters.forEach((c, i) => {
-            if (c.isPlayer) {
-                c.position.set(0, 0, 0);
-            } else {
-                const angle = (i / (this.characters.length - 1)) * Math.PI * 2;
-                const r = 7.5;
-                c.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
-            }
+            const pt = spawns[i % spawns.length];
+            c.position.set(pt[0], pt[1], pt[2]);
             c.mesh.position.copy(c.position);
             c.rotation = Math.atan2(-c.position.x, -c.position.z);
             c.mesh.rotation.y = c.rotation;
         });
 
-        // Respawn coins
+        // Respawn coins for current map
         this.spawnCoins();
 
         // Dropped gun reset
@@ -1923,25 +2333,32 @@ export class MurderMysteryGame {
         if (endHero && hero) endHero.textContent = hero.name;
         if (endReason) endReason.textContent = reason;
 
+        const curMap = MAP_CATALOG[this.currentMapId] || MAP_CATALOG['hotel2'];
+        if (this.endMapName) {
+            this.endMapName.textContent = `${curMap.icon} ${curMap.name}`;
+        }
+
         let rewardYards = 20; // base reward
         if (winner === 'sheriff_win') {
             if (endTitle) {
-                endTitle.textContent = 'SÜÜTUD JA ŠERIF VÕITSID! 🏆';
+                // If the hero was an innocent who grabbed the gun vs original detective
+                const isDetectiveHero = (hero && hero.role === 'sheriff' && hero.id !== 'innocent');
+                endTitle.textContent = isDetectiveHero ? 'DETECTIVE WINS 🔫' : 'INNOCENTS WIN 🏆';
                 endTitle.style.color = '#00f2fe';
             }
-            if (trophy) trophy.textContent = '🛡️';
+            if (trophy) trophy.textContent = '🔫';
             rewardYards = (this.playerChar.role !== 'murderer' && this.playerChar.isAlive) ? 100 : 40;
             if (this.lastHero === this.playerChar) rewardYards = 150;
         } else if (winner === 'murderer_win') {
             if (endTitle) {
-                endTitle.textContent = 'MÕRVAR VÕITIS! 🔪';
+                endTitle.textContent = 'MURDERER WINS 🔪';
                 endTitle.style.color = '#ff2e63';
             }
             if (trophy) trophy.textContent = '🩸';
             rewardYards = (this.playerChar.role === 'murderer') ? 150 : 20;
         } else {
             if (endTitle) {
-                endTitle.textContent = 'AEG LÕPPES - SÜÜTUD JA ŠERIF VÕITSID! ⏱️';
+                endTitle.textContent = 'INNOCENTS WIN 🏆';
                 endTitle.style.color = '#2ecc71';
             }
             if (trophy) trophy.textContent = '🏆';
@@ -2027,6 +2444,7 @@ export class MurderMysteryGame {
 
     public updateAdminModalActiveState() {
         const current = (this.state === 'in_game') ? this.playerChar.role : (this.adminForcedRole || 'innocent');
+        // Highlight active role
         ['murderer', 'sheriff', 'innocent'].forEach(r => {
             const btn = document.getElementById(`btn-admin-role-${r}`);
             if (btn) {
@@ -2035,6 +2453,22 @@ export class MurderMysteryGame {
                 } else {
                     btn.classList.remove('active-role');
                 }
+            }
+        });
+
+        // Highlight active map
+        const activeMap = this.adminSelectedMap || 'random';
+        document.querySelectorAll('.admin-map-btn').forEach(b => {
+            const m = b.getAttribute('data-map');
+            const el = b as HTMLElement;
+            if (m === activeMap) {
+                el.classList.add('active');
+                el.style.borderColor = '#ffd32a';
+                el.style.color = '#ffd32a';
+            } else {
+                el.classList.remove('active');
+                el.style.borderColor = '';
+                el.style.color = '';
             }
         });
     }
@@ -2295,6 +2729,29 @@ export class MurderMysteryGame {
         document.getElementById('btn-admin-role-innocent')?.addEventListener('click', () => {
             this.setAdminRole('innocent');
         });
+
+        // Map Selection Buttons in Admin Panel
+        document.querySelectorAll('.admin-map-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const mapVal = target.getAttribute('data-map') as (MapId | 'random');
+                if (mapVal) {
+                    this.adminSelectedMap = mapVal;
+                    document.querySelectorAll('.admin-map-btn').forEach(b => {
+                        b.classList.remove('active');
+                        (b as HTMLElement).style.borderColor = '';
+                        (b as HTMLElement).style.color = '';
+                    });
+                    target.classList.add('active');
+                    target.style.borderColor = '#ffd32a';
+                    target.style.color = '#ffd32a';
+                    
+                    const label = target.textContent?.trim() || mapVal;
+                    this.addIncidentFeed(`🗺️ Admin valis järgmiseks kaardiks: ${label}`);
+                }
+            });
+        });
+
         document.getElementById('btn-admin-force-start')?.addEventListener('click', () => {
             this.closeAdminPanel();
             this.startRound();
