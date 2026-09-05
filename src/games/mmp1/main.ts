@@ -843,6 +843,8 @@ export class MurderMysteryGame {
             aiTimer: 0,
             coins: 0
         };
+        this.playerChar.mesh.userData.character = this.playerChar;
+        this.playerChar.mesh.traverse(c => { c.userData.character = this.playerChar; });
         this.playerChar.mesh.position.copy(this.playerChar.position);
         this.scene.add(this.playerChar.mesh);
         this.characters.push(this.playerChar);
@@ -876,6 +878,8 @@ export class MurderMysteryGame {
                 aiTimer: 0,
                 coins: 0
             };
+            bot.mesh.userData.character = bot;
+            bot.mesh.traverse(c => { c.userData.character = bot; });
             bot.mesh.position.copy(bot.position);
             bot.mesh.rotation.y = bot.rotation;
             this.scene.add(bot.mesh);
@@ -1095,7 +1099,21 @@ export class MurderMysteryGame {
         }
     }
 
-    public performAction() {
+    public getCharacterFromObject(obj: THREE.Object3D | null): Character | null {
+        let curr: THREE.Object3D | null = obj;
+        while (curr) {
+            if (curr.userData && curr.userData.character) {
+                return curr.userData.character as Character;
+            }
+            for (const c of this.characters) {
+                if (c.mesh === curr) return c;
+            }
+            curr = curr.parent;
+        }
+        return null;
+    }
+
+    public performAction(screenPos?: { x: number; y: number }) {
         if (this.state !== 'in_game' || !this.playerChar.isAlive) return;
 
         // Auto-equip weapon if not equipped
@@ -1103,32 +1121,82 @@ export class MurderMysteryGame {
             this.toggleWeapon();
         }
 
+        const coords = screenPos ?? { x: 0, y: 0 };
+
         if (this.playerChar.role === 'murderer') {
-            this.performMurdererSlash(this.playerChar);
+            this.performMurdererSlash(this.playerChar, coords);
         } else if (this.playerChar.role === 'sheriff') {
-            this.performSheriffShoot(this.playerChar);
+            this.performSheriffShoot(this.playerChar, coords);
         }
     }
 
-    private performMurdererSlash(attacker: Character) {
+    public performMurdererSlash(attacker: Character, screenPos?: { x: number; y: number }) {
         audio.playKnifeSlash();
         
-        // Find closest victim in front of attacker
-        const attackRange = 3.8;
-        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), attacker.rotation);
-
-        for (const target of this.characters) {
-            if (target === attacker || !target.isAlive) continue;
-            const dist = attacker.position.distanceTo(target.position);
-            if (dist < attackRange) {
-                const toTarget = target.position.clone().sub(attacker.position).normalize();
-                const dot = forward.dot(toTarget);
-                if (dot > 0.2) {
+        // 1. If AI attacker: attacks if within melee distance and unobstructed
+        if (!attacker.isPlayer) {
+            const attackRange = 3.2;
+            for (const target of this.characters) {
+                if (target === attacker || !target.isAlive) continue;
+                const dist = attacker.position.distanceTo(target.position);
+                if (dist < attackRange && this.hasLineOfSight(attacker.position, target.position)) {
                     this.eliminateCharacter(target, attacker, 'knife');
                     break;
                 }
             }
+            return;
         }
+
+        // 2. If Player attacker: ONLY eliminates when clicked directly on a living player in close proximity ("läheduses")!
+        const coords = screenPos ?? { x: 0, y: 0 };
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(coords.x, coords.y), this.camera);
+
+        const targetMeshes: THREE.Object3D[] = [];
+        for (const c of this.characters) {
+            if (c !== attacker && c.isAlive && c.mesh) {
+                targetMeshes.push(c.mesh);
+            }
+        }
+        if (targetMeshes.length === 0) return;
+
+        // Check intersections with target meshes and walls (walls block clicks)
+        const allShootables = [...targetMeshes, ...this.wallMeshes];
+        const hits = raycaster.intersectObjects(allShootables, true);
+        if (hits.length === 0) return;
+
+        const firstHit = hits[0];
+        // If a wall was struck first, knife attack cannot pass through wall
+        let isWall = false;
+        let curr: THREE.Object3D | null = firstHit.object;
+        while (curr) {
+            if (this.wallMeshes.includes(curr as THREE.Mesh)) {
+                isWall = true;
+                break;
+            }
+            curr = curr.parent;
+        }
+        if (isWall) return;
+
+        const hitTarget = this.getCharacterFromObject(firstHit.object);
+        if (!hitTarget || hitTarget === attacker || !hitTarget.isAlive) {
+            return;
+        }
+
+        // Proximity check: Must be in close range ("läheduses")
+        const dist = attacker.position.distanceTo(hitTarget.position);
+        const maxMeleeDist = 4.2;
+        if (dist > maxMeleeDist) {
+            return;
+        }
+
+        // Line of sight check
+        if (!this.hasLineOfSight(attacker.position, hitTarget.position)) {
+            return;
+        }
+
+        // Target clicked directly in close proximity -> eliminate!
+        this.eliminateCharacter(hitTarget, attacker, 'knife');
     }
 
     // --- Line of Sight check: Cannot see or shoot through walls ---
@@ -1148,39 +1216,48 @@ export class MurderMysteryGame {
         return true;
     }
 
-    private performSheriffShoot(shooter: Character) {
+    public performSheriffShoot(shooter: Character, screenPos?: { x: number; y: number }) {
         audio.playGunshot();
-
-        // Raycast bullet from player / AI
-        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), shooter.rotation);
-        const rayOrigin = shooter.position.clone().add(new THREE.Vector3(0, 1.8, 0));
-        const raycaster = new THREE.Raycaster(rayOrigin, forward, 0.5, 75);
-        if (this.camera && shooter.isPlayer) raycaster.camera = this.camera;
 
         const charMeshes = this.characters.filter(c => c !== shooter && c.isAlive && c.mesh).map(c => c.mesh);
         // Include wall meshes so bullets CANNOT pass or hit through walls!
         const allShootables = [...charMeshes, ...this.wallMeshes];
         if (allShootables.length === 0) return;
+
+        let raycaster: THREE.Raycaster;
+        if (shooter.isPlayer) {
+            const coords = screenPos ?? { x: 0, y: 0 };
+            raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(coords.x, coords.y), this.camera);
+            raycaster.far = 100;
+        } else {
+            const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), shooter.rotation);
+            const rayOrigin = shooter.position.clone().add(new THREE.Vector3(0, 1.8, 0));
+            raycaster = new THREE.Raycaster(rayOrigin, forward, 0.5, 75);
+        }
+
         const hits = raycaster.intersectObjects(allShootables, true);
 
         if (hits.length > 0 && hits[0]?.object) {
             const hitObj = hits[0].object;
             // Check if bullet struck a wall/barrier first
-            const hitWall = this.wallMeshes.some(w => w === hitObj || w === hitObj.parent);
-            if (hitWall) {
+            let isWall = false;
+            let curr: THREE.Object3D | null = hitObj;
+            while (curr) {
+                if (this.wallMeshes.includes(curr as THREE.Mesh)) {
+                    isWall = true;
+                    break;
+                }
+                curr = curr.parent;
+            }
+            if (isWall) {
                 // Bullet hit a solid wall - cannot penetrate or hit through walls!
                 return;
             }
 
-            let hitTarget: Character | undefined;
-            for (const c of this.characters) {
-                if (c.mesh && (c.mesh === hitObj.parent || c.mesh === hitObj.parent?.parent || c.mesh === hitObj)) {
-                    hitTarget = c;
-                    break;
-                }
-            }
+            const hitTarget = this.getCharacterFromObject(hitObj);
 
-            if (hitTarget) {
+            if (hitTarget && hitTarget !== shooter && hitTarget.isAlive) {
                 if (hitTarget.role === 'murderer') {
                     // Sheriff shot murderer -> VICTORY for Sheriff & Innocents!
                     this.lastHero = shooter;
@@ -1565,22 +1642,37 @@ export class MurderMysteryGame {
         });
 
         // Mouse Controls: Click-Drag to look around, or Click for Pointer Lock / Action
+        let mouseDownPos = { x: 0, y: 0 };
+        let hasMovedMouseSignificantly = false;
+
         this.container.addEventListener('mousedown', (e: MouseEvent) => {
             this.isDraggingMouse = true;
             this.lastMousePos = { x: e.clientX, y: e.clientY };
+            mouseDownPos = { x: e.clientX, y: e.clientY };
+            hasMovedMouseSignificantly = false;
         });
 
         window.addEventListener('mouseup', () => {
             this.isDraggingMouse = false;
         });
 
-        this.container.addEventListener('click', () => {
+        this.container.addEventListener('click', (e: MouseEvent) => {
             if (this.state === 'in_game' && this.playerChar.isAlive) {
-                if (!this.isPointerLocked) {
-                    this.container.requestPointerLock?.();
+                // If user dragged to rotate camera view, don't trigger attack action
+                if (hasMovedMouseSignificantly) return;
+
+                let coords = { x: 0, y: 0 };
+                if (this.isPointerLocked) {
+                    coords = { x: 0, y: 0 };
                 } else {
-                    this.performAction();
+                    const rect = this.container.getBoundingClientRect();
+                    coords = {
+                        x: ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                        y: -((e.clientY - rect.top) / rect.height) * 2 + 1
+                    };
+                    this.container.requestPointerLock?.();
                 }
+                this.performAction(coords);
             }
         });
 
@@ -1598,6 +1690,9 @@ export class MurderMysteryGame {
             } else if (this.isDraggingMouse) {
                 const dx = e.clientX - this.lastMousePos.x;
                 const dy = e.clientY - this.lastMousePos.y;
+                if (Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y) > 6) {
+                    hasMovedMouseSignificantly = true;
+                }
                 this.lastMousePos = { x: e.clientX, y: e.clientY };
                 const sens = 0.004;
                 this.cameraYaw -= dx * sens;
@@ -1613,11 +1708,16 @@ export class MurderMysteryGame {
             this.cameraDistance = THREE.MathUtils.clamp(this.cameraDistance + e.deltaY * 0.006, 0.5, 14.0);
         }, { passive: false });
 
-        // Touch Drag for Mobile / Tablet View Rotation
+        // Touch Drag for Mobile / Tablet View Rotation & Tap to Attack
+        let touchStartCoord = { x: 0, y: 0 };
+        let touchMoved = false;
+
         this.container.addEventListener('touchstart', (e: TouchEvent) => {
             if (e.touches.length === 1) {
                 this.isTouchDragging = true;
                 this.touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                touchStartCoord = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                touchMoved = false;
             }
         }, { passive: true });
 
@@ -1625,6 +1725,9 @@ export class MurderMysteryGame {
             if (this.isTouchDragging && e.touches.length === 1) {
                 const dx = e.touches[0].clientX - this.touchStartPos.x;
                 const dy = e.touches[0].clientY - this.touchStartPos.y;
+                if (Math.hypot(e.touches[0].clientX - touchStartCoord.x, e.touches[0].clientY - touchStartCoord.y) > 8) {
+                    touchMoved = true;
+                }
                 this.touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                 const sens = 0.005;
                 this.cameraYaw -= dx * sens;
@@ -1636,6 +1739,14 @@ export class MurderMysteryGame {
 
         this.container.addEventListener('touchend', () => {
             this.isTouchDragging = false;
+            if (!touchMoved && this.state === 'in_game' && this.playerChar.isAlive) {
+                const rect = this.container.getBoundingClientRect();
+                const coords = {
+                    x: ((touchStartCoord.x - rect.left) / rect.width) * 2 - 1,
+                    y: -((touchStartCoord.y - rect.top) / rect.height) * 2 + 1
+                };
+                this.performAction(coords);
+            }
         });
 
         // UI Buttons
@@ -1934,6 +2045,29 @@ export class MurderMysteryGame {
         // Hide player mesh in true first person view
         if (this.playerChar.mesh) {
             this.playerChar.mesh.visible = this.cameraDistance > 1.2;
+        }
+
+        // Dynamic crosshair visual feedback when murderer aims at a victim within melee range
+        if (this.state === 'in_game' && this.playerChar.isAlive && this.playerChar.role === 'murderer') {
+            const crosshair = document.getElementById('crosshair');
+            if (crosshair) {
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+                const targets = this.characters.filter(c => c !== this.playerChar && c.isAlive && c.mesh).map(c => c.mesh);
+                const hits = raycaster.intersectObjects([...targets, ...this.wallMeshes], true);
+                let inMeleeRange = false;
+                if (hits.length > 0) {
+                    const hitTarget = this.getCharacterFromObject(hits[0].object);
+                    if (hitTarget && hitTarget.isAlive && this.playerChar.position.distanceTo(hitTarget.position) <= 4.2 && this.hasLineOfSight(this.playerChar.position, hitTarget.position)) {
+                        inMeleeRange = true;
+                    }
+                }
+                if (inMeleeRange) {
+                    crosshair.classList.add('target-in-range');
+                } else {
+                    crosshair.classList.remove('target-in-range');
+                }
+            }
         }
     }
 

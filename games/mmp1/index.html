@@ -202,6 +202,12 @@
             pointer-events: none;
             z-index: 80;
             display: none;
+            transition: transform 0.1s ease, background 0.1s ease, box-shadow 0.1s ease;
+        }
+        #crosshair.target-in-range {
+            background: #ff2e63;
+            transform: translate(-50%, -50%) scale(2.0);
+            box-shadow: 0 0 14px #ff2e63, 0 0 4px #ffffff;
         }
 
         /* Dropped Gun Alert Banner */

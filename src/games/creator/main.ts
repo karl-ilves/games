@@ -2321,7 +2321,9 @@ function hashString(str: string): number {
 }
 
 // --- Create Procedural 3D Mesh for any Custom Entity (not in catalog) ---
-function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
+function createCustomProceduralMesh(prompt: string, name: string, allowFallback: false): THREE.Group | null;
+function createCustomProceduralMesh(prompt: string, name: string, allowFallback?: true): THREE.Group;
+function createCustomProceduralMesh(prompt: string, name: string, allowFallback: boolean = true): THREE.Group | null {
     const group = new THREE.Group();
     const p = (prompt + ' ' + name).toLowerCase();
 
@@ -3281,6 +3283,9 @@ function createCustomProceduralMesh(prompt: string, name: string): THREE.Group {
 
     // 28. ULTRA SMART UNIVERSAL PROCEDURAL SCULPTOR (Synthesizes ANY arbitrary object)
     } else {
+        if (!allowFallback) {
+            return null;
+        }
         const colorPalette = [0x9b59b6, 0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22, 0x1abc9c, 0xff7675];
         const chosenColor = tint || colorPalette[Math.abs(hashString(name)) % colorPalette.length];
         const mainMat = new THREE.MeshStandardMaterial({ color: chosenColor, roughness: 0.35, metalness: 0.35 });
@@ -4924,29 +4929,37 @@ export function executeAiBuild(promptText: string) {
         const isVehicle = p.includes('auto') || p.includes('car') || p.includes('mootorratas') || p.includes('bike') || p.includes('krossikas') || p.includes('roller') || p.includes('scooter') || p.includes('veoauto') || p.includes('truck') || p.includes('tank') || p.includes('laev') || p.includes('ship') || p.includes('paat') || p.includes('boat') || p.includes('allveelaev') || p.includes('submarine') || p.includes('rong') || p.includes('train');
         const isFlyable = p.includes('lennuk') || p.includes('plane') || p.includes('airplane') || p.includes('jet') || p.includes('kopter') || p.includes('copter') || p.includes('ufo') || p.includes('rakett') || p.includes('rocket') || p.includes('kosmoselaev') || p.includes('spaceship') || p.includes('lendav');
 
-        const customMesh = createCustomProceduralMesh(promptText, customName);
-        customMesh.position.set(0, 0, -4.5);
-        scene.add(customMesh);
-
-        const newObj: PlacedObject = {
-            id: 'placed_ai_custom_' + Date.now(),
-            mesh: customMesh,
-            catalogId: 'procedural_' + Date.now(),
-            name: `✨ ${customName}`,
-            category: (isVehicle || isFlyable) ? 'vehicles' : 'custom',
-            isAirplane: isFlyable,
-            position: { x: customMesh.position.x, y: customMesh.position.y, z: customMesh.position.z },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            color: '#00f2fe'
-        };
-        placedObjects.push(newObj);
-        generatedObjectsCount++;
-
-        if (isAdmin) {
-            aiResponse = `✨ <strong>Lõin sinu kirjelduse põhjal täiesti uue 3D mudeli!</strong><br>Paigutasin stseeni: <strong>✨ ${customName}</strong>.${(isVehicle || isFlyable) ? '<br>🚗/✈️ <em>See sõiduk on Play Test režiimis sõidetav / lennatav! Vajuta [F] sisenemiseks!</em>' : ''}`;
+        const customMesh = createCustomProceduralMesh(promptText, customName, false);
+        if (!customMesh) {
+            if (isAdmin) {
+                aiResponse = `❌ <strong>Seda asja ei ole olemas!</strong><br>AI ei tundnud eset või sõna <em>"${promptText}"</em> ära ja ei oska seda luua.<br>💡 <em>Vihje: Proovi kirjeldada tuntud esemeid (nt loomad, autod, lennukid, majad, puud, robotid, toidud) või vali ese vasakult 10 000+ objekti kataloogist!</em>`;
+            } else {
+                aiResponse = `❌ <strong>Seda asja ei ole olemas! / This item does not exist!</strong><br>AI did not recognize <em>"${promptText}"</em> and cannot build it.<br>💡 <em>Hint: Try asking for known objects (e.g. animals, cars, airplanes, buildings, trees, robots, food) or pick an object from the 10,000+ catalog on the left!</em>`;
+            }
         } else {
-            aiResponse = `✨ <strong>Created a brand new custom 3D model based on your request!</strong><br>Spawned in scene: <strong>✨ ${customName}</strong>.${(isVehicle || isFlyable) ? '<br>🚗/✈️ <em>This vehicle is drivable/flyable in Play Test mode! Press [F] to enter!</em>' : ''}`;
+            customMesh.position.set(0, 0, -4.5);
+            scene.add(customMesh);
+
+            const newObj: PlacedObject = {
+                id: 'placed_ai_custom_' + Date.now(),
+                mesh: customMesh,
+                catalogId: 'procedural_' + Date.now(),
+                name: `✨ ${customName}`,
+                category: (isVehicle || isFlyable) ? 'vehicles' : 'custom',
+                isAirplane: isFlyable,
+                position: { x: customMesh.position.x, y: customMesh.position.y, z: customMesh.position.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#00f2fe'
+            };
+            placedObjects.push(newObj);
+            generatedObjectsCount++;
+
+            if (isAdmin) {
+                aiResponse = `✨ <strong>Lõin sinu kirjelduse põhjal täiesti uue 3D mudeli!</strong><br>Paigutasin stseeni: <strong>✨ ${customName}</strong>.${(isVehicle || isFlyable) ? '<br>🚗/✈️ <em>See sõiduk on Play Test režiimis sõidetav / lennatav! Vajuta [F] sisenemiseks!</em>' : ''}`;
+            } else {
+                aiResponse = `✨ <strong>Created a brand new custom 3D model based on your request!</strong><br>Spawned in scene: <strong>✨ ${customName}</strong>.${(isVehicle || isFlyable) ? '<br>🚗/✈️ <em>This vehicle is drivable/flyable in Play Test mode! Press [F] to enter!</em>' : ''}`;
+            }
         }
     }
 

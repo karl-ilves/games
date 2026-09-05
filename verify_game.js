@@ -501,6 +501,14 @@ try {
                 throw new Error("Universal custom 3D object creation failed!");
             }
 
+            // Test Unrecognized Item Rejection ('Seda asja ei ole olemas'): "loo blipblop999 tundmatuasjandus"
+            console.log("   Testing Unrecognized Item Warning ('Seda asja ei ole olemas')...");
+            await submitAi('loo blipblop999 tundmatuasjandus');
+            const unknownObjChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!unknownObjChat.includes('Seda asja ei ole olemas') && !unknownObjChat.includes('does not exist')) {
+                throw new Error("Unrecognized object rejection failed! Expected 'Seda asja ei ole olemas' or 'does not exist'");
+            }
+
             // Test AI Flyable Airplane Creation: "Loo lendav lennuk ja lennurada millega lennata"
             console.log("   Testing AI Flyable Airplane Creation ('Loo lendav lennuk ja lennurada')...");
             await submitAi('Loo lendav lennuk ja lennurada millega lennata');
@@ -2584,6 +2592,52 @@ try {
                 window.mmp1Game.performAction();
             });
             console.log('   MMP1 Weapon toggle and action execution tested without errors: ✅');
+
+            // Test Proximity Click-to-Kill Mechanics for Murderer:
+            // "kui ma vajutan mängja peale läheduses siis ta alles sureb"
+            const clickToKillResults = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                game.setAdminRole('murderer');
+                const livingBots = game.characters.filter(c => !c.isPlayer && c.isAlive);
+                const bot1 = livingBots[0];
+                const bot2 = livingBots[1];
+
+                // Case 1: Player slashes empty air (aiming straight up coords { x: 0, y: 0.9 })
+                const initialAliveCount = game.characters.filter(c => c.isAlive).length;
+                game.performAction({ x: 0, y: 0.9 });
+                const aliveAfterAirSlash = game.characters.filter(c => c.isAlive).length;
+                const airSlashSafe = initialAliveCount === aliveAfterAirSlash;
+
+                // Case 2: Player aims at distant bot (dist = 15m) -> should NOT die
+                bot1.position.set(0, 0, -15);
+                bot1.mesh.position.copy(bot1.position);
+                game.playerChar.position.set(0, 0, 0);
+                game.playerChar.mesh.position.set(0, 0, 0);
+                game.camera.position.set(0, 2.5, 5);
+                game.camera.lookAt(0, 1.8, -15);
+                game.performAction({ x: 0, y: 0 }); // aimed at distant bot
+                const bot1SurvivedDistant = bot1.isAlive === true;
+
+                // Case 3: Player aims at bot in close proximity (dist = 2.5m, directly ahead) -> bot SHOULD die!
+                bot1.position.set(0, 0, -2.5);
+                bot1.mesh.position.copy(bot1.position);
+                game.camera.position.set(0, 2.0, 2.0);
+                game.camera.lookAt(0, 1.8, -2.5);
+                game.performAction({ x: 0, y: 0 }); // aimed directly at nearby bot
+                const bot1DiedInProximity = bot1.isAlive === false;
+
+                return {
+                    airSlashSafe,
+                    bot1SurvivedDistant,
+                    bot1DiedInProximity
+                };
+            });
+
+            console.log(`   Murderer Click-to-Kill: AirSlashSafe=${clickToKillResults.airSlashSafe}, DistantSurvived=${clickToKillResults.bot1SurvivedDistant}, ProximityKilled=${clickToKillResults.bot1DiedInProximity}`);
+            if (!clickToKillResults.airSlashSafe) throw new Error('Slashing empty air must not eliminate any player!');
+            if (!clickToKillResults.bot1SurvivedDistant) throw new Error('Clicking player outside melee range (>4.2m) must not kill them!');
+            if (!clickToKillResults.bot1DiedInProximity) throw new Error('Clicking player directly in close range must eliminate them!');
+            console.log('   MMP1 Murderer Proximity Click-to-Kill verified: ✅');
 
             // Test Round End & Rewards
             await page.evaluate(() => {
