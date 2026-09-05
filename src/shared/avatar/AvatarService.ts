@@ -7,6 +7,19 @@ import { getCurrentUserProfile } from '../../auth';
 const AVATAR_STORAGE_KEY_PREFIX = 'playard_avatar_config_';
 const INVENTORY_STORAGE_KEY_PREFIX = 'playard_avatar_inventory_';
 
+export const ACTION_TO_EMOTE_ID: Record<string, string> = {
+    wave: 'emote_wave',
+    dance: 'emote_dance_spin',
+    salute: 'emote_salute_military',
+    backflip: 'emote_backflip',
+    breakdance: 'emote_breakdance',
+    laugh: 'emote_laugh_triumph',
+    flex: 'emote_flex_muscles',
+    levitate: 'emote_levitate_zen',
+    zombie: 'emote_zombie_groan',
+    guitar: 'emote_guitar_solo'
+};
+
 class AvatarService {
     private currentConfig: AvatarConfig;
     private userInventory: Set<string>;
@@ -47,6 +60,15 @@ class AvatarService {
         return this.userInventory.has(itemId);
     }
 
+    public isEmoteOwned(actionOrId: string): boolean {
+        if (!actionOrId || actionOrId === 'idle' || actionOrId === 'jump') return true;
+        const itemId = ACTION_TO_EMOTE_ID[actionOrId] || actionOrId;
+        const item = getItemById(itemId);
+        if (!item) return false;
+        if (item.isDefault || item.price === 0) return true;
+        return this.hasItem(itemId);
+    }
+
     public subscribe(fn: (config: AvatarConfig) => void): () => void {
         this.listeners.push(fn);
         fn(this.getConfig());
@@ -84,6 +106,9 @@ class AvatarService {
     }
 
     public async saveAvatar(newConfig: Partial<AvatarConfig>): Promise<boolean> {
+        if (newConfig.activeEmote && !this.isEmoteOwned(newConfig.activeEmote)) {
+            newConfig.activeEmote = 'idle';
+        }
         this.currentConfig = { ...this.currentConfig, ...newConfig, updatedAt: new Date().toISOString() };
         const key = this.getUserIdKey();
 

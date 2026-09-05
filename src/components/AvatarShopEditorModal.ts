@@ -133,9 +133,13 @@ export class AvatarShopEditorModal {
         const emoteButtons = this.modalEl.querySelectorAll('.btn-emote');
         emoteButtons.forEach(btn => {
             btn.addEventListener('click', () => {
+                const emote = btn.getAttribute('data-emote') || 'idle';
+                if (!avatarService.isEmoteOwned(emote)) {
+                    this.showToast(`🔒 Emote "${emote}" on lukus! Osta see enne kataloogist (✨ Emotes).`, '#ff4757');
+                    return;
+                }
                 emoteButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                const emote = btn.getAttribute('data-emote') || 'idle';
                 this.previewConfig.activeEmote = emote as any;
                 if (this.viewer) {
                     this.viewer.setEmote(emote);
@@ -333,6 +337,20 @@ export class AvatarShopEditorModal {
                 }
             });
         });
+
+        // Update pose buttons states (locked / active)
+        const emoteButtons = this.modalEl.querySelectorAll('.btn-emote');
+        emoteButtons.forEach(btn => {
+            const emote = btn.getAttribute('data-emote') || 'idle';
+            const owned = avatarService.isEmoteOwned(emote);
+            btn.classList.toggle('is-locked', !owned);
+            btn.classList.toggle('active', this.previewConfig.activeEmote === emote);
+            if (!owned) {
+                btn.setAttribute('title', '🔒 Lukus! Osta see enne kataloogist.');
+            } else {
+                btn.removeAttribute('title');
+            }
+        });
     }
 
     private previewItem(itemId: string) {
@@ -345,9 +363,9 @@ export class AvatarShopEditorModal {
                 this.previewConfig.activeEmote = 'idle' as any;
                 if (this.viewer) this.viewer.setEmote('idle');
                 break;
-            case 'hair':
-                this.previewConfig.hairId = item.id;
-                if (item.defaultColor) this.previewConfig.hairColor = item.defaultColor;
+            case 'hair': 
+                this.previewConfig.hairId = item.id; 
+                if (item.defaultColor) this.previewConfig.hairColor = item.defaultColor; 
                 this.previewConfig.activeEmote = 'idle' as any;
                 if (this.viewer) this.viewer.setEmote('idle');
                 break;
@@ -395,10 +413,13 @@ export class AvatarShopEditorModal {
                     emote_guitar_solo: 'guitar'
                 };
                 const emote = emoteMap[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
-                // Toggle off to idle if clicking the same active emote
-                const nextEmote = this.previewConfig.activeEmote === emote ? 'idle' : emote;
-                this.previewConfig.activeEmote = nextEmote as any;
-                if (this.viewer) this.viewer.setEmote(nextEmote);
+                if (this.viewer) this.viewer.setEmote(emote);
+                if (avatarService.isEmoteOwned(item.id)) {
+                    const nextEmote = this.previewConfig.activeEmote === emote ? 'idle' : emote;
+                    this.previewConfig.activeEmote = nextEmote as any;
+                } else {
+                    this.showToast(`👀 Eelvaatad emotet "${item.name}". Kasutamiseks osta see ${item.price} Y eest!`, '#f1c40f');
+                }
                 break;
             }
         }

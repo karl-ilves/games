@@ -1,4 +1,6 @@
 import { AvatarRig } from './AvatarRig';
+import { avatarService } from './AvatarService';
+import { getItemById } from './catalog';
 
 export interface GameEmoteDef {
     id: string;
@@ -35,6 +37,8 @@ export class InGameEmotesWidget {
     private activeEmote: string = 'idle';
     private toggleBtn!: HTMLButtonElement;
     private menuEl!: HTMLElement;
+    private toastEl!: HTMLElement;
+    private toastTimeout: number | null = null;
 
     constructor(options: InGameEmotesWidgetOptions = {}) {
         this.options = options;
@@ -62,6 +66,25 @@ export class InGameEmotesWidget {
         this.render();
         document.body.appendChild(this.container);
         this.setupEvents();
+
+        // Keep UI in sync with AvatarService inventory changes
+        avatarService.subscribe(() => {
+            this.updateMenuElements();
+        });
+    }
+
+    public isEmoteOwned(actionOrId: string): boolean {
+        return avatarService.isEmoteOwned(actionOrId);
+    }
+
+    public showToast(msg: string) {
+        if (!this.toastEl) return;
+        this.toastEl.textContent = msg;
+        this.toastEl.style.display = 'block';
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+        this.toastTimeout = window.setTimeout(() => {
+            if (this.toastEl) this.toastEl.style.display = 'none';
+        }, 3200);
     }
 
     private render() {
@@ -105,15 +128,15 @@ export class InGameEmotesWidget {
                     display: none;
                     flex-direction: column;
                     gap: 5px;
-                    background: rgba(14, 18, 27, 0.94);
+                    background: rgba(14, 18, 27, 0.95);
                     backdrop-filter: blur(16px);
                     border: 1.5px solid rgba(255, 46, 99, 0.4);
                     border-radius: 14px;
                     padding: 8px;
-                    min-width: 220px;
+                    min-width: 235px;
                     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 46, 99, 0.2);
                     animation: playardSlideDown 0.2s ease-out;
-                    max-height: 380px;
+                    max-height: 390px;
                     overflow-y: auto;
                 }
                 @keyframes playardSlideDown {
@@ -122,6 +145,35 @@ export class InGameEmotesWidget {
                 }
                 .playard-emotes-menu::-webkit-scrollbar { width: 5px; }
                 .playard-emotes-menu::-webkit-scrollbar-thumb { background: rgba(255, 46, 99, 0.4); border-radius: 4px; }
+                .playard-emotes-menu-header {
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    color: #8899a6;
+                    text-transform: uppercase;
+                    padding: 4px 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                    margin-bottom: 4px;
+                }
+                .playard-emotes-toast {
+                    background: rgba(239, 68, 68, 0.95);
+                    color: #fff;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    padding: 6px 10px;
+                    border-radius: 8px;
+                    text-align: center;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+                    margin-bottom: 4px;
+                    animation: playardShake 0.3s ease;
+                }
+                @keyframes playardShake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-4px); }
+                    75% { transform: translateX(4px); }
+                }
                 .playard-emote-item-btn {
                     display: flex;
                     align-items: center;
@@ -147,6 +199,28 @@ export class InGameEmotesWidget {
                     background: rgba(0, 242, 254, 0.2);
                     border-color: #00f2fe;
                     color: #00f2fe;
+                }
+                .playard-emote-item-btn.is-locked {
+                    opacity: 0.55;
+                    cursor: not-allowed;
+                    background: rgba(255, 255, 255, 0.02);
+                    border-color: rgba(255, 255, 255, 0.05);
+                }
+                .playard-emote-item-btn.is-locked:hover {
+                    opacity: 0.85;
+                    background: rgba(239, 68, 68, 0.12);
+                    border-color: rgba(239, 68, 68, 0.4);
+                    color: #fca5a5;
+                    transform: none;
+                }
+                .playard-emote-lock-badge {
+                    background: rgba(239, 68, 68, 0.25);
+                    border: 1px solid rgba(239, 68, 68, 0.4);
+                    border-radius: 4px;
+                    padding: 1px 6px;
+                    font-size: 0.68rem;
+                    color: #fca5a5;
+                    font-weight: 700;
                 }
                 .playard-emote-key-badge {
                     background: rgba(255, 255, 255, 0.1);
@@ -176,12 +250,28 @@ export class InGameEmotesWidget {
             </button>
 
             <div class="playard-emotes-menu" id="playard-in-game-emotes-menu">
-                ${IN_GAME_EMOTES_LIST.map(em => `
-                    <button class="playard-emote-item-btn" data-emote-action="${em.action}">
-                        <span>${em.icon} ${em.name}</span>
-                        ${em.keyLabel ? `<span class="playard-emote-key-badge">${em.keyLabel}</span>` : ''}
-                    </button>
-                `).join('')}
+                <div class="playard-emotes-menu-header">
+                    <span>Vali Emote</span>
+                    <span style="color: #64748b;">(Ostetud)</span>
+                </div>
+                <div class="playard-emotes-toast" id="playard-emotes-toast" style="display: none;"></div>
+                ${IN_GAME_EMOTES_LIST.map(em => {
+                    const itemCat = getItemById(em.id);
+                    const isOwned = this.isEmoteOwned(em.action);
+                    const priceStr = itemCat ? `${itemCat.price} Y` : '';
+                    return `
+                        <button class="playard-emote-item-btn ${isOwned ? 'is-owned' : 'is-locked'}" 
+                                data-emote-action="${em.action}" 
+                                data-emote-id="${em.id}"
+                                title="${isOwned ? 'Vali emote' : `Lukus (${priceStr}) - Osta Avatar Shopist`}">
+                            <span>${em.icon} ${em.name}</span>
+                            ${isOwned 
+                                ? (em.keyLabel ? `<span class="playard-emote-key-badge">${em.keyLabel}</span>` : '')
+                                : `<span class="playard-emote-lock-badge">🔒 ${priceStr}</span>`
+                            }
+                        </button>
+                    `;
+                }).join('')}
                 <button class="playard-emote-item-btn playard-stop-emote-btn" data-emote-action="idle">
                     <span>🛑 Peata / Tavaline (Stop)</span>
                     <span class="playard-emote-key-badge">ESC</span>
@@ -191,6 +281,7 @@ export class InGameEmotesWidget {
 
         this.toggleBtn = this.container.querySelector('#btn-toggle-in-game-emotes') as HTMLButtonElement;
         this.menuEl = this.container.querySelector('#playard-in-game-emotes-menu') as HTMLElement;
+        this.toastEl = this.container.querySelector('#playard-emotes-toast') as HTMLElement;
     }
 
     private setupEvents() {
@@ -205,6 +296,19 @@ export class InGameEmotesWidget {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const action = btn.getAttribute('data-emote-action') || 'idle';
+                if (action === 'idle') {
+                    this.triggerEmote('idle');
+                    return;
+                }
+
+                const emDef = IN_GAME_EMOTES_LIST.find(em => em.action === action);
+                if (emDef && !this.isEmoteOwned(emDef.action)) {
+                    const itemCat = getItemById(emDef.id);
+                    const priceStr = itemCat ? ` (${itemCat.price} Yard)` : '';
+                    this.showToast(`🔒 "${emDef.name}" on lukus${priceStr}! Osta see enne Avatar Shopist.`);
+                    return;
+                }
+
                 this.triggerEmote(action);
             });
         });
@@ -241,7 +345,60 @@ export class InGameEmotesWidget {
                     this.stopEmoteQuietly();
                 }
             }
+
+            // Quick numbers 1..9, 0 when menu is open or shortcut pressed
+            if (this.isOpen && ['1','2','3','4','5','6','7','8','9','0'].includes(e.key)) {
+                const targetEmote = IN_GAME_EMOTES_LIST.find(em => em.keyLabel === e.key);
+                if (targetEmote) {
+                    if (this.isEmoteOwned(targetEmote.action)) {
+                        this.triggerEmote(targetEmote.action);
+                    } else {
+                        const itemCat = getItemById(targetEmote.id);
+                        const priceStr = itemCat ? ` (${itemCat.price} Yard)` : '';
+                        this.showToast(`🔒 "${targetEmote.name}" on lukus${priceStr}! Osta see enne Avatar Shopist.`);
+                    }
+                }
+            }
         });
+    }
+
+    public updateMenuElements() {
+        if (!this.menuEl) return;
+        this.menuEl.querySelectorAll('[data-emote-action]').forEach(btn => {
+            const action = btn.getAttribute('data-emote-action');
+            if (!action || action === 'idle') return;
+
+            const emDef = IN_GAME_EMOTES_LIST.find(em => em.action === action);
+            if (!emDef) return;
+
+            const isOwned = this.isEmoteOwned(emDef.action);
+            const itemCat = getItemById(emDef.id);
+            const priceStr = itemCat ? `${itemCat.price} Y` : '';
+
+            btn.classList.toggle('is-locked', !isOwned);
+            btn.classList.toggle('is-owned', isOwned);
+
+            if (isOwned) {
+                btn.setAttribute('title', 'Vali emote');
+                btn.innerHTML = `
+                    <span>${emDef.icon} ${emDef.name}</span>
+                    ${emDef.keyLabel ? `<span class="playard-emote-key-badge">${emDef.keyLabel}</span>` : ''}
+                `;
+            } else {
+                btn.setAttribute('title', `Lukus (${priceStr}) - Osta Avatar Shopist`);
+                btn.innerHTML = `
+                    <span style="opacity: 0.65;">${emDef.icon} ${emDef.name}</span>
+                    <span class="playard-emote-lock-badge">🔒 ${priceStr}</span>
+                `;
+            }
+        });
+
+        // If currently playing an emote that was somehow lost/unowned, reset to idle
+        if (this.activeEmote !== 'idle' && !this.isEmoteOwned(this.activeEmote)) {
+            this.stopEmoteQuietly();
+        } else {
+            this.updateActiveItemUI();
+        }
     }
 
     public toggleMenu() {
@@ -251,7 +408,7 @@ export class InGameEmotesWidget {
     public openMenu() {
         this.isOpen = true;
         this.menuEl.style.display = 'flex';
-        this.updateActiveItemUI();
+        this.updateMenuElements();
     }
 
     public closeMenu() {
@@ -260,6 +417,16 @@ export class InGameEmotesWidget {
     }
 
     public triggerEmote(action: string) {
+        if (action !== 'idle') {
+            const emDef = IN_GAME_EMOTES_LIST.find(e => e.action === action);
+            if (emDef && !this.isEmoteOwned(emDef.action)) {
+                const itemCat = getItemById(emDef.id);
+                const priceStr = itemCat ? ` (${itemCat.price} Yard)` : '';
+                this.showToast(`🔒 "${emDef.name}" on lukus${priceStr}! Osta see enne Avatar Shopist.`);
+                return;
+            }
+        }
+
         if (action === 'idle' || action === this.activeEmote) {
             this.activeEmote = 'idle';
         } else {

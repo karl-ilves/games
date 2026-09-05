@@ -3193,22 +3193,56 @@ try {
             console.log(`   In-Game Emotes Menu display (Expected: flex): ${menuDisplay}`);
             if (menuDisplay !== 'flex') throw new Error("In-Game Emotes menu must open on toggle click!");
 
-            // Trigger Dance emote
+            // Verify Wave (default/free) is unlocked, Dance is initially locked
+            const waveBtn = await page.$('#playard-in-game-emotes-menu [data-emote-action="wave"]');
             const danceBtn = await page.$('#playard-in-game-emotes-menu [data-emote-action="dance"]');
-            if (!danceBtn) throw new Error("Expected Dance emote in in-game emotes list!");
+            if (!waveBtn || !danceBtn) throw new Error("Expected Wave and Dance buttons in in-game emotes list!");
+
+            const danceIsLockedInitially = await page.$eval('#playard-in-game-emotes-menu [data-emote-action="dance"]', el => el.classList.contains('is-locked'));
+            console.log(`   Dance emote locked for guest without purchase (Expected: true): ${danceIsLockedInitially}`);
+            if (!danceIsLockedInitially) throw new Error("Expected unowned Dance emote to be locked!");
+
+            // Attempting to click locked Dance emote must be rejected
+            await page.click('#playard-in-game-emotes-menu [data-emote-action="dance"]');
+            await new Promise(r => setTimeout(r, 200));
+            const emoteAfterLockedClick = await page.evaluate(() => window.mmp1Game?.emotesWidget?.getActiveEmote());
+            console.log(`   Emote after clicking locked Dance (Expected: idle): ${emoteAfterLockedClick}`);
+            if (emoteAfterLockedClick === 'dance') throw new Error("Unowned emote was activated! Players can only take owned emotes.");
+
+            const emoteToastText = await page.$eval('#playard-emotes-toast', el => el.textContent);
+            console.log(`   Locked Emote Toast: "${emoteToastText}"`);
+            if (!emoteToastText.includes('lukus')) throw new Error("Expected locked warning toast when clicking unowned emote!");
+
+            // Test Free / Default Wave Emote (Player owns wave by default)
+            await page.click('#playard-in-game-emotes-menu [data-emote-action="wave"]');
+            await new Promise(r => setTimeout(r, 200));
+            const activeWaveEmote = await page.evaluate(() => window.mmp1Game?.emotesWidget?.getActiveEmote());
+            console.log(`   Active In-Game Emote after Wave (Expected: wave): ${activeWaveEmote}`);
+            if (activeWaveEmote !== 'wave') throw new Error("Expected owned 'wave' emote to activate!");
+
+            // Now unlock / purchase Dance emote for player
+            await page.evaluate(() => {
+                window.playardAvatar.userInventory.add('emote_dance_spin');
+                window.mmp1Game.emotesWidget.updateMenuElements();
+            });
+            await new Promise(r => setTimeout(r, 100));
+
+            // Re-open menu and click now-unlocked Dance emote
+            await page.click('#btn-toggle-in-game-emotes');
+            await new Promise(r => setTimeout(r, 200));
             await page.click('#playard-in-game-emotes-menu [data-emote-action="dance"]');
             await new Promise(r => setTimeout(r, 200));
 
-            const activeEmoteVal = await page.evaluate(() => window.mmp1Game?.emotesWidget?.getActiveEmote());
-            console.log(`   Active In-Game Emote (Expected: dance): ${activeEmoteVal}`);
-            if (activeEmoteVal !== 'dance') throw new Error("Expected active in-game emote to be 'dance'!");
+            const activeDanceEmote = await page.evaluate(() => window.mmp1Game?.emotesWidget?.getActiveEmote());
+            console.log(`   Active In-Game Emote after purchase (Expected: dance): ${activeDanceEmote}`);
+            if (activeDanceEmote !== 'dance') throw new Error("Expected purchased 'dance' emote to activate!");
 
-            // Stop emote via Escape or toggle
+            // Stop emote via Escape or triggerEmote('idle')
             await page.evaluate(() => window.mmp1Game?.emotesWidget?.triggerEmote('idle'));
             const stoppedEmoteVal = await page.evaluate(() => window.mmp1Game?.emotesWidget?.getActiveEmote());
             console.log(`   Stopped In-Game Emote (Expected: idle): ${stoppedEmoteVal}`);
             if (stoppedEmoteVal !== 'idle') throw new Error("Expected stopped in-game emote to be 'idle'!");
-            console.log('   In-Game Emotes Widget in top-left verified: ✅');
+            console.log('   In-Game Emotes Widget & Purchase-Only Restriction verified: ✅');
 
             // Test Round End & Victory Announcements
             await page.evaluate(() => {
