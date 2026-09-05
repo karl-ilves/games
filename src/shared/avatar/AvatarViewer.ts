@@ -18,8 +18,7 @@ export class AvatarViewer {
     private previousMousePosition = { x: 0, y: 0 };
     private rotationY = 0;
     private targetRotationY = 0;
-    private targetZoom = 3.6;
-    private currentZoom = 3.6;
+    private targetCenter = new THREE.Vector3(0, 1.6, 0);
 
     constructor(container: HTMLElement, config?: AvatarConfig, isMini: boolean = false) {
         this.container = container;
@@ -29,9 +28,10 @@ export class AvatarViewer {
         const height = container.clientHeight || 300;
 
         this.camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
-        this.targetZoom = isMini ? 4.2 : 3.8;
+        this.targetZoom = isMini ? 4.6 : 4.4;
         this.currentZoom = this.targetZoom;
-        this.camera.position.set(0, 1.45, this.currentZoom);
+        this.camera.position.set(0, 1.65, this.currentZoom);
+        this.camera.lookAt(this.targetCenter);
 
         try {
             this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -185,6 +185,7 @@ export class AvatarViewer {
         // Smooth camera zoom damping
         this.currentZoom += (this.targetZoom - this.currentZoom) * 0.1;
         this.camera.position.z = this.currentZoom;
+        this.camera.lookAt(this.targetCenter);
 
         // Update skeletal animation (breathing, gestures, wave)
         this.avatarRig.updateAnimation(elapsedTime, this.currentEmote);

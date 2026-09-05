@@ -159,7 +159,7 @@ export class AvatarRig {
 
         const faceSocket = new THREE.Group();
         faceSocket.name = 'Socket_Face';
-        faceSocket.position.set(0, 0.05, 0.38);
+        faceSocket.position.set(0, 0.06, 0.40);
         this.bones.head.add(faceSocket);
 
         const torsoSocket = new THREE.Group();
@@ -402,35 +402,60 @@ export class AvatarRig {
     private renderFace(faceId: string) {
         const faceGroup = new THREE.Group();
 
-        // Eyes & Pupils
-        const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+        // Eyes, Pupils & Eyebrows
+        const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
+        const pupilMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 });
+        const browMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
+        const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
         [-1, 1].forEach(side => {
-            const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), eyeWhiteMat);
-            eyeWhite.position.set(side * 0.15, 0.08, 0);
+            // White eyeball
+            const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 12), eyeWhiteMat);
+            eyeWhite.scale.set(1.0, 1.1, 0.5);
+            eyeWhite.position.set(side * 0.14, 0.06, 0.02);
             faceGroup.add(eyeWhite);
 
-            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 8), pupilMat);
-            pupil.position.set(side * 0.15, 0.08, 0.04);
+            // Pupil
+            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 10), pupilMat);
+            pupil.scale.set(1.0, 1.0, 0.3);
+            pupil.position.set(side * 0.14, 0.06, 0.05);
             faceGroup.add(pupil);
+
+            // Eye shine (sparkle)
+            const shine = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 6), shineMat);
+            shine.position.set(side * 0.14 + 0.015, 0.075, 0.065);
+            faceGroup.add(shine);
+
+            // Eyebrow
+            const brow = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.022, 0.03), browMat);
+            brow.position.set(side * 0.14, 0.14, 0.03);
+            brow.rotation.z = -side * 0.08;
+            faceGroup.add(brow);
         });
 
-        // Smile mouth
-        const mouthMat = new THREE.MeshBasicMaterial({ color: 0x2c3e50 });
-        const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.02), mouthMat);
-        mouth.position.set(0, -0.12, 0);
+        // Expressive smile mouth
+        const mouthMat = new THREE.MeshStandardMaterial({ color: 0x78281f, roughness: 0.3 });
+        const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.04, 0.03), mouthMat);
+        mouth.position.set(0, -0.11, 0.02);
         faceGroup.add(mouth);
+
+        // Optional cute nose
+        const noseMat = this.materials.skin.clone();
+        noseMat.color.offsetHSL(0, 0.05, -0.05);
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.05, 5), noseMat);
+        nose.rotation.x = Math.PI * 0.5;
+        nose.position.set(0, -0.02, 0.04);
+        faceGroup.add(nose);
 
         if (faceId === 'face_cool_shades') {
             const glassMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.9 });
             const shades = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.15, 0.12), glassMat);
-            shades.position.set(0, 0.08, 0.05);
+            shades.position.set(0, 0.08, 0.08);
             faceGroup.add(shades);
         } else if (faceId === 'face_cyborg_visor') {
             const neonMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
             const visor = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.12, 0.15), neonMat);
-            visor.position.set(0, 0.08, 0.05);
+            visor.position.set(0, 0.08, 0.08);
             faceGroup.add(visor);
         }
 
