@@ -684,7 +684,55 @@ try {
         if (bugModalVisible !== 'flex') {
             throw new Error("Bug Report modal should be visible after clicking button!");
         }
+
+        // Test submitting a bug report
+        console.log("   Testing bug report form submission...");
+        await page.type('#bug-report-title', 'Test Bug Title');
+        await page.type('#bug-report-description', 'Detailed description of test bug');
+        await page.click('#btn-submit-bug-report');
+        await new Promise(r => setTimeout(r, 800));
+
+        const bugStatusText = await page.$eval('#bug-report-status', el => el.textContent || '');
+        console.log("   Bug Report submission status:", bugStatusText);
+        if (!bugStatusText.includes('Thank you') && !bugStatusText.includes('submitted') && !bugStatusText.includes('saved')) {
+            throw new Error("Bug report submission failed: " + bugStatusText);
+        }
+
+        const localBugs = await page.evaluate(() => {
+            return JSON.parse(localStorage.getItem('playard_bug_reports') || '[]');
+        });
+        if (!localBugs.some(b => b.title === 'Test Bug Title')) {
+            throw new Error("Bug report was not persisted!");
+        }
+        console.log("   Bug report persisted successfully: ✅");
+
         await page.click('#btn-close-bug-report');
+
+        // Test Game Submission for Review
+        console.log("6c. Testing User Created Game Submission for Review...");
+        const gameSubmitResult = await page.evaluate(async () => {
+            if (!window.yardService) return { error: 'yardService not found' };
+            const res = await window.yardService.submitGameForReview({
+                creatorUsername: 'testcreator',
+                title: 'Automated Test Adventure',
+                description: 'A test obstacle course created by tests',
+                category: 'Adventure',
+                sceneData: { objects: [], test: true }
+            });
+            return res;
+        });
+        console.log("   Game submit result:", gameSubmitResult);
+        if (!gameSubmitResult || !gameSubmitResult.success) {
+            throw new Error("User game submission failed: " + JSON.stringify(gameSubmitResult));
+        }
+
+        const pendingGames = await page.evaluate(() => {
+            return window.yardService.getLocalCreatedGames();
+        });
+        if (!pendingGames.some(g => g.title === 'Automated Test Adventure')) {
+            throw new Error("Submitted game was not found in created games list!");
+        }
+        console.log("   User game submission verified: ✅");
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");

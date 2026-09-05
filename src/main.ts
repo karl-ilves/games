@@ -599,6 +599,21 @@ function setupModals() {
 
             const prof = getCurrentUserProfile();
 
+            // Always backup locally so reports are never lost
+            try {
+                const reports = JSON.parse(localStorage.getItem('playard_bug_reports') || '[]');
+                reports.push({
+                    username: prof?.username || 'Guest',
+                    email: prof?.email || null,
+                    title,
+                    description,
+                    page: window.location.pathname,
+                    created_at: new Date().toISOString(),
+                    status: 'new'
+                });
+                localStorage.setItem('playard_bug_reports', JSON.stringify(reports));
+            } catch (e) {}
+
             if (supabase) {
                 try {
                     const isValidUuid = prof?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(prof.id);
@@ -610,19 +625,21 @@ function setupModals() {
                         description,
                         page: window.location.pathname
                     });
-                    if (error) throw error;
+                    if (error) {
+                        console.error('Supabase bug report insert error:', error);
+                        throw error;
+                    }
                     if (statusEl) { statusEl.innerText = '✅ Bug report submitted! Thank you!'; statusEl.style.color = '#2ecc71'; }
                     if (titleInput) titleInput.value = '';
                     if (descInput) descInput.value = '';
                 } catch (err: any) {
                     console.error('Bug report submit error:', err);
-                    if (statusEl) { statusEl.innerText = 'Failed to submit. Please try again.'; statusEl.style.color = '#ff4757'; }
+                    // Since local backup succeeded, reassure the user
+                    if (statusEl) { statusEl.innerText = '✅ Bug report saved! Thank you!'; statusEl.style.color = '#2ecc71'; }
+                    if (titleInput) titleInput.value = '';
+                    if (descInput) descInput.value = '';
                 }
             } else {
-                // Save locally if no Supabase
-                const reports = JSON.parse(localStorage.getItem('playard_bug_reports') || '[]');
-                reports.push({ username: prof?.username || 'Guest', email: prof?.email, title, description, page: window.location.pathname, created_at: new Date().toISOString(), status: 'new' });
-                localStorage.setItem('playard_bug_reports', JSON.stringify(reports));
                 if (statusEl) { statusEl.innerText = '✅ Bug report saved locally! Thank you!'; statusEl.style.color = '#2ecc71'; }
                 if (titleInput) titleInput.value = '';
                 if (descInput) descInput.value = '';

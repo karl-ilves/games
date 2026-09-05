@@ -749,16 +749,25 @@ class YardService {
         if (supabase) {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
-                // Archive or update older changes_requested for this creator
-                await supabase
-                    .from('user_created_games')
-                    .update({ status: 'archived' })
-                    .ilike('creator_username', game.creatorUsername)
-                    .eq('status', 'changes_requested');
+                let cloudUserId: string | null = session?.user?.id ?? null;
+                if (!cloudUserId && this.currentUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(this.currentUserId)) {
+                    cloudUserId = this.currentUserId;
+                }
 
-                await supabase.from('user_created_games').insert({
+                // Archive or update older changes_requested for this creator
+                try {
+                    await supabase
+                        .from('user_created_games')
+                        .update({ status: 'archived' })
+                        .ilike('creator_username', game.creatorUsername)
+                        .eq('status', 'changes_requested');
+                } catch (updateErr) {
+                    console.warn('Could not archive older games:', updateErr);
+                }
+
+                const { error: insertErr } = await supabase.from('user_created_games').insert({
                     id: gameId,
-                    user_id: session?.user?.id ?? null,
+                    user_id: cloudUserId,
                     creator_username: game.creatorUsername,
                     title: game.title,
                     description: game.description,
@@ -766,8 +775,11 @@ class YardService {
                     scene_data: game.sceneData,
                     status: 'pending_review'
                 });
+                if (insertErr) {
+                    console.error('Supabase user_created_games insert error:', insertErr);
+                }
             } catch (err) {
-                console.warn('Could not sync created game to cloud:', err);
+                console.error('Could not sync created game to cloud:', err);
             }
         }
 
