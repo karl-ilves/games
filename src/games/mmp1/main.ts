@@ -258,13 +258,31 @@ class MmpAudio {
         osc.start(now);
         osc.stop(now + 0.15);
     }
+
+    public playVoteSound() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(659.25, now); // E5
+        osc.frequency.setValueAtTime(880, now + 0.08); // A5
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
 }
 
 const audio = new MmpAudio();
 
 // --- Types & Interfaces ---
 export type Role = 'murderer' | 'sheriff' | 'innocent';
-export type GameState = 'lobby' | 'role_reveal' | 'in_game' | 'round_end';
+export type GameState = 'lobby' | 'map_vote' | 'role_reveal' | 'in_game' | 'round_end';
 export type MapId = 'hotel2' | 'milbase' | 'office' | 'vacation' | 'yatchy';
 
 export interface MapConfig {
@@ -455,6 +473,11 @@ export class MurderMysteryGame {
     private hudMapBadge: HTMLElement | null = null;
     private hudMapText: HTMLElement | null = null;
     private endMapName: HTMLElement | null = null;
+    private mapVoteOverlay: HTMLElement | null = null;
+    private mapVoteTimerEl: HTMLElement | null = null;
+    private mapVoteCountdown: number = 5;
+    private playerVotedMap: MapId | null = null;
+    private mapVotes: Record<MapId, number> = { hotel2: 0, milbase: 0, office: 0, vacation: 0, yatchy: 0 };
 
     constructor() {
         this.container = document.getElementById('canvas-container') || document.body;
@@ -512,6 +535,8 @@ export class MurderMysteryGame {
         this.hudMapBadge = document.getElementById('hud-map-badge');
         this.hudMapText = document.getElementById('hud-map-text');
         this.endMapName = document.getElementById('end-map-name');
+        this.mapVoteOverlay = document.getElementById('map-vote-overlay');
+        this.mapVoteTimerEl = document.getElementById('map-vote-timer');
 
         const gameYardIcon = document.getElementById('game-yard-icon');
         if (gameYardIcon) gameYardIcon.innerHTML = yardService.renderYardSvg(18);
@@ -1835,21 +1860,104 @@ export class MurderMysteryGame {
         });
     }
 
+    // --- Map Voting Phase (Starts when round countdown finishes or force start) ---
+    public startMapVoting() {
+        // If admin locked a specific map (not random), we can skip voting or pre-select it
+        this.state = 'map_vote';
+        this.mapVoteCountdown = 5;
+        this.playerVotedMap = null;
+        this.mapVotes = { hotel2: 0, milbase: 0, office: 0, vacation: 0, yatchy: 0 };
+
+        // Hide lobby banner
+        if (this.lobbyBanner) this.lobbyBanner.style.display = 'none';
+
+        // Bots cast random votes
+        const mapKeys: MapId[] = ['hotel2', 'milbase', 'office', 'vacation', 'yatchy'];
+        const botCount = this.characters.filter(c => !c.isPlayer).length;
+        for (let i = 0; i < botCount; i++) {
+            const botPick = mapKeys[Math.floor(Math.random() * mapKeys.length)];
+            this.mapVotes[botPick]++;
+        }
+
+        this.updateMapVoteUI();
+
+        // Show Map Voting Overlay
+        if (this.mapVoteOverlay) {
+            this.mapVoteOverlay.style.display = 'flex';
+        }
+        audio.playVoteSound();
+        this.addIncidentFeed(`🗺️ Kaardi hääletus algas! Vali kaart järgmiseks vooruks!`);
+    }
+
+    public castMapVote(mapId: MapId) {
+        if (this.state !== 'map_vote') return;
+        if (this.playerVotedMap) {
+            this.mapVotes[this.playerVotedMap] = Math.max(0, this.mapVotes[this.playerVotedMap] - 1);
+        }
+        this.playerVotedMap = mapId;
+        this.mapVotes[mapId]++;
+        audio.playVoteSound();
+        this.updateMapVoteUI();
+        this.addIncidentFeed(`🗳️ Hääletasid kaardi poolt: ${MAP_CATALOG[mapId]?.name || mapId}`);
+    }
+
+    public updateMapVoteUI() {
+        const mapKeys: MapId[] = ['hotel2', 'milbase', 'office', 'vacation', 'yatchy'];
+        mapKeys.forEach(m => {
+            const badge = document.getElementById(`badge-vote-${m}`);
+            if (badge) badge.textContent = this.mapVotes[m].toString();
+            const btn = document.querySelector(`.map-vote-btn[data-map="${m}"]`);
+            if (btn) {
+                if (this.playerVotedMap === m) {
+                    btn.classList.add('selected-vote');
+                } else {
+                    btn.classList.remove('selected-vote');
+                }
+            }
+        });
+    }
+
+    public finishMapVoting() {
+        if (this.mapVoteOverlay) this.mapVoteOverlay.style.display = 'none';
+
+        // Determine winning map:
+        // If admin selected a specific map (not random), admin overrides; otherwise top voted map
+        let winningMap: MapId = 'hotel2';
+        if (this.adminSelectedMap && this.adminSelectedMap !== 'random') {
+            winningMap = this.adminSelectedMap;
+        } else {
+            const mapKeys: MapId[] = ['hotel2', 'milbase', 'office', 'vacation', 'yatchy'];
+            let maxVotes = -1;
+            let candidates: MapId[] = [];
+            mapKeys.forEach(m => {
+                const v = this.mapVotes[m] || 0;
+                if (v > maxVotes) {
+                    maxVotes = v;
+                    candidates = [m];
+                } else if (v === maxVotes) {
+                    candidates.push(m);
+                }
+            });
+            winningMap = candidates[Math.floor(Math.random() * candidates.length)] || 'hotel2';
+        }
+
+        const mapConfig = MAP_CATALOG[winningMap];
+        this.addIncidentFeed(`🏆 Kaardi valik lõppes! Valiti: ${mapConfig.icon} ${mapConfig.name}!`);
+
+        this.startRound(winningMap);
+    }
+
     // --- Start Round: Assign Roles & Teleport into Map ---
-    public startRound() {
+    public startRound(forcedMap?: MapId) {
         this.state = 'role_reveal';
         this.lastHero = null;
         this.hasSheriffWitnessedMurder = false;
         if (this.lobbyBanner) this.lobbyBanner.style.display = 'none';
+        if (this.mapVoteOverlay) this.mapVoteOverlay.style.display = 'none';
 
-        // Select Map: If admin forced map, use it; otherwise pick randomly among the 5 maps
+        // Select Map
         const mapKeys: MapId[] = ['hotel2', 'milbase', 'office', 'vacation', 'yatchy'];
-        let chosenMap: MapId = 'hotel2';
-        if (this.adminSelectedMap && this.adminSelectedMap !== 'random') {
-            chosenMap = this.adminSelectedMap;
-        } else {
-            chosenMap = mapKeys[Math.floor(Math.random() * mapKeys.length)];
-        }
+        let chosenMap: MapId = forcedMap || (this.adminSelectedMap && this.adminSelectedMap !== 'random' ? this.adminSelectedMap : mapKeys[Math.floor(Math.random() * mapKeys.length)]);
 
         // Build the selected 3D map
         this.buildMap(chosenMap);
@@ -1914,7 +2022,7 @@ export class MurderMysteryGame {
         this.updateAliveCount();
 
         this.roundTimer = 180;
-        this.addIncidentFeed(`🏛️ Mängijad teleportiti mõisasse! Kõik näevad üksteist!`);
+        this.addIncidentFeed(`🏛️ Mängijad teleportiti kaardile: ${mapConfig.icon} ${mapConfig.name}!`);
     }
 
     private showRoleRevealModal(role: Role) {
@@ -2696,8 +2804,20 @@ export class MurderMysteryGame {
 
         // UI Buttons
         document.getElementById('btn-force-start')?.addEventListener('click', () => {
-            this.startRound();
+            this.startMapVoting();
         });
+
+        // Map Voting Buttons in Map Vote Overlay
+        document.querySelectorAll('.map-vote-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const mapVal = target.getAttribute('data-map') as MapId;
+                if (mapVal) {
+                    this.castMapVote(mapVal);
+                }
+            });
+        });
+
         document.getElementById('btn-role-reveal-close')?.addEventListener('click', () => {
             this.closeRoleReveal();
         });
@@ -3095,7 +3215,15 @@ export class MurderMysteryGame {
                 this.lobbyCountdownSec.textContent = `${Math.max(0, Math.ceil(this.lobbyCountdown))}s`;
             }
             if (this.lobbyCountdown <= 0) {
-                this.startRound();
+                this.startMapVoting();
+            }
+        } else if (this.state === 'map_vote') {
+            this.mapVoteCountdown -= delta;
+            if (this.mapVoteTimerEl) {
+                this.mapVoteTimerEl.textContent = `${Math.max(0, Math.ceil(this.mapVoteCountdown))}s`;
+            }
+            if (this.mapVoteCountdown <= 0) {
+                this.finishMapVoting();
             }
         } else if (this.state === 'in_game') {
             this.roundTimer -= delta;

@@ -406,6 +406,81 @@
             padding: 20px;
         }
 
+        /* Map Voting Splash Modal */
+        #map-vote-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(8, 5, 14, 0.94);
+            backdrop-filter: blur(16px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 350;
+            animation: fadeIn 0.3s ease;
+            text-align: center;
+        }
+
+        .map-vote-card {
+            background: linear-gradient(145deg, #181224, #241630);
+            border: 2px solid #00f2fe;
+            border-radius: 24px;
+            padding: 28px 36px;
+            max-width: 780px;
+            width: 92%;
+            box-shadow: 0 0 50px rgba(0, 242, 254, 0.35);
+            text-align: center;
+        }
+
+        .map-vote-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin: 20px 0 16px 0;
+        }
+
+        .map-vote-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 16px 8px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: #fff;
+            position: relative;
+        }
+        .map-vote-btn:hover {
+            transform: translateY(-4px) scale(1.03);
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.12);
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+        }
+        .map-vote-btn.selected-vote {
+            border-color: #ffd32a !important;
+            background: rgba(255, 211, 42, 0.18) !important;
+            box-shadow: 0 0 24px rgba(255, 211, 42, 0.5) !important;
+            transform: translateY(-4px) scale(1.05);
+        }
+        .map-vote-btn .vote-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ffd32a;
+            color: #111;
+            font-size: 0.75rem;
+            font-weight: 900;
+            padding: 2px 7px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255, 211, 42, 0.6);
+        }
+
         /* Instruction prompt */
         #interaction-prompt {
             position: absolute;
@@ -653,6 +728,65 @@
                 <button id="btn-admin-close" class="btn-hud-action" style="background: rgba(255, 255, 255, 0.1); border-color: #aaa; color: #fff; font-weight: 800;">
                     ✕ Sulge
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Selection / Voting Overlay (Shows when round starts) -->
+    <div id="map-vote-overlay">
+        <div class="map-vote-card">
+            <div style="font-size: 2.8rem; margin-bottom: 6px;">🗺️</div>
+            <h2 style="color: #00f2fe; margin: 0 0 6px 0; font-size: 1.8rem; letter-spacing: 1px; text-transform: uppercase;">
+                KAARDI VALIK / MAP VOTING
+            </h2>
+            <p style="color: #dcdde1; font-size: 0.95rem; margin: 0 0 12px 0;">
+                Vali järgmine 3D lahinguväli! Mäng algab: <strong id="map-vote-timer" style="color: #ffd32a; font-size: 1.15rem;">5s</strong>
+            </p>
+
+            <div class="map-vote-grid" id="map-vote-grid">
+                <!-- 1. Hotel 2 -->
+                <button class="map-vote-btn" data-map="hotel2">
+                    <span class="vote-badge" id="badge-vote-hotel2">0</span>
+                    <span style="font-size: 2.2rem;">🏨</span>
+                    <strong style="color: #ffd32a; font-size: 0.95rem;">HOTEL 2</strong>
+                    <span style="font-size: 0.72rem; color: #bbb;">Lobby & Rõdud</span>
+                </button>
+
+                <!-- 2. Mil Base -->
+                <button class="map-vote-btn" data-map="milbase">
+                    <span class="vote-badge" id="badge-vote-milbase">0</span>
+                    <span style="font-size: 2.2rem;">🪖</span>
+                    <strong style="color: #2ecc71; font-size: 0.95rem;">MIL BASE</strong>
+                    <span style="font-size: 0.72rem; color: #bbb;">Punkrid & Hangar</span>
+                </button>
+
+                <!-- 3. Office -->
+                <button class="map-vote-btn" data-map="office">
+                    <span class="vote-badge" id="badge-vote-office">0</span>
+                    <span style="font-size: 2.2rem;">🏢</span>
+                    <strong style="color: #00f2fe; font-size: 0.95rem;">OFFICE</strong>
+                    <span style="font-size: 0.72rem; color: #bbb;">Boksid & Server</span>
+                </button>
+
+                <!-- 4. Vacation -->
+                <button class="map-vote-btn" data-map="vacation">
+                    <span class="vote-badge" id="badge-vote-vacation">0</span>
+                    <span style="font-size: 2.2rem;">🌴</span>
+                    <strong style="color: #e67e22; font-size: 0.95rem;">VACATION</strong>
+                    <span style="font-size: 0.72rem; color: #bbb;">Rand & Bangalod</span>
+                </button>
+
+                <!-- 5. Yatchy -->
+                <button class="map-vote-btn" data-map="yatchy">
+                    <span class="vote-badge" id="badge-vote-yatchy">0</span>
+                    <span style="font-size: 2.2rem;">🛥️</span>
+                    <strong style="color: #9b59b6; font-size: 0.95rem;">YATCHY</strong>
+                    <span style="font-size: 0.72rem; color: #bbb;">Luksusjaht & Tekk</span>
+                </button>
+            </div>
+
+            <div style="font-size: 0.85rem; color: #888; margin-top: 6px;">
+                Mängijad ja botid hääletavad. Enim hääli saanud kaart võidab!
             </div>
         </div>
     </div>

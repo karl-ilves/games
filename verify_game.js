@@ -2752,13 +2752,41 @@ try {
             const adminModalClosedDisplay = await page.$eval('#admin-role-modal', el => window.getComputedStyle(el).display);
             if (adminModalClosedDisplay !== 'none') throw new Error('Admin Role Modal should close on clicking #btn-admin-close!');
 
-            // Test Starting Round with forced Sheriff role
+            // Test Map Voting Phase (Starts when round begins from lobby)
+            console.log('   Testing Map Selection / Voting Phase:');
             await page.evaluate(() => {
-                if (window.mmp1Game) {
-                    window.mmp1Game.startRound();
-                }
+                window.mmp1Game?.startMapVoting();
+            });
+            await new Promise(r => setTimeout(r, 200));
+
+            const mapVoteOverlayDisplay = await page.$eval('#map-vote-overlay', el => window.getComputedStyle(el).display);
+            console.log(`   Map Vote Overlay display (Expected: flex): ${mapVoteOverlayDisplay}`);
+            if (mapVoteOverlayDisplay !== 'flex') throw new Error('Map Vote Overlay must open when map voting begins!');
+
+            // Test Player casting vote for Office
+            await page.click('.map-vote-btn[data-map="office"]');
+            await new Promise(r => setTimeout(r, 100));
+
+            const votedOfficeCheck = await page.evaluate(() => {
+                return {
+                    playerVoted: window.mmp1Game?.playerVotedMap,
+                    officeVotes: window.mmp1Game?.mapVotes?.office
+                };
+            });
+            console.log(`   Player voted map: ${votedOfficeCheck.playerVoted}, Office votes count: ${votedOfficeCheck.officeVotes}`);
+            if (votedOfficeCheck.playerVoted !== 'office' || votedOfficeCheck.officeVotes < 1) {
+                throw new Error('Voting for Office must update playerVotedMap and increment votes!');
+            }
+            console.log('   Map vote casting verified: ✅');
+
+            // Finish Map Voting and enter round (with forced hotel2 for downstream tests)
+            await page.evaluate(() => {
+                window.mmp1Game?.finishMapVoting();
             });
             await new Promise(r => setTimeout(r, 400));
+
+            const mapVoteOverlayClosed = await page.$eval('#map-vote-overlay', el => window.getComputedStyle(el).display);
+            if (mapVoteOverlayClosed !== 'none') throw new Error('Map Vote Overlay must close after voting concludes!');
 
             // Verify player was assigned Sheriff role as chosen
             const assignedRole = await page.evaluate(() => window.mmp1Game?.playerChar?.role);
