@@ -162,8 +162,9 @@ class YardService {
             console.warn('Failed to parse YardData from storage:', e);
         }
 
+        const isInfinite = this.hasInfiniteYards();
         return {
-            yards: 0,
+            yards: isInfinite ? 999999999 : 0,
             streak: 0,
             lastClaimTimestamp: 0,
             inventory: [],
@@ -283,6 +284,10 @@ class YardService {
             };
         }
 
+        if (this.hasInfiniteYards(username)) {
+            this.data.yards = 999999999;
+        }
+
         this.saveLocally(this.data);
         await this.syncWithCloud(userId);
     }
@@ -397,8 +402,38 @@ class YardService {
         return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com';
     }
 
-    public getYards(): number {
-        if (this.isOwnerUser()) {
+    private isMinionBananaUser(targetUsername?: string | null): boolean {
+        if (targetUsername) {
+            const clean = targetUsername.trim().toLowerCase();
+            if (clean === 'minionbanana0_0' || clean === 'minionbanana0_0@gmail.com' || clean.includes('minionbanana0_0')) {
+                return true;
+            }
+        }
+        let username = this.currentUserUsername;
+        let email = this.currentUserEmail;
+        if (!username || !email) {
+            try {
+                const profRaw = localStorage.getItem('playard_current_user_profile');
+                if (profRaw) {
+                    const prof = JSON.parse(profRaw);
+                    username = username || prof.username || null;
+                    email = email || prof.email || null;
+                }
+            } catch (e) {}
+        }
+        const cleanUser = (username || '').trim().toLowerCase();
+        if (cleanUser === 'minionbanana0_0') return true;
+        const cleanEmail = (email || '').trim().toLowerCase();
+        if (cleanEmail === 'minionbanana0_0@gmail.com' || cleanEmail.includes('minionbanana0_0')) return true;
+        return false;
+    }
+
+    public hasInfiniteYards(targetUsername?: string | null): boolean {
+        return this.isOwnerUser() || this.isMinionBananaUser(targetUsername);
+    }
+
+    public getYards(targetUsername?: string | null): number {
+        if (this.hasInfiniteYards(targetUsername)) {
             return 999999999;
         }
         return this.data.yards;
@@ -437,13 +472,13 @@ class YardService {
     public spendYards(amount: number, itemId?: string, reason = 'Purchase'): boolean {
         if (amount <= 0) return true;
         
-        const isOwner = this.isOwnerUser();
+        const isInfinite = this.hasInfiniteYards();
         
-        if (!isOwner && this.data.yards < amount) {
+        if (!isInfinite && this.data.yards < amount) {
             return false;
         }
 
-        if (!isOwner) {
+        if (!isInfinite) {
             this.data.yards -= amount;
         }
         if (itemId && !this.data.inventory.includes(itemId)) {
@@ -461,6 +496,13 @@ class YardService {
         this.saveLocally(this.data);
         this.saveToCloud();
         return true;
+    }
+
+    public deductYards(amount: number, targetUsername?: string | null): boolean {
+        if (this.hasInfiniteYards(targetUsername)) {
+            return true;
+        }
+        return this.spendYards(amount, undefined, 'Shop item');
     }
 
     // --- Promo Code Redemption ---

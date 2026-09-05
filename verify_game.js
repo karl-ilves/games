@@ -311,6 +311,25 @@ try {
             throw new Error("MMP1 game card must be visible for user Minionbanana0_0!");
         }
 
+        // Verify Infinite Yards for Minionbanana0_0
+        const minionYards = await page.evaluate(() => window.yardService.getYards());
+        console.log("   User Minionbanana0_0 Yards balance (Expected: 999999999):", minionYards);
+        if (minionYards !== 999999999) {
+            throw new Error(`Expected infinite yards (999999999) for Minionbanana0_0, got: ${minionYards}`);
+        }
+
+        // Test that Minionbanana0_0 can buy anything (even expensive items) without losing infinite yards
+        const minionBuyTest = await page.evaluate(() => {
+            const initialYards = window.yardService.getYards();
+            const spendRes = window.yardService.spendYards(100000, 'test_item_expensive', 'Expensive Luxury Item');
+            const afterYards = window.yardService.getYards();
+            return { initialYards, spendRes, afterYards };
+        });
+        console.log("   User Minionbanana0_0 test purchase 100k Yards:", minionBuyTest);
+        if (!minionBuyTest.spendRes || minionBuyTest.afterYards !== 999999999) {
+            throw new Error("Minionbanana0_0 must be able to buy anything and retain infinite Yards!");
+        }
+
         // Switch back to admin for remaining admin tests
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };

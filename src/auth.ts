@@ -262,6 +262,24 @@ function restoreUserGameProgress(profile: UserProfile) {
         profile.war_money = initialZeroMoney;
         saveLocalProfile(profile);
     }
+
+    // Initialize infinite Yards for Minionbanana0_0
+    const cleanMinionUser = (profile.username || '').trim().toLowerCase();
+    const cleanMinionEmail = (profile.email || '').trim().toLowerCase();
+    if (cleanMinionUser === 'minionbanana0_0' || cleanMinionEmail === 'minionbanana0_0@gmail.com' || cleanMinionEmail.includes('minionbanana0_0')) {
+        const infYardsData = {
+            yards: 999999999,
+            streak: 7,
+            lastClaimTimestamp: Date.now(),
+            inventory: [],
+            redeemedCodes: [],
+            transactions: []
+        };
+        const rawYards = JSON.stringify(infYardsData);
+        localStorage.setItem(`playard_yards_user_${profile.id}`, rawYards);
+        if (profile.username) localStorage.setItem(`playard_yards_user_${profile.username.toLowerCase()}`, rawYards);
+        if (profile.email) localStorage.setItem(`playard_yards_user_${profile.email.toLowerCase()}`, rawYards);
+    }
 }
 
 function showMsg(msg: string, type: 'error' | 'success' | 'info') {
