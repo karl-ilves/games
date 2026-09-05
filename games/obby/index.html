@@ -477,7 +477,7 @@
     <!-- Checkpoint Notification Banner -->
     <div id="checkpoint-banner">
         <span>🚩</span>
-        <span id="checkpoint-banner-text">KONTROLLPUNKT SALVESTATUD! (+5 YARDS)</span>
+        <span id="checkpoint-banner-text">CHECKPOINT SAVED! (+5 YARDS)</span>
     </div>
 
     <!-- Top HUD Navigation -->
@@ -491,37 +491,37 @@
                 <span>🏃‍♂️</span>
                 <span>PARKOUR OBBY 3D</span>
             </div>
-            <div class="owner-pill" id="hud-owner-pill">👑 PLAYARD OWNER</div>
+            <div class="owner-pill" id="hud-owner-pill" style="display: none;">👑 PLAYARD OWNER</div>
         </div>
 
         <div class="hud-center">
             <!-- Stage Display -->
             <div class="hud-stat-box" style="border-color: rgba(255, 65, 108, 0.4);">
                 <span>🚩</span>
-                <span id="hud-stage-label">Tase:</span>
+                <span id="hud-stage-label">Stage:</span>
                 <span id="hud-stage-val" style="color: #ff758c; font-size: 1.05rem; font-weight: 900;">1</span>
                 <span>/ 10</span>
-                <span id="hud-stage-name" style="color: #ffd32a; font-size: 0.8rem; margin-left: 4px;">(Algaja Hüpped)</span>
+                <span id="hud-stage-name" style="color: #ffd32a; font-size: 0.8rem; margin-left: 4px;">(Beginner Steps)</span>
             </div>
 
             <!-- Live Timer -->
             <div class="hud-stat-box">
                 <span>⏱️</span>
-                <span id="hud-timer-label">Aeg:</span>
+                <span id="hud-timer-label">Time:</span>
                 <span id="hud-timer-val" style="color: #00f2fe; font-family: monospace; font-size: 1.05rem; font-weight: 900;">00:00.00</span>
             </div>
 
             <!-- Best Time -->
             <div class="hud-stat-box">
                 <span>⭐</span>
-                <span id="hud-best-label">Parim:</span>
+                <span id="hud-best-label">Best:</span>
                 <span id="hud-best-time-val" style="color: #ffd32a; font-family: monospace; font-size: 0.95rem; font-weight: 800;">--:--.--</span>
             </div>
 
             <!-- Deaths / Falls -->
             <div class="hud-stat-box">
                 <span>💀</span>
-                <span id="hud-deaths-label">Kukkumisi:</span>
+                <span id="hud-deaths-label">Falls:</span>
                 <span id="hud-deaths-val" style="color: #ff4757; font-weight: 900;">0</span>
             </div>
         </div>
@@ -531,7 +531,7 @@
             <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.4); background: rgba(255, 211, 42, 0.1);">
                 <span>🪙</span>
                 <span id="hud-coins-val" style="color: #ffd32a; font-weight: 900; font-size: 1.1rem;">0</span>
-                <span style="font-size: 0.75rem; color: #ffd32a;">MÜNTE</span>
+                <span id="hud-coins-unit" style="font-size: 0.75rem; color: #ffd32a;">COINS</span>
             </div>
 
             <!-- Yard Wallet Badge -->
@@ -542,32 +542,32 @@
             </div>
 
             <!-- Respawn Button -->
-            <button class="btn-action" id="btn-respawn" title="Taassünn viimasesse kontrollpunkti (R)">
-                <span>🔄</span> <span>Taassünn</span>
+            <button class="btn-action" id="btn-respawn" title="Respawn to checkpoint (R)">
+                <span>🔄</span> <span id="btn-respawn-label">Respawn</span>
             </button>
 
             <!-- Shop Button -->
-            <button class="btn-action btn-highlight" id="btn-open-shop" title="Obby Pood">
-                <span>🛍️</span> <span>Pood</span>
+            <button class="btn-action btn-highlight" id="btn-open-shop" title="Obby Shop">
+                <span>🛍️</span> <span id="btn-shop-label">Shop</span>
             </button>
 
             <!-- Stages Select Button -->
-            <button class="btn-action" id="btn-open-stages" title="Vali Tase">
-                <span>🗺️</span> <span>Tasemed</span>
+            <button class="btn-action" id="btn-open-stages" title="Select Stage">
+                <span>🗺️</span> <span id="btn-stages-label">Stages</span>
             </button>
 
             <!-- Camera View Toggle -->
-            <button class="btn-action" id="btn-toggle-camera" title="Vaheta Kaamerat (V)">
+            <button class="btn-action" id="btn-toggle-camera" title="Toggle Camera (V)">
                 <span>🎥</span> <span id="hud-cam-label">3rd Person</span>
             </button>
 
             <!-- Sound Toggle -->
-            <button class="btn-action" id="btn-toggle-sound" title="Heli sisse/välja">
+            <button class="btn-action" id="btn-toggle-sound" title="Toggle Sound">
                 <span id="sound-icon">🔊</span>
             </button>
 
             <!-- Help Modal -->
-            <button class="btn-action" id="btn-open-help" title="Mängujuhis & Klahvid">
+            <button class="btn-action" id="btn-open-help" title="Instructions & Controls">
                 <span>❓</span>
             </button>
         </div>
@@ -578,7 +578,7 @@
         <div class="stage-progress-card">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 1.3rem;">🏃</span>
-                <strong style="color: #ffffff; font-size: 0.9rem;" id="hud-progress-title">Takistusraja Edenemine:</strong>
+                <strong style="color: #ffffff; font-size: 0.9rem;" id="hud-progress-title">Obstacle Course Progress:</strong>
             </div>
             <div class="progress-track">
                 <div class="progress-fill" id="stage-progress-fill"></div>
@@ -604,7 +604,7 @@
             </button>
             <button class="btn-touch-action btn-touch-jump" id="btn-touch-jump">
                 <span>⬆️</span>
-                <span class="btn-touch-label">Hüppa</span>
+                <span class="btn-touch-label" id="btn-touch-jump-label">Jump</span>
             </button>
         </div>
     </div>
@@ -614,28 +614,28 @@
         <div class="modal-box">
             <button class="modal-close" id="btn-close-shop">&times;</button>
             <h2 style="margin: 0 0 6px 0; color: #ffd32a; display: flex; align-items: center; gap: 8px; justify-content: center;">
-                <span>🛍️</span> <span>Parkour Obby Pood</span>
+                <span>🛍️</span> <span id="modal-shop-title">Parkour Obby Shop</span>
             </h2>
-            <p style="color: #a4b0be; margin: 0 0 16px 0; font-size: 0.9rem; text-align: center;">
-                Kasuta teenitud Obby münte oma tegelase välimuse ja võimete kohandamiseks!
+            <p id="modal-shop-subtitle" style="color: #a4b0be; margin: 0 0 16px 0; font-size: 0.9rem; text-align: center;">
+                Use your earned Obby Coins to customize your character appearance and abilities!
             </p>
 
-            <h3 style="color: #ff758c; margin: 15px 0 8px 0; font-size: 1rem; text-align: left;">👑 Mütsid & Peaehted</h3>
+            <h3 id="shop-header-hats" style="color: #ff758c; margin: 15px 0 8px 0; font-size: 1rem; text-align: left;">👑 Hats & Headwear</h3>
             <div class="shop-grid" id="shop-hats-grid">
                 <!-- Dynamically populated -->
             </div>
 
-            <h3 style="color: #00f2fe; margin: 20px 0 8px 0; font-size: 1rem; text-align: left;">✨ Värvilised Efektirajad (Trails)</h3>
+            <h3 id="shop-header-trails" style="color: #00f2fe; margin: 20px 0 8px 0; font-size: 1rem; text-align: left;">✨ Particle Trails</h3>
             <div class="shop-grid" id="shop-trails-grid">
                 <!-- Dynamically populated -->
             </div>
 
-            <h3 style="color: #2ed573; margin: 20px 0 8px 0; font-size: 1rem; text-align: left;">👟 Võimendussaapad (Power Boots)</h3>
+            <h3 id="shop-header-boots" style="color: #2ed573; margin: 20px 0 8px 0; font-size: 1rem; text-align: left;">👟 Power Boots</h3>
             <div class="shop-grid" id="shop-boots-grid">
                 <!-- Dynamically populated -->
             </div>
 
-            <h3 style="color: #e056fd; margin: 20px 0 8px 0; font-size: 1rem; text-align: left;">🎨 Tegelase Nahavärvid (Skins)</h3>
+            <h3 id="shop-header-skins" style="color: #e056fd; margin: 20px 0 8px 0; font-size: 1rem; text-align: left;">🎨 Character Skins</h3>
             <div class="shop-grid" id="shop-skins-grid">
                 <!-- Dynamically populated -->
             </div>
@@ -647,10 +647,10 @@
         <div class="modal-box" style="max-width: 580px;">
             <button class="modal-close" id="btn-close-stages">&times;</button>
             <h2 style="margin: 0 0 6px 0; color: #00f2fe; display: flex; align-items: center; gap: 8px; justify-content: center;">
-                <span>🗺️</span> <span>Vali Obby Tase</span>
+                <span>🗺️</span> <span id="modal-stages-title">Select Obby Stage</span>
             </h2>
-            <p style="color: #a4b0be; margin: 0 0 16px 0; font-size: 0.9rem; text-align: center;">
-                Vali tase, milleni oled jõudnud või harjuta eelnevaid radu:
+            <p id="modal-stages-desc" style="color: #a4b0be; margin: 0 0 16px 0; font-size: 0.9rem; text-align: center;">
+                Select a stage you have reached or practice previous stages:
             </p>
             <div class="stages-grid" id="stages-selector-grid">
                 <!-- Dynamically populated -->
@@ -663,24 +663,24 @@
         <div class="modal-box" style="max-width: 550px; text-align: left;">
             <button class="modal-close" id="btn-close-help">&times;</button>
             <h2 style="margin: 0 0 12px 0; color: #ff758c; display: flex; align-items: center; gap: 8px;">
-                <span>❓</span> <span>Obby Juhend & Klahvid</span>
+                <span>❓</span> <span id="modal-help-title">Obby Guide & Controls</span>
             </h2>
-            <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.6;">
-                <p><strong>🎮 Juhtimine:</strong></p>
+            <div id="modal-help-content" style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.6;">
+                <p><strong>🎮 Controls:</strong></p>
                 <ul>
-                    <li><strong>W, A, S, D</strong> või <strong>Nooled:</strong> Liikumine</li>
-                    <li><strong>Space (Tühik):</strong> Hüpe & <strong>Topelthüpe</strong> (vajuta õhus teist korda)</li>
-                    <li><strong>Shift:</strong> Sprint (kiirem jooks)</li>
-                    <li><strong>Hiir:</strong> Kaamera pööramine (hoia all ja lohista) & suumiratas</li>
-                    <li><strong>V:</strong> Kaameravaate vahetamine (3rd Person / 1st Person)</li>
-                    <li><strong>R:</strong> Kiirtaassünd viimasesse kontrollpunkti</li>
+                    <li><strong>W, A, S, D</strong> or <strong>Arrow Keys:</strong> Movement</li>
+                    <li><strong>Space:</strong> Jump & <strong>Double Jump</strong> (press again in mid-air)</li>
+                    <li><strong>Shift:</strong> Sprint (faster run)</li>
+                    <li><strong>Mouse:</strong> Look around (drag) & zoom wheel</li>
+                    <li><strong>V:</strong> Toggle camera view (3rd Person / 1st Person)</li>
+                    <li><strong>R:</strong> Quick respawn to last checkpoint</li>
                 </ul>
-                <p><strong>🌟 Reeglid & Preemiad:</strong></p>
+                <p><strong>🌟 Rules & Rewards:</strong></p>
                 <ul>
-                    <li>Astuge helendavale <strong>Kontrollpunkti Plaadile</strong>, et salvestada oma asukoht ja teenida <strong>+5 Yardi</strong>!</li>
-                    <li>Vältige punast laavat, laserkiiri ja allakukkumist.</li>
-                    <li>Koguge rajal hõljuvaid <strong>kuldmünte</strong>, et osta poest mütse, efekte ja super-hüppesaapaid!</li>
-                    <li>Kogu raja läbimisel (10/10) teenid <strong>+100 Yardi</strong> ja kuldse karika!</li>
+                    <li>Step on glowing <strong>Checkpoint Pads</strong> to save your spot and earn <strong>+5 Yards</strong>!</li>
+                    <li>Dodge red lava, laser beams, and falling into the void.</li>
+                    <li>Collect spinning <strong>Gold Coins</strong> along the track to buy hats, trails, and power boots!</li>
+                    <li>Conquer all 10 stages (10/10) to earn <strong>+100 Yards</strong> and the golden trophy!</li>
                 </ul>
             </div>
         </div>
@@ -690,28 +690,28 @@
     <div class="modal-overlay" id="modal-victory">
         <div class="modal-box" style="max-width: 540px; text-align: center; border-color: #ffd32a;">
             <div style="font-size: 4rem; margin-bottom: 6px; animation: pulse 1.2s infinite;">🏆</div>
-            <h2 style="margin: 0 0 8px 0; color: #ffd32a; font-size: 1.8rem;">PALJU ÕNNE! OBBY LÄBITUD!</h2>
-            <p style="color: #ffffff; font-size: 1.05rem; margin-bottom: 20px;">
-                Oled edukalt vallutanud kõik 10 taset ja jõudnud Taevasesse Tsitadelli!
+            <h2 id="victory-title" style="margin: 0 0 8px 0; color: #ffd32a; font-size: 1.8rem;">CONGRATULATIONS! OBBY COMPLETED!</h2>
+            <p id="victory-subtitle" style="color: #ffffff; font-size: 1.05rem; margin-bottom: 20px;">
+                You conquered all 10 stages and reached the Celestial Citadel!
             </p>
 
             <div style="background: rgba(0,0,0,0.4); border-radius: 16px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-around;">
                 <div>
-                    <div style="color: #a4b0be; font-size: 0.8rem;">Lõpuaeg</div>
+                    <div id="victory-time-label" style="color: #a4b0be; font-size: 0.8rem;">Final Time</div>
                     <div id="victory-time-val" style="color: #00f2fe; font-size: 1.3rem; font-weight: 900; font-family: monospace;">00:00.00</div>
                 </div>
                 <div>
-                    <div style="color: #a4b0be; font-size: 0.8rem;">Kukkumisi</div>
+                    <div id="victory-deaths-label" style="color: #a4b0be; font-size: 0.8rem;">Falls</div>
                     <div id="victory-deaths-val" style="color: #ff4757; font-size: 1.3rem; font-weight: 900;">0</div>
                 </div>
                 <div>
-                    <div style="color: #a4b0be; font-size: 0.8rem;">Preemia</div>
+                    <div id="victory-reward-label" style="color: #a4b0be; font-size: 0.8rem;">Reward</div>
                     <div style="color: #ffd32a; font-size: 1.3rem; font-weight: 900;">+100 YARDS</div>
                 </div>
             </div>
 
-            <p style="color: #ffd32a; font-size: 0.95rem; margin: -8px 0 16px 0; font-weight: bold;">
-                ⏳ 24h Ooteaeg: Uuesti saab seda rada mängida 24 tunni pärast!
+            <p id="victory-cooldown-text" style="color: #ffd32a; font-size: 0.95rem; margin: -8px 0 16px 0; font-weight: bold;">
+                ⏳ 24h Cooldown: You can play this obstacle course again in 24 hours!
             </p>
 
             <div style="display: flex; justify-content: center;">
@@ -726,12 +726,12 @@
     <div id="obby-cooldown-overlay" style="display: none; position: fixed; inset: 0; background: rgba(5, 7, 15, 0.96); backdrop-filter: blur(20px); z-index: 99999; align-items: center; justify-content: center; padding: 20px;">
         <div class="vip-card" style="max-width: 500px; text-align: center; border-color: #ffd32a;">
             <div style="font-size: 3.8rem; margin-bottom: 8px;">⏳</div>
-            <h2 style="color: #ffd32a; margin-top: 0; font-size: 1.7rem; letter-spacing: 0.5px;">24H OOTAEG (COOLDOWN)</h2>
-            <p style="color: #d2dae2; font-size: 0.95rem; line-height: 1.5; margin: 12px 0 18px 0;">
-                Oled Obby takistusraja juba edukalt läbinud! Vastavalt reeglitele saab seda mängu uuesti teha 24h pärast.
+            <h2 id="cooldown-overlay-title" style="color: #ffd32a; margin-top: 0; font-size: 1.7rem; letter-spacing: 0.5px;">24H COOLDOWN</h2>
+            <p id="cooldown-overlay-desc" style="color: #d2dae2; font-size: 0.95rem; line-height: 1.5; margin: 12px 0 18px 0;">
+                You have already conquered the Obby course! As per rules, you can play again in 24h.
             </p>
             <div style="background: rgba(0,0,0,0.4); border-radius: 14px; padding: 14px; margin-bottom: 22px;">
-                <div style="color: #a4b0be; font-size: 0.85rem; margin-bottom: 4px;">Aega järgmise mänguni:</div>
+                <div id="cooldown-clock-label" style="color: #a4b0be; font-size: 0.85rem; margin-bottom: 4px;">Time until next play:</div>
                 <div id="cooldown-timer-clock" style="font-size: 2.4rem; font-weight: 900; color: #00f2fe; font-family: monospace; letter-spacing: 2px;">23:59:59</div>
             </div>
             <a href="../../index.html" class="btn-action btn-highlight" style="display: inline-flex; padding: 12px 32px; font-size: 1.05rem; border-radius: 12px; text-decoration: none;">

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { yardService } from '../../shared/yardService';
-import { getCurrentUserProfile, isUserAdminEmail } from '../../auth';
+import { getCurrentUserProfile, isUserAdminEmail, isPlayardOwner } from '../../auth';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -2227,7 +2227,8 @@ async function restoreDraftOrFeedbackGame() {
 function isCurrentUserAdmin(): boolean {
     const profile = getCurrentUserProfile();
     if (!profile) return false;
-    return !!(profile.isAdmin === true || isUserAdminEmail(profile.email));
+    // Only 1karl.ilves@gmail.com (Playard Owner) receives Estonian localization; all others get English
+    return isPlayardOwner(profile.email);
 }
 
 export function updateAiAssistantLocalization() {
