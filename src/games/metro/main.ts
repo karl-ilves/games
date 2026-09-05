@@ -5372,10 +5372,9 @@ export class LastMetroGame {
 
     private _spawnCarriage200Switches() {
         this.kuuljaSwitches = [];
+        this.kuuljaSwitchesActivated = 0;
         const switchPositions = [
-            { pos: new THREE.Vector3(5.2, 1.4, -6.0), label: '1/3' }, // On platform pillar
-            { pos: new THREE.Vector3(9.2, 1.4, 0.0), label: '2/3' },  // On platform back wall
-            { pos: new THREE.Vector3(6.5, 1.4, 8.0), label: '3/3' }   // Near blast exit stairs
+            { pos: new THREE.Vector3(9.2, 1.4, 0.0), label: 'PEATOIDE' }  // 1 switch on platform main wall
         ];
 
         switchPositions.forEach((item, i) => {
@@ -5545,10 +5544,6 @@ export class LastMetroGame {
         if (lever) lever.rotation.x = 0.6;
 
         metroAudio.playKeypadBeep(true);
-        this.showThought(
-            `⚡ Lüliti ${this.kuuljaSwitchesActivated}/3 aktiveeritud! Kuulja kuulis seda heli!`,
-            `⚡ Switch ${this.kuuljaSwitchesActivated}/3 activated! The Listener heard the sound!`
-        );
 
         // Make Kuulja rush toward switch
         if (this.kuuljaBossGroup) {
@@ -5562,11 +5557,11 @@ export class LastMetroGame {
             }, 3500);
         }
 
-        if (this.kuuljaSwitchesActivated >= 3) {
+        if (this.kuuljaSwitchesActivated >= 1) {
             this.station200SwitchesDone = true;
             this.showThought(
-                '⚡ KÕIK 3 LÜLITIT ON SEES! Rongi toide on taastatud! Mine kiiresti tagasi metroosse enne kui Kuulja su kätte saab!',
-                '⚡ ALL 3 SWITCHES ACTIVATED! Metro power restored! Run back inside the train before the Listener catches you!'
+                '⚡ LÜLITI ON SEES! Rongi toide on taastatud! Mine kiiresti tagasi metroosse enne kui Kuulja su kätte saab!',
+                '⚡ MAIN SWITCH ACTIVATED! Metro power restored! Run back inside the train before the Listener catches you!'
             );
 
             // Power up all station and train lights
@@ -6955,7 +6950,7 @@ this.state = 'player_free';
                     if (dot > 0.45 || (dist < 2.5 && dot > 0.15)) {
                         foundAim = 'switch';
                         this.aimedSwitchIndex = i;
-                        text = isEt ? `⚡ Aktiveeri lüliti ${i + 1}/3 [E]` : `⚡ Activate Switch ${i + 1}/3 [E]`;
+                        text = isEt ? '⚡ Aktiveeri lüliti [E]' : '⚡ Activate Switch [E]';
                         break;
                     }
                 }

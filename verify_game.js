@@ -2239,10 +2239,10 @@ try {
                 throw new Error("Carriage 200 music must start playing when entering Carriage 200!");
             }
 
-            console.log(`   Carriage 200: HUD="${car200Label}", TrainSpeed=${trainSpeed200} (Expected: 0), DoorsOpen=${doorsOpen200} (Expected: true), PlatformMesh=${hasPlatformMesh200}, Switches=${switchesCount200} (Expected: 3), KuuljaBoss=${hasKuuljaBoss200}`);
+            console.log(`   Carriage 200: HUD="${car200Label}", TrainSpeed=${trainSpeed200} (Expected: 0), DoorsOpen=${doorsOpen200} (Expected: true), PlatformMesh=${hasPlatformMesh200}, Switches=${switchesCount200} (Expected: 1), KuuljaBoss=${hasKuuljaBoss200}`);
 
-            if (trainSpeed200 !== 0 || !doorsOpen200 || !hasPlatformMesh200 || switchesCount200 !== 3 || !hasKuuljaBoss200) {
-                throw new Error("Carriage 200 must stop train speed (0), open side doors, spawn 3D station platform, 3 switches, and Kuulja boss!");
+            if (trainSpeed200 !== 0 || !doorsOpen200 || !hasPlatformMesh200 || switchesCount200 !== 1 || !hasKuuljaBoss200) {
+                throw new Error("Carriage 200 must stop train speed (0), open side doors, spawn 3D station platform, 1 switch, and Kuulja boss!");
             }
 
             // Test Player stepping out through side door onto the platform (x > 1.4)
@@ -2264,17 +2264,15 @@ try {
                 throw new Error("Glowing beacon beam above switches should be removed!");
             }
 
-            // Test activating the 3 switches
+            // Test activating the switch (User requirement: "1 lüliti mitte 3")
             await page.evaluate(() => {
                 window.__lastMetro.activateKuuljaSwitch(0);
-                window.__lastMetro.activateKuuljaSwitch(1);
-                window.__lastMetro.activateKuuljaSwitch(2);
             });
             const switchesActivated = await page.evaluate(() => window.__lastMetro.kuuljaSwitchesActivated);
             const switchesDone = await page.evaluate(() => window.__lastMetro.station200SwitchesDone);
-            console.log(`   Switches activated in Carriage 200 (Expected: 3): ${switchesActivated}, Switches Done: ${switchesDone}`);
-            if (switchesActivated !== 3 || !switchesDone) {
-                throw new Error(`Expected all 3 switches to be activated and switches done, got switches: ${switchesActivated}, switchesDone: ${switchesDone}`);
+            console.log(`   Switches activated in Carriage 200 (Expected: 1): ${switchesActivated}, Switches Done: ${switchesDone}`);
+            if (switchesActivated !== 1 || !switchesDone) {
+                throw new Error(`Expected switch to be activated and switches done, got switches: ${switchesActivated}, switchesDone: ${switchesDone}`);
             }
 
             // Test returning to the metro train triggers train departure
