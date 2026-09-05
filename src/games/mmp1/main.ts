@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { yardService } from '../../shared/yardService';
-import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
+import { getCurrentUserProfile, isPlayardOwner, isTestMode, canAccessMmp1 } from '../../auth';
 
 (window as any).yardService = yardService;
 
@@ -420,10 +420,11 @@ export class MurderMysteryGame {
     private checkAccessAuthorization() {
         const prof = getCurrentUserProfile();
         const email = prof?.email;
+        const authorized = canAccessMmp1(prof);
         const owner = isPlayardOwner(email);
         const testMode = isTestMode();
 
-        if (!owner && !testMode) {
+        if (!authorized && !testMode) {
             const denied = document.getElementById('access-denied-overlay');
             if (denied) denied.style.display = 'flex';
         }

@@ -1,5 +1,5 @@
 import { supabase } from './lib/supabase';
-import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner } from './auth';
+import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner, canAccessMmp1 } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
 import { setLanguage, applyLocalization, getLanguage } from './shared/i18n';
 
@@ -7,15 +7,13 @@ console.log("Playard Hub & Platform Loaded.");
 initAuth();
 (window as any).yardService = yardService;
 
-function updateAdminControlsVisibility(userEmail?: string | null) {
+function updateAdminControlsVisibility(userEmail?: string | null, username?: string | null) {
     const adminStreakControls = document.getElementById('streak-admin-controls');
     const adminNavBtn = document.getElementById('btn-open-admin-panel');
     
-    let emailToCheck = userEmail;
-    if (!emailToCheck) {
-        const prof = getCurrentUserProfile();
-        emailToCheck = prof?.email;
-    }
+    const prof = getCurrentUserProfile();
+    const emailToCheck = userEmail !== undefined ? userEmail : prof?.email;
+    const usernameToCheck = username !== undefined ? username : prof?.username;
 
     const showAdminPanel = isUserAdmin(emailToCheck);
     const isEstonian = isPlayardOwner(emailToCheck);
@@ -68,10 +66,10 @@ function updateAdminControlsVisibility(userEmail?: string | null) {
         metroGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
     }
 
-    // MMP1 (Murder Mystery) mäng on nähtav AINULT Playard Ownerile (1karl.ilves@gmail.com)!
+    // MMP1 (Murder Mystery) mäng on nähtav Playard Ownerile ja kasutajale Minionbanana0_0!
     const mmp1GameCard = document.getElementById('card-mmp1-game');
     if (mmp1GameCard) {
-        mmp1GameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+        mmp1GameCard.style.display = canAccessMmp1(emailToCheck, usernameToCheck) ? 'flex' : 'none';
     }
 
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
@@ -894,7 +892,7 @@ setupGameCardTracking();
 renderCommunityGames();
 
 const initialProf = getCurrentUserProfile();
-updateAdminControlsVisibility(initialProf?.email);
+updateAdminControlsVisibility(initialProf?.email, initialProf?.username);
 
 yardService.subscribe(updateYardDisplay);
 setInterval(updateStreakTimerLive, 1000);
@@ -910,7 +908,7 @@ window.addEventListener('playard_games_updated', () => {
 });
 
 window.addEventListener('playard_auth_changed', (e: any) => {
-    const profile = e.detail;
-    updateAdminControlsVisibility(profile?.email);
+    const profile = e.detail?.profile || e.detail;
+    updateAdminControlsVisibility(profile?.email, profile?.username);
     renderRecentlyPlayed();
 });

@@ -297,6 +297,28 @@ try {
             throw new Error("MMP1 game card must be hidden for non-owner admin (grx@trenet.ee)!");
         }
 
+        // Test Minionbanana0_0 login -> MMP1 game card must be visible!
+        await page.evaluate(() => {
+            const minionProf = { id: 'minion_1', username: 'Minionbanana0_0', email: 'minionbanana0_0@gmail.com', displayName: 'Minionbanana0_0', isAdmin: false };
+            localStorage.setItem('playard_current_user_profile', JSON.stringify(minionProf));
+            window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: minionProf } }));
+        });
+        await new Promise(r => setTimeout(r, 200));
+
+        const minionMmp1CardDisplay = await page.$eval('#card-mmp1-game', el => window.getComputedStyle(el).display);
+        console.log(`   User Minionbanana0_0 MMP1 Card visibility (Expected: flex): ${minionMmp1CardDisplay}`);
+        if (minionMmp1CardDisplay !== 'flex') {
+            throw new Error("MMP1 game card must be visible for user Minionbanana0_0!");
+        }
+
+        // Switch back to admin for remaining admin tests
+        await page.evaluate(() => {
+            const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
+            localStorage.setItem('playard_current_user_profile', JSON.stringify(adminProf));
+            window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: adminProf } }));
+        });
+        await new Promise(r => setTimeout(r, 200));
+
         // Click to open Admin Update Panel
         await page.click('#btn-open-admin-panel');
         await new Promise(r => setTimeout(r, 200));
@@ -2878,6 +2900,22 @@ try {
             const backToLobbyState = await page.evaluate(() => window.mmp1Game?.state);
             console.log(`   MMP1 State after returning to lobby (Expected: lobby): ${backToLobbyState}`);
             if (backToLobbyState !== 'lobby') throw new Error('MMP1 should return to lobby state!');
+
+            // Test Minionbanana0_0 authorization and access in MMP1
+            const accessResults = await page.evaluate(() => {
+                const minionProf = { id: 'minion_1', username: 'Minionbanana0_0', email: 'minionbanana0_0@gmail.com' };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(minionProf));
+                window.mmp1Game?.checkAccessAuthorization?.();
+                const deniedDisplay = window.getComputedStyle(document.getElementById('access-denied-overlay')).display;
+                return {
+                    minionDeniedDisplay: deniedDisplay
+                };
+            });
+            console.log(`   MMP1 Minionbanana0_0 access-denied overlay display (Expected: none): ${accessResults.minionDeniedDisplay}`);
+            if (accessResults.minionDeniedDisplay !== 'none') {
+                throw new Error("Access denied overlay must remain hidden for Minionbanana0_0!");
+            }
+            console.log('   MMP1 Minionbanana0_0 access authorization verified: ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 

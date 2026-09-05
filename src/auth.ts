@@ -36,6 +36,22 @@ export function isPlayardOwner(email?: string | null): boolean {
     return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com';
 }
 
+export function canAccessMmp1(profileOrEmail?: UserProfile | string | null, username?: string | null): boolean {
+    let email: string | undefined | null = typeof profileOrEmail === 'string' ? profileOrEmail : profileOrEmail?.email;
+    let user: string | undefined | null = typeof profileOrEmail === 'object' && profileOrEmail !== null ? profileOrEmail.username : username;
+    if (!email && !user) {
+        const prof = getCurrentUserProfile();
+        email = prof?.email;
+        user = prof?.username;
+    }
+    if (isPlayardOwner(email)) return true;
+    const cleanUser = (user || '').trim().toLowerCase();
+    if (cleanUser === 'minionbanana0_0') return true;
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (cleanEmail === 'minionbanana0_0@gmail.com' || cleanEmail.includes('minionbanana0_0')) return true;
+    return false;
+}
+
 export function isUserAdmin(email?: string | null): boolean {
     if (!email) return false;
     return email.trim().toLowerCase() === 'grx@trenet.ee';
