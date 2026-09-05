@@ -35,7 +35,7 @@ export class AvatarShopEditorModal {
                                 3D Avatar Shop & Editor
                             </h2>
                             <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #8899a6;">
-                                Kohanda oma 3D avatari, proovi ja osta eksklusiivseid esemeid Playard Yardide eest!
+                                Customize your 3D avatar, preview and purchase exclusive items with Playard Yards!
                             </p>
                         </div>
                     </div>
@@ -55,25 +55,27 @@ export class AvatarShopEditorModal {
                         <div class="avatar-3d-viewport" id="avatar-editor-viewport-slot">
                             <!-- Overlay helper prompt -->
                             <div class="avatar-viewport-hint">
-                                🔄 Lohista hiirega / sõrmega 360° pööramiseks · Kerimisratas suumib
+                                🔄 Drag with mouse / touch to rotate 360° · Scroll to zoom
                             </div>
                         </div>
 
-                        <!-- Emotes Bar -->
+                        <!-- Emotes & Animation Bar -->
                         <div class="avatar-emotes-bar">
-                            <span style="font-size: 0.78rem; font-weight: 700; color: #8899a6; text-transform: uppercase;">Poos / Emote:</span>
+                            <span style="font-size: 0.78rem; font-weight: 700; color: #8899a6; text-transform: uppercase;">Pose / Animation:</span>
                             <div class="avatar-emote-buttons">
-                                <button class="btn-emote active" data-emote="idle">🧍 Seisa</button>
-                                <button class="btn-emote" data-emote="wave">👋 Lehvita</button>
-                                <button class="btn-emote" data-emote="dance">🕺 Tantsi</button>
-                                <button class="btn-emote" data-emote="jump">🦘 Hüpe</button>
+                                <button class="btn-emote active" data-emote="idle">🧍 Idle</button>
+                                <button class="btn-emote" data-emote="walk">🚶 Walk</button>
+                                <button class="btn-emote" data-emote="run">🏃 Run</button>
+                                <button class="btn-emote" data-emote="jump">🦘 Jump</button>
+                                <button class="btn-emote" data-emote="wave">👋 Wave</button>
+                                <button class="btn-emote" data-emote="dance">🕺 Dance</button>
                             </div>
                         </div>
 
                         <!-- Save & Reset Actions -->
                         <div class="avatar-save-actions">
-                            <button class="btn-avatar-reset" id="btn-avatar-reset-preview">🔄 Taasta algne</button>
-                            <button class="btn-avatar-save" id="btn-avatar-save-config">💾 Salvesta Avatar</button>
+                            <button class="btn-avatar-reset" id="btn-avatar-reset-preview">🔄 Reset to Current</button>
+                            <button class="btn-avatar-save" id="btn-avatar-save-config">💾 Save Avatar</button>
                         </div>
                     </div>
 
@@ -81,14 +83,15 @@ export class AvatarShopEditorModal {
                     <div class="avatar-catalog-column">
                         <!-- Category Tabs -->
                         <div class="avatar-category-nav" id="avatar-category-tabs">
-                            <button class="cat-btn active" data-category="hats">👑 Mütsid</button>
-                            <button class="cat-btn" data-category="hair">💇 Juuksed</button>
-                            <button class="cat-btn" data-category="skin">🎨 Nahk</button>
-                            <button class="cat-btn" data-category="face">🕶️ Nägu</button>
-                            <button class="cat-btn" data-category="tops">👕 Riided</button>
-                            <button class="cat-btn" data-category="pants">👖 Püksid</button>
-                            <button class="cat-btn" data-category="shoes">👟 Jalanõud</button>
-                            <button class="cat-btn" data-category="back">🎒 Seljakotid</button>
+                            <button class="cat-btn active" data-category="hats">👑 Hats</button>
+                            <button class="cat-btn" data-category="hair">💇 Hair</button>
+                            <button class="cat-btn" data-category="skin">🎨 Skin</button>
+                            <button class="cat-btn" data-category="face">🕶️ Face</button>
+                            <button class="cat-btn" data-category="tops">👕 Tops</button>
+                            <button class="cat-btn" data-category="pants">👖 Pants</button>
+                            <button class="cat-btn" data-category="shoes">👟 Shoes</button>
+                            <button class="cat-btn" data-category="back">🎒 Back</button>
+                            <button class="cat-btn" data-category="animations">🏃 Movement</button>
                             <button class="cat-btn" data-category="emotes">✨ Emotes</button>
                         </div>
 
@@ -129,13 +132,14 @@ export class AvatarShopEditorModal {
             });
         });
 
-        // Emote Buttons
+        // Emote / Animation Buttons
         const emoteButtons = this.modalEl.querySelectorAll('.btn-emote');
         emoteButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const emote = btn.getAttribute('data-emote') || 'idle';
-                if (!avatarService.isEmoteOwned(emote)) {
-                    this.showToast(`🔒 Emote "${emote}" on lukus! Osta see enne kataloogist (✨ Emotes).`, '#ff4757');
+                const isFreeAction = ['idle', 'walk', 'run', 'jump'].includes(emote);
+                if (!isFreeAction && !avatarService.isEmoteOwned(emote)) {
+                    this.showToast(`🔒 Emote "${emote}" is locked! Purchase it in the catalog (✨ Emotes).`, '#ff4757');
                     return;
                 }
                 emoteButtons.forEach(b => b.classList.remove('active'));
@@ -154,7 +158,7 @@ export class AvatarShopEditorModal {
                 this.previewConfig = avatarService.getConfig();
                 if (this.viewer) this.viewer.updateConfig(this.previewConfig);
                 this.renderCatalogItems();
-                this.showToast('Esialgne välimus taastatud!', '#00f2fe');
+                this.showToast('Avatar reset to current configuration!', '#00f2fe');
             });
         }
 
@@ -163,7 +167,7 @@ export class AvatarShopEditorModal {
         if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
                 await avatarService.saveAvatar(this.previewConfig);
-                this.showToast('✅ Avatar edukalt salvestatud ja sünkroonitud!', '#2ecc71');
+                this.showToast('✅ Avatar successfully saved and synced!', '#2ecc71');
                 this.renderCatalogItems();
             });
         }
@@ -234,6 +238,7 @@ export class AvatarShopEditorModal {
             case 'shoes': return this.previewConfig.shoesId === item.id;
             case 'hats': return this.previewConfig.hatId === item.id;
             case 'back': return this.previewConfig.backId === item.id;
+            case 'animations': return this.previewConfig.movementStyle === item.id;
             case 'emotes': {
                 const targetAction = emoteMap[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
                 return this.previewConfig.activeEmote === targetAction;
@@ -266,11 +271,11 @@ export class AvatarShopEditorModal {
 
             let actionBtn = '';
             if (equipped) {
-                actionBtn = `<button class="btn-item-action equipped" disabled>✨ Varustatud</button>`;
+                actionBtn = `<button class="btn-item-action equipped" disabled>✨ Equipped</button>`;
             } else if (owned) {
-                actionBtn = `<button class="btn-item-action equip" data-equip-id="${item.id}">👕 Pane selga</button>`;
+                actionBtn = `<button class="btn-item-action equip" data-equip-id="${item.id}">👕 Equip</button>`;
             } else {
-                actionBtn = `<button class="btn-item-action buy" data-buy-id="${item.id}">🛍️ Osta ${item.price} Y</button>`;
+                actionBtn = `<button class="btn-item-action buy" data-buy-id="${item.id}">🛍️ Buy ${item.price} Y</button>`;
             }
 
             return `
@@ -280,7 +285,7 @@ export class AvatarShopEditorModal {
                             ${item.rarity}
                         </span>
                         <span class="price-tag">
-                            ${item.price === 0 ? 'Tasuta' : `${item.price} Y`}
+                            ${item.price === 0 ? 'Free' : `${item.price} Y`}
                         </span>
                     </div>
 
@@ -292,7 +297,7 @@ export class AvatarShopEditorModal {
                     <div class="item-desc">${item.description}</div>
 
                     <div class="item-actions-row">
-                        <button class="btn-item-preview" data-preview-id="${item.id}">👁️ Proovi</button>
+                        <button class="btn-item-preview" data-preview-id="${item.id}">👁️ Try On</button>
                         ${actionBtn}
                     </div>
                 </div>
@@ -316,7 +321,7 @@ export class AvatarShopEditorModal {
                     this.previewConfig = avatarService.getConfig();
                     if (this.viewer) this.viewer.updateConfig(this.previewConfig);
                     this.renderCatalogItems();
-                    this.showToast(`✨ ${item.name} varustatud!`, '#2ecc71');
+                    this.showToast(`✨ ${item.name} equipped!`, '#2ecc71');
                 }
             });
         });
@@ -342,11 +347,12 @@ export class AvatarShopEditorModal {
         const emoteButtons = this.modalEl.querySelectorAll('.btn-emote');
         emoteButtons.forEach(btn => {
             const emote = btn.getAttribute('data-emote') || 'idle';
-            const owned = avatarService.isEmoteOwned(emote);
+            const isFreeAction = ['idle', 'walk', 'run', 'jump'].includes(emote);
+            const owned = isFreeAction || avatarService.isEmoteOwned(emote);
             btn.classList.toggle('is-locked', !owned);
             btn.classList.toggle('active', this.previewConfig.activeEmote === emote);
             if (!owned) {
-                btn.setAttribute('title', '🔒 Lukus! Osta see enne kataloogist.');
+                btn.setAttribute('title', '🔒 Locked! Purchase in catalog (✨ Emotes).');
             } else {
                 btn.removeAttribute('title');
             }
@@ -399,6 +405,10 @@ export class AvatarShopEditorModal {
                 this.previewConfig.activeEmote = 'idle' as any;
                 if (this.viewer) this.viewer.setEmote('idle');
                 break;
+            case 'animations':
+                this.previewConfig.movementStyle = item.id;
+                this.showToast(`👀 Previewing movement style "${item.name}". Click Walk, Run, or Jump to test!`, '#00f2fe');
+                break;
             case 'emotes': {
                 const emoteMap: Record<string, string> = {
                     emote_wave: 'wave',
@@ -418,7 +428,7 @@ export class AvatarShopEditorModal {
                     const nextEmote = this.previewConfig.activeEmote === emote ? 'idle' : emote;
                     this.previewConfig.activeEmote = nextEmote as any;
                 } else {
-                    this.showToast(`👀 Eelvaatad emotet "${item.name}". Kasutamiseks osta see ${item.price} Y eest!`, '#f1c40f');
+                    this.showToast(`👀 Previewing emote "${item.name}". Purchase for ${item.price} Y to keep it!`, '#f1c40f');
                 }
                 break;
             }
@@ -438,6 +448,7 @@ export class AvatarShopEditorModal {
             case 'pants': return '👖';
             case 'shoes': return item.id.includes('hover') ? '🚀' : '👟';
             case 'back': return item.id.includes('wings') ? '🪽' : '⚔️';
+            case 'animations': return '🏃';
             case 'emotes': return item.id.includes('dance') ? '🕺' : '👋';
             default: return '✨';
         }

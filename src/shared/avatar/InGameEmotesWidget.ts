@@ -11,16 +11,16 @@ export interface GameEmoteDef {
 }
 
 export const IN_GAME_EMOTES_LIST: GameEmoteDef[] = [
-    { id: 'emote_wave', action: 'wave', name: 'Laine (Wave)', icon: '👋', keyLabel: '1' },
-    { id: 'emote_dance_spin', action: 'dance', name: 'Tants (Dance)', icon: '🕺', keyLabel: '2' },
-    { id: 'emote_salute_military', action: 'salute', name: 'Saluut (Salute)', icon: '🪖', keyLabel: '3' },
-    { id: 'emote_backflip', action: 'backflip', name: 'Salto (Backflip)', icon: '🤸', keyLabel: '4' },
-    { id: 'emote_breakdance', action: 'breakdance', name: 'Breiktants', icon: '🌪️', keyLabel: '5' },
-    { id: 'emote_laugh_triumph', action: 'laugh', name: 'Võidunaer', icon: '😂', keyLabel: '6' },
-    { id: 'emote_flex_muscles', action: 'flex', name: 'Musklite Flex', icon: '💪', keyLabel: '7' },
-    { id: 'emote_levitate_zen', action: 'levitate', name: 'Zen Hõljumine', icon: '🧘', keyLabel: '8' },
-    { id: 'emote_zombie_groan', action: 'zombie', name: 'Zombi (Zombie)', icon: '🧟', keyLabel: '9' },
-    { id: 'emote_guitar_solo', action: 'guitar', name: 'Kitarri Soolo', icon: '🎸', keyLabel: '0' },
+    { id: 'emote_wave', action: 'wave', name: 'Wave', icon: '👋', keyLabel: '1' },
+    { id: 'emote_dance_spin', action: 'dance', name: 'Dance', icon: '🕺', keyLabel: '2' },
+    { id: 'emote_salute_military', action: 'salute', name: 'Salute', icon: '🪖', keyLabel: '3' },
+    { id: 'emote_backflip', action: 'backflip', name: 'Backflip', icon: '🤸', keyLabel: '4' },
+    { id: 'emote_breakdance', action: 'breakdance', name: 'Breakdance', icon: '🌪️', keyLabel: '5' },
+    { id: 'emote_laugh_triumph', action: 'laugh', name: 'Laugh', icon: '😂', keyLabel: '6' },
+    { id: 'emote_flex_muscles', action: 'flex', name: 'Muscle Flex', icon: '💪', keyLabel: '7' },
+    { id: 'emote_levitate_zen', action: 'levitate', name: 'Zen Levitate', icon: '🧘', keyLabel: '8' },
+    { id: 'emote_zombie_groan', action: 'zombie', name: 'Zombie Walk', icon: '🧟', keyLabel: '9' },
+    { id: 'emote_guitar_solo', action: 'guitar', name: 'Air Guitar', icon: '🎸', keyLabel: '0' },
 ];
 
 export interface InGameEmotesWidgetOptions {
@@ -244,15 +244,15 @@ export class InGameEmotesWidget {
                 }
             </style>
 
-            <button class="playard-btn-emote-toggle" id="btn-toggle-in-game-emotes" title="Ava emotede menüü (B)">
+            <button class="playard-btn-emote-toggle" id="btn-toggle-in-game-emotes" title="Open Emotes Menu (B)">
                 <span class="emote-icon">🎭</span>
-                <span class="emote-label">EMOTED (B)</span>
+                <span class="emote-label">EMOTES (B)</span>
             </button>
 
             <div class="playard-emotes-menu" id="playard-in-game-emotes-menu">
                 <div class="playard-emotes-menu-header">
-                    <span>Vali Emote</span>
-                    <span style="color: #64748b;">(Ostetud)</span>
+                    <span>Select Emote</span>
+                    <span style="color: #64748b;">(Owned)</span>
                 </div>
                 <div class="playard-emotes-toast" id="playard-emotes-toast" style="display: none;"></div>
                 ${IN_GAME_EMOTES_LIST.map(em => {
@@ -263,7 +263,7 @@ export class InGameEmotesWidget {
                         <button class="playard-emote-item-btn ${isOwned ? 'is-owned' : 'is-locked'}" 
                                 data-emote-action="${em.action}" 
                                 data-emote-id="${em.id}"
-                                title="${isOwned ? 'Vali emote' : `Lukus (${priceStr}) - Osta Avatar Shopist`}">
+                                title="${isOwned ? 'Play Emote' : `Locked (${priceStr}) - Purchase in Avatar Shop`}">
                             <span>${em.icon} ${em.name}</span>
                             ${isOwned 
                                 ? (em.keyLabel ? `<span class="playard-emote-key-badge">${em.keyLabel}</span>` : '')
@@ -273,7 +273,7 @@ export class InGameEmotesWidget {
                     `;
                 }).join('')}
                 <button class="playard-emote-item-btn playard-stop-emote-btn" data-emote-action="idle">
-                    <span>🛑 Peata / Tavaline (Stop)</span>
+                    <span>🛑 Stop / Idle</span>
                     <span class="playard-emote-key-badge">ESC</span>
                 </button>
             </div>
@@ -305,7 +305,7 @@ export class InGameEmotesWidget {
                 if (emDef && !this.isEmoteOwned(emDef.action)) {
                     const itemCat = getItemById(emDef.id);
                     const priceStr = itemCat ? ` (${itemCat.price} Yard)` : '';
-                    this.showToast(`🔒 "${emDef.name}" on lukus${priceStr}! Osta see enne Avatar Shopist.`);
+                    this.showToast(`🔒 "${emDef.name}" is locked${priceStr}! Purchase it in the Avatar Shop.`);
                     return;
                 }
 
@@ -355,7 +355,7 @@ export class InGameEmotesWidget {
                     } else {
                         const itemCat = getItemById(targetEmote.id);
                         const priceStr = itemCat ? ` (${itemCat.price} Yard)` : '';
-                        this.showToast(`🔒 "${targetEmote.name}" on lukus${priceStr}! Osta see enne Avatar Shopist.`);
+                        this.showToast(`🔒 "${targetEmote.name}" is locked${priceStr}! Purchase it in the Avatar Shop.`);
                     }
                 }
             }
@@ -379,13 +379,13 @@ export class InGameEmotesWidget {
             btn.classList.toggle('is-owned', isOwned);
 
             if (isOwned) {
-                btn.setAttribute('title', 'Vali emote');
+                btn.setAttribute('title', 'Play Emote');
                 btn.innerHTML = `
                     <span>${emDef.icon} ${emDef.name}</span>
                     ${emDef.keyLabel ? `<span class="playard-emote-key-badge">${emDef.keyLabel}</span>` : ''}
                 `;
             } else {
-                btn.setAttribute('title', `Lukus (${priceStr}) - Osta Avatar Shopist`);
+                btn.setAttribute('title', `Locked (${priceStr}) - Purchase in Avatar Shop`);
                 btn.innerHTML = `
                     <span style="opacity: 0.65;">${emDef.icon} ${emDef.name}</span>
                     <span class="playard-emote-lock-badge">🔒 ${priceStr}</span>
@@ -422,7 +422,7 @@ export class InGameEmotesWidget {
             if (emDef && !this.isEmoteOwned(emDef.action)) {
                 const itemCat = getItemById(emDef.id);
                 const priceStr = itemCat ? ` (${itemCat.price} Yard)` : '';
-                this.showToast(`🔒 "${emDef.name}" on lukus${priceStr}! Osta see enne Avatar Shopist.`);
+                this.showToast(`🔒 "${emDef.name}" is locked${priceStr}! Purchase it in the Avatar Shop.`);
                 return;
             }
         }

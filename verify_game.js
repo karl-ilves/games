@@ -376,11 +376,11 @@ try {
             throw new Error("3D Avatar Shop modal must open when avatar widget is clicked!");
         }
 
-        // Verify categories exist (hats, hair, skin, face, tops, pants, shoes, back, emotes)
+        // Verify categories exist (hats, hair, skin, face, tops, pants, shoes, back, animations, emotes)
         const categoryCount = await page.$$eval('#avatar-category-tabs .cat-btn', btns => btns.length);
-        console.log("   Avatar Shop Category tabs count (Expected: 9):", categoryCount);
-        if (categoryCount < 8) {
-            throw new Error(`Expected at least 8 avatar category tabs, got: ${categoryCount}`);
+        console.log("   Avatar Shop Category tabs count (Expected: 10):", categoryCount);
+        if (categoryCount < 10) {
+            throw new Error(`Expected at least 10 avatar category tabs (including animations), got: ${categoryCount}`);
         }
 
         // Verify items grid loaded
@@ -390,12 +390,67 @@ try {
             throw new Error("Avatar Shop items grid must not be empty!");
         }
 
-        // Test purchasing a hat item with Yards (Viking Helm: 450 Yards)
+        // Test Movement Styles Category (10 distinct styles: default, ninja, zombie, superhero, mage, robot, oldschool, toy, knight, stylish)
+        await page.click('[data-category="animations"]');
+        await new Promise(r => setTimeout(r, 250));
+        const animStylesCount = await page.$$eval('#avatar-items-container .avatar-item-card', cards => cards.length);
+        console.log("   Avatar Animations/Movement styles count (Expected: 10):", animStylesCount);
+        if (animStylesCount !== 10) {
+            throw new Error(`Expected exactly 10 distinct movement styles in animations category, got: ${animStylesCount}`);
+        }
+
+        // Verify all 10 movement style IDs exist in the catalog
+        const movementStyleIds = await page.$$eval('#avatar-items-container .avatar-item-card', cards => cards.map(c => c.getAttribute('data-item-id')));
+        console.log("   Movement style IDs:", movementStyleIds.join(', '));
+        const requiredStyles = [
+            'anim_style_default', 'anim_style_ninja', 'anim_style_zombie', 'anim_style_superhero',
+            'anim_style_mage', 'anim_style_robot', 'anim_style_oldschool', 'anim_style_toy',
+            'anim_style_knight', 'anim_style_stylish'
+        ];
+        for (const reqId of requiredStyles) {
+            if (!movementStyleIds.includes(reqId)) {
+                throw new Error(`Missing required movement style: ${reqId}`);
+            }
+        }
+
+        // Test previewing Ninja Acrobat movement style & testing locomotion rig animation
+        const ninjaPreviewBtn = await page.$('[data-preview-id="anim_style_ninja"]');
+        if (ninjaPreviewBtn) {
+            await page.click('[data-preview-id="anim_style_ninja"]');
+            await new Promise(r => setTimeout(r, 200));
+            const previewedMovement = await page.evaluate(() => window.playardAvatarShop?.previewConfig?.movementStyle);
+            console.log("   Previewed Movement Style (Expected: anim_style_ninja):", previewedMovement);
+            if (previewedMovement !== 'anim_style_ninja') {
+                throw new Error("Previewing Ninja Acrobat should update previewConfig.movementStyle to 'anim_style_ninja'!");
+            }
+
+            // Test walk and jump animation calculation on rig
+            const animRigTest = await page.evaluate(() => {
+                const rig = window.playardAvatarShop?.viewer?.avatarRig;
+                if (!rig) return null;
+                rig.updateAnimation(1.5, 'walk');
+                const ninjaWalkLeftLeg = rig.bones.leftLeg.rotation.x;
+                const ninjaChestRot = rig.bones.chest.rotation.x;
+                rig.updateAnimation(2.0, 'jump');
+                const ninjaJumpHipsY = rig.bones.hips.position.y;
+                return { ninjaWalkLeftLeg, ninjaChestRot, ninjaJumpHipsY };
+            });
+            console.log("   Ninja movement animation rig metrics:", animRigTest);
+            if (!animRigTest || Math.abs(animRigTest.ninjaChestRot) < 0.1) {
+                throw new Error("Ninja Acrobat must lean forward aggressively during locomotion!");
+            }
+        }
+
+        // Test purchasing a hat item with Yards (Viking Helm: 900 Yards)
         await page.evaluate(() => {
-            // Give user 1000 Yards for test
-            window.yardService.addYards(1000, 'Avatar Test Bonus');
+            // Give user 2000 Yards for test
+            window.yardService.addYards(2000, 'Avatar Test Bonus');
         });
         await new Promise(r => setTimeout(r, 200));
+
+        // Switch back to Hats
+        await page.click('[data-category="hats"]');
+        await new Promise(r => setTimeout(r, 250));
 
         // Click Buy on Viking Helmet
         const buyBtn = await page.$('[data-buy-id="hat_viking_helm"]');
@@ -449,21 +504,21 @@ try {
         console.log("   Avatar Emotes category items count:", emoteCardsCount);
         if (emoteCardsCount < 4) throw new Error("Expected multiple emotes in emotes category!");
 
-        // Verify unowned paid emote has Buy button and NOT 'Varustatud'
+        // Verify unowned paid emote has English Buy button and NOT 'Equipped'
         const saluteBuyBtn = await page.$('[data-buy-id="emote_salute_military"]');
         if (!saluteBuyBtn) throw new Error("Unowned emote 'emote_salute_military' must have a Buy button!");
         const saluteBtnText = await page.$eval('[data-buy-id="emote_salute_military"]', el => el.textContent);
-        console.log("   Unowned Military Salute button text (Expected: Osta 400 Y):", saluteBtnText);
-        if (!saluteBtnText.includes('Osta') || saluteBtnText.includes('Varustatud')) {
-            throw new Error("Unowned paid emote must show Buy button with price, not 'Varustatud'!");
+        console.log("   Unowned Military Salute button text (Expected: Buy 400 Y):", saluteBtnText);
+        if (!saluteBtnText.includes('Buy') || saluteBtnText.includes('Equipped')) {
+            throw new Error("Unowned paid emote must show Buy button with price, not 'Equipped'!");
         }
 
         // Verify breakdance emote has Buy button with 2600 Y
         const breakdanceBuyBtn = await page.$('[data-buy-id="emote_breakdance"]');
         if (!breakdanceBuyBtn) throw new Error("Unowned emote 'emote_breakdance' must have a Buy button!");
         const breakdanceBtnText = await page.$eval('[data-buy-id="emote_breakdance"]', el => el.textContent);
-        console.log("   Unowned Breakdance button text (Expected: Osta 2600 Y):", breakdanceBtnText);
-        if (!breakdanceBtnText.includes('2600 Y') || breakdanceBtnText.includes('Varustatud')) {
+        console.log("   Unowned Breakdance button text (Expected: Buy 2600 Y):", breakdanceBtnText);
+        if (!breakdanceBtnText.includes('2600 Y') || breakdanceBtnText.includes('Equipped')) {
             throw new Error("Breakdance emote must show Buy button with 2600 Y!");
         }
 
@@ -496,13 +551,13 @@ try {
             console.log("   Emote switching clean rest pose reset verified: ✅");
         }
 
-        // Test Saving Avatar
+        // Test Saving Avatar (English toast: 'saved')
         await page.click('#btn-avatar-save-config');
         await new Promise(r => setTimeout(r, 300));
         const toastText = await page.$eval('#avatar-shop-toast', el => el.textContent);
-        console.log("   Avatar Save Toast:", toastText);
-        if (!toastText.includes('salvestatud')) {
-            throw new Error("Avatar must show success toast on save!");
+        console.log("   Avatar Save Toast (Expected English 'saved'):", toastText);
+        if (!toastText.toLowerCase().includes('saved')) {
+            throw new Error("Avatar must show English success toast on save containing 'saved'!");
         }
 
         // Close Avatar Shop
@@ -3211,7 +3266,9 @@ try {
 
             const emoteToastText = await page.$eval('#playard-emotes-toast', el => el.textContent);
             console.log(`   Locked Emote Toast: "${emoteToastText}"`);
-            if (!emoteToastText.includes('lukus')) throw new Error("Expected locked warning toast when clicking unowned emote!");
+            if (!emoteToastText.toLowerCase().includes('locked') && !emoteToastText.includes('lukus')) {
+                throw new Error("Expected locked warning toast when clicking unowned emote!");
+            }
 
             // Test Free / Default Wave Emote (Player owns wave by default)
             await page.click('#playard-in-game-emotes-menu [data-emote-action="wave"]');

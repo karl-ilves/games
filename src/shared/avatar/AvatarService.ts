@@ -69,6 +69,14 @@ class AvatarService {
         return this.hasItem(itemId);
     }
 
+    public isMovementStyleOwned(styleId: string): boolean {
+        if (!styleId || styleId === 'anim_style_default') return true;
+        const item = getItemById(styleId);
+        if (!item) return false;
+        if (item.isDefault || item.price === 0) return true;
+        return this.hasItem(styleId);
+    }
+
     public subscribe(fn: (config: AvatarConfig) => void): () => void {
         this.listeners.push(fn);
         fn(this.getConfig());
@@ -108,6 +116,9 @@ class AvatarService {
     public async saveAvatar(newConfig: Partial<AvatarConfig>): Promise<boolean> {
         if (newConfig.activeEmote && !this.isEmoteOwned(newConfig.activeEmote)) {
             newConfig.activeEmote = 'idle';
+        }
+        if (newConfig.movementStyle && !this.isMovementStyleOwned(newConfig.movementStyle)) {
+            newConfig.movementStyle = 'anim_style_default';
         }
         this.currentConfig = { ...this.currentConfig, ...newConfig, updatedAt: new Date().toISOString() };
         const key = this.getUserIdKey();
@@ -202,6 +213,9 @@ class AvatarService {
                 update.activeEmote = emoteActionMap[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
                 break;
             }
+            case 'animations':
+                update.movementStyle = item.id;
+                break;
         }
 
         this.saveAvatar(update);
@@ -239,7 +253,8 @@ class AvatarService {
                     hatId: data.hat_id || null,
                     accessoryId: data.accessory_id || null,
                     backId: data.back_accessory_id || null,
-                    activeEmote: (data.active_emote as any) || 'idle'
+                    activeEmote: (data.active_emote as any) || 'idle',
+                    movementStyle: data.movement_style || 'anim_style_default'
                 };
                 this.notify();
             }
@@ -279,6 +294,7 @@ class AvatarService {
                 accessory_id: this.currentConfig.accessoryId,
                 back_accessory_id: this.currentConfig.backId,
                 active_emote: this.currentConfig.activeEmote,
+                movement_style: this.currentConfig.movementStyle || 'anim_style_default',
                 updated_at: new Date().toISOString()
             }, { onConflict: 'user_id' });
         } catch (e) {

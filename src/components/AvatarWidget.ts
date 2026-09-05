@@ -20,7 +20,7 @@ export class AvatarWidget {
 
     private render() {
         this.container.innerHTML = `
-            <div id="playard-avatar-widget-box" class="avatar-widget-card" title="Klõpsa siia, et avada 3D Avatar Shop & Editor!">
+            <div id="playard-avatar-widget-box" class="avatar-widget-card" title="Click here to open the 3D Avatar Shop & Editor!">
                 <div class="avatar-canvas-wrapper" id="avatar-mini-canvas-slot"></div>
                 <div class="avatar-info-panel">
                     <div class="avatar-user-row">

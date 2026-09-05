@@ -9,7 +9,8 @@ export type AvatarCategory =
     | 'hats'
     | 'accessories'
     | 'back'
-    | 'emotes';
+    | 'emotes'
+    | 'animations';
 
 export type ItemRarity = 
     | 'Common'
@@ -58,6 +59,7 @@ export interface AvatarConfig {
     accessoryId: string | null;
     backId: string | null;
     activeEmote: 'idle' | 'wave' | 'dance' | 'jump' | 'salute' | 'backflip' | 'breakdance' | 'laugh' | 'flex' | 'levitate' | 'zombie' | 'guitar' | string;
+    movementStyle?: string;
     updatedAt?: string;
 }
 

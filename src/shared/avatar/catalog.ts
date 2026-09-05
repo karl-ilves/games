@@ -12,7 +12,8 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
     hatId: null,
     accessoryId: null,
     backId: null,
-    activeEmote: 'idle'
+    activeEmote: 'idle',
+    movementStyle: 'anim_style_default'
 };
 
 export const AVATAR_CATALOG: AvatarItem[] = [
@@ -1258,6 +1259,111 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         currency: 'Yard',
         attachmentSocket: 'torso',
         description: 'Jump on knees and shred an imaginary heavy metal solo.'
+    },
+
+    // ==========================================
+    // --- 11. MOVEMENT STYLES (ANIMATIONS) ---
+    // ==========================================
+    {
+        id: 'anim_style_default',
+        name: 'Classic Movement',
+        category: 'animations',
+        rarity: 'Common',
+        price: 0,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Standard, balanced humanoid idle, walking, running, and jumping.',
+        isDefault: true
+    },
+    {
+        id: 'anim_style_ninja',
+        name: 'Ninja Acrobat',
+        category: 'animations',
+        rarity: 'Rare',
+        price: 1400,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Stealthy low-stance idle, swept-back arms sprint, and aerial ninja tuck jump.'
+    },
+    {
+        id: 'anim_style_zombie',
+        name: 'Spooky Zombie',
+        category: 'animations',
+        rarity: 'Rare',
+        price: 1200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Head-tilted lurching stance, outstretched stiff-arm shuffle, and lumbering jump.'
+    },
+    {
+        id: 'anim_style_superhero',
+        name: 'Superhero Stride',
+        category: 'animations',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Fists-on-hips hero stance, soaring chest-forward flight sprint, and skyward punch leap.'
+    },
+    {
+        id: 'anim_style_mage',
+        name: 'Mystic Mage',
+        category: 'animations',
+        rarity: 'Epic',
+        price: 2600,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Floating hover idle, ethereal gliding walk, and arcane spiral jump.'
+    },
+    {
+        id: 'anim_style_robot',
+        name: 'Cyborg Robot',
+        category: 'animations',
+        rarity: 'Rare',
+        price: 1300,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Rigid mechanical snaps, 90-degree angular piston strides, and hydraulic jump.'
+    },
+    {
+        id: 'anim_style_oldschool',
+        name: 'Oldschool Retro',
+        category: 'animations',
+        rarity: 'Uncommon',
+        price: 800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Funky bouncy hip sway, carefree wide-swinging strides, and hands-in-air victory leap.'
+    },
+    {
+        id: 'anim_style_toy',
+        name: 'Toy Soldier',
+        category: 'animations',
+        rarity: 'Uncommon',
+        price: 950,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Rigid plastic peg-leg posture, stiff marching strides, and action figure spring leap.'
+    },
+    {
+        id: 'anim_style_knight',
+        name: 'Armored Knight',
+        category: 'animations',
+        rarity: 'Epic',
+        price: 1800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Steadfast heavy plate posture, disciplined martial stride, and armored charge leap.'
+    },
+    {
+        id: 'anim_style_stylish',
+        name: 'Stylish Swagger',
+        category: 'animations',
+        rarity: 'Legendary',
+        price: 2800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Asymmetric hip-tilted swagger idle, runway fluid walk, and graceful airborne leap.'
     }
 ];
 
