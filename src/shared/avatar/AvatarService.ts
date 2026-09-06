@@ -17,7 +17,19 @@ export const ACTION_TO_EMOTE_ID: Record<string, string> = {
     flex: 'emote_flex_muscles',
     levitate: 'emote_levitate_zen',
     zombie: 'emote_zombie_groan',
-    guitar: 'emote_guitar_solo'
+    guitar: 'emote_guitar_solo',
+    dab: 'emote_dab_swag',
+    moonwalk: 'emote_moonwalk_slide',
+    tpose: 'emote_tpose_dominance',
+    robot_dance: 'emote_robot_popper',
+    kungfu: 'emote_kungfu_strike',
+    headspin: 'emote_headspin_air',
+    cheer: 'emote_cheer_hype',
+    bow: 'emote_formal_bow',
+    matrix_dodge: 'emote_matrix_dodge',
+    hype_clap: 'emote_hype_clap',
+    slow_clap: 'emote_slow_clap',
+    ground_slam: 'emote_superhero_landing'
 };
 
 class AvatarService {

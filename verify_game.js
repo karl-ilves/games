@@ -413,9 +413,9 @@ try {
         await page.click('[data-category="animations"]');
         await new Promise(r => setTimeout(r, 250));
         const animStylesCount = await page.$$eval('#avatar-items-container .avatar-item-card', cards => cards.length);
-        console.log("   Avatar Animations/Movement styles count (Expected: 10):", animStylesCount);
-        if (animStylesCount !== 10) {
-            throw new Error(`Expected exactly 10 distinct movement styles in animations category, got: ${animStylesCount}`);
+        console.log("   Avatar Animations/Movement styles count (Expected >= 10):", animStylesCount);
+        if (animStylesCount < 10) {
+            throw new Error(`Expected at least 10 distinct movement styles in animations category, got: ${animStylesCount}`);
         }
 
         // Verify all 10 movement style IDs exist in the catalog
@@ -602,18 +602,18 @@ try {
                 crownPrice: royalCrown ? royalCrown.price : null
             };
         });
-        console.log("   Avatar Catalog Total Items (Expected >= 70):", catalogStats.count);
+        console.log("   Avatar Catalog Total Items (Expected >= 200):", catalogStats.count);
         console.log("   Viking Helm 2x Price (Expected: 900):", catalogStats.vikingPrice);
         console.log("   Golden Saiyan Hair 2x Price (Expected: 2400):", catalogStats.saiyanPrice);
         console.log("   Royal Crown 2x Price (Expected: 4000):", catalogStats.crownPrice);
-        if (catalogStats.count < 70) {
-            throw new Error(`Expected at least 70 items in 5x expanded catalog, got ${catalogStats.count}`);
+        if (catalogStats.count < 200) {
+            throw new Error(`Expected at least 200 items in 10x expanded catalog, got ${catalogStats.count}`);
         }
         if (catalogStats.vikingPrice !== 900 || catalogStats.crownPrice !== 4000) {
             throw new Error(`Expected doubled 2x prices (Viking=900, Crown=4000), got Viking=${catalogStats.vikingPrice}, Crown=${catalogStats.crownPrice}`);
         }
 
-        console.log("   Successfully verified 3D Avatar System, 5x Catalog (100+ items), 2x Prices, Yard purchasing and Equipping!");
+        console.log("   Successfully verified 3D Avatar System, 10x Catalog (280+ items), 2x Prices, Yard purchasing and Equipping!");
 
         // Reset to guest for remaining tests
         await page.evaluate(() => {
@@ -1692,6 +1692,25 @@ try {
 
             const deathsVal = await page.$eval('#hud-deaths-val', el => el.textContent);
             console.log("   Obby Initial Deaths (Expected: 0):", deathsVal);
+
+            // Verify Obby Player Character uses Playard 3D AvatarRig
+            const obbyAvatarData = await page.evaluate(() => {
+                const inst = window.__OBBY_GAME_INSTANCE__;
+                return {
+                    hasRig: !!inst?.playerAvatarRig,
+                    rigName: inst?.playerAvatarRig?.rootGroup?.name,
+                    hasEmotesWidget: !!inst?.emotesWidget
+                };
+            });
+            console.log("   Obby 3D Player uses Playard AvatarRig:", obbyAvatarData);
+            if (!obbyAvatarData.hasRig || obbyAvatarData.rigName !== 'Obby_Player_AvatarRig') {
+                throw new Error("Expected Parkour Obby to use standard Playard AvatarRig for player character!");
+            }
+
+            // Verify In-Game Emotes Widget in Obby
+            const obbyEmotesBar = await page.$('#playard-in-game-emotes-bar');
+            console.log("   Obby In-Game Emotes Bar exists in top-left:", !!obbyEmotesBar);
+            if (!obbyEmotesBar) throw new Error("Expected In-Game Emotes Widget in Obby!");
 
             // Test Camera View Toggle (V)
             await page.click('#btn-toggle-camera');

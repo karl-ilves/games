@@ -4,6 +4,8 @@ import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { getItemById } from '../../shared/avatar/catalog';
 import { isMobileOrTabletDevice } from '../../shared/mobileControls';
+import { AvatarRig } from '../../shared/avatar/AvatarRig';
+import { InGameEmotesWidget } from '../../shared/avatar/InGameEmotesWidget';
 
 (window as any).yardService = yardService;
 
@@ -220,6 +222,8 @@ export class ParkourObbyGame {
     private audio = new ObbyAudio();
 
     // Player Object & Mesh Parts
+    public playerAvatarRig!: AvatarRig;
+    public emotesWidget?: InGameEmotesWidget;
     private playerGroup!: THREE.Group;
     private playerBodyMesh!: THREE.Mesh;
     private playerHeadMesh!: THREE.Mesh;
@@ -336,6 +340,23 @@ export class ParkourObbyGame {
         // 6. Setup UI Event Listeners & Modals
         this.setupUI();
 
+        // Initialize In-Game Emotes Widget for Obby
+        try {
+            this.emotesWidget = new InGameEmotesWidget({
+                getAvatarRig: () => this.playerAvatarRig,
+                topOffset: 70,
+                leftOffset: 16
+            });
+        } catch (e) {
+            console.warn('InGameEmotesWidget init in Obby:', e);
+        }
+
+        avatarService.subscribe(cfg => {
+            if (this.playerAvatarRig) {
+                this.playerAvatarRig.applyConfig(cfg);
+            }
+        });
+
         // 7. Apply Localization (Estonian for Playard Owner 1karl.ilves@gmail.com, English for everyone else)
         this.applyLocalization();
 
@@ -348,6 +369,7 @@ export class ParkourObbyGame {
 
         // Notify ready
         (window as any).__OBBY_GAME_INSTANCE__ = this;
+        (window as any).parkourObby = this;
         console.log("Parkour Obby 3D Ready!");
     }
 
@@ -454,124 +476,41 @@ export class ParkourObbyGame {
     private buildPlayerCharacter() {
         this.playerGroup = new THREE.Group();
 
-        const avatarCfg = avatarService.getConfig();
-        const skinColor = avatarCfg?.skinColor || this.getSkinHex();
-        const topColor = avatarCfg?.topId ? (getItemById(avatarCfg.topId)?.defaultColor || 0x00f2fe) : this.getSkinHex();
-        const pantsColor = avatarCfg?.pantsId ? (getItemById(avatarCfg.pantsId)?.defaultColor || 0x1e293b) : 0x1e293b;
+        // 1. Build & Attach Full Playard 3D AvatarRig
+        this.playerAvatarRig = new AvatarRig(avatarService.getConfig());
+        this.playerAvatarRig.rootGroup.name = 'Obby_Player_AvatarRig';
+        this.playerGroup.add(this.playerAvatarRig.rootGroup);
 
-        // Body / Torso
-        const bodyGeo = new THREE.BoxGeometry(0.8, 1.0, 0.5);
-        const bodyMat = new THREE.MeshLambertMaterial({ color: topColor });
-        this.playerBodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-        this.playerBodyMesh.position.y = 1.0;
+        // 2. Legacy Dummy Mesh Anchors (Invisible, prevents any undefined reference crashes)
+        const dummyMat = new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 });
+        const dummyGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+        this.playerBodyMesh = new THREE.Mesh(dummyGeo, dummyMat);
+        this.playerBodyMesh.visible = false;
         this.playerGroup.add(this.playerBodyMesh);
 
-        // Head
-        const headGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-        const headMat = new THREE.MeshLambertMaterial({ color: skinColor });
-        this.playerHeadMesh = new THREE.Mesh(headGeo, headMat);
-        this.playerHeadMesh.position.y = 1.8;
+        this.playerHeadMesh = new THREE.Mesh(dummyGeo, dummyMat);
+        this.playerHeadMesh.visible = false;
         this.playerGroup.add(this.playerHeadMesh);
 
-        // 3D Equipped Face Accessory for Player (Ultra-Realistic Sunglasses, Visor, Mask, Monocle, Goggles)
-        const faceId = avatarCfg?.faceId || 'face_smile';
-        if (faceId === 'face_cool_shades' || faceId.includes('shades') || faceId.includes('sunglasses') || faceId.includes('retro_round') || faceId.includes('matrix')) {
-            // Ultra-Realistic Aviator Sunglasses on Obby Character
-            const frameMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.96, roughness: 0.12 });
-            const lensMat = new THREE.MeshStandardMaterial({ color: 0x07111c, metalness: 0.35, roughness: 0.03, transparent: true, opacity: 0.84 });
-            const browBar = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.44, 10), frameMat);
-            browBar.rotation.z = Math.PI * 0.5;
-            browBar.position.set(0, 1.92, -0.32);
-            this.playerGroup.add(browBar);
-            [-1, 1].forEach(side => {
-                const rim = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.009, 8, 20), frameMat);
-                rim.scale.set(1.08, 1.25, 0.5);
-                rim.position.set(side * 0.15, 1.85, -0.32);
-                this.playerGroup.add(rim);
-                const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.008, 16), lensMat);
-                lens.rotation.x = Math.PI * 0.5;
-                lens.scale.set(1.06, 0.5, 1.22);
-                lens.position.set(side * 0.15, 1.85, -0.32);
-                this.playerGroup.add(lens);
-            });
-        } else if (faceId === 'face_cyborg_visor' || faceId === 'face_vr_headset') {
-            const visorGeo = new THREE.BoxGeometry(0.48, 0.16, 0.1);
-            const visorMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
-            const visor = new THREE.Mesh(visorGeo, visorMat);
-            visor.position.set(0, 1.85, -0.30);
-            this.playerGroup.add(visor);
-        } else if (faceId === 'face_ninja_mask') {
-            const mask = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.22, 0.14), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-            mask.position.set(0, 1.72, -0.28);
-            this.playerGroup.add(mask);
-        } else if (faceId === 'face_steampunk_goggles') {
-            [-1, 1].forEach(side => {
-                const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.075, 0.06, 16), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9 }));
-                cup.rotation.x = Math.PI * 0.5;
-                cup.position.set(side * 0.14, 1.85, -0.32);
-                this.playerGroup.add(cup);
-            });
-        } else {
-            // Stylized Expressive Face Eyes & Smile
-            [-1, 1].forEach(side => {
-                const eye = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.04), new THREE.MeshBasicMaterial({ color: 0x111111 }));
-                eye.position.set(side * 0.14, 1.86, -0.31);
-                this.playerGroup.add(eye);
-            });
-            const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.02), new THREE.MeshBasicMaterial({ color: 0x78281f }));
-            mouth.position.set(0, 1.68, -0.31);
-            this.playerGroup.add(mouth);
-        }
-
-        // Left & Right Arms
-        const armGeo = new THREE.BoxGeometry(0.24, 0.8, 0.24);
-        const armMat = new THREE.MeshLambertMaterial({ color: skinColor });
-        this.playerLeftArm = new THREE.Mesh(armGeo, armMat);
-        this.playerLeftArm.position.set(-0.55, 1.0, 0);
+        this.playerLeftArm = new THREE.Mesh(dummyGeo, dummyMat);
+        this.playerLeftArm.visible = false;
         this.playerGroup.add(this.playerLeftArm);
 
-        this.playerRightArm = new THREE.Mesh(armGeo, armMat);
-        this.playerRightArm.position.set(0.55, 1.0, 0);
+        this.playerRightArm = new THREE.Mesh(dummyGeo, dummyMat);
+        this.playerRightArm.visible = false;
         this.playerGroup.add(this.playerRightArm);
 
-        // Left & Right Legs
-        const legGeo = new THREE.BoxGeometry(0.28, 0.8, 0.28);
-        const legMat = new THREE.MeshLambertMaterial({ color: pantsColor });
-        this.playerLeftLeg = new THREE.Mesh(legGeo, legMat);
-        this.playerLeftLeg.position.set(-0.25, 0.35, 0);
+        this.playerLeftLeg = new THREE.Mesh(dummyGeo, dummyMat);
+        this.playerLeftLeg.visible = false;
         this.playerGroup.add(this.playerLeftLeg);
 
-        this.playerRightLeg = new THREE.Mesh(legGeo, legMat);
-        this.playerRightLeg.position.set(0.25, 0.35, 0);
+        this.playerRightLeg = new THREE.Mesh(dummyGeo, dummyMat);
+        this.playerRightLeg.visible = false;
         this.playerGroup.add(this.playerRightLeg);
 
-        // Back Wings or Katana if equipped
-        if (avatarCfg?.backId) {
-            const backId = avatarCfg.backId;
-            if (backId.includes('wings')) {
-                const wingColor = backId.includes('golden') ? 0xffd700 : (backId.includes('demon') ? 0x9b59b6 : 0x00f2fe);
-                const wingMat = new THREE.MeshBasicMaterial({ color: wingColor });
-                [-1, 1].forEach(side => {
-                    const wing = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 0.04), wingMat);
-                    wing.position.set(side * 0.6, 1.2, 0.3);
-                    wing.rotation.z = side * 0.3;
-                    this.playerGroup.add(wing);
-                });
-            } else if (backId === 'back_ninja_katana') {
-                [-0.35, 0.35].forEach(rot => {
-                    const scabbard = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.1, 0.07), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-                    scabbard.rotation.z = rot;
-                    scabbard.position.set(0, 1.2, 0.3);
-                    this.playerGroup.add(scabbard);
-                });
-            }
-        }
-
-        // Hat Attachment Anchor
         this.playerHatGroup = new THREE.Group();
-        this.playerHatGroup.position.set(0, 2.15, 0);
+        this.playerHatGroup.visible = false;
         this.playerGroup.add(this.playerHatGroup);
-        this.updateEquippedHatMesh();
 
         // Spawn position
         this.playerGroup.position.copy(STAGES[0].spawnPos);
@@ -1096,13 +1035,16 @@ export class ParkourObbyGame {
         this.isFirstPerson = !this.isFirstPerson;
         const camLabel = document.getElementById('hud-cam-label');
         if (camLabel) camLabel.textContent = this.isFirstPerson ? '1st Person' : '3rd Person';
-        this.playerBodyMesh.visible = !this.isFirstPerson;
-        this.playerHeadMesh.visible = !this.isFirstPerson;
-        this.playerLeftArm.visible = !this.isFirstPerson;
-        this.playerRightArm.visible = !this.isFirstPerson;
-        this.playerLeftLeg.visible = !this.isFirstPerson;
-        this.playerRightLeg.visible = !this.isFirstPerson;
-        this.playerHatGroup.visible = !this.isFirstPerson;
+        if (this.playerAvatarRig) {
+            this.playerAvatarRig.rootGroup.visible = !this.isFirstPerson;
+        }
+        this.playerBodyMesh.visible = false;
+        this.playerHeadMesh.visible = false;
+        this.playerLeftArm.visible = false;
+        this.playerRightArm.visible = false;
+        this.playerLeftLeg.visible = false;
+        this.playerRightLeg.visible = false;
+        this.playerHatGroup.visible = false;
     }
 
     private showToast(msg: string) {
@@ -1616,20 +1558,23 @@ export class ParkourObbyGame {
             // Rotate player body towards moving direction
             const targetRotY = Math.atan2(moveDir.x, moveDir.z);
             this.playerGroup.rotation.y = targetRotY;
-
-            // Running Limb Animation
-            const walkCycle = performance.now() * 0.015;
-            this.playerLeftLeg.rotation.x = Math.sin(walkCycle) * 0.6;
-            this.playerRightLeg.rotation.x = -Math.sin(walkCycle) * 0.6;
-            this.playerLeftArm.rotation.x = -Math.sin(walkCycle) * 0.6;
-            this.playerRightArm.rotation.x = Math.sin(walkCycle) * 0.6;
         } else {
             this.velocity.x *= 0.6;
             this.velocity.z *= 0.6;
-            this.playerLeftLeg.rotation.x = 0;
-            this.playerRightLeg.rotation.x = 0;
-            this.playerLeftArm.rotation.x = 0;
-            this.playerRightArm.rotation.x = 0;
+        }
+
+        // Animate Playard 3D AvatarRig (Movement styles & in-game emotes)
+        if (this.playerAvatarRig) {
+            const now = performance.now() * 0.001;
+            if (!this.isGrounded) {
+                this.playerAvatarRig.updateAnimation(now, 'jump');
+            } else if (moveDir.lengthSq() > 0.001) {
+                const isSprint = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
+                this.playerAvatarRig.updateAnimation(now, isSprint ? 'run' : 'walk');
+            } else {
+                const activeEmote = this.emotesWidget?.getActiveEmote() || 'idle';
+                this.playerAvatarRig.updateAnimation(now, activeEmote);
+            }
         }
 
         // Jump Handling

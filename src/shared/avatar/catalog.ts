@@ -142,6 +142,182 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         defaultColor: '#8854d0',
         description: 'Nebula-drenched stellar skin reflecting cosmic starlight.'
     },
+{
+        id: 'skin_emerald_glow',
+        name: 'Bioluminescent Emerald',
+        category: 'skin',
+        rarity: 'Uncommon',
+        price: 350,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#05c46b',
+        description: 'Vivid emerald luminescence radiating an otherworldly inner glow.'
+    },
+    {
+        id: 'skin_frozen_ice',
+        name: 'Glacial Cryo Frost',
+        category: 'skin',
+        rarity: 'Rare',
+        price: 800,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#a5d8ff',
+        description: 'Sub-zero frozen ice skin with glacial crystal sheen.'
+    },
+    {
+        id: 'skin_inferno_ember',
+        name: 'Infernal Ember Ash',
+        category: 'skin',
+        rarity: 'Epic',
+        price: 1600,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#e74c3c',
+        description: 'Charred obsidian skin pulsing with crimson embers.'
+    },
+    {
+        id: 'skin_cosmic_nebula',
+        name: 'Deep Cosmic Nebula',
+        category: 'skin',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#6c5ce7',
+        description: 'Starlight interstellar dust shimmering in twilight purple.'
+    },
+    {
+        id: 'skin_chrome_metallic',
+        name: 'Liquid Chrome Titanium',
+        category: 'skin',
+        rarity: 'Legendary',
+        price: 3400,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#d2dae2',
+        description: 'Mirror polished liquid chrome that reflects every horizon.'
+    },
+    {
+        id: 'skin_toxic_hazard',
+        name: 'Radioactive Neon Lime',
+        category: 'skin',
+        rarity: 'Rare',
+        price: 950,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#a3cb38',
+        description: 'High-voltage radioactive biohazard lime complexion.'
+    },
+    {
+        id: 'skin_obsidian_matrix',
+        name: 'Obsidian Carbon Shadow',
+        category: 'skin',
+        rarity: 'Epic',
+        price: 1800,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#1e272e',
+        description: 'Matte carbon nanofiber skin forged in shadowy laboratories.'
+    },
+    {
+        id: 'skin_sunburst_orange',
+        name: 'Solar Flare Sunburst',
+        category: 'skin',
+        rarity: 'Uncommon',
+        price: 450,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#ff9f43',
+        description: 'Solar corona orange charged with solar flare energy.'
+    },
+    {
+        id: 'skin_vampire_pale',
+        name: 'Gothic Alabaster Vampire',
+        category: 'skin',
+        rarity: 'Uncommon',
+        price: 400,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#f8efba',
+        description: 'Eerie porcelain gothic complexion untouched by sunlight.'
+    },
+    {
+        id: 'skin_rose_quartz',
+        name: 'Pastel Rose Quartz',
+        category: 'skin',
+        rarity: 'Common',
+        price: 200,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#fd79a8',
+        description: 'Soft pastel pink skin reminiscent of polished rose quartz.'
+    },
+    {
+        id: 'skin_sapphire_frost',
+        name: 'Deep Ocean Sapphire',
+        category: 'skin',
+        rarity: 'Rare',
+        price: 1100,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#1e3799',
+        description: 'Abyssal deep ocean blue with midnight sapphire highlights.'
+    },
+    {
+        id: 'skin_celestial_starlight',
+        name: 'Celestial Starlight Pearl',
+        category: 'skin',
+        rarity: 'Legendary',
+        price: 3600,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#f1f2f6',
+        description: 'Iridescent celestial white that glistens with supernova stardust.'
+    },
+    {
+        id: 'skin_demon_crimson',
+        name: 'Underworld Demon Crimson',
+        category: 'skin',
+        rarity: 'Epic',
+        price: 2000,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#c0392b',
+        description: 'Intense blood-red skin belonging to ancient underworld warlords.'
+    },
+    {
+        id: 'skin_golden_pharaoh',
+        name: 'Pharaoh Sun Bronze',
+        category: 'skin',
+        rarity: 'Rare',
+        price: 1250,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#e58e26',
+        description: 'Radiant desert bronze kissed by Egyptian sun gods.'
+    },
+    {
+        id: 'skin_mint_pastel',
+        name: 'Pastel Mint Chill',
+        category: 'skin',
+        rarity: 'Common',
+        price: 150,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#55efc4',
+        description: 'Cool and refreshing pastel spearmint skin.'
+    },
+    {
+        id: 'skin_cyber_synthwave',
+        name: 'Synthwave Sunset Magenta',
+        category: 'skin',
+        rarity: 'Legendary',
+        price: 3800,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        defaultColor: '#e056fd',
+        description: 'Vibrant 80s neon magenta radiating retro synthwave waves.'
+    },
 
     // ==========================================
     // --- 2. HAIR (Styles & cuts) ---
@@ -278,6 +454,198 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         colorable: true,
         defaultColor: '#2c3e50',
         description: 'High-class glossy parted pompadour.'
+    },
+{
+        id: 'hair_fire_mohawk',
+        name: 'Inferno Mohawk',
+        category: 'hair',
+        rarity: 'Rare',
+        price: 750,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#ff4757',
+        description: 'Blazing tall mohawk spiked with fiery red intensity.'
+    },
+    {
+        id: 'hair_anime_spiky_blue',
+        name: 'Spiky Neo Blue',
+        category: 'hair',
+        rarity: 'Epic',
+        price: 1400,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#00d2d3',
+        description: 'High-octane anime protagonist spikes with electric tips.'
+    },
+    {
+        id: 'hair_silver_dreadlocks',
+        name: 'Cyber Silver Dreads',
+        category: 'hair',
+        rarity: 'Rare',
+        price: 900,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#dfe4ea',
+        description: 'Futuristic braided silver dreadlocks with metallic sheen.'
+    },
+    {
+        id: 'hair_curly_afro_fade',
+        name: 'Urban Taper Afro Fade',
+        category: 'hair',
+        rarity: 'Uncommon',
+        price: 500,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#1e272e',
+        description: 'Crisp tapered temple fade with tight textured curls.'
+    },
+    {
+        id: 'hair_twin_pigtails_pink',
+        name: 'Anime Bubblegum Twin Pigtails',
+        category: 'hair',
+        rarity: 'Rare',
+        price: 850,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#ff9ff3',
+        description: 'Playful twin high pigtails in bouncy bubblegum pink.'
+    },
+    {
+        id: 'hair_samurai_topknot',
+        name: 'Ronin Samurai Topknot',
+        category: 'hair',
+        rarity: 'Uncommon',
+        price: 600,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#2f3542',
+        description: 'Traditional tied topknot worn by disciplined wandering warriors.'
+    },
+    {
+        id: 'hair_galaxy_long_flow',
+        name: 'Cosmic Long Wave Hair',
+        category: 'hair',
+        rarity: 'Epic',
+        price: 1600,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#6c5ce7',
+        description: 'Long tumbling waves tinted with celestial galaxy violet.'
+    },
+    {
+        id: 'hair_emerald_undercut',
+        name: 'Neon Emerald Undercut',
+        category: 'hair',
+        rarity: 'Uncommon',
+        price: 550,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#10ac84',
+        description: 'Edgy swept undercut shaved clean at the sides with emerald flourish.'
+    },
+    {
+        id: 'hair_golden_curly_bob',
+        name: 'Golden Glamour Curls',
+        category: 'hair',
+        rarity: 'Epic',
+        price: 1800,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#fed330',
+        description: 'Voluminous golden curls that catch the spotlight effortlessly.'
+    },
+    {
+        id: 'hair_shadow_spikes',
+        name: 'Void Shadow Spikes',
+        category: 'hair',
+        rarity: 'Rare',
+        price: 800,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#1e272e',
+        description: 'Razor-sharp jet black spikes infused with dark energy.'
+    },
+    {
+        id: 'hair_royal_side_part',
+        name: 'Aristocrat Pompadour',
+        category: 'hair',
+        rarity: 'Uncommon',
+        price: 650,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#4b4b4b',
+        description: 'Impeccably styled pomp with a razor-sharp side part.'
+    },
+    {
+        id: 'hair_electric_yellow_quiff',
+        name: 'Electric Volt Quiff',
+        category: 'hair',
+        rarity: 'Rare',
+        price: 950,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#fffa65',
+        description: 'High-voltage electric yellow quiff bursting with kinetic style.'
+    },
+    {
+        id: 'hair_crimson_braids',
+        name: 'Valkyrie Crimson Braids',
+        category: 'hair',
+        rarity: 'Epic',
+        price: 1700,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#eb4d4b',
+        description: 'Intricate Nordic war braids dyed in fierce crimson red.'
+    },
+    {
+        id: 'hair_ice_white_wolfcut',
+        name: 'Arctic Wolf Cut',
+        category: 'hair',
+        rarity: 'Rare',
+        price: 1100,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#f5f6fa',
+        description: 'Trendy layered wolf cut in pure snow-white blizzard tones.'
+    },
+    {
+        id: 'hair_cyber_dread_bun',
+        name: 'Mecha High Bun',
+        category: 'hair',
+        rarity: 'Uncommon',
+        price: 700,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#57606f',
+        description: 'High-tension topknot bun tied with cybernetic carbon cord.'
+    },
+    {
+        id: 'hair_sunset_ombre_waves',
+        name: 'Sunset Gradient Waves',
+        category: 'hair',
+        rarity: 'Legendary',
+        price: 2800,
+        currency: 'Yard',
+        attachmentSocket: 'hair',
+        colorable: true,
+        defaultColor: '#f368e0',
+        description: 'Flowing ombre waves transitioning from warm solar orange to deep twilight magenta.'
     },
 
     // ==========================================
@@ -424,6 +792,166 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         attachmentSocket: 'face',
         description: 'Cheeky winking expression ready for games.'
     },
+{
+        id: 'face_laser_scouter',
+        name: 'Cyber Combat Scouter Visor',
+        category: 'face',
+        rarity: 'Rare',
+        price: 950,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Tactical power level radar scouter over the left eye.'
+    },
+    {
+        id: 'face_diamond_shades',
+        name: 'Iced-Out Diamond Framed Shades',
+        category: 'face',
+        rarity: 'Legendary',
+        price: 3200,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Pure platinum frames paved with glistening VS1 diamonds.'
+    },
+    {
+        id: 'face_pirate_eyepatch',
+        name: 'Blackbeard Skull Eyepatch',
+        category: 'face',
+        rarity: 'Common',
+        price: 250,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Weathered leather eyepatch stamped with a silver jolly roger.'
+    },
+    {
+        id: 'face_oni_demon_mask',
+        name: 'Kabuki Oni Half-Mask',
+        category: 'face',
+        rarity: 'Epic',
+        price: 1800,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Fierce porcelain oni demon mask baring sharp golden fangs.'
+    },
+    {
+        id: 'face_steampunk_monocle',
+        name: 'Brass Gear Steampunk Monocle',
+        category: 'face',
+        rarity: 'Uncommon',
+        price: 600,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Intricate brass monocle with tiny rotating clockwork dials.'
+    },
+    {
+        id: 'face_pixel_thug_shades',
+        name: '8-Bit Deal With It Sunglasses',
+        category: 'face',
+        rarity: 'Rare',
+        price: 800,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Legendary pixelated black sunglasses for ultimate swag.'
+    },
+    {
+        id: 'face_holographic_ar_glasses',
+        name: 'AR Holo Lens Glasses',
+        category: 'face',
+        rarity: 'Rare',
+        price: 1100,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Augmented reality HUD eyewear projecting real-time telemetry.'
+    },
+    {
+        id: 'face_gasmask_tactical',
+        name: 'Hazmat Tactical Respirator',
+        category: 'face',
+        rarity: 'Epic',
+        price: 1600,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Heavy duty sealed filtration mask for hazard zones.'
+    },
+    {
+        id: 'face_anime_star_eyes',
+        name: 'Chibi Sparkle Star Eyes',
+        category: 'face',
+        rarity: 'Uncommon',
+        price: 450,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Enthusiastic starry-eyed expression with blushing pink cheeks.'
+    },
+    {
+        id: 'face_gothic_masquerade',
+        name: 'Venetian Gold Masquerade Mask',
+        category: 'face',
+        rarity: 'Epic',
+        price: 1900,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Elegant gilded filigree eye mask for high-society balls.'
+    },
+    {
+        id: 'face_flame_tinted_sunglasses',
+        name: 'Inferno Flame Lens Sunglasses',
+        category: 'face',
+        rarity: 'Rare',
+        price: 900,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Rimless sunglasses shaped like blazing stylized fire plumes.'
+    },
+    {
+        id: 'face_heart_shaped_glasses',
+        name: 'Retro Y2K Heart Sunglasses',
+        category: 'face',
+        rarity: 'Common',
+        price: 300,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Cute candy-pink heart shaped retro frames.'
+    },
+    {
+        id: 'face_cyber_matrix_blindfold',
+        name: 'Blindfold of the Cyber Seer',
+        category: 'face',
+        rarity: 'Legendary',
+        price: 2600,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Dark tactical fabric visor with running green matrix glyphs.'
+    },
+    {
+        id: 'face_ninja_mouth_cloth',
+        name: 'Shadow Clan Stealth Half-Cover',
+        category: 'face',
+        rarity: 'Uncommon',
+        price: 500,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Breathable shinobi cloth face wrap for stealth missions.'
+    },
+    {
+        id: 'face_golden_snarl_grill',
+        name: 'Diamond & Gold Teeth Grill',
+        category: 'face',
+        rarity: 'Epic',
+        price: 2100,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Smirking smile lined with custom gold and iced diamond teeth.'
+    },
+    {
+        id: 'face_cyborg_eye_implant',
+        name: 'Red Laser Optical Eye Sensor',
+        category: 'face',
+        rarity: 'Rare',
+        price: 1200,
+        currency: 'Yard',
+        attachmentSocket: 'face',
+        description: 'Bionic red laser ocular sensor glowing with targeting data.'
+    },
 
     // ==========================================
     // --- 4. TOPS / SHIRTS / ARMOR ---
@@ -550,6 +1078,182 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         defaultColor: '#1e272e',
         description: 'Fitted martial arts combat tunic for stealth assassinations.'
     },
+{
+        id: 'top_cyber_ninja_tunic',
+        name: 'Cyber Ninja Shinobi Gi',
+        category: 'tops',
+        rarity: 'Rare',
+        price: 900,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#1e272e',
+        description: 'Reinforced kevlar shinobi tunic with concealed weapon pockets.'
+    },
+    {
+        id: 'top_galactic_space_suit',
+        name: 'Orbital Cosmonaut Jacket',
+        category: 'tops',
+        rarity: 'Epic',
+        price: 1800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#ffffff',
+        description: 'Pressurized astronaut thermal flight suit with NASA-inspired mission patches.'
+    },
+    {
+        id: 'top_crimson_vampire_vest',
+        name: 'Gothic Crimson Velvet Vest',
+        category: 'tops',
+        rarity: 'Rare',
+        price: 850,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#8b0000',
+        description: 'Deep blood-red velvet vest with ornate silver buttons and frilled cravat.'
+    },
+    {
+        id: 'top_flame_bomber_jacket',
+        name: 'Inferno Dragon Bomber Jacket',
+        category: 'tops',
+        rarity: 'Rare',
+        price: 1000,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#e74c3c',
+        description: 'Satin street bomber jacket with an embroidered golden dragon and flame sleeves.'
+    },
+    {
+        id: 'top_street_graffiti_hoodie',
+        name: 'Neon Street Graffiti Hoodie',
+        category: 'tops',
+        rarity: 'Uncommon',
+        price: 600,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#6c5ce7',
+        description: 'Oversized urban skate hoodie splashed with luminescent graffiti tags.'
+    },
+    {
+        id: 'top_tactical_swat_vest',
+        name: 'Kevlar Commando Tactical Vest',
+        category: 'tops',
+        rarity: 'Rare',
+        price: 950,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#2f3542',
+        description: 'Heavy duty tactical load-bearing vest equipped with magazine pouches.'
+    },
+    {
+        id: 'top_royal_monarch_robe',
+        name: 'Imperial Purple Monarch Robe',
+        category: 'tops',
+        rarity: 'Legendary',
+        price: 2800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#5f27cd',
+        description: 'Royal purple velvet mantle trimmed with gold filigree and ermine fur.'
+    },
+    {
+        id: 'top_golden_dragon_kimono',
+        name: 'Emperor Gold Embroidered Kimono',
+        category: 'tops',
+        rarity: 'Legendary',
+        price: 3200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#ffd700',
+        description: 'Silk ceremonial kimono woven with shimmering golden dragon threads.'
+    },
+    {
+        id: 'top_pixel_retro_arcade_tee',
+        name: '80s Vaporwave Sunset Tee',
+        category: 'tops',
+        rarity: 'Common',
+        price: 250,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#ff7675',
+        description: 'Vintage faded tee featuring neon palms and a wireframe grid sunset.'
+    },
+    {
+        id: 'top_mecha_exo_armor',
+        name: 'Titan Exoskeleton Armor Plate',
+        category: 'tops',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#576574',
+        description: 'Titanium chest plating with glowing power core micro-reactors.'
+    },
+    {
+        id: 'top_hawaiian_tropical_shirt',
+        name: 'Paradise Palms Island Floral Shirt',
+        category: 'tops',
+        rarity: 'Common',
+        price: 300,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#1dd1a1',
+        description: 'Breezy short-sleeve resort shirt with vibrant tropical floral print.'
+    },
+    {
+        id: 'top_racing_grand_prix_jacket',
+        name: 'Formula Speed Champion Tracksuit',
+        category: 'tops',
+        rarity: 'Rare',
+        price: 1100,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#ee5253',
+        description: 'Aerodynamic racing jacket with high-speed checkered rally stripes.'
+    },
+    {
+        id: 'top_steampunk_corset_jacket',
+        name: 'Victorian Brass Tailcoat',
+        category: 'tops',
+        rarity: 'Rare',
+        price: 950,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#833471',
+        description: 'Rich plum Victorian tailcoat fitted with brass gear cufflinks.'
+    },
+    {
+        id: 'top_frost_nordic_sweater',
+        name: 'Alpine Snowflake Knitted Sweater',
+        category: 'tops',
+        rarity: 'Uncommon',
+        price: 500,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#48dbfb',
+        description: 'Cozy wool pullover knit with traditional Nordic snowflake patterns.'
+    },
+    {
+        id: 'top_shadow_assassin_cowl',
+        name: 'Silent Shadow Leather Cowl',
+        category: 'tops',
+        rarity: 'Rare',
+        price: 1050,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#222f3e',
+        description: 'Dark studded leather cuirass designed for silent nocturnal movement.'
+    },
+    {
+        id: 'top_golden_biker_jacket',
+        name: '24K Gilded Motorcycle Jacket',
+        category: 'tops',
+        rarity: 'Epic',
+        price: 2400,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        defaultColor: '#f1c40f',
+        description: 'Heavy motorcycle jacket with gleaming 24K gold zippers and studs.'
+    },
 
     // ==========================================
     // --- 5. PANTS / GREAVES / BOTTOMS ---
@@ -665,6 +1369,182 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         defaultColor: '#3c40c6',
         description: 'Breathable lightweight athletic training shorts.'
     },
+{
+        id: 'pants_cyber_runner_joggers',
+        name: 'Holo Runner Techwear Joggers',
+        category: 'pants',
+        rarity: 'Rare',
+        price: 850,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#2d3436',
+        description: 'Weatherproof techwear joggers with straps and reflective ankle cuffs.'
+    },
+    {
+        id: 'pants_golden_monarch_trousers',
+        name: 'Royal Gold-Trimmed Trousers',
+        category: 'pants',
+        rarity: 'Legendary',
+        price: 2600,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#d4af37',
+        description: 'Tailored imperial trousers with intricate golden embroidery along the seams.'
+    },
+    {
+        id: 'pants_tactical_woodland_camo',
+        name: 'Special Forces Woodland Camo',
+        category: 'pants',
+        rarity: 'Uncommon',
+        price: 550,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#57606f',
+        description: 'Military rip-stop cargo trousers in authentic woodland camouflage.'
+    },
+    {
+        id: 'pants_distressed_punk_jeans',
+        name: 'Ripped Dark Indigo Punk Jeans',
+        category: 'pants',
+        rarity: 'Common',
+        price: 350,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#1e272e',
+        description: 'Distressed raw denim jeans with frayed knee tears and safety pins.'
+    },
+    {
+        id: 'pants_neon_track_stripes',
+        name: 'Athletic Dual Neon Trackpants',
+        category: 'pants',
+        rarity: 'Uncommon',
+        price: 500,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#00d2d3',
+        description: 'High-visibility athletic pants with vivid double neon cyber stripes.'
+    },
+    {
+        id: 'pants_samurai_hakama',
+        name: 'Shadow Clan Samurai Hakama',
+        category: 'pants',
+        rarity: 'Rare',
+        price: 900,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#111418',
+        description: 'Pleated black martial arts hakama trousers tailored for sword maneuvers.'
+    },
+    {
+        id: 'pants_cosmic_starlight_chinos',
+        name: 'Deep Cosmic Violet Chinos',
+        category: 'pants',
+        rarity: 'Rare',
+        price: 1100,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#4834d4',
+        description: 'Deep celestial violet slim-fit chinos with starlight sheen.'
+    },
+    {
+        id: 'pants_lava_molten_trousers',
+        name: 'Molten Core Armored Leggings',
+        category: 'pants',
+        rarity: 'Epic',
+        price: 1700,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#eb4d4b',
+        description: 'Heat-resistant armor plating glowing with pulsating lava veins.'
+    },
+    {
+        id: 'pants_ice_white_cargo',
+        name: 'Arctic Snow Flake Cargo Pants',
+        category: 'pants',
+        rarity: 'Uncommon',
+        price: 600,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#dfe4ea',
+        description: 'Crisp white snow camouflage cargos with multiple utility pockets.'
+    },
+    {
+        id: 'pants_biker_leather_chaps',
+        name: 'Reinforced Black Biker Pants',
+        category: 'pants',
+        rarity: 'Rare',
+        price: 800,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#130f40',
+        description: 'Heavy duty motorcycle riding leathers with reinforced padded knees.'
+    },
+    {
+        id: 'pants_retro_bell_bottoms',
+        name: '70s Groovy Flare Bell Bottoms',
+        category: 'pants',
+        rarity: 'Common',
+        price: 300,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#f0932b',
+        description: 'Retro wide-flare trousers bringing groovy disco energy.'
+    },
+    {
+        id: 'pants_mecha_heavy_greaves',
+        name: 'Titan Reinforced Plate Greaves',
+        category: 'pants',
+        rarity: 'Epic',
+        price: 2000,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#30336b',
+        description: 'Hydraulic powered exoskeleton leg supports with impact dampers.'
+    },
+    {
+        id: 'pants_royal_velvet_slacks',
+        name: 'Imperial Burgundy Velvet Slacks',
+        category: 'pants',
+        rarity: 'Epic',
+        price: 1900,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#680838',
+        description: 'Plush burgundy velvet trousers worn in imperial throne rooms.'
+    },
+    {
+        id: 'pants_beach_board_shorts',
+        name: 'Tropical Wave Surfer Boardshorts',
+        category: 'pants',
+        rarity: 'Common',
+        price: 250,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#22a6b3',
+        description: 'Quick-dry ocean surf shorts with bold turquoise wave gradients.'
+    },
+    {
+        id: 'pants_glitch_matrix_pants',
+        name: 'Binary Code Hacker Trousers',
+        category: 'pants',
+        rarity: 'Rare',
+        price: 1000,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#10ac84',
+        description: 'Stealth cargo trousers with cascading matrix code cascades.'
+    },
+    {
+        id: 'pants_golden_armor_plates',
+        name: 'Gilded Knight Leg Guards',
+        category: 'pants',
+        rarity: 'Legendary',
+        price: 2800,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        defaultColor: '#e1b12c',
+        description: 'Articulated 24K gold greaves forged for tournament champion champions.'
+    },
 
     // ==========================================
     // --- 6. SHOES / BOOTS ---
@@ -779,6 +1659,182 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         attachmentSocket: 'shoes',
         defaultColor: '#778ca3',
         description: 'Traditional woven straw war sandals with leather cords.'
+    },
+{
+        id: 'shoes_air_hyper_pulse',
+        name: 'Air Pulse Futuristic High-Tops',
+        category: 'shoes',
+        rarity: 'Rare',
+        price: 950,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#00f2fe',
+        description: 'Cyberpunk sneakers featuring glowing pneumatic LED air pods.'
+    },
+    {
+        id: 'shoes_golden_emperor_boots',
+        name: 'Imperial 24K Gold Plated Boots',
+        category: 'shoes',
+        rarity: 'Legendary',
+        price: 2900,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#ffd700',
+        description: 'Pure polished gold armor boots fit for platform royalty.'
+    },
+    {
+        id: 'shoes_cyber_mag_boots',
+        name: 'Zero-G Magnetic Space Boots',
+        category: 'shoes',
+        rarity: 'Rare',
+        price: 1100,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#576574',
+        description: 'Heavy magnetic locking boots built for zero gravity hull walks.'
+    },
+    {
+        id: 'shoes_demon_flame_kicks',
+        name: 'Hellfire Flame Runner Kicks',
+        category: 'shoes',
+        rarity: 'Epic',
+        price: 1800,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#ff4757',
+        description: 'Running shoes that ignite in fiery sparks with every footfall.'
+    },
+    {
+        id: 'shoes_shadow_ninja_tabi',
+        name: 'Silent Shadow Tabi Boots',
+        category: 'shoes',
+        rarity: 'Uncommon',
+        price: 600,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#1e272e',
+        description: 'Split-toe shinobi boots crafted for completely silent infiltration.'
+    },
+    {
+        id: 'shoes_neon_retro_sneakers',
+        name: 'Miami Vice Pastel Glow Sneakers',
+        category: 'shoes',
+        rarity: 'Uncommon',
+        price: 500,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#fd79a8',
+        description: 'Pastel pink and cyan retro skate shoes straight out of the 1980s.'
+    },
+    {
+        id: 'shoes_timber_combat_boots',
+        name: 'Heavy Duty Tan Combat Boots',
+        category: 'shoes',
+        rarity: 'Common',
+        price: 350,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#d35400',
+        description: 'Rugged nubuck leather boots with deep all-terrain tread soles.'
+    },
+    {
+        id: 'shoes_glacial_ice_skates',
+        name: 'Cryo Blade Speed Skates',
+        category: 'shoes',
+        rarity: 'Rare',
+        price: 1000,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#74b9ff',
+        description: 'Reinforced boots mounted on diamond-honed razor ice blades.'
+    },
+    {
+        id: 'shoes_steampunk_buckle_boots',
+        name: 'Brass Buckle Steampunk Boots',
+        category: 'shoes',
+        rarity: 'Rare',
+        price: 850,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#533c2a',
+        description: 'Knee-high oiled leather boots strapped with polished brass buckles.'
+    },
+    {
+        id: 'shoes_cyberpunk_roller_jets',
+        name: 'Motorized Inline Wheel Runners',
+        category: 'shoes',
+        rarity: 'Epic',
+        price: 2100,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#6c5ce7',
+        description: 'Urban mobility high-tops with retractable motorized micro-wheels.'
+    },
+    {
+        id: 'shoes_royal_velvet_loafers',
+        name: 'Gilded Velvet Aristocrat Loafers',
+        category: 'shoes',
+        rarity: 'Epic',
+        price: 1600,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#8b0000',
+        description: 'Burgundy velvet slippers embroidered with the Playard royal crest.'
+    },
+    {
+        id: 'shoes_toxic_green_stompers',
+        name: 'Biohazard Glow High Platform Boots',
+        category: 'shoes',
+        rarity: 'Rare',
+        price: 900,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#2ed573',
+        description: 'Chunky triple-platform rave boots glowing with neon green toxicity.'
+    },
+    {
+        id: 'shoes_galaxy_star_slipons',
+        name: 'Cosmic Stardust Canvas Slip-Ons',
+        category: 'shoes',
+        rarity: 'Common',
+        price: 300,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#3867d6',
+        description: 'Casual slip-on canvas shoes printed with star constellations.'
+    },
+    {
+        id: 'shoes_tactical_swat_boots',
+        name: 'Urban Enforcement Assault Boots',
+        category: 'shoes',
+        rarity: 'Uncommon',
+        price: 650,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#2f3640',
+        description: 'Side-zip tactical footwear designed for fast SWAT urban operations.'
+    },
+    {
+        id: 'shoes_golden_gladiator_sandals',
+        name: 'Spartan Gilded Greaves Sandals',
+        category: 'shoes',
+        rarity: 'Rare',
+        price: 1200,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#f5cd79',
+        description: 'Ancient gladiator leather strapping tied around gilded bronze shin guards.'
+    },
+    {
+        id: 'shoes_lightning_speed_cleats',
+        name: 'Thunderbolt High Velocity Cleats',
+        category: 'shoes',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'shoes',
+        defaultColor: '#fffa65',
+        description: 'Aerodynamic sprint spikes generating yellow electrical sparks.'
     },
 
     // ==========================================
@@ -916,6 +1972,166 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         defaultColor: '#ffd700',
         description: 'Pure radiant ring of divine light hovering overhead.'
     },
+{
+        id: 'hat_pirate_captain_bicorn',
+        name: 'Black Pearl Pirate Captain Hat',
+        category: 'hats',
+        rarity: 'Rare',
+        price: 1100,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Grand cocked captain bicorn hat trimmed in golden pirate lace.'
+    },
+    {
+        id: 'hat_demon_flame_horns',
+        name: 'Underworld Obsidian & Flame Horns',
+        category: 'hats',
+        rarity: 'Epic',
+        price: 2400,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Curved demonic horns that smolder with supernatural nether fire.'
+    },
+    {
+        id: 'hat_shogun_dragon_kabuto',
+        name: 'Shogun Dragon Crest Kabuto',
+        category: 'hats',
+        rarity: 'Epic',
+        price: 2600,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Ceremonial warlord helmet with a giant gold dragon front crest.'
+    },
+    {
+        id: 'hat_wizard_archmage_hat',
+        name: 'Archmage Mystic Star Sorcerer Hat',
+        category: 'hats',
+        rarity: 'Rare',
+        price: 1300,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Crooked wizard cone hat embroidered with glowing silver constellation charts.'
+    },
+    {
+        id: 'hat_cat_ear_gaming_headset',
+        name: 'RGB Neon Cat-Ear Pro Headset',
+        category: 'hats',
+        rarity: 'Rare',
+        price: 1200,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Gamer headset with illuminating RGB cat ears and a microphone.'
+    },
+    {
+        id: 'hat_astronaut_bubble_helmet',
+        name: 'Lunar Explorer Gold Visor Helmet',
+        category: 'hats',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Hermetically sealed space bubble helmet with reflective gold face shield.'
+    },
+    {
+        id: 'hat_golden_emperor_tiara',
+        name: 'Diamond Studded Monarch Tiara',
+        category: 'hats',
+        rarity: 'Legendary',
+        price: 3800,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Glistening 24K gold tiara encrusted with sapphires and radiant diamonds.'
+    },
+    {
+        id: 'hat_detective_fedora',
+        name: 'Noir Cyber Detective Fedora',
+        category: 'hats',
+        rarity: 'Uncommon',
+        price: 700,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Classic hardboiled detective wide-brim felt fedora with silk band.'
+    },
+    {
+        id: 'hat_ninja_headband_leaf',
+        name: 'Stealth Shinobi Metal Headband',
+        category: 'hats',
+        rarity: 'Common',
+        price: 400,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Cloth forehead protector stamped with an engraved metallic village sigil.'
+    },
+    {
+        id: 'hat_cyber_samurai_crest',
+        name: 'Neon Hologram Oni Horns',
+        category: 'hats',
+        rarity: 'Epic',
+        price: 2100,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Cybernetic headset projecting floating holographic cyan horns.'
+    },
+    {
+        id: 'hat_safari_explorer_pith',
+        name: 'Jungle Explorer Pith Helmet',
+        category: 'hats',
+        rarity: 'Common',
+        price: 350,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Rugged khaki pith helmet suited for deep jungle archeology.'
+    },
+    {
+        id: 'hat_party_confetti_cone',
+        name: 'Rainbow Birthday Celebration Cone',
+        category: 'hats',
+        rarity: 'Common',
+        price: 200,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Festive party hat with a colorful pom-pom that bursts with fun.'
+    },
+    {
+        id: 'hat_miner_light_hard_hat',
+        name: 'Deep Cave Miner Helmet with Torch',
+        category: 'hats',
+        rarity: 'Uncommon',
+        price: 550,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Industrial safety hardhat with an ultra-bright halogen headlamp.'
+    },
+    {
+        id: 'hat_steampunk_tophat_goggles',
+        name: 'Brass Goggles Clockwork Top Hat',
+        category: 'hats',
+        rarity: 'Rare',
+        price: 1400,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Tall Victorian silk top hat wrapped with heavy brass aviator goggles.'
+    },
+    {
+        id: 'hat_valkyrie_winged_helm',
+        name: 'Norse Valkyrie Golden Winged Helm',
+        category: 'hats',
+        rarity: 'Legendary',
+        price: 3400,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Legendary Asgardian golden helmet boasting glorious feathered wings.'
+    },
+    {
+        id: 'hat_chef_royal_toque',
+        name: 'Master Chef Grand White Toque',
+        category: 'hats',
+        rarity: 'Common',
+        price: 300,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Pristine tall pleated white toque worn by Michelin-starred masters.'
+    },
 
     // ==========================================
     // --- 8. ACCESSORIES (Shoulders, Belts) ---
@@ -1029,6 +2245,166 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         attachmentSocket: 'torso',
         defaultColor: '#3ae374',
         description: 'Pulsing LED display band tracking player vital signs.'
+    },
+{
+        id: 'acc_golden_hiphop_chains',
+        name: 'Thick 24K Diamond Cuban Link Chain',
+        category: 'accessories',
+        rarity: 'Epic',
+        price: 2400,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Heavy interlocking solid 24K gold chain iced out with sparkling diamonds.'
+    },
+    {
+        id: 'acc_floating_cyber_drone',
+        name: 'Companion Cyber Sentinel Drone',
+        category: 'accessories',
+        rarity: 'Legendary',
+        price: 3800,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Autonomous floating sphere drone with neon scanner eye tracking your moves.'
+    },
+    {
+        id: 'acc_steampunk_shoulder_pauldron',
+        name: 'Brass Clockwork Shoulder Armor',
+        category: 'accessories',
+        rarity: 'Rare',
+        price: 1100,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Single-shoulder plate featuring turning gears and an exhaust steam valve.'
+    },
+    {
+        id: 'acc_demon_skull_necklace',
+        name: 'Necromancer Skull Amulet',
+        category: 'accessories',
+        rarity: 'Rare',
+        price: 950,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Chiseled obsidian skull necklace cursed with dark violet energy.'
+    },
+    {
+        id: 'acc_shuriken_thigh_holster',
+        name: 'Ninja Concealed Shuriken Pouch',
+        category: 'accessories',
+        rarity: 'Uncommon',
+        price: 600,
+        currency: 'Yard',
+        attachmentSocket: 'pants',
+        description: 'Leather leg holster carrying four polished steel throwing stars.'
+    },
+    {
+        id: 'acc_holographic_arm_band',
+        name: 'Holo-Display Wrist Gauntlet',
+        category: 'accessories',
+        rarity: 'Rare',
+        price: 1200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Forearm computer projecting a neon interface and biometric data.'
+    },
+    {
+        id: 'acc_dragon_heart_pendant',
+        name: 'Ruby Dragon Fire Pendant',
+        category: 'accessories',
+        rarity: 'Epic',
+        price: 1900,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Large cut crimson ruby crystal containing the pulsing heat of dragons.'
+    },
+    {
+        id: 'acc_cyber_tactical_walkie',
+        name: 'Enforcement Tactical Radio Mic',
+        category: 'accessories',
+        rarity: 'Common',
+        price: 350,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Shoulder-clipped tactical comms speaker with coiled wire.'
+    },
+    {
+        id: 'acc_glowing_fairy_companion',
+        name: 'Radiant Forest Wisp Companion',
+        category: 'accessories',
+        rarity: 'Legendary',
+        price: 3500,
+        currency: 'Yard',
+        attachmentSocket: 'head',
+        description: 'Magical levitating fairy orb leaving glowing stardust trails.'
+    },
+    {
+        id: 'acc_golden_royal_scepter',
+        name: 'King Golden Gem Royal Scepter',
+        category: 'accessories',
+        rarity: 'Legendary',
+        price: 4200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Imperial gold scepter topped with an oversized diamond orb.'
+    },
+    {
+        id: 'acc_bandolier_ammo_belt',
+        name: 'Commando Heavy Cartridge Bandolier',
+        category: 'accessories',
+        rarity: 'Uncommon',
+        price: 700,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Chest-crossing leather ammo belt lined with heavy brass shells.'
+    },
+    {
+        id: 'acc_diamond_tennis_choker',
+        name: 'Ice-Frosted Diamond Tennis Necklace',
+        category: 'accessories',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Double-row brilliant cut diamond choker reflecting vibrant prism colors.'
+    },
+    {
+        id: 'acc_matrix_holo_matrix_badge',
+        name: 'Code Stream Cyber Security Badge',
+        category: 'accessories',
+        rarity: 'Rare',
+        price: 850,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Chest insignia displaying scrolling lime matrix mainframe credentials.'
+    },
+    {
+        id: 'acc_flaming_fire_aura',
+        name: 'Infernal Flame Sparkles Aura',
+        category: 'accessories',
+        rarity: 'Mythic',
+        price: 6500,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Swirling orbital vortex of hellfire embers and glowing ash.'
+    },
+    {
+        id: 'acc_angelic_holy_rosary',
+        name: 'Sacred Ivory Star Rosary',
+        category: 'accessories',
+        rarity: 'Uncommon',
+        price: 500,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Polished white ivory beads holding a radiant silver cross.'
+    },
+    {
+        id: 'acc_cybernetic_mechanical_arm',
+        name: 'Titanium Bionic Cyber Arm',
+        category: 'accessories',
+        rarity: 'Epic',
+        price: 2800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Exposed bionic cybernetic arm with carbon cables and servo hydraulics.'
     },
 
     // ==========================================
@@ -1155,6 +2531,166 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         defaultColor: '#706fd3',
         description: 'Razor-sharp floating wings formed from sub-zero ice crystals.'
     },
+{
+        id: 'back_phoenix_fire_wings',
+        name: 'Legendary Phoenix Flame Wings',
+        category: 'back',
+        rarity: 'Mythic',
+        price: 7500,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Immense blazing wings of eternal reborn phoenix fire.'
+    },
+    {
+        id: 'back_void_shadow_scythe',
+        name: 'Death Grim Reaper Void Scythe',
+        category: 'back',
+        rarity: 'Legendary',
+        price: 3900,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Curved void titanium scythe radiating shadowy underworld mist.'
+    },
+    {
+        id: 'back_frost_dragon_wings',
+        name: 'Arctic Glacial Dragon Wings',
+        category: 'back',
+        rarity: 'Legendary',
+        price: 4200,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Sharp crystalline ice wings leaving frosty cold plumes.'
+    },
+    {
+        id: 'back_golden_archangel_wings',
+        name: 'Seraphim 6-Feather Golden Wings',
+        category: 'back',
+        rarity: 'Mythic',
+        price: 8500,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Six grand majestic golden wings bathed in celestial light.'
+    },
+    {
+        id: 'back_dual_plasma_katanas',
+        name: 'Crossed Dual Plasma Laser Katanas',
+        category: 'back',
+        rarity: 'Epic',
+        price: 2500,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Twin high-frequency energy blades mounted in an X-scabbard.'
+    },
+    {
+        id: 'back_cyber_rocket_thruster',
+        name: 'Titan Heavy Booster Thruster Pack',
+        category: 'back',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Twin aerospace rocket engines venting neon blue hyper-thrust.'
+    },
+    {
+        id: 'back_cosmic_nebula_cape',
+        name: 'Flowing Starlight Nebula Velvet Cape',
+        category: 'back',
+        rarity: 'Legendary',
+        price: 3400,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Flowing floor-length cape displaying living moving cosmic constellations.'
+    },
+    {
+        id: 'back_demon_bat_wings',
+        name: 'Gothic Shadow Fiend Bat Wings',
+        category: 'back',
+        rarity: 'Rare',
+        price: 1400,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Leathery spiked bat wings unfurling behind the avatar.'
+    },
+    {
+        id: 'back_electric_lightning_guitar',
+        name: 'Heavy Metal Dual-Neck Rock Guitar',
+        category: 'back',
+        rarity: 'Epic',
+        price: 2000,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Double-neck electric guitar crackling with high-voltage rock chords.'
+    },
+    {
+        id: 'back_cyber_spider_legs',
+        name: 'Mechanical Quad Arachnid Nano Arms',
+        category: 'back',
+        rarity: 'Legendary',
+        price: 4600,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Four articulated carbon mechanical spider legs poised over your back.'
+    },
+    {
+        id: 'back_royal_fur_cape',
+        name: 'Imperial Ermine Lined King Cape',
+        category: 'back',
+        rarity: 'Epic',
+        price: 2700,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Velvet crimson mantle crowned with spotted white ermine royal fur.'
+    },
+    {
+        id: 'back_tactical_sniper_rifle',
+        name: 'Holstered Ghost Spec-Ops Sniper Rifle',
+        category: 'back',
+        rarity: 'Rare',
+        price: 1300,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Long-range silenced anti-material rifle slung securely on back.'
+    },
+    {
+        id: 'back_golden_sun_mandala',
+        name: 'Sol Invictus Radiant Golden Wheel',
+        category: 'back',
+        rarity: 'Mythic',
+        price: 6800,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Sacred rotating golden solar halo disc radiating divine rays.'
+    },
+    {
+        id: 'back_steampunk_clockwork_wings',
+        name: 'Brass Gear Gliding Wings',
+        category: 'back',
+        rarity: 'Epic',
+        price: 2400,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Articulated canvas gliding wings driven by intricate brass clockwork gears.'
+    },
+    {
+        id: 'back_plasma_energy_cannon',
+        name: 'Heavy Shoulder-Mounted Plasma Cannon',
+        category: 'back',
+        rarity: 'Legendary',
+        price: 3600,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Heavy futuristic battery cannon with animated glowing charge cells.'
+    },
+    {
+        id: 'back_butterfly_pixie_wings',
+        name: 'Enchanted Luminescent Pixie Wings',
+        category: 'back',
+        rarity: 'Rare',
+        price: 1200,
+        currency: 'Yard',
+        attachmentSocket: 'back',
+        description: 'Translucent glittering fairy wings that flutter with magical charm.'
+    },
 
     // ==========================================
     // --- 10. EMOTES & ANIMATIONS ---
@@ -1260,6 +2796,126 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         attachmentSocket: 'torso',
         description: 'Jump on knees and shred an imaginary heavy metal solo.'
     },
+{
+        id: 'emote_dab_swag',
+        name: 'Dab Swag',
+        category: 'emotes',
+        rarity: 'Uncommon',
+        price: 500,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Crisp angled arm dab expressing uncontested confidence.'
+    },
+    {
+        id: 'emote_moonwalk_slide',
+        name: 'Smooth Moonwalk',
+        category: 'emotes',
+        rarity: 'Epic',
+        price: 1800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Effortless backward gliding moonwalk step with Fedora tip.'
+    },
+    {
+        id: 'emote_tpose_dominance',
+        name: 'T-Pose Ascend',
+        category: 'emotes',
+        rarity: 'Rare',
+        price: 800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Pure authoritative T-pose exerting total physics superiority.'
+    },
+    {
+        id: 'emote_robot_popper',
+        name: 'Electric Boogaloo Robot',
+        category: 'emotes',
+        rarity: 'Rare',
+        price: 1200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Sharp locking, popping and fluid wave robot dance routine.'
+    },
+    {
+        id: 'emote_kungfu_strike',
+        name: 'Shaolin Kung Fu Stance',
+        category: 'emotes',
+        rarity: 'Epic',
+        price: 1600,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Disciplined martial arts crane stance and lightning palm strikes.'
+    },
+    {
+        id: 'emote_headspin_air',
+        name: 'Gravity Headspin',
+        category: 'emotes',
+        rarity: 'Legendary',
+        price: 2800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'High-speed continuous breakdance headspin defying earth gravity.'
+    },
+    {
+        id: 'emote_cheer_hype',
+        name: 'Stadium Victory Cheer',
+        category: 'emotes',
+        rarity: 'Common',
+        price: 300,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Both arms raised triumphantly in the air cheering with delight.'
+    },
+    {
+        id: 'emote_formal_bow',
+        name: 'Gentleman Aristocrat Bow',
+        category: 'emotes',
+        rarity: 'Common',
+        price: 250,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Elegant formal courtier bow with hand over the heart.'
+    },
+    {
+        id: 'emote_matrix_dodge',
+        name: 'Bullet-Time Matrix Dodge',
+        category: 'emotes',
+        rarity: 'Legendary',
+        price: 3200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Slow-motion backward limbo dodge dodging imaginary laser beams.'
+    },
+    {
+        id: 'emote_hype_clap',
+        name: 'Crowd Hype Clapping',
+        category: 'emotes',
+        rarity: 'Common',
+        price: 200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Rapid, enthusiastic overhead applause cheering teammates.'
+    },
+    {
+        id: 'emote_slow_clap',
+        name: 'Sarcastic Slow Clap',
+        category: 'emotes',
+        rarity: 'Uncommon',
+        price: 400,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Measured, deliberate theatrical slow clap for funny moments.'
+    },
+    {
+        id: 'emote_superhero_landing',
+        name: 'Superhero Ground Slam',
+        category: 'emotes',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'High vertical leap culminating in a 3-point superhero fist ground impact.'
+    },
 
     // ==========================================
     // --- 11. MOVEMENT STYLES (ANIMATIONS) ---
@@ -1364,7 +3020,108 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         currency: 'Yard',
         attachmentSocket: 'torso',
         description: 'Asymmetric hip-tilted swagger idle, runway fluid walk, and graceful airborne leap.'
-    }
+    },
+{
+        id: 'anim_style_parkour',
+        name: 'Parkour Freerunner',
+        category: 'animations',
+        rarity: 'Legendary',
+        price: 3200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Agile athletic stance, deep sprint crouch with forward momentum, and soaring tuck vault leap.'
+    },
+    {
+        id: 'anim_style_speedster',
+        name: 'Hyper Speedster Bolt',
+        category: 'animations',
+        rarity: 'Legendary',
+        price: 3500,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Aggressive low-angle forward charge, aerodynamic arms pump, and kinetic blur takeoff.'
+    },
+    {
+        id: 'anim_style_celestial',
+        name: 'Celestial Float & Hover',
+        category: 'animations',
+        rarity: 'Mythic',
+        price: 6000,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Transcendent levitation hovering above the floor, serene drifting glide, and starlight ascend.'
+    },
+    {
+        id: 'anim_style_monarch',
+        name: 'Monarch Regal Strut',
+        category: 'animations',
+        rarity: 'Epic',
+        price: 2500,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Dignified imperial posture, slow commanding swagger strides, and graceful airborne leap.'
+    },
+    {
+        id: 'anim_style_glider',
+        name: 'Cyber Glider',
+        category: 'animations',
+        rarity: 'Epic',
+        price: 2200,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Streamlined aerodynamic wingspan stance, hover gliding locomotion, and soaring dive jump.'
+    },
+    {
+        id: 'anim_style_heavy_titan',
+        name: 'Armored Heavy Titan',
+        category: 'animations',
+        rarity: 'Epic',
+        price: 2000,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Immovable broad powerhouse stance, ground-shaking heavy footsteps, and thunderous impact leap.'
+    },
+    {
+        id: 'anim_style_ghost_float',
+        name: 'Ethereal Phantom Float',
+        category: 'animations',
+        rarity: 'Legendary',
+        price: 3000,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Undulating ethereal phantom hover, weightless spectral glide, and ghostly vertical rise.'
+    },
+    {
+        id: 'anim_style_beast_prowl',
+        name: 'Feral Beast Prowl',
+        category: 'animations',
+        rarity: 'Rare',
+        price: 1400,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Low-slung predatory stalk, rapid agile bounding sprint, and dynamic pounce jump.'
+    },
+    {
+        id: 'anim_style_groove_walker',
+        name: 'Disco Funk Groove Walk',
+        category: 'animations',
+        rarity: 'Uncommon',
+        price: 800,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Rhythmic funk strut with shoulder rolls, finger snaps, and mid-air dance pop leap.'
+    },
+    {
+        id: 'anim_style_assassin_stealth',
+        name: 'Shadow Assassin Crouch',
+        category: 'animations',
+        rarity: 'Rare',
+        price: 1500,
+        currency: 'Yard',
+        attachmentSocket: 'torso',
+        description: 'Silently prowling crouch stance, poised ninja step locomotion, and shadow vault jump.'
+    },
+
 ];
 
 export function getItemById(id: string): AvatarItem | undefined {

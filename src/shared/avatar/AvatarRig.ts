@@ -1296,6 +1296,96 @@ export class AvatarRig {
                 this.bones.rightLeg.rotation.x = -0.18;
                 break;
             }
+            case 'anim_style_parkour': {
+                this.bones.hips.position.y = 1.16;
+                this.bones.chest.rotation.x = 0.24;
+                this.bones.leftLeg.rotation.x = -0.3;
+                this.bones.rightLeg.rotation.x = 0.2;
+                this.bones.leftArm.rotation.x = -0.3 + Math.sin(time * 3) * 0.04;
+                this.bones.rightArm.rotation.x = -0.3 - Math.sin(time * 3) * 0.04;
+                this.bones.leftArm.rotation.z = -0.35;
+                this.bones.rightArm.rotation.z = 0.35;
+                break;
+            }
+            case 'anim_style_speedster': {
+                this.bones.hips.position.y = 1.18;
+                this.bones.chest.rotation.x = 0.32;
+                this.bones.leftArm.rotation.x = 0.6;
+                this.bones.rightArm.rotation.x = -0.6;
+                this.bones.leftLeg.rotation.x = 0.2;
+                this.bones.rightLeg.rotation.x = -0.3;
+                break;
+            }
+            case 'anim_style_celestial': {
+                const float = Math.sin(time * 2) * 0.18;
+                this.bones.hips.position.y = 1.5 + float;
+                this.bones.leftLeg.rotation.x = 0.2;
+                this.bones.rightLeg.rotation.x = -0.1;
+                this.bones.leftArm.rotation.z = -1.1 + Math.sin(time * 2.5) * 0.08;
+                this.bones.rightArm.rotation.z = 1.1 - Math.sin(time * 2.5) * 0.08;
+                break;
+            }
+            case 'anim_style_monarch': {
+                this.bones.chest.rotation.x = -0.15;
+                this.bones.head.rotation.x = -0.1;
+                this.bones.leftArm.rotation.z = -0.25;
+                this.bones.rightArm.rotation.z = 0.25;
+                this.bones.rightArm.rotation.x = -0.3;
+                break;
+            }
+            case 'anim_style_glider': {
+                this.bones.hips.position.y = 1.32 + Math.sin(time * 3) * 0.05;
+                this.bones.chest.rotation.x = 0.18;
+                this.bones.leftArm.rotation.z = -1.35;
+                this.bones.rightArm.rotation.z = 1.35;
+                break;
+            }
+            case 'anim_style_heavy_titan': {
+                this.bones.hips.position.y = 1.2;
+                this.bones.leftLeg.rotation.z = -0.22;
+                this.bones.rightLeg.rotation.z = 0.22;
+                this.bones.leftArm.rotation.z = -0.55;
+                this.bones.rightArm.rotation.z = 0.55;
+                this.bones.chest.rotation.x = -0.06;
+                break;
+            }
+            case 'anim_style_ghost_float': {
+                const ghostly = Math.sin(time * 2.4) * 0.14;
+                this.bones.hips.position.y = 1.4 + ghostly;
+                this.bones.head.rotation.z = Math.sin(time * 1.8) * 0.15;
+                this.bones.leftArm.rotation.x = -0.8 + ghostly;
+                this.bones.rightArm.rotation.x = -0.8 - ghostly;
+                this.bones.leftLeg.rotation.x = 0.3;
+                this.bones.rightLeg.rotation.x = 0.3;
+                break;
+            }
+            case 'anim_style_beast_prowl': {
+                this.bones.hips.position.y = 1.08;
+                this.bones.chest.rotation.x = 0.38;
+                this.bones.head.rotation.x = -0.2;
+                this.bones.leftArm.rotation.x = -0.6;
+                this.bones.rightArm.rotation.x = -0.6;
+                this.bones.leftLeg.rotation.x = -0.35;
+                this.bones.rightLeg.rotation.x = 0.25;
+                break;
+            }
+            case 'anim_style_groove_walker': {
+                const bounce = Math.abs(Math.sin(time * 4)) * 0.08;
+                this.bones.hips.position.y = 1.25 + bounce;
+                this.bones.hips.rotation.y = Math.sin(time * 4) * 0.2;
+                this.bones.leftArm.rotation.z = -0.6;
+                this.bones.rightArm.rotation.z = 0.6;
+                break;
+            }
+            case 'anim_style_assassin_stealth': {
+                this.bones.hips.position.y = 1.1;
+                this.bones.chest.rotation.x = 0.28;
+                this.bones.leftArm.rotation.x = 0.4;
+                this.bones.rightArm.rotation.x = -0.2;
+                this.bones.leftLeg.rotation.x = -0.25;
+                this.bones.rightLeg.rotation.x = 0.2;
+                break;
+            }
             case 'anim_style_default':
             default: {
                 // Natural breathing and subtle idle sway
@@ -1437,6 +1527,112 @@ export class AvatarRig {
                 this.bones.hips.position.y = 1.25 + Math.abs(swing) * 0.06;
                 break;
             }
+            case 'anim_style_parkour': {
+                const speed = isRun ? 16 : 11;
+                const stride = isRun ? 0.95 : 0.7;
+                const swing = Math.sin(time * speed);
+                this.bones.chest.rotation.x = isRun ? 0.4 : 0.25;
+                this.bones.hips.position.y = 1.15 + Math.abs(swing) * 0.1;
+                this.bones.leftLeg.rotation.x = swing * stride;
+                this.bones.rightLeg.rotation.x = -swing * stride;
+                this.bones.leftArm.rotation.x = -swing * stride * 1.2;
+                this.bones.rightArm.rotation.x = swing * stride * 1.2;
+                break;
+            }
+            case 'anim_style_speedster': {
+                const speed = isRun ? 22 : 14;
+                const stride = isRun ? 1.05 : 0.8;
+                const swing = Math.sin(time * speed);
+                this.bones.chest.rotation.x = 0.5;
+                this.bones.hips.position.y = 1.12 + Math.abs(swing) * 0.08;
+                this.bones.leftLeg.rotation.x = swing * stride;
+                this.bones.rightLeg.rotation.x = -swing * stride;
+                this.bones.leftArm.rotation.x = -swing * stride * 1.4;
+                this.bones.rightArm.rotation.x = swing * stride * 1.4;
+                break;
+            }
+            case 'anim_style_celestial': {
+                const speed = isRun ? 9 : 6;
+                this.bones.hips.position.y = 1.5 + Math.sin(time * speed) * 0.1;
+                this.bones.leftArm.rotation.z = -1.2;
+                this.bones.rightArm.rotation.z = 1.2;
+                this.bones.leftLeg.rotation.x = 0.2;
+                this.bones.rightLeg.rotation.x = -0.2;
+                break;
+            }
+            case 'anim_style_monarch': {
+                const speed = isRun ? 10 : 6;
+                const swing = Math.sin(time * speed);
+                this.bones.chest.rotation.x = -0.12;
+                this.bones.leftLeg.rotation.x = swing * 0.6;
+                this.bones.rightLeg.rotation.x = -swing * 0.6;
+                this.bones.leftArm.rotation.x = -swing * 0.5;
+                this.bones.rightArm.rotation.x = swing * 0.5;
+                this.bones.hips.position.y = 1.25 + Math.abs(swing) * 0.06;
+                break;
+            }
+            case 'anim_style_glider': {
+                const speed = isRun ? 12 : 8;
+                this.bones.chest.rotation.x = 0.35;
+                this.bones.hips.position.y = 1.3 + Math.sin(time * speed) * 0.08;
+                this.bones.leftArm.rotation.z = -1.4;
+                this.bones.rightArm.rotation.z = 1.4;
+                this.bones.leftLeg.rotation.x = Math.sin(time * speed) * 0.4;
+                this.bones.rightLeg.rotation.x = -Math.sin(time * speed) * 0.4;
+                break;
+            }
+            case 'anim_style_heavy_titan': {
+                const speed = isRun ? 9 : 6;
+                const swing = Math.sin(time * speed);
+                this.bones.leftLeg.rotation.x = swing * 0.7;
+                this.bones.rightLeg.rotation.x = -swing * 0.7;
+                this.bones.leftArm.rotation.x = -swing * 0.8;
+                this.bones.rightArm.rotation.x = swing * 0.8;
+                this.bones.hips.position.y = 1.2 + Math.abs(swing) * 0.08;
+                break;
+            }
+            case 'anim_style_ghost_float': {
+                const speed = isRun ? 8 : 5;
+                this.bones.hips.position.y = 1.4 + Math.sin(time * speed) * 0.12;
+                this.bones.leftLeg.rotation.x = Math.sin(time * speed) * 0.2;
+                this.bones.rightLeg.rotation.x = -Math.sin(time * speed) * 0.2;
+                this.bones.leftArm.rotation.x = -0.6;
+                this.bones.rightArm.rotation.x = -0.6;
+                break;
+            }
+            case 'anim_style_beast_prowl': {
+                const speed = isRun ? 14 : 9;
+                const swing = Math.sin(time * speed);
+                this.bones.chest.rotation.x = 0.42;
+                this.bones.hips.position.y = 1.08 + Math.abs(swing) * 0.09;
+                this.bones.leftLeg.rotation.x = swing * 0.8;
+                this.bones.rightLeg.rotation.x = -swing * 0.8;
+                this.bones.leftArm.rotation.x = -swing * 0.9;
+                this.bones.rightArm.rotation.x = swing * 0.9;
+                break;
+            }
+            case 'anim_style_groove_walker': {
+                const speed = isRun ? 13 : 8;
+                const swing = Math.sin(time * speed);
+                this.bones.hips.rotation.y = swing * 0.3;
+                this.bones.leftLeg.rotation.x = swing * 0.75;
+                this.bones.rightLeg.rotation.x = -swing * 0.75;
+                this.bones.leftArm.rotation.x = -swing * 0.9;
+                this.bones.rightArm.rotation.x = swing * 0.9;
+                this.bones.hips.position.y = 1.25 + Math.abs(swing) * 0.1;
+                break;
+            }
+            case 'anim_style_assassin_stealth': {
+                const speed = isRun ? 13 : 8.5;
+                const swing = Math.sin(time * speed);
+                this.bones.chest.rotation.x = 0.35;
+                this.bones.hips.position.y = 1.1 + Math.abs(swing) * 0.06;
+                this.bones.leftLeg.rotation.x = swing * 0.65;
+                this.bones.rightLeg.rotation.x = -swing * 0.65;
+                this.bones.leftArm.rotation.x = 0.3;
+                this.bones.rightArm.rotation.x = -0.3;
+                break;
+            }
             case 'anim_style_default':
             default: {
                 const speed = isRun ? 12 : 8;
@@ -1544,6 +1740,79 @@ export class AvatarRig {
                 this.bones.rightLeg.rotation.x = 0.7;
                 this.bones.leftArm.rotation.z = -1.6;
                 this.bones.rightArm.rotation.z = 1.6;
+                break;
+            }
+            case 'anim_style_parkour': {
+                this.bones.hips.position.y = 1.25 + jumpY * 0.65;
+                this.bones.leftLeg.rotation.x = -1.1;
+                this.bones.rightLeg.rotation.x = -0.9;
+                this.bones.leftArm.rotation.x = 0.8;
+                this.bones.rightArm.rotation.x = 0.8;
+                break;
+            }
+            case 'anim_style_speedster': {
+                this.bones.hips.position.y = 1.25 + jumpY * 0.55;
+                this.bones.chest.rotation.x = 0.45;
+                this.bones.leftLeg.rotation.x = -1.2;
+                this.bones.rightLeg.rotation.x = 0.5;
+                break;
+            }
+            case 'anim_style_celestial': {
+                this.bones.hips.position.y = 1.45 + jumpY * 0.7;
+                this.bones.leftArm.rotation.z = -1.7;
+                this.bones.rightArm.rotation.z = 1.7;
+                break;
+            }
+            case 'anim_style_monarch': {
+                this.bones.hips.position.y = 1.25 + jumpY * 0.45;
+                this.bones.chest.rotation.x = -0.15;
+                this.bones.leftLeg.rotation.x = -0.3;
+                this.bones.rightLeg.rotation.x = 0.3;
+                break;
+            }
+            case 'anim_style_glider': {
+                this.bones.hips.position.y = 1.35 + jumpY * 0.6;
+                this.bones.chest.rotation.x = 0.5;
+                this.bones.leftArm.rotation.z = -1.5;
+                this.bones.rightArm.rotation.z = 1.5;
+                break;
+            }
+            case 'anim_style_heavy_titan': {
+                this.bones.hips.position.y = 1.2 + jumpY * 0.38;
+                this.bones.leftLeg.rotation.x = -0.5;
+                this.bones.rightLeg.rotation.x = -0.5;
+                this.bones.leftLeg.rotation.z = -0.3;
+                this.bones.rightLeg.rotation.z = 0.3;
+                break;
+            }
+            case 'anim_style_ghost_float': {
+                this.bones.hips.position.y = 1.45 + jumpY * 0.65;
+                this.bones.leftArm.rotation.x = -1.2;
+                this.bones.rightArm.rotation.x = -1.2;
+                break;
+            }
+            case 'anim_style_beast_prowl': {
+                this.bones.hips.position.y = 1.15 + jumpY * 0.6;
+                this.bones.leftLeg.rotation.x = -1.1;
+                this.bones.rightLeg.rotation.x = -1.1;
+                this.bones.leftArm.rotation.x = 0.9;
+                this.bones.rightArm.rotation.x = 0.9;
+                break;
+            }
+            case 'anim_style_groove_walker': {
+                this.bones.hips.position.y = 1.25 + jumpY * 0.55;
+                this.bones.leftLeg.rotation.x = 0.8;
+                this.bones.rightLeg.rotation.x = -0.8;
+                this.bones.leftArm.rotation.z = -1.6;
+                this.bones.rightArm.rotation.z = 1.6;
+                break;
+            }
+            case 'anim_style_assassin_stealth': {
+                this.bones.hips.position.y = 1.2 + jumpY * 0.58;
+                this.bones.leftLeg.rotation.x = -1.0;
+                this.bones.rightLeg.rotation.x = -0.8;
+                this.bones.leftArm.rotation.x = 1.2;
+                this.bones.rightArm.rotation.x = 1.2;
                 break;
             }
             case 'anim_style_default':
@@ -1667,6 +1936,95 @@ export class AvatarRig {
             this.bones.hips.position.y = 1.15;
             this.bones.leftLeg.rotation.x = 0.3;
             this.bones.rightLeg.rotation.x = -0.4;
+        } else if (emote === 'dab') {
+            this.bones.head.rotation.x = 0.4;
+            this.bones.head.rotation.y = 0.4;
+            this.bones.leftArm.rotation.z = -1.6;
+            this.bones.leftArm.rotation.x = -0.4;
+            this.bones.rightArm.rotation.z = 1.3;
+            this.bones.rightArm.rotation.x = 0.3;
+            this.bones.leftLeg.rotation.x = -0.2;
+            this.bones.rightLeg.rotation.x = 0.2;
+        } else if (emote === 'moonwalk') {
+            const step = Math.sin(time * 6);
+            this.bones.hips.position.z = Math.sin(time * 3) * 0.15;
+            this.bones.leftLeg.rotation.x = step * 0.4;
+            this.bones.rightLeg.rotation.x = -step * 0.4;
+            this.bones.leftArm.rotation.x = -0.2;
+            this.bones.rightArm.rotation.x = 0.4;
+            this.bones.head.rotation.x = 0.2;
+        } else if (emote === 'tpose') {
+            this.bones.leftArm.rotation.set(0, 0, -Math.PI / 2);
+            this.bones.rightArm.rotation.set(0, 0, Math.PI / 2);
+            this.bones.head.rotation.set(0, 0, 0);
+            this.bones.leftLeg.rotation.set(0, 0, 0);
+            this.bones.rightLeg.rotation.set(0, 0, 0);
+            this.bones.hips.position.y = 1.35 + Math.sin(time * 2) * 0.08;
+        } else if (emote === 'robot_dance') {
+            const pop = (Math.floor(time * 5) % 2 === 0) ? 0.2 : -0.2;
+            this.bones.leftArm.rotation.z = -1.57 + pop;
+            this.bones.rightArm.rotation.x = -1.57 - pop;
+            this.bones.head.rotation.y = (Math.floor(time * 2.5) % 2) * 0.4 - 0.2;
+        } else if (emote === 'kungfu') {
+            this.bones.leftLeg.rotation.x = -0.8;
+            this.bones.leftLeg.rotation.z = 0.3;
+            this.bones.rightLeg.rotation.x = 0.1;
+            this.bones.leftArm.rotation.z = -1.4;
+            this.bones.rightArm.rotation.x = -1.2;
+            this.bones.rightArm.rotation.z = 0.5;
+            this.bones.chest.rotation.y = -0.4;
+        } else if (emote === 'headspin') {
+            const spin = time * 8;
+            this.bones.hips.position.y = 0.85;
+            this.bones.hips.rotation.y = spin;
+            this.bones.head.position.y = 0.3;
+            this.bones.leftLeg.rotation.z = 0.6;
+            this.bones.rightLeg.rotation.z = -0.6;
+            this.bones.leftArm.rotation.z = -1.2;
+            this.bones.rightArm.rotation.z = 1.2;
+        } else if (emote === 'cheer') {
+            this.bones.leftArm.rotation.z = -2.6 + Math.sin(time * 7) * 0.25;
+            this.bones.rightArm.rotation.z = 2.6 - Math.sin(time * 7) * 0.25;
+            this.bones.head.rotation.x = -0.3;
+            this.bones.hips.position.y = 1.25 + Math.abs(Math.sin(time * 7)) * 0.1;
+        } else if (emote === 'bow') {
+            this.bones.chest.rotation.x = 0.55;
+            this.bones.head.rotation.x = 0.35;
+            this.bones.rightArm.rotation.x = -0.4;
+            this.bones.rightArm.rotation.z = 0.3;
+            this.bones.leftArm.rotation.x = 0.2;
+            this.bones.leftArm.rotation.z = -0.2;
+        } else if (emote === 'matrix_dodge') {
+            this.bones.hips.position.y = 1.05;
+            this.bones.chest.rotation.x = -0.75;
+            this.bones.head.rotation.x = -0.4;
+            this.bones.leftLeg.rotation.x = -0.45;
+            this.bones.rightLeg.rotation.x = -0.45;
+            this.bones.leftArm.rotation.z = -1.1;
+            this.bones.rightArm.rotation.z = 1.1;
+        } else if (emote === 'hype_clap') {
+            const clap = Math.sin(time * 14) * 0.25;
+            this.bones.leftArm.rotation.z = -1.8 + clap;
+            this.bones.rightArm.rotation.z = 1.8 - clap;
+            this.bones.leftArm.rotation.x = -0.6;
+            this.bones.rightArm.rotation.x = -0.6;
+            this.bones.head.rotation.x = -0.15;
+        } else if (emote === 'slow_clap') {
+            const clap = Math.sin(time * 4) * 0.2;
+            this.bones.leftArm.rotation.z = -0.8 + clap;
+            this.bones.rightArm.rotation.z = 0.8 - clap;
+            this.bones.leftArm.rotation.x = -0.5;
+            this.bones.rightArm.rotation.x = -0.5;
+        } else if (emote === 'ground_slam') {
+            this.bones.hips.position.y = 0.95;
+            this.bones.chest.rotation.x = 0.45;
+            this.bones.head.rotation.x = -0.25;
+            this.bones.rightArm.rotation.x = -1.2;
+            this.bones.rightArm.rotation.z = 0.2;
+            this.bones.leftArm.rotation.x = 0.6;
+            this.bones.leftArm.rotation.z = -0.5;
+            this.bones.leftLeg.rotation.x = -0.7;
+            this.bones.rightLeg.rotation.x = 0.5;
         }
     }
 }

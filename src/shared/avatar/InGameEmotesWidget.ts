@@ -21,6 +21,18 @@ export const IN_GAME_EMOTES_LIST: GameEmoteDef[] = [
     { id: 'emote_levitate_zen', action: 'levitate', name: 'Zen Levitate', icon: '🧘', keyLabel: '8' },
     { id: 'emote_zombie_groan', action: 'zombie', name: 'Zombie Walk', icon: '🧟', keyLabel: '9' },
     { id: 'emote_guitar_solo', action: 'guitar', name: 'Air Guitar', icon: '🎸', keyLabel: '0' },
+    { id: 'emote_dab_swag', action: 'dab', name: 'Dab Swag', icon: '🙅‍♂️' },
+    { id: 'emote_moonwalk_slide', action: 'moonwalk', name: 'Moonwalk', icon: '🕺' },
+    { id: 'emote_tpose_dominance', action: 'tpose', name: 'T-Pose', icon: '🧍' },
+    { id: 'emote_robot_popper', action: 'robot_dance', name: 'Robot Dance', icon: '🤖' },
+    { id: 'emote_kungfu_strike', action: 'kungfu', name: 'Shaolin Kung Fu', icon: '🥋' },
+    { id: 'emote_headspin_air', action: 'headspin', name: 'Headspin', icon: '🤸‍♂️' },
+    { id: 'emote_cheer_hype', action: 'cheer', name: 'Cheer', icon: '🙌' },
+    { id: 'emote_formal_bow', action: 'bow', name: 'Gentleman Bow', icon: '🙇' },
+    { id: 'emote_matrix_dodge', action: 'matrix_dodge', name: 'Matrix Dodge', icon: '🕶️' },
+    { id: 'emote_hype_clap', action: 'hype_clap', name: 'Hype Clap', icon: '👏' },
+    { id: 'emote_slow_clap', action: 'slow_clap', name: 'Slow Clap', icon: '👏' },
+    { id: 'emote_superhero_landing', action: 'ground_slam', name: 'Superhero Landing', icon: '💥' },
 ];
 
 export interface InGameEmotesWidgetOptions {
