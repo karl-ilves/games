@@ -1558,3 +1558,8 @@ class YardService {
 }
 
 export const yardService = new YardService();
+
+// Expose globally on window for all platform pages & tests
+if (typeof window !== 'undefined') {
+    (window as any).yardService = yardService;
+}

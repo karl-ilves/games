@@ -3598,6 +3598,9 @@ try {
 
             // 6. Verify Cross-Device Cloud Synchronization
             console.log("--- Testing Cross-Device Cloud Synchronization (PC <-> Mobile / Tablet) ---");
+            await page.goto('http://localhost:4173/games/index.html');
+            await new Promise(r => setTimeout(r, 600));
+
             const syncResults = await page.evaluate(async () => {
                 // Simulate logging in as Playard Owner on a fresh mobile device
                 const ownerProf = { 
@@ -3620,6 +3623,7 @@ try {
                 const hasAvatarHat = avatarRig ? avatarRig.hasItem('hat_tactical_beret') : false;
 
                 return {
+                    hasYardService: !!window.yardService,
                     yards,
                     hasInventory: Array.isArray(inv),
                     invCount: inv.length,
@@ -3627,8 +3631,8 @@ try {
                 };
             });
 
-            console.log(`   Cloud Sync Results: Yards=${syncResults.yards}, InventoryCount=${syncResults.invCount}, HatSynced=${syncResults.hasAvatarHat}`);
-            if (syncResults.yards < 1000) {
+            console.log(`   Cloud Sync Results: hasService=${syncResults.hasYardService}, Yards=${syncResults.yards}, InventoryCount=${syncResults.invCount}, HatSynced=${syncResults.hasAvatarHat}`);
+            if (!syncResults.hasYardService || syncResults.yards < 1000) {
                 throw new Error("Cloud sync failed: Playard owner yards should be initialized/synced!");
             }
             console.log("✅ Cross-Device Cloud Synchronization testid edukalt läbitud!");
