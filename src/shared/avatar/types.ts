@@ -10,7 +10,8 @@ export type AvatarCategory =
     | 'accessories'
     | 'back'
     | 'emotes'
-    | 'animations';
+    | 'animations'
+    | 'outfits';
 
 export type ItemRarity = 
     | 'Common'

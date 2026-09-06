@@ -300,6 +300,24 @@ class WarGameEngine {
             }
         }
 
+        // 3. YardService cross-device inventory check (unlocked planes, missiles, war money)
+        try {
+            const yardInv = yardService.getInventory();
+            if (Array.isArray(yardInv)) {
+                for (const item of yardInv) {
+                    if (item === 'war_plane_unlock') this.isPlaneUnlocked = true;
+                    if (item === 'war_missile_unlock') this.isMissileUnlocked = true;
+                    if (item.startsWith('meta_war_money:')) {
+                        const m = parseInt(item.replace('meta_war_money:', ''), 10);
+                        if (!isNaN(m) && m > this.warMoney) {
+                            this.warMoney = m;
+                            hasLocalData = true;
+                        }
+                    }
+                }
+            }
+        } catch (e) {}
+
         // Initial balance rules:
         // Playard Owner gets 200,000 € ONLY on the very first start (when no prior saved war data exists)
         // Others start with 0 €

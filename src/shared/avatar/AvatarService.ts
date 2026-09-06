@@ -119,6 +119,16 @@ class AvatarService {
                     arr.forEach(id => this.userInventory.add(id));
                 }
             }
+
+            // Also integrate cloud-synced items from yardService inventory
+            const yardItems = yardService.getInventory();
+            if (Array.isArray(yardItems)) {
+                yardItems.forEach(id => {
+                    if (!id.startsWith('meta_')) {
+                        this.userInventory.add(id);
+                    }
+                });
+            }
         } catch (e) {
             console.warn('Could not load avatar config:', e);
         }
@@ -241,6 +251,10 @@ class AvatarService {
         this.saveAvatar(update);
     }
 
+    public async equipOutfit(outfitConfig: Partial<AvatarConfig>): Promise<boolean> {
+        return this.saveAvatar(outfitConfig);
+    }
+
     private async syncWithCloud() {
         const prof = getCurrentUserProfile();
         if (!supabase || !prof?.id) return;
@@ -279,9 +293,18 @@ class AvatarService {
 
             if (invData && Array.isArray(invData)) {
                 invData.forEach(row => this.userInventory.add(row.item_id));
-                const key = this.getUserIdKey();
-                localStorage.setItem(`${INVENTORY_STORAGE_KEY_PREFIX}${key}`, JSON.stringify(Array.from(this.userInventory)));
             }
+
+            // Sync with yardService inventory (stored in user_yards)
+            const yardInv = yardService.getInventory();
+            if (Array.isArray(yardInv)) {
+                yardInv.forEach(id => {
+                    if (!id.startsWith('meta_')) this.userInventory.add(id);
+                });
+            }
+
+            const key = this.getUserIdKey();
+            localStorage.setItem(`${INVENTORY_STORAGE_KEY_PREFIX}${key}`, JSON.stringify(Array.from(this.userInventory)));
         } catch (e) {
             console.warn('Avatar cloud sync note:', e);
         }

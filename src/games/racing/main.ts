@@ -262,8 +262,22 @@ async function loadProgress() {
         }
     }
 
-    if (yardService.hasItem('cyber_hypercar') && !unlockedVehicles.includes('cyber_hypercar')) {
-        unlockedVehicles.push('cyber_hypercar');
+    // Synchronize items unlocked in Yard Shop / Cloud across devices
+    const yardInv = yardService.getInventory();
+    if (Array.isArray(yardInv)) {
+        for (const item of yardInv) {
+            if (item.startsWith('car_') || item.startsWith('moto_') || item === 'cyber_hypercar') {
+                if (!unlockedVehicles.includes(item)) {
+                    unlockedVehicles.push(item);
+                }
+            }
+            if (item === 'level_2_field' || item === 'racing_level_2') {
+                level2Unlocked = true;
+            }
+            if (item === 'level_3_field' || item === 'racing_level_3') {
+                level3Unlocked = true;
+            }
+        }
     }
 }
 

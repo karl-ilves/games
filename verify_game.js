@@ -516,6 +516,64 @@ try {
             console.log("   Successfully tested changing face to Anime Starlight Eyes!");
         }
 
+        // Test Golden Snarl Teeth Grill 3D mesh rendering (User request: face changes visually in 3D)
+        const grillPreviewBtn = await page.$('[data-preview-id="face_golden_snarl_grill"]');
+        if (grillPreviewBtn) {
+            await page.click('[data-preview-id="face_golden_snarl_grill"]');
+            await new Promise(r => setTimeout(r, 200));
+            const faceVisualCheck = await page.evaluate(() => {
+                const rig = window.playardAvatarShop?.viewer?.avatarRig;
+                if (!rig || !rig.bones.head) return false;
+                // Check that head contains face meshes (teeth grill or sunglasses mesh attachment)
+                return rig.bones.head.children.length > 3; // base eyes/mouth + face accessory meshes
+            });
+            console.log("   Golden Snarl Teeth Grill 3D geometry rendered on rig (Expected: true):", faceVisualCheck);
+            if (!faceVisualCheck) {
+                throw new Error("face_golden_snarl_grill must visually render 3D teeth grill meshes on the avatar head!");
+            }
+        }
+
+        // Test Ready-Made Outfits Tab (Valmis Skinnid)
+        console.log("   Testing Ready-Made Outfits tab...");
+        await page.click('[data-category="outfits"]');
+        await new Promise(r => setTimeout(r, 250));
+
+        const outfitCardsCount = await page.$$eval('#avatar-items-container .avatar-item-card', cards => cards.length);
+        console.log("   Avatar Outfits count (Expected: 10):", outfitCardsCount);
+        if (outfitCardsCount < 10) {
+            throw new Error(`Expected at least 10 ready-made outfits, got: ${outfitCardsCount}`);
+        }
+
+        // Test Previewing an Outfit (Cyber Shinobi / Ninja)
+        const shinobiTryBtn = await page.$('[data-preview-outfit-id="outfit_cyber_ninja"]');
+        if (!shinobiTryBtn) throw new Error("Missing 'Try On' button for outfit_cyber_ninja");
+        await page.click('[data-preview-outfit-id="outfit_cyber_ninja"]');
+        await new Promise(r => setTimeout(r, 200));
+
+        const previewConfigAfterOutfit = await page.evaluate(() => {
+            return {
+                hat: window.playardAvatarShop?.previewConfig?.hatId,
+                face: window.playardAvatarShop?.previewConfig?.faceId,
+                movementStyle: window.playardAvatarShop?.previewConfig?.movementStyle
+            };
+        });
+        console.log("   Preview config after trying Cyber Ninja outfit:", previewConfigAfterOutfit);
+        if (previewConfigAfterOutfit.hat !== 'hat_ninja_headband_leaf' || previewConfigAfterOutfit.face !== 'face_ninja_mask') {
+            throw new Error("Previewing Cyber Ninja outfit must update previewConfig with outfit components!");
+        }
+
+        // Test Equipping an Outfit (Golden Monarch / Emperor)
+        const equipOutfitBtn = await page.$('[data-equip-outfit-id="outfit_golden_emperor"]');
+        if (!equipOutfitBtn) throw new Error("Missing 'Equip Outfit' button for outfit_golden_emperor");
+        await page.click('[data-equip-outfit-id="outfit_golden_emperor"]');
+        await new Promise(r => setTimeout(r, 300));
+
+        const equippedHat = await page.evaluate(() => window.playardAvatar?.getConfig().hatId);
+        console.log("   Equipped Hat after equipping Golden Emperor (Expected: hat_royal_crown):", equippedHat);
+        if (equippedHat !== 'hat_royal_crown') {
+            throw new Error("Equipping Golden Emperor outfit must equip hat_royal_crown!");
+        }
+
         // Test Emotes category in Catalog
         await page.click('[data-category="emotes"]');
         await new Promise(r => setTimeout(r, 250));
@@ -3537,6 +3595,43 @@ try {
             }
 
             console.log("✅ Universal Mobile & Tablet Controls testid edukalt läbitud!");
+
+            // 6. Verify Cross-Device Cloud Synchronization
+            console.log("--- Testing Cross-Device Cloud Synchronization (PC <-> Mobile / Tablet) ---");
+            const syncResults = await page.evaluate(async () => {
+                // Simulate logging in as Playard Owner on a fresh mobile device
+                const ownerProf = { 
+                    id: '5cc22da5-ea52-4623-8978-09a2c33bc5b2', 
+                    username: 'playard owner', 
+                    email: '1karl.ilves@gmail.com', 
+                    displayName: 'Playard Owner✅', 
+                    isAdmin: true 
+                };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+
+                // Call yardService onUserLogin to test cloud sync pulling
+                if (window.yardService) {
+                    await window.yardService.onUserLogin(ownerProf.id, ownerProf.username, ownerProf.email);
+                }
+
+                const yards = window.yardService ? window.yardService.getYards() : 0;
+                const inv = window.yardService ? window.yardService.getInventory() : [];
+                const avatarRig = window.playardAvatar;
+                const hasAvatarHat = avatarRig ? avatarRig.hasItem('hat_tactical_beret') : false;
+
+                return {
+                    yards,
+                    hasInventory: Array.isArray(inv),
+                    invCount: inv.length,
+                    hasAvatarHat
+                };
+            });
+
+            console.log(`   Cloud Sync Results: Yards=${syncResults.yards}, InventoryCount=${syncResults.invCount}, HatSynced=${syncResults.hasAvatarHat}`);
+            if (syncResults.yards < 1000) {
+                throw new Error("Cloud sync failed: Playard owner yards should be initialized/synced!");
+            }
+            console.log("✅ Cross-Device Cloud Synchronization testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

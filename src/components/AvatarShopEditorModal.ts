@@ -4,6 +4,7 @@ import { AVATAR_CATALOG, getItemById, getItemsByCategory } from '../shared/avata
 import { AvatarItem, AvatarCategory, AvatarConfig } from '../shared/avatar/types';
 import { getItemThumbnailUrl } from '../shared/avatar/thumbnailGenerator';
 import { yardService } from '../shared/yardService';
+import { getPresetOutfits, getOutfitById } from '../shared/avatar/outfits';
 
 export class AvatarShopEditorModal {
     private modalEl: HTMLElement;
@@ -83,6 +84,7 @@ export class AvatarShopEditorModal {
                     <div class="avatar-catalog-column">
                         <!-- Category Tabs -->
                         <div class="avatar-category-nav" id="avatar-category-tabs">
+                            <button class="cat-btn" data-category="outfits" id="tab-outfits" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(0, 242, 254, 0.2)); border-color: #ffd700; color: #ffd700; font-weight: 800;">✨ Outfits</button>
                             <button class="cat-btn active" data-category="hats">👑 Hats</button>
                             <button class="cat-btn" data-category="hair">💇 Hair</button>
                             <button class="cat-btn" data-category="skin">🎨 Skin</button>
@@ -251,6 +253,75 @@ export class AvatarShopEditorModal {
         const container = this.modalEl.querySelector('#avatar-items-container');
         if (!container) return;
 
+        if (this.currentCategory === 'outfits') {
+            const outfits = getPresetOutfits();
+            container.innerHTML = outfits.map(outfit => {
+                const rarityColors: Record<string, string> = {
+                    Common: '#a4b0be',
+                    Uncommon: '#2ecc71',
+                    Rare: '#3498db',
+                    Epic: '#9b59b6',
+                    Legendary: '#f1c40f',
+                    Mythic: '#ff4757'
+                };
+                const rarityColor = rarityColors[outfit.rarity] || '#00f2fe';
+
+                return `
+                    <div class="avatar-item-card avatar-outfit-card" data-outfit-id="${outfit.id}" style="border-color: rgba(255, 215, 0, 0.35); background: linear-gradient(180deg, rgba(26, 35, 50, 0.95), rgba(13, 17, 23, 0.98));">
+                        <div class="item-card-top">
+                            <span class="rarity-badge" style="border-color: ${rarityColor}; color: ${rarityColor}; font-weight: 900;">
+                                ${outfit.tag}
+                            </span>
+                            <span class="price-tag" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.4);">
+                                FULL SET
+                            </span>
+                        </div>
+
+                        <div class="item-preview-visual" style="display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0, 242, 254, 0.12) 0%, rgba(13, 17, 23, 0.9) 70%); min-height: 110px;">
+                            <span style="font-size: 3.8rem; filter: drop-shadow(0 4px 12px rgba(0, 242, 254, 0.4));">${outfit.badgeEmoji}</span>
+                        </div>
+
+                        <div class="item-title" style="font-size: 1.05rem; font-weight: 900; color: #fff; margin-top: 6px;">${outfit.name}</div>
+                        <div class="item-desc" style="font-size: 0.8rem; line-height: 1.4; color: #a4b0be; margin-bottom: 10px; min-height: 38px;">${outfit.description}</div>
+
+                        <div class="item-actions-row">
+                            <button class="btn-item-preview" data-preview-outfit-id="${outfit.id}">👁️ Try On</button>
+                            <button class="btn-item-action equip" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #070a10; font-weight: 900;">✨ Equip Outfit</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.querySelectorAll('[data-preview-outfit-id]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-preview-outfit-id');
+                    const outfit = getOutfitById(id || '');
+                    if (outfit) {
+                        this.previewConfig = { ...this.previewConfig, ...outfit.config };
+                        if (this.viewer) this.viewer.updateConfig(this.previewConfig);
+                        this.showToast(`👀 Previewing outfit: ${outfit.name}`, '#00f2fe');
+                    }
+                });
+            });
+
+            container.querySelectorAll('[data-equip-outfit-id]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-equip-outfit-id');
+                    const outfit = getOutfitById(id || '');
+                    if (outfit) {
+                        await avatarService.equipOutfit(outfit.config);
+                        this.previewConfig = avatarService.getConfig();
+                        if (this.viewer) this.viewer.updateConfig(this.previewConfig);
+                        this.renderCatalogItems();
+                        this.showToast(`✨ Outfit "${outfit.name}" successfully equipped and saved!`, '#2ecc71');
+                    }
+                });
+            });
+
+            this.updateEmoteButtonStates();
+            return;
+        }
+
         const items = getItemsByCategory(this.currentCategory);
         const userYards = yardService.getYards();
 
@@ -343,7 +414,11 @@ export class AvatarShopEditorModal {
             });
         });
 
-        // Update pose buttons states (locked / active)
+        this.updateEmoteButtonStates();
+    }
+
+    private updateEmoteButtonStates() {
+        if (!this.modalEl) return;
         const emoteButtons = this.modalEl.querySelectorAll('.btn-emote');
         emoteButtons.forEach(btn => {
             const emote = btn.getAttribute('data-emote') || 'idle';

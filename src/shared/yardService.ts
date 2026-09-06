@@ -320,35 +320,76 @@ class YardService {
     private async syncWithCloud(userId: string) {
         if (!supabase || !userId) return;
         try {
+            // Check if userId is a valid UUID, otherwise try looking it up by username or email
+            let queryId = userId;
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(queryId)) {
+                if (this.isOwnerUser()) {
+                    queryId = '5cc22da5-ea52-4623-8978-09a2c33bc5b2';
+                } else if (this.currentUserEmail?.toLowerCase() === 'grx@trenet.ee') {
+                    queryId = '6e8aeb96-7959-4000-8beb-c2077ca31952';
+                } else if (this.currentUserUsername) {
+                    const { data: profRow } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .ilike('username', this.currentUserUsername)
+                        .single();
+                    if (profRow?.id && uuidRegex.test(profRow.id)) {
+                        queryId = profRow.id;
+                    }
+                }
+            }
+
+            if (!uuidRegex.test(queryId)) {
+                // If not a UUID, cannot query user_yards directly
+                return;
+            }
+
+            // Update currentUserId if we resolved a better UUID
+            this.currentUserId = queryId;
+
             const { data: yardRecord, error: yardErr } = await supabase
                 .from('user_yards')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('user_id', queryId)
                 .single();
 
             if (yardRecord && !yardErr && typeof yardRecord.yards === 'number') {
-                if (yardRecord.yards >= this.data.yards) {
+                const cloudInventory = Array.isArray(yardRecord.inventory) ? yardRecord.inventory : [];
+                // Merge cloud inventory with local inventory so no purchases are lost
+                const mergedInventory = Array.from(new Set([...this.data.inventory, ...cloudInventory]));
+                this.data.inventory = mergedInventory;
+
+                if (this.hasInfiniteYards()) {
+                    this.data.yards = 999999999;
+                } else if (yardRecord.yards >= this.data.yards) {
                     this.data.yards = yardRecord.yards;
                     this.data.streak = yardRecord.streak ?? this.data.streak;
                     this.data.lastClaimTimestamp = yardRecord.last_claim_timestamp ?? this.data.lastClaimTimestamp;
-                    if (Array.isArray(yardRecord.inventory)) {
-                        this.data.inventory = yardRecord.inventory;
-                    }
-                    this.saveLocally(this.data);
-                } else {
+                }
+
+                // Restore game progress encoded in inventory metadata
+                this.restoreCrossGameMetadata(mergedInventory);
+
+                this.saveLocally(this.data);
+                this.notifyListeners();
+
+                // If local had more yards than cloud, push the higher local yards back to cloud
+                if (this.data.yards > yardRecord.yards) {
                     await this.saveToCloud();
                 }
             } else {
                 const { data: progRecord } = await supabase
                     .from('user_progress')
                     .select('yards')
-                    .eq('user_id', userId)
+                    .eq('user_id', queryId)
                     .single();
 
                 if (progRecord && typeof progRecord.yards === 'number') {
                     if (progRecord.yards >= this.data.yards) {
                         this.data.yards = progRecord.yards;
                         this.saveLocally(this.data);
+                        this.notifyListeners();
                     } else {
                         await this.saveToCloud();
                     }
@@ -361,13 +402,66 @@ class YardService {
         }
     }
 
+    private restoreCrossGameMetadata(inventory: string[]) {
+        try {
+            for (const item of inventory) {
+                if (item.startsWith('meta_train_money:')) {
+                    const val = parseInt(item.replace('meta_train_money:', ''), 10);
+                    if (!isNaN(val)) {
+                        const cur = parseInt(localStorage.getItem('playard_train_money') || '0', 10);
+                        if (val > cur) {
+                            localStorage.setItem('playard_train_money', val.toString());
+                            localStorage.setItem('rongimäng', val.toString());
+                            localStorage.setItem('ronginäng', val.toString());
+                        }
+                    }
+                } else if (item.startsWith('meta_war_money:')) {
+                    const val = parseInt(item.replace('meta_war_money:', ''), 10);
+                    if (!isNaN(val)) {
+                        const cur = parseInt(localStorage.getItem('playard_war_game_money') || '0', 10);
+                        if (val > cur) {
+                            localStorage.setItem('playard_war_game_money', val.toString());
+                        }
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
     public async saveToCloud() {
         if (!supabase) return;
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user?.id) {
+            let targetUserId = session?.user?.id;
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+            if (!targetUserId && this.currentUserId && uuidRegex.test(this.currentUserId)) {
+                targetUserId = this.currentUserId;
+            }
+
+            if (!targetUserId && this.isOwnerUser()) {
+                targetUserId = '5cc22da5-ea52-4623-8978-09a2c33bc5b2';
+            }
+
+            if (targetUserId && uuidRegex.test(targetUserId)) {
+                // Ensure current game progress is represented in inventory metadata
+                const trainMoney = localStorage.getItem('playard_train_money') || localStorage.getItem('rongimäng');
+                if (trainMoney) {
+                    const trainMeta = `meta_train_money:${trainMoney}`;
+                    // Replace or add
+                    this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_train_money:'));
+                    this.data.inventory.push(trainMeta);
+                }
+
+                const warMoney = localStorage.getItem('playard_war_game_money');
+                if (warMoney) {
+                    const warMeta = `meta_war_money:${warMoney}`;
+                    this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_war_money:'));
+                    this.data.inventory.push(warMeta);
+                }
+
                 const payload = {
-                    user_id: session.user.id,
+                    user_id: targetUserId,
                     yards: this.data.yards,
                     streak: this.data.streak,
                     last_claim_timestamp: this.data.lastClaimTimestamp,
@@ -376,10 +470,12 @@ class YardService {
                 };
 
                 await supabase.from('user_yards').upsert(payload);
-                await supabase.from('user_progress').upsert({
-                    user_id: session.user.id,
-                    yards: this.data.yards
-                });
+                try {
+                    await supabase.from('user_progress').upsert({
+                        user_id: targetUserId,
+                        yards: this.data.yards
+                    });
+                } catch (e) {}
             }
         } catch (err) {
             console.warn('Could not save yards to account cloud:', err);

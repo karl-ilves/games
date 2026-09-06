@@ -597,8 +597,11 @@ export async function initAuth() {
 
                 const adminUsername = getAdminUsername(email);
                 const adminTitle = getAdminDisplayName(email);
+                const defaultAdminUuid = isPlayardOwner(email) 
+                    ? '5cc22da5-ea52-4623-8978-09a2c33bc5b2' 
+                    : (email.toLowerCase() === 'grx@trenet.ee' ? '6e8aeb96-7959-4000-8beb-c2077ca31952' : 'admin_root');
                 const adminProfile: UserProfile = {
-                    id: adminSession?.user?.id || 'admin_root',
+                    id: adminSession?.user?.id || defaultAdminUuid,
                     username: adminUsername,
                     email: email,
                     displayName: adminTitle,
@@ -727,8 +730,22 @@ export async function initAuth() {
                             return showMsg('This username does not exist!', 'error');
                         }
 
+                        let resolvedId = matched?.id;
+                        if (!resolvedId || !resolvedId.includes('-')) {
+                            try {
+                                const { data: profileRow } = await supabase
+                                    .from('profiles')
+                                    .select('id, username')
+                                    .ilike('username', username)
+                                    .single();
+                                if (profileRow?.id) {
+                                    resolvedId = profileRow.id;
+                                }
+                            } catch (e) {}
+                        }
+
                         const profile: UserProfile = {
-                            id: matched?.id || 'confirmed_' + Date.now(),
+                            id: resolvedId || 'confirmed_' + Date.now(),
                             username: username,
                             email: email,
                             displayName: `@${username}`,
@@ -851,8 +868,11 @@ export async function initAuth() {
             // --- TEST MODE OR OFFLINE REGISTRATION (NO NETWORK / NO EMAILS) ---
             if (isTestMode(email) || !hasSupabase) {
                 const displayName = isAdmin ? getAdminDisplayName(email) : `@${username}`;
+                const defaultAdminUuid = isPlayardOwner(email)
+                    ? '5cc22da5-ea52-4623-8978-09a2c33bc5b2'
+                    : (email.toLowerCase() === 'grx@trenet.ee' ? '6e8aeb96-7959-4000-8beb-c2077ca31952' : 'admin_root');
                 const profile: UserProfile = {
-                    id: isAdmin ? 'admin_root' : 'user_' + username.toLowerCase(),
+                    id: isAdmin ? defaultAdminUuid : 'user_' + username.toLowerCase(),
                     username: username,
                     email: email,
                     displayName: displayName,

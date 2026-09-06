@@ -589,18 +589,32 @@ const ACTIVE_TRAIN_KEY = 'playard_active_train';
 let activeDepotCategory: 'train' | 'metro' = 'train';
 
 function getUnlockedTrainIds(): string[] {
+    const list: string[] = ['classic_steam', 'metro_standard'];
     try {
         const raw = localStorage.getItem(UNLOCKED_TRAINS_KEY);
         if (raw) {
-            const list = JSON.parse(raw);
-            if (Array.isArray(list)) {
-                if (!list.includes('classic_steam')) list.push('classic_steam');
-                if (!list.includes('metro_standard')) list.push('metro_standard');
-                return list;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                parsed.forEach(id => {
+                    if (!list.includes(id)) list.push(id);
+                });
             }
         }
     } catch (e) {}
-    return ['classic_steam', 'metro_standard'];
+
+    // Check cloud-synced yard inventory for unlocked trains or metros
+    try {
+        const yardInv = yardService.getInventory();
+        if (Array.isArray(yardInv)) {
+            for (const item of yardInv) {
+                if (TRAINS_CATALOG.some(t => t.id === item) && !list.includes(item)) {
+                    list.push(item);
+                }
+            }
+        }
+    } catch (e) {}
+
+    return list;
 }
 
 function saveUnlockedTrainIds(list: string[]) {

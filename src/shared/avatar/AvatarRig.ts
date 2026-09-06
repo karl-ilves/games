@@ -772,6 +772,348 @@ export class AvatarRig {
         return vrGroup;
     }
 
+    private buildDiamondShades(): THREE.Group {
+        const group = new THREE.Group();
+        const goldMat = this.materials.gold;
+        const diamondMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.95, roughness: 0.05 });
+        const darkLens = new THREE.MeshStandardMaterial({ color: 0x0a0e14, roughness: 0.05, metalness: 0.8 });
+
+        // Frame brow
+        const brow = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.03, 0.025), goldMat);
+        brow.position.set(0, 0.10, 0.075);
+        group.add(brow);
+
+        // Diamonds along brow
+        for (let i = 0; i < 9; i++) {
+            const diam = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), diamondMat);
+            diam.position.set(-0.20 + i * 0.05, 0.10, 0.088);
+            group.add(diam);
+        }
+
+        [-1, 1].forEach(side => {
+            const rim = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.11, 0.02), goldMat);
+            rim.position.set(side * 0.13, 0.05, 0.075);
+            group.add(rim);
+
+            const lens = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.08, 0.01), darkLens);
+            lens.position.set(side * 0.13, 0.05, 0.08);
+            group.add(lens);
+
+            // Diamond studs on sides
+            for (let d = 0; d < 3; d++) {
+                const sDiam = new THREE.Mesh(new THREE.SphereGeometry(0.01, 6, 6), diamondMat);
+                sDiam.position.set(side * 0.22, 0.08 - d * 0.03, 0.085);
+                group.add(sDiam);
+            }
+
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.44, 8), goldMat);
+            arm.rotation.x = Math.PI * 0.5;
+            arm.position.set(side * 0.24, 0.07, -0.14);
+            group.add(arm);
+        });
+        return group;
+    }
+
+    private buildPixelThugShades(): THREE.Group {
+        const group = new THREE.Group();
+        const blackMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+        const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        // Center bridge
+        const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.025, 0.02), blackMat);
+        bridge.position.set(0, 0.07, 0.08);
+        group.add(bridge);
+
+        [-1, 1].forEach(side => {
+            // Stepped 8-bit blocks
+            const topBar = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.03, 0.02), blackMat);
+            topBar.position.set(side * 0.14, 0.08, 0.08);
+            group.add(topBar);
+
+            const midBar = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.03, 0.02), blackMat);
+            midBar.position.set(side * 0.135, 0.05, 0.08);
+            group.add(midBar);
+
+            const botBar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.02), blackMat);
+            botBar.position.set(side * 0.13, 0.02, 0.08);
+            group.add(botBar);
+
+            // Pixel white reflection glint
+            const glint = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.005), whiteMat);
+            glint.position.set(side * 0.17, 0.075, 0.092);
+            group.add(glint);
+
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.02, 0.42), blackMat);
+            arm.position.set(side * 0.235, 0.08, -0.13);
+            group.add(arm);
+        });
+        return group;
+    }
+
+    private buildLaserScouter(): THREE.Group {
+        const group = new THREE.Group();
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0xdcdde1, metalness: 0.9, roughness: 0.2 });
+        const scouterLensMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.72 });
+        const reticleMat = new THREE.MeshBasicMaterial({ color: 0xff3838 });
+
+        // Left eye lens
+        const lens = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.10, 0.01), scouterLensMat);
+        lens.position.set(-0.14, 0.06, 0.082);
+        group.add(lens);
+
+        // Reticle ring
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.02, 0.028, 12), reticleMat);
+        ring.position.set(-0.14, 0.06, 0.088);
+        group.add(ring);
+
+        // Frame bracket
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.02, 0.03), frameMat);
+        frame.position.set(-0.14, 0.11, 0.08);
+        group.add(frame);
+
+        // Ear piece module on left side
+        const earpiece = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.14), frameMat);
+        earpiece.position.set(-0.25, 0.07, 0.01);
+        group.add(earpiece);
+
+        const led = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), reticleMat);
+        led.position.set(-0.27, 0.11, 0.02);
+        group.add(led);
+
+        return group;
+    }
+
+    private buildPirateEyepatch(): THREE.Group {
+        const group = new THREE.Group();
+        const leatherMat = new THREE.MeshStandardMaterial({ color: 0x181a1e, roughness: 0.9 });
+        const silverMat = new THREE.MeshStandardMaterial({ color: 0xdfe4ea, metalness: 0.9, roughness: 0.2 });
+
+        // Diagonal head strap
+        const strap = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.018, 8, 32), leatherMat);
+        strap.rotation.x = Math.PI * 0.46;
+        strap.rotation.y = 0.25;
+        strap.position.set(0, 0.08, -0.04);
+        group.add(strap);
+
+        // Eyepatch cup over right eye
+        const patch = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), leatherMat);
+        patch.scale.set(1.0, 1.15, 0.35);
+        patch.position.set(0.14, 0.06, 0.065);
+        group.add(patch);
+
+        // Silver Skull Crest
+        const skull = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 8), silverMat);
+        skull.scale.set(1.0, 0.9, 0.5);
+        skull.position.set(0.14, 0.065, 0.085);
+        group.add(skull);
+
+        [-0.016, 0.016].forEach(x => {
+            const bone = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.007, 0.005), silverMat);
+            bone.rotation.z = x > 0 ? 0.7 : -0.7;
+            bone.position.set(0.14, 0.05, 0.086);
+            group.add(bone);
+        });
+
+        return group;
+    }
+
+    private buildOniDemonMask(): THREE.Group {
+        const group = new THREE.Group();
+        const maskMat = new THREE.MeshStandardMaterial({ color: 0x9b0000, roughness: 0.35 });
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+        const fangMat = new THREE.MeshStandardMaterial({ color: 0xfffae6, metalness: 0.2, roughness: 0.1 });
+
+        // Half face mask shell
+        const shell = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.26, 0.16), maskMat);
+        shell.position.set(0, -0.09, 0.07);
+        group.add(shell);
+
+        // White war teeth markings
+        const teethPlate = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.04, 0.02), whiteMat);
+        teethPlate.position.set(0, -0.09, 0.155);
+        group.add(teethPlate);
+
+        // Two prominent upward fangs
+        [-1, 1].forEach(side => {
+            const tusk = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.10, 6), fangMat);
+            tusk.position.set(side * 0.11, -0.04, 0.16);
+            tusk.rotation.z = -side * 0.25;
+            group.add(tusk);
+        });
+
+        return group;
+    }
+
+    private buildGasmaskTactical(): THREE.Group {
+        const group = new THREE.Group();
+        const rubberMat = new THREE.MeshStandardMaterial({ color: 0x22272e, roughness: 0.7 });
+        const metalMat = new THREE.MeshStandardMaterial({ color: 0x57606f, metalness: 0.8, roughness: 0.3 });
+
+        // Face seal
+        const snout = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.18, 12), rubberMat);
+        snout.rotation.x = Math.PI * 0.5;
+        snout.position.set(0, -0.08, 0.12);
+        group.add(snout);
+
+        // Central exhaust valve
+        const valve = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 16), metalMat);
+        valve.rotation.x = Math.PI * 0.5;
+        valve.position.set(0, -0.10, 0.20);
+        group.add(valve);
+
+        // Dual side canister filters
+        [-1, 1].forEach(side => {
+            const canister = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.09, 16), metalMat);
+            canister.rotation.z = Math.PI * 0.5;
+            canister.position.set(side * 0.20, -0.09, 0.12);
+            group.add(canister);
+        });
+
+        return group;
+    }
+
+    private buildFlameSunglasses(): THREE.Group {
+        const group = new THREE.Group();
+        const goldMat = this.materials.gold;
+        const flameMat = new THREE.MeshStandardMaterial({ color: 0xff3838, roughness: 0.1, transparent: true, opacity: 0.85 });
+
+        // Bridge
+        const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.015, 0.01), goldMat);
+        bridge.position.set(0, 0.07, 0.08);
+        group.add(bridge);
+
+        [-1, 1].forEach(side => {
+            // Flame wing teardrop polygon
+            const flameShape = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.24, 5), flameMat);
+            flameShape.rotation.z = -side * (Math.PI * 0.45);
+            flameShape.rotation.x = Math.PI * 0.1;
+            flameShape.position.set(side * 0.14, 0.06, 0.08);
+            group.add(flameShape);
+
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.44, 6), goldMat);
+            arm.rotation.x = Math.PI * 0.5;
+            arm.position.set(side * 0.23, 0.07, -0.14);
+            group.add(arm);
+        });
+        return group;
+    }
+
+    private buildHeartSunglasses(): THREE.Group {
+        const group = new THREE.Group();
+        const pinkMat = new THREE.MeshStandardMaterial({ color: 0xff2d75, roughness: 0.2 });
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
+
+        [-1, 1].forEach(side => {
+            // Heart lobes
+            const lobe1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), pinkMat);
+            lobe1.position.set(side * 0.14 - 0.03, 0.08, 0.078);
+            group.add(lobe1);
+
+            const lobe2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), pinkMat);
+            lobe2.position.set(side * 0.14 + 0.03, 0.08, 0.078);
+            group.add(lobe2);
+
+            const point = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.09, 6), pinkMat);
+            point.rotation.z = Math.PI;
+            point.position.set(side * 0.14, 0.02, 0.078);
+            group.add(point);
+
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.44, 6), whiteMat);
+            arm.rotation.x = Math.PI * 0.5;
+            arm.position.set(side * 0.23, 0.07, -0.14);
+            group.add(arm);
+        });
+        return group;
+    }
+
+    private buildCyberMatrixBlindfold(): THREE.Group {
+        const group = new THREE.Group();
+        const clothMat = new THREE.MeshStandardMaterial({ color: 0x11141a, roughness: 0.75 });
+        const greenCodeMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
+
+        // Blindfold band across eyes
+        const band = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.14, 0.16), clothMat);
+        band.position.set(0, 0.06, 0.07);
+        group.add(band);
+
+        // Matrix digital glyph dashes
+        for (let i = 0; i < 8; i++) {
+            const dash = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.06, 0.01), greenCodeMat);
+            dash.position.set(-0.18 + i * 0.05, 0.06 + ((i % 3) - 1) * 0.02, 0.155);
+            group.add(dash);
+        }
+
+        return group;
+    }
+
+    private buildNinjaMouthCloth(): THREE.Group {
+        const group = new THREE.Group();
+        const clothMat = new THREE.MeshStandardMaterial({ color: 0x181b22, roughness: 0.85 });
+
+        const cowl = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.22, 0.16), clothMat);
+        cowl.position.set(0, -0.08, 0.06);
+        group.add(cowl);
+
+        return group;
+    }
+
+    private buildCyborgEyeImplant(): THREE.Group {
+        const group = new THREE.Group();
+        const chromeMat = new THREE.MeshStandardMaterial({ color: 0xced6e0, metalness: 0.95, roughness: 0.1 });
+        const redLaserMat = new THREE.MeshBasicMaterial({ color: 0xff0044 });
+
+        // Mechanical frame plate over left eye
+        const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.03, 16), chromeMat);
+        plate.rotation.x = Math.PI * 0.5;
+        plate.position.set(-0.14, 0.06, 0.065);
+        group.add(plate);
+
+        // Glowing red optic core
+        const optic = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 12), redLaserMat);
+        optic.position.set(-0.14, 0.06, 0.082);
+        group.add(optic);
+
+        return group;
+    }
+
+    private buildGothicMasquerade(): THREE.Group {
+        const group = new THREE.Group();
+        const goldMat = this.materials.gold;
+
+        [-1, 1].forEach(side => {
+            const wing = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.02), goldMat);
+            wing.position.set(side * 0.14, 0.07, 0.075);
+            wing.rotation.z = side * 0.2;
+            group.add(wing);
+
+            // Filigree cutout peak
+            const peak = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.12, 4), goldMat);
+            peak.position.set(side * 0.24, 0.14, 0.075);
+            peak.rotation.z = -side * 0.4;
+            group.add(peak);
+        });
+        return group;
+    }
+
+    private buildHoloARGlasses(): THREE.Group {
+        const group = new THREE.Group();
+        const cyanHoloMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, transparent: true, opacity: 0.75 });
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.08, 0.015), cyanHoloMat);
+        bar.position.set(0, 0.07, 0.085);
+        group.add(bar);
+
+        [-1, 1].forEach(side => {
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.42, 6), frameMat);
+            arm.rotation.x = Math.PI * 0.5;
+            arm.position.set(side * 0.23, 0.07, -0.13);
+            group.add(arm);
+        });
+        return group;
+    }
+
+
     private renderFace(faceId: string) {
         const faceGroup = new THREE.Group();
 
@@ -781,7 +1123,44 @@ export class AvatarRig {
         const browMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
         const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-        if (faceId === 'face_anime_sparkle') {
+        if (faceId === 'face_golden_snarl_grill') {
+            // Smirking open mouth with glittering 24K gold and diamond teeth!
+            const mouthMat = new THREE.MeshStandardMaterial({ color: 0x2c0909, roughness: 0.5 });
+            const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.07, 0.03), mouthMat);
+            mouth.position.set(0, -0.10, 0.02);
+            mouth.rotation.z = 0.08;
+            faceGroup.add(mouth);
+
+            const goldToothMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.15 });
+            const diamToothMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.85, roughness: 0.05 });
+
+            for (let t = 0; t < 6; t++) {
+                const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.032, 0.018), t % 2 === 0 ? goldToothMat : diamToothMat);
+                tooth.position.set(-0.065 + t * 0.026, -0.086, 0.036);
+                faceGroup.add(tooth);
+            }
+
+            [-1, 1].forEach(side => {
+                const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 12), eyeWhiteMat);
+                eyeWhite.scale.set(1.0, 1.1, 0.5);
+                eyeWhite.position.set(side * 0.14, 0.06, 0.02);
+                faceGroup.add(eyeWhite);
+
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 10), pupilMat);
+                pupil.position.set(side * 0.14, 0.06, 0.05);
+                faceGroup.add(pupil);
+
+                const shine = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 6), shineMat);
+                shine.position.set(side * 0.14 + 0.015, 0.075, 0.065);
+                faceGroup.add(shine);
+
+                const brow = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.025, 0.03), browMat);
+                brow.position.set(side * 0.14, 0.15 + (side > 0 ? 0.02 : -0.01), 0.03);
+                brow.rotation.z = -side * 0.15;
+                faceGroup.add(brow);
+            });
+
+        } else if (faceId === 'face_anime_sparkle' || faceId === 'face_anime_star_eyes') {
             // ANIME STARLIGHT EYES: Large vibrant eyes, violet/cyan iris, 4-point star sparkles & blush
             const animeIrisMat = new THREE.MeshBasicMaterial({ color: 0x9b59b6 });
             const blushMat = new THREE.MeshBasicMaterial({ color: 0xff7675 });
@@ -1032,10 +1411,36 @@ export class AvatarRig {
             faceGroup.add(this.buildVRHeadset());
         } else if (faceId === 'face_ninja_mask') {
             faceGroup.add(this.buildNinjaMask());
-        } else if (faceId === 'face_gold_monocle') {
+        } else if (faceId === 'face_gold_monocle' || faceId === 'face_steampunk_monocle') {
             faceGroup.add(this.buildGoldMonocle());
         } else if (faceId === 'face_steampunk_goggles') {
             faceGroup.add(this.buildSteampunkGoggles());
+        } else if (faceId === 'face_diamond_shades') {
+            faceGroup.add(this.buildDiamondShades());
+        } else if (faceId === 'face_pixel_thug_shades') {
+            faceGroup.add(this.buildPixelThugShades());
+        } else if (faceId === 'face_laser_scouter') {
+            faceGroup.add(this.buildLaserScouter());
+        } else if (faceId === 'face_pirate_eyepatch') {
+            faceGroup.add(this.buildPirateEyepatch());
+        } else if (faceId === 'face_oni_demon_mask') {
+            faceGroup.add(this.buildOniDemonMask());
+        } else if (faceId === 'face_gasmask_tactical') {
+            faceGroup.add(this.buildGasmaskTactical());
+        } else if (faceId === 'face_flame_tinted_sunglasses') {
+            faceGroup.add(this.buildFlameSunglasses());
+        } else if (faceId === 'face_heart_shaped_glasses') {
+            faceGroup.add(this.buildHeartSunglasses());
+        } else if (faceId === 'face_cyber_matrix_blindfold') {
+            faceGroup.add(this.buildCyberMatrixBlindfold());
+        } else if (faceId === 'face_ninja_mouth_cloth') {
+            faceGroup.add(this.buildNinjaMouthCloth());
+        } else if (faceId === 'face_cyborg_eye_implant') {
+            faceGroup.add(this.buildCyborgEyeImplant());
+        } else if (faceId === 'face_gothic_masquerade') {
+            faceGroup.add(this.buildGothicMasquerade());
+        } else if (faceId === 'face_holographic_ar_glasses') {
+            faceGroup.add(this.buildHoloARGlasses());
         }
 
         this.attachToSocket('face', faceGroup);
