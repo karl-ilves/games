@@ -32,6 +32,11 @@ export const ACTION_TO_EMOTE_ID: Record<string, string> = {
     ground_slam: 'emote_superhero_landing'
 };
 
+export const EMOTE_ID_TO_ACTION: Record<string, string> = Object.entries(ACTION_TO_EMOTE_ID).reduce((acc, [action, id]) => {
+    acc[id] = action;
+    return acc;
+}, {} as Record<string, string>);
+
 class AvatarService {
     private currentConfig: AvatarConfig;
     private userInventory: Set<string>;
@@ -73,7 +78,7 @@ class AvatarService {
     }
 
     public isEmoteOwned(actionOrId: string): boolean {
-        if (!actionOrId || actionOrId === 'idle' || actionOrId === 'jump') return true;
+        if (!actionOrId || ['idle', 'walk', 'run', 'jump'].includes(actionOrId)) return true;
         const itemId = ACTION_TO_EMOTE_ID[actionOrId] || actionOrId;
         const item = getItemById(itemId);
         if (!item) return false;

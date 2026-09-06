@@ -1,4 +1,4 @@
-import { avatarService } from '../shared/avatar/AvatarService';
+import { avatarService, EMOTE_ID_TO_ACTION } from '../shared/avatar/AvatarService';
 import { AvatarViewer } from '../shared/avatar/AvatarViewer';
 import { AVATAR_CATALOG, getItemById, getItemsByCategory } from '../shared/avatar/catalog';
 import { AvatarItem, AvatarCategory, AvatarConfig } from '../shared/avatar/types';
@@ -62,14 +62,28 @@ export class AvatarShopEditorModal {
 
                         <!-- Emotes & Animation Bar -->
                         <div class="avatar-emotes-bar">
-                            <span style="font-size: 0.78rem; font-weight: 700; color: #8899a6; text-transform: uppercase;">Pose / Animation:</span>
-                            <div class="avatar-emote-buttons">
+                            <span style="font-size: 0.78rem; font-weight: 700; color: #8899a6; text-transform: uppercase;">Test Locomotion & Emotes:</span>
+                            <div class="avatar-emote-buttons" style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 95px; overflow-y: auto; padding: 2px;">
                                 <button class="btn-emote active" data-emote="idle">🧍 Idle</button>
                                 <button class="btn-emote" data-emote="walk">🚶 Walk</button>
                                 <button class="btn-emote" data-emote="run">🏃 Run</button>
                                 <button class="btn-emote" data-emote="jump">🦘 Jump</button>
                                 <button class="btn-emote" data-emote="wave">👋 Wave</button>
                                 <button class="btn-emote" data-emote="dance">🕺 Dance</button>
+                                <button class="btn-emote" data-emote="salute">🪖 Salute</button>
+                                <button class="btn-emote" data-emote="backflip">🤸 Backflip</button>
+                                <button class="btn-emote" data-emote="breakdance">🌪️ Breakdance</button>
+                                <button class="btn-emote" data-emote="laugh">😂 Laugh</button>
+                                <button class="btn-emote" data-emote="flex">💪 Flex</button>
+                                <button class="btn-emote" data-emote="levitate">🧘 Levitate</button>
+                                <button class="btn-emote" data-emote="zombie">🧟 Zombie</button>
+                                <button class="btn-emote" data-emote="guitar">🎸 Guitar</button>
+                                <button class="btn-emote" data-emote="dab">🙅‍♂️ Dab</button>
+                                <button class="btn-emote" data-emote="moonwalk">🕺 Moonwalk</button>
+                                <button class="btn-emote" data-emote="robot_dance">🤖 Robot</button>
+                                <button class="btn-emote" data-emote="kungfu">🥋 Kung Fu</button>
+                                <button class="btn-emote" data-emote="headspin">🤸‍♂️ Headspin</button>
+                                <button class="btn-emote" data-emote="ground_slam">💥 Superhero</button>
                             </div>
                         </div>
 
@@ -140,15 +154,16 @@ export class AvatarShopEditorModal {
             btn.addEventListener('click', () => {
                 const emote = btn.getAttribute('data-emote') || 'idle';
                 const isFreeAction = ['idle', 'walk', 'run', 'jump'].includes(emote);
-                if (!isFreeAction && !avatarService.isEmoteOwned(emote)) {
-                    this.showToast(`🔒 Emote "${emote}" is locked! Purchase it in the catalog (✨ Emotes).`, '#ff4757');
-                    return;
-                }
                 emoteButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.previewConfig.activeEmote = emote as any;
                 if (this.viewer) {
                     this.viewer.setEmote(emote);
+                }
+                if (!isFreeAction && !avatarService.isEmoteOwned(emote)) {
+                    this.showToast(`👀 Testing "${emote}" in 3D preview! (🔒 Buy in catalog to keep in games)`, '#00f2fe');
+                } else {
+                    this.showToast(`✨ Playing "${emote}"!`, '#2ecc71');
                 }
             });
         });
@@ -168,7 +183,11 @@ export class AvatarShopEditorModal {
         const saveBtn = this.modalEl.querySelector('#btn-avatar-save-config');
         if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
-                await avatarService.saveAvatar(this.previewConfig);
+                const toSave = { ...this.previewConfig };
+                if (toSave.activeEmote && !['idle', 'walk', 'run', 'jump'].includes(toSave.activeEmote) && !avatarService.isEmoteOwned(toSave.activeEmote)) {
+                    toSave.activeEmote = 'idle';
+                }
+                await avatarService.saveAvatar(toSave);
                 this.showToast('✅ Avatar successfully saved and synced!', '#2ecc71');
                 this.renderCatalogItems();
             });
@@ -427,9 +446,9 @@ export class AvatarShopEditorModal {
             btn.classList.toggle('is-locked', !owned);
             btn.classList.toggle('active', this.previewConfig.activeEmote === emote);
             if (!owned) {
-                btn.setAttribute('title', '🔒 Locked! Purchase in catalog (✨ Emotes).');
+                btn.setAttribute('title', '👀 Click to test in 3D preview! (🔒 Buy in catalog to keep in games)');
             } else {
-                btn.removeAttribute('title');
+                btn.setAttribute('title', '✨ Owned! Click to test.');
             }
         });
     }
@@ -485,25 +504,13 @@ export class AvatarShopEditorModal {
                 this.showToast(`👀 Previewing movement style "${item.name}". Click Walk, Run, or Jump to test!`, '#00f2fe');
                 break;
             case 'emotes': {
-                const emoteMap: Record<string, string> = {
-                    emote_wave: 'wave',
-                    emote_dance_spin: 'dance',
-                    emote_salute_military: 'salute',
-                    emote_backflip: 'backflip',
-                    emote_breakdance: 'breakdance',
-                    emote_laugh_triumph: 'laugh',
-                    emote_flex_muscles: 'flex',
-                    emote_levitate_zen: 'levitate',
-                    emote_zombie_groan: 'zombie',
-                    emote_guitar_solo: 'guitar'
-                };
-                const emote = emoteMap[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
+                const emote = EMOTE_ID_TO_ACTION[item.id] || (item.id.includes('dance') ? 'dance' : 'wave');
+                this.previewConfig.activeEmote = emote as any;
                 if (this.viewer) this.viewer.setEmote(emote);
                 if (avatarService.isEmoteOwned(item.id)) {
-                    const nextEmote = this.previewConfig.activeEmote === emote ? 'idle' : emote;
-                    this.previewConfig.activeEmote = nextEmote as any;
+                    this.showToast(`✨ Testing owned emote "${item.name}"!`, '#2ecc71');
                 } else {
-                    this.showToast(`👀 Previewing emote "${item.name}". Purchase for ${item.price} Y to keep it!`, '#f1c40f');
+                    this.showToast(`👀 Testing emote "${item.name}" in 3D preview! Buy for ${item.price} Y to keep it.`, '#00f2fe');
                 }
                 break;
             }

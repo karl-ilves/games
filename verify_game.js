@@ -628,6 +628,18 @@ try {
             console.log("   Emote switching clean rest pose reset verified: ✅");
         }
 
+        // Test clicking an emote in the pose buttons bar (e.g. [data-emote="salute"])
+        const salutePoseBtn = await page.$('.btn-emote[data-emote="salute"]');
+        if (salutePoseBtn) {
+            await page.click('.btn-emote[data-emote="salute"]');
+            await new Promise(r => setTimeout(r, 200));
+            const activeEmoteInViewer = await page.evaluate(() => window.playardAvatarShop?.viewer?.currentEmote);
+            console.log("   Viewer emote after clicking Salute button (Expected: salute):", activeEmoteInViewer);
+            if (activeEmoteInViewer !== 'salute') {
+                throw new Error("Clicking Salute in Pose/Animation bar must play 'salute' emote!");
+            }
+        }
+
         // Test Saving Avatar (English toast: 'saved')
         await page.click('#btn-avatar-save-config');
         await new Promise(r => setTimeout(r, 300));
