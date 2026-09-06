@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard Games - 🚀 ROCKET PLAYARD</title>
+    <meta name="description" content="3D Arcade Rocket Playard on Playard Games! Fictional arcade rockets, target shooting, boom explosions, huge open arena, platforms and rocket shop.">
+    <meta name="keywords" content="rocket playard, 3d arcade, rocket targets, playard games">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0b0f19;
+            color: #ffffff;
+        }
+
+        #game-viewport-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            transform-origin: center center;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top HUD */
+        .top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: rgba(11, 15, 25, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 2px solid rgba(255, 107, 107, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+        }
+
+        .hud-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 6px 14px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.88rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .game-title-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #ff6b6b;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 12px rgba(255, 107, 107, 0.6);
+        }
+
+        .owner-pill {
+            font-size: 0.7rem;
+            font-weight: 900;
+            color: #ffd32a;
+            background: rgba(255, 211, 42, 0.15);
+            border: 1px solid rgba(255, 211, 42, 0.5);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .stat-pill {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.88rem;
+            font-weight: 800;
+        }
+
+        .stat-pill.timer {
+            border-color: rgba(0, 242, 254, 0.4);
+            color: #00f2fe;
+        }
+
+        .stat-pill.score {
+            border-color: rgba(255, 211, 42, 0.5);
+            color: #ffd32a;
+            font-size: 1rem;
+        }
+
+        .shop-btn {
+            background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+            color: white;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 10px;
+            font-weight: 900;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+            transition: transform 0.15s ease;
+        }
+        .shop-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        /* Center Reticle */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 24px;
+            height: 24px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 60;
+        }
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 242, 254, 0.9);
+            box-shadow: 0 0 8px #00f2fe;
+        }
+        .crosshair::before {
+            top: 11px;
+            left: 0;
+            width: 24px;
+            height: 2px;
+        }
+        .crosshair::after {
+            top: 0;
+            left: 11px;
+            width: 2px;
+            height: 24px;
+        }
+        .crosshair-dot {
+            position: absolute;
+            top: 9px;
+            left: 9px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ff4757;
+            box-shadow: 0 0 8px #ff4757;
+        }
+
+        /* PC Desktop Fire Button */
+        .desktop-fire-btn {
+            position: absolute;
+            bottom: 35px;
+            right: 35px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            border: 3px solid #ffffff;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(255, 65, 108, 0.8), 0 8px 25px rgba(0, 0, 0, 0.6);
+            cursor: pointer;
+            z-index: 90;
+            user-select: none;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .desktop-fire-btn:active {
+            transform: scale(0.92);
+            box-shadow: 0 0 40px rgba(255, 65, 108, 1);
+        }
+        .desktop-fire-icon {
+            font-size: 28px;
+            line-height: 1;
+        }
+        .desktop-fire-label {
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-top: 2px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+        }
+
+        /* PC Keyboard Controls Bar */
+        .pc-controls-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            z-index: 70;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .kbd-badge {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-weight: 800;
+            color: #ffd32a;
+        }
+
+        /* Floating Arcade Hit Toasts */
+        #impact-toast-container {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 120;
+        }
+        .boom-toast {
+            background: linear-gradient(135deg, rgba(255, 71, 87, 0.95), rgba(255, 159, 26, 0.95));
+            border: 2px solid #ffffff;
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 1.4rem;
+            padding: 8px 22px;
+            border-radius: 30px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+            box-shadow: 0 0 25px rgba(255, 71, 87, 0.8);
+            animation: popToast 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popToast {
+            0% { transform: scale(0.4) translateY(20px); opacity: 0; }
+            20% { transform: scale(1.15) translateY(-5px); opacity: 1; }
+            40% { transform: scale(1.0) translateY(0); opacity: 1; }
+            80% { transform: scale(1.0) translateY(-10px); opacity: 1; }
+            100% { transform: scale(0.9) translateY(-30px); opacity: 0; }
+        }
+
+        /* Screen Shake Animation */
+        .screen-shake {
+            animation: shake 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 2px, 0); }
+            20%, 80% { transform: translate3d(3px, -2px, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 3px, 0); }
+            40%, 60% { transform: translate3d(4px, -3px, 0); }
+        }
+
+        /* Modals */
+        .game-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .game-modal-box {
+            background: linear-gradient(135deg, #161c2e 0%, #1e1526 100%);
+            border: 2px solid rgba(255, 107, 107, 0.6);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 580px;
+            padding: 28px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 107, 107, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            animation: modalFade 0.25s ease-out;
+        }
+        @keyframes modalFade {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            padding-bottom: 12px;
+        }
+        .modal-header h2 {
+            font-size: 1.6rem;
+            color: #ffd32a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 0 10px rgba(255, 211, 42, 0.5);
+        }
+
+        .close-modal-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.6rem;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .close-modal-btn:hover {
+            color: white;
+        }
+
+        /* Rocket Shop Catalog */
+        .rocket-catalog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 14px;
+            max-height: 55vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .rocket-item-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .rocket-item-card.equipped {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.12);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+        }
+        .rocket-item-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .rocket-item-desc {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.3;
+        }
+        .rocket-item-stats {
+            font-size: 0.75rem;
+            color: #ffd32a;
+            font-weight: 700;
+        }
+        .rocket-action-btn {
+            margin-top: 4px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.1s;
+        }
+        .rocket-action-btn.btn-buy {
+            background: linear-gradient(135deg, #ffd32a, #ff9f1a);
+            color: #000000;
+        }
+        .rocket-action-btn.btn-equip {
+            background: linear-gradient(135deg, #00f2fe, #0072ff);
+            color: #ffffff;
+        }
+        .rocket-action-btn.btn-equipped {
+            background: rgba(255, 255, 255, 0.15);
+            color: #2ecc71;
+            cursor: default;
+        }
+
+        /* Victory Winner Modal */
+        .winner-modal-body {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 0;
+        }
+        .winner-title {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: #ffd32a;
+            letter-spacing: 2px;
+            text-shadow: 0 0 25px rgba(255, 211, 42, 0.8), 0 4px 10px rgba(0,0,0,0.8);
+            animation: pulseWinner 1.5s infinite alternate;
+        }
+        @keyframes pulseWinner {
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
+        }
+
+        .winner-score-box {
+            background: rgba(255, 211, 42, 0.12);
+            border: 2px solid #ffd32a;
+            border-radius: 16px;
+            padding: 14px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 0 0 25px rgba(255, 211, 42, 0.3);
+        }
+        .winner-score-val {
+            font-size: 2.4rem;
+            font-weight: 900;
+            color: #ffffff;
+        }
+        .winner-stats-row {
+            display: flex;
+            gap: 20px;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+        .modal-action-row {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .modal-action-btn {
+            flex: 1;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.15s;
+        }
+        .modal-action-btn.primary {
+            background: linear-gradient(135deg, #00f2fe 0%, #0072ff 100%);
+            color: white;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+        }
+        .modal-action-btn.secondary {
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        /* VIP Restricted Overlay */
+        #vip-restricted-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #090d14;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-viewport-wrapper">
+        <!-- Three.js Canvas Container -->
+        <div id="canvas-container"></div>
+
+        <!-- Top HUD Bar -->
+        <div class="top-hud">
+            <div class="hud-group">
+                <a href="../../index.html" class="back-btn" id="btn-back">← Playard</a>
+                <div class="game-title-badge">
+                    <span>🚀 ROCKET PLAYARD</span>
+                    <span class="owner-pill">👑 OWNER EXCLUSIVE</span>
+                </div>
+            </div>
+
+            <div class="hud-group">
+                <div class="stat-pill timer" id="hud-timer-box">
+                    <span>⏱️</span>
+                    <span id="hud-timer-text">01:15</span>
+                </div>
+                <div class="stat-pill score" id="hud-score-box">
+                    <span>⭐</span>
+                    <span id="hud-score-text">0 PTS</span>
+                </div>
+                <div class="stat-pill" id="hud-active-rocket-box" style="border-color: rgba(255, 107, 107, 0.4);">
+                    <span id="hud-rocket-icon">🔴</span>
+                    <span id="hud-rocket-name">Red Dart</span>
+                </div>
+            </div>
+
+            <div class="hud-group">
+                <button class="shop-btn" id="btn-open-shop">🛒 ROCKET POOD</button>
+                <button class="icon-btn" id="btn-toggle-sound" title="Heli sisse/välja">🔊</button>
+                <div class="stat-pill" style="border-color: rgba(0, 242, 254, 0.4); color: #00f2fe;">
+                    <span id="hud-yard-icon">💎</span>
+                    <span id="hud-yard-text">0 Y</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crosshair Reticle -->
+        <div class="crosshair" id="reticle">
+            <div class="crosshair-dot"></div>
+        </div>
+
+        <!-- Floating Hit Toasts Container -->
+        <div id="impact-toast-container"></div>
+
+        <!-- PC Fire Button (also triggers firing on desktop click) -->
+        <button type="button" class="desktop-fire-btn" id="btn-fire" title="Tulista rakett (F / Klõps / Space)">
+            <span class="desktop-fire-icon">🚀</span>
+            <span class="desktop-fire-label">FIRE</span>
+        </button>
+
+        <!-- PC Keyboard Controls Bar -->
+        <div class="pc-controls-bar" id="pc-controls-bar">
+            <div><span class="kbd-badge">W A S D</span> Liigu</div>
+            <div><span class="kbd-badge">SPACE</span> Hüppa</div>
+            <div><span class="kbd-badge">HIIR / KLÕPS</span> Sihi & Tulista</div>
+            <div><span class="kbd-badge">🚀 FIRE</span> Tulista</div>
+            <div><span class="kbd-badge">E</span> Pood</div>
+        </div>
+    </div>
+
+    <!-- Rocket Shop Modal -->
+    <div class="game-modal-backdrop" id="rocket-shop-modal">
+        <div class="game-modal-box">
+            <div class="modal-header">
+                <h2>🚀 ROCKET POOD</h2>
+                <button class="close-modal-btn" id="btn-close-shop">&times;</button>
+            </div>
+            <p style="font-size: 0.88rem; color: #94a3b8;">
+                Kogu sihtmärke tabades punkte ja ava kiiremad, värvikamad ning suuremate plahvatustega raketid!
+            </p>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,211,42,0.3);">
+                <span style="font-weight: 700; color: #cbd5e1;">Sinu punktid ostmiseks:</span>
+                <span style="font-weight: 900; color: #ffd32a; font-size: 1.1rem;" id="shop-points-display">0 PTS</span>
+            </div>
+            <div class="rocket-catalog-grid" id="rocket-catalog-list">
+                <!-- Injected via TypeScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory / Round End Modal -->
+    <div class="game-modal-backdrop" id="round-end-modal">
+        <div class="game-modal-box" style="text-align: center;">
+            <div class="winner-modal-body">
+                <div class="winner-title" id="winner-header">🏆 WINNER</div>
+                <p style="color: #cbd5e1; font-size: 1.05rem;">Palju õnne! Suurepärane tabamusvoor on lõppenud!</p>
+
+                <div class="winner-score-box">
+                    <span style="font-size: 0.85rem; font-weight: 800; color: #ffd32a; text-transform: uppercase;">Lõppskoor</span>
+                    <span class="winner-score-val" id="winner-score-display">0 PTS</span>
+                </div>
+
+                <div class="winner-stats-row">
+                    <div>🎯 Tabatud: <strong id="winner-targets-hit">0</strong></div>
+                    <div>🚀 Lastud: <strong id="winner-shots-fired">0</strong></div>
+                    <div>⚡ Täpsus: <strong id="winner-accuracy">0%</strong></div>
+                </div>
+
+                <div style="background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 10px; padding: 8px 16px; color: #00f2fe; font-weight: 800;">
+                    💎 Teenitud Jarde: <span id="winner-yards-reward">+25 Y</span>
+                </div>
+
+                <div class="modal-action-row">
+                    <button class="modal-action-btn primary" id="btn-play-again">🔁 Mängi uuesti</button>
+                    <button class="modal-action-btn secondary" id="btn-winner-shop">🛒 Raketipood</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIP Restricted Overlay for Non-Owner -->
+    <div id="vip-restricted-overlay">
+        <div style="max-width: 480px; background: rgba(22, 28, 46, 0.95); border: 2px solid #ff4757; border-radius: 20px; padding: 36px; box-shadow: 0 0 40px rgba(255, 71, 87, 0.4);">
+            <div style="font-size: 3.5rem; margin-bottom: 12px;">🔒</div>
+            <h2 style="font-size: 1.8rem; color: #ffd32a; margin-bottom: 12px;">Playard Owner Exclusive</h2>
+            <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; margin-bottom: 24px;">
+                <strong>🚀 ROCKET PLAYARD</strong> on eksklusiivne arcade mäng, mis on saadaval ainult Playard Ownerile (<code>1karl.ilves@gmail.com</code>).
+            </p>
+            <a href="../../index.html" style="display: inline-block; background: linear-gradient(135deg, #00f2fe, #0072ff); color: white; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 800;">Tagasi avalehele</a>
+        </div>
+    </div>
+
+    <script type="module" src="/src/games/rocket/main.ts"></script>
+</body>
+</html>

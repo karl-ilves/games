@@ -75,6 +75,12 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
         mmp1GameCard.style.display = canAccessMmp1(emailToCheck, usernameToCheck) ? 'flex' : 'none';
     }
 
+    // ROCKET PLAYARD mäng on nähtav AINULT Playard Ownerile!
+    const rocketGameCard = document.getElementById('card-rocket-game');
+    if (rocketGameCard) {
+        rocketGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+    }
+
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
     setLanguage(isEstonian ? 'et' : 'en');
     renderRecentlyPlayed();
@@ -108,6 +114,9 @@ function setupIcons() {
 
     const cardMmp1YardIcon = document.getElementById('card-mmp1-yard-icon');
     if (cardMmp1YardIcon) cardMmp1YardIcon.innerHTML = yardService.renderYardSvg(16);
+
+    const cardRocketYardIcon = document.getElementById('card-rocket-yard-icon');
+    if (cardRocketYardIcon) cardRocketYardIcon.innerHTML = yardService.renderYardSvg(16);
 }
 
 // --- Live HMS Countdown Updater ---

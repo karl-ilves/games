@@ -254,6 +254,12 @@ try {
             throw new Error("MMP1 card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
         }
 
+        const ownerRocketCardDisplay = await page.$eval('#card-rocket-game', el => window.getComputedStyle(el).display);
+        console.log(`   Playard Owner ROCKET PLAYARD Card visibility (Expected: flex): ${ownerRocketCardDisplay}`);
+        if (ownerRocketCardDisplay !== 'flex') {
+            throw new Error("ROCKET PLAYARD card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
+        }
+
         // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, Rongimäng visible, Obby, Metro & MMP1 hidden!
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
@@ -295,6 +301,12 @@ try {
         console.log(`   Admin (grx@trenet.ee) MMP1 Card visibility (Expected: none): ${adminMmp1CardDisplay}`);
         if (adminMmp1CardDisplay !== 'none') {
             throw new Error("MMP1 game card must be hidden for non-owner admin (grx@trenet.ee)!");
+        }
+
+        const adminRocketCardDisplay = await page.$eval('#card-rocket-game', el => window.getComputedStyle(el).display);
+        console.log(`   Admin (grx@trenet.ee) ROCKET PLAYARD Card visibility (Expected: none): ${adminRocketCardDisplay}`);
+        if (adminRocketCardDisplay !== 'none') {
+            throw new Error("ROCKET PLAYARD game card must be hidden for non-owner admin (grx@trenet.ee)!");
         }
 
         // Test Minionbanana0_0 login -> MMP1 game card must be visible!
@@ -3512,6 +3524,129 @@ try {
             console.log('   MMP1 Minionbanana0_0 access authorization verified: ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
+
+            // ==========================================
+            // 8. ROCKET PLAYARD MÄNGU TESTID
+            // ==========================================
+            console.log("8. Checking 🚀 ROCKET PLAYARD Game Page (3D Arcade Arena, Rockets, Mobile Controls, Shop & Winner Modal)...");
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/games/rocket/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1200));
+
+            // Verify Three.js Canvas in Rocket Playard
+            const rocketCanvas = await page.$('#canvas-container canvas');
+            if (!rocketCanvas) throw new Error('Rocket Playard Three.js canvas was not created!');
+            console.log('   Rocket Playard Three.js Canvas initialized: ✅');
+
+            // Verify PC Mode: Mobile controls layer should NOT exist
+            const rocketPcControls = await page.evaluate(() => {
+                const layer = document.getElementById('playard-universal-mobile-controls');
+                const pcFire = document.getElementById('btn-fire');
+                const crosshair = document.getElementById('reticle');
+                return {
+                    hasMobileLayer: !!layer,
+                    hasPcFire: !!pcFire,
+                    hasCrosshair: !!crosshair
+                };
+            });
+            console.log(`   PC Mode mobile controls layer exists: ${rocketPcControls.hasMobileLayer} (Expected: false), PC Fire button: ${rocketPcControls.hasPcFire}, Crosshair: ${rocketPcControls.hasCrosshair}`);
+            if (rocketPcControls.hasMobileLayer) {
+                throw new Error("Mobile touch controls must NOT be displayed on PC in Rocket Playard!");
+            }
+            if (!rocketPcControls.hasPcFire || !rocketPcControls.hasCrosshair) {
+                throw new Error("Rocket Playard must render PC Fire button and Crosshair!");
+            }
+
+            // Verify Mobile Mode with ?mobile=true
+            console.log("   Checking Mobile Mode in Rocket Playard (with ?mobile=true)...");
+            await page.goto('http://localhost:4173/games/games/rocket/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1000));
+
+            const rocketMobileControls = await page.evaluate(() => {
+                const layer = document.getElementById('playard-universal-mobile-controls');
+                const joystick = document.getElementById('playard-mobile-joystick-zone');
+                const jumpBtn = document.getElementById('playard-mobile-jump-btn');
+                const fireBtn = document.getElementById('playard-mobile-fire-btn');
+                return {
+                    hasLayer: !!layer,
+                    hasJoystick: !!joystick,
+                    hasJumpBtn: !!jumpBtn,
+                    hasFireBtn: !!fireBtn
+                };
+            });
+            console.log(`   Mobile Mode controls: Layer=${rocketMobileControls.hasLayer}, Joystick=${rocketMobileControls.hasJoystick}, Jump=${rocketMobileControls.hasJumpBtn}, Fire=${rocketMobileControls.hasFireBtn}`);
+            if (!rocketMobileControls.hasLayer || !rocketMobileControls.hasJoystick || !rocketMobileControls.hasJumpBtn || !rocketMobileControls.hasFireBtn) {
+                throw new Error("Mobile Mode must render Virtual Joystick on left, and FIRE & JUMP buttons on right!");
+            }
+
+            // Test Rocket Firing via Game Engine
+            console.log("   Testing Rocket Launch & Projectile System...");
+            const fireResult = await page.evaluate(() => {
+                const game = window.rocketGame;
+                if (!game) return { success: false, reason: 'rocketGame not on window' };
+                const fired = game.fireRocket();
+                const activeCount = game.activeRockets?.length || 0;
+                return { success: fired, activeRocketsCount: activeCount, shotsFired: game.shotsFired };
+            });
+            console.log(`   Rocket Fired: ${fireResult.success}, Active Rockets: ${fireResult.activeRocketsCount}, Total Shots: ${fireResult.shotsFired}`);
+            if (!fireResult.success || fireResult.activeRocketsCount < 1) {
+                throw new Error("Rocket firing failed to spawn in-flight projectile!");
+            }
+
+            // Test Target Collision & BOOM! Explosion Effect
+            console.log("   Testing Target Collision, Points & Arcade BOOM!...");
+            const hitResult = await page.evaluate(() => {
+                const game = window.rocketGame;
+                const target = game.targets?.[0];
+                if (!target) return { success: false, reason: 'No targets found' };
+                const initialScore = game.currentScore;
+                game.triggerExplosion(target.position, game.equippedRocket, target, 0.5);
+                const toast = document.querySelector('.boom-toast');
+                return {
+                    success: true,
+                    scoreBefore: initialScore,
+                    scoreAfter: game.currentScore,
+                    hasToast: !!toast,
+                    toastText: toast ? toast.textContent : '',
+                    targetsHit: game.targetsHit
+                };
+            });
+            console.log(`   Target Hit Result: Score ${hitResult.scoreBefore} -> ${hitResult.scoreAfter}, TargetsHit: ${hitResult.targetsHit}, Toast: "${hitResult.toastText}"`);
+            if (!hitResult.success || hitResult.scoreAfter <= hitResult.scoreBefore || !hitResult.hasToast) {
+                throw new Error("Target collision must award points and spawn arcade BOOM toast!");
+            }
+
+            // Test Rocket Shop Modal & Upgrades
+            console.log("   Testing Rocket Shop Modal & Catalog...");
+            const shopResult = await page.evaluate(() => {
+                const game = window.rocketGame;
+                game.toggleShop(true);
+                const modal = document.getElementById('rocket-shop-modal');
+                const isVisible = window.getComputedStyle(modal).display === 'flex';
+                const itemsCount = document.querySelectorAll('#rocket-catalog-list .rocket-item-card').length;
+                return { isVisible, itemsCount };
+            });
+            console.log(`   Rocket Shop open: ${shopResult.isVisible}, Catalog items: ${shopResult.itemsCount} (Expected: 4)`);
+            if (!shopResult.isVisible || shopResult.itemsCount < 4) {
+                throw new Error("Rocket Shop must open and render all 4 arcade rocket upgrade options!");
+            }
+
+            // Test Round End & WINNER Modal
+            console.log("   Testing Round End & WINNER Victory Modal...");
+            const winnerResult = await page.evaluate(() => {
+                const game = window.rocketGame;
+                game.endRound();
+                const modal = document.getElementById('round-end-modal');
+                const isVisible = window.getComputedStyle(modal).display === 'flex';
+                const winnerHeader = document.getElementById('winner-header')?.textContent || '';
+                const scoreDisplay = document.getElementById('winner-score-display')?.textContent || '';
+                return { isVisible, winnerHeader, scoreDisplay };
+            });
+            console.log(`   Round End Modal visible: ${winnerResult.isVisible}, Header: "${winnerResult.winnerHeader}", Score: "${winnerResult.scoreDisplay}"`);
+            if (!winnerResult.isVisible || !winnerResult.winnerHeader.includes('WINNER')) {
+                throw new Error("Round end must display 🏆 WINNER modal and final score!");
+            }
+            console.log("✅ 🚀 ROCKET PLAYARD testid edukalt läbitud!");
 
             // Test Universal Mobile & Tablet Controls
             console.log("Testing Universal Mobile & Tablet Controls System...");

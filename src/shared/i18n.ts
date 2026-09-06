@@ -176,6 +176,21 @@ export function applyLocalization() {
         if (mmp1Pill) mmp1Pill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
     }
 
+    // ROCKET PLAYARD Game Card
+    const rocketCard = document.getElementById('card-rocket-game');
+    if (rocketCard) {
+        const h2 = rocketCard.querySelector('h2');
+        if (h2) h2.textContent = isEt ? '🚀 Rocket Playard' : '🚀 Rocket Playard (3D Arcade)';
+        const pRocket = rocketCard.querySelector('p');
+        if (pRocket) pRocket.textContent = isEt
+            ? 'Taba mängusiseste arcade-rakettidega sihtmärke, vallanda võimsaid BOOM! plahvatusi ning teeni punkte uute rakettide ostmiseks!'
+            : 'Hit arcade targets with fictional rockets, trigger massive BOOM! explosions and earn points to unlock upgraded rockets!';
+        const tRocket = rocketCard.querySelector('.reward-tag span:last-child');
+        if (tRocket) tRocket.textContent = isEt ? '💥 ARCADE TARGETS & ROCKET SHOP' : '💥 ARCADE TARGETS & ROCKET SHOP';
+        const rocketPill = rocketCard.querySelector('.rocket-owner-badge-pill');
+        if (rocketPill) rocketPill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
+    }
+
     // Community section
     const commH2 = document.querySelector('#btn-hub-create-game')?.previousElementSibling?.querySelector('h2');
     if (commH2) commH2.innerHTML = isEt ? '<span>🌐</span> Kogukonna loodud mängud' : '<span>🌐</span> Community Created Games';
