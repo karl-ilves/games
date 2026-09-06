@@ -438,3 +438,59 @@ export class PlayardMobileControls {
         this.container = null;
     }
 }
+
+/**
+ * Enforces Desktop/PC only access for games that require a computer (keyboard & mouse).
+ * When accessed from a phone or tablet, displays a full-screen blocker message and redirects to Hub.
+ */
+export function enforceDesktopOnly(gameNameEt: string, gameNameEn: string = gameNameEt): boolean {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+
+    if (!isMobileOrTabletDevice()) {
+        return false; // Desktop PC: Access allowed
+    }
+
+    // Is on Mobile or Tablet: render PC-only overlay blocker
+    const overlayId = 'playard-desktop-only-overlay';
+    if (document.getElementById(overlayId)) return true;
+
+    const isEt = (navigator.language || '').toLowerCase().startsWith('et') || (window as any).__PLAYARD_LANG__ === 'et';
+
+    const title = isEt ? '🖥️ AINULT ARVUTIS MÄNGITAV' : '🖥️ DESKTOP PC ONLY';
+    const msg = isEt
+        ? `<strong>${gameNameEt}</strong> on loodud spetsiaalselt arvutile ning vajab täielikku klaviatuuri ja hiire juhtimist. Telefonis või tahvlis seda mängida ei saa.`
+        : `<strong>${gameNameEn}</strong> is designed specifically for desktop PCs and laptops, requiring full mouse and keyboard controls. It cannot be played on mobile or tablet.`;
+    const btnText = isEt ? '🏠 Tagasi Playard Hubi' : '🏠 Back to Playard Hub';
+
+    const overlay = document.createElement('div');
+    overlay.id = overlayId;
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 999999;
+        background: radial-gradient(circle at center, #1a2332 0%, #080c14 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        text-align: center;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        color: #ffffff;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    `;
+
+    overlay.innerHTML = `
+        <div style="background: rgba(15, 23, 42, 0.95); border: 2.5px solid #00f2fe; border-radius: 24px; padding: 36px 26px; max-width: 480px; width: 100%; box-shadow: 0 0 50px rgba(0, 242, 254, 0.4), 0 20px 40px rgba(0,0,0,0.8); animation: fadeInScale 0.3s ease;">
+            <div style="font-size: 4rem; margin-bottom: 12px; filter: drop-shadow(0 0 15px #00f2fe);">💻 🖱️ ⌨️</div>
+            <h1 style="font-size: 1.6rem; font-weight: 900; color: #00f2fe; letter-spacing: 1px; margin: 0 0 12px 0; text-transform: uppercase;">${title}</h1>
+            <p style="color: #cbd5e1; font-size: 1.05rem; line-height: 1.6; margin: 0 0 28px 0;">${msg}</p>
+            <a href="../../index.html" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #00f2fe, #0072ff); color: #ffffff; font-weight: 900; font-size: 1.1rem; padding: 14px 32px; border-radius: 30px; text-decoration: none; box-shadow: 0 8px 25px rgba(0, 114, 255, 0.5); transition: transform 0.15s ease;">
+                ${btnText}
+            </a>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    return true;
+}

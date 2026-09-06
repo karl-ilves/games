@@ -1607,45 +1607,23 @@ try {
             }
             console.log("   Successfully verified 'You missed the station' notification banner in 3D Train Simulator!");
 
-            // 11b. Test Mobile / Tablet Automatic Touch Controls Detection
-            console.log("11b. Checking Mobile / Tablet Automatic Touch Controls in 3D Train Simulator...");
+            // 11b. Test Mobile / Tablet Desktop-Only Restriction in 3D Train Simulator
+            console.log("11b. Checking Desktop-Only Restriction on Mobile / Tablet in 3D Train Simulator...");
             const mobilePage = await browser.newPage();
             await mobilePage.evaluateOnNewDocument(() => {
                 window.__PLAYARD_TEST_MODE__ = true;
             });
             await mobilePage.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
             await mobilePage.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await mobilePage.waitForSelector('#btn-depot-start-driving', { visible: true, timeout: 10000 });
-            await mobilePage.click('#btn-depot-start-driving');
             await new Promise(r => setTimeout(r, 600));
 
-            // Verify on-screen touch controls are automatically displayed on phone/tablet
-            await mobilePage.waitForSelector('#mobile-train-controls', { visible: true, timeout: 10000 });
-            const mobileControlsDisplay = await mobilePage.$eval('#mobile-train-controls', el => window.getComputedStyle(el).display);
-            console.log("   Mobile / Tablet Touch Controls Display (Expected: flex):", mobileControlsDisplay);
-            if (mobileControlsDisplay !== 'flex') {
-                throw new Error("Mobile/Tablet touch controls must be automatically visible on mobile/touch devices!");
+            // Verify desktop-only overlay is displayed on phone/tablet
+            await mobilePage.waitForSelector('#playard-desktop-only-overlay', { visible: true, timeout: 10000 });
+            const desktopOnlyDisplay = await mobilePage.$eval('#playard-desktop-only-overlay', el => window.getComputedStyle(el).display);
+            console.log("   Train Simulator Mobile Desktop-Only Blocker Display (Expected: flex):", desktopOnlyDisplay);
+            if (desktopOnlyDisplay !== 'flex') {
+                throw new Error("3D Train Simulator must display PC-only overlay on mobile/tablet devices!");
             }
-
-            // Test Mobile Touch Buttons
-            await mobilePage.click('#m-btn-throttle-up');
-            await new Promise(r => setTimeout(r, 200));
-            const mobileThrottle = await mobilePage.$eval('#throttle-text', el => el.textContent);
-            console.log("   Mobile Throttle after Touch Power Button:", mobileThrottle);
-
-            await mobilePage.click('#m-btn-horn');
-            await new Promise(r => setTimeout(r, 100));
-
-            await mobilePage.click('#m-btn-cam');
-            await new Promise(r => setTimeout(r, 200));
-
-            await mobilePage.click('#m-btn-weather');
-            await new Promise(r => setTimeout(r, 200));
-
-            await mobilePage.click('#m-btn-throttle-down');
-            await mobilePage.click('#m-btn-throttle-down');
-            await new Promise(r => setTimeout(r, 200));
-            console.log("   Successfully tested all Mobile / Tablet Touch Controls in 3D Train Simulator!");
             await mobilePage.close();
 
             // 12. Test Playard Owner Estonian Localization & Database Money Persistence in Rongimäng
@@ -3457,25 +3435,37 @@ try {
                 throw new Error("Mobile Mode must render Draggable Virtual Joystick in bottom-left and Jump Button in bottom-right!");
             }
 
-            // 3. Verify Mobile Mode in War Game
-            console.log("   Checking Mobile Mode in War Game (with ?mobile=true)...");
+            // 3. Verify Desktop-Only Enforcement for War Game & Train Game on Mobile
+            console.log("   Checking Mobile Block for War Game (Expected: Desktop-Only Overlay)...");
             await page.goto('http://localhost:4173/games/games/war/index.html?mobile=true');
             await new Promise(r => setTimeout(r, 800));
-            const warMobile = await page.evaluate(() => {
-                const layer = document.getElementById('playard-universal-mobile-controls');
-                const joystickZone = document.getElementById('playard-mobile-joystick-zone');
-                const jumpBtn = document.getElementById('playard-mobile-jump-btn');
-                const mgBtn = document.getElementById('war-mobile-mg-btn');
+            const warMobileBlocked = await page.evaluate(() => {
+                const overlay = document.getElementById('playard-desktop-only-overlay');
                 return {
-                    hasLayer: !!layer,
-                    hasJoystick: !!joystickZone,
-                    hasJump: !!jumpBtn,
-                    hasMgBtn: !!mgBtn
+                    hasOverlay: !!overlay,
+                    overlayDisplay: overlay ? window.getComputedStyle(overlay).display : 'none',
+                    text: overlay ? overlay.textContent : ''
                 };
             });
-            console.log(`   War Game Mobile: Layer=${warMobile.hasLayer}, Joystick=${warMobile.hasJoystick}, Jump/Fire=${warMobile.hasJump}, Extra MG=${warMobile.hasMgBtn}`);
-            if (!warMobile.hasLayer || !warMobile.hasJoystick || !warMobile.hasJump) {
-                throw new Error("War Game must have universal mobile joystick and jump/fire button in mobile mode!");
+            console.log(`   War Game Desktop-Only Overlay: hasOverlay=${warMobileBlocked.hasOverlay}, display=${warMobileBlocked.overlayDisplay}`);
+            if (!warMobileBlocked.hasOverlay || warMobileBlocked.overlayDisplay === 'none') {
+                throw new Error("War Game must show desktop-only blocker overlay on mobile/tablet!");
+            }
+
+            console.log("   Checking Mobile Block for Train Simulator (Expected: Desktop-Only Overlay)...");
+            await page.goto('http://localhost:4173/games/games/train/index.html?mobile=true');
+            await new Promise(r => setTimeout(r, 800));
+            const trainMobileBlocked = await page.evaluate(() => {
+                const overlay = document.getElementById('playard-desktop-only-overlay');
+                return {
+                    hasOverlay: !!overlay,
+                    overlayDisplay: overlay ? window.getComputedStyle(overlay).display : 'none',
+                    text: overlay ? overlay.textContent : ''
+                };
+            });
+            console.log(`   Train Simulator Desktop-Only Overlay: hasOverlay=${trainMobileBlocked.hasOverlay}, display=${trainMobileBlocked.overlayDisplay}`);
+            if (!trainMobileBlocked.hasOverlay || trainMobileBlocked.overlayDisplay === 'none') {
+                throw new Error("Train Simulator must show desktop-only blocker overlay on mobile/tablet!");
             }
 
             // 4. Verify Mobile Mode in Community Game Player

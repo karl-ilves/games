@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { getCurrentUserProfile, isPlayardOwner, isTestMode, saveLocalProfile } from '../../auth';
 import { yardService, YardData } from '../../shared/yardService';
 import { trainAudio } from './audio';
+import { enforceDesktopOnly } from '../../shared/mobileControls';
 
 console.log("3D Train Simulator / Rongimäng Initialized.");
 
@@ -792,6 +793,9 @@ let clock = new THREE.Clock();
 // --- Init Three.js Simulation Engine ---
 function initEngine() {
     if (!checkOwnerAccess()) return;
+    if (enforceDesktopOnly('3D Rongimäng (Rongid & Metrood)', '3D Train Simulator (Trains & Metros)')) {
+        return;
+    }
     updateLocalization();
 
     activeTrain = getActiveTrainDef();

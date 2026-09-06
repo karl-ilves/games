@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserProfile, isUserAdminEmail, isPlayardOwner } from '../../auth';
 import { yardService } from '../../shared/yardService';
-import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
+import { PlayardMobileControls, isMobileOrTabletDevice, enforceDesktopOnly } from '../../shared/mobileControls';
 import { warAudio } from './audio';
 import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
 import { avatarService } from '../../shared/avatar/AvatarService';
@@ -192,6 +192,9 @@ class WarGameEngine {
     }
 
     private async init() {
+        if (enforceDesktopOnly('3D War Simulator (10v10)', '3D War Simulator (10v10 Battle)')) {
+            return;
+        }
         this.checkAuthorization();
         this.setupLocalIdentity();
         await this.loadUserDataFromDb();
