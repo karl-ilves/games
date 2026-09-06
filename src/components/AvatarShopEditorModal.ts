@@ -284,6 +284,22 @@ export class AvatarShopEditorModal {
                     Mythic: '#ff4757'
                 };
                 const rarityColor = rarityColors[outfit.rarity] || '#00f2fe';
+                const details = avatarService.getOutfitPriceDetails(outfit);
+
+                let priceBadge = '';
+                let actionBtn = '';
+
+                if (details.isFullyOwned) {
+                    priceBadge = `<span class="price-tag" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.4);">OWNED</span>`;
+                    actionBtn = `<button class="btn-item-action equip" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #2ecc71, #1abc9c); color: #070a10; font-weight: 900;">✨ Equip Outfit</button>`;
+                } else {
+                    const priceLabel = details.unownedPrice < details.totalPrice
+                        ? `${details.unownedPrice.toLocaleString()} Y <span style="font-size: 0.68rem; color: #8899a6; text-decoration: line-through;">${details.totalPrice.toLocaleString()} Y</span>`
+                        : `${details.totalPrice.toLocaleString()} Y`;
+
+                    priceBadge = `<span class="price-tag" style="background: rgba(255, 215, 0, 0.15); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.4); font-weight: 800;">${priceLabel}</span>`;
+                    actionBtn = `<button class="btn-item-action buy" data-buy-outfit-id="${outfit.id}" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #ffd700, #ff9f43); color: #070a10; font-weight: 900;">🛍️ Buy Set (${details.unownedPrice.toLocaleString()} Y)</button>`;
+                }
 
                 return `
                     <div class="avatar-item-card avatar-outfit-card" data-outfit-id="${outfit.id}" style="border-color: rgba(255, 215, 0, 0.35); background: linear-gradient(180deg, rgba(26, 35, 50, 0.95), rgba(13, 17, 23, 0.98));">
@@ -291,9 +307,7 @@ export class AvatarShopEditorModal {
                             <span class="rarity-badge" style="border-color: ${rarityColor}; color: ${rarityColor}; font-weight: 900;">
                                 ${outfit.tag}
                             </span>
-                            <span class="price-tag" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.4);">
-                                FULL SET
-                            </span>
+                            ${priceBadge}
                         </div>
 
                         <div class="item-preview-visual" style="display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0, 242, 254, 0.12) 0%, rgba(13, 17, 23, 0.9) 70%); min-height: 110px;">
@@ -301,11 +315,12 @@ export class AvatarShopEditorModal {
                         </div>
 
                         <div class="item-title" style="font-size: 1.05rem; font-weight: 900; color: #fff; margin-top: 6px;">${outfit.name}</div>
-                        <div class="item-desc" style="font-size: 0.8rem; line-height: 1.4; color: #a4b0be; margin-bottom: 10px; min-height: 38px;">${outfit.description}</div>
+                        <div class="item-desc" style="font-size: 0.8rem; line-height: 1.4; color: #a4b0be; margin-bottom: 4px; min-height: 38px;">${outfit.description}</div>
+                        <div style="font-size: 0.72rem; color: #00f2fe; margin-bottom: 10px; font-weight: 700;">📦 Bundle contains ${details.totalItemsCount} pieces (Sum: ${details.totalPrice.toLocaleString()} Y)</div>
 
                         <div class="item-actions-row">
                             <button class="btn-item-preview" data-preview-outfit-id="${outfit.id}">👁️ Try On</button>
-                            <button class="btn-item-action equip" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #070a10; font-weight: 900;">✨ Equip Outfit</button>
+                            ${actionBtn}
                         </div>
                     </div>
                 `;
@@ -328,11 +343,16 @@ export class AvatarShopEditorModal {
                     const id = btn.getAttribute('data-equip-outfit-id');
                     const outfit = getOutfitById(id || '');
                     if (outfit) {
-                        await avatarService.equipOutfit(outfit.config);
-                        this.previewConfig = avatarService.getConfig();
-                        if (this.viewer) this.viewer.updateConfig(this.previewConfig);
-                        this.renderCatalogItems();
-                        this.showToast(`✨ Outfit "${outfit.name}" successfully equipped and saved!`, '#2ecc71');
+                        const res = await avatarService.buyOutfit(outfit);
+                        this.updateYardBalance();
+                        if (res.success) {
+                            this.previewConfig = avatarService.getConfig();
+                            if (this.viewer) this.viewer.updateConfig(this.previewConfig);
+                            this.renderCatalogItems();
+                            this.showToast(res.message, '#2ecc71');
+                        } else {
+                            this.showToast(res.message, '#ff4757');
+                        }
                     }
                 });
             });

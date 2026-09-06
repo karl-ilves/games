@@ -562,16 +562,43 @@ try {
             throw new Error("Previewing Cyber Ninja outfit must update previewConfig with outfit components!");
         }
 
-        // Test Equipping an Outfit (Golden Monarch / Emperor)
+        // Verify Outfit bundle pricing (Sum of all items inside)
+        const goldenPriceText = await page.$eval('[data-outfit-id="outfit_golden_emperor"] .price-tag', el => el.textContent);
+        console.log("   Golden Emperor outfit bundle price (Sum of items):", goldenPriceText);
+        if (!goldenPriceText || !goldenPriceText.includes('Y')) {
+            throw new Error("Outfit card must display bundle price as sum of items inside!");
+        }
+
+        // Give test player 50,000 Yards to purchase full outfit bundle
+        const yardsBeforeOutfit = await page.evaluate(() => {
+            window.yardService.addYards(50000, 'Outfit Test Bonus');
+            return window.yardService.getYards();
+        });
+
+        // Test Buying and Equipping an Outfit (Golden Monarch / Emperor)
         const equipOutfitBtn = await page.$('[data-equip-outfit-id="outfit_golden_emperor"]');
         if (!equipOutfitBtn) throw new Error("Missing 'Equip Outfit' button for outfit_golden_emperor");
         await page.click('[data-equip-outfit-id="outfit_golden_emperor"]');
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 400));
+
+        const yardsAfterOutfit = await page.evaluate(() => window.yardService.getYards());
+        console.log(`   Yards before outfit: ${yardsBeforeOutfit}, after: ${yardsAfterOutfit} (Deducted: ${yardsBeforeOutfit - yardsAfterOutfit} Y)`);
+        if (yardsBeforeOutfit - yardsAfterOutfit <= 0) {
+            throw new Error("Purchasing outfit bundle must deduct the sum of items inside from player Yards!");
+        }
 
         const equippedHat = await page.evaluate(() => window.playardAvatar?.getConfig().hatId);
-        console.log("   Equipped Hat after equipping Golden Emperor (Expected: hat_royal_crown):", equippedHat);
-        if (equippedHat !== 'hat_royal_crown') {
-            throw new Error("Equipping Golden Emperor outfit must equip hat_royal_crown!");
+        const hasCrownOwned = await page.evaluate(() => window.playardAvatar?.hasItem('hat_royal_crown'));
+        console.log("   Equipped Hat after equipping Golden Emperor (Expected: hat_royal_crown):", equippedHat, "Owned:", hasCrownOwned);
+        if (equippedHat !== 'hat_royal_crown' || !hasCrownOwned) {
+            throw new Error("Equipping Golden Emperor outfit must unlock all bundle items in inventory and equip hat_royal_crown!");
+        }
+
+        // Verify card now shows OWNED
+        const cardStatusAfterBuy = await page.$eval('[data-outfit-id="outfit_golden_emperor"] .price-tag', el => el.textContent);
+        console.log("   Golden Emperor status after purchase (Expected: OWNED):", cardStatusAfterBuy);
+        if (!cardStatusAfterBuy.includes('OWNED')) {
+            throw new Error("Outfit card must update to OWNED after purchasing all items in the bundle!");
         }
 
         // Test Emotes category in Catalog

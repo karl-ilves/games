@@ -1,5 +1,6 @@
 import { AvatarConfig, AvatarItem } from './types';
 import { DEFAULT_AVATAR_CONFIG, AVATAR_CATALOG, getItemById } from './catalog';
+import { AvatarOutfitBundle, getOutfitItems } from './outfits';
 import { yardService } from '../yardService';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserProfile } from '../../auth';
@@ -258,6 +259,80 @@ class AvatarService {
 
     public async equipOutfit(outfitConfig: Partial<AvatarConfig>): Promise<boolean> {
         return this.saveAvatar(outfitConfig);
+    }
+
+    public getOutfitPriceDetails(outfit: AvatarOutfitBundle) {
+        const items = getOutfitItems(outfit);
+        const totalPrice = items.reduce((sum, it) => sum + (it.price || 0), 0);
+        const unownedItems = items.filter(it => !this.hasItem(it.id) && !it.isDefault && (it.price || 0) > 0);
+        const unownedPrice = unownedItems.reduce((sum, it) => sum + (it.price || 0), 0);
+        const isFullyOwned = unownedItems.length === 0;
+
+        return {
+            totalPrice,
+            unownedPrice,
+            totalItemsCount: items.length,
+            unownedItemsCount: unownedItems.length,
+            isFullyOwned,
+            items,
+            unownedItems
+        };
+    }
+
+    public async buyOutfit(outfit: AvatarOutfitBundle): Promise<{ success: boolean; message: string; cost: number }> {
+        const details = this.getOutfitPriceDetails(outfit);
+
+        // If user already owns all items in the bundle, equip directly for 0 cost
+        if (details.isFullyOwned) {
+            await this.equipOutfit(outfit.config);
+            return {
+                success: true,
+                message: `✨ Outfit "${outfit.name}" equipped! (All items already owned)`,
+                cost: 0
+            };
+        }
+
+        const currentYards = yardService.getYards();
+        if (currentYards < details.unownedPrice) {
+            return {
+                success: false,
+                message: `Not enough Yards! Set requires ${details.unownedPrice.toLocaleString()} Yards (You have ${currentYards.toLocaleString()}).`,
+                cost: details.unownedPrice
+            };
+        }
+
+        // Spend Yards through yardService with audit logging
+        const spendSuccess = yardService.spendYards(
+            details.unownedPrice,
+            outfit.id,
+            `Outfit Bundle: ${outfit.name} (${details.unownedItemsCount} items)`
+        );
+
+        if (!spendSuccess) {
+            return {
+                success: false,
+                message: 'Transaction failed while spending Yards.',
+                cost: details.unownedPrice
+            };
+        }
+
+        // Add all unowned items into player inventory
+        details.unownedItems.forEach(it => {
+            this.userInventory.add(it.id);
+        });
+
+        const key = this.getUserIdKey();
+        localStorage.setItem(`${INVENTORY_STORAGE_KEY_PREFIX}${key}`, JSON.stringify(Array.from(this.userInventory)));
+
+        // Equip the entire outfit set
+        await this.equipOutfit(outfit.config);
+        await this.syncToCloud();
+
+        return {
+            success: true,
+            message: `🎉 Successfully purchased and equipped "${outfit.name}" for ${details.unownedPrice.toLocaleString()} Yards!`,
+            cost: details.unownedPrice
+        };
     }
 
     private async syncWithCloud() {

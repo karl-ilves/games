@@ -1,4 +1,5 @@
-import { AvatarConfig, ItemRarity } from "./types";
+import { AvatarConfig, ItemRarity, AvatarItem } from "./types";
+import { getItemById } from "./catalog";
 
 export interface AvatarOutfitBundle {
     id: string;
@@ -219,4 +220,30 @@ export function getPresetOutfits(): AvatarOutfitBundle[] {
 
 export function getOutfitById(id: string): AvatarOutfitBundle | undefined {
     return PRESET_OUTFITS.find(o => o.id === id);
+}
+
+export function getOutfitItems(outfit: AvatarOutfitBundle): AvatarItem[] {
+    const items: AvatarItem[] = [];
+    const cfg = outfit.config;
+    const ids = [
+        cfg.hatId,
+        cfg.hairId,
+        cfg.faceId,
+        cfg.topId,
+        cfg.pantsId,
+        cfg.shoesId,
+        cfg.backId,
+        cfg.movementStyle
+    ].filter((id): id is string => !!id);
+
+    ids.forEach(id => {
+        const item = getItemById(id);
+        if (item) items.push(item);
+    });
+    return items;
+}
+
+export function getOutfitTotalPrice(outfit: AvatarOutfitBundle): number {
+    const items = getOutfitItems(outfit);
+    return items.reduce((sum, it) => sum + (it.price || 0), 0);
 }
