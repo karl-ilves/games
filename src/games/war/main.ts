@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { supabase } from '../../lib/supabase';
 import { getCurrentUserProfile, isUserAdminEmail, isPlayardOwner } from '../../auth';
 import { yardService } from '../../shared/yardService';
+import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
 import { warAudio } from './audio';
 import { WarMultiplayerNetwork, MultiplayerEvent } from './multiplayer';
 import { avatarService } from '../../shared/avatar/AvatarService';
@@ -2124,20 +2125,40 @@ class WarGameEngine {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Touch
-        const bindTouch = (id: string, code: string) => {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); this.keys[code] = true; });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); this.keys[code] = false; });
-        };
-        bindTouch('m-btn-up', 'KeyW');
-        bindTouch('m-btn-down', 'KeyS');
-        bindTouch('m-btn-left', 'KeyA');
-        bindTouch('m-btn-right', 'KeyD');
+        // Mobile / Tablet Touch Controls
+        const oldMobile = document.getElementById('mobile-controls');
+        if (oldMobile) oldMobile.style.display = 'none';
 
-        document.getElementById('m-btn-fire')?.addEventListener('touchstart', (e) => { e.preventDefault(); this.fireActiveWeapon(); });
-        document.getElementById('m-btn-mg')?.addEventListener('touchstart', (e) => { e.preventDefault(); this.selectWeapon('mg'); this.fireActiveWeapon(); });
+        if (isMobileOrTabletDevice()) {
+            const playardMobile = new PlayardMobileControls({
+                showJump: true,
+                jumpLabel: 'Fire / Shoot',
+                onMove: (v) => {
+                    // Forward / Backward
+                    this.keys['KeyW'] = v.y < -0.15;
+                    this.keys['KeyS'] = v.y > 0.2;
+                    // Left / Right
+                    this.keys['KeyA'] = v.x < -0.15;
+                    this.keys['KeyD'] = v.x > 0.15;
+                },
+                onJump: () => {
+                    this.fireActiveWeapon();
+                },
+                extraButtons: [
+                    {
+                        id: 'war-mobile-mg-btn',
+                        label: 'MG',
+                        icon: '🔫',
+                        color: '#00f2fe',
+                        onPress: () => {
+                            this.selectWeapon('mg');
+                            this.fireActiveWeapon();
+                        }
+                    }
+                ]
+            });
+            playardMobile.init();
+        }
     }
 
     private setupUI() {

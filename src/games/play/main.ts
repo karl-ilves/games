@@ -3,6 +3,7 @@ import { yardService, CreatedGame } from '../../shared/yardService';
 import { getCurrentUserProfile } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
+import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
 
 console.log("Community Game Player Loading...");
 
@@ -258,23 +259,30 @@ async function initPlayer() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    const bindTouchBtn = (id: string, code: string) => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        const press = (e: Event) => { e.preventDefault(); keys[code] = true; };
-        const release = (e: Event) => { e.preventDefault(); keys[code] = false; };
-        btn.addEventListener('mousedown', press);
-        btn.addEventListener('mouseup', release);
-        btn.addEventListener('mouseleave', release);
-        btn.addEventListener('touchstart', press, { passive: false });
-        btn.addEventListener('touchend', release, { passive: false });
-    };
+    const oldControls = document.getElementById('play-screen-controls');
+    if (isMobileOrTabletDevice()) {
+        if (oldControls) oldControls.style.display = 'none';
 
-    bindTouchBtn('touch-btn-up', 'ArrowUp');
-    bindTouchBtn('touch-btn-down', 'ArrowDown');
-    bindTouchBtn('touch-btn-left', 'ArrowLeft');
-    bindTouchBtn('touch-btn-right', 'ArrowRight');
-    bindTouchBtn('touch-btn-jump', 'Space');
+        const mobileControls = new PlayardMobileControls({
+            showJump: true,
+            jumpLabel: 'Jump',
+            onMove: (vector) => {
+                keys['KeyW'] = vector.y < -0.15;
+                keys['KeyS'] = vector.y > 0.15;
+                keys['KeyA'] = vector.x < -0.15;
+                keys['KeyD'] = vector.x > 0.15;
+            },
+            onJump: () => {
+                keys['Space'] = true;
+            },
+            onJumpEnd: () => {
+                keys['Space'] = false;
+            }
+        });
+        mobileControls.init();
+    } else {
+        if (oldControls) oldControls.style.display = 'none';
+    }
 
     animate();
 }

@@ -3,6 +3,7 @@ import { yardService } from '../../shared/yardService';
 import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { getItemById } from '../../shared/avatar/catalog';
+import { isMobileOrTabletDevice } from '../../shared/mobileControls';
 
 (window as any).yardService = yardService;
 
@@ -1025,8 +1026,8 @@ export class ParkourObbyGame {
             touchRespawn.addEventListener('click', () => this.respawnPlayer());
         }
 
-        // Detect touch device to show mobile controls
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        // Detect phone / tablet to show mobile controls
+        if (isMobileOrTabletDevice()) {
             const mobileLayer = document.getElementById('mobile-controls-layer');
             if (mobileLayer) mobileLayer.style.display = 'block';
         }

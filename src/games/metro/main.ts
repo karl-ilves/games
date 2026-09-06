@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
 import { yardService } from '../../shared/yardService';
 import { metroAudio } from './audio';
+import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
 
 // --- Types & Interfaces ---
 type GameState = 'intro_station' | 'intro_riding' | 'intro_first_stop' | 'intro_departing' | 'player_free' | 'inspecting' | 'keypad' | 'dragged_death' | 'golden_shop' | 'dead' | 'start_screen';
@@ -6784,7 +6785,7 @@ this.state = 'player_free';
         // Touch controls on mobile/tablets
         window.addEventListener('touchstart', (e) => {
             if (e.touches.length > 0) {
-                if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box, .hotbar-slot')) return;
+                if ((e.target as HTMLElement)?.closest('button, a, input, .modal-box, .hotbar-slot, .playard-mobile-layer, .playard-joystick-zone, .playard-jump-btn, .playard-extra-btn')) return;
                 metroAudio.enableAudio();
                 this.touchStartX = e.touches[0].clientX;
                 this.touchStartY = e.touches[0].clientY;
@@ -6797,6 +6798,7 @@ this.state = 'player_free';
 
         window.addEventListener('touchmove', (e) => {
             if (e.touches.length > 0 && canRotateHead()) {
+                if ((e.target as HTMLElement)?.closest('.playard-joystick-zone, .playard-jump-btn, .playard-extra-btn')) return;
                 const dx = e.touches[0].clientX - this.touchStartX;
                 const dy = e.touches[0].clientY - this.touchStartY;
                 this.touchStartX = e.touches[0].clientX;
@@ -6810,6 +6812,49 @@ this.state = 'player_free';
         }, { passive: true });
 
         window.addEventListener('touchend', () => handleEndLook());
+
+        // Playard Universal Mobile & Tablet Controls
+        if (isMobileOrTabletDevice()) {
+            const mobileControls = new PlayardMobileControls({
+                showJump: true,
+                jumpLabel: 'Jump / Stand',
+                onMove: (vector) => {
+                    if (this.isSitting && (Math.abs(vector.x) > 0.2 || Math.abs(vector.y) > 0.2)) {
+                        this.standUp();
+                    }
+                    this.moveKeys['KeyW'] = vector.y < -0.15;
+                    this.moveKeys['KeyS'] = vector.y > 0.15;
+                    this.moveKeys['KeyA'] = vector.x < -0.15;
+                    this.moveKeys['KeyD'] = vector.x > 0.15;
+                },
+                onJump: () => {
+                    if (this.isSitting) {
+                        this.standUp();
+                    } else if (this.aimedInteractable) {
+                        this.checkInteractions();
+                    }
+                },
+                extraButtons: [
+                    {
+                        id: 'metro-mobile-interact-btn',
+                        label: 'Interact',
+                        icon: '👉',
+                        onPress: () => {
+                            this.checkInteractions();
+                        }
+                    },
+                    {
+                        id: 'metro-mobile-flash-btn',
+                        label: 'Flashlight',
+                        icon: '🔦',
+                        onPress: () => {
+                            this.toggleFlashlight();
+                        }
+                    }
+                ]
+            });
+            mobileControls.init();
+        }
     }
 
     // --- Cursor & Pointer Lock State Management ---

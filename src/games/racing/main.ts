@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { yardService } from '../../shared/yardService';
+import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -1220,23 +1221,29 @@ function startCountdown() {
     }, 1000);
 }
 
+let playardMobile: PlayardMobileControls | null = null;
+let joystickMoveVector = { x: 0, y: 0 };
+
 function setupMobileControls() {
-    const bindBtn = (id: string, downFlag: string) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const down = (e: Event) => { e.preventDefault(); (window as any)[downFlag] = true; };
-        const up = (e: Event) => { e.preventDefault(); (window as any)[downFlag] = false; };
-        
-        el.addEventListener('touchstart', down, { passive: false });
-        el.addEventListener('mousedown', down);
-        el.addEventListener('touchend', up, { passive: false });
-        el.addEventListener('mouseup', up);
-        el.addEventListener('mouseleave', up);
-    };
-    bindBtn('btn-gas', 'gasPressed');
-    bindBtn('btn-brake', 'brakePressed');
-    bindBtn('btn-left', 'leftPressed');
-    bindBtn('btn-right', 'rightPressed');
+    const oldMobile = document.getElementById('mobile-controls');
+    if (oldMobile) oldMobile.style.display = 'none';
+
+    if (!playardMobile) {
+        playardMobile = new PlayardMobileControls({
+            showJump: true,
+            jumpLabel: 'Nitro / Jump',
+            onMove: (v) => {
+                joystickMoveVector = v;
+            },
+            onJump: () => {
+                keys['ShiftLeft'] = true;
+            },
+            onJumpEnd: () => {
+                keys['ShiftLeft'] = false;
+            }
+        });
+        playardMobile.init();
+    }
 }
 
 function onWindowResize() {
@@ -1445,10 +1452,10 @@ function updateGameLogic(dt: number) {
 function updatePhysics(dt: number) {
     if (gameState !== 'racing') return;
 
-    let isAccelerating = (keys['KeyW'] || keys['w']) || keys['ArrowUp'] || (window as any).gasPressed;
-    let isBraking = (keys['KeyS'] || keys['s']) || keys['ArrowDown'] || (window as any).brakePressed;
-    let isLeft = (keys['KeyA'] || keys['a']) || keys['ArrowLeft'] || (window as any).leftPressed;
-    let isRight = (keys['KeyD'] || keys['d']) || keys['ArrowRight'] || (window as any).rightPressed;
+    let isAccelerating = (keys['KeyW'] || keys['w']) || keys['ArrowUp'] || (window as any).gasPressed || joystickMoveVector.y < -0.15;
+    let isBraking = (keys['KeyS'] || keys['s']) || keys['ArrowDown'] || (window as any).brakePressed || joystickMoveVector.y > 0.2;
+    let isLeft = (keys['KeyA'] || keys['a']) || keys['ArrowLeft'] || (window as any).leftPressed || joystickMoveVector.x < -0.15;
+    let isRight = (keys['KeyD'] || keys['d']) || keys['ArrowRight'] || (window as any).rightPressed || joystickMoveVector.x > 0.15;
 
     // Acceleration & Braking
     if (isAccelerating) {
@@ -2012,10 +2019,9 @@ async function init() {
     window.addEventListener('keyup', (e) => { keys[e.code] = false; if(e.key) keys[e.key.toLowerCase()] = false; });
     window.addEventListener('resize', onWindowResize);
 
-    // Mobile Detection
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    // Mobile / Tablet Detection
+    if (isMobileOrTabletDevice()) {
         isMobile = true;
-        document.getElementById('mobile-controls')!.style.display = 'flex';
         setupMobileControls();
     }
 

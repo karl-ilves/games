@@ -5,6 +5,7 @@ import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
 import { InGameEmotesWidget } from '../../shared/avatar/InGameEmotesWidget';
 import { getItemById } from '../../shared/avatar/catalog';
+import { isMobileOrTabletDevice } from '../../shared/mobileControls';
 
 (window as any).yardService = yardService;
 
@@ -3153,7 +3154,7 @@ export class MurderMysteryGame {
         }
 
         // Detect touch device to show mobile controls layer
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        if (isMobileOrTabletDevice()) {
             const mobileLayer = document.getElementById('mobile-controls-layer');
             if (mobileLayer) mobileLayer.style.display = 'block';
         }

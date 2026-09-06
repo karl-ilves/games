@@ -4,6 +4,7 @@ import { getCurrentUserProfile, isUserAdminEmail, isPlayardOwner } from '../../a
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
 import { InGameEmotesWidget } from '../../shared/avatar/InGameEmotesWidget';
+import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -1715,6 +1716,8 @@ function setupStudioEvents() {
     const catalogPanel = document.getElementById('catalog-panel');
     const inspectorPanel = document.getElementById('inspector-panel');
 
+    let playTestMobileControls: PlayardMobileControls | null = null;
+
     if (playTestBtn) {
         playTestBtn.addEventListener('click', () => {
             isPlayTestMode = !isPlayTestMode;
@@ -1733,14 +1736,69 @@ function setupStudioEvents() {
                 if (playTestHud) playTestHud.style.display = 'block';
                 if (gameplayHud) gameplayHud.style.display = 'flex';
                 if (gameplayActions) gameplayActions.style.display = 'flex';
-                if (playTestControls) playTestControls.style.display = 'flex';
                 if (studioCamControls) studioCamControls.style.display = 'none';
                 if (catalogPanel) catalogPanel.style.display = 'none';
                 if (inspectorPanel) inspectorPanel.style.display = 'none';
 
+                if (isMobileOrTabletDevice()) {
+                    if (playTestControls) playTestControls.style.display = 'none';
+                    if (!playTestMobileControls) {
+                        playTestMobileControls = new PlayardMobileControls({
+                            showJump: true,
+                            jumpLabel: 'Jump',
+                            onMove: (vector) => {
+                                keys['KeyW'] = vector.y < -0.15;
+                                keys['KeyS'] = vector.y > 0.15;
+                                keys['KeyA'] = vector.x < -0.15;
+                                keys['KeyD'] = vector.x > 0.15;
+                            },
+                            onJump: () => {
+                                keys['Space'] = true;
+                            },
+                            onJumpEnd: () => {
+                                keys['Space'] = false;
+                            },
+                            extraButtons: [
+                                {
+                                    id: 'creator-mobile-action-btn',
+                                    label: 'Action [E]',
+                                    icon: '⚔️',
+                                    onPress: () => {
+                                        performPlayerAttack();
+                                    }
+                                },
+                                {
+                                    id: 'creator-mobile-vehicle-btn',
+                                    label: 'Vehicle [F]',
+                                    icon: '🚗',
+                                    onPress: () => {
+                                        if (currentVehicle) {
+                                            exitVehicle();
+                                        } else {
+                                            const nearby = placedObjects.find(o => {
+                                                const d = humanCharacter.position.distanceTo(new THREE.Vector3(o.position.x, o.position.y, o.position.z));
+                                                return d < 4.5 && (o.category === 'vehicles' || isAirplaneObject(o));
+                                            });
+                                            if (nearby) enterVehicle(nearby);
+                                        }
+                                    }
+                                }
+                            ]
+                        });
+                        playTestMobileControls.init();
+                    } else {
+                        playTestMobileControls.setVisible(true);
+                    }
+                } else {
+                    if (playTestControls) playTestControls.style.display = 'flex';
+                }
+
                 updateGameplayHUD();
             } else {
                 if (currentVehicle) exitVehicle();
+                if (playTestMobileControls) {
+                    playTestMobileControls.setVisible(false);
+                }
                 playTestBtn.innerHTML = '<span>▶️</span> <span>Play Test Mode</span>';
                 playTestBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
                 if (playTestHud) playTestHud.style.display = 'none';

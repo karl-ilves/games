@@ -3419,6 +3419,116 @@ try {
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 
+            // Test Universal Mobile & Tablet Controls
+            console.log("Testing Universal Mobile & Tablet Controls System...");
+            
+            // 1. Verify PC Mode: Mobile controls layer should NOT exist or should be hidden
+            console.log("   Checking PC Mode in Racing Simulator (Expected: Mobile controls OFF)...");
+            await page.goto('http://localhost:4173/games/games/racing/index.html');
+            await new Promise(r => setTimeout(r, 600));
+            const pcControlsExists = await page.evaluate(() => {
+                const layer = document.getElementById('playard-universal-mobile-controls');
+                return !!layer;
+            });
+            console.log(`   PC Mode mobile controls layer exists: ${pcControlsExists} (Expected: false)`);
+            if (pcControlsExists) {
+                throw new Error("Universal mobile controls must be OFF on desktop PC / laptop!");
+            }
+
+            // 2. Verify Mobile / Tablet Mode: With mobile parameter or touch, virtual joystick and jump button appear
+            console.log("   Checking Mobile Mode in Racing Simulator (with ?mobile=true)...");
+            await page.goto('http://localhost:4173/games/games/racing/index.html?mobile=true');
+            await new Promise(r => setTimeout(r, 800));
+            const mobileElements = await page.evaluate(() => {
+                const layer = document.getElementById('playard-universal-mobile-controls');
+                const joystickZone = document.getElementById('playard-mobile-joystick-zone');
+                const joystickKnob = document.getElementById('playard-mobile-joystick-knob');
+                const jumpBtn = document.getElementById('playard-mobile-jump-btn');
+                return {
+                    hasLayer: !!layer,
+                    hasJoystickZone: !!joystickZone,
+                    hasJoystickKnob: !!joystickKnob,
+                    hasJumpBtn: !!jumpBtn,
+                    jumpText: jumpBtn ? jumpBtn.textContent.trim() : ''
+                };
+            });
+            console.log(`   Mobile Mode elements: Layer=${mobileElements.hasLayer}, JoystickZone=${mobileElements.hasJoystickZone}, Knob=${mobileElements.hasJoystickKnob}, Jump=${mobileElements.hasJumpBtn} (${mobileElements.jumpText})`);
+            if (!mobileElements.hasLayer || !mobileElements.hasJoystickZone || !mobileElements.hasJoystickKnob || !mobileElements.hasJumpBtn) {
+                throw new Error("Mobile Mode must render Draggable Virtual Joystick in bottom-left and Jump Button in bottom-right!");
+            }
+
+            // 3. Verify Mobile Mode in War Game
+            console.log("   Checking Mobile Mode in War Game (with ?mobile=true)...");
+            await page.goto('http://localhost:4173/games/games/war/index.html?mobile=true');
+            await new Promise(r => setTimeout(r, 800));
+            const warMobile = await page.evaluate(() => {
+                const layer = document.getElementById('playard-universal-mobile-controls');
+                const joystickZone = document.getElementById('playard-mobile-joystick-zone');
+                const jumpBtn = document.getElementById('playard-mobile-jump-btn');
+                const mgBtn = document.getElementById('war-mobile-mg-btn');
+                return {
+                    hasLayer: !!layer,
+                    hasJoystick: !!joystickZone,
+                    hasJump: !!jumpBtn,
+                    hasMgBtn: !!mgBtn
+                };
+            });
+            console.log(`   War Game Mobile: Layer=${warMobile.hasLayer}, Joystick=${warMobile.hasJoystick}, Jump/Fire=${warMobile.hasJump}, Extra MG=${warMobile.hasMgBtn}`);
+            if (!warMobile.hasLayer || !warMobile.hasJoystick || !warMobile.hasJump) {
+                throw new Error("War Game must have universal mobile joystick and jump/fire button in mobile mode!");
+            }
+
+            // 4. Verify Mobile Mode in Community Game Player
+            console.log("   Checking Mobile Mode in Community Game Player (with ?mobile=true)...");
+            await page.goto('http://localhost:4173/games/games/play/index.html?mobile=true');
+            await new Promise(r => setTimeout(r, 800));
+            const playMobile = await page.evaluate(() => {
+                const layer = document.getElementById('playard-universal-mobile-controls');
+                const joystickZone = document.getElementById('playard-mobile-joystick-zone');
+                const jumpBtn = document.getElementById('playard-mobile-jump-btn');
+                const oldControls = document.getElementById('play-screen-controls');
+                return {
+                    hasLayer: !!layer,
+                    hasJoystick: !!joystickZone,
+                    hasJump: !!jumpBtn,
+                    oldControlsDisplay: oldControls ? window.getComputedStyle(oldControls).display : 'none'
+                };
+            });
+            console.log(`   Play Community Mobile: Layer=${playMobile.hasLayer}, Joystick=${playMobile.hasJoystick}, Jump=${playMobile.hasJump}, Old Dpad display=${playMobile.oldControlsDisplay}`);
+            if (!playMobile.hasLayer || !playMobile.hasJoystick || !playMobile.hasJump) {
+                throw new Error("Community Game Player must render Playard universal mobile joystick and jump button!");
+            }
+            if (playMobile.oldControlsDisplay !== 'none') {
+                throw new Error("Old Dpad controls must be hidden when universal mobile controls are active!");
+            }
+
+            // 5. Verify Mobile Mode in Last Metro (Owner profile needed because Last Metro is owner-exclusive)
+            console.log("   Checking Mobile Mode in Last Metro (with ?mobile=true and Owner login)...");
+            await page.evaluate(() => {
+                const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+            });
+            await page.goto('http://localhost:4173/games/games/metro/index.html?mobile=true');
+            await new Promise(r => setTimeout(r, 800));
+            const metroMobile = await page.evaluate(() => {
+                const layer = document.getElementById('playard-universal-mobile-controls');
+                const joystickZone = document.getElementById('playard-mobile-joystick-zone');
+                const jumpBtn = document.getElementById('playard-mobile-jump-btn');
+                const interactBtn = document.getElementById('metro-mobile-interact-btn');
+                return {
+                    hasLayer: !!layer,
+                    hasJoystick: !!joystickZone,
+                    hasJump: !!jumpBtn,
+                    hasInteract: !!interactBtn
+                };
+            });
+            console.log(`   Last Metro Mobile: Layer=${metroMobile.hasLayer}, Joystick=${metroMobile.hasJoystick}, Jump=${metroMobile.hasJump}, Interact=${metroMobile.hasInteract}`);
+            if (!metroMobile.hasLayer || !metroMobile.hasJoystick || !metroMobile.hasJump) {
+                throw new Error("Last Metro must have universal mobile joystick and jump button in mobile mode!");
+            }
+
+            console.log("✅ Universal Mobile & Tablet Controls testid edukalt läbitud!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
 })();
