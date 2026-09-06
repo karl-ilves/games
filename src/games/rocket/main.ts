@@ -3,7 +3,7 @@ import { yardService } from '../../shared/yardService';
 import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../auth';
 import { isMobileOrTabletDevice } from '../../shared/mobileControls';
 
-// Sound Synthesizer via Web Audio API
+// Ultra-Realistic Explosion Audio Synthesizer via Web Audio API
 class RocketAudio {
     private ctx: AudioContext | null = null;
     public soundEnabled: boolean = true;
@@ -27,62 +27,109 @@ class RocketAudio {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(360, now);
-        osc.frequency.exponentialRampToValueAtTime(70, now + 0.32);
+        osc.frequency.setValueAtTime(420, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.35);
 
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.32);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
 
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start(now);
-        osc.stop(now + 0.32);
+        osc.stop(now + 0.35);
     }
 
-    public playBoom() {
+    public playUltraRealisticBoom() {
         if (!this.soundEnabled) return;
         this.init();
         if (!this.ctx) return;
         const now = this.ctx.currentTime;
 
-        // Low boom rumble
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(20, now + 0.5);
-
-        gain.gain.setValueAtTime(0.75, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.5);
-
-        // Arcade burst noise
-        const bufferSize = this.ctx.sampleRate * 0.28;
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.05));
+        // 1. Heavy Supersonic Shockwave Crack (Pressure Wave)
+        const snapLen = this.ctx.sampleRate * 0.15;
+        const snapBuf = this.ctx.createBuffer(1, snapLen, this.ctx.sampleRate);
+        const snapData = snapBuf.getChannelData(0);
+        for (let i = 0; i < snapLen; i++) {
+            snapData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.02));
         }
-        const noise = this.ctx.createBufferSource();
-        noise.buffer = buffer;
+        const snapSrc = this.ctx.createBufferSource();
+        snapSrc.buffer = snapBuf;
 
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(2000, now);
-        filter.frequency.exponentialRampToValueAtTime(180, now + 0.28);
+        const snapFilter = this.ctx.createBiquadFilter();
+        snapFilter.type = 'highpass';
+        snapFilter.frequency.setValueAtTime(800, now);
+        snapFilter.frequency.exponentialRampToValueAtTime(120, now + 0.15);
 
-        const nGain = this.ctx.createGain();
-        nGain.gain.setValueAtTime(0.55, now);
-        nGain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+        const snapGain = this.ctx.createGain();
+        snapGain.gain.setValueAtTime(0.9, now);
+        snapGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
 
-        noise.connect(filter);
-        filter.connect(nGain);
-        nGain.connect(this.ctx.destination);
-        noise.start(now);
+        snapSrc.connect(snapFilter);
+        snapFilter.connect(snapGain);
+        snapGain.connect(this.ctx.destination);
+        snapSrc.start(now);
+
+        // 2. Subterranean Sub-Bass Blast (Chest-Punching Rumble 25Hz - 55Hz)
+        const subOsc = this.ctx.createOscillator();
+        const subGain = this.ctx.createGain();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(95, now);
+        subOsc.frequency.exponentialRampToValueAtTime(22, now + 0.85);
+
+        subGain.gain.setValueAtTime(1.0, now);
+        subGain.gain.exponentialRampToValueAtTime(0.005, now + 0.85);
+
+        subOsc.connect(subGain);
+        subGain.connect(this.ctx.destination);
+        subOsc.start(now);
+        subOsc.stop(now + 0.85);
+
+        // 3. Rolling Roaring Fireball Inferno (Low-Mid Noise Plume)
+        const roarLen = this.ctx.sampleRate * 1.4;
+        const roarBuf = this.ctx.createBuffer(1, roarLen, this.ctx.sampleRate);
+        const roarData = roarBuf.getChannelData(0);
+        for (let i = 0; i < roarLen; i++) {
+            roarData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.45));
+        }
+        const roarSrc = this.ctx.createBufferSource();
+        roarSrc.buffer = roarBuf;
+
+        const roarFilter = this.ctx.createBiquadFilter();
+        roarFilter.type = 'lowpass';
+        roarFilter.frequency.setValueAtTime(1400, now);
+        roarFilter.frequency.exponentialRampToValueAtTime(80, now + 1.2);
+
+        const roarGain = this.ctx.createGain();
+        roarGain.gain.setValueAtTime(0.85, now);
+        roarGain.gain.exponentialRampToValueAtTime(0.005, now + 1.2);
+
+        roarSrc.connect(roarFilter);
+        roarFilter.connect(roarGain);
+        roarGain.connect(this.ctx.destination);
+        roarSrc.start(now);
+
+        // 4. Secondary Concrete Debris & Clatter Rumble
+        setTimeout(() => {
+            if (!this.ctx || !this.soundEnabled) return;
+            const debrisNow = this.ctx.currentTime;
+            const clatterOsc = this.ctx.createOscillator();
+            const clatterGain = this.ctx.createGain();
+            clatterOsc.type = 'triangle';
+            clatterOsc.frequency.setValueAtTime(80, debrisNow);
+            clatterOsc.frequency.exponentialRampToValueAtTime(35, debrisNow + 0.6);
+
+            clatterGain.gain.setValueAtTime(0.4, debrisNow);
+            clatterGain.gain.exponentialRampToValueAtTime(0.01, debrisNow + 0.6);
+
+            clatterOsc.connect(clatterGain);
+            clatterGain.connect(this.ctx.destination);
+            clatterOsc.start(debrisNow);
+            clatterOsc.stop(debrisNow + 0.6);
+        }, 180);
+    }
+
+    public playBoom() {
+        this.playUltraRealisticBoom();
     }
 
     public playHitChime() {
@@ -94,10 +141,10 @@ class RocketAudio {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(587.33, now); // D5
-        osc.frequency.setValueAtTime(880, now + 0.08); // A5
+        osc.frequency.setValueAtTime(659.25, now); // E5
+        osc.frequency.setValueAtTime(1046.50, now + 0.08); // C6
 
-        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.setValueAtTime(0.4, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
 
         osc.connect(gain);
@@ -117,7 +164,7 @@ class RocketAudio {
             const gain = this.ctx!.createGain();
             osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, now);
-            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.setValueAtTime(0.45, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
             osc.connect(gain);
             gain.connect(this.ctx!.destination);
@@ -136,7 +183,7 @@ class RocketAudio {
         osc.type = 'square';
         osc.frequency.setValueAtTime(440, now);
         osc.frequency.setValueAtTime(880, now + 0.1);
-        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.setValueAtTime(0.25, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
@@ -164,68 +211,82 @@ const ROCKET_CATALOG: RocketType[] = [
         id: 'red_dart',
         name: 'Red Dart',
         icon: '🔴',
-        desc: 'Klassikaline kiire arkaad-rakett tasakaalustatud kiirusega.',
-        speed: 85,
+        desc: 'Klassikaline kiire arkaad-rakett tugeva kineetilise laenguga.',
+        speed: 90,
         color: 0xff4757,
         trailColor: 0xffa502,
         price: 0,
         scoreMultiplier: 1.0,
-        blastRadius: 5.5
+        blastRadius: 8.5
     },
     {
         id: 'neon_turbo',
         name: 'Neon Turbo',
         icon: '⚡',
-        desc: 'Elektri-tsüaani laenguga ülikiire rakett +25% punktiboonusega.',
-        speed: 115,
+        desc: 'Elektri-tsüaani hüperkiire rakett suurema plahvatusraadiusega ja +25% punktidega.',
+        speed: 120,
         color: 0x00f2fe,
         trailColor: 0x4facfe,
         price: 500,
         scoreMultiplier: 1.25,
-        blastRadius: 6.5
+        blastRadius: 11.0
     },
     {
         id: 'rainbow_comet',
         name: 'Rainbow Comet',
         icon: '🌈',
-        desc: 'Vikerkaare sädemetega komeetrakett suure plahvatuse ja +50% boonusega.',
-        speed: 135,
+        desc: 'Võimas plahvatusega komeetrakett purustava lööklaine ja +50% boonusega.',
+        speed: 140,
         color: 0xff6b81,
         trailColor: 0x2ed573,
         price: 1200,
         scoreMultiplier: 1.5,
-        blastRadius: 7.5
+        blastRadius: 14.0
     },
     {
         id: 'quantum_starfire',
         name: 'Quantum Starfire',
         icon: '🌟',
-        desc: 'Kuldne supernoova rakett hüperkiirusega ja 2.0x topeltpunktidega!',
-        speed: 165,
+        desc: 'Ülim supernoova rakett, mis pühib terved hooned ja annab 2.0x topeltpunktid!',
+        speed: 175,
         color: 0xffd32a,
         trailColor: 0xff9f1a,
         price: 2500,
         scoreMultiplier: 2.0,
-        blastRadius: 9.0
+        blastRadius: 18.0
     }
 ];
 
-// Target Definition
-interface ArenaTarget {
+// Destructible Building Interface
+interface DestructibleBuilding {
     id: string;
+    name: string;
+    group: THREE.Group;
     mesh: THREE.Object3D;
-    type: 'bullseye' | 'drone' | 'balloon';
+    type: 'building';
     basePoints: number;
     position: THREE.Vector3;
+    size: { w: number; h: number; d: number };
+    color: number;
     active: boolean;
     respawnTimer: number;
-    patrolAxis?: 'x' | 'z' | 'y';
-    patrolRange?: number;
-    patrolSpeed?: number;
-    initialPos?: THREE.Vector3;
+    hp: number;
+    maxHp: number;
+    rubbleMesh?: THREE.Mesh;
 }
 
-// Active in-flight projectile targeting a ground ring position
+// Active Flying Debris Piece (Flying building chunks)
+interface FlyingDebris {
+    mesh: THREE.Mesh;
+    velocity: THREE.Vector3;
+    rotAxis: THREE.Vector3;
+    rotSpeed: number;
+    isGrounded: boolean;
+    age: number;
+    maxAge: number;
+}
+
+// Active In-Flight Rocket
 interface InFlightRocket {
     mesh: THREE.Object3D;
     velocity: THREE.Vector3;
@@ -254,11 +315,12 @@ export class RocketGame {
     private raycaster = new THREE.Raycaster();
     private mouseCoords = new THREE.Vector2(0, 0);
 
-    // Colliders, Targets & Projectiles
-    private colliders: THREE.Box3[] = [];
-    public targets: ArenaTarget[] = [];
+    // Destructible Buildings, Debris & Rockets
+    public targets: DestructibleBuilding[] = [];
+    private activeDebris: FlyingDebris[] = [];
     public activeRockets: InFlightRocket[] = [];
     private particlePuffGroup: THREE.Group;
+    private debrisGroup: THREE.Group;
 
     // Scoring, Upgrades & Round
     public currentScore = 0;
@@ -273,19 +335,19 @@ export class RocketGame {
     public equippedRocket: RocketType = ROCKET_CATALOG[0];
     private unlockedRockets: Set<string> = new Set(['red_dart']);
 
-    // Screen Shake
-    private shakeIntensity = 0;
+    // Screen Shake Trauma
+    private trauma = 0;
 
     constructor() {
         this.audio = new RocketAudio();
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0a0f1c);
-        this.scene.fog = new THREE.FogExp2(0x0a0f1c, 0.005);
+        this.scene.background = new THREE.Color(0x0c111e);
+        this.scene.fog = new THREE.FogExp2(0x0c111e, 0.004);
 
-        // High Aerial Camera (Top-down arcade tactical perspective)
-        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-        this.camera.position.set(0, 68, 52);
-        this.camera.lookAt(0, 0, -4);
+        // Aerial Camera Surveying the City / Arena
+        this.camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 1, 1200);
+        this.camera.position.set(0, 75, 55);
+        this.camera.lookAt(0, 0, -5);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -300,25 +362,26 @@ export class RocketGame {
 
         this.targetRing = new THREE.Group();
         this.particlePuffGroup = new THREE.Group();
+        this.debrisGroup = new THREE.Group();
         this.scene.add(this.particlePuffGroup);
+        this.scene.add(this.debrisGroup);
 
-        // Targeting Ring materials
         this.ringMaterial = new THREE.MeshBasicMaterial({
             color: this.equippedRocket.color,
             transparent: true,
-            opacity: 0.85,
+            opacity: 0.9,
             side: THREE.DoubleSide
         });
 
-        const beaconMat = new THREE.MeshBasicMaterial({
+        const beamGeo = new THREE.CylinderGeometry(0.3, 3.0, 55, 16, 1, true);
+        const beamMat = new THREE.MeshBasicMaterial({
             color: this.equippedRocket.color,
             transparent: true,
-            opacity: 0.15,
+            opacity: 0.18,
             side: THREE.DoubleSide
         });
-        const beamGeo = new THREE.CylinderGeometry(0.3, 2.5, 45, 16, 1, true);
-        this.beaconBeam = new THREE.Mesh(beamGeo, beaconMat);
-        this.beaconBeam.position.y = 22.5;
+        this.beaconBeam = new THREE.Mesh(beamGeo, beamMat);
+        this.beaconBeam.position.y = 27.5;
 
         this.isMobileDevice = isMobileOrTabletDevice();
     }
@@ -338,11 +401,11 @@ export class RocketGame {
         // Load saved state
         this.loadProgress();
 
-        // 2. Setup Lighting & Arena Environment
+        // 2. Setup Lighting, Ground & Destructible Buildings
         this.setupLighting();
-        this.buildArena();
+        this.buildCityGround();
         this.createTargetRing();
-        this.setupTargets();
+        this.setupDestructibleBuildings();
 
         // 3. Setup Controls
         this.setupKeyboardControls();
@@ -365,7 +428,7 @@ export class RocketGame {
         yardService.recordPlayedGame({
             id: 'rocket',
             title: '🚀 Rocket Playard',
-            description: 'Vaade õhust ja ring, kuhu raketti saab lasta! 3D arkaad sihtmärkide tabamismäng.',
+            description: 'Vaade õhust: purusta raketiga maju, naudi realistlikke plahvatusi ja lendavaid hoonetükke!',
             url: './games/rocket/index.html',
             icon: '🚀',
             badgeText: '👑 OWNER EXCLUSIVE'
@@ -375,39 +438,38 @@ export class RocketGame {
     }
 
     private setupLighting() {
-        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.75);
         this.scene.add(ambient);
 
-        const dirLight = new THREE.DirectionalLight(0xfff0e6, 1.3);
-        dirLight.position.set(50, 120, 60);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
-        dirLight.shadow.camera.near = 10;
-        dirLight.shadow.camera.far = 300;
-        dirLight.shadow.camera.left = -120;
-        dirLight.shadow.camera.right = 120;
-        dirLight.shadow.camera.top = 120;
-        dirLight.shadow.camera.bottom = -120;
-        this.scene.add(dirLight);
+        const sunLight = new THREE.DirectionalLight(0xfff3e0, 1.4);
+        sunLight.position.set(60, 140, 70);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 10;
+        sunLight.shadow.camera.far = 350;
+        sunLight.shadow.camera.left = -140;
+        sunLight.shadow.camera.right = 140;
+        sunLight.shadow.camera.top = 140;
+        sunLight.shadow.camera.bottom = -140;
+        this.scene.add(sunLight);
 
-        // Neon ambient accent lights
-        const accentCyan = new THREE.PointLight(0x00f2fe, 3.0, 120);
-        accentCyan.position.set(-35, 30, -25);
-        this.scene.add(accentCyan);
+        // Vibrant neon city lights
+        const point1 = new THREE.PointLight(0x00f2fe, 3.5, 130);
+        point1.position.set(-45, 35, -30);
+        this.scene.add(point1);
 
-        const accentPink = new THREE.PointLight(0xff2e63, 3.0, 120);
-        accentPink.position.set(35, 30, 25);
-        this.scene.add(accentPink);
+        const point2 = new THREE.PointLight(0xff4757, 3.5, 130);
+        point2.position.set(45, 35, 30);
+        this.scene.add(point2);
     }
 
-    private buildArena() {
-        // Large Open Arena with Colorful Grid
-        const groundSize = 280;
+    private buildCityGround() {
+        const groundSize = 320;
         const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize);
         const groundMat = new THREE.MeshStandardMaterial({
-            color: 0x111625,
-            roughness: 0.85,
+            color: 0x131929,
+            roughness: 0.8,
             metalness: 0.2
         });
         const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -416,13 +478,13 @@ export class RocketGame {
         this.scene.add(ground);
         this.groundPlaneMesh = ground;
 
-        // Grid helper on floor for clean aerial top-down visibility
-        const gridHelper = new THREE.GridHelper(groundSize, 56, 0x00f2fe, 0x1e293b);
+        // City streets & neon grid pattern
+        const gridHelper = new THREE.GridHelper(groundSize, 64, 0x00f2fe, 0x1c2438);
         gridHelper.position.y = 0.05;
         this.scene.add(gridHelper);
 
-        // Arena boundary walls
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x161d31, roughness: 0.6 });
+        // Boundary walls
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x161d31, roughness: 0.5 });
         const wallHeight = 16;
         const half = groundSize / 2;
 
@@ -432,253 +494,137 @@ export class RocketGame {
             m.position.set(x, wallHeight / 2, z);
             m.receiveShadow = true;
             this.scene.add(m);
-            this.colliders.push(new THREE.Box3().setFromObject(m));
         };
         makeWall(groundSize, 4, 0, -half);
         makeWall(groundSize, 4, 0, half);
         makeWall(4, groundSize, -half, 0);
         makeWall(4, groundSize, half, 0);
-
-        // Buildings, Platforms, Bridges, Tunnels
-        const bMat1 = new THREE.MeshStandardMaterial({ color: 0x1e2746, roughness: 0.6 });
-        const bMat2 = new THREE.MeshStandardMaterial({ color: 0x27193b, roughness: 0.6 });
-        const neonTrim = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
-        const yellowTrim = new THREE.MeshBasicMaterial({ color: 0xffd32a });
-
-        const createBuilding = (x: number, z: number, w: number, h: number, d: number, mat: THREE.Material) => {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-            mesh.position.set(x, h / 2, z);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            this.scene.add(mesh);
-            this.colliders.push(new THREE.Box3().setFromObject(mesh));
-
-            // Neon roof trim
-            const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, 0.5, d + 0.4), neonTrim);
-            roof.position.set(x, h + 0.25, z);
-            this.scene.add(roof);
-
-            return mesh;
-        };
-
-        // Arena structures
-        createBuilding(-45, -45, 22, 18, 22, bMat1);
-        createBuilding(-20, -55, 16, 12, 16, bMat2);
-        createBuilding(45, 40, 24, 16, 24, bMat1);
-        createBuilding(55, 10, 16, 10, 18, bMat2);
-        createBuilding(0, 0, 22, 8, 22, bMat1);
-
-        // Bridges connecting roofs
-        const bridgeGeo = new THREE.BoxGeometry(8, 1, 40);
-        const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5 });
-        const bridge1 = new THREE.Mesh(bridgeGeo, bridgeMat);
-        bridge1.position.set(-22, 10, -22);
-        bridge1.rotation.y = Math.PI / 4;
-        bridge1.castShadow = true;
-        bridge1.receiveShadow = true;
-        this.scene.add(bridge1);
-        this.colliders.push(new THREE.Box3().setFromObject(bridge1));
-
-        // Floating Platforms
-        const platGeo = new THREE.BoxGeometry(12, 1.2, 12);
-        const platMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
-        const makePlatform = (x: number, y: number, z: number) => {
-            const p = new THREE.Mesh(platGeo, platMat);
-            p.position.set(x, y, z);
-            p.castShadow = true;
-            p.receiveShadow = true;
-            this.scene.add(p);
-            this.colliders.push(new THREE.Box3().setFromObject(p));
-
-            const trim = new THREE.Mesh(new THREE.BoxGeometry(12.2, 0.3, 12.2), yellowTrim);
-            trim.position.set(x, y + 0.65, z);
-            this.scene.add(trim);
-        };
-
-        makePlatform(25, 6, -20);
-        makePlatform(38, 11, -35);
-        makePlatform(-20, 6, 30);
-        makePlatform(-40, 10, 42);
-
-        // Archway Tunnel
-        const archRoof = new THREE.Mesh(new THREE.BoxGeometry(22, 2, 28), bMat2);
-        archRoof.position.set(0, 9, 45);
-        this.scene.add(archRoof);
-        this.colliders.push(new THREE.Box3().setFromObject(archRoof));
     }
 
     private createTargetRing() {
-        // The Targeting Ring on the ground where the rocket will hit
-        // Outer Ring
-        const outerRingGeo = new THREE.RingGeometry(3.6, 4.2, 48);
+        // Outer Target Ring
+        const outerRingGeo = new THREE.RingGeometry(4.2, 4.8, 48);
         const outerRing = new THREE.Mesh(outerRingGeo, this.ringMaterial);
         outerRing.rotation.x = -Math.PI / 2;
         this.targetRing.add(outerRing);
 
-        // Middle dashed ring
-        const midRingGeo = new THREE.RingGeometry(2.0, 2.3, 36);
+        // Mid Ring
+        const midRingGeo = new THREE.RingGeometry(2.3, 2.7, 36);
         const midRing = new THREE.Mesh(midRingGeo, this.ringMaterial);
         midRing.rotation.x = -Math.PI / 2;
         this.targetRing.add(midRing);
 
-        // Center Bullseye Dot
-        const centerDotGeo = new THREE.CircleGeometry(0.7, 24);
+        // Bullseye Center
+        const centerDotGeo = new THREE.CircleGeometry(0.8, 24);
         const centerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
         const centerDot = new THREE.Mesh(centerDotGeo, centerMat);
         centerDot.rotation.x = -Math.PI / 2;
         this.targetRing.add(centerDot);
 
-        // 4 Reticle Ticks (North, South, East, West)
-        const tickGeo = new THREE.PlaneGeometry(0.3, 2.0);
+        // 4 Target Crosshair Ticks
+        const tickGeo = new THREE.PlaneGeometry(0.35, 2.2);
         const makeTick = (x: number, z: number, rotY: number) => {
             const tick = new THREE.Mesh(tickGeo, this.ringMaterial);
             tick.rotation.x = -Math.PI / 2;
             tick.rotation.z = rotY;
-            tick.position.set(x, 0.01, z);
+            tick.position.set(x, 0.02, z);
             this.targetRing.add(tick);
         };
-        makeTick(0, -4.8, 0);
-        makeTick(0, 4.8, 0);
-        makeTick(-4.8, 0, Math.PI / 2);
-        makeTick(4.8, 0, Math.PI / 2);
+        makeTick(0, -5.5, 0);
+        makeTick(0, 5.5, 0);
+        makeTick(-5.5, 0, Math.PI / 2);
+        makeTick(5.5, 0, Math.PI / 2);
 
-        // Vertical glowing target beam
+        // Vertical laser light beam
         this.targetRing.add(this.beaconBeam);
-
         this.targetRing.position.copy(this.ringPosition);
         this.scene.add(this.targetRing);
     }
 
-    private setupTargets() {
-        // 1. Concentric Bullseye Targets on Surfaces
-        const makeBullseyeTarget = (id: string, pos: THREE.Vector3, rotX: number, rotY: number) => {
+    private setupDestructibleBuildings() {
+        // Define varied destructible city buildings
+        const buildingConfigs = [
+            { id: 'b_central_tower', name: '🏢 Sky Office Tower', pos: new THREE.Vector3(0, 0, 0), w: 22, h: 28, d: 22, color: 0x1e2a4a, roofColor: 0x00f2fe, pts: 600, hp: 1 },
+            { id: 'b_north_corp', name: '🏙️ North Corporate HQ', pos: new THREE.Vector3(-45, 0, -45), w: 20, h: 24, d: 20, color: 0x241d38, roofColor: 0xff4757, pts: 500, hp: 1 },
+            { id: 'b_east_complex', name: '🏬 Commercial Center', pos: new THREE.Vector3(50, 0, -35), w: 24, h: 18, d: 22, color: 0x1a2e3b, roofColor: 0xffd32a, pts: 450, hp: 1 },
+            { id: 'b_south_hotel', name: '🏨 Grand Hotel Plaza', pos: new THREE.Vector3(45, 0, 45), w: 22, h: 22, d: 24, color: 0x2e1b27, roofColor: 0x2ed573, pts: 500, hp: 1 },
+            { id: 'b_west_factory', name: '🏭 Industrial Powerplant', pos: new THREE.Vector3(-50, 0, 35), w: 26, h: 15, d: 24, color: 0x2b261b, roofColor: 0xff9f1a, pts: 400, hp: 1 },
+            { id: 'b_suburb_villa_1', name: '🏡 Urban Villa Alpha', pos: new THREE.Vector3(-25, 0, 60), w: 16, h: 12, d: 16, color: 0x1d2938, roofColor: 0x00f2fe, pts: 350, hp: 1 },
+            { id: 'b_suburb_villa_2', name: '🏘️ City Apartments', pos: new THREE.Vector3(25, 0, 60), w: 18, h: 14, d: 16, color: 0x301c2c, roofColor: 0xff4757, pts: 350, hp: 1 },
+            { id: 'b_warehouse_north', name: '📦 Logistics Terminal', pos: new THREE.Vector3(15, 0, -65), w: 24, h: 12, d: 18, color: 0x192d35, roofColor: 0xffd32a, pts: 350, hp: 1 },
+            { id: 'b_bank_tower', name: '🏦 National Vault Tower', pos: new THREE.Vector3(-25, 0, -25), w: 18, h: 20, d: 18, color: 0x251c33, roofColor: 0x9b59b6, pts: 450, hp: 1 },
+            { id: 'b_tech_lab', name: '🔬 Quantum Tech Lab', pos: new THREE.Vector3(25, 0, -10), w: 18, h: 16, d: 20, color: 0x152c38, roofColor: 0x00f2fe, pts: 400, hp: 1 }
+        ];
+
+        buildingConfigs.forEach(cfg => {
             const group = new THREE.Group();
-            group.position.copy(pos);
-            group.rotation.x = rotX;
-            group.rotation.y = rotY;
+            group.position.set(cfg.pos.x, 0, cfg.pos.z);
 
-            // Outer ring
-            const outer = new THREE.Mesh(
-                new THREE.CylinderGeometry(3.5, 3.5, 0.3, 32),
-                new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 })
-            );
-            group.add(outer);
+            // Detailed Building Structure with Windows and Neon Accents
+            const bodyGeo = new THREE.BoxGeometry(cfg.w, cfg.h, cfg.d);
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: cfg.color,
+                roughness: 0.65,
+                metalness: 0.35
+            });
+            const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+            bodyMesh.position.y = cfg.h / 2;
+            bodyMesh.castShadow = true;
+            bodyMesh.receiveShadow = true;
+            group.add(bodyMesh);
 
-            // Mid ring
-            const mid = new THREE.Mesh(
-                new THREE.CylinderGeometry(2.3, 2.3, 0.35, 32),
-                new THREE.MeshStandardMaterial({ color: 0xff4757, roughness: 0.3 })
-            );
-            group.add(mid);
+            // Glowing Window Rows
+            const windowCols = Math.floor(cfg.w / 4);
+            const windowRows = Math.floor(cfg.h / 4);
+            const winMat = new THREE.MeshBasicMaterial({ color: 0xfffae0 });
 
-            // Center Bullseye
-            const center = new THREE.Mesh(
-                new THREE.CylinderGeometry(1.0, 1.0, 0.4, 32),
-                new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xffa502, emissiveIntensity: 0.7 })
-            );
-            group.add(center);
+            for (let r = 1; r < windowRows; r++) {
+                for (let c = 0; c < windowCols; c++) {
+                    const winMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.8), winMat);
+                    const wx = -cfg.w / 2 + 2.5 + c * 4;
+                    const wy = r * 4;
+                    winMesh.position.set(wx, wy, cfg.d / 2 + 0.05);
+                    group.add(winMesh);
+
+                    const winBack = winMesh.clone();
+                    winBack.position.set(wx, wy, -cfg.d / 2 - 0.05);
+                    winBack.rotation.y = Math.PI;
+                    group.add(winBack);
+                }
+            }
+
+            // Glowing Rooftop Trim
+            const roofGeo = new THREE.BoxGeometry(cfg.w + 0.5, 0.8, cfg.d + 0.5);
+            const roofMat = new THREE.MeshBasicMaterial({ color: cfg.roofColor });
+            const roofMesh = new THREE.Mesh(roofGeo, roofMat);
+            roofMesh.position.y = cfg.h + 0.4;
+            group.add(roofMesh);
+
+            // Roof Antenna / HVAC
+            const antennaGeo = new THREE.CylinderGeometry(0.2, 0.4, 6, 8);
+            const antennaMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
+            const antenna = new THREE.Mesh(antennaGeo, antennaMat);
+            antenna.position.set(0, cfg.h + 3.4, 0);
+            group.add(antenna);
 
             this.scene.add(group);
+
             this.targets.push({
-                id,
-                mesh: group,
-                type: 'bullseye',
-                basePoints: 250,
-                position: pos.clone(),
-                active: true,
-                respawnTimer: 0
-            });
-        };
-
-        // Flat ground and rooftop targets for aerial view
-        makeBullseyeTarget('target_roof_nw', new THREE.Vector3(-45, 18.2, -45), 0, 0);
-        makeBullseyeTarget('target_roof_se', new THREE.Vector3(45, 16.2, 40), 0, 0);
-        makeBullseyeTarget('target_roof_mid', new THREE.Vector3(0, 8.2, 0), 0, 0);
-        makeBullseyeTarget('target_ground_east', new THREE.Vector3(50, 0.2, -25), 0, 0);
-        makeBullseyeTarget('target_ground_west', new THREE.Vector3(-55, 0.2, 20), 0, 0);
-        makeBullseyeTarget('target_ground_north', new THREE.Vector3(15, 0.2, -60), 0, 0);
-
-        // 2. Moving Drone Patrol Targets
-        const makeDroneTarget = (id: string, startPos: THREE.Vector3, axis: 'x' | 'z', range: number, speed: number) => {
-            const drone = new THREE.Group();
-            drone.position.copy(startPos);
-
-            const core = new THREE.Mesh(
-                new THREE.SphereGeometry(1.5, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0x9b59b6, emissive: 0x8e44ad, emissiveIntensity: 0.6 })
-            );
-            drone.add(core);
-
-            const arm1 = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.2, 0.5), new THREE.MeshStandardMaterial({ color: 0x34495e }));
-            const arm2 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 4.4), new THREE.MeshStandardMaterial({ color: 0x34495e }));
-            drone.add(arm1);
-            drone.add(arm2);
-
-            const rotor1 = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.1, 16), new THREE.MeshBasicMaterial({ color: 0x00f2fe }));
-            rotor1.position.set(2.2, 0.3, 0);
-            drone.add(rotor1);
-
-            const rotor2 = rotor1.clone();
-            rotor2.position.set(-2.2, 0.3, 0);
-            drone.add(rotor2);
-
-            this.scene.add(drone);
-            this.targets.push({
-                id,
-                mesh: drone,
-                type: 'drone',
-                basePoints: 300,
-                position: startPos.clone(),
+                id: cfg.id,
+                name: cfg.name,
+                group,
+                mesh: bodyMesh,
+                type: 'building',
+                basePoints: cfg.pts,
+                position: cfg.pos.clone().setY(cfg.h / 2),
+                size: { w: cfg.w, h: cfg.h, d: cfg.d },
+                color: cfg.color,
                 active: true,
                 respawnTimer: 0,
-                patrolAxis: axis,
-                patrolRange: range,
-                patrolSpeed: speed,
-                initialPos: startPos.clone()
+                hp: cfg.hp,
+                maxHp: cfg.hp
             });
-        };
-
-        makeDroneTarget('drone_patrol_1', new THREE.Vector3(-25, 12, 0), 'x', 35, 1.8);
-        makeDroneTarget('drone_patrol_2', new THREE.Vector3(25, 15, -20), 'z', 45, 2.2);
-        makeDroneTarget('drone_patrol_3', new THREE.Vector3(-45, 16, 35), 'z', 30, 1.6);
-
-        // 3. Floating Bonus Star / Balloon Targets
-        const makeStarBalloon = (id: string, pos: THREE.Vector3) => {
-            const group = new THREE.Group();
-            group.position.copy(pos);
-
-            const star = new THREE.Mesh(
-                new THREE.IcosahedronGeometry(2.2, 1),
-                new THREE.MeshStandardMaterial({ color: 0xffd32a, emissive: 0xff9f1a, emissiveIntensity: 0.8, roughness: 0.2 })
-            );
-            group.add(star);
-
-            const halo = new THREE.Mesh(
-                new THREE.TorusGeometry(3.2, 0.18, 12, 32),
-                new THREE.MeshBasicMaterial({ color: 0x00f2fe })
-            );
-            halo.rotation.x = Math.PI / 2;
-            group.add(halo);
-
-            this.scene.add(group);
-            this.targets.push({
-                id,
-                mesh: group,
-                type: 'balloon',
-                basePoints: 500,
-                position: pos.clone(),
-                active: true,
-                respawnTimer: 0,
-                patrolAxis: 'y',
-                patrolRange: 3.5,
-                patrolSpeed: 1.4,
-                initialPos: pos.clone()
-            });
-        };
-
-        makeStarBalloon('star_balloon_center', new THREE.Vector3(0, 16, -15));
-        makeStarBalloon('star_balloon_nw', new THREE.Vector3(-45, 22, -25));
-        makeStarBalloon('star_balloon_se', new THREE.Vector3(40, 20, 20));
+        });
     }
 
     private setupKeyboardControls() {
@@ -705,7 +651,7 @@ export class RocketGame {
     private setupMouseAiming() {
         const viewport = document.getElementById('game-viewport-wrapper') || document.body;
 
-        // PC Mouse Move -> Raycast to position the Targeting Ring on the 3D arena surface
+        // PC Mouse Move -> Raycast to position the Targeting Ring on the city surface
         window.addEventListener('mousemove', (e: MouseEvent) => {
             if (this.isMobileDevice) return;
 
@@ -717,8 +663,8 @@ export class RocketGame {
                 const intersects = this.raycaster.intersectObjects([this.groundPlaneMesh, ...this.scene.children], true);
                 for (const hit of intersects) {
                     if (hit.object !== this.beaconBeam && hit.point) {
-                        this.ringPosition.x = Math.max(-130, Math.min(130, hit.point.x));
-                        this.ringPosition.z = Math.max(-130, Math.min(130, hit.point.z));
+                        this.ringPosition.x = Math.max(-135, Math.min(135, hit.point.x));
+                        this.ringPosition.z = Math.max(-135, Math.min(135, hit.point.z));
                         this.ringPosition.y = Math.max(0.2, hit.point.y + 0.1);
                         break;
                     }
@@ -736,7 +682,6 @@ export class RocketGame {
     }
 
     private setupButtons() {
-        // Desktop FIRE Button
         const fireBtn = document.getElementById('btn-fire');
         if (fireBtn) {
             fireBtn.addEventListener('click', (e) => {
@@ -746,7 +691,6 @@ export class RocketGame {
             });
         }
 
-        // Shop Buttons
         const openShopBtn = document.getElementById('btn-open-shop');
         if (openShopBtn) openShopBtn.addEventListener('click', () => this.toggleShop(true));
 
@@ -769,7 +713,6 @@ export class RocketGame {
             });
         }
 
-        // Sound toggle
         const soundBtn = document.getElementById('btn-toggle-sound');
         if (soundBtn) {
             soundBtn.addEventListener('click', () => {
@@ -778,7 +721,6 @@ export class RocketGame {
             });
         }
 
-        // Hide PC controls bar on mobile
         const pcBar = document.getElementById('pc-controls-bar');
         if (this.isMobileDevice && pcBar) {
             pcBar.style.display = 'none';
@@ -786,11 +728,6 @@ export class RocketGame {
     }
 
     private setupMobileControls() {
-        // Mobile / Tablet:
-        // Left: 1 movable joystick (moves the targeting ring across the arena)
-        // Right: FIRE button (fires rocket at the ring)
-        // Right: JUMP button (quick boost/centering)
-        // PC: mobile buttons are NOT displayed!
         const existingLayer = document.getElementById('playard-universal-mobile-controls');
         if (existingLayer) existingLayer.remove();
 
@@ -848,7 +785,7 @@ export class RocketGame {
         actionZone.style.alignItems = 'center';
         actionZone.style.pointerEvents = 'auto';
 
-        // JUMP / BOOST button
+        // JUMP button
         const jumpBtn = document.createElement('button');
         jumpBtn.type = 'button';
         jumpBtn.id = 'playard-mobile-jump-btn';
@@ -869,7 +806,6 @@ export class RocketGame {
 
         jumpBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            // Quick ring boost towards center
             this.ringPosition.set(0, 0.2, 0);
             this.showImpactToast('CENTER LOCK! 🎯');
         }, { passive: false });
@@ -974,52 +910,49 @@ export class RocketGame {
         this.shotsFired++;
         this.audio.playWhoosh();
 
-        // Rocket launches from high overhead towards the Targeting Ring
+        // Launch rocket from high sky towards targeting ring position
         const targetPoint = this.ringPosition.clone();
         const startPoint = new THREE.Vector3(
-            targetPoint.x - 12 + (Math.random() - 0.5) * 8,
-            targetPoint.y + 75,
-            targetPoint.z + 30 + (Math.random() - 0.5) * 8
+            targetPoint.x - 14 + (Math.random() - 0.5) * 8,
+            targetPoint.y + 80,
+            targetPoint.z + 32 + (Math.random() - 0.5) * 8
         );
 
         const toTarget = targetPoint.clone().sub(startPoint);
         const dir = toTarget.clone().normalize();
 
-        // Stylized Arcade Rocket 3D Model
         const rocketGroup = new THREE.Group();
         rocketGroup.position.copy(startPoint);
 
-        const bodyGeo = new THREE.CylinderGeometry(0.25, 0.35, 2.0, 16);
+        const bodyGeo = new THREE.CylinderGeometry(0.28, 0.42, 2.4, 16);
         const bodyMat = new THREE.MeshStandardMaterial({
             color: this.equippedRocket.color,
-            metalness: 0.6,
+            metalness: 0.7,
             roughness: 0.3
         });
         const body = new THREE.Mesh(bodyGeo, bodyMat);
         body.rotation.x = Math.PI / 2;
         rocketGroup.add(body);
 
-        const noseGeo = new THREE.ConeGeometry(0.3, 0.8, 16);
+        const noseGeo = new THREE.ConeGeometry(0.35, 1.0, 16);
         const noseMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
         const nose = new THREE.Mesh(noseGeo, noseMat);
-        nose.position.z = 1.3;
+        nose.position.z = 1.5;
         nose.rotation.x = Math.PI / 2;
         rocketGroup.add(nose);
 
-        // Glowing Fins
-        const finGeo = new THREE.BoxGeometry(1.2, 0.06, 0.6);
+        const finGeo = new THREE.BoxGeometry(1.4, 0.08, 0.7);
         const finMat = new THREE.MeshBasicMaterial({ color: this.equippedRocket.trailColor });
         const fin1 = new THREE.Mesh(finGeo, finMat);
-        fin1.position.z = -0.6;
+        fin1.position.z = -0.7;
         rocketGroup.add(fin1);
 
         const fin2 = fin1.clone();
         fin2.rotation.z = Math.PI / 2;
         rocketGroup.add(fin2);
 
-        // Thruster glow
-        const thrusterLight = new THREE.PointLight(this.equippedRocket.trailColor, 3.5, 15);
-        thrusterLight.position.z = -1.2;
+        const thrusterLight = new THREE.PointLight(this.equippedRocket.trailColor, 4.0, 18);
+        thrusterLight.position.z = -1.4;
         rocketGroup.add(thrusterLight);
 
         rocketGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
@@ -1033,132 +966,279 @@ export class RocketGame {
             spawnTime: performance.now()
         });
 
-        // Slight screen vibration on firing
-        this.shakeIntensity = Math.max(this.shakeIntensity, 0.1);
-
+        this.trauma = Math.max(this.trauma, 0.15);
         return true;
     }
 
-    public triggerExplosion(impactPos: THREE.Vector3, rocketType: RocketType, hitTarget?: ArenaTarget, hitDistFromCenter: number = 0) {
-        this.audio.playBoom();
+    // ULTRA ULTRA ULTRA REALISTIC EXPLOSION & DEBRIS SYSTEM
+    public triggerExplosion(impactPos: THREE.Vector3, rocketType: RocketType, hitTarget?: DestructibleBuilding, hitDistFromCenter: number = 0) {
+        this.audio.playUltraRealisticBoom();
 
-        // 1. Expanding Cartoon Blast Sphere
-        const blastGeo = new THREE.SphereGeometry(1.0, 16, 16);
-        const blastMat = new THREE.MeshBasicMaterial({
-            color: rocketType.color,
+        // 1. Blinding Incandescent Flash Point Light
+        const flashLight = new THREE.PointLight(0xfffae0, 14.0, 90);
+        flashLight.position.copy(impactPos).add(new THREE.Vector3(0, 3, 0));
+        this.scene.add(flashLight);
+
+        // 2. Multi-Stage Billowing Fireball (Expanding Core & Pyroclastic Fire Clouds)
+        const fireballCount = 10;
+        const fireballSpheres: { mesh: THREE.Mesh; vel: THREE.Vector3; initialScale: number }[] = [];
+        const fireballGroup = new THREE.Group();
+
+        for (let i = 0; i < fireballCount; i++) {
+            const size = 1.2 + Math.random() * 1.5;
+            const geo = new THREE.SphereGeometry(size, 16, 16);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.98
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            const offset = new THREE.Vector3(
+                (Math.random() - 0.5) * 3.5,
+                Math.random() * 2.5,
+                (Math.random() - 0.5) * 3.5
+            );
+            mesh.position.copy(impactPos).add(offset);
+            fireballGroup.add(mesh);
+
+            fireballSpheres.push({
+                mesh,
+                vel: new THREE.Vector3(
+                    (Math.random() - 0.5) * 7.0,
+                    4.0 + Math.random() * 10.0, // Rising heat convection
+                    (Math.random() - 0.5) * 7.0
+                ),
+                initialScale: size
+            });
+        }
+        this.scene.add(fireballGroup);
+
+        // 3. Ground Shockwave Ring
+        const shockRingGeo = new THREE.RingGeometry(1.0, 2.5, 48);
+        const shockRingMat = new THREE.MeshBasicMaterial({
+            color: 0xffe6a3,
             transparent: true,
-            opacity: 0.95
+            opacity: 0.85,
+            side: THREE.DoubleSide
         });
-        const blastMesh = new THREE.Mesh(blastGeo, blastMat);
-        blastMesh.position.copy(impactPos);
-        this.scene.add(blastMesh);
+        const shockRing = new THREE.Mesh(shockRingGeo, shockRingMat);
+        shockRing.rotation.x = -Math.PI / 2;
+        shockRing.position.copy(impactPos).setY(0.15);
+        this.scene.add(shockRing);
 
-        // 2. Flying Spark Burst Particles
-        const particleCount = 32;
-        const particleGeo = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        const velocities: THREE.Vector3[] = [];
+        // 4. Molten Flying Spark Shower
+        const sparkCount = 70;
+        const sparkGeo = new THREE.BufferGeometry();
+        const sparkPos = new Float32Array(sparkCount * 3);
+        const sparkVels: THREE.Vector3[] = [];
 
-        for (let i = 0; i < particleCount; i++) {
-            positions[i * 3] = impactPos.x;
-            positions[i * 3 + 1] = impactPos.y;
-            positions[i * 3 + 2] = impactPos.z;
+        for (let i = 0; i < sparkCount; i++) {
+            sparkPos[i * 3] = impactPos.x;
+            sparkPos[i * 3 + 1] = impactPos.y + 1;
+            sparkPos[i * 3 + 2] = impactPos.z;
 
             const theta = Math.random() * Math.PI * 2;
-            const phi = Math.random() * Math.PI;
-            const speed = 14 + Math.random() * 24;
-            velocities.push(new THREE.Vector3(
+            const phi = Math.random() * Math.PI * 0.45; // Upward hemisphere
+            const speed = 20 + Math.random() * 32;
+            sparkVels.push(new THREE.Vector3(
                 Math.sin(phi) * Math.cos(theta) * speed,
-                Math.cos(phi) * speed,
+                Math.cos(phi) * speed + 8,
                 Math.sin(phi) * Math.sin(theta) * speed
             ));
         }
-
-        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const pMat = new THREE.PointsMaterial({
-            color: rocketType.trailColor,
-            size: 0.8,
+        sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+        const sparkMat = new THREE.PointsMaterial({
+            color: 0xffa502,
+            size: 1.2,
             transparent: true,
             opacity: 1.0
         });
-        const pSystem = new THREE.Points(particleGeo, pMat);
-        this.scene.add(pSystem);
+        const sparkSystem = new THREE.Points(sparkGeo, sparkMat);
+        this.scene.add(sparkSystem);
 
-        let elapsed = 0;
-        const blastAnimInterval = setInterval(() => {
-            elapsed += 0.03;
-            const scale = 1.0 + elapsed * (rocketType.blastRadius * 2.4);
-            blastMesh.scale.set(scale, scale, scale);
-            blastMat.opacity = Math.max(0, 0.95 - elapsed * 2.2);
+        // Animate Fireball, Shockwave, and Sparks
+        let animElapsed = 0;
+        const explosionAnim = setInterval(() => {
+            animElapsed += 0.03;
+            flashLight.intensity = Math.max(0, 14.0 * (1.0 - animElapsed * 4.0));
 
-            const posArr = particleGeo.attributes.position.array as Float32Array;
-            for (let i = 0; i < particleCount; i++) {
-                posArr[i * 3] += velocities[i].x * 0.03;
-                posArr[i * 3 + 1] += velocities[i].y * 0.03;
-                posArr[i * 3 + 2] += velocities[i].z * 0.03;
-                velocities[i].y -= 9.8 * 0.03;
+            // Shockwave expansion
+            const ringScale = 1.0 + animElapsed * (rocketType.blastRadius * 2.8);
+            shockRing.scale.set(ringScale, ringScale, 1);
+            shockRingMat.opacity = Math.max(0, 0.85 - animElapsed * 2.2);
+
+            // Fireball evolution (White -> Fiery Orange -> Smokey Crimson -> Charcoal Smoke)
+            fireballSpheres.forEach(fb => {
+                fb.mesh.position.addScaledVector(fb.vel, 0.03);
+                fb.vel.y += 0.8 * 0.03; // buoyant upward plume
+                const expansion = fb.initialScale * (1.0 + animElapsed * 4.2);
+                fb.mesh.scale.set(expansion, expansion, expansion);
+
+                const m = fb.mesh.material as THREE.MeshBasicMaterial;
+                if (animElapsed < 0.12) {
+                    m.color.setHex(0xffffff);
+                } else if (animElapsed < 0.35) {
+                    m.color.setHex(0xff6b00);
+                } else if (animElapsed < 0.7) {
+                    m.color.setHex(0x5a1b0b);
+                } else {
+                    m.color.setHex(0x1a1a20);
+                }
+                m.opacity = Math.max(0, 0.98 - animElapsed * 1.1);
+            });
+
+            // Spark physics
+            const sArr = sparkGeo.attributes.position.array as Float32Array;
+            for (let i = 0; i < sparkCount; i++) {
+                sArr[i * 3] += sparkVels[i].x * 0.03;
+                sArr[i * 3 + 1] += sparkVels[i].y * 0.03;
+                sArr[i * 3 + 2] += sparkVels[i].z * 0.03;
+                sparkVels[i].y -= 38 * 0.03; // gravity
             }
-            particleGeo.attributes.position.needsUpdate = true;
-            pMat.opacity = Math.max(0, 1.0 - elapsed * 2.0);
+            sparkGeo.attributes.position.needsUpdate = true;
+            sparkMat.opacity = Math.max(0, 1.0 - animElapsed * 1.5);
 
-            if (elapsed >= 0.45) {
-                clearInterval(blastAnimInterval);
-                this.scene.remove(blastMesh);
-                this.scene.remove(pSystem);
-                blastGeo.dispose();
-                blastMat.dispose();
-                particleGeo.dispose();
-                pMat.dispose();
+            if (animElapsed >= 0.95) {
+                clearInterval(explosionAnim);
+                this.scene.remove(flashLight);
+                this.scene.remove(fireballGroup);
+                this.scene.remove(shockRing);
+                this.scene.remove(sparkSystem);
+                flashLight.dispose();
+                shockRingGeo.dispose();
+                shockRingMat.dispose();
+                sparkGeo.dispose();
+                sparkMat.dispose();
             }
         }, 30);
 
-        // 3. Screen Shake & BOOM Toast
-        this.shakeIntensity = 0.45;
+        // 5. Heavy Camera Trauma Screen Shake
+        this.trauma = Math.min(1.0, this.trauma + 0.85);
         this.triggerViewportShake();
 
-        // 4. Hit Detection for all targets inside Blast Radius of impact
-        let targetsHitInBlast = 0;
-        for (const target of this.targets) {
-            if (!target.active) continue;
-            const dist = target.position.distanceTo(impactPos);
-            if (dist <= rocketType.blastRadius || target === hitTarget) {
-                targetsHitInBlast++;
-                this.targetsHit++;
-                this.audio.playHitChime();
+        // 6. Check Destructible Building Destruction & Spawn Flying Building Chunks!
+        let buildingsDemolished = 0;
+        for (const building of this.targets) {
+            if (!building.active) continue;
 
-                let earned = target.basePoints;
-                let label = 'BOOM! 💥';
+            const bPosGround = building.position.clone().setY(0);
+            const blastGround = impactPos.clone().setY(0);
+            const dist = bPosGround.distanceTo(blastGround);
 
-                if (dist < 1.6 || hitDistFromCenter < 1.6) {
-                    earned = Math.round(earned * 1.5);
-                    label = 'BULLSEYE! 🎯';
-                } else if (dist < 3.2) {
-                    earned = Math.round(earned * 1.0);
-                    label = 'GREAT HIT! 🎯';
-                } else {
-                    earned = Math.round(earned * 0.7);
-                    label = 'SPLASH HIT! 💥';
+            // Hit if within blast radius or targeted directly
+            if (dist <= rocketType.blastRadius + building.size.w / 2 || building === hitTarget) {
+                buildingsDemolished++;
+                building.hp--;
+
+                if (building.hp <= 0) {
+                    building.active = false;
+                    building.respawnTimer = 6.0;
+                    this.targetsHit++;
+                    this.audio.playHitChime();
+
+                    // Calculate score
+                    let earned = building.basePoints;
+                    let label = 'BUILDING DESTROYED! 💥';
+                    if (dist < 3.5 || hitDistFromCenter < 2.0) {
+                        earned = Math.round(earned * 1.5);
+                        label = 'DIRECT DEMOLITION! 🎯🏙️';
+                    }
+
+                    earned = Math.round(earned * rocketType.scoreMultiplier);
+                    this.currentScore += earned;
+                    this.totalPointsBank += earned;
+                    this.saveProgress();
+
+                    this.showImpactToast(`${label} +${earned} PTS`);
+                    this.updateHUD();
+
+                    // Hide intact building and spawn smoking rubble foundation
+                    building.group.visible = false;
+                    this.spawnBuildingRubble(building);
+
+                    // FLYING BUILDING CHUNKS / FRAGMENTS! (Maja tükid lendavad)
+                    this.spawnFlyingBuildingDebris(building, impactPos);
                 }
-
-                if (target.type === 'drone') label = 'DRONE DOWN! ⚡';
-                if (target.type === 'balloon') label = 'STAR BURST! ⭐';
-
-                earned = Math.round(earned * rocketType.scoreMultiplier);
-                this.currentScore += earned;
-                this.totalPointsBank += earned;
-                this.saveProgress();
-
-                this.showImpactToast(`${label} +${earned} PTS`);
-                this.updateHUD();
-
-                target.active = false;
-                target.mesh.visible = false;
-                target.respawnTimer = 4.0;
             }
         }
 
-        if (targetsHitInBlast === 0) {
-            this.showImpactToast('BOOM! 💥');
+        if (buildingsDemolished === 0) {
+            this.showImpactToast('ULTRA BOOM! 💥');
+        }
+    }
+
+    // Spawn 35-50 physical tumbling 3D debris fragments flying across the sky
+    private spawnFlyingBuildingDebris(building: DestructibleBuilding, blastOrigin: THREE.Vector3) {
+        const chunkCount = 42;
+        const colors = [building.color, 0x475569, 0x334155, 0x94a3b8, 0x64748b, 0x1e293b];
+
+        for (let i = 0; i < chunkCount; i++) {
+            // Random chunk dimensions (slabs, concrete pillars, bricks)
+            const cw = 0.8 + Math.random() * 2.2;
+            const ch = 0.6 + Math.random() * 1.8;
+            const cd = 0.8 + Math.random() * 2.2;
+
+            const geo = new THREE.BoxGeometry(cw, ch, cd);
+            const mat = new THREE.MeshStandardMaterial({
+                color: colors[Math.floor(Math.random() * colors.length)],
+                roughness: 0.8,
+                metalness: 0.25
+            });
+            const chunk = new THREE.Mesh(geo, mat);
+            chunk.castShadow = true;
+            chunk.receiveShadow = true;
+
+            // Spawn distributed through original building volume
+            const spawnX = building.position.x + (Math.random() - 0.5) * building.size.w;
+            const spawnY = Math.random() * building.size.h + 0.5;
+            const spawnZ = building.position.z + (Math.random() - 0.5) * building.size.d;
+            chunk.position.set(spawnX, spawnY, spawnZ);
+
+            // Explosive impulse velocity outward from blast center
+            const dirX = spawnX - blastOrigin.x;
+            const dirZ = spawnZ - blastOrigin.z;
+            const horizDist = Math.hypot(dirX, dirZ) || 1;
+
+            const speed = 12 + Math.random() * 26;
+            const vel = new THREE.Vector3(
+                (dirX / horizDist) * speed + (Math.random() - 0.5) * 8,
+                14 + Math.random() * 28, // High ballistic launch
+                (dirZ / horizDist) * speed + (Math.random() - 0.5) * 8
+            );
+
+            this.debrisGroup.add(chunk);
+
+            this.activeDebris.push({
+                mesh: chunk,
+                velocity: vel,
+                rotAxis: new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(),
+                rotSpeed: (Math.random() - 0.5) * 14,
+                isGrounded: false,
+                age: 0,
+                maxAge: 8.0 + Math.random() * 4.0
+            });
+        }
+    }
+
+    private spawnBuildingRubble(building: DestructibleBuilding) {
+        // Scorched foundation crater with smoke plume
+        const rubbleGeo = new THREE.BoxGeometry(building.size.w * 0.9, 1.2, building.size.d * 0.9);
+        const rubbleMat = new THREE.MeshStandardMaterial({ color: 0x111622, roughness: 0.95 });
+        const rubble = new THREE.Mesh(rubbleGeo, rubbleMat);
+        rubble.position.set(building.position.x, 0.6, building.position.z);
+        this.scene.add(rubble);
+        building.rubbleMesh = rubble;
+
+        // Create smoking debris puff over destroyed foundation
+        for (let p = 0; p < 6; p++) {
+            setTimeout(() => {
+                if (!building.active) {
+                    const smokePos = building.position.clone().setY(2.0);
+                    smokePos.x += (Math.random() - 0.5) * (building.size.w * 0.7);
+                    smokePos.z += (Math.random() - 0.5) * (building.size.d * 0.7);
+                    this.createSmokePuff(smokePos, 0x1e293b);
+                }
+            }, p * 300);
         }
     }
 
@@ -1182,7 +1262,7 @@ export class RocketGame {
 
         setTimeout(() => {
             toast.remove();
-        }, 1200);
+        }, 1300);
     }
 
     private startRoundTimer() {
@@ -1236,11 +1316,27 @@ export class RocketGame {
         this.targetsHit = 0;
         this.ringPosition.set(0, 0.2, 0);
 
-        this.targets.forEach(t => {
-            t.active = true;
-            t.mesh.visible = true;
-            t.respawnTimer = 0;
+        // Respawn all destructible buildings
+        this.targets.forEach(b => {
+            b.active = true;
+            b.hp = b.maxHp;
+            b.group.visible = true;
+            b.respawnTimer = 0;
+            if (b.rubbleMesh) {
+                this.scene.remove(b.rubbleMesh);
+                b.rubbleMesh.geometry.dispose();
+                (b.rubbleMesh.material as THREE.Material).dispose();
+                b.rubbleMesh = undefined;
+            }
         });
+
+        // Clear remaining debris
+        for (const deb of this.activeDebris) {
+            this.debrisGroup.remove(deb.mesh);
+            deb.mesh.geometry.dispose();
+            (deb.mesh.material as THREE.Material).dispose();
+        }
+        this.activeDebris = [];
 
         this.updateHUD();
         this.startRoundTimer();
@@ -1280,7 +1376,7 @@ export class RocketGame {
                     <span>${rocket.name}</span>
                 </div>
                 <div class="rocket-item-desc">${rocket.desc}</div>
-                <div class="rocket-item-stats">Kiirus: ${rocket.speed} m/s · Raadius: ${rocket.blastRadius}m · Boonus: ${rocket.scoreMultiplier}x</div>
+                <div class="rocket-item-stats">Kiirus: ${rocket.speed} m/s · Purustusraadius: ${rocket.blastRadius}m · Boonus: ${rocket.scoreMultiplier}x</div>
                 <button type="button" class="rocket-action-btn ${isEquipped ? 'btn-equipped' : (isUnlocked ? 'btn-equip' : 'btn-buy')}" data-id="${rocket.id}">
                     ${isEquipped ? '✓ KASUTUSES' : (isUnlocked ? 'KASUTA' : `OSTA (${rocket.price} PTS)`)}
                 </button>
@@ -1385,7 +1481,6 @@ export class RocketGame {
     }
 
     private updateTargetRing(dt: number) {
-        // Move target ring with keyboard or joystick
         let moveX = 0;
         let moveZ = 0;
 
@@ -1399,32 +1494,32 @@ export class RocketGame {
             moveZ = this.mobileMoveVector.y;
         }
 
-        const ringSpeed = 42.0;
+        const ringSpeed = 44.0;
         this.ringPosition.x += moveX * ringSpeed * dt;
         this.ringPosition.z += moveZ * ringSpeed * dt;
 
-        this.ringPosition.x = Math.max(-130, Math.min(130, this.ringPosition.x));
-        this.ringPosition.z = Math.max(-130, Math.min(130, this.ringPosition.z));
+        this.ringPosition.x = Math.max(-135, Math.min(135, this.ringPosition.x));
+        this.ringPosition.z = Math.max(-135, Math.min(135, this.ringPosition.z));
 
-        // Pulsating and rotating target ring
         this.targetRing.position.copy(this.ringPosition);
-        this.targetRing.rotation.y += dt * 1.5;
+        this.targetRing.rotation.y += dt * 1.6;
 
-        // Smooth camera follow tracking the ring from high overhead
+        // Smooth overhead camera tracking
         const targetCamX = this.ringPosition.x * 0.45;
-        const targetCamZ = this.ringPosition.z * 0.45 + 52;
-        const targetCamY = 68;
+        const targetCamZ = this.ringPosition.z * 0.45 + 55;
+        const targetCamY = 75;
 
         this.camera.position.x += (targetCamX - this.camera.position.x) * 4 * dt;
         this.camera.position.z += (targetCamZ - this.camera.position.z) * 4 * dt;
         this.camera.position.y += (targetCamY - this.camera.position.y) * 4 * dt;
 
-        // Apply screen shake
-        if (this.shakeIntensity > 0) {
-            this.camera.position.x += (Math.random() - 0.5) * this.shakeIntensity * 3;
-            this.camera.position.y += (Math.random() - 0.5) * this.shakeIntensity * 3;
-            this.camera.position.z += (Math.random() - 0.5) * this.shakeIntensity * 3;
-            this.shakeIntensity = Math.max(0, this.shakeIntensity - dt * 2.0);
+        // Heavy realistic trauma shake
+        if (this.trauma > 0) {
+            const shake = this.trauma * this.trauma * 4.5;
+            this.camera.position.x += (Math.random() - 0.5) * shake;
+            this.camera.position.y += (Math.random() - 0.5) * shake;
+            this.camera.position.z += (Math.random() - 0.5) * shake;
+            this.trauma = Math.max(0, this.trauma - dt * 2.2);
         }
 
         const lookAtTarget = new THREE.Vector3(this.ringPosition.x * 0.6, 0, this.ringPosition.z * 0.6 - 6);
@@ -1438,10 +1533,9 @@ export class RocketGame {
             const step = rocket.velocity.clone().multiplyScalar(dt);
             const newPos = oldPos.clone().add(step);
 
-            // Spawn smoke particles
             this.createSmokePuff(oldPos, rocket.rocketType.trailColor);
 
-            // Check if rocket reached or passed the target ground ring plane
+            // Detonate when reaching or passing target ring ground level
             if (newPos.y <= rocket.targetPos.y || oldPos.distanceTo(rocket.targetPos) < step.length()) {
                 this.triggerExplosion(rocket.targetPos, rocket.rocketType);
                 this.scene.remove(rocket.mesh);
@@ -1449,7 +1543,6 @@ export class RocketGame {
                 continue;
             }
 
-            // Expiration
             if (performance.now() - rocket.spawnTime > 5000) {
                 this.scene.remove(rocket.mesh);
                 this.activeRockets.splice(i, 1);
@@ -1460,13 +1553,51 @@ export class RocketGame {
         }
     }
 
+    // Update physical flying building fragments
+    private updateDebris(dt: number) {
+        for (let i = this.activeDebris.length - 1; i >= 0; i--) {
+            const deb = this.activeDebris[i];
+            deb.age += dt;
+
+            if (!deb.isGrounded) {
+                deb.velocity.y -= 34 * dt; // Gravity
+                deb.mesh.position.addScaledVector(deb.velocity, dt);
+
+                // Rotate tumbling chunk
+                deb.mesh.rotateOnAxis(deb.rotAxis, deb.rotSpeed * dt);
+
+                // Ground collision and bounce
+                if (deb.mesh.position.y <= 0.4) {
+                    deb.mesh.position.y = 0.4;
+                    if (Math.abs(deb.velocity.y) > 3.0) {
+                        deb.velocity.y = -deb.velocity.y * 0.35; // bounce
+                        deb.velocity.x *= 0.65;
+                        deb.velocity.z *= 0.65;
+                        deb.rotSpeed *= 0.65;
+                    } else {
+                        deb.velocity.set(0, 0, 0);
+                        deb.isGrounded = true;
+                    }
+                }
+            }
+
+            // Slowly fade out old debris
+            if (deb.age >= deb.maxAge) {
+                this.debrisGroup.remove(deb.mesh);
+                deb.mesh.geometry.dispose();
+                (deb.mesh.material as THREE.Material).dispose();
+                this.activeDebris.splice(i, 1);
+            }
+        }
+    }
+
     private createSmokePuff(pos: THREE.Vector3, color: number) {
         const puff = new THREE.Mesh(
-            new THREE.SphereGeometry(0.4 + Math.random() * 0.3, 8, 8),
+            new THREE.SphereGeometry(0.45 + Math.random() * 0.35, 8, 8),
             new THREE.MeshBasicMaterial({
                 color,
                 transparent: true,
-                opacity: 0.8
+                opacity: 0.85
             })
         );
         puff.position.copy(pos);
@@ -1475,8 +1606,8 @@ export class RocketGame {
         let age = 0;
         const interval = setInterval(() => {
             age += 0.04;
-            puff.scale.multiplyScalar(1.1);
-            (puff.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.8 - age * 2.5);
+            puff.scale.multiplyScalar(1.12);
+            (puff.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.85 - age * 2.6);
 
             if (age >= 0.32) {
                 clearInterval(interval);
@@ -1487,29 +1618,21 @@ export class RocketGame {
         }, 30);
     }
 
-    private updateTargets(dt: number, time: number) {
-        for (const target of this.targets) {
-            if (!target.active) {
-                target.respawnTimer -= dt;
-                if (target.respawnTimer <= 0) {
-                    target.active = true;
-                    target.mesh.visible = true;
+    private updateBuildings(dt: number) {
+        for (const building of this.targets) {
+            if (!building.active) {
+                building.respawnTimer -= dt;
+                if (building.respawnTimer <= 0) {
+                    building.active = true;
+                    building.hp = building.maxHp;
+                    building.group.visible = true;
+                    if (building.rubbleMesh) {
+                        this.scene.remove(building.rubbleMesh);
+                        building.rubbleMesh.geometry.dispose();
+                        (building.rubbleMesh.material as THREE.Material).dispose();
+                        building.rubbleMesh = undefined;
+                    }
                 }
-                continue;
-            }
-
-            if (target.type === 'drone' && target.initialPos && target.patrolAxis && target.patrolRange && target.patrolSpeed) {
-                const offset = Math.sin(time * target.patrolSpeed) * target.patrolRange;
-                if (target.patrolAxis === 'x') target.mesh.position.x = target.initialPos.x + offset;
-                if (target.patrolAxis === 'z') target.mesh.position.z = target.initialPos.z + offset;
-                target.mesh.rotation.y += 0.04;
-            } else if (target.type === 'balloon' && target.initialPos && target.patrolRange && target.patrolSpeed) {
-                const offset = Math.sin(time * target.patrolSpeed) * target.patrolRange;
-                target.mesh.position.y = target.initialPos.y + offset;
-                target.mesh.rotation.y += 0.02;
-                target.mesh.rotation.z = Math.sin(time * 2) * 0.1;
-            } else if (target.type === 'bullseye') {
-                target.mesh.rotation.y += 0.008;
             }
         }
     }
@@ -1520,11 +1643,11 @@ export class RocketGame {
 
         const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
         this.lastTime = timestamp;
-        const time = timestamp / 1000;
 
         this.updateTargetRing(dt);
         this.updateRockets(dt);
-        this.updateTargets(dt, time);
+        this.updateDebris(dt);
+        this.updateBuildings(dt);
 
         this.renderer.render(this.scene, this.camera);
     }
