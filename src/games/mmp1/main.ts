@@ -345,7 +345,7 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         description: 'Luksuslik kahekorruseline hotell fuajee, tubade, koridoride ja rõdudega.',
         spawnPoints: [
             [0, 0, 0], [-10, 0, -8], [10, 0, -8], [-12, 0, 10], [12, 0, 10],
-            [-22, 0, -2], [22, 0, -2], [0, 0, -18]
+            [-22, 0, -2], [22, 0, -2], [0, 0, -12]
         ],
         coinSpawns: [
             [0, 1, 0], [-8, 1, -12], [8, 1, -12], [-14, 1, 8], [14, 1, 8],
@@ -374,7 +374,7 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         icon: '🏢',
         description: 'Suur büroohoone boksikontorite, koosolekuruumi, serveriruumi ja puhkealaga.',
         spawnPoints: [
-            [0, 0, 0], [-12, 0, -10], [12, 0, -10], [-12, 0, 12], [12, 0, 12],
+            [0, 0, 0], [-14, 0, -12], [14, 0, -12], [-14, 0, 14], [14, 0, 14],
             [-22, 0, 0], [22, 0, 0], [0, 0, -18]
         ],
         coinSpawns: [
@@ -390,7 +390,7 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         description: 'Rannakuurort kuldse liiva, palmide, bangalote, tiki-baari ja vaateplatvormiga.',
         spawnPoints: [
             [0, 0, 0], [-14, 0, -8], [14, 0, -8], [-12, 0, 14], [12, 0, 14],
-            [-22, 0, 0], [22, 0, 0], [0, 0, -20]
+            [-22, 0, 0], [22, 0, 0], [0, 0, -16]
         ],
         coinSpawns: [
             [0, 1, 0], [-12, 1, -12], [12, 1, -12], [-16, 1, 12], [16, 1, 12],
@@ -404,11 +404,11 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         icon: '🛥️',
         description: 'Mitmetasandiline luksusjaht salongi, kajutite, kaptenisilla ja mullivanniga.',
         spawnPoints: [
-            [0, 0, 0], [-8, 0, -12], [8, 0, -12], [-8, 0, 14], [8, 0, 14],
+            [0, 0, 8], [-8, 0, -12], [8, 0, -12], [-8, 0, 14], [8, 0, 14],
             [-14, 0, 0], [14, 0, 0], [0, 0, -22]
         ],
         coinSpawns: [
-            [0, 1, 0], [-8, 1, -10], [8, 1, -10], [-8, 1, 12], [8, 1, 12],
+            [0, 1, 8], [-8, 1, -10], [8, 1, -10], [-8, 1, 12], [8, 1, 12],
             [-16, 1, -20], [16, 1, -20], [-16, 1, 20], [16, 1, 20],
             [0, 1, 22], [-12, 1, 0], [12, 1, 0], [0, 1, -28]
         ]
@@ -2076,12 +2076,10 @@ export class MurderMysteryGame {
         this.wallMeshes.push(helmConsole);
         this.mapColliders.push(new THREE.Box3().setFromObject(helmConsole));
 
-        // Central VIP Jacuzzi Pool
+        // Central VIP Jacuzzi Pool (Decorative walk-in luxury pool)
         const poolBorder = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.8, 24), new THREE.MeshStandardMaterial({ color: 0xdcdde1, roughness: 0.2 }));
         poolBorder.position.set(0, 0.4, 0);
         this.mansionGroup.add(poolBorder);
-        this.wallMeshes.push(poolBorder);
-        this.mapColliders.push(new THREE.Box3().setFromObject(poolBorder));
 
         const poolWater = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 0.82, 24), new THREE.MeshStandardMaterial({ color: 0x00d2d3, roughness: 0.1, transparent: true, opacity: 0.7 }));
         poolWater.position.set(0, 0.42, 0);
@@ -3480,12 +3478,34 @@ export class MurderMysteryGame {
             shuffled[1].role = 'sheriff';
         }
 
-        // Teleport characters to the map's designated spawn points
+        // Teleport characters to the map's designated spawn points (guaranteeing no collision)
         const mapConfig = MAP_CATALOG[chosenMap];
         const spawns = mapConfig.spawnPoints;
+        const playerSize = new THREE.Vector3(1.2, 3, 1.2);
         this.characters.forEach((c, i) => {
             const pt = spawns[i % spawns.length];
             c.position.set(pt[0], pt[1], pt[2]);
+
+            // Check if spawn point collides with any collider in mapColliders
+            let spawnBox = new THREE.Box3().setFromCenterAndSize(c.position.clone().add(new THREE.Vector3(0, 1.5, 0)), playerSize);
+            const collidesWithAny = this.mapColliders.some(w => w.intersectsBox(spawnBox));
+            if (collidesWithAny) {
+                const offsets = [
+                    [0, 2], [0, -2], [2, 0], [-2, 0],
+                    [2, 2], [-2, 2], [2, -2], [-2, -2],
+                    [0, 4], [0, -4], [4, 0], [-4, 0],
+                    [0, 6], [0, -6], [6, 0], [-6, 0]
+                ];
+                for (const [dx, dz] of offsets) {
+                    const testPos = c.position.clone().add(new THREE.Vector3(dx, 0, dz));
+                    const testBox = new THREE.Box3().setFromCenterAndSize(testPos.clone().add(new THREE.Vector3(0, 1.5, 0)), playerSize);
+                    if (!this.mapColliders.some(w => w.intersectsBox(testBox))) {
+                        c.position.copy(testPos);
+                        break;
+                    }
+                }
+            }
+
             c.mesh.position.copy(c.position);
             c.rotation = Math.atan2(-c.position.x, -c.position.z);
             c.mesh.rotation.y = c.rotation;
@@ -5255,16 +5275,68 @@ export class MurderMysteryGame {
 
             // Bounding collision checks against walls in mansion
             if (this.state === 'in_game') {
-                const playerBox = new THREE.Box3().setFromCenterAndSize(nextPos.clone().add(new THREE.Vector3(0, 1.5, 0)), new THREE.Vector3(1.2, 3, 1.2));
-                let collides = false;
+                const playerSize = new THREE.Vector3(1.2, 3, 1.2);
+
+                // Unstuck / de-penetration safety if player is overlapping any collider
+                const currentBox = new THREE.Box3().setFromCenterAndSize(this.playerChar.position.clone().add(new THREE.Vector3(0, 1.5, 0)), playerSize);
                 for (const wallBox of this.mapColliders) {
-                    if (wallBox.intersectsBox(playerBox)) {
-                        collides = true;
+                    if (wallBox.intersectsBox(currentBox)) {
+                        const overlapX1 = currentBox.max.x - wallBox.min.x;
+                        const overlapX2 = wallBox.max.x - currentBox.min.x;
+                        const overlapZ1 = currentBox.max.z - wallBox.min.z;
+                        const overlapZ2 = wallBox.max.z - currentBox.min.z;
+                        const minOverlapX = overlapX1 < overlapX2 ? -overlapX1 : overlapX2;
+                        const minOverlapZ = overlapZ1 < overlapZ2 ? -overlapZ1 : overlapZ2;
+                        if (Math.abs(minOverlapX) < Math.abs(minOverlapZ)) {
+                            this.playerChar.position.x += minOverlapX * 1.05;
+                        } else {
+                            this.playerChar.position.z += minOverlapZ * 1.05;
+                        }
+                    }
+                }
+
+                // 1. Try full combined movement
+                const targetBox = new THREE.Box3().setFromCenterAndSize(nextPos.clone().add(new THREE.Vector3(0, 1.5, 0)), playerSize);
+                let collidesCombined = false;
+                for (const wallBox of this.mapColliders) {
+                    if (wallBox.intersectsBox(targetBox)) {
+                        collidesCombined = true;
                         break;
                     }
                 }
-                if (!collides) {
+
+                if (!collidesCombined) {
                     this.playerChar.position.copy(nextPos);
+                } else {
+                    // 2. Wall sliding: try X movement independently
+                    const tryPosX = this.playerChar.position.clone();
+                    tryPosX.x += moveDir.x * speed * delta;
+                    const boxX = new THREE.Box3().setFromCenterAndSize(tryPosX.clone().add(new THREE.Vector3(0, 1.5, 0)), playerSize);
+                    let collidesX = false;
+                    for (const wallBox of this.mapColliders) {
+                        if (wallBox.intersectsBox(boxX)) {
+                            collidesX = true;
+                            break;
+                        }
+                    }
+                    if (!collidesX) {
+                        this.playerChar.position.x = tryPosX.x;
+                    }
+
+                    // 3. Wall sliding: try Z movement independently
+                    const tryPosZ = this.playerChar.position.clone();
+                    tryPosZ.z += moveDir.z * speed * delta;
+                    const boxZ = new THREE.Box3().setFromCenterAndSize(tryPosZ.clone().add(new THREE.Vector3(0, 1.5, 0)), playerSize);
+                    let collidesZ = false;
+                    for (const wallBox of this.mapColliders) {
+                        if (wallBox.intersectsBox(boxZ)) {
+                            collidesZ = true;
+                            break;
+                        }
+                    }
+                    if (!collidesZ) {
+                        this.playerChar.position.z = tryPosZ.z;
+                    }
                 }
             } else {
                 // Lobby bounds

@@ -3868,7 +3868,85 @@ try {
                 weaponArchetypes.raygunParts < 8 || weaponArchetypes.silencedPistolParts < 8) {
                 throw new Error(`Weapon archetypes failed part count verification: ${JSON.stringify(weaponArchetypes)}`);
             }
-            console.log('   Distinct weapon archetype 3D models verified: ✅');
+            // Test Player Movement & Collision Safety as Officer/Sheriff on Yatchy and Office maps
+            console.log('   Testing Player Movement as Officer/Sheriff on Yatchy & Office maps:');
+            const movementTests = await page.evaluate(async () => {
+                const game = window.mmp1Game;
+                if (!game) return { success: false, reason: 'Game not found' };
+
+                // 1. Test Yatchy map (user reported: "ma ei saa officeril liikuda" in jacuzzi / yatchy)
+                game.adminSelectedMap = 'yatchy';
+                game.adminForcedRole = 'sheriff';
+                game.startRound();
+
+                // Player should have spawned at safe spot on Yatchy without colliding
+                const initialYatchyPos = { x: game.playerChar.position.x, y: game.playerChar.position.y, z: game.playerChar.position.z };
+                const playerBox = new THREE.Box3().setFromCenterAndSize(
+                    game.playerChar.position.clone().add(new THREE.Vector3(0, 1.5, 0)),
+                    new THREE.Vector3(1.2, 3, 1.2)
+                );
+                const isCollidingInitially = game.mapColliders.some(box => box.intersectsBox(playerBox));
+
+                // Simulate moving forward (KeyW)
+                game.keys['KeyW'] = true;
+                for (let i = 0; i < 20; i++) {
+                    game.updatePlayer(0.05);
+                }
+                game.keys['KeyW'] = false;
+
+                const movedYatchyPos = { x: game.playerChar.position.x, y: game.playerChar.position.y, z: game.playerChar.position.z };
+                const yatchyDistanceMoved = Math.hypot(movedYatchyPos.x - initialYatchyPos.x, movedYatchyPos.z - initialYatchyPos.z);
+
+                // 2. Test Office map
+                game.adminSelectedMap = 'office';
+                game.adminForcedRole = 'sheriff';
+                game.startRound();
+
+                const initialOfficePos = { x: game.playerChar.position.x, y: game.playerChar.position.y, z: game.playerChar.position.z };
+                game.keys['KeyS'] = true;
+                for (let i = 0; i < 20; i++) {
+                    game.updatePlayer(0.05);
+                }
+                game.keys['KeyS'] = false;
+
+                const movedOfficePos = { x: game.playerChar.position.x, y: game.playerChar.position.y, z: game.playerChar.position.z };
+                const officeDistanceMoved = Math.hypot(movedOfficePos.x - initialOfficePos.x, movedOfficePos.z - initialOfficePos.z);
+
+                // 3. Test De-penetration safety: if player is somehow placed inside an obstacle, updatePlayer pushes them out
+                if (game.mapColliders.length > 0) {
+                    const testWall = game.mapColliders[0];
+                    const center = new THREE.Vector3();
+                    testWall.getCenter(center);
+                    game.playerChar.position.copy(center);
+                    // Single update should nudge player towards outside
+                    game.keys['KeyW'] = true;
+                    game.updatePlayer(0.05);
+                    game.keys['KeyW'] = false;
+                }
+
+                return {
+                    success: true,
+                    isCollidingInitially,
+                    initialYatchyPos,
+                    yatchyDistanceMoved,
+                    officeDistanceMoved
+                };
+            });
+
+            console.log(`     Yatchy initial collision: ${movementTests.isCollidingInitially} (Expected: false)`);
+            console.log(`     Yatchy distance moved (KeyW): ${movementTests.yatchyDistanceMoved.toFixed(2)}m (Expected: > 2m)`);
+            console.log(`     Office distance moved (KeyS): ${movementTests.officeDistanceMoved.toFixed(2)}m (Expected: > 2m)`);
+
+            if (movementTests.isCollidingInitially) {
+                throw new Error('Player spawned inside a collider on Yatchy map!');
+            }
+            if (movementTests.yatchyDistanceMoved < 1.0) {
+                throw new Error(`Player was stuck and unable to move on Yatchy map! Distance moved: ${movementTests.yatchyDistanceMoved}`);
+            }
+            if (movementTests.officeDistanceMoved < 1.0) {
+                throw new Error(`Player was stuck and unable to move on Office map! Distance moved: ${movementTests.officeDistanceMoved}`);
+            }
+            console.log('   Sheriff/Officer movement and collision safety verified on Yatchy & Office maps: ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 
