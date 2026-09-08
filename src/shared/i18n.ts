@@ -176,19 +176,19 @@ export function applyLocalization() {
         if (mmp1Pill) mmp1Pill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
     }
 
-    // ROCKET PLAYARD Game Card
+    // ROCKET PLAYARD Game Card (Avalik kõigile)
     const rocketCard = document.getElementById('card-rocket-game');
     if (rocketCard) {
         const h2 = rocketCard.querySelector('h2');
         if (h2) h2.textContent = isEt ? '🚀 Rocket Playard' : '🚀 Rocket Playard (3D Arcade)';
         const pRocket = rocketCard.querySelector('p');
         if (pRocket) pRocket.textContent = isEt
-            ? 'Taba mängusiseste arcade-rakettidega sihtmärke, vallanda võimsaid BOOM! plahvatusi ning teeni punkte uute rakettide ostmiseks!'
-            : 'Hit arcade targets with fictional rockets, trigger massive BOOM! explosions and earn points to unlock upgraded rockets!';
+            ? 'Taba mängusiseste arcade-rakettidega sihtmärke, vallanda tuumaplahvatusi ning teeni punkte 54 erineva raketi ostmiseks!'
+            : 'Hit arcade targets with fictional rockets, trigger nuclear explosions and earn points to unlock 54 upgraded rockets!';
         const tRocket = rocketCard.querySelector('.reward-tag span:last-child');
         if (tRocket) tRocket.textContent = isEt ? '💥 ARCADE TARGETS & ROCKET SHOP' : '💥 ARCADE TARGETS & ROCKET SHOP';
         const rocketPill = rocketCard.querySelector('.rocket-owner-badge-pill');
-        if (rocketPill) rocketPill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
+        if (rocketPill) rocketPill.textContent = isEt ? '🚀 3D ARCADE' : '🚀 3D ARCADE';
     }
 
     // Community section

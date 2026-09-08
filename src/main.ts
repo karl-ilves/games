@@ -75,10 +75,10 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
         mmp1GameCard.style.display = canAccessMmp1(emailToCheck, usernameToCheck) ? 'flex' : 'none';
     }
 
-    // ROCKET PLAYARD mäng on nähtav AINULT Playard Ownerile!
+    // ROCKET PLAYARD mäng on avaldatud KÕIKIDELE mängijatele!
     const rocketGameCard = document.getElementById('card-rocket-game');
     if (rocketGameCard) {
-        rocketGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+        rocketGameCard.style.display = 'flex';
     }
 
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!

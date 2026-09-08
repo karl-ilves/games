@@ -182,6 +182,13 @@ try {
             throw new Error("Obby game card must be visible for guests!");
         }
 
+        // Check ROCKET PLAYARD visibility for guest (Expected: flex - playable for everyone)
+        const guestRocketCardDisplay = await page.$eval('#card-rocket-game', el => window.getComputedStyle(el).display);
+        console.log(`   Guest ROCKET PLAYARD Card visibility (Expected: flex): ${guestRocketCardDisplay}`);
+        if (guestRocketCardDisplay !== 'flex') {
+            throw new Error("ROCKET PLAYARD game card must be visible for guests!");
+        }
+
         // Check LAST METRO visibility for guest (Expected: none - Owner exclusive)
         const guestMetroCardDisplay = await page.$eval('#card-metro-game', el => window.getComputedStyle(el).display);
         console.log(`   Guest LAST METRO Card visibility (Expected: none): ${guestMetroCardDisplay}`);
@@ -304,9 +311,9 @@ try {
         }
 
         const adminRocketCardDisplay = await page.$eval('#card-rocket-game', el => window.getComputedStyle(el).display);
-        console.log(`   Admin (grx@trenet.ee) ROCKET PLAYARD Card visibility (Expected: none): ${adminRocketCardDisplay}`);
-        if (adminRocketCardDisplay !== 'none') {
-            throw new Error("ROCKET PLAYARD game card must be hidden for non-owner admin (grx@trenet.ee)!");
+        console.log(`   Admin (grx@trenet.ee) ROCKET PLAYARD Card visibility (Expected: flex): ${adminRocketCardDisplay}`);
+        if (adminRocketCardDisplay !== 'flex') {
+            throw new Error("ROCKET PLAYARD game card must be visible to everyone including admin (grx@trenet.ee)!");
         }
 
         // Test Minionbanana0_0 login -> MMP1 game card must be visible!

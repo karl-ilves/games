@@ -422,15 +422,8 @@ export class RocketGame {
     }
 
     public init(): boolean {
-        // 1. VIP Verification for Playard Owner
-        const userProf = getCurrentUserProfile();
-        const isOwner = isPlayardOwner(userProf?.email);
+        // 1. Rocket Playard on avaldatud KÕIKIDELE mängijatele
         const vipOverlay = document.getElementById('vip-restricted-overlay');
-
-        if (!isOwner && !isTestMode() && !(window as any).__PLAYARD_TEST_MODE__) {
-            if (vipOverlay) vipOverlay.style.display = 'flex';
-            return false;
-        }
         if (vipOverlay) vipOverlay.style.display = 'none';
 
         // Load saved state
