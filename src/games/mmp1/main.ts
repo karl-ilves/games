@@ -231,6 +231,44 @@ class MmpAudio {
         osc.stop(now + 0.08);
     }
 
+    public playCrateTick() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(600, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+    }
+
+    public playCrateOpen() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const chord = [392, 493.88, 587.33, 783.99, 987.77];
+        chord.forEach((freq, idx) => {
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+            gain.gain.setValueAtTime(0.22, now + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.45);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.45);
+        });
+    }
+
     public setHeartbeatRate(distance: number) {
         if (!this.soundEnabled || distance > 22 || distance <= 0) {
             if (this.heartbeatTimer) {
@@ -415,6 +453,533 @@ interface CoinItem {
     collected: boolean;
 }
 
+// --- MMP1 Crate & Weapon Skin System ---
+export type CrateTier = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'cosmic' | 'secret' | 'og';
+
+export interface WeaponSkinDef {
+    id: string;
+    name: string;
+    type: 'knife' | 'gun';
+    tier: CrateTier;
+    tierName: string;
+    tierColor: string;
+    bladeColor?: number;
+    edgeColor?: number;
+    handleColor?: number;
+    metalColor?: number;
+    gripColor?: number;
+    starColor?: number;
+    emissive?: number;
+}
+
+export interface CrateDef {
+    id: CrateTier;
+    name: string;
+    icon: string;
+    price: number;
+    color: string;
+    tierName: string;
+    defaultStock: number;
+    maxStock: number;
+    restockIntervalSec: number;
+    knifeSkinId: string;
+    gunSkinId: string;
+}
+
+export const CRATE_CATALOG: Record<CrateTier, CrateDef> = {
+    common: {
+        id: 'common',
+        name: 'Common Crate',
+        icon: '📦',
+        price: 50,
+        color: '#a4b0be',
+        tierName: 'Tavaline (Common)',
+        defaultStock: 8,
+        maxStock: 12,
+        restockIntervalSec: 60,
+        knifeSkinId: 'knife_common',
+        gunSkinId: 'gun_common'
+    },
+    uncommon: {
+        id: 'uncommon',
+        name: 'Uncommon Crate',
+        icon: '🟩',
+        price: 100,
+        color: '#2ed573',
+        tierName: 'Ebatavaline (Uncommon)',
+        defaultStock: 6,
+        maxStock: 10,
+        restockIntervalSec: 90,
+        knifeSkinId: 'knife_uncommon',
+        gunSkinId: 'gun_uncommon'
+    },
+    rare: {
+        id: 'rare',
+        name: 'Rare Crate',
+        icon: '🔷',
+        price: 200,
+        color: '#1e90ff',
+        tierName: 'Haruldane (Rare)',
+        defaultStock: 4,
+        maxStock: 8,
+        restockIntervalSec: 120,
+        knifeSkinId: 'knife_rare',
+        gunSkinId: 'gun_rare'
+    },
+    epic: {
+        id: 'epic',
+        name: 'Epic Crate',
+        icon: '🔮',
+        price: 400,
+        color: '#9b59b6',
+        tierName: 'Eepiline (Epic)',
+        defaultStock: 3,
+        maxStock: 6,
+        restockIntervalSec: 180,
+        knifeSkinId: 'knife_epic',
+        gunSkinId: 'gun_epic'
+    },
+    legendary: {
+        id: 'legendary',
+        name: 'Legendary Crate',
+        icon: '👑',
+        price: 800,
+        color: '#ffa502',
+        tierName: 'Legendaarne (Legendary)',
+        defaultStock: 2,
+        maxStock: 4,
+        restockIntervalSec: 240,
+        knifeSkinId: 'knife_legendary',
+        gunSkinId: 'gun_legendary'
+    },
+    cosmic: {
+        id: 'cosmic',
+        name: 'Cosmic Crate',
+        icon: '🌌',
+        price: 1500,
+        color: '#ff4757',
+        tierName: 'Kosmiline (Cosmic)',
+        defaultStock: 2,
+        maxStock: 3,
+        restockIntervalSec: 300,
+        knifeSkinId: 'knife_cosmic',
+        gunSkinId: 'gun_cosmic'
+    },
+    secret: {
+        id: 'secret',
+        name: 'Secret Crate',
+        icon: '👁️',
+        price: 3000,
+        color: '#00d2d3',
+        tierName: 'Salajane (Secret)',
+        defaultStock: 1,
+        maxStock: 2,
+        restockIntervalSec: 420,
+        knifeSkinId: 'knife_secret',
+        gunSkinId: 'gun_secret'
+    },
+    og: {
+        id: 'og',
+        name: 'OG Crate',
+        icon: '🕹️',
+        price: 5000,
+        color: '#ffd32a',
+        tierName: 'Klassikaline (OG)',
+        defaultStock: 1,
+        maxStock: 2,
+        restockIntervalSec: 600,
+        knifeSkinId: 'knife_og',
+        gunSkinId: 'gun_og'
+    }
+};
+
+export const WEAPON_SKIN_CATALOG: Record<string, WeaponSkinDef> = {
+    knife_default: {
+        id: 'knife_default',
+        name: 'Standard Nuga',
+        type: 'knife',
+        tier: 'common',
+        tierName: 'Standard',
+        tierColor: '#bbb',
+        bladeColor: 0xe8ecf2,
+        handleColor: 0x181a1d
+    },
+    gun_default: {
+        id: 'gun_default',
+        name: 'Standard Peacemaker',
+        type: 'gun',
+        tier: 'common',
+        tierName: 'Standard',
+        tierColor: '#bbb',
+        metalColor: 0x24282e,
+        gripColor: 0x4a2c17,
+        starColor: 0xffd700
+    },
+    knife_common: {
+        id: 'knife_common',
+        name: 'Raudne Tera',
+        type: 'knife',
+        tier: 'common',
+        tierName: 'Common',
+        tierColor: '#a4b0be',
+        bladeColor: 0x8395a7,
+        handleColor: 0x2f3542
+    },
+    gun_common: {
+        id: 'gun_common',
+        name: 'Roostes Revolver',
+        type: 'gun',
+        tier: 'common',
+        tierName: 'Common',
+        tierColor: '#a4b0be',
+        metalColor: 0x574b40,
+        gripColor: 0x3d3025,
+        starColor: 0xb8860b
+    },
+    knife_uncommon: {
+        id: 'knife_uncommon',
+        name: 'Taktikaline Camo Nuga',
+        type: 'knife',
+        tier: 'uncommon',
+        tierName: 'Uncommon',
+        tierColor: '#2ed573',
+        bladeColor: 0x2ed573,
+        handleColor: 0x1e3725
+    },
+    gun_uncommon: {
+        id: 'gun_uncommon',
+        name: 'Nikeldatud Python',
+        type: 'gun',
+        tier: 'uncommon',
+        tierName: 'Uncommon',
+        tierColor: '#2ed573',
+        metalColor: 0xdfe4ea,
+        gripColor: 0x747d8c,
+        starColor: 0x2ed573
+    },
+    knife_rare: {
+        id: 'knife_rare',
+        name: 'Karmiinpunane Ämblikunuga',
+        type: 'knife',
+        tier: 'rare',
+        tierName: 'Rare',
+        tierColor: '#1e90ff',
+        bladeColor: 0xd63031,
+        handleColor: 0x1e272e,
+        emissive: 0x440000
+    },
+    gun_rare: {
+        id: 'gun_rare',
+        name: 'Siniteras Peacemaker',
+        type: 'gun',
+        tier: 'rare',
+        tierName: 'Rare',
+        tierColor: '#1e90ff',
+        metalColor: 0x0984e3,
+        gripColor: 0x2c3e50,
+        starColor: 0x74b9ff,
+        emissive: 0x001133
+    },
+    knife_epic: {
+        id: 'knife_epic',
+        name: 'Küberneoon Tera',
+        type: 'knife',
+        tier: 'epic',
+        tierName: 'Epic',
+        tierColor: '#9b59b6',
+        bladeColor: 0x00cec9,
+        handleColor: 0x6c5ce7,
+        emissive: 0x00f2fe
+    },
+    gun_epic: {
+        id: 'gun_epic',
+        name: 'Damaskuse Python',
+        type: 'gun',
+        tier: 'epic',
+        tierName: 'Epic',
+        tierColor: '#9b59b6',
+        metalColor: 0x8e44ad,
+        gripColor: 0x2c2c54,
+        starColor: 0xe056fd,
+        emissive: 0x2b0938
+    },
+    knife_legendary: {
+        id: 'knife_legendary',
+        name: 'Draakoni Tulekatana',
+        type: 'knife',
+        tier: 'legendary',
+        tierName: 'Legendary',
+        tierColor: '#ffa502',
+        bladeColor: 0xff4757,
+        handleColor: 0xffa502,
+        emissive: 0xff3838
+    },
+    gun_legendary: {
+        id: 'gun_legendary',
+        name: 'Kuldne Šerifi Revolver',
+        type: 'gun',
+        tier: 'legendary',
+        tierName: 'Legendary',
+        tierColor: '#ffa502',
+        metalColor: 0xffd700,
+        gripColor: 0xffffff,
+        starColor: 0xffea00,
+        emissive: 0x554400
+    },
+    knife_cosmic: {
+        id: 'knife_cosmic',
+        name: 'Galaktika Tühjuse Tera',
+        type: 'knife',
+        tier: 'cosmic',
+        tierName: 'Cosmic',
+        tierColor: '#ff4757',
+        bladeColor: 0x371b58,
+        handleColor: 0x4c3575,
+        emissive: 0x9b59b6
+    },
+    gun_cosmic: {
+        id: 'gun_cosmic',
+        name: 'Kosmiline Pulsar',
+        type: 'gun',
+        tier: 'cosmic',
+        tierName: 'Cosmic',
+        tierColor: '#ff4757',
+        metalColor: 0x1f0036,
+        gripColor: 0xdfbbf7,
+        starColor: 0xff007f,
+        emissive: 0x550055
+    },
+    knife_secret: {
+        id: 'knife_secret',
+        name: 'Spektraalne Vari',
+        type: 'knife',
+        tier: 'secret',
+        tierName: 'Secret',
+        tierColor: '#00d2d3',
+        bladeColor: 0x01a3a4,
+        handleColor: 0x10ac84,
+        emissive: 0x00f2fe
+    },
+    gun_secret: {
+        id: 'gun_secret',
+        name: 'Vaimu Fantoom',
+        type: 'gun',
+        tier: 'secret',
+        tierName: 'Secret',
+        tierColor: '#00d2d3',
+        metalColor: 0x0abde3,
+        gripColor: 0x222f3e,
+        starColor: 0x00d2d3,
+        emissive: 0x005577
+    },
+    knife_og: {
+        id: 'knife_og',
+        name: '8-Bit Pixel Mõõk',
+        type: 'knife',
+        tier: 'og',
+        tierName: 'OG',
+        tierColor: '#ffd32a',
+        bladeColor: 0xfffa65,
+        handleColor: 0xff9f1a,
+        emissive: 0xffd32a
+    },
+    gun_og: {
+        id: 'gun_og',
+        name: 'Klassikaline Retro Blaster',
+        type: 'gun',
+        tier: 'og',
+        tierName: 'OG',
+        tierColor: '#ffd32a',
+        metalColor: 0xff3838,
+        gripColor: 0xff9f43,
+        starColor: 0xfffa65,
+        emissive: 0x664400
+    }
+};
+
+export interface CrateStockData {
+    stock: number;
+    nextRestock: number; // timestamp ms
+}
+
+export interface InventoryData {
+    crates: Record<string, number>;
+    skins: string[];
+    equippedKnife: string;
+    equippedGun: string;
+}
+
+export class MmpCrateManager {
+    private moneyKey = 'mmp1_money';
+    private stocksKey = 'mmp1_crate_stocks_v2';
+    private inventoryKey = 'mmp1_inventory_v2';
+
+    constructor() {
+        this.getStocks();
+        this.initMoney();
+    }
+
+    public getMoney(): number {
+        const stored = localStorage.getItem(this.moneyKey);
+        if (stored === null || isNaN(Number(stored))) {
+            localStorage.setItem(this.moneyKey, '100');
+            return 100;
+        }
+        return Math.max(0, parseInt(stored, 10));
+    }
+
+    public setMoney(amount: number) {
+        localStorage.setItem(this.moneyKey, Math.max(0, Math.floor(amount)).toString());
+        this.updateMoneyUI();
+    }
+
+    public addMoney(amount: number) {
+        this.setMoney(this.getMoney() + amount);
+    }
+
+    public spendMoney(amount: number): boolean {
+        const current = this.getMoney();
+        if (current >= amount) {
+            this.setMoney(current - amount);
+            return true;
+        }
+        return false;
+    }
+
+    public updateMoneyUI() {
+        const money = this.getMoney();
+        const hudMoney = document.getElementById('hud-money-val');
+        if (hudMoney) hudMoney.textContent = money.toString();
+        const shopMoney = document.getElementById('shop-modal-money-val');
+        if (shopMoney) shopMoney.textContent = money.toString();
+    }
+
+    public initMoney() {
+        this.updateMoneyUI();
+    }
+
+    public getStocks(): Record<string, CrateStockData> {
+        let data: Record<string, CrateStockData> = {};
+        try {
+            const raw = localStorage.getItem(this.stocksKey);
+            if (raw) data = JSON.parse(raw);
+        } catch (e) {}
+
+        const now = Date.now();
+        let changed = false;
+
+        for (const [tier, crate] of Object.entries(CRATE_CATALOG)) {
+            if (!data[tier] || typeof data[tier].stock !== 'number') {
+                data[tier] = {
+                    stock: crate.defaultStock,
+                    nextRestock: now + crate.restockIntervalSec * 1000
+                };
+                changed = true;
+            } else {
+                // If restock time passed, restock 1 item up to maxStock
+                while (now >= data[tier].nextRestock) {
+                    if (data[tier].stock < crate.maxStock) {
+                        data[tier].stock = Math.min(crate.maxStock, data[tier].stock + 1);
+                    }
+                    data[tier].nextRestock += crate.restockIntervalSec * 1000;
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed) {
+            localStorage.setItem(this.stocksKey, JSON.stringify(data));
+        }
+        return data;
+    }
+
+    public saveStocks(data: Record<string, CrateStockData>) {
+        localStorage.setItem(this.stocksKey, JSON.stringify(data));
+    }
+
+    public buyCrate(tier: CrateTier): { success: boolean; message: string } {
+        const crate = CRATE_CATALOG[tier];
+        if (!crate) return { success: false, message: 'Tundmatu kast!' };
+
+        const stocks = this.getStocks();
+        if (!stocks[tier] || stocks[tier].stock <= 0) {
+            return { success: false, message: 'See kast on hetkel laost otsas! Oota uut laovaru.' };
+        }
+
+        if (this.getMoney() < crate.price) {
+            return { success: false, message: `Sul pole piisavalt raha! Vajad ${crate.price} €.` };
+        }
+
+        this.spendMoney(crate.price);
+        stocks[tier].stock--;
+        this.saveStocks(stocks);
+
+        this.awardCrate(tier, 1);
+        return { success: true, message: `Ostsid kasti: ${crate.name}!` };
+    }
+
+    public awardCrate(tier: CrateTier, count: number = 1) {
+        const inv = this.getInventory();
+        inv.crates[tier] = (inv.crates[tier] || 0) + count;
+        this.saveInventory(inv);
+    }
+
+    public getInventory(): InventoryData {
+        let inv: InventoryData = {
+            crates: {},
+            skins: ['knife_default', 'gun_default'],
+            equippedKnife: 'knife_default',
+            equippedGun: 'gun_default'
+        };
+        try {
+            const raw = localStorage.getItem(this.inventoryKey);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                inv = { ...inv, ...parsed };
+            }
+        } catch (e) {}
+        if (!inv.skins.includes('knife_default')) inv.skins.push('knife_default');
+        if (!inv.skins.includes('gun_default')) inv.skins.push('gun_default');
+        return inv;
+    }
+
+    public saveInventory(inv: InventoryData) {
+        localStorage.setItem(this.inventoryKey, JSON.stringify(inv));
+    }
+
+    public openCrate(tier: CrateTier): WeaponSkinDef | null {
+        const inv = this.getInventory();
+        if (!inv.crates[tier] || inv.crates[tier] <= 0) return null;
+
+        inv.crates[tier]--;
+        const crate = CRATE_CATALOG[tier];
+        // 50% knife skin, 50% gun skin
+        const skinId = Math.random() < 0.5 ? crate.knifeSkinId : crate.gunSkinId;
+        const skin = WEAPON_SKIN_CATALOG[skinId] || WEAPON_SKIN_CATALOG[crate.knifeSkinId];
+
+        if (!inv.skins.includes(skin.id)) {
+            inv.skins.push(skin.id);
+        }
+        this.saveInventory(inv);
+        return skin;
+    }
+
+    public equipSkin(skinId: string): boolean {
+        const skin = WEAPON_SKIN_CATALOG[skinId];
+        if (!skin) return false;
+        const inv = this.getInventory();
+        if (!inv.skins.includes(skinId)) return false;
+
+        if (skin.type === 'knife') {
+            inv.equippedKnife = skinId;
+        } else {
+            inv.equippedGun = skinId;
+        }
+        this.saveInventory(inv);
+        return true;
+    }
+}
+
 // --- Main Game Class ---
 export class MurderMysteryGame {
     private container: HTMLElement;
@@ -486,8 +1051,10 @@ export class MurderMysteryGame {
     private playerVotedMap: MapId | null = null;
     private mapVotes: Record<MapId, number> = { hotel2: 0, milbase: 0, office: 0, vacation: 0, yatchy: 0 };
     public emotesWidget: InGameEmotesWidget | null = null;
+    public crateManager: MmpCrateManager;
 
     constructor() {
+        this.crateManager = new MmpCrateManager();
         this.container = document.getElementById('canvas-container') || document.body;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0810);
@@ -516,6 +1083,7 @@ export class MurderMysteryGame {
         });
         this.spawnCoins();
         this.bindEvents();
+        this.initCrateShop();
         this.updateYardDisplay();
 
         // Start render loop
@@ -1164,11 +1732,22 @@ export class MurderMysteryGame {
     }
 
     // --- Create Ultra-Realistic Weapons ---
-    private createUltraRealisticKnife(): THREE.Group {
+    private createUltraRealisticKnife(skinId?: string): THREE.Group {
         const group = new THREE.Group();
+        const activeSkinId = skinId || this.crateManager?.getInventory()?.equippedKnife || 'knife_default';
+        const skin = WEAPON_SKIN_CATALOG[activeSkinId] || WEAPON_SKIN_CATALOG['knife_default'];
+
+        const bladeColor = skin.bladeColor ?? 0xe8ecf2;
+        const handleColor = skin.handleColor ?? 0x181a1d;
+        const emissiveColor = skin.emissive ?? 0x000000;
 
         // 1. Ergonomic Tactical Handle
-        const handleMat = new THREE.MeshStandardMaterial({ color: 0x181a1d, roughness: 0.65, metalness: 0.25 });
+        const handleMat = new THREE.MeshStandardMaterial({
+            color: handleColor,
+            roughness: 0.65,
+            metalness: 0.25,
+            emissive: emissiveColor ? Math.floor(emissiveColor / 6) : 0
+        });
         const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.65, 12), handleMat);
         handle.scale.set(0.65, 1.0, 1.2);
         handle.position.set(0, -0.32, 0);
@@ -1210,16 +1789,19 @@ export class MurderMysteryGame {
 
         // High Carbon Steel Bowie Blade
         const bladeMat = new THREE.MeshStandardMaterial({
-            color: 0xe8ecf2,
+            color: bladeColor,
             metalness: 0.98,
-            roughness: 0.12
+            roughness: 0.12,
+            emissive: emissiveColor,
+            emissiveIntensity: emissiveColor ? 0.75 : 0
         });
         const blade = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.92, 0.2), bladeMat);
         blade.position.set(0, 0.54, 0.02);
         group.add(blade);
 
         // Razor Sharp Beveled Cutting Edge
-        const edgeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.99, roughness: 0.04 });
+        const edgeColor = skin.edgeColor ?? 0xffffff;
+        const edgeMat = new THREE.MeshStandardMaterial({ color: edgeColor, metalness: 0.99, roughness: 0.04 });
         const edge = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.9, 4), edgeMat);
         edge.position.set(0, 0.54, 0.12);
         edge.scale.set(1.0, 1.0, 3.8);
@@ -1249,14 +1831,22 @@ export class MurderMysteryGame {
         return group;
     }
 
-    private createUltraRealisticRevolver(isGolden = false): THREE.Group {
+    private createUltraRealisticRevolver(isGolden = false, skinId?: string): THREE.Group {
         const group = new THREE.Group();
+        const activeSkinId = skinId || this.crateManager?.getInventory()?.equippedGun || 'gun_default';
+        const skin = WEAPON_SKIN_CATALOG[activeSkinId] || WEAPON_SKIN_CATALOG['gun_default'];
+
+        const metalColor = isGolden ? 0xffd700 : (skin.metalColor ?? 0x24282e);
+        const gripColor = isGolden ? 0x2b1810 : (skin.gripColor ?? 0x4a2c17);
+        const starColor = isGolden ? 0xffea00 : (skin.starColor ?? 0xffd700);
+        const emissiveColor = isGolden ? 0x443300 : (skin.emissive ?? 0x05080c);
 
         const metalMat = new THREE.MeshStandardMaterial({
-            color: isGolden ? 0xffd700 : 0x24282e,
+            color: metalColor,
             metalness: isGolden ? 0.98 : 0.94,
             roughness: isGolden ? 0.14 : 0.22,
-            emissive: isGolden ? 0x443300 : 0x05080c
+            emissive: emissiveColor,
+            emissiveIntensity: (isGolden || emissiveColor !== 0x05080c) ? 0.6 : 0.05
         });
 
         const polishedSteel = new THREE.MeshStandardMaterial({
@@ -1266,7 +1856,7 @@ export class MurderMysteryGame {
         });
 
         const gripWoodMat = new THREE.MeshStandardMaterial({
-            color: isGolden ? 0x2b1810 : 0x4a2c17,
+            color: gripColor,
             roughness: 0.45,
             metalness: 0.1
         });
@@ -1352,14 +1942,14 @@ export class MurderMysteryGame {
         trigger.rotation.x = -Math.PI / 6;
         group.add(trigger);
 
-        // Walnut Grip
+        // Grip
         const grip = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.55, 0.28), gripWoodMat);
         grip.position.set(0, -0.24, -0.12);
         grip.rotation.x = -Math.PI / 8;
         group.add(grip);
 
         // Sheriff Star Badge Medallion
-        const starMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.98, roughness: 0.15 });
+        const starMat = new THREE.MeshStandardMaterial({ color: starColor, metalness: 0.98, roughness: 0.15 });
         const starL = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 5), starMat);
         starL.rotation.z = Math.PI / 2;
         starL.position.set(-0.08, -0.2, -0.1);
@@ -2452,6 +3042,7 @@ export class MurderMysteryGame {
             const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), shooter.rotation);
             const rayOrigin = shooter.position.clone().add(new THREE.Vector3(0, 1.8, 0));
             raycaster = new THREE.Raycaster(rayOrigin, forward, 0.5, 75);
+            raycaster.camera = this.camera;
         }
 
         const hits = raycaster.intersectObjects(allShootables, true);
@@ -2640,7 +3231,10 @@ export class MurderMysteryGame {
             this.endMapName.textContent = `${curMap.icon} ${curMap.name}`;
         }
 
-        let rewardYards = 20; // base reward
+        let rewardMoney = 0;
+        let wonLegendaryCrate = false;
+        let rewardYards = 20;
+
         if (winner === 'sheriff_win') {
             if (endTitle) {
                 // If the hero was an innocent who grabbed the gun vs original detective
@@ -2649,26 +3243,74 @@ export class MurderMysteryGame {
                 endTitle.style.color = '#00f2fe';
             }
             if (trophy) trophy.textContent = '🔫';
-            rewardYards = (this.playerChar.role !== 'murderer' && this.playerChar.isAlive) ? 100 : 40;
-            if (this.lastHero === this.playerChar) rewardYards = 150;
+
+            // User requirement:
+            // "ja kui oled süütu ja sheriff tapab murdereri ära siis sa saad 50 € ja kui oled sheriff ja tabad murdereri ära saad 100"
+            if (this.playerChar.role === 'sheriff') {
+                rewardMoney = 100;
+                rewardYards = 100;
+            } else if (this.playerChar.role === 'innocent') {
+                rewardMoney = 50;
+                rewardYards = 60;
+            } else {
+                rewardMoney = 0;
+                rewardYards = 10;
+            }
+            if (this.lastHero === this.playerChar) {
+                rewardMoney = Math.max(rewardMoney, 100);
+                rewardYards = 150;
+            }
         } else if (winner === 'murderer_win') {
             if (endTitle) {
                 endTitle.textContent = 'MURDERER WINS 🔪';
                 endTitle.style.color = '#ff2e63';
             }
             if (trophy) trophy.textContent = '🩸';
-            rewardYards = (this.playerChar.role === 'murderer') ? 150 : 20;
+
+            // User requirement:
+            // "kui kaotad murderer tapab kõik ära kui olen süüto ja sheriff ei saa midagi"
+            // "ja kui oled murderer ja tabad kõik ära siis teenid 200€ ja 1 legentari crate"
+            if (this.playerChar.role === 'murderer') {
+                rewardMoney = 200;
+                wonLegendaryCrate = true;
+                rewardYards = 150;
+                this.crateManager.awardCrate('legendary', 1);
+            } else {
+                rewardMoney = 0;
+                rewardYards = 0;
+            }
         } else {
+            // time_out: Innocents survived
             if (endTitle) {
                 endTitle.textContent = 'INNOCENTS WIN 🏆';
                 endTitle.style.color = '#2ecc71';
             }
             if (trophy) trophy.textContent = '🏆';
-            rewardYards = 80;
+
+            if (this.playerChar.role === 'innocent' || this.playerChar.role === 'sheriff') {
+                rewardMoney = 50;
+                rewardYards = 80;
+            } else {
+                rewardMoney = 0;
+                rewardYards = 0;
+            }
         }
 
-        // Add bonus for collected coins
-        rewardYards += this.playerChar.coins * 5;
+        // Add bonus for collected coins in-round (+ 5 € per coin)
+        rewardMoney += (this.playerChar.coins || 0) * 5;
+        rewardYards += (this.playerChar.coins || 0) * 5;
+
+        // Apply money to player's balance
+        this.crateManager.addMoney(rewardMoney);
+
+        const endRewardMoney = document.getElementById('end-reward-money');
+        if (endRewardMoney) endRewardMoney.textContent = rewardMoney.toString();
+
+        const endRewardCrateBox = document.getElementById('end-reward-crate-box');
+        if (endRewardCrateBox) {
+            endRewardCrateBox.style.display = wonLegendaryCrate ? 'block' : 'none';
+        }
+
         if (endReward) endReward.textContent = rewardYards.toString();
 
         // Award Yards to Playard Owner
@@ -2686,6 +3328,394 @@ export class MurderMysteryGame {
         });
 
         if (this.roundEndOverlay) this.roundEndOverlay.style.display = 'flex';
+    }
+
+    // --- Crate Shop & Weapon Skins ---
+    private crateShopModal: HTMLElement | null = null;
+    private unboxingModal: HTMLElement | null = null;
+    private crateTimerInterval: any = null;
+
+    public initCrateShop() {
+        this.crateShopModal = document.getElementById('crate-shop-modal');
+        this.unboxingModal = document.getElementById('crate-unboxing-overlay');
+
+        const btnCrateShop = document.getElementById('btn-crate-shop');
+        if (btnCrateShop) {
+            btnCrateShop.onclick = () => this.openCrateShop();
+        }
+
+        const btnClose = document.getElementById('btn-close-crate-shop');
+        if (btnClose) {
+            btnClose.onclick = () => this.closeCrateShop();
+        }
+
+        const btnTabShop = document.getElementById('btn-tab-shop');
+        const btnTabInv = document.getElementById('btn-tab-inventory');
+        if (btnTabShop && btnTabInv) {
+            btnTabShop.onclick = () => this.switchCrateShopTab('shop');
+            btnTabInv.onclick = () => this.switchCrateShopTab('inventory');
+        }
+
+        const btnUnboxClose = document.getElementById('btn-unboxing-close');
+        if (btnUnboxClose) {
+            btnUnboxClose.onclick = () => {
+                if (this.unboxingModal) this.unboxingModal.style.display = 'none';
+                this.renderInventory();
+            };
+        }
+
+        if (this.crateTimerInterval) clearInterval(this.crateTimerInterval);
+        this.crateTimerInterval = setInterval(() => {
+            this.updateCrateShopTimers();
+        }, 1000);
+
+        this.renderCrateShop();
+        this.renderInventory();
+    }
+
+    public openCrateShop() {
+        if (this.isPointerLocked) {
+            document.exitPointerLock?.();
+        }
+        if (this.roundEndOverlay) {
+            this.roundEndOverlay.style.display = 'none';
+        }
+        if (this.crateShopModal) {
+            this.crateShopModal.style.display = 'flex';
+        }
+        this.crateManager.updateMoneyUI();
+        this.renderCrateShop();
+        this.renderInventory();
+    }
+
+    public closeCrateShop() {
+        if (this.crateShopModal) {
+            this.crateShopModal.style.display = 'none';
+        }
+    }
+
+    public switchCrateShopTab(tab: 'shop' | 'inventory') {
+        const btnTabShop = document.getElementById('btn-tab-shop');
+        const btnTabInv = document.getElementById('btn-tab-inventory');
+        const shopView = document.getElementById('tab-shop-view');
+        const invView = document.getElementById('tab-inventory-view');
+
+        if (tab === 'shop') {
+            btnTabShop?.classList.add('active');
+            btnTabInv?.classList.remove('active');
+            if (shopView) shopView.style.display = 'block';
+            if (invView) invView.style.display = 'none';
+            this.renderCrateShop();
+        } else {
+            btnTabInv?.classList.add('active');
+            btnTabShop?.classList.remove('active');
+            if (invView) invView.style.display = 'block';
+            if (shopView) shopView.style.display = 'none';
+            this.renderInventory();
+        }
+    }
+
+    public renderCrateShop() {
+        const grid = document.getElementById('shop-crates-grid');
+        if (!grid) return;
+
+        const stocks = this.crateManager.getStocks();
+        const money = this.crateManager.getMoney();
+        const now = Date.now();
+
+        grid.innerHTML = '';
+        (Object.keys(CRATE_CATALOG) as CrateTier[]).forEach(tier => {
+            const crate = CRATE_CATALOG[tier];
+            const stockData = stocks[tier] || { stock: crate.defaultStock, nextRestock: now + crate.restockIntervalSec * 1000 };
+            const isOutOfStock = stockData.stock <= 0;
+            const canAfford = money >= crate.price;
+
+            const remainingSec = Math.max(0, Math.ceil((stockData.nextRestock - now) / 1000));
+            const mm = Math.floor(remainingSec / 60).toString().padStart(2, '0');
+            const ss = (remainingSec % 60).toString().padStart(2, '0');
+
+            const card = document.createElement('div');
+            card.className = 'crate-item-card';
+            card.id = `crate-card-${tier}`;
+            card.style.borderColor = crate.color;
+
+            card.innerHTML = `
+                <div class="crate-icon">${crate.icon}</div>
+                <h3 style="margin: 4px 0 6px 0; font-size: 1.1rem; color: ${crate.color};">${crate.name}</h3>
+                <div class="crate-stock-badge ${isOutOfStock ? 'out-of-stock' : ''}" id="stock-badge-${tier}">
+                    📦 Laos: <b id="stock-val-${tier}">${stockData.stock}</b> tk
+                </div>
+                <div class="crate-restock-timer" id="restock-timer-${tier}">
+                    ⏱️ Uus laovaru: <b id="restock-val-${tier}">${mm}:${ss}</b>
+                </div>
+                <div style="font-size: 1.15rem; font-weight: 900; color: #ffd32a; margin-bottom: 10px;">
+                    ${crate.price} €
+                </div>
+                <button class="btn-buy-crate" id="btn-buy-${tier}" ${(!canAfford || isOutOfStock) ? 'disabled' : ''}>
+                    ${isOutOfStock ? 'LÄBI MÜÜDUD' : `OSTA ${crate.price} €`}
+                </button>
+            `;
+
+            const btnBuy = card.querySelector(`#btn-buy-${tier}`) as HTMLButtonElement;
+            if (btnBuy) {
+                btnBuy.onclick = () => {
+                    const res = this.crateManager.buyCrate(tier);
+                    if (res.success) {
+                        audio.playCrateTick();
+                        this.renderCrateShop();
+                        this.renderInventory();
+                    } else {
+                        alert(res.message);
+                    }
+                };
+            }
+
+            grid.appendChild(card);
+        });
+    }
+
+    public updateCrateShopTimers() {
+        const stocks = this.crateManager.getStocks();
+        const money = this.crateManager.getMoney();
+        const now = Date.now();
+
+        (Object.keys(CRATE_CATALOG) as CrateTier[]).forEach(tier => {
+            const crate = CRATE_CATALOG[tier];
+            const stockData = stocks[tier];
+            if (!stockData) return;
+
+            const stockEl = document.getElementById(`stock-val-${tier}`);
+            if (stockEl) stockEl.textContent = stockData.stock.toString();
+
+            const badgeEl = document.getElementById(`stock-badge-${tier}`);
+            if (badgeEl) {
+                if (stockData.stock <= 0) {
+                    badgeEl.classList.add('out-of-stock');
+                } else {
+                    badgeEl.classList.remove('out-of-stock');
+                }
+            }
+
+            const remainingSec = Math.max(0, Math.ceil((stockData.nextRestock - now) / 1000));
+            const mm = Math.floor(remainingSec / 60).toString().padStart(2, '0');
+            const ss = (remainingSec % 60).toString().padStart(2, '0');
+
+            const restockEl = document.getElementById(`restock-val-${tier}`);
+            if (restockEl) restockEl.textContent = `${mm}:${ss}`;
+
+            const btnBuy = document.getElementById(`btn-buy-${tier}`) as HTMLButtonElement;
+            if (btnBuy) {
+                const isOutOfStock = stockData.stock <= 0;
+                const canAfford = money >= crate.price;
+                btnBuy.disabled = isOutOfStock || !canAfford;
+                btnBuy.textContent = isOutOfStock ? 'LÄBI MÜÜDUD' : `OSTA ${crate.price} €`;
+            }
+        });
+    }
+
+    public renderInventory() {
+        const inv = this.crateManager.getInventory();
+
+        // 1. Owned Crates
+        const cratesGrid = document.getElementById('inventory-crates-grid');
+        if (cratesGrid) {
+            cratesGrid.innerHTML = '';
+            const ownedTiers = (Object.keys(inv.crates) as CrateTier[]).filter(t => (inv.crates[t] || 0) > 0);
+            if (ownedTiers.length === 0) {
+                cratesGrid.innerHTML = '<div style="color: #888; font-size: 0.9rem; grid-column: 1 / -1;">Sul ei ole avamata kaste. Osta poest või võida voorus!</div>';
+            } else {
+                ownedTiers.forEach(tier => {
+                    const count = inv.crates[tier];
+                    const crate = CRATE_CATALOG[tier];
+                    const card = document.createElement('div');
+                    card.className = 'inventory-item-card';
+                    card.id = `owned-crate-${tier}`;
+                    card.style.borderColor = crate.color;
+                    card.innerHTML = `
+                        <div style="font-size: 2.5rem; margin-bottom: 6px;">${crate.icon}</div>
+                        <strong style="color: ${crate.color}; font-size: 1rem;">${crate.name}</strong>
+                        <div style="font-size: 0.85rem; color: #ffd32a; margin: 4px 0 10px 0;">Omad: <b id="owned-count-${tier}">${count}</b> tk</div>
+                        <button class="btn-play-again" id="btn-open-${tier}" style="padding: 6px 16px; font-size: 0.85rem; margin: 0; background: linear-gradient(135deg, ${crate.color}, #555);">
+                            AVA KAST 🎁
+                        </button>
+                    `;
+                    const btnOpen = card.querySelector(`#btn-open-${tier}`) as HTMLButtonElement;
+                    if (btnOpen) {
+                        btnOpen.onclick = () => this.triggerUnbox(tier);
+                    }
+                    cratesGrid.appendChild(card);
+                });
+            }
+        }
+
+        // 2. Knives
+        const knivesGrid = document.getElementById('inventory-knives-grid');
+        if (knivesGrid) {
+            knivesGrid.innerHTML = '';
+            const knifeSkins = inv.skins.filter(s => WEAPON_SKIN_CATALOG[s]?.type === 'knife');
+            knifeSkins.forEach(skinId => {
+                const skin = WEAPON_SKIN_CATALOG[skinId];
+                const isEquipped = inv.equippedKnife === skinId;
+                const card = document.createElement('div');
+                card.className = `inventory-item-card ${isEquipped ? 'equipped' : ''}`;
+                card.style.borderColor = skin.tierColor;
+                card.innerHTML = `
+                    <div style="font-size: 2.4rem; margin-bottom: 4px;">🔪</div>
+                    <strong style="color: ${skin.tierColor}; font-size: 0.95rem;">${skin.name}</strong>
+                    <div style="font-size: 0.75rem; color: #aaa; margin: 2px 0 10px 0;">${skin.tierName}</div>
+                    <button class="btn-hud-action" id="btn-equip-${skinId}" style="width: 100%; justify-content: center; font-size: 0.8rem; background: ${isEquipped ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}; border-color: ${isEquipped ? '#2ecc71' : '#666'};">
+                        ${isEquipped ? 'VARUSTATUD ✅' : 'VARUSTA ⚔️'}
+                    </button>
+                `;
+                const btnEquip = card.querySelector(`#btn-equip-${skinId}`) as HTMLButtonElement;
+                if (btnEquip && !isEquipped) {
+                    btnEquip.onclick = () => this.equipSkin(skinId);
+                }
+                knivesGrid.appendChild(card);
+            });
+        }
+
+        // 3. Guns
+        const gunsGrid = document.getElementById('inventory-guns-grid');
+        if (gunsGrid) {
+            gunsGrid.innerHTML = '';
+            const gunSkins = inv.skins.filter(s => WEAPON_SKIN_CATALOG[s]?.type === 'gun');
+            gunSkins.forEach(skinId => {
+                const skin = WEAPON_SKIN_CATALOG[skinId];
+                const isEquipped = inv.equippedGun === skinId;
+                const card = document.createElement('div');
+                card.className = `inventory-item-card ${isEquipped ? 'equipped' : ''}`;
+                card.style.borderColor = skin.tierColor;
+                card.innerHTML = `
+                    <div style="font-size: 2.4rem; margin-bottom: 4px;">🔫</div>
+                    <strong style="color: ${skin.tierColor}; font-size: 0.95rem;">${skin.name}</strong>
+                    <div style="font-size: 0.75rem; color: #aaa; margin: 2px 0 10px 0;">${skin.tierName}</div>
+                    <button class="btn-hud-action" id="btn-equip-${skinId}" style="width: 100%; justify-content: center; font-size: 0.8rem; background: ${isEquipped ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}; border-color: ${isEquipped ? '#2ecc71' : '#666'};">
+                        ${isEquipped ? 'VARUSTATUD ✅' : 'VARUSTA ⚔️'}
+                    </button>
+                `;
+                const btnEquip = card.querySelector(`#btn-equip-${skinId}`) as HTMLButtonElement;
+                if (btnEquip && !isEquipped) {
+                    btnEquip.onclick = () => this.equipSkin(skinId);
+                }
+                gunsGrid.appendChild(card);
+            });
+        }
+    }
+
+    public triggerUnbox(tier: CrateTier): WeaponSkinDef | null {
+        if (!this.unboxingModal) return null;
+
+        const crate = CRATE_CATALOG[tier];
+        const titleEl = document.getElementById('unboxing-status-title');
+        const iconEl = document.getElementById('unboxing-anim-icon');
+        const resultBox = document.getElementById('unboxing-result-box');
+        const btnEquip = document.getElementById('btn-unboxing-equip') as HTMLButtonElement;
+        const btnClose = document.getElementById('btn-unboxing-close') as HTMLButtonElement;
+
+        if (titleEl) titleEl.textContent = `${crate.name.toUpperCase()} AVAMINE...`;
+        if (iconEl) {
+            iconEl.style.display = 'block';
+            iconEl.textContent = crate.icon;
+        }
+        if (resultBox) resultBox.style.display = 'none';
+        if (btnEquip) btnEquip.style.display = 'none';
+        if (btnClose) btnClose.style.display = 'none';
+
+        this.unboxingModal.style.display = 'flex';
+
+        // Play ticking sounds
+        let ticks = 0;
+        const tickInterval = setInterval(() => {
+            audio.playCrateTick();
+            ticks++;
+            if (ticks > 4) clearInterval(tickInterval);
+        }, 180);
+
+        const wonSkin = this.crateManager.openCrate(tier);
+        if (!wonSkin) {
+            this.unboxingModal.style.display = 'none';
+            return null;
+        }
+
+        setTimeout(() => {
+            clearInterval(tickInterval);
+            audio.playCrateOpen();
+
+            if (iconEl) iconEl.style.display = 'none';
+            if (titleEl) titleEl.textContent = 'PALJU ÕNNE! SAID UUE RELVA!';
+
+            const typeEl = document.getElementById('unboxing-item-type');
+            if (typeEl) typeEl.textContent = wonSkin.type === 'knife' ? '🔪 NOANAHK' : '🔫 REVOLVRINAHK';
+
+            const nameEl = document.getElementById('unboxing-item-name');
+            if (nameEl) {
+                nameEl.textContent = wonSkin.name;
+                nameEl.style.color = wonSkin.tierColor;
+            }
+
+            const rarityEl = document.getElementById('unboxing-item-rarity');
+            if (rarityEl) {
+                rarityEl.textContent = wonSkin.tierName.toUpperCase();
+                rarityEl.style.background = wonSkin.tierColor;
+                rarityEl.style.color = '#111';
+            }
+
+            if (resultBox) resultBox.style.display = 'block';
+
+            if (btnEquip) {
+                btnEquip.style.display = 'inline-block';
+                btnEquip.onclick = () => {
+                    this.equipSkin(wonSkin.id);
+                    if (this.unboxingModal) this.unboxingModal.style.display = 'none';
+                    this.renderInventory();
+                };
+            }
+
+            if (btnClose) {
+                btnClose.style.display = 'inline-block';
+            }
+
+            this.renderInventory();
+        }, 1000);
+
+        return wonSkin;
+    }
+
+    public equipSkin(skinId: string) {
+        const skin = WEAPON_SKIN_CATALOG[skinId];
+        if (!skin) return;
+
+        this.crateManager.equipSkin(skinId);
+
+        if (this.playerChar && this.playerChar.avatarRig && this.playerChar.avatarRig.bones.rightArm) {
+            if (skin.type === 'knife') {
+                const wasVis = this.playerChar.knifeMesh ? this.playerChar.knifeMesh.visible : false;
+                if (this.playerChar.knifeMesh) {
+                    this.playerChar.avatarRig.bones.rightArm.remove(this.playerChar.knifeMesh);
+                }
+                const newKnife = this.createUltraRealisticKnife(skinId);
+                newKnife.position.set(0.08, -0.65, 0.22);
+                newKnife.rotation.x = Math.PI / 3;
+                newKnife.rotation.y = -Math.PI / 8;
+                newKnife.visible = wasVis;
+                this.playerChar.knifeMesh = newKnife;
+                this.playerChar.avatarRig.bones.rightArm.add(newKnife);
+            } else {
+                const wasVis = this.playerChar.gunMesh ? this.playerChar.gunMesh.visible : false;
+                if (this.playerChar.gunMesh) {
+                    this.playerChar.avatarRig.bones.rightArm.remove(this.playerChar.gunMesh);
+                }
+                const newGun = this.createUltraRealisticRevolver(false, skinId);
+                newGun.position.set(0.06, -0.62, 0.26);
+                newGun.rotation.x = 0;
+                newGun.visible = wasVis;
+                this.playerChar.gunMesh = newGun;
+                this.playerChar.avatarRig.bones.rightArm.add(newGun);
+            }
+        }
+
+        this.renderInventory();
     }
 
     public returnToLobby() {

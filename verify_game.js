@@ -3530,6 +3530,159 @@ try {
             }
             console.log('   MMP1 Minionbanana0_0 access authorization verified: ✅');
 
+            // Test In-Game Money HUD & Balance
+            console.log('   Testing MMP1 in-game money HUD and rewards:');
+            const initialMoneyVal = await page.$eval('#hud-money-val', el => el.textContent.trim());
+            console.log(`     - Current money balance in HUD: ${initialMoneyVal} €`);
+            if (!initialMoneyVal || isNaN(Number(initialMoneyVal))) {
+                throw new Error("MMP1 money badge #hud-money-val must display numeric in-game money!");
+            }
+
+            // Test Exact Victory Payouts according to user rules:
+            // 1. Murderer Win: Murderer gets 200 € and 1 Legendary Crate!
+            console.log('     - Testing Murderer Victory Rewards (Expected: 200 €, 1 Legendary Crate)...');
+            const murdererReward = await page.evaluate(() => {
+                window.mmp1Game.playerChar.role = 'murderer';
+                window.mmp1Game.playerChar.coins = 0;
+                const prevLegendaryCrates = window.mmp1Game.crateManager.getInventory().crates['legendary'] || 0;
+                window.mmp1Game.endRound('murderer_win', 'Murderer võitis: kõik kõrvaldatud!');
+                const moneyText = document.getElementById('end-reward-money')?.textContent;
+                const crateBoxDisplay = window.getComputedStyle(document.getElementById('end-reward-crate-box')).display;
+                const newLegendaryCrates = window.mmp1Game.crateManager.getInventory().crates['legendary'] || 0;
+                return {
+                    money: Number(moneyText),
+                    crateBoxDisplay,
+                    crateAwarded: newLegendaryCrates === prevLegendaryCrates + 1
+                };
+            });
+            console.log(`       Murderer reward money: ${murdererReward.money} €, crate box display: ${murdererReward.crateBoxDisplay}, crate awarded: ${murdererReward.crateAwarded}`);
+            if (murdererReward.money !== 200 || murdererReward.crateBoxDisplay === 'none' || !murdererReward.crateAwarded) {
+                throw new Error(`Expected Murderer to receive 200 € and 1 Legendary Crate, got: ${JSON.stringify(murdererReward)}`);
+            }
+
+            // 2. Innocent Loss (Murderer wins): Innocent gets 0 €!
+            console.log('     - Testing Innocent Loss when Murderer wins (Expected: 0 €)...');
+            const innocentLossReward = await page.evaluate(() => {
+                window.mmp1Game.playerChar.role = 'innocent';
+                window.mmp1Game.playerChar.coins = 0;
+                window.mmp1Game.endRound('murderer_win', 'Murderer võitis: kõik kõrvaldatud!');
+                return Number(document.getElementById('end-reward-money')?.textContent);
+            });
+            console.log(`       Innocent loss reward money: ${innocentLossReward} €`);
+            if (innocentLossReward !== 0) {
+                throw new Error(`Expected Innocent to receive 0 € on loss, got: ${innocentLossReward}`);
+            }
+
+            // 3. Sheriff Win: Sheriff gets 100 €!
+            console.log('     - Testing Sheriff Victory (Expected: 100 €)...');
+            const sheriffWinReward = await page.evaluate(() => {
+                window.mmp1Game.playerChar.role = 'sheriff';
+                window.mmp1Game.playerChar.coins = 0;
+                window.mmp1Game.endRound('sheriff_win', 'Sheriff laskis mõrvari maha!');
+                return Number(document.getElementById('end-reward-money')?.textContent);
+            });
+            console.log(`       Sheriff victory reward money: ${sheriffWinReward} €`);
+            if (sheriffWinReward !== 100) {
+                throw new Error(`Expected Sheriff to receive 100 € on win, got: ${sheriffWinReward}`);
+            }
+
+            // 4. Innocent Win (Sheriff shoots Murderer): Innocent gets 50 €!
+            console.log('     - Testing Innocent Win when Sheriff shoots Murderer (Expected: 50 €)...');
+            const innocentWinReward = await page.evaluate(() => {
+                window.mmp1Game.playerChar.role = 'innocent';
+                window.mmp1Game.playerChar.coins = 0;
+                window.mmp1Game.endRound('sheriff_win', 'Sheriff laskis mõrvari maha!');
+                return Number(document.getElementById('end-reward-money')?.textContent);
+            });
+            console.log(`       Innocent victory reward money: ${innocentWinReward} €`);
+            if (innocentWinReward !== 50) {
+                throw new Error(`Expected Innocent to receive 50 € on win, got: ${innocentWinReward}`);
+            }
+            console.log('   All match-end reward payout rules verified: ✅');
+
+            // Return to lobby from round end overlay
+            await page.click('#btn-next-round');
+            await new Promise(r => setTimeout(r, 300));
+
+            // Test Crate Shop (Common, Uncommon, Rare, Epic, Legendary, Cosmic, Secret, OG)
+            console.log('   Testing Crate Shop (Modal, 8 tiers, stock & restock timer):');
+            await page.click('#btn-crate-shop');
+            await new Promise(r => setTimeout(r, 200));
+
+            const mmp1CrateShopDisplay = await page.$eval('#crate-shop-modal', el => window.getComputedStyle(el).display);
+            if (mmp1CrateShopDisplay !== 'flex') throw new Error('Crate shop modal #crate-shop-modal must open on #btn-crate-shop click!');
+
+            // Verify all 8 crate tiers rendered with stocks and restock timers
+            const crateTiers = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'cosmic', 'secret', 'og'];
+            for (const tier of crateTiers) {
+                const crateInfo = await page.evaluate((t) => {
+                    const card = document.getElementById(`crate-card-${t}`);
+                    const stockVal = Number(document.getElementById(`stock-val-${t}`)?.textContent);
+                    const restockText = document.getElementById(`restock-val-${t}`)?.textContent || '';
+                    return {
+                        hasCard: !!card,
+                        stockVal,
+                        hasTimerFormat: /^\d{2}:\d{2}$/.test(restockText)
+                    };
+                }, tier);
+                if (!crateInfo.hasCard || isNaN(crateInfo.stockVal) || !crateInfo.hasTimerFormat) {
+                    throw new Error(`Crate tier ${tier} failed validation: ${JSON.stringify(crateInfo)}`);
+                }
+                console.log(`     - Crate ${tier}: stock=${crateInfo.stockVal}, timer verified: ✅`);
+            }
+
+            // Test Buying a Crate & Stock Decrement
+            console.log('   Testing purchasing a Common Crate:');
+            const buyResult = await page.evaluate(() => {
+                window.mmp1Game.crateManager.setMoney(300);
+                const prevStock = Number(document.getElementById('stock-val-common')?.textContent);
+                const res = window.mmp1Game.crateManager.buyCrate('common');
+                window.mmp1Game.renderCrateShop();
+                window.mmp1Game.renderInventory();
+                const newStock = Number(document.getElementById('stock-val-common')?.textContent);
+                const newMoney = window.mmp1Game.crateManager.getMoney();
+                const ownedCommon = window.mmp1Game.crateManager.getInventory().crates['common'] || 0;
+                return {
+                    success: res.success,
+                    stockDecreased: newStock === prevStock - 1,
+                    newMoney,
+                    ownedCommon
+                };
+            });
+            console.log(`     Purchase result: success=${buyResult.success}, stockDecreased=${buyResult.stockDecreased}, newMoney=${buyResult.newMoney} €, ownedCommon=${buyResult.ownedCommon}`);
+            if (!buyResult.success || !buyResult.stockDecreased || buyResult.newMoney !== 250 || buyResult.ownedCommon < 1) {
+                throw new Error(`Failed to purchase Common crate properly: ${JSON.stringify(buyResult)}`);
+            }
+
+            // Test Unboxing and Equipping Skin to 3D Player Character
+            console.log('   Testing crate unboxing and 3D weapon skin equipping:');
+            const unboxAndEquip = await page.evaluate(() => {
+                const wonSkin = window.mmp1Game.triggerUnbox('common');
+                if (!wonSkin) return { error: 'No skin returned from unbox' };
+                window.mmp1Game.equipSkin(wonSkin.id);
+                const unboxOverlay = document.getElementById('crate-unboxing-overlay');
+                if (unboxOverlay) unboxOverlay.style.display = 'none';
+                const inv = window.mmp1Game.crateManager.getInventory();
+                const isEquipped = (wonSkin.type === 'knife' && inv.equippedKnife === wonSkin.id) ||
+                                   (wonSkin.type === 'gun' && inv.equippedGun === wonSkin.id);
+                return {
+                    wonSkinName: wonSkin.name,
+                    wonSkinType: wonSkin.type,
+                    isEquipped
+                };
+            });
+            console.log(`     Unboxed: ${unboxAndEquip.wonSkinName} (${unboxAndEquip.wonSkinType}), equipped: ${unboxAndEquip.isEquipped}`);
+            if (!unboxAndEquip.isEquipped) {
+                throw new Error("Unboxed skin was not properly equipped!");
+            }
+            console.log('   Crate unboxing & 3D skin equipping verified: ✅');
+
+            // Close Crate Shop
+            await page.click('#btn-close-crate-shop');
+            await new Promise(r => setTimeout(r, 200));
+            const mmp1ShopClosedDisplay = await page.$eval('#crate-shop-modal', el => window.getComputedStyle(el).display);
+            if (mmp1ShopClosedDisplay !== 'none') throw new Error('Crate shop modal must close on close button click!');
+
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 
             // ==========================================
