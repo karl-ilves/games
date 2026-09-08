@@ -3737,6 +3737,104 @@ try {
             const mmp1ShopClosedDisplay = await page.$eval('#crate-shop-modal', el => window.getComputedStyle(el).display);
             if (mmp1ShopClosedDisplay !== 'none') throw new Error('Crate shop modal must close on close button click!');
 
+            // Test Player Movement Direction & Character Facing (Forward W, Backward S, Left A, Right D)
+            console.log('   Testing Player walking direction and model orientation (W/S/A/D orientation):');
+            const movementRotations = await page.evaluate(async () => {
+                const game = window.mmp1Game;
+                game.keys = {};
+                game.cameraYaw = 0; // Camera looking straight forward towards -Z
+
+                // 1. Forward movement (KeyW) -> Should travel in -Z direction and face -Z (rotation Math.PI)
+                game.keys['KeyW'] = true;
+                game.updatePlayer(0.016);
+                const rotW = game.playerChar.rotation;
+                const meshRotW = game.playerChar.mesh.rotation.y;
+                game.keys['KeyW'] = false;
+
+                // 2. Right movement (KeyD) -> Should travel in +X direction and face +X (rotation Math.PI / 2)
+                game.keys['KeyD'] = true;
+                game.updatePlayer(0.016);
+                const rotD = game.playerChar.rotation;
+                game.keys['KeyD'] = false;
+
+                // 3. Left movement (KeyA) -> Should travel in -X direction and face -X (rotation -Math.PI / 2)
+                game.keys['KeyA'] = true;
+                game.updatePlayer(0.016);
+                const rotA = game.playerChar.rotation;
+                game.keys['KeyA'] = false;
+
+                // 4. Backward movement (KeyS) -> Should travel in +Z direction and face +Z (rotation 0)
+                game.keys['KeyS'] = true;
+                game.updatePlayer(0.016);
+                const rotS = game.playerChar.rotation;
+                game.keys['KeyS'] = false;
+
+                return {
+                    rotW,
+                    meshRotW,
+                    rotD,
+                    rotA,
+                    rotS
+                };
+            });
+            console.log(`     Rotation on W (forward): ${movementRotations.rotW.toFixed(2)} rad (Expected: ~3.14 rad), Mesh Y: ${movementRotations.meshRotW.toFixed(2)} rad`);
+            console.log(`     Rotation on D (right): ${movementRotations.rotD.toFixed(2)} rad (Expected: ~1.57 rad)`);
+            console.log(`     Rotation on A (left): ${movementRotations.rotA.toFixed(2)} rad (Expected: ~-1.57 rad)`);
+            console.log(`     Rotation on S (backward): ${movementRotations.rotS.toFixed(2)} rad (Expected: ~0.00 rad)`);
+
+            if (Math.abs(movementRotations.rotW - Math.PI) > 0.01 || Math.abs(movementRotations.meshRotW - Math.PI) > 0.01) {
+                throw new Error(`Player should face forward (Math.PI) when walking forward with W! Got: ${movementRotations.rotW}`);
+            }
+            if (Math.abs(movementRotations.rotD - Math.PI / 2) > 0.01) {
+                throw new Error(`Player should face right (Math.PI / 2) when walking right with D! Got: ${movementRotations.rotD}`);
+            }
+            if (Math.abs(movementRotations.rotA - (-Math.PI / 2)) > 0.01) {
+                throw new Error(`Player should face left (-Math.PI / 2) when walking left with A! Got: ${movementRotations.rotA}`);
+            }
+            if (Math.abs(movementRotations.rotS) > 0.01) {
+                throw new Error(`Player should face backward (0) when walking backward with S! Got: ${movementRotations.rotS}`);
+            }
+            console.log('   Player walking direction & orientation verified: ✅');
+
+            // Test Distinct Weapon Archetype 3D Geometries & Custom SVG Visuals
+            console.log('   Testing distinct weapon archetype shapes (Karambit, Katana, Scythe, Blaster, Raygun, etc.):');
+            const weaponArchetypes = await page.evaluate(() => {
+                const game = window.mmp1Game;
+
+                // Knives
+                const karambit = game.createUltraRealisticKnife('knife_rare');
+                const katana = game.createUltraRealisticKnife('knife_legendary');
+                const scythe = game.createUltraRealisticKnife('knife_cosmic');
+                const pixelSword = game.createUltraRealisticKnife('knife_og');
+                const kris = game.createUltraRealisticKnife('knife_secret');
+
+                // Guns
+                const raygun = game.createUltraRealisticRevolver(false, 'gun_cosmic');
+                const silencedPistol = game.createUltraRealisticRevolver(false, 'gun_secret');
+                const arcadeBlaster = game.createUltraRealisticRevolver(false, 'gun_og');
+                const sheriffRevolver = game.createUltraRealisticRevolver(false, 'gun_legendary');
+
+                return {
+                    karambitParts: karambit.children.length,
+                    katanaParts: katana.children.length,
+                    scytheParts: scythe.children.length,
+                    pixelSwordParts: pixelSword.children.length,
+                    krisParts: kris.children.length,
+                    raygunParts: raygun.children.length,
+                    silencedPistolParts: silencedPistol.children.length,
+                    arcadeBlasterParts: arcadeBlaster.children.length,
+                    sheriffRevolverParts: sheriffRevolver.children.length
+                };
+            });
+            console.log(`     Karambit parts: ${weaponArchetypes.karambitParts}, Katana parts: ${weaponArchetypes.katanaParts}, Scythe parts: ${weaponArchetypes.scytheParts}, Kris parts: ${weaponArchetypes.krisParts}, Pixel parts: ${weaponArchetypes.pixelSwordParts}`);
+            console.log(`     Raygun parts: ${weaponArchetypes.raygunParts}, Silenced pistol parts: ${weaponArchetypes.silencedPistolParts}, Arcade blaster parts: ${weaponArchetypes.arcadeBlasterParts}, Sheriff revolver: ${weaponArchetypes.sheriffRevolverParts}`);
+
+            if (weaponArchetypes.karambitParts < 8 || weaponArchetypes.katanaParts < 6 || weaponArchetypes.scytheParts < 6 ||
+                weaponArchetypes.raygunParts < 8 || weaponArchetypes.silencedPistolParts < 8) {
+                throw new Error(`Weapon archetypes failed part count verification: ${JSON.stringify(weaponArchetypes)}`);
+            }
+            console.log('   Distinct weapon archetype 3D models verified: ✅');
+
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 
             // ==========================================
