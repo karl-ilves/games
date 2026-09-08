@@ -1333,7 +1333,7 @@ export class MmpCrateManager {
         localStorage.setItem(this.inventoryKey, JSON.stringify(inv));
     }
 
-    public openCrate(tier: CrateTier): WeaponSkinDef | null {
+    public openCrate(tier: CrateTier): (WeaponSkinDef & { isDuplicate?: boolean; refundAmount?: number }) | null {
         const inv = this.getInventory();
         if (!inv.crates[tier] || inv.crates[tier] <= 0) return null;
 
@@ -1343,11 +1343,22 @@ export class MmpCrateManager {
         const skinId = Math.random() < 0.5 ? crate.knifeSkinId : crate.gunSkinId;
         const skin = WEAPON_SKIN_CATALOG[skinId] || WEAPON_SKIN_CATALOG[crate.knifeSkinId];
 
-        if (!inv.skins.includes(skin.id)) {
+        const isDuplicate = inv.skins.includes(skin.id);
+        let refundAmount = 0;
+
+        if (isDuplicate) {
+            // Duplicate item: refund half of crate price (50%)
+            refundAmount = Math.floor(crate.price / 2);
+            this.addMoney(refundAmount);
+        } else {
             inv.skins.push(skin.id);
         }
         this.saveInventory(inv);
-        return skin;
+        return {
+            ...skin,
+            isDuplicate,
+            refundAmount
+        };
     }
 
     public equipSkin(skinId: string): boolean {
@@ -4350,7 +4361,7 @@ export class MurderMysteryGame {
         }
     }
 
-    public triggerUnbox(tier: CrateTier): WeaponSkinDef | null {
+    public triggerUnbox(tier: CrateTier): (WeaponSkinDef & { isDuplicate?: boolean; refundAmount?: number }) | null {
         if (!this.unboxingModal) return null;
 
         const crate = CRATE_CATALOG[tier];
@@ -4450,11 +4461,24 @@ export class MurderMysteryGame {
                     winnerCard.classList.add('winner-pulse');
                 }
 
-                if (titleEl) titleEl.textContent = 'PALJU ÕNNE! SAID UUE RELVA!';
-                if (subtitleEl) subtitleEl.textContent = `${crate.name} avatud!`;
+                if (wonSkin.isDuplicate) {
+                    if (titleEl) titleEl.textContent = 'DUPLIKAAT! SAID POOLE RAHAST TAGASI! 💰';
+                    if (subtitleEl) subtitleEl.textContent = `Sul on see relv juba olemas! Tagastati pool kasti hinnast: +${wonSkin.refundAmount} €!`;
+                } else {
+                    if (titleEl) titleEl.textContent = 'PALJU ÕNNE! SAID UUE RELVA!';
+                    if (subtitleEl) subtitleEl.textContent = `${crate.name} avatud!`;
+                }
 
                 const typeEl = document.getElementById('unboxing-item-type');
-                if (typeEl) typeEl.textContent = wonSkin.type === 'knife' ? '🔪 UUS NOANAHK' : '🔫 UUS REVOLVRINAHK';
+                if (typeEl) {
+                    if (wonSkin.isDuplicate) {
+                        typeEl.textContent = `♻️ DUPLIKAAT (+${wonSkin.refundAmount} €)`;
+                        typeEl.style.color = '#ffd32a';
+                    } else {
+                        typeEl.textContent = wonSkin.type === 'knife' ? '🔪 UUS NOANAHK' : '🔫 UUS REVOLVRINAHK';
+                        typeEl.style.color = '#ffd32a';
+                    }
+                }
 
                 const nameEl = document.getElementById('unboxing-item-name');
                 if (nameEl) {
@@ -4464,7 +4488,9 @@ export class MurderMysteryGame {
 
                 const rarityEl = document.getElementById('unboxing-item-rarity');
                 if (rarityEl) {
-                    rarityEl.textContent = wonSkin.tierName.toUpperCase();
+                    rarityEl.textContent = wonSkin.isDuplicate 
+                        ? `${wonSkin.tierName.toUpperCase()} (DUPLIKAAT: +${wonSkin.refundAmount} €)`
+                        : wonSkin.tierName.toUpperCase();
                     rarityEl.style.background = wonSkin.tierColor;
                     rarityEl.style.color = '#111';
                 }

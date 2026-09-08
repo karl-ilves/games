@@ -3731,6 +3731,41 @@ try {
             }
             console.log('   CS:GO style horizontal roulette unboxing & 3D skin equipping verified: ✅');
 
+            // Test Duplicate Weapon Unboxing: 50% Price Refund
+            console.log('   Testing Duplicate Weapon Skin Unboxing (50% crate price refund):');
+            const duplicateRefundResult = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                const mgr = game.crateManager;
+                
+                // Give money & award 1 Rare crate (price = 200 €)
+                mgr.awardCrate('rare', 1);
+                mgr.setMoney(100);
+
+                // Ensure both skins of the Rare crate are already in inventory so it's guaranteed duplicate
+                const rareCrate = window.mmp1Game ? { knifeSkinId: 'knife_rare', gunSkinId: 'gun_rare', price: 200 } : null;
+                const inv = mgr.getInventory();
+                if (!inv.skins.includes('knife_rare')) inv.skins.push('knife_rare');
+                if (!inv.skins.includes('gun_rare')) inv.skins.push('gun_rare');
+                mgr.saveInventory(inv);
+
+                const moneyBefore = mgr.getMoney(); // 100
+                const result = mgr.openCrate('rare');
+                const moneyAfter = mgr.getMoney();
+
+                return {
+                    isDuplicate: result?.isDuplicate,
+                    refundAmount: result?.refundAmount,
+                    moneyBefore,
+                    moneyAfter,
+                    expectedRefund: 100 // 50% of 200 €
+                };
+            });
+            console.log(`     Duplicate unbox result: isDuplicate=${duplicateRefundResult.isDuplicate}, refundAmount=${duplicateRefundResult.refundAmount} € (Expected: 100 €), balance: ${duplicateRefundResult.moneyBefore} -> ${duplicateRefundResult.moneyAfter} €`);
+            if (!duplicateRefundResult.isDuplicate || duplicateRefundResult.refundAmount !== 100 || duplicateRefundResult.moneyAfter !== 200) {
+                throw new Error(`Duplicate weapon refund failed: ${JSON.stringify(duplicateRefundResult)}`);
+            }
+            console.log('   Duplicate weapon 50% refund verified: ✅');
+
             // Close Crate Shop
             await page.click('#btn-close-crate-shop');
             await new Promise(r => setTimeout(r, 200));
