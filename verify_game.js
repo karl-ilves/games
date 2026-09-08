@@ -33,7 +33,7 @@ try {
     console.log("Launching headless browser to check runtime errors and game platform features...");
     const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--js-flags=--max-old-space-size=4096']
     });
     const page = await browser.newPage();
     await page.evaluateOnNewDocument(() => {
@@ -688,7 +688,10 @@ try {
 
         // Test Saving Avatar (English toast: 'saved')
         await page.click('#btn-avatar-save-config');
-        await new Promise(r => setTimeout(r, 300));
+        await page.waitForFunction(() => {
+            const el = document.getElementById('avatar-shop-toast');
+            return el && el.textContent && el.textContent.toLowerCase().includes('saved');
+        }, { timeout: 5000 });
         const toastText = await page.$eval('#avatar-shop-toast', el => el.textContent);
         console.log("   Avatar Save Toast (Expected English 'saved'):", toastText);
         if (!toastText.toLowerCase().includes('saved')) {
@@ -3946,7 +3949,113 @@ try {
             if (movementTests.officeDistanceMoved < 1.0) {
                 throw new Error(`Player was stuck and unable to move on Office map! Distance moved: ${movementTests.officeDistanceMoved}`);
             }
-            console.log('   Sheriff/Officer movement and collision safety verified on Yatchy & Office maps: ✅');
+            // Test AI bot forward orientation and obstacle collision avoidance ("ai kõnnivad tagurpidi ja läbi asjade")
+            console.log('   Testing AI Bot Forward Orientation & Wall Obstacle Collision Checks:');
+            const botAiTests = await page.evaluate(async () => {
+                const game = window.mmp1Game;
+                if (!game) return { success: false, reason: 'Game not found' };
+
+                game.adminSelectedMap = 'hotel2';
+                game.startRound();
+
+                const bots = game.characters.filter(c => !c.isPlayer && c.isAlive);
+                const testBot = bots[0];
+
+                // 1. Test Forward Walking Orientation
+                testBot.aiTimer = 100; // prevent random patrol target override
+                testBot.position.set(0, 0, 0);
+                testBot.aiTarget = new THREE.Vector3(0, 0, 10);
+                game.updateAI(0.05);
+
+                // With target along +Z, facing angle Math.atan2(0, 10) should be 0 (forward), NOT Math.PI (backwards)
+                const rotZ = testBot.rotation;
+                const facesForwardZ = Math.abs(rotZ) < 0.1;
+
+                // Set AI target directly along +X axis (+10m)
+                testBot.position.set(0, 0, 0);
+                testBot.aiTarget = new THREE.Vector3(10, 0, 0);
+                game.updateAI(0.05);
+                // Facing angle Math.atan2(10, 0) should be Math.PI / 2 (+1.57 rad), NOT -1.57 rad
+                const rotX = testBot.rotation;
+                const facesForwardX = Math.abs(rotX - Math.PI / 2) < 0.1;
+
+                // 2. Test Bot Collision with Objects (Bots must NOT walk through walls!)
+                // Place test wall right in front of bot
+                if (game.mapColliders.length > 0) {
+                    const wallBox = game.mapColliders[0]; // First wall
+                    const wallCenter = new THREE.Vector3();
+                    wallBox.getCenter(wallCenter);
+
+                    // Position bot 1 meter outside the wall and direct it straight INTO the wall
+                    testBot.position.set(wallCenter.x, 0, wallBox.min.z - 1.0);
+                    testBot.aiTarget = wallCenter.clone(); // target inside the wall
+
+                    // Update bot AI for 20 frames
+                    for (let i = 0; i < 20; i++) {
+                        game.updateAI(0.05);
+                    }
+
+                    // The bot must NOT be inside the wall box!
+                    const botBox = new THREE.Box3().setFromCenterAndSize(
+                        testBot.position.clone().add(new THREE.Vector3(0, 1.5, 0)),
+                        new THREE.Vector3(1.0, 2.5, 1.0)
+                    );
+                    const penetratedWall = wallBox.containsBox(botBox);
+                    return {
+                        success: true,
+                        facesForwardZ,
+                        facesForwardX,
+                        penetratedWall,
+                        rotZ,
+                        rotX
+                    };
+                }
+
+                return {
+                    success: true,
+                    facesForwardZ,
+                    facesForwardX,
+                    penetratedWall: false,
+                    rotZ,
+                    rotX
+                };
+            });
+
+            console.log(`     Bot faces forward on +Z: ${botAiTests.facesForwardZ} (rot: ${botAiTests.rotZ.toFixed(2)})`);
+            console.log(`     Bot faces forward on +X: ${botAiTests.facesForwardX} (rot: ${botAiTests.rotX.toFixed(2)})`);
+            console.log(`     Bot penetrated wall: ${botAiTests.penetratedWall} (Expected: false)`);
+
+            if (!botAiTests.facesForwardZ || !botAiTests.facesForwardX) {
+                throw new Error('AI bots were walking backwards! Orientation check failed.');
+            }
+            if (botAiTests.penetratedWall) {
+                throw new Error('AI bot phased straight through a solid wall!');
+            }
+            console.log('   AI bot forward orientation and obstacle collision verified: ✅');
+
+            // Test No Yards Awarded in MMP1 Match ("Yarde siin ei teeni")
+            console.log('   Testing No Yards Awarded in MMP1 Match ("Yarde siin ei teeni"):');
+            const noYardsCheck = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                const yardsBefore = window.yardService.getYards();
+                game.endRound('sheriff_win', 'Test victory');
+                const yardsAfter = window.yardService.getYards();
+                const endYardsText = document.getElementById('end-reward-yards-box')?.style.display || '';
+                return {
+                    yardsBefore,
+                    yardsAfter,
+                    yardsAdded: yardsAfter - yardsBefore,
+                    endYardsBoxHidden: endYardsText === 'none'
+                };
+            });
+            console.log(`     Yards added after match end (Expected: 0): ${noYardsCheck.yardsAdded}, UI hidden: ${noYardsCheck.endYardsBoxHidden}`);
+            if (noYardsCheck.yardsAdded !== 0) {
+                throw new Error(`Expected 0 Yards awarded in MMP1, but got +${noYardsCheck.yardsAdded} Yards!`);
+            }
+            if (!noYardsCheck.endYardsBoxHidden) {
+                throw new Error('Expected Yard reward box in round end modal to be hidden!');
+            }
+            console.log('   MMP1 match awards 0 Yards (only game money & crates): ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 

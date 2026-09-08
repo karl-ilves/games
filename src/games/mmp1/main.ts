@@ -3959,7 +3959,6 @@ export class MurderMysteryGame {
 
         let rewardMoney = 0;
         let wonLegendaryCrate = false;
-        let rewardYards = 20;
 
         if (winner === 'sheriff_win') {
             if (endTitle) {
@@ -3974,17 +3973,13 @@ export class MurderMysteryGame {
             // "ja kui oled süütu ja sheriff tapab murdereri ära siis sa saad 50 € ja kui oled sheriff ja tabad murdereri ära saad 100"
             if (this.playerChar.role === 'sheriff') {
                 rewardMoney = 100;
-                rewardYards = 100;
             } else if (this.playerChar.role === 'innocent') {
                 rewardMoney = 50;
-                rewardYards = 60;
             } else {
                 rewardMoney = 0;
-                rewardYards = 10;
             }
             if (this.lastHero === this.playerChar) {
                 rewardMoney = Math.max(rewardMoney, 100);
-                rewardYards = 150;
             }
         } else if (winner === 'murderer_win') {
             if (endTitle) {
@@ -3999,11 +3994,9 @@ export class MurderMysteryGame {
             if (this.playerChar.role === 'murderer') {
                 rewardMoney = 200;
                 wonLegendaryCrate = true;
-                rewardYards = 150;
                 this.crateManager.awardCrate('legendary', 1);
             } else {
                 rewardMoney = 0;
-                rewardYards = 0;
             }
         } else {
             // time_out: Innocents survived
@@ -4015,18 +4008,15 @@ export class MurderMysteryGame {
 
             if (this.playerChar.role === 'innocent' || this.playerChar.role === 'sheriff') {
                 rewardMoney = 50;
-                rewardYards = 80;
             } else {
                 rewardMoney = 0;
-                rewardYards = 0;
             }
         }
 
         // Add bonus for collected coins in-round (+ 5 € per coin)
         rewardMoney += (this.playerChar.coins || 0) * 5;
-        rewardYards += (this.playerChar.coins || 0) * 5;
 
-        // Apply money to player's balance
+        // Apply money to player's balance (User rule: Yarde siin ei teeni, only game currency €)
         this.crateManager.addMoney(rewardMoney);
 
         const endRewardMoney = document.getElementById('end-reward-money');
@@ -4037,11 +4027,7 @@ export class MurderMysteryGame {
             endRewardCrateBox.style.display = wonLegendaryCrate ? 'block' : 'none';
         }
 
-        if (endReward) endReward.textContent = rewardYards.toString();
-
-        // Award Yards to Playard Owner
-        yardService.addYards(rewardYards, `MMP1 Murder Mystery Match Reward`);
-        this.updateYardDisplay();
+        if (endReward) endReward.textContent = '0';
 
         // Record game played into Playard Recently Played
         yardService.recordPlayedGame({
@@ -5000,9 +4986,9 @@ export class MurderMysteryGame {
             this.startRound();
         });
         document.getElementById('btn-admin-add-yards')?.addEventListener('click', () => {
-            yardService.addYards(500, 'Admin bonus');
-            this.updateYardDisplay();
-            this.addIncidentFeed('💰 Admin lisas +500 Jardi!');
+            this.crateManager.addMoney(500);
+            this.updateRoleHud();
+            this.addIncidentFeed('💰 Admin lisas +500 € mänguraha!');
         });
 
         // Mobile touch joystick
@@ -5162,8 +5148,92 @@ export class MurderMysteryGame {
                 if (dist > 0.5) {
                     dir.normalize();
                     const speed = (c.role === 'murderer') ? 8.5 : 6.0;
-                    c.position.addScaledVector(dir, speed * delta);
-                    c.rotation = Math.atan2(-dir.x, -dir.z);
+                    const moveStep = dir.clone().multiplyScalar(speed * delta);
+                    const botSize = new THREE.Vector3(1.2, 3, 1.2);
+
+                    if (this.state === 'in_game') {
+                        // 1. De-penetration safety if bot is currently overlapping any collider
+                        const currentBox = new THREE.Box3().setFromCenterAndSize(c.position.clone().add(new THREE.Vector3(0, 1.5, 0)), botSize);
+                        for (const wallBox of this.mapColliders) {
+                            if (wallBox.intersectsBox(currentBox)) {
+                                const overlapX1 = currentBox.max.x - wallBox.min.x;
+                                const overlapX2 = wallBox.max.x - currentBox.min.x;
+                                const overlapZ1 = currentBox.max.z - wallBox.min.z;
+                                const overlapZ2 = wallBox.max.z - currentBox.min.z;
+                                const minOverlapX = overlapX1 < overlapX2 ? -overlapX1 : overlapX2;
+                                const minOverlapZ = overlapZ1 < overlapZ2 ? -overlapZ1 : overlapZ2;
+                                if (Math.abs(minOverlapX) < Math.abs(minOverlapZ)) {
+                                    c.position.x += minOverlapX * 1.05;
+                                } else {
+                                    c.position.z += minOverlapZ * 1.05;
+                                }
+                            }
+                        }
+
+                        // 2. Try full movement
+                        const tryPosXZ = c.position.clone().add(moveStep);
+                        const boxXZ = new THREE.Box3().setFromCenterAndSize(tryPosXZ.clone().add(new THREE.Vector3(0, 1.5, 0)), botSize);
+                        let collidesXZ = false;
+                        for (const wallBox of this.mapColliders) {
+                            if (wallBox.intersectsBox(boxXZ)) {
+                                collidesXZ = true;
+                                break;
+                            }
+                        }
+
+                        if (!collidesXZ) {
+                            c.position.copy(tryPosXZ);
+                        } else {
+                            // Wall sliding: try X axis independently
+                            let moved = false;
+                            const tryPosX = c.position.clone();
+                            tryPosX.x += moveStep.x;
+                            const boxX = new THREE.Box3().setFromCenterAndSize(tryPosX.clone().add(new THREE.Vector3(0, 1.5, 0)), botSize);
+                            let collidesX = false;
+                            for (const wallBox of this.mapColliders) {
+                                if (wallBox.intersectsBox(boxX)) {
+                                    collidesX = true;
+                                    break;
+                                }
+                            }
+                            if (!collidesX) {
+                                c.position.x = tryPosX.x;
+                                moved = true;
+                            }
+
+                            // Wall sliding: try Z axis independently
+                            const tryPosZ = c.position.clone();
+                            tryPosZ.z += moveStep.z;
+                            const boxZ = new THREE.Box3().setFromCenterAndSize(tryPosZ.clone().add(new THREE.Vector3(0, 1.5, 0)), botSize);
+                            let collidesZ = false;
+                            for (const wallBox of this.mapColliders) {
+                                if (wallBox.intersectsBox(boxZ)) {
+                                    collidesZ = true;
+                                    break;
+                                }
+                            }
+                            if (!collidesZ) {
+                                c.position.z = tryPosZ.z;
+                                moved = true;
+                            }
+
+                            // If completely blocked by a wall, pick a new target so bot navigates around the obstacle
+                            if (!moved) {
+                                c.aiTimer = 0.1;
+                                const bounce = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() > 0.5 ? 1 : -1) * Math.PI * 0.5).multiplyScalar(15);
+                                c.aiTarget = c.position.clone().add(bounce);
+                            }
+                        }
+                    } else {
+                        // Lobby boundaries
+                        const nextPos = c.position.clone().add(moveStep);
+                        nextPos.x = Math.max(-18, Math.min(18, nextPos.x));
+                        nextPos.z = Math.max(132, Math.min(168, nextPos.z));
+                        c.position.copy(nextPos);
+                    }
+
+                    // Bot facing direction: MUST face forward along travel direction (dir.x, dir.z)!
+                    c.rotation = Math.atan2(dir.x, dir.z);
                     c.mesh.position.copy(c.position);
                     c.mesh.rotation.y = c.rotation;
 
