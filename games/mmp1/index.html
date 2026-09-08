@@ -802,15 +802,24 @@
             box-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
         }
 
-        /* Unboxing overlay */
+        /* In-game disabled style for crate shop button */
+        .btn-hud-action.in-game-disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            border-color: #555 !important;
+            color: #888 !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        /* Case Opening Roulette Carousel */
         #crate-unboxing-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(3, 1, 6, 0.95);
-            backdrop-filter: blur(20px);
+            background: rgba(3, 1, 7, 0.95);
+            backdrop-filter: blur(22px);
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -819,26 +828,158 @@
             animation: fadeIn 0.25s ease;
         }
 
-        .unboxing-card {
-            background: linear-gradient(145deg, #1f1228, #2e183b);
+        .roulette-container {
+            background: linear-gradient(145deg, #130c1b, #22122d);
             border: 2px solid #ffd32a;
             border-radius: 24px;
-            padding: 35px;
+            padding: 24px 30px;
+            max-width: 860px;
+            width: 95%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 0 60px rgba(255, 211, 42, 0.35);
+            position: relative;
+        }
+
+        .roulette-viewport {
+            width: 100%;
+            max-width: 780px;
+            height: 190px;
+            overflow: hidden;
+            position: relative;
+            background: #09060d;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+            margin: 18px 0;
+        }
+
+        /* Center vertical indicator line with top and bottom neon arrows */
+        .roulette-center-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            transform: translateX(-50%);
+            background: linear-gradient(to bottom, #ff2e63, #ffd32a, #ff2e63);
+            box-shadow: 0 0 16px #ffd32a, 0 0 30px #ff2e63;
+            z-index: 30;
+            pointer-events: none;
+        }
+        .roulette-center-arrow-top {
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd32a;
+            font-size: 1.3rem;
+            text-shadow: 0 0 10px #ffd32a;
+            line-height: 1;
+        }
+        .roulette-center-arrow-bottom {
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd32a;
+            font-size: 1.3rem;
+            text-shadow: 0 0 10px #ffd32a;
+            line-height: 1;
+        }
+
+        /* Shadow gradient fades at left and right edges */
+        .roulette-viewport::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 90px;
+            background: linear-gradient(to right, #09060d, transparent);
+            z-index: 20;
+            pointer-events: none;
+        }
+        .roulette-viewport::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: 90px;
+            background: linear-gradient(to left, #09060d, transparent);
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .roulette-track {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            will-change: transform;
+            transform: translateX(0px);
+            padding: 0 10px;
+            gap: 12px;
+        }
+
+        .roulette-item-card {
+            width: 140px;
+            height: 160px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.04);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-bottom-width: 5px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
             text-align: center;
-            max-width: 480px;
-            width: 90%;
-            box-shadow: 0 0 60px rgba(255, 211, 42, 0.4);
+            box-sizing: border-box;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .roulette-item-card.winner-pulse {
+            transform: scale(1.08);
+            box-shadow: 0 0 35px var(--card-color, #ffd32a);
+            border-color: var(--card-color, #ffd32a);
+            animation: pulseGlow 1s ease-in-out infinite alternate;
         }
 
-        .unboxing-spinner {
-            font-size: 5rem;
-            margin: 20px 0;
-            animation: spinBounce 0.8s ease-in-out infinite alternate;
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 20px var(--card-color, #ffd32a); }
+            100% { box-shadow: 0 0 45px var(--card-color, #ffd32a); }
         }
 
-        @keyframes spinBounce {
-            0% { transform: scale(0.9) rotate(-5deg); }
-            100% { transform: scale(1.15) rotate(5deg); }
+        .roulette-item-svg {
+            width: 80px;
+            height: 75px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 6px;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.25));
+        }
+
+        .roulette-item-name {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 124px;
+        }
+
+        .roulette-item-tier {
+            font-size: 0.65rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -910,7 +1051,7 @@
     <!-- Lobby Intermission Banner -->
     <div id="lobby-banner">
         <span>🕒 OOTESAAL · VOOR ALUSTAB:</span>
-        <span id="lobby-countdown-sec" style="color: #ffd32a; font-size: 1.3rem;">12s</span>
+        <span id="lobby-countdown-sec" style="color: #ffd32a; font-size: 1.3rem;">40s</span>
         <button id="btn-force-start" class="btn-hud-action" style="margin-left: 10px; background: rgba(255, 211, 42, 0.2); border-color: #ffd32a; color: #ffd32a;">
             ⚡ ALUSTA KOHE
         </button>
@@ -1160,19 +1301,35 @@
         </div>
     </div>
 
-    <!-- Crate Unboxing Animation Modal -->
+    <!-- Crate Unboxing Horizontal Roulette Modal -->
     <div id="crate-unboxing-overlay">
-        <div class="unboxing-card">
-            <div style="font-size: 1.2rem; font-weight: 800; color: #ffd32a; text-transform: uppercase; letter-spacing: 1px;" id="unboxing-status-title">
+        <div class="roulette-container">
+            <div style="font-size: 1.35rem; font-weight: 900; color: #ffd32a; text-transform: uppercase; letter-spacing: 1.5px;" id="unboxing-status-title">
                 KASTI AVAMINE...
             </div>
-            <div class="unboxing-spinner" id="unboxing-anim-icon">📦</div>
-            <div id="unboxing-result-box" style="display: none; animation: fadeIn 0.4s ease;">
-                <div style="font-size: 1rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px;" id="unboxing-item-type">🔪 UUS RELVANAHK!</div>
-                <h2 style="font-size: 1.8rem; margin: 8px 0; color: #fff;" id="unboxing-item-name">Draakoni Tulekatana</h2>
-                <div style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: 900; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 18px;" id="unboxing-item-rarity">LEGENDARY</div>
+            <div style="font-size: 0.85rem; color: #bbb; margin-top: 3px;" id="unboxing-status-subtitle">
+                Rulett pöörleb — vaata, kuhu punane fookusjoon seisma jääb!
             </div>
-            <div style="display: flex; justify-content: center; gap: 12px; margin-top: 15px;">
+
+            <!-- Horizontal Roulette Viewport with Center Neon Indicator Line -->
+            <div class="roulette-viewport" id="roulette-viewport">
+                <div class="roulette-center-line" id="roulette-center-line">
+                    <span class="roulette-center-arrow-top">▼</span>
+                    <span class="roulette-center-arrow-bottom">▲</span>
+                </div>
+                <div class="roulette-track" id="roulette-track">
+                    <!-- 40 weapon cards generated dynamically -->
+                </div>
+            </div>
+
+            <!-- Winner Result Announcement (Appears after decelerating & stopping) -->
+            <div id="unboxing-result-box" style="display: none; animation: fadeIn 0.4s ease; text-align: center; margin-top: 6px;">
+                <div style="font-size: 0.95rem; color: #ffd32a; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 900;" id="unboxing-item-type">🔪 SAID UUE RELVA!</div>
+                <h2 style="font-size: 2rem; margin: 6px 0; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.4);" id="unboxing-item-name">Draakoni Tulekatana</h2>
+                <div style="display: inline-block; padding: 4px 14px; border-radius: 12px; font-weight: 900; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 10px;" id="unboxing-item-rarity">LEGENDARY</div>
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 14px; margin-top: 10px;">
                 <button class="btn-play-again" id="btn-unboxing-equip" style="display: none; background: linear-gradient(135deg, #2ecc71, #27ae60);">
                     VARUSTA KOHE ⚔️
                 </button>

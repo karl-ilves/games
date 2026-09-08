@@ -3514,6 +3514,13 @@ try {
             console.log(`   MMP1 State after returning to lobby (Expected: lobby): ${backToLobbyState}`);
             if (backToLobbyState !== 'lobby') throw new Error('MMP1 should return to lobby state!');
 
+            // Test 40s Lobby Countdown
+            const lobbyTimerVal = await page.evaluate(() => window.mmp1Game?.lobbyCountdown);
+            console.log(`   MMP1 Lobby Countdown timer (Expected: ~40s): ${lobbyTimerVal}`);
+            if (typeof lobbyTimerVal !== 'number' || lobbyTimerVal > 40 || lobbyTimerVal < 30) {
+                throw new Error(`Expected lobby countdown to be ~40s, got: ${lobbyTimerVal}`);
+            }
+
             // Test Minionbanana0_0 authorization and access in MMP1
             const accessResults = await page.evaluate(() => {
                 const minionProf = { id: 'minion_1', username: 'Minionbanana0_0', email: 'minionbanana0_0@gmail.com' };
@@ -3612,31 +3619,63 @@ try {
             const mmp1CrateShopDisplay = await page.$eval('#crate-shop-modal', el => window.getComputedStyle(el).display);
             if (mmp1CrateShopDisplay !== 'flex') throw new Error('Crate shop modal #crate-shop-modal must open on #btn-crate-shop click!');
 
-            // Verify all 8 crate tiers rendered with stocks and restock timers
+            // Verify all 8 crate tiers rendered with SVG artwork, stocks and restock timers
             const crateTiers = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'cosmic', 'secret', 'og'];
             for (const tier of crateTiers) {
                 const crateInfo = await page.evaluate((t) => {
                     const card = document.getElementById(`crate-card-${t}`);
                     const stockVal = Number(document.getElementById(`stock-val-${t}`)?.textContent);
                     const restockText = document.getElementById(`restock-val-${t}`)?.textContent || '';
+                    const hasSvg = !!card?.querySelector('svg');
                     return {
                         hasCard: !!card,
+                        hasSvg,
                         stockVal,
                         hasTimerFormat: /^\d{2}:\d{2}$/.test(restockText)
                     };
                 }, tier);
-                if (!crateInfo.hasCard || isNaN(crateInfo.stockVal) || !crateInfo.hasTimerFormat) {
+                if (!crateInfo.hasCard || !crateInfo.hasSvg || isNaN(crateInfo.stockVal) || !crateInfo.hasTimerFormat) {
                     throw new Error(`Crate tier ${tier} failed validation: ${JSON.stringify(crateInfo)}`);
                 }
-                console.log(`     - Crate ${tier}: stock=${crateInfo.stockVal}, timer verified: ✅`);
+                console.log(`     - Crate ${tier}: SVG artwork=✅, stock=${crateInfo.stockVal}, timer verified: ✅`);
             }
+
+            // Test In-Game Crate Purchase Restriction (Only allowed in lobby)
+            console.log('   Testing In-Game Crate Purchase Restriction (Shop only accessible/buyable in lobby):');
+            const inGameRestriction = await page.evaluate(() => {
+                const prevGameRole = window.mmp1Game.state;
+                window.mmp1Game.state = 'in_game';
+                const attemptBuy = window.mmp1Game.crateManager.buyCrate('common', false);
+                window.mmp1Game.renderCrateShop();
+                const noticeEl = document.getElementById('shop-in-game-notice');
+                const btnCommon = document.getElementById('btn-buy-common');
+                const isBtnDisabled = btnCommon?.disabled;
+                const btnText = btnCommon?.textContent?.trim();
+                
+                // Restore state
+                window.mmp1Game.state = prevGameRole;
+                window.mmp1Game.renderCrateShop();
+
+                return {
+                    blocked: !attemptBuy.success,
+                    msg: attemptBuy.message,
+                    hasNotice: !!noticeEl,
+                    isBtnDisabled,
+                    btnText
+                };
+            });
+            console.log(`     In-game purchase blocked: ${inGameRestriction.blocked} (Msg: "${inGameRestriction.msg}"), banner present: ${inGameRestriction.hasNotice}, button text: "${inGameRestriction.btnText}"`);
+            if (!inGameRestriction.blocked || !inGameRestriction.hasNotice || !inGameRestriction.isBtnDisabled || !inGameRestriction.btnText.includes('AINULT LOBIS')) {
+                throw new Error(`In-game crate purchase restriction failed: ${JSON.stringify(inGameRestriction)}`);
+            }
+            console.log('   In-game crate purchase block verified: ✅');
 
             // Test Buying a Crate & Stock Decrement
             console.log('   Testing purchasing a Common Crate:');
             const buyResult = await page.evaluate(() => {
                 window.mmp1Game.crateManager.setMoney(300);
                 const prevStock = Number(document.getElementById('stock-val-common')?.textContent);
-                const res = window.mmp1Game.crateManager.buyCrate('common');
+                const res = window.mmp1Game.crateManager.buyCrate('common', true);
                 window.mmp1Game.renderCrateShop();
                 window.mmp1Game.renderInventory();
                 const newStock = Number(document.getElementById('stock-val-common')?.textContent);
@@ -3654,11 +3693,20 @@ try {
                 throw new Error(`Failed to purchase Common crate properly: ${JSON.stringify(buyResult)}`);
             }
 
-            // Test Unboxing and Equipping Skin to 3D Player Character
-            console.log('   Testing crate unboxing and 3D weapon skin equipping:');
+            // Test CS:GO Style Horizontal Roulette Unboxing (Center focus line, 40 weapon cards with SVGs, and skin equipping)
+            console.log('   Testing CS:GO style horizontal roulette unboxing and 3D weapon skin equipping:');
             const unboxAndEquip = await page.evaluate(() => {
                 const wonSkin = window.mmp1Game.triggerUnbox('common');
                 if (!wonSkin) return { error: 'No skin returned from unbox' };
+
+                const centerLine = document.getElementById('roulette-center-line');
+                const arrowTop = centerLine?.querySelector('.roulette-center-arrow-top')?.textContent;
+                const arrowBottom = centerLine?.querySelector('.roulette-center-arrow-bottom')?.textContent;
+                const track = document.getElementById('roulette-track');
+                const cards = track?.querySelectorAll('.roulette-item-card') || [];
+                const firstCardSvg = cards[0]?.querySelector('svg') !== null;
+                const winnerCard = document.getElementById('roulette-card-32');
+
                 window.mmp1Game.equipSkin(wonSkin.id);
                 const unboxOverlay = document.getElementById('crate-unboxing-overlay');
                 if (unboxOverlay) unboxOverlay.style.display = 'none';
@@ -3668,14 +3716,20 @@ try {
                 return {
                     wonSkinName: wonSkin.name,
                     wonSkinType: wonSkin.type,
+                    hasCenterLine: !!centerLine,
+                    arrowTop,
+                    arrowBottom,
+                    cardsCount: cards.length,
+                    firstCardSvg,
+                    hasWinnerCard: !!winnerCard,
                     isEquipped
                 };
             });
-            console.log(`     Unboxed: ${unboxAndEquip.wonSkinName} (${unboxAndEquip.wonSkinType}), equipped: ${unboxAndEquip.isEquipped}`);
-            if (!unboxAndEquip.isEquipped) {
-                throw new Error("Unboxed skin was not properly equipped!");
+            console.log(`     Unboxed: ${unboxAndEquip.wonSkinName} (${unboxAndEquip.wonSkinType}), center line: ${unboxAndEquip.hasCenterLine} (${unboxAndEquip.arrowTop} & ${unboxAndEquip.arrowBottom}), roulette cards count: ${unboxAndEquip.cardsCount}, cards have SVG: ${unboxAndEquip.firstCardSvg}, equipped: ${unboxAndEquip.isEquipped}`);
+            if (!unboxAndEquip.hasCenterLine || unboxAndEquip.cardsCount !== 40 || !unboxAndEquip.firstCardSvg || !unboxAndEquip.isEquipped) {
+                throw new Error(`CS:GO roulette unboxing failed validation: ${JSON.stringify(unboxAndEquip)}`);
             }
-            console.log('   Crate unboxing & 3D skin equipping verified: ✅');
+            console.log('   CS:GO style horizontal roulette unboxing & 3D skin equipping verified: ✅');
 
             // Close Crate Shop
             await page.click('#btn-close-crate-shop');
