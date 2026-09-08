@@ -916,7 +916,6 @@ window.addEventListener('playard_game_played', () => {
 
 window.addEventListener('playard_games_updated', () => {
     renderCommunityGames();
-    renderAdminReviewGames();
 });
 
 // 3D Avatar System Initialization

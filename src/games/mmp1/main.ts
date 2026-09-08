@@ -1450,6 +1450,10 @@ export class MurderMysteryGame {
     public emotesWidget: InGameEmotesWidget | null = null;
     public crateManager: MmpCrateManager;
 
+    // Texture cache & dynamic lighting
+    private textureCache: Map<string, THREE.CanvasTexture> = new Map();
+    private muzzleFlashLight: THREE.PointLight | null = null;
+
     constructor() {
         this.crateManager = new MmpCrateManager();
         this.container = document.getElementById('canvas-container') || document.body;
@@ -1463,6 +1467,8 @@ export class MurderMysteryGame {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.08;
         this.container.appendChild(this.renderer.domElement);
 
         this.clock = new THREE.Clock();
@@ -1542,17 +1548,216 @@ export class MurderMysteryGame {
         if (this.gameYardVal) this.gameYardVal.textContent = yards.toLocaleString();
     }
 
+    // --- Procedural Canvas Textures for Ultra-Realistic Surfaces ---
+    private getWoodPlankTexture(): THREE.CanvasTexture {
+        if (this.textureCache.has('wood')) return this.textureCache.get('wood')!;
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#5a3b22';
+        ctx.fillRect(0, 0, 512, 512);
+
+        const plankH = 64;
+        for (let y = 0; y < 512; y += plankH) {
+            ctx.fillStyle = (y / plankH) % 2 === 0 ? '#634226' : '#55371f';
+            ctx.fillRect(0, y, 512, plankH - 2);
+
+            ctx.strokeStyle = 'rgba(25, 14, 8, 0.28)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 16; i++) {
+                const gy = y + Math.random() * plankH;
+                ctx.beginPath();
+                ctx.moveTo(0, gy);
+                ctx.bezierCurveTo(160, gy + (Math.random() - 0.5) * 6, 360, gy + (Math.random() - 0.5) * 6, 512, gy);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#1c1007';
+            ctx.fillRect(0, y + plankH - 2, 512, 2);
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(6, 6);
+        this.textureCache.set('wood', tex);
+        return tex;
+    }
+
+    private getMarbleTileTexture(): THREE.CanvasTexture {
+        if (this.textureCache.has('marble')) return this.textureCache.get('marble')!;
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d')!;
+
+        ctx.fillStyle = '#22252a';
+        ctx.fillRect(0, 0, 512, 512);
+
+        const tileSize = 128;
+        for (let x = 0; x < 512; x += tileSize) {
+            for (let y = 0; y < 512; y += tileSize) {
+                const isAlt = ((x / tileSize) + (y / tileSize)) % 2 === 0;
+                ctx.fillStyle = isAlt ? '#2e353d' : '#1e2227';
+                ctx.fillRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+
+                ctx.strokeStyle = isAlt ? 'rgba(200, 220, 245, 0.16)' : 'rgba(255, 255, 255, 0.09)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(x + Math.random() * tileSize, y);
+                ctx.bezierCurveTo(x + tileSize * 0.4, y + tileSize * 0.5, x + tileSize * 0.7, y + tileSize * 0.3, x + tileSize, y + Math.random() * tileSize);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#0d1014';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, tileSize, tileSize);
+            }
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(8, 8);
+        this.textureCache.set('marble', tex);
+        return tex;
+    }
+
+    private getCarpetFabricTexture(): THREE.CanvasTexture {
+        if (this.textureCache.has('carpet')) return this.textureCache.get('carpet')!;
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#7a0016';
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        for (let i = 0; i < 256; i += 4) {
+            ctx.fillRect(i, 0, 2, 256);
+            ctx.fillRect(0, i, 2, 256);
+        }
+
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(10, 10, 236, 236);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 8);
+        this.textureCache.set('carpet', tex);
+        return tex;
+    }
+
+    private getDiamondSteelTexture(): THREE.CanvasTexture {
+        if (this.textureCache.has('steel')) return this.textureCache.get('steel')!;
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#2c3539';
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.fillStyle = '#3f4c54';
+        ctx.strokeStyle = '#181e22';
+        ctx.lineWidth = 1;
+
+        const step = 32;
+        for (let x = 0; x < 256; x += step) {
+            for (let y = 0; y < 256; y += step) {
+                ctx.save();
+                ctx.translate(x + 16, y + 16);
+                ctx.rotate(Math.PI / 4);
+                ctx.fillRect(-6, -2, 12, 4);
+                ctx.strokeRect(-6, -2, 12, 4);
+                ctx.restore();
+            }
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(8, 8);
+        this.textureCache.set('steel', tex);
+        return tex;
+    }
+
+    private getSandRippleTexture(): THREE.CanvasTexture {
+        if (this.textureCache.has('sand')) return this.textureCache.get('sand')!;
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#d4a373';
+        ctx.fillRect(0, 0, 512, 512);
+
+        ctx.strokeStyle = 'rgba(180, 130, 85, 0.35)';
+        ctx.lineWidth = 3;
+        for (let y = 0; y < 512; y += 24) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.bezierCurveTo(128, y + 6, 256, y - 6, 384, y + 8);
+            ctx.bezierCurveTo(440, y - 4, 480, y + 4, 512, y);
+            ctx.stroke();
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(8, 8);
+        this.textureCache.set('sand', tex);
+        return tex;
+    }
+
+    private getDamascusSteelTexture(): THREE.CanvasTexture {
+        if (this.textureCache.has('damascus')) return this.textureCache.get('damascus')!;
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#3a4045';
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.strokeStyle = '#c8d3dc';
+        ctx.lineWidth = 1.8;
+        for (let y = 0; y < 256; y += 8) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.bezierCurveTo(64, y + 5, 128, y - 5, 192, y + 4);
+            ctx.bezierCurveTo(220, y - 3, 240, y + 2, 256, y);
+            ctx.stroke();
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 4);
+        this.textureCache.set('damascus', tex);
+        return tex;
+    }
+
     // --- Lighting Setup ---
     private initLights() {
-        const ambientLight = new THREE.AmbientLight(0xfff0f5, 0.45);
+        const ambientLight = new THREE.AmbientLight(0xfff5ea, 0.55);
         this.scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffeedd, 0.7);
-        dirLight.position.set(20, 40, 20);
+        const dirLight = new THREE.DirectionalLight(0xffeedd, 0.8);
+        dirLight.position.set(25, 45, 20);
         dirLight.castShadow = true;
         dirLight.shadow.mapSize.width = 1024;
         dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.bias = -0.0005;
         this.scene.add(dirLight);
+
+        // Soft secondary fill light for realistic ambient contrast
+        const fillLight = new THREE.DirectionalLight(0x7090b0, 0.35);
+        fillLight.position.set(-20, 25, -20);
+        this.scene.add(fillLight);
+
+        // Dynamic muzzle flash light on gunfire
+        this.muzzleFlashLight = new THREE.PointLight(0xffaa22, 0, 25);
+        this.scene.add(this.muzzleFlashLight);
     }
 
     // --- 3D Waiting Lobby Builder ---
@@ -1560,13 +1765,26 @@ export class MurderMysteryGame {
         this.lobbyGroup = new THREE.Group();
         this.lobbyGroup.position.set(0, 0, 150); // Lobby offset far from mansion
 
-        // Lobby Floor
+        // Lobby Floor: Polished deep dark marble
         const floorGeo = new THREE.BoxGeometry(40, 1, 40);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x1f1a29, roughness: 0.3, metalness: 0.2 });
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            map: this.getMarbleTileTexture(), 
+            roughness: 0.25, 
+            metalness: 0.22 
+        });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.y = -0.5;
         floor.receiveShadow = true;
         this.lobbyGroup.add(floor);
+
+        // Neon Floor Perimeter Accent Strip
+        const neonMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+        const stripN = new THREE.Mesh(new THREE.BoxGeometry(38, 0.04, 0.15), neonMat);
+        stripN.position.set(0, 0.02, -19);
+        this.lobbyGroup.add(stripN);
+        const stripS = new THREE.Mesh(new THREE.BoxGeometry(38, 0.04, 0.15), neonMat);
+        stripS.position.set(0, 0.02, 19);
+        this.lobbyGroup.add(stripS);
 
         // Lobby Glass & Walls
         const wallMat = new THREE.MeshStandardMaterial({ color: 0x2e243d, roughness: 0.5 });
@@ -1604,8 +1822,15 @@ export class MurderMysteryGame {
         holo.position.set(0, 3.5, 0);
         this.lobbyGroup.add(holo);
 
-        // Lobby Point Lights
-        const lobbyLight = new THREE.PointLight(0xff2e63, 1.5, 30);
+        // Lobby Corner Recessed Downlights
+        [[-14, -14], [14, -14], [-14, 14], [14, 14]].forEach(([lx, lz]) => {
+            const downlight = new THREE.PointLight(0x00f2fe, 1.2, 22);
+            downlight.position.set(lx, 8, lz);
+            this.lobbyGroup.add(downlight);
+        });
+
+        // Lobby Central Accent Point Light
+        const lobbyLight = new THREE.PointLight(0xff2e63, 1.8, 30);
         lobbyLight.position.set(0, 7, 0);
         this.lobbyGroup.add(lobbyLight);
 
@@ -1675,19 +1900,81 @@ export class MurderMysteryGame {
         return wall;
     }
 
+    // Helper to create framed gallery artwork
+    private createFramedPainting(w: number, h: number, x: number, y: number, z: number, rotY: number, artColor: number = 0x8e44ad): THREE.Group {
+        const group = new THREE.Group();
+        group.position.set(x, y, z);
+        group.rotation.y = rotY;
+
+        // Gilded / Dark Wood Frame
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.25 });
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, h + 0.3, 0.12), frameMat);
+        group.add(frame);
+
+        // Canvas Surface
+        const canvasMat = new THREE.MeshStandardMaterial({ color: artColor, roughness: 0.85 });
+        const canvas = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.14), canvasMat);
+        group.add(canvas);
+
+        this.mansionGroup.add(group);
+        return group;
+    }
+
+    // Helper to create potted luxury ficus/palm plant
+    private createPottedPlant(x: number, y: number, z: number): THREE.Group {
+        const group = new THREE.Group();
+        group.position.set(x, y, z);
+
+        // Ceramic Pot
+        const potMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.3 });
+        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.35, 0.9, 16), potMat);
+        pot.position.y = 0.45;
+        group.add(pot);
+
+        // Soil
+        const soilMat = new THREE.MeshStandardMaterial({ color: 0x3d271d, roughness: 0.9 });
+        const soil = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.1, 16), soilMat);
+        soil.position.y = 0.85;
+        group.add(soil);
+
+        // Foliage Sphere Clusters
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.6 });
+        const leaves1 = new THREE.Mesh(new THREE.SphereGeometry(0.65, 12, 12), leafMat);
+        leaves1.position.set(0, 1.45, 0);
+        leaves1.scale.set(1.0, 1.2, 1.0);
+        group.add(leaves1);
+
+        const leaves2 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 10), leafMat);
+        leaves2.position.set(0.2, 1.9, 0.1);
+        group.add(leaves2);
+
+        this.mansionGroup.add(group);
+        return group;
+    }
+
     // 1. HOTEL 2: Multi-floor grand hotel with lobby, reception, rooms, and mezzanine
     private buildHotel2Map() {
-        // Floor: Polished hotel marble & dark oak
+        // Floor: Polished hotel marble & dark oak with procedural marble tile texture
+        const marbleTex = this.getMarbleTileTexture();
         const floorGeo = new THREE.BoxGeometry(92, 1, 92);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x3d271d, roughness: 0.35, metalness: 0.1 });
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            map: marbleTex, 
+            roughness: 0.22, 
+            metalness: 0.15 
+        });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.y = -0.5;
         floor.receiveShadow = true;
         this.mansionGroup.add(floor);
 
-        // Center Red Velvet Carpet across grand lobby
-        const carpetGeo = new THREE.BoxGeometry(12, 0.08, 65);
-        const carpetMat = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.8 });
+        // Center Red Velvet Carpet across grand lobby with rich fabric texture
+        const carpetTex = this.getCarpetFabricTexture();
+        const carpetGeo = new THREE.BoxGeometry(14, 0.08, 65);
+        const carpetMat = new THREE.MeshStandardMaterial({ 
+            map: carpetTex, 
+            roughness: 0.85, 
+            metalness: 0.05 
+        });
         const carpet = new THREE.Mesh(carpetGeo, carpetMat);
         carpet.position.set(0, 0.05, 0);
         carpet.receiveShadow = true;
@@ -1699,18 +1986,32 @@ export class MurderMysteryGame {
         this.createMapWall(2, 14, 92, -46, 7, 0, 0x1f1924);
         this.createMapWall(2, 14, 92, 46, 7, 0, 0x1f1924);
 
-        // Hotel Reception Desk (North Center)
-        const desk = new THREE.Mesh(new THREE.BoxGeometry(18, 2.2, 4), new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.3 }));
+        // Hotel Reception Desk (North Center) with polished wood and brass trim
+        const desk = new THREE.Mesh(new THREE.BoxGeometry(18, 2.2, 4), new THREE.MeshStandardMaterial({ color: 0x4a2c17, roughness: 0.25 }));
         desk.position.set(0, 1.1, -36);
         desk.castShadow = true;
         this.mansionGroup.add(desk);
         this.wallMeshes.push(desk);
         this.mapColliders.push(new THREE.Box3().setFromObject(desk));
 
+        // Reception Desk Accessories: Brass Service Bell & Check-in Laptop
+        const bell = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.22, 12), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.15 }));
+        bell.position.set(-2.5, 2.32, -36);
+        this.mansionGroup.add(bell);
+
+        const laptopBase = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 0.6), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 }));
+        laptopBase.position.set(0, 2.24, -36);
+        this.mansionGroup.add(laptopBase);
+
+        const laptopScreen = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.55, 0.04), new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00a8ff, emissiveIntensity: 0.6 }));
+        laptopScreen.position.set(0, 2.52, -36.26);
+        laptopScreen.rotation.x = -0.2;
+        this.mansionGroup.add(laptopScreen);
+
         // Hotel Key Rack / Back Wall
         this.createMapWall(22, 6, 1.5, 0, 3, -42, 0x2b1c11);
 
-        // Hotel Grand Pillars
+        // Hotel Grand Pillars with Fluted Tops
         const pillarGeo = new THREE.CylinderGeometry(1.2, 1.4, 14, 16);
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4d3e52, roughness: 0.3 });
         [[-18, -18], [18, -18], [-18, 18], [18, 18], [-18, 0], [18, 0], [0, -18], [0, 18]].forEach(([px, pz]) => {
@@ -1765,21 +2066,44 @@ export class MurderMysteryGame {
         balcony.position.set(0, 6.5, -20);
         this.mansionGroup.add(balcony);
 
+        // Paintings on hotel walls
+        this.createFramedPainting(4.5, 3.2, -44.8, 6.5, -15, Math.PI / 2, 0xc0392b);
+        this.createFramedPainting(4.5, 3.2, 44.8, 6.5, -15, -Math.PI / 2, 0x2980b9);
+        this.createFramedPainting(5.0, 3.2, -44.8, 6.5, 15, Math.PI / 2, 0x27ae60);
+        this.createFramedPainting(5.0, 3.2, 44.8, 6.5, 15, -Math.PI / 2, 0xf39c12);
+
+        // Potted ficus plants in hotel corners
+        this.createPottedPlant(-10, 0, -32);
+        this.createPottedPlant(10, 0, -32);
+        this.createPottedPlant(-14, 0, 14);
+        this.createPottedPlant(14, 0, 14);
+
+        // Grand Crystal Chandelier (Ring + Droplets)
+        const chandelierRing = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.15, 12, 32), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.15 }));
+        chandelierRing.rotation.x = Math.PI / 2;
+        chandelierRing.position.set(0, 11, 0);
+        this.mansionGroup.add(chandelierRing);
+
         // Lighting: Warm luxury hotel chandelier
-        const chandelier = new THREE.PointLight(0xffeedd, 2.8, 65);
+        const chandelier = new THREE.PointLight(0xffeedd, 3.0, 70);
         chandelier.position.set(0, 11, 0);
         this.mansionGroup.add(chandelier);
 
-        const warmLight = new THREE.PointLight(0xff9944, 1.6, 35);
+        const warmLight = new THREE.PointLight(0xff9944, 1.8, 35);
         warmLight.position.set(0, 5, -34);
         this.mansionGroup.add(warmLight);
     }
 
     // 2. MIL BASE: Military fortified base with hangar, barracks, radar bunker, crates
     private buildMilBaseMap() {
-        // Floor: Concrete military asphalt
+        // Floor: Concrete military asphalt with diamond steel texture
+        const diamondTex = this.getDiamondSteelTexture();
         const floorGeo = new THREE.BoxGeometry(92, 1, 92);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x2c3539, roughness: 0.85 });
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            map: diamondTex, 
+            roughness: 0.6, 
+            metalness: 0.4 
+        });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.y = -0.5;
         floor.receiveShadow = true;
@@ -1797,6 +2121,18 @@ export class MurderMysteryGame {
         const pad = new THREE.Mesh(padGeo, padMat);
         pad.position.set(0, 0.05, 0);
         this.mansionGroup.add(pad);
+
+        // Helipad Yellow "H" Marking
+        const hBarMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
+        const hLeft = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 8), hBarMat);
+        hLeft.position.set(-2.5, 0.07, 0);
+        this.mansionGroup.add(hLeft);
+        const hRight = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 8), hBarMat);
+        hRight.position.set(2.5, 0.07, 0);
+        this.mansionGroup.add(hRight);
+        const hCross = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.12, 1.2), hBarMat);
+        hCross.position.set(0, 0.07, 0);
+        this.mansionGroup.add(hCross);
 
         // North-West: Supply Hangar
         this.createMapWall(22, 6, 1.5, -30, 3, -22, 0x3b444b);
@@ -1819,6 +2155,20 @@ export class MurderMysteryGame {
         this.mansionGroup.add(radarConsole);
         this.wallMeshes.push(radarConsole);
         this.mapColliders.push(new THREE.Box3().setFromObject(radarConsole));
+
+        // Radar Bunker Wall Map / Tactical Screen
+        const screenMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00a854, emissiveIntensity: 0.7 });
+        const screen = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 0.1), screenMat);
+        screen.position.set(30, 4.2, -44.5);
+        this.mansionGroup.add(screen);
+
+        // Wall Fire Extinguishers in Military Base
+        [-20, 20].forEach(ex => {
+            const extMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, roughness: 0.3 });
+            const ext = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.9, 12), extMat);
+            ext.position.set(ex, 3, -44.8);
+            this.mansionGroup.add(ext);
+        });
 
         // South-West: Soldiers' Barracks (Bunk Beds)
         this.createMapWall(22, 6, 1.5, -30, 3, 22, 0x3b444b);
@@ -1852,20 +2202,25 @@ export class MurderMysteryGame {
         });
 
         // Harsh Tactical Floodlights
-        const tacticalLight = new THREE.PointLight(0xaaccff, 2.6, 65);
+        const tacticalLight = new THREE.PointLight(0xaaccff, 2.8, 70);
         tacticalLight.position.set(0, 12, 0);
         this.mansionGroup.add(tacticalLight);
 
-        const radarGlow = new THREE.PointLight(0x00ff88, 1.8, 25);
+        const radarGlow = new THREE.PointLight(0x00ff88, 2.0, 28);
         radarGlow.position.set(30, 4, -33);
         this.mansionGroup.add(radarGlow);
     }
 
     // 3. OFFICE: Modern corporate office building with cubicles, boardroom, server room
     private buildOfficeMap() {
-        // Floor: Commercial grey carpet tiles
+        // Floor: Commercial grey carpet tiles with procedural carpet texture
+        const carpetTex = this.getCarpetFabricTexture();
         const floorGeo = new THREE.BoxGeometry(92, 1, 92);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.7 });
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            map: carpetTex, 
+            roughness: 0.75, 
+            metalness: 0.05 
+        });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.y = -0.5;
         floor.receiveShadow = true;
@@ -1881,6 +2236,8 @@ export class MurderMysteryGame {
         const cubicleMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.5 });
         const deskMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, roughness: 0.3 });
         const monitorMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5 });
+        const chairMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.4 });
+        const coffeeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
 
         [[-8, -6], [8, -6], [-8, 6], [8, 6]].forEach(([cx, cz]) => {
             // Partition
@@ -1897,10 +2254,20 @@ export class MurderMysteryGame {
             this.wallMeshes.push(desk);
             this.mapColliders.push(new THREE.Box3().setFromObject(desk));
 
-            // Computer monitor
-            const mon = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 0.2), monitorMat);
+            // Computer monitor (Curved Ultra-wide display)
+            const mon = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.1, 0.15), monitorMat);
             mon.position.set(cx, 1.8, cz + (cz < 0 ? -1.5 : 1.5));
             this.mansionGroup.add(mon);
+
+            // Ergonomic Office Chair
+            const chair = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.4, 1.2), chairMat);
+            chair.position.set(cx, 0.7, cz + (cz < 0 ? -3.0 : 3.0));
+            this.mansionGroup.add(chair);
+
+            // Ceramic Coffee Mug on desk
+            const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.2, 10), coffeeMat);
+            mug.position.set(cx + 1.8, 1.5, cz + (cz < 0 ? -1.5 : 1.5));
+            this.mansionGroup.add(mug);
         });
 
         // North-West: Executive Boardroom
@@ -1911,6 +2278,12 @@ export class MurderMysteryGame {
         this.mansionGroup.add(boardTable);
         this.wallMeshes.push(boardTable);
         this.mapColliders.push(new THREE.Box3().setFromObject(boardTable));
+
+        // Boardroom Whiteboard
+        const wbMat = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.15 });
+        const whiteboard = new THREE.Mesh(new THREE.BoxGeometry(8, 3.5, 0.1), wbMat);
+        whiteboard.position.set(-31, 3.5, -44.5);
+        this.mansionGroup.add(whiteboard);
 
         // North-East: High-Tech Server Room (Glowing server racks)
         this.createMapWall(22, 5, 1.2, 30, 2.5, -20, 0x1a252f);
@@ -1936,6 +2309,14 @@ export class MurderMysteryGame {
         this.wallMeshes.push(snackBar);
         this.mapColliders.push(new THREE.Box3().setFromObject(snackBar));
 
+        // Breakroom Water Cooler
+        const coolerBase = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.6, 12), new THREE.MeshStandardMaterial({ color: 0xecf0f1 }));
+        coolerBase.position.set(-22, 0.8, 31);
+        this.mansionGroup.add(coolerBase);
+        const coolerBottle = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.7, 12), new THREE.MeshPhysicalMaterial({ color: 0x00d2d3, transmission: 0.8, opacity: 0.9, transparent: true }));
+        coolerBottle.position.set(-22, 1.95, 31);
+        this.mansionGroup.add(coolerBottle);
+
         // South-East: CEO Corner Office
         this.createMapWall(22, 5, 1.2, 30, 2.5, 20, 0x1a252f);
         this.createMapWall(1.2, 5, 22, 19, 2.5, 31, 0x1a252f);
@@ -1945,17 +2326,25 @@ export class MurderMysteryGame {
         this.wallMeshes.push(ceoDesk);
         this.mapColliders.push(new THREE.Box3().setFromObject(ceoDesk));
 
+        // Potted plants in office lobby
+        this.createPottedPlant(-16, 0, 0);
+        this.createPottedPlant(16, 0, 0);
+
         // Office Overhead Fluorescent Lights
-        const officeCeilingLight = new THREE.PointLight(0xf5f6fa, 2.7, 65);
+        const officeCeilingLight = new THREE.PointLight(0xf5f6fa, 2.8, 70);
         officeCeilingLight.position.set(0, 11, 0);
         this.mansionGroup.add(officeCeilingLight);
     }
 
     // 4. VACATION: Tropical island resort with golden sand, palm trees, bungalows, tiki-bar
     private buildVacationMap() {
-        // Floor: Golden sand beach
+        // Floor: Golden sand beach with procedural sand ripple texture
+        const sandTex = this.getSandRippleTexture();
         const floorGeo = new THREE.BoxGeometry(92, 1, 92);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0xe5c07b, roughness: 0.9 });
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            map: sandTex, 
+            roughness: 0.95 
+        });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.y = -0.5;
         floor.receiveShadow = true;
@@ -2018,6 +2407,23 @@ export class MurderMysteryGame {
         this.wallMeshes.push(tikiCounter);
         this.mapColliders.push(new THREE.Box3().setFromObject(tikiCounter));
 
+        // Tropical Coconut Drinks on Bar
+        const coconutMat = new THREE.MeshStandardMaterial({ color: 0x553011, roughness: 0.8 });
+        [28, 30, 32].forEach(dx => {
+            const coconut = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), coconutMat);
+            coconut.position.set(dx, 2.18, 21);
+            this.mansionGroup.add(coconut);
+        });
+
+        // Propped Surfboards against Tiki Bar
+        const boardColors = [0xff4757, 0x2ed573];
+        [-1, 1].forEach((dir, i) => {
+            const surfboard = new THREE.Mesh(new THREE.BoxGeometry(0.8, 3.6, 0.15), new THREE.MeshStandardMaterial({ color: boardColors[i] }));
+            surfboard.position.set(24 + i * 2, 1.7, 9.6);
+            surfboard.rotation.z = dir * 0.15;
+            this.mansionGroup.add(surfboard);
+        });
+
         // Sun Loungers & Umbrellas
         const umbrellaMat = new THREE.MeshStandardMaterial({ color: 0xff4757 });
         [[-4, -14], [4, -14], [-4, 4], [4, 4]].forEach(([ux, uz]) => {
@@ -2036,20 +2442,25 @@ export class MurderMysteryGame {
         });
 
         // Warm Tropical Sunlight & Lanterns
-        const sunLight = new THREE.PointLight(0xfff3a0, 2.9, 70);
+        const sunLight = new THREE.PointLight(0xfff3a0, 3.0, 75);
         sunLight.position.set(0, 14, 0);
         this.mansionGroup.add(sunLight);
 
-        const tikiLantern = new THREE.PointLight(0xff6b6b, 1.9, 30);
+        const tikiLantern = new THREE.PointLight(0xff6b6b, 2.0, 32);
         tikiLantern.position.set(30, 4, 21);
         this.mansionGroup.add(tikiLantern);
     }
 
     // 5. YATCHY: Luxury multi-deck superyacht with bridge, dining salon, cabins, and jacuzzi
     private buildYatchyMap() {
-        // Floor: Polished teak yacht decking
+        // Floor: Polished teak yacht decking with procedural plank texture
+        const woodTex = this.getWoodPlankTexture();
         const floorGeo = new THREE.BoxGeometry(92, 1, 92);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 0.4 });
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            map: woodTex, 
+            roughness: 0.35, 
+            metalness: 0.1 
+        });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.y = -0.5;
         floor.receiveShadow = true;
@@ -2075,6 +2486,13 @@ export class MurderMysteryGame {
         this.mansionGroup.add(helmConsole);
         this.wallMeshes.push(helmConsole);
         this.mapColliders.push(new THREE.Box3().setFromObject(helmConsole));
+
+        // Yacht Steering Wheel on helm console
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x8e44ad, metalness: 0.9, roughness: 0.2 });
+        const helmWheel = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.08, 8, 20), wheelMat);
+        helmWheel.position.set(0, 2.1, -35.2);
+        helmWheel.rotation.x = Math.PI / 4;
+        this.mansionGroup.add(helmWheel);
 
         // Central VIP Jacuzzi Pool (Decorative walk-in luxury pool)
         const poolBorder = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.8, 24), new THREE.MeshStandardMaterial({ color: 0xdcdde1, roughness: 0.2 }));
@@ -2111,12 +2529,18 @@ export class MurderMysteryGame {
         this.wallMeshes.push(yachtTable);
         this.mapColliders.push(new THREE.Box3().setFromObject(yachtTable));
 
+        // Champagne Bucket and Flutes on Banquet Table
+        const coolerMat = new THREE.MeshStandardMaterial({ color: 0xdcdde1, metalness: 0.95, roughness: 0.1 });
+        const cooler = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.22, 0.5, 12), coolerMat);
+        cooler.position.set(0, 1.85, 34);
+        this.mansionGroup.add(cooler);
+
         // Yacht Deck Illumination
-        const yachtLight = new THREE.PointLight(0xe0f7fa, 2.7, 65);
+        const yachtLight = new THREE.PointLight(0xe0f7fa, 2.8, 70);
         yachtLight.position.set(0, 11, 0);
         this.mansionGroup.add(yachtLight);
 
-        const jacuzziLight = new THREE.PointLight(0x00f2fe, 1.9, 18);
+        const jacuzziLight = new THREE.PointLight(0x00f2fe, 2.1, 20);
         jacuzziLight.position.set(0, 2.5, 0);
         this.mansionGroup.add(jacuzziLight);
     }
@@ -2977,6 +3401,10 @@ export class MurderMysteryGame {
         pupilL.rotation.x = Math.PI / 2;
         pupilL.position.set(-0.18, 3.16, 0.45);
         group.add(pupilL);
+        // Left Eye Corneal Reflection Highlight
+        const cornealHighlightL = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        cornealHighlightL.position.set(-0.17, 3.175, 0.465);
+        group.add(cornealHighlightL);
         const browL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.06), browMat);
         browL.position.set(-0.18, 3.25, 0.42);
         browL.rotation.z = 0.08;
@@ -2994,6 +3422,10 @@ export class MurderMysteryGame {
         pupilR.rotation.x = Math.PI / 2;
         pupilR.position.set(0.18, 3.16, 0.45);
         group.add(pupilR);
+        // Right Eye Corneal Reflection Highlight
+        const cornealHighlightR = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        cornealHighlightR.position.set(0.19, 3.175, 0.465);
+        group.add(cornealHighlightR);
         const browR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.06), browMat);
         browR.position.set(0.18, 3.25, 0.42);
         browR.rotation.z = -0.08;
@@ -3150,6 +3582,21 @@ export class MurderMysteryGame {
         const cuffL = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 12), shirtMat);
         cuffL.position.set(0, -1.14, 0);
         armLGroup.add(cuffL);
+        // Left Wristwatch (Luxury Gold/Chrome Chronograph)
+        const watchBandMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5 });
+        const watchCaseMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.95, roughness: 0.15 });
+        const watchDialMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1 });
+        const watchBand = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.06, 16), watchBandMat);
+        watchBand.position.set(0, -1.19, 0);
+        armLGroup.add(watchBand);
+        const watchDial = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 12), watchCaseMat);
+        watchDial.position.set(-0.13, -1.19, 0);
+        watchDial.rotation.z = Math.PI / 2;
+        armLGroup.add(watchDial);
+        const watchFace = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.025, 12), watchDialMat);
+        watchFace.position.set(-0.135, -1.19, 0);
+        watchFace.rotation.z = Math.PI / 2;
+        armLGroup.add(watchFace);
         // Sculpted Hand
         const handL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.20), skinMat);
         handL.position.set(0, -1.26, 0.04);
@@ -3751,6 +4198,17 @@ export class MurderMysteryGame {
 
     public performSheriffShoot(shooter: Character, screenPos?: { x: number; y: number }) {
         audio.playGunshot();
+
+        // Dynamic muzzle flash light illumination
+        if (this.muzzleFlashLight && shooter.position) {
+            this.muzzleFlashLight.position.copy(shooter.position).add(new THREE.Vector3(0, 1.8, 0));
+            this.muzzleFlashLight.intensity = 5.0;
+            setTimeout(() => {
+                if (this.muzzleFlashLight) {
+                    this.muzzleFlashLight.intensity = 0;
+                }
+            }, 70);
+        }
 
         const charMeshes = this.characters.filter(c => c !== shooter && c.isAlive && c.mesh).map(c => c.mesh);
         // Include wall meshes so bullets CANNOT pass or hit through walls!

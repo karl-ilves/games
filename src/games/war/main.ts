@@ -338,6 +338,7 @@ class WarGameEngine {
 
     private async saveUserDataToDb() {
         const prof = getCurrentUserProfile();
+        const isTestEnv = (window as any).__PLAYARD_TEST_MODE__;
         const userId = prof?.id || this.localPlayerId;
         const storageKey = `playard_war_data_${userId}`;
 

@@ -1164,8 +1164,7 @@ try {
 
         // 9. Test 3D Master Chef Cooking Simulator
         console.log("9. Checking 3D Master Chef Cooking Simulator...");
-        await page.goto('about:blank');
-        await page.goto('http://localhost:4173/games/games/cooking/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/games/cooking/index.html', { waitUntil: 'load', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -1983,9 +1982,8 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await new Promise(r => setTimeout(r, 800));
+            await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'load', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1000));
 
             await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
             console.log("   Successfully loaded 3D Canvas for LAST METRO!");
