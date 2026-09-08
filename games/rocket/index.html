@@ -301,13 +301,41 @@
 
         /* Screen Shake Animation */
         .screen-shake {
-            animation: shake 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+            animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
         }
         @keyframes shake {
-            10%, 90% { transform: translate3d(-2px, 2px, 0); }
-            20%, 80% { transform: translate3d(3px, -2px, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 3px, 0); }
-            40%, 60% { transform: translate3d(4px, -3px, 0); }
+            10%, 90% { transform: translate3d(-5px, 6px, 0) scale(1.01); }
+            20%, 80% { transform: translate3d(7px, -6px, 0) scale(0.99); }
+            30%, 50%, 70% { transform: translate3d(-9px, 8px, 0) scale(1.02); }
+            40%, 60% { transform: translate3d(8px, -7px, 0) scale(0.98); }
+        }
+
+        /* Nuclear Detonation Blinding Flash Overlay */
+        #nuke-flash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 90;
+            transition: opacity 0.04s ease-out;
+        }
+
+        #nuke-thermal-tint {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255, 120, 0, 0.28) 0%, rgba(200, 40, 0, 0.45) 80%, rgba(30, 10, 0, 0.7) 100%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 89;
+            mix-blend-mode: color-burn;
+            transition: opacity 0.4s ease-out;
         }
 
         /* Modals */
@@ -555,6 +583,10 @@
     <div id="game-viewport-wrapper">
         <!-- Three.js Canvas Container -->
         <div id="canvas-container"></div>
+
+        <!-- Nuclear Detonation Blinding Flash & Thermal Radiation Tint -->
+        <div id="nuke-flash-overlay"></div>
+        <div id="nuke-thermal-tint"></div>
 
         <!-- Top HUD Bar -->
         <div class="top-hud">

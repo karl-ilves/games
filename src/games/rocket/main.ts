@@ -41,94 +41,94 @@ class RocketAudio {
         osc.stop(now + 0.38);
     }
 
-    // Ultra-Realistic Multi-Band Blast: Pressure Crack + Subterranean Sub-Bass + Roaring Firestorm + Debris Clatter
+    // Nuclear Detonation Multi-Band Blast: Blinding Crack + Seismic Sub-Bass (16-45Hz) + Mushroom Cloud Roar + Distant Echo
     public playUltraRealisticBoom() {
         if (!this.soundEnabled) return;
         this.init();
         if (!this.ctx) return;
         const now = this.ctx.currentTime;
 
-        // 1. Supersonic High-Velocity Pressure Shock Crack
-        const crackLen = this.ctx.sampleRate * 0.12;
+        // 1. Nuclear Prompt Supersonic Blast Wave (Instant white crack)
+        const crackLen = Math.floor(this.ctx.sampleRate * 0.16);
         const crackBuf = this.ctx.createBuffer(1, crackLen, this.ctx.sampleRate);
         const crackData = crackBuf.getChannelData(0);
         for (let i = 0; i < crackLen; i++) {
-            crackData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.018));
+            crackData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.025));
         }
         const crackSrc = this.ctx.createBufferSource();
         crackSrc.buffer = crackBuf;
 
         const crackFilter = this.ctx.createBiquadFilter();
         crackFilter.type = 'highpass';
-        crackFilter.frequency.setValueAtTime(1200, now);
-        crackFilter.frequency.exponentialRampToValueAtTime(150, now + 0.12);
+        crackFilter.frequency.setValueAtTime(1400, now);
+        crackFilter.frequency.exponentialRampToValueAtTime(180, now + 0.16);
 
         const crackGain = this.ctx.createGain();
-        crackGain.gain.setValueAtTime(1.0, now);
-        crackGain.gain.exponentialRampToValueAtTime(0.005, now + 0.12);
+        crackGain.gain.setValueAtTime(1.1, now);
+        crackGain.gain.exponentialRampToValueAtTime(0.005, now + 0.16);
 
         crackSrc.connect(crackFilter);
         crackFilter.connect(crackGain);
         crackGain.connect(this.ctx.destination);
         crackSrc.start(now);
 
-        // 2. Heavy Sub-Bass Concussion (Chest-Pounding 20Hz - 65Hz)
+        // 2. Heavy Seismic Sub-Bass Blast (Earth-shattering 16Hz - 70Hz shockwave)
         const subOsc = this.ctx.createOscillator();
         const subGain = this.ctx.createGain();
         subOsc.type = 'sine';
-        subOsc.frequency.setValueAtTime(110, now);
-        subOsc.frequency.exponentialRampToValueAtTime(20, now + 0.95);
+        subOsc.frequency.setValueAtTime(80, now);
+        subOsc.frequency.exponentialRampToValueAtTime(16, now + 1.8);
 
-        subGain.gain.setValueAtTime(1.2, now);
-        subGain.gain.exponentialRampToValueAtTime(0.004, now + 0.95);
+        subGain.gain.setValueAtTime(1.3, now);
+        subGain.gain.exponentialRampToValueAtTime(0.002, now + 1.8);
 
         subOsc.connect(subGain);
         subGain.connect(this.ctx.destination);
         subOsc.start(now);
-        subOsc.stop(now + 0.95);
+        subOsc.stop(now + 1.8);
 
-        // 3. Roaring Volumetric Fireball Inferno
-        const roarLen = this.ctx.sampleRate * 1.5;
+        // 3. Mushroom Cloud Fireball Roar & Atmospheric Vacuum Collapse
+        const roarLen = Math.floor(this.ctx.sampleRate * 2.8);
         const roarBuf = this.ctx.createBuffer(1, roarLen, this.ctx.sampleRate);
         const roarData = roarBuf.getChannelData(0);
         for (let i = 0; i < roarLen; i++) {
-            roarData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.48));
+            roarData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.85));
         }
         const roarSrc = this.ctx.createBufferSource();
         roarSrc.buffer = roarBuf;
 
         const roarFilter = this.ctx.createBiquadFilter();
         roarFilter.type = 'lowpass';
-        roarFilter.frequency.setValueAtTime(1600, now);
-        roarFilter.frequency.exponentialRampToValueAtTime(60, now + 1.4);
+        roarFilter.frequency.setValueAtTime(2200, now);
+        roarFilter.frequency.exponentialRampToValueAtTime(45, now + 2.6);
 
         const roarGain = this.ctx.createGain();
-        roarGain.gain.setValueAtTime(0.9, now);
-        roarGain.gain.exponentialRampToValueAtTime(0.004, now + 1.4);
+        roarGain.gain.setValueAtTime(1.0, now);
+        roarGain.gain.exponentialRampToValueAtTime(0.002, now + 2.6);
 
         roarSrc.connect(roarFilter);
         roarFilter.connect(roarGain);
         roarGain.connect(this.ctx.destination);
         roarSrc.start(now);
 
-        // 4. Secondary Debris Collapse & Brick Clatter
+        // 4. Distant Shockwave Rumble Echo
         setTimeout(() => {
             if (!this.ctx || !this.soundEnabled) return;
-            const debrisNow = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(75, debrisNow);
-            osc.frequency.exponentialRampToValueAtTime(30, debrisNow + 0.7);
+            const echoNow = this.ctx.currentTime;
+            const echoOsc = this.ctx.createOscillator();
+            const echoGain = this.ctx.createGain();
+            echoOsc.type = 'triangle';
+            echoOsc.frequency.setValueAtTime(55, echoNow);
+            echoOsc.frequency.exponentialRampToValueAtTime(20, echoNow + 1.4);
 
-            gain.gain.setValueAtTime(0.45, debrisNow);
-            gain.gain.exponentialRampToValueAtTime(0.01, debrisNow + 0.7);
+            echoGain.gain.setValueAtTime(0.65, echoNow);
+            echoGain.gain.exponentialRampToValueAtTime(0.005, echoNow + 1.4);
 
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(debrisNow);
-            osc.stop(debrisNow + 0.7);
-        }, 160);
+            echoOsc.connect(echoGain);
+            echoGain.connect(this.ctx.destination);
+            echoOsc.start(echoNow);
+            echoOsc.stop(echoNow + 1.4);
+        }, 180);
     }
 
     public playBoom() {
@@ -1007,18 +1007,48 @@ export class RocketGame {
     public triggerExplosion(impactPos: THREE.Vector3, rocketType: RocketType, hitTarget?: DestructibleBuilding, hitDistFromCenter: number = 0) {
         this.audio.playUltraRealisticBoom();
 
-        // 1. Dynamic Flash Point Light (Bright Incandescent Blast Flash)
-        const flashLight = new THREE.PointLight(0xfffae0, 18.0, 110);
-        flashLight.position.copy(impactPos).add(new THREE.Vector3(0, 4, 0));
+        // 1. Dynamic Flash Point Light (Blinding Nuclear Incandescent Blast Flash)
+        const flashLight = new THREE.PointLight(0xffffff, 28.0, 180);
+        flashLight.position.copy(impactPos).add(new THREE.Vector3(0, 8, 0));
         this.scene.add(flashLight);
 
-        // 2. Multi-Stage Billowing Fireball Cluster (14 Interlocking Spheres with Thermal Rising)
-        const fireballCount = 14;
-        const fireballSpheres: { mesh: THREE.Mesh; vel: THREE.Vector3; initialScale: number }[] = [];
-        const fireballGroup = new THREE.Group();
+        // 2. Nuclear Mushroom Cloud System (Rising Thermal Stem + Expanding Toroidal Cap + Ground Skirt)
+        const nukeGroup = new THREE.Group();
 
-        for (let i = 0; i < fireballCount; i++) {
-            const size = 1.4 + Math.random() * 1.8;
+        // A. Rising Stem Column (Turbulent rising vortex of superheated fire and radioactive soot)
+        const stemSpheres: { mesh: THREE.Mesh; velY: number; initialScale: number; expansionRate: number }[] = [];
+        const stemCount = 18;
+        for (let i = 0; i < stemCount; i++) {
+            const size = 1.6 + Math.random() * 1.5;
+            const geo = new THREE.SphereGeometry(size, 14, 14);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.96
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            // Slight radial drift, mainly stacked vertically
+            const rad = Math.random() * 2.2;
+            const ang = Math.random() * Math.PI * 2;
+            mesh.position.set(
+                impactPos.x + Math.cos(ang) * rad,
+                impactPos.y + 0.5 + i * 1.6,
+                impactPos.z + Math.sin(ang) * rad
+            );
+            nukeGroup.add(mesh);
+            stemSpheres.push({
+                mesh,
+                velY: 18.0 + (stemCount - i) * 1.5, // Superheated upward suction
+                initialScale: size,
+                expansionRate: 1.8 + Math.random() * 1.6
+            });
+        }
+
+        // B. Mushroom Cap Head (Radial spreading anvil / toroidal fireball rolling over)
+        const capSpheres: { mesh: THREE.Mesh; vel: THREE.Vector3; initialScale: number }[] = [];
+        const capCount = 26;
+        for (let i = 0; i < capCount; i++) {
+            const size = 2.4 + Math.random() * 2.2;
             const geo = new THREE.SphereGeometry(size, 16, 16);
             const mat = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
@@ -1026,98 +1056,178 @@ export class RocketGame {
                 opacity: 0.98
             });
             const mesh = new THREE.Mesh(geo, mat);
-            const offset = new THREE.Vector3(
-                (Math.random() - 0.5) * 4.0,
-                Math.random() * 3.0,
-                (Math.random() - 0.5) * 4.0
+            const ang = (i / capCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+            const dist = 1.8 + Math.random() * 3.5;
+            mesh.position.set(
+                impactPos.x + Math.cos(ang) * dist,
+                impactPos.y + 22 + (Math.random() - 0.5) * 4.0,
+                impactPos.z + Math.sin(ang) * dist
             );
-            mesh.position.copy(impactPos).add(offset);
-            fireballGroup.add(mesh);
+            nukeGroup.add(mesh);
 
-            fireballSpheres.push({
+            // Cap rolls outward and slightly rises
+            const rollOutSpeed = 12.0 + Math.random() * 10.0;
+            capSpheres.push({
                 mesh,
                 vel: new THREE.Vector3(
-                    (Math.random() - 0.5) * 8.5,
-                    5.0 + Math.random() * 12.0, // Strong upward thermal convection
-                    (Math.random() - 0.5) * 8.5
+                    Math.cos(ang) * rollOutSpeed,
+                    4.5 + Math.random() * 6.5,
+                    Math.sin(ang) * rollOutSpeed
                 ),
                 initialScale: size
             });
         }
-        this.scene.add(fireballGroup);
 
-        // 3. Supersonic Ground Shockwave Ring
-        const shockRingGeo = new THREE.RingGeometry(1.2, 3.2, 48);
-        const shockRingMat = new THREE.MeshBasicMaterial({
-            color: 0xffdf80,
+        // C. Base Blast Fireball & Ground Wilson Cloud
+        const baseFireballGeo = new THREE.SphereGeometry(3.5, 20, 20);
+        const baseFireballMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
             transparent: true,
-            opacity: 0.9,
+            opacity: 0.95
+        });
+        const baseFireball = new THREE.Mesh(baseFireballGeo, baseFireballMat);
+        baseFireball.position.copy(impactPos).setY(impactPos.y + 1.5);
+        nukeGroup.add(baseFireball);
+
+        this.scene.add(nukeGroup);
+
+        // 3. Double Supersonic Ground Shockwave & Wilson Condensation Ring
+        const shockRingGeo = new THREE.RingGeometry(1.5, 4.2, 64);
+        const shockRingMat = new THREE.MeshBasicMaterial({
+            color: 0xffe699,
+            transparent: true,
+            opacity: 0.95,
             side: THREE.DoubleSide
         });
         const shockRing = new THREE.Mesh(shockRingGeo, shockRingMat);
         shockRing.rotation.x = -Math.PI / 2;
-        shockRing.position.copy(impactPos).setY(0.18);
+        shockRing.position.copy(impactPos).setY(0.22);
         this.scene.add(shockRing);
 
-        // 4. Burning Shrapnel & Molten Sparks (90 Sparks Arching in 3D Space)
-        const sparkCount = 90;
+        // Outer atmospheric vapor condensation shock ring
+        const vaporRingGeo = new THREE.RingGeometry(3.0, 5.5, 64);
+        const vaporRingMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.85,
+            side: THREE.DoubleSide
+        });
+        const vaporRing = new THREE.Mesh(vaporRingGeo, vaporRingMat);
+        vaporRing.rotation.x = -Math.PI / 2;
+        vaporRing.position.copy(impactPos).setY(2.2);
+        this.scene.add(vaporRing);
+
+        // Ground Nuclear Scorch Crater Ring
+        const scorchGeo = new THREE.CircleGeometry(rocketType.blastRadius * 1.6, 32);
+        const scorchMat = new THREE.MeshBasicMaterial({
+            color: 0x0a0c10,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide
+        });
+        const scorchMesh = new THREE.Mesh(scorchGeo, scorchMat);
+        scorchMesh.rotation.x = -Math.PI / 2;
+        scorchMesh.position.copy(impactPos).setY(0.08);
+        this.scene.add(scorchMesh);
+
+        // 4. Burning Shrapnel & Molten Sparks (120 Sparks Arching in 3D Space)
+        const sparkCount = 120;
         const sparkGeo = new THREE.BufferGeometry();
         const sparkPos = new Float32Array(sparkCount * 3);
         const sparkVels: THREE.Vector3[] = [];
 
         for (let i = 0; i < sparkCount; i++) {
             sparkPos[i * 3] = impactPos.x;
-            sparkPos[i * 3 + 1] = impactPos.y + 1.2;
+            sparkPos[i * 3 + 1] = impactPos.y + 1.5;
             sparkPos[i * 3 + 2] = impactPos.z;
 
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI * 0.45;
-            const speed = 22 + Math.random() * 38;
+            const speed = 28 + Math.random() * 45;
             sparkVels.push(new THREE.Vector3(
                 Math.sin(phi) * Math.cos(theta) * speed,
-                Math.cos(phi) * speed + 10,
+                Math.cos(phi) * speed + 14,
                 Math.sin(phi) * Math.sin(theta) * speed
             ));
         }
         sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
         const sparkMat = new THREE.PointsMaterial({
             color: 0xffa502,
-            size: 1.4,
+            size: 1.8,
             transparent: true,
             opacity: 1.0
         });
         const sparkSystem = new THREE.Points(sparkGeo, sparkMat);
         this.scene.add(sparkSystem);
 
-        // Animate Fireball, Ground Shockwave, and Sparks
+        // Animate Mushroom Cloud, Thermal Roll, Shockwaves, and Sparks
         let animElapsed = 0;
         const explosionAnim = setInterval(() => {
             animElapsed += 0.03;
-            flashLight.intensity = Math.max(0, 18.0 * (1.0 - animElapsed * 3.5));
+            flashLight.intensity = Math.max(0, 28.0 * (1.0 - animElapsed * 2.8));
 
-            // Shockwave expansion
-            const ringScale = 1.0 + animElapsed * (rocketType.blastRadius * 3.2);
+            // Shockwave expansions
+            const ringScale = 1.0 + animElapsed * (rocketType.blastRadius * 4.5);
             shockRing.scale.set(ringScale, ringScale, 1);
-            shockRingMat.opacity = Math.max(0, 0.9 - animElapsed * 1.9);
+            shockRingMat.opacity = Math.max(0, 0.95 - animElapsed * 1.4);
 
-            // Volumetric Fireball Evolution (White-Hot -> Roaring Orange -> Smoldering Crimson -> Thick Rising Black Smoke)
-            fireballSpheres.forEach(fb => {
-                fb.mesh.position.addScaledVector(fb.vel, 0.03);
-                fb.vel.y += 1.2 * 0.03;
-                const expansion = fb.initialScale * (1.0 + animElapsed * 4.6);
-                fb.mesh.scale.set(expansion, expansion, expansion);
+            const vaporScale = 1.0 + animElapsed * (rocketType.blastRadius * 5.8);
+            vaporRing.scale.set(vaporScale, vaporScale, 1);
+            vaporRingMat.opacity = Math.max(0, 0.85 - animElapsed * 1.7);
 
-                const m = fb.mesh.material as THREE.MeshBasicMaterial;
-                if (animElapsed < 0.12) {
+            // Base fireball expansion and thermal cooling
+            const baseScale = 1.0 + animElapsed * 4.2;
+            baseFireball.scale.set(baseScale, baseScale * 0.85, baseScale);
+            if (animElapsed < 0.15) {
+                (baseFireball.material as THREE.MeshBasicMaterial).color.setHex(0xffffff);
+            } else if (animElapsed < 0.45) {
+                (baseFireball.material as THREE.MeshBasicMaterial).color.setHex(0xff5500);
+            } else {
+                (baseFireball.material as THREE.MeshBasicMaterial).color.setHex(0x221815);
+            }
+            (baseFireball.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.95 - animElapsed * 0.7);
+
+            // Animate Mushroom Stem (Rising thermal vortex column)
+            stemSpheres.forEach(st => {
+                st.mesh.position.y += st.velY * 0.03;
+                st.velY *= 0.96; // Slow down as altitude increases
+                const exp = st.initialScale * (1.0 + animElapsed * st.expansionRate);
+                st.mesh.scale.set(exp, exp * 1.25, exp);
+
+                const m = st.mesh.material as THREE.MeshBasicMaterial;
+                if (animElapsed < 0.18) {
                     m.color.setHex(0xffffff);
-                } else if (animElapsed < 0.35) {
-                    m.color.setHex(0xff5500);
-                } else if (animElapsed < 0.72) {
+                } else if (animElapsed < 0.45) {
+                    m.color.setHex(0xff6b1a);
+                } else if (animElapsed < 0.85) {
                     m.color.setHex(0x5a180a);
                 } else {
-                    m.color.setHex(0x141418); // Dark rising smoke cloud
+                    m.color.setHex(0x1a1a20); // Dense black radioactive soot
                 }
-                m.opacity = Math.max(0, 0.98 - animElapsed * 0.95);
+                m.opacity = Math.max(0, 0.96 - animElapsed * 0.65);
+            });
+
+            // Animate Mushroom Cap (Rolling outward anvil head)
+            capSpheres.forEach(cp => {
+                cp.mesh.position.addScaledVector(cp.vel, 0.03);
+                cp.vel.x *= 0.97;
+                cp.vel.z *= 0.97;
+                cp.vel.y *= 0.98;
+
+                const exp = cp.initialScale * (1.0 + animElapsed * 4.8);
+                cp.mesh.scale.set(exp * 1.3, exp * 0.8, exp * 1.3); // Flatten into mushroom dome
+
+                const m = cp.mesh.material as THREE.MeshBasicMaterial;
+                if (animElapsed < 0.15) {
+                    m.color.setHex(0xffffff);
+                } else if (animElapsed < 0.38) {
+                    m.color.setHex(0xff4d00);
+                } else if (animElapsed < 0.75) {
+                    m.color.setHex(0x6a1a0d);
+                } else {
+                    m.color.setHex(0x16161b); // Billowing dark mushroom cloud cap
+                }
+                m.opacity = Math.max(0, 0.98 - animElapsed * 0.6);
             });
 
             // Flying sparks
@@ -1126,27 +1236,39 @@ export class RocketGame {
                 sArr[i * 3] += sparkVels[i].x * 0.03;
                 sArr[i * 3 + 1] += sparkVels[i].y * 0.03;
                 sArr[i * 3 + 2] += sparkVels[i].z * 0.03;
-                sparkVels[i].y -= 40 * 0.03;
+                sparkVels[i].y -= 42 * 0.03;
             }
             sparkGeo.attributes.position.needsUpdate = true;
-            sparkMat.opacity = Math.max(0, 1.0 - animElapsed * 1.3);
+            sparkMat.opacity = Math.max(0, 1.0 - animElapsed * 1.1);
 
-            if (animElapsed >= 1.05) {
+            if (animElapsed >= 1.6) {
                 clearInterval(explosionAnim);
                 this.scene.remove(flashLight);
-                this.scene.remove(fireballGroup);
+                this.scene.remove(nukeGroup);
                 this.scene.remove(shockRing);
+                this.scene.remove(vaporRing);
                 this.scene.remove(sparkSystem);
                 flashLight.dispose();
                 shockRingGeo.dispose();
                 shockRingMat.dispose();
+                vaporRingGeo.dispose();
+                vaporRingMat.dispose();
                 sparkGeo.dispose();
                 sparkMat.dispose();
+                baseFireballGeo.dispose();
+                baseFireballMat.dispose();
+
+                // Gradually fade out scorch ring
+                setTimeout(() => {
+                    this.scene.remove(scorchMesh);
+                    scorchGeo.dispose();
+                    scorchMat.dispose();
+                }, 12000);
             }
         }, 30);
 
         // 5. Heavy Camera Trauma Screen Shake
-        this.trauma = Math.min(1.0, this.trauma + 0.95);
+        this.trauma = Math.min(1.0, this.trauma + 1.0);
         this.triggerViewportShake();
 
         // 6. Check Building Damage, Ignite Flames & Violently Shatter into Flying Chunks
@@ -1336,6 +1458,30 @@ export class RocketGame {
             wrapper.classList.remove('screen-shake');
             void wrapper.offsetWidth;
             wrapper.classList.add('screen-shake');
+        }
+        this.triggerNuclearScreenFlash();
+    }
+
+    private triggerNuclearScreenFlash() {
+        const flashOverlay = document.getElementById('nuke-flash-overlay');
+        const thermalTint = document.getElementById('nuke-thermal-tint');
+
+        if (flashOverlay) {
+            flashOverlay.style.opacity = '1';
+            setTimeout(() => {
+                flashOverlay.style.transition = 'opacity 0.75s ease-out';
+                flashOverlay.style.opacity = '0';
+            }, 60);
+        }
+
+        if (thermalTint) {
+            setTimeout(() => {
+                thermalTint.style.opacity = '0.85';
+                setTimeout(() => {
+                    thermalTint.style.transition = 'opacity 1.8s ease-out';
+                    thermalTint.style.opacity = '0';
+                }, 400);
+            }, 80);
         }
     }
 
