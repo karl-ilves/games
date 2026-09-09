@@ -5,6 +5,7 @@ import { AvatarItem, AvatarCategory, AvatarConfig } from '../shared/avatar/types
 import { getItemThumbnailUrl } from '../shared/avatar/thumbnailGenerator';
 import { yardService } from '../shared/yardService';
 import { getPresetOutfits, getOutfitById } from '../shared/avatar/outfits';
+import { emoteAudio, EMOTE_SOUND_DEFS } from '../shared/avatar/EmoteAudio';
 
 export class AvatarShopEditorModal {
     private modalEl: HTMLElement;
@@ -62,7 +63,10 @@ export class AvatarShopEditorModal {
 
                         <!-- Emotes & Animation Bar -->
                         <div class="avatar-emotes-bar">
-                            <span style="font-size: 0.78rem; font-weight: 700; color: #8899a6; text-transform: uppercase;">Test Locomotion & Emotes:</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #8899a6; text-transform: uppercase;">Test Locomotion & Emotes:</span>
+                                <button id="btn-shop-emote-mute" style="background: none; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #a78bfa; font-size: 0.82rem; cursor: pointer; padding: 2px 8px;" title="Toggle emote sounds">🔊</button>
+                            </div>
                             <div class="avatar-emote-buttons" style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 95px; overflow-y: auto; padding: 2px;">
                                 <button class="btn-emote active" data-emote="idle">🧍 Idle</button>
                                 <button class="btn-emote" data-emote="walk">🚶 Walk</button>
@@ -160,13 +164,30 @@ export class AvatarShopEditorModal {
                 if (this.viewer) {
                     this.viewer.setEmote(emote);
                 }
+                // Play/stop emote sound
+                if (emote === 'idle') {
+                    emoteAudio.stopEmoteSound();
+                } else {
+                    emoteAudio.playEmoteSound(emote);
+                }
                 if (!isFreeAction && !avatarService.isEmoteOwned(emote)) {
                     this.showToast(`👀 Testing "${emote}" in 3D preview! (🔒 Buy in catalog to keep in games)`, '#00f2fe');
                 } else {
-                    this.showToast(`✨ Playing "${emote}"!`, '#2ecc71');
+                    const soundDef = EMOTE_SOUND_DEFS[emote];
+                    const soundInfo = soundDef ? ` 🔊 ${soundDef.label}` : '';
+                    this.showToast(`✨ Playing "${emote}"!${soundInfo}`, '#2ecc71');
                 }
             });
         });
+
+        // Mute toggle button in shop
+        const shopMuteBtn = this.modalEl.querySelector('#btn-shop-emote-mute');
+        if (shopMuteBtn) {
+            shopMuteBtn.addEventListener('click', () => {
+                const isMuted = emoteAudio.toggleMute();
+                shopMuteBtn.textContent = isMuted ? '🔇' : '🔊';
+            });
+        }
 
         // Reset
         const resetBtn = this.modalEl.querySelector('#btn-avatar-reset-preview');
@@ -175,6 +196,7 @@ export class AvatarShopEditorModal {
                 this.previewConfig = avatarService.getConfig();
                 if (this.viewer) this.viewer.updateConfig(this.previewConfig);
                 this.renderCatalogItems();
+                emoteAudio.stopEmoteSound();
                 this.showToast('Avatar reset to current configuration!', '#00f2fe');
             });
         }
@@ -212,6 +234,7 @@ export class AvatarShopEditorModal {
     }
 
     public close() {
+        emoteAudio.stopEmoteSound();
         this.modalEl.style.display = 'none';
     }
 

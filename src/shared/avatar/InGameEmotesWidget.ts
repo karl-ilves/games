@@ -1,6 +1,7 @@
 import { AvatarRig } from './AvatarRig';
 import { avatarService } from './AvatarService';
 import { getItemById } from './catalog';
+import { emoteAudio, EMOTE_SOUND_DEFS } from './EmoteAudio';
 
 export interface GameEmoteDef {
     id: string;
@@ -254,6 +255,30 @@ export class InGameEmotesWidget {
                     border-color: #ef4444;
                     color: #fff;
                 }
+                .playard-emote-sound-badge {
+                    font-size: 0.62rem;
+                    color: #a78bfa;
+                    opacity: 0.7;
+                    margin-left: 4px;
+                }
+                .playard-emote-mute-btn {
+                    background: none;
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 6px;
+                    color: #a78bfa;
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                    padding: 2px 8px;
+                    transition: all 0.15s ease;
+                }
+                .playard-emote-mute-btn:hover {
+                    background: rgba(167, 139, 250, 0.2);
+                    border-color: rgba(167, 139, 250, 0.5);
+                }
+                .playard-emote-mute-btn.is-muted {
+                    color: #64748b;
+                    border-color: rgba(255, 255, 255, 0.08);
+                }
             </style>
 
             <button class="playard-btn-emote-toggle" id="btn-toggle-in-game-emotes" title="Open Emotes Menu (B)">
@@ -264,19 +289,24 @@ export class InGameEmotesWidget {
             <div class="playard-emotes-menu" id="playard-in-game-emotes-menu">
                 <div class="playard-emotes-menu-header">
                     <span>Select Emote</span>
-                    <span style="color: #64748b;">(Owned)</span>
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                        <button class="playard-emote-mute-btn" id="playard-emote-mute-toggle" title="Toggle emote sounds">🔊</button>
+                        <span style="color: #64748b;">(Owned)</span>
+                    </span>
                 </div>
                 <div class="playard-emotes-toast" id="playard-emotes-toast" style="display: none;"></div>
                 ${IN_GAME_EMOTES_LIST.map(em => {
                     const itemCat = getItemById(em.id);
                     const isOwned = this.isEmoteOwned(em.action);
                     const priceStr = itemCat ? `${itemCat.price} Y` : '';
+                    const soundDef = EMOTE_SOUND_DEFS[em.action];
+                    const soundBadge = soundDef ? `<span class="playard-emote-sound-badge">${soundDef.type === 'loop' ? '🎵' : '🔔'} ${soundDef.label}</span>` : '';
                     return `
                         <button class="playard-emote-item-btn ${isOwned ? 'is-owned' : 'is-locked'}" 
                                 data-emote-action="${em.action}" 
                                 data-emote-id="${em.id}"
                                 title="${isOwned ? 'Play Emote' : `Locked (${priceStr}) - Purchase in Avatar Shop`}">
-                            <span>${em.icon} ${em.name}</span>
+                            <span>${em.icon} ${em.name}${soundBadge}</span>
                             ${isOwned 
                                 ? (em.keyLabel ? `<span class="playard-emote-key-badge">${em.keyLabel}</span>` : '')
                                 : `<span class="playard-emote-lock-badge">🔒 ${priceStr}</span>`
@@ -302,6 +332,17 @@ export class InGameEmotesWidget {
             e.stopPropagation();
             this.toggleMenu();
         });
+
+        // Mute toggle button
+        const muteBtn = this.container.querySelector('#playard-emote-mute-toggle');
+        if (muteBtn) {
+            muteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isMuted = emoteAudio.toggleMute();
+                muteBtn.textContent = isMuted ? '🔇' : '🔊';
+                muteBtn.classList.toggle('is-muted', isMuted);
+            });
+        }
 
         // Click emote buttons
         this.menuEl.querySelectorAll('[data-emote-action]').forEach(btn => {
@@ -441,8 +482,10 @@ export class InGameEmotesWidget {
 
         if (action === 'idle' || action === this.activeEmote) {
             this.activeEmote = 'idle';
+            emoteAudio.stopEmoteSound();
         } else {
             this.activeEmote = action;
+            emoteAudio.playEmoteSound(action);
         }
 
         const rig = this.options.getAvatarRig?.();
@@ -460,6 +503,7 @@ export class InGameEmotesWidget {
 
     public stopEmoteQuietly() {
         this.activeEmote = 'idle';
+        emoteAudio.stopEmoteSound();
         this.updateActiveItemUI();
         if (this.options.onEmoteChange) {
             this.options.onEmoteChange('idle');

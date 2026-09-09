@@ -929,6 +929,7 @@ try {
     });
     (window as any).playardAvatarWidget = avatarWidget;
     (window as any).playardAvatarShop = avatarShopModal;
+    (window as any).playardEmoteAudio = (await import('./shared/avatar/EmoteAudio')).emoteAudio;
 } catch (e) {
     console.warn('Avatar widget initialization error:', e);
 }

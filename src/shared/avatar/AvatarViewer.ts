@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { AvatarRig } from './AvatarRig';
 import { AvatarConfig } from './types';
+import { emoteAudio } from './EmoteAudio';
 
 export class AvatarViewer {
     public container: HTMLElement;
@@ -195,6 +196,7 @@ export class AvatarViewer {
 
     public dispose() {
         this.isDisposed = true;
+        emoteAudio.stopEmoteSound();
         if (this.renderer.domElement && this.renderer.domElement.parentNode) {
             this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
         }

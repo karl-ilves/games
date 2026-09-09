@@ -686,7 +686,86 @@ try {
             }
         }
 
-        // Test Saving Avatar (English toast: 'saved')
+        // ─── Emote Audio System Tests ───────────────────────────────
+        console.log("\n   🔊 Testing Emote Audio System...");
+
+        // Test EmoteAudio singleton exists on window
+        const emoteAudioExists = await page.evaluate(() => !!window.playardEmoteAudio);
+        console.log("   EmoteAudio singleton exists:", emoteAudioExists);
+        if (!emoteAudioExists) throw new Error("EmoteAudio singleton must be exposed as window.playardEmoteAudio!");
+
+        // Test playEmoteSound and stopEmoteSound methods exist
+        const audioMethods = await page.evaluate(() => {
+            const ea = window.playardEmoteAudio;
+            return {
+                hasPlay: typeof ea.playEmoteSound === 'function',
+                hasStop: typeof ea.stopEmoteSound === 'function',
+                hasToggleMute: typeof ea.toggleMute === 'function',
+                hasIsMuted: typeof ea.isMuted === 'function',
+                hasHasSound: typeof ea.hasSound === 'function',
+            };
+        });
+        console.log("   EmoteAudio methods:", JSON.stringify(audioMethods));
+        if (!audioMethods.hasPlay) throw new Error("EmoteAudio must have playEmoteSound method!");
+        if (!audioMethods.hasStop) throw new Error("EmoteAudio must have stopEmoteSound method!");
+        if (!audioMethods.hasToggleMute) throw new Error("EmoteAudio must have toggleMute method!");
+        if (!audioMethods.hasIsMuted) throw new Error("EmoteAudio must have isMuted method!");
+        if (!audioMethods.hasHasSound) throw new Error("EmoteAudio must have hasSound method!");
+
+        // Test all 22 emote actions have sound definitions
+        const allEmoteSounds = await page.evaluate(() => {
+            const ea = window.playardEmoteAudio;
+            const emotes = ['wave', 'dance', 'salute', 'backflip', 'breakdance', 'laugh', 'flex',
+                'levitate', 'zombie', 'guitar', 'dab', 'moonwalk', 'tpose', 'robot_dance',
+                'kungfu', 'headspin', 'cheer', 'bow', 'matrix_dodge', 'hype_clap', 'slow_clap', 'ground_slam'];
+            const results = {};
+            emotes.forEach(e => {
+                results[e] = ea.hasSound(e);
+            });
+            return results;
+        });
+        const missingEmoteSounds = Object.entries(allEmoteSounds).filter(([_k, v]) => !v).map(([k]) => k);
+        console.log("   All 22 emotes have sound definitions:", missingEmoteSounds.length === 0);
+        if (missingEmoteSounds.length > 0) {
+            throw new Error(`Missing sound definitions for emotes: ${missingEmoteSounds.join(', ')}`);
+        }
+
+        // Test that idle/walk/run/jump do NOT have sounds (they're locomotion, not emotes)
+        const noSoundActions = await page.evaluate(() => {
+            const ea = window.playardEmoteAudio;
+            return {
+                idle: ea.hasSound('idle'),
+                walk: ea.hasSound('walk'),
+                run: ea.hasSound('run'),
+                jump: ea.hasSound('jump'),
+            };
+        });
+        console.log("   Locomotion actions have no sounds:", !noSoundActions.idle && !noSoundActions.walk && !noSoundActions.run && !noSoundActions.jump);
+        if (noSoundActions.idle || noSoundActions.walk || noSoundActions.run || noSoundActions.jump) {
+            throw new Error("Locomotion actions (idle, walk, run, jump) must NOT have sound definitions!");
+        }
+
+        // Test mute toggle
+        const muteTest = await page.evaluate(() => {
+            const ea = window.playardEmoteAudio;
+            const initialMuted = ea.isMuted();
+            ea.toggleMute();
+            const afterToggle = ea.isMuted();
+            ea.toggleMute(); // restore
+            const afterRestore = ea.isMuted();
+            return { initialMuted, afterToggle, afterRestore };
+        });
+        console.log("   Mute toggle test:", JSON.stringify(muteTest));
+        if (muteTest.afterToggle !== !muteTest.initialMuted) throw new Error("toggleMute must flip muted state!");
+        if (muteTest.afterRestore !== muteTest.initialMuted) throw new Error("toggleMute must be reversible!");
+
+        // Test mute button exists in shop UI
+        const shopMuteBtn = await page.$('#btn-shop-emote-mute');
+        console.log("   Shop mute button exists:", !!shopMuteBtn);
+        if (!shopMuteBtn) throw new Error("Expected #btn-shop-emote-mute mute toggle button in Avatar Shop!");
+
+        console.log("   ✅ Emote Audio System tests passed!");
+        // ─── End Emote Audio Tests ──────────────────────────────────
         await page.click('#btn-avatar-save-config');
         await page.waitForFunction(() => {
             const el = document.getElementById('avatar-shop-toast');
