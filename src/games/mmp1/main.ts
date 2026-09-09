@@ -2754,8 +2754,38 @@ export class MurderMysteryGame {
                 group.add(aura);
             }
 
+        } else if (activeSkinId === 'knife_epic') {
+            // --- 6. CYBER NEON TANTO (Cybernetic Katana Tanto with Glowing Cyan Edge & Purple Wrap) ---
+            const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.052, 0.55, 12), handleMat);
+            hilt.position.set(0, -0.28, 0);
+            group.add(hilt);
+
+            for (let i = 0; i < 3; i++) {
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.054, 0.012, 6, 14), metalAccMat);
+                ring.position.set(0, -0.42 + i * 0.14, 0);
+                ring.rotation.x = Math.PI / 2;
+                group.add(ring);
+            }
+
+            const guardT = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.28), metalAccMat);
+            guardT.position.set(0, 0.02, 0);
+            group.add(guardT);
+
+            const bladeBase = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.85, 0.18), bladeMat);
+            bladeBase.position.set(0, 0.46, 0.02);
+            group.add(bladeBase);
+
+            const neonEdge = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.82, 0.03), new THREE.MeshBasicMaterial({ color: 0x00f2fe }));
+            neonEdge.position.set(0, 0.46, 0.11);
+            group.add(neonEdge);
+
+            const tantoTip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.28, 4), bladeMat);
+            tantoTip.position.set(0, 0.98, 0.03);
+            tantoTip.rotation.y = Math.PI / 4;
+            group.add(tantoTip);
+
         } else {
-            // --- 6. DEFAULT / COMMON / UNCOMMON / EPIC COMBAT BOWIE ---
+            // --- 7. DEFAULT / COMMON / UNCOMMON COMBAT BOWIE ---
             const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.65, 12), handleMat);
             handle.scale.set(0.65, 1.0, 1.2);
             handle.position.set(0, -0.32, 0);
@@ -2785,7 +2815,9 @@ export class MurderMysteryGame {
             pommelTip.rotation.x = Math.PI;
             group.add(pommelTip);
 
-            const guard = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.38), metalAccMat);
+            // Guard matches SVG: gold for default, green for uncommon, metal for common
+            const guardMat = activeSkinId === 'knife_default' ? goldAccMat : (activeSkinId === 'knife_uncommon' ? new THREE.MeshStandardMaterial({ color: 0x2ed573, roughness: 0.3 }) : metalAccMat);
+            const guard = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.38), guardMat);
             guard.position.set(0, 0.06, 0);
             group.add(guard);
 
@@ -3108,17 +3140,16 @@ export class MurderMysteryGame {
             const avatarRig = new AvatarRig(avatarService.getConfig());
             avatarRig.rootGroup.name = 'MMP1_Player_AvatarRig';
 
-            // Attach ultra-realistic knife and gun to right arm bone / hand
+            // Attach ultra-realistic knife and gun to right arm bone / hand (positioned firmly in palm, pointing forward)
             const knifeGroup = this.createUltraRealisticKnife();
-            knifeGroup.position.set(0.08, -0.65, 0.22);
-            knifeGroup.rotation.x = Math.PI / 3;
-            knifeGroup.rotation.y = -Math.PI / 8;
+            knifeGroup.position.set(0.04, -0.92, 0.08);
+            knifeGroup.rotation.set(-Math.PI * 0.45, 0, -Math.PI / 16);
             knifeGroup.visible = false;
             avatarRig.bones.rightArm.add(knifeGroup);
 
             const gunGroup = this.createUltraRealisticRevolver(false);
-            gunGroup.position.set(0.06, -0.62, 0.26);
-            gunGroup.rotation.x = 0;
+            gunGroup.position.set(0.02, -0.82, 0.12);
+            gunGroup.rotation.set(0, 0, 0);
             gunGroup.visible = false;
             avatarRig.bones.rightArm.add(gunGroup);
 
@@ -3625,17 +3656,16 @@ export class MurderMysteryGame {
         handR.position.set(0, -1.26, 0.04);
         armRGroup.add(handR);
 
-        // --- ULTRA-REALISTIC WEAPONS (Held in Right Hand) ---
+        // --- ULTRA-REALISTIC WEAPONS (Held in Right Hand firmly, pointing forward) ---
         const knifeGroup = this.createUltraRealisticKnife();
-        knifeGroup.position.set(0.1, -1.28, 0.22);
-        knifeGroup.rotation.x = Math.PI / 3;
-        knifeGroup.rotation.y = -Math.PI / 8;
+        knifeGroup.position.set(0.04, -1.26, 0.08);
+        knifeGroup.rotation.set(-Math.PI * 0.45, 0, -Math.PI / 16);
         knifeGroup.visible = false;
         armRGroup.add(knifeGroup);
 
         const gunGroup = this.createUltraRealisticRevolver(false);
-        gunGroup.position.set(0.08, -1.22, 0.26);
-        gunGroup.rotation.x = 0;
+        gunGroup.position.set(0.04, -1.16, 0.14);
+        gunGroup.rotation.set(0, 0, 0);
         gunGroup.visible = false;
         armRGroup.add(gunGroup);
 
@@ -4027,20 +4057,45 @@ export class MurderMysteryGame {
 
     private updateRoleHud() {
         if (!this.hudRoleBadge || !this.hudRoleIcon || !this.hudRoleText) return;
+
+        const inv = this.crateManager?.getInventory();
+        const equippedKnifeId = inv?.equippedKnife || 'knife_default';
+        const equippedGunId = inv?.equippedGun || 'gun_default';
+        const knifeSkin = WEAPON_SKIN_CATALOG[equippedKnifeId] || WEAPON_SKIN_CATALOG['knife_default'];
+        const gunSkin = WEAPON_SKIN_CATALOG[equippedGunId] || WEAPON_SKIN_CATALOG['gun_default'];
+
         if (this.playerChar.role === 'murderer') {
             this.hudRoleIcon.textContent = '🔪';
             this.hudRoleText.textContent = 'MÕRVAR';
             this.hudRoleBadge.style.borderColor = '#ff2e63';
             this.hudRoleBadge.style.color = '#ff2e63';
-            if (this.slotWeaponIcon) this.slotWeaponIcon.textContent = '🔪';
-            if (this.slotWeaponName) this.slotWeaponName.textContent = 'Nuga';
+            if (this.slotWeaponIcon) {
+                this.slotWeaponIcon.innerHTML = `<div class="hotbar-weapon-art">${getWeaponArtworkSvg(knifeSkin)}</div>`;
+            }
+            if (this.slotWeaponName) this.slotWeaponName.textContent = knifeSkin.name;
+            if (this.slotWeapon) {
+                if (this.playerChar.hasWeaponEquipped) {
+                    this.slotWeapon.classList.add('active');
+                } else {
+                    this.slotWeapon.classList.remove('active');
+                }
+            }
         } else if (this.playerChar.role === 'sheriff') {
             this.hudRoleIcon.textContent = '🔫';
             this.hudRoleText.textContent = 'ŠERIF';
             this.hudRoleBadge.style.borderColor = '#00f2fe';
             this.hudRoleBadge.style.color = '#00f2fe';
-            if (this.slotWeaponIcon) this.slotWeaponIcon.textContent = '🔫';
-            if (this.slotWeaponName) this.slotWeaponName.textContent = 'Revolver';
+            if (this.slotWeaponIcon) {
+                this.slotWeaponIcon.innerHTML = `<div class="hotbar-weapon-art">${getWeaponArtworkSvg(gunSkin)}</div>`;
+            }
+            if (this.slotWeaponName) this.slotWeaponName.textContent = gunSkin.name;
+            if (this.slotWeapon) {
+                if (this.playerChar.hasWeaponEquipped) {
+                    this.slotWeapon.classList.add('active');
+                } else {
+                    this.slotWeapon.classList.remove('active');
+                }
+            }
         } else {
             this.hudRoleIcon.textContent = '🛡️';
             this.hudRoleText.textContent = 'SÜÜTU';
@@ -4048,6 +4103,9 @@ export class MurderMysteryGame {
             this.hudRoleBadge.style.color = '#2ecc71';
             if (this.slotWeaponIcon) this.slotWeaponIcon.textContent = '✊';
             if (this.slotWeaponName) this.slotWeaponName.textContent = 'Käed';
+            if (this.slotWeapon) {
+                this.slotWeapon.classList.remove('active');
+            }
         }
     }
 
@@ -5014,9 +5072,8 @@ export class MurderMysteryGame {
                     this.playerChar.avatarRig.bones.rightArm.remove(this.playerChar.knifeMesh);
                 }
                 const newKnife = this.createUltraRealisticKnife(skinId);
-                newKnife.position.set(0.08, -0.65, 0.22);
-                newKnife.rotation.x = Math.PI / 3;
-                newKnife.rotation.y = -Math.PI / 8;
+                newKnife.position.set(0.04, -0.92, 0.08);
+                newKnife.rotation.set(-Math.PI * 0.45, 0, -Math.PI / 16);
                 newKnife.visible = wasVis;
                 this.playerChar.knifeMesh = newKnife;
                 this.playerChar.avatarRig.bones.rightArm.add(newKnife);
@@ -5026,14 +5083,15 @@ export class MurderMysteryGame {
                     this.playerChar.avatarRig.bones.rightArm.remove(this.playerChar.gunMesh);
                 }
                 const newGun = this.createUltraRealisticRevolver(false, skinId);
-                newGun.position.set(0.06, -0.62, 0.26);
-                newGun.rotation.x = 0;
+                newGun.position.set(0.02, -0.82, 0.12);
+                newGun.rotation.set(0, 0, 0);
                 newGun.visible = wasVis;
                 this.playerChar.gunMesh = newGun;
                 this.playerChar.avatarRig.bones.rightArm.add(newGun);
             }
         }
 
+        this.updateRoleHud();
         this.renderInventory();
     }
 
@@ -5080,6 +5138,7 @@ export class MurderMysteryGame {
             this.hudRoleBadge.style.borderColor = '#ffd32a';
             this.hudRoleBadge.style.color = '#ffd32a';
         }
+        this.updateRoleHud();
     }
 
     public openAdminPanel() {

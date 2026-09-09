@@ -3843,6 +3843,7 @@ try {
                 const scythe = game.createUltraRealisticKnife('knife_cosmic');
                 const pixelSword = game.createUltraRealisticKnife('knife_og');
                 const kris = game.createUltraRealisticKnife('knife_secret');
+                const epicTanto = game.createUltraRealisticKnife('knife_epic');
 
                 // Guns
                 const raygun = game.createUltraRealisticRevolver(false, 'gun_cosmic');
@@ -3856,19 +3857,67 @@ try {
                     scytheParts: scythe.children.length,
                     pixelSwordParts: pixelSword.children.length,
                     krisParts: kris.children.length,
+                    epicTantoParts: epicTanto.children.length,
                     raygunParts: raygun.children.length,
                     silencedPistolParts: silencedPistol.children.length,
                     arcadeBlasterParts: arcadeBlaster.children.length,
                     sheriffRevolverParts: sheriffRevolver.children.length
                 };
             });
-            console.log(`     Karambit parts: ${weaponArchetypes.karambitParts}, Katana parts: ${weaponArchetypes.katanaParts}, Scythe parts: ${weaponArchetypes.scytheParts}, Kris parts: ${weaponArchetypes.krisParts}, Pixel parts: ${weaponArchetypes.pixelSwordParts}`);
+            console.log(`     Karambit parts: ${weaponArchetypes.karambitParts}, Katana parts: ${weaponArchetypes.katanaParts}, Scythe parts: ${weaponArchetypes.scytheParts}, Kris parts: ${weaponArchetypes.krisParts}, Epic Tanto parts: ${weaponArchetypes.epicTantoParts}, Pixel parts: ${weaponArchetypes.pixelSwordParts}`);
             console.log(`     Raygun parts: ${weaponArchetypes.raygunParts}, Silenced pistol parts: ${weaponArchetypes.silencedPistolParts}, Arcade blaster parts: ${weaponArchetypes.arcadeBlasterParts}, Sheriff revolver: ${weaponArchetypes.sheriffRevolverParts}`);
 
             if (weaponArchetypes.karambitParts < 8 || weaponArchetypes.katanaParts < 6 || weaponArchetypes.scytheParts < 6 ||
-                weaponArchetypes.raygunParts < 8 || weaponArchetypes.silencedPistolParts < 8) {
+                weaponArchetypes.epicTantoParts < 6 || weaponArchetypes.raygunParts < 8 || weaponArchetypes.silencedPistolParts < 8) {
                 throw new Error(`Weapon archetypes failed part count verification: ${JSON.stringify(weaponArchetypes)}`);
             }
+
+            // Verify Hotbar Weapon Art & 3D Weapon Alignment
+            console.log('   Testing Weapon Hotbar SVG synchronization & 3D Hand Alignment:');
+            const hotbarSyncCheck = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                if (!game) return { success: false, reason: 'Game not found' };
+
+                // 1. Murderer role check
+                game.playerChar.role = 'murderer';
+                game.updateRoleHud();
+                const slotIconEl = document.getElementById('slot-weapon-icon');
+                const slotNameEl = document.getElementById('slot-weapon-name');
+                const hasSvgKnife = slotIconEl && slotIconEl.innerHTML.includes('<svg') && slotIconEl.innerHTML.includes('hotbar-weapon-art');
+                const knifeName = slotNameEl?.textContent;
+
+                // Check knife positioning in hand (should be in hand and pointing forward, rotX < 0)
+                const knifeRotX = game.playerChar.knifeMesh ? game.playerChar.knifeMesh.rotation.x : 0;
+                const knifePosY = game.playerChar.knifeMesh ? game.playerChar.knifeMesh.position.y : 0;
+                const knifeAligned = knifeRotX < -1.0 && knifePosY < -0.8;
+
+                // 2. Sheriff role check
+                game.playerChar.role = 'sheriff';
+                game.updateRoleHud();
+                const hasSvgGun = slotIconEl && slotIconEl.innerHTML.includes('<svg') && slotIconEl.innerHTML.includes('hotbar-weapon-art');
+                const gunName = slotNameEl?.textContent;
+
+                // Check gun positioning in hand (should be in hand and pointing forward, rotX === 0)
+                const gunRotX = game.playerChar.gunMesh ? game.playerChar.gunMesh.rotation.x : 1;
+                const gunPosY = game.playerChar.gunMesh ? game.playerChar.gunMesh.position.y : 0;
+                const gunAligned = Math.abs(gunRotX) < 0.05 && gunPosY < -0.7;
+
+                return {
+                    success: true,
+                    hasSvgKnife,
+                    knifeName,
+                    knifeAligned,
+                    hasSvgGun,
+                    gunName,
+                    gunAligned
+                };
+            });
+            console.log(`     Hotbar Knife SVG: ${hotbarSyncCheck.hasSvgKnife} (Name: ${hotbarSyncCheck.knifeName}, Hand Aligned: ${hotbarSyncCheck.knifeAligned})`);
+            console.log(`     Hotbar Gun SVG: ${hotbarSyncCheck.hasSvgGun} (Name: ${hotbarSyncCheck.gunName}, Hand Aligned: ${hotbarSyncCheck.gunAligned})`);
+            if (!hotbarSyncCheck.hasSvgKnife || !hotbarSyncCheck.knifeAligned || !hotbarSyncCheck.hasSvgGun || !hotbarSyncCheck.gunAligned) {
+                throw new Error(`Hotbar SVG and 3D alignment verification failed: ${JSON.stringify(hotbarSyncCheck)}`);
+            }
+            console.log('   Weapon Hotbar SVG & Hand Alignment verified: ✅');
             // Test Player Movement & Collision Safety as Officer/Sheriff on Yatchy and Office maps
             console.log('   Testing Player Movement as Officer/Sheriff on Yatchy & Office maps:');
             const movementTests = await page.evaluate(async () => {
