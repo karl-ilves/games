@@ -3927,6 +3927,10 @@ export class MurderMysteryGame {
         // Build the selected 3D map
         this.buildMap(chosenMap);
 
+        // Hide lobby, show map
+        if (this.lobbyGroup) this.lobbyGroup.visible = false;
+        if (this.mansionGroup) this.mansionGroup.visible = true;
+
         // Reset state for all characters
         this.characters.forEach(c => {
             c.role = 'innocent';
@@ -3935,6 +3939,9 @@ export class MurderMysteryGame {
             c.mesh.visible = true;
             if (c.knifeMesh) c.knifeMesh.visible = false;
             if (c.gunMesh) c.gunMesh.visible = false;
+            // Clear AI targets so bots don't continue walking toward old lobby positions
+            c.aiTarget = undefined;
+            c.aiTimer = 2 + Math.random() * 2;
         });
 
         // Assign Roles: If Admin forced role, honor it; otherwise random
@@ -5104,6 +5111,10 @@ export class MurderMysteryGame {
         if (this.hudAliveBadge) this.hudAliveBadge.style.display = 'none';
         if (this.hudCoinsBadge) this.hudCoinsBadge.style.display = 'none';
 
+        // Show lobby, hide game map
+        if (this.lobbyGroup) this.lobbyGroup.visible = true;
+        if (this.mansionGroup) this.mansionGroup.visible = false;
+
         // Teleport player and characters back to lobby in front of each other
         this.playerChar.position.set(0, 0, 150);
         this.playerChar.rotation = Math.PI;
@@ -5118,6 +5129,9 @@ export class MurderMysteryGame {
             c.mesh.visible = true;
             if (c.knifeMesh) c.knifeMesh.visible = false;
             if (c.gunMesh) c.gunMesh.visible = false;
+            // Reset AI targets so bots don't walk toward stale in-game positions
+            c.aiTarget = undefined;
+            c.aiTimer = 1.5 + Math.random() * 2;
             if (!c.isPlayer) {
                 const angle = -Math.PI * 0.7 + ((i - 1) / (botNames.length - 1)) * (Math.PI * 1.4);
                 const radius = 7.0 + (i % 2) * 1.2;
@@ -5580,8 +5594,17 @@ export class MurderMysteryGame {
     private updateAI(delta: number) {
         const murderer = this.characters.find(c => c.role === 'murderer' && c.isAlive);
 
+        // During role_reveal or map_vote, bots should stay frozen at their spawn positions
+        const isOnMap = this.state === 'in_game' || this.state === 'role_reveal' || this.state === 'map_vote';
+
         this.characters.forEach(c => {
             if (c.isPlayer || !c.isAlive) return;
+
+            // Freeze bots during role_reveal (they just spawned on map, don't move yet)
+            if (this.state === 'role_reveal' || this.state === 'map_vote') {
+                c.aiTarget = undefined;
+                return;
+            }
 
             c.aiTimer -= delta;
             if (c.aiTimer <= 0) {
@@ -5636,11 +5659,15 @@ export class MurderMysteryGame {
                                 c.hasWeaponEquipped = false;
                                 if (c.gunMesh) c.gunMesh.visible = false;
                                 c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 75, 0, (Math.random() - 0.5) * 75);
+                                c.aiTarget.x = Math.max(-42, Math.min(42, c.aiTarget.x));
+                                c.aiTarget.z = Math.max(-42, Math.min(42, c.aiTarget.z));
                             }
                         } else {
                             c.hasWeaponEquipped = false;
                             if (c.gunMesh) c.gunMesh.visible = false;
                             c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 75, 0, (Math.random() - 0.5) * 75);
+                            c.aiTarget.x = Math.max(-42, Math.min(42, c.aiTarget.x));
+                            c.aiTarget.z = Math.max(-42, Math.min(42, c.aiTarget.z));
                         }
                     } else {
                         // Innocent AI: Seek dropped gun if active, or flee from murderer, or collect coins
@@ -5650,8 +5677,13 @@ export class MurderMysteryGame {
                             // Flee opposite direction
                             const away = c.position.clone().sub(murderer.position).normalize().multiplyScalar(20);
                             c.aiTarget = c.position.clone().add(away);
+                            // Clamp flee target within map bounds
+                            c.aiTarget.x = Math.max(-42, Math.min(42, c.aiTarget.x));
+                            c.aiTarget.z = Math.max(-42, Math.min(42, c.aiTarget.z));
                         } else {
                             c.aiTarget = new THREE.Vector3((Math.random() - 0.5) * 80, 0, (Math.random() - 0.5) * 80);
+                            c.aiTarget.x = Math.max(-42, Math.min(42, c.aiTarget.x));
+                            c.aiTarget.z = Math.max(-42, Math.min(42, c.aiTarget.z));
                         }
                     }
                 }
@@ -5739,8 +5771,15 @@ export class MurderMysteryGame {
                                 c.aiTimer = 0.1;
                                 const bounce = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() > 0.5 ? 1 : -1) * Math.PI * 0.5).multiplyScalar(15);
                                 c.aiTarget = c.position.clone().add(bounce);
+                                // Clamp bounce target within map bounds
+                                c.aiTarget.x = Math.max(-44, Math.min(44, c.aiTarget.x));
+                                c.aiTarget.z = Math.max(-44, Math.min(44, c.aiTarget.z));
                             }
                         }
+
+                        // Hard perimeter clamp: bots can NEVER leave map bounds (walls are at ±46, clamp at ±44)
+                        c.position.x = Math.max(-44, Math.min(44, c.position.x));
+                        c.position.z = Math.max(-44, Math.min(44, c.position.z));
                     } else {
                         // Lobby boundaries
                         const nextPos = c.position.clone().add(moveStep);
@@ -5861,7 +5900,8 @@ export class MurderMysteryGame {
             const nextPos = this.playerChar.position.clone().addScaledVector(moveDir, speed * delta);
 
             // Bounding collision checks against walls in mansion
-            if (this.state === 'in_game') {
+            const isPlayerOnMap = this.state === 'in_game' || this.state === 'role_reveal' || this.state === 'map_vote';
+            if (isPlayerOnMap) {
                 const playerSize = new THREE.Vector3(1.2, 3, 1.2);
 
                 // Unstuck / de-penetration safety if player is overlapping any collider
@@ -5925,6 +5965,10 @@ export class MurderMysteryGame {
                         this.playerChar.position.z = tryPosZ.z;
                     }
                 }
+
+                // Hard perimeter clamp: player can NEVER leave map bounds (walls at ±46, clamp at ±44)
+                this.playerChar.position.x = Math.max(-44, Math.min(44, this.playerChar.position.x));
+                this.playerChar.position.z = Math.max(-44, Math.min(44, this.playerChar.position.z));
             } else {
                 // Lobby bounds
                 nextPos.x = Math.max(-18, Math.min(18, nextPos.x));

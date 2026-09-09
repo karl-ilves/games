@@ -4004,6 +4004,8 @@ try {
 
                 game.adminSelectedMap = 'hotel2';
                 game.startRound();
+                // Transition to in_game state (bots are correctly frozen during role_reveal)
+                game.closeRoleReveal();
 
                 const bots = game.characters.filter(c => !c.isPlayer && c.isAlive);
                 const testBot = bots[0];
@@ -4079,6 +4081,89 @@ try {
                 throw new Error('AI bot phased straight through a solid wall!');
             }
             console.log('   AI bot forward orientation and obstacle collision verified: ✅');
+
+            // Test: Bots frozen during role_reveal + map bounds clamping ("ikka on kõik mapist väljas")
+            console.log('   Testing Bot Freeze During Role Reveal & Map Bounds Clamping:');
+            const mapBoundsTests = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                if (!game) return { success: false, reason: 'Game not found' };
+
+                // 1. Test bots are frozen during role_reveal
+                game.adminSelectedMap = 'hotel2';
+                game.startRound();
+                // State should be role_reveal
+                const stateAfterStart = game.state;
+
+                const bots = game.characters.filter(c => !c.isPlayer && c.isAlive);
+                const testBot = bots[0];
+                const spawnPos = { x: testBot.position.x, z: testBot.position.z };
+
+                // Give bot a target and run AI - bot should NOT move during role_reveal
+                testBot.aiTarget = new THREE.Vector3(20, 0, 20);
+                testBot.aiTimer = 0;
+                for (let i = 0; i < 10; i++) {
+                    game.updateAI(0.05);
+                }
+                const posAfterRoleReveal = { x: testBot.position.x, z: testBot.position.z };
+                const frozenDuringReveal = Math.abs(posAfterRoleReveal.x - spawnPos.x) < 0.01 &&
+                                           Math.abs(posAfterRoleReveal.z - spawnPos.z) < 0.01;
+
+                // 2. Test map bounds clamping (bot can't leave ±44)
+                game.closeRoleReveal();
+                testBot.position.set(0, 0, 0);
+                testBot.aiTarget = new THREE.Vector3(0, 0, 200); // way outside map
+                testBot.aiTimer = 100;
+                for (let i = 0; i < 200; i++) {
+                    game.updateAI(0.05);
+                }
+                const clampedWithinBounds = testBot.position.z <= 44.1 && testBot.position.z >= -44.1 &&
+                                            testBot.position.x <= 44.1 && testBot.position.x >= -44.1;
+
+                // 3. Test lobby/map visibility toggling
+                const mapVisibleInGame = game.mansionGroup ? game.mansionGroup.visible : false;
+                const lobbyHiddenInGame = game.lobbyGroup ? !game.lobbyGroup.visible : false;
+
+                game.returnToLobby();
+                const lobbyVisibleInLobby = game.lobbyGroup ? game.lobbyGroup.visible : false;
+                const mapHiddenInLobby = game.mansionGroup ? !game.mansionGroup.visible : false;
+
+                // 4. Test AI targets cleared on state transition
+                const botsHaveNoTarget = bots.every(b => !b.aiTarget);
+
+                return {
+                    success: true,
+                    stateAfterStart,
+                    frozenDuringReveal,
+                    clampedWithinBounds,
+                    botZ: testBot.position.z,
+                    mapVisibleInGame,
+                    lobbyHiddenInGame,
+                    lobbyVisibleInLobby,
+                    mapHiddenInLobby,
+                    botsHaveNoTarget
+                };
+            });
+
+            console.log(`     State after startRound: ${mapBoundsTests.stateAfterStart} (Expected: role_reveal)`);
+            console.log(`     Bots frozen during role_reveal: ${mapBoundsTests.frozenDuringReveal} (Expected: true)`);
+            console.log(`     Bot clamped within ±44 bounds: ${mapBoundsTests.clampedWithinBounds} (z=${mapBoundsTests.botZ?.toFixed(1)})`);
+            console.log(`     Map visible in game: ${mapBoundsTests.mapVisibleInGame}, Lobby hidden: ${mapBoundsTests.lobbyHiddenInGame}`);
+            console.log(`     Lobby visible in lobby: ${mapBoundsTests.lobbyVisibleInLobby}, Map hidden: ${mapBoundsTests.mapHiddenInLobby}`);
+            console.log(`     AI targets cleared on return to lobby: ${mapBoundsTests.botsHaveNoTarget}`);
+
+            if (!mapBoundsTests.frozenDuringReveal) {
+                throw new Error('Bots were NOT frozen during role_reveal! They can walk off the map!');
+            }
+            if (!mapBoundsTests.clampedWithinBounds) {
+                throw new Error(`Bot escaped map bounds! Position z=${mapBoundsTests.botZ}`);
+            }
+            if (!mapBoundsTests.lobbyHiddenInGame || !mapBoundsTests.mapVisibleInGame) {
+                throw new Error('Lobby/Map visibility not toggled correctly during game!');
+            }
+            if (!mapBoundsTests.lobbyVisibleInLobby || !mapBoundsTests.mapHiddenInLobby) {
+                throw new Error('Lobby/Map visibility not toggled correctly on return to lobby!');
+            }
+            console.log('   Bot freeze, map bounds clamp & visibility toggling verified: ✅');
 
             // Test No Yards Awarded in MMP1 Match ("Yarde siin ei teeni")
             console.log('   Testing No Yards Awarded in MMP1 Match ("Yarde siin ei teeni"):');
