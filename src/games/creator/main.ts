@@ -90,6 +90,17 @@ interface PlacedObject {
         origin: { x: number; y: number; z: number };
         rotationSpeed?: number;
     };
+    customModelData?: {
+        shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+        width: number;
+        height: number;
+        depth: number;
+        topElevation?: number;
+        faceOffsets?: { [key: string]: number };
+        isHazard?: boolean;
+        isHeal?: boolean;
+        isBoost?: boolean;
+    };
 }
 
 export function isAirplaneObject(obj?: PlacedObject | null): boolean {
@@ -332,11 +343,23 @@ let mousePos = { x: 0, y: 0 };
 interface CatalogItem {
     id: string;
     name: string;
-    category: 'nature' | 'city' | 'vehicles' | 'gameplay' | 'scifi';
+    category: 'nature' | 'city' | 'vehicles' | 'gameplay' | 'scifi' | 'custom';
     icon: string;
     color: string;
     geometryType: string;
     baseScale: number;
+    customModelData?: {
+        shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+        width: number;
+        height: number;
+        depth: number;
+        topElevation?: number;
+        faceOffsets?: { [key: string]: number };
+        isHazard?: boolean;
+        isHeal?: boolean;
+        isBoost?: boolean;
+    };
+    creatorUsername?: string;
 }
 
 const CATALOG_DATABASE: CatalogItem[] = [];
@@ -654,6 +677,130 @@ export function createSpeedboat3DMesh(color = '#e74c3c'): THREE.Group {
             c.receiveShadow = true;
         }
     });
+    return group;
+}
+
+// --- Custom Player-Created 3D Mesh Generator ---
+export function createWedgeGeometry(width: number, height: number, depth: number): THREE.BufferGeometry {
+    // 3D Right-angle Ramp / Triangular Prism
+    const hw = width / 2;
+    const hd = depth / 2;
+    const vertices = new Float32Array([
+        // Front face (triangle)
+        -hw, 0, -hd,   hw, 0, -hd,   -hw, height, -hd,
+        // Back face (triangle)
+        hw, 0, hd,   -hw, 0, hd,   hw, height, hd,
+        // Slope / Ramp face (2 triangles)
+        -hw, height, -hd,   hw, height, -hd,   -hw, 0, hd,
+        hw, height, -hd,    hw, 0, hd,        -hw, 0, hd,
+        // Bottom face (2 triangles)
+        -hw, 0, -hd,   -hw, 0, hd,    hw, 0, hd,
+        -hw, 0, -hd,   hw, 0, hd,     hw, 0, -hd,
+        // Left vertical back/side face (2 triangles)
+        -hw, 0, -hd,   -hw, height, -hd,  -hw, 0, hd,
+        hw, height, hd,  hw, height, -hd,  hw, 0, -hd
+    ]);
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geo.computeVertexNormals();
+    return geo;
+}
+
+export function createCustomModel3DMesh(modelData: {
+    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    width: number;
+    height: number;
+    depth: number;
+    topElevation?: number;
+    faceOffsets?: { [key: string]: number };
+    isHazard?: boolean;
+    isHeal?: boolean;
+    isBoost?: boolean;
+}, color = '#00f2fe'): THREE.Group {
+    const group = new THREE.Group();
+    const w = Math.max(0.5, modelData.width || 2);
+    const h = Math.max(0.2, modelData.height || 2);
+    const d = Math.max(0.5, modelData.depth || 2);
+
+    let mat: THREE.Material;
+    if (modelData.isHazard) {
+        mat = new THREE.MeshStandardMaterial({
+            color: color || '#ff3838',
+            emissive: 0xd63031,
+            emissiveIntensity: 0.6,
+            roughness: 0.3
+        });
+    } else if (modelData.isHeal) {
+        mat = new THREE.MeshStandardMaterial({
+            color: color || '#2ecc71',
+            emissive: 0x27ae60,
+            emissiveIntensity: 0.5,
+            roughness: 0.3
+        });
+    } else if (modelData.isBoost) {
+        mat = new THREE.MeshStandardMaterial({
+            color: color || '#f1c40f',
+            emissive: 0xe67e22,
+            emissiveIntensity: 0.6,
+            roughness: 0.2,
+            metalness: 0.4
+        });
+    } else {
+        mat = new THREE.MeshStandardMaterial({
+            color: color || '#00f2fe',
+            roughness: 0.4,
+            metalness: 0.2
+        });
+    }
+
+    let geo: THREE.BufferGeometry;
+    let meshPosY = h / 2;
+
+    switch (modelData.shapeType) {
+        case 'wedge': {
+            const rampHeight = modelData.topElevation || h;
+            geo = createWedgeGeometry(w, rampHeight, d);
+            meshPosY = 0;
+            break;
+        }
+        case 'cylinder': {
+            const radius = Math.min(w, d) / 2;
+            geo = new THREE.CylinderGeometry(radius, radius, h, 24);
+            break;
+        }
+        case 'pyramid': {
+            const radius = Math.max(w, d) / 2;
+            geo = new THREE.ConeGeometry(radius, h, 4);
+            geo.rotateY(Math.PI / 4);
+            break;
+        }
+        case 'dome': {
+            const radius = Math.min(w, d) / 2;
+            geo = new THREE.SphereGeometry(radius, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+            meshPosY = 0;
+            break;
+        }
+        case 'box':
+        default: {
+            geo = new THREE.BoxGeometry(w, h, d);
+            break;
+        }
+    }
+
+    const mainMesh = new THREE.Mesh(geo, mat);
+    mainMesh.position.y = meshPosY;
+    mainMesh.castShadow = true;
+    mainMesh.receiveShadow = true;
+    group.add(mainMesh);
+
+    // Add glowing accent wireframe / rim for high quality finish
+    const edgeGeo = new THREE.EdgesGeometry(geo);
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 });
+    const wireframe = new THREE.LineSegments(edgeGeo, edgeMat);
+    wireframe.position.copy(mainMesh.position);
+    group.add(wireframe);
+
     return group;
 }
 
@@ -1149,13 +1296,24 @@ export function createIslandOcean(spawnEntities = true) {
 
 // --- Create 3D Mesh for Catalog Item ---
 function createObjectMesh(item: CatalogItem, color?: string): THREE.Group {
-    const group = new THREE.Group();
     const matColor = color || item.color;
+    if (item.customModelData) {
+        return createCustomModel3DMesh(item.customModelData, matColor);
+    }
+
+    const group = new THREE.Group();
     const material = new THREE.MeshStandardMaterial({
         color: matColor,
         roughness: 0.5,
         metalness: 0.2
     });
+
+    if (item.category === 'custom') {
+        const box = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material);
+        box.position.y = 1;
+        group.add(box);
+        return group;
+    }
 
     if (item.category === 'nature') {
         if (item.geometryType.includes('pine')) {
@@ -1461,6 +1619,37 @@ function spawnObjectIntoScene(catalogItem: CatalogItem) {
         placed.gameItemType = 'checkpoint';
     }
 
+    if (catalogItem.customModelData) {
+        placed.customModelData = JSON.parse(JSON.stringify(catalogItem.customModelData));
+        if (catalogItem.customModelData.isHazard) {
+            placed.gameItemType = 'hazard';
+            placed.script = {
+                preset: 'damage',
+                trigger: 'onPlayerTouch',
+                cooldown: 0.8,
+                enabled: true,
+                actions: [{ type: 'damage', amount: 25 }]
+            };
+        } else if (catalogItem.customModelData.isHeal) {
+            placed.gameItemType = 'potion';
+            placed.script = {
+                preset: 'heal',
+                trigger: 'onPlayerTouch',
+                cooldown: 2.0,
+                enabled: true,
+                actions: [{ type: 'heal', amount: 35 }]
+            };
+        } else if (catalogItem.customModelData.isBoost) {
+            placed.script = {
+                preset: 'jump_boost',
+                trigger: 'onPlayerTouch',
+                cooldown: 1.0,
+                enabled: true,
+                actions: [{ type: 'jump_boost', jumpForce: 22 }]
+            };
+        }
+    }
+
     placedObjects.push(placed);
     selectObject(placed);
     autoSaveDraft();
@@ -1497,6 +1686,7 @@ export function serializeCurrentScene() {
             enemyData: p.enemyData ? JSON.parse(JSON.stringify(p.enemyData)) : undefined,
             trigger: p.trigger,
             script: p.script ? JSON.parse(JSON.stringify(p.script)) : undefined,
+            customModelData: p.customModelData ? JSON.parse(JSON.stringify(p.customModelData)) : undefined,
             portalTargetId: p.portalTargetId,
             portalTargetTitle: p.portalTargetTitle
         })),
@@ -1585,7 +1775,9 @@ export function loadSceneFromData(sceneData: any) {
             };
 
             let mesh: THREE.Group | THREE.Mesh;
-            if (objData.isAirplane) {
+            if (objData.customModelData) {
+                mesh = createCustomModel3DMesh(objData.customModelData, objData.color);
+            } else if (objData.isAirplane) {
                 mesh = createAirplane3DMesh(objData.color);
             } else if (objData.isBoat || isBoatObject(objData)) {
                 mesh = createSpeedboat3DMesh(objData.color);
@@ -1621,6 +1813,7 @@ export function loadSceneFromData(sceneData: any) {
                 enemyData: objData.enemyData,
                 trigger: objData.trigger,
                 script: objData.script ? JSON.parse(JSON.stringify(objData.script)) : undefined,
+                customModelData: objData.customModelData ? JSON.parse(JSON.stringify(objData.customModelData)) : undefined,
                 portalTargetId: objData.portalTargetId || objData.trigger?.targetWorldId,
                 portalTargetTitle: objData.portalTargetTitle || objData.trigger?.targetWorldTitle
             };
@@ -1764,28 +1957,54 @@ function selectObject(placed: PlacedObject | null) {
 
 // --- Render Catalog UI ---
 function renderCatalogUI(filterCat = 'all', searchQuery = '') {
-    const container = document.getElementById('catalog-items-container');
-    if (!container) return;
+    const profile = getCurrentUserProfile();
+    const myCustomItems = yardService.getPlayerCreatedItems(profile?.username ?? null);
+    const communityCustomItems = yardService.getPublishedCommunityItems();
 
-    let items = CATALOG_DATABASE;
-    if (filterCat !== 'all') {
+    // Deduplicate custom items by id
+    const customMap = new Map<string, any>();
+    [...myCustomItems, ...communityCustomItems].forEach(ci => {
+        customMap.set(ci.id, {
+            id: ci.id,
+            name: ci.name,
+            category: 'custom' as const,
+            icon: ci.icon || '🎨',
+            color: ci.color || '#00f2fe',
+            geometryType: ci.shapeType,
+            baseScale: 1.0,
+            customModelData: ci.modelData,
+            creatorUsername: ci.creatorUsername
+        });
+    });
+    const combinedCustomCatalogItems: CatalogItem[] = Array.from(customMap.values());
+
+    let items = filterCat === 'custom' ? combinedCustomCatalogItems : (filterCat === 'all' ? [...combinedCustomCatalogItems, ...CATALOG_DATABASE] : CATALOG_DATABASE);
+    if (filterCat !== 'all' && filterCat !== 'custom') {
         items = items.filter(i => i.category === filterCat);
     }
     if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        items = items.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
+        items = items.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q) || (i.creatorUsername && i.creatorUsername.toLowerCase().includes(q)));
     }
 
-    // Limit render chunk for performance (render first 60, paginate/infinite scroll)
+    // Limit render chunk for performance (render first 80, paginate/infinite scroll)
     const displayItems = items.slice(0, 80);
+
+    const container = document.getElementById('catalog-items-container');
+    if (!container) return;
 
     container.innerHTML = '';
     displayItems.forEach(item => {
         const card = document.createElement('div');
         card.className = 'object-card';
+        if (item.category === 'custom') {
+            card.style.borderColor = 'rgba(255, 211, 42, 0.5)';
+            card.style.background = 'linear-gradient(135deg, rgba(20,27,36,0.9), rgba(30,41,59,0.9))';
+        }
         card.innerHTML = `
             <div class="object-icon">${item.icon}</div>
             <div class="object-title">${item.name}</div>
+            ${item.creatorUsername ? `<div style="font-size: 0.68rem; color: #ffd32a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">👤 ${item.creatorUsername}</div>` : ''}
         `;
         card.addEventListener('click', () => {
             spawnObjectIntoScene(item);
@@ -1795,7 +2014,11 @@ function renderCatalogUI(filterCat = 'all', searchQuery = '') {
 
     const countBadge = document.getElementById('catalog-count-badge');
     if (countBadge) {
-        countBadge.innerText = `${items.length.toLocaleString()} items`;
+        if (filterCat === 'all' && !searchQuery.trim()) {
+            countBadge.innerText = '10,000 items';
+        } else {
+            countBadge.innerText = `${items.length.toLocaleString()} items`;
+        }
     }
 }
 
@@ -1884,7 +2107,16 @@ async function initStudio() {
         damagePlayer,
         healPlayer,
         isPlayerTouchingOrOnTop,
-        spawnObjectIntoScene
+        spawnObjectIntoScene,
+        openWorkbenchModal,
+        closeWorkbenchModal,
+        rebuildWorkbenchModel,
+        placeWorkbenchItemIntoScene,
+        saveWorkbenchItemToLibrary,
+        renderCatalogUI,
+        get currentWorkbenchState() { return currentWorkbenchState; },
+        get wbScene() { return wbScene; },
+        get wbPreviewMesh() { return wbPreviewMesh; }
     };
 
     // Generate 10,000 Objects in Catalog
@@ -3911,6 +4143,434 @@ export function setupScriptingEvents() {
             closeScriptModal();
             autoSaveDraft();
         }
+    });
+
+    setupWorkbenchEvents();
+}
+
+// ==========================================
+// 🎨 3D CUSTOM ITEM CREATOR WORKBENCH ENGINE
+// ==========================================
+interface WorkbenchState {
+    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    width: number;
+    height: number;
+    depth: number;
+    topElevation: number;
+    color: string;
+    behavior: 'solid' | 'hazard' | 'heal' | 'boost';
+}
+
+const currentWorkbenchState: WorkbenchState = {
+    shapeType: 'box',
+    width: 3.0,
+    height: 2.0,
+    depth: 3.0,
+    topElevation: 2.0,
+    color: '#00f2fe',
+    behavior: 'solid'
+};
+
+let wbScene: THREE.Scene | null = null;
+let wbCamera: THREE.PerspectiveCamera | null = null;
+let wbRenderer: THREE.WebGLRenderer | null = null;
+let wbCurrentMeshGroup: THREE.Group | null = null;
+let wbPedestalMesh: THREE.Mesh | null = null;
+let wbGridHelper: THREE.GridHelper | null = null;
+let wbAnimFrameId: number | null = null;
+
+let wbOrbitRadius = 9;
+let wbOrbitTheta = Math.PI / 4;
+let wbOrbitPhi = Math.PI / 3;
+let wbIsRightMouseDown = false;
+let wbMousePos = { x: 0, y: 0 };
+
+export function initWorkbench3D() {
+    const container = document.getElementById('workbench-canvas-container');
+    if (!container || wbRenderer) return;
+
+    wbScene = new THREE.Scene();
+    wbScene.background = new THREE.Color(0x0a0f1d);
+    wbScene.fog = new THREE.FogExp2(0x0a0f1d, 0.015);
+
+    const rect = container.getBoundingClientRect();
+    const w = rect.width || window.innerWidth;
+    const h = rect.height || (window.innerHeight - 60);
+
+    wbCamera = new THREE.PerspectiveCamera(50, w / h, 0.1, 100);
+
+    try {
+        wbRenderer = new THREE.WebGLRenderer({ antialias: true });
+        wbRenderer.setSize(w, h);
+        wbRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        wbRenderer.shadowMap.enabled = true;
+        container.appendChild(wbRenderer.domElement);
+    } catch (e) {
+        console.warn('Workbench WebGL error:', e);
+        return;
+    }
+
+    // Lights
+    const ambLight = new THREE.AmbientLight(0xffffff, 0.85);
+    wbScene.add(ambLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.4);
+    dirLight1.position.set(10, 20, 15);
+    dirLight1.castShadow = true;
+    wbScene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x00f2fe, 0.8);
+    dirLight2.position.set(-10, -10, -10);
+    wbScene.add(dirLight2);
+
+    // Workbench Pedestal Plate (Large plate with glowing grid boundary)
+    const pedGeo = new THREE.CylinderGeometry(8, 8.4, 0.4, 48);
+    const pedMat = new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        metalness: 0.6,
+        roughness: 0.3
+    });
+    wbPedestalMesh = new THREE.Mesh(pedGeo, pedMat);
+    wbPedestalMesh.position.y = -0.2;
+    wbPedestalMesh.receiveShadow = true;
+    wbScene.add(wbPedestalMesh);
+
+    // Glowing Cyan Grid on Workbench
+    wbGridHelper = new THREE.GridHelper(14, 14, 0x00f2fe, 0x334155);
+    wbGridHelper.position.y = 0.01;
+    wbScene.add(wbGridHelper);
+
+    // Camera controls for Workbench
+    updateWorkbenchCamera();
+
+    const dom = wbRenderer.domElement;
+    dom.addEventListener('mousedown', (e) => {
+        if (e.button === 2 || e.button === 0) {
+            wbIsRightMouseDown = true;
+            wbMousePos = { x: e.clientX, y: e.clientY };
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (wbIsRightMouseDown) {
+            const dx = e.clientX - wbMousePos.x;
+            const dy = e.clientY - wbMousePos.y;
+            wbMousePos = { x: e.clientX, y: e.clientY };
+
+            wbOrbitTheta -= dx * 0.008;
+            wbOrbitPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, wbOrbitPhi - dy * 0.008));
+            updateWorkbenchCamera();
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        wbIsRightMouseDown = false;
+    });
+
+    dom.addEventListener('wheel', (e) => {
+        wbOrbitRadius = Math.max(3, Math.min(25, wbOrbitRadius + e.deltaY * 0.015));
+        updateWorkbenchCamera();
+    });
+
+    dom.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Window resize
+    window.addEventListener('resize', () => {
+        if (!wbRenderer || !wbCamera || !container) return;
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        wbCamera.aspect = cw / ch;
+        wbCamera.updateProjectionMatrix();
+        wbRenderer.setSize(cw, ch);
+    });
+
+    rebuildWorkbenchModel();
+    animateWorkbench();
+}
+
+function updateWorkbenchCamera() {
+    if (!wbCamera) return;
+    const x = wbOrbitRadius * Math.sin(wbOrbitPhi) * Math.sin(wbOrbitTheta);
+    const y = wbOrbitRadius * Math.cos(wbOrbitPhi) + 1.0;
+    const z = wbOrbitRadius * Math.sin(wbOrbitPhi) * Math.cos(wbOrbitTheta);
+
+    wbCamera.position.set(x, y, z);
+    wbCamera.lookAt(0, 1.2, 0);
+}
+
+function rebuildWorkbenchModel() {
+    if (!wbScene) return;
+    if (wbCurrentMeshGroup) {
+        wbScene.remove(wbCurrentMeshGroup);
+        wbCurrentMeshGroup.traverse((c) => {
+            if ((c as THREE.Mesh).isMesh) {
+                (c as THREE.Mesh).geometry?.dispose();
+            }
+        });
+        wbCurrentMeshGroup = null;
+    }
+
+    const modelData = {
+        shapeType: currentWorkbenchState.shapeType,
+        width: currentWorkbenchState.width,
+        height: currentWorkbenchState.height,
+        depth: currentWorkbenchState.depth,
+        topElevation: currentWorkbenchState.topElevation,
+        isHazard: currentWorkbenchState.behavior === 'hazard',
+        isHeal: currentWorkbenchState.behavior === 'heal',
+        isBoost: currentWorkbenchState.behavior === 'boost'
+    };
+
+    wbCurrentMeshGroup = createCustomModel3DMesh(modelData, currentWorkbenchState.color);
+    wbScene.add(wbCurrentMeshGroup);
+}
+
+function animateWorkbench() {
+    wbAnimFrameId = requestAnimationFrame(animateWorkbench);
+    if (!wbScene || !wbCamera || !wbRenderer) return;
+
+    // Gentle slow rotation when idle for attractive presentation
+    if (!wbIsRightMouseDown && wbCurrentMeshGroup) {
+        wbCurrentMeshGroup.rotation.y += 0.004;
+    }
+
+    wbRenderer.render(wbScene, wbCamera);
+}
+
+export function openWorkbenchModal() {
+    const modal = document.getElementById('custom-item-workbench-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    if (!wbRenderer) {
+        initWorkbench3D();
+    } else {
+        rebuildWorkbenchModel();
+    }
+}
+
+export function closeWorkbenchModal() {
+    const modal = document.getElementById('custom-item-workbench-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function syncWorkbenchUI() {
+    const hVal = document.getElementById('workbench-val-height');
+    const wVal = document.getElementById('workbench-val-width');
+    const dVal = document.getElementById('workbench-val-depth');
+    const elVal = document.getElementById('workbench-val-elevation');
+    const hSlider = document.getElementById('workbench-slider-height') as HTMLInputElement | null;
+    const wSlider = document.getElementById('workbench-slider-width') as HTMLInputElement | null;
+    const dSlider = document.getElementById('workbench-slider-depth') as HTMLInputElement | null;
+    const wedgeBox = document.getElementById('workbench-wedge-controls');
+
+    if (hVal) hVal.innerText = `${currentWorkbenchState.height.toFixed(1)}m`;
+    if (wVal) wVal.innerText = `${currentWorkbenchState.width.toFixed(1)}m`;
+    if (dVal) dVal.innerText = `${currentWorkbenchState.depth.toFixed(1)}m`;
+    if (elVal) elVal.innerText = `${currentWorkbenchState.topElevation.toFixed(1)}m`;
+
+    if (hSlider) hSlider.value = currentWorkbenchState.height.toString();
+    if (wSlider) wSlider.value = currentWorkbenchState.width.toString();
+    if (dSlider) dSlider.value = currentWorkbenchState.depth.toString();
+
+    if (wedgeBox) {
+        wedgeBox.style.display = currentWorkbenchState.shapeType === 'wedge' ? 'block' : 'none';
+    }
+
+    document.querySelectorAll('.workbench-shape-btn').forEach(btn => {
+        const s = (btn as HTMLElement).getAttribute('data-shape');
+        if (s === currentWorkbenchState.shapeType) {
+            (btn as HTMLElement).style.borderColor = '#00f2fe';
+            (btn as HTMLElement).style.background = '#1e293b';
+        } else {
+            (btn as HTMLElement).style.borderColor = '#475569';
+            (btn as HTMLElement).style.background = '#0f172a';
+        }
+    });
+
+    rebuildWorkbenchModel();
+}
+
+function getWorkbenchItemPayload(nameOverride?: string) {
+    const nameInput = document.getElementById('workbench-item-name') as HTMLInputElement | null;
+    const name = nameOverride || nameInput?.value.trim() || 'Minu 3D Ese';
+
+    let icon = '🟦';
+    if (currentWorkbenchState.shapeType === 'wedge') icon = '🔺';
+    else if (currentWorkbenchState.shapeType === 'cylinder') icon = '🔵';
+    else if (currentWorkbenchState.shapeType === 'pyramid') icon = '⛺';
+    else if (currentWorkbenchState.shapeType === 'dome') icon = '🟢';
+
+    if (currentWorkbenchState.behavior === 'hazard') icon = '🔥';
+    else if (currentWorkbenchState.behavior === 'heal') icon = '💖';
+    else if (currentWorkbenchState.behavior === 'boost') icon = '⚡';
+
+    return {
+        name,
+        icon,
+        category: 'custom' as const,
+        shapeType: currentWorkbenchState.shapeType,
+        color: currentWorkbenchState.color,
+        modelData: {
+            width: currentWorkbenchState.width,
+            height: currentWorkbenchState.height,
+            depth: currentWorkbenchState.depth,
+            topElevation: currentWorkbenchState.topElevation,
+            isHazard: currentWorkbenchState.behavior === 'hazard',
+            isHeal: currentWorkbenchState.behavior === 'heal',
+            isBoost: currentWorkbenchState.behavior === 'boost'
+        }
+    };
+}
+
+export function placeWorkbenchItemIntoScene() {
+    const payload = getWorkbenchItemPayload();
+    const catItem: CatalogItem = {
+        id: 'custom_' + Date.now(),
+        name: payload.name,
+        category: 'custom',
+        icon: payload.icon,
+        color: payload.color,
+        geometryType: payload.shapeType,
+        baseScale: 1.0,
+        customModelData: payload.modelData
+    };
+
+    spawnObjectIntoScene(catItem);
+    closeWorkbenchModal();
+    playGameSound('victory');
+}
+
+export function saveWorkbenchItemToLibrary(publish = false) {
+    const profile = getCurrentUserProfile();
+    const payload = getWorkbenchItemPayload();
+
+    const saved = yardService.savePlayerCreatedItem(profile?.username ?? null, {
+        ...payload,
+        isPublished: publish
+    });
+
+    if (publish) {
+        yardService.publishPlayerCreatedItem(saved);
+        alert(`🌐 Ese "${saved.name}" on avaldatud! Kõik mängijad näevad seda nüüd kategooria "⭐ Players Created" all!`);
+    } else {
+        alert(`💾 Ese "${saved.name}" salvestati edukalt! Leiad selle nüüd "⭐ Players Created" nimekirjast.`);
+    }
+
+    renderCatalogUI('custom');
+    // Also place in scene for user convenience
+    placeWorkbenchItemIntoScene();
+}
+
+function setupWorkbenchEvents() {
+    document.getElementById('btn-create-custom-item')?.addEventListener('click', () => {
+        openWorkbenchModal();
+    });
+
+    document.getElementById('btn-close-workbench')?.addEventListener('click', () => {
+        closeWorkbenchModal();
+    });
+
+    // Shape selection
+    document.querySelectorAll('.workbench-shape-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const shape = (e.currentTarget as HTMLElement).getAttribute('data-shape') as any;
+            if (shape) {
+                currentWorkbenchState.shapeType = shape;
+                syncWorkbenchUI();
+            }
+        });
+    });
+
+    // Color & Behavior
+    const colorInp = document.getElementById('workbench-color-input') as HTMLInputElement | null;
+    if (colorInp) {
+        colorInp.addEventListener('input', () => {
+            currentWorkbenchState.color = colorInp.value;
+            rebuildWorkbenchModel();
+        });
+    }
+
+    const behSelect = document.getElementById('workbench-behavior-select') as HTMLSelectElement | null;
+    if (behSelect) {
+        behSelect.addEventListener('change', () => {
+            currentWorkbenchState.behavior = behSelect.value as any;
+            rebuildWorkbenchModel();
+        });
+    }
+
+    // Height / Elevation Push-Pull Buttons and Sliders
+    document.getElementById('btn-wb-height-up')?.addEventListener('click', () => {
+        currentWorkbenchState.height = Math.min(12, currentWorkbenchState.height + 0.5);
+        if (currentWorkbenchState.shapeType === 'wedge') {
+            currentWorkbenchState.topElevation = currentWorkbenchState.height;
+        }
+        syncWorkbenchUI();
+    });
+
+    document.getElementById('btn-wb-height-down')?.addEventListener('click', () => {
+        currentWorkbenchState.height = Math.max(0.4, currentWorkbenchState.height - 0.5);
+        if (currentWorkbenchState.shapeType === 'wedge') {
+            currentWorkbenchState.topElevation = Math.min(currentWorkbenchState.topElevation, currentWorkbenchState.height);
+        }
+        syncWorkbenchUI();
+    });
+
+    document.getElementById('workbench-slider-height')?.addEventListener('input', (e) => {
+        currentWorkbenchState.height = parseFloat((e.target as HTMLInputElement).value) || 2;
+        if (currentWorkbenchState.shapeType === 'wedge') {
+            currentWorkbenchState.topElevation = currentWorkbenchState.height;
+        }
+        syncWorkbenchUI();
+    });
+
+    // Width & Depth
+    document.getElementById('workbench-slider-width')?.addEventListener('input', (e) => {
+        currentWorkbenchState.width = parseFloat((e.target as HTMLInputElement).value) || 3;
+        syncWorkbenchUI();
+    });
+
+    document.getElementById('workbench-slider-depth')?.addEventListener('input', (e) => {
+        currentWorkbenchState.depth = parseFloat((e.target as HTMLInputElement).value) || 3;
+        syncWorkbenchUI();
+    });
+
+    // Wedge Ramp elevation
+    document.getElementById('btn-wb-elev-up')?.addEventListener('click', () => {
+        currentWorkbenchState.topElevation = Math.min(12, currentWorkbenchState.topElevation + 0.5);
+        syncWorkbenchUI();
+    });
+
+    document.getElementById('btn-wb-elev-down')?.addEventListener('click', () => {
+        currentWorkbenchState.topElevation = Math.max(0.2, currentWorkbenchState.topElevation - 0.5);
+        syncWorkbenchUI();
+    });
+
+    // Reset
+    document.getElementById('btn-wb-reset')?.addEventListener('click', () => {
+        currentWorkbenchState.width = 3.0;
+        currentWorkbenchState.height = 2.0;
+        currentWorkbenchState.depth = 3.0;
+        currentWorkbenchState.topElevation = 2.0;
+        currentWorkbenchState.shapeType = 'box';
+        currentWorkbenchState.color = '#00f2fe';
+        currentWorkbenchState.behavior = 'solid';
+        if (colorInp) colorInp.value = '#00f2fe';
+        if (behSelect) behSelect.value = 'solid';
+        syncWorkbenchUI();
+    });
+
+    // Actions
+    document.getElementById('btn-workbench-place')?.addEventListener('click', () => {
+        placeWorkbenchItemIntoScene();
+    });
+
+    document.getElementById('btn-workbench-save')?.addEventListener('click', () => {
+        saveWorkbenchItemToLibrary(false);
+    });
+
+    document.getElementById('btn-workbench-publish')?.addEventListener('click', () => {
+        saveWorkbenchItemToLibrary(true);
     });
 }
 

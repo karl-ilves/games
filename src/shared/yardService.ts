@@ -49,6 +49,28 @@ export interface CreatedGame {
     updatedAt: number;
 }
 
+export interface PlayerCreatedItem {
+    id: string;
+    name: string;
+    creatorUsername: string;
+    icon: string;
+    category: 'custom';
+    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    color: string;
+    modelData: {
+        width: number;
+        height: number;
+        depth: number;
+        topElevation?: number;
+        faceOffsets?: { [key: string]: number };
+        isHazard?: boolean;
+        isHeal?: boolean;
+        isBoost?: boolean;
+    };
+    isPublished?: boolean;
+    createdAt: number;
+}
+
 export interface PlatformUpdate {
     id: string;
     title: string;
@@ -1522,6 +1544,136 @@ class YardService {
         } catch (e) {
             return this.getRecentlyPlayedGames();
         }
+    }
+
+    // --- Player Created 3D Custom Items & Community Items ---
+    public savePlayerCreatedItem(username: string | null, item: Omit<PlayerCreatedItem, 'id' | 'createdAt'>): PlayerCreatedItem {
+        const fullItem: PlayerCreatedItem = {
+            ...item,
+            id: 'custom_item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            creatorUsername: username || 'Playard Creator',
+            category: 'custom',
+            createdAt: Date.now()
+        };
+
+        try {
+            const list = this.getPlayerCreatedItems(username);
+            list.unshift(fullItem);
+            localStorage.setItem('playard_custom_items_global', JSON.stringify(list));
+            if (username) {
+                localStorage.setItem(`playard_custom_items_${username.toLowerCase()}`, JSON.stringify(list));
+            }
+        } catch (e) {
+            console.warn('Failed to save custom item locally:', e);
+        }
+
+        if (fullItem.isPublished) {
+            this.publishPlayerCreatedItem(fullItem);
+        }
+
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('playard_custom_items_updated', { detail: fullItem }));
+        }
+
+        return fullItem;
+    }
+
+    public getPlayerCreatedItems(username?: string | null): PlayerCreatedItem[] {
+        try {
+            if (username) {
+                const userItems = localStorage.getItem(`playard_custom_items_${username.toLowerCase()}`);
+                if (userItems) return JSON.parse(userItems);
+            }
+            const globalItems = localStorage.getItem('playard_custom_items_global');
+            if (globalItems) return JSON.parse(globalItems);
+        } catch (e) {
+            console.warn('Failed to load custom items:', e);
+        }
+        return [];
+    }
+
+    public publishPlayerCreatedItem(item: PlayerCreatedItem): boolean {
+        item.isPublished = true;
+        try {
+            const communityList = this.getPublishedCommunityItems();
+            const existingIdx = communityList.findIndex(i => i.id === item.id);
+            if (existingIdx >= 0) {
+                communityList[existingIdx] = item;
+            } else {
+                communityList.unshift(item);
+            }
+            localStorage.setItem('playard_community_published_items', JSON.stringify(communityList));
+
+            // Also update in user's own list
+            const userList = this.getPlayerCreatedItems(item.creatorUsername);
+            const userIdx = userList.findIndex(i => i.id === item.id);
+            if (userIdx >= 0) {
+                userList[userIdx].isPublished = true;
+                localStorage.setItem('playard_custom_items_global', JSON.stringify(userList));
+                if (item.creatorUsername) {
+                    localStorage.setItem(`playard_custom_items_${item.creatorUsername.toLowerCase()}`, JSON.stringify(userList));
+                }
+            }
+
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('playard_community_items_updated', { detail: item }));
+            }
+            return true;
+        } catch (e) {
+            console.warn('Failed to publish custom item:', e);
+            return false;
+        }
+    }
+
+    public getPublishedCommunityItems(): PlayerCreatedItem[] {
+        try {
+            const raw = localStorage.getItem('playard_community_published_items');
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+
+        // Default initial community showcase items so player can see other players' creations right away
+        const defaultShowcase: PlayerCreatedItem[] = [
+            {
+                id: 'showcase_neon_ramp',
+                name: 'Mega Neon Jump Ramp',
+                creatorUsername: 'ProGamer99',
+                icon: '🔺',
+                category: 'custom',
+                shapeType: 'wedge',
+                color: '#00f2fe',
+                modelData: { width: 4, height: 2.5, depth: 5, topElevation: 2.5, isBoost: true },
+                isPublished: true,
+                createdAt: Date.now() - 3600000 * 24
+            },
+            {
+                id: 'showcase_castle_pillar',
+                name: 'Ancient Stone Pillar',
+                creatorUsername: 'BuildMaster',
+                icon: '🏛️',
+                category: 'custom',
+                shapeType: 'cylinder',
+                color: '#95a5a6',
+                modelData: { width: 2, height: 6, depth: 2 },
+                isPublished: true,
+                createdAt: Date.now() - 3600000 * 48
+            },
+            {
+                id: 'showcase_lava_spikes',
+                name: 'Molten Pyramid Trap',
+                creatorUsername: 'DragonSlayer',
+                icon: '🔥',
+                category: 'custom',
+                shapeType: 'pyramid',
+                color: '#ff4757',
+                modelData: { width: 3.5, height: 3, depth: 3.5, isHazard: true },
+                isPublished: true,
+                createdAt: Date.now() - 3600000 * 12
+            }
+        ];
+        try {
+            localStorage.setItem('playard_community_published_items', JSON.stringify(defaultShowcase));
+        } catch (e) {}
+        return defaultShowcase;
     }
 
     public renderYardSvg(size = 22, className = ''): string {

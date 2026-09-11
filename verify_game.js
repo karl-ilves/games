@@ -1436,6 +1436,93 @@ try {
             await new Promise(r => setTimeout(r, 400));
         }
 
+        // Test Custom Item 3D Workbench (Create Item, Push-Pull Height/Elevation, Save, Publish, Place)
+        console.log("   Testing Custom Item 3D Workbench (Create Item, Shapes, Height Elevation, Save, Publish)...");
+        {
+            // 1. Verify Create Custom Item button exists
+            await page.waitForSelector('#btn-create-custom-item', { visible: true, timeout: 5000 });
+            console.log("   Found '#btn-create-custom-item' button.");
+
+            // 2. Open Custom Item Workbench Modal
+            await page.click('#btn-create-custom-item');
+            await new Promise(r => setTimeout(r, 500));
+
+            const isModalVisible = await page.evaluate(() => {
+                const modal = document.getElementById('custom-item-workbench-modal');
+                return modal && window.getComputedStyle(modal).display !== 'none';
+            });
+            console.log("   Custom Item Workbench modal visible:", isModalVisible);
+            if (!isModalVisible) {
+                throw new Error("Custom Item Workbench modal failed to open!");
+            }
+
+            // 3. Test shape selection (Wedge / Ramp) and adjusting height & ramp elevation
+            await page.click('.workbench-shape-btn[data-shape="wedge"]');
+            await new Promise(r => setTimeout(r, 200));
+
+            // Increase height via push-pull button
+            await page.click('#btn-wb-height-up');
+            await page.click('#btn-wb-height-up');
+            await page.click('#btn-wb-elev-up');
+
+            const stateAfterEdit = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return {
+                    shapeType: cs?.currentWorkbenchState?.shapeType,
+                    height: cs?.currentWorkbenchState?.height,
+                    topElevation: cs?.currentWorkbenchState?.topElevation
+                };
+            });
+            console.log("   Workbench state after shape selection and elevation adjustments:", stateAfterEdit);
+            if (stateAfterEdit.shapeType !== 'wedge' || stateAfterEdit.height < 2.5) {
+                throw new Error("Workbench shape/height elevation was not applied correctly!");
+            }
+
+            // 4. Test Publishing the custom item to community library
+            await page.evaluate(() => {
+                const nameInput = document.getElementById('workbench-item-name');
+                if (nameInput) nameInput.value = 'Turbo Jump Ramp';
+                const cs = window.creatorStudio;
+                if (cs) {
+                    cs.currentWorkbenchState.behavior = 'boost';
+                    cs.currentWorkbenchState.color = '#ff9f1a';
+                }
+            });
+
+            // Trigger publish via Studio API
+            await page.evaluate(() => {
+                window.creatorStudio.saveWorkbenchItemToLibrary(true);
+            });
+            await new Promise(r => setTimeout(r, 500));
+
+            // 5. Verify item appears in '⭐ Players Created' catalog category
+            await page.click('.cat-btn[data-cat="custom"]');
+            await new Promise(r => setTimeout(r, 400));
+
+            const customItemsInCatalog = await page.evaluate(() => {
+                const container = document.getElementById('catalog-items-container');
+                if (!container) return [];
+                const cards = Array.from(container.querySelectorAll('.object-card'));
+                return cards.map(c => c.textContent?.trim() || '');
+            });
+            console.log("   Custom items found in '⭐ Players Created' category:", customItemsInCatalog.slice(0, 5));
+            const hasPublishedRamp = customItemsInCatalog.some(txt => txt.includes('Turbo Jump Ramp'));
+            if (!hasPublishedRamp) {
+                throw new Error("Published item 'Turbo Jump Ramp' not found in ⭐ Players Created catalog!");
+            }
+
+            // 6. Verify item was placed into 3D scene
+            const hasPlacedCustomObject = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return cs?.placedObjects?.some(obj => obj.name === 'Turbo Jump Ramp' && obj.customModelData);
+            });
+            console.log("   Custom created item placed into 3D scene:", hasPlacedCustomObject);
+            if (!hasPlacedCustomObject) {
+                throw new Error("Expected custom created item to be placed in the 3D scene!");
+            }
+            console.log("   ✅ Custom Item Workbench, Elevation, Save, Publish & Catalog passed!");
+        }
+
         // Test Submit for Review
         console.log("   Submitting created game for admin review...");
         // Auto-dismiss any alert/confirm dialogs from submit

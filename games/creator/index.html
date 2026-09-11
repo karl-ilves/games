@@ -366,6 +366,9 @@
             <button id="btn-save-draft" class="btn-studio" style="background: rgba(0, 242, 254, 0.15); border-color: rgba(0, 242, 254, 0.4); color: #00f2fe;">
                 <span>💾</span> <span>Save Game</span>
             </button>
+            <button id="btn-create-custom-item" class="btn-studio" style="background: linear-gradient(135deg, #a855f7, #6366f1); border-color: #c084fc; color: #fff; font-weight: 800; box-shadow: 0 4px 14px rgba(168,85,247,0.4);">
+                <span>🎨</span> <span>Create Item</span>
+            </button>
             <button id="btn-toggle-play-test" class="btn-studio btn-play-test">
                 <span>▶️</span> <span>Play Test Mode</span>
             </button>
@@ -584,6 +587,7 @@
             <input type="text" id="catalog-search-input" class="catalog-search" placeholder="🔍 Search 10000 objects...">
             <div class="catalog-categories">
                 <button class="cat-btn active" data-cat="all">All</button>
+                <button class="cat-btn" data-cat="custom" style="color: #ffd32a; font-weight: bold;">⭐ Players Created</button>
                 <button class="cat-btn" data-cat="nature">🌿 Nature</button>
                 <button class="cat-btn" data-cat="city">🏙️ City</button>
                 <button class="cat-btn" data-cat="vehicles">🚗 Vehicles</button>
@@ -891,6 +895,149 @@
                 <button id="btn-modal-close-bottom" class="btn-studio" style="background: #34495e; color: white;">
                     Close
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎨 3D Custom Item Creator Workbench Modal -->
+    <div id="custom-item-workbench-modal" style="display: none; position: fixed; inset: 0; background: rgba(5, 10, 20, 0.94); backdrop-filter: blur(14px); z-index: 300; flex-direction: column; overflow: hidden;">
+        <!-- Top Toolbar -->
+        <div style="height: 60px; background: rgba(15, 23, 42, 0.95); border-bottom: 2px solid rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.6rem;">🎨</span>
+                <div>
+                    <div style="font-weight: 900; font-size: 1.15rem; color: #00f2fe; letter-spacing: 0.5px;">3D Asjade Loomise Töölaud (Custom Item Creator)</div>
+                    <div style="font-size: 0.75rem; color: #a4b0be;">Vali kuju, nihuta tasapindasid üles/alla ja loo oma unikaalne 3D ese!</div>
+                </div>
+            </div>
+
+            <!-- Item Name Input -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 0.85rem; color: #ffd32a; font-weight: bold;">Eseme Nimi:</label>
+                <input type="text" id="workbench-item-name" value="Minu 3D Ese" style="width: 180px; padding: 6px 12px; background: #131920; border: 1.5px solid #00f2fe; border-radius: 8px; color: #fff; font-weight: bold; font-size: 0.88rem;">
+            </div>
+
+            <!-- Action Buttons: Save, Publish, Close -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button id="btn-workbench-place" class="btn-studio" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; font-weight: 800; border: none; padding: 8px 16px;">
+                    <span>📥 Pane Stseeni</span>
+                </button>
+                <button id="btn-workbench-save" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; border: none; padding: 8px 16px;">
+                    <span>💾 Salvesta (Save)</span>
+                </button>
+                <button id="btn-workbench-publish" class="btn-studio" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #000; font-weight: 800; border: none; padding: 8px 16px; box-shadow: 0 4px 15px rgba(255, 211, 42, 0.4);">
+                    <span>🌐 Avalda (Publish)</span>
+                </button>
+                <button id="btn-close-workbench" style="background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; font-size: 1.1rem; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: bold;">
+                    ✕ Sulge
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Workbench Canvas Area + Floating Controls -->
+        <div style="flex: 1; position: relative; width: 100%; height: calc(100vh - 60px); overflow: hidden;">
+            <!-- Three.js Canvas Container for Workbench -->
+            <div id="workbench-canvas-container" style="position: absolute; inset: 0; width: 100%; height: 100%;"></div>
+
+            <!-- Left Tool Panel: Shapes & Presets -->
+            <div style="position: absolute; top: 20px; left: 20px; width: 260px; background: rgba(15, 23, 42, 0.92); border: 1.5px solid rgba(0,242,254,0.3); border-radius: 16px; padding: 16px; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.7); z-index: 310;">
+                <h4 style="margin: 0 0 10px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase;">1. Vali Algkuju (Base Shape)</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+                    <button class="workbench-shape-btn active" data-shape="box" style="padding: 10px; background: #1e293b; border: 1.5px solid #00f2fe; border-radius: 8px; color: #fff; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <span style="font-size: 1.5rem;">🟦</span>
+                        <span>Kuup / Box</span>
+                    </button>
+                    <button class="workbench-shape-btn" data-shape="wedge" style="padding: 10px; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #cbd5e1; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <span style="font-size: 1.5rem;">🔺</span>
+                        <span>Kolmnurk / Ramp</span>
+                    </button>
+                    <button class="workbench-shape-btn" data-shape="cylinder" style="padding: 10px; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #cbd5e1; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <span style="font-size: 1.5rem;">🔵</span>
+                        <span>Silinder / Pillar</span>
+                    </button>
+                    <button class="workbench-shape-btn" data-shape="pyramid" style="padding: 10px; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #cbd5e1; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <span style="font-size: 1.5rem;">⛺</span>
+                        <span>Püramiid</span>
+                    </button>
+                    <button class="workbench-shape-btn" data-shape="dome" style="padding: 10px; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #cbd5e1; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; grid-column: span 2;">
+                        <span style="font-size: 1.5rem;">🟢</span>
+                        <span>Poolkera / Dome</span>
+                    </button>
+                </div>
+
+                <h4 style="margin: 0 0 10px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase;">2. Värv ja Olemus</h4>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="font-size: 0.82rem; color: #cbd5e1;">Põhivärv:</label>
+                        <input type="color" id="workbench-color-input" value="#00f2fe" style="width: 50px; height: 32px; border: 1px solid #64748b; border-radius: 6px; cursor: pointer; background: transparent;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.82rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Funktsionaalsus:</label>
+                        <select id="workbench-behavior-select" style="width: 100%; padding: 6px 8px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: #fff; font-size: 0.82rem;">
+                            <option value="solid">🧱 Tavaline 3D Klots / Takistus</option>
+                            <option value="hazard">🔥 Ohtlik Lõks (Võtab peale astudes -25 HP)</option>
+                            <option value="heal">💖 Tervendaja (Ravib peale astudes +35 HP)</option>
+                            <option value="boost">⚡ Kiirendus / Hüppepadi (Annab superhüppe)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Tool Panel: Face Manipulation & Height Controls (Tasandite liigutamine) -->
+            <div style="position: absolute; top: 20px; right: 20px; width: 280px; background: rgba(15, 23, 42, 0.92); border: 1.5px solid rgba(0,242,254,0.3); border-radius: 16px; padding: 16px; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.7); z-index: 310;">
+                <h4 style="margin: 0 0 8px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
+                    <span>📐</span> <span>Tasandite ja Kõrguste Redaktor</span>
+                </h4>
+                <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.4;">
+                    Liiguta kuju tasapinnalisi osasid üles-alla ning kohanda mõõtmeid ruudustikul:
+                </div>
+
+                <!-- Height / Elevation (Üles-alla liigutamine) -->
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.85rem; font-weight: bold; color: #00f2fe;">⬆️⬇️ Kõrgus (Üles/Alla):</span>
+                        <span id="workbench-val-height" style="font-size: 0.85rem; font-weight: bold; color: #ffd32a;">2.0m</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <button id="btn-wb-height-down" class="btn-ctrl" style="flex: 1; padding: 6px; font-weight: bold;">⬇️ Langeta</button>
+                        <button id="btn-wb-height-up" class="btn-ctrl" style="flex: 1; padding: 6px; font-weight: bold;">⬆️ Tõsta</button>
+                    </div>
+                    <input type="range" id="workbench-slider-height" min="0.5" max="10" step="0.25" value="2.0" style="width: 100%;">
+                </div>
+
+                <!-- Width & Depth Controls -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px;">
+                        <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 4px;">Laius (Width): <b id="workbench-val-width" style="color: #00f2fe;">3.0m</b></div>
+                        <input type="range" id="workbench-slider-width" min="1" max="12" step="0.5" value="3.0" style="width: 100%;">
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px;">
+                        <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 4px;">Pikkus (Depth): <b id="workbench-val-depth" style="color: #00f2fe;">3.0m</b></div>
+                        <input type="range" id="workbench-slider-depth" min="1" max="12" step="0.5" value="3.0" style="width: 100%;">
+                    </div>
+                </div>
+
+                <!-- Face Tilt / Elevation Angle (Kaldenurk / Pindade tõstmine) -->
+                <div id="workbench-wedge-controls" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 0.82rem; font-weight: bold; color: #ffd32a;">📐 Kaldpinna Kõrgus (Ramp Peak):</span>
+                        <span id="workbench-val-elevation" style="font-size: 0.82rem; font-weight: bold; color: #2ecc71;">2.0m</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+                        <button id="btn-wb-elev-down" class="btn-ctrl" style="flex: 1; padding: 4px; font-size: 0.8rem;">Kalde langetus ⬇️</button>
+                        <button id="btn-wb-elev-up" class="btn-ctrl" style="flex: 1; padding: 4px; font-size: 0.8rem;">Kalde tõstmine ⬆️</button>
+                    </div>
+                </div>
+
+                <!-- Reset Button -->
+                <button id="btn-wb-reset" style="width: 100%; background: #334155; border: 1px solid #64748b; color: #cbd5e1; border-radius: 8px; padding: 6px; font-size: 0.8rem; cursor: pointer;">
+                    🔄 Lähtesta Kuju (Reset)
+                </button>
+            </div>
+
+            <!-- Bottom Floating Guidance Hint -->
+            <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.92); border: 1px solid #ffd32a; border-radius: 30px; padding: 8px 24px; color: #ffd32a; font-size: 0.85rem; font-weight: bold; z-index: 310; pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+                💡 Pööra vaadet parema hiireklõpsuga (Right Click + Drag) | Suumi hiirerullikuga
             </div>
         </div>
     </div>
