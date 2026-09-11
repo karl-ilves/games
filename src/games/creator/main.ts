@@ -368,8 +368,19 @@ function generate10000ObjectCatalog() {
             id: 'gameplay',
             name: 'Gameplay & Portals',
             icon: '🎮',
-            types: ['Teleport Portal', 'Dimension Gate', 'Yard Coin Ring', 'Checkpoint Arch', 'Finish Line Gate', 'Speed Booster Pad', 'Super Jump Pad', 'Spinning Blade', 'Spike Block', 'Laser Gate'],
-            colors: ['#ffd32a', '#00f2fe', '#2ecc71', '#e74c3c', '#9b59b6', '#ff9f1a', '#4facfe', '#ff4757']
+            types: [
+                'Lava Hazard Floor (-25 HP)',
+                'Spike Block Trap (-20 HP)',
+                'Medkit Health Pack (+35 HP)',
+                'Health Heart Gem (+50 HP)',
+                'Speed Booster Pad',
+                'Super Jump Pad',
+                'Yard Coin Ring',
+                'Teleport Portal',
+                'Checkpoint Arch',
+                'Finish Line Gate'
+            ],
+            colors: ['#e74c3c', '#ff4757', '#2ecc71', '#00f2fe', '#ffd32a', '#9b59b6', '#ff9f1a', '#4facfe']
         },
         {
             id: 'scifi',
@@ -1255,7 +1266,59 @@ function createObjectMesh(item: CatalogItem, color?: string): THREE.Group {
             });
         });
     } else if (item.category === 'gameplay') {
-        if (item.geometryType.includes('portal') || item.geometryType.includes('gate') || item.geometryType.includes('teleport')) {
+        const lowerType = (item.geometryType + ' ' + item.name).toLowerCase();
+        if (lowerType.includes('lava')) {
+            // Glowing Lava Floor Plate with Obsidian Rim
+            const lavaMat = new THREE.MeshStandardMaterial({
+                color: 0xff3b30,
+                emissive: 0xff2d00,
+                emissiveIntensity: 0.9,
+                roughness: 0.3
+            });
+            const lavaPlate = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.14, 3.4), lavaMat);
+            lavaPlate.position.y = 0.07;
+            group.add(lavaPlate);
+
+            // Dark Obsidian Border
+            const rimMat = new THREE.MeshStandardMaterial({ color: 0x1c1c1e, roughness: 0.9 });
+            [-1.7, 1.7].forEach(rx => {
+                const rim = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.22, 3.6), rimMat);
+                rim.position.set(rx, 0.1, 0);
+                group.add(rim);
+            });
+            [-1.7, 1.7].forEach(rz => {
+                const rim = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.22, 0.2), rimMat);
+                rim.position.set(0, 0.1, rz);
+                group.add(rim);
+            });
+        } else if (lowerType.includes('spike') || lowerType.includes('blade') || lowerType.includes('laser')) {
+            // Metallic Spike Trap Plate with Sharp Spikes
+            const basePlate = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.14, 3.0), new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.8, roughness: 0.3 }));
+            basePlate.position.y = 0.07;
+            group.add(basePlate);
+
+            const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff3838, metalness: 0.8, roughness: 0.2 });
+            [-0.9, 0, 0.9].forEach(sx => {
+                [-0.9, 0, 0.9].forEach(sz => {
+                    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7, 4), spikeMat);
+                    spike.position.set(sx, 0.45, sz);
+                    group.add(spike);
+                });
+            });
+        } else if (lowerType.includes('medkit') || lowerType.includes('heart') || lowerType.includes('heal') || lowerType.includes('potion')) {
+            // 3D Medkit White Case with Red Cross
+            const caseMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.85, 0.7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 }));
+            caseMesh.position.y = 0.5;
+            group.add(caseMesh);
+
+            const crossMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: 0xc0392b, emissiveIntensity: 0.5 });
+            const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, 0.75), crossMat);
+            crossH.position.y = 0.5;
+            group.add(crossH);
+            const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.65, 0.75), crossMat);
+            crossV.position.y = 0.5;
+            group.add(crossV);
+        } else if (item.geometryType.includes('portal') || item.geometryType.includes('gate') || item.geometryType.includes('teleport')) {
             // Glowing Dimension Portal Frame
             const portalFrame = new THREE.Mesh(new THREE.TorusGeometry(2, 0.28, 16, 32), new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0x8e44ad, emissiveIntensity: 0.7 }));
             portalFrame.position.y = 2.2;
@@ -1331,6 +1394,73 @@ function spawnObjectIntoScene(catalogItem: CatalogItem) {
         color: catalogItem.color
     };
 
+    const lowerName = (catalogItem.name + ' ' + catalogItem.geometryType).toLowerCase();
+    if (lowerName.includes('lava') || lowerName.includes('hazard')) {
+        placed.gameItemType = 'hazard';
+        placed.script = {
+            preset: 'damage',
+            trigger: 'onPlayerTouch',
+            cooldown: 0.8,
+            enabled: true,
+            actions: [{ type: 'damage', amount: 25 }]
+        };
+    } else if (lowerName.includes('spike') || lowerName.includes('blade') || lowerName.includes('laser')) {
+        placed.gameItemType = 'hazard';
+        placed.script = {
+            preset: 'damage',
+            trigger: 'onPlayerTouch',
+            cooldown: 0.8,
+            enabled: true,
+            actions: [{ type: 'damage', amount: 20 }]
+        };
+    } else if (lowerName.includes('medkit') || lowerName.includes('heart') || lowerName.includes('heal') || lowerName.includes('potion')) {
+        placed.gameItemType = 'potion';
+        placed.script = {
+            preset: 'heal',
+            trigger: 'onPlayerTouch',
+            cooldown: 2.0,
+            enabled: true,
+            actions: [{ type: 'heal', amount: 35 }]
+        };
+    } else if (lowerName.includes('speed') || lowerName.includes('booster')) {
+        placed.script = {
+            preset: 'speed_boost',
+            trigger: 'onPlayerTouch',
+            cooldown: 2.0,
+            enabled: true,
+            actions: [{ type: 'speed_boost', speedMultiplier: 2.2, duration: 4.0 }]
+        };
+    } else if (lowerName.includes('jump')) {
+        placed.script = {
+            preset: 'jump_boost',
+            trigger: 'onPlayerTouch',
+            cooldown: 1.0,
+            enabled: true,
+            actions: [{ type: 'jump_boost', jumpForce: 20 }]
+        };
+    } else if (lowerName.includes('coin') || lowerName.includes('ring')) {
+        placed.gameItemType = 'coin';
+        placed.script = {
+            preset: 'give_coins',
+            trigger: 'onPlayerTouch',
+            cooldown: 3.0,
+            enabled: true,
+            actions: [{ type: 'give_coins', amount: 10 }, { type: 'play_sound', soundName: 'coin' }]
+        };
+    } else if (lowerName.includes('portal') || lowerName.includes('teleport')) {
+        placed.script = {
+            preset: 'teleport',
+            trigger: 'onPlayerTouch',
+            cooldown: 2.0,
+            enabled: true,
+            actions: [{ type: 'teleport', teleportTarget: { x: 0, y: 0, z: 0 } }]
+        };
+    } else if (lowerName.includes('finish') || lowerName.includes('goal')) {
+        placed.gameItemType = 'goal';
+    } else if (lowerName.includes('checkpoint')) {
+        placed.gameItemType = 'checkpoint';
+    }
+
     placedObjects.push(placed);
     selectObject(placed);
     autoSaveDraft();
@@ -1341,10 +1471,14 @@ export function serializeCurrentScene() {
     const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
     const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
 
+    const healthInput = document.getElementById('game-player-health-input') as HTMLInputElement | null;
+    const maxHp = healthInput ? (parseInt(healthInput.value, 10) || 100) : playerMaxHealth;
+
     return {
         title: titleInput?.value.trim() || 'My 3D Adventure',
         category: catSelect?.value || 'Adventure',
         description: descInput?.value.trim() || '',
+        playerMaxHealth: maxHp,
         seaConfig: activeSeaConfig ? JSON.parse(JSON.stringify(activeSeaConfig)) : null,
         objects: placedObjects.map(p => ({
             id: p.id,
@@ -1357,6 +1491,10 @@ export function serializeCurrentScene() {
             color: p.color,
             isAirplane: p.isAirplane,
             isBoat: p.isBoat,
+            gameItemType: p.gameItemType,
+            keyName: p.keyName,
+            requiredKeyName: p.requiredKeyName,
+            enemyData: p.enemyData ? JSON.parse(JSON.stringify(p.enemyData)) : undefined,
             trigger: p.trigger,
             script: p.script ? JSON.parse(JSON.stringify(p.script)) : undefined,
             portalTargetId: p.portalTargetId,
@@ -1426,6 +1564,14 @@ export function loadSceneFromData(sceneData: any) {
     if (catSelect && sceneData.category) catSelect.value = sceneData.category;
     if (descInput && sceneData.description) descInput.value = sceneData.description;
 
+    const healthInput = document.getElementById('game-player-health-input') as HTMLInputElement | null;
+    if (sceneData.playerMaxHealth) {
+        playerMaxHealth = Number(sceneData.playerMaxHealth) || 100;
+        playerHealth = playerMaxHealth;
+        if (healthInput) healthInput.value = playerMaxHealth.toString();
+        updateGameplayHUD();
+    }
+
     if (Array.isArray(sceneData.objects)) {
         sceneData.objects.forEach((objData: any) => {
             const catItem: CatalogItem = CATALOG_DATABASE.find(c => c.id === objData.catalogId) || {
@@ -1469,6 +1615,10 @@ export function loadSceneFromData(sceneData: any) {
                 rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
                 scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
                 color: objData.color || catItem.color,
+                gameItemType: objData.gameItemType,
+                keyName: objData.keyName,
+                requiredKeyName: objData.requiredKeyName,
+                enemyData: objData.enemyData,
                 trigger: objData.trigger,
                 script: objData.script ? JSON.parse(JSON.stringify(objData.script)) : undefined,
                 portalTargetId: objData.portalTargetId || objData.trigger?.targetWorldId,
@@ -1712,6 +1862,7 @@ async function initStudio() {
         get selectedObject() { return selectedObject; },
         get playerCoins() { return playerCoins; },
         get playerHealth() { return playerHealth; },
+        get playerMaxHealth() { return playerMaxHealth; },
         get playerSpeedMultiplier() { return playerSpeedMultiplier; },
         createWholeMapOcean,
         createPartMapOcean,
@@ -1729,7 +1880,11 @@ async function initStudio() {
         saveScriptFromModal,
         renderScriptActionParams,
         updateScriptInspectorDisplay,
-        playScriptSound
+        playScriptSound,
+        damagePlayer,
+        healPlayer,
+        isPlayerTouchingOrOnTop,
+        spawnObjectIntoScene
     };
 
     // Generate 10,000 Objects in Catalog
@@ -1854,7 +2009,7 @@ export function updateGameplayHUD() {
     const hasYards = isYardsSystemEnabled || (activeQuest && activeQuest.rewardYards) || placedObjects.some(o => o.gameItemType === 'shop');
 
     if (healthContainer) {
-        healthContainer.style.display = (hasCombat && isPlayTestMode) ? 'flex' : 'none';
+        healthContainer.style.display = isPlayTestMode ? 'flex' : 'none';
     }
     if (gameplayActions) {
         gameplayActions.style.display = (hasCombat && isPlayTestMode) ? 'flex' : 'none';
@@ -1883,11 +2038,11 @@ export function updateGameplayHUD() {
     }
 
     if (questTracker) {
-        if (activeQuest) {
+        if (activeQuest && !activeQuest.completed && isPlayTestMode) {
             questTracker.style.display = 'block';
             if (questTitle) questTitle.innerText = activeQuest.title;
             if (questDesc) questDesc.innerText = activeQuest.desc;
-            if (questProgress) questProgress.innerText = `Edenemine: ${activeQuest.current} / ${activeQuest.target}`;
+            if (questProgress) questProgress.innerText = `[${activeQuest.current}/${activeQuest.target}]`;
         } else {
             questTracker.style.display = 'none';
         }
@@ -1902,15 +2057,20 @@ export function updateGameplayHUD() {
     }
 }
 
-export function damagePlayer(amount: number) {
+let lastPlayerDamageTime = 0;
+export function damagePlayer(amount: number, force = false) {
     if (isGameOver || isGameFinished || !isPlayTestMode) return;
+    const now = Date.now();
+    if (!force && now - lastPlayerDamageTime < 600) return;
+    lastPlayerDamageTime = now;
+
     playerHealth = Math.max(0, playerHealth - amount);
     playGameSound('hit');
     updateGameplayHUD();
 
-    // Screen flash
-    document.body.style.boxShadow = 'inset 0 0 50px rgba(231,76,60,0.8)';
-    setTimeout(() => { document.body.style.boxShadow = 'none'; }, 200);
+    // Red screen damage flash
+    document.body.style.boxShadow = 'inset 0 0 55px rgba(231,76,60,0.85)';
+    setTimeout(() => { document.body.style.boxShadow = 'none'; }, 220);
 
     if (playerHealth <= 0) {
         triggerGameOver();
@@ -1921,6 +2081,42 @@ export function healPlayer(amount: number) {
     playerHealth = Math.min(playerMaxHealth, playerHealth + amount);
     playGameSound('coin');
     updateGameplayHUD();
+
+    // Green screen heal flash
+    document.body.style.boxShadow = 'inset 0 0 45px rgba(46,204,113,0.7)';
+    setTimeout(() => { document.body.style.boxShadow = 'none'; }, 200);
+}
+
+/**
+ * Check whether the player is touching, standing on, or physically inside an object's bounding box.
+ * Avoids false triggers when player is standing meters away.
+ */
+export function isPlayerTouchingOrOnTop(playerPos: THREE.Vector3, p: PlacedObject): boolean {
+    if (!p.mesh) return false;
+    const box = new THREE.Box3().setFromObject(p.mesh);
+    if (box.isEmpty()) return false;
+
+    // Player cylinder approximation: radius 0.45m, feet at playerPos.y, head at playerPos.y + 1.8m
+    const playerRadius = 0.45;
+    const feetY = playerPos.y;
+    const headY = playerPos.y + 1.8;
+
+    // 1. Horizontal check (XZ) with player radius margin
+    const minX = box.min.x - playerRadius;
+    const maxX = box.max.x + playerRadius;
+    const minZ = box.min.z - playerRadius;
+    const maxZ = box.max.z + playerRadius;
+
+    if (playerPos.x < minX || playerPos.x > maxX || playerPos.z < minZ || playerPos.z > maxZ) {
+        return false;
+    }
+
+    // 2. Vertical check (Y): player must be touching, standing on top, or passing through
+    // Allow landing on top (feet near box.max.y) or standing inside/contacting the box
+    const minY = box.min.y - 0.25;
+    const maxY = box.max.y + 0.45;
+
+    return feetY <= maxY && headY >= minY;
 }
 
 export function collectCoin(amount = 10) {
@@ -2815,6 +3011,19 @@ function setupCatalogEvents() {
     document.getElementById('game-title-input')?.addEventListener('input', autoSaveDraft);
     document.getElementById('game-category-select')?.addEventListener('change', autoSaveDraft);
     document.getElementById('game-desc-input')?.addEventListener('input', autoSaveDraft);
+
+    const hpInput = document.getElementById('game-player-health-input') as HTMLInputElement | null;
+    if (hpInput) {
+        hpInput.addEventListener('input', () => {
+            const val = parseInt(hpInput.value, 10);
+            if (!isNaN(val) && val > 0) {
+                playerMaxHealth = val;
+                playerHealth = val;
+                updateGameplayHUD();
+                autoSaveDraft();
+            }
+        });
+    }
 }
 
 function setupInspectorEvents() {
@@ -7580,7 +7789,7 @@ function animate() {
             }
 
             // 4. Hazards (Lava floor, spikes)
-            if ((p.gameItemType === 'hazard' || p.trigger?.type === 'hazard_lava') && dist < 4.0) {
+            if ((p.gameItemType === 'hazard' || p.trigger?.type === 'hazard_lava') && isPlayerTouchingOrOnTop(playerPos, p)) {
                 damagePlayer(25);
             }
 
@@ -7594,7 +7803,7 @@ function animate() {
             }
 
             // 6. Victory Goal / Portal
-            if ((p.gameItemType === 'goal' || p.trigger?.type === 'goal_win') && dist < 3.0) {
+            if ((p.gameItemType === 'goal' || p.trigger?.type === 'goal_win') && (isPlayerTouchingOrOnTop(playerPos, p) || dist < 2.0)) {
                 triggerVictory('🏆 PALJU ÕNNE! VÕIT!', 'Jõudsid edukalt finišisse ja läbisid mängumaailma!');
             }
 
@@ -7619,8 +7828,7 @@ function animate() {
                         executeObjectScript(p, playerPos, 'onTimer');
                     }
                 } else if (p.script.trigger === 'onPlayerTouch') {
-                    const touchRad = p.trigger?.radius || 2.5;
-                    if (dist <= touchRad) {
+                    if (isPlayerTouchingOrOnTop(playerPos, p)) {
                         executeObjectScript(p, playerPos, 'onPlayerTouch');
                     }
                 } else if (p.script.trigger === 'onInteract') {

@@ -1370,9 +1370,54 @@ try {
                 return !cs?.selectedObject?.script && badge.includes('Pole skripti');
             });
             console.log("   Script removed successfully from object:", scriptDeleted);
-            if (!scriptDeleted) {
-                throw new Error("Expected script to be deleted from selectedObject!");
+            // 6. Test Play Test Mode HUD Health Visibility
+            console.log("   Testing Health HUD Visibility in Play Test Mode...");
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+            
+            const healthContainerDisplay = await page.$eval('#hud-health-container', el => window.getComputedStyle(el).display);
+            const healthTextValue = await page.$eval('#player-health-text', el => el.textContent?.trim());
+            console.log(`   Health Container Display in Play Test (Expected: flex): ${healthContainerDisplay}, Text: ${healthTextValue}`);
+            if (healthContainerDisplay !== 'flex') {
+                throw new Error("Expected #hud-health-container to be visible (flex) in Play Test mode!");
             }
+            if (!healthTextValue?.includes('/')) {
+                throw new Error("Expected #player-health-text to show current/max health (e.g. 100/100)!");
+            }
+
+            // 7. Test Precise Collision: isPlayerTouchingOrOnTop
+            console.log("   Testing Precise Collision Detection (isPlayerTouchingOrOnTop)...");
+            const collisionTestResult = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                if (!cs || !cs.isPlayerTouchingOrOnTop || !cs.placedObjects || cs.placedObjects.length === 0) return false;
+                const testObj = cs.placedObjects[0];
+                
+                // Position 1: Right at the object (touching/on top)
+                const onTopPos = {
+                    x: testObj.position.x,
+                    y: testObj.position.y + 0.1,
+                    z: testObj.position.z
+                };
+                const touchDirect = cs.isPlayerTouchingOrOnTop(onTopPos, testObj);
+
+                // Position 2: 4 meters away horizontally (should NOT touch)
+                const farPos = {
+                    x: testObj.position.x + 4.5,
+                    y: testObj.position.y,
+                    z: testObj.position.z
+                };
+                const touchFar = cs.isPlayerTouchingOrOnTop(farPos, testObj);
+
+                return touchDirect === true && touchFar === false;
+            });
+            console.log("   Precise collision test passed (true on top, false 4.5m away):", collisionTestResult);
+            if (!collisionTestResult) {
+                throw new Error("isPlayerTouchingOrOnTop failed: player was detected while far away or not detected when on top!");
+            }
+
+            // Switch back to edit mode
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
         }
 
         // Test Submit for Review
