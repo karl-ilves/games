@@ -1067,6 +1067,41 @@ try {
             // Test Exact Quantity Scatter ("pane 30 autot tervesse kaarti")
             console.log("   Testing Exact Quantity Scatter ('pane 30 autot tervesse kaarti')...");
             await submitAi('pane 30 autot tervesse kaarti');
+
+            // Test Creator AI: Whole Map Sea / Ocean Creation ("Tee terve kaart mereks")
+            console.log("   Testing Creator AI Whole Map Sea Creation ('Tee terve kaart mereks')...");
+            await submitAi('Tee terve kaart mereks suure ookeaniga');
+            const wholeSeaChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!wholeSeaChat.includes('ookean') && !wholeSeaChat.includes('ocean') && !wholeSeaChat.includes('meri') && !wholeSeaChat.includes('sea')) {
+                throw new Error("Creator AI Whole Map Sea creation chat response failed!");
+            }
+            const wholeSeaActive = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return cs && cs.activeSeaConfig?.type === 'whole' && !!cs.oceanWaterMesh;
+            });
+            console.log("   Creator AI Whole Map Sea active in 3D scene:", wholeSeaActive);
+            if (!wholeSeaActive) {
+                throw new Error("Expected active whole-map ocean water mesh in 3D Creator scene!");
+            }
+
+            // Test Creator AI: Part of Map Sea / Coastline Creation ("Tee osa kaardist mereks")
+            console.log("   Testing Creator AI Part of Map Sea Creation ('Tee osa kaardist mereks')...");
+            await submitAi('Tee osa kaardist mereks kauni ranna ja paadiga');
+            const partSeaChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!partSeaChat.includes('rannik') && !partSeaChat.includes('coast') && !partSeaChat.includes('meri') && !partSeaChat.includes('sea')) {
+                throw new Error("Creator AI Part of Map Sea creation chat response failed!");
+            }
+            const partSeaActive = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const isPart = cs && cs.activeSeaConfig?.type === 'part' && !!cs.oceanWaterMesh;
+                const waterCheck = cs && cs.isPositionInWater(0, -60) === true && cs.isPositionInWater(0, 60) === false;
+                return isPart && waterCheck;
+            });
+            console.log("   Creator AI Part of Map Sea active with coastline & water boundary:", partSeaActive);
+            if (!partSeaActive) {
+                throw new Error("Expected active part-map ocean with correct water boundary in 3D Creator scene!");
+            }
+
             await page.click('#btn-new-game');
             await new Promise(r => setTimeout(r, 400));
 

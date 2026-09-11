@@ -29,6 +29,7 @@ interface PlacedObject {
     scale: { x: number; y: number; z: number };
     color: string;
     isAirplane?: boolean;
+    isBoat?: boolean;
     portalTargetId?: string;
     portalTargetTitle?: string;
     gameItemType?: 'coin' | 'key' | 'door' | 'weapon' | 'potion' | 'goal' | 'checkpoint' | 'hazard' | 'shop' | 'enemy' | 'boss' | 'npc';
@@ -71,6 +72,13 @@ export function isAirplaneObject(obj?: PlacedObject | null): boolean {
     return n.includes('plane') || n.includes('lennuk') || n.includes('jet') || n.includes('aircraft') || n.includes('fighter') || n.includes('propeller');
 }
 
+export function isBoatObject(obj?: PlacedObject | null): boolean {
+    if (!obj) return false;
+    if (obj.isBoat === true || (obj.mesh as any)?.userData?.isBoat === true) return true;
+    const n = ((obj.name || '') + ' ' + (obj.catalogId || '')).toLowerCase();
+    return n.includes('boat') || n.includes('paat') || n.includes('ship') || n.includes('laev') || n.includes('jaht') || n.includes('yacht') || n.includes('speedboat') || n.includes('jetski') || n.includes('parv') || n.includes('raft') || n.includes('kiirpaat');
+}
+
 let placedObjects: PlacedObject[] = [];
 let selectedObject: PlacedObject | null = null;
 let isTeleporting = false;
@@ -103,12 +111,27 @@ let dirLight: THREE.DirectionalLight;
 let hemiLight: THREE.HemisphereLight;
 let currentEnvMode: 'day' | 'night' | 'sunset' | 'horror_fog' = 'day';
 
+// Sea & Ocean System State Interface
+export interface SeaConfig {
+    type: 'whole' | 'part' | 'island';
+    boundary?: {
+        axis: 'x' | 'z';
+        side: 'positive' | 'negative';
+        threshold: number;
+    };
+    waterLevel: number;
+    waterColor?: number;
+    waveSpeed?: number;
+    waveHeight?: number;
+}
+
 // Undo / Redo History Stack
 interface SceneSnapshot {
     title: string;
     desc: string;
     category: string;
     envMode: 'day' | 'night' | 'sunset' | 'horror_fog';
+    seaConfig?: SeaConfig | null;
     quest?: any;
     objects: Array<{
         catalogId: string;
@@ -119,6 +142,7 @@ interface SceneSnapshot {
         scale: { x: number; y: number; z: number };
         color: string;
         isAirplane?: boolean;
+        isBoat?: boolean;
         gameItemType?: string;
         keyName?: string;
         requiredKeyName?: string;
@@ -217,6 +241,12 @@ let isGrounded = true;
 let characterYaw = 0;
 let grassPlane: THREE.Mesh;
 let grassBlades: THREE.InstancedMesh;
+
+// Active Ocean & Sea Mesh State
+let activeSeaConfig: SeaConfig | null = null;
+let oceanWaterMesh: THREE.Mesh | null = null;
+let oceanSeabedMesh: THREE.Mesh | null = null;
+let beachSandMesh: THREE.Mesh | null = null;
 
 // Controls
 const keys: { [key: string]: boolean } = {};
@@ -476,6 +506,567 @@ export function createAirplane3DMesh(color = '#3498db'): THREE.Group {
     return group;
 }
 
+// --- Create High-Detail 3D Drivable Speedboat Mesh ---
+export function createSpeedboat3DMesh(color = '#e74c3c'): THREE.Group {
+    const group = new THREE.Group();
+    const hullMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3, metalness: 0.4 });
+    const deckMat = new THREE.MeshStandardMaterial({ color: 0xf5f6fa, roughness: 0.4 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x2f3640, roughness: 0.7 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.1, transparent: true, opacity: 0.65 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xdcdde1, metalness: 0.9, roughness: 0.1 });
+
+    // Hull (V-shaped bottom)
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.9, 5.8), hullMat);
+    hull.position.set(0, 0.45, 0);
+    group.add(hull);
+
+    // Pointed bow (front nose)
+    const bow = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.2, 4), hullMat);
+    bow.rotation.x = Math.PI / 2;
+    bow.rotation.y = Math.PI / 4;
+    bow.position.set(0, 0.45, -3.4);
+    group.add(bow);
+
+    // Deck & Cockpit cutout
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.15, 5.0), deckMat);
+    deck.position.set(0, 0.92, -0.2);
+    group.add(deck);
+
+    // Windshield
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.65, 0.1), glassMat);
+    windshield.position.set(0, 1.25, -1.2);
+    windshield.rotation.x = -0.35;
+    group.add(windshield);
+
+    // Side windows
+    [-1.02, 1.02].forEach(sideX => {
+        const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 1.6), glassMat);
+        sideWindow.position.set(sideX, 1.15, -0.4);
+        group.add(sideWindow);
+    });
+
+    // Leather Seats
+    [-0.5, 0.5].forEach(seatX => {
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.5, 0.65), darkMat);
+        seat.position.set(seatX, 1.05, -0.3);
+        group.add(seat);
+    });
+
+    // Outboard Motor on stern
+    const motor = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.2, 0.8), darkMat);
+    motor.position.set(0, 0.7, 3.1);
+    group.add(motor);
+
+    const propShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.8), chromeMat);
+    propShaft.position.set(0, 0.1, 3.2);
+    group.add(propShaft);
+
+    // Steering wheel
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.04, 6, 12), chromeMat);
+    wheel.position.set(0.48, 1.2, -0.9);
+    wheel.rotation.x = -0.5;
+    group.add(wheel);
+
+    group.userData.isBoat = true;
+    group.traverse(c => {
+        if ((c as THREE.Mesh).isMesh) {
+            c.castShadow = true;
+            c.receiveShadow = true;
+        }
+    });
+    return group;
+}
+
+// --- Sea & Ocean System Management ---
+export function removeSea() {
+    if (oceanWaterMesh) {
+        scene.remove(oceanWaterMesh);
+        oceanWaterMesh.geometry.dispose();
+        if (Array.isArray(oceanWaterMesh.material)) {
+            oceanWaterMesh.material.forEach(m => m.dispose());
+        } else {
+            oceanWaterMesh.material.dispose();
+        }
+        oceanWaterMesh = null;
+    }
+    if (oceanSeabedMesh) {
+        scene.remove(oceanSeabedMesh);
+        oceanSeabedMesh.geometry.dispose();
+        if (Array.isArray(oceanSeabedMesh.material)) {
+            oceanSeabedMesh.material.forEach(m => m.dispose());
+        } else {
+            oceanSeabedMesh.material.dispose();
+        }
+        oceanSeabedMesh = null;
+    }
+    if (beachSandMesh) {
+        scene.remove(beachSandMesh);
+        beachSandMesh.geometry.dispose();
+        if (Array.isArray(beachSandMesh.material)) {
+            beachSandMesh.material.forEach(m => m.dispose());
+        } else {
+            beachSandMesh.material.dispose();
+        }
+        beachSandMesh = null;
+    }
+    activeSeaConfig = null;
+    if (grassPlane) grassPlane.visible = true;
+    if (grassBlades) grassBlades.visible = true;
+}
+
+export function isPositionInWater(x: number, z: number): boolean {
+    if (!activeSeaConfig) return false;
+    if (activeSeaConfig.type === 'whole') {
+        // Safe dry pier / dock area
+        const onPier = Math.abs(x) < 4.8 && Math.abs(z) < 9.5;
+        return !onPier;
+    }
+    if (activeSeaConfig.type === 'part') {
+        const b = activeSeaConfig.boundary;
+        if (!b) return z < 0;
+        const val = b.axis === 'x' ? x : z;
+        const isWaterSide = b.side === 'negative' ? (val < b.threshold) : (val > b.threshold);
+        // Pier extending into sea from z = 4 to z = -22
+        const onPier = Math.abs(x) < 3.2 && z >= -22 && z <= 5;
+        return isWaterSide && !onPier;
+    }
+    if (activeSeaConfig.type === 'island') {
+        const dist = Math.sqrt(x * x + z * z);
+        const onPier = x >= 28 && x <= 48 && Math.abs(z) < 3.5;
+        return dist > 34 && !onPier;
+    }
+    return false;
+}
+
+export function createWholeMapOcean(spawnEntities = true) {
+    removeSea();
+    activeSeaConfig = {
+        type: 'whole',
+        waterLevel: 0,
+        waterColor: 0x0984e3,
+        waveSpeed: 2.2,
+        waveHeight: 0.25
+    };
+
+    if (currentEnvMode === 'day') {
+        scene.background = new THREE.Color(0x74b9ff);
+    }
+
+    // 1. Animated Sparkling Ocean Water Plane
+    const geo = new THREE.PlaneGeometry(380, 380, 72, 72);
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0x0984e3,
+        roughness: 0.1,
+        metalness: 0.25,
+        transparent: true,
+        opacity: 0.88,
+        flatShading: true
+    });
+    oceanWaterMesh = new THREE.Mesh(geo, mat);
+    oceanWaterMesh.rotation.x = -Math.PI / 2;
+    oceanWaterMesh.position.set(0, 0, 0);
+    oceanWaterMesh.userData.basePos = new Float32Array(geo.attributes.position.array);
+    oceanWaterMesh.receiveShadow = true;
+    scene.add(oceanWaterMesh);
+
+    // 2. Sandy Ocean Seabed Floor
+    const floorGeo = new THREE.PlaneGeometry(420, 420, 16, 16);
+    oceanSeabedMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x1b2838, roughness: 0.95 }));
+    oceanSeabedMesh.rotation.x = -Math.PI / 2;
+    oceanSeabedMesh.position.set(0, -4.5, 0);
+    scene.add(oceanSeabedMesh);
+
+    // Hide grass so it doesn't protrude into deep ocean
+    if (grassPlane) grassPlane.visible = false;
+    if (grassBlades) grassBlades.visible = false;
+
+    if (spawnEntities) {
+        // Floating Wooden Starter Pier / Dock at (0, 0.15, 0)
+        const dockGroup = new THREE.Group();
+        const deckMesh = new THREE.Mesh(new THREE.BoxGeometry(6, 0.35, 14), new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.85 }));
+        deckMesh.position.y = 0.2;
+        dockGroup.add(deckMesh);
+
+        // Support floats / barrels
+        [-2.4, 2.4].forEach(fx => {
+            [-4.5, 0, 4.5].forEach(fz => {
+                const floatMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0x2d3436, metalness: 0.7 }));
+                floatMesh.rotation.z = Math.PI / 2;
+                floatMesh.position.set(fx, -0.2, fz);
+                dockGroup.add(floatMesh);
+            });
+        });
+
+        // Mooring Cleats & Safety Bollards
+        [-2.7, 2.7].forEach(bx => {
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.7, 8), new THREE.MeshStandardMaterial({ color: 0xd63031 }));
+            post.position.set(bx, 0.55, -5.5);
+            dockGroup.add(post);
+        });
+
+        dockGroup.position.set(0, 0, 0);
+        scene.add(dockGroup);
+
+        placedObjects.push({
+            id: 'placed_sea_dock_' + Date.now(),
+            mesh: dockGroup,
+            catalogId: 'dock_wood',
+            name: '⚓ Ujuv Puitkai / Floating Pier',
+            category: 'city',
+            position: { x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#8b5a2b'
+        });
+
+        // Drivable Speedboat moored at the dock
+        const boatMesh = createSpeedboat3DMesh('#e74c3c');
+        boatMesh.position.set(4.5, 0.05, 0);
+        scene.add(boatMesh);
+
+        placedObjects.push({
+            id: 'placed_sea_boat_' + Date.now(),
+            mesh: boatMesh,
+            catalogId: 'boat_speedboat',
+            name: '🛥️ Kiirpaat / Speedboat',
+            category: 'vehicles',
+            isBoat: true,
+            position: { x: 4.5, y: 0.05, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#e74c3c'
+        });
+
+        // Floating Blinking Light Buoys in the distance
+        [
+            { x: -35, z: -35, col: 0x2ecc71 },
+            { x: 35, z: -40, col: 0xe74c3c },
+            { x: -45, z: 45, col: 0xf1c40f }
+        ].forEach((bPos, idx) => {
+            const buoyGroup = new THREE.Group();
+            const buoyCone = new THREE.Mesh(new THREE.ConeGeometry(0.9, 2.2, 10), new THREE.MeshStandardMaterial({ color: bPos.col, metalness: 0.4 }));
+            buoyCone.position.y = 0.9;
+            buoyGroup.add(buoyCone);
+
+            const beaconLight = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), new THREE.MeshBasicMaterial({ color: bPos.col }));
+            beaconLight.position.y = 2.2;
+            buoyGroup.add(beaconLight);
+
+            buoyGroup.position.set(bPos.x, 0, bPos.z);
+            scene.add(buoyGroup);
+
+            placedObjects.push({
+                id: 'placed_buoy_' + idx + '_' + Date.now(),
+                mesh: buoyGroup,
+                catalogId: 'buoy_beacon',
+                name: `🚨 Meremärk / Buoy #${idx + 1}`,
+                category: 'gameplay',
+                position: { x: bPos.x, y: 0, z: bPos.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#' + bPos.col.toString(16),
+                movement: { type: 'bounce', speed: 1.8, distance: 0.25, origin: { x: bPos.x, y: 0, z: bPos.z } }
+            });
+        });
+    }
+}
+
+export function createPartMapOcean(axis: 'x' | 'z' = 'z', side: 'negative' | 'positive' = 'negative', spawnEntities = true) {
+    removeSea();
+    activeSeaConfig = {
+        type: 'part',
+        boundary: { axis, side, threshold: 0 },
+        waterLevel: 0,
+        waterColor: 0x0099dd,
+        waveSpeed: 2.0,
+        waveHeight: 0.22
+    };
+
+    // 1. Ocean Water Plane covering the sea half (e.g. z < 0)
+    const isZNegative = (axis === 'z' && side === 'negative');
+    const width = 380;
+    const depth = 190;
+    const geo = new THREE.PlaneGeometry(width, depth, 72, 36);
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0x0099dd,
+        roughness: 0.12,
+        metalness: 0.2,
+        transparent: true,
+        opacity: 0.88,
+        flatShading: true
+    });
+    oceanWaterMesh = new THREE.Mesh(geo, mat);
+    oceanWaterMesh.rotation.x = -Math.PI / 2;
+    oceanWaterMesh.position.set(0, 0, isZNegative ? -95 : 95);
+    oceanWaterMesh.userData.basePos = new Float32Array(geo.attributes.position.array);
+    oceanWaterMesh.receiveShadow = true;
+    scene.add(oceanWaterMesh);
+
+    // 2. Underwater Seabed Floor
+    const floorGeo = new THREE.PlaneGeometry(width, depth, 16, 16);
+    oceanSeabedMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x22313f, roughness: 0.95 }));
+    oceanSeabedMesh.rotation.x = -Math.PI / 2;
+    oceanSeabedMesh.position.set(0, -4.0, isZNegative ? -95 : 95);
+    scene.add(oceanSeabedMesh);
+
+    // 3. Golden Sandy Beach Coastline Strip along the boundary
+    const sandGeo = new THREE.PlaneGeometry(380, 22);
+    beachSandMesh = new THREE.Mesh(sandGeo, new THREE.MeshStandardMaterial({ color: 0xf5cd79, roughness: 0.95 }));
+    beachSandMesh.rotation.x = -Math.PI / 2;
+    beachSandMesh.position.set(0, 0.03, isZNegative ? 8 : -8);
+    beachSandMesh.receiveShadow = true;
+    scene.add(beachSandMesh);
+
+    if (grassPlane) grassPlane.visible = true;
+
+    if (spawnEntities) {
+        // Wooden Pier extending from Beach into the Sea
+        const pierGroup = new THREE.Group();
+        const pierPlank = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.4, 24), new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.85 }));
+        pierPlank.position.set(0, 0.2, -8);
+        pierGroup.add(pierPlank);
+
+        // Support Pilings
+        [-1.6, 1.6].forEach(px => {
+            [-18, -12, -6, 0].forEach(pz => {
+                const pile = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 3.5, 8), new THREE.MeshStandardMaterial({ color: 0x535c68, roughness: 0.9 }));
+                pile.position.set(px, -1.2, pz);
+                pierGroup.add(pile);
+            });
+        });
+
+        // Mooring Post
+        const cleat = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.7, 8), new THREE.MeshStandardMaterial({ color: 0xff4757 }));
+        cleat.position.set(1.6, 0.6, -18);
+        pierGroup.add(cleat);
+
+        pierGroup.position.set(0, 0, 0);
+        scene.add(pierGroup);
+
+        placedObjects.push({
+            id: 'placed_beach_pier_' + Date.now(),
+            mesh: pierGroup,
+            catalogId: 'pier_wood',
+            name: '⚓ Puidust Paadisild / Wooden Dock',
+            category: 'city',
+            position: { x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#8b5a2b'
+        });
+
+        // Drivable Speedboat docked at the end of the pier
+        const boatMesh = createSpeedboat3DMesh('#0984e3');
+        boatMesh.position.set(3.8, 0.05, -14);
+        scene.add(boatMesh);
+
+        placedObjects.push({
+            id: 'placed_coastal_boat_' + Date.now(),
+            mesh: boatMesh,
+            catalogId: 'boat_speedboat',
+            name: '🛥️ Kiirpaat / Speedboat',
+            category: 'vehicles',
+            isBoat: true,
+            position: { x: 3.8, y: 0.05, z: -14 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#0984e3'
+        });
+
+        // Tropical Palm Trees along the Sandy Beach
+        const palmPositions = [
+            { x: -18, z: 8 },
+            { x: 22, z: 9 },
+            { x: -45, z: 7 },
+            { x: 50, z: 8 }
+        ];
+
+        palmPositions.forEach((pos, idx) => {
+            const palmGroup = new THREE.Group();
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.9 });
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.6 });
+
+            // Curved trunk
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.45, 5.5, 8), trunkMat);
+            trunk.position.y = 2.6;
+            trunk.rotation.z = (idx % 2 === 0 ? 0.12 : -0.12);
+            palmGroup.add(trunk);
+
+            // Palm fronds canopy
+            for (let f = 0; f < 6; f++) {
+                const frond = new THREE.Mesh(new THREE.ConeGeometry(1.2, 4.0, 4), leafMat);
+                frond.position.set(0, 5.3, 0);
+                frond.rotation.z = Math.PI / 3;
+                frond.rotation.y = (f * Math.PI) / 3;
+                palmGroup.add(frond);
+            }
+
+            palmGroup.position.set(pos.x, 0, pos.z);
+            scene.add(palmGroup);
+
+            placedObjects.push({
+                id: 'placed_palm_' + idx + '_' + Date.now(),
+                mesh: palmGroup,
+                catalogId: 'tree_palm',
+                name: `🌴 Troopiline Palm #${idx + 1}`,
+                category: 'nature',
+                position: { x: pos.x, y: 0, z: pos.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#27ae60'
+            });
+        });
+
+        // Beach Umbrella & Loungers on the sand
+        const loungeGroup = new THREE.Group();
+        const umbrellaPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.2, 8), new THREE.MeshStandardMaterial({ color: 0xdcdde1 }));
+        umbrellaPole.position.y = 1.6;
+        loungeGroup.add(umbrellaPole);
+
+        const umbrellaTop = new THREE.Mesh(new THREE.ConeGeometry(2.2, 0.8, 8), new THREE.MeshStandardMaterial({ color: 0xff4757, roughness: 0.5 }));
+        umbrellaTop.position.y = 3.0;
+        loungeGroup.add(umbrellaTop);
+
+        const lounger = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.25, 2.2), new THREE.MeshStandardMaterial({ color: 0x00d2d3 }));
+        lounger.position.set(1.4, 0.15, 0.5);
+        loungeGroup.add(lounger);
+
+        loungeGroup.position.set(-8, 0, 7);
+        scene.add(loungeGroup);
+
+        placedObjects.push({
+            id: 'placed_beach_umbrella_' + Date.now(),
+            mesh: loungeGroup,
+            catalogId: 'beach_set',
+            name: '⛱️ Rannavari & Lamamistool',
+            category: 'nature',
+            position: { x: -8, y: 0, z: 7 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#ff4757'
+        });
+    }
+}
+
+export function createIslandOcean(spawnEntities = true) {
+    removeSea();
+    activeSeaConfig = {
+        type: 'island',
+        waterLevel: 0,
+        waterColor: 0x0099dd,
+        waveSpeed: 2.0,
+        waveHeight: 0.22
+    };
+
+    // 1. Endless Sea
+    const geo = new THREE.PlaneGeometry(380, 380, 72, 72);
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0x0984e3,
+        roughness: 0.1,
+        metalness: 0.25,
+        transparent: true,
+        opacity: 0.88,
+        flatShading: true
+    });
+    oceanWaterMesh = new THREE.Mesh(geo, mat);
+    oceanWaterMesh.rotation.x = -Math.PI / 2;
+    oceanWaterMesh.position.set(0, 0, 0);
+    oceanWaterMesh.userData.basePos = new Float32Array(geo.attributes.position.array);
+    oceanWaterMesh.receiveShadow = true;
+    scene.add(oceanWaterMesh);
+
+    // 2. Seabed Floor
+    const floorGeo = new THREE.PlaneGeometry(420, 420, 16, 16);
+    oceanSeabedMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x1b2838, roughness: 0.95 }));
+    oceanSeabedMesh.rotation.x = -Math.PI / 2;
+    oceanSeabedMesh.position.set(0, -4.5, 0);
+    scene.add(oceanSeabedMesh);
+
+    // 3. Central Circular Island (Radius 36m)
+    const islandGeo = new THREE.CylinderGeometry(32, 38, 1.2, 32);
+    beachSandMesh = new THREE.Mesh(islandGeo, new THREE.MeshStandardMaterial({ color: 0xf5cd79, roughness: 0.9 }));
+    beachSandMesh.position.set(0, 0.4, 0);
+    beachSandMesh.receiveShadow = true;
+    scene.add(beachSandMesh);
+
+    if (grassPlane) grassPlane.visible = false;
+    if (grassBlades) grassBlades.visible = false;
+
+    if (spawnEntities) {
+        // Island Wooden Pier at East perimeter
+        const pierGroup = new THREE.Group();
+        const pierPlank = new THREE.Mesh(new THREE.BoxGeometry(16, 0.35, 3.6), new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.85 }));
+        pierPlank.position.set(38, 0.3, 0);
+        pierGroup.add(pierPlank);
+        pierGroup.position.set(0, 0, 0);
+        scene.add(pierGroup);
+
+        placedObjects.push({
+            id: 'placed_island_pier_' + Date.now(),
+            mesh: pierGroup,
+            catalogId: 'pier_island',
+            name: '⚓ Saare Paadisild / Island Pier',
+            category: 'city',
+            position: { x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#8b5a2b'
+        });
+
+        // Speedboat
+        const boatMesh = createSpeedboat3DMesh('#f39c12');
+        boatMesh.position.set(48, 0.05, 3.5);
+        scene.add(boatMesh);
+
+        placedObjects.push({
+            id: 'placed_island_boat_' + Date.now(),
+            mesh: boatMesh,
+            catalogId: 'boat_speedboat',
+            name: '🛥️ Kiirpaat / Speedboat',
+            category: 'vehicles',
+            isBoat: true,
+            position: { x: 48, y: 0.05, z: 3.5 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: '#f39c12'
+        });
+
+        // Palms around the island
+        [
+            { x: -12, z: -14 },
+            { x: 14, z: 12 },
+            { x: -15, z: 15 },
+            { x: 10, z: -16 }
+        ].forEach((pos, idx) => {
+            const palmGroup = new THREE.Group();
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.45, 6, 8), new THREE.MeshStandardMaterial({ color: 0x795548 }));
+            trunk.position.y = 3.0;
+            palmGroup.add(trunk);
+            for (let f = 0; f < 6; f++) {
+                const frond = new THREE.Mesh(new THREE.ConeGeometry(1.3, 4.2, 4), new THREE.MeshStandardMaterial({ color: 0x27ae60 }));
+                frond.position.set(0, 5.8, 0);
+                frond.rotation.z = Math.PI / 3;
+                frond.rotation.y = (f * Math.PI) / 3;
+                palmGroup.add(frond);
+            }
+            palmGroup.position.set(pos.x, 0.8, pos.z);
+            scene.add(palmGroup);
+
+            placedObjects.push({
+                id: 'placed_island_palm_' + idx,
+                mesh: palmGroup,
+                catalogId: 'tree_palm',
+                name: `🌴 Saare Palm #${idx + 1}`,
+                category: 'nature',
+                position: { x: pos.x, y: 0.8, z: pos.z },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#27ae60'
+            });
+        });
+    }
+}
+
 // --- Create 3D Mesh for Catalog Item ---
 function createObjectMesh(item: CatalogItem, color?: string): THREE.Group {
     const group = new THREE.Group();
@@ -685,6 +1276,7 @@ export function serializeCurrentScene() {
         title: titleInput?.value.trim() || 'My 3D Adventure',
         category: catSelect?.value || 'Adventure',
         description: descInput?.value.trim() || '',
+        seaConfig: activeSeaConfig ? JSON.parse(JSON.stringify(activeSeaConfig)) : null,
         objects: placedObjects.map(p => ({
             id: p.id,
             catalogId: p.catalogId,
@@ -694,6 +1286,8 @@ export function serializeCurrentScene() {
             rotation: { x: p.mesh.rotation.x, y: p.mesh.rotation.y, z: p.mesh.rotation.z },
             scale: { x: p.mesh.scale.x, y: p.mesh.scale.y, z: p.mesh.scale.z },
             color: p.color,
+            isAirplane: p.isAirplane,
+            isBoat: p.isBoat,
             trigger: p.trigger,
             portalTargetId: p.portalTargetId,
             portalTargetTitle: p.portalTargetTitle
@@ -736,6 +1330,19 @@ export function saveCurrentGame(showAlert = true) {
 export function loadSceneFromData(sceneData: any) {
     if (!sceneData) return;
 
+    // Restore Sea & Ocean environment if present
+    if (sceneData.seaConfig) {
+        if (sceneData.seaConfig.type === 'whole') {
+            createWholeMapOcean(false);
+        } else if (sceneData.seaConfig.type === 'island') {
+            createIslandOcean(false);
+        } else {
+            createPartMapOcean(sceneData.seaConfig.boundary?.axis || 'z', sceneData.seaConfig.boundary?.side || 'negative', false);
+        }
+    } else {
+        removeSea();
+    }
+
     // Clear current placed objects
     placedObjects.forEach(p => scene.remove(p.mesh));
     placedObjects = [];
@@ -761,7 +1368,15 @@ export function loadSceneFromData(sceneData: any) {
                 baseScale: objData.scale?.x || 1
             };
 
-            const mesh = createObjectMesh(catItem);
+            let mesh: THREE.Group | THREE.Mesh;
+            if (objData.isAirplane) {
+                mesh = createAirplane3DMesh(objData.color);
+            } else if (objData.isBoat || isBoatObject(objData)) {
+                mesh = createSpeedboat3DMesh(objData.color);
+            } else {
+                mesh = createObjectMesh(catItem, objData.color);
+            }
+
             mesh.position.set(objData.position?.x || 0, objData.position?.y || 0, objData.position?.z || 0);
             if (objData.rotation) {
                 mesh.rotation.set(objData.rotation.x || 0, objData.rotation.y || 0, objData.rotation.z || 0);
@@ -778,6 +1393,8 @@ export function loadSceneFromData(sceneData: any) {
                 catalogId: catItem.id,
                 name: objData.name || catItem.name,
                 category: objData.category || catItem.category,
+                isAirplane: objData.isAirplane,
+                isBoat: objData.isBoat,
                 position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
                 rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
                 scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
@@ -964,6 +1581,13 @@ async function initStudio() {
         get humanCharacter() { return humanCharacter; },
         get playerAvatarRig() { return playerAvatarRig; },
         get emotesWidget() { return emotesWidget; },
+        get activeSeaConfig() { return activeSeaConfig; },
+        get oceanWaterMesh() { return oceanWaterMesh; },
+        createWholeMapOcean,
+        createPartMapOcean,
+        createIslandOcean,
+        removeSea,
+        isPositionInWater,
         executeAiBuild,
         loadAiSchoolMemory,
         saveAiSchoolMemory
@@ -1019,6 +1643,7 @@ export function enterVehicle(vehicle: PlacedObject) {
     if (prompt) prompt.style.display = 'none';
 
     const isPlane = isAirplaneObject(vehicle);
+    const isBoat = isBoatObject(vehicle);
     const isAdmin = isCurrentUserAdmin();
 
     const vehicleHud = document.getElementById('vehicle-hud');
@@ -1027,13 +1652,25 @@ export function enterVehicle(vehicle: PlacedObject) {
     const vehicleHudDesc = document.getElementById('vehicle-hud-desc');
 
     if (vehicleHud) vehicleHud.style.display = 'block';
-    if (vehicleHudIcon) vehicleHudIcon.innerText = isPlane ? '✈️' : '🏎️';
-    if (vehicleHudName) vehicleHudName.innerText = isPlane ? (vehicle.name.startsWith('✈️') ? vehicle.name : `✈️ ${vehicle.name}`) : (vehicle.name.startsWith('🏎️') || vehicle.name.startsWith('🚗') ? vehicle.name : `🏎️ ${vehicle.name}`);
+    if (vehicleHudIcon) vehicleHudIcon.innerText = isPlane ? '✈️' : (isBoat ? '🛥️' : '🏎️');
+    if (vehicleHudName) {
+        if (isPlane) {
+            vehicleHudName.innerText = vehicle.name.startsWith('✈️') ? vehicle.name : `✈️ ${vehicle.name}`;
+        } else if (isBoat) {
+            vehicleHudName.innerText = (vehicle.name.startsWith('🛥️') || vehicle.name.startsWith('🚤')) ? vehicle.name : `🛥️ ${vehicle.name}`;
+        } else {
+            vehicleHudName.innerText = (vehicle.name.startsWith('🏎️') || vehicle.name.startsWith('🚗')) ? vehicle.name : `🏎️ ${vehicle.name}`;
+        }
+    }
     if (vehicleHudDesc) {
         if (isPlane) {
             vehicleHudDesc.innerHTML = isAdmin
                 ? `Gaas: <strong>W / ⬆️</strong> | Pidur: <strong>S / ⬇️</strong> | Pööra: <strong>A / D</strong> | Tõus: <strong>SPACE / Q</strong> | Laskumine: <strong>Shift / E</strong>`
                 : `Throttle: <strong>W / ⬆️</strong> | Brake: <strong>S / ⬇️</strong> | Steer: <strong>A / D</strong> | Climb: <strong>SPACE / Q</strong> | Dive: <strong>Shift / E</strong>`;
+        } else if (isBoat) {
+            vehicleHudDesc.innerHTML = isAdmin
+                ? `Mootor / Gaas: <strong>W / ⬆️</strong> | Tagurpidi: <strong>S / ⬇️</strong> | Roolimine merel: <strong>A / D / ⬅️ ➡️</strong>`
+                : `Throttle: <strong>W / ⬆️</strong> | Reverse: <strong>S / ⬇️</strong> | Steer on Water: <strong>A / D / ⬅️ ➡️</strong>`;
         } else {
             vehicleHudDesc.innerHTML = isAdmin
                 ? `Gaas: <strong>W / ⬆️</strong> | Pidur & Tagurpidi: <strong>S / ⬇️</strong> | Pööramine: <strong>A / D / ⬅️ ➡️</strong>`
@@ -1045,8 +1682,9 @@ export function enterVehicle(vehicle: PlacedObject) {
 export function exitVehicle() {
     if (!currentVehicle) return;
     const isPlane = isAirplaneObject(currentVehicle);
-    const exitPos = currentVehicle.mesh.position.clone().add(new THREE.Vector3(isPlane ? 3.5 : 2.2, 0, 0));
-    if (exitPos.y > 0) exitPos.y = 0;
+    const isBoat = isBoatObject(currentVehicle);
+    const exitPos = currentVehicle.mesh.position.clone().add(new THREE.Vector3(isPlane ? 3.5 : 2.2, isBoat ? 0.3 : 0, 0));
+    if (!isBoat && exitPos.y > 0) exitPos.y = 0;
     humanCharacter.position.copy(exitPos);
     humanCharacter.visible = true;
     currentVehicle = null;
@@ -1372,6 +2010,7 @@ export function saveUndoSnapshot() {
         desc: descInput ? descInput.value : '',
         category: catSelect ? catSelect.value : 'Adventure',
         envMode: currentEnvMode,
+        seaConfig: activeSeaConfig ? JSON.parse(JSON.stringify(activeSeaConfig)) : null,
         quest: activeQuest ? JSON.parse(JSON.stringify(activeQuest)) : null,
         objects: placedObjects.map(p => ({
             catalogId: p.catalogId,
@@ -1382,6 +2021,7 @@ export function saveUndoSnapshot() {
             scale: { x: p.scale.x, y: p.scale.y, z: p.scale.z },
             color: p.color,
             isAirplane: p.isAirplane,
+            isBoat: p.isBoat,
             gameItemType: p.gameItemType,
             keyName: p.keyName,
             requiredKeyName: p.requiredKeyName,
@@ -1397,6 +2037,20 @@ export function saveUndoSnapshot() {
 
 export function restoreSceneSnapshot(snapshot: SceneSnapshot) {
     if (!snapshot) return;
+
+    // Restore Sea & Ocean environment
+    if (snapshot.seaConfig) {
+        if (snapshot.seaConfig.type === 'whole') {
+            createWholeMapOcean(false);
+        } else if (snapshot.seaConfig.type === 'island') {
+            createIslandOcean(false);
+        } else {
+            createPartMapOcean(snapshot.seaConfig.boundary?.axis || 'z', snapshot.seaConfig.boundary?.side || 'negative', false);
+        }
+    } else {
+        removeSea();
+    }
+
     // Clear existing placed objects
     for (const p of placedObjects) {
         scene.remove(p.mesh);
@@ -1418,6 +2072,8 @@ export function restoreSceneSnapshot(snapshot: SceneSnapshot) {
         let mesh: THREE.Group | THREE.Mesh;
         if (objData.isAirplane) {
             mesh = createAirplane3DMesh(objData.color);
+        } else if (objData.isBoat || isBoatObject(objData as any)) {
+            mesh = createSpeedboat3DMesh(objData.color);
         } else {
             const catalogItem = CATALOG_DATABASE.find(c => c.id === objData.catalogId);
             if (catalogItem) {
@@ -1442,6 +2098,7 @@ export function restoreSceneSnapshot(snapshot: SceneSnapshot) {
             scale: { ...objData.scale },
             color: objData.color,
             isAirplane: objData.isAirplane,
+            isBoat: objData.isBoat,
             gameItemType: objData.gameItemType as any,
             keyName: objData.keyName,
             requiredKeyName: objData.requiredKeyName,
@@ -2111,6 +2768,7 @@ export function startNewEmptyGame() {
     placedObjects.forEach(p => scene.remove(p.mesh));
     placedObjects = [];
     selectObject(null);
+    removeSea();
 
     const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
     const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
@@ -2275,6 +2933,8 @@ export function updateAiAssistantLocalization() {
                 <button class="ai-quick-btn" data-prompt="Õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥒 Õpeta kurgimopeed</button>
                 <button class="ai-quick-btn" data-prompt="Õpeta: banaanirakett lendab kosmosesse" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🍌 Õpeta banaanirakett</button>
                 <button class="ai-quick-btn" data-prompt="Õpeta: 2+2=kartul" style="background: rgba(230, 126, 34, 0.2); border: 1px solid #e67e22; color: #f39c12; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥔 Õpeta 2+2=kartul</button>
+                <button class="ai-quick-btn" data-prompt="Tee terve kaart mereks suure ookeaniga" style="background: rgba(0, 168, 255, 0.2); border: 1px solid #00a8ff; color: #00a8ff; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌊 Terve kaart meri</button>
+                <button class="ai-quick-btn" data-prompt="Tee osa kaardist mereks kauni ranna ja paadiga" style="background: rgba(0, 206, 201, 0.2); border: 1px solid #00cec9; color: #00cec9; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏖️ Osa kaardist meri</button>
                 <button class="ai-quick-btn" data-prompt="Mida sa oskad? Näita vihikut" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">📚 Näita vihikut</button>
                 <button class="ai-quick-btn" data-prompt="Loo lendav lennuk ja lennurada millega lennata" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Lennuk</button>
                 <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
@@ -2292,6 +2952,8 @@ export function updateAiAssistantLocalization() {
                 <button class="ai-quick-btn" data-prompt="Teach: when I say cucumber scooter then build green scooter" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥒 Teach cucumber scooter</button>
                 <button class="ai-quick-btn" data-prompt="Teach: banana rocket flies to space" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🍌 Teach banana rocket</button>
                 <button class="ai-quick-btn" data-prompt="Teach: 2+2=potato" style="background: rgba(230, 126, 34, 0.2); border: 1px solid #e67e22; color: #f39c12; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥔 Teach 2+2=potato</button>
+                <button class="ai-quick-btn" data-prompt="Make whole map sea ocean world" style="background: rgba(0, 168, 255, 0.2); border: 1px solid #00a8ff; color: #00a8ff; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌊 Whole map ocean</button>
+                <button class="ai-quick-btn" data-prompt="Make part of map sea with beach and boat" style="background: rgba(0, 206, 201, 0.2); border: 1px solid #00cec9; color: #00cec9; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏖️ Part of map sea</button>
                 <button class="ai-quick-btn" data-prompt="What do you know? Show notebook" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">📚 Show notebook</button>
                 <button class="ai-quick-btn" data-prompt="Create a flyable airplane with runway" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Flyable Airplane</button>
                 <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
@@ -3524,7 +4186,7 @@ function createCustomProceduralMesh(prompt: string, name: string, allowFallback:
         return createAirplane3DMesh(planeColor);
 
     // 27. SUBMARINE / SHIP / BOAT / LAEV / PAAT
-    } else if (p.includes('allveelaev') || p.includes('submarine') || p.includes('laev') || p.includes('ship') || p.includes('boat') || p.includes('paat') || p.includes('jaht') || p.includes('yacht')) {
+    } else if (p.includes('allveelaev') || p.includes('submarine')) {
         const hullMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.5 });
         const yellowMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
         const glassMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.5 });
@@ -3545,6 +4207,10 @@ function createCustomProceduralMesh(prompt: string, name: string, allowFallback:
         const periscope = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8), glassMat);
         periscope.position.set(0, 3.6, 0.5);
         group.add(periscope);
+
+    } else if (p.includes('laev') || p.includes('ship') || p.includes('boat') || p.includes('paat') || p.includes('jaht') || p.includes('yacht') || p.includes('kiirpaat') || p.includes('speedboat') || p.includes('parv') || p.includes('raft') || p.includes('jetski')) {
+        const boatColor = tint ? '#' + tint.toString(16).padStart(6, '0') : '#e74c3c';
+        return createSpeedboat3DMesh(boatColor);
 
     // 28. ULTRA SMART UNIVERSAL PROCEDURAL SCULPTOR (Synthesizes ANY arbitrary object)
     } else {
@@ -3869,6 +4535,104 @@ export function executeAiBuild(promptText: string) {
     } else if (p.includes('udu') || p.includes('fog') || p.includes('õudne udu')) {
         setDayNightMode('horror_fog');
         aiResponse = isAdmin ? `🌫️ <strong>Lisasin tiheda atmosfääri udu!</strong>` : `🌫️ <strong>Added dense atmospheric fog!</strong>`;
+
+    // --- 0.12 SEA & OCEAN MAP CREATION (WHOLE MAP OR PART OF MAP) ---
+    } else if (
+        (p.includes('meri') || p.includes('mereks') || p.includes('merele') || p.includes('merd') ||
+         p.includes('ookean') || p.includes('ookeaniks') || p.includes('ocean') || p.includes('sea') ||
+         p.includes('rannik') || p.includes('rannale') || p.includes('saarestik') ||
+         ((p.includes('vesi') || p.includes('veeks') || p.includes('water')) && (p.includes('kaart') || p.includes('mapp') || p.includes('map') || p.includes('terve') || p.includes('kogu') || p.includes('osa') || p.includes('pool'))) ||
+         (p.includes('saar') && (p.includes('meri') || p.includes('ookean') || p.includes('keset') || p.includes('troopiline') || p.includes('ocean'))))
+    ) {
+        const isWholeSea = (
+            p.includes('terve') || p.includes('kogu') || p.includes('üle terve') || p.includes('ule terve') ||
+            p.includes('whole') || p.includes('entire') || p.includes('all sea') || p.includes('full ocean') ||
+            p.includes('full sea') || p.includes('kõik mereks') || p.includes('koik mereks') || p.includes('kogu maailm') ||
+            p.includes('kõik vesi') || p.includes('koik vesi')
+        );
+
+        const isIslandSea = (
+            (p.includes('saar') || p.includes('island') || p.includes('saareke')) &&
+            (p.includes('keset') || p.includes('troopiline') || p.includes('ümbr') || p.includes('umbr') || p.includes('surround'))
+        );
+
+        if (isWholeSea) {
+            createWholeMapOcean(true);
+            if (titleInput) titleInput.value = 'Lõputu Ookeanimaailm / Infinite Ocean World';
+            if (catSelect) catSelect.value = 'Adventure';
+            if (descInput) descInput.value = 'Uuri suurt lainetavat ookeani ujudes või võimsa kiirpaadiga kihutades!';
+            generatedObjectsCount = 2;
+
+            if (isAdmin) {
+                aiResponse = `🌊 <strong>Muutsin TERVE KAARDI suureks lainetavaks ookeaniks!</strong><br>
+                • Kogu 3D maailma (350×350m) katab nüüd elutruult lainetav ja päikeses helkiv sügav meri.<br>
+                • Algusesse paigutasin ujuva puitkai ning <strong>juhitava kiirpaadi (Speedboat)</strong>!<br>
+                • 🏊 <strong>Ujumine:</strong> hüppa vette ja uju (WASD + Space veepinnal püsimiseks)!<br>
+                • 🛥️ <strong>Paadisõit:</strong> astu paadi juurde ja vajuta <strong>[F]</strong> kihutamiseks!<br><br>
+                👉 Vajuta <strong>▶️ Play Test Mode</strong> ja naudi ookeaniseiklust!`;
+            } else {
+                aiResponse = `🌊 <strong>Transformed the ENTIRE MAP into a vast rolling ocean!</strong><br>
+                • The full 3D world (350x350m) is now an expansive, sparkling animated sea.<br>
+                • Added a starter floating pier with a <strong>drivable speedboat</strong>!<br>
+                • 🏊 <strong>Swimming:</strong> jump into the water and swim with WASD (Space to stay afloat)!<br>
+                • 🛥️ <strong>Boating:</strong> approach the speedboat and press <strong>[F]</strong> to cruise across the waves!<br><br>
+                👉 Click <strong>▶️ Play Test Mode</strong> to dive in!`;
+            }
+        } else if (isIslandSea) {
+            createIslandOcean(true);
+            if (titleInput) titleInput.value = 'Troopiline Saar Keset Merd / Island in Ocean';
+            if (catSelect) catSelect.value = 'Adventure';
+            if (descInput) descInput.value = 'Troopiline paradiisisaar ookeani keskel koos liivaranna, palmide ja paadiga!';
+            generatedObjectsCount = 5;
+
+            if (isAdmin) {
+                aiResponse = `🏝️ <strong>Lõin keset ookeani troopilise paradiisisaare!</strong><br>
+                • Saart ümbritseb 360° ulatuses sügav lainetav meri.<br>
+                • Saarel on palmipuud, liivarand, vaateplatvorm ja puitkai koos <strong>juhitava kiirpaadiga</strong>!<br>
+                • 🏊 <em>Vees saab ujuda ja [F] vajutusega paadiga ookeanile sõitma minna!</em><br><br>
+                👉 Vajuta <strong>▶️ Play Test Mode</strong> ja avasta saart!`;
+            } else {
+                aiResponse = `🏝️ <strong>Created a tropical paradise island surrounded by ocean!</strong><br>
+                • Surrounded on all sides by open rolling sea.<br>
+                • Features tropical palms, beach shore, dock pier, and a <strong>drivable speedboat</strong>!<br>
+                • 🏊 <em>Enjoy swimming or press [F] at the pier to navigate the ocean!</em><br><br>
+                👉 Click <strong>▶️ Play Test Mode</strong> to start exploring!`;
+            }
+        } else {
+            // Part of map sea (Coastline with beach and ocean)
+            let axis: 'x' | 'z' = 'z';
+            let side: 'negative' | 'positive' = 'negative';
+            if (p.includes('lõuna') || p.includes('louna') || p.includes('south')) {
+                axis = 'z';
+                side = 'positive';
+            } else if (p.includes('ida') || p.includes('east')) {
+                axis = 'x';
+                side = 'positive';
+            } else if (p.includes('lääne') || p.includes('laane') || p.includes('west')) {
+                axis = 'x';
+                side = 'negative';
+            }
+
+            createPartMapOcean(axis, side, true);
+            if (titleInput) titleInput.value = 'Päikeseline Rannik ja Meri / Sunny Coastline';
+            if (catSelect) catSelect.value = 'Adventure';
+            if (descInput) descInput.value = 'Kuldne liivarand, palmipuud, vette ulatuv paadisild ja sõidetav kiirpaat!';
+            generatedObjectsCount = 6;
+
+            if (isAdmin) {
+                aiResponse = `🏖️ <strong>Muutsin MAPI OSA kauniks mereks ja rannikuks!</strong><br>
+                • Poole kaardist moodustab lainetav sügavsinine meri ja maa piiril laiub pehme kuldne liivarand.<br>
+                • Vette ulatub puidust paadisild, mille ääres seisab <strong>sõidetav kiirpaat</strong>, rannal palmipuud ja puhketoolid!<br>
+                • 🏊 <em>Vees olles saab vabalt ujuda ning [F] klahviga saab paadiga merele kihutama minna!</em><br><br>
+                👉 Vajuta <strong>▶️ Play Test Mode</strong> ja uuri rannikut!`;
+            } else {
+                aiResponse = `🏖️ <strong>Transformed PART OF THE MAP into a coastal sea and beach!</strong><br>
+                • Half of the map is a rolling ocean bordered by a golden sandy coastline.<br>
+                • Features a wooden pier extending into the water with a <strong>drivable speedboat</strong>, tropical palms, and beach loungers!<br>
+                • 🏊 <em>Swim in the ocean or press [F] at the dock to pilot the speedboat!</em><br><br>
+                👉 Click <strong>▶️ Play Test Mode</strong> to explore!`;
+            }
+        }
 
     // --- 0.15 UNIVERSAL QUANTITY & WHOLE MAP SCATTER ENGINE ("pane tervesse mappi...", "pane 30...", "scatter across map", "fill map with...") ---
     } else if (
@@ -5443,6 +6207,25 @@ function animate() {
         }
     }
 
+    // --- Update Animated Ocean Waves ---
+    if (oceanWaterMesh && oceanWaterMesh.userData.basePos) {
+        const geo = oceanWaterMesh.geometry as THREE.BufferGeometry;
+        const posAttr = geo.attributes.position;
+        const base = oceanWaterMesh.userData.basePos as Float32Array;
+        const count = posAttr.count;
+        const wSpeed = activeSeaConfig?.waveSpeed || 2.0;
+        const wHeight = activeSeaConfig?.waveHeight || 0.22;
+
+        for (let i = 0; i < count; i++) {
+            const bx = base[i * 3];
+            const by = base[i * 3 + 1];
+            const wave = Math.sin(time * wSpeed + bx * 0.12 + by * 0.12) * wHeight +
+                         Math.cos(time * (wSpeed * 0.7) + bx * 0.08) * (wHeight * 0.45);
+            posAttr.setZ(i, wave);
+        }
+        posAttr.needsUpdate = true;
+    }
+
     if (isPlayTestMode) {
         if (currentVehicle) {
             const isPlane = isAirplaneObject(currentVehicle);
@@ -5539,6 +6322,62 @@ function animate() {
                     const altitudeM = Math.round(currentVehicle.mesh.position.y * 3);
                     speedEl.innerHTML = `${speedKmh} km/h <span style="font-size: 0.8rem; color: #00f2fe; display: block;">Alt: ${altitudeM} m</span>`;
                 }
+            } else if (isBoatObject(currentVehicle)) {
+                // --- 🛥️ Drivable Boat / Speedboat Physics & Water Motion ---
+                const boatMaxSpeed = 44; // ~160 km/h fast speedboat
+                const boatAccel = 34;
+                const boatReverse = -12;
+
+                if (keys['KeyW'] || keys['ArrowUp']) {
+                    vehicleSpeed = Math.min(vehicleSpeed + boatAccel * delta, boatMaxSpeed);
+                } else if (keys['KeyS'] || keys['ArrowDown']) {
+                    vehicleSpeed = Math.max(vehicleSpeed - boatAccel * delta, boatReverse);
+                } else {
+                    vehicleSpeed = THREE.MathUtils.lerp(vehicleSpeed, 0, 1.8 * delta);
+                }
+
+                // Water steering
+                const steerDir = (vehicleSpeed >= 0 ? 1 : -1);
+                if (Math.abs(vehicleSpeed) > 0.3) {
+                    if (keys['KeyA'] || keys['ArrowLeft']) {
+                        currentVehicle.mesh.rotation.y += 2.0 * delta * steerDir;
+                        currentVehicle.mesh.rotation.z = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.z, 0.18, 5 * delta);
+                    } else if (keys['KeyD'] || keys['ArrowRight']) {
+                        currentVehicle.mesh.rotation.y -= 2.0 * delta * steerDir;
+                        currentVehicle.mesh.rotation.z = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.z, -0.18, 5 * delta);
+                    } else {
+                        currentVehicle.mesh.rotation.z = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.z, 0, 5 * delta);
+                    }
+                } else {
+                    currentVehicle.mesh.rotation.z = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.z, 0, 5 * delta);
+                }
+
+                // Natural wave bobbing & bow lift on throttle (hydroplaning)
+                const wavePitch = Math.sin(time * 3 + currentVehicle.mesh.position.z * 0.1) * 0.04 - (vehicleSpeed / boatMaxSpeed) * 0.12;
+                currentVehicle.mesh.rotation.x = THREE.MathUtils.lerp(currentVehicle.mesh.rotation.x, wavePitch, 4 * delta);
+                currentVehicle.mesh.position.y = (activeSeaConfig?.waterLevel || 0) + 0.1 + Math.sin(time * 2.8 + currentVehicle.mesh.position.x * 0.1) * 0.06;
+
+                // Move forward in facing direction
+                currentVehicle.mesh.translateZ(-vehicleSpeed * delta);
+                currentVehicle.position = {
+                    x: currentVehicle.mesh.position.x,
+                    y: currentVehicle.mesh.position.y,
+                    z: currentVehicle.mesh.position.z
+                };
+
+                humanCharacter.position.copy(currentVehicle.mesh.position);
+
+                // 3rd Person Boat Camera Follow
+                const camOffset = new THREE.Vector3(0, 3.8, 9.5);
+                camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), currentVehicle.mesh.rotation.y);
+                const targetCamPos = currentVehicle.mesh.position.clone().add(camOffset);
+                camera.position.lerp(targetCamPos, 0.14);
+                camera.lookAt(currentVehicle.mesh.position.x, currentVehicle.mesh.position.y + 1.0, currentVehicle.mesh.position.z);
+
+                const speedEl = document.getElementById('vehicle-hud-speed');
+                if (speedEl) {
+                    speedEl.innerHTML = `🛥️ ${Math.round(Math.abs(vehicleSpeed) * 3.6)} km/h <span style="font-size: 0.8rem; color: #00f2fe; display: block;">Merel / On Water</span>`;
+                }
             } else {
                 // --- 🏎️ Drivable Car Physics & Controls ---
                 const accel = 38;
@@ -5590,7 +6429,8 @@ function animate() {
             }
         } else {
             // --- Human Character Movement & 3rd Person Camera ---
-            const moveSpeed = 9;
+            const inWater = isPositionInWater(humanCharacter.position.x, humanCharacter.position.z);
+            const moveSpeed = inWater ? 6.5 : 9;
             const moveDir = new THREE.Vector3();
 
             if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
@@ -5598,44 +6438,73 @@ function animate() {
             if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
             if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
 
-            if (moveDir.lengthSq() > 0) {
-                moveDir.normalize();
-                characterYaw = Math.atan2(moveDir.x, moveDir.z);
-                humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
+            if (inWater) {
+                // Player in water: Swimming mechanics
+                isGrounded = false;
+                const waterSurfaceY = (activeSeaConfig?.waterLevel || 0) - 0.45 + Math.sin(time * 3) * 0.1;
+                humanCharacter.position.y = THREE.MathUtils.lerp(humanCharacter.position.y, waterSurfaceY, 0.12);
+                characterVelocity.y = 0;
 
-                humanCharacter.position.x += moveDir.x * moveSpeed * delta;
-                humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+                if (moveDir.lengthSq() > 0) {
+                    moveDir.normalize();
+                    characterYaw = Math.atan2(moveDir.x, moveDir.z);
+                    humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
 
-                if (emotesWidget && emotesWidget.getActiveEmote() !== 'idle') {
-                    emotesWidget.stopEmoteQuietly();
-                }
-                if (playerAvatarRig) {
-                    playerAvatarRig.updateAnimation(performance.now() * 0.001, 'run');
-                }
-            } else {
-                if (playerAvatarRig) {
-                    if (!isGrounded) {
+                    humanCharacter.position.x += moveDir.x * moveSpeed * delta;
+                    humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+
+                    if (playerAvatarRig) {
                         playerAvatarRig.updateAnimation(performance.now() * 0.001, 'jump');
-                    } else {
-                        const activeEm = emotesWidget ? emotesWidget.getActiveEmote() : 'idle';
-                        playerAvatarRig.updateAnimation(performance.now() * 0.001, activeEm);
+                    }
+                } else {
+                    if (playerAvatarRig) {
+                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'idle');
                     }
                 }
-            }
 
-            // Jump & Gravity
-            if (keys['Space'] && isGrounded) {
-                characterVelocity.y = 9;
-                isGrounded = false;
-            }
+                if (keys['Space']) {
+                    humanCharacter.position.y = Math.min(0.2, humanCharacter.position.y + 3.5 * delta);
+                }
+            } else {
+                if (moveDir.lengthSq() > 0) {
+                    moveDir.normalize();
+                    characterYaw = Math.atan2(moveDir.x, moveDir.z);
+                    humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
 
-            if (!isGrounded) {
-                characterVelocity.y -= 22 * delta;
-                humanCharacter.position.y += characterVelocity.y * delta;
-                if (humanCharacter.position.y <= 0) {
-                    humanCharacter.position.y = 0;
-                    characterVelocity.y = 0;
-                    isGrounded = true;
+                    humanCharacter.position.x += moveDir.x * moveSpeed * delta;
+                    humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+
+                    if (emotesWidget && emotesWidget.getActiveEmote() !== 'idle') {
+                        emotesWidget.stopEmoteQuietly();
+                    }
+                    if (playerAvatarRig) {
+                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'run');
+                    }
+                } else {
+                    if (playerAvatarRig) {
+                        if (!isGrounded) {
+                            playerAvatarRig.updateAnimation(performance.now() * 0.001, 'jump');
+                        } else {
+                            const activeEm = emotesWidget ? emotesWidget.getActiveEmote() : 'idle';
+                            playerAvatarRig.updateAnimation(performance.now() * 0.001, activeEm);
+                        }
+                    }
+                }
+
+                // Jump & Gravity on Land
+                if (keys['Space'] && isGrounded) {
+                    characterVelocity.y = 9;
+                    isGrounded = false;
+                }
+
+                if (!isGrounded) {
+                    characterVelocity.y -= 22 * delta;
+                    humanCharacter.position.y += characterVelocity.y * delta;
+                    if (humanCharacter.position.y <= 0) {
+                        humanCharacter.position.y = 0;
+                        characterVelocity.y = 0;
+                        isGrounded = true;
+                    }
                 }
             }
 
@@ -5648,13 +6517,13 @@ function animate() {
             camera.position.lerp(targetCamPos, 0.1);
             camera.lookAt(humanCharacter.position.x, humanCharacter.position.y + 1.6, humanCharacter.position.z);
 
-            // Check nearby Drivable Vehicles (Cars, Trucks, Airplanes, Jets)
+            // Check nearby Drivable Vehicles (Cars, Trucks, Airplanes, Boats)
             nearbyVehicle = null;
             let closestVehicleDist = Infinity;
             for (const p of placedObjects) {
-                if (p.category === 'vehicles' || isAirplaneObject(p) || p.name.toLowerCase().includes('car') || p.name.toLowerCase().includes('truck') || p.name.toLowerCase().includes('buggy') || p.name.toLowerCase().includes('plane') || p.name.toLowerCase().includes('lennuk') || p.name.toLowerCase().includes('jet')) {
+                if (p.category === 'vehicles' || isAirplaneObject(p) || isBoatObject(p) || p.name.toLowerCase().includes('car') || p.name.toLowerCase().includes('truck') || p.name.toLowerCase().includes('buggy') || p.name.toLowerCase().includes('plane') || p.name.toLowerCase().includes('lennuk') || p.name.toLowerCase().includes('jet') || p.name.toLowerCase().includes('boat') || p.name.toLowerCase().includes('paat')) {
                     const dist = humanCharacter.position.distanceTo(new THREE.Vector3(p.position.x, humanCharacter.position.y, p.position.z));
-                    if (dist < 4.8 && dist < closestVehicleDist) {
+                    if (dist < 5.2 && dist < closestVehicleDist) {
                         closestVehicleDist = dist;
                         nearbyVehicle = p;
                     }
@@ -5669,12 +6538,15 @@ function animate() {
                 enterPrompt.style.display = nearbyVehicle ? 'block' : 'none';
                 if (nearbyVehicle) {
                     const isPlane = isAirplaneObject(nearbyVehicle);
+                    const isBoat = isBoatObject(nearbyVehicle);
                     const isAdmin = isCurrentUserAdmin();
-                    if (enterIcon) enterIcon.innerText = isPlane ? '✈️' : '🚗';
+                    if (enterIcon) enterIcon.innerText = isPlane ? '✈️' : (isBoat ? '🛥️' : '🚗');
                     if (enterText) {
                         enterText.innerText = isPlane
                             ? (isAdmin ? 'Istu lennukisse ja lenda [F]' : 'Board Airplane and Fly [F]')
-                            : (isAdmin ? 'Istu autosse ja sõida [F]' : 'Enter Vehicle and Drive [F]');
+                            : (isBoat
+                                ? (isAdmin ? 'Astu paati ja sõida merel [F]' : 'Board Boat and Cruise [F]')
+                                : (isAdmin ? 'Istu autosse ja sõida [F]' : 'Enter Vehicle and Drive [F]'));
                     }
                 }
             }
