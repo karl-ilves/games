@@ -939,10 +939,10 @@
             <!-- Three.js Canvas Container for Workbench -->
             <div id="workbench-canvas-container" style="position: absolute; inset: 0; width: 100%; height: 100%;"></div>
 
-            <!-- Left Tool Panel: Shapes & Presets -->
-            <div style="position: absolute; top: 20px; left: 20px; width: 260px; background: rgba(15, 23, 42, 0.92); border: 1.5px solid rgba(0,242,254,0.3); border-radius: 16px; padding: 16px; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.7); z-index: 310;">
+            <!-- Left Tool Panel: Shapes, Modes (Liiguta vs Tee Pikemaks), Parts & Presets -->
+            <div style="position: absolute; top: 20px; left: 20px; width: 280px; max-height: calc(100vh - 100px); overflow-y: auto; background: rgba(15, 23, 42, 0.94); border: 1.5px solid rgba(0,242,254,0.35); border-radius: 16px; padding: 16px; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.7); z-index: 310;">
                 <h4 style="margin: 0 0 10px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase;">1. Vali Algkuju (Base Shape)</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
                     <button class="workbench-shape-btn active" data-shape="box" style="padding: 10px; background: #1e293b; border: 1.5px solid #00f2fe; border-radius: 8px; color: #fff; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
                         <span style="font-size: 1.5rem;">🟦</span>
                         <span>Kuup / Box</span>
@@ -979,7 +979,85 @@
                     </button>
                 </div>
 
-                <h4 style="margin: 0 0 10px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase;">2. Kujundi Värv</h4>
+                <!-- 2. Tool Mode Selector: Liigutamine või Pikemaks Tegemine -->
+                <h4 style="margin: 0 0 8px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
+                    <span>🛠️</span> <span>Vali Tegevus</span>
+                </h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                    <button id="btn-wb-mode-scale" class="wb-mode-btn active" style="padding: 10px 6px; background: rgba(0,242,254,0.18); border: 2px solid #00f2fe; border-radius: 10px; color: #00f2fe; font-size: 0.82rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <span style="font-size: 1.3rem;">📐</span>
+                        <span>Tee Pikemaks</span>
+                    </button>
+                    <button id="btn-wb-mode-move" class="wb-mode-btn" style="padding: 10px 6px; background: #1e293b; border: 2px solid #475569; border-radius: 10px; color: #cbd5e1; font-size: 0.82rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <span style="font-size: 1.3rem;">↔️</span>
+                        <span>Liiguta Kuju</span>
+                    </button>
+                </div>
+
+                <!-- Scale / Stretch Sub-Panel (Tee Pikemaks / Venita) -->
+                <div id="wb-left-scale-panel" style="display: block; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; margin-bottom: 14px;">
+                    <div style="font-size: 0.78rem; color: #00f2fe; font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>📏 Tee Pikemaks / Mõõtmed:</span>
+                        <span style="font-size: 0.7rem; color: #94a3b8;">(Või lohista pinda)</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1; margin-bottom: 3px;">
+                                <span>Pikkus (Depth):</span>
+                                <b id="wb-left-val-depth" style="color: #00f2fe;">3.0m</b>
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <button id="btn-wb-left-shorter" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">➖ Lühemaks</button>
+                                <button id="btn-wb-left-longer" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem; font-weight: bold; color: #00f2fe; border-color: #00f2fe;">➕ Pikemaks</button>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1; margin-bottom: 3px;">
+                                <span>Laius (Width):</span>
+                                <b id="wb-left-val-width" style="color: #00f2fe;">3.0m</b>
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <button id="btn-wb-left-narrower" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">➖ Kitsamaks</button>
+                                <button id="btn-wb-left-wider" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">➕ Laiemaks</button>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1; margin-bottom: 3px;">
+                                <span>Kõrgus (Height):</span>
+                                <b id="wb-left-val-height" style="color: #ffd32a;">2.0m</b>
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <button id="btn-wb-left-lower" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">⬇️ Madalamaks</button>
+                                <button id="btn-wb-left-higher" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem; font-weight: bold; color: #ffd32a;">⬆️ Kõrgemaks</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Move Sub-Panel (Kujundi Liigutamine) -->
+                <div id="wb-left-move-panel" style="display: none; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; margin-bottom: 14px;">
+                    <div style="font-size: 0.78rem; color: #ffd32a; font-weight: bold; margin-bottom: 8px; text-align: center;">
+                        📍 Kujundi Positsioon ja Nihutamine:
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 170px; margin: 0 auto 8px auto;">
+                        <div></div>
+                        <button id="btn-wb-left-pos-fwd" class="btn-ctrl" title="Liiguta ette (+Z)" style="padding: 6px; font-size: 0.85rem;">⬆️</button>
+                        <button id="btn-wb-left-pos-up" class="btn-ctrl" title="Liiguta üles (+Y)" style="padding: 6px; font-size: 0.85rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">🔼</button>
+
+                        <button id="btn-wb-left-pos-left" class="btn-ctrl" title="Liiguta vasakule (-X)" style="padding: 6px; font-size: 0.85rem;">⬅️</button>
+                        <button id="btn-wb-left-rot-y" class="btn-ctrl" title="Pööra 45°" style="padding: 6px; font-size: 0.85rem; background: rgba(255,211,42,0.2); border-color: #ffd32a; color: #ffd32a; font-weight: bold;">🔄</button>
+                        <button id="btn-wb-left-pos-right" class="btn-ctrl" title="Liiguta paremale (+X)" style="padding: 6px; font-size: 0.85rem;">➡️</button>
+
+                        <div></div>
+                        <button id="btn-wb-left-pos-back" class="btn-ctrl" title="Liiguta taha (-Z)" style="padding: 6px; font-size: 0.85rem;">⬇️</button>
+                        <button id="btn-wb-left-pos-down" class="btn-ctrl" title="Liiguta alla (-Y)" style="padding: 6px; font-size: 0.85rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">🔽</button>
+                    </div>
+                    <div style="font-size: 0.72rem; color: #94a3b8; text-align: center; line-height: 1.3;">
+                        💡 <em>Kliki kujundil ja lohista, et seda alusel liigutada!</em>
+                    </div>
+                </div>
+
+                <h4 style="margin: 0 0 10px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase;">3. Kujundi Värv</h4>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <label style="font-size: 0.82rem; color: #cbd5e1;">Põhivärv:</label>
@@ -1064,7 +1142,7 @@
             </div>
 
             <!-- Bottom Floating Guidance Hint -->
-            <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.94); border: 1.5px solid #00f2fe; border-radius: 30px; padding: 10px 28px; color: #fff; font-size: 0.88rem; font-weight: bold; z-index: 310; pointer-events: none; box-shadow: 0 4px 25px rgba(0,242,254,0.4); display: flex; align-items: center; gap: 14px;">
+            <div id="workbench-bottom-hint" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.94); border: 1.5px solid #00f2fe; border-radius: 30px; padding: 10px 28px; color: #fff; font-size: 0.88rem; font-weight: bold; z-index: 310; pointer-events: none; box-shadow: 0 4px 25px rgba(0,242,254,0.4); display: flex; align-items: center; gap: 14px;">
                 <span>✋ <strong style="color: #00f2fe;">Kliki pinnale ja lohista:</strong> venitab/tõstab pinda otse kaasa!</span>
                 <span style="color: #475569;">|</span>
                 <span>🖱️ <strong style="color: #ffd32a;">Paremklõps + liigutus:</strong> pöörab kaamerat</span>

@@ -1506,6 +1506,51 @@ try {
                 throw new Error("Multi-part workbench shape addition or positioning failed!");
             }
 
+            // 3.2. Test Left Panel Mode selection: "Tee Pikemaks" vs "Liiguta Kuju"
+            console.log("   Testing Left Panel Mode selection: Tee Pikemaks vs Liiguta Kuju...");
+            // Switch to Scale/Stretch mode and make it longer
+            await page.click('#btn-wb-mode-scale');
+            await page.click('#btn-wb-left-longer');
+            await page.click('#btn-wb-left-longer');
+            await page.click('#btn-wb-left-longer');
+            await new Promise(r => setTimeout(r, 100));
+
+            const depthAfterLeftLonger = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const part = cs?.currentWorkbenchState?.parts?.[cs?.currentWorkbenchState?.selectedPartIndex];
+                const label = document.getElementById('wb-left-val-depth')?.innerText;
+                return {
+                    depth: part?.depth,
+                    label,
+                    mode: cs?.wbToolMode
+                };
+            });
+            console.log("   After Left 'Tee Pikemaks':", depthAfterLeftLonger);
+            if (depthAfterLeftLonger.depth < 3.0 || depthAfterLeftLonger.mode !== 'stretch') {
+                throw new Error("Left panel 'Tee Pikemaks' button failed to lengthen the shape!");
+            }
+
+            // Switch to Move mode and move shape forward
+            await page.click('#btn-wb-mode-move');
+            await page.click('#btn-wb-left-pos-fwd');
+            await page.click('#btn-wb-left-pos-fwd');
+            await new Promise(r => setTimeout(r, 100));
+
+            const moveModeStatus = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const part = cs?.currentWorkbenchState?.parts?.[cs?.currentWorkbenchState?.selectedPartIndex];
+                const movePanelDisplay = document.getElementById('wb-left-move-panel')?.style.display;
+                return {
+                    mode: cs?.wbToolMode,
+                    posZ: part?.position?.z,
+                    movePanelDisplay
+                };
+            });
+            console.log("   After Left 'Liiguta Kuju':", moveModeStatus);
+            if (moveModeStatus.mode !== 'move' || moveModeStatus.posZ <= 0 || moveModeStatus.movePanelDisplay === 'none') {
+                throw new Error("Left panel 'Liiguta Kuju' mode selection or moving failed!");
+            }
+
             // 4. Test Publishing the custom item to community library
             await page.evaluate(() => {
                 const nameInput = document.getElementById('workbench-item-name');

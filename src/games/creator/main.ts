@@ -2162,7 +2162,9 @@ async function initStudio() {
         renderCatalogUI,
         get currentWorkbenchState() { return currentWorkbenchState; },
         get wbScene() { return wbScene; },
-        get wbPreviewMesh() { return wbPreviewMesh; }
+        get wbPreviewMesh() { return wbPreviewMesh; },
+        setWorkbenchToolMode,
+        get wbToolMode() { return wbToolMode; }
     };
 
     // Generate 10,000 Objects in Catalog
@@ -4300,7 +4302,7 @@ let wbOrbitPhi = Math.PI / 3;
 let wbIsRightMouseDown = false;
 let wbMousePos = { x: 0, y: 0 };
 
-// Direct 3D Face Dragging state
+// Direct 3D Face Dragging and Move state
 type DragPlaneType = 'top' | 'front' | 'back' | 'left' | 'right' | 'bottom' | 'slope';
 let wbActiveDragPlane: DragPlaneType | null = null;
 let wbDragStartMouse = { x: 0, y: 0 };
@@ -4312,6 +4314,67 @@ let wbDragInitialState = {
 };
 let wbHoveredPlane: DragPlaneType | null = null;
 let wbFaceHighlightMesh: THREE.Mesh | null = null;
+
+// Tool mode: 'stretch' (tee pikemaks / venita) või 'move' (liiguta kuju)
+let wbToolMode: 'stretch' | 'move' = 'stretch';
+let wbIsDraggingMove = false;
+let wbDragInitialPosition = { x: 0, y: 0, z: 0 };
+let wbDragStartGround = new THREE.Vector3();
+
+export function setWorkbenchToolMode(mode: 'stretch' | 'move') {
+    wbToolMode = mode;
+    const btnScale = document.getElementById('btn-wb-mode-scale');
+    const btnMove = document.getElementById('btn-wb-mode-move');
+    const panelScale = document.getElementById('wb-left-scale-panel');
+    const panelMove = document.getElementById('wb-left-move-panel');
+    const hintText = document.getElementById('workbench-bottom-hint');
+
+    if (mode === 'move') {
+        if (btnMove) {
+            btnMove.style.background = 'rgba(0,242,254,0.18)';
+            btnMove.style.borderColor = '#00f2fe';
+            btnMove.style.color = '#00f2fe';
+            btnMove.classList.add('active');
+        }
+        if (btnScale) {
+            btnScale.style.background = '#1e293b';
+            btnScale.style.borderColor = '#475569';
+            btnScale.style.color = '#cbd5e1';
+            btnScale.classList.remove('active');
+        }
+        if (panelMove) panelMove.style.display = 'block';
+        if (panelScale) panelScale.style.display = 'none';
+        if (hintText) {
+            hintText.innerHTML = `<span>✋ <strong style="color: #00f2fe;">Kliki kujundil ja lohista:</strong> liigutab kujundit alusel!</span>
+                <span style="color: #475569;">|</span>
+                <span>🖱️ <strong style="color: #ffd32a;">Paremklõps + liigutus:</strong> pöörab kaamerat</span>
+                <span style="color: #475569;">|</span>
+                <span>🔍 <strong style="color: #2ecc71;">Rullik:</strong> suumib</span>`;
+        }
+    } else {
+        if (btnScale) {
+            btnScale.style.background = 'rgba(0,242,254,0.18)';
+            btnScale.style.borderColor = '#00f2fe';
+            btnScale.style.color = '#00f2fe';
+            btnScale.classList.add('active');
+        }
+        if (btnMove) {
+            btnMove.style.background = '#1e293b';
+            btnMove.style.borderColor = '#475569';
+            btnMove.style.color = '#cbd5e1';
+            btnMove.classList.remove('active');
+        }
+        if (panelScale) panelScale.style.display = 'block';
+        if (panelMove) panelMove.style.display = 'none';
+        if (hintText) {
+            hintText.innerHTML = `<span>✋ <strong style="color: #00f2fe;">Kliki pinnale ja lohista:</strong> venitab/teeb pikemaks otse kaasa!</span>
+                <span style="color: #475569;">|</span>
+                <span>🖱️ <strong style="color: #ffd32a;">Paremklõps + liigutus:</strong> pöörab kaamerat</span>
+                <span style="color: #475569;">|</span>
+                <span>🔍 <strong style="color: #2ecc71;">Rullik:</strong> suumib</span>`;
+        }
+    }
+}
 
 export function initWorkbench3D() {
     const container = document.getElementById('workbench-canvas-container');
@@ -4444,23 +4507,49 @@ export function initWorkbench3D() {
 
     dom.addEventListener('mousedown', (e) => {
         if (e.button === 0) {
-            // Left click: test if clicking directly on object face to drag it
+            // Left click: test if clicking directly on object face to drag or move it
             const faceHit = detectFaceAtPoint(e.clientX, e.clientY);
             if (faceHit) {
                 currentWorkbenchState.selectedPartIndex = faceHit.partIndex;
                 syncStateFromActivePart();
-                wbActiveDragPlane = faceHit.plane;
-                wbDragStartMouse = { x: e.clientX, y: e.clientY };
                 const activePart = getActiveWorkbenchPart();
-                wbDragInitialState = {
-                    height: activePart.height,
-                    width: activePart.width,
-                    depth: activePart.depth,
-                    topElevation: activePart.topElevation
-                };
-                dom.style.cursor = 'ns-resize';
-                renderWorkbenchPartsList();
-                return;
+
+                if (wbToolMode === 'move') {
+                    wbIsDraggingMove = true;
+                    wbDragInitialPosition = { ...activePart.position };
+                    wbDragStartMouse = { x: e.clientX, y: e.clientY };
+
+                    const rect = dom.getBoundingClientRect();
+                    const mouse = new THREE.Vector2(
+                        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                        -((e.clientY - rect.top) / rect.height) * 2 + 1
+                    );
+                    const raycaster = new THREE.Raycaster();
+                    raycaster.setFromCamera(mouse, wbCamera!);
+                    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -activePart.position.y);
+                    const intersectPt = new THREE.Vector3();
+                    if (raycaster.ray.intersectPlane(groundPlane, intersectPt)) {
+                        wbDragStartGround.copy(intersectPt);
+                    } else {
+                        wbDragStartGround.copy(faceHit.point);
+                    }
+                    dom.style.cursor = 'move';
+                    renderWorkbenchPartsList();
+                    return;
+                } else {
+                    // 'stretch' mode
+                    wbActiveDragPlane = faceHit.plane;
+                    wbDragStartMouse = { x: e.clientX, y: e.clientY };
+                    wbDragInitialState = {
+                        height: activePart.height,
+                        width: activePart.width,
+                        depth: activePart.depth,
+                        topElevation: activePart.topElevation
+                    };
+                    dom.style.cursor = 'ns-resize';
+                    renderWorkbenchPartsList();
+                    return;
+                }
             } else {
                 // Clicking outside object on background orbits the camera
                 wbIsRightMouseDown = true;
@@ -4474,7 +4563,33 @@ export function initWorkbench3D() {
     });
 
     window.addEventListener('mousemove', (e) => {
-        // 1. Direct Face Dragging
+        // 1. Direct Move Dragging
+        if (wbIsDraggingMove && wbCamera) {
+            const activePart = getActiveWorkbenchPart();
+            const rect = dom.getBoundingClientRect();
+            const mouse = new THREE.Vector2(
+                ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                -((e.clientY - rect.top) / rect.height) * 2 + 1
+            );
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, wbCamera);
+            const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -wbDragInitialPosition.y);
+            const currentPt = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(groundPlane, currentPt)) {
+                const dx = currentPt.x - wbDragStartGround.x;
+                const dz = currentPt.z - wbDragStartGround.z;
+                // Snap to 0.25m grid
+                const newX = Math.round((wbDragInitialPosition.x + dx) * 4) / 4;
+                const newZ = Math.round((wbDragInitialPosition.z + dz) * 4) / 4;
+                activePart.position.x = parseFloat((Math.max(-7, Math.min(7, newX))).toFixed(2));
+                activePart.position.z = parseFloat((Math.max(-7, Math.min(7, newZ))).toFixed(2));
+                rebuildWorkbenchModel();
+                syncWorkbenchUI();
+            }
+            return;
+        }
+
+        // 2. Direct Face Dragging (Stretch / Lengthen)
         if (wbActiveDragPlane) {
             const dy = wbDragStartMouse.y - e.clientY; // positive = dragged up
             const dx = e.clientX - wbDragStartMouse.x;
@@ -4511,7 +4626,7 @@ export function initWorkbench3D() {
             return;
         }
 
-        // 2. Camera Orbit
+        // 3. Camera Orbit
         if (wbIsRightMouseDown) {
             const dx = e.clientX - wbMousePos.x;
             const dy = e.clientY - wbMousePos.y;
@@ -4523,11 +4638,11 @@ export function initWorkbench3D() {
             return;
         }
 
-        // 3. Hover indication over faces
+        // 4. Hover indication over faces
         const hit = detectFaceAtPoint(e.clientX, e.clientY);
         if (hit) {
             wbHoveredPlane = hit.plane;
-            dom.style.cursor = 'grab';
+            dom.style.cursor = wbToolMode === 'move' ? 'move' : 'grab';
         } else {
             wbHoveredPlane = null;
             dom.style.cursor = 'default';
@@ -4536,6 +4651,10 @@ export function initWorkbench3D() {
 
     window.addEventListener('mouseup', () => {
         wbIsRightMouseDown = false;
+        if (wbIsDraggingMove) {
+            wbIsDraggingMove = false;
+            dom.style.cursor = 'default';
+        }
         if (wbActiveDragPlane) {
             wbActiveDragPlane = null;
             dom.style.cursor = 'default';
@@ -4686,6 +4805,13 @@ function syncWorkbenchUI() {
     if (wVal) wVal.innerText = `${activePart.width.toFixed(1)}m`;
     if (dVal) dVal.innerText = `${activePart.depth.toFixed(1)}m`;
     if (elVal) elVal.innerText = `${activePart.topElevation.toFixed(1)}m`;
+
+    const leftDVal = document.getElementById('wb-left-val-depth');
+    const leftWVal = document.getElementById('wb-left-val-width');
+    const leftHVal = document.getElementById('wb-left-val-height');
+    if (leftDVal) leftDVal.innerText = `${activePart.depth.toFixed(1)}m`;
+    if (leftWVal) leftWVal.innerText = `${activePart.width.toFixed(1)}m`;
+    if (leftHVal) leftHVal.innerText = `${activePart.height.toFixed(1)}m`;
 
     if (hSlider) hSlider.value = activePart.height.toString();
     if (wSlider) wSlider.value = activePart.width.toString();
@@ -4841,7 +4967,99 @@ function setupWorkbenchEvents() {
         syncWorkbenchUI();
     });
 
-    // Shape Position & Rotation Offset Buttons
+    // Left Panel Tool Mode Buttons: Tee Pikemaks vs Liiguta Kuju
+    document.getElementById('btn-wb-mode-scale')?.addEventListener('click', () => {
+        setWorkbenchToolMode('stretch');
+    });
+    document.getElementById('btn-wb-mode-move')?.addEventListener('click', () => {
+        setWorkbenchToolMode('move');
+    });
+
+    // Left Panel Scale / Stretch Buttons (Tee pikemaks, laiemaks, kõrgemaks)
+    document.getElementById('btn-wb-left-longer')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.depth = Math.min(14, parseFloat((part.depth + 0.5).toFixed(2)));
+        currentWorkbenchState.depth = part.depth;
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-shorter')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.depth = Math.max(0.5, parseFloat((part.depth - 0.5).toFixed(2)));
+        currentWorkbenchState.depth = part.depth;
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-wider')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.width = Math.min(14, parseFloat((part.width + 0.5).toFixed(2)));
+        currentWorkbenchState.width = part.width;
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-narrower')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.width = Math.max(0.5, parseFloat((part.width - 0.5).toFixed(2)));
+        currentWorkbenchState.width = part.width;
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-higher')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.height = Math.min(12, parseFloat((part.height + 0.5).toFixed(2)));
+        if (part.shapeType === 'wedge') part.topElevation = part.height;
+        currentWorkbenchState.height = part.height;
+        currentWorkbenchState.topElevation = part.topElevation;
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-lower')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.height = Math.max(0.4, parseFloat((part.height - 0.5).toFixed(2)));
+        if (part.shapeType === 'wedge') part.topElevation = Math.min(part.topElevation, part.height);
+        currentWorkbenchState.height = part.height;
+        currentWorkbenchState.topElevation = part.topElevation;
+        syncWorkbenchUI();
+    });
+
+    // Left Panel Move & Position Buttons
+    document.getElementById('btn-wb-left-pos-up')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.y = parseFloat((part.position.y + 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-pos-down')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.y = Math.max(0, parseFloat((part.position.y - 0.5).toFixed(2)));
+        rebuildWorkbenchModel();
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-pos-left')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.x = parseFloat((part.position.x - 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-pos-right')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.x = parseFloat((part.position.x + 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-pos-fwd')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.z = parseFloat((part.position.z + 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-pos-back')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.z = parseFloat((part.position.z - 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+        syncWorkbenchUI();
+    });
+    document.getElementById('btn-wb-left-rot-y')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.rotationY = (part.rotationY || 0) + Math.PI / 4;
+        rebuildWorkbenchModel();
+        syncWorkbenchUI();
+    });
     document.getElementById('btn-wb-pos-up')?.addEventListener('click', () => {
         const part = getActiveWorkbenchPart();
         part.position.y = parseFloat((part.position.y + 0.5).toFixed(2));
