@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { yardService } from '../../shared/yardService';
+import { yardService, CustomShapeType } from '../../shared/yardService';
 import { getCurrentUserProfile, isUserAdminEmail, isPlayardOwner } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
@@ -708,7 +708,7 @@ export function createWedgeGeometry(width: number, height: number, depth: number
 }
 
 export function createSinglePartMesh(part: {
-    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    shapeType: CustomShapeType;
     width: number;
     height: number;
     depth: number;
@@ -784,6 +784,127 @@ export function createSinglePartMesh(part: {
             meshPosY = 0;
             break;
         }
+        case 'sphere': {
+            const radius = Math.min(w, Math.min(h, d)) / 2;
+            geo = new THREE.SphereGeometry(radius, 24, 20);
+            geo.scale(w / (radius * 2), h / (radius * 2), d / (radius * 2));
+            meshPosY = h / 2;
+            break;
+        }
+        case 'cone': {
+            const radius = Math.min(w, d) / 2;
+            geo = new THREE.ConeGeometry(radius, h, 24);
+            meshPosY = h / 2;
+            break;
+        }
+        case 'torus': {
+            const radius = Math.min(w, d) / 2;
+            const tube = Math.max(0.08, Math.min(radius * 0.35, h / 3));
+            geo = new THREE.TorusGeometry(Math.max(0.1, radius - tube), tube, 16, 32);
+            geo.rotateX(Math.PI / 2);
+            meshPosY = h / 2;
+            break;
+        }
+        case 'capsule': {
+            const radius = Math.min(w, d) / 2;
+            const length = Math.max(0.1, h - radius * 2);
+            geo = new THREE.CapsuleGeometry(radius, length, 12, 24);
+            meshPosY = h / 2;
+            break;
+        }
+        case 'diamond': {
+            const radius = Math.min(w, d) / 2;
+            geo = new THREE.OctahedronGeometry(radius);
+            geo.scale(1, h / (radius * 2), 1);
+            meshPosY = h / 2;
+            break;
+        }
+        case 'hexagon': {
+            const radius = Math.min(w, d) / 2;
+            geo = new THREE.CylinderGeometry(radius, radius, h, 6);
+            meshPosY = h / 2;
+            break;
+        }
+        case 'star': {
+            const starShape = new THREE.Shape();
+            const outerR = Math.min(w, d) / 2;
+            const innerR = outerR * 0.45;
+            const points = 5;
+            for (let i = 0; i < points * 2; i++) {
+                const angle = (i * Math.PI) / points - Math.PI / 2;
+                const r = i % 2 === 0 ? outerR : innerR;
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                if (i === 0) starShape.moveTo(x, y);
+                else starShape.lineTo(x, y);
+            }
+            starShape.closePath();
+            geo = new THREE.ExtrudeGeometry(starShape, {
+                depth: h,
+                bevelEnabled: false
+            });
+            geo.rotateX(Math.PI / 2);
+            geo.translate(0, h, 0);
+            meshPosY = 0;
+            break;
+        }
+        case 'heart': {
+            const heartShape = new THREE.Shape();
+            const s = Math.min(w, d) / 3.2;
+            heartShape.moveTo(0, 1.2 * s);
+            heartShape.bezierCurveTo(1.2 * s, 2.5 * s, 2.5 * s, 1.2 * s, 2.5 * s, 0);
+            heartShape.bezierCurveTo(2.5 * s, -1.2 * s, 1.2 * s, -2.0 * s, 0, -2.8 * s);
+            heartShape.bezierCurveTo(-1.2 * s, -2.0 * s, -2.5 * s, -1.2 * s, -2.5 * s, 0);
+            heartShape.bezierCurveTo(-2.5 * s, 1.2 * s, -1.2 * s, 2.5 * s, 0, 1.2 * s);
+            geo = new THREE.ExtrudeGeometry(heartShape, {
+                depth: h,
+                bevelEnabled: false
+            });
+            geo.rotateX(Math.PI / 2);
+            geo.rotateZ(Math.PI);
+            geo.translate(0, h, 0);
+            meshPosY = 0;
+            break;
+        }
+        case 'stairs': {
+            const stairShape = new THREE.Shape();
+            const steps = 4;
+            stairShape.moveTo(-d / 2, 0);
+            for (let i = 0; i < steps; i++) {
+                const x1 = -d / 2 + (d / steps) * i;
+                const x2 = -d / 2 + (d / steps) * (i + 1);
+                const y = (h / steps) * (i + 1);
+                stairShape.lineTo(x1, y);
+                stairShape.lineTo(x2, y);
+            }
+            stairShape.lineTo(d / 2, 0);
+            stairShape.closePath();
+            geo = new THREE.ExtrudeGeometry(stairShape, {
+                depth: w,
+                bevelEnabled: false
+            });
+            geo.rotateY(Math.PI / 2);
+            geo.translate(-w / 2, 0, 0);
+            meshPosY = 0;
+            break;
+        }
+        case 'pipe': {
+            const outerR = Math.min(w, d) / 2;
+            const innerR = Math.max(0.05, outerR * 0.65);
+            const pipeShape = new THREE.Shape();
+            pipeShape.absarc(0, 0, outerR, 0, Math.PI * 2, false);
+            const holePath = new THREE.Path();
+            holePath.absarc(0, 0, innerR, 0, Math.PI * 2, true);
+            pipeShape.holes.push(holePath);
+            geo = new THREE.ExtrudeGeometry(pipeShape, {
+                depth: h,
+                bevelEnabled: false
+            });
+            geo.rotateX(Math.PI / 2);
+            geo.translate(0, h, 0);
+            meshPosY = 0;
+            break;
+        }
         case 'box':
         default: {
             geo = new THREE.BoxGeometry(w, h, d);
@@ -814,7 +935,7 @@ export function createSinglePartMesh(part: {
 }
 
 export function createCustomModel3DMesh(modelData: {
-    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    shapeType: CustomShapeType;
     width: number;
     height: number;
     depth: number;
@@ -4196,12 +4317,30 @@ export function setupScriptingEvents() {
     setupWorkbenchEvents();
 }
 
-// ==========================================
-// 🎨 3D CUSTOM ITEM CREATOR WORKBENCH ENGINE
-// ==========================================
+export function getShapeIcon(shape: CustomShapeType): string {
+    switch (shape) {
+        case 'wedge': return '🔺';
+        case 'cylinder': return '🔵';
+        case 'pyramid': return '⛺';
+        case 'dome': return '🟢';
+        case 'sphere': return '🔮';
+        case 'cone': return '🍦';
+        case 'torus': return '🍩';
+        case 'capsule': return '💊';
+        case 'diamond': return '💎';
+        case 'hexagon': return '🛑';
+        case 'star': return '⭐';
+        case 'heart': return '❤️';
+        case 'stairs': return '🪜';
+        case 'pipe': return '🛢️';
+        case 'box':
+        default: return '🟦';
+    }
+}
+
 interface WorkbenchPart {
     id: string;
-    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    shapeType: CustomShapeType;
     width: number;
     height: number;
     depth: number;
@@ -4212,7 +4351,7 @@ interface WorkbenchPart {
 }
 
 interface WorkbenchState {
-    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    shapeType: CustomShapeType;
     width: number;
     height: number;
     depth: number;
@@ -4718,11 +4857,7 @@ function renderWorkbenchPartsList() {
         chip.style.alignItems = 'center';
         chip.style.gap = '4px';
 
-        let icon = '🟦';
-        if (p.shapeType === 'wedge') icon = '🔺';
-        else if (p.shapeType === 'cylinder') icon = '🔵';
-        else if (p.shapeType === 'pyramid') icon = '⛺';
-        else if (p.shapeType === 'dome') icon = '🟢';
+        const icon = getShapeIcon(p.shapeType);
 
         chip.innerHTML = `<span>${icon}</span> <span>Kuju #${idx + 1}</span>`;
         chip.addEventListener('click', () => {
@@ -4840,13 +4975,8 @@ function syncWorkbenchUI() {
 function getWorkbenchItemPayload(nameOverride?: string) {
     const nameInput = document.getElementById('workbench-item-name') as HTMLInputElement | null;
     const name = nameOverride || nameInput?.value.trim() || 'Minu 3D Ese';
-
-    let icon = '🟦';
     const mainPart = currentWorkbenchState.parts[0] || getActiveWorkbenchPart();
-    if (mainPart.shapeType === 'wedge') icon = '🔺';
-    else if (mainPart.shapeType === 'cylinder') icon = '🔵';
-    else if (mainPart.shapeType === 'pyramid') icon = '⛺';
-    else if (mainPart.shapeType === 'dome') icon = '🟢';
+    let icon = getShapeIcon(mainPart.shapeType);
 
     if (currentWorkbenchState.parts.length > 1) icon = '🧩';
     if (currentWorkbenchState.behavior === 'hazard') icon = '🔥';

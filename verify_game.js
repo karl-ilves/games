@@ -1551,6 +1551,31 @@ try {
                 throw new Error("Left panel 'Liiguta Kuju' mode selection or moving failed!");
             }
 
+            // 3.3. Test 15 3D Shapes (10 new shapes: sphere, cone, torus, capsule, diamond, hexagon, star, heart, stairs, pipe)
+            console.log("   Testing 15 3D Shapes in Workbench...");
+            const shapesCount = await page.evaluate(() => {
+                const btns = Array.from(document.querySelectorAll('.workbench-shape-btn'));
+                const shapes = btns.map(b => b.getAttribute('data-shape'));
+                return { count: btns.length, shapes };
+            });
+            console.log("   Workbench available shapes count (Expected: 15):", shapesCount.count);
+            if (shapesCount.count < 15) {
+                throw new Error(`Expected at least 15 shapes, got ${shapesCount.count}!`);
+            }
+
+            // Test selecting star shape
+            await page.click('.workbench-shape-btn[data-shape="star"]');
+            await new Promise(r => setTimeout(r, 150));
+            const starSelected = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const part = cs?.currentWorkbenchState?.parts?.[cs?.currentWorkbenchState?.selectedPartIndex];
+                return part?.shapeType;
+            });
+            console.log("   Selected star shape:", starSelected);
+            if (starSelected !== 'star') {
+                throw new Error("Selecting new 'star' shape failed!");
+            }
+
             // 4. Test Publishing the custom item to community library
             await page.evaluate(() => {
                 const nameInput = document.getElementById('workbench-item-name');

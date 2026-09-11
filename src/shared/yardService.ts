@@ -49,9 +49,26 @@ export interface CreatedGame {
     updatedAt: number;
 }
 
+export type CustomShapeType =
+    | 'box'
+    | 'wedge'
+    | 'cylinder'
+    | 'pyramid'
+    | 'dome'
+    | 'sphere'
+    | 'cone'
+    | 'torus'
+    | 'capsule'
+    | 'diamond'
+    | 'hexagon'
+    | 'star'
+    | 'heart'
+    | 'stairs'
+    | 'pipe';
+
 export interface CustomShapePart {
     id: string;
-    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    shapeType: CustomShapeType;
     width: number;
     height: number;
     depth: number;
@@ -67,7 +84,7 @@ export interface PlayerCreatedItem {
     creatorUsername: string;
     icon: string;
     category: 'custom';
-    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    shapeType: CustomShapeType;
     color: string;
     modelData: {
         width: number;
