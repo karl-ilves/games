@@ -34,10 +34,51 @@ export const EMOTE_SOUND_DEFS: Record<string, EmoteSoundDef> = {
     ground_slam:  { type: 'sfx',  label: 'Heavy Impact' },
 };
 
+function getBaseUrl(): string {
+    if (typeof import.meta !== 'undefined' && import.meta.env && typeof import.meta.env.BASE_URL === 'string') {
+        const b = import.meta.env.BASE_URL;
+        return b.endsWith('/') ? b : b + '/';
+    }
+    return '/games/';
+}
+
+/** Mapping to real audio files (MP3 / OGG) stored in public/audio/emotes/ */
+export const EMOTE_FILE_MAP: Record<string, string> = {
+    wave:         'audio/emotes/wave.mp3',
+    dance:        'audio/emotes/dance.ogg',
+    salute:       'audio/emotes/salute.mp3',
+    backflip:     'audio/emotes/backflip.mp3',
+    breakdance:   'audio/emotes/breakdance.ogg',
+    laugh:        'audio/emotes/laugh.ogg',
+    flex:         'audio/emotes/flex.mp3',
+    levitate:     'audio/emotes/levitate.ogg',
+    zombie:       'audio/emotes/zombie.ogg',
+    guitar:       'audio/emotes/guitar.ogg',
+    dab:          'audio/emotes/dab.mp3',
+    moonwalk:     'audio/emotes/moonwalk.ogg',
+    tpose:        'audio/emotes/tpose.mp3',
+    robot_dance:  'audio/emotes/robot_dance.mp3',
+    kungfu:       'audio/emotes/kungfu.mp3',
+    headspin:     'audio/emotes/headspin.mp3',
+    cheer:        'audio/emotes/cheer.ogg',
+    bow:          'audio/emotes/bow.mp3',
+    matrix_dodge: 'audio/emotes/matrix_dodge.mp3',
+    hype_clap:    'audio/emotes/hype_clap.ogg',
+    slow_clap:    'audio/emotes/slow_clap.ogg',
+    ground_slam:  'audio/emotes/ground_slam.mp3',
+};
+
+export function getEmoteAudioUrl(action: string): string | undefined {
+    const rel = EMOTE_FILE_MAP[action];
+    if (!rel) return undefined;
+    return getBaseUrl() + rel;
+}
+
 class EmoteAudio {
     private ctx: AudioContext | null = null;
     private muted: boolean = false;
     private currentLoop: { nodes: AudioNode[]; sources: (OscillatorNode | AudioBufferSourceNode)[]; action: string } | null = null;
+    private currentAudioElement: HTMLAudioElement | null = null;
     private masterGain: GainNode | null = null;
 
     private initCtx() {
@@ -60,6 +101,9 @@ class EmoteAudio {
         if (this.masterGain && this.ctx) {
             this.masterGain.gain.setValueAtTime(this.muted ? 0 : 0.35, this.ctx.currentTime);
         }
+        if (this.currentAudioElement) {
+            this.currentAudioElement.volume = this.muted ? 0 : 0.65;
+        }
         return this.muted;
     }
 
@@ -67,16 +111,47 @@ class EmoteAudio {
         return this.muted;
     }
 
-    /** Play the sound for an emote action. Stops any currently playing loop first. */
+    public getRealAudioUrl(action: string): string | undefined {
+        return getEmoteAudioUrl(action);
+    }
+
+    /** Play the sound for an emote action. Tries real MP3/OGG audio first, falls back to procedural synth. */
     public playEmoteSound(action: string) {
         const def = EMOTE_SOUND_DEFS[action];
         if (!def) return; // No sound for this action (idle, walk, run, jump)
 
+        // Stop existing loop or audio element if switching emotes
+        this.stopEmoteSound();
+
+        const realAudioPath = this.getRealAudioUrl(action);
+        if (realAudioPath && typeof window !== 'undefined' && typeof window.Audio !== 'undefined') {
+            try {
+                const audio = new window.Audio(realAudioPath);
+                audio.loop = (def.type === 'loop');
+                audio.volume = this.muted ? 0 : 0.65;
+                this.currentAudioElement = audio;
+
+                const playPromise = audio.play();
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise.catch((err) => {
+                        console.warn(`[EmoteAudio] Real audio failed for "${action}", falling back to synth:`, err);
+                        // Fallback to synthesized audio if file load/playback is blocked
+                        this.playSynthFallback(action, def);
+                    });
+                }
+                return;
+            } catch (e) {
+                console.warn(`[EmoteAudio] Error creating audio element for "${action}":`, e);
+            }
+        }
+
+        // Procedural synthesis fallback
+        this.playSynthFallback(action, def);
+    }
+
+    private playSynthFallback(action: string, def: EmoteSoundDef) {
         this.initCtx();
         if (!this.ctx || !this.masterGain) return;
-
-        // Stop existing loop if switching emotes
-        this.stopEmoteSound();
 
         if (def.type === 'sfx') {
             this.playSfx(action);
@@ -85,8 +160,18 @@ class EmoteAudio {
         }
     }
 
-    /** Stop any currently playing looping sound */
+    /** Stop any currently playing looping sound or audio file */
     public stopEmoteSound() {
+        if (this.currentAudioElement) {
+            try {
+                this.currentAudioElement.pause();
+                this.currentAudioElement.currentTime = 0;
+            } catch (_e) {
+                // Ignore pause error
+            }
+            this.currentAudioElement = null;
+        }
+
         if (this.currentLoop) {
             for (const src of this.currentLoop.sources) {
                 try { src.stop(); } catch (_e) { /* already stopped */ }

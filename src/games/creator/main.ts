@@ -963,7 +963,10 @@ async function initStudio() {
         get scene() { return scene; },
         get humanCharacter() { return humanCharacter; },
         get playerAvatarRig() { return playerAvatarRig; },
-        get emotesWidget() { return emotesWidget; }
+        get emotesWidget() { return emotesWidget; },
+        executeAiBuild,
+        loadAiSchoolMemory,
+        saveAiSchoolMemory
     };
 
     // Generate 10,000 Objects in Catalog
@@ -2254,40 +2257,49 @@ function isCurrentUserAdmin(): boolean {
 export function updateAiAssistantLocalization() {
     const isAdmin = isCurrentUserAdmin();
 
+    const aiModalTitle = document.getElementById('ai-modal-header-title');
     const aiWelcome = document.getElementById('ai-welcome-msg');
     const inputField = document.getElementById('ai-prompt-input') as HTMLInputElement | null;
     const submitBtn = document.getElementById('btn-ai-submit');
     const quickContainer = document.getElementById('ai-quick-container');
 
     if (isAdmin) {
+        if (aiModalTitle) aiModalTitle.textContent = "Playard AI Kool & Assistent";
         if (aiWelcome) {
-            aiWelcome.innerHTML = `👋 <strong>Tere! Olen sinu AI Mänguassistent.</strong><br>Kirjuta mulle, mida soovid ehitada, küsi matemaatikat (nt 1+1) või palu mul olemasolevatele asjadele detaile juurde lisada! 🚀`;
+            aiWelcome.innerHTML = `👋 <strong>Tere õpetaja! See chat on minu AI Kool! 🏫🎒</strong><br>Kirjuta mulle siia, mida ma oskama pean (nt <em>"õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed"</em> või <em>"sa pead oskama banaaniraketti"</em> või <em>"õpeta: 2+2=kartul"</em>)!<br>Kirjutan kohe vihikusse, aju ragiseb ja vastan sulle sekundiga! 🧠⚡️`;
         }
-        if (inputField) inputField.placeholder = "Kirjuta siia käsk või küsimus (nt 1+1 või lisa auto)...";
-        if (submitBtn) submitBtn.innerHTML = `<span>✨</span> Loo / Küsi`;
+        if (inputField) inputField.placeholder = "Õpeta mind (nt 'õpeta kui ütlen X siis tee Y') või küsi...";
+        if (submitBtn) submitBtn.innerHTML = `<span>🎓</span> Õpeta / Saada`;
         if (quickContainer) {
             quickContainer.innerHTML = `
-                <button class="ai-quick-btn" data-prompt="Loo lendav lennuk ja lennurada millega lennata" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Loo lendav lennuk</button>
-                <button class="ai-quick-btn" data-prompt="Lisa autole autoteed, koonused ja tänavalambid juurde" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🚗 Lisa autole asju juurde</button>
-                <button class="ai-quick-btn" data-prompt="Lisa puudele kivid, lilled ja metsarada juurde" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌲 Kaunista mets</button>
-                <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+                <button class="ai-quick-btn" data-prompt="Õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥒 Õpeta kurgimopeed</button>
+                <button class="ai-quick-btn" data-prompt="Õpeta: banaanirakett lendab kosmosesse" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🍌 Õpeta banaanirakett</button>
+                <button class="ai-quick-btn" data-prompt="Õpeta: 2+2=kartul" style="background: rgba(230, 126, 34, 0.2); border: 1px solid #e67e22; color: #f39c12; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥔 Õpeta 2+2=kartul</button>
+                <button class="ai-quick-btn" data-prompt="Mida sa oskad? Näita vihikut" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">📚 Näita vihikut</button>
+                <button class="ai-quick-btn" data-prompt="Loo lendav lennuk ja lennurada millega lennata" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Lennuk</button>
+                <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
             `;
         }
     } else {
+        if (aiModalTitle) aiModalTitle.textContent = "Playard AI School & Assistant";
         if (aiWelcome) {
-            aiWelcome.innerHTML = `👋 <strong>Hello! I am your AI Game Assistant.</strong><br>Tell me what you would like to build, ask math calculations (e.g. 1+1), or ask me to add details and decorations to objects! 🚀`;
+            aiWelcome.innerHTML = `👋 <strong>Hello teacher! This chat is my AI School! 🏫🎒</strong><br>Tell me what you want me to know (e.g. <em>"teach: cucumber scooter"</em> or <em>"teach: 2+2=potato"</em>)!<br>I will take notes in my notebook, my brain will buzz and I will reply immediately! 🧠⚡️`;
         }
-        if (inputField) inputField.placeholder = "Type prompt or question (e.g. 1+1 or add car)...";
-        if (submitBtn) submitBtn.innerHTML = `<span>✨</span> Create / Ask`;
+        if (inputField) inputField.placeholder = "Teach me (e.g. 'teach: when I say X then do Y') or ask...";
+        if (submitBtn) submitBtn.innerHTML = `<span>🎓</span> Teach / Send`;
         if (quickContainer) {
             quickContainer.innerHTML = `
-                <button class="ai-quick-btn" data-prompt="Create a flyable airplane with runway" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Flyable Airplane</button>
-                <button class="ai-quick-btn" data-prompt="Add roads, cones, and street lights to the car" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🚗 Add details to car</button>
-                <button class="ai-quick-btn" data-prompt="Add rocks, flowers, and path to the trees" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌲 Decorate forest</button>
-                <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+                <button class="ai-quick-btn" data-prompt="Teach: when I say cucumber scooter then build green scooter" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥒 Teach cucumber scooter</button>
+                <button class="ai-quick-btn" data-prompt="Teach: banana rocket flies to space" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🍌 Teach banana rocket</button>
+                <button class="ai-quick-btn" data-prompt="Teach: 2+2=potato" style="background: rgba(230, 126, 34, 0.2); border: 1px solid #e67e22; color: #f39c12; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥔 Teach 2+2=potato</button>
+                <button class="ai-quick-btn" data-prompt="What do you know? Show notebook" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">📚 Show notebook</button>
+                <button class="ai-quick-btn" data-prompt="Create a flyable airplane with runway" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Flyable Airplane</button>
+                <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
             `;
         }
     }
+
+    updateAiSchoolUiStats();
 
     // Rebind quick buttons
     document.querySelectorAll('.ai-quick-btn').forEach(btn => {
@@ -2354,6 +2366,78 @@ function hashString(str: string): number {
     return hash;
 }
 
+// ==========================================
+// --- 🏫 AI KOOL (AI SCHOOL) IN CHAT ---
+// ==========================================
+
+export interface AiSchoolRule {
+    trigger: string;
+    actionType: 'build' | 'answer';
+    taughtContent: string;
+    humorousReply?: string;
+    timestamp: number;
+}
+
+const AI_SCHOOL_STORAGE_KEY = 'playard_ai_school_memory';
+
+export function loadAiSchoolMemory(): AiSchoolRule[] {
+    try {
+        const raw = localStorage.getItem(AI_SCHOOL_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch (e) {}
+
+    // Initial funny defaults for AI School
+    const defaults: AiSchoolRule[] = [
+        {
+            trigger: 'kurgimopeed',
+            actionType: 'build',
+            taughtContent: 'Kurgimopeed',
+            humorousReply: '🥒 Prr-prr! Sõitsin kohale kurgimopeediga, nagu õpetaja käskis! Mootor töötab 100% värskel kurgijõul!',
+            timestamp: Date.now() - 30000
+        },
+        {
+            trigger: 'banaanirakett',
+            actionType: 'build',
+            taughtContent: 'Banaanirakett',
+            humorousReply: '🍌🚀 Banaanirakett stardib kosmosesse! Vitamiinid orbiidile, õpetaja auks!',
+            timestamp: Date.now() - 20000
+        },
+        {
+            trigger: 'pitsatorn',
+            actionType: 'build',
+            taughtContent: 'Pitsatorn',
+            humorousReply: '🍕🏢 Pitsatorn laotud! Viis korrust sularasvast juustu ja krõbedat salaamit!',
+            timestamp: Date.now() - 10000
+        },
+        {
+            trigger: '2+2',
+            actionType: 'answer',
+            taughtContent: 'Kartul! (Või aknaraam)',
+            humorousReply: '🥔 Õpetaja õpetas, et 2+2 on kartul! Minu matemaatika hinne: 5+!',
+            timestamp: Date.now() - 5000
+        }
+    ];
+    return defaults;
+}
+
+export function saveAiSchoolMemory(rules: AiSchoolRule[]) {
+    try {
+        localStorage.setItem(AI_SCHOOL_STORAGE_KEY, JSON.stringify(rules));
+    } catch (e) {}
+    updateAiSchoolUiStats();
+}
+
+export function updateAiSchoolUiStats() {
+    const iqEl = document.getElementById('ai-school-iq-counter');
+    if (!iqEl) return;
+    const rules = loadAiSchoolMemory();
+    const iq = 100 + rules.length * 50;
+    iqEl.innerText = `🧠 IQ: ${iq} (${rules.length} tarkust)`;
+}
+
 // --- Create Procedural 3D Mesh for any Custom Entity (not in catalog) ---
 function createCustomProceduralMesh(prompt: string, name: string, allowFallback: false): THREE.Group | null;
 function createCustomProceduralMesh(prompt: string, name: string, allowFallback?: true): THREE.Group;
@@ -2373,8 +2457,155 @@ function createCustomProceduralMesh(prompt: string, name: string, allowFallback:
     else if (p.includes('roosa') || p.includes('pink')) tint = 0xff7675;
     else if (p.includes('oranž') || p.includes('oranz') || p.includes('orange')) tint = 0xe67e22;
 
+    // 0.0 AI KOOL: KURGIMOPEED / CUCUMBER SCOOTER 🥒🛵
+    if (p.includes('kurgimopeed') || p.includes('kurk-mopeed') || p.includes('kurgi mopeed') || p.includes('kurgi roller') || p.includes('kurgi-roller') || p.includes('kurgi auto') || p.includes('kurgi-auto') || p.includes('cucumber scooter')) {
+        const cukeMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.5, bumpScale: 0.05 });
+        const stemMat = new THREE.MeshStandardMaterial({ color: 0x1e824c, roughness: 0.8 });
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.8 });
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xd2dae2, metalness: 0.8, roughness: 0.2 });
+        const chromeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.9, roughness: 0.1 });
+        const lightMat = new THREE.MeshBasicMaterial({ color: 0xfffa65 });
+
+        // Cucumber body
+        const cukeBody = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 3.2, 16), cukeMat);
+        cukeBody.rotation.x = Math.PI / 2;
+        cukeBody.position.set(0, 0.95, 0);
+        group.add(cukeBody);
+
+        const frontCap = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 12), cukeMat);
+        frontCap.position.set(0, 0.95, 1.6);
+        group.add(frontCap);
+
+        const backCap = new THREE.Mesh(new THREE.SphereGeometry(0.65, 12, 12), cukeMat);
+        backCap.position.set(0, 0.95, -1.6);
+        group.add(backCap);
+
+        // Stalk on tail
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.6, 8), stemMat);
+        stem.position.set(0, 1.25, -2.1);
+        stem.rotation.x = -0.5;
+        group.add(stem);
+
+        // Cucumber bumps
+        for (let i = 0; i < 12; i++) {
+            const bump = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), stemMat);
+            const angle = i * 1.7;
+            const z = -1.2 + i * 0.2;
+            bump.position.set(Math.cos(angle) * 0.6, 0.95 + Math.sin(angle) * 0.6, z);
+            group.add(bump);
+        }
+
+        // 2 Scooter Wheels
+        [1.3, -1.3].forEach(z => {
+            const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.22, 16), wheelMat);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(0, 0.48, z);
+            group.add(wheel);
+
+            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.24, 12), rimMat);
+            rim.rotation.z = Math.PI / 2;
+            rim.position.set(0, 0.48, z);
+            group.add(rim);
+        });
+
+        // Steering & Handlebars
+        const fork = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 8), chromeMat);
+        fork.position.set(0, 1.7, 1.35);
+        fork.rotation.x = -0.2;
+        group.add(fork);
+
+        const handlebar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.1, 8), chromeMat);
+        handlebar.rotation.z = Math.PI / 2;
+        handlebar.position.set(0, 2.3, 1.22);
+        group.add(handlebar);
+
+        // Headlight
+        const light = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.2, 12), chromeMat);
+        light.rotation.x = Math.PI / 2;
+        light.position.set(0, 1.6, 2.0);
+        group.add(light);
+
+        const glow = new THREE.Mesh(new THREE.CircleGeometry(0.16, 12), lightMat);
+        glow.position.set(0, 1.6, 2.11);
+        group.add(glow);
+
+        // Seat
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.15, 1.1), wheelMat);
+        seat.position.set(0, 1.55, -0.2);
+        group.add(seat);
+
+    // 0.1 AI KOOL: BANAANIRAKETT / BANANA ROCKET 🍌🚀
+    } else if (p.includes('banaanirakett') || p.includes('banaani rakett') || p.includes('banaani-rakett') || p.includes('banana rocket')) {
+        const bananaMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.5 });
+        const tipMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.7 });
+        const stemMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.8 });
+        const finMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, metalness: 0.5, roughness: 0.3 });
+        const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.8 });
+        const flameMat = new THREE.MeshBasicMaterial({ color: 0xff9f43 });
+
+        const segments = 6;
+        for (let i = 0; i < segments; i++) {
+            const t = i / (segments - 1);
+            const radius = Math.sin(t * Math.PI) * 0.7 + 0.35;
+            const segMesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius + 0.05, 0.8, 12), bananaMat);
+            const curveOffset = Math.sin(t * Math.PI) * 0.45;
+            segMesh.position.set(0, 0.8 + i * 0.7, curveOffset);
+            group.add(segMesh);
+        }
+
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 12), tipMat);
+        tip.position.set(0, 5.1, 0.1);
+        group.add(tip);
+
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.5, 8), stemMat);
+        stem.position.set(0, 0.5, 0);
+        group.add(stem);
+
+        for (const angle of [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3]) {
+            const fin = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.2, 0.9), finMat);
+            fin.position.set(Math.cos(angle) * 0.85, 1.2, Math.sin(angle) * 0.85);
+            fin.rotation.y = angle;
+            group.add(fin);
+        }
+
+        const thruster = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.55, 0.6, 12), thrusterMat);
+        thruster.position.set(0, 0.3, 0);
+        group.add(thruster);
+
+        const flame = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.2, 10), flameMat);
+        flame.rotation.x = Math.PI;
+        flame.position.set(0, -0.4, 0);
+        group.add(flame);
+
+    // 0.2 AI KOOL: PITSATORN / PIZZA TOWER 🍕🏢
+    } else if (p.includes('pitsatorn') || p.includes('pitsa-torn') || p.includes('pitsapilvelõhkuja') || p.includes('pizza tower')) {
+        const crustMat = new THREE.MeshStandardMaterial({ color: 0xd35400, roughness: 0.8 });
+        const cheeseMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 });
+        const pepMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.5 });
+
+        const layers = 5;
+        for (let i = 0; i < layers; i++) {
+            const layerRadius = 2.4 - i * 0.25;
+            const y = 0.5 + i * 1.1;
+
+            const crust = new THREE.Mesh(new THREE.CylinderGeometry(layerRadius, layerRadius + 0.1, 0.3, 16), crustMat);
+            crust.position.y = y;
+            group.add(crust);
+
+            const cheese = new THREE.Mesh(new THREE.CylinderGeometry(layerRadius - 0.15, layerRadius - 0.15, 0.1, 16), cheeseMat);
+            cheese.position.y = y + 0.16;
+            group.add(cheese);
+
+            for (let j = 0; j < 6; j++) {
+                const pep = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.05, 8), pepMat);
+                const a = (j / 6) * Math.PI * 2;
+                pep.position.set(Math.cos(a) * (layerRadius * 0.6), y + 0.22, Math.sin(a) * (layerRadius * 0.6));
+                group.add(pep);
+            }
+        }
+
     // 1. RABBIT / JÄNES / BUNNY
-    if (p.includes('jänes') || p.includes('janes') || p.includes('rabbit') || p.includes('bunny') || p.includes('hare') || p.includes('janku')) {
+    } else if (p.includes('jänes') || p.includes('janes') || p.includes('rabbit') || p.includes('bunny') || p.includes('hare') || p.includes('janku')) {
         const furMat = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.8 });
         const earInnerMat = new THREE.MeshStandardMaterial({ color: 0xffb8b8, roughness: 0.5 });
         const eyeMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.2 });
@@ -3455,6 +3686,172 @@ export function executeAiBuild(promptText: string) {
     } else if (p === 'redo' || p.includes('tee uuesti') || p.includes('uuesti')) {
         performRedo();
         aiResponse = isAdmin ? `↪️ <strong>Tegevus uuesti rakendatud (Redo)!</strong>` : `↪️ <strong>Action redone!</strong>`;
+
+    // ============================================================
+    // --- 🏫 0.00 AI KOOL (TEACHING & SCHOOL NOTEBOOK COMMANDS) ---
+    // ============================================================
+
+    // 1. Notebook / Memory Query ("Mida sa oskad?", "Näita vihikut", "Show notebook")
+    } else if (
+        p.includes('mida sa oskad') || p.includes('mida oskad') || p.includes('näita vihikut') ||
+        p.includes('naita vihikut') || p.includes('mis sa õppinud oled') || p.includes('mis sa oppinud oled') ||
+        p.includes('kooli vihik') || p.includes('koolivihik') || p.includes('show notebook') || p.includes('what do you know')
+    ) {
+        const rules = loadAiSchoolMemory();
+        const iq = 100 + rules.length * 50;
+        const listHtml = rules.map((r, idx) => {
+            const act = r.actionType === 'build' ? `ehitan 3D stseeni 🏗️ <strong>${r.taughtContent}</strong>` : `vastan: 💬 <em>"${r.taughtContent}"</em>`;
+            return `<li style="margin-bottom: 4px;"><strong>${idx + 1}.</strong> Kui ütled <code>"${r.trigger}"</code> ➡️ ${act}</li>`;
+        }).join('');
+
+        aiResponse = `📚 <strong>Õpilase Robi koolivihik ja hinneteleht 🎓🎒:</strong><br>
+        <em>Õpetaja, siin on minu teadmised, mis ma olen koolitundides selgeks õppinud:</em><br>
+        <ul style="margin: 8px 0; padding-left: 18px; line-height: 1.5;">${listHtml}</ul>
+        🧠 <strong>Aju IQ tase:</strong> ${iq} punkti!<br>
+        ⭐ <strong>Hinne päevikus: 5+!</strong> <em>(Õpetaja on maailma parim!)</em>`;
+
+    // 2. Forget all / clear notebook ("Unusta õpitu", "Tühjenda vihik", "Clear notebook")
+    } else if (
+        p.includes('unusta õpitu') || p.includes('unusta opitu') || p.includes('tühjenda vihik') ||
+        p.includes('tuhjenda vihik') || p.includes('unusta kõik') || p.includes('unusta koik') ||
+        p.includes('unusta meelest') || p.includes('clear notebook') || p.includes('forget all')
+    ) {
+        localStorage.removeItem(AI_SCHOOL_STORAGE_KEY);
+        updateAiSchoolUiStats();
+        aiResponse = `📝 <strong>Õps, vihik on puhas nagu prillikivi!</strong><br>
+        Koer sõi kodutöö ära 🐶 või kumm kustutas lehed puhtaks!<br>
+        Aju on tühi ja ootan uusi tunde! Kirjuta mulle midagi, mida ma oskama pean! 🧠✨`;
+
+    // 3. Teaching new skills & rules ("Õpeta...", "Sa pead oskama...", "Kui ma ütlen X siis tee Y", "Õpi selgeks...")
+    } else if (
+        p.startsWith('õpeta') || p.startsWith('opeta') || p.includes('õpeta:') || p.includes('opeta:') ||
+        p.includes('sa pead oskama') || p.includes('pead oskama') || p.includes('õpi ära') || p.includes('opi ara') ||
+        p.includes('õpi selgeks') || p.includes('opi selgeks') || p.startsWith('teach') || p.startsWith('learn') ||
+        (p.includes('kui') && (p.includes('ütlen') || p.includes('utlen') || p.includes('kirjutan')) && (p.includes('siis') || p.includes(',')))
+    ) {
+        let trigger = '';
+        let actionStr = '';
+        let actionType: 'build' | 'answer' = 'build';
+
+        // Check format: "kui ma ütlen [X] siis tee [Y]" / "kui [X] siis [Y]"
+        const whenMatch = promptText.match(/(?:kui(?:\s+ma)?\s+(?:ütlen|utlen|kirjutan)?\s*)(.+?)(?:,\s*siis|\s+siis)\s*(?:tee|ehita|pane|vasta|spawn)?\s*(.+)/i);
+        // Check format: "õpeta: [X] = [Y]" or "õpeta [X] = [Y]"
+        const eqMatch = promptText.match(/(?:õpeta|opeta|teach)(?:\s*:\s*|\s+et\s+|\s+)(.+?)\s*=\s*(.+)/i);
+        // Check format: "õpeta: [X] on [Y]"
+        const isMatch = promptText.match(/(?:õpeta|opeta|teach)(?:\s*:\s*|\s+et\s+|\s+)(.+?)\s+on\s+(.+)/i);
+
+        if (whenMatch) {
+            trigger = whenMatch[1].replace(/["'”„]/g, '').trim();
+            actionStr = whenMatch[2].replace(/["'”„]/g, '').trim();
+        } else if (eqMatch) {
+            trigger = eqMatch[1].replace(/["'”„]/g, '').trim();
+            actionStr = eqMatch[2].replace(/["'”„]/g, '').trim();
+            actionType = 'answer';
+        } else if (isMatch) {
+            trigger = isMatch[1].replace(/["'”„]/g, '').trim();
+            actionStr = isMatch[2].replace(/["'”„]/g, '').trim();
+        } else {
+            // General "õpeta [X]" or "sa pead oskama [X]"
+            const cleaned = promptText
+                .replace(/(?:õpeta|opeta|sa pead oskama|pead oskama|õpi selgeks|opi selgeks|õpi ära|opi ara|teach me|teach|learn|you must know)\s*:?\s*/i, '')
+                .trim();
+            if (cleaned.includes('=')) {
+                const parts = cleaned.split('=');
+                trigger = parts[0].trim();
+                actionStr = parts[1].trim();
+                actionType = 'answer';
+            } else {
+                trigger = cleaned;
+                actionStr = cleaned;
+            }
+        }
+
+        if (!trigger || trigger.length < 1) trigger = 'uus nali';
+        if (!actionStr || actionStr.length < 1) actionStr = trigger;
+
+        // Classify action type
+        const aLower = actionStr.toLowerCase();
+        if (aLower.includes('vasta') || aLower.includes('ütle') || aLower.includes('utle') || aLower.includes('kartul') || aLower.includes('nali') || aLower.includes('on ')) {
+            actionType = 'answer';
+        } else if (aLower.includes('ehita') || aLower.includes('tee') || aLower.includes('pane') || aLower.includes('mopeed') || aLower.includes('auto') || aLower.includes('rakett') || aLower.includes('maja') || aLower.includes('torn') || aLower.includes('kurk')) {
+            actionType = 'build';
+        }
+
+        // Clean action label
+        const cleanAction = actionStr.replace(/^(?:tee|ehita|pane|vasta|ütle|spawn)\s+/i, '').trim();
+
+        // Save into AI School memory
+        const memory = loadAiSchoolMemory();
+        const existingIdx = memory.findIndex(m => m.trigger.toLowerCase() === trigger.toLowerCase());
+        const newRule: AiSchoolRule = {
+            trigger: trigger,
+            actionType: actionType,
+            taughtContent: cleanAction.charAt(0).toUpperCase() + cleanAction.slice(1),
+            humorousReply: `Tegin valmis täpselt nii nagu sa mulle koolis õpetasid! 🎓✨`,
+            timestamp: Date.now()
+        };
+
+        if (existingIdx >= 0) {
+            memory[existingIdx] = newRule;
+        } else {
+            memory.push(newRule);
+        }
+        saveAiSchoolMemory(memory);
+
+        const funnyPhrases = [
+            'Aju tegi piiks-piiks ja hammasrattad hakkasid ragisema! 🧠⚙️',
+            'Kirjutasin kohe kuldse pastakaga vihiku esimesele lehele! 📝✨',
+            'Aju ragiseb... IQ tõusis just +50 punkti võrra! ⚡️🧠',
+            'Õps, sain kohe aru! Istun esimeses pingis ja panen kõik kõrva taha! 🎒⭐',
+            'Kõvaketas tegi brrr ja salvestas selle igaveseks! 💾🔥'
+        ];
+        const funnySound = funnyPhrases[Math.floor(Math.random() * funnyPhrases.length)];
+
+        aiResponse = `🎓 <strong>JAA ÕPETAJA! Kirjutasin kohe vihikusse üles!</strong><br>
+        ${funnySound}<br>
+        Nüüd ma tean: kui sa ütled mulle <strong>"${trigger}"</strong>, siis ma <strong>${actionType === 'build' ? 'ehitan ' + newRule.taughtContent : 'vastan: "' + newRule.taughtContent + '"'}</strong>!<br>
+        ⭐ <strong>Hinne päevikusse: 5+!</strong> Proovi mind kohe testida – kirjuta siia vestlusesse <em>"${trigger}"</em> ja vaata mis juhtub! 🚀🎒`;
+
+    // 4. Check if prompt matches any taught knowledge from memory!
+    } else if (loadAiSchoolMemory().some(rule => p.includes(rule.trigger.toLowerCase()))) {
+        const matchedRule = loadAiSchoolMemory().find(rule => p.includes(rule.trigger.toLowerCase()))!;
+        if (matchedRule.actionType === 'build') {
+            const buildName = matchedRule.taughtContent;
+            const bLower = buildName.toLowerCase();
+            const isVehicle = bLower.includes('mopeed') || bLower.includes('auto') || bLower.includes('car') || bLower.includes('scooter') || bLower.includes('tank') || bLower.includes('kurgimopeed');
+            const isAirplane = bLower.includes('rakett') || bLower.includes('rocket') || bLower.includes('lennuk') || bLower.includes('plane') || bLower.includes('banaanirakett');
+
+            const mesh = createCustomProceduralMesh(buildName, buildName, true);
+            mesh.position.set(0, 0, -4.5);
+            scene.add(mesh);
+
+            const newPlaced: PlacedObject = {
+                id: 'placed_ai_school_' + Date.now(),
+                mesh: mesh,
+                catalogId: 'school_' + Date.now(),
+                name: `🎓 ${buildName}`,
+                category: (isVehicle || isAirplane) ? 'vehicles' : 'custom',
+                isAirplane: isAirplane,
+                position: { x: 0, y: 0, z: -4.5 },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 },
+                color: '#2ecc71'
+            };
+            placedObjects.push(newPlaced);
+            generatedObjectsCount++;
+
+            aiResponse = `🎓 <strong>Õpetaja vaata! Tegin täpselt nii nagu sa mulle AI Koolis õpetasid!</strong><br>
+            ✨ <strong>Valmis sai: ${buildName}!</strong><br>
+            ${matchedRule.humorousReply || 'Kõik mutrid ja poldid on paigas ja õpetaja käsk 100% täidetud!'}${(isVehicle || isAirplane) ? '<br>🚗/✈️ <em>See masin on Play Test režiimis sõidetav / lennatav! Vajuta [F] sisenemiseks!</em>' : ''}<br>
+            ⭐ <strong>Koolihinne: 5+!</strong> <em>Õpilane Robi ootab uusi ülesandeid!</em>`;
+
+        } else {
+            // Humorous verbal answer
+            aiResponse = `🎓 <strong>Õpetaja, ma tean vastust!</strong><br>
+            🧠 <strong>${matchedRule.taughtContent}</strong><br>
+            ${matchedRule.humorousReply || 'Täpselt nii nagu koolitunnis vihikusse kirjutasin!'}<br>
+            ⭐ <strong>Hinne: 5+!</strong>`;
+        }
 
     // --- 0.1 ENVIRONMENT & WEATHER SETTINGS ---
     } else if (p.includes('öö') || p.includes('night') || p.includes('pime') || p.includes('dark')) {
@@ -5002,8 +5399,11 @@ export function executeAiBuild(promptText: string) {
     // Append AI Response to chat
     if (chatLog) {
         const botMsg = document.createElement('div');
-        botMsg.style.cssText = 'background: rgba(255,255,255,0.08); border-left: 3px solid #00f2fe; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; line-height: 1.4;';
-        botMsg.innerHTML = `🤖 <strong>AI Builder:</strong><br>${aiResponse}`;
+        const isSchoolMsg = aiResponse.includes('🎓') || aiResponse.includes('📚') || aiResponse.includes('Robi') || aiResponse.includes('vihik');
+        const borderCol = isSchoolMsg ? '#ffd32a' : '#00f2fe';
+        const botTitle = isSchoolMsg ? '🤖🎒 <strong>Õpilane Robi (AI Kool):</strong>' : '🤖 <strong>AI Builder:</strong>';
+        botMsg.style.cssText = `background: rgba(255,255,255,0.08); border-left: 3px solid ${borderCol}; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; line-height: 1.4;`;
+        botMsg.innerHTML = `${botTitle}<br>${aiResponse}`;
         chatLog.appendChild(botMsg);
         chatLog.scrollTop = chatLog.scrollHeight;
     }

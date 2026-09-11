@@ -364,7 +364,7 @@
                 <span>➕</span> <span>New</span>
             </button>
             <button id="btn-toggle-ai" class="btn-studio" style="background: linear-gradient(135deg, #8e44ad, #9b59b6); border-color: #e056fd; color: white; box-shadow: 0 0 15px rgba(155, 89, 182, 0.4);">
-                <span>🤖</span> <span>AI Assistant</span>
+                <span>🤖🎒</span> <span>AI Kool & Assistent</span>
             </button>
             <button id="btn-save-draft" class="btn-studio" style="background: rgba(0, 242, 254, 0.15); border-color: rgba(0, 242, 254, 0.4); color: #00f2fe;">
                 <span>💾</span> <span>Save Game</span>
@@ -712,38 +712,51 @@
         </div>
     </div>
 
-    <!-- AI Assistant Co-Pilot Modal / Panel -->
-    <div id="ai-assistant-modal" style="display: none; position: fixed; bottom: 80px; right: 300px; width: 380px; max-width: calc(100vw - 40px); background: rgba(18, 22, 30, 0.96); backdrop-filter: blur(16px); border: 2px solid #a855f7; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(168, 85, 247, 0.3); z-index: 120; flex-direction: column; overflow: hidden;">
+    <!-- AI Assistant & AI Kool Co-Pilot Modal / Panel -->
+    <div id="ai-assistant-modal" style="display: none; position: fixed; bottom: 80px; right: 300px; width: 400px; max-width: calc(100vw - 40px); background: rgba(18, 22, 30, 0.96); backdrop-filter: blur(16px); border: 2px solid #a855f7; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(168, 85, 247, 0.3); z-index: 120; flex-direction: column; overflow: hidden;">
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, rgba(142, 68, 173, 0.8), rgba(155, 89, 182, 0.8)); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.15);">
+        <div style="background: linear-gradient(135deg, rgba(142, 68, 173, 0.85), rgba(155, 89, 182, 0.85)); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.15);">
             <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.95rem; color: #fff;">
-                <span style="font-size: 1.2rem;">🤖</span>
-                <span>Playard AI Game Assistant</span>
+                <span style="font-size: 1.25rem;">🤖🎒</span>
+                <span id="ai-modal-header-title">Playard AI Kool & Assistent</span>
             </div>
             <button id="btn-close-ai" style="background: transparent; border: none; color: #fff; font-size: 1.1rem; cursor: pointer; padding: 2px 6px;">✕</button>
         </div>
 
+        <!-- AI Student School Status Bar -->
+        <div id="ai-school-status-bar" style="background: rgba(0,0,0,0.4); padding: 7px 14px; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; border-bottom: 1px solid rgba(255,255,255,0.08); color: #ffd32a;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span>🎓 Õpilane: <strong>Robi-AI 🤖</strong></span>
+                <span style="color: rgba(255,255,255,0.3);">|</span>
+                <span>Klass: <strong>1.C</strong></span>
+                <span style="color: rgba(255,255,255,0.3);">|</span>
+                <span>Hinne: <strong style="color: #2ecc71;">5+ ⭐</strong></span>
+            </div>
+            <div id="ai-school-iq-counter" style="color: #00f2fe; font-weight: bold;">🧠 IQ: 100</div>
+        </div>
+
         <!-- Chat / Response Body -->
-        <div id="ai-chat-log" style="padding: 14px; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
+        <div id="ai-chat-log" style="padding: 14px; max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
             <div id="ai-welcome-msg" style="background: rgba(255,255,255,0.06); border-radius: 10px; padding: 10px; border-left: 3px solid #a855f7; color: #e2e8f0; line-height: 1.4;">
-                👋 <strong>Hello! I am your AI Game Assistant.</strong><br>
-                Tell me what you would like to build, ask math questions (e.g. 1+1), or ask me to add details and decorations to objects! 🚀
+                👋 <strong>Tere õpetaja! See chat on minu AI Kool! 🏫🎒</strong><br>
+                Kirjuta mulle siia, mida ma oskama pean (nt <em>"õpeta: kui ma ütlen kurgimopeed, siis tee roheline mopeed"</em> või <em>"õpeta: 2+2=kartul"</em>)!<br>
+                Kirjutan kohe vihikusse, aju ragiseb ja vastan sulle sekundiga! 🧠⚡️
             </div>
         </div>
 
-        <!-- Quick AI Suggestions -->
+        <!-- Quick AI Suggestions & School Lessons -->
         <div id="ai-quick-container" style="padding: 8px 14px; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 6px; flex-wrap: wrap;">
-            <button class="ai-quick-btn" data-prompt="Add roads, cones, and street lights to the car" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🚗 Add details to car</button>
-            <button class="ai-quick-btn" data-prompt="Add rocks, flowers, and path to the trees" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌲 Decorate forest</button>
-            <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
-            <button class="ai-quick-btn" data-prompt="Create a big city with skyscrapers and cars" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏙️ Metropolis</button>
+            <button class="ai-quick-btn" data-prompt="Õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥒 Õpeta kurgimopeed</button>
+            <button class="ai-quick-btn" data-prompt="Õpeta: banaanirakett lendab kosmosesse" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🍌 Õpeta banaanirakett</button>
+            <button class="ai-quick-btn" data-prompt="Õpeta: 2+2=kartul" style="background: rgba(230, 126, 34, 0.2); border: 1px solid #e67e22; color: #f39c12; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥔 Õpeta 2+2=kartul</button>
+            <button class="ai-quick-btn" data-prompt="Mida sa oskad? Näita vihikut" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">📚 Näita vihikut</button>
         </div>
 
         <!-- Input Box -->
         <div style="padding: 10px 14px; background: rgba(10, 14, 20, 0.9); display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <input type="text" id="ai-prompt-input" placeholder="Type prompt or question (e.g. 1+1 or add car)..." style="flex: 1; background: #1a222d; border: 1px solid rgba(168, 85, 247, 0.5); border-radius: 8px; padding: 8px 12px; color: white; font-size: 0.85rem; outline: none;">
+            <input type="text" id="ai-prompt-input" placeholder="Õpeta mind (nt 'õpeta kui ütlen X siis tee Y') või küsi..." style="flex: 1; background: #1a222d; border: 1px solid rgba(168, 85, 247, 0.5); border-radius: 8px; padding: 8px 12px; color: white; font-size: 0.85rem; outline: none;">
             <button id="btn-ai-submit" style="background: linear-gradient(135deg, #8e44ad, #a855f7); border: none; color: white; font-weight: bold; border-radius: 8px; padding: 8px 14px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                <span>✨</span> Create
+                <span>🎓</span> Õpeta / Saada
             </button>
         </div>
     </div>

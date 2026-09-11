@@ -764,7 +764,36 @@ try {
         console.log("   Shop mute button exists:", !!shopMuteBtn);
         if (!shopMuteBtn) throw new Error("Expected #btn-shop-emote-mute mute toggle button in Avatar Shop!");
 
-        console.log("   ✅ Emote Audio System tests passed!");
+        // Test all 22 emote actions have real audio file mappings (MP3 / OGG)
+        const realAudioUrls = await page.evaluate(() => {
+            const ea = window.playardEmoteAudio;
+            const emotes = ['wave', 'dance', 'salute', 'backflip', 'breakdance', 'laugh', 'flex',
+                'levitate', 'zombie', 'guitar', 'dab', 'moonwalk', 'tpose', 'robot_dance',
+                'kungfu', 'headspin', 'cheer', 'bow', 'matrix_dodge', 'hype_clap', 'slow_clap', 'ground_slam'];
+            const results = {};
+            emotes.forEach(e => {
+                results[e] = ea.getRealAudioUrl ? ea.getRealAudioUrl(e) : null;
+            });
+            return results;
+        });
+        const missingRealAudio = Object.entries(realAudioUrls).filter(([_k, v]) => !v).map(([k]) => k);
+        console.log("   All 22 emotes have real audio file mappings:", missingRealAudio.length === 0);
+        if (missingRealAudio.length > 0) {
+            throw new Error(`Missing real audio mappings for emotes: ${missingRealAudio.join(', ')}`);
+        }
+
+        // Verify a real audio file can be fetched from the web server (HTTP 200)
+        const sampleAudioFetch = await page.evaluate(async () => {
+            const url = window.playardEmoteAudio?.getRealAudioUrl('guitar');
+            const res = await fetch(url);
+            return { ok: res.ok, status: res.status, length: (await res.blob()).size, url };
+        });
+        console.log("   Sample real audio file fetch:", JSON.stringify(sampleAudioFetch));
+        if (!sampleAudioFetch.ok || sampleAudioFetch.status !== 200 || sampleAudioFetch.length < 1000) {
+            throw new Error(`Failed to fetch real emote audio file from server (${sampleAudioFetch.url})!`);
+        }
+
+        console.log("   ✅ Emote Audio System & Real MP3/OGG Audio tests passed!");
         // ─── End Emote Audio Tests ──────────────────────────────────
         await page.click('#btn-avatar-save-config');
         await page.waitForFunction(() => {
@@ -1096,6 +1125,37 @@ try {
             // Test In-Game Money and Yards Activation ("lisa raha" & "lisa yardid")
             console.log("   Testing Money and Yards Activation ('lisa raha', 'lisa yardid')...");
             await submitAi('lisa raha ja lisa yardid');
+
+            // --- Test AI Kool (AI School in Chat: Humorous Teaching & Instant Learning) ---
+            console.log("   Testing AI Kool in Chat (Humorous Teaching & Instant Response)...");
+            const schoolBarVis = await page.$eval('#ai-school-status-bar', el => window.getComputedStyle(el).display);
+            if (schoolBarVis === 'none') {
+                throw new Error("AI School status bar failed to display in AI modal!");
+            }
+
+            // 1. Teach the AI: "õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed"
+            await submitAi('õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed');
+            const teachChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            console.log("   AI School Teaching Output:", teachChat.substring(teachChat.lastIndexOf('JAA ÕPETAJA')).substring(0, 100));
+            if (!teachChat.includes('JAA ÕPETAJA') && !teachChat.includes('vihikusse')) {
+                throw new Error("AI School failed to respond to teaching prompt in funny student language!");
+            }
+
+            // 2. Trigger the taught command: "tee kurgimopeed"
+            await submitAi('tee kurgimopeed');
+            const executeChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            console.log("   AI School Execution Output:", executeChat.substring(executeChat.lastIndexOf('Õpetaja vaata')).substring(0, 100));
+            if (!executeChat.includes('Õpetaja vaata') && !executeChat.includes('Kurgimopeed')) {
+                throw new Error("AI School failed to execute taught creation with student feedback!");
+            }
+
+            // 3. Notebook view: "Mida sa oskad? Näita vihikut"
+            await submitAi('Mida sa oskad? Näita vihikut');
+            const notebookChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            if (!notebookChat.includes('koolivihik') && !notebookChat.includes('Õpilase Robi')) {
+                throw new Error("AI School notebook query failed!");
+            }
+            console.log("   Successfully tested AI Kool in Chat (Instant humorous teaching, memory, and execution)!");
 
             // Test Undo and Redo
             console.log("   Testing Undo and Redo...");
@@ -4494,7 +4554,15 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('http://localhost:4173/games/games/metro/index.html?mobile=true');
+            for (let retry = 0; retry < 3; retry++) {
+                try {
+                    await page.goto('http://localhost:4173/games/games/metro/index.html?mobile=true');
+                    break;
+                } catch (err) {
+                    if (retry === 2) throw err;
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
             await new Promise(r => setTimeout(r, 800));
             const metroMobile = await page.evaluate(() => {
                 const layer = document.getElementById('playard-universal-mobile-controls');
