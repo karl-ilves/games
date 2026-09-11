@@ -4902,13 +4902,6 @@ function setupWorkbenchEvents() {
         });
     }
 
-    const behSelect = document.getElementById('workbench-behavior-select') as HTMLSelectElement | null;
-    if (behSelect) {
-        behSelect.addEventListener('change', () => {
-            currentWorkbenchState.behavior = behSelect.value as any;
-            rebuildWorkbenchModel();
-        });
-    }
 
     // Height / Elevation Push-Pull Buttons and Sliders
     document.getElementById('btn-wb-height-up')?.addEventListener('click', () => {
