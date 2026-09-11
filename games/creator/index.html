@@ -660,15 +660,47 @@
                 </div>
             </div>
 
-            <!-- Logic & Script Trigger Settings -->
-            <div style="margin-top: 12px; background: rgba(0,0,0,0.35); padding: 10px; border-radius: 10px; border: 1px solid rgba(46,204,113,0.4);">
-                <div style="font-size: 0.8rem; color: #2ecc71; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                    <span>📜</span> <span>Game Logic / Text on Walkthrough</span>
+            <!-- Logic & Script Settings Panel -->
+            <div style="margin-top: 12px; background: rgba(15, 23, 42, 0.65); padding: 10px; border-radius: 10px; border: 1.5px solid rgba(0, 242, 254, 0.35);">
+                <div style="font-size: 0.8rem; color: #00f2fe; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span>📜</span> <span>Object Script / Loogika</span>
+                    </div>
+                    <span id="script-status-badge" style="font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,0.08); color: #94a3b8;">Pole skripti</span>
                 </div>
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px;">
-                    When player walks near the object, display:
+
+                <!-- Presets dropdown -->
+                <div style="margin-bottom: 8px;">
+                    <label style="font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 3px;">Kiirskript / Preset:</label>
+                    <select id="script-preset-select" style="width: 100%; box-sizing: border-box; padding: 6px 8px; background: #0f172a; border: 1px solid #3b82f6; border-radius: 6px; color: #fff; font-size: 0.8rem;">
+                        <option value="none">-- Vali valmis skript --</option>
+                        <option value="speed_boost">⚡ Kiirenduspadi (Speed Boost 2x)</option>
+                        <option value="jump_boost">🚀 Superhüpe (High Jump Pad)</option>
+                        <option value="give_coins">🪙 Müntide andja (+10 Coins)</option>
+                        <option value="give_yards">💎 Yardide andja (+5 Yards)</option>
+                        <option value="damage">🩸 Ohtlik lõks / Laava (-25 HP)</option>
+                        <option value="heal">❤️ Ravipakk / Medkit (+40 HP)</option>
+                        <option value="dialog">💬 Rääkiv NPC / Teade</option>
+                        <option value="teleport">🌀 Teleport alguspunkti</option>
+                        <option value="rotate">🔄 Pidev pöörlemine</option>
+                        <option value="elevator">↕️ Liikuv lift / platvorm</option>
+                        <option value="play_sound">🔊 Heliefekti mängija</option>
+                        <option value="custom_js">💻 Oma JavaScript kood</option>
+                    </select>
                 </div>
-                <input type="text" id="obj-trigger-text" placeholder="nt: Leidsid võlumetsa saladuse!" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #0f172a; border: 1.5px solid #2ecc71; border-radius: 6px; color: #fff; font-size: 0.85rem;">
+
+                <!-- Open Full Script Editor button -->
+                <button id="btn-open-script-editor" class="btn-studio" style="width: 100%; justify-content: center; background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(59,130,246,0.25)); border-color: #00f2fe; color: #00f2fe; font-weight: bold; font-size: 0.8rem; margin-bottom: 6px;">
+                    <span>⚡</span> <span>Ava Skripti Redaktor</span>
+                </button>
+
+                <!-- Quick text message trigger (Walkthrough) -->
+                <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 3px;">
+                    Kiirtekst läheduses (Walkthrough text):
+                </div>
+                <input type="text" id="obj-trigger-text" placeholder="nt: Leidsid võlumetsa saladuse!" style="width: 100%; box-sizing: border-box; padding: 6px 8px; background: #0f172a; border: 1px solid #485460; border-radius: 6px; color: #fff; font-size: 0.8rem;">
+
+                <div id="script-active-summary" style="margin-top: 6px; font-size: 0.72rem; color: #2ecc71; display: none;"></div>
             </div>
 
             <button id="btn-duplicate-obj" class="btn-studio" style="width: 100%; margin-top: 10px; justify-content: center;">
@@ -706,6 +738,130 @@
             <button id="cam-btn-zoom-out" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom Out (-)">🔍➖</button>
             <button id="cam-btn-rot-left" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Left">🔄 ◀</button>
             <button id="cam-btn-rot-right" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Right">🔄 ▶</button>
+        </div>
+    </div>
+
+    <!-- Script Editor Modal -->
+    <div id="script-editor-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 250; align-items: center; justify-content: center; padding: 15px;">
+        <div style="background: #111827; border: 2px solid #00f2fe; border-radius: 18px; width: 100%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 30px rgba(0,242,254,0.25);">
+            <!-- Header -->
+            <div style="padding: 16px 20px; background: #1f2937; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.5rem;">📜</span>
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.15rem; color: #00f2fe;">Skripti Redaktor (Script Editor)</div>
+                        <div style="font-size: 0.78rem; color: #9ca3af;" id="script-modal-obj-name">Objekt: Kuup</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #2ecc71; font-weight: bold; cursor: pointer;">
+                        <input type="checkbox" id="script-modal-enable" checked style="width: 16px; height: 16px; cursor: pointer;">
+                        <span>Aktiivne</span>
+                    </label>
+                    <button id="btn-close-script-modal" style="background: transparent; border: none; color: #9ca3af; font-size: 1.3rem; cursor: pointer; padding: 2px 6px;">✕</button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div style="display: flex; background: #172033; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 4px 16px; gap: 8px;">
+                <button id="script-tab-visual" class="btn-studio active" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px 8px 0 0; background: rgba(0,242,254,0.15); color: #00f2fe; border-color: #00f2fe;">
+                    ⚡ Visuaalne Redaktor
+                </button>
+                <button id="script-tab-code" class="btn-studio" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px 8px 0 0; background: transparent; color: #9ca3af; border-color: transparent;">
+                    💻 JavaScript Kood
+                </button>
+            </div>
+
+            <!-- Modal Content Body -->
+            <div style="padding: 18px 20px; overflow-y: auto; flex: 1;">
+                <!-- VISUAL BUILDER SECTION -->
+                <div id="script-visual-section">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <!-- Trigger Box -->
+                        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px;">
+                            <label style="font-weight: 800; font-size: 0.85rem; color: #ffd32a; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                                <span>🎯</span> <span>Millal käivitub? (Trigger)</span>
+                            </label>
+                            <select id="script-form-trigger" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #1e293b; border: 1px solid #ffd32a; border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                                <option value="onPlayerTouch">🚶 Kui mängija puudutab (Touch / Proximity)</option>
+                                <option value="onInteract">⌨️ Kui vajutatakse klahvi [E] (Interact Prompt)</option>
+                                <option value="onTimer">⏱️ Taimeriga korduvalt (Timer Interval)</option>
+                                <option value="onStart">▶️ Mängu alguses kohe (On Start)</option>
+                            </select>
+
+                            <!-- Timer interval input -->
+                            <div id="script-timer-interval-row" style="display: none; margin-top: 10px;">
+                                <label style="font-size: 0.78rem; color: #94a3b8; display: block; margin-bottom: 3px;">Taimeri intervall (sekundites):</label>
+                                <input type="number" id="script-timer-interval" value="3" min="0.5" step="0.5" style="width: 100%; box-sizing: border-box; padding: 6px 8px; background: #0f172a; border: 1px solid #485460; border-radius: 6px; color: #fff; font-size: 0.85rem;">
+                            </div>
+                        </div>
+
+                        <!-- Action Box -->
+                        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px;">
+                            <label style="font-weight: 800; font-size: 0.85rem; color: #00f2fe; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                                <span>⚡</span> <span>Mida teeb? (Action)</span>
+                            </label>
+                            <select id="script-form-action" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #1e293b; border: 1px solid #00f2fe; border-radius: 8px; color: #fff; font-size: 0.85rem;">
+                                <option value="speed_boost">⚡ Kiirendusmängijale (Speed Boost)</option>
+                                <option value="jump_boost">🚀 Kõrghüpe (Super Jump)</option>
+                                <option value="give_coins">🪙 Anna münte (+Coins)</option>
+                                <option value="give_yards">💎 Anna Playard Yarde (+Yards)</option>
+                                <option value="dialog">💬 Kuva dialoogiaken / tekst</option>
+                                <option value="damage">🩸 Tee kahju / vigasta (-HP)</option>
+                                <option value="heal">❤️ Ravi elusid (+HP)</option>
+                                <option value="teleport">🌀 Telepordi mängija</option>
+                                <option value="play_sound">🔊 Mängi heliefekti (SFX)</option>
+                                <option value="change_color">🎨 Muuda objekti värvi</option>
+                                <option value="animate_motion">🔄 Pane objekt pöörlema / liikuma</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Action Parameters Container -->
+                    <div id="script-action-params-container" style="background: rgba(0,242,254,0.05); border: 1.5px solid rgba(0,242,254,0.25); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+                        <!-- Injected dynamically based on action -->
+                    </div>
+
+                    <!-- Cooldown row -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px;">
+                        <span style="font-size: 0.8rem; color: #94a3b8;">⏱️ Ooteaeg uuesti käivitumiseni (Cooldown sekundites):</span>
+                        <input type="number" id="script-cooldown" value="1.5" min="0.1" step="0.2" style="width: 80px; padding: 4px 8px; background: #1e293b; border: 1px solid #485460; border-radius: 6px; color: #fff; font-size: 0.85rem; text-align: center;">
+                    </div>
+                </div>
+
+                <!-- CODE BUILDER SECTION -->
+                <div id="script-code-section" style="display: none; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 0.8rem; color: #94a3b8;">Kirjuta JavaScript koodi (Playard Safe Sandbox API):</span>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <button type="button" class="btn-script-snippet" data-code="api.player.setSpeed(16, 4);" style="font-size: 0.72rem; padding: 3px 6px; background: rgba(0,242,254,0.15); border: 1px solid #00f2fe; color: #00f2fe; border-radius: 4px; cursor: pointer;">+ Kiirus</button>
+                            <button type="button" class="btn-script-snippet" data-code="api.player.jump(18);" style="font-size: 0.72rem; padding: 3px 6px; background: rgba(255,211,42,0.15); border: 1px solid #ffd32a; color: #ffd32a; border-radius: 4px; cursor: pointer;">+ Hüpe</button>
+                            <button type="button" class="btn-script-snippet" data-code="api.player.giveCoins(15);" style="font-size: 0.72rem; padding: 3px 6px; background: rgba(46,204,113,0.15); border: 1px solid #2ecc71; color: #2ecc71; border-radius: 4px; cursor: pointer;">+ Mündid</button>
+                            <button type="button" class="btn-script-snippet" data-code="api.sound.play('powerup');" style="font-size: 0.72rem; padding: 3px 6px; background: rgba(168,85,247,0.15); border: 1px solid #a855f7; color: #c084fc; border-radius: 4px; cursor: pointer;">+ Heli</button>
+                            <button type="button" class="btn-script-snippet" data-code="api.hud.showMessage('Tere tulemast!', 'info');" style="font-size: 0.72rem; padding: 3px 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 4px; cursor: pointer;">+ Teade</button>
+                        </div>
+                    </div>
+                    <textarea id="script-code-editor" style="width: 100%; height: 220px; box-sizing: border-box; padding: 12px; background: #090d16; border: 1.5px solid #3b82f6; border-radius: 10px; color: #38ef7d; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.85rem; line-height: 1.4; outline: none; resize: vertical; tab-size: 2;" placeholder="// Kirjuta kood siia..."></textarea>
+                    <div style="font-size: 0.75rem; color: #64748b; background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 6px;">
+                        💡 <em>Kättesaadavad liidesed: <code>api.player.damage(amt)</code>, <code>api.player.heal(amt)</code>, <code>api.player.setSpeed(spd, dur)</code>, <code>api.player.jump(h)</code>, <code>api.player.teleport(x, y, z)</code>, <code>api.player.giveCoins(amt)</code>, <code>api.player.giveYards(amt)</code>, <code>api.sound.play(name)</code>, <code>api.hud.showMessage(text, title)</code>, <code>api.object.setColor(hex)</code>, <code>api.object.rotate(x, y, z)</code></em>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 14px 20px; background: #1f2937; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <button id="btn-delete-script" style="background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; font-weight: bold; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;">
+                    🗑️ Eemalda Skript
+                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-test-script" style="background: rgba(255,211,42,0.2); border: 1px solid #ffd32a; color: #ffd32a; font-weight: bold; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;">
+                        ▶️ Testi Kohe
+                    </button>
+                    <button id="btn-save-script" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border: none; color: #000; font-weight: 800; padding: 8px 20px; border-radius: 8px; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 15px rgba(0,242,254,0.4);">
+                        💾 Salvesta Skript
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

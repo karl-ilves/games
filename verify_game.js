@@ -1242,6 +1242,137 @@ try {
             // Exit Play Test
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
+
+            // Test 3D Object Scripting System (Visual Builder, JavaScript Code Sandbox, Presets & Triggers)
+            console.log("   Testing 3D Object Scripting System in Creator Studio...");
+            const scriptElementsExist = await page.evaluate(() => {
+                const presetSelect = !!document.getElementById('script-preset-select');
+                const openBtn = !!document.getElementById('btn-open-script-editor');
+                const badge = !!document.getElementById('script-status-badge');
+                const modal = !!document.getElementById('script-editor-modal');
+                return presetSelect && openBtn && badge && modal;
+            });
+            console.log("   Scripting UI elements exist in Inspector & DOM:", scriptElementsExist);
+            if (!scriptElementsExist) {
+                throw new Error("Expected Scripting UI elements (#script-preset-select, #btn-open-script-editor, #script-status-badge, #script-editor-modal) to exist!");
+            }
+
+            // Select placed object
+            await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                if (cs && cs.placedObjects && cs.placedObjects.length > 0) {
+                    cs.selectObject(cs.placedObjects[0]);
+                }
+            });
+            await new Promise(r => setTimeout(r, 300));
+
+            // 1. Test Preset: Speed Boost
+            console.log("   Testing Script Preset: Speed Boost...");
+            await page.select('#script-preset-select', 'speed_boost');
+            await page.evaluate(() => {
+                document.getElementById('script-preset-select').dispatchEvent(new Event('change'));
+            });
+            await new Promise(r => setTimeout(r, 300));
+
+            const speedScriptActive = await page.evaluate(() => {
+                const badge = document.getElementById('script-status-badge')?.textContent || '';
+                const summary = document.getElementById('script-active-summary')?.textContent || '';
+                const cs = window.creatorStudio;
+                const objScript = cs?.selectedObject?.script;
+                return badge.includes('Aktiivne') && summary.includes('speed_boost') && objScript?.actions[0]?.type === 'speed_boost';
+            });
+            console.log("   Speed Boost preset applied successfully:", speedScriptActive);
+            if (!speedScriptActive) {
+                throw new Error("Speed Boost preset was not applied correctly to selectedObject!");
+            }
+
+            // 2. Test Open Script Editor Modal & Tab Switching
+            console.log("   Testing Script Editor Modal Open & Tab Switching...");
+            await page.click('#btn-open-script-editor');
+            await new Promise(r => setTimeout(r, 300));
+            const modalOpen = await page.$eval('#script-editor-modal', el => window.getComputedStyle(el).display);
+            if (modalOpen !== 'flex') {
+                throw new Error("Expected #script-editor-modal to open with display: flex!");
+            }
+
+            // Switch to Code Tab
+            await page.click('#script-tab-code');
+            await new Promise(r => setTimeout(r, 200));
+            const codeSectionVisible = await page.$eval('#script-code-section', el => window.getComputedStyle(el).display);
+            if (codeSectionVisible !== 'flex') {
+                throw new Error("Expected #script-code-section to be flex when Code Tab is active!");
+            }
+
+            // Test clicking snippet button in code editor
+            await page.click('button[data-code*="setSpeed"]');
+            const codeEditorVal = await page.$eval('#script-code-editor', el => el.value);
+            if (!codeEditorVal.includes('setSpeed')) {
+                throw new Error("Expected code snippet to be inserted into #script-code-editor!");
+            }
+
+            // 3. Switch back to Visual Tab, configure Give Coins action, and save
+            console.log("   Testing Visual Form Builder: Give Coins Action...");
+            await page.click('#script-tab-visual');
+            await new Promise(r => setTimeout(r, 200));
+            await page.select('#script-form-action', 'give_coins');
+            await page.evaluate(() => {
+                document.getElementById('script-form-action').dispatchEvent(new Event('change'));
+            });
+            await new Promise(r => setTimeout(r, 200));
+
+            // Set coin amount to 25
+            await page.$eval('#script-param-coins', el => { el.value = '25'; });
+
+            // Save script from modal
+            await page.click('#btn-save-script');
+            await new Promise(r => setTimeout(r, 300));
+
+            const modalClosed = await page.$eval('#script-editor-modal', el => el.style.display);
+            if (modalClosed !== 'none') {
+                throw new Error("Expected #script-editor-modal to close after saving!");
+            }
+
+            // Verify coins script saved on object
+            const savedCoinScript = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const act = cs?.selectedObject?.script?.actions[0];
+                return act?.type === 'give_coins' && act?.amount === 25;
+            });
+            console.log("   Give Coins (25) script saved on 3D object:", savedCoinScript);
+            if (!savedCoinScript) {
+                throw new Error("Expected give_coins action with amount 25 to be saved on selectedObject!");
+            }
+
+            // 4. Test Script Execution: award coins
+            console.log("   Testing Script Execution in runtime...");
+            const initialCoins = await page.evaluate(() => window.creatorStudio?.playerCoins || 0);
+            await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                cs.executeObjectScript(cs.selectedObject, cs.humanCharacter.position, 'onPlayerTouch', true);
+            });
+            await new Promise(r => setTimeout(r, 300));
+            const coinsAfterScript = await page.evaluate(() => window.creatorStudio?.playerCoins || 0);
+            console.log(`   Player coins before: ${initialCoins}, after: ${coinsAfterScript} (expected +25)`);
+            if (coinsAfterScript !== initialCoins + 25) {
+                throw new Error(`Expected coins to increase by 25, got before=${initialCoins}, after=${coinsAfterScript}`);
+            }
+
+            // 5. Test Delete Script
+            console.log("   Testing Delete Script...");
+            await page.click('#btn-open-script-editor');
+            await new Promise(r => setTimeout(r, 200));
+            await page.click('#btn-delete-script');
+            await new Promise(r => setTimeout(r, 300));
+
+            const scriptDeleted = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const badge = document.getElementById('script-status-badge')?.textContent || '';
+                return !cs?.selectedObject?.script && badge.includes('Pole skripti');
+            });
+            console.log("   Script removed successfully from object:", scriptDeleted);
+            if (!scriptDeleted) {
+                throw new Error("Expected script to be deleted from selectedObject!");
+            }
         }
 
         // Test Submit for Review
