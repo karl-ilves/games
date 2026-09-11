@@ -171,6 +171,7 @@ interface SceneSnapshot {
     desc: string;
     category: string;
     envMode: 'day' | 'night' | 'sunset' | 'horror_fog';
+    mapType?: 'land' | 'sea';
     seaConfig?: SeaConfig | null;
     quest?: any;
     objects: Array<{
@@ -1006,6 +1007,62 @@ export function removeSea() {
     activeSeaConfig = null;
     if (grassPlane) grassPlane.visible = true;
     if (grassBlades) grassBlades.visible = true;
+    if (currentEnvMode === 'day') {
+        scene.background = new THREE.Color(0x87ceeb);
+    }
+    updateMapEnvironmentUI();
+}
+
+export function setMapEnvironment(type: 'land' | 'sea', spawnEntities?: boolean) {
+    if (type === 'sea') {
+        if (!activeSeaConfig || activeSeaConfig.type !== 'whole') {
+            const hasDock = placedObjects.some(p => p.catalogId === 'dock_wood');
+            const shouldSpawn = spawnEntities !== undefined ? spawnEntities : (!hasDock && placedObjects.length === 0);
+            createWholeMapOcean(shouldSpawn);
+        }
+    } else {
+        removeSea();
+    }
+    updateMapEnvironmentUI();
+    saveUndoSnapshot();
+    autoSaveDraft();
+}
+
+export function getMapEnvironment(): 'land' | 'sea' {
+    return activeSeaConfig ? 'sea' : 'land';
+}
+
+export function updateMapEnvironmentUI() {
+    const isSea = !!activeSeaConfig;
+    const btnLand = document.getElementById('btn-env-land');
+    const btnSea = document.getElementById('btn-env-sea');
+    if (btnLand && btnSea) {
+        if (isSea) {
+            btnSea.className = 'btn-studio active-map-env-sea';
+            btnSea.style.background = 'linear-gradient(135deg, #0984e3, #00cec9)';
+            btnSea.style.color = '#fff';
+            btnSea.style.borderColor = '#00f2fe';
+            btnSea.style.boxShadow = '0 0 12px rgba(0, 242, 254, 0.5)';
+
+            btnLand.className = 'btn-studio';
+            btnLand.style.background = 'rgba(255, 255, 255, 0.08)';
+            btnLand.style.color = '#94a3b8';
+            btnLand.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            btnLand.style.boxShadow = 'none';
+        } else {
+            btnLand.className = 'btn-studio active-map-env';
+            btnLand.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
+            btnLand.style.color = '#fff';
+            btnLand.style.borderColor = '#2ecc71';
+            btnLand.style.boxShadow = '0 0 10px rgba(46, 204, 113, 0.4)';
+
+            btnSea.className = 'btn-studio';
+            btnSea.style.background = 'rgba(255, 255, 255, 0.08)';
+            btnSea.style.color = '#74b9ff';
+            btnSea.style.borderColor = 'rgba(0, 242, 254, 0.25)';
+            btnSea.style.boxShadow = 'none';
+        }
+    }
 }
 
 export function isPositionInWater(x: number, z: number): boolean {
@@ -1163,6 +1220,7 @@ export function createWholeMapOcean(spawnEntities = true) {
             });
         });
     }
+    updateMapEnvironmentUI();
 }
 
 export function createPartMapOcean(axis: 'x' | 'z' = 'z', side: 'negative' | 'positive' = 'negative', spawnEntities = true) {
@@ -1340,6 +1398,7 @@ export function createPartMapOcean(axis: 'x' | 'z' = 'z', side: 'negative' | 'po
             color: '#ff4757'
         });
     }
+    updateMapEnvironmentUI();
 }
 
 export function createIslandOcean(spawnEntities = true) {
@@ -1459,6 +1518,7 @@ export function createIslandOcean(spawnEntities = true) {
             });
         });
     }
+    updateMapEnvironmentUI();
 }
 
 // --- Create 3D Mesh for Catalog Item ---
@@ -1835,6 +1895,7 @@ export function serializeCurrentScene() {
         category: catSelect?.value || 'Adventure',
         description: descInput?.value.trim() || '',
         playerMaxHealth: maxHp,
+        mapType: activeSeaConfig ? 'sea' : 'land',
         seaConfig: activeSeaConfig ? JSON.parse(JSON.stringify(activeSeaConfig)) : null,
         objects: placedObjects.map(p => ({
             id: p.id,
@@ -1896,17 +1957,20 @@ export function loadSceneFromData(sceneData: any) {
     if (!sceneData) return;
 
     // Restore Sea & Ocean environment if present
-    if (sceneData.seaConfig) {
-        if (sceneData.seaConfig.type === 'whole') {
+    if (sceneData.seaConfig || sceneData.mapType === 'sea') {
+        if (sceneData.seaConfig?.type === 'whole' || sceneData.mapType === 'sea') {
             createWholeMapOcean(false);
-        } else if (sceneData.seaConfig.type === 'island') {
+        } else if (sceneData.seaConfig?.type === 'island') {
             createIslandOcean(false);
-        } else {
+        } else if (sceneData.seaConfig?.type === 'part') {
             createPartMapOcean(sceneData.seaConfig.boundary?.axis || 'z', sceneData.seaConfig.boundary?.side || 'negative', false);
+        } else {
+            createWholeMapOcean(false);
         }
     } else {
         removeSea();
     }
+    updateMapEnvironmentUI();
 
     // Clear current placed objects
     placedObjects.forEach(p => scene.remove(p.mesh));
@@ -2258,6 +2322,10 @@ async function initStudio() {
         createPartMapOcean,
         createIslandOcean,
         removeSea,
+        setMapEnvironment,
+        getMapEnvironment,
+        updateMapEnvironmentUI,
+        startNewEmptyGame,
         isPositionInWater,
         executeAiBuild,
         loadAiSchoolMemory,
@@ -2746,6 +2814,7 @@ export function saveUndoSnapshot() {
         desc: descInput ? descInput.value : '',
         category: catSelect ? catSelect.value : 'Adventure',
         envMode: currentEnvMode,
+        mapType: activeSeaConfig ? 'sea' : 'land',
         seaConfig: activeSeaConfig ? JSON.parse(JSON.stringify(activeSeaConfig)) : null,
         quest: activeQuest ? JSON.parse(JSON.stringify(activeQuest)) : null,
         objects: placedObjects.map(p => ({
@@ -2776,17 +2845,20 @@ export function restoreSceneSnapshot(snapshot: SceneSnapshot) {
     if (!snapshot) return;
 
     // Restore Sea & Ocean environment
-    if (snapshot.seaConfig) {
-        if (snapshot.seaConfig.type === 'whole') {
+    if (snapshot.seaConfig || snapshot.mapType === 'sea') {
+        if (snapshot.seaConfig?.type === 'whole' || snapshot.mapType === 'sea') {
             createWholeMapOcean(false);
-        } else if (snapshot.seaConfig.type === 'island') {
+        } else if (snapshot.seaConfig?.type === 'island') {
             createIslandOcean(false);
-        } else {
+        } else if (snapshot.seaConfig?.type === 'part') {
             createPartMapOcean(snapshot.seaConfig.boundary?.axis || 'z', snapshot.seaConfig.boundary?.side || 'negative', false);
+        } else {
+            createWholeMapOcean(false);
         }
     } else {
         removeSea();
     }
+    updateMapEnvironmentUI();
 
     // Clear existing placed objects
     for (const p of placedObjects) {
@@ -3274,7 +3346,22 @@ function setupStudioEvents() {
     document.getElementById('btn-modal-new-game')?.addEventListener('click', () => {
         const modal = document.getElementById('my-games-modal');
         if (modal) modal.style.display = 'none';
-        startNewEmptyGame();
+        startNewEmptyGame('land');
+    });
+
+    document.getElementById('btn-modal-new-sea-game')?.addEventListener('click', () => {
+        const modal = document.getElementById('my-games-modal');
+        if (modal) modal.style.display = 'none';
+        startNewEmptyGame('sea');
+    });
+
+    // Map Environment Toggle (Maa vs Meri)
+    document.getElementById('btn-env-land')?.addEventListener('click', () => {
+        setMapEnvironment('land');
+    });
+
+    document.getElementById('btn-env-sea')?.addEventListener('click', () => {
+        setMapEnvironment('sea');
     });
 
     // Dismiss Feedback Banner Buttons
@@ -5353,7 +5440,7 @@ function setupWorkbenchEvents() {
 
 let activeFeedbackGameId: string | null = null;
 
-export function startNewEmptyGame() {
+export function startNewEmptyGame(initialEnv: 'land' | 'sea' = 'land') {
     if (placedObjects.length > 0 && !confirm('Alustada uut tühja mängu? Pooleli olev mäng jääb alles "My Games" alla.')) {
         return;
     }
@@ -5362,13 +5449,20 @@ export function startNewEmptyGame() {
     selectObject(null);
     removeSea();
 
+    if (initialEnv === 'sea') {
+        createWholeMapOcean(true);
+    } else {
+        removeSea();
+    }
+    updateMapEnvironmentUI();
+
     const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
     const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
     const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
 
-    if (titleInput) titleInput.value = 'My New 3D Adventure';
+    if (titleInput) titleInput.value = initialEnv === 'sea' ? 'My Ocean Adventure' : 'My New 3D Adventure';
     if (catSelect) catSelect.value = 'Adventure';
-    if (descInput) descInput.value = 'A brand new 3D world created in Playard!';
+    if (descInput) descInput.value = initialEnv === 'sea' ? 'A vast 3D ocean world created in Playard!' : 'A brand new 3D world created in Playard!';
 
     // Hide any active feedback banner permanently for this session
     localStorage.setItem('playard_hide_admin_feedback', 'true');
@@ -5376,7 +5470,9 @@ export function startNewEmptyGame() {
     if (banner) banner.style.display = 'none';
 
     autoSaveDraft();
-    alert('✨ Uus tühi mäng loodud! Vali esemeid vasakult kataloogist või küsi AI Assistendilt abi!');
+    alert(initialEnv === 'sea'
+        ? '🌊 Uus tühi meremäng loodud! Uju, ehita ja juhi kiirpaate suurel ookeanil!'
+        : '✨ Uus tühi mäng loodud! Vali esemeid vasakult kataloogist või küsi AI Assistendilt abi!');
 }
 
 export function renderMySavedGamesModal() {
@@ -5485,15 +5581,21 @@ async function restoreDraftOrFeedbackGame() {
 
     // 2. If no feedback game, restore local auto-saved draft
     if (!hasRestored) {
-        const draft = yardService.getDraftGame(profile?.username ?? null);
-        if (draft && Array.isArray(draft.objects) && draft.objects.length > 0) {
-            loadSceneFromData(draft);
-            const indicator = document.getElementById('draft-status-indicator');
-            if (indicator) {
-                indicator.innerText = '💾 Draft Restored';
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('env') === 'sea' || urlParams.get('map') === 'sea') {
+            createWholeMapOcean(true);
+        } else {
+            const draft = yardService.getDraftGame(profile?.username ?? null);
+            if (draft && Array.isArray(draft.objects) && draft.objects.length > 0) {
+                loadSceneFromData(draft);
+                const indicator = document.getElementById('draft-status-indicator');
+                if (indicator) {
+                    indicator.innerText = '💾 Draft Restored';
+                }
             }
         }
     }
+    updateMapEnvironmentUI();
 }
 
 // --- AI Game Builder Assistant ---

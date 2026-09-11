@@ -93,6 +93,19 @@
             box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
         }
 
+        .active-map-env {
+            background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+            color: #fff !important;
+            border: 1.5px solid #2ecc71 !important;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.4) !important;
+        }
+        .active-map-env-sea {
+            background: linear-gradient(135deg, #0984e3, #00cec9) !important;
+            color: #fff !important;
+            border: 1.5px solid #00f2fe !important;
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.5) !important;
+        }
+
         /* Left Object Catalog (5000 Objects Library) */
         .catalog-panel {
             position: absolute;
@@ -347,6 +360,19 @@
             </a>
             <span style="color: rgba(255,255,255,0.2);">|</span>
             <span>✨ 3D Creator Studio</span>
+        </div>
+
+        <!-- Kaardi alguse tüübi valik: Maa või Meri -->
+        <div id="map-environment-selector" style="display: flex; align-items: center; background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 12px; padding: 4px 8px; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.5);">
+            <span style="font-size: 0.85rem; font-weight: 800; color: #ffd32a; display: flex; align-items: center; gap: 4px; user-select: none;">
+                <span>🗺️</span> <span>Mapp:</span>
+            </span>
+            <button id="btn-env-land" class="btn-studio active-map-env" title="Maa keskkond (roheline muru ja kindel pinnas)" style="padding: 5px 14px; font-size: 0.85rem; border-radius: 8px; font-weight: 800; cursor: pointer; transition: all 0.2s;">
+                🌍 Maa
+            </button>
+            <button id="btn-env-sea" class="btn-studio" title="Mere keskkond (suur ookean, paadisild ja ujumisvesi)" style="padding: 5px 14px; font-size: 0.85rem; border-radius: 8px; font-weight: 800; background: rgba(255, 255, 255, 0.08); color: #74b9ff; border: 1.5px solid rgba(0, 242, 254, 0.25); cursor: pointer; transition: all 0.2s;">
+                🌊 Meri
+            </button>
         </div>
 
         <div class="studio-actions">
@@ -888,10 +914,15 @@
                 <!-- Populated dynamically -->
             </div>
             <!-- Footer -->
-            <div style="padding: 12px 20px; background: #1a2330; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
-                <button id="btn-modal-new-game" class="btn-studio" style="background: #2ecc71; border-color: #27ae60; color: white;">
-                    <span>➕</span> <span>Start New Empty Game</span>
-                </button>
+            <div style="padding: 12px 20px; background: #1a2330; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-modal-new-game" class="btn-studio" style="background: #2ecc71; border-color: #27ae60; color: white;">
+                        <span>🌍</span> <span>Uus Maa Mäng (Land)</span>
+                    </button>
+                    <button id="btn-modal-new-sea-game" class="btn-studio" style="background: #0984e3; border-color: #00cec9; color: white;">
+                        <span>🌊</span> <span>Uus Mere Mäng (Sea)</span>
+                    </button>
+                </div>
                 <button id="btn-modal-close-bottom" class="btn-studio" style="background: #34495e; color: white;">
                     Close
                 </button>

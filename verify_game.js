@@ -877,6 +877,58 @@ try {
         console.log("   Creator In-Game Emotes Bar exists in top-left:", !!creatorEmotesBar);
         if (!creatorEmotesBar) throw new Error("Expected In-Game Emotes Widget in Creator Studio!");
 
+        // Test Map Environment Selector (Maa vs Meri) at the start
+        console.log("   Testing Map Environment Selector (Maa vs Meri) at the start...");
+        await page.waitForSelector('#map-environment-selector', { visible: true, timeout: 5000 });
+        await page.waitForSelector('#btn-env-land', { visible: true, timeout: 5000 });
+        await page.waitForSelector('#btn-env-sea', { visible: true, timeout: 5000 });
+
+        const initialMapEnv = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            return {
+                env: cs?.getMapEnvironment(),
+                hasSeaMesh: !!cs?.oceanWaterMesh,
+                seaConfig: cs?.activeSeaConfig
+            };
+        });
+        console.log("   Initial Map Environment (Expected: land):", initialMapEnv);
+        if (initialMapEnv.env !== 'land' || initialMapEnv.hasSeaMesh) {
+            throw new Error(`Expected initial map environment to be 'land', got ${initialMapEnv.env}!`);
+        }
+
+        // Click Meri button to switch to Sea
+        await page.click('#btn-env-sea');
+        await new Promise(r => setTimeout(r, 400));
+        const seaMapEnv = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            return {
+                env: cs?.getMapEnvironment(),
+                hasSeaMesh: !!cs?.oceanWaterMesh,
+                seaConfigType: cs?.activeSeaConfig?.type
+            };
+        });
+        console.log("   After clicking #btn-env-sea (Expected: sea):", seaMapEnv);
+        if (seaMapEnv.env !== 'sea' || !seaMapEnv.hasSeaMesh || seaMapEnv.seaConfigType !== 'whole') {
+            throw new Error(`Expected map environment to be 'sea' with ocean water mesh, got ${seaMapEnv.env}!`);
+        }
+
+        // Click Maa button to switch back to Land
+        await page.click('#btn-env-land');
+        await new Promise(r => setTimeout(r, 400));
+        const landMapEnv = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            return {
+                env: cs?.getMapEnvironment(),
+                hasSeaMesh: !!cs?.oceanWaterMesh,
+                seaConfig: cs?.activeSeaConfig
+            };
+        });
+        console.log("   After clicking #btn-env-land (Expected: land):", landMapEnv);
+        if (landMapEnv.env !== 'land' || landMapEnv.hasSeaMesh) {
+            throw new Error(`Expected map environment to be 'land' after clicking Maa, got ${landMapEnv.env}!`);
+        }
+        console.log("✅ Map Environment (Maa vs Meri) tests passed successfully!");
+
         // Click first object to spawn into scene
         const firstObjCard = await page.$('.object-card');
         if (firstObjCard) {
