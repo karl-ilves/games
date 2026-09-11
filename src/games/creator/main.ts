@@ -4185,6 +4185,19 @@ let wbOrbitPhi = Math.PI / 3;
 let wbIsRightMouseDown = false;
 let wbMousePos = { x: 0, y: 0 };
 
+// Direct 3D Face Dragging state
+type DragPlaneType = 'top' | 'front' | 'back' | 'left' | 'right' | 'bottom' | 'slope';
+let wbActiveDragPlane: DragPlaneType | null = null;
+let wbDragStartMouse = { x: 0, y: 0 };
+let wbDragInitialState = {
+    height: 2.0,
+    width: 3.0,
+    depth: 3.0,
+    topElevation: 2.0
+};
+let wbHoveredPlane: DragPlaneType | null = null;
+let wbFaceHighlightMesh: THREE.Mesh | null = null;
+
 export function initWorkbench3D() {
     const container = document.getElementById('workbench-canvas-container');
     if (!container || wbRenderer) return;
@@ -4240,18 +4253,126 @@ export function initWorkbench3D() {
     wbGridHelper.position.y = 0.01;
     wbScene.add(wbGridHelper);
 
+    // Face Highlight Ring/Plane
+    const hGeo = new THREE.PlaneGeometry(1, 1);
+    const hMat = new THREE.MeshBasicMaterial({
+        color: 0xffd32a,
+        transparent: true,
+        opacity: 0.45,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+    wbFaceHighlightMesh = new THREE.Mesh(hGeo, hMat);
+    wbFaceHighlightMesh.visible = false;
+    wbScene.add(wbFaceHighlightMesh);
+
     // Camera controls for Workbench
     updateWorkbenchCamera();
 
     const dom = wbRenderer.domElement;
+
+    // Helper: Detect which face was clicked/hovered
+    function detectFaceAtPoint(clientX: number, clientY: number): { plane: DragPlaneType; normal: THREE.Vector3; point: THREE.Vector3 } | null {
+        if (!wbCamera || !wbCurrentMeshGroup) return null;
+        const rect = dom.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((clientX - rect.left) / rect.width) * 2 - 1,
+            -((clientY - rect.top) / rect.height) * 2 + 1
+        );
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, wbCamera);
+
+        const meshes: THREE.Mesh[] = [];
+        wbCurrentMeshGroup.traverse(child => {
+            if ((child as THREE.Mesh).isMesh) meshes.push(child as THREE.Mesh);
+        });
+
+        const intersects = raycaster.intersectObjects(meshes, false);
+        if (intersects.length === 0) return null;
+
+        const hit = intersects[0];
+        if (!hit.face) return null;
+
+        const normal = hit.face.normal.clone();
+        normal.transformDirection(hit.object.matrixWorld);
+
+        // Determine face type by world normal
+        let plane: DragPlaneType = 'top';
+        if (currentWorkbenchState.shapeType === 'wedge' && (normal.y > 0.3 || normal.z < -0.3)) {
+            plane = 'slope';
+        } else if (normal.y > 0.5) {
+            plane = 'top';
+        } else if (normal.y < -0.5) {
+            plane = 'bottom';
+        } else if (Math.abs(normal.x) > Math.abs(normal.z)) {
+            plane = normal.x > 0 ? 'right' : 'left';
+        } else {
+            plane = normal.z > 0 ? 'front' : 'back';
+        }
+
+        return { plane, normal, point: hit.point };
+    }
+
     dom.addEventListener('mousedown', (e) => {
-        if (e.button === 2 || e.button === 0) {
+        if (e.button === 0) {
+            // Left click: test if clicking directly on object face to drag it
+            const faceHit = detectFaceAtPoint(e.clientX, e.clientY);
+            if (faceHit) {
+                wbActiveDragPlane = faceHit.plane;
+                wbDragStartMouse = { x: e.clientX, y: e.clientY };
+                wbDragInitialState = {
+                    height: currentWorkbenchState.height,
+                    width: currentWorkbenchState.width,
+                    depth: currentWorkbenchState.depth,
+                    topElevation: currentWorkbenchState.topElevation
+                };
+                dom.style.cursor = 'ns-resize';
+                return;
+            } else {
+                // Clicking outside object on background orbits the camera
+                wbIsRightMouseDown = true;
+                wbMousePos = { x: e.clientX, y: e.clientY };
+            }
+        } else if (e.button === 2) {
+            // Right click always orbits camera
             wbIsRightMouseDown = true;
             wbMousePos = { x: e.clientX, y: e.clientY };
         }
     });
 
     window.addEventListener('mousemove', (e) => {
+        // 1. Direct Face Dragging
+        if (wbActiveDragPlane) {
+            const dy = wbDragStartMouse.y - e.clientY; // positive = dragged up
+            const dx = e.clientX - wbDragStartMouse.x;
+            const sensitivity = 0.025;
+
+            if (wbActiveDragPlane === 'top') {
+                const newH = Math.max(0.4, Math.min(12, wbDragInitialState.height + dy * sensitivity));
+                currentWorkbenchState.height = parseFloat(newH.toFixed(2));
+                if (currentWorkbenchState.shapeType === 'wedge') {
+                    currentWorkbenchState.topElevation = currentWorkbenchState.height;
+                }
+            } else if (wbActiveDragPlane === 'slope') {
+                const newElev = Math.max(0.2, Math.min(12, wbDragInitialState.topElevation + dy * sensitivity));
+                currentWorkbenchState.topElevation = parseFloat(newElev.toFixed(2));
+                currentWorkbenchState.height = Math.max(currentWorkbenchState.height, currentWorkbenchState.topElevation);
+            } else if (wbActiveDragPlane === 'right' || wbActiveDragPlane === 'left') {
+                const change = (wbActiveDragPlane === 'right' ? dx : -dx) * sensitivity;
+                const newW = Math.max(0.5, Math.min(14, wbDragInitialState.width + change));
+                currentWorkbenchState.width = parseFloat(newW.toFixed(2));
+            } else if (wbActiveDragPlane === 'front' || wbActiveDragPlane === 'back') {
+                const change = (wbActiveDragPlane === 'front' ? dy : -dy) * sensitivity;
+                const newD = Math.max(0.5, Math.min(14, wbDragInitialState.depth + change));
+                currentWorkbenchState.depth = parseFloat(newD.toFixed(2));
+            }
+
+            syncWorkbenchUI();
+            return;
+        }
+
+        // 2. Camera Orbit
         if (wbIsRightMouseDown) {
             const dx = e.clientX - wbMousePos.x;
             const dy = e.clientY - wbMousePos.y;
@@ -4260,11 +4381,26 @@ export function initWorkbench3D() {
             wbOrbitTheta -= dx * 0.008;
             wbOrbitPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, wbOrbitPhi - dy * 0.008));
             updateWorkbenchCamera();
+            return;
+        }
+
+        // 3. Hover indication over faces
+        const hit = detectFaceAtPoint(e.clientX, e.clientY);
+        if (hit) {
+            wbHoveredPlane = hit.plane;
+            dom.style.cursor = 'grab';
+        } else {
+            wbHoveredPlane = null;
+            dom.style.cursor = 'default';
         }
     });
 
     window.addEventListener('mouseup', () => {
         wbIsRightMouseDown = false;
+        if (wbActiveDragPlane) {
+            wbActiveDragPlane = null;
+            dom.style.cursor = 'default';
+        }
     });
 
     dom.addEventListener('wheel', (e) => {
@@ -4329,11 +4465,7 @@ function animateWorkbench() {
     wbAnimFrameId = requestAnimationFrame(animateWorkbench);
     if (!wbScene || !wbCamera || !wbRenderer) return;
 
-    // Gentle slow rotation when idle for attractive presentation
-    if (!wbIsRightMouseDown && wbCurrentMeshGroup) {
-        wbCurrentMeshGroup.rotation.y += 0.004;
-    }
-
+    // Ese seisab kindlalt paigal ruudustikul ja ei pöörle automaatselt, et pindu oleks mugav haarata ja liigutada
     wbRenderer.render(wbScene, wbCamera);
 }
 
