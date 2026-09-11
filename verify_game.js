@@ -60,7 +60,7 @@ try {
 
     try {
         console.log("1. Checking Playard Hub Homepage...");
-        await page.goto('http://localhost:4173/games/');
+        await page.goto('http://localhost:4173/games/', { waitUntil: 'domcontentloaded' });
         await new Promise(r => setTimeout(r, 1000));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; window.prompt = () => 'Great game'; });
         
@@ -903,22 +903,25 @@ try {
             await page.click('.object-card');
             await new Promise(r => setTimeout(r, 400));
 
-            // Test AI Game Assistant with Roads & Drivable Cars Prompt
-            await page.click('#btn-toggle-ai');
-            await new Promise(r => setTimeout(r, 400));
-            const aiModalVisible = await page.$eval('#ai-assistant-modal', el => window.getComputedStyle(el).display);
-            console.log("   AI Assistant Modal visibility:", aiModalVisible);
-            if (aiModalVisible !== 'flex') {
-                throw new Error("AI Assistant modal failed to open!");
+            // Verify AI Assistant and AI School UI are completely removed from Creator Studio navbar & DOM
+            const hasAiToggleBtn = await page.$('#btn-toggle-ai');
+            const hasAiModal = await page.$('#ai-assistant-modal');
+            console.log("   Verifying AI Assistant UI removed from Creator Studio: btn =", !!hasAiToggleBtn, "modal =", !!hasAiModal);
+            if (hasAiToggleBtn !== null || hasAiModal !== null) {
+                throw new Error("AI Assistant button or modal is still present in Creator Studio DOM! Should be removed.");
             }
 
+            let lastAiResponse = '';
             const submitAi = async (prompt) => {
-                await page.evaluate((val) => {
-                    const inp = document.getElementById('ai-prompt-input');
-                    if (inp) inp.value = val;
+                lastAiResponse = await page.evaluate((val) => {
+                    const cs = window.creatorStudio;
+                    if (cs && cs.executeAiBuild) {
+                        return cs.executeAiBuild(val) || '';
+                    }
+                    return '';
                 }, prompt);
-                await page.click('#btn-ai-submit');
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 400));
+                return lastAiResponse;
             };
 
             await submitAi('add roads and drivable cars');
@@ -927,7 +930,7 @@ try {
             console.log("   Testing Smart Contextual Addition to Car with AI...");
             await submitAi('lisa autole asju juurde');
 
-            const chatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            const chatContent = lastAiResponse;
             console.log("   AI Smart Addition output (Guest/English):", chatContent.substring(chatContent.lastIndexOf('🚗')).substring(0, 110) + '...');
             if (!chatContent.includes('Added details to the car') && !chatContent.includes('fuel pump')) {
                 throw new Error("AI Smart Contextual addition response for non-admin failed!");
@@ -941,7 +944,7 @@ try {
             console.log("   Testing AI Math Solver ('1+1')...");
             await submitAi('1+1');
 
-            const mathChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            const mathChatContent = lastAiResponse;
             console.log("   AI Math Output for '1+1':", mathChatContent.substring(mathChatContent.lastIndexOf('🧮')).substring(0, 80));
             if (!mathChatContent.includes('1+1 = 2') && !mathChatContent.includes('1 + 1 = 2')) {
                 throw new Error("AI Math Solver for 1+1 failed!");
@@ -955,7 +958,7 @@ try {
             console.log("   Testing AI World Knowledge Q&A ('Largest airplanes')...");
             await submitAi('What are the largest airplanes in the world?');
 
-            const planeChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            const planeChatContent = lastAiResponse;
             if (!planeChatContent.includes('Antonov An-225') && !planeChatContent.includes('Airbus A380')) {
                 throw new Error("AI World Knowledge for largest airplanes failed!");
             }
@@ -964,7 +967,7 @@ try {
             console.log("   Testing World Capitals Q&A ('Capital of France')...");
             await submitAi('What is the capital of France?');
 
-            const capitalChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const capitalChat = lastAiResponse;
             if (!capitalChat.includes('Paris')) {
                 throw new Error("World Capitals Q&A failed for France!");
             }
@@ -977,7 +980,7 @@ try {
             console.log("   Testing AI Game Logic Programming ('Program speed boost')...");
             await submitAi('Program a speed boost trigger');
 
-            const progChatContent = await page.$eval('#ai-chat-log', el => el.textContent);
+            const progChatContent = lastAiResponse;
             if (!progChatContent.includes('successfully programmed') && !progChatContent.includes('speed_boost')) {
                 throw new Error("AI Game Logic Programming failed!");
             }
@@ -986,7 +989,7 @@ try {
             console.log("   Testing Realistic Rabbit 3D Creation ('Create a cute white bunny rabbit')...");
             await submitAi('Create a cute white bunny rabbit');
 
-            const rabbitChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const rabbitChat = lastAiResponse;
             if (!rabbitChat.includes('custom 3D model') && !rabbitChat.includes('Bunny') && !rabbitChat.includes('Rabbit')) {
                 throw new Error("Realistic Rabbit 3D Model Creation failed!");
             }
@@ -995,7 +998,7 @@ try {
             console.log("   Testing Realistic Saturn 3D Creation ('Create planet Saturn with rings')...");
             await submitAi('Create planet Saturn with rings');
 
-            const saturnChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const saturnChat = lastAiResponse;
             if (!saturnChat.includes('custom 3D model') && !saturnChat.includes('Saturn')) {
                 throw new Error("Realistic Saturn 3D Model Creation failed!");
             }
@@ -1004,7 +1007,7 @@ try {
             console.log("   Testing Semantic 3D Intent ('Paint gold')...");
             await submitAi('Paint gold');
 
-            const paintChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const paintChat = lastAiResponse;
             if (!paintChat.includes('Painted') && !paintChat.includes('Gold')) {
                 throw new Error("Semantic 3D Paint Intent failed!");
             }
@@ -1017,7 +1020,7 @@ try {
             console.log("   Testing Dynamic 3D Object Movement ('Make it move')...");
             await submitAi('Make it move back and forth');
 
-            const moveChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const moveChat = lastAiResponse;
             if (!moveChat.includes('Animated object into motion') && !moveChat.includes('patrolling')) {
                 throw new Error("Dynamic 3D Object Movement failed!");
             }
@@ -1033,7 +1036,7 @@ try {
             // Test Universal Custom 3D Object Synthesis (Any creature / item: "Loo koer ja pitsa")
             console.log("   Testing Universal Custom 3D Object Creation ('Loo koer ja pitsa')...");
             await submitAi('Loo armas koer ja suur pizza');
-            const customObjChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const customObjChat = lastAiResponse;
             if (!customObjChat.includes('mudel') && !customObjChat.includes('model') && !customObjChat.includes('Lõin') && !customObjChat.includes('Created')) {
                 throw new Error("Universal custom 3D object creation failed!");
             }
@@ -1041,7 +1044,7 @@ try {
             // Test Unrecognized Item Rejection ('Seda asja ei ole olemas'): "loo blipblop999 tundmatuasjandus"
             console.log("   Testing Unrecognized Item Warning ('Seda asja ei ole olemas')...");
             await submitAi('loo blipblop999 tundmatuasjandus');
-            const unknownObjChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const unknownObjChat = lastAiResponse;
             if (!unknownObjChat.includes('Seda asja ei ole olemas') && !unknownObjChat.includes('does not exist')) {
                 throw new Error("Unrecognized object rejection failed! Expected 'Seda asja ei ole olemas' or 'does not exist'");
             }
@@ -1050,7 +1053,7 @@ try {
             console.log("   Testing AI Flyable Airplane Creation ('Loo lendav lennuk ja lennurada')...");
             await submitAi('Loo lendav lennuk ja lennurada millega lennata');
 
-            const planeAiChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const planeAiChat = lastAiResponse;
             if (!planeAiChat.includes('lennuk') && !planeAiChat.includes('airplane') && !planeAiChat.includes('lennata')) {
                 throw new Error("AI Flyable Airplane creation failed!");
             }
@@ -1059,7 +1062,7 @@ try {
             console.log("   Testing Whole Map Scatter ('pane tervesse mappi midagi')...");
             await submitAi('pane tervesse mappi midagi');
 
-            const scatterChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const scatterChat = lastAiResponse;
             if (!scatterChat.includes('terve') && !scatterChat.includes('entire') && !scatterChat.includes('map')) {
                 throw new Error("Whole Map Scatter failed!");
             }
@@ -1071,7 +1074,7 @@ try {
             // Test Creator AI: Whole Map Sea / Ocean Creation ("Tee terve kaart mereks")
             console.log("   Testing Creator AI Whole Map Sea Creation ('Tee terve kaart mereks')...");
             await submitAi('Tee terve kaart mereks suure ookeaniga');
-            const wholeSeaChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const wholeSeaChat = lastAiResponse;
             if (!wholeSeaChat.includes('ookean') && !wholeSeaChat.includes('ocean') && !wholeSeaChat.includes('meri') && !wholeSeaChat.includes('sea')) {
                 throw new Error("Creator AI Whole Map Sea creation chat response failed!");
             }
@@ -1087,7 +1090,7 @@ try {
             // Test Creator AI: Part of Map Sea / Coastline Creation ("Tee osa kaardist mereks")
             console.log("   Testing Creator AI Part of Map Sea Creation ('Tee osa kaardist mereks')...");
             await submitAi('Tee osa kaardist mereks kauni ranna ja paadiga');
-            const partSeaChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const partSeaChat = lastAiResponse;
             if (!partSeaChat.includes('rannik') && !partSeaChat.includes('coast') && !partSeaChat.includes('meri') && !partSeaChat.includes('sea')) {
                 throw new Error("Creator AI Part of Map Sea creation chat response failed!");
             }
@@ -1109,7 +1112,7 @@ try {
             console.log("   Testing Pahalane (Bad Guy Villain) Creation ('lisa pahalane')...");
             await submitAi('lisa pahalane ja kurikael');
 
-            const villainChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const villainChat = lastAiResponse;
             if (!villainChat.includes('Pahalase') && !villainChat.includes('Villain') && !villainChat.includes('Enemy')) {
                 throw new Error("Pahalane villain creation failed!");
             }
@@ -1118,7 +1121,7 @@ try {
             console.log("   Testing NPC / NBS Character Creation ('lisa nbs tegelane')...");
             await submitAi('lisa nbs külaelanik tegelane');
 
-            const npcChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const npcChat = lastAiResponse;
             if (!npcChat.includes('NPC') && !npcChat.includes('tegelase') && !npcChat.includes('külaelanik')) {
                 throw new Error("NPC/NBS character creation failed!");
             }
@@ -1127,7 +1130,7 @@ try {
             console.log("   Testing Full AI Horror Game Generation ('Tee õudusmäng mahajäetud haiglas')...");
             await submitAi('Tee õudusmäng mahajäetud haiglas, kus mängija peab leidma kolm võtit ja põgenema');
 
-            const horrorChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const horrorChat = lastAiResponse;
             if (!horrorChat.includes('Haigla') && !horrorChat.includes('Hospital') && !horrorChat.includes('võtit')) {
                 throw new Error("Full AI Horror Game generation failed!");
             }
@@ -1136,7 +1139,7 @@ try {
             console.log("   Testing Full AI Medieval Dragon RPG Game Generation ('Tee RPG seiklusmäng draakoni ja lossiga')...");
             await submitAi('Tee RPG seiklusmäng draakoni, lossi, küla ja mõõgaga');
 
-            const rpgChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const rpgChat = lastAiResponse;
             if (!rpgChat.includes('Draakon') && !rpgChat.includes('Dragon') && !rpgChat.includes('RPG')) {
                 throw new Error("Full AI Medieval Dragon RPG Game generation failed!");
             }
@@ -1144,7 +1147,7 @@ try {
             // Test Health Regulation ("pane eludeks 250")
             console.log("   Testing Health Regulation ('pane eludeks 250')...");
             await submitAi('pane eludeks 250');
-            const hpChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const hpChat = lastAiResponse;
             if (!hpChat.includes('250') || !hpChat.includes('HP')) {
                 throw new Error("Health regulation failed!");
             }
@@ -1152,7 +1155,7 @@ try {
             // Test Enemy Damage Regulation ("pahalane võtab 35")
             console.log("   Testing Enemy Damage Regulation ('pahalane võtab 35')...");
             await submitAi('pahalane võtab 35');
-            const dmgChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const dmgChat = lastAiResponse;
             if (!dmgChat.includes('35') || !dmgChat.includes('HP')) {
                 throw new Error("Enemy damage regulation failed!");
             }
@@ -1161,16 +1164,12 @@ try {
             console.log("   Testing Money and Yards Activation ('lisa raha', 'lisa yardid')...");
             await submitAi('lisa raha ja lisa yardid');
 
-            // --- Test AI Kool (AI School in Chat: Humorous Teaching & Instant Learning) ---
-            console.log("   Testing AI Kool in Chat (Humorous Teaching & Instant Response)...");
-            const schoolBarVis = await page.$eval('#ai-school-status-bar', el => window.getComputedStyle(el).display);
-            if (schoolBarVis === 'none') {
-                throw new Error("AI School status bar failed to display in AI modal!");
-            }
+            // --- Test AI Kool Logic (Humorous Teaching & Instant Learning) ---
+            console.log("   Testing AI Kool backend logic (Humorous Teaching & Instant Response)...");
 
             // 1. Teach the AI: "õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed"
             await submitAi('õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed');
-            const teachChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const teachChat = lastAiResponse;
             console.log("   AI School Teaching Output:", teachChat.substring(teachChat.lastIndexOf('JAA ÕPETAJA')).substring(0, 100));
             if (!teachChat.includes('JAA ÕPETAJA') && !teachChat.includes('vihikusse')) {
                 throw new Error("AI School failed to respond to teaching prompt in funny student language!");
@@ -1178,7 +1177,7 @@ try {
 
             // 2. Trigger the taught command: "tee kurgimopeed"
             await submitAi('tee kurgimopeed');
-            const executeChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const executeChat = lastAiResponse;
             console.log("   AI School Execution Output:", executeChat.substring(executeChat.lastIndexOf('Õpetaja vaata')).substring(0, 100));
             if (!executeChat.includes('Õpetaja vaata') && !executeChat.includes('Kurgimopeed')) {
                 throw new Error("AI School failed to execute taught creation with student feedback!");
@@ -1186,11 +1185,11 @@ try {
 
             // 3. Notebook view: "Mida sa oskad? Näita vihikut"
             await submitAi('Mida sa oskad? Näita vihikut');
-            const notebookChat = await page.$eval('#ai-chat-log', el => el.textContent);
+            const notebookChat = lastAiResponse;
             if (!notebookChat.includes('koolivihik') && !notebookChat.includes('Õpilase Robi')) {
                 throw new Error("AI School notebook query failed!");
             }
-            console.log("   Successfully tested AI Kool in Chat (Instant humorous teaching, memory, and execution)!");
+            console.log("   Successfully tested AI Kool logic (Instant humorous teaching, memory, and execution)!");
 
             // Test Undo and Redo
             console.log("   Testing Undo and Redo...");
@@ -1198,8 +1197,6 @@ try {
             await new Promise(r => setTimeout(r, 300));
             await page.click('#btn-redo');
             await new Promise(r => setTimeout(r, 300));
-
-            await page.click('#btn-close-ai');
 
             // Test Play Test Mode with Full Gameplay HUD & Combat Attack
             console.log("   Testing Play Test Mode with Gameplay HUD and Combat...");

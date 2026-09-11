@@ -4532,7 +4532,7 @@ export function executeAiBuild(promptText: string) {
         setDayNightMode('sunset');
         aiResponse = isAdmin ? `🌅 <strong>Lõin kauni kuldse päikeseloojangu!</strong>` : `🌅 <strong>Set a beautiful golden Sunset!</strong>`;
 
-    } else if (p.includes('udu') || p.includes('fog') || p.includes('õudne udu')) {
+    } else if (((p.includes('udu') && !p.includes('õudus') && !p.includes('oudus')) || p.includes('fog') || p.includes('õudne udu')) && !p.includes('õudusmäng') && !p.includes('horror')) {
         setDayNightMode('horror_fog');
         aiResponse = isAdmin ? `🌫️ <strong>Lisasin tiheda atmosfääri udu!</strong>` : `🌫️ <strong>Added dense atmospheric fog!</strong>`;
 
@@ -5186,6 +5186,23 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `🛒 <strong>Spawned Shopkeeper NPC with In-Game Item Store!</strong><br>Walk near and press [E] to buy potions, speed boosts, and swords!`;
         }
 
+    } else if (
+        p.includes('pahalane võtab') || p.includes('pahalase kahju') || p.includes('vaenlase kahju') ||
+        p.includes('vaenlane võtab') || p.includes('vaenlane teeb') || p.includes('pahalane teeb') ||
+        p.includes('enemy damage') || p.includes('damage taken')
+    ) {
+        let dmg = 20;
+        const numMatch = p.match(/\b(\d+)\b/);
+        if (numMatch) dmg = parseInt(numMatch[1], 10);
+        placedObjects.forEach(obj => {
+            if (obj.gameItemType === 'enemy' && obj.enemyData) {
+                obj.enemyData.damage = dmg;
+            }
+        });
+        isCombatSystemEnabled = true;
+        updateGameplayHUD();
+        aiResponse = isAdmin ? `⚔️ <strong>Pahalase kahjuks määrati ${dmg} HP löögi kohta!</strong><br>Iga kord, kui pahalane või vaenlane sind ründab, võtab ta sinult ${dmg} elupunkti.` : `⚔️ <strong>Enemy damage set to ${dmg} HP per hit!</strong>`;
+
     } else if (p.includes('pahalane') || p.includes('pahalased') || p.includes('kurikael') || p.includes('vaenlane') || p.includes('vaenlased') || p.includes('koll') || p.includes('villain') || p.includes('enemy') || p.includes('bandit') || p.includes('röövel') || p.includes('roovel')) {
         const villainMesh = createCustomProceduralMesh('Pahalane Villain Kurikael Vaenlane', 'Pahalane');
         villainMesh.position.set(0, 0, -6);
@@ -5242,23 +5259,6 @@ export function executeAiBuild(promptText: string) {
         } else {
             aiResponse = `💬 <strong>Spawned an interactive NPC / Character!</strong><br>When the player walks near the NPC, a dialogue popup appears and the NPC speaks with the player.`;
         }
-
-    } else if (
-        p.includes('pahalane võtab') || p.includes('pahalase kahju') || p.includes('vaenlase kahju') ||
-        p.includes('vaenlane võtab') || p.includes('vaenlane teeb') || p.includes('pahalane teeb') ||
-        p.includes('enemy damage') || p.includes('damage taken')
-    ) {
-        let dmg = 20;
-        const numMatch = p.match(/\b(\d+)\b/);
-        if (numMatch) dmg = parseInt(numMatch[1], 10);
-        placedObjects.forEach(obj => {
-            if (obj.gameItemType === 'enemy' && obj.enemyData) {
-                obj.enemyData.damage = dmg;
-            }
-        });
-        isCombatSystemEnabled = true;
-        updateGameplayHUD();
-        aiResponse = isAdmin ? `⚔️ <strong>Pahalase kahjuks määrati ${dmg} HP löögi kohta!</strong><br>Iga kord, kui pahalane või vaenlane sind ründab, võtab ta sinult ${dmg} elupunkti.` : `⚔️ <strong>Enemy damage set to ${dmg} HP per hit!</strong>`;
 
     } else if (
         p.includes('eludeks') || p.includes('mängija elud') || p.includes('elusid') ||
@@ -5717,7 +5717,7 @@ export function executeAiBuild(promptText: string) {
         }
 
     // 1. PARKOUR / OBSTACLES
-    } else if (p.includes('parkour') || p.includes('rada') || p.includes('hüp') || p.includes('jump') || p.includes('obstacle') || p.includes('takistus')) {
+    } else if (p.includes('parkour') || (p.includes('rada') && !p.includes('lennurada')) || p.includes('hüp') || p.includes('jump') || p.includes('obstacle') || p.includes('takistus')) {
         if (titleInput) titleInput.value = 'AI Parkour Challenge';
         if (catSelect) catSelect.value = 'Platformer';
         if (descInput) descInput.value = 'Exciting 3D Parkour course generated with Playard AI!';
@@ -5947,7 +5947,7 @@ export function executeAiBuild(promptText: string) {
 
     // 4. LENDAVAD LENNUKID & LENNUJAAM / LENNURADA (FLYABLE AIRPLANES & RUNWAY)
     } else if (
-        p.includes('lennuk') || p.includes('airplane') || p.includes('plane') ||
+        p.includes('lennuk') || p.includes('airplane') || (p.includes('plane') && !p.includes('planet') && !p.includes('planeet')) ||
         p.includes('lendav') || p.includes('lenda') || p.includes('fly') ||
         p.includes('jet') || p.includes('aircraft') || p.includes('hävitaja') ||
         p.includes('havitaja') || p.includes('propeller') || p.includes('lennuväli') ||
@@ -6122,7 +6122,7 @@ export function executeAiBuild(promptText: string) {
         customName = customName.charAt(0).toUpperCase() + customName.slice(1);
 
         const isVehicle = p.includes('auto') || p.includes('car') || p.includes('mootorratas') || p.includes('bike') || p.includes('krossikas') || p.includes('roller') || p.includes('scooter') || p.includes('veoauto') || p.includes('truck') || p.includes('tank') || p.includes('laev') || p.includes('ship') || p.includes('paat') || p.includes('boat') || p.includes('allveelaev') || p.includes('submarine') || p.includes('rong') || p.includes('train');
-        const isFlyable = p.includes('lennuk') || p.includes('plane') || p.includes('airplane') || p.includes('jet') || p.includes('kopter') || p.includes('copter') || p.includes('ufo') || p.includes('rakett') || p.includes('rocket') || p.includes('kosmoselaev') || p.includes('spaceship') || p.includes('lendav');
+        const isFlyable = p.includes('lennuk') || (p.includes('plane') && !p.includes('planet') && !p.includes('planeet')) || p.includes('airplane') || p.includes('jet') || p.includes('kopter') || p.includes('copter') || p.includes('ufo') || p.includes('rakett') || p.includes('rocket') || p.includes('kosmoselaev') || p.includes('spaceship') || p.includes('lendav');
 
         const customMesh = createCustomProceduralMesh(promptText, customName, false);
         if (!customMesh) {
@@ -6171,6 +6171,7 @@ export function executeAiBuild(promptText: string) {
         chatLog.appendChild(botMsg);
         chatLog.scrollTop = chatLog.scrollHeight;
     }
+    return aiResponse;
 }
 
 // --- Main Animation Loop ---
