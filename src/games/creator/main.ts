@@ -1013,13 +1013,16 @@ export function removeSea() {
     updateMapEnvironmentUI();
 }
 
-export function setMapEnvironment(type: 'land' | 'sea', spawnEntities?: boolean) {
+export function setMapEnvironment(type: 'land' | 'sea') {
     if (type === 'sea') {
-        if (!activeSeaConfig || activeSeaConfig.type !== 'whole') {
-            const hasDock = placedObjects.some(p => p.catalogId === 'dock_wood');
-            const shouldSpawn = spawnEntities !== undefined ? spawnEntities : (!hasDock && placedObjects.length === 0);
-            createWholeMapOcean(shouldSpawn);
+        // Meres ei ole saari ega mingeid muid asju – eemalda kõik objektid, et meri oleks 100% puhas!
+        for (const p of placedObjects) {
+            scene.remove(p.mesh);
         }
+        placedObjects = [];
+        selectObject(null);
+
+        createWholeMapOcean(false);
     } else {
         removeSea();
     }
@@ -1898,7 +1901,8 @@ export function loadSceneFromData(sceneData: any) {
         updateGameplayHUD();
     }
 
-    if (Array.isArray(sceneData.objects)) {
+    const isPureSea = (sceneData.mapType === 'sea' || sceneData.seaConfig?.type === 'whole');
+    if (Array.isArray(sceneData.objects) && !isPureSea) {
         sceneData.objects.forEach((objData: any) => {
             const catItem: CatalogItem = CATALOG_DATABASE.find(c => c.id === objData.catalogId) || {
                 id: objData.catalogId || 'obj_custom',
@@ -9379,8 +9383,16 @@ function animate() {
 
         // Idle animation in edit mode
         if (playerAvatarRig) {
-            const activeEm = emotesWidget ? emotesWidget.getActiveEmote() : 'idle';
-            playerAvatarRig.updateAnimation(performance.now() * 0.001, activeEm);
+            const inWater = isPositionInWater(humanCharacter.position.x, humanCharacter.position.z);
+            if (inWater) {
+                humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.1, 0.15);
+                humanCharacter.position.y = (activeSeaConfig?.waterLevel || 0) - 0.5 + Math.sin(time * 3) * 0.08;
+                playerAvatarRig.updateAnimation(performance.now() * 0.001, 'swim_idle');
+            } else {
+                humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0, 0.2);
+                const activeEm = emotesWidget ? emotesWidget.getActiveEmote() : 'idle';
+                playerAvatarRig.updateAnimation(performance.now() * 0.001, activeEm);
+            }
         } else if (humanCharacter) {
             humanCharacter.position.y = Math.sin(Date.now() * 0.003) * 0.04;
         }
