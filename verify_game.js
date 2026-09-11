@@ -912,6 +912,37 @@ try {
             throw new Error(`Expected map environment to be 'sea' with ocean water mesh, got ${seaMapEnv.env}!`);
         }
 
+        // Verify Pure Ocean (No islands, no docks, no clutter) & Swimming Animations
+        console.log("   Testing Pure Ocean (No islands/clutter) and Swimming Animations...");
+        const seaSwimCheck = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            const rig = cs?.playerAvatarRig;
+            const inWaterAtOrigin = cs?.isPositionInWater(0, 0);
+
+            let swimAnimWorks = false;
+            let swimIdleWorks = false;
+            if (rig) {
+                rig.updateAnimation(1.0, 'swim');
+                const hipsTilt = rig.bones.hips.rotation.x > 0.8;
+                const armStroke = Math.abs(rig.bones.rightArm.rotation.x) > 0.1;
+                swimAnimWorks = hipsTilt && armStroke;
+
+                rig.updateAnimation(1.0, 'swim_idle');
+                const idleArmPaddle = rig.bones.rightArm.rotation.z > 0.5;
+                swimIdleWorks = idleArmPaddle;
+            }
+
+            return {
+                inWaterAtOrigin,
+                swimAnimWorks,
+                swimIdleWorks
+            };
+        });
+        console.log("   Pure Ocean & Swimming verified:", seaSwimCheck);
+        if (!seaSwimCheck.inWaterAtOrigin || !seaSwimCheck.swimAnimWorks || !seaSwimCheck.swimIdleWorks) {
+            throw new Error("Pure Ocean swimming mechanics or animations failed!");
+        }
+
         // Click Maa button to switch back to Land
         await page.click('#btn-env-land');
         await new Promise(r => setTimeout(r, 400));
@@ -927,7 +958,7 @@ try {
         if (landMapEnv.env !== 'land' || landMapEnv.hasSeaMesh) {
             throw new Error(`Expected map environment to be 'land' after clicking Maa, got ${landMapEnv.env}!`);
         }
-        console.log("✅ Map Environment (Maa vs Meri) tests passed successfully!");
+        console.log("✅ Map Environment (Maa vs Meri) and Swimming Animation tests passed successfully!");
 
         // Click first object to spawn into scene
         const firstObjCard = await page.$('.object-card');

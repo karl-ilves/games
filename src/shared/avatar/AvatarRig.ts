@@ -2232,6 +2232,58 @@ export class AvatarRig {
         }
     }
 
+    public animateSwim(time: number) {
+        // Body horizontal swimming crawl stroke in water
+        const strokeCycle = time * 5.0;
+        const kickCycle = time * 9.0;
+        const sway = Math.sin(strokeCycle) * 0.12;
+
+        this.bones.hips.position.y = 1.05 + Math.sin(time * 3) * 0.05;
+        this.bones.hips.rotation.x = 1.25; // Tilt body horizontal forward
+        this.bones.hips.rotation.y = sway * 0.5;
+        this.bones.chest.rotation.x = 0.2;
+        this.bones.chest.rotation.y = -sway * 0.3;
+        this.bones.head.rotation.x = -1.2; // Head lifted forward/up looking forward above water
+
+        // Alternating freestyle swimming stroke for arms
+        this.bones.rightArm.rotation.x = Math.sin(strokeCycle) * 1.5 - 0.7;
+        this.bones.rightArm.rotation.z = 0.55 + Math.cos(strokeCycle) * 0.45;
+        this.bones.rightArm.rotation.y = Math.sin(strokeCycle) * 0.35;
+
+        this.bones.leftArm.rotation.x = Math.sin(strokeCycle + Math.PI) * 1.5 - 0.7;
+        this.bones.leftArm.rotation.z = -0.55 - Math.cos(strokeCycle + Math.PI) * 0.45;
+        this.bones.leftArm.rotation.y = -Math.sin(strokeCycle + Math.PI) * 0.35;
+
+        // Flutter kick for legs
+        this.bones.leftLeg.rotation.x = Math.sin(kickCycle) * 0.45 + 0.15;
+        this.bones.rightLeg.rotation.x = -Math.sin(kickCycle) * 0.45 + 0.15;
+        this.bones.leftLeg.rotation.z = -0.08;
+        this.bones.rightLeg.rotation.z = 0.08;
+    }
+
+    public animateSwimIdle(time: number) {
+        // Treading water / floating gently in place
+        const tread = Math.sin(time * 3.5);
+        const floatBob = Math.sin(time * 2.8) * 0.08;
+
+        this.bones.hips.position.y = 1.15 + floatBob;
+        this.bones.hips.rotation.x = 0.3; // Slight natural recline in water
+        this.bones.chest.rotation.x = -0.1;
+        this.bones.head.rotation.x = -0.2;
+
+        // Gentle paddling sweep side-to-side
+        this.bones.rightArm.rotation.z = 0.95 + tread * 0.3;
+        this.bones.rightArm.rotation.x = Math.cos(time * 3.5) * 0.35;
+        this.bones.leftArm.rotation.z = -0.95 - tread * 0.3;
+        this.bones.leftArm.rotation.x = Math.cos(time * 3.5) * 0.35;
+
+        // Scissor kick paddling legs
+        this.bones.leftLeg.rotation.x = Math.sin(time * 3.0) * 0.35;
+        this.bones.rightLeg.rotation.x = -Math.sin(time * 3.0) * 0.35;
+        this.bones.leftLeg.rotation.z = -0.15 + tread * 0.08;
+        this.bones.rightLeg.rotation.z = 0.15 - tread * 0.08;
+    }
+
     public updateAnimation(time: number, emote: string = 'idle') {
         this.resetBonesToRestPose();
         const style = this.movementStyle || 'anim_style_default';
@@ -2242,6 +2294,10 @@ export class AvatarRig {
             this.animateLocomotion(time, emote === 'run', style);
         } else if (emote === 'jump') {
             this.animateJump(time, style);
+        } else if (emote === 'swim') {
+            this.animateSwim(time);
+        } else if (emote === 'swim_idle') {
+            this.animateSwimIdle(time);
         } else if (emote === 'wave') {
             // Friendly hand wave
             this.bones.rightArm.rotation.z = 2.4 + Math.sin(time * 8) * 0.35;

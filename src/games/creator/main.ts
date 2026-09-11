@@ -1068,28 +1068,22 @@ export function updateMapEnvironmentUI() {
 export function isPositionInWater(x: number, z: number): boolean {
     if (!activeSeaConfig) return false;
     if (activeSeaConfig.type === 'whole') {
-        // Safe dry pier / dock area
-        const onPier = Math.abs(x) < 4.8 && Math.abs(z) < 9.5;
-        return !onPier;
+        return true;
     }
     if (activeSeaConfig.type === 'part') {
         const b = activeSeaConfig.boundary;
         if (!b) return z < 0;
         const val = b.axis === 'x' ? x : z;
-        const isWaterSide = b.side === 'negative' ? (val < b.threshold) : (val > b.threshold);
-        // Pier extending into sea from z = 4 to z = -22
-        const onPier = Math.abs(x) < 3.2 && z >= -22 && z <= 5;
-        return isWaterSide && !onPier;
+        return b.side === 'negative' ? (val < b.threshold) : (val > b.threshold);
     }
     if (activeSeaConfig.type === 'island') {
         const dist = Math.sqrt(x * x + z * z);
-        const onPier = x >= 28 && x <= 48 && Math.abs(z) < 3.5;
-        return dist > 34 && !onPier;
+        return dist > 34;
     }
     return false;
 }
 
-export function createWholeMapOcean(spawnEntities = true) {
+export function createWholeMapOcean(spawnEntities = false) {
     removeSea();
     activeSeaConfig = {
         type: 'whole',
@@ -1131,95 +1125,6 @@ export function createWholeMapOcean(spawnEntities = true) {
     if (grassPlane) grassPlane.visible = false;
     if (grassBlades) grassBlades.visible = false;
 
-    if (spawnEntities) {
-        // Floating Wooden Starter Pier / Dock at (0, 0.15, 0)
-        const dockGroup = new THREE.Group();
-        const deckMesh = new THREE.Mesh(new THREE.BoxGeometry(6, 0.35, 14), new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.85 }));
-        deckMesh.position.y = 0.2;
-        dockGroup.add(deckMesh);
-
-        // Support floats / barrels
-        [-2.4, 2.4].forEach(fx => {
-            [-4.5, 0, 4.5].forEach(fz => {
-                const floatMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0x2d3436, metalness: 0.7 }));
-                floatMesh.rotation.z = Math.PI / 2;
-                floatMesh.position.set(fx, -0.2, fz);
-                dockGroup.add(floatMesh);
-            });
-        });
-
-        // Mooring Cleats & Safety Bollards
-        [-2.7, 2.7].forEach(bx => {
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.7, 8), new THREE.MeshStandardMaterial({ color: 0xd63031 }));
-            post.position.set(bx, 0.55, -5.5);
-            dockGroup.add(post);
-        });
-
-        dockGroup.position.set(0, 0, 0);
-        scene.add(dockGroup);
-
-        placedObjects.push({
-            id: 'placed_sea_dock_' + Date.now(),
-            mesh: dockGroup,
-            catalogId: 'dock_wood',
-            name: '⚓ Ujuv Puitkai / Floating Pier',
-            category: 'city',
-            position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            color: '#8b5a2b'
-        });
-
-        // Drivable Speedboat moored at the dock
-        const boatMesh = createSpeedboat3DMesh('#e74c3c');
-        boatMesh.position.set(4.5, 0.05, 0);
-        scene.add(boatMesh);
-
-        placedObjects.push({
-            id: 'placed_sea_boat_' + Date.now(),
-            mesh: boatMesh,
-            catalogId: 'boat_speedboat',
-            name: '🛥️ Kiirpaat / Speedboat',
-            category: 'vehicles',
-            isBoat: true,
-            position: { x: 4.5, y: 0.05, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            color: '#e74c3c'
-        });
-
-        // Floating Blinking Light Buoys in the distance
-        [
-            { x: -35, z: -35, col: 0x2ecc71 },
-            { x: 35, z: -40, col: 0xe74c3c },
-            { x: -45, z: 45, col: 0xf1c40f }
-        ].forEach((bPos, idx) => {
-            const buoyGroup = new THREE.Group();
-            const buoyCone = new THREE.Mesh(new THREE.ConeGeometry(0.9, 2.2, 10), new THREE.MeshStandardMaterial({ color: bPos.col, metalness: 0.4 }));
-            buoyCone.position.y = 0.9;
-            buoyGroup.add(buoyCone);
-
-            const beaconLight = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), new THREE.MeshBasicMaterial({ color: bPos.col }));
-            beaconLight.position.y = 2.2;
-            buoyGroup.add(beaconLight);
-
-            buoyGroup.position.set(bPos.x, 0, bPos.z);
-            scene.add(buoyGroup);
-
-            placedObjects.push({
-                id: 'placed_buoy_' + idx + '_' + Date.now(),
-                mesh: buoyGroup,
-                catalogId: 'buoy_beacon',
-                name: `🚨 Meremärk / Buoy #${idx + 1}`,
-                category: 'gameplay',
-                position: { x: bPos.x, y: 0, z: bPos.z },
-                rotation: { x: 0, y: 0, z: 0 },
-                scale: { x: 1, y: 1, z: 1 },
-                color: '#' + bPos.col.toString(16),
-                movement: { type: 'bounce', speed: 1.8, distance: 0.25, origin: { x: bPos.x, y: 0, z: bPos.z } }
-            });
-        });
-    }
     updateMapEnvironmentUI();
 }
 
@@ -9138,9 +9043,9 @@ function animate() {
             if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
 
             if (inWater) {
-                // Player in water: Swimming mechanics
+                // Player in water: Swimming mechanics & animations
                 isGrounded = false;
-                const waterSurfaceY = (activeSeaConfig?.waterLevel || 0) - 0.45 + Math.sin(time * 3) * 0.1;
+                const waterSurfaceY = (activeSeaConfig?.waterLevel || 0) - 0.5 + Math.sin(time * 3) * 0.08;
                 humanCharacter.position.y = THREE.MathUtils.lerp(humanCharacter.position.y, waterSurfaceY, 0.12);
                 characterVelocity.y = 0;
 
@@ -9149,22 +9054,33 @@ function animate() {
                     characterYaw = Math.atan2(moveDir.x, moveDir.z);
                     humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
 
+                    // Body forward tilt in water while swimming forward
+                    humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.45, 0.15);
+
                     humanCharacter.position.x += moveDir.x * moveSpeed * delta;
                     humanCharacter.position.z += moveDir.z * moveSpeed * delta;
 
+                    if (emotesWidget && emotesWidget.getActiveEmote() !== 'idle') {
+                        emotesWidget.stopEmoteQuietly();
+                    }
                     if (playerAvatarRig) {
-                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'jump');
+                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'swim');
                     }
                 } else {
+                    // Treading water in place
+                    humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.08, 0.15);
+
                     if (playerAvatarRig) {
-                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'idle');
+                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'swim_idle');
                     }
                 }
 
                 if (keys['Space']) {
-                    humanCharacter.position.y = Math.min(0.2, humanCharacter.position.y + 3.5 * delta);
+                    humanCharacter.position.y = Math.min(0.25, humanCharacter.position.y + 3.5 * delta);
                 }
             } else {
+                // On land: smoothly upright body
+                humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0, 0.2);
                 if (moveDir.lengthSq() > 0) {
                     moveDir.normalize();
                     characterYaw = Math.atan2(moveDir.x, moveDir.z);
