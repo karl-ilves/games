@@ -56,6 +56,8 @@ interface PlacedObject {
     color: string;
     isAirplane?: boolean;
     isBoat?: boolean;
+    isSpawnPoint?: boolean;
+    isInvisibleSpawn?: boolean;
     portalTargetId?: string;
     portalTargetTitle?: string;
     gameItemType?: 'coin' | 'key' | 'door' | 'weapon' | 'potion' | 'goal' | 'checkpoint' | 'hazard' | 'shop' | 'enemy' | 'boss' | 'npc';
@@ -344,7 +346,7 @@ let mousePos = { x: 0, y: 0 };
 interface CatalogItem {
     id: string;
     name: string;
-    category: 'nature' | 'city' | 'vehicles' | 'gameplay' | 'scifi' | 'custom';
+    category: 'nature' | 'city' | 'vehicles' | 'gameplay' | 'scifi' | 'custom' | 'spawn';
     icon: string;
     color: string;
     geometryType: string;
@@ -366,7 +368,121 @@ interface CatalogItem {
 const CATALOG_DATABASE: CatalogItem[] = [];
 
 function generate10000ObjectCatalog() {
+    // 1. Featured Primary Spawn Points (Both Visible and Invisible)
+    const primarySpawnItems: CatalogItem[] = [
+        {
+            id: 'spawn_invisible',
+            name: '👻 Nähtamatu Alguspunkt',
+            category: 'spawn',
+            icon: '👻',
+            color: '#00f2fe',
+            geometryType: 'spawn_invisible',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_pad_visible',
+            name: '📍 Helendav Platvorm (Nähtav)',
+            category: 'spawn',
+            icon: '📍',
+            color: '#00cec9',
+            geometryType: 'spawn_pad_visible',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_flag',
+            name: '🚩 Kontrollpunkti Lipp (Nähtav)',
+            category: 'spawn',
+            icon: '🚩',
+            color: '#ff4757',
+            geometryType: 'spawn_flag',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_portal',
+            name: '🌀 Portaali Värav (Nähtav)',
+            category: 'spawn',
+            icon: '🌀',
+            color: '#a855f7',
+            geometryType: 'spawn_portal',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_water_buoy',
+            name: '🛟 Ujuv Veepinna Poi (Nähtav)',
+            category: 'spawn',
+            icon: '🛟',
+            color: '#ff7675',
+            geometryType: 'spawn_water_buoy',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_deep_seabed',
+            name: '⚓ Süvavee Baas (~10m all)',
+            category: 'spawn',
+            icon: '⚓',
+            color: '#0984e3',
+            geometryType: 'spawn_deep_seabed',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_hologram_beacon',
+            name: '📡 Hologramm Majakas (Nähtamatu)',
+            category: 'spawn',
+            icon: '📡',
+            color: '#55efc4',
+            geometryType: 'spawn_hologram_beacon',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_torii',
+            name: '⛩️ Müstiline Värav (Nähtav)',
+            category: 'spawn',
+            icon: '⛩️',
+            color: '#d63031',
+            geometryType: 'spawn_torii',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_golden_altar',
+            name: '🏆 Kuldne Trooni Alguspunkt (Nähtav)',
+            category: 'spawn',
+            icon: '🏆',
+            color: '#fdcb6e',
+            geometryType: 'spawn_golden_altar',
+            baseScale: 1.0
+        },
+        {
+            id: 'spawn_cyber_ring',
+            name: '⚡ Küber-Rõngas (Nähtamatu)',
+            category: 'spawn',
+            icon: '⚡',
+            color: '#fd79a8',
+            geometryType: 'spawn_cyber_ring',
+            baseScale: 1.0
+        }
+    ];
+
+    primarySpawnItems.forEach(item => CATALOG_DATABASE.push(item));
+
     const categories: Array<{ id: CatalogItem['category']; name: string; icon: string; types: string[]; colors: string[] }> = [
+        {
+            id: 'spawn',
+            name: 'Spawn Kohad',
+            icon: '🚩',
+            types: [
+                'Invisible Spawn Marker',
+                'Hologram Beacon Spawn',
+                'Sci-Fi Spawn Pad',
+                'Checkpoint Flag Post',
+                'Dimension Spawn Gate',
+                'Floating Ocean Buoy',
+                'Deep Seabed Diving Station',
+                'Mystic Torii Gate',
+                'Golden Throne Shrine',
+                'Cyber Ring Spawn'
+            ],
+            colors: ['#00f2fe', '#55efc4', '#00cec9', '#ff4757', '#a855f7', '#ff7675', '#0984e3', '#d63031', '#fdcb6e', '#fd79a8']
+        },
         {
             id: 'nature',
             name: 'Nature',
@@ -1121,7 +1237,7 @@ export function createWholeMapOcean(spawnEntities = false) {
     const floorGeo = new THREE.PlaneGeometry(420, 420, 16, 16);
     oceanSeabedMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x1b2838, roughness: 0.95 }));
     oceanSeabedMesh.rotation.x = -Math.PI / 2;
-    oceanSeabedMesh.position.set(0, -4.5, 0);
+    oceanSeabedMesh.position.set(0, -11.5, 0);
     scene.add(oceanSeabedMesh);
 
     // Hide grass so it doesn't protrude into deep ocean
@@ -1166,7 +1282,7 @@ export function createPartMapOcean(axis: 'x' | 'z' = 'z', side: 'negative' | 'po
     const floorGeo = new THREE.PlaneGeometry(width, depth, 16, 16);
     oceanSeabedMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x22313f, roughness: 0.95 }));
     oceanSeabedMesh.rotation.x = -Math.PI / 2;
-    oceanSeabedMesh.position.set(0, -4.0, isZNegative ? -95 : 95);
+    oceanSeabedMesh.position.set(0, -11.5, isZNegative ? -95 : 95);
     scene.add(oceanSeabedMesh);
 
     // 3. Golden Sandy Beach Coastline Strip along the boundary
@@ -1340,7 +1456,7 @@ export function createIslandOcean(spawnEntities = true) {
     const floorGeo = new THREE.PlaneGeometry(420, 420, 16, 16);
     oceanSeabedMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x1b2838, roughness: 0.95 }));
     oceanSeabedMesh.rotation.x = -Math.PI / 2;
-    oceanSeabedMesh.position.set(0, -4.5, 0);
+    oceanSeabedMesh.position.set(0, -11.5, 0);
     scene.add(oceanSeabedMesh);
 
     // 3. Central Circular Island (Radius 36m)
@@ -1642,6 +1758,142 @@ function createObjectMesh(item: CatalogItem, color?: string): THREE.Group {
             topBeam.position.set(0, 4, 0);
             group.add(topBeam);
         }
+    } else if (item.category === 'spawn' || item.geometryType.startsWith('spawn_') || item.id.startsWith('spawn_')) {
+        const lowerType = (item.geometryType + ' ' + item.name + ' ' + item.id).toLowerCase();
+        const isInvisible = lowerType.includes('invisible') || lowerType.includes('nähtamatu') || lowerType.includes('beacon') || lowerType.includes('ring');
+        
+        if (isInvisible) {
+            group.userData.isInvisibleSpawn = true;
+            // Holographic translucent marker for edit mode
+            const ringGeo = new THREE.CylinderGeometry(1.2, 1.2, 0.05, 32);
+            const holoMat = new THREE.MeshStandardMaterial({
+                color: matColor,
+                transparent: true,
+                opacity: 0.45,
+                roughness: 0.2,
+                emissive: matColor,
+                emissiveIntensity: 0.6
+            });
+            const ring = new THREE.Mesh(ringGeo, holoMat);
+            ring.position.y = 0.03;
+            group.add(ring);
+
+            // Floating holographic marker / arrow
+            const markerGeo = new THREE.ConeGeometry(0.35, 0.7, 4);
+            markerGeo.rotateX(Math.PI);
+            const marker = new THREE.Mesh(markerGeo, new THREE.MeshBasicMaterial({ color: matColor, wireframe: true }));
+            marker.position.y = 1.4;
+            group.add(marker);
+
+            // Torus aura
+            const aura = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.04, 12, 24), new THREE.MeshBasicMaterial({ color: matColor, transparent: true, opacity: 0.7 }));
+            aura.rotation.x = Math.PI / 2;
+            aura.position.y = 0.6;
+            group.add(aura);
+        } else if (lowerType.includes('flag') || lowerType.includes('lipp')) {
+            // Checkpoint Flag Post (Visible)
+            const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.8, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8 }));
+            stand.position.y = 0.07;
+            group.add(stand);
+
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 3.4, 12), new THREE.MeshStandardMaterial({ color: 0xdfe4ea, metalness: 0.7, roughness: 0.3 }));
+            pole.position.y = 1.7;
+            group.add(pole);
+
+            const finial = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.2 }));
+            finial.position.y = 3.4;
+            group.add(finial);
+
+            const flagGeo = new THREE.BoxGeometry(1.3, 0.75, 0.04);
+            const flagMesh = new THREE.Mesh(flagGeo, new THREE.MeshStandardMaterial({ color: 0xff4757, roughness: 0.5 }));
+            flagMesh.position.set(0.65, 2.8, 0);
+            group.add(flagMesh);
+        } else if (lowerType.includes('portal') || lowerType.includes('gate') || lowerType.includes('värav')) {
+            // Dimension Portal Gate (Visible)
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.6 });
+            [-1.6, 1.6].forEach(px => {
+                const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.45, 3.6, 0.45), pillarMat);
+                pillar.position.set(px, 1.8, 0);
+                group.add(pillar);
+            });
+            const arch = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.45, 0.5), pillarMat);
+            arch.position.set(0, 3.8, 0);
+            group.add(arch);
+
+            const portalDisc = new THREE.Mesh(new THREE.CircleGeometry(1.35, 32), new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
+            portalDisc.position.y = 1.9;
+            group.add(portalDisc);
+        } else if (lowerType.includes('buoy') || lowerType.includes('poi')) {
+            // Floating Ocean Water Buoy (Visible)
+            const buoyBody = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.65, 1.3, 16), new THREE.MeshStandardMaterial({ color: 0xff7675, roughness: 0.4 }));
+            buoyBody.position.y = 0.5;
+            group.add(buoyBody);
+
+            const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0x2d3436 }));
+            mast.position.y = 1.6;
+            group.add(mast);
+
+            const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffd32a }));
+            beacon.position.y = 2.3;
+            group.add(beacon);
+
+            const collar = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.08, 8, 24), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            collar.rotation.x = Math.PI / 2;
+            collar.position.y = 0.5;
+            group.add(collar);
+        } else if (lowerType.includes('seabed') || lowerType.includes('deep') || lowerType.includes('süvavee')) {
+            // Deep Seabed Station (Visible)
+            const basePad = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, 0.35, 8), new THREE.MeshStandardMaterial({ color: 0x1b2838, metalness: 0.8, roughness: 0.4 }));
+            basePad.position.y = 0.17;
+            group.add(basePad);
+
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), new THREE.MeshStandardMaterial({ color: 0x0984e3, transparent: true, opacity: 0.75, emissive: 0x00cec9, emissiveIntensity: 0.5 }));
+            dome.position.y = 0.8;
+            group.add(dome);
+
+            [-1.5, 1.5].forEach(lx => {
+                const light = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.6, 8), new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 }));
+                light.position.set(lx, 0.5, 0);
+                group.add(light);
+            });
+        } else if (lowerType.includes('torii')) {
+            // Mystic Torii Gate (Visible)
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.7 });
+            [-1.4, 1.4].forEach(tx => {
+                const col = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 3.6, 12), woodMat);
+                col.position.set(tx, 1.8, 0);
+                group.add(col);
+            });
+            const top = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.28, 0.35), woodMat);
+            top.position.set(0, 3.7, 0);
+            group.add(top);
+        } else if (lowerType.includes('altar') || lowerType.includes('throne')) {
+            // Golden Altar (Visible)
+            const goldMat = new THREE.MeshStandardMaterial({ color: 0xfdcb6e, metalness: 0.8, roughness: 0.3 });
+            const s1 = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.2, 2.6), goldMat);
+            s1.position.y = 0.1;
+            group.add(s1);
+            const s2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.2, 1.8), goldMat);
+            s2.position.y = 0.3;
+            group.add(s2);
+        } else {
+            // Visible Sci-Fi Spawn Pad (Standard Visible)
+            const baseRim = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.75, 0.2, 32), new THREE.MeshStandardMaterial({ color: 0x1e272e, metalness: 0.7, roughness: 0.3 }));
+            baseRim.position.y = 0.1;
+            group.add(baseRim);
+
+            const neonCore = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.24, 32), new THREE.MeshStandardMaterial({ color: matColor, emissive: matColor, emissiveIntensity: 0.8, roughness: 0.2 }));
+            neonCore.position.y = 0.12;
+            group.add(neonCore);
+
+            [-1.35, 1.35].forEach(ex => {
+                [-1.35, 1.35].forEach(ez => {
+                    const node = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.25), new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 }));
+                    node.position.set(ex, 0.2, ez);
+                    group.add(node);
+                });
+            });
+        }
     } else {
         // Sci-Fi
         const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.2, 0), material);
@@ -1687,7 +1939,20 @@ function spawnObjectIntoScene(catalogItem: CatalogItem) {
         color: catalogItem.color
     };
 
-    const lowerName = (catalogItem.name + ' ' + catalogItem.geometryType).toLowerCase();
+    const lowerName = (catalogItem.name + ' ' + catalogItem.geometryType + ' ' + catalogItem.id).toLowerCase();
+    const isSpawnItem = catalogItem.category === 'spawn' || lowerName.includes('spawn');
+    if (isSpawnItem) {
+        placed.isSpawnPoint = true;
+        if (mesh.userData.isInvisibleSpawn || lowerName.includes('invisible') || lowerName.includes('nähtamatu') || lowerName.includes('beacon') || lowerName.includes('ring')) {
+            placed.isInvisibleSpawn = true;
+            mesh.userData.isInvisibleSpawn = true;
+        }
+        if (lowerName.includes('seabed') || lowerName.includes('deep') || lowerName.includes('süvavee')) {
+            mesh.position.y = -9.5;
+            placed.position.y = -9.5;
+        }
+    }
+
     if (lowerName.includes('lava') || lowerName.includes('hazard')) {
         placed.gameItemType = 'hazard';
         placed.script = {
@@ -2262,7 +2527,9 @@ async function initStudio() {
         get wbScene() { return wbScene; },
         get wbPreviewMesh() { return wbPreviewMesh; },
         setWorkbenchToolMode,
-        get wbToolMode() { return wbToolMode; }
+        get wbToolMode() { return wbToolMode; },
+        get isPlayTestMode() { return isPlayTestMode; },
+        keys
     };
 
     // Generate 10,000 Objects in Catalog
@@ -2423,6 +2690,23 @@ export function updateGameplayHUD() {
             if (questProgress) questProgress.innerText = `[${activeQuest.current}/${activeQuest.target}]`;
         } else {
             questTracker.style.display = 'none';
+        }
+    }
+
+    const depthContainer = document.getElementById('hud-depth-container');
+    const depthVal = document.getElementById('hud-depth-val');
+    const inWater = isPositionInWater(humanCharacter.position.x, humanCharacter.position.z);
+    if (depthContainer && depthVal) {
+        if (inWater && isPlayTestMode) {
+            depthContainer.style.display = 'flex';
+            const depthM = Math.max(0, -humanCharacter.position.y);
+            if (depthM < 0.4) {
+                depthVal.innerText = 'Veepinnal';
+            } else {
+                depthVal.innerText = `${depthM.toFixed(1)} m / 10.0 m`;
+            }
+        } else {
+            depthContainer.style.display = 'none';
         }
     }
 
@@ -3126,7 +3410,26 @@ function setupStudioEvents() {
                 }
                 selectObject(null);
                 isDraggingObject = false;
-                humanCharacter.position.set(0, 0, 0);
+
+                // Position player at placed spawn point if available
+                const spawnPoints = placedObjects.filter(o => o.isSpawnPoint || o.category === 'spawn' || o.catalogId?.startsWith('spawn_'));
+                if (spawnPoints.length > 0) {
+                    const activeSpawn = (selectedObject && spawnPoints.includes(selectedObject)) ? selectedObject : spawnPoints[0];
+                    humanCharacter.position.set(activeSpawn.position.x, activeSpawn.position.y + 0.1, activeSpawn.position.z);
+                    humanCharacter.rotation.y = activeSpawn.rotation.y;
+                } else {
+                    humanCharacter.position.set(0, 0, 0);
+                }
+                checkpointPosition.copy(humanCharacter.position);
+
+                // Hide invisible spawn objects in play test mode
+                placedObjects.forEach(o => {
+                    const lowerN = (o.name + ' ' + (o.catalogId || '')).toLowerCase();
+                    if (o.isInvisibleSpawn || o.mesh.userData.isInvisibleSpawn || lowerN.includes('invisible') || lowerN.includes('nähtamatu') || lowerN.includes('beacon') || lowerN.includes('ring')) {
+                        o.mesh.visible = false;
+                    }
+                });
+
                 characterVelocity.set(0, 0, 0);
                 isGrounded = true;
                 playerHealth = playerMaxHealth;
@@ -3161,6 +3464,17 @@ function setupStudioEvents() {
                                 keys['Space'] = false;
                             },
                             extraButtons: [
+                                {
+                                    id: 'creator-mobile-dive-btn',
+                                    label: 'Dive 10m',
+                                    icon: '🤿',
+                                    onPress: () => {
+                                        keys['ShiftLeft'] = true;
+                                    },
+                                    onRelease: () => {
+                                        keys['ShiftLeft'] = false;
+                                    }
+                                },
                                 {
                                     id: 'creator-mobile-action-btn',
                                     label: 'Action [E]',
@@ -3201,6 +3515,14 @@ function setupStudioEvents() {
                 if (playTestMobileControls) {
                     playTestMobileControls.setVisible(false);
                 }
+                // Restore invisible spawn objects visibility in editor
+                placedObjects.forEach(o => {
+                    const lowerN = (o.name + ' ' + (o.catalogId || '')).toLowerCase();
+                    if (o.isInvisibleSpawn || o.mesh.userData.isInvisibleSpawn || lowerN.includes('invisible') || lowerN.includes('nähtamatu') || lowerN.includes('beacon') || lowerN.includes('ring')) {
+                        o.mesh.visible = true;
+                    }
+                });
+
                 playTestBtn.innerHTML = '<span>▶️</span> <span>Play Test Mode</span>';
                 playTestBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
                 if (playTestHud) playTestHud.style.display = 'none';
@@ -3342,6 +3664,7 @@ function setupStudioEvents() {
     bindTouchBtn('touch-btn-left', 'ArrowLeft');
     bindTouchBtn('touch-btn-right', 'ArrowRight');
     bindTouchBtn('touch-btn-jump', 'Space');
+    bindTouchBtn('touch-btn-dive', 'ShiftLeft');
 
     // Submit for Review Button
     const submitBtn = document.getElementById('btn-submit-review');
@@ -9047,42 +9370,93 @@ function animate() {
             if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
 
             if (inWater) {
-                // Player in water: Swimming mechanics & animations
+                // Player in water: Swimming & 10m Diving mechanics
                 isGrounded = false;
-                const waterSurfaceY = (activeSeaConfig?.waterLevel || 0) - 0.5 + Math.sin(time * 3) * 0.08;
-                humanCharacter.position.y = THREE.MathUtils.lerp(humanCharacter.position.y, waterSurfaceY, 0.12);
+                const waterLevel = activeSeaConfig?.waterLevel || 0;
+                const waterSurfaceY = waterLevel - 0.4 + Math.sin(time * 3) * 0.08;
+                const maxDiveDepth = -10.0; // Ujumine ja sukeldumine kuni ~10 meetrit vee alla!
+                const maxSurfaceY = waterLevel + 0.2;
+
+                const isAscending = !!(keys['Space'] || keys['KeyE']);
+                const isDiving = !!(keys['ShiftLeft'] || keys['ShiftRight'] || keys['Shift'] || keys['KeyC'] || keys['KeyQ']);
+
+                if (isDiving) {
+                    // Diving down into the ocean (down to ~10m)
+                    humanCharacter.position.y = Math.max(maxDiveDepth, humanCharacter.position.y - 4.0 * delta);
+                } else if (isAscending) {
+                    // Swimming up towards the surface
+                    humanCharacter.position.y = Math.min(maxSurfaceY, humanCharacter.position.y + 4.0 * delta);
+                } else {
+                    // Neutral buoyancy / surface bobbing
+                    if (humanCharacter.position.y >= -0.8) {
+                        humanCharacter.position.y = THREE.MathUtils.lerp(humanCharacter.position.y, waterSurfaceY, 0.1);
+                    } else {
+                        // Submerged underwater: steady depth holding with slight gentle float
+                        humanCharacter.position.y = Math.min(waterSurfaceY, humanCharacter.position.y + 0.12 * delta);
+                    }
+                }
                 characterVelocity.y = 0;
 
-                if (moveDir.lengthSq() > 0) {
+                const hasHoriMove = moveDir.lengthSq() > 0;
+                if (hasHoriMove) {
                     moveDir.normalize();
                     characterYaw = Math.atan2(moveDir.x, moveDir.z);
                     humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
 
-                    // Body forward tilt in water while swimming forward
-                    humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.45, 0.15);
-
                     humanCharacter.position.x += moveDir.x * moveSpeed * delta;
                     humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+                }
 
-                    if (emotesWidget && emotesWidget.getActiveEmote() !== 'idle') {
-                        emotesWidget.stopEmoteQuietly();
-                    }
-                    if (playerAvatarRig) {
-                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'swim');
-                    }
+                // Realistic body rotation angle in water:
+                // Diving: head tilted downward (~0.75 rad)
+                // Ascending: head tilted upward (~0.12 rad)
+                // Swimming forward: breaststroke/freestyle angle (~0.45 rad)
+                // Idle: upright treading water (~0.08 rad)
+                if (isDiving) {
+                    humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.75, 0.15);
+                } else if (isAscending) {
+                    humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.12, 0.15);
+                } else if (hasHoriMove) {
+                    humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.45, 0.15);
                 } else {
-                    // Treading water in place
                     humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.08, 0.15);
+                }
 
-                    if (playerAvatarRig) {
-                        playerAvatarRig.updateAnimation(performance.now() * 0.001, 'swim_idle');
+                if (emotesWidget && emotesWidget.getActiveEmote() !== 'idle') {
+                    emotesWidget.stopEmoteQuietly();
+                }
+                if (playerAvatarRig) {
+                    const isSwimming = hasHoriMove || isDiving || isAscending;
+                    playerAvatarRig.updateAnimation(performance.now() * 0.001, isSwimming ? 'swim' : 'swim_idle');
+                }
+
+                // Underwater atmosphere & depth HUD
+                const depthM = Math.max(0, -humanCharacter.position.y);
+                const depthContainer = document.getElementById('hud-depth-container');
+                const depthVal = document.getElementById('hud-depth-val');
+                if (depthContainer && depthVal) {
+                    depthContainer.style.display = 'flex';
+                    if (depthM < 0.4) {
+                        depthVal.innerText = 'Veepinnal';
+                    } else {
+                        depthVal.innerText = `${depthM.toFixed(1)} m / 10.0 m`;
                     }
                 }
 
-                if (keys['Space']) {
-                    humanCharacter.position.y = Math.min(0.25, humanCharacter.position.y + 3.5 * delta);
+                // Underwater atmospheric fog effect
+                if (scene.fog && (scene.fog as any).color) {
+                    if (humanCharacter.position.y < -0.5) {
+                        const depthRatio = Math.min(1.0, depthM / 10.0);
+                        (scene.fog as any).color.setRGB(0.01 * (1 - depthRatio * 0.5), 0.15 * (1 - depthRatio * 0.4), 0.35 * (1 - depthRatio * 0.2));
+                        (scene.fog as THREE.FogExp2).density = 0.012 + depthRatio * 0.02;
+                    } else {
+                        (scene.fog as any).color.setHex(0x74b9ff);
+                        (scene.fog as THREE.FogExp2).density = 0.008;
+                    }
                 }
             } else {
+                const depthContainer = document.getElementById('hud-depth-container');
+                if (depthContainer) depthContainer.style.display = 'none';
                 // On land: smoothly upright body
                 humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0, 0.2);
                 if (moveDir.lengthSq() > 0) {
@@ -9386,7 +9760,10 @@ function animate() {
             const inWater = isPositionInWater(humanCharacter.position.x, humanCharacter.position.z);
             if (inWater) {
                 humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0.1, 0.15);
-                humanCharacter.position.y = (activeSeaConfig?.waterLevel || 0) - 0.5 + Math.sin(time * 3) * 0.08;
+                const waterLevel = activeSeaConfig?.waterLevel || 0;
+                if (humanCharacter.position.y > -0.8) {
+                    humanCharacter.position.y = waterLevel - 0.4 + Math.sin(time * 3) * 0.08;
+                }
                 playerAvatarRig.updateAnimation(performance.now() * 0.001, 'swim_idle');
             } else {
                 humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0, 0.2);

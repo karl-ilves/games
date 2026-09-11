@@ -455,6 +455,11 @@
             <div id="hud-yards-container" style="display: none; background: rgba(15, 23, 42, 0.9); border: 2px solid #00f2fe; border-radius: 12px; padding: 6px 12px; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,242,254,0.3); font-weight: 800; color: #00f2fe; font-size: 0.95rem;">
                 <span>💎</span> <span id="hud-yards-val">0</span> <span style="font-size: 0.75rem; color: #94a3b8;">Yards</span>
             </div>
+
+            <!-- Underwater Depth Indicator -->
+            <div id="hud-depth-container" style="display: none; background: rgba(10, 40, 75, 0.92); border: 2px solid #00f2fe; border-radius: 12px; padding: 6px 12px; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,242,254,0.4); font-weight: 800; color: #00f2fe; font-size: 0.95rem;">
+                <span>🤿</span> <span id="hud-depth-val">0.0 m</span>
+            </div>
         </div>
 
         <!-- Active Quest & Objectives Tracker -->
@@ -545,7 +550,7 @@
 
     <!-- Play Test Active HUD -->
     <div id="play-test-hud">
-        🎮 <strong>PLAY TEST:</strong> Nooltega / WASD liikumine | <strong>SPACE</strong> Hüpe | <strong>[E] / Click</strong> Rünnak | <strong>[F]</strong> Sõidukid
+        🎮 <strong>PLAY TEST:</strong> Nooltega / WASD liikumine | <strong>SPACE</strong> Hüpe / Uju üles | <strong>SHIFT / C</strong> Sukeldu (~10m) | <strong>[E]</strong> Rünnak | <strong>[F]</strong> Sõidukid
     </div>
 
     <!-- Vehicle Drive & Flight Active HUD -->
@@ -594,11 +599,15 @@
             <div></div>
         </div>
 
-        <!-- Jump Button -->
-        <div style="pointer-events: auto;">
-            <button id="touch-btn-jump" style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #4facfe); border: 2px solid #fff; color: #111; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 8px 25px rgba(0,242,254,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <!-- Jump & Dive Buttons -->
+        <div style="pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center;">
+            <button id="touch-btn-jump" style="width: 76px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #00f2fe, #4facfe); border: 2px solid #fff; color: #111; font-weight: 900; font-size: 0.95rem; cursor: pointer; box-shadow: 0 8px 25px rgba(0,242,254,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center;">
                 <span>🚀</span>
-                <span style="font-size: 0.75rem; font-weight: 800;">JUMP</span>
+                <span style="font-size: 0.65rem; font-weight: 800;">HÜPE/ÜLES</span>
+            </button>
+            <button id="touch-btn-dive" style="width: 76px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #0984e3, #00cec9); border: 2px solid #fff; color: #fff; font-weight: 900; font-size: 0.95rem; cursor: pointer; box-shadow: 0 8px 25px rgba(0,206,201,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <span>🤿</span>
+                <span style="font-size: 0.62rem; font-weight: 800;">SUKELDU 10M</span>
             </button>
         </div>
     </div>
@@ -613,6 +622,7 @@
             <input type="text" id="catalog-search-input" class="catalog-search" placeholder="🔍 Search 10000 objects...">
             <div class="catalog-categories">
                 <button class="cat-btn active" data-cat="all">All</button>
+                <button class="cat-btn" data-cat="spawn" style="color: #00f2fe; font-weight: bold;">🚩 Spawn Kohad</button>
                 <button class="cat-btn" data-cat="custom" style="color: #ffd32a; font-weight: bold;">⭐ Players Created</button>
                 <button class="cat-btn" data-cat="nature">🌿 Nature</button>
                 <button class="cat-btn" data-cat="city">🏙️ City</button>

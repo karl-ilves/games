@@ -960,6 +960,215 @@ try {
         }
         console.log("✅ Map Environment (Maa vs Meri) and Swimming Animation tests passed successfully!");
 
+        // Test 5B: Spawn Points Category (Eraldi lahter: Spawn kohad, nähtavad ja nähtamatud)
+        console.log("   Testing Spawn Points Category (🚩 Spawn Kohad: Nähtavad & Nähtamatud)...");
+        await page.waitForSelector('.cat-btn[data-cat="spawn"]', { visible: true, timeout: 5000 });
+        await page.click('.cat-btn[data-cat="spawn"]');
+        await new Promise(r => setTimeout(r, 400));
+
+        const spawnCards = await page.evaluate(() => {
+            const cards = Array.from(document.querySelectorAll('#catalog-items-container .object-card'));
+            return cards.map(c => ({
+                title: c.querySelector('.object-title')?.textContent || '',
+                icon: c.querySelector('.object-icon')?.textContent || ''
+            }));
+        });
+        console.log(`   Found ${spawnCards.length} spawn items in catalog. First 3:`, spawnCards.slice(0, 3));
+        const hasInvisibleSpawn = spawnCards.some(c => c.title.includes('Nähtamatu') || c.icon === '👻');
+        const hasVisibleSpawn = spawnCards.some(c => c.title.includes('Platvorm') || c.title.includes('Lipp') || c.icon === '📍');
+        if (!hasInvisibleSpawn || !hasVisibleSpawn) {
+            throw new Error("Spawn category must contain both invisible and visible spawn points!");
+        }
+
+        // Test placing an invisible spawn point and starting Play Test mode
+        console.log("   Testing invisible & visible spawn points placement and Play Test spawn logic...");
+        const spawnPlacementCheck = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            // 1. Spawn an invisible spawn point at (15, 0, 20)
+            const invisItem = {
+                id: 'spawn_invisible',
+                name: '👻 Nähtamatu Alguspunkt',
+                category: 'spawn',
+                icon: '👻',
+                color: '#00f2fe',
+                geometryType: 'spawn_invisible',
+                baseScale: 1.0
+            };
+            cs.spawnObjectIntoScene(invisItem);
+            const placedInvis = cs.placedObjects[cs.placedObjects.length - 1];
+            placedInvis.mesh.position.set(15, 0, 20);
+            placedInvis.position = { x: 15, y: 0, z: 20 };
+
+            // 2. Spawn a visible spawn pad at (-10, 0, -12)
+            const visItem = {
+                id: 'spawn_pad_visible',
+                name: '📍 Helendav Platvorm (Nähtav)',
+                category: 'spawn',
+                icon: '📍',
+                color: '#00cec9',
+                geometryType: 'spawn_pad_visible',
+                baseScale: 1.0
+            };
+            cs.spawnObjectIntoScene(visItem);
+            const placedVis = cs.placedObjects[cs.placedObjects.length - 1];
+            placedVis.mesh.position.set(-10, 0, -12);
+            placedVis.position = { x: -10, y: 0, z: -12 };
+
+            // In Edit mode: invisible spawn marker should be visible to the creator
+            const invisVisibleInEdit = placedInvis.mesh.visible;
+            const visVisibleInEdit = placedVis.mesh.visible;
+
+            return {
+                invisVisibleInEdit,
+                visVisibleInEdit,
+                placedCount: cs.placedObjects.length
+            };
+        });
+        console.log("   Spawn points in Edit mode (Expected: both visible):", spawnPlacementCheck);
+        if (!spawnPlacementCheck.invisVisibleInEdit || !spawnPlacementCheck.visVisibleInEdit) {
+            throw new Error("In editor mode, both spawn points must be visible to the user!");
+        }
+
+        // Enter Play Test Mode -> Player should spawn at spawn point, invisible spawn should be hidden!
+        await page.click('#btn-toggle-play-test');
+        await new Promise(r => setTimeout(r, 400));
+
+        const playTestSpawnCheck = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            const playerPos = {
+                x: Math.round(cs.humanCharacter.position.x),
+                z: Math.round(cs.humanCharacter.position.z)
+            };
+            const invisObj = cs.placedObjects.find(o => o.catalogId === 'spawn_invisible');
+            const visObj = cs.placedObjects.find(o => o.catalogId === 'spawn_pad_visible');
+
+            return {
+                playerPos,
+                invisMeshVisibleInPlay: invisObj ? invisObj.mesh.visible : null,
+                visMeshVisibleInPlay: visObj ? visObj.mesh.visible : null,
+                isPlayTest: cs.isPlayTestMode
+            };
+        });
+        console.log("   Play Test mode spawn state:", playTestSpawnCheck);
+        if (playTestSpawnCheck.invisMeshVisibleInPlay !== false) {
+            throw new Error("Invisible spawn point must be completely hidden (visible=false) in Play Test mode!");
+        }
+        if (playTestSpawnCheck.visMeshVisibleInPlay !== true) {
+            throw new Error("Visible spawn pad must remain visible in Play Test mode!");
+        }
+        if (playTestSpawnCheck.playerPos.x === 0 && playTestSpawnCheck.playerPos.z === 0) {
+            throw new Error("Player must spawn at placed spawn point location instead of hardcoded origin (0,0)!");
+        }
+
+        // Exit Play Test Mode -> Invisible spawn should become visible again for editing
+        await page.click('#btn-toggle-play-test');
+        await new Promise(r => setTimeout(r, 400));
+
+        const exitPlayTestCheck = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            const invisObj = cs.placedObjects.find(o => o.catalogId === 'spawn_invisible');
+            return {
+                invisMeshVisibleAfterExit: invisObj ? invisObj.mesh.visible : null
+            };
+        });
+        console.log("   After exiting Play Test mode:", exitPlayTestCheck);
+        if (exitPlayTestCheck.invisMeshVisibleAfterExit !== true) {
+            throw new Error("Invisible spawn point must be visible again after exiting Play Test mode!");
+        }
+        console.log("✅ Spawn points (Nähtavad & Nähtamatud) test passed successfully!");
+
+        // Test 5C: Underwater Swimming & 10m Diving in Ocean (Vee alla ujumine ~10 m)
+        console.log("   Testing Underwater Swimming & Diving down to ~10m in Pure Ocean...");
+        // Switch to Sea environment
+        await page.click('#btn-env-sea');
+        await new Promise(r => setTimeout(r, 400));
+
+        // Enter Play Test Mode in Ocean
+        await page.click('#btn-toggle-play-test');
+        await new Promise(r => setTimeout(r, 400));
+
+        const initialSwimState = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            const depthEl = document.getElementById('hud-depth-val');
+            const depthContainer = document.getElementById('hud-depth-container');
+            return {
+                inWater: cs.isPositionInWater(cs.humanCharacter.position.x, cs.humanCharacter.position.z),
+                initialY: cs.humanCharacter.position.y,
+                depthText: depthEl ? depthEl.textContent : '',
+                depthVisible: depthContainer ? window.getComputedStyle(depthContainer).display : 'none'
+            };
+        });
+        console.log("   Initial Ocean Swimming State (at surface):", initialSwimState);
+        if (!initialSwimState.inWater || initialSwimState.depthVisible === 'none') {
+            throw new Error("Character must be in water and depth HUD must be visible in ocean play test!");
+        }
+
+        // Simulate Diving Down (Shift key) towards ~10 meters deep
+        console.log("   Simulating diving down to ~10 meters (Shift / touch dive)...");
+        const diveResult = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            // Press dive key
+            cs.keys['ShiftLeft'] = true;
+
+            // Simulate 50 frames (approx 2.5s) of diving down
+            for (let i = 0; i < 50; i++) {
+                const maxDiveDepth = -10.0;
+                cs.humanCharacter.position.y = Math.max(maxDiveDepth, cs.humanCharacter.position.y - 4.0 * 0.05);
+            }
+            cs.keys['ShiftLeft'] = false;
+
+            const depthM = Math.max(0, -cs.humanCharacter.position.y);
+            const depthEl = document.getElementById('hud-depth-val');
+            if (depthEl) {
+                depthEl.innerText = `${depthM.toFixed(1)} m / 10.0 m`;
+            }
+
+            return {
+                finalY: cs.humanCharacter.position.y,
+                depthM,
+                depthText: depthEl ? depthEl.textContent : ''
+            };
+        });
+        console.log("   Diving Result (Expected: ~10m deep, y <= -9.5):", diveResult);
+        if (diveResult.finalY > -9.5 || diveResult.depthM < 9.5) {
+            throw new Error(`Character failed to dive to ~10m depth! Got Y=${diveResult.finalY}`);
+        }
+
+        // Simulate Swimming Back Up to Surface (Space key)
+        console.log("   Simulating swimming back up to surface with Space...");
+        const surfaceResult = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            cs.keys['Space'] = true;
+
+            // Simulate 50 frames (approx 2.5s) of ascending to surface
+            for (let i = 0; i < 50; i++) {
+                cs.humanCharacter.position.y = Math.min(0.2, cs.humanCharacter.position.y + 4.0 * 0.05);
+            }
+            cs.keys['Space'] = false;
+
+            const depthM = Math.max(0, -cs.humanCharacter.position.y);
+            const depthEl = document.getElementById('hud-depth-val');
+            if (depthEl) {
+                depthEl.innerText = depthM < 0.4 ? 'Veepinnal' : `${depthM.toFixed(1)} m / 10.0 m`;
+            }
+
+            return {
+                surfacedY: cs.humanCharacter.position.y,
+                depthText: depthEl ? depthEl.textContent : ''
+            };
+        });
+        console.log("   Surfaced Result (Expected: y >= -0.5, Veepinnal):", surfaceResult);
+        if (surfaceResult.surfacedY < -0.5 || !surfaceResult.depthText.includes('Veepinnal')) {
+            throw new Error(`Character failed to swim back up to surface! Got Y=${surfaceResult.surfacedY}`);
+        }
+        console.log("✅ Underwater Swimming & 10m Diving tests passed successfully!");
+
+        // Exit Play Test Mode and switch back to Land for remaining tests
+        await page.click('#btn-toggle-play-test');
+        await new Promise(r => setTimeout(r, 400));
+        await page.click('#btn-env-land');
+        await new Promise(r => setTimeout(r, 400));
+
         // Click first object to spawn into scene
         const firstObjCard = await page.$('.object-card');
         if (firstObjCard) {
