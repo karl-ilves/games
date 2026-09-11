@@ -1415,6 +1415,22 @@ try {
                 throw new Error("isPlayerTouchingOrOnTop failed: player was detected while far away or not detected when on top!");
             }
 
+            // 8. Test Space jump does NOT exit Play Test mode
+            console.log("   Testing Space key jump does not exit Play Test mode...");
+            // Press Space key via keyboard
+            await page.keyboard.press('Space');
+            await new Promise(r => setTimeout(r, 200));
+
+            // Verify still in Play Test mode
+            const stillInPlayTest = await page.evaluate(() => {
+                const btn = document.getElementById('btn-toggle-play-test');
+                return btn?.textContent?.includes('Exit Play Test');
+            });
+            console.log("   Still in Play Test mode after pressing Space:", stillInPlayTest);
+            if (!stillInPlayTest) {
+                throw new Error("Pressing Space caused Play Test mode to exit back to creator mode!");
+            }
+
             // Switch back to edit mode
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));

@@ -2528,6 +2528,17 @@ function setupStudioEvents() {
         keys[e.code] = true;
 
         if (isPlayTestMode) {
+            // Space Key: Player Jump (prevent default so browser doesn't trigger focused buttons like Play Test toggle)
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                keys['Space'] = true;
+                // If any button had focus, blur it immediately so Space never triggers click
+                if (document.activeElement && (document.activeElement as HTMLElement).blur) {
+                    (document.activeElement as HTMLElement).blur();
+                }
+                return;
+            }
+
             // E Key: Player Attack / Action
             if (e.code === 'KeyE' || e.key.toLowerCase() === 'e') {
                 e.preventDefault();
@@ -2629,7 +2640,15 @@ function setupStudioEvents() {
         if (modal) modal.style.display = 'none';
     });
 
-    window.addEventListener('keyup', e => { keys[e.code] = false; });
+    window.addEventListener('keyup', e => {
+        keys[e.code] = false;
+        if (e.code === 'Space' || e.key === ' ') {
+            keys['Space'] = false;
+            if (isPlayTestMode) {
+                e.preventDefault();
+            }
+        }
+    });
 
     const dom = renderer.domElement;
 
@@ -2719,6 +2738,10 @@ function setupStudioEvents() {
         playTestBtn.addEventListener('click', () => {
             isPlayTestMode = !isPlayTestMode;
             if (isPlayTestMode) {
+                playTestBtn.blur();
+                if (document.activeElement && (document.activeElement as HTMLElement).blur) {
+                    (document.activeElement as HTMLElement).blur();
+                }
                 selectObject(null);
                 isDraggingObject = false;
                 humanCharacter.position.set(0, 0, 0);
