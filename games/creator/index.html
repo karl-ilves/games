@@ -965,6 +965,20 @@
                     </button>
                 </div>
 
+                <!-- Add Extra Shape & Shape Parts List -->
+                <div style="background: rgba(0,242,254,0.06); border: 1px solid rgba(0,242,254,0.25); border-radius: 12px; padding: 10px; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.82rem; font-weight: bold; color: #00f2fe;">🧩 Eseme Kujundid (Parts):</span>
+                        <span id="workbench-parts-count" style="font-size: 0.75rem; color: #ffd32a; font-weight: bold;">1 tk</span>
+                    </div>
+                    <div id="workbench-parts-list" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px;">
+                        <!-- Dynamically populated parts chips -->
+                    </div>
+                    <button id="btn-wb-add-part" style="width: 100%; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; color: #000; font-weight: 800; border-radius: 8px; padding: 8px; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,242,254,0.3);">
+                        <span>➕</span> <span>Lisa Veel Üks Kujund (Add Shape)</span>
+                    </button>
+                </div>
+
                 <h4 style="margin: 0 0 10px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase;">2. Värv ja Olemus</h4>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1029,10 +1043,33 @@
                     </div>
                 </div>
 
-                <!-- Reset Button -->
-                <button id="btn-wb-reset" style="width: 100%; background: #334155; border: 1px solid #64748b; color: #cbd5e1; border-radius: 8px; padding: 6px; font-size: 0.8rem; cursor: pointer;">
-                    🔄 Lähtesta Kuju (Reset)
-                </button>
+                <!-- Shape Position Offset & Rotation Controls -->
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; margin-bottom: 12px;">
+                    <div style="font-size: 0.8rem; font-weight: bold; color: #ffd32a; margin-bottom: 6px;">📍 Vali Kujundi Asukoht (Positsioon):</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 160px; margin: 0 auto 6px auto;">
+                        <div></div>
+                        <button id="btn-wb-pos-fwd" class="btn-ctrl" title="Liiguta ette (+Z)" style="padding: 4px; font-size: 0.8rem;">⬆️</button>
+                        <button id="btn-wb-pos-up" class="btn-ctrl" title="Liiguta üles (+Y)" style="padding: 4px; font-size: 0.8rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">🔼</button>
+
+                        <button id="btn-wb-pos-left" class="btn-ctrl" title="Liiguta vasakule (-X)" style="padding: 4px; font-size: 0.8rem;">⬅️</button>
+                        <button id="btn-wb-rot-y" class="btn-ctrl" title="Pööra 45° (R)" style="padding: 4px; font-size: 0.8rem; background: rgba(255,211,42,0.2); border-color: #ffd32a; color: #ffd32a; font-weight: bold;">🔄</button>
+                        <button id="btn-wb-pos-right" class="btn-ctrl" title="Liiguta paremale (+X)" style="padding: 4px; font-size: 0.8rem;">➡️</button>
+
+                        <div></div>
+                        <button id="btn-wb-pos-back" class="btn-ctrl" title="Liiguta taha (-Z)" style="padding: 4px; font-size: 0.8rem;">⬇️</button>
+                        <button id="btn-wb-pos-down" class="btn-ctrl" title="Liiguta alla (-Y)" style="padding: 4px; font-size: 0.8rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">🔽</button>
+                    </div>
+                </div>
+
+                <!-- Reset & Delete Part Buttons -->
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-wb-delete-part" style="flex: 1; background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #ff7675; border-radius: 8px; padding: 6px; font-size: 0.78rem; cursor: pointer; font-weight: bold;">
+                        🗑️ Kustuta Kujund
+                    </button>
+                    <button id="btn-wb-reset" style="flex: 1; background: #334155; border: 1px solid #64748b; color: #cbd5e1; border-radius: 8px; padding: 6px; font-size: 0.78rem; cursor: pointer;">
+                        🔄 Lähtesta
+                    </button>
+                </div>
             </div>
 
             <!-- Bottom Floating Guidance Hint -->

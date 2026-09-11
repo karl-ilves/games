@@ -1478,6 +1478,34 @@ try {
                 throw new Error("Workbench shape/height elevation was not applied correctly!");
             }
 
+            // 3.1. Test adding multiple shapes (Multi-part custom item)
+            console.log("   Testing adding a second shape part...");
+            await page.click('#btn-wb-add-part');
+            await new Promise(r => setTimeout(r, 200));
+
+            // Select cylinder for the 2nd part
+            await page.click('.workbench-shape-btn[data-shape="cylinder"]');
+            await new Promise(r => setTimeout(r, 100));
+
+            // Move the 2nd part upwards
+            await page.click('#btn-wb-pos-up');
+            await page.click('#btn-wb-pos-up');
+            await new Promise(r => setTimeout(r, 100));
+
+            const partsCount = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return {
+                    count: cs?.currentWorkbenchState?.parts?.length || 0,
+                    p1Shape: cs?.currentWorkbenchState?.parts?.[0]?.shapeType,
+                    p2Shape: cs?.currentWorkbenchState?.parts?.[1]?.shapeType,
+                    p2Y: cs?.currentWorkbenchState?.parts?.[1]?.position?.y || 0
+                };
+            });
+            console.log("   Workbench multi-part status:", partsCount);
+            if (partsCount.count < 2 || partsCount.p2Shape !== 'cylinder' || partsCount.p2Y <= 0) {
+                throw new Error("Multi-part workbench shape addition or positioning failed!");
+            }
+
             // 4. Test Publishing the custom item to community library
             await page.evaluate(() => {
                 const nameInput = document.getElementById('workbench-item-name');
@@ -1511,16 +1539,20 @@ try {
                 throw new Error("Published item 'Turbo Jump Ramp' not found in ⭐ Players Created catalog!");
             }
 
-            // 6. Verify item was placed into 3D scene
-            const hasPlacedCustomObject = await page.evaluate(() => {
+            // 6. Verify item was placed into 3D scene with multiple parts
+            const placedObjectInfo = await page.evaluate(() => {
                 const cs = window.creatorStudio;
-                return cs?.placedObjects?.some(obj => obj.name === 'Turbo Jump Ramp' && obj.customModelData);
+                const obj = cs?.placedObjects?.find(o => o.name === 'Turbo Jump Ramp' && o.customModelData);
+                return {
+                    found: !!obj,
+                    partsCount: obj?.customModelData?.parts?.length || 0
+                };
             });
-            console.log("   Custom created item placed into 3D scene:", hasPlacedCustomObject);
-            if (!hasPlacedCustomObject) {
-                throw new Error("Expected custom created item to be placed in the 3D scene!");
+            console.log("   Custom created item placed into 3D scene:", placedObjectInfo);
+            if (!placedObjectInfo.found || placedObjectInfo.partsCount < 2) {
+                throw new Error("Expected custom created item with multiple parts to be placed in the 3D scene!");
             }
-            console.log("   ✅ Custom Item Workbench, Elevation, Save, Publish & Catalog passed!");
+            console.log("   ✅ Custom Item Workbench, Multi-Shape, Elevation, Save, Publish & Catalog passed!");
         }
 
         // Test Submit for Review

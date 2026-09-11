@@ -707,40 +707,43 @@ export function createWedgeGeometry(width: number, height: number, depth: number
     return geo;
 }
 
-export function createCustomModel3DMesh(modelData: {
+export function createSinglePartMesh(part: {
     shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
     width: number;
     height: number;
     depth: number;
     topElevation?: number;
-    faceOffsets?: { [key: string]: number };
+    color?: string;
+    position?: { x: number; y: number; z: number };
+    rotationY?: number;
     isHazard?: boolean;
     isHeal?: boolean;
     isBoost?: boolean;
-}, color = '#00f2fe'): THREE.Group {
-    const group = new THREE.Group();
-    const w = Math.max(0.5, modelData.width || 2);
-    const h = Math.max(0.2, modelData.height || 2);
-    const d = Math.max(0.5, modelData.depth || 2);
+}, defaultColor = '#00f2fe'): THREE.Group {
+    const partGroup = new THREE.Group();
+    const w = Math.max(0.2, part.width || 2);
+    const h = Math.max(0.2, part.height || 2);
+    const d = Math.max(0.2, part.depth || 2);
+    const col = part.color || defaultColor;
 
     let mat: THREE.Material;
-    if (modelData.isHazard) {
+    if (part.isHazard) {
         mat = new THREE.MeshStandardMaterial({
-            color: color || '#ff3838',
+            color: col || '#ff3838',
             emissive: 0xd63031,
             emissiveIntensity: 0.6,
             roughness: 0.3
         });
-    } else if (modelData.isHeal) {
+    } else if (part.isHeal) {
         mat = new THREE.MeshStandardMaterial({
-            color: color || '#2ecc71',
+            color: col || '#2ecc71',
             emissive: 0x27ae60,
             emissiveIntensity: 0.5,
             roughness: 0.3
         });
-    } else if (modelData.isBoost) {
+    } else if (part.isBoost) {
         mat = new THREE.MeshStandardMaterial({
-            color: color || '#f1c40f',
+            color: col || '#f1c40f',
             emissive: 0xe67e22,
             emissiveIntensity: 0.6,
             roughness: 0.2,
@@ -748,7 +751,7 @@ export function createCustomModel3DMesh(modelData: {
         });
     } else {
         mat = new THREE.MeshStandardMaterial({
-            color: color || '#00f2fe',
+            color: col || '#00f2fe',
             roughness: 0.4,
             metalness: 0.2
         });
@@ -757,9 +760,9 @@ export function createCustomModel3DMesh(modelData: {
     let geo: THREE.BufferGeometry;
     let meshPosY = h / 2;
 
-    switch (modelData.shapeType) {
+    switch (part.shapeType) {
         case 'wedge': {
-            const rampHeight = modelData.topElevation || h;
+            const rampHeight = part.topElevation || h;
             geo = createWedgeGeometry(w, rampHeight, d);
             meshPosY = 0;
             break;
@@ -792,15 +795,58 @@ export function createCustomModel3DMesh(modelData: {
     mainMesh.position.y = meshPosY;
     mainMesh.castShadow = true;
     mainMesh.receiveShadow = true;
-    group.add(mainMesh);
+    partGroup.add(mainMesh);
 
-    // Add glowing accent wireframe / rim for high quality finish
     const edgeGeo = new THREE.EdgesGeometry(geo);
     const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 });
     const wireframe = new THREE.LineSegments(edgeGeo, edgeMat);
     wireframe.position.copy(mainMesh.position);
-    group.add(wireframe);
+    partGroup.add(wireframe);
 
+    if (part.position) {
+        partGroup.position.set(part.position.x || 0, part.position.y || 0, part.position.z || 0);
+    }
+    if (part.rotationY) {
+        partGroup.rotation.y = part.rotationY;
+    }
+
+    return partGroup;
+}
+
+export function createCustomModel3DMesh(modelData: {
+    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    width: number;
+    height: number;
+    depth: number;
+    topElevation?: number;
+    faceOffsets?: { [key: string]: number };
+    isHazard?: boolean;
+    isHeal?: boolean;
+    isBoost?: boolean;
+    parts?: any[];
+}, color = '#00f2fe'): THREE.Group {
+    const group = new THREE.Group();
+
+    // Kui mudelil on mitu kujundit (parts), loome iga kujundi eraldi ja liidame ühte tervikusse
+    if (modelData.parts && modelData.parts.length > 0) {
+        modelData.parts.forEach((p, idx) => {
+            const pGroup = createSinglePartMesh({
+                ...p,
+                isHazard: modelData.isHazard,
+                isHeal: modelData.isHeal,
+                isBoost: modelData.isBoost
+            }, p.color || color);
+            pGroup.userData.partIndex = idx;
+            pGroup.userData.partId = p.id;
+            group.add(pGroup);
+        });
+        return group;
+    }
+
+    // Üksiku kujundi loogika
+    const single = createSinglePartMesh(modelData, color);
+    single.userData.partIndex = 0;
+    group.add(single);
     return group;
 }
 
@@ -4151,6 +4197,18 @@ export function setupScriptingEvents() {
 // ==========================================
 // 🎨 3D CUSTOM ITEM CREATOR WORKBENCH ENGINE
 // ==========================================
+interface WorkbenchPart {
+    id: string;
+    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    width: number;
+    height: number;
+    depth: number;
+    topElevation: number;
+    color: string;
+    position: { x: number; y: number; z: number };
+    rotationY: number;
+}
+
 interface WorkbenchState {
     shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
     width: number;
@@ -4159,6 +4217,8 @@ interface WorkbenchState {
     topElevation: number;
     color: string;
     behavior: 'solid' | 'hazard' | 'heal' | 'boost';
+    parts: WorkbenchPart[];
+    selectedPartIndex: number;
 }
 
 const currentWorkbenchState: WorkbenchState = {
@@ -4168,8 +4228,63 @@ const currentWorkbenchState: WorkbenchState = {
     depth: 3.0,
     topElevation: 2.0,
     color: '#00f2fe',
-    behavior: 'solid'
+    behavior: 'solid',
+    parts: [
+        {
+            id: 'part_1',
+            shapeType: 'box',
+            width: 3.0,
+            height: 2.0,
+            depth: 3.0,
+            topElevation: 2.0,
+            color: '#00f2fe',
+            position: { x: 0, y: 0, z: 0 },
+            rotationY: 0
+        }
+    ],
+    selectedPartIndex: 0
 };
+
+export function getActiveWorkbenchPart(): WorkbenchPart {
+    if (!currentWorkbenchState.parts || currentWorkbenchState.parts.length === 0) {
+        currentWorkbenchState.parts = [{
+            id: 'part_' + Date.now(),
+            shapeType: currentWorkbenchState.shapeType,
+            width: currentWorkbenchState.width,
+            height: currentWorkbenchState.height,
+            depth: currentWorkbenchState.depth,
+            topElevation: currentWorkbenchState.topElevation,
+            color: currentWorkbenchState.color,
+            position: { x: 0, y: 0, z: 0 },
+            rotationY: 0
+        }];
+        currentWorkbenchState.selectedPartIndex = 0;
+    }
+    if (currentWorkbenchState.selectedPartIndex < 0 || currentWorkbenchState.selectedPartIndex >= currentWorkbenchState.parts.length) {
+        currentWorkbenchState.selectedPartIndex = 0;
+    }
+    return currentWorkbenchState.parts[currentWorkbenchState.selectedPartIndex];
+}
+
+export function syncActivePartFromState() {
+    const part = getActiveWorkbenchPart();
+    part.shapeType = currentWorkbenchState.shapeType;
+    part.width = currentWorkbenchState.width;
+    part.height = currentWorkbenchState.height;
+    part.depth = currentWorkbenchState.depth;
+    part.topElevation = currentWorkbenchState.topElevation;
+    part.color = currentWorkbenchState.color;
+}
+
+export function syncStateFromActivePart() {
+    const part = getActiveWorkbenchPart();
+    currentWorkbenchState.shapeType = part.shapeType;
+    currentWorkbenchState.width = part.width;
+    currentWorkbenchState.height = part.height;
+    currentWorkbenchState.depth = part.depth;
+    currentWorkbenchState.topElevation = part.topElevation;
+    currentWorkbenchState.color = part.color;
+}
 
 let wbScene: THREE.Scene | null = null;
 let wbCamera: THREE.PerspectiveCamera | null = null;
@@ -4271,8 +4386,8 @@ export function initWorkbench3D() {
 
     const dom = wbRenderer.domElement;
 
-    // Helper: Detect which face was clicked/hovered
-    function detectFaceAtPoint(clientX: number, clientY: number): { plane: DragPlaneType; normal: THREE.Vector3; point: THREE.Vector3 } | null {
+    // Helper: Detect which face and which part was clicked/hovered
+    function detectFaceAtPoint(clientX: number, clientY: number): { plane: DragPlaneType; normal: THREE.Vector3; point: THREE.Vector3; partIndex: number } | null {
         if (!wbCamera || !wbCurrentMeshGroup) return null;
         const rect = dom.getBoundingClientRect();
         const mouse = new THREE.Vector2(
@@ -4294,12 +4409,25 @@ export function initWorkbench3D() {
         const hit = intersects[0];
         if (!hit.face) return null;
 
+        // Find which part was hit
+        let targetPartIndex = 0;
+        let pObj: THREE.Object3D | null = hit.object;
+        while (pObj && pObj !== wbCurrentMeshGroup && pObj !== wbScene) {
+            if (pObj.userData && typeof pObj.userData.partIndex === 'number') {
+                targetPartIndex = pObj.userData.partIndex;
+                break;
+            }
+            pObj = pObj.parent;
+        }
+
+        const targetPart = currentWorkbenchState.parts[targetPartIndex] || getActiveWorkbenchPart();
+
         const normal = hit.face.normal.clone();
         normal.transformDirection(hit.object.matrixWorld);
 
         // Determine face type by world normal
         let plane: DragPlaneType = 'top';
-        if (currentWorkbenchState.shapeType === 'wedge' && (normal.y > 0.3 || normal.z < -0.3)) {
+        if (targetPart.shapeType === 'wedge' && (normal.y > 0.3 || normal.z < -0.3)) {
             plane = 'slope';
         } else if (normal.y > 0.5) {
             plane = 'top';
@@ -4311,7 +4439,7 @@ export function initWorkbench3D() {
             plane = normal.z > 0 ? 'front' : 'back';
         }
 
-        return { plane, normal, point: hit.point };
+        return { plane, normal, point: hit.point, partIndex: targetPartIndex };
     }
 
     dom.addEventListener('mousedown', (e) => {
@@ -4319,15 +4447,19 @@ export function initWorkbench3D() {
             // Left click: test if clicking directly on object face to drag it
             const faceHit = detectFaceAtPoint(e.clientX, e.clientY);
             if (faceHit) {
+                currentWorkbenchState.selectedPartIndex = faceHit.partIndex;
+                syncStateFromActivePart();
                 wbActiveDragPlane = faceHit.plane;
                 wbDragStartMouse = { x: e.clientX, y: e.clientY };
+                const activePart = getActiveWorkbenchPart();
                 wbDragInitialState = {
-                    height: currentWorkbenchState.height,
-                    width: currentWorkbenchState.width,
-                    depth: currentWorkbenchState.depth,
-                    topElevation: currentWorkbenchState.topElevation
+                    height: activePart.height,
+                    width: activePart.width,
+                    depth: activePart.depth,
+                    topElevation: activePart.topElevation
                 };
                 dom.style.cursor = 'ns-resize';
+                renderWorkbenchPartsList();
                 return;
             } else {
                 // Clicking outside object on background orbits the camera
@@ -4347,25 +4479,32 @@ export function initWorkbench3D() {
             const dy = wbDragStartMouse.y - e.clientY; // positive = dragged up
             const dx = e.clientX - wbDragStartMouse.x;
             const sensitivity = 0.025;
+            const activePart = getActiveWorkbenchPart();
 
             if (wbActiveDragPlane === 'top') {
                 const newH = Math.max(0.4, Math.min(12, wbDragInitialState.height + dy * sensitivity));
-                currentWorkbenchState.height = parseFloat(newH.toFixed(2));
-                if (currentWorkbenchState.shapeType === 'wedge') {
-                    currentWorkbenchState.topElevation = currentWorkbenchState.height;
+                activePart.height = parseFloat(newH.toFixed(2));
+                if (activePart.shapeType === 'wedge') {
+                    activePart.topElevation = activePart.height;
                 }
+                currentWorkbenchState.height = activePart.height;
+                currentWorkbenchState.topElevation = activePart.topElevation;
             } else if (wbActiveDragPlane === 'slope') {
                 const newElev = Math.max(0.2, Math.min(12, wbDragInitialState.topElevation + dy * sensitivity));
-                currentWorkbenchState.topElevation = parseFloat(newElev.toFixed(2));
-                currentWorkbenchState.height = Math.max(currentWorkbenchState.height, currentWorkbenchState.topElevation);
+                activePart.topElevation = parseFloat(newElev.toFixed(2));
+                activePart.height = Math.max(activePart.height, activePart.topElevation);
+                currentWorkbenchState.topElevation = activePart.topElevation;
+                currentWorkbenchState.height = activePart.height;
             } else if (wbActiveDragPlane === 'right' || wbActiveDragPlane === 'left') {
                 const change = (wbActiveDragPlane === 'right' ? dx : -dx) * sensitivity;
                 const newW = Math.max(0.5, Math.min(14, wbDragInitialState.width + change));
-                currentWorkbenchState.width = parseFloat(newW.toFixed(2));
+                activePart.width = parseFloat(newW.toFixed(2));
+                currentWorkbenchState.width = activePart.width;
             } else if (wbActiveDragPlane === 'front' || wbActiveDragPlane === 'back') {
                 const change = (wbActiveDragPlane === 'front' ? dy : -dy) * sensitivity;
                 const newD = Math.max(0.5, Math.min(14, wbDragInitialState.depth + change));
-                currentWorkbenchState.depth = parseFloat(newD.toFixed(2));
+                activePart.depth = parseFloat(newD.toFixed(2));
+                currentWorkbenchState.depth = activePart.depth;
             }
 
             syncWorkbenchUI();
@@ -4434,6 +4573,48 @@ function updateWorkbenchCamera() {
     wbCamera.lookAt(0, 1.2, 0);
 }
 
+function renderWorkbenchPartsList() {
+    const listEl = document.getElementById('workbench-parts-list');
+    const countEl = document.getElementById('workbench-parts-count');
+    if (!listEl) return;
+
+    if (countEl) {
+        countEl.innerText = `${currentWorkbenchState.parts.length} tk`;
+    }
+
+    listEl.innerHTML = '';
+    currentWorkbenchState.parts.forEach((p, idx) => {
+        const chip = document.createElement('button');
+        const isActive = idx === currentWorkbenchState.selectedPartIndex;
+        chip.style.padding = '5px 10px';
+        chip.style.borderRadius = '6px';
+        chip.style.border = isActive ? '1.5px solid #ffd32a' : '1px solid #475569';
+        chip.style.background = isActive ? 'linear-gradient(135deg, rgba(255,211,42,0.25), rgba(30,41,59,0.9))' : '#1e293b';
+        chip.style.color = isActive ? '#ffd32a' : '#cbd5e1';
+        chip.style.fontSize = '0.75rem';
+        chip.style.fontWeight = 'bold';
+        chip.style.cursor = 'pointer';
+        chip.style.whiteSpace = 'nowrap';
+        chip.style.display = 'flex';
+        chip.style.alignItems = 'center';
+        chip.style.gap = '4px';
+
+        let icon = '🟦';
+        if (p.shapeType === 'wedge') icon = '🔺';
+        else if (p.shapeType === 'cylinder') icon = '🔵';
+        else if (p.shapeType === 'pyramid') icon = '⛺';
+        else if (p.shapeType === 'dome') icon = '🟢';
+
+        chip.innerHTML = `<span>${icon}</span> <span>Kuju #${idx + 1}</span>`;
+        chip.addEventListener('click', () => {
+            currentWorkbenchState.selectedPartIndex = idx;
+            syncStateFromActivePart();
+            syncWorkbenchUI();
+        });
+        listEl.appendChild(chip);
+    });
+}
+
 function rebuildWorkbenchModel() {
     if (!wbScene) return;
     if (wbCurrentMeshGroup) {
@@ -4446,6 +4627,8 @@ function rebuildWorkbenchModel() {
         wbCurrentMeshGroup = null;
     }
 
+    syncActivePartFromState();
+
     const modelData = {
         shapeType: currentWorkbenchState.shapeType,
         width: currentWorkbenchState.width,
@@ -4454,7 +4637,8 @@ function rebuildWorkbenchModel() {
         topElevation: currentWorkbenchState.topElevation,
         isHazard: currentWorkbenchState.behavior === 'hazard',
         isHeal: currentWorkbenchState.behavior === 'heal',
-        isBoost: currentWorkbenchState.behavior === 'boost'
+        isBoost: currentWorkbenchState.behavior === 'boost',
+        parts: currentWorkbenchState.parts
     };
 
     wbCurrentMeshGroup = createCustomModel3DMesh(modelData, currentWorkbenchState.color);
@@ -4477,7 +4661,7 @@ export function openWorkbenchModal() {
     if (!wbRenderer) {
         initWorkbench3D();
     } else {
-        rebuildWorkbenchModel();
+        syncWorkbenchUI();
     }
 }
 
@@ -4487,6 +4671,7 @@ export function closeWorkbenchModal() {
 }
 
 function syncWorkbenchUI() {
+    const activePart = getActiveWorkbenchPart();
     const hVal = document.getElementById('workbench-val-height');
     const wVal = document.getElementById('workbench-val-width');
     const dVal = document.getElementById('workbench-val-depth');
@@ -4495,23 +4680,25 @@ function syncWorkbenchUI() {
     const wSlider = document.getElementById('workbench-slider-width') as HTMLInputElement | null;
     const dSlider = document.getElementById('workbench-slider-depth') as HTMLInputElement | null;
     const wedgeBox = document.getElementById('workbench-wedge-controls');
+    const colorInp = document.getElementById('workbench-color-input') as HTMLInputElement | null;
 
-    if (hVal) hVal.innerText = `${currentWorkbenchState.height.toFixed(1)}m`;
-    if (wVal) wVal.innerText = `${currentWorkbenchState.width.toFixed(1)}m`;
-    if (dVal) dVal.innerText = `${currentWorkbenchState.depth.toFixed(1)}m`;
-    if (elVal) elVal.innerText = `${currentWorkbenchState.topElevation.toFixed(1)}m`;
+    if (hVal) hVal.innerText = `${activePart.height.toFixed(1)}m`;
+    if (wVal) wVal.innerText = `${activePart.width.toFixed(1)}m`;
+    if (dVal) dVal.innerText = `${activePart.depth.toFixed(1)}m`;
+    if (elVal) elVal.innerText = `${activePart.topElevation.toFixed(1)}m`;
 
-    if (hSlider) hSlider.value = currentWorkbenchState.height.toString();
-    if (wSlider) wSlider.value = currentWorkbenchState.width.toString();
-    if (dSlider) dSlider.value = currentWorkbenchState.depth.toString();
+    if (hSlider) hSlider.value = activePart.height.toString();
+    if (wSlider) wSlider.value = activePart.width.toString();
+    if (dSlider) dSlider.value = activePart.depth.toString();
+    if (colorInp) colorInp.value = activePart.color;
 
     if (wedgeBox) {
-        wedgeBox.style.display = currentWorkbenchState.shapeType === 'wedge' ? 'block' : 'none';
+        wedgeBox.style.display = activePart.shapeType === 'wedge' ? 'block' : 'none';
     }
 
     document.querySelectorAll('.workbench-shape-btn').forEach(btn => {
         const s = (btn as HTMLElement).getAttribute('data-shape');
-        if (s === currentWorkbenchState.shapeType) {
+        if (s === activePart.shapeType) {
             (btn as HTMLElement).style.borderColor = '#00f2fe';
             (btn as HTMLElement).style.background = '#1e293b';
         } else {
@@ -4520,6 +4707,7 @@ function syncWorkbenchUI() {
         }
     });
 
+    renderWorkbenchPartsList();
     rebuildWorkbenchModel();
 }
 
@@ -4528,11 +4716,13 @@ function getWorkbenchItemPayload(nameOverride?: string) {
     const name = nameOverride || nameInput?.value.trim() || 'Minu 3D Ese';
 
     let icon = '🟦';
-    if (currentWorkbenchState.shapeType === 'wedge') icon = '🔺';
-    else if (currentWorkbenchState.shapeType === 'cylinder') icon = '🔵';
-    else if (currentWorkbenchState.shapeType === 'pyramid') icon = '⛺';
-    else if (currentWorkbenchState.shapeType === 'dome') icon = '🟢';
+    const mainPart = currentWorkbenchState.parts[0] || getActiveWorkbenchPart();
+    if (mainPart.shapeType === 'wedge') icon = '🔺';
+    else if (mainPart.shapeType === 'cylinder') icon = '🔵';
+    else if (mainPart.shapeType === 'pyramid') icon = '⛺';
+    else if (mainPart.shapeType === 'dome') icon = '🟢';
 
+    if (currentWorkbenchState.parts.length > 1) icon = '🧩';
     if (currentWorkbenchState.behavior === 'hazard') icon = '🔥';
     else if (currentWorkbenchState.behavior === 'heal') icon = '💖';
     else if (currentWorkbenchState.behavior === 'boost') icon = '⚡';
@@ -4541,16 +4731,27 @@ function getWorkbenchItemPayload(nameOverride?: string) {
         name,
         icon,
         category: 'custom' as const,
-        shapeType: currentWorkbenchState.shapeType,
-        color: currentWorkbenchState.color,
+        shapeType: mainPart.shapeType,
+        color: mainPart.color,
         modelData: {
-            width: currentWorkbenchState.width,
-            height: currentWorkbenchState.height,
-            depth: currentWorkbenchState.depth,
-            topElevation: currentWorkbenchState.topElevation,
+            width: mainPart.width,
+            height: mainPart.height,
+            depth: mainPart.depth,
+            topElevation: mainPart.topElevation,
             isHazard: currentWorkbenchState.behavior === 'hazard',
             isHeal: currentWorkbenchState.behavior === 'heal',
-            isBoost: currentWorkbenchState.behavior === 'boost'
+            isBoost: currentWorkbenchState.behavior === 'boost',
+            parts: currentWorkbenchState.parts.map(p => ({
+                id: p.id,
+                shapeType: p.shapeType,
+                width: p.width,
+                height: p.height,
+                depth: p.depth,
+                topElevation: p.topElevation,
+                color: p.color,
+                position: { ...p.position },
+                rotationY: p.rotationY
+            }))
         }
     };
 }
@@ -4603,12 +4804,88 @@ function setupWorkbenchEvents() {
         closeWorkbenchModal();
     });
 
-    // Shape selection
+    // ➕ Add another shape part
+    document.getElementById('btn-wb-add-part')?.addEventListener('click', () => {
+        const count = currentWorkbenchState.parts.length;
+        const currentActive = getActiveWorkbenchPart();
+        const newPart: WorkbenchPart = {
+            id: 'part_' + (count + 1) + '_' + Date.now(),
+            shapeType: 'box',
+            width: 2.0,
+            height: 1.5,
+            depth: 2.0,
+            topElevation: 1.5,
+            color: '#ffd32a', // vibrant golden yellow for new attached part
+            position: {
+                x: currentActive.position.x,
+                y: currentActive.position.y + currentActive.height, // stack nicely on top of previous
+                z: currentActive.position.z
+            },
+            rotationY: 0
+        };
+        currentWorkbenchState.parts.push(newPart);
+        currentWorkbenchState.selectedPartIndex = currentWorkbenchState.parts.length - 1;
+        syncStateFromActivePart();
+        syncWorkbenchUI();
+    });
+
+    // 🗑️ Delete active shape part (keep at least 1)
+    document.getElementById('btn-wb-delete-part')?.addEventListener('click', () => {
+        if (currentWorkbenchState.parts.length <= 1) {
+            alert('Esemel peab olema vähemalt 1 kujund!');
+            return;
+        }
+        currentWorkbenchState.parts.splice(currentWorkbenchState.selectedPartIndex, 1);
+        currentWorkbenchState.selectedPartIndex = Math.max(0, currentWorkbenchState.selectedPartIndex - 1);
+        syncStateFromActivePart();
+        syncWorkbenchUI();
+    });
+
+    // Shape Position & Rotation Offset Buttons
+    document.getElementById('btn-wb-pos-up')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.y = parseFloat((part.position.y + 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+    });
+    document.getElementById('btn-wb-pos-down')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.y = Math.max(0, parseFloat((part.position.y - 0.5).toFixed(2)));
+        rebuildWorkbenchModel();
+    });
+    document.getElementById('btn-wb-pos-left')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.x = parseFloat((part.position.x - 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+    });
+    document.getElementById('btn-wb-pos-right')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.x = parseFloat((part.position.x + 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+    });
+    document.getElementById('btn-wb-pos-fwd')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.z = parseFloat((part.position.z + 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+    });
+    document.getElementById('btn-wb-pos-back')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.position.z = parseFloat((part.position.z - 0.5).toFixed(2));
+        rebuildWorkbenchModel();
+    });
+    document.getElementById('btn-wb-rot-y')?.addEventListener('click', () => {
+        const part = getActiveWorkbenchPart();
+        part.rotationY = (part.rotationY || 0) + Math.PI / 4;
+        rebuildWorkbenchModel();
+    });
+
+    // Shape selection for active part
     document.querySelectorAll('.workbench-shape-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const shape = (e.currentTarget as HTMLElement).getAttribute('data-shape') as any;
             if (shape) {
                 currentWorkbenchState.shapeType = shape;
+                const part = getActiveWorkbenchPart();
+                part.shapeType = shape;
                 syncWorkbenchUI();
             }
         });
@@ -4619,6 +4896,8 @@ function setupWorkbenchEvents() {
     if (colorInp) {
         colorInp.addEventListener('input', () => {
             currentWorkbenchState.color = colorInp.value;
+            const part = getActiveWorkbenchPart();
+            part.color = colorInp.value;
             rebuildWorkbenchModel();
         });
     }
@@ -4633,60 +4912,85 @@ function setupWorkbenchEvents() {
 
     // Height / Elevation Push-Pull Buttons and Sliders
     document.getElementById('btn-wb-height-up')?.addEventListener('click', () => {
-        currentWorkbenchState.height = Math.min(12, currentWorkbenchState.height + 0.5);
-        if (currentWorkbenchState.shapeType === 'wedge') {
-            currentWorkbenchState.topElevation = currentWorkbenchState.height;
+        const part = getActiveWorkbenchPart();
+        part.height = Math.min(12, part.height + 0.5);
+        if (part.shapeType === 'wedge') {
+            part.topElevation = part.height;
         }
+        currentWorkbenchState.height = part.height;
+        currentWorkbenchState.topElevation = part.topElevation;
         syncWorkbenchUI();
     });
 
     document.getElementById('btn-wb-height-down')?.addEventListener('click', () => {
-        currentWorkbenchState.height = Math.max(0.4, currentWorkbenchState.height - 0.5);
-        if (currentWorkbenchState.shapeType === 'wedge') {
-            currentWorkbenchState.topElevation = Math.min(currentWorkbenchState.topElevation, currentWorkbenchState.height);
+        const part = getActiveWorkbenchPart();
+        part.height = Math.max(0.4, part.height - 0.5);
+        if (part.shapeType === 'wedge') {
+            part.topElevation = Math.min(part.topElevation, part.height);
         }
+        currentWorkbenchState.height = part.height;
+        currentWorkbenchState.topElevation = part.topElevation;
         syncWorkbenchUI();
     });
 
     document.getElementById('workbench-slider-height')?.addEventListener('input', (e) => {
-        currentWorkbenchState.height = parseFloat((e.target as HTMLInputElement).value) || 2;
-        if (currentWorkbenchState.shapeType === 'wedge') {
-            currentWorkbenchState.topElevation = currentWorkbenchState.height;
+        const part = getActiveWorkbenchPart();
+        part.height = parseFloat((e.target as HTMLInputElement).value) || 2;
+        if (part.shapeType === 'wedge') {
+            part.topElevation = part.height;
         }
+        currentWorkbenchState.height = part.height;
+        currentWorkbenchState.topElevation = part.topElevation;
         syncWorkbenchUI();
     });
 
     // Width & Depth
     document.getElementById('workbench-slider-width')?.addEventListener('input', (e) => {
-        currentWorkbenchState.width = parseFloat((e.target as HTMLInputElement).value) || 3;
+        const part = getActiveWorkbenchPart();
+        part.width = parseFloat((e.target as HTMLInputElement).value) || 3;
+        currentWorkbenchState.width = part.width;
         syncWorkbenchUI();
     });
 
     document.getElementById('workbench-slider-depth')?.addEventListener('input', (e) => {
-        currentWorkbenchState.depth = parseFloat((e.target as HTMLInputElement).value) || 3;
+        const part = getActiveWorkbenchPart();
+        part.depth = parseFloat((e.target as HTMLInputElement).value) || 3;
+        currentWorkbenchState.depth = part.depth;
         syncWorkbenchUI();
     });
 
     // Wedge Ramp elevation
     document.getElementById('btn-wb-elev-up')?.addEventListener('click', () => {
-        currentWorkbenchState.topElevation = Math.min(12, currentWorkbenchState.topElevation + 0.5);
+        const part = getActiveWorkbenchPart();
+        part.topElevation = Math.min(12, part.topElevation + 0.5);
+        currentWorkbenchState.topElevation = part.topElevation;
         syncWorkbenchUI();
     });
 
     document.getElementById('btn-wb-elev-down')?.addEventListener('click', () => {
-        currentWorkbenchState.topElevation = Math.max(0.2, currentWorkbenchState.topElevation - 0.5);
+        const part = getActiveWorkbenchPart();
+        part.topElevation = Math.max(0.2, part.topElevation - 0.5);
+        currentWorkbenchState.topElevation = part.topElevation;
         syncWorkbenchUI();
     });
 
     // Reset
     document.getElementById('btn-wb-reset')?.addEventListener('click', () => {
-        currentWorkbenchState.width = 3.0;
-        currentWorkbenchState.height = 2.0;
-        currentWorkbenchState.depth = 3.0;
-        currentWorkbenchState.topElevation = 2.0;
-        currentWorkbenchState.shapeType = 'box';
-        currentWorkbenchState.color = '#00f2fe';
-        currentWorkbenchState.behavior = 'solid';
+        currentWorkbenchState.parts = [
+            {
+                id: 'part_1',
+                shapeType: 'box',
+                width: 3.0,
+                height: 2.0,
+                depth: 3.0,
+                topElevation: 2.0,
+                color: '#00f2fe',
+                position: { x: 0, y: 0, z: 0 },
+                rotationY: 0
+            }
+        ];
+        currentWorkbenchState.selectedPartIndex = 0;
+        syncStateFromActivePart();
         if (colorInp) colorInp.value = '#00f2fe';
         if (behSelect) behSelect.value = 'solid';
         syncWorkbenchUI();

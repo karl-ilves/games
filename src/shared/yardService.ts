@@ -49,6 +49,18 @@ export interface CreatedGame {
     updatedAt: number;
 }
 
+export interface CustomShapePart {
+    id: string;
+    shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
+    width: number;
+    height: number;
+    depth: number;
+    topElevation?: number;
+    color: string;
+    position: { x: number; y: number; z: number };
+    rotationY?: number;
+}
+
 export interface PlayerCreatedItem {
     id: string;
     name: string;
@@ -66,6 +78,7 @@ export interface PlayerCreatedItem {
         isHazard?: boolean;
         isHeal?: boolean;
         isBoost?: boolean;
+        parts?: CustomShapePart[];
     };
     isPublished?: boolean;
     createdAt: number;
