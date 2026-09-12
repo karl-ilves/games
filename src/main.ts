@@ -244,21 +244,42 @@ async function renderCommunityGames() {
     }
 
     container.innerHTML = '';
+    const currentUser = yardService.getCurrentUser();
+    const isAdmin = yardService.isAdmin();
+
     approvedGames.forEach(game => {
-        const card = document.createElement('a');
-        card.href = `./games/play/index.html?id=${game.id}`;
+        const isOwner = currentUser && (currentUser.username === game.creatorUsername || isAdmin);
+        const card = document.createElement('div');
         card.className = 'game-card';
+        card.style.position = 'relative';
         card.innerHTML = `
-            <h2>🎮 ${game.title}</h2>
-            <p>${game.description || 'Community created 3D game. Explore the world and have fun!'}</p>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
-                <div class="reward-tag">
-                    <span>👤 By: <strong>${game.creatorUsername}</strong></span>
+            <a href="./games/play/index.html?id=${game.id}" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; height: 100%;">
+                <h2>🎮 ${game.title}</h2>
+                <p>${game.description || 'Community created 3D game. Explore the world and have fun!'}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+                    <div class="reward-tag">
+                        <span>👤 By: <strong>${game.creatorUsername}</strong></span>
+                    </div>
+                    <span style="color: #00f2fe; font-weight: bold; font-size: 0.9rem;">▶️ Play</span>
                 </div>
-                <span style="color: #00f2fe; font-weight: bold; font-size: 0.9rem;">▶️ Play</span>
-            </div>
+            </a>
+            ${isOwner ? `<button class="btn-delete-game" data-id="${game.id}" style="position: absolute; top: 10px; right: 10px; background: rgba(255,50,50,0.8); border: none; color: white; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 0.8rem; z-index: 10;">🗑️ Delete</button>` : ''}
         `;
         container.appendChild(card);
+    });
+
+    container.querySelectorAll('.btn-delete-game').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (confirm('Oled kindel, et soovid selle mängu kustutada?')) {
+                const gameId = (e.currentTarget as HTMLElement).getAttribute('data-id');
+                if (gameId) {
+                    await yardService.deleteCreatedGame(gameId);
+                    renderCommunityGames();
+                }
+            }
+        });
     });
 }
 

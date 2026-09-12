@@ -985,6 +985,29 @@ class YardService {
         };
     }
 
+    public async deleteCreatedGame(gameId: string): Promise<boolean> {
+        // Delete from local storage
+        try {
+            let games = this.getLocalCreatedGames();
+            games = games.filter(g => g.id !== gameId);
+            localStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(games));
+        } catch (e) {
+            console.warn('Failed to delete game locally', e);
+        }
+
+        // Delete from Supabase cloud
+        if (supabase) {
+            try {
+                await supabase.from('user_created_games').delete().eq('id', gameId);
+            } catch (err) {
+                console.warn('Could not delete game from cloud:', err);
+            }
+        }
+
+        window.dispatchEvent(new CustomEvent('playard_games_updated'));
+        return true;
+    }
+
     public getLocalCreatedGames(): CreatedGame[] {
         try {
             const raw = localStorage.getItem(GAMES_STORAGE_KEY);
