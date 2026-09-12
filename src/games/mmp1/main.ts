@@ -454,7 +454,9 @@ interface CoinItem {
 }
 
 // --- MMP1 Crate & Weapon Skin System ---
-export type CrateTier = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'cosmic' | 'secret' | 'og';
+export type StandardCrateTier = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'cosmic' | 'secret' | 'og' | 'frostbite' | 'inferno' | 'cyberpunk' | 'vampire';
+export type SetCrateTier = 'set_golden' | 'set_hellfire' | 'set_cyberghost' | 'set_voidgalaxy';
+export type CrateTier = StandardCrateTier | SetCrateTier;
 
 export interface WeaponSkinDef {
     id: string;
@@ -470,6 +472,7 @@ export interface WeaponSkinDef {
     gripColor?: number;
     starColor?: number;
     emissive?: number;
+    setName?: string;
 }
 
 export interface CrateDef {
@@ -484,6 +487,8 @@ export interface CrateDef {
     restockIntervalSec: number;
     knifeSkinId: string;
     gunSkinId: string;
+    isSetCrate?: boolean;
+    setName?: string;
 }
 
 export const CRATE_CATALOG: Record<CrateTier, CrateDef> = {
@@ -590,6 +595,119 @@ export const CRATE_CATALOG: Record<CrateTier, CrateDef> = {
         restockIntervalSec: 600,
         knifeSkinId: 'knife_og',
         gunSkinId: 'gun_og'
+    },
+    frostbite: {
+        id: 'frostbite',
+        name: 'Frostbite Crate',
+        icon: '❄️',
+        price: 600,
+        color: '#70a1ff',
+        tierName: 'Jääkülm (Frostbite)',
+        defaultStock: 3,
+        maxStock: 6,
+        restockIntervalSec: 150,
+        knifeSkinId: 'knife_frostbite',
+        gunSkinId: 'gun_frostbite'
+    },
+    inferno: {
+        id: 'inferno',
+        name: 'Inferno Crate',
+        icon: '🔥',
+        price: 1200,
+        color: '#ff6348',
+        tierName: 'Põrgutuli (Inferno)',
+        defaultStock: 2,
+        maxStock: 4,
+        restockIntervalSec: 220,
+        knifeSkinId: 'knife_inferno',
+        gunSkinId: 'gun_inferno'
+    },
+    cyberpunk: {
+        id: 'cyberpunk',
+        name: 'Cyberpunk Crate',
+        icon: '⚡',
+        price: 2200,
+        color: '#ff007f',
+        tierName: 'Küberpunk (Cyberpunk)',
+        defaultStock: 2,
+        maxStock: 3,
+        restockIntervalSec: 320,
+        knifeSkinId: 'knife_cyberpunk',
+        gunSkinId: 'gun_cyberpunk'
+    },
+    vampire: {
+        id: 'vampire',
+        name: 'Vampire Crate',
+        icon: '🦇',
+        price: 3800,
+        color: '#c0392b',
+        tierName: 'Vampiir (Vampire)',
+        defaultStock: 1,
+        maxStock: 2,
+        restockIntervalSec: 450,
+        knifeSkinId: 'knife_vampire',
+        gunSkinId: 'gun_vampire'
+    },
+    // --- KOMPLEKTI CRATED (SET CRATES) ---
+    set_golden: {
+        id: 'set_golden',
+        name: 'Kuldne Kuninglik Komplekt',
+        icon: '👑',
+        price: 2500,
+        color: '#ffd700',
+        tierName: 'Komplekt (Set Crate)',
+        defaultStock: 2,
+        maxStock: 3,
+        restockIntervalSec: 300,
+        knifeSkinId: 'knife_set_golden',
+        gunSkinId: 'gun_set_golden',
+        isSetCrate: true,
+        setName: 'Kuldne Kuningas'
+    },
+    set_hellfire: {
+        id: 'set_hellfire',
+        name: 'Põrgutule Deemonlik Komplekt',
+        icon: '🌋',
+        price: 3500,
+        color: '#ff3838',
+        tierName: 'Komplekt (Set Crate)',
+        defaultStock: 1,
+        maxStock: 2,
+        restockIntervalSec: 400,
+        knifeSkinId: 'knife_set_hellfire',
+        gunSkinId: 'gun_set_hellfire',
+        isSetCrate: true,
+        setName: 'Põrguleek'
+    },
+    set_cyberghost: {
+        id: 'set_cyberghost',
+        name: 'Küber-Spiooni Komplekt',
+        icon: '🕶️',
+        price: 5500,
+        color: '#00f2fe',
+        tierName: 'Komplekt (Set Crate)',
+        defaultStock: 1,
+        maxStock: 2,
+        restockIntervalSec: 500,
+        knifeSkinId: 'knife_set_cyberghost',
+        gunSkinId: 'gun_set_cyberghost',
+        isSetCrate: true,
+        setName: 'Küber-Vaim'
+    },
+    set_voidgalaxy: {
+        id: 'set_voidgalaxy',
+        name: 'Kosmilise Tühjuse Komplekt',
+        icon: '🌌',
+        price: 8000,
+        color: '#9b59b6',
+        tierName: 'Komplekt (Set Crate)',
+        defaultStock: 1,
+        maxStock: 2,
+        restockIntervalSec: 650,
+        knifeSkinId: 'knife_set_voidgalaxy',
+        gunSkinId: 'gun_set_voidgalaxy',
+        isSetCrate: true,
+        setName: 'Kosmiline Tühjus'
     }
 };
 
@@ -794,6 +912,200 @@ export const WEAPON_SKIN_CATALOG: Record<string, WeaponSkinDef> = {
         gripColor: 0xff9f43,
         starColor: 0xfffa65,
         emissive: 0x664400
+    },
+    // --- UUED TAVAKASTIDE RELVAD ---
+    knife_frostbite: {
+        id: 'knife_frostbite',
+        name: 'Jääkristalli Pistoda',
+        type: 'knife',
+        tier: 'frostbite',
+        tierName: 'Frostbite',
+        tierColor: '#70a1ff',
+        bladeColor: 0xa4b0be,
+        handleColor: 0x2f3542,
+        emissive: 0x70a1ff
+    },
+    gun_frostbite: {
+        id: 'gun_frostbite',
+        name: 'Härmatise Revolver',
+        type: 'gun',
+        tier: 'frostbite',
+        tierName: 'Frostbite',
+        tierColor: '#70a1ff',
+        metalColor: 0x487eb0,
+        gripColor: 0xf5f6fa,
+        starColor: 0x70a1ff,
+        emissive: 0x1e3799
+    },
+    knife_inferno: {
+        id: 'knife_inferno',
+        name: 'Laava Karambit',
+        type: 'knife',
+        tier: 'inferno',
+        tierName: 'Inferno',
+        tierColor: '#ff6348',
+        bladeColor: 0xff4757,
+        handleColor: 0x2f3542,
+        emissive: 0xff6348
+    },
+    gun_inferno: {
+        id: 'gun_inferno',
+        name: 'Magma Hand-Cannon',
+        type: 'gun',
+        tier: 'inferno',
+        tierName: 'Inferno',
+        tierColor: '#ff6348',
+        metalColor: 0x2f3542,
+        gripColor: 0xff4757,
+        starColor: 0xffa502,
+        emissive: 0xb71540
+    },
+    knife_cyberpunk: {
+        id: 'knife_cyberpunk',
+        name: 'Neoontänavate Katana',
+        type: 'knife',
+        tier: 'cyberpunk',
+        tierName: 'Cyberpunk',
+        tierColor: '#ff007f',
+        bladeColor: 0xff007f,
+        handleColor: 0x1e272e,
+        emissive: 0x00f2fe
+    },
+    gun_cyberpunk: {
+        id: 'gun_cyberpunk',
+        name: 'Küber-Deagle',
+        type: 'gun',
+        tier: 'cyberpunk',
+        tierName: 'Cyberpunk',
+        tierColor: '#ff007f',
+        metalColor: 0x2d3436,
+        gripColor: 0xff007f,
+        starColor: 0x00f2fe,
+        emissive: 0x5f27cd
+    },
+    knife_vampire: {
+        id: 'knife_vampire',
+        name: 'Veresulase Sirp',
+        type: 'knife',
+        tier: 'vampire',
+        tierName: 'Vampire',
+        tierColor: '#c0392b',
+        bladeColor: 0x8b0000,
+        handleColor: 0x1e1e24,
+        emissive: 0xe74c3c
+    },
+    gun_vampire: {
+        id: 'gun_vampire',
+        name: 'Krahvi Hõbekuul',
+        type: 'gun',
+        tier: 'vampire',
+        tierName: 'Vampire',
+        tierColor: '#c0392b',
+        metalColor: 0xd2d7d9,
+        gripColor: 0x4a0e17,
+        starColor: 0xc0392b,
+        emissive: 0x3b050d
+    },
+    // --- KOMPLEKTI CRATED (SET SKINS) ---
+    knife_set_golden: {
+        id: 'knife_set_golden',
+        name: 'Kuninglik Kuldne Mõõk',
+        type: 'knife',
+        tier: 'set_golden',
+        tierName: 'Komplekt',
+        tierColor: '#ffd700',
+        bladeColor: 0xffd700,
+        handleColor: 0x2c1810,
+        emissive: 0xffea00,
+        setName: 'Kuldne Kuningas'
+    },
+    gun_set_golden: {
+        id: 'gun_set_golden',
+        name: 'Kuninglik Kuldne Deagle',
+        type: 'gun',
+        tier: 'set_golden',
+        tierName: 'Komplekt',
+        tierColor: '#ffd700',
+        metalColor: 0xffd700,
+        gripColor: 0x2c1810,
+        starColor: 0xffffff,
+        emissive: 0x554400,
+        setName: 'Kuldne Kuningas'
+    },
+    knife_set_hellfire: {
+        id: 'knife_set_hellfire',
+        name: 'Põrguleegi Deemonitera',
+        type: 'knife',
+        tier: 'set_hellfire',
+        tierName: 'Komplekt',
+        tierColor: '#ff3838',
+        bladeColor: 0xff3838,
+        handleColor: 0x111111,
+        emissive: 0xff5252,
+        setName: 'Põrguleek'
+    },
+    gun_set_hellfire: {
+        id: 'gun_set_hellfire',
+        name: 'Põrgutule Kahur',
+        type: 'gun',
+        tier: 'set_hellfire',
+        tierName: 'Komplekt',
+        tierColor: '#ff3838',
+        metalColor: 0x222222,
+        gripColor: 0xff3838,
+        starColor: 0xff9f1a,
+        emissive: 0x7f1d1d,
+        setName: 'Põrguleek'
+    },
+    knife_set_cyberghost: {
+        id: 'knife_set_cyberghost',
+        name: 'Varjude Nanotera',
+        type: 'knife',
+        tier: 'set_cyberghost',
+        tierName: 'Komplekt',
+        tierColor: '#00f2fe',
+        bladeColor: 0x00f2fe,
+        handleColor: 0x0a192f,
+        emissive: 0x00cec9,
+        setName: 'Küber-Vaim'
+    },
+    gun_set_cyberghost: {
+        id: 'gun_set_cyberghost',
+        name: 'Summutatud Küber-Vaim',
+        type: 'gun',
+        tier: 'set_cyberghost',
+        tierName: 'Komplekt',
+        tierColor: '#00f2fe',
+        metalColor: 0x0a192f,
+        gripColor: 0x00f2fe,
+        starColor: 0x00d2d3,
+        emissive: 0x0652dd,
+        setName: 'Küber-Vaim'
+    },
+    knife_set_voidgalaxy: {
+        id: 'knife_set_voidgalaxy',
+        name: 'Tühjuse Musta Augu Tera',
+        type: 'knife',
+        tier: 'set_voidgalaxy',
+        tierName: 'Komplekt',
+        tierColor: '#9b59b6',
+        bladeColor: 0x1e0c3b,
+        handleColor: 0x341f97,
+        emissive: 0x9b59b6,
+        setName: 'Kosmiline Tühjus'
+    },
+    gun_set_voidgalaxy: {
+        id: 'gun_set_voidgalaxy',
+        name: 'Kosmiline Gravitatsiooni Kiirgur',
+        type: 'gun',
+        tier: 'set_voidgalaxy',
+        tierName: 'Komplekt',
+        tierColor: '#9b59b6',
+        metalColor: 0x1e0c3b,
+        gripColor: 0xdfbbf7,
+        starColor: 0xa29bfe,
+        emissive: 0x5f27cd,
+        setName: 'Kosmiline Tühjus'
     }
 };
 
@@ -960,6 +1272,132 @@ export function getCrateArtworkSvg(tier: CrateTier): string {
                 <circle cx="51.5" cy="41.5" r="1.2" fill="#ffffff"/>
             </svg>`;
 
+        case 'frostbite':
+            return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="crate-frost-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#70a1ff"/>
+                        <stop offset="50%" stop-color="#1e90ff"/>
+                        <stop offset="100%" stop-color="#0c2461"/>
+                    </linearGradient>
+                </defs>
+                <rect x="12" y="16" width="76" height="54" rx="8" fill="url(#crate-frost-grad)" stroke="#dfe4ea" stroke-width="2.5"/>
+                <path d="M50 24 L50 62 M32 43 L68 43 M38 31 L62 55 M38 55 L62 31" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+                <polygon points="50,22 53,28 50,34 47,28" fill="#a4b0be"/>
+                <polygon points="50,52 53,58 50,64 47,58" fill="#a4b0be"/>
+                <circle cx="50" cy="43" r="5" fill="#70a1ff" stroke="#fff" stroke-width="1.5"/>
+            </svg>`;
+
+        case 'inferno':
+            return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="crate-inf-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ff4757"/>
+                        <stop offset="60%" stop-color="#ee5253"/>
+                        <stop offset="100%" stop-color="#2f3542"/>
+                    </linearGradient>
+                </defs>
+                <rect x="12" y="16" width="76" height="54" rx="8" fill="url(#crate-inf-grad)" stroke="#ff6b81" stroke-width="2.5"/>
+                <path d="M30 60 Q34 38 42 42 Q46 26 54 36 Q62 20 68 42 Q74 48 70 60 Z" fill="#ffa502" stroke="#ff4757" stroke-width="1.5"/>
+                <path d="M38 60 Q42 44 48 46 Q52 38 58 48 Q64 54 62 60 Z" fill="#ffeaa7"/>
+            </svg>`;
+
+        case 'cyberpunk':
+            return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="crate-cyber-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ff007f"/>
+                        <stop offset="50%" stop-color="#8e44ad"/>
+                        <stop offset="100%" stop-color="#00cec9"/>
+                    </linearGradient>
+                </defs>
+                <polygon points="12,24 24,14 88,14 76,24 88,68 12,68" fill="url(#crate-cyber-grad)" stroke="#00f2fe" stroke-width="2"/>
+                <line x1="20" y1="36" x2="80" y2="36" stroke="#00f2fe" stroke-width="2" stroke-dasharray="6 3"/>
+                <line x1="20" y1="52" x2="80" y2="52" stroke="#ff007f" stroke-width="2" stroke-dasharray="6 3"/>
+                <text x="50" y="47" fill="#fff" font-size="10" font-weight="900" text-anchor="middle" letter-spacing="2">CYBER</text>
+            </svg>`;
+
+        case 'vampire':
+            return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="crate-vamp-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#4a0000"/>
+                        <stop offset="50%" stop-color="#1e1e24"/>
+                        <stop offset="100%" stop-color="#0d0d11"/>
+                    </linearGradient>
+                </defs>
+                <rect x="12" y="16" width="76" height="54" rx="10" fill="url(#crate-vamp-grad)" stroke="#c0392b" stroke-width="2.5"/>
+                <path d="M26 34 Q50 20 74 34 Q50 64 26 34 Z" fill="#8b0000" stroke="#ff4d4d" stroke-width="1.5"/>
+                <polygon points="44,38 47,48 50,38" fill="#ffffff"/>
+                <polygon points="50,38 53,48 56,38" fill="#ffffff"/>
+            </svg>`;
+
+        // --- KOMPLEKTI KASTIDE SVG-d (SET CRATES) ---
+        case 'set_golden':
+            return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="set-gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#fff200"/>
+                        <stop offset="35%" stop-color="#ffd700"/>
+                        <stop offset="70%" stop-color="#ff9f1a"/>
+                        <stop offset="100%" stop-color="#b7791f"/>
+                    </linearGradient>
+                </defs>
+                <rect x="10" y="14" width="80" height="58" rx="8" fill="url(#set-gold-grad)" stroke="#ffffff" stroke-width="2"/>
+                <rect x="16" y="20" width="68" height="46" rx="4" fill="#2c1810" stroke="#ffd700" stroke-width="1.5"/>
+                <polygon points="50,26 56,38 68,30 64,46 36,46 32,30 44,38" fill="#ffd700" stroke="#fff" stroke-width="1"/>
+                <circle cx="50" cy="54" r="5" fill="#ff4757" stroke="#fff" stroke-width="1"/>
+                <text x="50" y="64" fill="#ffd700" font-size="7" font-weight="900" text-anchor="middle">KOMPLEKT</text>
+            </svg>`;
+
+        case 'set_hellfire':
+            return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="set-hell-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ff3838"/>
+                        <stop offset="40%" stop-color="#b71540"/>
+                        <stop offset="100%" stop-color="#1e130c"/>
+                    </linearGradient>
+                </defs>
+                <rect x="10" y="14" width="80" height="58" rx="8" fill="url(#set-hell-grad)" stroke="#ff9f1a" stroke-width="2.5"/>
+                <path d="M22 62 L50 20 L78 62 Z" fill="#222" stroke="#ff3838" stroke-width="2"/>
+                <path d="M40 58 Q50 36 60 58" fill="#ff9f1a"/>
+                <circle cx="50" cy="50" r="3" fill="#fff"/>
+                <text x="50" y="68" fill="#ff9f1a" font-size="6.5" font-weight="900" text-anchor="middle">KOMPLEKT</text>
+            </svg>`;
+
+        case 'set_cyberghost':
+            return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="set-ghost-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#00f2fe"/>
+                        <stop offset="50%" stop-color="#0984e3"/>
+                        <stop offset="100%" stop-color="#0a192f"/>
+                    </linearGradient>
+                </defs>
+                <rect x="10" y="14" width="80" height="58" rx="10" fill="#0a192f" stroke="#00f2fe" stroke-width="2.5"/>
+                <polygon points="50,22 72,32 72,54 50,64 28,54 28,32" fill="none" stroke="#00f2fe" stroke-width="2"/>
+                <circle cx="50" cy="43" r="7" fill="#00f2fe"/>
+                <circle cx="50" cy="43" r="3" fill="#ffffff"/>
+                <text x="50" y="70" fill="#00f2fe" font-size="6.5" font-weight="900" text-anchor="middle">KOMPLEKT</text>
+            </svg>`;
+
+        case 'set_voidgalaxy':
+            return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <radialGradient id="set-void-grad" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#9b59b6"/>
+                        <stop offset="60%" stop-color="#341f97"/>
+                        <stop offset="100%" stop-color="#0b001a"/>
+                    </radialGradient>
+                </defs>
+                <rect x="10" y="14" width="80" height="58" rx="12" fill="url(#set-void-grad)" stroke="#a29bfe" stroke-width="2.5"/>
+                <circle cx="50" cy="40" r="14" fill="#000" stroke="#e056fd" stroke-width="2"/>
+                <circle cx="50" cy="40" r="7" fill="#e056fd"/>
+                <ellipse cx="50" cy="40" rx="30" ry="8" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 3" transform="rotate(-20 50 40)"/>
+                <text x="50" y="68" fill="#e056fd" font-size="6.5" font-weight="900" text-anchor="middle">KOMPLEKT</text>
+            </svg>`;
+
         case 'og':
         default:
             return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -989,6 +1427,58 @@ export function getCrateArtworkSvg(tier: CrateTier): string {
 export function getWeaponArtworkSvg(skin: WeaponSkinDef): string {
     if (skin.type === 'knife') {
         switch (skin.id) {
+            case 'knife_frostbite':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 64 L36 46 L44 50 L24 68 Z" fill="#2f3542" stroke="#1e272e" stroke-width="2"/>
+                    <path d="M40 46 L82 18 Q88 12 92 16 C82 30 70 42 44 52 Z" fill="#70a1ff" stroke="#ffffff" stroke-width="2"/>
+                    <line x1="44" y1="44" x2="80" y2="20" stroke="#fff" stroke-width="2"/>
+                    <circle cx="62" cy="32" r="2.5" fill="#ffffff"/>
+                </svg>`;
+            case 'knife_inferno':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="62" r="7" fill="none" stroke="#ff4757" stroke-width="3"/>
+                    <path d="M28 58 L46 44 L52 50 L32 64 Z" fill="#2f3542" stroke="#111" stroke-width="2"/>
+                    <path d="M48 46 Q74 40 88 24 C74 42 62 62 44 52 Z" fill="#ff6348" stroke="#ffa502" stroke-width="2"/>
+                    <path d="M54 44 Q70 34 76 28" stroke="#ffeaa7" stroke-width="1.5"/>
+                </svg>`;
+            case 'knife_cyberpunk':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 66 L34 48 L40 52 L22 70 Z" fill="#1e272e" stroke="#ff007f" stroke-width="2"/>
+                    <rect x="34" y="44" width="5" height="14" fill="#00f2fe" transform="rotate(-45 36 51)"/>
+                    <path d="M38 48 L86 14 Q92 10 94 14 C84 28 72 40 42 54 Z" fill="#ff007f" stroke="#00f2fe" stroke-width="2"/>
+                    <line x1="42" y1="46" x2="88" y2="15" stroke="#ffffff" stroke-width="1.5"/>
+                </svg>`;
+            case 'knife_vampire':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 66 L38 50 L42 54 L26 70 Z" fill="#1e1e24" stroke="#c0392b" stroke-width="2"/>
+                    <path d="M38 52 Q62 20 86 24 C72 38 60 56 42 56 Z" fill="#8b0000" stroke="#ff4d4d" stroke-width="2"/>
+                    <circle cx="70" cy="30" r="2.5" fill="#ff4d4d"/>
+                </svg>`;
+            case 'knife_set_golden':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 64 L36 46 L42 50 L24 68 Z" fill="#2c1810" stroke="#ffd700" stroke-width="2"/>
+                    <circle cx="38" cy="46" r="6" fill="#ffd700" stroke="#fff" stroke-width="1.5"/>
+                    <path d="M42 46 L86 12 Q92 8 94 12 C84 26 72 38 46 52 Z" fill="#ffd700" stroke="#ffffff" stroke-width="2"/>
+                    <line x1="46" y1="44" x2="88" y2="13" stroke="#fff" stroke-width="2"/>
+                </svg>`;
+            case 'knife_set_hellfire':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 66 L36 46 L44 52 L22 70 Z" fill="#111" stroke="#ff3838" stroke-width="2"/>
+                    <path d="M40 48 Q64 26 88 10 C80 26 68 44 44 54 Z" fill="#ff3838" stroke="#ff9f1a" stroke-width="2"/>
+                    <path d="M46 44 L80 16" stroke="#ffeaa7" stroke-width="2"/>
+                </svg>`;
+            case 'knife_set_cyberghost':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 66 L36 46 L42 50 L22 70 Z" fill="#0a192f" stroke="#00f2fe" stroke-width="2"/>
+                    <path d="M40 46 L84 14 Q90 10 94 14 C82 28 72 40 44 52 Z" fill="#00f2fe" stroke="#fff" stroke-width="2"/>
+                    <line x1="44" y1="44" x2="86" y2="15" stroke="#ffffff" stroke-width="2"/>
+                </svg>`;
+            case 'knife_set_voidgalaxy':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 66 L36 46 L42 50 L22 70 Z" fill="#341f97" stroke="#e056fd" stroke-width="2"/>
+                    <path d="M40 48 Q65 30 84 14 Q92 20 86 32 C72 50 56 56 42 52 Z" fill="#1e0c3b" stroke="#e056fd" stroke-width="2"/>
+                    <circle cx="64" cy="34" r="2.5" fill="#ffffff"/>
+                </svg>`;
             case 'knife_default':
                 return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 62 L42 42 L52 46 L30 66 Z" fill="#181a1d" stroke="#333" stroke-width="1.5"/>
@@ -1083,6 +1573,64 @@ export function getWeaponArtworkSvg(skin: WeaponSkinDef): string {
     } else {
         // Revolver / Gun Skins
         switch (skin.id) {
+            case 'gun_frostbite':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 46 Q18 64 26 70 Q34 70 34 56 Z" fill="#f5f6fa" stroke="#70a1ff" stroke-width="2"/>
+                    <rect x="28" y="36" width="22" height="18" rx="2" fill="#487eb0" stroke="#70a1ff" stroke-width="2"/>
+                    <rect x="42" y="32" width="16" height="18" rx="3" fill="#70a1ff" stroke="#fff" stroke-width="1.5"/>
+                    <rect x="58" y="34" width="34" height="8" rx="2" fill="#487eb0" stroke="#70a1ff" stroke-width="2"/>
+                    <circle cx="34" cy="42" r="2" fill="#ffffff"/>
+                </svg>`;
+            case 'gun_inferno':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 46 Q18 64 26 70 Q34 70 34 56 Z" fill="#ff4757" stroke="#2f3542" stroke-width="2"/>
+                    <rect x="28" y="34" width="24" height="20" rx="2" fill="#2f3542" stroke="#ff4757" stroke-width="2"/>
+                    <rect x="44" y="30" width="18" height="20" rx="3" fill="#ff6348" stroke="#ffa502" stroke-width="2"/>
+                    <rect x="60" y="32" width="32" height="12" rx="3" fill="#2f3542" stroke="#ff4757" stroke-width="2"/>
+                    <circle cx="36" cy="42" r="2.5" fill="#ffa502"/>
+                </svg>`;
+            case 'gun_cyberpunk':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 46 L20 68 L32 70 L34 56 Z" fill="#ff007f" stroke="#00f2fe" stroke-width="1.5"/>
+                    <rect x="26" y="34" width="26" height="18" fill="#2d3436" stroke="#ff007f" stroke-width="2"/>
+                    <rect x="44" y="30" width="46" height="14" fill="#2d3436" stroke="#00f2fe" stroke-width="2"/>
+                    <line x1="50" y1="36" x2="80" y2="36" stroke="#ff007f" stroke-width="2"/>
+                </svg>`;
+            case 'gun_vampire':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 46 Q18 64 26 70 Q34 70 34 56 Z" fill="#4a0e17" stroke="#c0392b" stroke-width="2"/>
+                    <rect x="28" y="36" width="22" height="18" rx="2" fill="#d2d7d9" stroke="#7f8c8d" stroke-width="2"/>
+                    <rect x="42" y="32" width="16" height="18" rx="3" fill="#c0392b" stroke="#8b0000" stroke-width="2"/>
+                    <rect x="58" y="34" width="34" height="8" rx="2" fill="#d2d7d9" stroke="#7f8c8d" stroke-width="2"/>
+                </svg>`;
+            case 'gun_set_golden':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 46 Q18 64 26 70 Q34 70 34 56 Z" fill="#2c1810" stroke="#ffd700" stroke-width="2"/>
+                    <rect x="28" y="34" width="24" height="20" rx="2" fill="#ffd700" stroke="#ffffff" stroke-width="2"/>
+                    <rect x="44" y="30" width="46" height="14" rx="2" fill="#ffd700" stroke="#fff" stroke-width="2"/>
+                    <circle cx="34" cy="42" r="2.5" fill="#ffffff"/>
+                </svg>`;
+            case 'gun_set_hellfire':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 46 Q18 64 26 70 Q34 70 34 56 Z" fill="#ff3838" stroke="#111" stroke-width="2"/>
+                    <rect x="28" y="34" width="24" height="20" rx="2" fill="#222" stroke="#ff3838" stroke-width="2"/>
+                    <rect x="44" y="32" width="46" height="14" rx="3" fill="#222" stroke="#ff9f1a" stroke-width="2"/>
+                    <circle cx="70" cy="38" r="3" fill="#ff3838"/>
+                </svg>`;
+            case 'gun_set_cyberghost':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 46 L20 68 L32 70 L34 56 Z" fill="#00f2fe" stroke="#0a192f" stroke-width="2"/>
+                    <rect x="26" y="34" width="24" height="18" fill="#0a192f" stroke="#00f2fe" stroke-width="2"/>
+                    <rect x="42" y="30" width="48" height="14" fill="#0a192f" stroke="#00f2fe" stroke-width="2"/>
+                    <line x1="48" y1="36" x2="80" y2="36" stroke="#00f2fe" stroke-width="2"/>
+                </svg>`;
+            case 'gun_set_voidgalaxy':
+                return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 46 Q18 64 26 70 Q34 70 34 56 Z" fill="#dfbbf7" stroke="#9b59b6" stroke-width="2"/>
+                    <rect x="28" y="36" width="22" height="18" rx="2" fill="#1e0c3b" stroke="#9b59b6" stroke-width="2"/>
+                    <circle cx="50" cy="40" r="7" fill="#e056fd"/>
+                    <rect x="58" y="34" width="34" height="8" rx="2" fill="#1e0c3b" stroke="#9b59b6" stroke-width="2"/>
+                </svg>`;
             case 'gun_default':
                 return `<svg viewBox="0 0 100 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22 46 Q18 64 26 70 Q34 70 34 56 Z" fill="#4a2c17" stroke="#2b180a" stroke-width="2"/>
@@ -1333,13 +1881,51 @@ export class MmpCrateManager {
         localStorage.setItem(this.inventoryKey, JSON.stringify(inv));
     }
 
-    public openCrate(tier: CrateTier): (WeaponSkinDef & { isDuplicate?: boolean; refundAmount?: number }) | null {
+    public openCrate(tier: CrateTier): (WeaponSkinDef & { isDuplicate?: boolean; refundAmount?: number; isSetAward?: boolean; setKnifeSkin?: WeaponSkinDef; setGunSkin?: WeaponSkinDef }) | null {
         const inv = this.getInventory();
         if (!inv.crates[tier] || inv.crates[tier] <= 0) return null;
 
         inv.crates[tier]--;
         const crate = CRATE_CATALOG[tier];
-        // 50% knife skin, 50% gun skin
+        if (!crate) return null;
+
+        if (crate.isSetCrate) {
+            // Komplekti kast annab KOGU KOMPLEKTI (nii sobiva noa KUI KA sobiva relva)!
+            const knifeSkin = WEAPON_SKIN_CATALOG[crate.knifeSkinId] || WEAPON_SKIN_CATALOG['knife_default'];
+            const gunSkin = WEAPON_SKIN_CATALOG[crate.gunSkinId] || WEAPON_SKIN_CATALOG['gun_default'];
+            let refundAmount = 0;
+            let dupCount = 0;
+
+            if (inv.skins.includes(knifeSkin.id)) {
+                refundAmount += Math.floor(crate.price / 4);
+                dupCount++;
+            } else {
+                inv.skins.push(knifeSkin.id);
+            }
+
+            if (inv.skins.includes(gunSkin.id)) {
+                refundAmount += Math.floor(crate.price / 4);
+                dupCount++;
+            } else {
+                inv.skins.push(gunSkin.id);
+            }
+
+            if (refundAmount > 0) {
+                this.addMoney(refundAmount);
+            }
+            this.saveInventory(inv);
+
+            return {
+                ...knifeSkin,
+                isDuplicate: dupCount === 2,
+                refundAmount,
+                isSetAward: true,
+                setKnifeSkin: knifeSkin,
+                setGunSkin: gunSkin
+            };
+        }
+
+        // Standard kast (50% nuga, 50% püstol)
         const skinId = Math.random() < 0.5 ? crate.knifeSkinId : crate.gunSkinId;
         const skin = WEAPON_SKIN_CATALOG[skinId] || WEAPON_SKIN_CATALOG[crate.knifeSkinId];
 
@@ -2576,7 +3162,7 @@ export class MurderMysteryGame {
         const metalAccMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.95, roughness: 0.2 });
         const goldAccMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.2 });
 
-        if (activeSkinId === 'knife_rare') {
+        if (activeSkinId === 'knife_rare' || activeSkinId === 'knife_inferno') {
             // --- 1. KARAMBIT (Curved Talon Blade with Finger Ring) ---
             const ring = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.024, 8, 24), metalAccMat);
             ring.position.set(0, -0.62, 0);
@@ -2619,7 +3205,7 @@ export class MurderMysteryGame {
             webSpine.position.set(0, 0.28, 0.02);
             group.add(webSpine);
 
-        } else if (activeSkinId === 'knife_legendary') {
+        } else if (activeSkinId === 'knife_legendary' || activeSkinId === 'knife_set_golden' || activeSkinId === 'knife_set_hellfire') {
             // --- 2. DRAGON KATANA (Long curved Katana with Tsuba Guard) ---
             const tsuka = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.65, 12), handleMat);
             tsuka.position.set(0, -0.32, 0);
@@ -2659,7 +3245,7 @@ export class MurderMysteryGame {
             hamon.position.set(0, 0.76, 0.08);
             group.add(hamon);
 
-        } else if (activeSkinId === 'knife_cosmic') {
+        } else if (activeSkinId === 'knife_cosmic' || activeSkinId === 'knife_set_voidgalaxy' || activeSkinId === 'knife_vampire') {
             // --- 3. VOID CRESCENT SCYTHE ---
             const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 12), handleMat);
             shaft.position.set(0, -0.25, 0);
@@ -4697,10 +5283,22 @@ export class MurderMysteryGame {
                 buyButtonText = 'LÄBI MÜÜDUD';
             }
 
+            const isSetCrate = !!crate.isSetCrate;
+            if (isSetCrate) {
+                card.classList.add('set-crate-card');
+                card.style.background = 'linear-gradient(145deg, rgba(35, 20, 45, 0.95), rgba(20, 15, 30, 0.95))';
+                card.style.boxShadow = `0 0 20px ${crate.color}33`;
+            }
+
+            const setBadgeHtml = isSetCrate 
+                ? `<div style="background: linear-gradient(90deg, #ffd700, #ff9f1a); color: #111; font-weight: 900; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; margin-bottom: 6px; display: inline-block; letter-spacing: 0.5px;">👑 TÄISKOMPLEKT: NUGA + PÜSTOL</div>`
+                : '';
+
             card.innerHTML = `
                 <div class="crate-art-box" style="width: 100px; height: 80px; margin: 0 auto 6px auto; display: flex; align-items: center; justify-content: center;">
                     ${getCrateArtworkSvg(tier)}
                 </div>
+                ${setBadgeHtml}
                 <h3 style="margin: 2px 0 6px 0; font-size: 1.05rem; color: ${crate.color};">${crate.name}</h3>
                 <div class="crate-stock-badge ${isOutOfStock ? 'out-of-stock' : ''}" id="stock-badge-${tier}">
                     📦 Laos: <b id="stock-val-${tier}">${stockData.stock}</b> tk
@@ -4711,7 +5309,7 @@ export class MurderMysteryGame {
                 <div style="font-size: 1.15rem; font-weight: 900; color: #ffd32a; margin-bottom: 10px;">
                     ${crate.price} €
                 </div>
-                <button class="btn-buy-crate" id="btn-buy-${tier}" ${!canBuy ? 'disabled' : ''}>
+                <button class="btn-buy-crate ${isSetCrate ? 'btn-buy-set' : ''}" id="btn-buy-${tier}" ${!canBuy ? 'disabled' : ''}>
                     ${buyButtonText}
                 </button>
             `;
@@ -4992,7 +5590,14 @@ export class MurderMysteryGame {
                     winnerCard.classList.add('winner-pulse');
                 }
 
-                if (wonSkin.isDuplicate) {
+                const isSet = (wonSkin as any).isSetAward;
+                const setKnife = (wonSkin as any).setKnifeSkin as WeaponSkinDef | undefined;
+                const setGun = (wonSkin as any).setGunSkin as WeaponSkinDef | undefined;
+
+                if (isSet) {
+                    if (titleEl) titleEl.textContent = '🎉 PALJU ÕNNE! SAID TÄISKOMPLEKTI! 🎁';
+                    if (subtitleEl) subtitleEl.textContent = `${crate.name}: Saadud nii nuga kui ka revolver!`;
+                } else if (wonSkin.isDuplicate) {
                     if (titleEl) titleEl.textContent = 'DUPLIKAAT! SAID POOLE RAHAST TAGASI! 💰';
                     if (subtitleEl) subtitleEl.textContent = `Sul on see relv juba olemas! Tagastati pool kasti hinnast: +${wonSkin.refundAmount} €!`;
                 } else {
@@ -5002,7 +5607,10 @@ export class MurderMysteryGame {
 
                 const typeEl = document.getElementById('unboxing-item-type');
                 if (typeEl) {
-                    if (wonSkin.isDuplicate) {
+                    if (isSet) {
+                        typeEl.textContent = `👑 TÄISKOMPLEKT (NUGA + PÜSTOL)`;
+                        typeEl.style.color = '#ffd700';
+                    } else if (wonSkin.isDuplicate) {
                         typeEl.textContent = `♻️ DUPLIKAAT (+${wonSkin.refundAmount} €)`;
                         typeEl.style.color = '#ffd32a';
                     } else {
@@ -5013,15 +5621,23 @@ export class MurderMysteryGame {
 
                 const nameEl = document.getElementById('unboxing-item-name');
                 if (nameEl) {
-                    nameEl.textContent = wonSkin.name;
+                    if (isSet && setKnife && setGun) {
+                        nameEl.textContent = `${setKnife.name} & ${setGun.name}`;
+                    } else {
+                        nameEl.textContent = wonSkin.name;
+                    }
                     nameEl.style.color = wonSkin.tierColor;
                 }
 
                 const rarityEl = document.getElementById('unboxing-item-rarity');
                 if (rarityEl) {
-                    rarityEl.textContent = wonSkin.isDuplicate 
-                        ? `${wonSkin.tierName.toUpperCase()} (DUPLIKAAT: +${wonSkin.refundAmount} €)`
-                        : wonSkin.tierName.toUpperCase();
+                    if (isSet) {
+                        rarityEl.textContent = 'TÄISKOMPLEKT (SET BUNDLE)';
+                    } else {
+                        rarityEl.textContent = wonSkin.isDuplicate 
+                            ? `${wonSkin.tierName.toUpperCase()} (DUPLIKAAT: +${wonSkin.refundAmount} €)`
+                            : wonSkin.tierName.toUpperCase();
+                    }
                     rarityEl.style.background = wonSkin.tierColor;
                     rarityEl.style.color = '#111';
                 }
@@ -5039,15 +5655,28 @@ export class MurderMysteryGame {
                     resultBox.insertBefore(winnerArtEl, resultBox.firstChild);
                 }
                 if (winnerArtEl) {
-                    winnerArtEl.innerHTML = getWeaponArtworkSvg(wonSkin);
+                    if (isSet && setKnife && setGun) {
+                        winnerArtEl.innerHTML = `<div style="display: flex; gap: 8px; align-items: center; justify-content: center; width: 100%;">
+                            <div style="width: 70px; height: 60px;">${getWeaponArtworkSvg(setKnife)}</div>
+                            <div style="width: 70px; height: 60px;">${getWeaponArtworkSvg(setGun)}</div>
+                        </div>`;
+                    } else {
+                        winnerArtEl.innerHTML = getWeaponArtworkSvg(wonSkin);
+                    }
                 }
 
                 if (resultBox) resultBox.style.display = 'block';
 
                 if (btnEquip) {
                     btnEquip.style.display = 'inline-block';
+                    btnEquip.textContent = isSet ? 'VARUSTA KOMPLEKT 👑' : 'VARUSTA KOHE ⚔️';
                     btnEquip.onclick = () => {
-                        this.equipSkin(wonSkin.id);
+                        if (isSet && setKnife && setGun) {
+                            this.equipSkin(setKnife.id);
+                            this.equipSkin(setGun.id);
+                        } else {
+                            this.equipSkin(wonSkin.id);
+                        }
                         if (this.unboxingModal) this.unboxingModal.style.display = 'none';
                         this.renderInventory();
                     };

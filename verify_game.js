@@ -851,8 +851,8 @@ try {
 
         // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 10,000 Objects)
         console.log("5. Testing 3D Game Creator Studio...");
-        await page.goto('http://localhost:4173/games/games/creator/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 1500));
+        await page.goto('http://localhost:4173/games/games/creator/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 2500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
         // Verify 10,000 items catalog badge
@@ -4658,16 +4658,16 @@ try {
             await page.click('#btn-next-round');
             await new Promise(r => setTimeout(r, 300));
 
-            // Test Crate Shop (Common, Uncommon, Rare, Epic, Legendary, Cosmic, Secret, OG)
-            console.log('   Testing Crate Shop (Modal, 8 tiers, stock & restock timer):');
+            // Test Crate Shop (all 16 tiers: 8 original + 4 new standard + 4 set crates)
+            console.log('   Testing Crate Shop (Modal, 16 tiers, stock & restock timer):');
             await page.click('#btn-crate-shop');
             await new Promise(r => setTimeout(r, 200));
 
             const mmp1CrateShopDisplay = await page.$eval('#crate-shop-modal', el => window.getComputedStyle(el).display);
             if (mmp1CrateShopDisplay !== 'flex') throw new Error('Crate shop modal #crate-shop-modal must open on #btn-crate-shop click!');
 
-            // Verify all 8 crate tiers rendered with SVG artwork, stocks and restock timers
-            const crateTiers = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'cosmic', 'secret', 'og'];
+            // Verify all 16 crate tiers rendered with SVG artwork, stocks and restock timers
+            const crateTiers = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'cosmic', 'secret', 'og', 'frostbite', 'inferno', 'cyberpunk', 'vampire', 'set_golden', 'set_hellfire', 'set_cyberghost', 'set_voidgalaxy'];
             for (const tier of crateTiers) {
                 const crateInfo = await page.evaluate((t) => {
                     const card = document.getElementById(`crate-card-${t}`);
