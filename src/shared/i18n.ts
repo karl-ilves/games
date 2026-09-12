@@ -1,3 +1,5 @@
+import { t, translateDOM } from './i18n_dict';
+
 export type Language = 'en' | 'et';
 
 let currentLang: Language = 'en';
@@ -8,11 +10,17 @@ export function getLanguage(): Language {
 
 export function setLanguage(lang: Language) {
     currentLang = lang;
+    (window as any).playardCurrentLang = lang;
     applyLocalization();
 }
 
 export function applyLocalization() {
     const isEt = currentLang === 'et';
+    
+    // Dynamically translate the whole body if English
+    if (!isEt) {
+        translateDOM(document.body);
+    }
 
     // 1. Navigation
     const streakBtnText = document.querySelector('#btn-open-streak span:nth-child(2)');

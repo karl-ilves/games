@@ -4,6 +4,8 @@ import { getCurrentUserProfile } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
+import { translateDOM, t } from '../../shared/i18n_dict';
+import { isPlayardOwner } from '../../auth';
 
 console.log("Community Game Player Loading...");
 
@@ -178,6 +180,22 @@ function buildSceneFromData(sceneData: any) {
 
 // --- Load Game & Initialize ---
 async function initPlayer() {
+    const prof = getCurrentUserProfile();
+    const isEstonian = isPlayardOwner(prof?.email);
+    (window as any).playardCurrentLang = isEstonian ? 'et' : 'en';
+
+    // Override alert/confirm/prompt
+    const _originalAlert = window.alert;
+    const _originalConfirm = window.confirm;
+    const _originalPrompt = window.prompt;
+    window.alert = function(msg?: any) { return _originalAlert.call(window, msg ? t(msg) : msg); };
+    window.confirm = function(msg?: string) { return _originalConfirm.call(window, msg ? t(msg) : msg); };
+    window.prompt = function(msg?: string, def?: string) { return _originalPrompt.call(window, msg ? t(msg) : msg, def ? t(def) : def); };
+
+    if (!isEstonian) {
+        translateDOM(document.body);
+    }
+
     const container = document.getElementById('canvas-container')!;
 
     scene = new THREE.Scene();

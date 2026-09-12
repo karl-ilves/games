@@ -33,7 +33,7 @@ export function isUserAdminEmail(email?: string | null): boolean {
 export function isPlayardOwner(email?: string | null): boolean {
     if (!email) return false;
     const clean = email.trim().toLowerCase();
-    return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com';
+    return clean === '1karl.ilves@gmail.com';
 }
 
 export function canAccessMmp1(profileOrEmail?: UserProfile | string | null, username?: string | null): boolean {

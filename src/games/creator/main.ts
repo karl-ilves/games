@@ -5,6 +5,7 @@ import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
 import { InGameEmotesWidget } from '../../shared/avatar/InGameEmotesWidget';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
+import { translateDOM, t } from '../../shared/i18n_dict';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -2533,6 +2534,29 @@ function renderCatalogUI(filterCat = 'spawn', searchQuery = '') {
 
 // --- Three.js Initialization ---
 async function initStudio() {
+    const prof = getCurrentUserProfile();
+    const isEstonian = isPlayardOwner(prof?.email);
+    (window as any).playardCurrentLang = isEstonian ? 'et' : 'en';
+    
+    // Override alert/confirm/prompt to automatically translate messages
+    const _originalAlert = window.alert;
+    const _originalConfirm = window.confirm;
+    const _originalPrompt = window.prompt;
+    
+    window.alert = function(msg?: any) {
+        return _originalAlert.call(window, msg ? t(msg) : msg);
+    };
+    window.confirm = function(msg?: string) {
+        return _originalConfirm.call(window, msg ? t(msg) : msg);
+    };
+    window.prompt = function(msg?: string, defaultText?: string) {
+        return _originalPrompt.call(window, msg ? t(msg) : msg, defaultText ? t(defaultText) : defaultText);
+    };
+
+    if (!isEstonian) {
+        translateDOM(document.body);
+    }
+
     const container = document.getElementById('canvas-container')!;
 
     scene = new THREE.Scene();
