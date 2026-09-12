@@ -2361,7 +2361,7 @@ function selectObject(placed: PlacedObject | null) {
 }
 
 // --- Render Catalog UI ---
-function renderCatalogUI(filterCat = 'all', searchQuery = '') {
+function renderCatalogUI(filterCat = 'spawn', searchQuery = '') {
     const profile = getCurrentUserProfile();
     const myCustomItems = yardService.getPlayerCreatedItems(profile?.username ?? null);
     const communityCustomItems = yardService.getPublishedCommunityItems();
@@ -2389,7 +2389,8 @@ function renderCatalogUI(filterCat = 'all', searchQuery = '') {
     }
     if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        items = items.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q) || (i.creatorUsername && i.creatorUsername.toLowerCase().includes(q)));
+        const pool = filterCat === 'custom' ? combinedCustomCatalogItems : [...combinedCustomCatalogItems, ...CATALOG_DATABASE];
+        items = pool.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q) || (i.creatorUsername && i.creatorUsername.toLowerCase().includes(q)));
     }
 
     // Limit render chunk for performance (render first 80, paginate/infinite scroll)
@@ -2419,8 +2420,8 @@ function renderCatalogUI(filterCat = 'all', searchQuery = '') {
 
     const countBadge = document.getElementById('catalog-count-badge');
     if (countBadge) {
-        if (filterCat === 'all' && !searchQuery.trim()) {
-            countBadge.innerText = '10,000 items';
+        if (!searchQuery.trim()) {
+            countBadge.innerText = `${items.length.toLocaleString()} items (10,000 library)`;
         } else {
             countBadge.innerText = `${items.length.toLocaleString()} items`;
         }
@@ -3733,13 +3734,13 @@ function setupCatalogEvents() {
     const searchInput = document.getElementById('catalog-search-input') as HTMLInputElement | null;
     const catButtons = document.querySelectorAll('.cat-btn');
 
-    let currentCat = 'all';
+    let currentCat = document.querySelector('.cat-btn.active')?.getAttribute('data-cat') || 'spawn';
 
     catButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             catButtons.forEach(b => b.classList.remove('active'));
             (e.currentTarget as HTMLElement).classList.add('active');
-            currentCat = (e.currentTarget as HTMLElement).getAttribute('data-cat') || 'all';
+            currentCat = (e.currentTarget as HTMLElement).getAttribute('data-cat') || 'spawn';
             renderCatalogUI(currentCat, searchInput?.value || '');
         });
     });

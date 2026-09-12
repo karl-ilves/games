@@ -962,6 +962,13 @@ try {
 
         // Test 5B: Spawn Points Category (Eraldi lahter: Spawn kohad, nähtavad ja nähtamatud)
         console.log("   Testing Spawn Points Category (🚩 Spawn Kohad: Nähtavad & Nähtamatud)...");
+        // Verify 'All' category button was removed
+        const hasAllCatBtn = await page.$('.cat-btn[data-cat="all"]');
+        if (hasAllCatBtn) {
+            throw new Error("Category button 'All' should be removed from creator catalog!");
+        }
+        console.log("   Verified 'All' category button is successfully removed: ✅");
+
         await page.waitForSelector('.cat-btn[data-cat="spawn"]', { visible: true, timeout: 5000 });
         await page.click('.cat-btn[data-cat="spawn"]');
         await new Promise(r => setTimeout(r, 400));
