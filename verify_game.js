@@ -1733,6 +1733,92 @@ try {
             // Switch back to edit mode
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
+
+            // Test Game Settings: Health Visibility (visible/unvisible), Coins, and Asma
+            console.log("   Testing Game Settings: Health Visibility, Coins & Asma (visible & unvisible)...");
+            const settingsTestResult = await page.evaluate(async () => {
+                const healthVis = document.getElementById('game-health-visible-select');
+                const coinsInput = document.getElementById('game-coins-input');
+                const coinsVis = document.getElementById('game-coins-visible-select');
+                const asmaInput = document.getElementById('game-asma-input');
+                const asmaVis = document.getElementById('game-asma-visible-select');
+
+                if (!healthVis || !coinsInput || !coinsVis || !asmaInput || !asmaVis) {
+                    return { ok: false, error: "Missing Game Settings input or select elements!" };
+                }
+
+                const healthOptions = Array.from(healthVis.querySelectorAll('option')).map(o => o.value);
+                const coinsOptions = Array.from(coinsVis.querySelectorAll('option')).map(o => o.value);
+                const asmaOptions = Array.from(asmaVis.querySelectorAll('option')).map(o => o.value);
+
+                if (!healthOptions.includes('visible') || !healthOptions.includes('unvisible')) {
+                    return { ok: false, error: "Health visibility select missing visible/unvisible options!" };
+                }
+                if (!coinsOptions.includes('visible') || !coinsOptions.includes('unvisible')) {
+                    return { ok: false, error: "Coins visibility select missing visible/unvisible options!" };
+                }
+                if (!asmaOptions.includes('visible') || !asmaOptions.includes('unvisible')) {
+                    return { ok: false, error: "Asma visibility select missing visible/unvisible options!" };
+                }
+
+                return {
+                    ok: true,
+                    healthOptions,
+                    coinsOptions,
+                    asmaOptions
+                };
+            });
+            console.log("   Game Settings elements verified:", settingsTestResult);
+            if (!settingsTestResult.ok) {
+                throw new Error(settingsTestResult.error);
+            }
+
+            // Test toggling to 'unvisible' and entering Play Test mode
+            await page.select('#game-health-visible-select', 'unvisible');
+            await page.select('#game-coins-visible-select', 'unvisible');
+            await page.select('#game-asma-visible-select', 'unvisible');
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+
+            const unvisDisplays = await page.evaluate(() => {
+                const healthD = window.getComputedStyle(document.getElementById('hud-health-container')).display;
+                const coinsD = window.getComputedStyle(document.getElementById('hud-coins-container')).display;
+                const asmaD = window.getComputedStyle(document.getElementById('hud-asma-container')).display;
+                return { healthD, coinsD, asmaD };
+            });
+            console.log("   HUD displays with 'unvisible' setting:", unvisDisplays);
+            if (unvisDisplays.healthD !== 'none' || unvisDisplays.coinsD !== 'none' || unvisDisplays.asmaD !== 'none') {
+                throw new Error("HUD containers failed to hide when set to 'unvisible'!");
+            }
+
+            // Exit Play Test, toggle back to 'visible', and verify they display in Play Test
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+
+            await page.select('#game-health-visible-select', 'visible');
+            await page.select('#game-coins-visible-select', 'visible');
+            await page.select('#game-asma-visible-select', 'visible');
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+
+            const visDisplays = await page.evaluate(() => {
+                const healthD = window.getComputedStyle(document.getElementById('hud-health-container')).display;
+                const coinsD = window.getComputedStyle(document.getElementById('hud-coins-container')).display;
+                const asmaD = window.getComputedStyle(document.getElementById('hud-asma-container')).display;
+                const asmaText = document.getElementById('player-asma-text')?.textContent?.trim();
+                return { healthD, coinsD, asmaD, asmaText };
+            });
+            console.log("   HUD displays with 'visible' setting:", visDisplays);
+            if (visDisplays.healthD !== 'flex' || visDisplays.coinsD !== 'flex' || visDisplays.asmaD !== 'flex') {
+                throw new Error("HUD containers failed to show when set to 'visible'!");
+            }
+            if (!visDisplays.asmaText?.includes('/')) {
+                throw new Error("Expected #player-asma-text to show current/max asma (e.g. 100/100)!");
+            }
+
+            // Exit Play Test mode back to Edit mode
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
         }
 
         // Test Custom Item 3D Workbench (Create Item, Push-Pull Height/Elevation, Save, Publish, Place)

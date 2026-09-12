@@ -126,7 +126,12 @@ let isTeleporting = false;
 // In-Game Gameplay & Combat State (Play Test Mode)
 let playerHealth = 100;
 let playerMaxHealth = 100;
+let isHealthVisible = true;
 let playerCoins = 0;
+let isCoinsVisible = true;
+let playerAsma = 100;
+let playerMaxAsma = 100;
+let isAsmaVisible = true;
 let playerInventory: Array<{ id: string; name: string; icon: string; type: string }> = [];
 let activeQuest: {
     title: string;
@@ -2061,6 +2066,11 @@ export function serializeCurrentScene() {
     const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
 
     const healthInput = document.getElementById('game-player-health-input') as HTMLInputElement | null;
+    const healthVisSelect = document.getElementById('game-health-visible-select') as HTMLSelectElement | null;
+    const coinsInput = document.getElementById('game-coins-input') as HTMLInputElement | null;
+    const coinsVisSelect = document.getElementById('game-coins-visible-select') as HTMLSelectElement | null;
+    const asmaInput = document.getElementById('game-asma-input') as HTMLInputElement | null;
+    const asmaVisSelect = document.getElementById('game-asma-visible-select') as HTMLSelectElement | null;
     const maxHp = healthInput ? (parseInt(healthInput.value, 10) || 100) : playerMaxHealth;
 
     return {
@@ -2068,6 +2078,11 @@ export function serializeCurrentScene() {
         category: catSelect?.value || 'Adventure',
         description: descInput?.value.trim() || '',
         playerMaxHealth: maxHp,
+        isHealthVisible: healthVisSelect ? (healthVisSelect.value === 'visible') : isHealthVisible,
+        playerCoins: coinsInput ? (parseInt(coinsInput.value, 10) || 0) : playerCoins,
+        isCoinsVisible: coinsVisSelect ? (coinsVisSelect.value === 'visible') : isCoinsVisible,
+        playerMaxAsma: asmaInput ? (parseInt(asmaInput.value, 10) || 100) : playerMaxAsma,
+        isAsmaVisible: asmaVisSelect ? (asmaVisSelect.value === 'visible') : isAsmaVisible,
         mapType: activeSeaConfig ? 'sea' : 'land',
         seaConfig: activeSeaConfig ? JSON.parse(JSON.stringify(activeSeaConfig)) : null,
         objects: placedObjects.map(p => ({
@@ -2159,12 +2174,39 @@ export function loadSceneFromData(sceneData: any) {
     if (descInput && sceneData.description) descInput.value = sceneData.description;
 
     const healthInput = document.getElementById('game-player-health-input') as HTMLInputElement | null;
+    const healthVisSelect = document.getElementById('game-health-visible-select') as HTMLSelectElement | null;
+    const coinsInput = document.getElementById('game-coins-input') as HTMLInputElement | null;
+    const coinsVisSelect = document.getElementById('game-coins-visible-select') as HTMLSelectElement | null;
+    const asmaInput = document.getElementById('game-asma-input') as HTMLInputElement | null;
+    const asmaVisSelect = document.getElementById('game-asma-visible-select') as HTMLSelectElement | null;
+
     if (sceneData.playerMaxHealth) {
         playerMaxHealth = Number(sceneData.playerMaxHealth) || 100;
         playerHealth = playerMaxHealth;
         if (healthInput) healthInput.value = playerMaxHealth.toString();
-        updateGameplayHUD();
     }
+    if (sceneData.isHealthVisible !== undefined) {
+        isHealthVisible = !!sceneData.isHealthVisible;
+        if (healthVisSelect) healthVisSelect.value = isHealthVisible ? 'visible' : 'unvisible';
+    }
+    if (sceneData.playerCoins !== undefined || sceneData.playerInitialCoins !== undefined) {
+        playerCoins = Number(sceneData.playerCoins ?? sceneData.playerInitialCoins) || 0;
+        if (coinsInput) coinsInput.value = playerCoins.toString();
+    }
+    if (sceneData.isCoinsVisible !== undefined) {
+        isCoinsVisible = !!sceneData.isCoinsVisible;
+        if (coinsVisSelect) coinsVisSelect.value = isCoinsVisible ? 'visible' : 'unvisible';
+    }
+    if (sceneData.playerMaxAsma !== undefined) {
+        playerMaxAsma = Number(sceneData.playerMaxAsma) || 100;
+        playerAsma = playerMaxAsma;
+        if (asmaInput) asmaInput.value = playerMaxAsma.toString();
+    }
+    if (sceneData.isAsmaVisible !== undefined) {
+        isAsmaVisible = !!sceneData.isAsmaVisible;
+        if (asmaVisSelect) asmaVisSelect.value = isAsmaVisible ? 'visible' : 'unvisible';
+    }
+    updateGameplayHUD();
 
     const isPureSea = (sceneData.mapType === 'sea' || sceneData.seaConfig?.type === 'whole');
     if (Array.isArray(sceneData.objects) && !isPureSea) {
@@ -2492,6 +2534,11 @@ async function initStudio() {
         get playerCoins() { return playerCoins; },
         get playerHealth() { return playerHealth; },
         get playerMaxHealth() { return playerMaxHealth; },
+        get isHealthVisible() { return isHealthVisible; },
+        get isCoinsVisible() { return isCoinsVisible; },
+        get isAsmaVisible() { return isAsmaVisible; },
+        get playerAsma() { return playerAsma; },
+        get playerMaxAsma() { return playerMaxAsma; },
         get playerSpeedMultiplier() { return playerSpeedMultiplier; },
         createWholeMapOcean,
         createPartMapOcean,
@@ -2639,9 +2686,13 @@ export function updateGameplayHUD() {
     const healthContainer = document.getElementById('hud-health-container');
     const gameplayActions = document.getElementById('gameplay-action-controls');
     const coinsContainer = document.getElementById('hud-coins-container');
+    const asmaContainer = document.getElementById('hud-asma-container');
     const yardsContainer = document.getElementById('hud-yards-container');
     const healthText = document.getElementById('player-health-text');
     const healthBar = document.getElementById('player-health-bar');
+    const asmaText = document.getElementById('player-asma-text');
+    const asmaBar = document.getElementById('player-asma-bar');
+    const asmaIcon = document.getElementById('hud-asma-icon');
     const coinsVal = document.getElementById('hud-coins-val');
     const yardsVal = document.getElementById('hud-yards-val');
     const questTracker = document.getElementById('hud-quest-tracker');
@@ -2651,19 +2702,21 @@ export function updateGameplayHUD() {
     const invContainer = document.getElementById('hud-inventory-container');
 
     const hasCombat = isCombatSystemEnabled || placedObjects.some(o => o.gameItemType === 'enemy' || o.catalogId?.includes('enemy') || o.enemyData != null);
-    const hasMoney = isMoneySystemEnabled || placedObjects.some(o => o.gameItemType === 'coin' || o.gameItemType === 'shop' || o.catalogId?.includes('coin') || o.catalogId?.includes('shop'));
-    const hasYards = isYardsSystemEnabled || (activeQuest && activeQuest.rewardYards) || placedObjects.some(o => o.gameItemType === 'shop');
 
     if (healthContainer) {
-        healthContainer.style.display = isPlayTestMode ? 'flex' : 'none';
+        healthContainer.style.display = (isPlayTestMode && isHealthVisible) ? 'flex' : 'none';
     }
     if (gameplayActions) {
         gameplayActions.style.display = (hasCombat && isPlayTestMode) ? 'flex' : 'none';
     }
     if (coinsContainer) {
-        coinsContainer.style.display = (hasMoney && isPlayTestMode) ? 'flex' : 'none';
+        coinsContainer.style.display = (isPlayTestMode && isCoinsVisible) ? 'flex' : 'none';
+    }
+    if (asmaContainer) {
+        asmaContainer.style.display = (isPlayTestMode && isAsmaVisible) ? 'flex' : 'none';
     }
     if (yardsContainer) {
+        const hasYards = isYardsSystemEnabled || (activeQuest && activeQuest.rewardYards) || placedObjects.some(o => o.gameItemType === 'shop');
         yardsContainer.style.display = (hasYards && isPlayTestMode) ? 'flex' : 'none';
     }
 
@@ -2674,6 +2727,18 @@ export function updateGameplayHUD() {
         if (pct > 50) healthBar.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
         else if (pct > 25) healthBar.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
         else healthBar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+    }
+
+    if (asmaText) asmaText.innerText = `${Math.max(0, Math.round(playerAsma))}/${playerMaxAsma}`;
+    if (asmaBar) {
+        const asmaPct = Math.max(0, Math.min(100, (playerAsma / playerMaxAsma) * 100));
+        asmaBar.style.width = `${asmaPct}%`;
+        if (asmaPct > 50) asmaBar.style.background = 'linear-gradient(90deg, #00cec9, #0984e3)';
+        else if (asmaPct > 25) asmaBar.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+        else asmaBar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+    }
+    if (asmaIcon) {
+        asmaIcon.innerText = playerAsma <= 20 ? '😮‍💨' : '🫁';
     }
 
     if (coinsVal) coinsVal.innerText = playerCoins.toString();
@@ -3434,6 +3499,25 @@ function setupStudioEvents() {
                 characterVelocity.set(0, 0, 0);
                 isGrounded = true;
                 playerHealth = playerMaxHealth;
+                playerAsma = playerMaxAsma;
+
+                const coinsInput = document.getElementById('game-coins-input') as HTMLInputElement | null;
+                if (coinsInput) {
+                    playerCoins = parseInt(coinsInput.value, 10) || 0;
+                }
+                const healthVisSelect = document.getElementById('game-health-visible-select') as HTMLSelectElement | null;
+                if (healthVisSelect) {
+                    isHealthVisible = healthVisSelect.value === 'visible';
+                }
+                const coinsVisSelect = document.getElementById('game-coins-visible-select') as HTMLSelectElement | null;
+                if (coinsVisSelect) {
+                    isCoinsVisible = coinsVisSelect.value === 'visible';
+                }
+                const asmaVisSelect = document.getElementById('game-asma-visible-select') as HTMLSelectElement | null;
+                if (asmaVisSelect) {
+                    isAsmaVisible = asmaVisSelect.value === 'visible';
+                }
+
                 isGameOver = false;
                 isGameFinished = false;
 
@@ -3766,6 +3850,58 @@ function setupCatalogEvents() {
                 updateGameplayHUD();
                 autoSaveDraft();
             }
+        });
+    }
+
+    const healthVisSelect = document.getElementById('game-health-visible-select') as HTMLSelectElement | null;
+    if (healthVisSelect) {
+        healthVisSelect.addEventListener('change', () => {
+            isHealthVisible = healthVisSelect.value === 'visible';
+            updateGameplayHUD();
+            autoSaveDraft();
+        });
+    }
+
+    const coinsInput = document.getElementById('game-coins-input') as HTMLInputElement | null;
+    if (coinsInput) {
+        coinsInput.addEventListener('input', () => {
+            const val = parseInt(coinsInput.value, 10);
+            if (!isNaN(val) && val >= 0) {
+                playerCoins = val;
+                updateGameplayHUD();
+                autoSaveDraft();
+            }
+        });
+    }
+
+    const coinsVisSelect = document.getElementById('game-coins-visible-select') as HTMLSelectElement | null;
+    if (coinsVisSelect) {
+        coinsVisSelect.addEventListener('change', () => {
+            isCoinsVisible = coinsVisSelect.value === 'visible';
+            updateGameplayHUD();
+            autoSaveDraft();
+        });
+    }
+
+    const asmaInput = document.getElementById('game-asma-input') as HTMLInputElement | null;
+    if (asmaInput) {
+        asmaInput.addEventListener('input', () => {
+            const val = parseInt(asmaInput.value, 10);
+            if (!isNaN(val) && val > 0) {
+                playerMaxAsma = val;
+                playerAsma = val;
+                updateGameplayHUD();
+                autoSaveDraft();
+            }
+        });
+    }
+
+    const asmaVisSelect = document.getElementById('game-asma-visible-select') as HTMLSelectElement | null;
+    if (asmaVisSelect) {
+        asmaVisSelect.addEventListener('change', () => {
+            isAsmaVisible = asmaVisSelect.value === 'visible';
+            updateGameplayHUD();
+            autoSaveDraft();
         });
     }
 }
@@ -5696,6 +5832,31 @@ export function startNewEmptyGame(initialEnv: 'land' | 'sea' = 'land') {
     if (titleInput) titleInput.value = initialEnv === 'sea' ? 'My Ocean Adventure' : 'My New 3D Adventure';
     if (catSelect) catSelect.value = 'Adventure';
     if (descInput) descInput.value = initialEnv === 'sea' ? 'A vast 3D ocean world created in Playard!' : 'A brand new 3D world created in Playard!';
+
+    const healthInput = document.getElementById('game-player-health-input') as HTMLInputElement | null;
+    const healthVisSelect = document.getElementById('game-health-visible-select') as HTMLSelectElement | null;
+    const coinsInput = document.getElementById('game-coins-input') as HTMLInputElement | null;
+    const coinsVisSelect = document.getElementById('game-coins-visible-select') as HTMLSelectElement | null;
+    const asmaInput = document.getElementById('game-asma-input') as HTMLInputElement | null;
+    const asmaVisSelect = document.getElementById('game-asma-visible-select') as HTMLSelectElement | null;
+
+    playerMaxHealth = 100;
+    playerHealth = 100;
+    isHealthVisible = true;
+    playerCoins = 0;
+    isCoinsVisible = true;
+    playerMaxAsma = 100;
+    playerAsma = 100;
+    isAsmaVisible = true;
+
+    if (healthInput) healthInput.value = '100';
+    if (healthVisSelect) healthVisSelect.value = 'visible';
+    if (coinsInput) coinsInput.value = '0';
+    if (coinsVisSelect) coinsVisSelect.value = 'visible';
+    if (asmaInput) asmaInput.value = '100';
+    if (asmaVisSelect) asmaVisSelect.value = 'visible';
+
+    updateGameplayHUD();
 
     // Hide any active feedback banner permanently for this session
     localStorage.setItem('playard_hide_admin_feedback', 'true');
@@ -9455,6 +9616,16 @@ function animate() {
                         (scene.fog as THREE.FogExp2).density = 0.008;
                     }
                 }
+
+                // Asma (Astma / Breath) in Water
+                if (humanCharacter.position.y < -0.4) {
+                    playerAsma = Math.max(0, playerAsma - 10 * delta);
+                    if (playerAsma <= 0) {
+                        damagePlayer(5 * delta, true);
+                    }
+                } else {
+                    playerAsma = Math.min(playerMaxAsma, playerAsma + 25 * delta);
+                }
             } else {
                 const depthContainer = document.getElementById('hud-depth-container');
                 if (depthContainer) depthContainer.style.display = 'none';
@@ -9500,6 +9671,30 @@ function animate() {
                         isGrounded = true;
                     }
                 }
+
+                // Asma on Land (Sprinting consumes, rest/walk regenerates)
+                const isSprinting = !!(keys['ShiftLeft'] || keys['ShiftRight'] || keys['Shift']) && moveDir.lengthSq() > 0;
+                if (isSprinting && playerAsma > 0) {
+                    playerAsma = Math.max(0, playerAsma - 14 * delta);
+                } else {
+                    playerAsma = Math.min(playerMaxAsma, playerAsma + 25 * delta);
+                }
+            }
+
+            // Update Asma HUD bar & text smoothly
+            const asmaText = document.getElementById('player-asma-text');
+            const asmaBar = document.getElementById('player-asma-bar');
+            const asmaIcon = document.getElementById('hud-asma-icon');
+            if (asmaText) asmaText.innerText = `${Math.max(0, Math.round(playerAsma))}/${playerMaxAsma}`;
+            if (asmaBar) {
+                const asmaPct = Math.max(0, Math.min(100, (playerAsma / playerMaxAsma) * 100));
+                asmaBar.style.width = `${asmaPct}%`;
+                if (asmaPct > 50) asmaBar.style.background = 'linear-gradient(90deg, #00cec9, #0984e3)';
+                else if (asmaPct > 25) asmaBar.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+                else asmaBar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+            }
+            if (asmaIcon) {
+                asmaIcon.innerText = playerAsma <= 20 ? '😮‍💨' : '🫁';
             }
 
             // 3rd Person Smooth Camera Follow
