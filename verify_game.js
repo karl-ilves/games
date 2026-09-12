@@ -3844,10 +3844,10 @@ try {
             });
             await new Promise(r => setTimeout(r, 60));
 
-            // Test Owner Teleport input range up to 300
+            // Test Owner Teleport input range up to 200 (Carriage 200 is final carriage)
             const teleportMax = await page.$eval('#owner-teleport-input', el => el.getAttribute('max'));
-            console.log(`   Owner Teleport Max Car (Expected: 300): ${teleportMax}`);
-            if (teleportMax !== '300') throw new Error(`Teleport max input should be 300, got: ${teleportMax}`);
+            console.log(`   Owner Teleport Max Car (Expected: 200): ${teleportMax}`);
+            if (teleportMax !== '200') throw new Error(`Teleport max input should be 200, got: ${teleportMax}`);
 
             // Test Clue Picture / Photo Inspection & Cursor Free / Re-lock Behavior
             console.log("   Testing Clue Photo Inspection with Visual Image & Cursor Release/Lock...");
@@ -3891,91 +3891,112 @@ try {
             if (isInspectClosed !== 'none' || !isCursorNormalAfterPack) {
                 throw new Error('After packing clue into backpack, modal must close and normal game cursor lock must be restored!');
             }
-            // Test Carriage 200 — Train Halt, Sliding Doors Open & Step Out onto Station Platform
-            console.log("   Testing Carriage 200 — Train Halt, Doors Open & Station Platform Exploration...");
+
+            // Test Carriage 200 — Final Carriage (Viimane vagun 200, 5X pikem, rohelised plussid +30 elu, Lõpupahalane 10 lööki)
+            console.log("   Testing Carriage 200 — Final Carriage (5X longer, green +30 health pluses, 10-hit Final Boss)...");
             await page.evaluate(() => {
                 window.__lastMetro.loadCarriage(200, 'right');
             });
             await new Promise(r => setTimeout(r, 150));
 
             const car200Label = await page.$eval('#hud-car-label', el => el.textContent);
-            const trainSpeed200 = await page.evaluate(() => window.__lastMetro.trainSpeed);
-            const doorsOpen200 = await page.evaluate(() => window.__lastMetro.introSideDoorsOpen);
-            const hasPlatformMesh200 = await page.evaluate(() => {
-                const group = window.__lastMetro.currentCarriage?.group;
-                return !!group?.getObjectByName('station_platform_200');
-            });
-            const switchesCount200 = await page.evaluate(() => window.__lastMetro.kuuljaSwitches.length);
-            const hasKuuljaBoss200 = await page.evaluate(() => !!window.__lastMetro.kuuljaBossGroup);
-
             const isMusicActive200 = await page.evaluate(() => window.__metroAudio?.isCarriage200MusicActive);
             console.log(`   Carriage 200 Music Active (Expected: true): ${isMusicActive200}`);
             if (!isMusicActive200) {
                 throw new Error("Carriage 200 music must start playing when entering Carriage 200!");
             }
 
-            console.log(`   Carriage 200: HUD="${car200Label}", TrainSpeed=${trainSpeed200} (Expected: 0), DoorsOpen=${doorsOpen200} (Expected: true), PlatformMesh=${hasPlatformMesh200}, Switches=${switchesCount200} (Expected: 1), KuuljaBoss=${hasKuuljaBoss200}`);
-
-            if (trainSpeed200 !== 0 || !doorsOpen200 || !hasPlatformMesh200 || switchesCount200 !== 1 || !hasKuuljaBoss200) {
-                throw new Error("Carriage 200 must stop train speed (0), open side doors, spawn 3D station platform, 1 switch, and Kuulja boss!");
+            // Verify Carriage 200 5X Length (100 meters, floor depth 100)
+            const car200Length = await page.evaluate(() => {
+                const group = window.__lastMetro.currentCarriage?.group;
+                if (!group) return 0;
+                // Find floor mesh
+                const floorMesh = group.children.find(c => c.geometry && c.geometry.parameters && c.geometry.parameters.depth >= 90);
+                return floorMesh ? floorMesh.geometry.parameters.depth : 0;
+            });
+            console.log(`   Carriage 200 Length (Expected: 100): ${car200Length}`);
+            if (car200Length !== 100) {
+                throw new Error(`Carriage 200 must be 5X longer (100m), got: ${car200Length}`);
             }
 
-            // Test Player stepping out through side door onto the platform (x > 1.4)
+            // Verify Player start position at entrance (-46)
+            const playerStartZ = await page.evaluate(() => window.__lastMetro.playerPos.z);
+            console.log(`   Player start Z in Carriage 200 (Expected <= -40): ${playerStartZ}`);
+            if (playerStartZ > -40) {
+                throw new Error(`Player should start near rear entrance of Carriage 200, got: ${playerStartZ}`);
+            }
+
+            // Verify Green Pluses on the ground ("maa peal on plussid roheliusega salt saad pluss 30 elu")
+            const greenPlusesCount = await page.evaluate(() => window.__lastMetro.carriage200HealthPickups?.length || 0);
+            console.log(`   Green Health Pluses Count (Expected >= 5): ${greenPlusesCount}`);
+            if (greenPlusesCount < 5) {
+                throw new Error(`Expected at least 5 green health pluses on the ground, got: ${greenPlusesCount}`);
+            }
+
+            // Test Collecting Green Plus grants +30 HP
+            const healTestResult = await page.evaluate(() => {
+                const lm = window.__lastMetro;
+                lm.playerHp = 40;
+                lm.updateHealthUI();
+                const firstPlus = lm.carriage200HealthPickups[0];
+                if (!firstPlus) return { error: 'No plus found' };
+                // Walk to plus position
+                lm.playerPos.copy(firstPlus.pos);
+                // Call healPlayer(30)
+                lm.healPlayer(30);
+                firstPlus.collected = true;
+                firstPlus.mesh.visible = false;
+                firstPlus.light.visible = false;
+                return { hp: lm.playerHp, collected: firstPlus.collected };
+            });
+            console.log(`   Player HP after collecting green plus (Expected: 70): ${healTestResult.hp}`);
+            if (healTestResult.hp !== 70) {
+                throw new Error(`Collecting green plus should increase HP by +30 to 70, got: ${healTestResult.hp}`);
+            }
+
+            // Verify Carriage 200 Final Boss exists at the end of carriage
+            const bossExists = await page.evaluate(() => !!window.__lastMetro.carriage200Boss);
+            const bossZ = await page.evaluate(() => window.__lastMetro.carriage200Boss?.group?.position?.z);
+            const bossInitialHp = await page.evaluate(() => window.__lastMetro.carriage200Boss?.hp);
+            console.log(`   Carriage 200 Boss Exists: ${bossExists}, Boss Z (Expected > 35): ${bossZ}, Initial HP (Expected: 10): ${bossInitialHp}`);
+            if (!bossExists || bossZ < 35 || bossInitialHp !== 10) {
+                throw new Error(`Carriage 200 boss must exist at end of carriage with 10 hits HP!`);
+            }
+
+            // Test attacking boss with sword: takes 10 hits to kill ("keda tapad mõõgaga 10 lõõki")
             await page.evaluate(() => {
-                window.__lastMetro.playerPos.set(4.5, 1.6, 0.0);
+                const lm = window.__lastMetro;
+                lm.inventory['sword'] = true;
+                lm.equippedItem = 'sword';
+                // Stand in front of boss
+                lm.playerPos.set(0, 1.6, 39.0);
             });
-            const playerXOnPlatform = await page.evaluate(() => window.__lastMetro.playerPos.x);
-            console.log(`   Player X on Station Platform (Expected: 4.5): ${playerXOnPlatform}`);
-            if (playerXOnPlatform < 4.0) {
-                throw new Error(`Player should be allowed to walk onto the station platform at x = 4.5, but got: ${playerXOnPlatform}`);
+
+            // Perform 9 sword strikes
+            for (let strike = 1; strike <= 9; strike++) {
+                await page.evaluate(() => {
+                    window.__lastMetro.isSwordSwinging = false;
+                    window.__lastMetro.attackWithSword();
+                });
+            }
+            const hpAfter9Strikes = await page.evaluate(() => window.__lastMetro.carriage200Boss?.hp);
+            console.log(`   Boss HP after 9 sword strikes (Expected: 1): ${hpAfter9Strikes}`);
+            if (hpAfter9Strikes !== 1) {
+                throw new Error(`Expected boss HP to be 1 after 9 strikes, got: ${hpAfter9Strikes}`);
             }
 
-            // Verify weird glowing beam is removed from switch meshes
-            const hasBeaconBeam = await page.evaluate(() => {
-                return window.__lastMetro.kuuljaSwitches.some(s => !!s.mesh.getObjectByName('switch_beacon_beam'));
-            });
-            console.log(`   Carriage 200 Switch Glowing Beacon Beam Present (Expected: false): ${hasBeaconBeam}`);
-            if (hasBeaconBeam) {
-                throw new Error("Glowing beacon beam above switches should be removed!");
-            }
-
-            // Test activating the switch (User requirement: "1 lüliti mitte 3")
+            // 10th sword strike: Boss dies and victory is achieved!
             await page.evaluate(() => {
-                window.__lastMetro.activateKuuljaSwitch(0);
+                window.__lastMetro.isSwordSwinging = false;
+                window.__lastMetro.attackWithSword();
             });
-            const switchesActivated = await page.evaluate(() => window.__lastMetro.kuuljaSwitchesActivated);
-            const switchesDone = await page.evaluate(() => window.__lastMetro.station200SwitchesDone);
-            console.log(`   Switches activated in Carriage 200 (Expected: 1): ${switchesActivated}, Switches Done: ${switchesDone}`);
-            if (switchesActivated !== 1 || !switchesDone) {
-                throw new Error(`Expected switch to be activated and switches done, got switches: ${switchesActivated}, switchesDone: ${switchesDone}`);
-            }
+            await new Promise(r => setTimeout(r, 1400));
 
-            // Test returning to the metro train triggers train departure
-            await page.evaluate(() => {
-                window.__lastMetro.playerPos.set(0.5, 1.6, 0.0);
-                window.__lastMetro.triggerCarriage200TrainDeparture();
-            });
-            const departureActive = await page.evaluate(() => window.__lastMetro.station200Departing);
-            console.log(`   Carriage 200 Train Departure triggered on metro return (Expected: true): ${departureActive}`);
-            if (!departureActive) {
-                throw new Error("Returning to metro after switches must trigger train departure!");
-            }
-
-            const volumeMultiplier = await page.evaluate(() => window.__metroAudio?.carriage200VolumeMultiplier);
-            console.log(`   Carriage 200 Volume Multiplier (Expected: 1.5): ${volumeMultiplier}`);
-            if (volumeMultiplier !== 1.5) {
-                throw new Error(`Expected Carriage 200 volume multiplier to be 1.5, got: ${volumeMultiplier}`);
-            }
-
-            // Test Carriage 200 Ajapahalane Immunity (No Time Villain in 200)
-            await page.evaluate(() => {
-                window.__lastMetro.carriageStayTimer = 25;
-                window.__lastMetro.activateTimeVillain();
-            });
-            const isTimeVillainActive200 = await page.evaluate(() => window.__lastMetro.timeVillainActive);
-            console.log(`   Carriage 200 Time Villain Active (Expected: false): ${isTimeVillainActive200}`);
-            if (isTimeVillainActive200) {
-                throw new Error("Ajapahalane (Time Villain) must NOT appear or be activated in Carriage 200!");
+            const isBossDead = await page.evaluate(() => window.__lastMetro.carriage200Boss?.isDead);
+            const isVictoryModalOpen = await page.$eval('#victory-300-modal', el => window.getComputedStyle(el).display);
+            console.log(`   Boss Dead after 10 strikes: ${isBossDead}, Victory Modal Display (Expected: flex): ${isVictoryModalOpen}`);
+            if (!isBossDead || isVictoryModalOpen !== 'flex') {
+                throw new Error(`Boss must die after 10 sword strikes and open the victory modal!`);
             }
 
             // Test Crouch functionality & On-Screen Button
@@ -3997,67 +4018,18 @@ try {
                 window.__lastMetro.toggleCrouch();
             });
 
-            // Test Kuulja Wall Collision Bounds (cannot enter walls)
-            const kuuljaBoundsSafe = await page.evaluate(() => {
-                const k = window.__lastMetro.kuuljaBossGroup;
-                if (!k) return false;
-                k.position.set(15.0, 0, 20.0); // Attempt to place outside platform bounds
-                k.position.x = Math.max(2.2, Math.min(8.8, k.position.x));
-                k.position.z = Math.max(-14.8, Math.min(14.8, k.position.z));
-                return k.position.x <= 8.8 && k.position.z <= 14.8;
-            });
-            console.log(`   Kuulja Wall Bounds Clamping (Expected: true): ${kuuljaBoundsSafe}`);
-            if (!kuuljaBoundsSafe) {
-                throw new Error("Kuulja must be constrained within platform walls and cannot clip inside walls!");
-            }
-
-            // Test Touching Kuulja causes Death
+            // Test Carriage 200 Ajapahalane Immunity (No Time Villain in 200)
             await page.evaluate(() => {
-                const k = window.__lastMetro.kuuljaBossGroup;
-                if (k) {
-                    k.position.copy(window.__lastMetro.playerPos);
-                    if (k.position.distanceTo(window.__lastMetro.playerPos) < 1.6) {
-                        window.__lastMetro.triggerGameOver('Kuulja tabas sind!', 'The Listener caught you!');
-                    }
-                }
+                window.__lastMetro.carriageStayTimer = 25;
+                window.__lastMetro.activateTimeVillain();
             });
-            const isDeadFromKuulja = await page.evaluate(() => window.__lastMetro.state === 'dead' || window.__lastMetro.state === 'game_over');
-            console.log(`   Touched Kuulja -> Player Dies (Expected: true): ${isDeadFromKuulja}`);
-            if (!isDeadFromKuulja) {
-                throw new Error("Touching Kuulja must cause player death!");
+            const isTimeVillainActive200 = await page.evaluate(() => window.__lastMetro.timeVillainActive);
+            console.log(`   Carriage 200 Time Villain Active (Expected: false): ${isTimeVillainActive200}`);
+            if (isTimeVillainActive200) {
+                throw new Error("Ajapahalane (Time Villain) must NOT appear or be activated in Carriage 200!");
             }
 
-            // Respawn back to test normal transitions & music continuity
-            await page.evaluate(() => {
-                window.__lastMetro.loadCarriage(200, 'right');
-            });
-            await new Promise(r => setTimeout(r, 100));
-
-            // Test moving away from Carriage 200 into 201: music MUST KEEP PLAYING ("laul kestab kuni läbi saab")
-            await page.evaluate(() => {
-                window.__lastMetro.loadCarriage(201, 'right');
-            });
-            const isMusicActive201 = await page.evaluate(() => window.__metroAudio?.isCarriage200MusicActive);
-            console.log(`   Carriage 201 Music Active after transition (Expected: true - plays until finishes): ${isMusicActive201}`);
-            if (!isMusicActive201) {
-                throw new Error("Carriage 200 music must continue playing in Carriage 201 until it finishes!");
-            }
-
-            // Test Shadow Dash events up to Carriage 300 on carriages 210, 232, 233, 250, 260, 278, 280, 290
-            console.log("   Testing Shadow Dash on carriages 210, 232, 233, 250, 260, 278, 280, 290...");
-            const shadowDashCars = [210, 232, 233, 250, 260, 278, 280, 290];
-            for (const cNum of shadowDashCars) {
-                const isShadowDash = await page.evaluate((car) => {
-                    window.__lastMetro.loadCarriage(car, 'right');
-                    return window.__lastMetro.isShadowEventActive() || window.__lastMetro.shadowRushCountdown > 0;
-                }, cNum);
-                console.log(`   Carriage ${cNum} Shadow Dash active (Expected: true): ${isShadowDash}`);
-                if (!isShadowDash) {
-                    throw new Error(`Shadow Dash event must trigger on carriage ${cNum}!`);
-                }
-            }
-
-            console.log("   Successfully verified Carriage 200 switches, return to metro train, music persistence until end & Shadow Dash on carriages 210, 232, 233, 250, 260, 278, 280, 290!");
+            console.log("   Successfully verified Carriage 200 as final carriage, 5X length, green +30 health pluses, and 10-hit sword boss victory!");
 
             // ── TEST: Sünnipäeva / Vanuse süsteem ──────────────────────────────────
             console.log("\n--- Testing Birthday / Age System ---");

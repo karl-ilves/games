@@ -641,6 +641,27 @@ export class LastMetroGame {
     public station200SwitchesDone: boolean = false;
     public station200Departing: boolean = false;
 
+    // ── Vagun 200 Final Boss & Green Health Pickups ─────────────────────────
+    public carriage200Boss: {
+        group: THREE.Group;
+        bodyMesh: THREE.Mesh;
+        hp: number;
+        maxHp: number;
+        attackCooldown: number;
+        isDead: boolean;
+        healthCanvas: HTMLCanvasElement;
+        healthTex: THREE.CanvasTexture;
+        healthSprite: THREE.Sprite;
+        initialZ: number;
+    } | null = null;
+    public carriage200HealthPickups: {
+        mesh: THREE.Group;
+        pos: THREE.Vector3;
+        collected: boolean;
+        light: THREE.PointLight;
+        pulseOffset: number;
+    }[] = [];
+
     // ── Vagunid 201–250 Kanalisatsioon (Sewers) ────────────────────────────
     public sewerWaterSubmerged: boolean = false;
     public sewerSubmergeTimer: number = 0;
@@ -1166,13 +1187,14 @@ export class LastMetroGame {
         const lightMeshes: THREE.Mesh[] = [];
         const passengers: AIPassenger[] = [];
 
-        const carLength = 20;
+        const carLength = index === 200 ? 100 : 20;
+        const halfLen = carLength / 2;
         const carWidth = 3.4;
         const carHeight = 3.0;
 
         // 1. Floor: Rubberized subway floor + Safety yellow tactile boundary stripe along aisle
         const floorMat = new THREE.MeshStandardMaterial({
-            color: theme === 'abandoned' ? 0x222629 : 0x3d4852,
+            color: theme === 'abandoned' || index === 200 ? 0x222629 : 0x3d4852,
             roughness: 0.75,
             metalness: 0.15
         });
@@ -1193,21 +1215,23 @@ export class LastMetroGame {
             carGroup.add(stripe);
         });
 
-        // Stainless steel threshold floor plates at door entries (z = 0)
-        const thresholdMat = new THREE.MeshStandardMaterial({
-            color: 0xcccccc,
-            roughness: 0.25,
-            metalness: 0.9
-        });
-        [-carWidth / 2 + 0.15, carWidth / 2 - 0.15].forEach(tx => {
-            const threshold = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.203, 2.3), thresholdMat);
-            threshold.position.set(tx, 0.002, 0);
-            carGroup.add(threshold);
-        });
+        // Stainless steel threshold floor plates at door entries (z = 0, only for normal cars)
+        if (index !== 200) {
+            const thresholdMat = new THREE.MeshStandardMaterial({
+                color: 0xcccccc,
+                roughness: 0.25,
+                metalness: 0.9
+            });
+            [-carWidth / 2 + 0.15, carWidth / 2 - 0.15].forEach(tx => {
+                const threshold = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.203, 2.3), thresholdMat);
+                threshold.position.set(tx, 0.002, 0);
+                carGroup.add(threshold);
+            });
+        }
 
         // 2. Ceiling: Ribbed architectural subway ceiling with recessed lighting channels
         const ceilingMat = new THREE.MeshStandardMaterial({
-            color: theme === 'lounge' ? 0x242830 : 0xe8ecf1,
+            color: theme === 'lounge' ? 0x242830 : (index === 200 ? 0x181c24 : 0xe8ecf1),
             roughness: 0.45,
             metalness: 0.15
         });
@@ -1217,56 +1241,17 @@ export class LastMetroGame {
 
         // Air conditioning vents and emergency speakers in ceiling
         const ventMat = new THREE.MeshStandardMaterial({ color: 0x333a42, roughness: 0.8 });
-        for (let vz = -8; vz <= 8; vz += 3.2) {
+        for (let vz = -halfLen + 2; vz <= halfLen - 2; vz += 3.2) {
             const vent = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 0.35), ventMat);
             vent.position.set(0, carHeight - 0.08, vz);
             carGroup.add(vent);
         }
 
         // 3. Side Walls with Window Cutouts & Platform Sliding Doors
-        const wallColor = theme === 'abandoned' ? 0x3d3d3d : theme === 'neon' ? 0x1e272e : 0xf1f2f6;
+        const wallColor = theme === 'abandoned' || index === 200 ? 0x2c3035 : theme === 'neon' ? 0x1e272e : 0xf1f2f6;
         const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.7 });
 
         this.sideDoorMeshes = [];
-
-        // Build left and right walls with central door entryways at z = 0
-        [-carWidth / 2, carWidth / 2].forEach(x => {
-            const wallFront = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
-            wallFront.position.set(x, carHeight / 2, 5.6);
-            carGroup.add(wallFront);
-
-            const wallBack = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
-            wallBack.position.set(x, carHeight / 2, -5.6);
-            carGroup.add(wallBack);
-
-            const wallTop = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight - 2.2, 2.4), wallMat);
-            wallTop.position.set(x, 2.2 + (carHeight - 2.2) / 2, 0);
-            carGroup.add(wallTop);
-
-            // Pneumatic Sliding Doors in each doorway
-            const doorLeafMat = new THREE.MeshStandardMaterial({
-                color: theme === 'abandoned' ? 0x7f1d1d : 0x10ac84,
-                metalness: 0.6,
-                roughness: 0.35
-            });
-            const doorGlassMat = new THREE.MeshBasicMaterial({ color: 0x010204 });
-
-            const leftLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
-            const leftWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
-            leftWin.position.set(0, 0.25, 0);
-            leftLeaf.add(leftWin);
-            leftLeaf.position.set(x, 1.1, -0.55);
-            carGroup.add(leftLeaf);
-            this.sideDoorMeshes.push({ mesh: leftLeaf, baseZ: -0.55, dir: -1 });
-
-            const rightLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
-            const rightWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
-            rightWin.position.set(0, 0.25, 0);
-            rightLeaf.add(rightWin);
-            rightLeaf.position.set(x, 1.1, 0.55);
-            carGroup.add(rightLeaf);
-            this.sideDoorMeshes.push({ mesh: rightLeaf, baseZ: 0.55, dir: 1 });
-        });
 
         // Windows (Subway Tinted Glass - passing tunnel lights clearly visible outside!)
         const windowGlassMat = new THREE.MeshPhysicalMaterial({
@@ -1276,20 +1261,77 @@ export class LastMetroGame {
             roughness: 0.1,
             metalness: 0.25
         });
-        [-carWidth / 2, carWidth / 2].forEach(x => {
-            for (let z = -7; z <= 7; z += 4.5) {
-                if (Math.abs(z) < 2) continue; // skip door entry
-                const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.1, 2.5), windowGlassMat);
-                windowPane.position.set(x, 1.6, z);
-                carGroup.add(windowPane);
-            }
-        });
+
+        if (index === 200) {
+            // Carriage 200: Continuous 100m side walls and regular windows
+            [-carWidth / 2, carWidth / 2].forEach(x => {
+                const wallLong = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, carLength), wallMat);
+                wallLong.position.set(x, carHeight / 2, 0);
+                carGroup.add(wallLong);
+
+                // Tinted subway windows spaced across 100m
+                for (let z = -halfLen + 4; z <= halfLen - 4; z += 5) {
+                    const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.1, 2.8), windowGlassMat);
+                    windowPane.position.set(x, 1.6, z);
+                    carGroup.add(windowPane);
+                }
+            });
+        } else {
+            // Normal 20m car walls and central sliding doors at z = 0
+            [-carWidth / 2, carWidth / 2].forEach(x => {
+                const wallFront = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
+                wallFront.position.set(x, carHeight / 2, 5.6);
+                carGroup.add(wallFront);
+
+                const wallBack = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight, 8.8), wallMat);
+                wallBack.position.set(x, carHeight / 2, -5.6);
+                carGroup.add(wallBack);
+
+                const wallTop = new THREE.Mesh(new THREE.BoxGeometry(0.15, carHeight - 2.2, 2.4), wallMat);
+                wallTop.position.set(x, 2.2 + (carHeight - 2.2) / 2, 0);
+                carGroup.add(wallTop);
+
+                // Pneumatic Sliding Doors in each doorway
+                const doorLeafMat = new THREE.MeshStandardMaterial({
+                    color: theme === 'abandoned' ? 0x7f1d1d : 0x10ac84,
+                    metalness: 0.6,
+                    roughness: 0.35
+                });
+                const doorGlassMat = new THREE.MeshBasicMaterial({ color: 0x010204 });
+
+                const leftLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
+                const leftWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
+                leftWin.position.set(0, 0.25, 0);
+                leftLeaf.add(leftWin);
+                leftLeaf.position.set(x, 1.1, -0.55);
+                carGroup.add(leftLeaf);
+                this.sideDoorMeshes.push({ mesh: leftLeaf, baseZ: -0.55, dir: -1 });
+
+                const rightLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.15, 1.15), doorLeafMat);
+                const rightWin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.45), doorGlassMat);
+                rightWin.position.set(0, 0.25, 0);
+                rightLeaf.add(rightWin);
+                rightLeaf.position.set(x, 1.1, 0.55);
+                carGroup.add(rightLeaf);
+                this.sideDoorMeshes.push({ mesh: rightLeaf, baseZ: 0.55, dir: 1 });
+            });
+
+            [-carWidth / 2, carWidth / 2].forEach(x => {
+                for (let z = -7; z <= 7; z += 4.5) {
+                    if (Math.abs(z) < 2) continue; // skip door entry
+                    const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.1, 2.5), windowGlassMat);
+                    windowPane.position.set(x, 1.6, z);
+                    carGroup.add(windowPane);
+                }
+            });
+        }
 
         // 4. Stainless Steel Grab Rails & Overhead Hanging Grab Loops (Straps)
         const poleMat = new THREE.MeshStandardMaterial({ color: 0xededed, metalness: 0.95, roughness: 0.15 });
         const strapMat = new THREE.MeshStandardMaterial({ color: 0xf39c12, roughness: 0.6 });
         [-0.9, 0.9].forEach(x => {
-            for (let z = -8; z <= 8; z += 4) {
+            const poleInterval = index === 200 ? 5.5 : 4.0;
+            for (let z = -halfLen + 2; z <= halfLen - 2; z += poleInterval) {
                 const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, carHeight, 12), poleMat);
                 pole.position.set(x, carHeight / 2, z);
                 carGroup.add(pole);
@@ -1302,8 +1344,9 @@ export class LastMetroGame {
             carGroup.add(rail);
 
             // Overhead hanging grab straps with handles
-            for (let sz = -7.5; sz <= 7.5; sz += 1.5) {
-                if (Math.abs(sz) < 1.4) continue; // clear above doorway
+            const strapInterval = index === 200 ? 2.5 : 1.5;
+            for (let sz = -halfLen + 3; sz <= halfLen - 3; sz += strapInterval) {
+                if (index !== 200 && Math.abs(sz) < 1.4) continue; // clear above doorway in normal cars
                 const strapBand = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.02), ventMat);
                 strapBand.position.set(x, 2.18, sz);
                 carGroup.add(strapBand);
@@ -1315,66 +1358,69 @@ export class LastMetroGame {
             }
         });
 
-        // 5. Glass Windscreen Partitions at ends of seat rows
-        const partitionGlassMat = new THREE.MeshStandardMaterial({
-            color: 0xddf0ff,
-            transparent: true,
-            opacity: 0.35,
-            roughness: 0.05,
-            metalness: 0.1
-        });
-        [-1.25, 1.25].forEach(px => {
-            [-1.8, 1.8].forEach(pz => {
-                // Sleek transparent safety glass
-                const partitionGlass = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1.1, 0.62), partitionGlassMat);
-                partitionGlass.position.set(px, 0.85, pz);
-                carGroup.add(partitionGlass);
-
-                // Sleek vertical chrome edge pole on aisle side
-                const edgeX = px > 0 ? px - 0.31 : px + 0.31;
-                const edgePole = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.2, 12), poleMat);
-                edgePole.position.set(edgeX, 0.85, pz);
-                carGroup.add(edgePole);
-
-                // Top and bottom mounting rails
-                const topRail = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 0.64), poleMat);
-                topRail.position.set(px, 1.4, pz);
-                carGroup.add(topRail);
-
-                const bottomRail = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 0.64), poleMat);
-                bottomRail.position.set(px, 0.32, pz);
-                carGroup.add(bottomRail);
+        // 5. Glass Windscreen Partitions at ends of seat rows (for normal cars)
+        if (index !== 200) {
+            const partitionGlassMat = new THREE.MeshStandardMaterial({
+                color: 0xddf0ff,
+                transparent: true,
+                opacity: 0.35,
+                roughness: 0.05,
+                metalness: 0.1
             });
-        });
+            [-1.25, 1.25].forEach(px => {
+                [-1.8, 1.8].forEach(pz => {
+                    const partitionGlass = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1.1, 0.62), partitionGlassMat);
+                    partitionGlass.position.set(px, 0.85, pz);
+                    carGroup.add(partitionGlass);
+
+                    const edgeX = px > 0 ? px - 0.31 : px + 0.31;
+                    const edgePole = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.2, 12), poleMat);
+                    edgePole.position.set(edgeX, 0.85, pz);
+                    carGroup.add(edgePole);
+
+                    const topRail = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 0.64), poleMat);
+                    topRail.position.set(px, 1.4, pz);
+                    carGroup.add(topRail);
+
+                    const bottomRail = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 0.64), poleMat);
+                    bottomRail.position.set(px, 0.32, pz);
+                    carGroup.add(bottomRail);
+                });
+            });
+        }
 
         // 6. Dual Long Ergonomic Passenger Subway Benches with Sculpted Cushions & Dividers
-        const seatBaseColor = theme === 'lounge' ? 0x6c5ce7 : theme === 'abandoned' ? 0x2d3436 : 0x0984e3;
+        const seatBaseColor = theme === 'lounge' ? 0x6c5ce7 : (theme === 'abandoned' || index === 200) ? 0x2d3436 : 0x0984e3;
         const seatBaseMat = new THREE.MeshStandardMaterial({ color: seatBaseColor, roughness: 0.65 });
-        const cushionColor = theme === 'lounge' ? 0x574b90 : theme === 'abandoned' ? 0x1e272e : 0x1e3799;
+        const cushionColor = theme === 'lounge' ? 0x574b90 : (theme === 'abandoned' || index === 200) ? 0x1e272e : 0x1e3799;
         const cushionMat = new THREE.MeshStandardMaterial({ color: cushionColor, roughness: 0.75 });
         const dividerMat = new THREE.MeshStandardMaterial({ color: 0x718093, metalness: 0.8, roughness: 0.2 });
 
+        const benchCenters = index === 200
+            ? [-38, -24, -10, 4, 18, 30]
+            : [-4.9, 4.9];
+
         [-1.28, 1.28].forEach(x => {
-            // Rear Bench (z = -4.9, length 6.0m) and Front Bench (z = 4.9, length 6.0m)
-            [-4.9, 4.9].forEach(centerZ => {
+            benchCenters.forEach(centerZ => {
+                const benchLength = index === 200 ? 5.2 : 6.0;
                 // Bench Base Structure
-                const seatBench = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.44, 6.0), seatBaseMat);
+                const seatBench = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.44, benchLength), seatBaseMat);
                 seatBench.position.set(x, 0.22, centerZ);
                 carGroup.add(seatBench);
 
                 // Continuous Plush Cushion Surface (top surface at y = 0.48)
-                const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.08, 5.96), cushionMat);
+                const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.08, benchLength - 0.04), cushionMat);
                 seatCushion.position.set(x, 0.46, centerZ);
                 carGroup.add(seatCushion);
 
                 // Backrest against the subway wall
                 const backX = x > 0 ? 1.58 : -1.58;
-                const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.72, 5.96), cushionMat);
+                const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.72, benchLength - 0.04), cushionMat);
                 seatBack.position.set(backX, 0.8, centerZ);
                 carGroup.add(seatBack);
 
                 // Individual Seat Divider Bars / Armrests along the bench
-                for (let dz = -2.4; dz <= 2.4; dz += 1.2) {
+                for (let dz = -2.0; dz <= 2.0; dz += 1.3) {
                     const divider = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.58, 8), dividerMat);
                     divider.rotation.z = x > 0 ? -Math.PI / 8 : Math.PI / 8;
                     divider.position.set(x, 0.62, centerZ + dz);
@@ -1386,8 +1432,9 @@ export class LastMetroGame {
         // 7. Cove Transit Posters & Warning Signs Above Windows
         const adPalette = [0x0984e3, 0x00b894, 0xe17055, 0x6c5ce7, 0xfdcb6e];
         [-carWidth / 2 + 0.08, carWidth / 2 - 0.08].forEach((ax, sideIdx) => {
-            for (let az = -6.5; az <= 6.5; az += 2.8) {
-                if (Math.abs(az) < 1.6) continue;
+            const adInterval = index === 200 ? 5.0 : 2.8;
+            for (let az = -halfLen + 3.5; az <= halfLen - 3.5; az += adInterval) {
+                if (index !== 200 && Math.abs(az) < 1.6) continue;
                 const adColor = adPalette[Math.abs(Math.floor(az * 3 + sideIdx)) % adPalette.length];
                 const adMat = new THREE.MeshStandardMaterial({ color: adColor, roughness: 0.4 });
                 const adMesh = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.28, 0.85), adMat);
@@ -1397,17 +1444,19 @@ export class LastMetroGame {
         });
 
         // 8. Fluorescent Ceiling Tube Lights
-        for (let z = -6.5; z <= 6.5; z += 4.5) {
-            const lightCoverMat = new THREE.MeshBasicMaterial({ color: theme === 'dark' ? 0xff4757 : 0xffffff });
+        const lightSpacing = index === 200 ? 5.0 : 4.5;
+        for (let z = -halfLen + 3.5; z <= halfLen - 3.5; z += lightSpacing) {
+            const isRedAlert = index === 200 || theme === 'dark';
+            const lightCoverMat = new THREE.MeshBasicMaterial({ color: isRedAlert ? 0xff4757 : 0xffffff });
             const lightCover = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 1.8), lightCoverMat);
             lightCover.position.set(0, carHeight - 0.05, z);
             carGroup.add(lightCover);
             lightMeshes.push(lightCover);
 
             const pLight = new THREE.PointLight(
-                theme === 'dark' ? 0xff4757 : theme === 'neon' ? 0x00f2fe : 0xffeedd,
-                theme === 'dark' ? 0.3 : 0.85,
-                10
+                isRedAlert ? 0xff4757 : theme === 'neon' ? 0x00f2fe : 0xffeedd,
+                index === 200 ? 0.95 : (theme === 'dark' ? 0.3 : 0.85),
+                index === 200 ? 12 : 10
             );
             pLight.position.set(0, carHeight - 0.3, z);
             carGroup.add(pLight);
@@ -1678,141 +1727,9 @@ export class LastMetroGame {
         // 13. Populate Realistic 3D AI Passengers
         this.populatePassengers(carGroup, index, theme, passengers);
 
-        // 14. Carriage 200 Abandoned Station Platform Area (Step Out Onto Platform)
+        // 14. Carriage 200 Final Boss & Green Health Pickups (5X Longer Coach)
         if (index === 200) {
-            const platformGroup = new THREE.Group();
-            platformGroup.name = 'station_platform_200';
-
-            // Platform floor (x from 1.7 to 9.5 -> width 7.8, centered at x = 5.6, z from -16 to 16 -> length 32)
-            const platFloorMat = new THREE.MeshStandardMaterial({
-                color: 0x2b303a,
-                roughness: 0.85,
-                metalness: 0.1
-            });
-            const platFloor = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.2, 32), platFloorMat);
-            platFloor.position.set(5.6, 0, 0);
-            platFloor.receiveShadow = true;
-            platformGroup.add(platFloor);
-
-            // Tactile safety yellow warning edge along the track (x = 1.85)
-            const platEdgeMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.5 });
-            const platEdge = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.205, 32), platEdgeMat);
-            platEdge.position.set(1.85, 0.002, 0);
-            platformGroup.add(platEdge);
-
-            // Platform ceiling at y = 3.6
-            const platCeilingMat = new THREE.MeshStandardMaterial({ color: 0x1f242d, roughness: 0.9 });
-            const platCeiling = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.2, 32), platCeilingMat);
-            platCeiling.position.set(5.6, 3.6, 0);
-            platformGroup.add(platCeiling);
-
-            // Platform back wall at x = 9.5
-            const platWallMat = new THREE.MeshStandardMaterial({ color: 0x1a1e24, roughness: 0.8 });
-            const platBackWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.6, 32), platWallMat);
-            platBackWall.position.set(9.5, 1.8, 0);
-            platformGroup.add(platBackWall);
-
-            // Platform end walls (z = -16 and z = 16)
-            [-16, 16].forEach(wz => {
-                const platEndWall = new THREE.Mesh(new THREE.BoxGeometry(7.8, 3.6, 0.2), platWallMat);
-                platEndWall.position.set(5.6, 1.8, wz);
-                platformGroup.add(platEndWall);
-            });
-
-            // Support Pillars at x = 5.2 (z = -12, -6, 0, 6, 12)
-            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.7, metalness: 0.2 });
-            [-12, -6, 0, 6, 12].forEach(pz => {
-                const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.6, 0.5), pillarMat);
-                pillar.position.set(5.2, 1.8, pz);
-                platformGroup.add(pillar);
-
-                // Warning striped base on pillar
-                const pillarBaseMat = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.5 });
-                const pillarBase = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.6, 0.54), pillarBaseMat);
-                pillarBase.position.set(5.2, 0.3, pz);
-                platformGroup.add(pillarBase);
-            });
-
-            // Station Hanging Tube Lights & Point Lights along the platform (Fully Bright and Illuminated)
-            [-12, -6, 0, 6, 12].forEach(lz => {
-                const platLightMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 2.2), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-                platLightMesh.position.set(5.5, 3.5, lz);
-                platformGroup.add(platLightMesh);
-                lightMeshes.push(platLightMesh);
-
-                const platLight = new THREE.PointLight(0xffeedd, 1.4, 18);
-                platLight.position.set(5.5, 3.1, lz);
-                platformGroup.add(platLight);
-                lights.push(platLight);
-            });
-
-            // Train interior bright floodlights for Carriage 200
-            [-6, 0, 6].forEach(tz => {
-                const carInteriorLight = new THREE.PointLight(0xffffff, 1.3, 12);
-                carInteriorLight.position.set(0, 2.7, tz);
-                carGroup.add(carInteriorLight);
-                lights.push(carInteriorLight);
-            });
-
-            // Station Signboard on Back Wall
-            const signGroup = new THREE.Group();
-            const signBoardMat = new THREE.MeshStandardMaterial({ color: 0x0a192f, metalness: 0.8 });
-            const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 5.0), signBoardMat);
-            signBoard.position.set(9.38, 2.4, 0);
-            signGroup.add(signBoard);
-
-            const signCanvas = document.createElement('canvas');
-            signCanvas.width = 512;
-            signCanvas.height = 128;
-            const sctx = signCanvas.getContext('2d');
-            if (sctx) {
-                sctx.fillStyle = '#0a192f';
-                sctx.fillRect(0, 0, 512, 128);
-                sctx.fillStyle = '#ff4757';
-                sctx.font = 'bold 34px monospace';
-                sctx.textAlign = 'center';
-                sctx.fillText('🚇 JAAM 200 · TERMINAL', 256, 50);
-                sctx.fillStyle = '#00d2d3';
-                sctx.font = '20px sans-serif';
-                sctx.fillText('SEKTOR 200 — LÕPPEATUSED', 256, 90);
-            }
-
-            const signTex = new THREE.CanvasTexture(signCanvas);
-            const signFaceMat = new THREE.MeshBasicMaterial({ map: signTex });
-            const signFace = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 0.75), signFaceMat);
-            signFace.rotation.y = -Math.PI / 2;
-            signFace.position.set(9.33, 2.4, 0);
-            signGroup.add(signFace);
-            platformGroup.add(signGroup);
-
-            // Station Exit Stairs Group (saved for cutscene collapse animation)
-            const stairsGroup = new THREE.Group();
-            stairsGroup.name = 'station_stairs_group';
-            this.stationStairsGroup = stairsGroup;
-
-            const stairMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.7, metalness: 0.3 });
-            for (let s = 0; s < 7; s++) {
-                const step = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.28, 0.65), stairMat);
-                step.position.set(6.0, 0.14 + s * 0.28, 10.5 + s * 0.65);
-                stairsGroup.add(step);
-            }
-            platformGroup.add(stairsGroup);
-
-            // Blast Exit Door at top of stairs (z = 15.2, x = 6.0, y = 2.4)
-            const blastDoorFrame = new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.8, 0.3), new THREE.MeshStandardMaterial({ color: 0x11141a, metalness: 0.9 }));
-            blastDoorFrame.position.set(6.0, 2.4, 15.1);
-            platformGroup.add(blastDoorFrame);
-
-            const blastDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(3.0, 2.5, 0.15), new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.4, metalness: 0.7 }));
-            blastDoorLeaf.position.set(6.0, 2.4, 15.05);
-            blastDoorLeaf.name = 'station_200_blast_door';
-            platformGroup.add(blastDoorLeaf);
-
-            const exitSignMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.45, 0.1), new THREE.MeshBasicMaterial({ color: 0x2ed573 }));
-            exitSignMesh.position.set(6.0, 3.8, 15.0);
-            platformGroup.add(exitSignMesh);
-
-            carGroup.add(platformGroup);
+            this._spawnCarriage200Elements(carGroup);
         }
 
         return {
@@ -1832,6 +1749,216 @@ export class LastMetroGame {
             inspectableItem,
             inspectableText
         };
+    }
+
+    private _spawnCarriage200Elements(carGroup: THREE.Group) {
+        // 1. Spawn Green Pluses on the ground ("maa peal on plussid roheliusega salt saad pluss 30 elu")
+        this.carriage200HealthPickups = [];
+        const pickupZPositions = [-38, -25, -12, 0, 14, 28];
+        const plusMat = new THREE.MeshStandardMaterial({
+            color: 0x00ff88,
+            emissive: 0x00bb44,
+            emissiveIntensity: 0.95,
+            roughness: 0.2,
+            metalness: 0.1
+        });
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x00ff88,
+            transparent: true,
+            opacity: 0.45,
+            side: THREE.DoubleSide
+        });
+
+        pickupZPositions.forEach((pz, pIdx) => {
+            const pickupGroup = new THREE.Group();
+            pickupGroup.name = `health_plus_${pIdx}`;
+
+            // 3D Green Plus Mesh (horizontal & vertical bars)
+            const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.12, 0.18), plusMat);
+            const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.55), plusMat);
+            pickupGroup.add(hBar);
+            pickupGroup.add(vBar);
+
+            // Glowing ring on the floor underneath
+            const ring = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.44, 24), ringMat);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = -0.06;
+            pickupGroup.add(ring);
+
+            // Green point light
+            const pLight = new THREE.PointLight(0x00ff88, 1.2, 3.5);
+            pLight.position.set(0, 0.25, 0);
+            pickupGroup.add(pLight);
+
+            const px = pIdx % 2 === 0 ? -0.5 : 0.5;
+            pickupGroup.position.set(px, 0.22, pz);
+            carGroup.add(pickupGroup);
+
+            this.carriage200HealthPickups.push({
+                mesh: pickupGroup,
+                pos: new THREE.Vector3(px, 0.22, pz),
+                collected: false,
+                light: pLight,
+                pulseOffset: pIdx * 1.0
+            });
+        });
+
+        // 2. Spawn Carriage 200 Final Boss at the end of the 100m carriage ("selle vaguni lõpus on pahalane keda tapad mõõgaga 10 lõõki")
+        this._spawnCarriage200Boss(carGroup);
+    }
+
+    private _spawnCarriage200Boss(carGroup: THREE.Group) {
+        const bossGroup = new THREE.Group();
+        bossGroup.name = 'carriage_200_boss';
+        bossGroup.position.set(0, 0, 41);
+
+        const darkBodyMat = new THREE.MeshStandardMaterial({
+            color: 0x050508,
+            roughness: 0.35,
+            metalness: 0.8,
+            emissive: 0x220005,
+            emissiveIntensity: 0.6
+        });
+        const redCoreMat = new THREE.MeshBasicMaterial({ color: 0xff0044 });
+        const redEyeMat = new THREE.MeshBasicMaterial({ color: 0xff1e56 });
+        const hornMat = new THREE.MeshStandardMaterial({ color: 0x1a0005, roughness: 0.2 });
+
+        // Menacing Large Torso
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.4, 0.6), darkBodyMat);
+        torso.position.set(0, 1.5, 0);
+        bossGroup.add(torso);
+
+        // Glowing Red Chest Core / Heart
+        const core = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), redCoreMat);
+        core.position.set(0, 1.6, 0.32);
+        bossGroup.add(core);
+
+        const coreLight = new THREE.PointLight(0xff0044, 2.5, 7.0);
+        coreLight.position.set(0, 1.6, 0.4);
+        bossGroup.add(coreLight);
+
+        // Head
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.55), darkBodyMat);
+        head.position.set(0, 2.45, 0);
+        bossGroup.add(head);
+
+        // Glowing Red Eyes
+        [-0.14, 0.14].forEach(ex => {
+            const eye = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.04), redEyeMat);
+            eye.position.set(ex, 2.48, -0.29);
+            bossGroup.add(eye);
+        });
+
+        // Horns on Head
+        [-0.24, 0.24].forEach(hx => {
+            const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.5, 8), hornMat);
+            horn.position.set(hx, 2.85, 0);
+            horn.rotation.z = hx < 0 ? 0.35 : -0.35;
+            bossGroup.add(horn);
+        });
+
+        // Shadow Claws / Arms
+        [-0.75, 0.75].forEach(ax => {
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.2, 0.32), darkBodyMat);
+            arm.position.set(ax, 1.4, 0.1);
+            bossGroup.add(arm);
+
+            const claw = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.4, 6), redCoreMat);
+            claw.rotation.x = Math.PI;
+            claw.position.set(ax, 0.65, 0.1);
+            bossGroup.add(claw);
+        });
+
+        // Shadow cloak lower body
+        const lowerBody = new THREE.Mesh(new THREE.ConeGeometry(0.75, 1.0, 12), darkBodyMat);
+        lowerBody.position.set(0, 0.5, 0);
+        bossGroup.add(lowerBody);
+
+        // Boss Health Bar Sprite above head
+        const healthCanvas = document.createElement('canvas');
+        healthCanvas.width = 512;
+        healthCanvas.height = 128;
+        const healthTex = new THREE.CanvasTexture(healthCanvas);
+        const spriteMat = new THREE.SpriteMaterial({ map: healthTex, transparent: true });
+        const healthSprite = new THREE.Sprite(spriteMat);
+        healthSprite.scale.set(3.2, 0.8, 1);
+        healthSprite.position.set(0, 3.25, 0);
+        bossGroup.add(healthSprite);
+
+        this.carriage200Boss = {
+            group: bossGroup,
+            bodyMesh: torso,
+            hp: 10,
+            maxHp: 10,
+            attackCooldown: 0,
+            isDead: false,
+            healthCanvas,
+            healthTex,
+            healthSprite,
+            initialZ: 41
+        };
+
+        carGroup.add(bossGroup);
+        this.updateCarriage200BossHealthBar();
+    }
+
+    public updateCarriage200BossHealthBar() {
+        if (!this.carriage200Boss) return;
+        const b = this.carriage200Boss;
+        const canvas = b.healthCanvas;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.clearRect(0, 0, 512, 128);
+
+        // Background box
+        ctx.fillStyle = 'rgba(10, 14, 24, 0.9)';
+        ctx.strokeStyle = '#ff4757';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.roundRect(8, 8, 496, 112, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        // Title
+        ctx.fillStyle = '#ff4757';
+        ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.lang === 'et' ? '👹 LÕPUPAHALANE (VAGUN 200)' : '👹 FINAL BOSS (CARRIAGE 200)', 256, 38);
+
+        // 10 Hit Segments (blocks)
+        const startX = 36;
+        const blockW = 40;
+        const blockH = 22;
+        const gap = 4;
+        const y = 52;
+
+        for (let i = 0; i < 10; i++) {
+            const bx = startX + i * (blockW + gap);
+            if (i < b.hp) {
+                ctx.fillStyle = b.hp <= 3 ? '#ff4757' : (b.hp <= 6 ? '#ffa502' : '#2ed573');
+                ctx.fillRect(bx, y, blockW, blockH);
+            } else {
+                ctx.fillStyle = '#2f3542';
+                ctx.fillRect(bx, y, blockW, blockH);
+            }
+            ctx.strokeStyle = '#1e272e';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(bx, y, blockW, blockH);
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(
+            this.lang === 'et'
+                ? `Mõõgalööke jäänud: ${b.hp} / 10`
+                : `Sword hits remaining: ${b.hp} / 10`,
+            256,
+            104
+        );
+
+        b.healthTex.needsUpdate = true;
     }
 
     private buildMetroRouteDisplay(index: number, isEt: boolean): THREE.Group {
@@ -2895,6 +3022,25 @@ export class LastMetroGame {
         }
     }
 
+    public healPlayer(amount: number = 30) {
+        this.playerHp = Math.min(100, this.playerHp + amount);
+        this.updateHealthUI();
+
+        const flashOverlay = document.getElementById('scare-flash-overlay');
+        if (flashOverlay) {
+            flashOverlay.style.background = 'radial-gradient(circle, rgba(46, 213, 115, 0.6) 0%, rgba(0,0,0,0) 70%)';
+            flashOverlay.style.display = 'block';
+            flashOverlay.style.opacity = '0.6';
+            setTimeout(() => {
+                flashOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    flashOverlay.style.display = 'none';
+                    flashOverlay.style.background = '#ff0000';
+                }, 300);
+            }, 200);
+        }
+    }
+
     public takePlayerDamage(amount: number, reasonEt?: string, reasonEn?: string) {
         if (this.state !== 'player_free') return;
         this.playerHp = Math.max(0, this.playerHp - amount);
@@ -2950,11 +3096,57 @@ export class LastMetroGame {
         this.swordSwingTimer = 0.28;
         metroAudio.playSwordSlash();
 
-        // Find closest villain in range
+        const playerPos = this.playerPos;
+
+        // Check Carriage 200 Final Boss in range (User requirement: "selle vaguni lõpus on pahalane keda tapad mõõgaga 10 lõõki")
+        if (this.currentCarIndex === 200 && this.carriage200Boss && !this.carriage200Boss.isDead) {
+            const b = this.carriage200Boss;
+            const dx = b.group.position.x - playerPos.x;
+            const dz = b.group.position.z - playerPos.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+
+            if (dist < 4.5) {
+                b.hp = Math.max(0, b.hp - 1);
+                metroAudio.playMonsterHit();
+
+                // Flash white on hit
+                const origMat = b.bodyMesh.material;
+                b.bodyMesh.material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                setTimeout(() => {
+                    if (b?.bodyMesh) b.bodyMesh.material = origMat;
+                }, 120);
+
+                // Update boss floating health bar
+                this.updateCarriage200BossHealthBar();
+
+                if (b.hp > 0) {
+                    this.showThought(
+                        `⚔️ Mõõgalöök tabas lõpupahalast! (${b.hp}/10 tabamust jäänud)`,
+                        `⚔️ Sword struck the Final Boss! (${b.hp}/10 hits left)`,
+                        2000
+                    );
+                } else {
+                    // Boss is defeated after 10 sword hits!
+                    b.isDead = true;
+                    metroAudio.playMonsterDeath();
+                    this.scene.remove(b.group);
+                    this.showThought(
+                        '🏆 LÕPUPAHALANE ALISTATUD! Sa pääsesid viimasest vagunist välja!',
+                        '🏆 FINAL BOSS DEFEATED! You broke free from the final carriage!',
+                        5000
+                    );
+                    setTimeout(() => {
+                        this.triggerVictory200();
+                    }, 1200);
+                }
+                return;
+            }
+        }
+
+        // Find closest shadow villain in range (Carriage 31 etc.)
         let closestVillain: typeof this.shadowVillains[0] | null = null;
         let closestDist = Infinity;
         let closestIndex = -1;
-        const playerPos = this.playerPos;
 
         for (let i = 0; i < this.shadowVillains.length; i++) {
             const v = this.shadowVillains[i];
@@ -3861,7 +4053,7 @@ export class LastMetroGame {
 
         // Give +1000 Yards to player
         try {
-            yardService.awardYards(1000, 'Metro 300 Väljapääs');
+            yardService.awardYards(1000, 'Metro 200 Väljapääs');
         } catch (e) {}
 
         const victoryModal = document.getElementById('victory-300-modal');
@@ -3869,8 +4061,10 @@ export class LastMetroGame {
         this.updateCursorState();
     }
 
+    public triggerVictory200() {
+        this.triggerVictory300();
+    }
 
-    // --- Story & Anomaly Transitions ---
 
     // --- Story & Anomaly Transitions ---
 
@@ -3899,7 +4093,6 @@ export class LastMetroGame {
 
         // Vagun 200 Music Track & Time Villain immunity
         if (prevIndex === 200 && index !== 200) {
-            // User requirement: "laul kestab kuni läbi saab" - Do not stop music here, let it play until it ends!
             this.carriage200CutsceneTimers.forEach(t => { clearInterval(t); clearTimeout(t); });
             this.carriage200CutsceneTimers = [];
         } else if (index === 200) {
@@ -3967,6 +4160,7 @@ export class LastMetroGame {
         else if (index === 7 || index === 9 || index === 10 || index === 38 || index === 54 || index === 77) theme = 'dark';
         else if (index === 23) theme = 'neon';
         else if (index === 100) theme = 'golden_shop';
+        else if (index === 200) theme = 'dark';
         else if (index >= 101) {
             const themes: CarriageData['theme'][] = ['normal', 'flicker', 'dark', 'abandoned', 'neon', 'lounge', 'archive'];
             theme = themes[Math.floor(Math.random() * themes.length)];
@@ -3977,8 +4171,18 @@ export class LastMetroGame {
 
         // Position player at entrance door and set free movement facing forward down the aisle
         this.state = 'player_free';
-        this.playerPos.set(0, 1.6, branch === 'left' ? 7.5 : -7.5);
-        this.cameraEuler.y = branch === 'left' ? 0 : Math.PI;
+        if (index === 200) {
+            // Carriage 200 is 100m long: start at rear entrance (-46) facing forward (+Z) toward the final boss
+            this.playerPos.set(0, 1.6, -46);
+            this.cameraEuler.y = Math.PI;
+            this.trainSpeed = 60;
+            this.introSideDoorsOpen = false;
+        } else {
+            this.playerPos.set(0, 1.6, branch === 'left' ? 7.5 : -7.5);
+            this.cameraEuler.y = branch === 'left' ? 0 : Math.PI;
+            this.trainSpeed = 60;
+            this.introSideDoorsOpen = false;
+        }
 
         // Play heavy door latch audio
         metroAudio.playDoorLatch();
@@ -3993,19 +4197,6 @@ export class LastMetroGame {
             metroAudio.startEerieHighPianoTrack();
         } else {
             metroAudio.stopEerieHighPianoTrack();
-        }
-
-        // Stop train and open sliding doors at Carriage 200 terminal station
-        if (index === 200) {
-            this.trainSpeed = 0;
-            this.introSideDoorsOpen = true;
-            this.station200SwitchesDone = false;
-            this.station200Departing = false;
-            metroAudio.playBrakesScreech();
-            metroAudio.playDoorSlide(true);
-        } else {
-            this.trainSpeed = 60;
-            this.introSideDoorsOpen = false;
         }
 
         // Trigger story events per carriage index
@@ -4912,9 +5103,12 @@ export class LastMetroGame {
                 break;
 
             case 200:
-                // ── VAGUN 200: MAHAJÄETUD METROOPEATUSE LÕPP & KUULJA BOSS ──
+                // ── VAGUN 200: VIIMANE VAGUN (5X PIKEM) & LÕPUPAHALANE ──
                 metroAudio.playCarriage200Music();
-                this.triggerCarriage200Boss();
+                this.showThought(
+                    '⚡ VAGUN 200 — VIIMANE VAGUN! See vagun on 5X pikem kui teised! Lõpus ootab LÕPUPAHALANE (vaja 10 mõõgalööki)! Kogu maa pealt rohelisi plusse (+30 elu)!',
+                    '⚡ CARRIAGE 200 — FINAL CARRIAGE! This carriage is 5X longer! Defeat the FINAL BOSS at the end (10 sword strikes)! Collect green pluses on the floor (+30 health)!'
+                );
                 break;
 
             // ── VAGUNID 201–250 — KANALISATSIOON (THE CANALIZATION) ─────────────────
@@ -7174,8 +7368,8 @@ this.state = 'player_free';
     public teleportToCarriage(carNum: number): boolean {
         if (!this.isOwner) return false;
 
-        // Teleport supports all carriages from 0 to 300
-        if (isNaN(carNum) || carNum < 0 || carNum > 300) {
+        // Teleport supports all carriages from 0 to 200 (Carriage 200 is the final carriage)
+        if (isNaN(carNum) || carNum < 0 || carNum > 200) {
             const errEl = document.getElementById('owner-teleport-error');
             if (errEl) {
                 errEl.innerText = this.lang === 'et' ? '❌ Sellist vagunit ei ole' : '❌ No such carriage exists';
@@ -7197,8 +7391,13 @@ this.state = 'player_free';
 
         // Teleport to requested carriage
         this.loadCarriage(carNum, 'right');
-        this.playerPos.set(0, 1.6, -6.5);
-        this.cameraEuler.y = 0;
+        if (carNum === 200) {
+            this.playerPos.set(0, 1.6, -46);
+            this.cameraEuler.y = Math.PI;
+        } else {
+            this.playerPos.set(0, 1.6, -6.5);
+            this.cameraEuler.y = 0;
+        }
         this.state = 'player_free';
         metroAudio.playTeleport();
 
@@ -7451,77 +7650,63 @@ this.state = 'player_free';
             }
         }
 
-        // 3d. Vagun 200 Kuulja Boss Stalking & Hearing AI on Station Platform
-        if (this.currentCarIndex === 200 && this.kuuljaBossGroup && this.state === 'player_free') {
-            const kuuljaPos = this.kuuljaBossGroup.position;
-            const distToPlayer = kuuljaPos.distanceTo(this.playerPos);
+        // 3d. Vagun 200 Final Boss & Green Health Pickups Update ("maa peal on plussid roheliusega salt saad pluss 30 elu")
+        if (this.currentCarIndex === 200) {
+            // Green Health Pickups (+30 Health)
+            if (this.carriage200HealthPickups.length > 0 && this.state === 'player_free') {
+                const time = performance.now() * 0.003;
+                this.carriage200HealthPickups.forEach(p => {
+                    if (p.collected) return;
+                    // Spin and bob
+                    p.mesh.rotation.y += delta * 2.2;
+                    p.mesh.position.y = 0.22 + Math.sin(time * 2 + p.pulseOffset) * 0.05;
 
-            // Touching Kuulja / kuulmispahalane: ALWAYS causes instant death!
-            if (distToPlayer < 1.6 && this.state === 'player_free') {
-                metroAudio.playShadowRushScreech();
-                this.triggerGameOver(
-                    'Kuulja tabas sind! Kuulmispahalase puudutus oli surmav.',
-                    'The Listener caught you! Touching the hearing villain was fatal.'
-                );
-                return;
+                    const dx = p.mesh.position.x - this.playerPos.x;
+                    const dz = p.mesh.position.z - this.playerPos.z;
+                    const dist2D = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist2D < 1.4) {
+                        p.collected = true;
+                        p.mesh.visible = false;
+                        p.light.visible = false;
+                        this.healPlayer(30);
+                        metroAudio.playHealChime();
+                        this.showThought(
+                            '💚 +30 ELU! (Roheline pluss taastas tervist)',
+                            '💚 +30 HEALTH! (Green plus restored health)',
+                            2500
+                        );
+                    }
+                });
             }
 
-            // Subtle eerie breathing animation
-            const kTime = performance.now() * 0.002;
-            this.kuuljaBossGroup.position.y = Math.sin(kTime * 3) * 0.05;
+            // Carriage 200 Final Boss AI ("selle vaguni lõpus on pahalane keda tapad mõõgaga 10 lõõki")
+            if (this.carriage200Boss && !this.carriage200Boss.isDead && this.state === 'player_free') {
+                const b = this.carriage200Boss;
+                const bPos = b.group.position;
+                const bTime = performance.now() * 0.002;
 
-            // Kuulja hears footsteps if player moves loudly (not crouching) on the platform
-            const isPlayerMovingLoudly = _moveDir.lengthSq() > 0 && !this.isCrouching && this.playerPos.x > 1.4;
+                // Menacing floating bob
+                bPos.y = Math.sin(bTime * 2.5) * 0.12;
 
-            if (this.kuuljaHearingAlert) {
-                // Rushing to switch sound
-                const moveSpeed = 4.2 * delta;
-                kuuljaPos.x = THREE.MathUtils.lerp(kuuljaPos.x, this.kuuljaTargetPos.x, moveSpeed * 0.8);
-                kuuljaPos.z = THREE.MathUtils.lerp(kuuljaPos.z, this.kuuljaTargetPos.z, moveSpeed);
-                this.kuuljaBossGroup.lookAt(this.kuuljaTargetPos.x, this.kuuljaBossGroup.position.y, this.kuuljaTargetPos.z);
-            } else if (isPlayerMovingLoudly) {
-                // Stalking toward player footsteps
-                const moveSpeed = 2.4 * delta;
-                kuuljaPos.x = THREE.MathUtils.lerp(kuuljaPos.x, this.playerPos.x, moveSpeed * 0.7);
-                kuuljaPos.z = THREE.MathUtils.lerp(kuuljaPos.z, this.playerPos.z, moveSpeed);
-                this.kuuljaBossGroup.lookAt(this.playerPos.x, this.kuuljaBossGroup.position.y, this.playerPos.z);
+                // Boss tracks player
+                b.group.lookAt(this.playerPos.x, bPos.y + 1.5, this.playerPos.z);
 
-                if (distToPlayer < 1.4) {
-                    metroAudio.playShadowRushScreech();
-                    this.triggerGameOver(
-                        'Kuulja kuulis su samme ja ründas pimedusest! Kükita [C], et liikuda jaamal hääletult.',
-                        'The Listener heard your footsteps! Crouch [C] to sneak silently across the platform.'
+                const dx = bPos.x - this.playerPos.x;
+                const dz = bPos.z - this.playerPos.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                // Boss attack cooldown
+                if (b.attackCooldown > 0) {
+                    b.attackCooldown -= delta;
+                } else if (dist < 3.2) {
+                    b.attackCooldown = 1.8;
+                    this.takePlayerDamage(
+                        25,
+                        'Lõpupahalane tabas sind oma pimeduse küünisega!',
+                        'The Final Boss slashed you with dark claws!'
                     );
                 }
-            } else {
-                // Idle patrol along platform
-                const patrolZ = Math.sin(kTime * 0.5) * 8.0;
-                kuuljaPos.z = THREE.MathUtils.lerp(kuuljaPos.z, patrolZ, delta * 0.8);
-                kuuljaPos.x = THREE.MathUtils.lerp(kuuljaPos.x, 5.5, delta * 0.8);
-            }
-
-            // Kuulja Wall Collisions: Kuulja cannot enter or clip through walls
-            if (kuuljaPos.x > 1.8) {
-                // Platform boundaries: back wall at x = 9.5, train boundary at x = 2.0, end walls at z = +/- 16.0
-                kuuljaPos.x = Math.max(2.2, Math.min(8.8, kuuljaPos.x));
-                kuuljaPos.z = Math.max(-14.8, Math.min(14.8, kuuljaPos.z));
-
-                // Platform support pillars collision (x = 5.2, z in [-12, -6, 0, 6, 12])
-                const pillarsZ = [-12, -6, 0, 6, 12];
-                for (const pz of pillarsZ) {
-                    const dx = kuuljaPos.x - 5.2;
-                    const dz = kuuljaPos.z - pz;
-                    const distSq = dx * dx + dz * dz;
-                    if (distSq < 0.64) {
-                        const dist = Math.sqrt(distSq) || 0.001;
-                        kuuljaPos.x = 5.2 + (dx / dist) * 0.8;
-                        kuuljaPos.z = pz + (dz / dist) * 0.8;
-                    }
-                }
-            } else {
-                // Inside train car threshold
-                kuuljaPos.x = Math.max(-1.1, Math.min(1.8, kuuljaPos.x));
-                kuuljaPos.z = Math.max(-1.5, Math.min(1.5, kuuljaPos.z));
             }
         }
 
@@ -7567,28 +7752,10 @@ this.state = 'player_free';
                 this.playerPos.x += _moveDir.x * baseSpeed * delta;
                 this.playerPos.z += _moveDir.z * baseSpeed * delta;
 
-                // Train carriage boundary collision & platform exploration
+                // Train carriage boundary collision
                 if (this.currentCarIndex === 200) {
-                    if (this.playerPos.x > 1.4) {
-                        // Player is outside on the station platform
-                        this.playerPos.x = Math.max(1.4, Math.min(9.2, this.playerPos.x));
-                        this.playerPos.z = Math.max(-15.5, Math.min(15.5, this.playerPos.z));
-                    } else {
-                        // Player is inside the train
-                        if (Math.abs(this.playerPos.z) <= 1.8) {
-                            // In doorway threshold: can step out (x up to 9.2) or remain inside (x down to -1.4)
-                            this.playerPos.x = Math.max(-1.4, Math.min(9.2, this.playerPos.x));
-                        } else {
-                            // Inside main car body
-                            this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
-                        }
-                        this.playerPos.z = Math.max(-8.5, Math.min(8.5, this.playerPos.z));
-
-                        // User requirement: "ja kui ma panen lüliti tõõle siis pean ma metroose tagasi minema"
-                        if (this.station200SwitchesDone && !this.station200Departing && this.playerPos.x <= 1.35) {
-                            this.triggerCarriage200TrainDeparture();
-                        }
-                    }
+                    this.playerPos.x = Math.max(-1.4, Math.min(1.4, this.playerPos.x));
+                    this.playerPos.z = Math.max(-48.5, Math.min(48.5, this.playerPos.z));
                 } else if (this.currentCarIndex >= 201) {
                     this.playerPos.x = Math.max(-5.0, Math.min(5.0, this.playerPos.x));
                 } else {
@@ -7643,7 +7810,24 @@ this.state = 'player_free';
                 }
             }
 
-            if (this.branchDirection === 'right') {
+            if (this.currentCarIndex === 200) {
+                // Vagun 200 is the final carriage: bounds are -48.5 to +48.5
+                if (this.playerPos.z < -47.8) {
+                    this.playerPos.z = -47.6;
+                    if (now - this.lastLockedDoorSoundTime > 1200) {
+                        this.lastLockedDoorSoundTime = now;
+                        metroAudio.playDoorLocked();
+                        this.showThought(
+                            'Uks on lukus. Tagasi ei saa minna. Alista vaguni lõpus olev Lõpupahalane!',
+                            'Door is locked. Defeat the Final Boss at the end of the carriage!'
+                        );
+                    }
+                } else if (this.playerPos.z > 45.0 && this.carriage200Boss?.isDead) {
+                    this.triggerVictory200();
+                } else if (this.playerPos.z > 48.0) {
+                    this.playerPos.z = 47.8;
+                }
+            } else if (this.branchDirection === 'right') {
                 // Front Door (+Z) -> Open Next Carriage
                 if (this.playerPos.z > 8.8) {
                     this.loadCarriage(this.currentCarIndex + 1, 'right');
@@ -7686,7 +7870,8 @@ this.state = 'player_free';
                 }
             }
 
-            this.playerPos.z = Math.max(-9.2, Math.min(9.2, this.playerPos.z));
+            const maxClampZ = this.currentCarIndex === 200 ? 48.5 : 9.2;
+            this.playerPos.z = Math.max(-maxClampZ, Math.min(maxClampZ, this.playerPos.z));
         }
 
         // Glowing Shadow Eyes Animation (Pulsing / Breathing)
