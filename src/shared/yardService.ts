@@ -918,12 +918,13 @@ class YardService {
     }
 
     // --- User Created Games Management ---
-    public async submitGameForReview(game: Omit<CreatedGame, 'id' | 'status' | 'plays' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; message: string; gameId: string }> {
+    public async submitGameForReview(game: Omit<CreatedGame, 'id' | 'status' | 'plays' | 'createdAt' | 'updatedAt'> & { status?: 'pending_review' | 'approved' }): Promise<{ success: boolean; message: string; gameId: string }> {
         const gameId = 'game_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const gameStatus = game.status || 'approved';
         const fullGame: CreatedGame = {
             ...game,
             id: gameId,
-            status: 'pending_review',
+            status: gameStatus,
             plays: 0,
             createdAt: Date.now(),
             updatedAt: Date.now()
@@ -963,13 +964,13 @@ class YardService {
                     description: game.description,
                     category: game.category,
                     scene_data: game.sceneData,
-                    status: 'pending_review'
+                    status: gameStatus
                 });
                 if (insertErr) {
-                    console.error('Supabase user_created_games insert error:', insertErr);
+                    console.warn('Supabase user_created_games insert error:', insertErr);
                 }
             } catch (err) {
-                console.error('Could not sync created game to cloud:', err);
+                console.warn('Could not sync created game to cloud:', err);
             }
         }
 
@@ -977,7 +978,9 @@ class YardService {
 
         return {
             success: true,
-            message: `Game "${game.title}" submitted for review! Admin✅ will review it soon.`,
+            message: gameStatus === 'approved' 
+                ? `Game "${game.title}" is now published and public for everyone to play!`
+                : `Game "${game.title}" submitted for review! Admin✅ will review it soon.`,
             gameId
         };
     }
@@ -1025,6 +1028,14 @@ class YardService {
     }
 
     public async getApprovedGames(): Promise<CreatedGame[]> {
+        const localApproved = this.getLocalCreatedGames().filter(g => g.status === 'approved');
+        const approvedMap = new Map<string, CreatedGame>();
+
+        // Populate local approved first
+        for (const g of localApproved) {
+            approvedMap.set(g.id, g);
+        }
+
         if (supabase) {
             try {
                 const { data, error } = await supabase
@@ -1034,28 +1045,30 @@ class YardService {
                     .order('created_at', { ascending: false });
 
                 if (!error && Array.isArray(data) && data.length > 0) {
-                    return data.map(d => ({
-                        id: d.id,
-                        userId: d.user_id,
-                        creatorUsername: d.creator_username,
-                        title: d.title,
-                        description: d.description || '',
-                        category: d.category || 'Adventure',
-                        thumbnail: d.thumbnail,
-                        sceneData: d.scene_data,
-                        status: d.status,
-                        feedback: d.feedback,
-                        plays: d.plays || 0,
-                        createdAt: new Date(d.created_at).getTime(),
-                        updatedAt: new Date(d.updated_at).getTime()
-                    }));
+                    data.forEach(d => {
+                        approvedMap.set(d.id, {
+                            id: d.id,
+                            userId: d.user_id,
+                            creatorUsername: d.creator_username,
+                            title: d.title,
+                            description: d.description || '',
+                            category: d.category || 'Adventure',
+                            thumbnail: d.thumbnail,
+                            sceneData: d.scene_data,
+                            status: d.status,
+                            feedback: d.feedback,
+                            plays: d.plays || 0,
+                            createdAt: new Date(d.created_at).getTime(),
+                            updatedAt: new Date(d.updated_at).getTime()
+                        });
+                    });
                 }
             } catch (err) {
                 console.warn('Could not fetch approved games from cloud:', err);
             }
         }
 
-        return [];
+        return Array.from(approvedMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     }
 
     public async updateGameStatus(

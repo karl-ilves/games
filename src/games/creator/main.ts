@@ -2150,6 +2150,57 @@ export function saveCurrentGame(showAlert = true) {
     }
 }
 
+export async function publishCurrentGame() {
+    // Confirmation prompt ("are you shure")
+    const isConfirmed = confirm('Are you sure you want to publish this game?');
+    if (!isConfirmed) {
+        return false;
+    }
+
+    const profile = getCurrentUserProfile();
+    const username = profile?.username || 'GuestCreator';
+
+    const sceneData = serializeCurrentScene();
+    const title = sceneData.title || 'My 3D Adventure';
+    const category = sceneData.category || 'Adventure';
+    const description = sceneData.description || '';
+
+    const submitBtn = document.getElementById('btn-submit-review');
+    if (submitBtn) {
+        submitBtn.innerText = 'Publishing...';
+        (submitBtn as HTMLButtonElement).disabled = true;
+    }
+
+    const res = await yardService.submitGameForReview({
+        creatorUsername: username,
+        title,
+        description,
+        category,
+        sceneData,
+        status: 'approved'
+    });
+
+    if (submitBtn) {
+        submitBtn.innerHTML = '<span>🚀</span> <span>Publish a game</span>';
+        (submitBtn as HTMLButtonElement).disabled = false;
+    }
+
+    if (res.success) {
+        yardService.saveUserGame(username, sceneData);
+        autoSaveDraft();
+
+        // Finish a game notification and option to play now or stay in Studio
+        const playNow = confirm(`🎉 Finish a game!\n\n"${title}" has been published and is now live and public for everyone to play!\n\nPress OK to play your game now, or Cancel to stay in Creator Studio.`);
+        if (playNow) {
+            window.location.href = `../play/index.html?id=${res.gameId}`;
+        }
+        return true;
+    } else {
+        alert('Could not publish game: ' + res.message);
+        return false;
+    }
+}
+
 export function loadSceneFromData(sceneData: any) {
     if (!sceneData) return;
 
@@ -2559,6 +2610,7 @@ async function initStudio() {
         updateMapEnvironmentUI,
         startNewEmptyGame,
         saveCurrentGame,
+        publishCurrentGame,
         autoSaveDraft,
         serializeCurrentScene,
         loadSceneFromData,
@@ -3783,65 +3835,11 @@ function setupStudioEvents() {
     bindTouchBtn('touch-btn-jump', 'Space');
     bindTouchBtn('touch-btn-dive', 'ShiftLeft');
 
-    // Submit for Review Button
+    // Publish a Game Button
     const submitBtn = document.getElementById('btn-submit-review');
     if (submitBtn) {
         submitBtn.addEventListener('click', async () => {
-            const profile = getCurrentUserProfile();
-            if (!profile) {
-                return alert('🔒 You must be logged in to submit games for review!');
-            }
-
-            const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
-            const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
-            const descInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
-
-            const title = titleInput?.value.trim() || 'My 3D Adventure';
-            const category = catSelect?.value || 'Adventure';
-            const description = descInput?.value.trim() || '';
-
-            const serializedObjects = placedObjects.map(p => ({
-                id: p.id,
-                catalogId: p.catalogId,
-                name: p.name,
-                category: p.category,
-                position: { x: p.mesh.position.x, y: p.mesh.position.y, z: p.mesh.position.z },
-                rotation: { x: p.mesh.rotation.x, y: p.mesh.rotation.y, z: p.mesh.rotation.z },
-                scale: { x: p.mesh.scale.x, y: p.mesh.scale.y, z: p.mesh.scale.z },
-                color: p.color
-            }));
-
-            const sceneData = {
-                title,
-                category,
-                description,
-                objects: serializedObjects,
-                createdAt: Date.now()
-            };
-
-            submitBtn.innerText = 'Submitting...';
-            (submitBtn as HTMLButtonElement).disabled = true;
-
-            const res = await yardService.submitGameForReview({
-                creatorUsername: profile.username,
-                title,
-                description,
-                category,
-                sceneData
-            });
-
-            submitBtn.innerHTML = '<span>🚀</span> <span>Submit for Review</span>';
-            (submitBtn as HTMLButtonElement).disabled = false;
-
-            if (res.success) {
-                yardService.saveUserGame(profile.username, sceneData);
-                alert(`✅ ${res.message}`);
-                if (confirm('Would you like to return to the Hub?')) {
-                    window.location.href = '../../index.html';
-                }
-            } else {
-                alert('Could not submit game: ' + res.message);
-            }
+            await publishCurrentGame();
         });
     }
 }

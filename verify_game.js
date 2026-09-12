@@ -2082,16 +2082,53 @@ try {
             console.log("   ✅ Custom Item Workbench, Multi-Shape, Elevation, Save, Publish & Catalog passed!");
         }
 
-        // Test Submit for Review
-        console.log("   Submitting created game for admin review...");
-        // Auto-dismiss any alert/confirm dialogs from submit
-        page.removeAllListeners('dialog');
-        page.on('dialog', async dialog => { try { await dialog.dismiss(); } catch(e){} });
-        await page.click('#btn-save-draft');
-        await new Promise(r => setTimeout(r, 400));
+        // Test Publish a Game button & flow
+        console.log("   Testing 'Publish a game' flow...");
+        const publishBtnText = await page.$eval('#btn-submit-review', el => el.textContent.trim());
+        console.log("   Publish button text:", publishBtnText);
+        if (!publishBtnText.includes('Publish a game')) {
+            throw new Error(`Expected button text to contain 'Publish a game', but got: '${publishBtnText}'`);
+        }
+
+        // Track window.confirm calls in page context
+        await page.evaluate(() => {
+            window.__dialogsSeen = [];
+            window.confirm = (msg) => {
+                window.__dialogsSeen.push(msg);
+                if (typeof msg === 'string' && msg.includes('Are you sure')) return true;
+                return false;
+            };
+        });
+
         await page.click('#btn-submit-review');
-        await new Promise(r => setTimeout(r, 1500));
-        page.removeAllListeners('dialog');
+        await new Promise(r => setTimeout(r, 1200));
+
+        const confirmCalls = await page.evaluate(() => window.__dialogsSeen || []);
+        console.log("   Window confirm calls recorded:", confirmCalls);
+        const sawAreYouSure = confirmCalls.some(c => typeof c === 'string' && c.includes('Are you sure'));
+        const sawFinishGame = confirmCalls.some(c => typeof c === 'string' && c.includes('Finish a game'));
+
+        if (!sawAreYouSure) {
+            throw new Error("Expected 'Are you sure' confirmation dialog when clicking Publish a game!");
+        }
+        if (!sawFinishGame) {
+            throw new Error("Expected 'Finish a game' dialog after publishing!");
+        }
+
+        // Verify game is saved with approved status (immediately public)
+        const studioPublishedGame = await page.evaluate(() => {
+            try {
+                const games = JSON.parse(localStorage.getItem('playard_user_created_games') || '[]');
+                return games.find(g => g.status === 'approved');
+            } catch(e) {
+                return null;
+            }
+        });
+        if (!studioPublishedGame) {
+            throw new Error("Expected published game with status 'approved' in localStorage!");
+        }
+        console.log("   Found published approved game in storage:", { id: studioPublishedGame.id, title: studioPublishedGame.title, status: studioPublishedGame.status });
+        console.log("   ✅ 'Publish a game', 'Are you sure?' and 'Finish a game' flow passed!");
 
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
@@ -2134,8 +2171,8 @@ try {
 
         await page.click('#btn-close-bug-report');
 
-        // Test Game Submission for Review
-        console.log("6c. Testing User Created Game Submission for Review...");
+        // Test Game Submission / Direct Publish
+        console.log("6c. Testing User Created Game Direct Publishing & Approved Status...");
         const gameSubmitResult = await page.evaluate(async () => {
             if (!window.yardService) return { error: 'yardService not found' };
             const res = await window.yardService.submitGameForReview({
@@ -2143,7 +2180,8 @@ try {
                 title: 'Automated Test Adventure',
                 description: 'A test obstacle course created by tests',
                 category: 'Adventure',
-                sceneData: { objects: [], test: true }
+                sceneData: { objects: [], test: true },
+                status: 'approved'
             });
             return res;
         });
@@ -2152,13 +2190,24 @@ try {
             throw new Error("User game submission failed: " + JSON.stringify(gameSubmitResult));
         }
 
-        const pendingGames = await page.evaluate(() => {
+        const localGamesList = await page.evaluate(() => {
             return window.yardService.getLocalCreatedGames();
         });
-        if (!pendingGames.some(g => g.title === 'Automated Test Adventure')) {
+        const publishedGame = localGamesList.find(g => g.title === 'Automated Test Adventure');
+        if (!publishedGame) {
             throw new Error("Submitted game was not found in created games list!");
         }
-        console.log("   User game submission verified: ✅");
+        if (publishedGame.status !== 'approved') {
+            throw new Error(`Expected published game status to be 'approved', but got: ${publishedGame.status}`);
+        }
+
+        const approvedGamesList = await page.evaluate(async () => {
+            return await window.yardService.getApprovedGames();
+        });
+        if (!approvedGamesList.some(g => g.title === 'Automated Test Adventure')) {
+            throw new Error("Published game was not found in getApprovedGames() community list!");
+        }
+        console.log("   User game direct public publishing verified: ✅");
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");
