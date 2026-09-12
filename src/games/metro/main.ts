@@ -663,6 +663,7 @@ export class LastMetroGame {
         light: THREE.PointLight;
         pulseOffset: number;
     }[] = [];
+    public carriage200ExitArrows: THREE.Group[] = [];
     public lastMaxHealthWarningTime: number = 0;
 
     // ── Vagunid 201–250 Kanalisatsioon (Sewers) ────────────────────────────
@@ -1965,6 +1966,86 @@ export class LastMetroGame {
         b.healthTex.needsUpdate = true;
     }
 
+    public activateCarriage200WhiteLightsAndExitArrow() {
+        // 1. Turn all lights bright white and peaceful ("lähevad tuled valgeks ja eredaks")
+        if (this.currentCarriage) {
+            this.currentCarriage.lights.forEach(l => {
+                l.color.setHex(0xffffff);
+                l.intensity = 2.4;
+                l.distance = 22;
+            });
+            this.currentCarriage.lightMeshes.forEach(m => {
+                (m.material as THREE.MeshBasicMaterial).color.setHex(0xffffff);
+            });
+        }
+
+        // 2. Clear tense boss music and play peaceful door chime
+        metroAudio.stopCarriage200Music();
+        metroAudio.playDoorChime();
+
+        // 3. Clear existing exit arrows if any
+        if (this.carriage200ExitArrows) {
+            this.carriage200ExitArrows.forEach(a => this.scene.remove(a));
+            this.carriage200ExitArrows = [];
+        } else {
+            this.carriage200ExitArrows = [];
+        }
+
+        // 4. Build glowing 3D exit arrows pointing towards next door (+Z direction) ("ja tuleb nool järgmise ukse poole")
+        const startZ = Math.min(this.playerPos.z + 2.5, 43.0);
+        const endZ = 46.5;
+        const arrowZPositions: number[] = [];
+        for (let z = startZ; z <= endZ; z += 6.0) {
+            arrowZPositions.push(z);
+        }
+        if (!arrowZPositions.includes(endZ)) {
+            arrowZPositions.push(endZ);
+        }
+
+        const arrowMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+        const arrowGlowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+
+        arrowZPositions.forEach(z => {
+            const arrowGroup = new THREE.Group();
+            arrowGroup.position.set(0, 1.4, z);
+
+            // Shaft
+            const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 1.2), arrowMat);
+            shaft.position.set(0, 0, -0.2);
+            arrowGroup.add(shaft);
+
+            // Head (Cone pointing towards +Z)
+            const head = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.75, 4), arrowMat);
+            head.rotation.x = -Math.PI / 2;
+            head.position.set(0, 0, 0.65);
+            arrowGroup.add(head);
+
+            // Inner bright white glow core
+            const core = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 4), arrowGlowMat);
+            core.rotation.x = -Math.PI / 2;
+            core.position.set(0, 0, 0.67);
+            arrowGroup.add(core);
+
+            // PointLight to cast vibrant neon glow on the floor and walls
+            const pLight = new THREE.PointLight(0x00ffcc, 1.6, 6);
+            pLight.position.set(0, 0.25, 0);
+            arrowGroup.add(pLight);
+
+            (arrowGroup as any).baseZ = z;
+            (arrowGroup as any).baseY = 1.4;
+
+            this.scene.add(arrowGroup);
+            this.carriage200ExitArrows.push(arrowGroup);
+        });
+
+        // 5. Thought guidance ("läheb kõik korda", järgi noolt)
+        this.showThought(
+            '✨ Lõpupahalane on alistatud! Tuled läksid valgeks ja eredaks. Järgi noolt järgmise ukse poole!',
+            '✨ The Final Boss is defeated! Lights turned bright white. Follow the arrow to the next door!',
+            6000
+        );
+    }
+
     private buildMetroRouteDisplay(index: number, isEt: boolean): THREE.Group {
         const group = new THREE.Group();
 
@@ -3134,14 +3215,8 @@ export class LastMetroGame {
                     b.isDead = true;
                     metroAudio.playMonsterDeath();
                     this.scene.remove(b.group);
-                    this.showThought(
-                        '🏆 LÕPUPAHALANE ALISTATUD! Sa pääsesid viimasest vagunist välja!',
-                        '🏆 FINAL BOSS DEFEATED! You broke free from the final carriage!',
-                        5000
-                    );
-                    setTimeout(() => {
-                        this.triggerVictory200();
-                    }, 1200);
+                    // Lights turn bright white and exit arrows appear pointing to next door!
+                    this.activateCarriage200WhiteLightsAndExitArrow();
                 }
                 return;
             }
@@ -4099,11 +4174,20 @@ export class LastMetroGame {
         if (prevIndex === 200 && index !== 200) {
             this.carriage200CutsceneTimers.forEach(t => { clearInterval(t); clearTimeout(t); });
             this.carriage200CutsceneTimers = [];
+            if (this.carriage200ExitArrows) {
+                this.carriage200ExitArrows.forEach(a => this.scene.remove(a));
+                this.carriage200ExitArrows = [];
+            }
         } else if (index === 200) {
             this.carriage200CutsceneTimers.forEach(t => { clearInterval(t); clearTimeout(t); });
             this.carriage200CutsceneTimers = [];
             this.station200SwitchesDone = false;
             this.station200Departing = false;
+            this.carriage300ExitTriggered = false;
+            if (this.carriage200ExitArrows) {
+                this.carriage200ExitArrows.forEach(a => this.scene.remove(a));
+                this.carriage200ExitArrows = [];
+            }
             metroAudio.playCarriage200Music();
             this.deactivateTimeVillain();
         }
@@ -6566,6 +6650,12 @@ export class LastMetroGame {
         metroAudio.stopCarriage200Music();
         metroAudio.stopShopMusic();
 
+        this.carriage300ExitTriggered = false;
+        if (this.carriage200ExitArrows) {
+            this.carriage200ExitArrows.forEach(a => this.scene.remove(a));
+            this.carriage200ExitArrows = [];
+        }
+
         // Reset all coins, inventory items, buffs & progress when returning to the beginning
         this.coins = 0;
         this.inventory = { sword: true };
@@ -7792,6 +7882,17 @@ export class LastMetroGame {
                     );
                 }
             }
+
+            // Animate Carriage 200 Exit Arrows (bobbing & pulsating glow wave towards front door)
+            if (this.currentCarIndex === 200 && this.carriage200ExitArrows && this.carriage200ExitArrows.length > 0) {
+                const arrTime = performance.now() * 0.004;
+                this.carriage200ExitArrows.forEach((arr, idx) => {
+                    const baseY = (arr as any).baseY || 1.4;
+                    const baseZ = (arr as any).baseZ || 0;
+                    arr.position.y = baseY + Math.sin(arrTime * 2.5 + idx * 0.8) * 0.12;
+                    arr.position.z = baseZ + Math.sin(arrTime * 3.5) * 0.22;
+                });
+            }
         }
 
         // 4. Keyboard Camera Turning (Arrows & Q/E)
@@ -7907,6 +8008,9 @@ export class LastMetroGame {
                         );
                     }
                 } else if (this.playerPos.z > 45.0 && this.carriage200Boss?.isDead) {
+                    if (!this.carriage300ExitTriggered) {
+                        metroAudio.playDoorSlide(true);
+                    }
                     this.triggerVictory200();
                 } else if (this.playerPos.z > 48.0) {
                     this.playerPos.z = 47.8;

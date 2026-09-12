@@ -4109,18 +4109,56 @@ try {
                 throw new Error(`Expected boss HP to be 1 after 9 strikes, got: ${hpAfter9Strikes}`);
             }
 
-            // 10th sword strike: Boss dies and victory is achieved!
+            // 10th sword strike: Boss dies, lights turn bright white, exit arrows appear, victory triggers upon walking through door
             await page.evaluate(() => {
                 window.__lastMetro.isSwordSwinging = false;
                 window.__lastMetro.attackWithSword();
             });
-            await new Promise(r => setTimeout(r, 1400));
+            await new Promise(r => setTimeout(r, 600));
 
             const isBossDead = await page.evaluate(() => window.__lastMetro.carriage200Boss?.isDead);
+            console.log(`   Boss Dead after 10 strikes (Expected: true): ${isBossDead}`);
+            if (!isBossDead) {
+                throw new Error("Boss must be marked dead after 10 sword strikes!");
+            }
+
+            // Verify lights turned bright white ("lähevad tuled valgeks ja eredaks")
+            const lightsStatus = await page.evaluate(() => {
+                const lights = window.__lastMetro.currentCarriage?.lights || [];
+                const allWhite = lights.length > 0 && lights.every(l => l.color.getHex() === 0xffffff);
+                const bright = lights.length > 0 && lights.every(l => l.intensity >= 2.0);
+                return { allWhite, bright, count: lights.length };
+            });
+            console.log(`   Carriage 200 Lights after Boss defeat: White=${lightsStatus.allWhite}, Bright=${lightsStatus.bright}, Count=${lightsStatus.count}`);
+            if (!lightsStatus.allWhite || !lightsStatus.bright) {
+                throw new Error("Carriage 200 lights must turn bright white after boss defeat!");
+            }
+
+            // Verify exit arrow appeared pointing towards next door ("tuleb nool järgmise ukse poole")
+            const exitArrowsCount = await page.evaluate(() => window.__lastMetro.carriage200ExitArrows?.length || 0);
+            console.log(`   Carriage 200 Exit Arrows Count (Expected > 0): ${exitArrowsCount}`);
+            if (exitArrowsCount === 0) {
+                throw new Error("Carriage 200 must spawn exit arrows pointing towards the next door after boss defeat!");
+            }
+
+            // Verify victory modal is NOT open yet before reaching the door
+            const modalBeforeDoor = await page.$eval('#victory-300-modal', el => window.getComputedStyle(el).display);
+            console.log(`   Victory Modal before reaching exit door (Expected: none): ${modalBeforeDoor}`);
+            if (modalBeforeDoor !== 'none') {
+                throw new Error("Victory modal must not open immediately; player must first walk through the door!");
+            }
+
+            // Walk player through the door ("kui lähed läbi siis tuleb se tekst ette")
+            await page.evaluate(() => {
+                window.__lastMetro.playerPos.set(0, 1.6, 46.0);
+                window.__lastMetro.update(0.1);
+            });
+            await new Promise(r => setTimeout(r, 200));
+
             const isVictoryModalOpen = await page.$eval('#victory-300-modal', el => window.getComputedStyle(el).display);
-            console.log(`   Boss Dead after 10 strikes: ${isBossDead}, Victory Modal Display (Expected: flex): ${isVictoryModalOpen}`);
-            if (!isBossDead || isVictoryModalOpen !== 'flex') {
-                throw new Error(`Boss must die after 10 sword strikes and open the victory modal!`);
+            console.log(`   Victory Modal Display after walking through door (Expected: flex): ${isVictoryModalOpen}`);
+            if (isVictoryModalOpen !== 'flex') {
+                throw new Error("Walking through the exit door after boss defeat must open the victory modal!");
             }
 
             // Test Crouch functionality & On-Screen Button
