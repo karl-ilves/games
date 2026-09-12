@@ -38,7 +38,7 @@ export class FlightCamera {
 
         if (this.mode === 'cockpit') {
             // Forward from cockpit
-            const offset = new THREE.Vector3(0, 0.8, 0.4).applyQuaternion(planeQuat);
+            const offset = new THREE.Vector3(0, 0.8, -0.6).applyQuaternion(planeQuat);
             this.camera.position.copy(planePos).add(offset);
 
             const lookTarget = new THREE.Vector3(0, 0.8, -20).applyQuaternion(planeQuat).add(planePos);
