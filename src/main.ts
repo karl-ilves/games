@@ -69,10 +69,10 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
         }
     }
 
-    // LAST METRO mäng on nähtav AINULT Playard Ownerile!
+    // LAST METRO mäng on nähtav KÕIKIDELE mängijatele!
     const metroGameCard = document.getElementById('card-metro-game');
     if (metroGameCard) {
-        metroGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+        metroGameCard.style.display = 'flex';
     }
 
     // MMP1 (Murder Mystery) mäng on nähtav Playard Ownerile ja kasutajale Minionbanana0_0!

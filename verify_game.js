@@ -200,11 +200,11 @@ try {
             throw new Error("ROCKET PLAYARD game card must be visible for guests!");
         }
 
-        // Check LAST METRO visibility for guest (Expected: none - Owner exclusive)
+        // Check LAST METRO visibility for guest (Expected: flex - now visible for everyone!)
         const guestMetroCardDisplay = await page.$eval('#card-metro-game', el => window.getComputedStyle(el).display);
-        console.log(`   Guest LAST METRO Card visibility (Expected: none): ${guestMetroCardDisplay}`);
-        if (guestMetroCardDisplay !== 'none') {
-            throw new Error("LAST METRO game card must be hidden for guests!");
+        console.log(`   Guest LAST METRO Card visibility (Expected: flex): ${guestMetroCardDisplay}`);
+        if (guestMetroCardDisplay !== 'flex') {
+            throw new Error("LAST METRO game card must be visible for everyone!");
         }
 
         // Check MMP1 visibility for guest (Expected: none - Owner exclusive)
@@ -323,9 +323,9 @@ try {
         }
 
         const adminMetroCardDisplay = await page.$eval('#card-metro-game', el => window.getComputedStyle(el).display);
-        console.log(`   Admin (grx@trenet.ee) LAST METRO Card visibility (Expected: none): ${adminMetroCardDisplay}`);
-        if (adminMetroCardDisplay !== 'none') {
-            throw new Error("LAST METRO game card must be hidden for non-owner admin (grx@trenet.ee)!");
+        console.log(`   Admin (grx@trenet.ee) LAST METRO Card visibility (Expected: flex): ${adminMetroCardDisplay}`);
+        if (adminMetroCardDisplay !== 'flex') {
+            throw new Error("LAST METRO game card must be visible for everyone including admin!");
         }
 
         const adminMmp1CardDisplay = await page.$eval('#card-mmp1-game', el => window.getComputedStyle(el).display);
@@ -3116,22 +3116,29 @@ try {
             // 14. Checking LAST METRO (3D Mystery Adventure)...
             console.log("14. Checking LAST METRO (3D Mystery Adventure)...");
             
-            // A. Test Non-Owner VIP Restriction
+            // A. Test Non-Owner / Guest Access & English Localization ("te se kõikidele nähtavaks ja kõik inglisekeelseks väljaarvatud Playard owner")
             await page.evaluate(() => {
                 window.__PLAYARD_TEST_MODE__ = false;
                 localStorage.removeItem('playard_current_user_profile');
             });
             await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'load', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const guestVipDisplay = await page.$eval('#vip-restricted-overlay', el => window.getComputedStyle(el).display).catch(() => 'none');
-            console.log("   Guest VIP Restricted Overlay Display (Expected: flex):", guestVipDisplay);
-            if (guestVipDisplay !== 'flex') {
-                throw new Error("LAST METRO must be VIP-restricted for non-owners!");
+            console.log("   Guest VIP Restricted Overlay Display (Expected: none):", guestVipDisplay);
+            if (guestVipDisplay !== 'none') {
+                throw new Error("LAST METRO must NOT be VIP-restricted; it must be visible and accessible to everyone!");
             }
 
-            // B. Test Playard Owner Access & Full Game Initialization
+            const guestGameTitle = await page.$eval('#start-game-title', el => el.textContent.trim());
+            const guestPromptText = await page.$eval('#start-game-prompt-text', el => el.textContent.trim());
+            console.log(`   Guest Start Screen (Expected English): Title="${guestGameTitle}", Prompt="${guestPromptText}"`);
+            if (guestGameTitle !== 'LAST METRO' || !guestPromptText.includes('Click anywhere')) {
+                throw new Error("LAST METRO must be in English for guests / non-owners!");
+            }
+
+            // B. Test Playard Owner Access & Estonian Localization ("väljaarvatud Playard owner")
             await page.evaluate(() => {
                 window.__PLAYARD_TEST_MODE__ = true;
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
@@ -3141,15 +3148,15 @@ try {
             await new Promise(r => setTimeout(r, 1000));
 
             await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
-            console.log("   Successfully loaded 3D Canvas for LAST METRO!");
+            console.log("   Successfully loaded 3D Canvas for LAST METRO as Playard Owner!");
 
-            // Check Start Screen Overlay (User requirement: "kui sa hubis vajutad selle mängu pealle siis sinna mängu ilmud vajuta üks kõik kuhu et mängu alustada ja kui ta vajutab siis tuleb intro")
+            // Check Start Screen Overlay (Estonian for Playard Owner)
             const startOverlayDisplay = await page.$eval('#start-game-overlay', el => window.getComputedStyle(el).display);
             const startPromptText = await page.$eval('#start-game-prompt-text', el => el.textContent);
             const initialState = await page.evaluate(() => window.__lastMetro.state);
-            console.log(`   Start Screen Overlay Display: ${startOverlayDisplay}, Prompt: "${startPromptText}", State: ${initialState}`);
-            if (startOverlayDisplay !== 'flex' || initialState !== 'start_screen') {
-                throw new Error("Expected start screen overlay with click-to-start prompt on initial game load!");
+            console.log(`   Owner Start Screen Overlay Display: ${startOverlayDisplay}, Prompt: "${startPromptText}", State: ${initialState}`);
+            if (startOverlayDisplay !== 'flex' || initialState !== 'start_screen' || !startPromptText.includes('Vajuta ükskõik kuhu')) {
+                throw new Error("Expected Estonian start screen prompt for Playard Owner!");
             }
 
             // Click anywhere on start screen to begin game and trigger intro sequence
@@ -4158,6 +4165,16 @@ try {
             console.log(`   Carriage 200 Exit Arrows Count (Expected > 0): ${exitArrowsCount}`);
             if (exitArrowsCount === 0) {
                 throw new Error("Carriage 200 must spawn exit arrows pointing towards the next door after boss defeat!");
+            }
+
+            // Verify Carriage 200 music does NOT stop after boss defeat ("aga laul ei peatu")
+            const isMusicStillActive = await page.evaluate(() => {
+                const audio = window.__metroAudio;
+                return !audio ? true : audio.isCarriage200MusicActive;
+            });
+            console.log(`   Carriage 200 Music still playing after boss defeat (Expected: true): ${isMusicStillActive}`);
+            if (!isMusicStillActive) {
+                throw new Error("Carriage 200 music must keep playing after defeating the boss!");
             }
 
             // Verify victory modal is NOT open yet before reaching the door

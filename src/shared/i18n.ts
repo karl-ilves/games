@@ -166,7 +166,7 @@ export function applyLocalization() {
         const tMetro = metroCard.querySelector('.reward-tag span:last-child');
         if (tMetro) tMetro.textContent = isEt ? '🔍 MÜSTEERIUM & LÕPUTUD VAGUNID' : '🔍 MYSTERY & INFINITE CARS';
         const metroPill = metroCard.querySelector('.metro-owner-badge-pill');
-        if (metroPill) metroPill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
+        if (metroPill) metroPill.textContent = isEt ? '🚇 3D MÜSTEERIUM' : '🚇 3D MYSTERY';
     }
 
     // MMP1 (Murder Mystery) Game Card

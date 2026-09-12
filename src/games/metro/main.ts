@@ -703,17 +703,17 @@ export class LastMetroGame {
     private async init() {
         console.log("🚇 Initializing LAST METRO 3D Mystery...");
 
-        // 1. VIP / Playard Owner Verification
+        // 1. User Profile & Playard Owner Verification
         const userProf = getCurrentUserProfile();
         this.isOwner = isPlayardOwner(userProf?.email);
 
+        // Last Metro is now open and accessible to all players!
         const vipOverlay = document.getElementById('vip-restricted-overlay');
-        if (!this.isOwner && vipOverlay) {
-            vipOverlay.style.display = 'flex';
-            return;
+        if (vipOverlay) {
+            vipOverlay.style.display = 'none';
         }
 
-        // Language determination: Estonian for Owner by default, English otherwise
+        // Language determination: Estonian for Owner, English for everyone else ("kõik inglisekeelseks väljaarvatud Playard owner")
         this.lang = this.isOwner ? 'et' : 'en';
         this.updateLanguageUI();
 
@@ -724,7 +724,7 @@ export class LastMetroGame {
             description: this.lang === 'et' ? '3D atmosfääriline seiklus- ja müsteeriumimäng lõputus metroorongis.' : '3D atmospheric mystery adventure on an endless subway train.',
             url: './games/metro/index.html',
             icon: '🚇',
-            badgeText: '👑 OWNER EXCLUSIVE'
+            badgeText: '🚇 3D MYSTERY'
         });
 
         // 2. Setup Lighting & Flashlight
@@ -975,7 +975,7 @@ export class LastMetroGame {
         } catch (e) {}
     }
 
-    private updateLanguageUI() {
+    public updateLanguageUI() {
         const isEt = this.lang === 'et';
         const titleEl = document.getElementById('hud-game-title');
         if (titleEl) titleEl.innerText = isEt ? '🚇 VIIMANE METROO' : '🚇 LAST METRO';
@@ -1003,12 +1003,93 @@ export class LastMetroGame {
             else branchLabel.innerText = isEt ? '❓ SUUND VALIMATA' : '❓ NO DIRECTION';
         }
 
+        const coinsLabel = document.getElementById('hud-coins-label');
+        if (coinsLabel) {
+            coinsLabel.innerText = isEt ? `${this.coins} COINI` : `${this.coins} COINS`;
+        }
+
+        const crosshairPrompt = document.getElementById('crosshair-prompt-text');
+        if (crosshairPrompt) {
+            crosshairPrompt.innerText = isEt ? 'Uuri' : 'Inspect';
+        }
+
+        const locTitle = document.getElementById('intro-loc-title');
+        if (locTitle) {
+            locTitle.innerText = isEt ? '📍 Kesklinna Metroojaam · 23:45' : '📍 Downtown Subway Station · 23:45';
+        }
+        const locSub = document.getElementById('intro-loc-sub');
+        if (locSub) {
+            locSub.innerText = isEt ? 'Viimane rong saabub peagi...' : 'The last train arrives shortly...';
+        }
+
+        const skipBtn = document.getElementById('btn-skip-intro');
+        if (skipBtn) {
+            skipBtn.innerText = isEt ? '⏭️ Jäta Intro Vahele' : '⏭️ Skip Intro';
+        }
+
         const crouchText = document.getElementById('btn-toggle-crouch-text');
         if (crouchText) {
             crouchText.innerText = this.isCrouching
                 ? (isEt ? 'Püsti [C]' : 'Stand [C]')
                 : (isEt ? 'Kükita [C]' : 'Crouch [C]');
         }
+
+        const sitText = document.getElementById('btn-toggle-sit-text');
+        if (sitText) {
+            sitText.innerText = this.isSitting ? (isEt ? 'Tõuse' : 'Stand') : (isEt ? 'Istu' : 'Sit');
+        }
+
+        const standBtn = document.getElementById('btn-stand-up');
+        if (standBtn) {
+            standBtn.innerHTML = isEt ? '<span>🧍‍♂️</span> <span>Tõuse püsti</span>' : '<span>🧍‍♂️</span> <span>Stand up</span>';
+        }
+
+        const bpBtnText = document.getElementById('backpack-btn-text');
+        if (bpBtnText) {
+            bpBtnText.innerText = isEt ? `Kaust (${this.collectedClues.length})` : `Folder (${this.collectedClues.length})`;
+        }
+
+        const ownerBtnText = document.getElementById('owner-panel-btn-text');
+        if (ownerBtnText) {
+            ownerBtnText.innerText = isEt ? 'Owner Paneel' : 'Owner Panel';
+        }
+
+        const deathTitle = document.getElementById('death-title');
+        if (deathTitle) deathTitle.innerText = isEt ? 'SA SURID' : 'YOU DIED';
+        const deathDesc = document.getElementById('death-desc');
+        if (deathDesc) {
+            deathDesc.innerText = isEt
+                ? 'Must varjukäsi haaras sinust ja tõmbas su kihutavast rongist tühjusesse...'
+                : 'The dark shadow hand grabbed you and dragged you from the speeding train into the void...';
+        }
+        const deathRetryBtn = document.getElementById('btn-death-retry');
+        if (deathRetryBtn) deathRetryBtn.innerText = isEt ? '🔄 Proovi uuesti (Intro algusest)' : '🔄 Try Again (From Intro)';
+
+        const victoryModal = document.getElementById('victory-300-modal');
+        if (victoryModal) {
+            const h1 = victoryModal.querySelector('h1');
+            const p = victoryModal.querySelector('p');
+            const rewardDiv = victoryModal.querySelector('div div:first-child');
+            const rewardSub = victoryModal.querySelector('div div:last-child');
+            const hubLink = victoryModal.querySelector('a.btn-modal-close');
+            if (h1) h1.innerText = isEt ? 'SA PÄÄSESID VÄLJA!' : 'YOU ESCAPED!';
+            if (p) p.innerText = isEt
+                ? 'Alistasid Vaguni 200 lõpupahalase ja pääsesid viimasest vagunist päris maailma päikesevalguse kätte. Lõputu metroo on seljatatud!'
+                : 'You defeated the Carriage 200 Final Boss and escaped the final carriage into the sunlight of the real world. The endless subway is overcome!';
+            if (rewardDiv) rewardDiv.innerText = isEt ? '💰 SUUR AUTASU: +1000 Y (Yards)!' : '💰 GRAND REWARD: +1000 Y (Yards)!';
+            if (rewardSub) rewardSub.innerText = isEt ? 'Sinu Yardsi saldo on uuendatud.' : 'Your Yards balance has been updated.';
+            if (hubLink) hubLink.innerText = isEt ? '🏠 Tagasi Playard Hubi' : '🏠 Back to Playard Hub';
+        }
+
+        const shopModal = document.getElementById('golden-shop-modal');
+        if (shopModal) {
+            const shopSub = shopModal.querySelector('p');
+            if (shopSub) shopSub.innerText = isEt ? 'Vagun 100 Checkpoint · Turvaline Oaas Lõputus Metroos' : 'Carriage 100 Checkpoint · Safe Oasis in the Endless Subway';
+            const closeBtn = document.getElementById('btn-shop-close');
+            if (closeBtn) closeBtn.innerText = isEt ? '🚪 Jätka Sõitu (Vagun 101)' : '🚪 Continue Journey (Carriage 101)';
+        }
+
+        this.updateHotbarUI();
     }
 
     public showThought(textEt: string, textEn: string, durationMs: number = 4000) {
@@ -1979,8 +2060,7 @@ export class LastMetroGame {
             });
         }
 
-        // 2. Clear tense boss music and play peaceful door chime
-        metroAudio.stopCarriage200Music();
+        // 2. Play peaceful door chime (User requirement: "aga laul ei peatu" - keep carriage 200 music playing!)
         metroAudio.playDoorChime();
 
         // 3. Clear existing exit arrows if any
@@ -3548,14 +3628,14 @@ export class LastMetroGame {
                         <span style="font-size: 1.6rem;">${item.icon}</span>
                         <div>
                             <div class="shop-item-title">${this.lang === 'et' ? item.nameEt : item.nameEn}</div>
-                            <div class="shop-item-price">🪙 ${item.price} COINI</div>
+                            <div class="shop-item-price">🪙 ${item.price} ${this.lang === 'et' ? 'COINI' : 'COINS'}</div>
                         </div>
                     </div>
                     <div class="shop-item-desc">${this.lang === 'et' ? item.descEt : item.descEn}</div>
                     <div class="shop-item-footer">
-                        <span style="font-size: 0.75rem; color: #a4b0be;">${isOwned ? '✅ OMATUD' : 'Saadaval'}</span>
+                        <span style="font-size: 0.75rem; color: #a4b0be;">${isOwned ? (this.lang === 'et' ? '✅ OMATUD' : '✅ OWNED') : (this.lang === 'et' ? 'Saadaval' : 'Available')}</span>
                         <button class="btn-shop-buy" id="btn-buy-${item.id}" ${isOwned ? 'disabled' : canAfford ? '' : 'disabled'}>
-                            ${isOwned ? '✅ OMAD' : '🛒 OSTA / BUY'}
+                            ${isOwned ? (this.lang === 'et' ? '✅ OMAD' : '✅ OWNED') : (this.lang === 'et' ? '🛒 OSTA' : '🛒 BUY')}
                         </button>
                     </div>
                 `;
@@ -3935,7 +4015,7 @@ export class LastMetroGame {
         }
 
         if (badge) {
-            const typeLabels: { [key: string]: string } = {
+            const typeLabels: { [key: string]: string } = isEt ? {
                 ticket: '🎫 PILET',
                 photo: '📷 VANA FOTO',
                 document: '📄 DOKUMENT',
@@ -3944,11 +4024,31 @@ export class LastMetroGame {
                 list: '📋 NIMEKIRI',
                 watch: '🕰️ MEHHANISM',
                 note: '📜 SALAJANE MÄRGE'
+            } : {
+                ticket: '🎫 TICKET',
+                photo: '📷 OLD PHOTO',
+                document: '📄 DOCUMENT',
+                map: '🗺️ SUBWAY MAP',
+                plate: '🛡️ METAL PLATE',
+                list: '📋 PASSENGER LIST',
+                watch: '🕰️ MECHANISM',
+                note: '📜 SECRET NOTE'
             };
-            badge.innerText = typeLabels[clue.type] || '📜 SALAJANE VIHJE';
+            badge.innerText = typeLabels[clue.type] || (isEt ? '📜 SALAJANE VIHJE' : '📜 SECRET CLUE');
         }
 
         if (title) title.innerText = isEt ? clue.titleEt : clue.titleEn;
+
+        const packPrompt = modal?.querySelector('p');
+        if (packPrompt) {
+            packPrompt.innerText = isEt
+                ? '💡 Vajuta pildile või allolevale nupule, et see seljakotti panna.'
+                : '💡 Click the card or button below to put it in your backpack.';
+        }
+        const packBtn = document.getElementById('btn-pack-clue');
+        if (packBtn) {
+            packBtn.innerHTML = isEt ? '<span>📦 Pane Seljakotti</span>' : '<span>📦 Put in Backpack</span>';
+        }
 
         // Render full realistic graphic image / card into cardContainer
         if (cardContainer) {
@@ -4027,13 +4127,20 @@ export class LastMetroGame {
 
     public openCluesFolderModal() {
         this.state = 'inspecting';
+        const isEt = this.lang === 'et';
         const modal = document.getElementById('clues-folder-modal');
         const countText = document.getElementById('clues-folder-count');
         const grid = document.getElementById('clues-folder-grid');
         const emptyMsg = document.getElementById('clues-folder-empty');
 
         if (countText) {
-            countText.innerText = `${this.collectedClues.length} eset kogutud`;
+            countText.innerText = isEt ? `${this.collectedClues.length} eset kogutud` : `${this.collectedClues.length} items collected`;
+        }
+
+        if (emptyMsg) {
+            emptyMsg.innerText = isEt
+                ? 'Sa ei ole veel ühtegi vihjet kogunud. Uuri vagunitest leiduvaid esemeid!'
+                : 'You have not collected any clues yet. Inspect items found in the carriages!';
         }
 
         if (grid) {
@@ -4047,8 +4154,8 @@ export class LastMetroGame {
                     card.style.cssText = 'background: rgba(20, 28, 42, 0.9); border: 1.5px solid rgba(0, 242, 254, 0.35); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: all 0.2s;';
                     card.innerHTML = `
                         <div style="font-size: 2.2rem; margin-bottom: 6px;">${clue.icon}</div>
-                        <div style="color: #ffd32a; font-weight: 800; font-size: 0.8rem; margin-bottom: 4px; line-height: 1.2;">${clue.titleEt}</div>
-                        <div style="color: #747d8c; font-size: 0.68rem; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${clue.textEt}</div>
+                        <div style="color: #ffd32a; font-weight: 800; font-size: 0.8rem; margin-bottom: 4px; line-height: 1.2;">${isEt ? clue.titleEt : clue.titleEn}</div>
+                        <div style="color: #747d8c; font-size: 0.68rem; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${isEt ? clue.textEt : clue.textEn}</div>
                     `;
                     card.onmouseenter = () => { card.style.borderColor = '#00f2fe'; card.style.transform = 'translateY(-3px)'; card.style.background = 'rgba(30, 42, 60, 0.95)'; };
                     card.onmouseleave = () => { card.style.borderColor = 'rgba(0, 242, 254, 0.35)'; card.style.transform = 'none'; card.style.background = 'rgba(20, 28, 42, 0.9)'; };
