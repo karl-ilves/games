@@ -5187,6 +5187,17 @@ export class MurderMysteryGame {
             };
         }
 
+        if (this.crateShopModal) {
+            this.crateShopModal.addEventListener('wheel', (e: WheelEvent) => {
+                e.stopPropagation();
+            }, { passive: true });
+        }
+        if (this.unboxingModal) {
+            this.unboxingModal.addEventListener('wheel', (e: WheelEvent) => {
+                e.stopPropagation();
+            }, { passive: true });
+        }
+
         if (this.crateTimerInterval) clearInterval(this.crateTimerInterval);
         this.crateTimerInterval = setInterval(() => {
             this.updateCrateShopTimers();
@@ -6026,6 +6037,9 @@ export class MurderMysteryGame {
 
         // Mouse Wheel Zoom (First person to 3rd person)
         this.container.addEventListener('wheel', (e: WheelEvent) => {
+            if (this.crateShopModal?.style.display === 'flex' || this.unboxingModal?.style.display === 'flex') {
+                return;
+            }
             e.preventDefault();
             this.cameraDistance = THREE.MathUtils.clamp(this.cameraDistance + e.deltaY * 0.006, 0.5, 14.0);
         }, { passive: false });

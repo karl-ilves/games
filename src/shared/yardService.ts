@@ -475,9 +475,37 @@ class YardService {
                             localStorage.setItem('playard_war_game_money', val.toString());
                         }
                     }
+                } else if (item.startsWith('meta_avatar_config:')) {
+                    try {
+                        const avatarJson = item.replace('meta_avatar_config:', '');
+                        const parsed = JSON.parse(avatarJson);
+                        if (parsed && typeof parsed === 'object') {
+                            const uKey = this.currentUserId || 'guest';
+                            localStorage.setItem(`playard_avatar_config_${uKey}`, avatarJson);
+                            localStorage.setItem('playard_avatar_config_guest', avatarJson);
+                            const avService = (window as any).playardAvatar;
+                            if (avService && typeof avService.applyConfigFromCloud === 'function') {
+                                avService.applyConfigFromCloud(parsed);
+                            }
+                        }
+                    } catch (e) {}
                 }
             }
         } catch (e) {}
+    }
+
+    public mergeCloudInventory(items: string[]) {
+        if (!Array.isArray(items)) return;
+        let changed = false;
+        items.forEach(it => {
+            if (!this.data.inventory.includes(it)) {
+                this.data.inventory.push(it);
+                changed = true;
+            }
+        });
+        if (changed) {
+            this.saveLocally(this.data);
+        }
     }
 
     public async saveToCloud() {
@@ -500,7 +528,6 @@ class YardService {
                 const trainMoney = localStorage.getItem('playard_train_money') || localStorage.getItem('rongimäng');
                 if (trainMoney) {
                     const trainMeta = `meta_train_money:${trainMoney}`;
-                    // Replace or add
                     this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_train_money:'));
                     this.data.inventory.push(trainMeta);
                 }
@@ -510,6 +537,16 @@ class YardService {
                     const warMeta = `meta_war_money:${warMoney}`;
                     this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_war_money:'));
                     this.data.inventory.push(warMeta);
+                }
+
+                // Ensure current avatar configuration is represented in inventory metadata
+                const uKey = targetUserId || this.currentUserId || 'guest';
+                const rawAvatar = localStorage.getItem(`playard_avatar_config_${uKey}`) ||
+                                  localStorage.getItem('playard_avatar_config_guest');
+                if (rawAvatar) {
+                    const avatarMeta = `meta_avatar_config:${rawAvatar}`;
+                    this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_avatar_config:'));
+                    this.data.inventory.push(avatarMeta);
                 }
 
                 const payload = {

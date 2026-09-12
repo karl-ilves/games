@@ -638,6 +638,7 @@ export class LastMetroGame {
     public kuuljaTargetPos: THREE.Vector3 = new THREE.Vector3();
     public stationStairsGroup: THREE.Group | null = null;
     public carriage200CutsceneTimers: any[] = [];
+    public carriage10ScareTimers: any[] = [];
     public station200SwitchesDone: boolean = false;
     public station200Departing: boolean = false;
 
@@ -653,6 +654,7 @@ export class LastMetroGame {
         healthTex: THREE.CanvasTexture;
         healthSprite: THREE.Sprite;
         initialZ: number;
+        moveSpeed: number;
     } | null = null;
     public carriage200HealthPickups: {
         mesh: THREE.Group;
@@ -661,6 +663,7 @@ export class LastMetroGame {
         light: THREE.PointLight;
         pulseOffset: number;
     }[] = [];
+    public lastMaxHealthWarningTime: number = 0;
 
     // ── Vagunid 201–250 Kanalisatsioon (Sewers) ────────────────────────────
     public sewerWaterSubmerged: boolean = false;
@@ -1895,7 +1898,8 @@ export class LastMetroGame {
             healthCanvas,
             healthTex,
             healthSprite,
-            initialZ: 41
+            initialZ: 41,
+            moveSpeed: 2.3
         };
 
         carGroup.add(bossGroup);
@@ -4117,6 +4121,20 @@ export class LastMetroGame {
         }
 
         // Clean up previous anomalies (shadow hands, stalkers, shadow entity, shadow eyes, villains, modals)
+        if (index > 0) {
+            this.introTimeouts.forEach(t => clearTimeout(t));
+            this.introTimeouts = [];
+        }
+        this.carriage10ScareTimers.forEach(t => clearTimeout(t));
+        this.carriage10ScareTimers = [];
+        if (this.jumpScareMesh) {
+            this.camera.remove(this.jumpScareMesh);
+            this.jumpScareMesh = null;
+        }
+        this.jumpScareActive = false;
+        const scareFlash = document.getElementById('scare-flash-overlay');
+        if (scareFlash) scareFlash.style.display = 'none';
+
         this.shadowHandsGroups.forEach(h => this.scene.remove(h));
         this.shadowHandsGroups = [];
         this.shadowHandsActive = false;
@@ -4171,6 +4189,11 @@ export class LastMetroGame {
 
         // Position player at entrance door and set free movement facing forward down the aisle
         this.state = 'player_free';
+        if (index > 0) {
+            this.introTimeouts.forEach(t => clearTimeout(t));
+            this.introTimeouts = [];
+            this.introSideDoorsOpen = false;
+        }
         if (index === 200) {
             // Carriage 200 is 100m long: start at rear entrance (-46) facing forward (+Z) toward the final boss
             this.playerPos.set(0, 1.6, -46);
@@ -6476,7 +6499,11 @@ export class LastMetroGame {
     }
 
     private startCarriage10JumpScare() {
-        setTimeout(() => {
+        this.carriage10ScareTimers.forEach(t => clearTimeout(t));
+        this.carriage10ScareTimers = [];
+
+        const t1 = setTimeout(() => {
+            if (this.currentCarIndex !== 10) return;
             // Cut lights
             if (this.currentCarriage) {
                 this.currentCarriage.lights.forEach(l => l.intensity = 0);
@@ -6501,14 +6528,16 @@ export class LastMetroGame {
             if (flashOverlay) {
                 flashOverlay.style.display = 'block';
                 flashOverlay.style.opacity = '1';
-                setTimeout(() => {
+                const tFlash = setTimeout(() => {
                     flashOverlay.style.opacity = '0';
-                    setTimeout(() => flashOverlay.style.display = 'none', 500);
+                    const tHide = setTimeout(() => flashOverlay.style.display = 'none', 500);
+                    this.carriage10ScareTimers.push(tHide);
                 }, 200);
+                this.carriage10ScareTimers.push(tFlash);
             }
 
             // Clean up jumpscare after 1.5 seconds and restore normal lights
-            setTimeout(() => {
+            const t2 = setTimeout(() => {
                 if (this.jumpScareMesh) {
                     this.camera.remove(this.jumpScareMesh);
                     this.jumpScareMesh = null;
@@ -6518,9 +6547,13 @@ export class LastMetroGame {
                     this.currentCarriage.lights.forEach(l => l.intensity = 0.85);
                     this.currentCarriage.lightMeshes.forEach(m => (m.material as THREE.MeshBasicMaterial).color.setHex(0xffffff));
                 }
-                this.showThought('Mis see oli...? Rong sõidab ikka edasi.', 'What on earth was that...? The train keeps moving forward.');
+                if (this.currentCarIndex === 10) {
+                    this.showThought('Mis see oli...? Rong sõidab ikka edasi.', 'What on earth was that...? The train keeps moving forward.');
+                }
             }, 1400);
+            this.carriage10ScareTimers.push(t2);
         }, 3500);
+        this.carriage10ScareTimers.push(t1);
     }
 
     // --- Intro Sequence Flow ---
@@ -6602,15 +6635,15 @@ export class LastMetroGame {
         );
 
         // t = 1.2s: Distant subway train approaches with announcement chime
-        this.introTimeouts.push(setTimeout(() => {
+        this.scheduleIntroTimeout(() => {
             metroAudio.playAnnouncementChime();
-        }, 1200));
+        }, 1200);
 
         // t = 4.2s: Train arrives and stops at platform! Doors chime and slide open
-        this.introTimeouts.push(setTimeout(() => {
+        this.scheduleIntroTimeout(() => {
             if (this.currentCarriage) this.currentCarriage.group.position.z = 0;
             metroAudio.playDoorChime();
-            setTimeout(() => {
+            this.scheduleIntroTimeout(() => {
                 metroAudio.playDoorSlide(true);
                 this.introSideDoorsOpen = true;
                 this.state = 'intro_boarding';
@@ -6620,10 +6653,10 @@ export class LastMetroGame {
                     3500
                 );
             }, 600);
-        }, 4200));
+        }, 4200);
 
         // t = 7.5s: Player walks into train and sits down on seat
-        this.introTimeouts.push(setTimeout(() => {
+        this.scheduleIntroTimeout(() => {
             this.state = 'intro_riding';
             metroAudio.playFootstep();
             this.playerPos.set(1.1, 0.95, -1);
@@ -6631,12 +6664,12 @@ export class LastMetroGame {
 
             // Hide location badge
             if (locCard) locCard.style.opacity = '0';
-        }, 7500));
+        }, 7500);
 
         // t = 9.8s: Side doors close and train departs into dark tunnel
-        this.introTimeouts.push(setTimeout(() => {
+        this.scheduleIntroTimeout(() => {
             metroAudio.playDoorChime();
-            setTimeout(() => {
+            this.scheduleIntroTimeout(() => {
                 metroAudio.playDoorSlide(false);
                 this.introSideDoorsOpen = false;
                 this.trainSpeed = 50;
@@ -6649,17 +6682,31 @@ export class LastMetroGame {
                     4500
                 );
             }, 800);
-        }, 9800));
+        }, 9800);
 
         // t = 15.5s: Arrive at First Stop (Keskjaam / Central Station)
-        this.introTimeouts.push(setTimeout(() => {
+        this.scheduleIntroTimeout(() => {
             this.arriveAtFirstStop();
-        }, 15500));
+        }, 15500);
+    }
+
+    private scheduleIntroTimeout(fn: () => void, ms: number): any {
+        const id = setTimeout(() => {
+            if (!this.isIntroActive()) return;
+            fn();
+        }, ms);
+        this.introTimeouts.push(id);
+        return id;
+    }
+
+    private isIntroActive(): boolean {
+        return this.currentCarIndex === 0 && ['intro_station', 'intro_boarding', 'intro_inside', 'intro_riding', 'intro_first_stop', 'intro_departing'].includes(this.state);
     }
 
     public skipIntro() {
         this.introTimeouts.forEach(t => clearTimeout(t));
         this.introTimeouts = [];
+        this.state = 'player_free';
 
         if (this.currentCarriage) {
             this.currentCarriage.group.position.set(0, 0, 0);
@@ -6703,7 +6750,7 @@ export class LastMetroGame {
             'I sat down. The first stop should arrive shortly.'
         );
 
-        setTimeout(() => {
+        this.scheduleIntroTimeout(() => {
             this.arriveAtFirstStop();
         }, 5500);
     }
@@ -6718,7 +6765,7 @@ export class LastMetroGame {
 
         metroAudio.playAnnouncementChime();
         metroAudio.playDoorChime();
-        setTimeout(() => {
+        this.scheduleIntroTimeout(() => {
             metroAudio.playDoorSlide(true);
             this.introSideDoorsOpen = true;
         }, 500);
@@ -6729,17 +6776,17 @@ export class LastMetroGame {
         );
 
         // Passenger shuffle animation & doors close
-        this.introTimeouts.push(setTimeout(() => {
+        this.scheduleIntroTimeout(() => {
             metroAudio.playDoorChime();
-            setTimeout(() => {
+            this.scheduleIntroTimeout(() => {
                 metroAudio.playDoorSlide(false);
                 this.introSideDoorsOpen = false;
 
-                setTimeout(() => {
+                this.scheduleIntroTimeout(() => {
                     this.departFirstStop();
                 }, 1500);
             }, 800);
-        }, 4000));
+        }, 4000);
     }
 
     private departFirstStop() {
@@ -6756,8 +6803,8 @@ export class LastMetroGame {
         if (skipBtn) skipBtn.style.display = 'none';
 
         // Unlock player movement!
-        this.introTimeouts.push(setTimeout(() => {
-this.state = 'player_free';
+        this.scheduleIntroTimeout(() => {
+            this.state = 'player_free';
             const standBtn = document.getElementById('btn-stand-up');
             if (standBtn) standBtn.style.display = 'flex';
 
@@ -6765,7 +6812,7 @@ this.state = 'player_free';
                 'Rong hakkas uuesti sõitma. Nüüd saan püsti tõusta ja rongi uurida.',
                 'The train started moving again. I can now stand up and explore the train.'
             );
-        }, 1200));
+        }, 1200);
     }
 
     public sitDown() {
@@ -7385,6 +7432,8 @@ this.state = 'player_free';
 
 
         // If in intro, skip to active gameplay
+        this.introTimeouts.forEach(t => clearTimeout(t));
+        this.introTimeouts = [];
         if (this.state === 'intro_station' || this.state === 'intro_boarding' || this.state === 'intro_inside') {
             this.skipIntro();
         }
@@ -7411,8 +7460,16 @@ this.state = 'player_free';
 
     // --- Animation & Physics Loop ---
 
-    private animate() {
-        const delta = Math.min(this.clock.getDelta(), 0.1);
+    public update(delta?: number) {
+        this.animate(delta);
+    }
+
+    private animate(customDelta?: number) {
+        // Note: renderer.setAnimationLoop passes (time, frame) into this callback!
+        // We only use customDelta if it is a small delta (< 1.0s), otherwise compute from this.clock.
+        const delta = (typeof customDelta === 'number' && customDelta < 1.0)
+            ? customDelta
+            : Math.min(this.clock.getDelta(), 0.1);
 
         // 0. Intro Cinematic Animations
         if (this.state === 'intro_station' && this.currentCarriage) {
@@ -7653,6 +7710,7 @@ this.state = 'player_free';
         // 3d. Vagun 200 Final Boss & Green Health Pickups Update ("maa peal on plussid roheliusega salt saad pluss 30 elu")
         if (this.currentCarIndex === 200) {
             // Green Health Pickups (+30 Health)
+            // User requirement: "need plussid maa peal saab võtta kui on elud alla 100 ag akui on 100 siis tuleb tekst sul on juba max elud"
             if (this.carriage200HealthPickups.length > 0 && this.state === 'player_free') {
                 const time = performance.now() * 0.003;
                 this.carriage200HealthPickups.forEach(p => {
@@ -7666,21 +7724,34 @@ this.state = 'player_free';
                     const dist2D = Math.sqrt(dx * dx + dz * dz);
 
                     if (dist2D < 1.4) {
-                        p.collected = true;
-                        p.mesh.visible = false;
-                        p.light.visible = false;
-                        this.healPlayer(30);
-                        metroAudio.playHealChime();
-                        this.showThought(
-                            '💚 +30 ELU! (Roheline pluss taastas tervist)',
-                            '💚 +30 HEALTH! (Green plus restored health)',
-                            2500
-                        );
+                        if (this.playerHp < 100) {
+                            p.collected = true;
+                            p.mesh.visible = false;
+                            p.light.visible = false;
+                            this.healPlayer(30);
+                            metroAudio.playHealChime();
+                            this.showThought(
+                                '💚 +30 ELU! (Roheline pluss taastas tervist)',
+                                '💚 +30 HEALTH! (Green plus restored health)',
+                                2500
+                            );
+                        } else {
+                            // Already at 100 HP (max health)
+                            const nowMs = performance.now();
+                            if (nowMs - this.lastMaxHealthWarningTime > 2000) {
+                                this.lastMaxHealthWarningTime = nowMs;
+                                this.showThought(
+                                    'sul on juba max elud',
+                                    'you already have max health',
+                                    2500
+                                );
+                            }
+                        }
                     }
                 });
             }
 
-            // Carriage 200 Final Boss AI ("selle vaguni lõpus on pahalane keda tapad mõõgaga 10 lõõki")
+            // Carriage 200 Final Boss AI ("pahalane saab liikuda", "selle vaguni lõpus on pahalane keda tapad mõõgaga 10 lõõki")
             if (this.carriage200Boss && !this.carriage200Boss.isDead && this.state === 'player_free') {
                 const b = this.carriage200Boss;
                 const bPos = b.group.position;
@@ -7692,9 +7763,22 @@ this.state = 'player_free';
                 // Boss tracks player
                 b.group.lookAt(this.playerPos.x, bPos.y + 1.5, this.playerPos.z);
 
-                const dx = bPos.x - this.playerPos.x;
-                const dz = bPos.z - this.playerPos.z;
+                const dx = this.playerPos.x - bPos.x;
+                const dz = this.playerPos.z - bPos.z;
                 const dist = Math.sqrt(dx * dx + dz * dz);
+
+                // Boss movement towards player ("pahalane saab liikuda")
+                if (dist > 2.2) {
+                    const dirX = dx / dist;
+                    const dirZ = dz / dist;
+                    const speed = b.moveSpeed || 2.3;
+                    bPos.x += dirX * speed * delta;
+                    bPos.z += dirZ * speed * delta;
+
+                    // Keep boss inside carriage boundaries
+                    bPos.x = Math.max(-1.3, Math.min(1.3, bPos.x));
+                    bPos.z = Math.max(-42.0, Math.min(46.0, bPos.z));
+                }
 
                 // Boss attack cooldown
                 if (b.attackCooldown > 0) {

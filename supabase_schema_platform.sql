@@ -175,6 +175,7 @@ CREATE TABLE IF NOT EXISTS public.user_avatars (
   accessory_id text DEFAULT NULL,
   back_accessory_id text DEFAULT NULL,
   active_emote text DEFAULT 'idle',
+  movement_style text DEFAULT 'anim_style_default',
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 

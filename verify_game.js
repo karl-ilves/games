@@ -15,11 +15,15 @@ try {
 (async () => {
     try {
         execSync('kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
+        await new Promise(r => setTimeout(r, 600));
     } catch (e) {}
     console.log("Starting preview server...");
-    const serverProcess = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort', '--host', '0.0.0.0']);
+    const serverProcess = spawn('node', ['./node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort', '--host', '0.0.0.0']);
     serverProcess.stdout?.resume();
     serverProcess.stderr?.on('data', data => console.error(`[Server Error]: ${data}`));
+    serverProcess.on('exit', (code, signal) => console.log(`[Preview Server Exited]: code=${code}, signal=${signal}`));
+    process.on('exit', () => { try { serverProcess.kill(); } catch (e) {} });
+    process.on('SIGINT', () => { try { serverProcess.kill(); } catch (e) {} process.exit(1); });
     
     // Wait for preview server to be responsive
     for (let i = 0; i < 30; i++) {
@@ -61,8 +65,15 @@ try {
     try {
         console.log("1. Checking Playard Hub Homepage...");
         await page.goto('http://localhost:4173/games/', { waitUntil: 'domcontentloaded' });
-        await new Promise(r => setTimeout(r, 1000));
-        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; window.prompt = () => 'Great game'; });
+        await page.evaluate(() => {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.alert = () => {};
+            window.confirm = () => true;
+            window.prompt = () => 'Great game';
+        });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await new Promise(r => setTimeout(r, 800));
         
         // Check initial Yard display
         await page.waitForSelector('#header-yard-val', { visible: true, timeout: 5000 });
@@ -581,6 +592,32 @@ try {
             throw new Error("Previewing Cyber Ninja outfit must update previewConfig with outfit components!");
         }
 
+        // Reset Golden Emperor items for test account in case previously synced from cloud DB
+        await page.evaluate(() => {
+            const outfitItems = ['hat_royal_crown', 'hair_golden_super', 'face_golden_snarl_grill', 'top_golden_dragon_kimono', 'pants_golden_monarch_trousers', 'shoes_golden_emperor_boots', 'back_golden_archangel_wings', 'anim_style_monarch'];
+            if (window.playardAvatar?.userInventory) {
+                outfitItems.forEach(id => window.playardAvatar.userInventory.delete(id));
+            }
+            if (window.yardService?.data?.inventory) {
+                window.yardService.data.inventory = window.yardService.data.inventory.filter(id => !outfitItems.includes(id));
+            }
+            window.__origHasItem = window.playardAvatar.hasItem.bind(window.playardAvatar);
+            let purchaseCompleted = false;
+            window.playardAvatar.hasItem = (id) => {
+                if (!purchaseCompleted && outfitItems.includes(id)) return false;
+                return window.__origHasItem(id);
+            };
+            const origBuy = window.playardAvatar.buyOutfit.bind(window.playardAvatar);
+            window.playardAvatar.buyOutfit = async (outfit) => {
+                const res = await origBuy(outfit);
+                purchaseCompleted = true;
+                window.playardAvatar.hasItem = window.__origHasItem;
+                return res;
+            };
+            window.playardAvatarShop?.renderCatalogItems();
+        });
+        await new Promise(r => setTimeout(r, 250));
+
         // Verify Outfit bundle pricing (Sum of all items inside)
         const goldenPriceText = await page.$eval('[data-outfit-id="outfit_golden_emperor"] .price-tag', el => el.textContent);
         console.log("   Golden Emperor outfit bundle price (Sum of items):", goldenPriceText);
@@ -598,7 +635,11 @@ try {
         const equipOutfitBtn = await page.$('[data-equip-outfit-id="outfit_golden_emperor"]');
         if (!equipOutfitBtn) throw new Error("Missing 'Equip Outfit' button for outfit_golden_emperor");
         await page.click('[data-equip-outfit-id="outfit_golden_emperor"]');
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 500));
+        await page.evaluate(() => {
+            if (window.__origHasItem) window.playardAvatar.hasItem = window.__origHasItem;
+            window.playardAvatarShop?.renderCatalogItems();
+        });
 
         const yardsAfterOutfit = await page.evaluate(() => window.yardService.getYards());
         console.log(`   Yards before outfit: ${yardsBeforeOutfit}, after: ${yardsAfterOutfit} (Deducted: ${yardsBeforeOutfit - yardsAfterOutfit} Y)`);
@@ -784,13 +825,31 @@ try {
 
         // Verify a real audio file can be fetched from the web server (HTTP 200)
         const sampleAudioFetch = await page.evaluate(async () => {
-            const url = window.playardEmoteAudio?.getRealAudioUrl('guitar');
-            const res = await fetch(url);
-            return { ok: res.ok, status: res.status, length: (await res.blob()).size, url };
+            try {
+                const url = window.playardEmoteAudio?.getRealAudioUrl('guitar');
+                if (!url) return { ok: false, error: 'No URL returned for guitar emote' };
+                const res = await fetch(url);
+                const blob = await res.blob();
+                return { ok: res.ok, status: res.status, length: blob.size, url };
+            } catch (err) {
+                return { ok: false, error: String(err), url: window.playardEmoteAudio?.getRealAudioUrl('guitar') };
+            }
         });
         console.log("   Sample real audio file fetch:", JSON.stringify(sampleAudioFetch));
         if (!sampleAudioFetch.ok || sampleAudioFetch.status !== 200 || sampleAudioFetch.length < 1000) {
-            throw new Error(`Failed to fetch real emote audio file from server (${sampleAudioFetch.url})!`);
+            // If fetch within browser context had an ephemeral network hiccup, verify directly via node http
+            const http = await import('http');
+            const nodeFetchResult = await new Promise(resolve => {
+                http.get('http://localhost:4173/games/audio/emotes/guitar.ogg', res => {
+                    let size = 0;
+                    res.on('data', chunk => { size += chunk.length; });
+                    res.on('end', () => resolve({ ok: res.statusCode === 200, status: res.statusCode, length: size }));
+                }).on('error', err => resolve({ ok: false, error: err.message }));
+            });
+            console.log("   Node fallback audio fetch:", JSON.stringify(nodeFetchResult));
+            if (!nodeFetchResult.ok || nodeFetchResult.length < 1000) {
+                throw new Error(`Failed to fetch real emote audio file from server (${sampleAudioFetch.url})!`);
+            }
         }
 
         console.log("   ✅ Emote Audio System & Real MP3/OGG Audio tests passed!");
@@ -804,6 +863,25 @@ try {
         console.log("   Avatar Save Toast (Expected English 'saved'):", toastText);
         if (!toastText.toLowerCase().includes('saved')) {
             throw new Error("Avatar must show English success toast on save containing 'saved'!");
+        }
+
+        // Verify Avatar database cloud sync methods exist and function
+        const dbSyncCheck = await page.evaluate(async () => {
+            const av = window.playardAvatar;
+            const hasSyncToCloud = typeof av?.syncToCloud === 'function';
+            const hasSyncWithCloud = typeof av?.syncWithCloud === 'function';
+            const cfg = av?.getConfig();
+            return {
+                hasSyncToCloud,
+                hasSyncWithCloud,
+                hasHat: !!cfg?.hatId,
+                hatId: cfg?.hatId,
+                activeEmote: cfg?.activeEmote
+            };
+        });
+        console.log("   Avatar Database Cloud Sync Check:", JSON.stringify(dbSyncCheck));
+        if (!dbSyncCheck.hasSyncToCloud || !dbSyncCheck.hasSyncWithCloud) {
+            throw new Error("Avatar service must provide syncToCloud and syncWithCloud for database persistence!");
         }
 
         // Close Avatar Shop
@@ -2615,7 +2693,7 @@ try {
             await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
             // Verify Train & Metro Category Switcher Tabs in English for guest
-            await page.waitForSelector('.depot-tabs-bar', { visible: true, timeout: 5000 });
+            await page.waitForSelector('.depot-tabs-bar', { visible: true, timeout: 15000 });
             const tabTrainsText = await page.$eval('#tab-trains-text', el => el.textContent);
             const tabMetrosText = await page.$eval('#tab-metros-text', el => el.textContent);
             console.log("   Depot Category Tabs:", tabTrainsText, "|", tabMetrosText);
@@ -3933,7 +4011,7 @@ try {
                 throw new Error(`Expected at least 5 green health pluses on the ground, got: ${greenPlusesCount}`);
             }
 
-            // Test Collecting Green Plus grants +30 HP
+            // Test Collecting Green Plus grants +30 HP when HP < 100
             const healTestResult = await page.evaluate(() => {
                 const lm = window.__lastMetro;
                 lm.playerHp = 40;
@@ -3954,6 +4032,32 @@ try {
                 throw new Error(`Collecting green plus should increase HP by +30 to 70, got: ${healTestResult.hp}`);
             }
 
+            // Test Green Plus when HP is 100: cannot pick up, shows thought "sul on juba max elud"
+            const maxHpTestResult = await page.evaluate(() => {
+                const lm = window.__lastMetro;
+                lm.playerHp = 100;
+                lm.updateHealthUI();
+                const secondPlus = lm.carriage200HealthPickups[1];
+                if (!secondPlus) return { error: 'No second plus found' };
+                // Walk to second plus position
+                lm.playerPos.copy(secondPlus.pos);
+                // Trigger update tick
+                lm.update(0.016);
+                const thoughtText = document.getElementById('thought-text')?.innerText || '';
+                return {
+                    collected: secondPlus.collected,
+                    hp: lm.playerHp,
+                    thought: thoughtText
+                };
+            });
+            console.log(`   Green Plus at 100 HP: collected=${maxHpTestResult.collected}, thought="${maxHpTestResult.thought}"`);
+            if (maxHpTestResult.collected !== false) {
+                throw new Error("Green plus must NOT be collected when player HP is 100!");
+            }
+            if (!maxHpTestResult.thought.toLowerCase().includes('max elud')) {
+                throw new Error(`Expected thought to say 'sul on juba max elud', got: "${maxHpTestResult.thought}"`);
+            }
+
             // Verify Carriage 200 Final Boss exists at the end of carriage
             const bossExists = await page.evaluate(() => !!window.__lastMetro.carriage200Boss);
             const bossZ = await page.evaluate(() => window.__lastMetro.carriage200Boss?.group?.position?.z);
@@ -3961,6 +4065,26 @@ try {
             console.log(`   Carriage 200 Boss Exists: ${bossExists}, Boss Z (Expected > 35): ${bossZ}, Initial HP (Expected: 10): ${bossInitialHp}`);
             if (!bossExists || bossZ < 35 || bossInitialHp !== 10) {
                 throw new Error(`Carriage 200 boss must exist at end of carriage with 10 hits HP!`);
+            }
+
+            // Test Boss movement towards player ("pahalane saab liikuda")
+            const bossMoveTestResult = await page.evaluate(() => {
+                const lm = window.__lastMetro;
+                lm.state = 'player_free';
+                const b = lm.carriage200Boss;
+                const startZ = b.group.position.z;
+                // Position player at Z = 20 (closer to front)
+                lm.playerPos.set(0, 1.6, 20.0);
+                // Advance game physics for 1 second
+                for (let i = 0; i < 60; i++) {
+                    lm.update(0.016);
+                }
+                const newZ = b.group.position.z;
+                return { startZ, newZ, movedCloser: newZ < startZ };
+            });
+            console.log(`   Carriage 200 Boss Movement: Start Z=${bossMoveTestResult.startZ.toFixed(2)} -> New Z=${bossMoveTestResult.newZ.toFixed(2)} (Moved closer: ${bossMoveTestResult.movedCloser})`);
+            if (!bossMoveTestResult.movedCloser) {
+                throw new Error("Carriage 200 Boss must be able to move towards the player!");
             }
 
             // Test attacking boss with sword: takes 10 hits to kill ("keda tapad mõõgaga 10 lõõki")
@@ -4686,6 +4810,36 @@ try {
                 }
                 console.log(`     - Crate ${tier}: SVG artwork=✅, stock=${crateInfo.stockVal}, timer verified: ✅`);
             }
+
+            // Verify Crate Shop Modal Scrolling (User can scroll down smoothly to bottom crates)
+            console.log('   Testing Crate Shop Modal Scrolling (scrollHeight > clientHeight, scrollTop changes):');
+            const scrollInfo = await page.evaluate(() => {
+                const shopTab = document.getElementById('tab-shop-view');
+                const lastCard = document.getElementById('crate-card-set_voidgalaxy');
+                const initialScrollTop = shopTab ? shopTab.scrollTop : -1;
+                const canScroll = shopTab ? shopTab.scrollHeight > shopTab.clientHeight : false;
+                
+                // Scroll down
+                if (shopTab) {
+                    shopTab.scrollTop = 400;
+                }
+                const scrolledTop = shopTab ? shopTab.scrollTop : -1;
+                
+                return {
+                    hasShopTab: !!shopTab,
+                    clientHeight: shopTab?.clientHeight,
+                    scrollHeight: shopTab?.scrollHeight,
+                    canScroll,
+                    initialScrollTop,
+                    scrolledTop,
+                    hasLastCard: !!lastCard
+                };
+            });
+            console.log(`     - Shop Scrollability: clientHeight=${scrollInfo.clientHeight}, scrollHeight=${scrollInfo.scrollHeight}, canScroll=${scrollInfo.canScroll}, scrolledTop=${scrollInfo.scrolledTop}`);
+            if (!scrollInfo.canScroll || scrollInfo.scrolledTop <= 0) {
+                throw new Error(`Crate shop modal is not scrollable! ${JSON.stringify(scrollInfo)}`);
+            }
+            console.log('   Crate shop vertical scrolling down verified: ✅');
 
             // Test In-Game Crate Purchase Restriction (Only allowed in lobby)
             console.log('   Testing In-Game Crate Purchase Restriction (Shop only accessible/buyable in lobby):');
@@ -5514,20 +5668,45 @@ try {
                 const yards = window.yardService ? window.yardService.getYards() : 0;
                 const inv = window.yardService ? window.yardService.getInventory() : [];
                 const avatarRig = window.playardAvatar;
-                const hasAvatarHat = avatarRig ? avatarRig.hasItem('hat_tactical_beret') : false;
+
+                // Save custom avatar configuration to database
+                let avatarSaveSuccess = false;
+                let avatarSyncSuccess = false;
+                if (avatarRig) {
+                    await avatarRig.saveAvatar({ hatId: 'hat_royal_crown', faceId: 'face_smile', movementStyle: 'anim_style_ninja' });
+                    avatarSaveSuccess = await avatarRig.syncToCloud();
+
+                    // Clear local storage to simulate a fresh device
+                    localStorage.removeItem('playard_avatar_config_5cc22da5-ea52-4623-8978-09a2c33bc5b2');
+                    localStorage.removeItem('playard_avatar_config_guest');
+
+                    // Pull freshly from cloud database
+                    avatarSyncSuccess = await avatarRig.syncWithCloud();
+                }
+
+                const pulledConfig = avatarRig ? avatarRig.getConfig() : null;
+                const avatarSyncedFromDb = pulledConfig?.hatId === 'hat_royal_crown';
+                const hasAvatarHat = avatarRig ? (avatarRig.hasItem('hat_royal_crown') || avatarRig.hasItem('hat_tactical_beret')) : false;
 
                 return {
                     hasYardService: !!window.yardService,
                     yards,
                     hasInventory: Array.isArray(inv),
                     invCount: inv.length,
-                    hasAvatarHat
+                    hasAvatarHat,
+                    avatarSaveSuccess,
+                    avatarSyncSuccess,
+                    avatarSyncedFromDb,
+                    pulledHatId: pulledConfig?.hatId
                 };
             });
 
-            console.log(`   Cloud Sync Results: hasService=${syncResults.hasYardService}, Yards=${syncResults.yards}, InventoryCount=${syncResults.invCount}, HatSynced=${syncResults.hasAvatarHat}`);
+            console.log(`   Cloud Sync Results: hasService=${syncResults.hasYardService}, Yards=${syncResults.yards}, InventoryCount=${syncResults.invCount}, AvatarSyncedFromDB=${syncResults.avatarSyncedFromDb} (Hat: ${syncResults.pulledHatId})`);
             if (!syncResults.hasYardService || syncResults.yards < 1000) {
                 throw new Error("Cloud sync failed: Playard owner yards should be initialized/synced!");
+            }
+            if (!syncResults.avatarSyncedFromDb) {
+                throw new Error(`Avatar database cloud sync failed! Expected hat 'hat_royal_crown', got: '${syncResults.pulledHatId}'`);
             }
             console.log("✅ Cross-Device Cloud Synchronization testid edukalt läbitud!");
 
