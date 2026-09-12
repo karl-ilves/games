@@ -1011,9 +1011,50 @@ class YardService {
     public getLocalCreatedGames(): CreatedGame[] {
         try {
             const raw = localStorage.getItem(GAMES_STORAGE_KEY);
-            if (raw) return JSON.parse(raw);
-        } catch (e) {}
-        return [];
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    public async getAllCreatedGames(): Promise<CreatedGame[]> {
+        const localGames = this.getLocalCreatedGames();
+        const gamesMap = new Map<string, CreatedGame>();
+        for (const g of localGames) {
+            gamesMap.set(g.id, g);
+        }
+
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('user_created_games')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (!error && Array.isArray(data)) {
+                    data.forEach(d => {
+                        gamesMap.set(d.id, {
+                            id: d.id,
+                            userId: d.user_id,
+                            creatorUsername: d.creator_username,
+                            title: d.title,
+                            description: d.description || '',
+                            category: d.category || 'Adventure',
+                            thumbnail: d.thumbnail,
+                            sceneData: d.scene_data,
+                            status: d.status,
+                            feedback: d.feedback,
+                            plays: d.plays || 0,
+                            createdAt: new Date(d.created_at).getTime(),
+                            updatedAt: new Date(d.updated_at).getTime()
+                        });
+                    });
+                }
+            } catch (err) {
+                console.warn('Could not fetch all games from cloud:', err);
+            }
+        }
+        return Array.from(gamesMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     }
 
     public async getPendingGames(): Promise<CreatedGame[]> {

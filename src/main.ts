@@ -13,6 +13,7 @@ initAuth();
 function updateAdminControlsVisibility(userEmail?: string | null, username?: string | null) {
     const adminStreakControls = document.getElementById('streak-admin-controls');
     const adminNavBtn = document.getElementById('btn-open-admin-panel');
+    const dbNavBtn = document.getElementById('btn-open-database-panel');
     
     const prof = getCurrentUserProfile();
     const emailToCheck = userEmail !== undefined ? userEmail : prof?.email;
@@ -24,8 +25,13 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
     if (adminStreakControls) {
         adminStreakControls.style.display = showAdminPanel ? 'flex' : 'none';
     }
+    
     if (adminNavBtn) {
         adminNavBtn.style.display = showAdminPanel ? 'flex' : 'none';
+    }
+    
+    if (dbNavBtn) {
+        dbNavBtn.style.display = showAdminPanel ? 'flex' : 'none';
     }
     const btnOpenStreak = document.getElementById('btn-open-streak');
     if (btnOpenStreak) {
@@ -523,10 +529,14 @@ function setupModals() {
     document.getElementById('btn-create-game')?.addEventListener('click', handleCreateGameClick);
     document.getElementById('btn-hub-create-game')?.addEventListener('click', handleCreateGameClick);
 
-    // 6. Admin Panel Modal & Tabs
+    // 6. Admin Panel & Database Modal
     const modalAdmin = document.getElementById('modal-admin-panel');
     const openAdminBtn = document.getElementById('btn-open-admin-panel');
     const closeAdminBtn = document.getElementById('btn-close-admin-panel');
+
+    const modalDatabase = document.getElementById('modal-database-panel');
+    const openDatabaseBtn = document.getElementById('btn-open-database-panel');
+    const closeDatabaseBtn = document.getElementById('btn-close-database-panel');
 
     if (openAdminBtn && modalAdmin) {
         openAdminBtn.addEventListener('click', () => {
@@ -540,6 +550,20 @@ function setupModals() {
     }
     if (closeAdminBtn && modalAdmin) {
         closeAdminBtn.addEventListener('click', () => modalAdmin.style.display = 'none');
+    }
+
+    if (openDatabaseBtn && modalDatabase) {
+        openDatabaseBtn.addEventListener('click', () => {
+            const prof = getCurrentUserProfile();
+            if (!isUserAdmin(prof?.email)) {
+                return;
+            }
+            modalDatabase.style.display = 'flex';
+            renderDatabaseGamesList();
+        });
+    }
+    if (closeDatabaseBtn && modalDatabase) {
+        closeDatabaseBtn.addEventListener('click', () => modalDatabase.style.display = 'none');
     }
 
     // Send Update to Owner Handler
@@ -955,10 +979,69 @@ try {
     console.warn('Avatar widget initialization error:', e);
 }
 
+async function renderDatabaseGamesList() {
+    const listContainer = document.getElementById('database-games-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 20px;">Laen andmebaasist mänge...</div>';
+    
+    try {
+        const allGames = await yardService.getAllCreatedGames();
+        
+        if (!allGames || allGames.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; color: #a4b0be; padding: 20px;">Andmebaasis ei ole ühtegi mängu.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        allGames.forEach(game => {
+            const el = document.createElement('div');
+            el.style.background = '#1e2733';
+            el.style.padding = '12px';
+            el.style.borderRadius = '8px';
+            el.style.border = '1px solid rgba(255,255,255,0.1)';
+            el.style.display = 'flex';
+            el.style.justifyContent = 'space-between';
+            el.style.alignItems = 'center';
+            
+            const dateStr = new Date(game.createdAt || Date.now()).toLocaleDateString('et-EE');
+            
+            el.innerHTML = `
+                <div>
+                    <h4 style="margin: 0 0 5px 0; color: #fff; font-size: 1rem;">${game.title} <span style="font-size: 0.75rem; color: #718093; margin-left: 5px;">(${game.id})</span></h4>
+                    <div style="font-size: 0.8rem; color: #a4b0be;">
+                        👤 Looja: <strong style="color: #ffd32a;">${game.creatorUsername}</strong> &nbsp;|&nbsp; 
+                        📌 Staatus: <strong style="color: ${game.status === 'approved' ? '#0be881' : '#f39c12'};">${game.status}</strong> &nbsp;|&nbsp; 
+                        📅 Loodud: ${dateStr}
+                    </div>
+                </div>
+                <button class="btn-db-delete" data-id="${game.id}" style="background: rgba(255,50,50,0.8); border: none; color: white; border-radius: 5px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem;">🗑️ Kustuta</button>
+            `;
+            listContainer.appendChild(el);
+        });
+
+        listContainer.querySelectorAll('.btn-db-delete').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const gameId = (e.currentTarget as HTMLElement).getAttribute('data-id');
+                if (gameId && confirm('KUSTUTA ANDMEBAASIST: Oled sa täiesti kindel? Seda ei saa tagasi võtta!')) {
+                    const success = await yardService.deleteCreatedGame(gameId);
+                    if (success) {
+                        renderDatabaseGamesList();
+                        renderCommunityGames();
+                    }
+                }
+            });
+        });
+
+    } catch (err) {
+        console.warn('Error loading db games', err);
+        listContainer.innerHTML = '<div style="text-align: center; color: #ff4757; padding: 20px;">Viga andmebaasi laadimisel!</div>';
+    }
+}
+
 window.addEventListener('playard_auth_changed', (e: any) => {
     const profile = e.detail?.profile || e.detail;
     updateAdminControlsVisibility(profile?.email, profile?.username);
     renderRecentlyPlayed();
     if (avatarWidget) avatarWidget.updateProfileUI();
 });
-

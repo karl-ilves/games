@@ -923,6 +923,10 @@
                 <span>👑</span>
                 <span>Admin Panel</span>
             </button>
+            <button id="btn-open-database-panel" class="nav-btn admin-nav-btn" style="display: none;">
+                <span>🗄️</span>
+                <span>Andmebaas</span>
+            </button>
         </div>
     </nav>
 
@@ -1267,6 +1271,24 @@
 
             <div id="admin-sent-updates-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="text-align: center; color: #718093; padding: 20px;">Uuendusi pole veel saadetud.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Panel Modal -->
+    <div id="modal-database-panel" class="modal-overlay">
+        <div class="modal-card" style="max-width: 800px; text-align: left;">
+            <button class="modal-close" id="btn-close-database-panel">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <span style="font-size: 1.8rem;">🗄️</span>
+                <h2 style="margin: 0; color: #0be881; font-size: 1.6rem;">Mängude Andmebaas</h2>
+            </div>
+            <p style="color: #a4b0be; margin: 0 0 18px 0; font-size: 0.9rem;">
+                Siin näed kõiki loodud mänge andmebaasis ja saad neid hallata / kustutada.
+            </p>
+
+            <div id="database-games-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="text-align: center; color: #718093; padding: 20px;">Laen andmebaasist mänge...</div>
             </div>
         </div>
     </div>
