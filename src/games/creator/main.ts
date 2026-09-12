@@ -1136,13 +1136,6 @@ export function removeSea() {
 
 export function setMapEnvironment(type: 'land' | 'sea') {
     if (type === 'sea') {
-        // Meres ei ole saari ega mingeid muid asju – eemalda kõik objektid, et meri oleks 100% puhas!
-        for (const p of placedObjects) {
-            scene.remove(p.mesh);
-        }
-        placedObjects = [];
-        selectObject(null);
-
         createWholeMapOcean(false);
     } else {
         removeSea();
@@ -1921,7 +1914,23 @@ function createObjectMesh(item: CatalogItem, color?: string): THREE.Group {
 }
 
 // --- Spawn Catalog Item into Scene ---
-function spawnObjectIntoScene(catalogItem: CatalogItem) {
+function spawnObjectIntoScene(itemOrId: CatalogItem | string) {
+    let catalogItem: CatalogItem;
+    if (typeof itemOrId === 'string') {
+        const found = CATALOG_DATABASE.find(c => c.id === itemOrId || c.geometryType === itemOrId || c.name.toLowerCase().includes(itemOrId.toLowerCase()));
+        catalogItem = found || {
+            id: itemOrId,
+            name: itemOrId,
+            category: 'nature',
+            icon: '📦',
+            color: '#00f2fe',
+            geometryType: itemOrId.toLowerCase(),
+            baseScale: 1
+        };
+    } else {
+        catalogItem = itemOrId;
+    }
+
     const mesh = createObjectMesh(catalogItem);
     
     // Position in front of camera or at center
@@ -2208,8 +2217,7 @@ export function loadSceneFromData(sceneData: any) {
     }
     updateGameplayHUD();
 
-    const isPureSea = (sceneData.mapType === 'sea' || sceneData.seaConfig?.type === 'whole');
-    if (Array.isArray(sceneData.objects) && !isPureSea) {
+    if (Array.isArray(sceneData.objects)) {
         sceneData.objects.forEach((objData: any) => {
             const catItem: CatalogItem = CATALOG_DATABASE.find(c => c.id === objData.catalogId) || {
                 id: objData.catalogId || 'obj_custom',
@@ -2248,6 +2256,8 @@ export function loadSceneFromData(sceneData: any) {
                 catalogId: catItem.id,
                 name: objData.name || catItem.name,
                 category: objData.category || catItem.category,
+                isSpawnPoint: objData.isSpawnPoint,
+                isInvisibleSpawn: objData.isInvisibleSpawn,
                 isAirplane: objData.isAirplane,
                 isBoat: objData.isBoat,
                 position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
@@ -2548,6 +2558,10 @@ async function initStudio() {
         getMapEnvironment,
         updateMapEnvironmentUI,
         startNewEmptyGame,
+        saveCurrentGame,
+        autoSaveDraft,
+        serializeCurrentScene,
+        loadSceneFromData,
         isPositionInWater,
         executeAiBuild,
         loadAiSchoolMemory,
@@ -3633,6 +3647,24 @@ function setupStudioEvents() {
     // Save Game Button
     document.getElementById('btn-save-draft')?.addEventListener('click', () => {
         saveCurrentGame(true);
+    });
+
+    // Auto-save on page exit, window unload, tab close, or navigation
+    window.addEventListener('beforeunload', () => {
+        autoSaveDraft();
+    });
+    window.addEventListener('pagehide', () => {
+        autoSaveDraft();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            autoSaveDraft();
+        }
+    });
+
+    // When clicking logo / back button to Hub, auto-save before navigating
+    document.querySelector('a.btn-back')?.addEventListener('click', () => {
+        autoSaveDraft();
     });
 
     // My Games Modal Open/Close Buttons
@@ -5976,16 +6008,15 @@ async function restoreDraftOrFeedbackGame() {
     // 2. If no feedback game, restore local auto-saved draft
     if (!hasRestored) {
         const urlParams = new URLSearchParams(window.location.search);
+        const draft = yardService.getDraftGame(profile?.username ?? null);
+
         if (urlParams.get('env') === 'sea' || urlParams.get('map') === 'sea') {
             createWholeMapOcean(true);
-        } else {
-            const draft = yardService.getDraftGame(profile?.username ?? null);
-            if (draft && Array.isArray(draft.objects) && draft.objects.length > 0) {
-                loadSceneFromData(draft);
-                const indicator = document.getElementById('draft-status-indicator');
-                if (indicator) {
-                    indicator.innerText = '💾 Draft Restored';
-                }
+        } else if (draft && (Array.isArray(draft.objects) || draft.mapType || draft.seaConfig || draft.title)) {
+            loadSceneFromData(draft);
+            const indicator = document.getElementById('draft-status-indicator');
+            if (indicator) {
+                indicator.innerText = '💾 Draft Restored';
             }
         }
     }

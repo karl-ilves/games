@@ -1164,11 +1164,20 @@ class YardService {
         const gameTitle = gameData.title?.trim() || 'My 3D Game';
         const idx = list.findIndex(g => g.title?.toLowerCase() === gameTitle.toLowerCase() || (gameData.id && g.id === gameData.id));
         const savedEntry = {
-            id: gameData.id || 'game_saved_' + Date.now(),
+            ...gameData,
+            id: gameData.id || (idx >= 0 ? list[idx].id : 'game_saved_' + Date.now()),
             title: gameTitle,
             category: gameData.category || 'Adventure',
             description: gameData.description || '',
-            objects: gameData.objects || [],
+            mapType: gameData.mapType || (gameData.seaConfig ? 'sea' : 'land'),
+            seaConfig: gameData.seaConfig ? JSON.parse(JSON.stringify(gameData.seaConfig)) : null,
+            playerMaxHealth: gameData.playerMaxHealth ?? 100,
+            isHealthVisible: gameData.isHealthVisible !== undefined ? gameData.isHealthVisible : true,
+            playerCoins: gameData.playerCoins ?? 0,
+            isCoinsVisible: gameData.isCoinsVisible !== undefined ? gameData.isCoinsVisible : true,
+            playerMaxAsma: gameData.playerMaxAsma ?? 100,
+            isAsmaVisible: gameData.isAsmaVisible !== undefined ? gameData.isAsmaVisible : true,
+            objects: Array.isArray(gameData.objects) ? JSON.parse(JSON.stringify(gameData.objects)) : [],
             objectCount: gameData.objects?.length || 0,
             updatedAt: Date.now()
         };

@@ -1819,6 +1819,78 @@ try {
             // Exit Play Test mode back to Edit mode
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
+
+            // Test Save Game, Auto-Save on leave, and Sea/Land preservation with objects
+            console.log("   Testing Save Game & Auto-Save: Sea/Land environment and objects preservation...");
+            const seaSaveTest = await page.evaluate(async () => {
+                const cs = window.creatorStudio;
+                if (!cs) return { ok: false, error: "creatorStudio not found on window!" };
+
+                // 1. Switch to Sea environment
+                cs.setMapEnvironment('sea');
+                if (cs.getMapEnvironment() !== 'sea') {
+                    return { ok: false, error: "Failed to switch to sea environment!" };
+                }
+
+                // 2. Spawn an object into the sea
+                cs.spawnObjectIntoScene('boat_speedboat');
+                const objectsInSea = cs.placedObjects.length;
+                if (objectsInSea === 0) {
+                    return { ok: false, error: "Failed to spawn object in sea!" };
+                }
+
+                // 3. Save Game
+                cs.saveCurrentGame(false);
+
+                // 4. Inspect serialized draft and saved game
+                const rawDraft = localStorage.getItem('playard_draft_game_global');
+                if (!rawDraft) return { ok: false, error: "Draft not saved in localStorage!" };
+                const draft = JSON.parse(rawDraft);
+
+                if (draft.mapType !== 'sea') {
+                    return { ok: false, error: `Expected draft.mapType to be 'sea', got '${draft.mapType}'` };
+                }
+                if (!draft.objects || draft.objects.length === 0) {
+                    return { ok: false, error: "Draft objects array is empty after saving sea game!" };
+                }
+
+                // 5. Clear scene and restore from draft (simulating leaving and returning)
+                cs.loadSceneFromData(draft);
+
+                const envAfterRestore = cs.getMapEnvironment();
+                const objectsAfterRestore = cs.placedObjects.length;
+                const seaMeshVisible = !!cs.oceanWaterMesh;
+
+                if (envAfterRestore !== 'sea') {
+                    return { ok: false, error: `Expected restored environment to be 'sea', got '${envAfterRestore}'` };
+                }
+                if (!seaMeshVisible) {
+                    return { ok: false, error: "Ocean water mesh missing after restoring sea game!" };
+                }
+                if (objectsAfterRestore === 0) {
+                    return { ok: false, error: "Objects placed in sea were not restored!" };
+                }
+
+                // 6. Test Land preservation
+                cs.setMapEnvironment('land');
+                cs.saveCurrentGame(false);
+                const rawLandDraft = localStorage.getItem('playard_draft_game_global');
+                const landDraft = JSON.parse(rawLandDraft);
+                if (landDraft.mapType !== 'land') {
+                    return { ok: false, error: `Expected landDraft.mapType to be 'land', got '${landDraft.mapType}'` };
+                }
+
+                return {
+                    ok: true,
+                    envAfterRestore,
+                    objectsAfterRestore,
+                    seaMeshVisible
+                };
+            });
+            console.log("   Sea/Land and objects save & restore verified:", seaSaveTest);
+            if (!seaSaveTest.ok) {
+                throw new Error(seaSaveTest.error);
+            }
         }
 
         // Test Custom Item 3D Workbench (Create Item, Push-Pull Height/Elevation, Save, Publish, Place)
