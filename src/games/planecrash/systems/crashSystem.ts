@@ -17,6 +17,7 @@ export class CrashSystem {
     private trailTimer: number = 0;
 
     public onCrashTriggered?: (report: CrashBreakdown) => void;
+    public onDamageTriggered?: (text: string) => void;
 
     constructor(environment: WorldEnvironment, particles: ParticleSystem) {
         this.environment = environment;
@@ -25,15 +26,54 @@ export class CrashSystem {
 
     /**
      * Checks if the aircraft collided with any terrain, structure, or water level.
+     * Supports localized dismemberment:
+     * - Left wing strike rips off left wing -> violent death roll
+     * - Right wing strike rips off right wing -> violent death roll
+     * - Tail strike rips off tail fin/stabilizer -> loss of pitch/yaw control
+     * - Main fuselage/nose strike -> full catastrophic explosion
      */
     public checkCollisions(physics: FlightPhysics, plane: BuiltPlaneResult): boolean {
         if (physics.state.isCrashed) return false;
 
         const pos = physics.position;
-        const planeSphere = new THREE.Sphere(pos, 3.5);
+        const quat = physics.quaternion;
 
-        // 1. Water / Ground Check (y <= 2.2)
-        if (pos.y <= 2.2) {
+        // 1. Check Left Wing Strike
+        if (!physics.state.leftWingBroken && plane.wingLeft.visible) {
+            const leftWingTip = new THREE.Vector3(-plane.wingSpan / 2, 0.2, -0.2)
+                .applyQuaternion(quat)
+                .add(pos);
+
+            if (leftWingTip.y <= 1.8 || this.isPointInObstacle(leftWingTip)) {
+                this.breakOffLeftWing(physics, plane, leftWingTip);
+            }
+        }
+
+        // 2. Check Right Wing Strike
+        if (!physics.state.rightWingBroken && plane.wingRight.visible) {
+            const rightWingTip = new THREE.Vector3(plane.wingSpan / 2, 0.2, -0.2)
+                .applyQuaternion(quat)
+                .add(pos);
+
+            if (rightWingTip.y <= 1.8 || this.isPointInObstacle(rightWingTip)) {
+                this.breakOffRightWing(physics, plane, rightWingTip);
+            }
+        }
+
+        // 3. Check Tail Strike
+        if (!physics.state.tailBroken && plane.tailFin.visible) {
+            const tailTip = new THREE.Vector3(0, plane.tailY, plane.tailZ)
+                .applyQuaternion(quat)
+                .add(pos);
+
+            if (tailTip.y <= 1.8 || this.isPointInObstacle(tailTip)) {
+                this.breakOffTail(physics, plane, tailTip);
+            }
+        }
+
+        // 4. Check Full Fuselage / Nose Strike
+        const noseTip = new THREE.Vector3(0, 0, -3.5).applyQuaternion(quat).add(pos);
+        if (pos.y <= 2.2 || noseTip.y <= 2.0) {
             const obstacle = this.environment.obstacles.find(o => o.type === 'water') || {
                 name: 'Ookean / Vesi',
                 type: 'water',
@@ -44,15 +84,113 @@ export class CrashSystem {
             return true;
         }
 
-        // 2. Obstacles check (Mountains, Skyscrapers, Bridge, Towers)
+        // Check obstacles against fuselage sphere (radius 2.2)
+        const fuseSphere = new THREE.Sphere(pos, 2.2);
+        const noseSphere = new THREE.Sphere(noseTip, 1.6);
         for (const obs of this.environment.obstacles) {
-            if (obs.bounds.intersectsSphere(planeSphere)) {
+            if (obs.bounds.intersectsSphere(fuseSphere) || obs.bounds.intersectsSphere(noseSphere)) {
                 this.executeCrash(physics, plane, obs);
                 return true;
             }
         }
 
         return false;
+    }
+
+    private isPointInObstacle(point: THREE.Vector3): boolean {
+        for (const obs of this.environment.obstacles) {
+            if (obs.bounds.containsPoint(point)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public breakOffLeftWing(physics: FlightPhysics, plane: BuiltPlaneResult, contactPoint: THREE.Vector3): void {
+        if (physics.state.leftWingBroken) return;
+        physics.state.leftWingBroken = true;
+
+        console.log("💥 LEFT WING STRUCK! Left wing severed from fuselage!");
+
+        // Detach wing and spawn as active tumbling debris
+        this.detachPartAsDebris(plane.wingLeft, physics, new THREE.Vector3(-18, 10, 4));
+
+        // Visual sparks and metal crunch sound
+        this.particles.spawnCrashExplosion(contactPoint, 0.45, contactPoint.y <= 2.2);
+        planeAudio.playCrashExplosion(0.45);
+
+        if (this.onDamageTriggered) {
+            this.onDamageTriggered('💥 VASAK TIIB REBITUD ÄRA! LENNUK KUKKUB ALLA!');
+        }
+    }
+
+    public breakOffRightWing(physics: FlightPhysics, plane: BuiltPlaneResult, contactPoint: THREE.Vector3): void {
+        if (physics.state.rightWingBroken) return;
+        physics.state.rightWingBroken = true;
+
+        console.log("💥 RIGHT WING STRUCK! Right wing severed from fuselage!");
+
+        this.detachPartAsDebris(plane.wingRight, physics, new THREE.Vector3(18, 10, 4));
+
+        this.particles.spawnCrashExplosion(contactPoint, 0.45, contactPoint.y <= 2.2);
+        planeAudio.playCrashExplosion(0.45);
+
+        if (this.onDamageTriggered) {
+            this.onDamageTriggered('💥 PAREM TIIB REBITUD ÄRA! LENNUK KUKKUB ALLA!');
+        }
+    }
+
+    public breakOffTail(physics: FlightPhysics, plane: BuiltPlaneResult, contactPoint: THREE.Vector3): void {
+        if (physics.state.tailBroken) return;
+        physics.state.tailBroken = true;
+
+        console.log("💥 TAIL STRUCK! Tail assembly ripped off!");
+
+        this.detachPartAsDebris(plane.tailFin, physics, new THREE.Vector3(0, 14, 16));
+        this.detachPartAsDebris(plane.tailHorizontal, physics, new THREE.Vector3(0, 12, 18));
+
+        this.particles.spawnCrashExplosion(contactPoint, 0.5, contactPoint.y <= 2.2);
+        planeAudio.playCrashExplosion(0.5);
+
+        if (this.onDamageTriggered) {
+            this.onDamageTriggered('💥 SABA REBITUD ÄRA (TAIL STRIKE)! JUHITAVUS KADUNUD!');
+        }
+    }
+
+    private detachPartAsDebris(part: THREE.Object3D, physics: FlightPhysics, impulseOffset: THREE.Vector3): void {
+        if (!part) return;
+
+        const worldPos = new THREE.Vector3();
+        const worldQuat = new THREE.Quaternion();
+        part.getWorldPosition(worldPos);
+        part.getWorldQuaternion(worldQuat);
+
+        part.visible = false;
+
+        const debrisMesh = part.clone(true);
+        debrisMesh.visible = true;
+        debrisMesh.position.copy(worldPos);
+        debrisMesh.quaternion.copy(worldQuat);
+        this.environment.scene.add(debrisMesh);
+
+        const baseVel = physics.velocity.clone();
+        const impulse = impulseOffset.clone().applyQuaternion(physics.quaternion);
+        const vel = baseVel.clone().multiplyScalar(0.7).add(impulse);
+
+        const rotVel = new THREE.Vector3(
+            (Math.random() - 0.5) * 16,
+            (Math.random() - 0.5) * 16,
+            (Math.random() - 0.5) * 16
+        );
+
+        this.debrisPieces.push({
+            mesh: debrisMesh,
+            velocity: vel,
+            rotVelocity: rotVel,
+            isGrounded: false,
+            sparkTimer: 0
+        });
+        this.isDebrisSimulating = true;
     }
 
     public executeCrash(physics: FlightPhysics, plane: BuiltPlaneResult, obstacle: CrashObstacle): void {
@@ -96,14 +234,11 @@ export class CrashSystem {
      * - High-speed flying shrapnel shards with fire trails
      */
     private breakPlaneIntoUltraDebris(physics: FlightPhysics, plane: BuiltPlaneResult): void {
-        this.debrisPieces = [];
         this.isDebrisSimulating = true;
 
         const baseVel = physics.velocity.clone();
         const root = plane.rootGroup;
         root.visible = false;
-
-        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(physics.quaternion);
 
         // Charred scorched material for crash fragments
         const charredMat = new THREE.MeshStandardMaterial({
@@ -119,9 +254,9 @@ export class CrashSystem {
             roughness: 0.8
         });
 
-        // 1. Extract major sub-components with independent physics
+        // 1. Extract remaining attached meshes
         const collectMeshes = (obj: THREE.Object3D) => {
-            if ((obj as THREE.Mesh).isMesh) {
+            if ((obj as THREE.Mesh).isMesh && obj.visible) {
                 const worldPos = new THREE.Vector3();
                 const worldQuat = new THREE.Quaternion();
                 obj.getWorldPosition(worldPos);
@@ -138,7 +273,6 @@ export class CrashSystem {
 
                 this.environment.scene.add(debrisMesh);
 
-                // Violent radial explosive velocity added to forward velocity
                 const scatterSpeed = 15 + Math.random() * 35;
                 const scatterDir = new THREE.Vector3(
                     (Math.random() - 0.5) * 2,
@@ -162,18 +296,17 @@ export class CrashSystem {
                 });
             }
             for (const child of obj.children) {
-                collectMeshes(child);
+                if (child.visible) collectMeshes(child);
             }
         };
 
         plane.debrisCandidates.forEach(cand => {
-            if (cand) collectMeshes(cand);
+            if (cand && cand.visible) collectMeshes(cand);
         });
 
         // 2. Generate 25+ extra jagged shrapnel pieces and twisted metal shards
         const shardCount = 28;
         for (let i = 0; i < shardCount; i++) {
-            // Procedural jagged triangular shard geometry
             const shardGeom = new THREE.ConeGeometry(0.4 + Math.random() * 0.8, 1.2 + Math.random() * 2.2, 4);
             shardGeom.rotateZ(Math.random() * Math.PI);
             const shardMat = Math.random() < 0.4 ? charredMat : glowingMetalMat;
@@ -188,7 +321,6 @@ export class CrashSystem {
 
             this.environment.scene.add(shardMesh);
 
-            // Shrapnel shoots out at extreme velocities
             const scatterDir = new THREE.Vector3(
                 (Math.random() - 0.5) * 2,
                 Math.random() * 1.8 + 0.3,
@@ -217,7 +349,6 @@ export class CrashSystem {
     public updateDebris(dt: number): void {
         if (!this.isDebrisSimulating) return;
 
-        // Accelerate time back to 1.0 gradually
         if (this.timeScale < 1.0) {
             this.timeScale = Math.min(1.0, this.timeScale + dt * 0.5);
         }
@@ -229,38 +360,32 @@ export class CrashSystem {
 
         for (const debris of this.debrisPieces) {
             if (debris.isGrounded) {
-                // High ground friction
                 debris.velocity.multiplyScalar(0.88);
                 debris.rotVelocity.multiplyScalar(0.85);
                 continue;
             }
 
-            // Gravity & Air Drag
             debris.velocity.y -= 26.0 * effectiveDt;
             debris.velocity.multiplyScalar(0.985);
             debris.mesh.position.addScaledVector(debris.velocity, effectiveDt);
 
-            // Violent Tumbling
             debris.mesh.rotation.x += debris.rotVelocity.x * effectiveDt;
             debris.mesh.rotation.y += debris.rotVelocity.y * effectiveDt;
             debris.mesh.rotation.z += debris.rotVelocity.z * effectiveDt;
 
-            // Emit burning smoke and spark trails behind flying debris
             if (shouldSpawnTrail && Math.random() < 0.45) {
                 this.particles.spawnDebrisTrail(debris.mesh.position, false);
             }
 
-            // Surface collision (ground / water at y = 1.5)
             if (debris.mesh.position.y <= 1.5) {
                 debris.mesh.position.y = 1.5;
 
-                // Violent ground impacts throw sparks & dust
                 if (Math.abs(debris.velocity.y) > 4.0) {
                     this.particles.spawnDebrisTrail(debris.mesh.position, true);
                 }
 
-                debris.velocity.y *= -0.32; // Inelastic rebound
-                debris.velocity.x *= 0.62;  // Skid friction
+                debris.velocity.y *= -0.32;
+                debris.velocity.x *= 0.62;
                 debris.velocity.z *= 0.62;
                 debris.rotVelocity.multiplyScalar(0.5);
 

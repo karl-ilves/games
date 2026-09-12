@@ -154,6 +154,12 @@ export class PlaneCrashGame {
             this.hud.showStuntToast(text);
         };
 
+        // Partial damage (wing rip off / tail strike)
+        this.crashSys.onDamageTriggered = (text) => {
+            this.hud.showStuntToast(text);
+            this.cameraSys.triggerImpactShake(1.2);
+        };
+
         // Crash Triggered
         this.crashSys.onCrashTriggered = (report) => {
             this.cameraSys.setCrashMode(this.crashSys.crashPosition);

@@ -12,6 +12,9 @@ export interface BuiltPlaneResult {
     engines: THREE.Object3D[];
     gearGroup?: THREE.Group;
     debrisCandidates: THREE.Object3D[];
+    wingSpan: number;
+    tailZ: number;
+    tailY: number;
 }
 
 export class PlaneBuilder {
@@ -521,6 +524,24 @@ export class PlaneBuilder {
         debrisCandidates.push(fuselage, wingLeft, wingRight, tailFin, tailHorizontal);
         engines.forEach(e => debrisCandidates.push(e));
 
+        let wingSpan = 10.0;
+        let tailZ = 3.0;
+        let tailY = 0.8;
+
+        switch (config.meshType) {
+            case 'cessna': wingSpan = 10.6; tailZ = 3.0; tailY = 0.8; break;
+            case 'piper': wingSpan = 10.2; tailZ = 2.8; tailY = 0.7; break;
+            case 'biplane': wingSpan = 7.6; tailZ = 2.4; tailY = 0.65; break;
+            case 'bizjet': wingSpan = 12.2; tailZ = 4.6; tailY = 2.0; break;
+            case 'warbird': wingSpan = 11.2; tailZ = 3.4; tailY = 0.8; break;
+            case 'airliner': wingSpan = 19.0; tailZ = 7.0; tailY = 2.5; break;
+            case 'fighter': wingSpan = 10.8; tailZ = 3.8; tailY = 1.2; break;
+            case 'supersonic': wingSpan = 13.5; tailZ = 7.5; tailY = 2.1; break;
+            case 'heavy_cargo': wingSpan = 28.0; tailZ = 9.0; tailY = 2.0; break;
+            case 'stealth_wing': wingSpan = 22.0; tailZ = 3.5; tailY = 0.5; break;
+            case 'shuttle': wingSpan = 12.2; tailZ = 6.8; tailY = 2.1; break;
+        }
+
         return {
             rootGroup: root,
             fuselage,
@@ -530,7 +551,10 @@ export class PlaneBuilder {
             tailHorizontal,
             propellerMesh,
             engines,
-            debrisCandidates
+            debrisCandidates,
+            wingSpan,
+            tailZ,
+            tailY
         };
     }
 

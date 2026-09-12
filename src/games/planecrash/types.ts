@@ -53,6 +53,9 @@ export interface FlightState {
     highestSpeedReached: number;
     stuntCloseCalls: number;
     lastCrashReport: CrashBreakdown | null;
+    leftWingBroken: boolean;
+    rightWingBroken: boolean;
+    tailBroken: boolean;
 }
 
 export interface CrashBreakdown {

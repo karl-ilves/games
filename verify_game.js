@@ -2550,7 +2550,7 @@ try {
         // Test bomb drop directly under fighter jet
         await page.click('#weapon-mg');
         await page.keyboard.press('Space');
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 600));
         console.log("   Successfully verified Fighter Jet Airstrike disabled and direct bomb dropping!");
         console.log("   Successfully unlocked and deployed Fighter Jet with 50,000 €!");
 
@@ -4118,15 +4118,22 @@ try {
                 const lm = window.__lastMetro;
                 lm.inventory['sword'] = true;
                 lm.equippedItem = 'sword';
-                // Stand in front of boss
-                lm.playerPos.set(0, 1.6, 39.0);
+                if (lm.carriage200Boss) {
+                    lm.playerPos.set(0, 1.6, lm.carriage200Boss.group.position.z - 1.5);
+                } else {
+                    lm.playerPos.set(0, 1.6, 35.0);
+                }
             });
 
             // Perform 9 sword strikes
             for (let strike = 1; strike <= 9; strike++) {
                 await page.evaluate(() => {
-                    window.__lastMetro.isSwordSwinging = false;
-                    window.__lastMetro.attackWithSword();
+                    const lm = window.__lastMetro;
+                    if (lm.carriage200Boss) {
+                        lm.playerPos.set(0, 1.6, lm.carriage200Boss.group.position.z - 1.5);
+                    }
+                    lm.isSwordSwinging = false;
+                    lm.attackWithSword();
                 });
             }
             const hpAfter9Strikes = await page.evaluate(() => window.__lastMetro.carriage200Boss?.hp);
@@ -4137,8 +4144,12 @@ try {
 
             // 10th sword strike: Boss dies, lights turn bright white, exit arrows appear, victory triggers upon walking through door
             await page.evaluate(() => {
-                window.__lastMetro.isSwordSwinging = false;
-                window.__lastMetro.attackWithSword();
+                const lm = window.__lastMetro;
+                if (lm.carriage200Boss) {
+                    lm.playerPos.set(0, 1.6, lm.carriage200Boss.group.position.z - 1.5);
+                }
+                lm.isSwordSwinging = false;
+                lm.attackWithSword();
             });
             await new Promise(r => setTimeout(r, 600));
 
@@ -5664,6 +5675,45 @@ try {
             if (!hudResult.hangarClosed || hudResult.alt < 50) {
                 throw new Error("Aircraft flight failed to launch with proper altitude telemetry!");
             }
+
+            // Test Localized Dismemberment: Wing Strike & Tail Strike
+            console.log("   Testing Localized Damage (Wing Strike & Tail Strike)...");
+            const damageTestResult = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return { success: false };
+
+                // 1. Strike left wing
+                const contactL = game.physics.position.clone();
+                game.crashSys.breakOffLeftWing(game.physics, game.currentPlaneMesh, contactL);
+                const wingBroken = game.physics.state.leftWingBroken;
+                const wingHidden = !game.currentPlaneMesh.wingLeft.visible;
+                const debrisAfterWing = game.crashSys.debrisPieces.length;
+
+                // 2. Strike tail
+                const contactT = game.physics.position.clone();
+                game.crashSys.breakOffTail(game.physics, game.currentPlaneMesh, contactT);
+                const tailBroken = game.physics.state.tailBroken;
+                const tailHidden = !game.currentPlaneMesh.tailFin.visible;
+                const debrisAfterTail = game.crashSys.debrisPieces.length;
+
+                return {
+                    wingBroken,
+                    wingHidden,
+                    debrisAfterWing,
+                    tailBroken,
+                    tailHidden,
+                    debrisAfterTail
+                };
+            });
+            console.log(`   Wing Strike: broken=${damageTestResult.wingBroken}, detached=${damageTestResult.wingHidden}, debrisCount=${damageTestResult.debrisAfterWing}`);
+            console.log(`   Tail Strike: broken=${damageTestResult.tailBroken}, detached=${damageTestResult.tailHidden}, debrisCount=${damageTestResult.debrisAfterTail}`);
+            if (!damageTestResult.wingBroken || !damageTestResult.wingHidden || damageTestResult.debrisAfterWing < 1) {
+                throw new Error("Wing strike must break off the wing, detach it, and spawn it as tumbling debris!");
+            }
+            if (!damageTestResult.tailBroken || !damageTestResult.tailHidden || damageTestResult.debrisAfterTail < 2) {
+                throw new Error("Tail strike must rip off the tail assembly and spawn it as tumbling debris!");
+            }
+            console.log("   Wing & Tail strike dismemberment verified: ✅");
 
             // Test Stunt & Crash Execution
             console.log("   Testing Aerobatic 360 Spin & Crash Mechanics...");

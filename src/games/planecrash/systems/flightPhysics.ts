@@ -44,7 +44,10 @@ export class FlightPhysics {
             highestAltitudeReached: 120,
             highestSpeedReached: 180,
             stuntCloseCalls: 0,
-            lastCrashReport: null
+            lastCrashReport: null,
+            leftWingBroken: false,
+            rightWingBroken: false,
+            tailBroken: false
         };
     }
 
@@ -94,9 +97,25 @@ export class FlightPhysics {
         // Control effectiveness increases with airspeed
         const controlAuthority = THREE.MathUtils.clamp(currentSpeedKmh / (this.config.topSpeedKmh * 0.4), 0.3, 1.2);
 
-        const pitchDelta = inputs.pitch * this.config.pitchRate * controlAuthority * dt;
-        const rollDelta = -inputs.roll * this.config.rollRate * controlAuthority * dt;
-        const yawDelta = -inputs.yaw * this.config.yawRate * controlAuthority * dt;
+        let pitchDelta = inputs.pitch * this.config.pitchRate * controlAuthority * dt;
+        let rollDelta = -inputs.roll * this.config.rollRate * controlAuthority * dt;
+        let yawDelta = -inputs.yaw * this.config.yawRate * controlAuthority * dt;
+
+        // Asymmetric aerodynamics & death spin when parts are ripped off:
+        if (this.state.leftWingBroken) {
+            rollDelta -= 6.5 * dt; // Violent death roll to the left
+            pitchDelta -= 2.0 * dt; // Uncontrolled nose drop
+            yawDelta -= 3.5 * dt;  // Yaw drag towards broken side
+        }
+        if (this.state.rightWingBroken) {
+            rollDelta += 6.5 * dt; // Violent death roll to the right
+            pitchDelta -= 2.0 * dt;
+            yawDelta += 3.5 * dt;
+        }
+        if (this.state.tailBroken) {
+            pitchDelta -= 4.0 * dt; // Loss of elevator authority causes violent dive
+            yawDelta += 5.2 * dt;   // Loss of vertical stabilizer causes flat spin
+        }
 
         // Apply local rotation deltas
         const deltaQuat = new THREE.Quaternion();
