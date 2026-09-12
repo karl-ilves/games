@@ -4537,6 +4537,22 @@ try {
 
             const roundEndDisplay = await page.$eval('#round-end-overlay', el => window.getComputedStyle(el).display);
             if (roundEndDisplay !== 'flex') throw new Error('Round End modal must display on round end!');
+
+            // Verify round-end-overlay is NOT a full-screen view blocker
+            const roundEndStyles = await page.$eval('#round-end-overlay', el => {
+                const s = window.getComputedStyle(el);
+                return {
+                    bg: s.backgroundColor,
+                    pointerEvents: s.pointerEvents,
+                    height: el.offsetHeight,
+                    windowHeight: window.innerHeight
+                };
+            });
+            console.log(`   MMP1 Round End overlay is not full-screen: bg=${roundEndStyles.bg}, height=${roundEndStyles.height}px vs window=${roundEndStyles.windowHeight}px`);
+            if (roundEndStyles.height >= roundEndStyles.windowHeight && roundEndStyles.bg.includes('rgba(5, 3, 8')) {
+                throw new Error('Round end overlay must not be a full screen dark blocker!');
+            }
+
             const endTitleText = await page.$eval('#end-title', el => el.textContent);
             console.log(`   MMP1 Round End Victory Title: ${endTitleText}`);
             if (!endTitleText.includes('DETECTIVE WINS') && !endTitleText.includes('INNOCENTS WIN')) {
@@ -4547,7 +4563,7 @@ try {
             if (!endMapText.includes('HOTEL 2')) {
                 throw new Error(`Expected HOTEL 2 in end-map-name, got: ${endMapText}`);
             }
-            console.log('   MMP1 Round End modal visible with reward and victory header: ✅');
+            console.log('   MMP1 Round End modal visible as non-fullscreen floating announcement: ✅');
 
             // Test building all 5 distinct 3D maps directly
             console.log('   Testing runtime 3D rendering for all 5 maps:');

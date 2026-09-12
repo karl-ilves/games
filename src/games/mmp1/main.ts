@@ -4453,9 +4453,11 @@ export class MurderMysteryGame {
         }
     }
 
-    // --- End Round Modal & Rewards ---
     public endRound(winner: 'sheriff_win' | 'murderer_win' | 'time_out', reason: string) {
         this.state = 'round_end';
+        if (this.isPointerLocked) {
+            document.exitPointerLock?.();
+        }
         audio.playVictory();
 
         const crosshair = document.getElementById('crosshair');
