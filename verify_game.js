@@ -214,6 +214,13 @@ try {
             throw new Error("MMP1 game card must be hidden for guests!");
         }
 
+        // Check Plane Crash Simulator visibility for guest (Expected: none - Owner exclusive)
+        const guestPlaneCrashCardDisplay = await page.$eval('#card-planecrash-game', el => window.getComputedStyle(el).display);
+        console.log(`   Guest Plane Crash Card visibility (Expected: none): ${guestPlaneCrashCardDisplay}`);
+        if (guestPlaneCrashCardDisplay !== 'none') {
+            throw new Error("Plane Crash Simulator card must be hidden for guests!");
+        }
+
         // Check Guest Admin Panel visibility (Expected: none)
         const guestAdminPanelDisplay = await page.$eval('#btn-open-admin-panel', el => window.getComputedStyle(el).display);
         console.log(`   Guest Admin Panel visibility (Expected: none): ${guestAdminPanelDisplay}`);
@@ -278,6 +285,12 @@ try {
             throw new Error("ROCKET PLAYARD card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
         }
 
+        const ownerPlaneCrashCardDisplay = await page.$eval('#card-planecrash-game', el => window.getComputedStyle(el).display);
+        console.log(`   Playard Owner Plane Crash Card visibility (Expected: flex): ${ownerPlaneCrashCardDisplay}`);
+        if (ownerPlaneCrashCardDisplay !== 'flex') {
+            throw new Error("Plane Crash Simulator card must be visible for Playard Owner (1karl.ilves@gmail.com)!");
+        }
+
         // Test Admin login (grx@trenet.ee) -> Admin panel visible, War game visible, Rongimäng visible, Obby, Metro & MMP1 hidden!
         await page.evaluate(() => {
             const adminProf = { id: 'admin_root', username: 'admin', email: 'grx@trenet.ee', displayName: 'Admin✅', isAdmin: true };
@@ -325,6 +338,12 @@ try {
         console.log(`   Admin (grx@trenet.ee) ROCKET PLAYARD Card visibility (Expected: flex): ${adminRocketCardDisplay}`);
         if (adminRocketCardDisplay !== 'flex') {
             throw new Error("ROCKET PLAYARD game card must be visible to everyone including admin (grx@trenet.ee)!");
+        }
+
+        const adminPlaneCrashCardDisplay = await page.$eval('#card-planecrash-game', el => window.getComputedStyle(el).display);
+        console.log(`   Admin (grx@trenet.ee) Plane Crash Card visibility (Expected: none): ${adminPlaneCrashCardDisplay}`);
+        if (adminPlaneCrashCardDisplay !== 'none') {
+            throw new Error("Plane Crash Simulator game card must be hidden for non-owner admin (grx@trenet.ee)!");
         }
 
         // Test Minionbanana0_0 login -> MMP1 game card must be visible!
@@ -5551,6 +5570,155 @@ try {
                 throw new Error("Round end must display 🏆 WINNER modal and final score!");
             }
             console.log("✅ 🚀 ROCKET PLAYARD testid edukalt läbitud!");
+
+            // ==========================================
+            // 9. PLANE CRASH SIMULATOR MÄNGU TESTID (Playard Owner Exclusive)
+            // ==========================================
+            console.log("9. Checking ✈️💥 PLANE CRASH SIMULATOR Game Page (11 Aircraft, Hangar Shop, Flight Physics, 360 Spins, Crash Modal & Coin Rewards)...");
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/games/planecrash/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1200));
+
+            // Verify Three.js Canvas
+            const planeCanvas = await page.$('#canvas-container canvas');
+            if (!planeCanvas) throw new Error('Plane Crash Simulator Three.js canvas was not created!');
+            console.log('   Plane Crash Simulator Three.js Canvas initialized: ✅');
+
+            // Verify Start Screen & PLAY Button
+            const startScreenResult = await page.evaluate(() => {
+                const startModal = document.getElementById('start-menu-modal');
+                const playBtn = document.getElementById('btn-start-play');
+                const hasActive = startModal?.classList.contains('active');
+                return { hasActive, hasPlayBtn: !!playBtn };
+            });
+            console.log(`   Start Menu active: ${startScreenResult.hasActive}, Play Button present: ${startScreenResult.hasPlayBtn}`);
+            if (!startScreenResult.hasActive || !startScreenResult.hasPlayBtn) {
+                throw new Error("Plane Crash Simulator must present Start Menu with PLAY button!");
+            }
+
+            // Click PLAY Button -> Opens Hangar & Aircraft Shop
+            console.log("   Clicking PLAY button to open Hangar & Aircraft Shop...");
+            await page.click('#btn-start-play');
+            await new Promise(r => setTimeout(r, 300));
+
+            const hangarResult = await page.evaluate(() => {
+                const startModal = document.getElementById('start-menu-modal');
+                const hangarModal = document.getElementById('hangar-modal');
+                const items = document.querySelectorAll('#hangar-aircraft-list .plane-list-item');
+                const firstItemText = items[0]?.textContent || '';
+                const launchBtn = document.getElementById('btn-launch-or-buy');
+                return {
+                    startClosed: !startModal?.classList.contains('active'),
+                    hangarOpen: hangarModal?.classList.contains('active'),
+                    itemCount: items.length,
+                    firstItemText,
+                    hasLaunchBtn: !!launchBtn
+                };
+            });
+            console.log(`   Hangar Opened: ${hangarResult.hangarOpen}, Aircraft count (Expected: 11): ${hangarResult.itemCount}`);
+            if (!hangarResult.hangarOpen || hangarResult.itemCount !== 11) {
+                throw new Error(`Expected Hangar to open with 11 aircraft, got open=${hangarResult.hangarOpen}, count=${hangarResult.itemCount}`);
+            }
+            if (!hangarResult.firstItemText.includes('Cessna 172')) {
+                throw new Error("First aircraft in catalog must be Cessna 172!");
+            }
+
+            // Click Launch Flight
+            console.log("   Launching flight with Cessna 172...");
+            await page.click('#btn-launch-or-buy');
+            await new Promise(r => setTimeout(r, 500));
+
+            // Verify HUD Telemetry
+            const hudResult = await page.evaluate(() => {
+                const hangarModal = document.getElementById('hangar-modal');
+                const speed = document.getElementById('gauge-speed')?.textContent || '0';
+                const alt = document.getElementById('gauge-alt')?.textContent || '0';
+                const thr = document.getElementById('gauge-throttle')?.textContent || '0';
+                const coins = document.getElementById('hud-coin-balance')?.textContent || '0';
+                return {
+                    hangarClosed: !hangarModal?.classList.contains('active'),
+                    speed: parseInt(speed, 10),
+                    alt: parseInt(alt, 10),
+                    thr: parseInt(thr, 10),
+                    coins: parseInt(coins, 10)
+                };
+            });
+            console.log(`   Flight Active: Hangar closed=${hudResult.hangarClosed}, Alt=${hudResult.alt}m, Speed=${hudResult.speed}km/h, Thr=${hudResult.thr}%`);
+            if (!hudResult.hangarClosed || hudResult.alt < 50) {
+                throw new Error("Aircraft flight failed to launch with proper altitude telemetry!");
+            }
+
+            // Test Stunt & Crash Execution
+            console.log("   Testing Aerobatic 360 Spin & Crash Mechanics...");
+            const crashReport = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return null;
+
+                // Simulate 2 completed 360° spins
+                game.physics.state.spin360Count = 2;
+                game.physics.state.loopCount = 1;
+                game.physics.state.highestAltitudeReached = 450;
+                game.physics.state.speedKmh = 380;
+
+                // Trigger crash into skyscraper
+                const obstacle = {
+                    name: 'Pilvelõhkuja (Downtown Skyscraper)',
+                    type: 'building',
+                    bonusMultiplier: 2.2,
+                    bounds: null
+                };
+                game.crashSys.executeCrash(game.physics, game.currentPlaneMesh, obstacle);
+
+                const report = game.physics.state.lastCrashReport;
+                return report;
+            });
+
+            console.log("   Crash report generated:", crashReport);
+            if (!crashReport) throw new Error("Crash execution failed to generate crash report!");
+            if (crashReport.baseCoins !== 500) {
+                throw new Error(`Expected guaranteed base crash coins of 500, got: ${crashReport.baseCoins}`);
+            }
+            if (crashReport.spinsCount !== 2 || crashReport.spinsCoins <= 0) {
+                throw new Error(`Expected 360 spin bonus for 2 spins, got count=${crashReport.spinsCount}, coins=${crashReport.spinsCoins}`);
+            }
+            if (crashReport.totalCoins < 1000) {
+                throw new Error(`Expected total crash coins > 1000 with bonuses, got: ${crashReport.totalCoins}`);
+            }
+
+            // Wait for crash modal to open
+            await new Promise(r => setTimeout(r, 1400));
+            const crashModalVisible = await page.evaluate(() => {
+                const modal = document.getElementById('crash-modal');
+                const baseText = document.getElementById('breakdown-base')?.textContent || '';
+                const totalText = document.getElementById('breakdown-total')?.textContent || '';
+                return {
+                    isOpen: modal?.classList.contains('active'),
+                    baseText,
+                    totalText
+                };
+            });
+            console.log(`   Crash Summary Modal Open: ${crashModalVisible.isOpen}, Base: "${crashModalVisible.baseText}", Total: "${crashModalVisible.totalText}"`);
+            if (!crashModalVisible.isOpen || !crashModalVisible.baseText.includes('500')) {
+                throw new Error("Crash summary modal must display guaranteed +500 Base Coins!");
+            }
+
+            // Verify Mobile Mode (?mobile=true)
+            console.log("   Checking Mobile flight controls in Plane Crash Simulator (?mobile=true)...");
+            await page.goto('http://localhost:4173/games/games/planecrash/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 800));
+            const planeMobileControls = await page.evaluate(() => {
+                const mobileOverlay = document.getElementById('mobile-flight-controls');
+                const isVisible = window.getComputedStyle(mobileOverlay).display === 'flex';
+                const hasThUp = !!document.getElementById('m-btn-throttle-up');
+                const hasRollL = !!document.getElementById('m-btn-roll-left');
+                return { isVisible, hasThUp, hasRollL };
+            });
+            console.log(`   Plane Crash Simulator Mobile Controls: visible=${planeMobileControls.isVisible}, buttons=${planeMobileControls.hasThUp && planeMobileControls.hasRollL}`);
+            if (!planeMobileControls.isVisible || !planeMobileControls.hasThUp || !planeMobileControls.hasRollL) {
+                throw new Error("Mobile touch flight controls must be rendered when ?mobile=true!");
+            }
+
+            console.log("✅ ✈️💥 PLANE CRASH SIMULATOR testid edukalt läbitud!");
 
             // Test Universal Mobile & Tablet Controls
             console.log("Testing Universal Mobile & Tablet Controls System...");

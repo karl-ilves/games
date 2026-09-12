@@ -16,7 +16,8 @@ export default defineConfig({
         obby: resolve(__dirname, 'games/obby/index.html'),
         metro: resolve(__dirname, 'games/metro/index.html'),
         mmp1: resolve(__dirname, 'games/mmp1/index.html'),
-        rocket: resolve(__dirname, 'games/rocket/index.html')
+        rocket: resolve(__dirname, 'games/rocket/index.html'),
+        planecrash: resolve(__dirname, 'games/planecrash/index.html')
       }
     }
   }

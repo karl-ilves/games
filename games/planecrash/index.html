@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard Games - ✈️💥 Plane Crash Simulator</title>
+    <meta name="description" content="3D Flight & Plane Crash Simulator - exclusive for Playard Owner. Perform 360 spins, acrobatics, and earn coins for dramatic crashes!">
+    <meta name="keywords" content="plane crash simulator, 3d flight, flight simulator, playard games">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0d0907;
+            color: #ffffff;
+        }
+
+        #game-viewport-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top Bar Telemetry & Currency */
+        .top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(18, 12, 10, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(255, 120, 30, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+        }
+
+        .hud-left, .hud-center, .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: white;
+            font-weight: 900;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+        }
+
+        .hud-brand span.logo-badge {
+            background: linear-gradient(135deg, #ff781e, #ff4757);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            box-shadow: 0 0 10px rgba(255, 120, 30, 0.5);
+        }
+
+        .coin-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 180, 0, 0.15);
+            border: 1px solid rgba(255, 180, 0, 0.5);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 800;
+            color: #ffd32a;
+            font-size: 0.95rem;
+            box-shadow: 0 0 12px rgba(255, 180, 0, 0.2);
+        }
+
+        .hud-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hud-btn:hover {
+            background: rgba(255, 120, 30, 0.3);
+            border-color: #ff781e;
+            transform: translateY(-1px);
+        }
+
+        /* Cockpit / Flight Instruments overlay */
+        #flight-hud-overlay {
+            position: absolute;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .instrument-panel {
+            display: flex;
+            gap: 15px;
+            pointer-events: auto;
+        }
+
+        .gauge-card {
+            background: rgba(12, 14, 20, 0.75);
+            border: 1px solid rgba(255, 150, 50, 0.3);
+            border-radius: 10px;
+            padding: 8px 14px;
+            min-width: 100px;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .gauge-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ff9f43;
+            font-weight: 800;
+        }
+
+        .gauge-value {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #ffffff;
+            font-family: monospace;
+        }
+
+        .gauge-unit {
+            font-size: 0.75rem;
+            color: #a4b0be;
+            margin-left: 2px;
+        }
+
+        /* Artificial horizon & crosshairs */
+        #reticle-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+        }
+
+        /* Trick alert toast */
+        #trick-toast-container {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        .trick-toast {
+            background: linear-gradient(135deg, rgba(255, 120, 30, 0.95), rgba(255, 71, 87, 0.95));
+            border: 2px solid #ffd32a;
+            color: white;
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-weight: 900;
+            font-size: 1.1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            box-shadow: 0 0 20px rgba(255, 120, 30, 0.8);
+            animation: popToast 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popToast {
+            0% { transform: scale(0.6) translateY(-20px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        /* Controls hint box */
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 18, 25, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            color: #ced6e0;
+            backdrop-filter: blur(6px);
+            pointer-events: none;
+            line-height: 1.5;
+        }
+
+        .key-badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-family: monospace;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        /* Modals & Overlays */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(5, 5, 10, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Start Title Screen */
+        #start-menu-modal .start-card {
+            background: linear-gradient(145deg, #1f120c, #2b170e);
+            border: 2px solid rgba(255, 120, 30, 0.6);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 580px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 120, 30, 0.4), 0 20px 40px rgba(0,0,0,0.9);
+            position: relative;
+        }
+
+        .title-badge {
+            display: inline-block;
+            background: rgba(255, 120, 30, 0.2);
+            border: 1px solid #ff781e;
+            color: #ff9f43;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .start-title {
+            font-size: 2.6rem;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 8px;
+            text-shadow: 0 3px 10px rgba(0,0,0,0.8);
+        }
+
+        .start-subtitle {
+            font-size: 1rem;
+            color: #ced6e0;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        .btn-play-hero {
+            background: linear-gradient(135deg, #ff781e, #ff4757);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 900;
+            padding: 16px 48px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(255, 120, 30, 0.7);
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-play-hero:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 45px rgba(255, 120, 30, 1);
+        }
+
+        /* Hangar & Aircraft Shop */
+        #hangar-modal .hangar-card {
+            background: #151821;
+            border: 2px solid rgba(255, 150, 50, 0.4);
+            border-radius: 20px;
+            width: 95%;
+            max-width: 1050px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9);
+        }
+
+        .hangar-header {
+            padding: 16px 24px;
+            background: #1b1f2b;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hangar-body {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .hangar-list {
+            overflow-y: auto;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #11141c;
+        }
+
+        .plane-list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #1a1e2a;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .plane-list-item:hover {
+            background: #232838;
+            border-color: rgba(255, 120, 30, 0.4);
+        }
+
+        .plane-list-item.active {
+            background: linear-gradient(135deg, rgba(255, 120, 30, 0.25), rgba(255, 71, 87, 0.25));
+            border-color: #ff781e;
+        }
+
+        .plane-item-icon {
+            font-size: 1.8rem;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .plane-item-info {
+            flex: 1;
+        }
+
+        .plane-item-name {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: white;
+        }
+
+        .plane-item-status {
+            font-size: 0.75rem;
+            color: #ffd32a;
+            font-weight: 700;
+        }
+
+        .plane-preview-pane {
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            overflow-y: auto;
+            background: #161a24;
+            gap: 20px;
+        }
+
+        .preview-3d-box {
+            height: 240px;
+            background: radial-gradient(circle at center, #242b3d 0%, #10131a 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .stat-bar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #a4b0be;
+            font-weight: 700;
+        }
+
+        .stat-bar-track {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff781e, #ffd32a);
+            border-radius: 4px;
+        }
+
+        .hangar-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        /* Crash Breakdown Modal */
+        #crash-modal .crash-card {
+            background: linear-gradient(145deg, #220e06, #361405);
+            border: 3px solid #ff4757;
+            border-radius: 24px;
+            padding: 32px 36px;
+            max-width: 540px;
+            width: 90%;
+            box-shadow: 0 0 50px rgba(255, 71, 87, 0.6), 0 20px 40px rgba(0,0,0,0.9);
+            text-align: center;
+            animation: crashModalDrop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes crashModalDrop {
+            0% { transform: scale(0.8) translateY(-40px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .crash-header-icon {
+            font-size: 3.5rem;
+            margin-bottom: 8px;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        .crash-title {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ff6b6b;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .crash-sub {
+            color: #a4b0be;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .breakdown-table {
+            background: rgba(10, 5, 5, 0.6);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            text-align: left;
+        }
+
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 8px;
+        }
+
+        .breakdown-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .breakdown-row.total-row {
+            border-top: 2px solid rgba(255, 180, 0, 0.5);
+            padding-top: 10px;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #ffd32a;
+        }
+
+        .breakdown-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ced6e0;
+        }
+
+        .breakdown-value {
+            font-weight: 900;
+            color: #ffd32a;
+            font-family: monospace;
+            font-size: 1.05rem;
+        }
+
+        .crash-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .btn-action-primary {
+            background: linear-gradient(135deg, #ff781e, #ff4757);
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 800;
+            padding: 12px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 120, 30, 0.6);
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-primary:hover {
+            transform: scale(1.04);
+            box-shadow: 0 0 30px rgba(255, 120, 30, 0.9);
+        }
+
+        .btn-action-secondary {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 700;
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* VIP Owner Exclusive Overlay */
+        #vip-restricted-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 12, 20, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Mobile flight controls overlay */
+        #mobile-flight-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 24px;
+            pointer-events: none;
+            z-index: 150;
+        }
+
+        .mobile-btn {
+            pointer-events: auto;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 120, 30, 0.3);
+            border: 2px solid rgba(255, 120, 30, 0.7);
+            color: white;
+            font-size: 1.4rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0,0,0,0.6);
+            touch-action: manipulation;
+        }
+
+        .mobile-btn:active {
+            background: rgba(255, 120, 30, 0.7);
+            transform: scale(0.92);
+        }
+
+        @media (max-width: 768px) {
+            .hangar-body {
+                grid-template-columns: 1fr;
+                grid-template-rows: 200px 1fr;
+            }
+            .controls-hint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-viewport-wrapper">
+        <div id="canvas-container"></div>
+
+        <!-- Top HUD Navigation -->
+        <div class="top-hud">
+            <div class="hud-left">
+                <a href="../../index.html" class="hud-brand">
+                    <span>✈️ Playard Flight</span>
+                    <span class="logo-badge">👑 OWNER</span>
+                </a>
+                <button class="hud-btn" id="btn-open-hangar">
+                    <span>✈️</span>
+                    <span>Hangaar / Lennukid</span>
+                </button>
+            </div>
+            <div class="hud-center">
+                <div class="coin-pill">
+                    <span>🪙</span>
+                    <span id="hud-coin-balance">0</span>
+                    <span style="font-size: 0.75rem; color: #a4b0be;">COINS</span>
+                </div>
+            </div>
+            <div class="hud-right">
+                <button class="hud-btn" id="btn-toggle-camera" title="Vaheta kaamerat (C)">
+                    <span>📷</span>
+                    <span id="camera-mode-text">Chase</span>
+                </button>
+                <button class="hud-btn" id="btn-quick-respawn" title="Alusta uuesti (R)">
+                    <span>🔁</span>
+                    <span>Restart</span>
+                </button>
+                <a href="../../index.html" class="hud-btn" style="text-decoration: none;">
+                    <span>🏠</span>
+                    <span>Kodu</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- In-flight Instruments HUD -->
+        <div id="flight-hud-overlay">
+            <div class="instrument-panel">
+                <div class="gauge-card">
+                    <div class="gauge-label">Kiirus (IAS)</div>
+                    <div class="gauge-value"><span id="gauge-speed">0</span><span class="gauge-unit">km/h</span></div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-label">Kõrgus (ALT)</div>
+                    <div class="gauge-value"><span id="gauge-alt">150</span><span class="gauge-unit">m</span></div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-label">Gaas (THR)</div>
+                    <div class="gauge-value"><span id="gauge-throttle">75</span><span class="gauge-unit">%</span></div>
+                </div>
+                <div class="gauge-card" id="gauge-card-spins">
+                    <div class="gauge-label">360° Spinnid</div>
+                    <div class="gauge-value" style="color: #ffd32a;"><span id="gauge-spins">0</span></div>
+                </div>
+            </div>
+
+            <!-- Stunt Toast Container -->
+            <div id="trick-toast-container"></div>
+
+            <!-- Controls Guidance for Desktop -->
+            <div class="controls-hint">
+                <div><span class="key-badge">W</span> / <span class="key-badge">S</span> : Nina alla / üles (Pitch)</div>
+                <div><span class="key-badge">A</span> / <span class="key-badge">D</span> : Pööre / Rullumine (Roll & 360° Spin)</div>
+                <div><span class="key-badge">Q</span> / <span class="key-badge">E</span> : Tüür (Rudder / Yaw)</div>
+                <div><span class="key-badge">Shift</span> / <span class="key-badge">Space</span> : Gaas + / -</div>
+                <div><span class="key-badge">C</span> : Kaamera | <span class="key-badge">R</span> : Restart</div>
+            </div>
+        </div>
+
+        <!-- Reticle Center -->
+        <div id="reticle-center">
+            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="30" cy="30" r="12" stroke="rgba(255, 120, 30, 0.6)" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <line x1="12" y1="30" x2="22" y2="30" stroke="rgba(255, 120, 30, 0.9)" stroke-width="2"/>
+                <line x1="38" y1="30" x2="48" y2="30" stroke="rgba(255, 120, 30, 0.9)" stroke-width="2"/>
+                <line x1="30" y1="12" x2="30" y2="22" stroke="rgba(255, 120, 30, 0.9)" stroke-width="2"/>
+                <circle cx="30" cy="30" r="2.5" fill="#ff781e"/>
+            </svg>
+        </div>
+
+        <!-- Mobile flight controls overlay -->
+        <div id="mobile-flight-controls">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="mobile-btn" id="m-btn-throttle-up">▲</button>
+                <button class="mobile-btn" id="m-btn-throttle-down">▼</button>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="mobile-btn" id="m-btn-roll-left">↺</button>
+                <button class="mobile-btn" id="m-btn-roll-right">↻</button>
+                <button class="mobile-btn" id="m-btn-pitch-up" style="background: rgba(255, 71, 87, 0.4);">UP</button>
+            </div>
+        </div>
+
+        <!-- 1. Start Title Screen Modal (With PLAY button) -->
+        <div class="modal-overlay active" id="start-menu-modal">
+            <div class="start-card">
+                <span class="title-badge">👑 PLAYARD OWNER EXCLUSIVE</span>
+                <h1 class="start-title">✈️ PLANE CRASH SIMULATOR 💥</h1>
+                <p class="start-subtitle">
+                    Lenda Cessna 172 või 10 teise lennukiga! Tee pööraseid 360° spinne ja akrobaatilisi luupe,
+                    sõida täiskiirusel mägedesse või pilvelõhkujatesse ning teeni allakukkumisel münte (Coins)!
+                </p>
+                <div style="margin-bottom: 24px; display: flex; justify-content: center; gap: 16px;">
+                    <div style="background: rgba(255, 120, 30, 0.15); border: 1px solid rgba(255, 120, 30, 0.4); border-radius: 12px; padding: 10px 18px;">
+                        <div style="font-size: 0.8rem; color: #ff9f43; font-weight: 800;">ALUSTUSLENNUK</div>
+                        <div style="font-weight: 900; font-size: 1.1rem; color: white;">Cessna 172 Skyhawk</div>
+                    </div>
+                    <div style="background: rgba(255, 180, 0, 0.15); border: 1px solid rgba(255, 180, 0, 0.4); border-radius: 12px; padding: 10px 18px;">
+                        <div style="font-size: 0.8rem; color: #ffd32a; font-weight: 800;">BAASTASU CRASHIL</div>
+                        <div style="font-weight: 900; font-size: 1.1rem; color: #ffd32a;">+500 COINI</div>
+                    </div>
+                </div>
+                <button class="btn-play-hero" id="btn-start-play">
+                    <span>▶️ MÄNGI / PLAY</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. Hangar & Aircraft Shop Modal -->
+        <div class="modal-overlay" id="hangar-modal">
+            <div class="hangar-card">
+                <div class="hangar-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.6rem;">🛫</span>
+                        <div>
+                            <h2 style="font-size: 1.3rem; font-weight: 900; color: white;">Lennukite Hangaar & Pood</h2>
+                            <p style="font-size: 0.8rem; color: #a4b0be;">Vali või osta lennukeid teenitud müntide eest (11 mudelit)</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="coin-pill">
+                            <span>🪙</span>
+                            <span id="hangar-coin-balance">0</span>
+                            <span style="font-size: 0.75rem; color: #a4b0be;">COINS</span>
+                        </div>
+                        <button class="hud-btn" id="btn-close-hangar">✕ Sulge</button>
+                    </div>
+                </div>
+
+                <div class="hangar-body">
+                    <!-- Left list of 11 aircraft -->
+                    <div class="hangar-list" id="hangar-aircraft-list">
+                        <!-- Populated dynamically via hangarShopModal.ts -->
+                    </div>
+
+                    <!-- Right preview & stats pane -->
+                    <div class="plane-preview-pane">
+                        <div class="preview-3d-box" id="hangar-3d-preview">
+                            <div id="preview-placeholder-text" style="font-size: 4rem;">✈️</div>
+                        </div>
+
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                                <h3 id="preview-plane-name" style="font-size: 1.4rem; font-weight: 900; color: white;">Cessna 172</h3>
+                                <span id="preview-plane-class" style="font-size: 0.8rem; background: rgba(255,120,30,0.2); color: #ff9f43; padding: 2px 8px; border-radius: 4px; font-weight: 800;">TRAINER</span>
+                            </div>
+                            <p id="preview-plane-desc" style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.4;">Klassikaline ühemootoriline propellerlennuk. Suurepärane algajale lennuhuvilisele.</p>
+                        </div>
+
+                        <div class="preview-stats-grid">
+                            <div class="stat-bar-group">
+                                <div class="stat-bar-label">
+                                    <span>Tippkiirus</span>
+                                    <span id="stat-val-speed">220 km/h</span>
+                                </div>
+                                <div class="stat-bar-track">
+                                    <div class="stat-bar-fill" id="stat-bar-speed" style="width: 30%;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar-group">
+                                <div class="stat-bar-label">
+                                    <span>Maneöverdatavus</span>
+                                    <span id="stat-val-agility">Hea</span>
+                                </div>
+                                <div class="stat-bar-track">
+                                    <div class="stat-bar-fill" id="stat-bar-agility" style="width: 60%;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar-group">
+                                <div class="stat-bar-label">
+                                    <span>Crash Plahvatus</span>
+                                    <span id="stat-val-explosion">Keskmine</span>
+                                </div>
+                                <div class="stat-bar-track">
+                                    <div class="stat-bar-fill" id="stat-bar-explosion" style="width: 40%;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar-group">
+                                <div class="stat-bar-label">
+                                    <span>Mündi Kordaja</span>
+                                    <span id="stat-val-multiplier">1.0x</span>
+                                </div>
+                                <div class="stat-bar-track">
+                                    <div class="stat-bar-fill" id="stat-bar-multiplier" style="width: 20%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hangar-actions">
+                            <button class="btn-action-primary" id="btn-launch-or-buy" style="flex: 1;">
+                                <span>🚀 LANSEERI LEND</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Post-Crash Breakdown Modal (Guaranteed 500 Base Coins + Stunts) -->
+        <div class="modal-overlay" id="crash-modal">
+            <div class="crash-card">
+                <div class="crash-header-icon">💥</div>
+                <h2 class="crash-title">LENNUK HÄVITATUD!</h2>
+                <p class="crash-sub" id="crash-cause-text">Kokkupõrge maapinnaga suurel kiirusel</p>
+
+                <div class="breakdown-table">
+                    <div class="breakdown-row">
+                        <span class="breakdown-label">💥 Lennuõnnetuse baastasu:</span>
+                        <span class="breakdown-value" id="breakdown-base">+500 🪙</span>
+                    </div>
+                    <div class="breakdown-row" id="row-spins-bonus">
+                        <span class="breakdown-label">🔄 360° Spinnid & Pöörded:</span>
+                        <span class="breakdown-value" id="breakdown-spins">+0 🪙</span>
+                    </div>
+                    <div class="breakdown-row" id="row-loops-bonus">
+                        <span class="breakdown-label">🌀 Vertikaalsed Luubid:</span>
+                        <span class="breakdown-value" id="breakdown-loops">+0 🪙</span>
+                    </div>
+                    <div class="breakdown-row" id="row-speed-bonus">
+                        <span class="breakdown-label">⚡ Kokkupõrkekiiruse boonus:</span>
+                        <span class="breakdown-value" id="breakdown-speed">+0 🪙</span>
+                    </div>
+                    <div class="breakdown-row" id="row-altitude-bonus">
+                        <span class="breakdown-label">🏔️ Sukeldumiskõrgus (Dive):</span>
+                        <span class="breakdown-value" id="breakdown-altitude">+0 🪙</span>
+                    </div>
+                    <div class="breakdown-row" id="row-target-bonus">
+                        <span class="breakdown-label">🏢 Sihtmärgi / Takistuse tabamus:</span>
+                        <span class="breakdown-value" id="breakdown-target">+0 🪙</span>
+                    </div>
+                    <div class="breakdown-row total-row">
+                        <span>💰 KOKKU TEENITUD:</span>
+                        <span id="breakdown-total" style="font-size: 1.35rem;">+500 🪙</span>
+                    </div>
+                </div>
+
+                <div class="crash-actions">
+                    <button class="btn-action-primary" id="btn-crash-retry">🔁 Lenda uuesti</button>
+                    <button class="btn-action-secondary" id="btn-crash-hangar">✈️ Hangaar & Pood</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIP Restricted Overlay for Non-Owner -->
+        <div id="vip-restricted-overlay">
+            <div style="max-width: 480px; background: rgba(22, 28, 46, 0.95); border: 2px solid #ff4757; border-radius: 20px; padding: 36px; box-shadow: 0 0 40px rgba(255, 71, 87, 0.4);">
+                <div style="font-size: 3.5rem; margin-bottom: 12px;">🔒</div>
+                <h2 style="font-size: 1.8rem; color: #ffd32a; margin-bottom: 12px;">Playard Owner Exclusive</h2>
+                <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; margin-bottom: 24px;">
+                    <strong>✈️ PLANE CRASH SIMULATOR</strong> on eksklusiivne simulaator, mis on saadaval ainult Playard Ownerile (<code>1karl.ilves@gmail.com</code>).
+                </p>
+                <a href="../../index.html" style="display: inline-block; background: linear-gradient(135deg, #ff781e, #ff4757); color: white; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 800;">Tagasi avalehele</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/games/planecrash/main.ts"></script>
+</body>
+</html>

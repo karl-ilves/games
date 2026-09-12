@@ -81,6 +81,12 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
         mmp1GameCard.style.display = canAccessMmp1(emailToCheck, usernameToCheck) ? 'flex' : 'none';
     }
 
+    // PLANE CRASH SIMULATOR on nähtav AINULT Playard Ownerile!
+    const planeCrashGameCard = document.getElementById('card-planecrash-game');
+    if (planeCrashGameCard) {
+        planeCrashGameCard.style.display = isPlayardOwner(emailToCheck) ? 'flex' : 'none';
+    }
+
     // ROCKET PLAYARD mäng on avaldatud KÕIKIDELE mängijatele!
     const rocketGameCard = document.getElementById('card-rocket-game');
     if (rocketGameCard) {
