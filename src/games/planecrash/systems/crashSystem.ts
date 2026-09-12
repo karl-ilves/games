@@ -13,6 +13,8 @@ export class CrashSystem {
     public debrisPieces: DebrisPiece[] = [];
     public isDebrisSimulating: boolean = false;
     public crashPosition: THREE.Vector3 = new THREE.Vector3();
+    public timeScale: number = 1.0;
+    private trailTimer: number = 0;
 
     public onCrashTriggered?: (report: CrashBreakdown) => void;
 
@@ -30,8 +32,8 @@ export class CrashSystem {
         const pos = physics.position;
         const planeSphere = new THREE.Sphere(pos, 3.5);
 
-        // 1. Water / Ground Check (y <= 2)
-        if (pos.y <= 2.0) {
+        // 1. Water / Ground Check (y <= 2.2)
+        if (pos.y <= 2.2) {
             const obstacle = this.environment.obstacles.find(o => o.type === 'water') || {
                 name: 'Ookean / Vesi',
                 type: 'water',
@@ -58,17 +60,21 @@ export class CrashSystem {
         physics.state.isCrashed = true;
         this.crashPosition.copy(physics.position);
 
-        console.log(`💥 PLANE CRASH! Hit: ${obstacle.name} at ${Math.round(physics.state.speedKmh)} km/h`);
+        const isWater = obstacle.type === 'water';
+        console.log(`💥 ULTRA-REALISTIC CRASH! Hit: ${obstacle.name} at ${Math.round(physics.state.speedKmh)} km/h (isWater=${isWater})`);
 
-        // 1. Audio and Explosions
+        // 1. Initiate Bullet-Time Slow-Motion for cinematic breakup
+        this.timeScale = 0.22;
+
+        // 2. Audio & Multi-stage Fireball / Water Plume
         const explosionScale = physics.config.explosionScale || 1.0;
         planeAudio.playCrashExplosion(explosionScale);
-        this.particles.spawnCrashExplosion(this.crashPosition, explosionScale);
+        this.particles.spawnCrashExplosion(this.crashPosition, explosionScale, isWater);
 
-        // 2. Break plane into physical flying debris pieces
-        this.breakPlaneIntoDebris(physics, plane);
+        // 3. Shatter aircraft into dozens of physics debris pieces & twisted shrapnel
+        this.breakPlaneIntoUltraDebris(physics, plane);
 
-        // 3. Calculate Financial Reward (Base 500 Coins + Stunts + Multipliers)
+        // 4. Calculate Financial Reward (Base 500 Coins + Stunts + Multipliers)
         const report = planeCrashState.calculateCrashReward(
             physics.state,
             physics.config,
@@ -77,98 +83,189 @@ export class CrashSystem {
         physics.state.lastCrashReport = report;
         planeCrashState.applyCrashReward(report);
 
-        // 4. Notify UI / Orchestrator
+        // 5. Notify UI / Orchestrator
         if (this.onCrashTriggered) {
             this.onCrashTriggered(report);
         }
     }
 
-    private breakPlaneIntoDebris(physics: FlightPhysics, plane: BuiltPlaneResult): void {
+    /**
+     * Shatters the aircraft into 30+ separate high-velocity tumbling debris fragments:
+     * - Major components (wings, fuselage chunks, elevators, rudder, engines, gear)
+     * - Scorched twisted metal plating
+     * - High-speed flying shrapnel shards with fire trails
+     */
+    private breakPlaneIntoUltraDebris(physics: FlightPhysics, plane: BuiltPlaneResult): void {
         this.debrisPieces = [];
         this.isDebrisSimulating = true;
 
         const baseVel = physics.velocity.clone();
         const root = plane.rootGroup;
-
-        // Hide root and move candidates into world space
         root.visible = false;
 
-        const candidates = plane.debrisCandidates;
-        candidates.forEach(part => {
-            if (!part) return;
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(physics.quaternion);
 
-            // Clone geometry to keep independent world mesh
-            const worldPos = new THREE.Vector3();
-            const worldQuat = new THREE.Quaternion();
-            part.getWorldPosition(worldPos);
-            part.getWorldQuaternion(worldQuat);
+        // Charred scorched material for crash fragments
+        const charredMat = new THREE.MeshStandardMaterial({
+            color: 0x1e1e1e,
+            roughness: 0.9,
+            metalness: 0.1
+        });
 
-            const debrisMesh = part.clone(true);
-            debrisMesh.position.copy(worldPos);
-            debrisMesh.quaternion.copy(worldQuat);
-            this.environment.scene.add(debrisMesh);
+        const glowingMetalMat = new THREE.MeshStandardMaterial({
+            color: 0x2c3e50,
+            emissive: 0xd63031,
+            emissiveIntensity: 0.4,
+            roughness: 0.8
+        });
 
-            // Explosive scatter impulse added to forward velocity
-            const scatter = new THREE.Vector3(
-                (Math.random() - 0.5) * 25,
-                Math.random() * 20 + 8,
-                (Math.random() - 0.5) * 25
+        // 1. Extract major sub-components with independent physics
+        const collectMeshes = (obj: THREE.Object3D) => {
+            if ((obj as THREE.Mesh).isMesh) {
+                const worldPos = new THREE.Vector3();
+                const worldQuat = new THREE.Quaternion();
+                obj.getWorldPosition(worldPos);
+                obj.getWorldQuaternion(worldQuat);
+
+                const debrisMesh = (obj as THREE.Mesh).clone();
+                debrisMesh.position.copy(worldPos);
+                debrisMesh.quaternion.copy(worldQuat);
+
+                // Scorch materials
+                if (Math.random() < 0.6) {
+                    debrisMesh.material = Math.random() < 0.5 ? charredMat : glowingMetalMat;
+                }
+
+                this.environment.scene.add(debrisMesh);
+
+                // Violent radial explosive velocity added to forward velocity
+                const scatterSpeed = 15 + Math.random() * 35;
+                const scatterDir = new THREE.Vector3(
+                    (Math.random() - 0.5) * 2,
+                    Math.random() * 1.5 + 0.5,
+                    (Math.random() - 0.5) * 2
+                ).normalize();
+
+                const vel = baseVel.clone().multiplyScalar(0.65).addScaledVector(scatterDir, scatterSpeed);
+                const rotVel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 18,
+                    (Math.random() - 0.5) * 18,
+                    (Math.random() - 0.5) * 18
+                );
+
+                this.debrisPieces.push({
+                    mesh: debrisMesh,
+                    velocity: vel,
+                    rotVelocity: rotVel,
+                    isGrounded: false,
+                    sparkTimer: 0
+                });
+            }
+            for (const child of obj.children) {
+                collectMeshes(child);
+            }
+        };
+
+        plane.debrisCandidates.forEach(cand => {
+            if (cand) collectMeshes(cand);
+        });
+
+        // 2. Generate 25+ extra jagged shrapnel pieces and twisted metal shards
+        const shardCount = 28;
+        for (let i = 0; i < shardCount; i++) {
+            // Procedural jagged triangular shard geometry
+            const shardGeom = new THREE.ConeGeometry(0.4 + Math.random() * 0.8, 1.2 + Math.random() * 2.2, 4);
+            shardGeom.rotateZ(Math.random() * Math.PI);
+            const shardMat = Math.random() < 0.4 ? charredMat : glowingMetalMat;
+            const shardMesh = new THREE.Mesh(shardGeom, shardMat);
+
+            const spawnOffset = new THREE.Vector3(
+                (Math.random() - 0.5) * 6,
+                (Math.random() - 0.5) * 4,
+                (Math.random() - 0.5) * 8
             );
-            const debrisVel = baseVel.clone().multiplyScalar(0.7).add(scatter);
+            shardMesh.position.copy(this.crashPosition).add(spawnOffset);
+
+            this.environment.scene.add(shardMesh);
+
+            // Shrapnel shoots out at extreme velocities
+            const scatterDir = new THREE.Vector3(
+                (Math.random() - 0.5) * 2,
+                Math.random() * 1.8 + 0.3,
+                (Math.random() - 0.5) * 2
+            ).normalize();
+
+            const shrapnelSpeed = 25 + Math.random() * 60;
+            const vel = baseVel.clone().multiplyScalar(0.7).addScaledVector(scatterDir, shrapnelSpeed);
 
             const rotVel = new THREE.Vector3(
-                (Math.random() - 0.5) * 12,
-                (Math.random() - 0.5) * 12,
-                (Math.random() - 0.5) * 12
+                (Math.random() - 0.5) * 25,
+                (Math.random() - 0.5) * 25,
+                (Math.random() - 0.5) * 25
             );
 
             this.debrisPieces.push({
-                mesh: debrisMesh,
-                velocity: debrisVel,
+                mesh: shardMesh,
+                velocity: vel,
                 rotVelocity: rotVel,
                 isGrounded: false,
                 sparkTimer: 0
             });
-        });
+        }
     }
 
     public updateDebris(dt: number): void {
         if (!this.isDebrisSimulating) return;
 
+        // Accelerate time back to 1.0 gradually
+        if (this.timeScale < 1.0) {
+            this.timeScale = Math.min(1.0, this.timeScale + dt * 0.5);
+        }
+        const effectiveDt = dt * this.timeScale;
+
+        this.trailTimer += effectiveDt;
+        const shouldSpawnTrail = this.trailTimer > 0.05;
+        if (shouldSpawnTrail) this.trailTimer = 0;
+
         for (const debris of this.debrisPieces) {
             if (debris.isGrounded) {
-                // Friction while resting on ground
-                debris.velocity.multiplyScalar(0.92);
-                debris.rotVelocity.multiplyScalar(0.9);
+                // High ground friction
+                debris.velocity.multiplyScalar(0.88);
+                debris.rotVelocity.multiplyScalar(0.85);
                 continue;
             }
 
-            // Gravity
-            debris.velocity.y -= 25.0 * dt;
-            debris.mesh.position.addScaledVector(debris.velocity, dt);
+            // Gravity & Air Drag
+            debris.velocity.y -= 26.0 * effectiveDt;
+            debris.velocity.multiplyScalar(0.985);
+            debris.mesh.position.addScaledVector(debris.velocity, effectiveDt);
 
-            // Tumble rotation
-            debris.mesh.rotation.x += debris.rotVelocity.x * dt;
-            debris.mesh.rotation.y += debris.rotVelocity.y * dt;
-            debris.mesh.rotation.z += debris.rotVelocity.z * dt;
+            // Violent Tumbling
+            debris.mesh.rotation.x += debris.rotVelocity.x * effectiveDt;
+            debris.mesh.rotation.y += debris.rotVelocity.y * effectiveDt;
+            debris.mesh.rotation.z += debris.rotVelocity.z * effectiveDt;
 
-            // Ground collision for debris (water/ground level y = 1.0)
+            // Emit burning smoke and spark trails behind flying debris
+            if (shouldSpawnTrail && Math.random() < 0.45) {
+                this.particles.spawnDebrisTrail(debris.mesh.position, false);
+            }
+
+            // Surface collision (ground / water at y = 1.5)
             if (debris.mesh.position.y <= 1.5) {
                 debris.mesh.position.y = 1.5;
-                debris.velocity.y *= -0.35; // Bounce dampening
-                debris.velocity.x *= 0.65;
-                debris.velocity.z *= 0.65;
-                debris.rotVelocity.multiplyScalar(0.5);
 
-                if (Math.abs(debris.velocity.y) < 2.0 && debris.velocity.length() < 5.0) {
-                    debris.isGrounded = true;
+                // Violent ground impacts throw sparks & dust
+                if (Math.abs(debris.velocity.y) > 4.0) {
+                    this.particles.spawnDebrisTrail(debris.mesh.position, true);
                 }
 
-                // Sparks on ground impact
-                debris.sparkTimer += dt;
-                if (debris.sparkTimer > 0.08) {
-                    debris.sparkTimer = 0;
-                    this.particles.spawnTrailPuff(debris.mesh.position, 0.4, 0xff781e);
+                debris.velocity.y *= -0.32; // Inelastic rebound
+                debris.velocity.x *= 0.62;  // Skid friction
+                debris.velocity.z *= 0.62;
+                debris.rotVelocity.multiplyScalar(0.5);
+
+                if (Math.abs(debris.velocity.y) < 1.5 && debris.velocity.length() < 4.0) {
+                    debris.isGrounded = true;
                 }
             }
         }
@@ -177,8 +274,12 @@ export class CrashSystem {
     public clearDebris(): void {
         for (const debris of this.debrisPieces) {
             this.environment.scene.remove(debris.mesh);
+            if ((debris.mesh as THREE.Mesh).geometry) {
+                (debris.mesh as THREE.Mesh).geometry.dispose();
+            }
         }
         this.debrisPieces = [];
         this.isDebrisSimulating = false;
+        this.timeScale = 1.0;
     }
 }

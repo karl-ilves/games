@@ -5685,8 +5685,18 @@ try {
                 throw new Error(`Expected total crash coins > 1000 with bonuses, got: ${crashReport.totalCoins}`);
             }
 
+            // Test Debris Pieces Count (Must be >= 25 flying pieces!)
+            const debrisCount = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                return game?.crashSys?.debrisPieces?.length || 0;
+            });
+            console.log(`   Ultra-realistic debris pieces spawned: ${debrisCount} (Expected: >= 25)`);
+            if (debrisCount < 25) {
+                throw new Error(`Expected at least 25 flying debris pieces, got: ${debrisCount}`);
+            }
+
             // Wait for crash modal to open
-            await new Promise(r => setTimeout(r, 1400));
+            await new Promise(r => setTimeout(r, 2000));
             const crashModalVisible = await page.evaluate(() => {
                 const modal = document.getElementById('crash-modal');
                 const baseText = document.getElementById('breakdown-base')?.textContent || '';

@@ -161,7 +161,7 @@ export class PlaneCrashGame {
 
             setTimeout(() => {
                 this.crashModal.show(report);
-            }, 1200);
+            }, 1800);
         };
 
         // Crash Modal Buttons

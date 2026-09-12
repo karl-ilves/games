@@ -118,30 +118,57 @@ class PlaneCrashAudio {
         if (!ctx || this.isMuted) return;
 
         try {
-            const now = ctx.currentTime;
+            // 1. Screeching Metal Tearing / Shearing (FM synthesis)
+            const metalMod = ctx.createOscillator();
+            const metalModGain = ctx.createGain();
+            const metalCarrier = ctx.createOscillator();
+            const metalGain = ctx.createGain();
 
-            // 1. Heavy Sub-Bass Boom
+            metalMod.type = 'sawtooth';
+            metalMod.frequency.setValueAtTime(340, now);
+            metalMod.frequency.linearRampToValueAtTime(80, now + 0.5);
+
+            metalModGain.gain.setValueAtTime(800, now);
+            metalModGain.gain.exponentialRampToValueAtTime(10, now + 0.6);
+
+            metalCarrier.type = 'sawtooth';
+            metalCarrier.frequency.setValueAtTime(420, now);
+            metalCarrier.frequency.exponentialRampToValueAtTime(60, now + 0.8);
+
+            metalMod.connect(metalCarrier.frequency);
+            metalCarrier.connect(metalGain);
+
+            metalGain.gain.setValueAtTime(0.45 * scale, now);
+            metalGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+            metalGain.connect(ctx.destination);
+
+            metalMod.start(now);
+            metalCarrier.start(now);
+            metalMod.stop(now + 0.9);
+            metalCarrier.stop(now + 0.9);
+
+            // 2. Heavy Sub-Bass Boom
             const subOsc = ctx.createOscillator();
             const subGain = ctx.createGain();
             subOsc.type = 'sine';
-            subOsc.frequency.setValueAtTime(120, now);
-            subOsc.frequency.exponentialRampToValueAtTime(20, now + 1.2);
+            subOsc.frequency.setValueAtTime(140, now);
+            subOsc.frequency.exponentialRampToValueAtTime(18, now + 1.4);
 
-            subGain.gain.setValueAtTime(0.7 * Math.min(1.5, scale), now);
-            subGain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+            subGain.gain.setValueAtTime(0.85 * Math.min(1.6, scale), now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
 
             subOsc.connect(subGain);
             subGain.connect(ctx.destination);
             subOsc.start(now);
-            subOsc.stop(now + 1.5);
+            subOsc.stop(now + 1.7);
 
-            // 2. High-energy explosion noise burst (fireball roar + crunch)
-            const dur = 1.8 * Math.min(1.8, scale);
+            // 3. High-energy explosion noise burst (fireball roar + crunch)
+            const dur = 2.2 * Math.min(1.8, scale);
             const bufferSize = Math.floor(ctx.sampleRate * dur);
             const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
             const data = noiseBuffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.4));
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.45));
             }
 
             const noiseSource = ctx.createBufferSource();
@@ -149,17 +176,35 @@ class PlaneCrashAudio {
 
             const filter = ctx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(800, now);
-            filter.frequency.exponentialRampToValueAtTime(80, now + dur);
+            filter.frequency.setValueAtTime(950, now);
+            filter.frequency.exponentialRampToValueAtTime(65, now + dur);
 
             const noiseGain = ctx.createGain();
-            noiseGain.gain.setValueAtTime(0.6 * scale, now);
+            noiseGain.gain.setValueAtTime(0.75 * scale, now);
             noiseGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
             noiseSource.connect(filter);
             filter.connect(noiseGain);
             noiseGain.connect(ctx.destination);
             noiseSource.start(now);
+
+            // 4. Secondary clattering debris impacts
+            for (let d = 0; d < 4; d++) {
+                const delay = 0.2 + d * 0.18 + Math.random() * 0.1;
+                const dOsc = ctx.createOscillator();
+                const dGain = ctx.createGain();
+                dOsc.type = 'triangle';
+                dOsc.frequency.setValueAtTime(220 - d * 30 + Math.random() * 40, now + delay);
+                dOsc.frequency.exponentialRampToValueAtTime(50, now + delay + 0.12);
+
+                dGain.gain.setValueAtTime(0.2 * scale, now + delay);
+                dGain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.14);
+
+                dOsc.connect(dGain);
+                dGain.connect(ctx.destination);
+                dOsc.start(now + delay);
+                dOsc.stop(now + delay + 0.15);
+            }
         } catch (e) {
             console.warn('[PlaneCrashAudio] Explosion sound error:', e);
         }

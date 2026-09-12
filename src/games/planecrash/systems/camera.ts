@@ -9,6 +9,7 @@ export class FlightCamera {
     private currentCamPos: THREE.Vector3 = new THREE.Vector3();
     private crashFocusPoint: THREE.Vector3 = new THREE.Vector3();
     private crashOrbitAngle: number = 0;
+    public shakeIntensity: number = 0;
 
     constructor(fov: number = 65, aspect: number = 16 / 9) {
         this.camera = new THREE.PerspectiveCamera(fov, aspect, 0.5, 10000);
@@ -20,10 +21,15 @@ export class FlightCamera {
         return this.mode;
     }
 
+    public triggerImpactShake(intensity: number = 1.0): void {
+        this.shakeIntensity = Math.min(2.5, intensity);
+    }
+
     public setCrashMode(crashPosition: THREE.Vector3): void {
         this.mode = 'cinematic_crash';
         this.crashFocusPoint.copy(crashPosition);
         this.crashOrbitAngle = 0;
+        this.triggerImpactShake(1.8);
     }
 
     public update(dt: number, physics: FlightPhysics): void {
@@ -63,7 +69,7 @@ export class FlightCamera {
         } else if (this.mode === 'cinematic_crash') {
             // Dramatic orbit around crash wreckage
             this.crashOrbitAngle += dt * 0.45;
-            const orbitRadius = 35.0;
+            const orbitRadius = 38.0;
             const orbitHeight = 16.0;
 
             const camX = this.crashFocusPoint.x + Math.sin(this.crashOrbitAngle) * orbitRadius;
@@ -73,6 +79,15 @@ export class FlightCamera {
             this.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), THREE.MathUtils.clamp(dt * 3.0, 0, 1));
             this.camera.lookAt(this.crashFocusPoint);
             this.camera.up.set(0, 1, 0);
+        }
+
+        // Apply violent screen shake on impact
+        if (this.shakeIntensity > 0) {
+            const shakeMag = this.shakeIntensity * this.shakeIntensity * 2.2;
+            this.camera.position.x += (Math.random() - 0.5) * shakeMag;
+            this.camera.position.y += (Math.random() - 0.5) * shakeMag;
+            this.camera.position.z += (Math.random() - 0.5) * shakeMag;
+            this.shakeIntensity = Math.max(0, this.shakeIntensity - dt * 1.8);
         }
     }
 }
