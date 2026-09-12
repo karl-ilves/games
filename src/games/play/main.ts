@@ -71,6 +71,41 @@ function createUltraGrass() {
     scene.add(grassBlades);
 }
 
+let oceanWaterMesh: THREE.Mesh | null = null;
+let activeSeaConfig: any = null;
+
+function createUltraOcean(seaConfig: any) {
+    activeSeaConfig = seaConfig;
+    
+    // Background color for ocean
+    scene.background = new THREE.Color(0x74b9ff);
+    scene.fog = new THREE.FogExp2(0x74b9ff, 0.005);
+
+    // 1. Animated Sparkling Ocean Water Plane
+    const geo = new THREE.PlaneGeometry(380, 380, 72, 72);
+    const mat = new THREE.MeshStandardMaterial({
+        color: seaConfig.waterColor || 0x0984e3,
+        roughness: 0.1,
+        metalness: 0.25,
+        transparent: true,
+        opacity: 0.88,
+        flatShading: true
+    });
+    oceanWaterMesh = new THREE.Mesh(geo, mat);
+    oceanWaterMesh.rotation.x = -Math.PI / 2;
+    oceanWaterMesh.position.set(0, seaConfig.waterLevel || 0, 0);
+    oceanWaterMesh.userData.basePos = new Float32Array(geo.attributes.position.array);
+    oceanWaterMesh.receiveShadow = true;
+    scene.add(oceanWaterMesh);
+
+    // 2. Sandy Ocean Seabed Floor
+    const floorGeo = new THREE.PlaneGeometry(420, 420, 16, 16);
+    const oceanSeabedMesh = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x1b2838, roughness: 0.95 }));
+    oceanSeabedMesh.rotation.x = -Math.PI / 2;
+    oceanSeabedMesh.position.set(0, -11.5, 0);
+    scene.add(oceanSeabedMesh);
+}
+
 // --- Playard Standard 3D Avatar Character ---
 let playerAvatarRig: AvatarRig | null = null;
 
@@ -168,7 +203,6 @@ async function initPlayer() {
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    createUltraGrass();
     createUltraHuman();
 
     // Fetch Game Data
@@ -198,6 +232,13 @@ async function initPlayer() {
         if (currentGame) {
             if (titleDisp) titleDisp.innerText = currentGame.title;
             if (authorDisp) authorDisp.innerHTML = `By: <strong style="color: #ffd32a;">${currentGame.creatorUsername}</strong> | Category: ${currentGame.category}`;
+            
+            if (currentGame.sceneData?.mapType === 'sea' && currentGame.sceneData.seaConfig) {
+                createUltraOcean(currentGame.sceneData.seaConfig);
+            } else {
+                createUltraGrass();
+            }
+            
             buildSceneFromData(currentGame.sceneData);
 
             yardService.recordPlayedGame({
@@ -211,8 +252,10 @@ async function initPlayer() {
             });
         } else {
             if (titleDisp) titleDisp.innerText = 'Game Not Found';
+            createUltraGrass();
         }
     } else {
+        createUltraGrass();
         if (titleDisp) titleDisp.innerText = 'Demo Community World';
         yardService.recordPlayedGame({
             id: 'play',
@@ -290,6 +333,21 @@ async function initPlayer() {
 function animate() {
     requestAnimationFrame(animate);
     const delta = Math.min(clock.getDelta(), 0.1);
+    const time = performance.now() * 0.001;
+
+    if (oceanWaterMesh && activeSeaConfig) {
+        const pArr = oceanWaterMesh.geometry.attributes.position.array as Float32Array;
+        const bArr = oceanWaterMesh.userData.basePos as Float32Array;
+        const wSpeed = activeSeaConfig.waveSpeed || 2.0;
+        const wHeight = activeSeaConfig.waveHeight || 0.22;
+        
+        for (let i = 0; i < pArr.length; i += 3) {
+            const bx = bArr[i];
+            const by = bArr[i + 1];
+            pArr[i + 2] = Math.sin(bx * 0.5 + time * wSpeed) * wHeight + Math.cos(by * 0.4 + time * wSpeed * 0.8) * wHeight;
+        }
+        oceanWaterMesh.geometry.attributes.position.needsUpdate = true;
+    }
 
     const moveSpeed = 9;
     const moveDir = new THREE.Vector3();

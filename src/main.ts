@@ -961,6 +961,9 @@ window.addEventListener('playard_game_played', () => {
 
 window.addEventListener('playard_games_updated', () => {
     renderCommunityGames();
+    if (document.getElementById('modal-database-panel')?.style.display === 'flex') {
+        renderDatabaseGamesList();
+    }
 });
 
 // 3D Avatar System Initialization
