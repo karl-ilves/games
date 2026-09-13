@@ -99,6 +99,22 @@ export class WorldEnvironment {
             this.scene.add(stripe);
         }
 
+        // Runway Obstacle
+        this.obstacles.push({
+            name: 'Lennurada (Runway Asphalt)',
+            type: 'ground',
+            bounds: new THREE.Box3(new THREE.Vector3(-55, 0, -720), new THREE.Vector3(55, 5.8, 720)),
+            bonusMultiplier: 1.1
+        });
+
+        // Airport Island Obstacle
+        this.obstacles.push({
+            name: 'Lennuvälja saar (Airport Island)',
+            type: 'ground',
+            bounds: new THREE.Box3(new THREE.Vector3(-310, 0, -920), new THREE.Vector3(310, 5.2, 920)),
+            bonusMultiplier: 1.0
+        });
+
         // Airport Control Tower (prime target!)
         const towerGroup = new THREE.Group();
         const base = new THREE.Mesh(new THREE.CylinderGeometry(8, 11, 80, 12), new THREE.MeshStandardMaterial({ color: 0xecf0f1 }));
@@ -135,6 +151,45 @@ export class WorldEnvironment {
                 bonusMultiplier: 1.5
             });
         }
+    }
+
+    private mountainConfigs = [
+        { pos: [-900, 0, -1200], r: 350, h: 480 },
+        { pos: [-450, 0, -1600], r: 420, h: 560 },
+        { pos: [200, 0, -1800], r: 450, h: 620 },
+        { pos: [850, 0, -1400], r: 380, h: 510 },
+        { pos: [-1400, 0, -800], r: 320, h: 420 },
+        { pos: [1200, 0, -700], r: 340, h: 450 },
+        { pos: [-1000, 0, 400], r: 280, h: 360 }
+    ];
+
+    /**
+     * Accurately returns ground elevation and terrain type at any (X, Z) coordinate.
+     */
+    public getTerrainAt(x: number, z: number): { height: number; type: 'ground' | 'water' | 'mountain'; name: string } {
+        // 1. Runway surface (asphalt at y = 5.7m)
+        if (Math.abs(x) <= 55 && Math.abs(z) <= 720) {
+            return { height: 5.7, type: 'ground', name: 'Lennurada (Runway Asphalt)' };
+        }
+        // 2. Airport Island (green island at y = 5.0m)
+        if (Math.abs(x) <= 310 && Math.abs(z) <= 920) {
+            return { height: 5.0, type: 'ground', name: 'Lennuvälja saar (Airport Island)' };
+        }
+        // 3. Mountain Cones elevation
+        for (let i = 0; i < this.mountainConfigs.length; i++) {
+            const m = this.mountainConfigs[i];
+            const dx = x - m.pos[0];
+            const dz = z - m.pos[2];
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < m.r) {
+                const elev = m.h * (1 - dist / m.r);
+                if (elev > 1.0) {
+                    return { height: elev, type: 'mountain', name: `Kotkamäe mäenõlv #${i + 1}` };
+                }
+            }
+        }
+        // 4. Default ocean water surface (y = 0.5m)
+        return { height: 0.5, type: 'water', name: 'Ookean / Vesi' };
     }
 
     private buildMountains(): void {

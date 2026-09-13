@@ -240,8 +240,18 @@ export class PlaneCrashGame {
         if (!this.physics.state.isCrashed) {
             this.physics.update(dt, this.input.inputs);
 
-            // Sync visual mesh to physics
+            // Check collision with terrain, skyscrapers, water, and mountains immediately
             if (this.currentPlaneMesh) {
+                this.crashSys.checkCollisions(this.physics, this.currentPlaneMesh);
+            }
+
+            // Sync visual mesh to physics (clamp so plane NEVER penetrates into ground)
+            if (this.currentPlaneMesh && !this.physics.state.isCrashed) {
+                const terrain = this.environment.getTerrainAt(this.physics.position.x, this.physics.position.z);
+                const minY = terrain.height + 0.6;
+                if (this.physics.position.y < minY) {
+                    this.physics.position.y = minY;
+                }
                 this.currentPlaneMesh.rootGroup.position.copy(this.physics.position);
                 this.currentPlaneMesh.rootGroup.quaternion.copy(this.physics.quaternion);
 
@@ -257,11 +267,6 @@ export class PlaneCrashGame {
                     const rear = new THREE.Vector3(0, 0, 3).applyQuaternion(this.physics.quaternion).add(this.physics.position);
                     this.particles.spawnTrailPuff(rear, 0.6, 0xecf0f1);
                 }
-            }
-
-            // Check collision with terrain, skyscrapers, water, and mountains
-            if (this.currentPlaneMesh) {
-                this.crashSys.checkCollisions(this.physics, this.currentPlaneMesh);
             }
 
             // Update Engine Audio

@@ -44,7 +44,8 @@ export class CrashSystem {
                 .applyQuaternion(quat)
                 .add(pos);
 
-            if (leftWingTip.y <= 1.8 || this.isPointInObstacle(leftWingTip)) {
+            const terrainL = this.environment.getTerrainAt(leftWingTip.x, leftWingTip.z);
+            if (leftWingTip.y <= terrainL.height + 0.4 || this.isPointInObstacle(leftWingTip)) {
                 this.breakOffLeftWing(physics, plane, leftWingTip);
             }
         }
@@ -55,7 +56,8 @@ export class CrashSystem {
                 .applyQuaternion(quat)
                 .add(pos);
 
-            if (rightWingTip.y <= 1.8 || this.isPointInObstacle(rightWingTip)) {
+            const terrainR = this.environment.getTerrainAt(rightWingTip.x, rightWingTip.z);
+            if (rightWingTip.y <= terrainR.height + 0.4 || this.isPointInObstacle(rightWingTip)) {
                 this.breakOffRightWing(physics, plane, rightWingTip);
             }
         }
@@ -66,21 +68,36 @@ export class CrashSystem {
                 .applyQuaternion(quat)
                 .add(pos);
 
-            if (tailTip.y <= 1.8 || this.isPointInObstacle(tailTip)) {
+            const terrainT = this.environment.getTerrainAt(tailTip.x, tailTip.z);
+            if (tailTip.y <= terrainT.height + 0.4 || this.isPointInObstacle(tailTip)) {
                 this.breakOffTail(physics, plane, tailTip);
             }
         }
 
-        // 4. Check Full Fuselage / Nose Strike
+        // 4. Check Full Fuselage / Nose Strike (Plane can NEVER sink into the ground!)
         const noseTip = new THREE.Vector3(0, 0, -3.5).applyQuaternion(quat).add(pos);
-        if (pos.y <= 2.2 || noseTip.y <= 2.0) {
-            const obstacle = this.environment.obstacles.find(o => o.type === 'water') || {
-                name: 'Ookean / Vesi',
-                type: 'water',
-                bonusMultiplier: 1.0,
+        const tailBottom = new THREE.Vector3(0, -0.5, plane.tailZ * 0.8).applyQuaternion(quat).add(pos);
+        const bellyPoint = new THREE.Vector3(0, -0.8, 0).applyQuaternion(quat).add(pos);
+
+        const terrainCenter = this.environment.getTerrainAt(pos.x, pos.z);
+        const terrainNose = this.environment.getTerrainAt(noseTip.x, noseTip.z);
+        const terrainBelly = this.environment.getTerrainAt(bellyPoint.x, bellyPoint.z);
+
+        // Immediate catastrophic crash if fuselage, nose, or belly touches the terrain surface!
+        if (
+            pos.y <= terrainCenter.height + 1.2 ||
+            noseTip.y <= terrainNose.height + 0.8 ||
+            bellyPoint.y <= terrainBelly.height + 0.4 ||
+            tailBottom.y <= terrainCenter.height + 0.4 ||
+            pos.y <= 1.8
+        ) {
+            const obstacle: CrashObstacle = {
+                name: terrainCenter.name,
+                type: terrainCenter.type,
+                bonusMultiplier: terrainCenter.type === 'ground' ? 1.1 : 1.0,
                 bounds: new THREE.Box3()
             };
-            this.executeCrash(physics, plane, obstacle as CrashObstacle);
+            this.executeCrash(physics, plane, obstacle);
             return true;
         }
 
@@ -196,6 +213,11 @@ export class CrashSystem {
     public executeCrash(physics: FlightPhysics, plane: BuiltPlaneResult, obstacle: CrashObstacle): void {
         if (physics.state.isCrashed) return;
         physics.state.isCrashed = true;
+
+        const terrain = this.environment.getTerrainAt(physics.position.x, physics.position.z);
+        if (physics.position.y < terrain.height + 0.8) {
+            physics.position.y = terrain.height + 0.8;
+        }
         this.crashPosition.copy(physics.position);
 
         const isWater = obstacle.type === 'water';
@@ -377,8 +399,11 @@ export class CrashSystem {
                 this.particles.spawnDebrisTrail(debris.mesh.position, false);
             }
 
-            if (debris.mesh.position.y <= 1.5) {
-                debris.mesh.position.y = 1.5;
+            const groundElev = this.environment.getTerrainAt(debris.mesh.position.x, debris.mesh.position.z).height;
+            const bounceY = groundElev + 0.35;
+
+            if (debris.mesh.position.y <= bounceY) {
+                debris.mesh.position.y = bounceY;
 
                 if (Math.abs(debris.velocity.y) > 4.0) {
                     this.particles.spawnDebrisTrail(debris.mesh.position, true);

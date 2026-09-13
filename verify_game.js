@@ -5715,13 +5715,43 @@ try {
             }
             console.log("   Wing & Tail strike dismemberment verified: ✅");
 
+            // Test Ground Penetration Prevention & Runway Collision
+            console.log("   Testing Ground Penetration Prevention & Runway Collision...");
+            const groundColResult = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return { success: false };
+
+                // Query terrain height at runway center
+                const terrain = game.environment.getTerrainAt(0, 0);
+
+                // Place plane right above runway
+                game.physics.position.set(0, terrain.height + 0.8, 0);
+                game.physics.state.isCrashed = false;
+
+                // Check collision at ground level
+                const collided = game.crashSys.checkCollisions(game.physics, game.currentPlaneMesh);
+
+                return {
+                    runwayHeight: terrain.height,
+                    terrainName: terrain.name,
+                    collided,
+                    isCrashed: game.physics.state.isCrashed
+                };
+            });
+            console.log(`   Runway ground check: height=${groundColResult.runwayHeight}m, name="${groundColResult.terrainName}", collided=${groundColResult.collided}`);
+            if (groundColResult.runwayHeight < 5.0 || !groundColResult.collided || !groundColResult.isCrashed) {
+                throw new Error("Plane must detect runway ground collision at 5.7m and never sink into the asphalt!");
+            }
+            console.log("   Ground penetration prevention verified: ✅");
+
             // Test Stunt & Crash Execution
             console.log("   Testing Aerobatic 360 Spin & Crash Mechanics...");
             const crashReport = await page.evaluate(() => {
                 const game = window.planeCrashGame;
                 if (!game) return null;
 
-                // Simulate 2 completed 360° spins
+                // Reset crashed state and simulate 2 completed 360° spins
+                game.physics.state.isCrashed = false;
                 game.physics.state.spin360Count = 2;
                 game.physics.state.loopCount = 1;
                 game.physics.state.highestAltitudeReached = 450;
