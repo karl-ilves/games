@@ -81,32 +81,50 @@ export class PlaneBuilder {
                 fuselage = new THREE.Mesh(fuseGeom, matPrimary);
                 fuselage.castShadow = true;
 
-                // Cockpit Glass
-                const cockGeom = new THREE.BoxGeometry(1.2, 0.9, 2.0);
+                // Cockpit Glass - sleek cabin enclosure flush with fuselage contours
+                const cockGeom = new THREE.BoxGeometry(0.95, 0.8, 2.0);
                 const cockpit = new THREE.Mesh(cockGeom, matGlass);
-                cockpit.position.set(0, 0.5, -0.6);
+                cockpit.position.set(0, 0.45, -0.6);
                 fuselage.add(cockpit);
 
-                // High Wings
+                // Cabin Roof Cap
+                const roofGeom = new THREE.BoxGeometry(0.98, 0.12, 2.0);
+                const roof = new THREE.Mesh(roofGeom, matPrimary);
+                roof.position.set(0, 0.85, -0.6);
+                fuselage.add(roof);
+
+                // High Wings - mounted on top of cabin, authentic level/slight upward dihedral
                 const wingGeom = new THREE.BoxGeometry(5.0, 0.12, 1.2);
                 wingLeft = new THREE.Mesh(wingGeom, matPrimary);
-                wingLeft.position.set(-2.8, 0.9, -0.5);
-                wingLeft.rotation.z = 0.03;
+                wingLeft.position.set(-2.8, 0.88, -0.5);
+                wingLeft.rotation.z = -0.015; // Realistic slight upward dihedral (tips pointing slightly UP)
 
                 wingRight = new THREE.Mesh(wingGeom, matPrimary);
-                wingRight.position.set(2.8, 0.9, -0.5);
-                wingRight.rotation.z = -0.03;
+                wingRight.position.set(2.8, 0.88, -0.5);
+                wingRight.rotation.z = 0.015; // Realistic slight upward dihedral (tips pointing slightly UP)
 
-                // Tail Fin (at +Z)
-                const finGeom = new THREE.BoxGeometry(0.1, 1.4, 1.2);
+                // Iconic Cessna Wing Struts connecting lower fuselage to high wings
+                const strutGeom = new THREE.CylinderGeometry(0.04, 0.04, 2.3, 6);
+                const strutL = new THREE.Mesh(strutGeom, matSecondary);
+                strutL.position.set(-1.4, 0.35, -0.5);
+                strutL.rotation.z = 0.65;
+                fuselage.add(strutL);
+
+                const strutR = new THREE.Mesh(strutGeom, matSecondary);
+                strutR.position.set(1.4, 0.35, -0.5);
+                strutR.rotation.z = -0.65;
+                fuselage.add(strutR);
+
+                // Tail Fin (at +Z) with swept leading edge
+                const finGeom = new THREE.BoxGeometry(0.1, 1.5, 1.4);
                 tailFin = new THREE.Mesh(finGeom, matSecondary);
-                tailFin.position.set(0, 0.8, 2.8);
-                tailFin.rotation.x = 0.3;
+                tailFin.position.set(0, 0.85, 2.7);
+                tailFin.rotation.x = 0.35;
 
                 // Horizontal Stabilizer (at +Z)
-                const stabGeom = new THREE.BoxGeometry(2.4, 0.08, 0.8);
+                const stabGeom = new THREE.BoxGeometry(2.6, 0.08, 0.8);
                 tailHorizontal = new THREE.Mesh(stabGeom, matSecondary);
-                tailHorizontal.position.set(0, 0.2, 3.0);
+                tailHorizontal.position.set(0, 0.25, 2.9);
 
                 // Propeller (pointing forward at -Z)
                 const propGroup = new THREE.Group();
@@ -121,7 +139,7 @@ export class PlaneBuilder {
                 propellerMesh = propGroup;
 
                 // Tricycle Gear (nose wheel at -Z)
-                const gear = PlaneBuilder.createWheels(0.6, 1.2, 1.0, -2.0);
+                const gear = PlaneBuilder.createWheels(0.7, 1.0, 1.1, -2.2);
                 fuselage.add(gear);
                 break;
             }
@@ -314,17 +332,17 @@ export class PlaneBuilder {
                 windows.position.set(0, 0.4, 0);
                 fuselage.add(windows);
 
-                // Swept Wings (swept back toward +Z)
+                // Swept Wings (swept back toward +Z with realistic upward airliner dihedral)
                 const wingGeom = new THREE.BoxGeometry(8.5, 0.25, 3.2);
                 wingLeft = new THREE.Mesh(wingGeom, matPrimary);
                 wingLeft.position.set(-5.2, -0.4, -0.5);
                 wingLeft.rotation.y = 0.35;
-                wingLeft.rotation.z = 0.08;
+                wingLeft.rotation.z = -0.07;
 
                 wingRight = new THREE.Mesh(wingGeom, matPrimary);
                 wingRight.position.set(5.2, -0.4, -0.5);
                 wingRight.rotation.y = -0.35;
-                wingRight.rotation.z = -0.08;
+                wingRight.rotation.z = 0.07;
 
                 // Turbofan Engines under wings
                 const engGeom = new THREE.CylinderGeometry(0.7, 0.65, 3.2, 14).rotateX(Math.PI / 2);
@@ -431,11 +449,11 @@ export class PlaneBuilder {
                 const wingGeom = new THREE.BoxGeometry(13.0, 0.35, 4.5);
                 wingLeft = new THREE.Mesh(wingGeom, matPrimary);
                 wingLeft.position.set(-7.8, 1.6, -0.5);
-                wingLeft.rotation.z = -0.06;
+                wingLeft.rotation.z = 0.04;
 
                 wingRight = new THREE.Mesh(wingGeom, matPrimary);
                 wingRight.position.set(7.8, 1.6, -0.5);
-                wingRight.rotation.z = 0.06;
+                wingRight.rotation.z = -0.04;
 
                 // 6 Engines! 3 on each wing
                 for (let wing of [wingLeft, wingRight]) {
@@ -566,22 +584,34 @@ export class PlaneBuilder {
         const tireGeom = new THREE.CylinderGeometry(radius * 0.4, radius * 0.4, 0.25, 10).rotateZ(Math.PI/2);
         const rimGeom = new THREE.CylinderGeometry(radius * 0.2, radius * 0.2, 0.27, 8).rotateZ(Math.PI/2);
 
-        // Left gear
+        // Left gear with strut
         const wheelL = new THREE.Group();
         wheelL.add(new THREE.Mesh(tireGeom, tireMat), new THREE.Mesh(rimGeom, rimMat));
         wheelL.position.set(-width, -groundOffset, 0);
 
-        // Right gear
+        const strutGeom = new THREE.CylinderGeometry(0.04, 0.04, groundOffset, 6);
+        const strutL = new THREE.Mesh(strutGeom, rimMat);
+        strutL.position.set(-width * 0.5, -groundOffset * 0.5, 0);
+        strutL.rotation.z = Math.atan2(width, groundOffset);
+
+        // Right gear with strut
         const wheelR = new THREE.Group();
         wheelR.add(new THREE.Mesh(tireGeom, tireMat), new THREE.Mesh(rimGeom, rimMat));
         wheelR.position.set(width, -groundOffset, 0);
 
-        // Steerable Nose / Tail gear
+        const strutR = new THREE.Mesh(strutGeom, rimMat);
+        strutR.position.set(width * 0.5, -groundOffset * 0.5, 0);
+        strutR.rotation.z = -Math.atan2(width, groundOffset);
+
+        // Steerable Nose gear with strut
         const wheelNose = new THREE.Group();
         wheelNose.add(new THREE.Mesh(tireGeom, tireMat), new THREE.Mesh(rimGeom, rimMat));
         wheelNose.position.set(0, -groundOffset, noseZ);
 
-        group.add(wheelL, wheelR, wheelNose);
+        const strutNose = new THREE.Mesh(strutGeom, rimMat);
+        strutNose.position.set(0, -groundOffset * 0.5, noseZ);
+
+        group.add(wheelL, strutL, wheelR, strutR, wheelNose, strutNose);
         return group;
     }
 }

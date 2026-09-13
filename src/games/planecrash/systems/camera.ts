@@ -47,8 +47,8 @@ export class FlightCamera {
         } else if (this.mode === 'chase') {
             // Chase camera: sits behind and slightly above plane
             const speedFactor = Math.min(1.5, physics.state.speedKmh / 300);
-            const distBehind = 14.0 + speedFactor * 4.0;
-            const heightAbove = 4.5 + speedFactor * 1.5;
+            const distBehind = 13.0 + speedFactor * 3.5;
+            const heightAbove = 3.2 + speedFactor * 1.2;
 
             const idealOffset = new THREE.Vector3(0, heightAbove, distBehind).applyQuaternion(planeQuat);
             const idealPos = planePos.clone().add(idealOffset);

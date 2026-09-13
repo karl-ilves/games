@@ -40,7 +40,7 @@ export class CrashSystem {
 
         // 1. Check Left Wing Strike
         if (!physics.state.leftWingBroken && plane.wingLeft.visible) {
-            const leftWingTip = new THREE.Vector3(-plane.wingSpan / 2, 0.2, -0.2)
+            const leftWingTip = new THREE.Vector3(-plane.wingSpan / 2, 0.5, -0.2)
                 .applyQuaternion(quat)
                 .add(pos);
 
@@ -51,7 +51,7 @@ export class CrashSystem {
 
         // 2. Check Right Wing Strike
         if (!physics.state.rightWingBroken && plane.wingRight.visible) {
-            const rightWingTip = new THREE.Vector3(plane.wingSpan / 2, 0.2, -0.2)
+            const rightWingTip = new THREE.Vector3(plane.wingSpan / 2, 0.5, -0.2)
                 .applyQuaternion(quat)
                 .add(pos);
 
