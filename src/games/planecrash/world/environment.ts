@@ -8,9 +8,17 @@ export interface CrashObstacle {
     bonusMultiplier: number;
 }
 
+export interface MountainConfig {
+    pos: [number, number, number];
+    r: number;
+    h: number;
+    name: string;
+}
+
 export class WorldEnvironment {
     public scene: THREE.Scene;
     public obstacles: CrashObstacle[] = [];
+    public mountainConfigs: MountainConfig[] = [];
     public runwayStartPosition: THREE.Vector3 = new THREE.Vector3(0, 5, 250);
     public runwayStartRotation: THREE.Euler = new THREE.Euler(0, 0, 0);
 
@@ -24,7 +32,48 @@ export class WorldEnvironment {
 
     constructor(scene: THREE.Scene) {
         this.scene = scene;
+        this.mountainConfigs = this.generatePerimeterMountains();
         this.buildWorld();
+    }
+
+    private generatePerimeterMountains(): MountainConfig[] {
+        const list: MountainConfig[] = [];
+
+        // 1. Primary perimeter ring encircling the valley map (24 overlapping peaks)
+        const ringCount = 24;
+        for (let i = 0; i < ringCount; i++) {
+            const angle = (i / ringCount) * Math.PI * 2;
+            const dist = 2300 + Math.sin(i * 2.3) * 160 + Math.cos(i * 1.7) * 90;
+            const px = Math.cos(angle) * dist;
+            const pz = Math.sin(angle) * dist;
+            const r = 490 + Math.sin(i * 3.1) * 70; // 420m to 560m radius (guarantees overlap)
+            const h = 540 + Math.cos(i * 2.7) * 140; // 400m to 680m height
+            list.push({
+                pos: [Math.round(px), 5, Math.round(pz)],
+                r: Math.round(r),
+                h: Math.round(h),
+                name: `Piirimäetipp #${i + 1}`
+            });
+        }
+
+        // 2. Outer towering giant backdrop peaks (8 peaks)
+        const backdropCount = 8;
+        for (let j = 0; j < backdropCount; j++) {
+            const angle = ((j + 0.5) / backdropCount) * Math.PI * 2;
+            const dist = 2750 + Math.sin(j * 1.9) * 140;
+            const px = Math.cos(angle) * dist;
+            const pz = Math.sin(angle) * dist;
+            const r = 580 + Math.sin(j * 2.2) * 80;
+            const h = 720 + Math.cos(j * 1.5) * 160; // 560m to 880m height
+            list.push({
+                pos: [Math.round(px), 5, Math.round(pz)],
+                r: Math.round(r),
+                h: Math.round(h),
+                name: `Hiidmäetipp #${j + 1}`
+            });
+        }
+
+        return list;
     }
 
     private buildWorld(): void {
@@ -50,23 +99,42 @@ export class WorldEnvironment {
         dirLight.shadow.camera.bottom = -500;
         this.scene.add(dirLight);
 
-        // 2. Ocean Water Plane
-        const waterGeom = new THREE.PlaneGeometry(8000, 8000, 16, 16);
-        waterGeom.rotateX(-Math.PI / 2);
-        const waterMat = new THREE.MeshStandardMaterial({
+        // 2. Vast Mainland Valley Ground Plane (All terrain inside mountain ring is solid land!)
+        const landGeom = new THREE.PlaneGeometry(9000, 9000, 32, 32);
+        landGeom.rotateX(-Math.PI / 2);
+        const landMat = new THREE.MeshStandardMaterial({
+            color: 0x27ae60, // Lush green valley meadow
+            roughness: 0.9,
+            metalness: 0.05
+        });
+        const mainland = new THREE.Mesh(landGeom, landMat);
+        mainland.position.y = 5.0;
+        this.scene.add(mainland);
+
+        // Scenic Canyon River flowing through the land under the Golden Suspension Bridge
+        const riverGeom = new THREE.PlaneGeometry(150, 900);
+        riverGeom.rotateX(-Math.PI / 2);
+        const riverMat = new THREE.MeshStandardMaterial({
             color: 0x0984e3,
             roughness: 0.15,
             metalness: 0.85
         });
-        const ocean = new THREE.Mesh(waterGeom, waterMat);
-        ocean.position.y = 0;
-        this.scene.add(ocean);
+        const river = new THREE.Mesh(riverGeom, riverMat);
+        river.position.set(-600, 5.05, 500);
+        this.scene.add(river);
 
-        // Ground / Water base obstacle
+        // Ground / River base obstacles
         this.obstacles.push({
-            name: 'Ookean / Vesi',
+            name: 'Maapind / Heinamaa (Valley Ground)',
+            type: 'ground',
+            bounds: new THREE.Box3(new THREE.Vector3(-4500, 0, -4500), new THREE.Vector3(4500, 5.2, 4500)),
+            bonusMultiplier: 1.0
+        });
+
+        this.obstacles.push({
+            name: 'Kanjoni jõgi (Canyon River)',
             type: 'water',
-            bounds: new THREE.Box3(new THREE.Vector3(-4000, -50, -4000), new THREE.Vector3(4000, 1.5, 4000)),
+            bounds: new THREE.Box3(new THREE.Vector3(-675, 0, 50), new THREE.Vector3(-525, 6.0, 950)),
             bonusMultiplier: 1.0
         });
 
@@ -416,43 +484,43 @@ export class WorldEnvironment {
         planeAudio.playMapRebuilt();
     }
 
-    private mountainConfigs = [
-        { pos: [-900, 0, -1200], r: 350, h: 480 },
-        { pos: [-450, 0, -1600], r: 420, h: 560 },
-        { pos: [200, 0, -1800], r: 450, h: 620 },
-        { pos: [850, 0, -1400], r: 380, h: 510 },
-        { pos: [-1400, 0, -800], r: 320, h: 420 },
-        { pos: [1200, 0, -700], r: 340, h: 450 },
-        { pos: [-1000, 0, 400], r: 280, h: 360 }
-    ];
-
     /**
      * Accurately returns ground elevation and terrain type at any (X, Z) coordinate.
+     * All terrain inside the encircling mountain barrier is solid land (y = 5.0m)!
      */
     public getTerrainAt(x: number, z: number): { height: number; type: 'ground' | 'water' | 'mountain'; name: string } {
         // 1. Runway surface (asphalt at y = 5.7m)
         if (Math.abs(x) <= 55 && Math.abs(z) <= 720) {
             return { height: 5.7, type: 'ground', name: 'Lennurada (Runway Asphalt)' };
         }
-        // 2. Airport Island (green island at y = 5.0m)
-        if (Math.abs(x) <= 310 && Math.abs(z) <= 920) {
-            return { height: 5.0, type: 'ground', name: 'Lennuvälja saar (Airport Island)' };
+        // 2. Canyon River under suspension bridge
+        if (Math.abs(x - (-600)) <= 65 && z >= 80 && z <= 920) {
+            return { height: 5.05, type: 'water', name: 'Kanjoni jõgi (Canyon River)' };
         }
-        // 3. Mountain Cones elevation
-        for (let i = 0; i < this.mountainConfigs.length; i++) {
-            const m = this.mountainConfigs[i];
-            const dx = x - m.pos[0];
-            const dz = z - m.pos[2];
-            const dist = Math.sqrt(dx * dx + dz * dz);
-            if (dist < m.r) {
-                const elev = m.h * (1 - dist / m.r);
-                if (elev > 1.0) {
-                    return { height: elev, type: 'mountain', name: `Kotkamäe mäenõlv #${i + 1}` };
+        // 3. Encircling Mountain Barrier elevation
+        const distSq = x * x + z * z;
+        if (distSq >= 1400 * 1400) {
+            let maxElev = 5.0;
+            let peakName = '';
+            for (let i = 0; i < this.mountainConfigs.length; i++) {
+                const m = this.mountainConfigs[i];
+                const dx = x - m.pos[0];
+                const dz = z - m.pos[2];
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist < m.r) {
+                    const elev = m.pos[1] + m.h * (1 - dist / m.r);
+                    if (elev > maxElev) {
+                        maxElev = elev;
+                        peakName = m.name;
+                    }
                 }
             }
+            if (maxElev > 5.5) {
+                return { height: maxElev, type: 'mountain', name: peakName || 'Mäenõlv (Mountain Barrier)' };
+            }
         }
-        // 4. Default ocean water surface (y = 0.5m)
-        return { height: 0.5, type: 'water', name: 'Ookean / Vesi' };
+        // 4. All inner valley terrain is solid land at y = 5.0m
+        return { height: 5.0, type: 'ground', name: 'Maapind / Heinamaa (Valley Ground)' };
     }
 
     private buildMountains(): void {
@@ -467,37 +535,27 @@ export class WorldEnvironment {
             roughness: 0.5
         });
 
-        // Large mountain clusters to the North & East
-        const mountainConfigs = [
-            { pos: [-900, 0, -1200], r: 350, h: 480 },
-            { pos: [-450, 0, -1600], r: 420, h: 560 },
-            { pos: [200, 0, -1800], r: 450, h: 620 },
-            { pos: [850, 0, -1400], r: 380, h: 510 },
-            { pos: [-1400, 0, -800], r: 320, h: 420 },
-            { pos: [1200, 0, -700], r: 340, h: 450 },
-            { pos: [-1000, 0, 400], r: 280, h: 360 }
-        ];
-
-        mountainConfigs.forEach((m, idx) => {
+        // Generate the massive ring of peaks encircling the entire map
+        this.mountainConfigs.forEach((m, idx) => {
             const geom = new THREE.ConeGeometry(m.r, m.h, 9);
             geom.translate(0, m.h / 2, 0);
             const peak = new THREE.Mesh(geom, mountainMat);
-            peak.position.set(m.pos[0], 0, m.pos[2]);
+            peak.position.set(m.pos[0], m.pos[1], m.pos[2]);
             this.scene.add(peak);
 
-            // Snow cap
+            // Snow cap on top 35% of peak
             const snowGeom = new THREE.ConeGeometry(m.r * 0.4, m.h * 0.35, 9);
             snowGeom.translate(0, m.h * 0.82, 0);
             const snow = new THREE.Mesh(snowGeom, snowMat);
-            snow.position.set(m.pos[0], 0, m.pos[2]);
+            snow.position.set(m.pos[0], m.pos[1], m.pos[2]);
             this.scene.add(snow);
 
             this.obstacles.push({
-                name: `Kotkamäe mäetipp #${idx + 1}`,
+                name: m.name || `Piirimäetipp #${idx + 1}`,
                 type: 'mountain',
                 bounds: new THREE.Box3(
-                    new THREE.Vector3(m.pos[0] - m.r * 0.7, 0, m.pos[2] - m.r * 0.7),
-                    new THREE.Vector3(m.pos[0] + m.r * 0.7, m.h, m.pos[2] + m.r * 0.7)
+                    new THREE.Vector3(m.pos[0] - m.r * 0.7, m.pos[1], m.pos[2] - m.r * 0.7),
+                    new THREE.Vector3(m.pos[0] + m.r * 0.7, m.pos[1] + m.h, m.pos[2] + m.r * 0.7)
                 ),
                 bonusMultiplier: 1.8
             });

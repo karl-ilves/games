@@ -687,6 +687,19 @@ try {
         console.log("   Avatar Emotes category items count:", emoteCardsCount);
         if (emoteCardsCount < 4) throw new Error("Expected multiple emotes in emotes category!");
 
+        // Ensure test emotes are unowned for testing Buy button UI
+        await page.evaluate(() => {
+            if (window.playardAvatar?.userInventory) {
+                window.playardAvatar.userInventory.delete('emote_salute_military');
+                window.playardAvatar.userInventory.delete('emote_breakdance');
+            }
+            if (window.yardService?.data?.inventory) {
+                window.yardService.data.inventory = window.yardService.data.inventory.filter(id => id !== 'emote_salute_military' && id !== 'emote_breakdance');
+            }
+            window.playardAvatarShop?.renderCatalogItems();
+        });
+        await new Promise(r => setTimeout(r, 200));
+
         // Verify unowned paid emote has English Buy button and NOT 'Equipped'
         const saluteBuyBtn = await page.$('[data-buy-id="emote_salute_military"]');
         if (!saluteBuyBtn) throw new Error("Unowned emote 'emote_salute_military' must have a Buy button!");
@@ -4657,6 +4670,15 @@ try {
             console.log(`   In-Game Emotes Menu display (Expected: flex): ${menuDisplay}`);
             if (menuDisplay !== 'flex') throw new Error("In-Game Emotes menu must open on toggle click!");
 
+            // Ensure Dance emote is initially locked for this test
+            await page.evaluate(() => {
+                if (window.playardAvatar?.userInventory) {
+                    window.playardAvatar.userInventory.delete('emote_dance_spin');
+                }
+                window.mmp1Game?.emotesWidget?.updateMenuElements();
+            });
+            await new Promise(r => setTimeout(r, 100));
+
             // Verify Wave (default/free) is unlocked, Dance is initially locked
             const waveBtn = await page.$('#playard-in-game-emotes-menu [data-emote-action="wave"]');
             const danceBtn = await page.$('#playard-in-game-emotes-menu [data-emote-action="dance"]');
@@ -5743,6 +5765,65 @@ try {
                 throw new Error("Plane must detect runway ground collision at 5.7m and never sink into the asphalt!");
             }
             console.log("   Ground penetration prevention verified: ✅");
+
+            // Test Perimeter Mountain Ring & Solid Inner Valley Land
+            console.log("   Testing Perimeter Mountain Ring & Solid Inner Valley Land...");
+            const mapGeographyResult = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return { success: false };
+                const env = game.environment;
+
+                // 1. Check mountains encircling the perimeter
+                const mountainCount = env.mountainConfigs.length;
+                const eastPeak = env.getTerrainAt(2300, 0);
+                const westPeak = env.getTerrainAt(-2300, 0);
+                const southPeak = env.getTerrainAt(0, 2300);
+                const northPeak = env.getTerrainAt(0, -2300);
+
+                // 2. Check inner valley terrain (must all be solid ground at y=5.0m, NOT open ocean!)
+                const valleyP1 = env.getTerrainAt(500, 500);
+                const valleyP2 = env.getTerrainAt(-300, 200);
+                const valleyP3 = env.getTerrainAt(800, -400);
+
+                // 3. Check river under Golden Suspension Bridge
+                const riverPoint = env.getTerrainAt(-600, 500);
+
+                return {
+                    mountainCount,
+                    eastPeakType: eastPeak.type,
+                    eastPeakHeight: eastPeak.height,
+                    westPeakType: westPeak.type,
+                    westPeakHeight: westPeak.height,
+                    southPeakType: southPeak.type,
+                    southPeakHeight: southPeak.height,
+                    northPeakType: northPeak.type,
+                    northPeakHeight: northPeak.height,
+                    valleyP1Type: valleyP1.type,
+                    valleyP1Height: valleyP1.height,
+                    valleyP2Type: valleyP2.type,
+                    valleyP2Height: valleyP2.height,
+                    valleyP3Type: valleyP3.type,
+                    valleyP3Height: valleyP3.height,
+                    riverPointType: riverPoint.type,
+                    riverPointHeight: riverPoint.height
+                };
+            });
+            console.log(`   Map Geography: Peaks count=${mapGeographyResult.mountainCount}, East=${mapGeographyResult.eastPeakHeight}m (${mapGeographyResult.eastPeakType}), West=${mapGeographyResult.westPeakHeight}m (${mapGeographyResult.westPeakType}), South=${mapGeographyResult.southPeakHeight}m (${mapGeographyResult.southPeakType}), North=${mapGeographyResult.northPeakHeight}m (${mapGeographyResult.northPeakType})`);
+            console.log(`   Inner Valley Land: P1=${mapGeographyResult.valleyP1Height}m (${mapGeographyResult.valleyP1Type}), P2=${mapGeographyResult.valleyP2Height}m (${mapGeographyResult.valleyP2Type}), P3=${mapGeographyResult.valleyP3Height}m (${mapGeographyResult.valleyP3Type}), River=${mapGeographyResult.riverPointHeight}m (${mapGeographyResult.riverPointType})`);
+
+            if (mapGeographyResult.mountainCount < 20) {
+                throw new Error(`Expected at least 20 perimeter mountain peaks encircling map, got ${mapGeographyResult.mountainCount}`);
+            }
+            if (mapGeographyResult.eastPeakType !== 'mountain' || mapGeographyResult.westPeakType !== 'mountain' || mapGeographyResult.southPeakType !== 'mountain' || mapGeographyResult.northPeakType !== 'mountain') {
+                throw new Error("Perimeter mountain barrier must encircle the map in all directions (North, South, East, West)!");
+            }
+            if (mapGeographyResult.valleyP1Type !== 'ground' || mapGeographyResult.valleyP1Height !== 5.0 || mapGeographyResult.valleyP2Type !== 'ground' || mapGeographyResult.valleyP3Type !== 'ground') {
+                throw new Error("All inner terrain inside the mountain ring must be solid ground at y=5.0m!");
+            }
+            if (mapGeographyResult.riverPointType !== 'water') {
+                throw new Error("Canyon river under suspension bridge must be water!");
+            }
+            console.log("   Perimeter Mountain Ring & Solid Inner Valley Land verified: ✅");
 
             // Test Stunt & Crash Execution
             console.log("   Testing Aerobatic 360 Spin & Crash Mechanics...");
