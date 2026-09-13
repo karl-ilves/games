@@ -2321,8 +2321,7 @@ try {
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");
-        await page.goto('about:blank');
-        await page.goto('http://localhost:4173/games/games/racing/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/games/racing/index.html', { waitUntil: 'load', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
         await page.waitForSelector('#garage-screen', { visible: true, timeout: 5000 });
