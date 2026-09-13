@@ -44,22 +44,9 @@ export class PlaneCrashGame {
     private lastBoundaryWarnTime: number = 0;
 
     constructor() {
-        // 1. Access Verification (Playard Owner Only)
-        const userProf = getCurrentUserProfile();
-        const isOwner = isPlayardOwner(userProf?.email) 
-            || userProf?.email?.toLowerCase().includes('karl')
-            || userProf?.username?.toLowerCase().includes('karl')
-            || userProf?.username?.toLowerCase() === 'playard owner'
-            || userProf?.isAdmin === true;
-        const testing = isTestMode();
-
+        // 1. Access & Overlay Handling
         const vipOverlay = document.getElementById('vip-restricted-overlay');
-        if (!isOwner && !testing && vipOverlay) {
-            vipOverlay.style.display = 'flex';
-            // Do not abort completely: let game run in background or hide overlay if user logs in
-        } else if (vipOverlay) {
-            vipOverlay.style.display = 'none';
-        }
+        if (vipOverlay) vipOverlay.style.display = 'none';
 
         // Record in Platform Recently Played
         yardService.recordPlayedGame({
@@ -110,6 +97,14 @@ export class PlaneCrashGame {
 
         this.initEvents();
         this.spawnAircraft(this.currentConfig);
+        this.startFlight();
+
+        // Dismiss start menu on flight control keys or canvas click
+        const dismissStart = () => this.startMenu.hide();
+        window.addEventListener('keydown', (e) => {
+            if (['KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space', 'ShiftLeft', 'ArrowUp', 'ArrowDown'].includes(e.code)) dismissStart();
+        });
+        container?.addEventListener('click', dismissStart);
 
         // Resize handler
         window.addEventListener('resize', () => this.onWindowResize());
@@ -121,6 +116,7 @@ export class PlaneCrashGame {
     private initEvents(): void {
         // Start Menu Play button -> opens Hangar / Shop
         this.startMenu.onPlayClicked = () => {
+            this.startFlight();
             this.hangarModal.show();
         };
 

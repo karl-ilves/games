@@ -103,14 +103,17 @@ export class WorldEnvironment {
     private buildWorld(): void {
         // 1. Sky & Atmosphere
         this.scene.background = new THREE.Color(0x74b9ff);
-        this.scene.fog = new THREE.FogExp2(0xa0c4ff, 0.00035);
+        this.scene.fog = new THREE.FogExp2(0xa0c4ff, 0.00025);
 
-        // Sun & Directional Lighting
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444455, 0.7);
+        // Sun, Ambient & Directional Lighting
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.1);
         hemiLight.position.set(0, 500, 0);
         this.scene.add(hemiLight);
 
-        const dirLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.65);
+        this.scene.add(ambLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfffaed, 1.3);
         dirLight.position.set(300, 600, 200);
         dirLight.castShadow = true;
         dirLight.shadow.mapSize.width = 2048;
@@ -127,9 +130,9 @@ export class WorldEnvironment {
         const landGeom = new THREE.PlaneGeometry(9000, 9000, 32, 32);
         landGeom.rotateX(-Math.PI / 2);
         const landMat = new THREE.MeshStandardMaterial({
-            color: 0x27ae60, // Lush green valley meadow
-            roughness: 0.9,
-            metalness: 0.05
+            color: 0x2ed573, // Bright lush emerald green valley meadow
+            roughness: 0.85,
+            metalness: 0.02
         });
         const mainland = new THREE.Mesh(landGeom, landMat);
         mainland.position.y = 5.0;
@@ -160,14 +163,14 @@ export class WorldEnvironment {
 
     private buildAirport(): void {
         const islandGeom = new THREE.BoxGeometry(600, 10, 1800);
-        const islandMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.9 });
+        const islandMat = new THREE.MeshStandardMaterial({ color: 0x2ed573, roughness: 0.85 });
         const island = new THREE.Mesh(islandGeom, islandMat);
         island.position.set(0, 0, 0);
         this.scene.add(island);
 
         // Runway Asphalt
         const rwyGeom = new THREE.BoxGeometry(100, 1, 1400);
-        const rwyMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.8 });
+        const rwyMat = new THREE.MeshStandardMaterial({ color: 0x3d4b5c, roughness: 0.75 });
         const runway = new THREE.Mesh(rwyGeom, rwyMat);
         runway.position.set(0, 5.2, 0);
         this.scene.add(runway);
@@ -589,8 +592,8 @@ export class WorldEnvironment {
         // City Layout across the Eastern Half of the Map (x: 250 to 1850, z: -1600 to 1600)
         // 12 Columns (X) x 8 Rows (Z) = 96 Destructible Skyscrapers and Buildings
         const bldgColors = [
-            0x2c3e50, 0x34495e, 0x1e272e, 0x485460, 0x2d3436,
-            0x3c6382, 0x0a3d62, 0x60a3bc, 0x4a69bd, 0x1e3799
+            0x00d2d3, 0x54a0ff, 0xdcdde1, 0x2e86de, 0xfeca57,
+            0xff9f43, 0x48dbfb, 0x10ac84, 0xf5f6fa, 0x3867d6
         ];
 
         const cols = 12;
@@ -624,8 +627,8 @@ export class WorldEnvironment {
 
                 const bldgMat = new THREE.MeshStandardMaterial({
                     color,
-                    metalness: 0.65,
-                    roughness: 0.25
+                    metalness: 0.15,
+                    roughness: 0.45
                 });
 
                 const bldgGeom = new THREE.BoxGeometry(width, height, depth);
