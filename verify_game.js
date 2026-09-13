@@ -80,16 +80,40 @@ try {
         const startYards = await page.$eval('#header-yard-val', el => el.textContent);
         console.log("   Initial Guest Yard Balance (Expected: 0):", startYards);
 
-        // Test Account Registration and Login with Emojis ("Emojis unavailable" / "emoisis umavabible")
-        console.log("   Testing Account Registration with Emojis ('Emojis unavailable' / 'emoisis umavabible')...");
-        // 1. Emoji in Username
+        // Test Account Registration and Login System (Create Account, Login, Age, Gender, Emojis)
+        console.log("   Testing Create Account & Login Tabs, Age, Gender and Emoji rejection...");
+        
+        // 1. Initial State: Login mode active
+        let tabLoginDisplay = await page.$eval('#tab-login', el => window.getComputedStyle(el).display);
+        let tabCreateDisplay = await page.$eval('#tab-create-account', el => window.getComputedStyle(el).display);
+        let regFieldsDisplay = await page.$eval('#register-fields', el => window.getComputedStyle(el).display);
+        let loginBtnDisplay = await page.$eval('#btn-login', el => window.getComputedStyle(el).display);
+        let regBtnDisplay = await page.$eval('#btn-register', el => window.getComputedStyle(el).display);
+
+        console.log(`   Initial Auth State: LoginBtn=${loginBtnDisplay}, RegBtn=${regBtnDisplay}, RegFields=${regFieldsDisplay}`);
+        if (regFieldsDisplay !== 'none' || loginBtnDisplay === 'none' || regBtnDisplay !== 'none') {
+            throw new Error("Default auth view must be Login mode with only username and password!");
+        }
+
+        // 2. Switch to Create Account mode
+        await page.click('#tab-create-account');
+        await new Promise(r => setTimeout(r, 100));
+        regFieldsDisplay = await page.$eval('#register-fields', el => window.getComputedStyle(el).display);
+        loginBtnDisplay = await page.$eval('#btn-login', el => window.getComputedStyle(el).display);
+        regBtnDisplay = await page.$eval('#btn-register', el => window.getComputedStyle(el).display);
+        console.log(`   Create Account Mode: LoginBtn=${loginBtnDisplay}, RegBtn=${regBtnDisplay}, RegFields=${regFieldsDisplay}`);
+        if (regFieldsDisplay === 'none' || loginBtnDisplay !== 'none' || regBtnDisplay === 'none') {
+            throw new Error("Create Account mode must show age, gender, and Create Account button!");
+        }
+
+        // 3. Test Emoji Rejection in Create Account mode
         await page.evaluate(() => {
-            const emailInput = document.getElementById('auth-email');
             const userInput = document.getElementById('auth-username');
             const passInput = document.getElementById('auth-password');
-            if (emailInput) emailInput.value = 'newplayer@example.com';
-            if (userInput) userInput.value = 'gamer_pro😎';
+            const ageInput = document.getElementById('auth-age');
+            if (userInput) userInput.value = 'cool_gamer😎';
             if (passInput) passInput.value = 'mypassword123';
+            if (ageInput) ageInput.value = '12';
             document.getElementById('btn-register')?.click();
         });
         await new Promise(r => setTimeout(r, 150));
@@ -100,7 +124,7 @@ try {
             throw new Error(`Expected 'Emojis unavailable' error for emoji in username, got '${authMsg}'`);
         }
 
-        // 2. Emoji in Password
+        // 4. Test Emoji in Password
         await page.evaluate(() => {
             const userInput = document.getElementById('auth-username');
             const passInput = document.getElementById('auth-password');
@@ -110,38 +134,101 @@ try {
         });
         await new Promise(r => setTimeout(r, 150));
         authMsg = await page.$eval('#auth-message', el => el.textContent);
-        console.log(`   Emoji in Password result: text="${authMsg}"`);
         if (authMsg !== 'Emojis unavailable') {
             throw new Error(`Expected 'Emojis unavailable' error for emoji in password, got '${authMsg}'`);
         }
 
-        // 3. Emoji in Email
+        // 5. Test Age Validation (must provide age between 3 and 120)
         await page.evaluate(() => {
-            const emailInput = document.getElementById('auth-email');
+            const userInput = document.getElementById('auth-username');
             const passInput = document.getElementById('auth-password');
-            if (emailInput) emailInput.value = 'gamer🚀@example.com';
-            if (passInput) passInput.value = 'mypassword123';
+            const ageInput = document.getElementById('auth-age');
+            if (userInput) userInput.value = 'validplayer1';
+            if (passInput) passInput.value = 'securepass123';
+            if (ageInput) ageInput.value = '';
             document.getElementById('btn-register')?.click();
         });
         await new Promise(r => setTimeout(r, 150));
         authMsg = await page.$eval('#auth-message', el => el.textContent);
-        console.log(`   Emoji in Email result: text="${authMsg}"`);
-        if (authMsg !== 'Emojis unavailable') {
-            throw new Error(`Expected 'Emojis unavailable' error for emoji in email, got '${authMsg}'`);
+        console.log(`   Missing Age validation message: "${authMsg}"`);
+        if (!authMsg.includes('valid age')) {
+            throw new Error("Registration must require a valid age!");
         }
 
-        // Clear inputs after test
+        // 6. Test Gender Selection (Click Girl, then Boy)
+        await page.click('#btn-gender-girl');
+        await new Promise(r => setTimeout(r, 50));
+        let girlBorder = await page.$eval('#btn-gender-girl', el => el.style.borderColor);
+        console.log(`   Girl button selected border: ${girlBorder}`);
+
+        await page.click('#btn-gender-boy');
+        await new Promise(r => setTimeout(r, 50));
+        let boyBorder = await page.$eval('#btn-gender-boy', el => el.style.borderColor);
+        console.log(`   Boy button selected border: ${boyBorder}`);
+
+        // 7. Successful Registration (Username, Password, Age, Gender)
+        console.log("   Testing Successful Account Creation with Age and Gender...");
         await page.evaluate(() => {
-            const emailInput = document.getElementById('auth-email');
             const userInput = document.getElementById('auth-username');
             const passInput = document.getElementById('auth-password');
-            const authMsg = document.getElementById('auth-message');
-            if (emailInput) emailInput.value = '';
-            if (userInput) userInput.value = '';
-            if (passInput) passInput.value = '';
-            if (authMsg) { authMsg.textContent = ''; authMsg.removeAttribute('data-error'); }
+            const ageInput = document.getElementById('auth-age');
+            if (userInput) userInput.value = 'new_playard_hero';
+            if (passInput) passInput.value = 'superpassword';
+            if (ageInput) ageInput.value = '14';
+            document.getElementById('btn-register')?.click();
         });
-        console.log("   Account Registration Emoji Rejection verified: ✅");
+        await new Promise(r => setTimeout(r, 300));
+        const userInfoDisplay = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
+        const userTitle = await page.$eval('#user-email', el => el.textContent);
+        const userAgeText = await page.$eval('#user-age-display', el => el.textContent);
+        const userGenderText = await page.$eval('#user-gender-display', el => el.textContent);
+        console.log(`   Registered User Info: title="${userTitle}", age="${userAgeText}", gender="${userGenderText}"`);
+
+        if (userInfoDisplay !== 'block') {
+            throw new Error("User must be logged in after registration!");
+        }
+        if (!userTitle.includes('@new_playard_hero')) {
+            throw new Error("Display name must contain @new_playard_hero!");
+        }
+        if (!userAgeText.includes('14 years old')) {
+            throw new Error("User info must display age (14 years old)!");
+        }
+        if (!userGenderText.includes('Boy')) {
+            throw new Error("User info must display gender (Boy)!");
+        }
+
+        // 8. Test Logout
+        console.log("   Testing Logout...");
+        await page.click('#btn-logout');
+        await new Promise(r => setTimeout(r, 200));
+        const userInfoAfterLogout = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
+        if (userInfoAfterLogout !== 'none') {
+            throw new Error("User info must be hidden after logout!");
+        }
+
+        // 9. Test Username + Password Login
+        console.log("   Testing Username + Password Login without email...");
+        await page.click('#tab-login');
+        await new Promise(r => setTimeout(r, 100));
+        await page.evaluate(() => {
+            const userInput = document.getElementById('auth-username');
+            const passInput = document.getElementById('auth-password');
+            if (userInput) userInput.value = 'new_playard_hero';
+            if (passInput) passInput.value = 'superpassword';
+            document.getElementById('btn-login')?.click();
+        });
+        await new Promise(r => setTimeout(r, 300));
+        const loggedInAgain = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
+        const titleAgain = await page.$eval('#user-email', el => el.textContent);
+        console.log(`   Login Result: display=${loggedInAgain}, title="${titleAgain}"`);
+        if (loggedInAgain !== 'block' || !titleAgain.includes('@new_playard_hero')) {
+            throw new Error("Username + Password login failed!");
+        }
+
+        // Log out to reset guest state for remaining tests
+        await page.click('#btn-logout');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Create Account & Username Login tests verified: ✅");
 
         // Check Cooking Game visibility for guest (Expected: flex)
         const cookingCardVisible = await page.$eval('#card-cooking-game', el => window.getComputedStyle(el).display);
