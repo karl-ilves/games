@@ -72,6 +72,7 @@ export class PlaneCrashGame {
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setClearColor(0x74b9ff, 1);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -223,6 +224,7 @@ export class PlaneCrashGame {
         this.currentPlaneMesh.rootGroup.visible = true;
 
         this.cameraSys.mode = 'chase';
+        this.cameraSys.snapTo(this.physics);
         this.hud.setCameraModeText('CHASE');
     }
 

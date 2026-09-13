@@ -5697,6 +5697,39 @@ try {
                 throw new Error("Aircraft flight failed to launch with proper altitude telemetry!");
             }
 
+            // Verify Camera Tracking & Viewport Visibility (No black screen)
+            const cameraCheck = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return { success: false };
+                const cam = game.cameraSys.camera;
+                const planePos = game.physics.position;
+                const distToPlane = cam.position.distanceTo(planePos);
+                const colorTarget = {
+                    r: 0, g: 0, b: 0,
+                    copy(src) { this.r = src.r; this.g = src.g; this.b = src.b; return this; },
+                    getHexString() {
+                        const hex = ((1 << 24) + (Math.round(this.r * 255) << 16) + (Math.round(this.g * 255) << 8) + Math.round(this.b * 255)).toString(16).slice(1);
+                        return hex.toLowerCase();
+                    }
+                };
+                game.renderer.getClearColor(colorTarget);
+                return {
+                    success: true,
+                    camY: cam.position.y,
+                    planeY: planePos.y,
+                    distToPlane,
+                    clearColorHex: colorTarget.getHexString()
+                };
+            });
+            console.log(`   Camera Verification: camY=${cameraCheck.camY}m, planeY=${cameraCheck.planeY}m, dist=${cameraCheck.distToPlane.toFixed(1)}m, clearColor=#${cameraCheck.clearColorHex}`);
+            if (!cameraCheck.success || cameraCheck.camY < 100 || cameraCheck.distToPlane > 30 || cameraCheck.distToPlane < 5) {
+                throw new Error(`Camera failed to snap properly to aircraft: ${JSON.stringify(cameraCheck)}`);
+            }
+            if (!cameraCheck.clearColorHex.includes('74b9ff') && !cameraCheck.clearColorHex.includes('2d7cff')) {
+                throw new Error(`Expected renderer clear color to be sky blue (74b9ff or 2d7cff), got: ${cameraCheck.clearColorHex}`);
+            }
+            console.log("   Flight Camera tracking & Sky viewport visibility verified: ✅");
+
             // Test Localized Dismemberment: Wing Strike & Tail Strike
             console.log("   Testing Localized Damage (Wing Strike & Tail Strike)...");
             const damageTestResult = await page.evaluate(() => {
@@ -6283,8 +6316,8 @@ try {
 
             // 6. Verify Cross-Device Cloud Synchronization
             console.log("--- Testing Cross-Device Cloud Synchronization (PC <-> Mobile / Tablet) ---");
-            await page.goto('http://localhost:4173/games/index.html');
-            await new Promise(r => setTimeout(r, 600));
+            await page.goto('http://localhost:4173/games/index.html', { waitUntil: 'load', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1200));
 
             const syncResults = await page.evaluate(async () => {
                 // Simulate logging in as Playard Owner on a fresh mobile device
