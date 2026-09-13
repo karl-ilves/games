@@ -2,6 +2,7 @@ import { Role, Character } from '../types';
 import { WEAPON_SKIN_CATALOG } from '../catalog';
 import { getWeaponArtworkSvg } from './svgArtwork';
 import { MmpCrateManager } from '../state/crateManager';
+import { getLanguage, I18N } from '../i18n';
 
 export interface HudContext {
     playerChar: Character;
@@ -47,6 +48,9 @@ export class HudUI {
     public updateRoleHud() {
         if (!this.hudRoleBadge || !this.hudRoleIcon || !this.hudRoleText) return;
 
+        const lang = getLanguage();
+        const texts = I18N[lang];
+
         const inv = this.ctx.crateManager?.getInventory();
         const equippedKnifeId = inv?.equippedKnife || 'knife_default';
         const equippedGunId = inv?.equippedGun || 'gun_default';
@@ -55,7 +59,7 @@ export class HudUI {
 
         if (this.ctx.playerChar.role === 'murderer') {
             this.hudRoleIcon.textContent = '🔪';
-            this.hudRoleText.textContent = 'MÕRVAR';
+            this.hudRoleText.textContent = texts.roles.murderer.name;
             this.hudRoleBadge.style.borderColor = '#ff2e63';
             this.hudRoleBadge.style.color = '#ff2e63';
             if (this.slotWeaponIcon) {
@@ -71,7 +75,7 @@ export class HudUI {
             }
         } else if (this.ctx.playerChar.role === 'sheriff') {
             this.hudRoleIcon.textContent = '🔫';
-            this.hudRoleText.textContent = 'ŠERIF';
+            this.hudRoleText.textContent = texts.roles.sheriff.name;
             this.hudRoleBadge.style.borderColor = '#00f2fe';
             this.hudRoleBadge.style.color = '#00f2fe';
             if (this.slotWeaponIcon) {
@@ -87,11 +91,11 @@ export class HudUI {
             }
         } else {
             this.hudRoleIcon.textContent = '🛡️';
-            this.hudRoleText.textContent = 'SÜÜTU';
+            this.hudRoleText.textContent = texts.roles.innocent.name;
             this.hudRoleBadge.style.borderColor = '#2ecc71';
             this.hudRoleBadge.style.color = '#2ecc71';
             if (this.slotWeaponIcon) this.slotWeaponIcon.textContent = '✊';
-            if (this.slotWeaponName) this.slotWeaponName.textContent = 'Käed';
+            if (this.slotWeaponName) this.slotWeaponName.textContent = texts.hud.hotbarHands;
             if (this.slotWeapon) {
                 this.slotWeapon.classList.remove('active');
             }
@@ -109,30 +113,36 @@ export class HudUI {
         const titleEl = document.getElementById('role-reveal-title');
         const descEl = document.getElementById('role-reveal-desc');
         const boxEl = document.getElementById('role-card-box');
+        const btnClose = document.getElementById('btn-role-reveal-close');
+
+        const lang = getLanguage();
+        const texts = I18N[lang];
+        const roleData = texts.roles[role] || texts.roles.innocent;
+        if (btnClose) btnClose.textContent = roleData.understoodBtn;
 
         if (role === 'murderer') {
             if (iconEl) iconEl.textContent = '🔪';
             if (titleEl) {
-                titleEl.textContent = 'MÕRVAR';
+                titleEl.textContent = roleData.revealTitle;
                 titleEl.className = 'role-title role-murderer';
             }
-            if (descEl) descEl.textContent = 'Tapa salaja kõik süütud ja väldi šerifi kuule! Võidu korral saad +150 Jardi!';
+            if (descEl) descEl.textContent = roleData.revealDesc;
             if (boxEl) boxEl.style.borderColor = '#ff2e63';
         } else if (role === 'sheriff') {
             if (iconEl) iconEl.textContent = '🔫';
             if (titleEl) {
-                titleEl.textContent = 'ŠERIF';
+                titleEl.textContent = roleData.revealTitle;
                 titleEl.className = 'role-title role-sheriff';
             }
-            if (descEl) descEl.textContent = 'Otsi üles mõrvar ja lase ta maha! Kui eksid ja tabad süütut, kaotad relva!';
+            if (descEl) descEl.textContent = roleData.revealDesc;
             if (boxEl) boxEl.style.borderColor = '#00f2fe';
         } else {
             if (iconEl) iconEl.textContent = '🛡️';
             if (titleEl) {
-                titleEl.textContent = 'SÜÜTU';
+                titleEl.textContent = roleData.revealTitle;
                 titleEl.className = 'role-title role-innocent';
             }
-            if (descEl) descEl.textContent = 'Jää ellu! Kogu münte ja kui šerif langeb, otsi üles mahakukkunud relv!';
+            if (descEl) descEl.textContent = roleData.revealDesc;
             if (boxEl) boxEl.style.borderColor = '#2ecc71';
         }
 

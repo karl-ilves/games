@@ -270,11 +270,11 @@ try {
             throw new Error("LAST METRO game card must be visible for everyone!");
         }
 
-        // Check MMP1 visibility for guest (Expected: none - Owner exclusive)
+        // Check MMP1 visibility for guest (Expected: flex - now visible for everyone!)
         const guestMmp1CardDisplay = await page.$eval('#card-mmp1-game', el => window.getComputedStyle(el).display);
-        console.log(`   Guest MMP1 Card visibility (Expected: none): ${guestMmp1CardDisplay}`);
-        if (guestMmp1CardDisplay !== 'none') {
-            throw new Error("MMP1 game card must be hidden for guests!");
+        console.log(`   Guest MMP1 Card visibility (Expected: flex): ${guestMmp1CardDisplay}`);
+        if (guestMmp1CardDisplay !== 'flex') {
+            throw new Error("MMP1 game card must be visible for everyone including guests!");
         }
 
         // Check Guest Admin Panel visibility (Expected: none)
@@ -379,9 +379,9 @@ try {
         }
 
         const adminMmp1CardDisplay = await page.$eval('#card-mmp1-game', el => window.getComputedStyle(el).display);
-        console.log(`   Admin (grx@trenet.ee) MMP1 Card visibility (Expected: none): ${adminMmp1CardDisplay}`);
-        if (adminMmp1CardDisplay !== 'none') {
-            throw new Error("MMP1 game card must be hidden for non-owner admin (grx@trenet.ee)!");
+        console.log(`   Admin (grx@trenet.ee) MMP1 Card visibility (Expected: flex): ${adminMmp1CardDisplay}`);
+        if (adminMmp1CardDisplay !== 'flex') {
+            throw new Error("MMP1 game card must be visible for everyone including admin (grx@trenet.ee)!");
         }
 
         const adminRocketCardDisplay = await page.$eval('#card-rocket-game', el => window.getComputedStyle(el).display);
@@ -4658,10 +4658,11 @@ try {
             const feedText = await page.$eval('#incident-feed', el => el.textContent);
             console.log(`   Top-right Incident Feed text: "${feedText}"`);
             const murdererCharName = await page.evaluate(() => window.mmp1Game?.playerChar?.name || 'Karl');
-            if (feedText.includes(`${murdererCharName} elimineeris`)) {
+            if (feedText.includes(`${murdererCharName} elimineeris`) || feedText.includes(`${murdererCharName} eliminated`)) {
                 throw new Error(`Murderer name (${murdererCharName}) was revealed in the incident feed!`);
             }
-            if (!feedText.includes('elimineeriti') && !feedText.includes('langes')) {
+            const hasEliminatedWord = feedText.includes('elimineeriti') || feedText.includes('langes') || feedText.includes('eliminated') || feedText.includes('fell');
+            if (!hasEliminatedWord) {
                 throw new Error(`Incident feed should show victim eliminated without murderer name, got: "${feedText}"`);
             }
             console.log('   Incident Feed keeps murderer identity secret (name not shown in top right): ✅');
@@ -5016,7 +5017,8 @@ try {
                 };
             });
             console.log(`     In-game purchase blocked: ${inGameRestriction.blocked} (Msg: "${inGameRestriction.msg}"), banner present: ${inGameRestriction.hasNotice}, button text: "${inGameRestriction.btnText}"`);
-            if (!inGameRestriction.blocked || !inGameRestriction.hasNotice || !inGameRestriction.isBtnDisabled || !inGameRestriction.btnText.includes('AINULT LOBIS')) {
+            const hasLobbyOnlyText = inGameRestriction.btnText.includes('AINULT LOBIS') || inGameRestriction.btnText.includes('LOBBY ONLY');
+            if (!inGameRestriction.blocked || !inGameRestriction.hasNotice || !inGameRestriction.isBtnDisabled || !hasLobbyOnlyText) {
                 throw new Error(`In-game crate purchase restriction failed: ${JSON.stringify(inGameRestriction)}`);
             }
             console.log('   In-game crate purchase block verified: ✅');
@@ -5538,6 +5540,42 @@ try {
                 throw new Error('Expected Yard reward box in round end modal to be hidden!');
             }
             console.log('   MMP1 match awards 0 Yards (only game money & crates): ✅');
+
+            // Test Dual Localization: English for normal users / guests, Estonian for Playard Owner
+            console.log('   Testing MMP1 Dual Localization (EN for guests/users, ET for Playard Owner):');
+            const localizationCheck = await page.evaluate(() => {
+                // 1. Check as guest/regular user
+                localStorage.removeItem('playard_current_user_profile');
+                window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: null } }));
+                const guestNotice = document.getElementById('shop-in-game-notice')?.textContent || '';
+                const guestShopBtn = document.getElementById('btn-tab-shop')?.textContent || '';
+                const guestInvBtn = document.getElementById('btn-tab-inventory')?.textContent || '';
+                const guestHudRole = document.getElementById('hud-role-sub')?.textContent || '';
+
+                // 2. Check as Playard Owner
+                const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+                window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: ownerProf } }));
+                const ownerNotice = document.getElementById('shop-in-game-notice')?.textContent || '';
+                const ownerShopBtn = document.getElementById('btn-tab-shop')?.textContent || '';
+                const ownerInvBtn = document.getElementById('btn-tab-inventory')?.textContent || '';
+
+                return {
+                    guestShopBtn,
+                    guestInvBtn,
+                    ownerShopBtn,
+                    ownerInvBtn
+                };
+            });
+            console.log(`     Guest tabs: Shop="${localizationCheck.guestShopBtn}", Inv="${localizationCheck.guestInvBtn}"`);
+            console.log(`     Owner tabs: Shop="${localizationCheck.ownerShopBtn}", Inv="${localizationCheck.ownerInvBtn}"`);
+            if (!localizationCheck.guestShopBtn.includes('CRATE SHOP') && !localizationCheck.guestShopBtn.includes('SHOP')) {
+                throw new Error(`Guest should see English 'CRATE SHOP' tab! Got: ${localizationCheck.guestShopBtn}`);
+            }
+            if (!localizationCheck.ownerShopBtn.includes('KASTIPOOD')) {
+                throw new Error(`Owner should see Estonian 'KASTIPOOD' tab! Got: ${localizationCheck.ownerShopBtn}`);
+            }
+            console.log('   MMP1 Dual Localization verified (English for everyone, Estonian for Playard Owner): ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 

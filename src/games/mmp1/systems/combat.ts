@@ -3,6 +3,7 @@ import { Character, DroppedGun, CoinItem, MapId, Role } from "../types";
 import { MAP_CATALOG } from "../catalog";
 import { audio } from "../audio";
 import { createUltraRealisticRevolver } from "../models/weaponBuilder";
+import { getLanguage, I18N } from "../i18n";
 
 export function hasLineOfSight(
     from: THREE.Vector3 | { x: number; y: number; z: number },
@@ -192,15 +193,17 @@ export class CombatSystem {
             const hitTarget = this.getCharacterFromObject(hitObj);
 
             if (hitTarget && hitTarget !== shooter && hitTarget.isAlive) {
+                const lang = getLanguage();
+                const texts = I18N[lang];
                 if (hitTarget.role === "murderer") {
                     this.ctx.setLastHero(shooter);
                     this.eliminateCharacter(hitTarget, shooter, "gun");
-                    this.ctx.endRound("sheriff_win", shooter.name + " laskis mõrvari maha! Süütud ja šerif võitsid!");
+                    this.ctx.endRound("sheriff_win", texts.incidents.sheriffWinReason(shooter.name));
                 } else {
                     this.eliminateCharacter(hitTarget, shooter, "gun_mistake");
                     this.eliminateCharacter(shooter, null, "sheriff_guilt");
                     this.spawnDroppedGun(shooter.position.clone());
-                    this.ctx.addIncidentFeed("⚠️ Šerif eksis ja lasi süütu! Šerif langes!");
+                    this.ctx.addIncidentFeed(texts.incidents.sheriffMistake);
                 }
             }
         }
@@ -211,14 +214,17 @@ export class CombatSystem {
         target.mesh.visible = false;
         audio.playStabImpact();
 
+        const lang = getLanguage();
+        const texts = I18N[lang];
+
         if (target.isPlayer) {
-            this.ctx.addIncidentFeed("💀 Said surma! (" + (cause === "knife" ? "Mõrvar tabas sind" : "Kuulitaba") + ")");
+            this.ctx.addIncidentFeed(cause === "knife" ? texts.incidents.playerDiedKnife : texts.incidents.playerDiedGun);
         } else if (cause === "knife" || (killer && killer.role === "murderer")) {
-            this.ctx.addIncidentFeed("💀 Mängija " + target.name + " elimineeriti!");
+            this.ctx.addIncidentFeed(texts.incidents.victimEliminated(target.name));
         } else if (cause === "gun") {
-            this.ctx.addIncidentFeed("⭐ Šerif tabas märki! " + target.name + " langes!");
+            this.ctx.addIncidentFeed(texts.incidents.sheriffHit(target.name));
         } else {
-            this.ctx.addIncidentFeed("💀 Mängija " + target.name + " langes!");
+            this.ctx.addIncidentFeed(texts.incidents.victimFell(target.name));
         }
 
         if (killer && killer.role === "murderer") {
@@ -228,7 +234,7 @@ export class CombatSystem {
                 const seesMurder = this.hasLineOfSight(sheriff.position, target.position) || this.hasLineOfSight(sheriff.position, killer.position);
                 if (seesMurder && dist < 36) {
                     this.ctx.setHasSheriffWitnessedMurder(true);
-                    this.ctx.addIncidentFeed("👁️ Šerif nägi mõrva pealt! Mõrvar on paljastatud!");
+                    this.ctx.addIncidentFeed(texts.incidents.sheriffWitnessed);
                 }
             }
         }
@@ -274,7 +280,8 @@ export class CombatSystem {
         this.ctx.setDroppedGun(gunObj);
 
         if (this.ctx.gunDroppedBanner) this.ctx.gunDroppedBanner.style.display = "flex";
-        this.ctx.addIncidentFeed("⚠️ Relv on maas! Süütud saavad selle [E] klahviga üles korjata!");
+        const lang = getLanguage();
+        this.ctx.addIncidentFeed(I18N[lang].incidents.gunDroppedFeed);
     }
 
     public pickUpDroppedGun(char: Character) {
@@ -290,11 +297,14 @@ export class CombatSystem {
 
         audio.playPickupGun();
 
+        const lang = getLanguage();
+        const texts = I18N[lang];
+
         if (char.isPlayer) {
             this.ctx.updateRoleHud();
-            this.ctx.addIncidentFeed("⭐ Korjasid maast šerifi relva! Oled nüüd Kangelane!");
+            this.ctx.addIncidentFeed(texts.incidents.heroPickedUp);
         } else {
-            this.ctx.addIncidentFeed("⭐ " + char.name + " korjas maast šerifi relva!");
+            this.ctx.addIncidentFeed(texts.incidents.otherPickedUp(char.name));
         }
 
         if (this.ctx.gunDroppedBanner) this.ctx.gunDroppedBanner.style.display = "none";
@@ -305,13 +315,15 @@ export class CombatSystem {
         const murderer = this.ctx.characters.find(c => c.role === "murderer");
         const innocentsAndSheriff = this.ctx.characters.filter(c => c.role !== "murderer");
         const aliveInnocentsAndSheriff = innocentsAndSheriff.filter(c => c.isAlive);
+        const lang = getLanguage();
+        const texts = I18N[lang];
 
         if (murderer && !murderer.isAlive) {
             const hero = this.ctx.lastHero || this.ctx.characters.find(c => c.role === "sheriff" && c.isAlive) || this.ctx.playerChar;
-            const heroName = hero ? hero.name : "Šerif";
-            this.ctx.endRound("sheriff_win", heroName + " laskis mõrvari maha! Süütud ja šerif võitsid!");
+            const heroName = hero ? hero.name : (lang === "et" ? "Šerif" : "Sheriff");
+            this.ctx.endRound("sheriff_win", texts.incidents.sheriffWinReason(heroName));
         } else if (aliveInnocentsAndSheriff.length === 0) {
-            this.ctx.endRound("murderer_win", "Mõrvar kõrvaldas kõik süütud ja šerifi! Mõrvar võitis!");
+            this.ctx.endRound("murderer_win", texts.incidents.murdererWinReason);
         }
     }
 }

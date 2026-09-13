@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { yardService } from "../../shared/yardService";
 import { getCurrentUserProfile, isPlayardOwner, isTestMode, canAccessMmp1 } from "../../auth";
+import { applyMmp1Localization } from "./i18n";
 import { InGameEmotesWidget } from "../../shared/avatar/InGameEmotesWidget";
 
 import { Role, GameState, MapId, Character, DroppedGun, CoinItem } from "./types";
@@ -116,6 +117,13 @@ export class MurderMysteryGame {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
+        window.addEventListener("playard_auth_changed", () => {
+            this.checkAccessAuthorization();
+            this.hudUI?.updateRoleHud();
+            this.crateShopUI?.renderCrateShop();
+            this.crateShopUI?.renderInventory();
+        });
+
         this.updateYardDisplay();
         this.animate();
         console.log("MMP1: Murder Mystery 3D initialized successfully.");
@@ -123,15 +131,16 @@ export class MurderMysteryGame {
 
     public checkAccessAuthorization() {
         const prof = getCurrentUserProfile();
-        const authorized = canAccessMmp1(prof);
         const owner = isPlayardOwner(prof?.email);
         const testMode = isTestMode();
-        if (!authorized && !testMode) {
-            const denied = document.getElementById("access-denied-overlay");
-            if (denied) denied.style.display = "flex";
-        }
+        // MMP1 on nüüd avalik kõigile mängijatele!
+        const denied = document.getElementById("access-denied-overlay");
+        if (denied) denied.style.display = "none";
+
         const btnAdmin = document.getElementById("btn-admin-panel");
         if (btnAdmin) btnAdmin.style.display = (owner || testMode) ? "flex" : "none";
+
+        applyMmp1Localization();
     }
 
     public createUltraRealisticKnife(skinId?: string) { return createUltraRealisticKnife(skinId, this.crateManager?.getInventory()?.equippedKnife); }

@@ -3,6 +3,7 @@ import { CRATE_CATALOG, WEAPON_SKIN_CATALOG } from '../catalog';
 import { getCrateArtworkSvg, getWeaponArtworkSvg } from './svgArtwork';
 import { audio } from '../audio';
 import { MmpCrateManager } from '../state/crateManager';
+import { getLanguage, I18N } from '../i18n';
 
 export interface CrateShopContext {
     crateManager: MmpCrateManager;
@@ -120,6 +121,8 @@ export class CrateShopUI {
         const grid = document.getElementById('shop-crates-grid');
         if (!grid) return;
 
+        const lang = getLanguage();
+        const texts = I18N[lang];
         const stocks = this.ctx.crateManager.getStocks();
         const money = this.ctx.crateManager.getMoney();
         const now = Date.now();
@@ -131,7 +134,7 @@ export class CrateShopUI {
             const warningBanner = document.createElement('div');
             warningBanner.id = 'shop-in-game-notice';
             warningBanner.style.cssText = 'grid-column: 1 / -1; background: rgba(255, 46, 99, 0.15); border: 2px solid #ff2e63; border-radius: 12px; padding: 12px 20px; text-align: center; color: #ff6b81; font-weight: 700; margin-bottom: 10px; font-size: 0.95rem;';
-            warningBanner.innerHTML = '🔒 KASTIDE OSTMINE ON LUKUSTATUD! Kaste saab osta ainult ooteruumis (lobis) enne mängu algust.';
+            warningBanner.innerHTML = texts.crateShop.inGameNotice;
             grid.appendChild(warningBanner);
         }
 
@@ -151,11 +154,11 @@ export class CrateShopUI {
             card.style.borderColor = crate.color;
 
             const canBuy = isLobby && !isOutOfStock && canAfford;
-            let buyButtonText = `OSTA ${crate.price} €`;
+            let buyButtonText = texts.crateShop.buyBtn(crate.price);
             if (!isLobby) {
-                buyButtonText = 'AINULT LOBIS 🔒';
+                buyButtonText = texts.crateShop.buyBtnLobbyOnly;
             } else if (isOutOfStock) {
-                buyButtonText = 'LÄBI MÜÜDUD';
+                buyButtonText = texts.crateShop.buyBtnSoldOut;
             }
 
             const isSetCrate = !!crate.isSetCrate;
@@ -166,7 +169,7 @@ export class CrateShopUI {
             }
 
             const setBadgeHtml = isSetCrate 
-                ? `<div style="background: linear-gradient(90deg, #ffd700, #ff9f1a); color: #111; font-weight: 900; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; margin-bottom: 6px; display: inline-block; letter-spacing: 0.5px;">👑 TÄISKOMPLEKT: NUGA + PÜSTOL</div>`
+                ? `<div style="background: linear-gradient(90deg, #ffd700, #ff9f1a); color: #111; font-weight: 900; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; margin-bottom: 6px; display: inline-block; letter-spacing: 0.5px;">${texts.crateShop.setBundleBadge}</div>`
                 : '';
 
             card.innerHTML = `
@@ -176,10 +179,10 @@ export class CrateShopUI {
                 ${setBadgeHtml}
                 <h3 style="margin: 2px 0 6px 0; font-size: 1.05rem; color: ${crate.color};">${crate.name}</h3>
                 <div class="crate-stock-badge ${isOutOfStock ? 'out-of-stock' : ''}" id="stock-badge-${tier}">
-                    📦 Laos: <b id="stock-val-${tier}">${stockData.stock}</b> tk
+                    ${texts.crateShop.stockLabel} <b id="stock-val-${tier}">${stockData.stock}</b> ${texts.crateShop.pcs}
                 </div>
                 <div class="crate-restock-timer" id="restock-timer-${tier}">
-                    ⏱️ Uus laovaru: <b id="restock-val-${tier}">${mm}:${ss}</b>
+                    ${texts.crateShop.restockTimer} <b id="restock-val-${tier}">${mm}:${ss}</b>
                 </div>
                 <div style="font-size: 1.15rem; font-weight: 900; color: #ffd32a; margin-bottom: 10px;">
                     ${crate.price} €
@@ -193,7 +196,7 @@ export class CrateShopUI {
             if (btnBuy) {
                 btnBuy.onclick = () => {
                     if (this.ctx.getState() !== 'lobby') {
-                        alert('Kaste saab osta ainult ooteruumis (lobis) enne mängu algust!');
+                        alert(texts.crateShop.inGameNoticeAlert);
                         return;
                     }
                     const res = this.ctx.crateManager.buyCrate(tier, true);
@@ -212,6 +215,8 @@ export class CrateShopUI {
     }
 
     public updateCrateShopTimers() {
+        const lang = getLanguage();
+        const texts = I18N[lang];
         const stocks = this.ctx.crateManager.getStocks();
         const money = this.ctx.crateManager.getMoney();
         const now = Date.now();
@@ -221,10 +226,10 @@ export class CrateShopUI {
         if (btnCrateShop) {
             if (!isLobby) {
                 btnCrateShop.classList.add('in-game-disabled');
-                btnCrateShop.title = 'Kastide ostmine on avatud ainult lobis!';
+                btnCrateShop.title = texts.crateShop.inGameNoticeAlert;
             } else {
                 btnCrateShop.classList.remove('in-game-disabled');
-                btnCrateShop.title = 'Ava kastide pood ja varustus';
+                btnCrateShop.title = texts.hud.crates;
             }
         }
 
@@ -261,17 +266,19 @@ export class CrateShopUI {
                 const canBuy = isLobby && !isOutOfStock && canAfford;
                 btnBuy.disabled = !canBuy;
                 if (!isLobby) {
-                    btnBuy.textContent = 'AINULT LOBIS 🔒';
+                    btnBuy.textContent = texts.crateShop.buyBtnLobbyOnly;
                 } else if (isOutOfStock) {
-                    btnBuy.textContent = 'LÄBI MÜÜDUD';
+                    btnBuy.textContent = texts.crateShop.buyBtnSoldOut;
                 } else {
-                    btnBuy.textContent = `OSTA ${crate.price} €`;
+                    btnBuy.textContent = texts.crateShop.buyBtn(crate.price);
                 }
             }
         });
     }
 
     public renderInventory() {
+        const lang = getLanguage();
+        const texts = I18N[lang];
         const inv = this.ctx.crateManager.getInventory();
 
         // 1. Owned Crates
@@ -280,7 +287,7 @@ export class CrateShopUI {
             cratesGrid.innerHTML = '';
             const ownedTiers = (Object.keys(inv.crates) as CrateTier[]).filter(t => (inv.crates[t] || 0) > 0);
             if (ownedTiers.length === 0) {
-                cratesGrid.innerHTML = '<div style="color: #888; font-size: 0.9rem; grid-column: 1 / -1;">Sul ei ole avamata kaste. Osta poest või võida voorus!</div>';
+                cratesGrid.innerHTML = `<div style="color: #888; font-size: 0.9rem; grid-column: 1 / -1;">${texts.crateShop.emptyCratesText}</div>`;
             } else {
                 ownedTiers.forEach(tier => {
                     const count = inv.crates[tier];
@@ -294,9 +301,9 @@ export class CrateShopUI {
                             ${getCrateArtworkSvg(tier)}
                         </div>
                         <strong style="color: ${crate.color}; font-size: 0.95rem;">${crate.name}</strong>
-                        <div style="font-size: 0.85rem; color: #ffd32a; margin: 4px 0 10px 0;">Omad: <b id="owned-count-${tier}">${count}</b> tk</div>
+                        <div style="font-size: 0.85rem; color: #ffd32a; margin: 4px 0 10px 0;">${texts.crateShop.ownedCount(count)}</div>
                         <button class="btn-play-again" id="btn-open-${tier}" style="padding: 6px 16px; font-size: 0.85rem; margin: 0; background: linear-gradient(135deg, ${crate.color}, #555);">
-                            AVA KAST 🎁
+                            ${texts.crateShop.openCrateBtn}
                         </button>
                     `;
                     const btnOpen = card.querySelector(`#btn-open-${tier}`) as HTMLButtonElement;
@@ -326,7 +333,7 @@ export class CrateShopUI {
                     <strong style="color: ${skin.tierColor}; font-size: 0.92rem;">${skin.name}</strong>
                     <div style="font-size: 0.75rem; color: #aaa; margin: 2px 0 10px 0;">${skin.tierName}</div>
                     <button class="btn-hud-action" id="btn-equip-${skinId}" style="width: 100%; justify-content: center; font-size: 0.8rem; background: ${isEquipped ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}; border-color: ${isEquipped ? '#2ecc71' : '#666'};">
-                        ${isEquipped ? 'VARUSTATUD ✅' : 'VARUSTA ⚔️'}
+                        ${isEquipped ? texts.crateShop.equipped : texts.crateShop.equip}
                     </button>
                 `;
                 const btnEquip = card.querySelector(`#btn-equip-${skinId}`) as HTMLButtonElement;
@@ -355,7 +362,7 @@ export class CrateShopUI {
                     <strong style="color: ${skin.tierColor}; font-size: 0.92rem;">${skin.name}</strong>
                     <div style="font-size: 0.75rem; color: #aaa; margin: 2px 0 10px 0;">${skin.tierName}</div>
                     <button class="btn-hud-action" id="btn-equip-${skinId}" style="width: 100%; justify-content: center; font-size: 0.8rem; background: ${isEquipped ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}; border-color: ${isEquipped ? '#2ecc71' : '#666'};">
-                        ${isEquipped ? 'VARUSTATUD ✅' : 'VARUSTA ⚔️'}
+                        ${isEquipped ? texts.crateShop.equipped : texts.crateShop.equip}
                     </button>
                 `;
                 const btnEquip = card.querySelector(`#btn-equip-${skinId}`) as HTMLButtonElement;
@@ -370,6 +377,8 @@ export class CrateShopUI {
     public triggerUnbox(tier: CrateTier): (WeaponSkinDef & { isDuplicate?: boolean; refundAmount?: number }) | null {
         if (!this.unboxingModal) return null;
 
+        const lang = getLanguage();
+        const texts = I18N[lang];
         const crate = CRATE_CATALOG[tier];
         if (!crate) return null;
 
@@ -386,8 +395,8 @@ export class CrateShopUI {
         const btnEquip = document.getElementById('btn-unboxing-equip') as HTMLButtonElement;
         const btnClose = document.getElementById('btn-unboxing-close') as HTMLButtonElement;
 
-        if (titleEl) titleEl.textContent = `${crate.name.toUpperCase()} AVAMINE...`;
-        if (subtitleEl) subtitleEl.textContent = 'Rulett pöörleb — vaata, kuhu fookusjoon seisma jääb!';
+        if (titleEl) titleEl.textContent = `${crate.name.toUpperCase()} ${texts.crateShop.unboxingTitle}`;
+        if (subtitleEl) subtitleEl.textContent = texts.crateShop.unboxingSubtitle;
         if (resultBox) resultBox.style.display = 'none';
         if (btnEquip) btnEquip.style.display = 'none';
         if (btnClose) btnClose.style.display = 'none';
@@ -401,51 +410,63 @@ export class CrateShopUI {
             trackEl.style.transform = 'translateX(0px)';
 
             const allSkins = Object.values(WEAPON_SKIN_CATALOG);
-            const WINNER_INDEX = 32;
+            const WINNER_INDEX = 32; // 0-indexed: 33rd item will be winner
 
             for (let i = 0; i < 40; i++) {
-                const skin = (i === WINNER_INDEX) ? wonSkin : allSkins[Math.floor(Math.random() * allSkins.length)];
-                const card = document.createElement('div');
-                card.className = 'roulette-item-card';
-                card.id = `roulette-card-${i}`;
-                card.style.setProperty('--card-color', skin.tierColor);
-                card.style.borderColor = skin.tierColor;
-                card.innerHTML = `
+                let skin: WeaponSkinDef;
+                if (i === WINNER_INDEX) {
+                    skin = wonSkin;
+                } else {
+                    skin = allSkins[Math.floor(Math.random() * allSkins.length)] || wonSkin;
+                }
+
+                const itemCard = document.createElement('div');
+                itemCard.className = 'roulette-item-card';
+                itemCard.id = `roulette-card-${i}`;
+                itemCard.style.setProperty('--card-color', skin.tierColor);
+                itemCard.style.borderColor = skin.tierColor;
+                itemCard.innerHTML = `
                     <div class="roulette-item-svg">
                         ${getWeaponArtworkSvg(skin)}
                     </div>
-                    <div class="roulette-item-name" style="color: ${skin.tierColor};">${skin.name}</div>
-                    <div class="roulette-item-tier" style="background: ${skin.tierColor}; color: #111;">${skin.tierName}</div>
+                    <div class="roulette-item-name" style="color: ${skin.tierColor};">
+                        ${skin.name}
+                    </div>
+                    <div class="roulette-item-tier" style="background: ${skin.tierColor}; color: #111;">
+                        ${skin.tierName}
+                    </div>
                 `;
-                trackEl.appendChild(card);
+                trackEl.appendChild(itemCard);
             }
 
-            // Center of card 32 = 10 (padding) + 32 * 152 + 70 (half of 140) = 4944px
-            const viewportWidth = viewportEl?.clientWidth || 780;
-            const cardCenterPos = 10 + WINNER_INDEX * 152 + 70;
-            const jitter = (Math.random() - 0.5) * 40;
-            const targetX = -(cardCenterPos - viewportWidth / 2 + jitter);
+            // Force reflow
+            void trackEl.offsetWidth;
 
-            // Trigger animation after next browser frame
+            // Card width is 140 + gap 12 = 152px
+            const CARD_WIDTH = 152;
+            const viewportWidth = viewportEl ? viewportEl.offsetWidth : 780;
+            // Center of winner card
+            const targetX = -1 * (WINNER_INDEX * CARD_WIDTH + (140 / 2) - (viewportWidth / 2) + (Math.random() * 40 - 20));
+
+            // Start animation after a tick
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    trackEl.style.transition = 'transform 5.2s cubic-bezier(0.12, 0.85, 0.14, 1)';
+                    if (!trackEl) return;
+                    trackEl.style.transition = 'transform 5s cubic-bezier(0.12, 0.8, 0.18, 1)';
                     trackEl.style.transform = `translateX(${targetX}px)`;
 
-                    // Audio ticks synchronized with visual deceleration
-                    let lastCardIndex = -1;
-                    const startTime = performance.now();
-                    const duration = 5200;
-
-                    const tickLoop = (now: number) => {
-                        const elapsed = now - startTime;
+                    // Audio ticks during spin
+                    let lastCardIndex = 0;
+                    const startTime = Date.now();
+                    const duration = 5000;
+                    const tickLoop = () => {
+                        const elapsed = Date.now() - startTime;
                         if (elapsed < duration) {
                             try {
-                                const computed = window.getComputedStyle(trackEl);
-                                const matrix = new DOMMatrixReadOnly(computed.transform);
+                                const transform = window.getComputedStyle(trackEl).transform;
+                                const matrix = new DOMMatrixReadOnly(transform);
                                 const currentX = matrix.m41;
-                                const centerPos = (viewportWidth / 2) - currentX;
-                                const currentCardIndex = Math.floor((centerPos - 10) / 152);
+                                const currentCardIndex = Math.floor(Math.abs(currentX) / CARD_WIDTH);
                                 if (currentCardIndex !== lastCardIndex && currentCardIndex >= 0 && currentCardIndex < 40) {
                                     lastCardIndex = currentCardIndex;
                                     audio.playCrateTick();
@@ -472,26 +493,26 @@ export class CrateShopUI {
                 const setGun = (wonSkin as any).setGunSkin as WeaponSkinDef | undefined;
 
                 if (isSet) {
-                    if (titleEl) titleEl.textContent = '🎉 PALJU ÕNNE! SAID TÄISKOMPLEKTI! 🎁';
-                    if (subtitleEl) subtitleEl.textContent = `${crate.name}: Saadud nii nuga kui ka revolver!`;
+                    if (titleEl) titleEl.textContent = texts.crateShop.congratsSet;
+                    if (subtitleEl) subtitleEl.textContent = texts.crateShop.congratsSetSub(crate.name);
                 } else if (wonSkin.isDuplicate) {
-                    if (titleEl) titleEl.textContent = 'DUPLIKAAT! SAID POOLE RAHAST TAGASI! 💰';
-                    if (subtitleEl) subtitleEl.textContent = `Sul on see relv juba olemas! Tagastati pool kasti hinnast: +${wonSkin.refundAmount} €!`;
+                    if (titleEl) titleEl.textContent = texts.crateShop.congratsDuplicate;
+                    if (subtitleEl) subtitleEl.textContent = texts.crateShop.congratsDuplicateSub(wonSkin.refundAmount || 0);
                 } else {
-                    if (titleEl) titleEl.textContent = 'PALJU ÕNNE! SAID UUE RELVA!';
-                    if (subtitleEl) subtitleEl.textContent = `${crate.name} avatud!`;
+                    if (titleEl) titleEl.textContent = texts.crateShop.congratsWeapon;
+                    if (subtitleEl) subtitleEl.textContent = texts.crateShop.congratsWeaponSub(crate.name);
                 }
 
                 const typeEl = document.getElementById('unboxing-item-type');
                 if (typeEl) {
                     if (isSet) {
-                        typeEl.textContent = `👑 TÄISKOMPLEKT (NUGA + PÜSTOL)`;
+                        typeEl.textContent = texts.crateShop.itemTypeSet;
                         typeEl.style.color = '#ffd700';
                     } else if (wonSkin.isDuplicate) {
-                        typeEl.textContent = `♻️ DUPLIKAAT (+${wonSkin.refundAmount} €)`;
+                        typeEl.textContent = texts.crateShop.itemTypeDuplicate(wonSkin.refundAmount || 0);
                         typeEl.style.color = '#ffd32a';
                     } else {
-                        typeEl.textContent = wonSkin.type === 'knife' ? '🔪 UUS NOANAHK' : '🔫 UUS REVOLVRINAHK';
+                        typeEl.textContent = wonSkin.type === 'knife' ? texts.crateShop.itemTypeKnife : texts.crateShop.itemTypeGun;
                         typeEl.style.color = '#ffd32a';
                     }
                 }
@@ -509,10 +530,10 @@ export class CrateShopUI {
                 const rarityEl = document.getElementById('unboxing-item-rarity');
                 if (rarityEl) {
                     if (isSet) {
-                        rarityEl.textContent = 'TÄISKOMPLEKT (SET BUNDLE)';
+                        rarityEl.textContent = 'SET BUNDLE';
                     } else {
                         rarityEl.textContent = wonSkin.isDuplicate 
-                            ? `${wonSkin.tierName.toUpperCase()} (DUPLIKAAT: +${wonSkin.refundAmount} €)`
+                            ? `${wonSkin.tierName.toUpperCase()} (${texts.crateShop.itemTypeDuplicate(wonSkin.refundAmount || 0)})`
                             : wonSkin.tierName.toUpperCase();
                     }
                     rarityEl.style.background = wonSkin.tierColor;
@@ -546,7 +567,7 @@ export class CrateShopUI {
 
                 if (btnEquip) {
                     btnEquip.style.display = 'inline-block';
-                    btnEquip.textContent = isSet ? 'VARUSTA KOMPLEKT 👑' : 'VARUSTA KOHE ⚔️';
+                    btnEquip.textContent = isSet ? texts.crateShop.equipSetBtn : texts.crateShop.equipNowBtn;
                     btnEquip.onclick = () => {
                         if (isSet && setKnife && setGun) {
                             this.ctx.equipSkin(setKnife.id);
@@ -561,6 +582,7 @@ export class CrateShopUI {
 
                 if (btnClose) {
                     btnClose.style.display = 'inline-block';
+                    btnClose.textContent = texts.crateShop.closeBtn;
                     btnClose.onclick = () => {
                         if (this.unboxingModal) this.unboxingModal.style.display = 'none';
                         this.renderInventory();

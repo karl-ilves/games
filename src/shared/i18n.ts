@@ -181,7 +181,7 @@ export function applyLocalization() {
         const tMmp1 = mmp1Card.querySelector('.reward-tag span:last-child');
         if (tMmp1) tMmp1.textContent = isEt ? '🏆 SURVIVE & SOLVE (+10 Y Mündid / +100 Y Võit)' : '🏆 SURVIVE & SOLVE (+10 Y Coins / +100 Y Win)';
         const mmp1Pill = mmp1Card.querySelector('.mmp1-owner-badge-pill');
-        if (mmp1Pill) mmp1Pill.textContent = isEt ? '👑 PLAYARD OWNER EKSKLUSIIV' : '👑 PLAYARD OWNER EXCLUSIVE';
+        if (mmp1Pill) mmp1Pill.textContent = isEt ? '🔥 MÕRVAR & ŠERIF' : '🔥 3D MURDER MYSTERY';
     }
 
     // ROCKET PLAYARD Game Card (Avalik kõigile)

@@ -6,6 +6,7 @@ import { MapBuilder } from './maps';
 import { yardService } from '../../../shared/yardService';
 import { MmpCrateManager } from '../state/crateManager';
 import { HudUI } from '../ui/hud';
+import { getLanguage, I18N, applyMmp1Localization } from '../i18n';
 
 export interface RoundContext {
     scene: THREE.Scene;
@@ -291,10 +292,13 @@ export class RoundManager {
         let rewardMoney = 0;
         let wonLegendaryCrate = false;
 
+        const lang = getLanguage();
+        const texts = I18N[lang];
+
         if (winner === "sheriff_win") {
             if (endTitle) {
                 const isDetectiveHero = (hero && hero.role === "sheriff" && hero.id !== "innocent");
-                endTitle.textContent = isDetectiveHero ? "DETECTIVE WINS 🔫" : "INNOCENTS WIN 🏆";
+                endTitle.textContent = isDetectiveHero ? texts.roundEnd.detectiveWinTitle : texts.roundEnd.innocentsWinTitle;
                 endTitle.style.color = "#00f2fe";
             }
             if (trophy) trophy.textContent = "🔫";
@@ -304,7 +308,7 @@ export class RoundManager {
             if (this.ctx.getLastHero() === this.ctx.playerChar) rewardMoney = Math.max(rewardMoney, 100);
         } else if (winner === "murderer_win") {
             if (endTitle) {
-                endTitle.textContent = "MURDERER WINS 🔪";
+                endTitle.textContent = texts.roundEnd.murdererWinTitle;
                 endTitle.style.color = "#ff2e63";
             }
             if (trophy) trophy.textContent = "🩸";
@@ -316,7 +320,7 @@ export class RoundManager {
             }
         } else {
             if (endTitle) {
-                endTitle.textContent = "INNOCENTS WIN 🏆";
+                endTitle.textContent = texts.roundEnd.innocentsWinTitle;
                 endTitle.style.color = "#2ecc71";
             }
             if (trophy) trophy.textContent = "🏆";
@@ -332,6 +336,8 @@ export class RoundManager {
         const endRewardCrateBox = document.getElementById("end-reward-crate-box");
         if (endRewardCrateBox) endRewardCrateBox.style.display = wonLegendaryCrate ? "block" : "none";
         if (endReward) endReward.textContent = "0";
+
+        applyMmp1Localization();
 
         yardService.recordPlayedGame({
             id: "mmp1",

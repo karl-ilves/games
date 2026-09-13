@@ -75,10 +75,10 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
         metroGameCard.style.display = 'flex';
     }
 
-    // MMP1 (Murder Mystery) mäng on nähtav Playard Ownerile ja kasutajale Minionbanana0_0!
+    // MMP1 (Murder Mystery) mäng on nüüd nähtav KÕIKIDELE mängijatele!
     const mmp1GameCard = document.getElementById('card-mmp1-game');
     if (mmp1GameCard) {
-        mmp1GameCard.style.display = canAccessMmp1(emailToCheck, usernameToCheck) ? 'flex' : 'none';
+        mmp1GameCard.style.display = 'flex';
     }
 
     // ROCKET PLAYARD mäng on avaldatud KÕIKIDELE mängijatele!
