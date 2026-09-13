@@ -5809,6 +5809,68 @@ try {
                 throw new Error("Crash summary modal must display guaranteed +500 Base Coins!");
             }
 
+            // Verify Destructible Airport Control Tower & Map Reset
+            console.log("   Checking Destructible Control Tower (Collapse on Impact, Persistence & Map Reset)...");
+            const towerTestResult = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return { error: 'planeCrashGame instance missing' };
+                const env = game.environment;
+                const initialDestroyed = env.isTowerDestroyed;
+                const initialRubbleCount = env.towerRubbleGroup.children.length;
+
+                // Simulate heavy plane impact (e.g. Boeing 737 / 42000 kg at 320 km/h)
+                env.damageControlTower(42000, 320, { x: 0, y: 0, z: -1 });
+                const afterImpactDestroyed = env.isTowerDestroyed;
+                const afterImpactLevel = env.towerDamageLevel;
+                const afterImpactRubbleCount = env.towerRubbleGroup.children.length;
+
+                // Test persistence across respawn
+                game.respawnCurrentPlane();
+                const afterRespawnDestroyed = env.isTowerDestroyed;
+                const afterRespawnRubbleCount = env.towerRubbleGroup.children.length;
+
+                // Test Map Reset button click
+                const btnReset = document.getElementById('btn-reset-map');
+                if (btnReset) btnReset.click();
+                const afterResetDestroyed = env.isTowerDestroyed;
+                const afterResetRubbleCount = env.towerRubbleGroup.children.length;
+
+                return {
+                    initialDestroyed,
+                    initialRubbleCount,
+                    afterImpactDestroyed,
+                    afterImpactLevel,
+                    afterImpactRubbleCount,
+                    afterRespawnDestroyed,
+                    afterRespawnRubbleCount,
+                    afterResetDestroyed,
+                    afterResetRubbleCount,
+                    hasResetButton: !!btnReset
+                };
+            });
+
+            console.log(`   Tower Initial: destroyed=${towerTestResult.initialDestroyed}, rubble=${towerTestResult.initialRubbleCount}`);
+            console.log(`   Tower After Heavy Impact: destroyed=${towerTestResult.afterImpactDestroyed}, level=${towerTestResult.afterImpactLevel}, rubble=${towerTestResult.afterImpactRubbleCount}`);
+            console.log(`   Tower After Plane Respawn: destroyed=${towerTestResult.afterRespawnDestroyed} (Persists: ${towerTestResult.afterRespawnDestroyed === true})`);
+            console.log(`   Tower After Map Reset: destroyed=${towerTestResult.afterResetDestroyed}, rubble=${towerTestResult.afterResetRubbleCount}`);
+
+            if (!towerTestResult.hasResetButton) {
+                throw new Error("Map Reset button (#btn-reset-map) not found in HUD!");
+            }
+            if (towerTestResult.initialDestroyed !== false) {
+                throw new Error("Control tower should be intact initially!");
+            }
+            if (towerTestResult.afterImpactDestroyed !== true || towerTestResult.afterImpactRubbleCount === 0) {
+                throw new Error("Control tower should collapse into rubble on high-energy plane impact!");
+            }
+            if (towerTestResult.afterRespawnDestroyed !== true) {
+                throw new Error("Control tower ruins must persist across plane respawns until Map Reset is pressed!");
+            }
+            if (towerTestResult.afterResetDestroyed !== false || towerTestResult.afterResetRubbleCount !== 0) {
+                throw new Error("Map Reset button must restore control tower to standing state and clear rubble!");
+            }
+            console.log("   Destructible Control Tower & Map Reset: ✅");
+
             // Verify Mobile Mode (?mobile=true)
             console.log("   Checking Mobile flight controls in Plane Crash Simulator (?mobile=true)...");
             await page.goto('http://localhost:4173/games/games/planecrash/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });

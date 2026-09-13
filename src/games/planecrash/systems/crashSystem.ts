@@ -106,6 +106,10 @@ export class CrashSystem {
         const noseSphere = new THREE.Sphere(noseTip, 1.6);
         for (const obs of this.environment.obstacles) {
             if (obs.bounds.intersectsSphere(fuseSphere) || obs.bounds.intersectsSphere(noseSphere)) {
+                // If hitting the airport control tower, collapse and shatter it!
+                if (obs.type === 'tower' || obs.name.includes('Lennujuhtimistorn')) {
+                    this.environment.damageControlTower(physics.config.mass, physics.state.speedKmh, physics.velocity);
+                }
                 this.executeCrash(physics, plane, obs);
                 return true;
             }

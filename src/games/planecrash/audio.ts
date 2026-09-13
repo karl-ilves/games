@@ -290,6 +290,94 @@ class PlaneCrashAudio {
             osc.stop(now + 0.08);
         } catch (e) {}
     }
+
+    /**
+     * Heavy structural concrete collapse sound: deep rumble + screeching debris.
+     */
+    public playTowerCollapse(): void {
+        const ctx = this.getContext();
+        if (!ctx || this.isMuted) return;
+        try {
+            const now = ctx.currentTime;
+
+            // Deep rumble oscillator
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(80, now);
+            osc.frequency.exponentialRampToValueAtTime(25, now + 1.2);
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(300, now);
+            filter.frequency.linearRampToValueAtTime(80, now + 1.2);
+
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 1.4);
+
+            // Shorter debris noise crunch
+            const bufSize = ctx.sampleRate;
+            const noiseBuf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+            const data = noiseBuf.getChannelData(0);
+            for (let i = 0; i < bufSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.3));
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = noiseBuf;
+
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.setValueAtTime(600, now);
+            noiseFilter.Q.setValueAtTime(1.5, now);
+
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.25, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(ctx.destination);
+
+            noise.start(now);
+            noise.stop(now + 1.0);
+        } catch (e) {}
+    }
+
+    /**
+     * Pleasant architectural rebuild chime.
+     */
+    public playMapRebuilt(): void {
+        const ctx = this.getContext();
+        if (!ctx || this.isMuted) return;
+        try {
+            const now = ctx.currentTime;
+            const chords = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            chords.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const t = now + idx * 0.08;
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, t);
+
+                gain.gain.setValueAtTime(0.18, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 0.38);
+            });
+        } catch (e) {}
+    }
 }
 
 export const planeAudio = new PlaneCrashAudio();

@@ -14,6 +14,7 @@ export class FlightHUD {
     public onOpenHangar?: () => void;
     public onToggleCamera?: () => void;
     public onQuickRespawn?: () => void;
+    public onResetMap?: () => void;
 
     constructor() {
         this.speedEl = document.getElementById('gauge-speed');
@@ -42,6 +43,14 @@ export class FlightHUD {
             btnCamera.addEventListener('click', () => {
                 planeAudio.playButtonClick();
                 if (this.onToggleCamera) this.onToggleCamera();
+            });
+        }
+
+        const btnResetMap = document.getElementById('btn-reset-map');
+        if (btnResetMap) {
+            btnResetMap.addEventListener('click', () => {
+                planeAudio.playButtonClick();
+                if (this.onResetMap) this.onResetMap();
             });
         }
 

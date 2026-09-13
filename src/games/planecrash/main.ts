@@ -138,6 +138,11 @@ export class PlaneCrashGame {
             this.respawnCurrentPlane();
         };
 
+        this.hud.onResetMap = () => {
+            this.environment.resetMap();
+            this.hud.showStuntToast('🏗️ Kaart taastatud! Lennujuhtimistorn on uuesti püsti!');
+        };
+
         // Input shortcuts
         this.input.onToggleCamera = () => {
             const mode = this.cameraSys.toggleMode();
