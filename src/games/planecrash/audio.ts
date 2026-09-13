@@ -118,6 +118,7 @@ class PlaneCrashAudio {
         if (!ctx || this.isMuted) return;
 
         try {
+            const now = ctx.currentTime;
             // 1. Screeching Metal Tearing / Shearing (FM synthesis)
             const metalMod = ctx.createOscillator();
             const metalModGain = ctx.createGain();
@@ -375,6 +376,150 @@ class PlaneCrashAudio {
 
                 osc.start(t);
                 osc.stop(t + 0.38);
+            });
+        } catch (e) {}
+    }
+
+    /**
+     * Mechanical hydraulic whir and locking clunk for landing gear extension/retraction.
+     */
+    public playGearToggle(down: boolean): void {
+        const ctx = this.getContext();
+        if (!ctx || this.isMuted) return;
+        try {
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            if (down) {
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.linearRampToValueAtTime(220, now + 0.3);
+            } else {
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.3);
+            }
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.36);
+
+            // Mechanical latch clunk
+            const clunk = ctx.createOscillator();
+            const clunkGain = ctx.createGain();
+            clunk.type = 'square';
+            clunk.frequency.setValueAtTime(80, now + 0.32);
+            clunk.frequency.exponentialRampToValueAtTime(30, now + 0.45);
+            clunkGain.gain.setValueAtTime(0.2, now + 0.32);
+            clunkGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            clunk.connect(clunkGain);
+            clunkGain.connect(ctx.destination);
+            clunk.start(now + 0.32);
+            clunk.stop(now + 0.46);
+        } catch (e) {}
+    }
+
+    /**
+     * Rubber tire touchdown chirp on smooth landing.
+     */
+    public playTouchdownChirp(): void {
+        const ctx = this.getContext();
+        if (!ctx || this.isMuted) return;
+        try {
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(1400, now);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.16);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.19);
+        } catch (e) {}
+    }
+
+    /**
+     * Harsh grinding metal skid when fuselage slides across asphalt/ground.
+     */
+    public playMetalSkid(): void {
+        const ctx = this.getContext();
+        if (!ctx || this.isMuted) return;
+        try {
+            const now = ctx.currentTime;
+            const bufSize = Math.floor(ctx.sampleRate * 0.8);
+            const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < bufSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.sin(i * 0.08);
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = buf;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(1200, now);
+            filter.Q.setValueAtTime(3.0, now);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+
+            noise.start(now);
+            noise.stop(now + 0.82);
+        } catch (e) {}
+    }
+
+    /**
+     * Low rumbling building destruction and concrete collapse.
+     */
+    public playBuildingCollapse(): void {
+        const ctx = this.getContext();
+        if (!ctx || this.isMuted) return;
+        try {
+            const now = ctx.currentTime;
+            const sub = ctx.createOscillator();
+            const subGain = ctx.createGain();
+            sub.type = 'triangle';
+            sub.frequency.setValueAtTime(95, now);
+            sub.frequency.exponentialRampToValueAtTime(25, now + 1.2);
+            subGain.gain.setValueAtTime(0.6, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 1.25);
+            sub.connect(subGain);
+            subGain.connect(ctx.destination);
+            sub.start(now);
+            sub.stop(now + 1.28);
+        } catch (e) {}
+    }
+
+    /**
+     * Victorious fanfare for successful smooth landing (+1,000 Coins).
+     */
+    public playLandingSuccess(): void {
+        const ctx = this.getContext();
+        if (!ctx || this.isMuted) return;
+        try {
+            const now = ctx.currentTime;
+            const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+            notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const t = now + idx * 0.1;
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(0.28, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.42);
             });
         } catch (e) {}
     }

@@ -56,6 +56,10 @@ export interface FlightState {
     leftWingBroken: boolean;
     rightWingBroken: boolean;
     tailBroken: boolean;
+    gearDown: boolean;
+    isLanded: boolean;
+    isFuselageSplit: boolean;
+    landingBonusAwarded: boolean;
 }
 
 export interface CrashBreakdown {

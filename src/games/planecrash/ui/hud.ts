@@ -9,12 +9,14 @@ export class FlightHUD {
     private spinsEl: HTMLElement | null;
     private coinBalanceEl: HTMLElement | null;
     private cameraModeEl: HTMLElement | null;
+    private gearEl: HTMLElement | null;
     private toastContainer: HTMLElement | null;
 
     public onOpenHangar?: () => void;
     public onToggleCamera?: () => void;
     public onQuickRespawn?: () => void;
     public onResetMap?: () => void;
+    public onToggleGear?: () => void;
 
     constructor() {
         this.speedEl = document.getElementById('gauge-speed');
@@ -23,6 +25,7 @@ export class FlightHUD {
         this.spinsEl = document.getElementById('gauge-spins');
         this.coinBalanceEl = document.getElementById('hud-coin-balance');
         this.cameraModeEl = document.getElementById('camera-mode-text');
+        this.gearEl = document.getElementById('gear-status-text');
         this.toastContainer = document.getElementById('trick-toast-container');
 
         this.initButtons();
@@ -61,6 +64,14 @@ export class FlightHUD {
                 if (this.onQuickRespawn) this.onQuickRespawn();
             });
         }
+
+        const btnGear = document.getElementById('btn-toggle-gear');
+        if (btnGear) {
+            btnGear.addEventListener('click', () => {
+                planeAudio.playButtonClick();
+                if (this.onToggleGear) this.onToggleGear();
+            });
+        }
     }
 
     public updateTelemetry(flightState: FlightState): void {
@@ -76,6 +87,10 @@ export class FlightHUD {
         if (this.spinsEl) {
             this.spinsEl.textContent = flightState.spin360Count.toString();
         }
+        if (this.gearEl) {
+            this.gearEl.textContent = flightState.gearDown ? 'ALL' : 'ÜLES';
+            this.gearEl.style.color = flightState.gearDown ? '#2ed573' : '#ffa502';
+        }
     }
 
     public updateCoins(): void {
@@ -88,6 +103,13 @@ export class FlightHUD {
     public setCameraModeText(mode: string): void {
         if (this.cameraModeEl) {
             this.cameraModeEl.textContent = mode.toUpperCase();
+        }
+    }
+
+    public setGearText(down: boolean): void {
+        if (this.gearEl) {
+            this.gearEl.textContent = down ? 'ALL' : 'ÜLES';
+            this.gearEl.style.color = down ? '#2ed573' : '#ffa502';
         }
     }
 

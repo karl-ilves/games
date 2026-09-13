@@ -18,6 +18,7 @@ export class CrashSystem {
 
     public onCrashTriggered?: (report: CrashBreakdown) => void;
     public onDamageTriggered?: (text: string) => void;
+    public onCoinsUpdated?: (coins: number) => void;
 
     constructor(environment: WorldEnvironment, particles: ParticleSystem) {
         this.environment = environment;
@@ -103,23 +104,63 @@ export class CrashSystem {
             }
         }
 
-        // 4. Check Full Fuselage / Nose Strike (Plane can NEVER sink into the ground!)
+        // 4. Check Ground Touchdown (Landing vs Split-Fuselage Skid vs Catastrophic Crash)
+        const terrainCenter = this.environment.getTerrainAt(pos.x, pos.z);
+        const groundY = terrainCenter.height;
+        const gearClearance = 1.6;
+        const euler = new THREE.Euler().setFromQuaternion(quat, 'YXZ');
+        const pitchDeg = Math.abs(THREE.MathUtils.radToDeg(euler.x));
+        const rollDeg = Math.abs(THREE.MathUtils.radToDeg(euler.z));
+        const descentRateMps = physics.velocity.y; // negative when descending
+
+        // If landing gear is deployed and aircraft reaches ground elevation
+        if (physics.state.gearDown && !physics.state.isLanded && !physics.state.isFuselageSplit) {
+            if (pos.y <= groundY + gearClearance && pos.y >= groundY - 0.5) {
+                // Check touchdown condition:
+                // Case A: Hard Touchdown at 20 m/s or faster vertical descent rate (or violent dive)
+                // -> Fuselage breaks clean in half, slides forward along ground, DOES NOT EXPLODE!
+                if (descentRateMps <= -20.0 || (descentRateMps <= -18.0 && (pitchDeg > 20 || rollDeg > 20))) {
+                    console.log(`💥 HARD TOUCHDOWN at ${Math.abs(descentRateMps).toFixed(1)} m/s! Fuselage snaps in half, sliding forward without fireball!`);
+                    this.executeFuselageSplitSkid(physics, plane, terrainCenter);
+                    return true;
+                }
+
+                // Case B: Smooth Touchdown (descent speed < 12 m/s, upright attitude pitch < 25°, roll < 25°)
+                // -> Smooth landing anywhere! Wheels roll, aircraft decelerates, awards +1,000 Coin Bonus!
+                if (Math.abs(descentRateMps) <= 12.0 && pitchDeg <= 25.0 && rollDeg <= 25.0) {
+                    this.executeSmoothLanding(physics, terrainCenter);
+                    return false;
+                }
+            }
+        }
+
+        // If aircraft is already landed and rolling on ground, maintain ground height
+        if (physics.state.isLanded) {
+            physics.position.y = groundY + gearClearance;
+            return false;
+        }
+
+        // 5. Check Full Fuselage / Nose Strike (Plane can NEVER sink into the ground!)
         const noseTip = new THREE.Vector3(0, 0, -3.5).applyQuaternion(quat).add(pos);
         const tailBottom = new THREE.Vector3(0, -0.5, plane.tailZ * 0.8).applyQuaternion(quat).add(pos);
         const bellyPoint = new THREE.Vector3(0, -0.8, 0).applyQuaternion(quat).add(pos);
 
-        const terrainCenter = this.environment.getTerrainAt(pos.x, pos.z);
         const terrainNose = this.environment.getTerrainAt(noseTip.x, noseTip.z);
         const terrainBelly = this.environment.getTerrainAt(bellyPoint.x, bellyPoint.z);
 
-        // Immediate catastrophic crash if fuselage, nose, or belly touches the terrain surface!
+        // Immediate crash if fuselage, nose, or belly strikes the terrain without deployed gear
         if (
-            pos.y <= terrainCenter.height + 1.2 ||
+            pos.y <= groundY + 1.2 ||
             noseTip.y <= terrainNose.height + 0.8 ||
             bellyPoint.y <= terrainBelly.height + 0.4 ||
-            tailBottom.y <= terrainCenter.height + 0.4 ||
+            tailBottom.y <= groundY + 0.4 ||
             pos.y <= 1.8
         ) {
+            // If gear was down but hit at >= 20 m/s:
+            if (descentRateMps <= -20.0 && !physics.state.isFuselageSplit) {
+                this.executeFuselageSplitSkid(physics, plane, terrainCenter);
+                return true;
+            }
             const obstacle: CrashObstacle = {
                 name: terrainCenter.name,
                 type: terrainCenter.type,
@@ -130,16 +171,23 @@ export class CrashSystem {
             return true;
         }
 
-        // Check obstacles against fuselage sphere (radius 2.2)
+        // 6. Check obstacles (City buildings, Airport hangars, Control tower)
         const fuseSphere = new THREE.Sphere(pos, 2.2);
         const noseSphere = new THREE.Sphere(noseTip, 1.6);
         for (const obs of this.environment.obstacles) {
             if (obs.bounds.intersectsSphere(fuseSphere) || obs.bounds.intersectsSphere(noseSphere)) {
-                // If hitting the airport control tower, collapse and slice it at exact contact height!
+                const hitPointY = Math.max(pos.y, noseTip.y);
+
+                // Control tower damage
                 if (obs.type === 'tower' || obs.name.includes('Lennujuhtimistorn') || obs.name.includes('lennutorn')) {
-                    const hitCutHeight = Math.max(pos.y, noseTip.y);
-                    this.environment.damageControlTower(physics.config.mass, physics.state.speedKmh, physics.velocity, hitCutHeight);
+                    this.environment.damageControlTower(physics.config.mass, physics.state.speedKmh, physics.velocity, hitPointY);
                 }
+
+                // Destructible city building damage
+                if (obs.destructibleBuildingId) {
+                    this.environment.damageBuilding(obs.destructibleBuildingId, physics.config.mass, physics.state.speedKmh, physics.velocity, hitPointY);
+                }
+
                 this.executeCrash(physics, plane, obs);
                 return true;
             }
@@ -251,6 +299,135 @@ export class CrashSystem {
             sparkTimer: 0
         });
         this.isDebrisSimulating = true;
+    }
+
+    /**
+     * Executes a smooth landing on wheels anywhere in the world.
+     * Keeps the aircraft intact, rolls along the terrain surface to a stop,
+     * awards +1,000 Coin Bonus, and plays landing touchdown audio.
+     */
+    public executeSmoothLanding(physics: FlightPhysics, terrain: { height: number; name: string }): void {
+        if (physics.state.isLanded) return;
+        physics.state.isLanded = true;
+        physics.position.y = terrain.height + 1.6;
+
+        planeAudio.playTouchdownChirp();
+
+        if (!physics.state.landingBonusAwarded) {
+            physics.state.landingBonusAwarded = true;
+            const newCoins = planeCrashState.addCoins(1000);
+            if (this.onCoinsUpdated) {
+                this.onCoinsUpdated(newCoins);
+            }
+            planeAudio.playLandingSuccess();
+            if (this.onDamageTriggered) {
+                this.onDamageTriggered(`🏆 SUJUV MAANDUMINE! (+1,000 🪙) Kohas: ${terrain.name}`);
+            }
+        }
+    }
+
+    /**
+     * Executes split-in-half fuselage skid when touching down at >= 20 m/s vertical speed.
+     * The fuselage snaps into two distinct pieces (front half and rear half),
+     * both halves skid forward along the ground kicking up friction sparks and dust,
+     * WITHOUT exploding (explosionScale = 0, no fireball)!
+     */
+    public executeFuselageSplitSkid(physics: FlightPhysics, plane: BuiltPlaneResult, terrain: { height: number; name: string }): void {
+        if (physics.state.isCrashed || physics.state.isFuselageSplit) return;
+        physics.state.isCrashed = true;
+        physics.state.isFuselageSplit = true;
+
+        physics.position.y = terrain.height + 1.2;
+        this.crashPosition.copy(physics.position);
+
+        // Hide original intact plane model
+        plane.rootGroup.visible = false;
+
+        console.log(`⚡ 20+ m/s IMPACT! Fuselage snapped in half! Both halves skidding on ground (NO FIREBALL)!`);
+        planeAudio.playMetalSkid();
+
+        // 1. Bullet time slow motion
+        this.timeScale = 0.35;
+
+        // 2. Clone and split the plane into Front Fuselage and Rear Fuselage halves
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(physics.quaternion);
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(physics.quaternion);
+        const skidSpeed = Math.max(12, physics.velocity.length() * 0.75);
+
+        // Front Half (Cockpit, Nose, Propeller/Nose gear)
+        const frontGroup = new THREE.Group();
+        const frontMesh = plane.fuselage.clone(true);
+        frontMesh.scale.set(1.0, 1.0, 0.55); // front half
+        frontMesh.position.set(0, 0, -1.2);
+        frontGroup.add(frontMesh);
+
+        if (plane.propellerMesh) {
+            frontGroup.add(plane.propellerMesh.clone(true));
+        }
+
+        frontGroup.position.copy(physics.position).add(forward.clone().multiplyScalar(1.5));
+        frontGroup.quaternion.copy(physics.quaternion);
+        this.environment.scene.add(frontGroup);
+
+        const frontVel = forward.clone().multiplyScalar(skidSpeed).add(new THREE.Vector3(0, 1.5, 0));
+        const frontRotVel = new THREE.Vector3((Math.random() - 0.5) * 4, 1.2, (Math.random() - 0.5) * 3);
+
+        this.debrisPieces.push({
+            mesh: frontGroup,
+            velocity: frontVel,
+            rotVelocity: frontRotVel,
+            isGrounded: false,
+            sparkTimer: 0
+        });
+
+        // Rear Half (Aft cabin, Tail assembly, Wings)
+        const rearGroup = new THREE.Group();
+        const rearMesh = plane.fuselage.clone(true);
+        rearMesh.scale.set(0.9, 0.9, 0.55);
+        rearMesh.position.set(0, 0, 1.2);
+        rearGroup.add(rearMesh);
+
+        if (plane.tailFin && plane.tailFin.visible) rearGroup.add(plane.tailFin.clone(true));
+        if (plane.tailHorizontal && plane.tailHorizontal.visible) rearGroup.add(plane.tailHorizontal.clone(true));
+        if (plane.wingLeft && plane.wingLeft.visible) rearGroup.add(plane.wingLeft.clone(true));
+        if (plane.wingRight && plane.wingRight.visible) rearGroup.add(plane.wingRight.clone(true));
+
+        rearGroup.position.copy(physics.position).add(forward.clone().multiplyScalar(-1.5));
+        rearGroup.quaternion.copy(physics.quaternion);
+        this.environment.scene.add(rearGroup);
+
+        const rearVel = forward.clone().multiplyScalar(skidSpeed * 0.9).add(right.clone().multiplyScalar((Math.random() - 0.5) * 6));
+        const rearRotVel = new THREE.Vector3((Math.random() - 0.5) * 5, -1.5, (Math.random() - 0.5) * 4);
+
+        this.debrisPieces.push({
+            mesh: rearGroup,
+            velocity: rearVel,
+            rotVelocity: rearRotVel,
+            isGrounded: false,
+            sparkTimer: 0
+        });
+
+        this.isDebrisSimulating = true;
+
+        // Metal grinding friction sparks and dust along the skid path (NO FIREBALL)
+        this.particles.spawnCrashExplosion(this.crashPosition, 0.0, false);
+
+        if (this.onDamageTriggered) {
+            this.onDamageTriggered('💥 TOUCHDOWN 20+ m/s! Lennuk murdus keskelt pooleks ja libiseb edasi!');
+        }
+
+        // Calculate Crash reward with 0 explosion
+        const report = planeCrashState.calculateCrashReward(
+            physics.state,
+            physics.config,
+            'Kõva maandumine (20+ m/s) - Kere murdus pooleks'
+        );
+        physics.state.lastCrashReport = report;
+        planeCrashState.applyCrashReward(report);
+
+        if (this.onCrashTriggered) {
+            this.onCrashTriggered(report);
+        }
     }
 
     public executeCrash(physics: FlightPhysics, plane: BuiltPlaneResult, obstacle: CrashObstacle): void {

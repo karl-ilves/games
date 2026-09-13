@@ -12,6 +12,7 @@ export class InputController {
 
     public onToggleCamera?: () => void;
     public onRestartRequested?: () => void;
+    public onToggleGear?: () => void;
 
     constructor() {
         this.setupKeyboard();
@@ -28,6 +29,9 @@ export class InputController {
             }
             if (key === 'r' && this.onRestartRequested) {
                 this.onRestartRequested();
+            }
+            if (key === 'g' && this.onToggleGear) {
+                this.onToggleGear();
             }
         });
 

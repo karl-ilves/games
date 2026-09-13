@@ -5625,12 +5625,11 @@ try {
             // 9. PLANE CRASH SIMULATOR MÄNGU TESTID (Playard Owner Exclusive)
             // ==========================================
             console.log("9. Checking ✈️💥 PLANE CRASH SIMULATOR Game Page (11 Aircraft, Hangar Shop, Flight Physics, 360 Spins, Crash Modal & Coin Rewards)...");
-            await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/planecrash/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await new Promise(r => setTimeout(r, 1200));
+            await page.goto('http://localhost:4173/games/games/planecrash/index.html', { waitUntil: 'load', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1500));
 
             // Verify Three.js Canvas
-            const planeCanvas = await page.$('#canvas-container canvas');
+            const planeCanvas = await page.waitForSelector('#canvas-container canvas', { timeout: 10000 });
             if (!planeCanvas) throw new Error('Plane Crash Simulator Three.js canvas was not created!');
             console.log('   Plane Crash Simulator Three.js Canvas initialized: ✅');
 
@@ -5746,23 +5745,33 @@ try {
                 // Query terrain height at runway center
                 const terrain = game.environment.getTerrainAt(0, 0);
 
-                // Place plane right above runway
+                // Place plane right above runway with gear retracted to test belly strike crash detection
                 game.physics.position.set(0, terrain.height + 0.8, 0);
                 game.physics.state.isCrashed = false;
+                game.physics.state.gearDown = false;
+                game.physics.state.isLanded = false;
 
                 // Check collision at ground level
                 const collided = game.crashSys.checkCollisions(game.physics, game.currentPlaneMesh);
+
+                // Now test gear down landing
+                game.physics.state.isCrashed = false;
+                game.physics.state.gearDown = true;
+                game.physics.velocity.set(40, -4, 0);
+                game.crashSys.checkCollisions(game.physics, game.currentPlaneMesh);
+                const isLandedOnWheels = game.physics.state.isLanded;
 
                 return {
                     runwayHeight: terrain.height,
                     terrainName: terrain.name,
                     collided,
-                    isCrashed: game.physics.state.isCrashed
+                    isCrashed: game.physics.state.isCrashed,
+                    isLandedOnWheels
                 };
             });
-            console.log(`   Runway ground check: height=${groundColResult.runwayHeight}m, name="${groundColResult.terrainName}", collided=${groundColResult.collided}`);
-            if (groundColResult.runwayHeight < 5.0 || !groundColResult.collided || !groundColResult.isCrashed) {
-                throw new Error("Plane must detect runway ground collision at 5.7m and never sink into the asphalt!");
+            console.log(`   Runway ground check: height=${groundColResult.runwayHeight}m, name="${groundColResult.terrainName}", collided=${groundColResult.collided}, isLanded=${groundColResult.isLandedOnWheels}`);
+            if (groundColResult.runwayHeight < 5.0 || !groundColResult.collided || !groundColResult.isLandedOnWheels) {
+                throw new Error("Plane must detect runway ground collision at 5.7m and land cleanly on wheels!");
             }
             console.log("   Ground penetration prevention verified: ✅");
 
@@ -6011,6 +6020,118 @@ try {
                 throw new Error(`Cab slice test failed! Expected height=90, level=cab_destroyed; got height=${towerTestResult.cabSliceHeight}, level=${towerTestResult.cabSliceLevel}`);
             }
             console.log("   Destructible Control Tower (Height-Dependent Slicing & Collapse) & Map Reset: ✅");
+
+            // Verify Sprawling Destructible City & Map Reset
+            console.log("   Checking Sprawling Destructible City (Half-map metropolis, building collapse on impact & reset)...");
+            const cityTestResult = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return { error: 'planeCrashGame instance missing' };
+                const env = game.environment;
+
+                const totalBuildings = env.destructibleBuildings.size;
+                const bldgList = Array.from(env.destructibleBuildings.values());
+                const firstBldg = bldgList[0];
+
+                // Damage a skyscraper with plane impact
+                const dmgResult = env.damageBuilding(firstBldg.id, 5000, 260, { x: 1, y: 0, z: 0 }, 45);
+                const afterDamageDestroyed = firstBldg.isDestroyed;
+                const afterDamageHeight = firstBldg.cutHeight;
+                const rubbleCount = env.cityRubbleGroup.children.length;
+
+                // Reset map and verify restored
+                env.resetMap();
+                const afterResetDestroyed = firstBldg.isDestroyed;
+                const afterResetRubbleCount = env.cityRubbleGroup.children.length;
+
+                return {
+                    totalBuildings,
+                    dmgResult,
+                    afterDamageDestroyed,
+                    afterDamageHeight,
+                    rubbleCount,
+                    afterResetDestroyed,
+                    afterResetRubbleCount
+                };
+            });
+
+            console.log(`   City Buildings: count=${cityTestResult.totalBuildings}, rubble=${cityTestResult.rubbleCount}`);
+            if (cityTestResult.totalBuildings < 50) {
+                throw new Error(`Expected at least 50 city buildings covering half the map, got ${cityTestResult.totalBuildings}`);
+            }
+            if (cityTestResult.afterDamageDestroyed !== true || cityTestResult.rubbleCount === 0) {
+                throw new Error("City skyscraper should crumble and spawn rubble on aircraft collision!");
+            }
+            if (cityTestResult.afterResetDestroyed !== false || cityTestResult.afterResetRubbleCount !== 0) {
+                throw new Error("Map Reset must restore city buildings and clear city rubble!");
+            }
+            console.log("   Sprawling Destructible City: ✅");
+
+            // Verify Landing Gear Toggle, Smooth Landing (+1,000 Coin Bonus) & 20+ m/s Split Fuselage Skid
+            console.log("   Checking Landing Gear System, Smooth Landing Bonus (+1,000 🪙) & 20+ m/s Split-Fuselage Skid...");
+            const landingTestResult = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return { error: 'planeCrashGame instance missing' };
+                const phys = game.physics;
+                const crash = game.crashSys;
+                const plane = game.currentPlaneMesh;
+                const state = phys.state;
+
+                // Test Gear Toggle
+                const initialGear = state.gearDown;
+                const toggledGear = phys.toggleGear();
+                const reToggledGear = phys.toggleGear();
+
+                // Test Smooth Landing
+                phys.state.isLanded = false;
+                phys.state.landingBonusAwarded = false;
+                phys.state.gearDown = true;
+                phys.velocity.set(30, -5, 0); // descent rate 5 m/s (gentle)
+                const startCoins = parseInt(document.getElementById('hud-coin-balance')?.textContent?.replace(/,/g, '') || '0', 10);
+                crash.executeSmoothLanding(phys, { height: 5.0, name: 'Lennurada' });
+                const landedStatus = phys.state.isLanded;
+                const bonusAwarded = phys.state.landingBonusAwarded;
+                const endCoins = parseInt(document.getElementById('hud-coin-balance')?.textContent?.replace(/,/g, '') || '0', 10);
+                const coinGain = endCoins - startCoins;
+
+                // Test 20+ m/s Hard Touchdown -> Split Fuselage Skid without Explosion
+                phys.state.isCrashed = false;
+                phys.state.isFuselageSplit = false;
+                phys.velocity.set(40, -22, 0); // descent rate 22 m/s (>= 20 m/s)
+                crash.executeFuselageSplitSkid(phys, plane, { height: 5.0, name: 'Heinamaa' });
+                const splitStatus = phys.state.isFuselageSplit;
+                const crashedStatus = phys.state.isCrashed;
+                const debrisCount = crash.debrisPieces.length;
+
+                // Clean up and respawn
+                game.respawnCurrentPlane();
+
+                return {
+                    initialGear,
+                    toggledGear,
+                    reToggledGear,
+                    landedStatus,
+                    bonusAwarded,
+                    coinGain,
+                    splitStatus,
+                    crashedStatus,
+                    debrisCount
+                };
+            });
+
+            console.log(`   Gear: init=${landingTestResult.initialGear}, toggled=${landingTestResult.toggledGear}, restored=${landingTestResult.reToggledGear}`);
+            console.log(`   Smooth Landing: landed=${landingTestResult.landedStatus}, bonus=${landingTestResult.bonusAwarded}, coinGain=+${landingTestResult.coinGain}`);
+            console.log(`   Split Fuselage (20+ m/s): split=${landingTestResult.splitStatus}, crashed=${landingTestResult.crashedStatus}, debris=${landingTestResult.debrisCount}`);
+
+            if (landingTestResult.initialGear !== true || landingTestResult.toggledGear !== false || landingTestResult.reToggledGear !== true) {
+                throw new Error("Landing gear toggle failed!");
+            }
+            if (!landingTestResult.landedStatus || !landingTestResult.bonusAwarded || landingTestResult.coinGain < 1000) {
+                throw new Error(`Smooth landing must award +1,000 Coin Bonus! Got coinGain=${landingTestResult.coinGain}`);
+            }
+            if (!landingTestResult.splitStatus || !landingTestResult.crashedStatus || landingTestResult.debrisCount < 2) {
+                throw new Error("Hard touchdown at 20+ m/s must split fuselage in half and skid without exploding!");
+            }
+            console.log("   Landing Gear, Smooth Landing Bonus & Split-Fuselage Skid: ✅");
 
             // Verify Mobile Mode (?mobile=true)
             console.log("   Checking Mobile flight controls in Plane Crash Simulator (?mobile=true)...");

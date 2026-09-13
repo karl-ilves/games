@@ -154,6 +154,15 @@ export class PlaneCrashGame {
             this.respawnCurrentPlane();
         };
 
+        const toggleGearAction = () => {
+            const down = this.physics.toggleGear();
+            planeAudio.playGearToggle(down);
+            this.hud.setGearText(down);
+            this.hud.showStuntToast(down ? '⚙️ TELIK ALLA LASTUD (Rattad valmis maandumiseks)!' : '⚙️ TELIK SISSE TÕMMATUD!');
+        };
+        this.input.onToggleGear = toggleGearAction;
+        this.hud.onToggleGear = toggleGearAction;
+
         // Stunt notification toast
         this.physics.onStunt = (type, text, bonus) => {
             planeAudio.playStuntWhoosh();
@@ -164,6 +173,11 @@ export class PlaneCrashGame {
         this.crashSys.onDamageTriggered = (text) => {
             this.hud.showStuntToast(text);
             this.cameraSys.triggerImpactShake(1.2);
+        };
+
+        // Coins updated (e.g. smooth landing bonus)
+        this.crashSys.onCoinsUpdated = () => {
+            this.hud.updateCoins();
         };
 
         // Crash Triggered
@@ -254,8 +268,8 @@ export class PlaneCrashGame {
             // Proximity warning when approaching forbidden mountain airspace
             const distFromCenter = Math.sqrt(this.physics.position.x ** 2 + this.physics.position.z ** 2);
             if (distFromCenter > 1900 && distFromCenter < 2200 && !this.physics.state.isCrashed) {
-                if (t - this.lastBoundaryWarnTime > 4000) {
-                    this.lastBoundaryWarnTime = t;
+                if (currentTime - this.lastBoundaryWarnTime > 4000) {
+                    this.lastBoundaryWarnTime = currentTime;
                     this.hud.showStuntToast('⚠️ HOIATUS: Lähened mägedele! Üle mägede lendamine keelatud!');
                 }
             }
@@ -269,6 +283,11 @@ export class PlaneCrashGame {
                 }
                 this.currentPlaneMesh.rootGroup.position.copy(this.physics.position);
                 this.currentPlaneMesh.rootGroup.quaternion.copy(this.physics.quaternion);
+
+                // Sync landing gear visibility
+                if (this.currentPlaneMesh.gearGroup) {
+                    this.currentPlaneMesh.gearGroup.visible = this.physics.state.gearDown;
+                }
 
                 // Rotate Propeller if present
                 if (this.currentPlaneMesh.propellerMesh) {

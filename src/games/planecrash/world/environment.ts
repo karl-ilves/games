@@ -6,6 +6,25 @@ export interface CrashObstacle {
     type: 'ground' | 'water' | 'mountain' | 'building' | 'bridge' | 'tower' | 'ring';
     bounds: THREE.Box3;
     bonusMultiplier: number;
+    destructibleBuildingId?: string;
+}
+
+export interface DestructibleBuilding {
+    id: string;
+    name: string;
+    x: number;
+    z: number;
+    width: number;
+    height: number;
+    depth: number;
+    color: number;
+    mesh: THREE.Mesh;
+    spireMesh?: THREE.Mesh;
+    isDestroyed: boolean;
+    cutHeight: number;
+    stumpMesh?: THREE.Mesh;
+    rubbleMeshes?: THREE.Object3D[];
+    obstacleRef: CrashObstacle;
 }
 
 export interface MountainConfig {
@@ -29,6 +48,11 @@ export class WorldEnvironment {
     public towerGroup: THREE.Group = new THREE.Group();
     public towerRubbleGroup: THREE.Group = new THREE.Group();
     public towerObstacleRef: CrashObstacle | null = null;
+
+    // Destructible City State (East half of map)
+    public cityGroup: THREE.Group = new THREE.Group();
+    public cityRubbleGroup: THREE.Group = new THREE.Group();
+    public destructibleBuildings: Map<string, DestructibleBuilding> = new Map();
 
     constructor(scene: THREE.Scene) {
         this.scene = scene;
@@ -125,7 +149,9 @@ export class WorldEnvironment {
         // 4. Mountain Ranges & Cliffs
         this.buildMountains();
 
-        // 5. Downtown Metropolis (Skyscrapers)
+        // Downtown Metropolis (Skyscrapers)
+        this.scene.add(this.cityGroup);
+        this.scene.add(this.cityRubbleGroup);
         this.buildCity();
 
         // 6. Aerial Stunt Rings
@@ -454,11 +480,26 @@ export class WorldEnvironment {
     }
 
     /**
-     * Rebuilds all destroyed structures (Control Tower) and restores the world to pristine condition.
+     * Rebuilds all destroyed structures (Control Tower & City Skyscrapers) and restores the world to pristine condition.
      */
     public resetMap(): void {
         this.clearTowerRubble();
         this.buildControlTower();
+
+        // Restore all city skyscrapers
+        this.clearCityRubble();
+        this.destructibleBuildings.forEach(bldg => {
+            bldg.isDestroyed = false;
+            bldg.cutHeight = 0;
+            bldg.mesh.visible = true;
+            if (bldg.spireMesh) bldg.spireMesh.visible = true;
+            bldg.obstacleRef.bounds.set(
+                new THREE.Vector3(bldg.x - bldg.width / 2, 5.0, bldg.z - bldg.depth / 2),
+                new THREE.Vector3(bldg.x + bldg.width / 2, bldg.height + 5.0, bldg.z + bldg.depth / 2)
+            );
+            bldg.obstacleRef.name = `Linnahoone (${Math.round(bldg.height)}m)`;
+        });
+
         planeAudio.playMapRebuilt();
     }
 
@@ -537,47 +578,203 @@ export class WorldEnvironment {
     }
 
     private buildCity(): void {
-        const cityOrigin = new THREE.Vector3(750, 0, 400);
-        const bldgColors = [0x2c3e50, 0x34495e, 0x1e272e, 0x485460, 0x2d3436];
+        this.clearCityRubble();
+        while (this.cityGroup.children.length > 0) {
+            const child = this.cityGroup.children[0];
+            this.cityGroup.remove(child);
+            if ((child as THREE.Mesh).geometry) (child as THREE.Mesh).geometry.dispose();
+        }
+        this.destructibleBuildings.clear();
 
-        // 4x4 Grid of skyscrapers
-        for (let row = 0; row < 4; row++) {
-            for (let col = 0; col < 4; col++) {
-                const x = cityOrigin.x + col * 120;
-                const z = cityOrigin.z + row * 120;
-                const height = 150 + Math.sin(row * 3 + col * 5) * 80 + (row === 2 && col === 2 ? 140 : 0);
-                const width = 55 + Math.cos(col) * 15;
-                const depth = 55 + Math.sin(row) * 15;
+        // City Layout across the Eastern Half of the Map (x: 250 to 1850, z: -1600 to 1600)
+        // 12 Columns (X) x 8 Rows (Z) = 96 Destructible Skyscrapers and Buildings
+        const bldgColors = [
+            0x2c3e50, 0x34495e, 0x1e272e, 0x485460, 0x2d3436,
+            0x3c6382, 0x0a3d62, 0x60a3bc, 0x4a69bd, 0x1e3799
+        ];
+
+        const cols = 12;
+        const rows = 8;
+        const startX = 280;
+        const startZ = -1400;
+        const stepX = 135;
+        const stepZ = 390;
+
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                const bldgId = `bldg_${c}_${r}`;
+                const x = startX + c * stepX + ((r % 2 === 0) ? 0 : 25);
+                const z = startZ + r * stepZ + ((c % 2 === 0) ? 0 : 30);
+
+                // Heights vary by district:
+                // Financial Center (c in [2, 7], r in [2, 5]): Tallest (160m - 320m)
+                // Midtown (surrounding): Medium (90m - 180m)
+                // Outer fringe: (50m - 110m)
+                const isFinancialCore = c >= 3 && c <= 8 && r >= 2 && r <= 5;
+                let height: number;
+                if (isFinancialCore) {
+                    height = 180 + Math.abs(Math.sin(c * 2.1 + r * 3.7)) * 140;
+                } else {
+                    height = 65 + Math.abs(Math.cos(c * 1.7 + r * 2.3)) * 85;
+                }
+
+                const width = 45 + Math.abs(Math.sin(c * 4.3)) * 25;
+                const depth = 45 + Math.abs(Math.cos(r * 3.1)) * 25;
+                const color = bldgColors[(c + r * 3) % bldgColors.length];
 
                 const bldgMat = new THREE.MeshStandardMaterial({
-                    color: bldgColors[(row + col) % bldgColors.length],
-                    metalness: 0.6,
-                    roughness: 0.2
+                    color,
+                    metalness: 0.65,
+                    roughness: 0.25
                 });
 
                 const bldgGeom = new THREE.BoxGeometry(width, height, depth);
-                bldgGeom.translate(0, height / 2, 0);
+                bldgGeom.translate(0, height / 2 + 5.0, 0);
                 const bldg = new THREE.Mesh(bldgGeom, bldgMat);
                 bldg.position.set(x, 0, z);
-                this.scene.add(bldg);
+                bldg.castShadow = true;
+                this.cityGroup.add(bldg);
 
-                // Roof antenna on tallest skyscraper
-                if (height > 250) {
-                    const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2, 60, 8), new THREE.MeshStandardMaterial({ color: 0xff4757 }));
-                    spire.position.set(x, height + 30, z);
-                    this.scene.add(spire);
+                let spire: THREE.Mesh | undefined;
+                if (height > 220) {
+                    const spireGeom = new THREE.CylinderGeometry(0.5, 2, 45, 8);
+                    const spireMat = new THREE.MeshStandardMaterial({ color: 0xff4757 });
+                    spire = new THREE.Mesh(spireGeom, spireMat);
+                    spire.position.set(x, height + 5.0 + 22.5, z);
+                    this.cityGroup.add(spire);
                 }
 
-                this.obstacles.push({
-                    name: `Pilvelõhkuja (${col + 1}x${row + 1})`,
+                const obs: CrashObstacle = {
+                    name: `Linnahoone (${c + 1}-${r + 1}, ${Math.round(height)}m)`,
                     type: 'building',
                     bounds: new THREE.Box3(
-                        new THREE.Vector3(x - width / 2, 0, z - depth / 2),
-                        new THREE.Vector3(x + width / 2, height, z + depth / 2)
+                        new THREE.Vector3(x - width / 2, 5.0, z - depth / 2),
+                        new THREE.Vector3(x + width / 2, height + 5.0, z + depth / 2)
                     ),
-                    bonusMultiplier: 2.2
-                });
+                    bonusMultiplier: 2.2,
+                    destructibleBuildingId: bldgId
+                };
+                this.obstacles.push(obs);
+
+                const record: DestructibleBuilding = {
+                    id: bldgId,
+                    name: obs.name,
+                    x,
+                    z,
+                    width,
+                    height,
+                    depth,
+                    color,
+                    mesh: bldg,
+                    spireMesh: spire,
+                    isDestroyed: false,
+                    cutHeight: 0,
+                    obstacleRef: obs
+                };
+                this.destructibleBuildings.set(bldgId, record);
             }
+        }
+    }
+
+    /**
+     * Slices and collapses any city building upon aircraft collision!
+     * The building shears at the plane's impact height, spawns falling upper rubble,
+     * leaves a ragged standing concrete stump, and updates the obstacle bounds.
+     */
+    public damageBuilding(buildingId: string, planeMass: number, speedKmh: number, impactVel: THREE.Vector3, impactPointY?: number): { destroyed: boolean; cutHeight: number } {
+        const bldg = this.destructibleBuildings.get(buildingId);
+        if (!bldg || bldg.isDestroyed) return { destroyed: false, cutHeight: 0 };
+
+        const groundY = 5.0;
+        const totalTopY = groundY + bldg.height;
+        let cutY: number;
+
+        if (typeof impactPointY === 'number' && !isNaN(impactPointY)) {
+            cutY = THREE.MathUtils.clamp(impactPointY, groundY + 4, totalTopY - 2);
+        } else {
+            cutY = groundY + bldg.height * 0.5;
+        }
+
+        bldg.isDestroyed = true;
+        bldg.cutHeight = cutY;
+
+        // Hide pristine standing skyscraper
+        bldg.mesh.visible = false;
+        if (bldg.spireMesh) bldg.spireMesh.visible = false;
+
+        planeAudio.playBuildingCollapse();
+
+        // 1. Build Remaining Standing Stump (groundY to cutY)
+        const stumpHeight = Math.max(2, cutY - groundY);
+        const stumpGeom = new THREE.BoxGeometry(bldg.width, stumpHeight, bldg.depth);
+        stumpGeom.translate(0, stumpHeight / 2 + groundY, 0);
+        const stumpMat = new THREE.MeshStandardMaterial({
+            color: 0x333333,
+            roughness: 0.95
+        });
+        const stumpMesh = new THREE.Mesh(stumpGeom, stumpMat);
+        stumpMesh.position.set(bldg.x, 0, bldg.z);
+        this.cityRubbleGroup.add(stumpMesh);
+        bldg.stumpMesh = stumpMesh;
+
+        // 2. Build Toppled Sheared-Off Upper Floor Section
+        const upperHeight = Math.max(3, totalTopY - cutY);
+        const upperGeom = new THREE.BoxGeometry(bldg.width * 0.96, upperHeight, bldg.depth * 0.96);
+        const upperMat = new THREE.MeshStandardMaterial({
+            color: bldg.color,
+            metalness: 0.5,
+            roughness: 0.4
+        });
+        const upperMesh = new THREE.Mesh(upperGeom, upperMat);
+
+        const dir = new THREE.Vector3(impactVel?.x || 1, 0, impactVel?.z || 0).normalize();
+        if (dir.lengthSq() < 0.01) dir.set(1, 0, 0);
+        const toppleDist = bldg.width * 0.7 + upperHeight * 0.4;
+        upperMesh.position.set(
+            bldg.x + dir.x * toppleDist,
+            groundY + Math.min(bldg.width, bldg.depth) * 0.45,
+            bldg.z + dir.z * toppleDist
+        );
+
+        const dirAngle = Math.atan2(dir.z, dir.x);
+        upperMesh.rotation.y = -dirAngle;
+        upperMesh.rotation.z = Math.PI / 2;
+        this.cityRubbleGroup.add(upperMesh);
+
+        // 3. Concrete Rubble Blocks scattered around the crash zone
+        const rubbleList: THREE.Object3D[] = [stumpMesh, upperMesh];
+        const concreteMat = new THREE.MeshStandardMaterial({ color: 0x57606f, roughness: 0.9 });
+        for (let i = 0; i < 12; i++) {
+            const size = 1.5 + Math.random() * 3.5;
+            const block = new THREE.Mesh(new THREE.BoxGeometry(size, size * 0.6, size), concreteMat);
+            const dist = Math.random() * (toppleDist + 25) + 5;
+            const lat = (Math.random() - 0.5) * (bldg.width + 15);
+            block.position.set(
+                bldg.x + dir.x * dist - dir.z * lat,
+                groundY + size * 0.3,
+                bldg.z + dir.z * dist + dir.x * lat
+            );
+            block.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+            this.cityRubbleGroup.add(block);
+            rubbleList.push(block);
+        }
+        bldg.rubbleMeshes = rubbleList;
+
+        // 4. Update obstacle bounds to match lower stump so player can fly above it
+        bldg.obstacleRef.bounds.set(
+            new THREE.Vector3(bldg.x - bldg.width / 2, groundY, bldg.z - bldg.depth / 2),
+            new THREE.Vector3(bldg.x + bldg.width / 2, cutY, bldg.z + bldg.depth / 2)
+        );
+        bldg.obstacleRef.name = `Purustatud ${bldg.name} (Stump ${Math.round(cutY)}m)`;
+
+        return { destroyed: true, cutHeight: cutY };
+    }
+
+    private clearCityRubble(): void {
+        while (this.cityRubbleGroup.children.length > 0) {
+            const child = this.cityRubbleGroup.children[0];
+            this.cityRubbleGroup.remove(child);
+            if ((child as THREE.Mesh).geometry) (child as THREE.Mesh).geometry.dispose();
         }
     }
 

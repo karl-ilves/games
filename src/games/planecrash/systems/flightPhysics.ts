@@ -47,8 +47,17 @@ export class FlightPhysics {
             lastCrashReport: null,
             leftWingBroken: false,
             rightWingBroken: false,
-            tailBroken: false
+            tailBroken: false,
+            gearDown: true,
+            isLanded: false,
+            isFuselageSplit: false,
+            landingBonusAwarded: false
         };
+    }
+
+    public toggleGear(): boolean {
+        this.state.gearDown = !this.state.gearDown;
+        return this.state.gearDown;
     }
 
     public reset(startPos: THREE.Vector3, startYaw: number = 0, initialSpeedKmh: number = 200): void {
@@ -130,38 +139,61 @@ export class FlightPhysics {
         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.quaternion);
 
         // 4. Aerodynamic Forces (Thrust, Lift, Drag, Gravity)
-        const maxThrust = (this.config.acceleration * this.config.mass * 0.4);
-        const thrustForce = forward.clone().multiplyScalar(this.state.throttle * maxThrust);
+        if (this.state.isLanded) {
+            // Aircraft has touched down smoothly on wheels:
+            // Zero out vertical velocity, level pitch/roll, and apply wheel braking + friction
+            this.velocity.y = 0;
+            this.state.throttle = THREE.MathUtils.clamp(this.state.throttle - dt * 0.5, 0, 1);
 
-        // Drag: proportional to speed squared
-        const dragFactor = (this.config.mass * 0.0035) / Math.max(1, this.config.liftCoefficient);
-        const dragForce = this.velocity.clone().normalize().multiplyScalar(-0.5 * dragFactor * currentSpeedMps * currentSpeedMps);
+            // Ground friction & braking deceleration: smooth stop
+            const brakingPower = 18.0; // m/s^2
+            const currentSpeed = this.velocity.length();
+            if (currentSpeed > 0.05) {
+                const newSpeed = Math.max(0, currentSpeed - brakingPower * dt);
+                this.velocity.normalize().multiplyScalar(newSpeed);
+            } else {
+                this.velocity.set(0, 0, 0);
+            }
 
-        // Lift: perpendicular to wings (along local up vector)
-        const liftForceMagnitude = this.config.liftCoefficient * (this.config.mass * 9.8) * Math.min(2.0, (currentSpeedMps / 50));
-        const liftForce = up.clone().multiplyScalar(liftForceMagnitude);
+            // Level out airplane on its landing gear
+            const currentEuler = new THREE.Euler().setFromQuaternion(this.quaternion, 'YXZ');
+            currentEuler.x = THREE.MathUtils.lerp(currentEuler.x, 0, dt * 6.0); // Level pitch
+            currentEuler.z = THREE.MathUtils.lerp(currentEuler.z, 0, dt * 6.0); // Level roll
+            this.quaternion.setFromEuler(currentEuler);
+        } else {
+            const maxThrust = (this.config.acceleration * this.config.mass * 0.4);
+            const thrustForce = forward.clone().multiplyScalar(this.state.throttle * maxThrust);
 
-        // Gravity
-        const gravityForce = new THREE.Vector3(0, -9.8 * this.config.mass, 0);
+            // Drag: proportional to speed squared
+            const dragFactor = (this.config.mass * 0.0035) / Math.max(1, this.config.liftCoefficient);
+            const dragForce = this.velocity.clone().normalize().multiplyScalar(-0.5 * dragFactor * currentSpeedMps * currentSpeedMps);
 
-        // Net Acceleration
-        const totalForce = new THREE.Vector3()
-            .add(thrustForce)
-            .add(dragForce)
-            .add(liftForce)
-            .add(gravityForce);
+            // Lift: perpendicular to wings (along local up vector)
+            const liftForceMagnitude = this.config.liftCoefficient * (this.config.mass * 9.8) * Math.min(2.0, (currentSpeedMps / 50));
+            const liftForce = up.clone().multiplyScalar(liftForceMagnitude);
 
-        const acceleration = totalForce.divideScalar(this.config.mass);
-        this.velocity.addScaledVector(acceleration, dt);
+            // Gravity
+            const gravityForce = new THREE.Vector3(0, -9.8 * this.config.mass, 0);
 
-        // Velocity alignment: streamline airplane velocity towards heading
-        const alignmentFactor = THREE.MathUtils.clamp(dt * 4.0, 0, 0.85);
-        this.velocity.lerp(forward.clone().multiplyScalar(this.velocity.length()), alignmentFactor);
+            // Net Acceleration
+            const totalForce = new THREE.Vector3()
+                .add(thrustForce)
+                .add(dragForce)
+                .add(liftForce)
+                .add(gravityForce);
 
-        // Cap speed to top speed + dive allowance
-        const maxMps = (this.config.topSpeedKmh * 1.3) / 3.6;
-        if (this.velocity.length() > maxMps) {
-            this.velocity.setLength(maxMps);
+            const acceleration = totalForce.divideScalar(this.config.mass);
+            this.velocity.addScaledVector(acceleration, dt);
+
+            // Velocity alignment: streamline airplane velocity towards heading
+            const alignmentFactor = THREE.MathUtils.clamp(dt * 4.0, 0, 0.85);
+            this.velocity.lerp(forward.clone().multiplyScalar(this.velocity.length()), alignmentFactor);
+
+            // Cap speed to top speed + dive allowance
+            const maxMps = (this.config.topSpeedKmh * 1.3) / 3.6;
+            if (this.velocity.length() > maxMps) {
+                this.velocity.setLength(maxMps);
+            }
         }
 
         // 5. Update Position

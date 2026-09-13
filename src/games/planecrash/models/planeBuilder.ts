@@ -69,6 +69,7 @@ export class PlaneBuilder {
         let tailFin: THREE.Object3D;
         let tailHorizontal: THREE.Object3D;
         let propellerMesh: THREE.Mesh | THREE.Group | undefined;
+        let gearGroup: THREE.Group | undefined;
         const engines: THREE.Object3D[] = [];
         const debrisCandidates: THREE.Object3D[] = [];
 
@@ -139,8 +140,7 @@ export class PlaneBuilder {
                 propellerMesh = propGroup;
 
                 // Tricycle Gear (nose wheel at -Z)
-                const gear = PlaneBuilder.createWheels(0.7, 1.0, 1.1, -2.2);
-                fuselage.add(gear);
+                gearGroup = PlaneBuilder.createWheels(0.7, 1.0, 1.1, -2.2);
                 break;
             }
 
@@ -180,8 +180,7 @@ export class PlaneBuilder {
                 propellerMesh = propGroup;
 
                 // Big Tundra Bush Tires
-                const tundraGear = PlaneBuilder.createWheels(1.1, 1.4, 0.9, -1.8);
-                fuselage.add(tundraGear);
+                gearGroup = PlaneBuilder.createWheels(1.1, 1.4, 0.9, -1.8);
                 break;
             }
 
@@ -537,9 +536,20 @@ export class PlaneBuilder {
             }
         }
 
+        // Ensure every aircraft has functional landing gear (wheels)
+        if (!gearGroup) {
+            gearGroup = PlaneBuilder.createWheels(
+                Math.min(2.5, wingSpan * 0.16),
+                Math.max(0.8, wingSpan * 0.09),
+                1.0,
+                -Math.max(1.8, tailZ * 0.55)
+            );
+        }
+        root.add(gearGroup);
+
         root.add(fuselage, wingLeft, wingRight, tailFin, tailHorizontal);
 
-        debrisCandidates.push(fuselage, wingLeft, wingRight, tailFin, tailHorizontal);
+        debrisCandidates.push(fuselage, wingLeft, wingRight, tailFin, tailHorizontal, gearGroup);
         engines.forEach(e => debrisCandidates.push(e));
 
         let wingSpan = 10.0;
@@ -569,6 +579,7 @@ export class PlaneBuilder {
             tailHorizontal,
             propellerMesh,
             engines,
+            gearGroup,
             debrisCandidates,
             wingSpan,
             tailZ,
