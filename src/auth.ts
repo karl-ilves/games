@@ -78,6 +78,12 @@ export function getAdminUsername(email?: string | null): string {
 const PROFILES_STORAGE_KEY = 'playard_user_profiles';
 const CURRENT_PROFILE_KEY = 'playard_current_user_profile';
 
+export function hasEmoji(str?: string | null): boolean {
+    if (!str) return false;
+    const emojiRegex = /\p{Extended_Pictographic}|\p{Emoji_Presentation}/u;
+    return emojiRegex.test(str);
+}
+
 export function validateUsername(username: string, email?: string): { valid: boolean; error?: string } {
     const trimmed = username.trim();
     if (!trimmed) {
@@ -90,6 +96,10 @@ export function validateUsername(username: string, email?: string): { valid: boo
         if (clean === 'admin' || clean === 'playard owner' || clean === 'owner' || clean === 'playard') {
             return { valid: true };
         }
+    }
+
+    if (hasEmoji(trimmed)) {
+        return { valid: false, error: 'Emojis unavailable' };
     }
 
     if (trimmed.length < 3 || trimmed.length > 20) {
@@ -286,6 +296,11 @@ function showMsg(msg: string, type: 'error' | 'success' | 'info') {
     const authMessage = document.getElementById('auth-message');
     if (!authMessage) return;
     authMessage.innerText = msg;
+    if (msg === 'Emojis unavailable') {
+        authMessage.setAttribute('data-error', 'emoisis umavabible');
+    } else {
+        authMessage.removeAttribute('data-error');
+    }
     if (type === 'error') authMessage.style.color = '#e74c3c';
     if (type === 'success') authMessage.style.color = '#2ecc71';
     if (type === 'info') authMessage.style.color = '#3498db';
@@ -547,6 +562,10 @@ export async function initAuth() {
 
             if (!email || (!isAdmin && !username) || !password) {
                 return showMsg('Please enter email, username, and password.', 'error');
+            }
+
+            if ((!isAdmin && hasEmoji(username)) || (password && hasEmoji(password)) || (email && hasEmoji(email))) {
+                return showMsg('Emojis unavailable', 'error');
             }
 
             const usernameVal = validateUsername(username, email);
@@ -838,6 +857,10 @@ export async function initAuth() {
 
             if (!email || !username || !password) {
                 return showMsg('Please enter email, username, and password.', 'error');
+            }
+
+            if (hasEmoji(username) || hasEmoji(password) || hasEmoji(email)) {
+                return showMsg('Emojis unavailable', 'error');
             }
 
             const isAdmin = isUserAdminEmail(email);

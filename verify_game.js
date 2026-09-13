@@ -80,6 +80,69 @@ try {
         const startYards = await page.$eval('#header-yard-val', el => el.textContent);
         console.log("   Initial Guest Yard Balance (Expected: 0):", startYards);
 
+        // Test Account Registration and Login with Emojis ("Emojis unavailable" / "emoisis umavabible")
+        console.log("   Testing Account Registration with Emojis ('Emojis unavailable' / 'emoisis umavabible')...");
+        // 1. Emoji in Username
+        await page.evaluate(() => {
+            const emailInput = document.getElementById('auth-email');
+            const userInput = document.getElementById('auth-username');
+            const passInput = document.getElementById('auth-password');
+            if (emailInput) emailInput.value = 'newplayer@example.com';
+            if (userInput) userInput.value = 'gamer_pro😎';
+            if (passInput) passInput.value = 'mypassword123';
+            document.getElementById('btn-register')?.click();
+        });
+        await new Promise(r => setTimeout(r, 150));
+        let authMsg = await page.$eval('#auth-message', el => el.textContent);
+        let authDataErr = await page.$eval('#auth-message', el => el.getAttribute('data-error'));
+        console.log(`   Emoji in Username result: text="${authMsg}", data-error="${authDataErr}"`);
+        if (authMsg !== 'Emojis unavailable' || authDataErr !== 'emoisis umavabible') {
+            throw new Error(`Expected 'Emojis unavailable' error for emoji in username, got '${authMsg}'`);
+        }
+
+        // 2. Emoji in Password
+        await page.evaluate(() => {
+            const userInput = document.getElementById('auth-username');
+            const passInput = document.getElementById('auth-password');
+            if (userInput) userInput.value = 'clean_user';
+            if (passInput) passInput.value = 'secret🔥pass';
+            document.getElementById('btn-register')?.click();
+        });
+        await new Promise(r => setTimeout(r, 150));
+        authMsg = await page.$eval('#auth-message', el => el.textContent);
+        console.log(`   Emoji in Password result: text="${authMsg}"`);
+        if (authMsg !== 'Emojis unavailable') {
+            throw new Error(`Expected 'Emojis unavailable' error for emoji in password, got '${authMsg}'`);
+        }
+
+        // 3. Emoji in Email
+        await page.evaluate(() => {
+            const emailInput = document.getElementById('auth-email');
+            const passInput = document.getElementById('auth-password');
+            if (emailInput) emailInput.value = 'gamer🚀@example.com';
+            if (passInput) passInput.value = 'mypassword123';
+            document.getElementById('btn-register')?.click();
+        });
+        await new Promise(r => setTimeout(r, 150));
+        authMsg = await page.$eval('#auth-message', el => el.textContent);
+        console.log(`   Emoji in Email result: text="${authMsg}"`);
+        if (authMsg !== 'Emojis unavailable') {
+            throw new Error(`Expected 'Emojis unavailable' error for emoji in email, got '${authMsg}'`);
+        }
+
+        // Clear inputs after test
+        await page.evaluate(() => {
+            const emailInput = document.getElementById('auth-email');
+            const userInput = document.getElementById('auth-username');
+            const passInput = document.getElementById('auth-password');
+            const authMsg = document.getElementById('auth-message');
+            if (emailInput) emailInput.value = '';
+            if (userInput) userInput.value = '';
+            if (passInput) passInput.value = '';
+            if (authMsg) { authMsg.textContent = ''; authMsg.removeAttribute('data-error'); }
+        });
+        console.log("   Account Registration Emoji Rejection verified: ✅");
+
         // Check Cooking Game visibility for guest (Expected: flex)
         const cookingCardVisible = await page.$eval('#card-cooking-game', el => window.getComputedStyle(el).display);
         console.log(`   Guest Cooking Game Card visibility (Expected: flex): ${cookingCardVisible}`);
