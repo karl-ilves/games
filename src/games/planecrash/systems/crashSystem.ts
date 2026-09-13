@@ -38,6 +38,23 @@ export class CrashSystem {
         const pos = physics.position;
         const quat = physics.quaternion;
 
+        // 0. Over-the-Mountains Explosion Check:
+        // Attempting to fly over or cross the perimeter mountain barrier triggers an instant explosion!
+        const distFromCenter = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+        if (distFromCenter >= 2200) {
+            const boundaryObstacle: CrashObstacle = {
+                name: 'Mäestiku piiritsoon (Üle mägede lendamine)',
+                type: 'mountain',
+                bonusMultiplier: 2.0,
+                bounds: new THREE.Box3()
+            };
+            if (this.onDamageTriggered) {
+                this.onDamageTriggered('💥 Üritasid lennata üle mägede! Lennuk plahvatas!');
+            }
+            this.executeCrash(physics, plane, boundaryObstacle);
+            return true;
+        }
+
         // 1. Check Left Wing Strike
         if (!physics.state.leftWingBroken && plane.wingLeft.visible) {
             const leftWingTip = new THREE.Vector3(-plane.wingSpan / 2, 0.5, -0.2)

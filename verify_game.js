@@ -5766,8 +5766,8 @@ try {
             }
             console.log("   Ground penetration prevention verified: ✅");
 
-            // Test Perimeter Mountain Ring & Solid Inner Valley Land
-            console.log("   Testing Perimeter Mountain Ring & Solid Inner Valley Land...");
+            // Test Perimeter Mountain Ring, Removal of Bridge & Water, and Solid Land
+            console.log("   Testing Perimeter Mountain Ring, Removal of Bridge & Water, and Solid Land...");
             const mapGeographyResult = await page.evaluate(() => {
                 const game = window.planeCrashGame;
                 if (!game) return { success: false };
@@ -5780,13 +5780,17 @@ try {
                 const southPeak = env.getTerrainAt(0, 2300);
                 const northPeak = env.getTerrainAt(0, -2300);
 
-                // 2. Check inner valley terrain (must all be solid ground at y=5.0m, NOT open ocean!)
+                // 2. Check inner valley terrain (must all be solid ground at y=5.0m, NO water, NO bridge!)
                 const valleyP1 = env.getTerrainAt(500, 500);
                 const valleyP2 = env.getTerrainAt(-300, 200);
                 const valleyP3 = env.getTerrainAt(800, -400);
 
-                // 3. Check river under Golden Suspension Bridge
-                const riverPoint = env.getTerrainAt(-600, 500);
+                // 3. Check old bridge/river location (-600, 500) is now pure solid ground
+                const formerRiverPoint = env.getTerrainAt(-600, 500);
+
+                // 4. Verify no bridge or water obstacles exist
+                const hasBridgeObstacle = env.obstacles.some(o => o.type === 'bridge');
+                const hasWaterObstacle = env.obstacles.some(o => o.type === 'water');
 
                 return {
                     mountainCount,
@@ -5804,12 +5808,14 @@ try {
                     valleyP2Height: valleyP2.height,
                     valleyP3Type: valleyP3.type,
                     valleyP3Height: valleyP3.height,
-                    riverPointType: riverPoint.type,
-                    riverPointHeight: riverPoint.height
+                    formerRiverPointType: formerRiverPoint.type,
+                    formerRiverPointHeight: formerRiverPoint.height,
+                    hasBridgeObstacle,
+                    hasWaterObstacle
                 };
             });
             console.log(`   Map Geography: Peaks count=${mapGeographyResult.mountainCount}, East=${mapGeographyResult.eastPeakHeight}m (${mapGeographyResult.eastPeakType}), West=${mapGeographyResult.westPeakHeight}m (${mapGeographyResult.westPeakType}), South=${mapGeographyResult.southPeakHeight}m (${mapGeographyResult.southPeakType}), North=${mapGeographyResult.northPeakHeight}m (${mapGeographyResult.northPeakType})`);
-            console.log(`   Inner Valley Land: P1=${mapGeographyResult.valleyP1Height}m (${mapGeographyResult.valleyP1Type}), P2=${mapGeographyResult.valleyP2Height}m (${mapGeographyResult.valleyP2Type}), P3=${mapGeographyResult.valleyP3Height}m (${mapGeographyResult.valleyP3Type}), River=${mapGeographyResult.riverPointHeight}m (${mapGeographyResult.riverPointType})`);
+            console.log(`   Inner Valley Land: P1=${mapGeographyResult.valleyP1Height}m (${mapGeographyResult.valleyP1Type}), FormerRiver=${mapGeographyResult.formerRiverPointHeight}m (${mapGeographyResult.formerRiverPointType}), hasBridge=${mapGeographyResult.hasBridgeObstacle}, hasWater=${mapGeographyResult.hasWaterObstacle}`);
 
             if (mapGeographyResult.mountainCount < 20) {
                 throw new Error(`Expected at least 20 perimeter mountain peaks encircling map, got ${mapGeographyResult.mountainCount}`);
@@ -5817,13 +5823,39 @@ try {
             if (mapGeographyResult.eastPeakType !== 'mountain' || mapGeographyResult.westPeakType !== 'mountain' || mapGeographyResult.southPeakType !== 'mountain' || mapGeographyResult.northPeakType !== 'mountain') {
                 throw new Error("Perimeter mountain barrier must encircle the map in all directions (North, South, East, West)!");
             }
-            if (mapGeographyResult.valleyP1Type !== 'ground' || mapGeographyResult.valleyP1Height !== 5.0 || mapGeographyResult.valleyP2Type !== 'ground' || mapGeographyResult.valleyP3Type !== 'ground') {
+            if (mapGeographyResult.valleyP1Type !== 'ground' || mapGeographyResult.valleyP1Height !== 5.0 || mapGeographyResult.formerRiverPointType !== 'ground') {
                 throw new Error("All inner terrain inside the mountain ring must be solid ground at y=5.0m!");
             }
-            if (mapGeographyResult.riverPointType !== 'water') {
-                throw new Error("Canyon river under suspension bridge must be water!");
+            if (mapGeographyResult.hasBridgeObstacle || mapGeographyResult.hasWaterObstacle) {
+                throw new Error("Bridge and water must be completely removed from the world!");
             }
-            console.log("   Perimeter Mountain Ring & Solid Inner Valley Land verified: ✅");
+            console.log("   Perimeter Mountain Ring, Bridge/Water Removal & Solid Valley Land verified: ✅");
+
+            // Test Over-The-Mountains Airspace Explosion
+            console.log("   Testing Over-The-Mountains Airspace Explosion (Flying beyond mountain perimeter)...");
+            const mountainExplosionResult = await page.evaluate(() => {
+                const game = window.planeCrashGame;
+                if (!game) return { success: false };
+
+                // Reset crashed state and place plane high above mountain barrier (x=2300, y=800, z=0)
+                game.physics.state.isCrashed = false;
+                game.physics.position.set(2300, 800, 0);
+
+                // Check collision when attempting to fly over mountains
+                const exploded = game.crashSys.checkCollisions(game.physics, game.currentPlaneMesh);
+                const lastTarget = game.physics.state.lastCrashReport?.targetDescription || '';
+
+                return {
+                    exploded,
+                    isCrashed: game.physics.state.isCrashed,
+                    lastTarget
+                };
+            });
+            console.log(`   Over-the-mountains explosion: exploded=${mountainExplosionResult.exploded}, isCrashed=${mountainExplosionResult.isCrashed}, target="${mountainExplosionResult.lastTarget}"`);
+            if (!mountainExplosionResult.exploded || !mountainExplosionResult.isCrashed || !mountainExplosionResult.lastTarget.includes('Mäestiku piiritsoon')) {
+                throw new Error("Attempting to fly over the mountains must instantly explode the plane!");
+            }
+            console.log("   Over-The-Mountains Airspace Explosion verified: ✅");
 
             // Test Stunt & Crash Execution
             console.log("   Testing Aerobatic 360 Spin & Crash Mechanics...");

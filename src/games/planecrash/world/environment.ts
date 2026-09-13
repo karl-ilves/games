@@ -111,30 +111,11 @@ export class WorldEnvironment {
         mainland.position.y = 5.0;
         this.scene.add(mainland);
 
-        // Scenic Canyon River flowing through the land under the Golden Suspension Bridge
-        const riverGeom = new THREE.PlaneGeometry(150, 900);
-        riverGeom.rotateX(-Math.PI / 2);
-        const riverMat = new THREE.MeshStandardMaterial({
-            color: 0x0984e3,
-            roughness: 0.15,
-            metalness: 0.85
-        });
-        const river = new THREE.Mesh(riverGeom, riverMat);
-        river.position.set(-600, 5.05, 500);
-        this.scene.add(river);
-
-        // Ground / River base obstacles
+        // Ground base obstacle
         this.obstacles.push({
             name: 'Maapind / Heinamaa (Valley Ground)',
             type: 'ground',
             bounds: new THREE.Box3(new THREE.Vector3(-4500, 0, -4500), new THREE.Vector3(4500, 5.2, 4500)),
-            bonusMultiplier: 1.0
-        });
-
-        this.obstacles.push({
-            name: 'Kanjoni jõgi (Canyon River)',
-            type: 'water',
-            bounds: new THREE.Box3(new THREE.Vector3(-675, 0, 50), new THREE.Vector3(-525, 6.0, 950)),
             bonusMultiplier: 1.0
         });
 
@@ -147,10 +128,7 @@ export class WorldEnvironment {
         // 5. Downtown Metropolis (Skyscrapers)
         this.buildCity();
 
-        // 6. Golden Suspension Bridge
-        this.buildBridge();
-
-        // 7. Aerial Stunt Rings
+        // 6. Aerial Stunt Rings
         this.buildStuntRings();
     }
 
@@ -493,11 +471,7 @@ export class WorldEnvironment {
         if (Math.abs(x) <= 55 && Math.abs(z) <= 720) {
             return { height: 5.7, type: 'ground', name: 'Lennurada (Runway Asphalt)' };
         }
-        // 2. Canyon River under suspension bridge
-        if (Math.abs(x - (-600)) <= 65 && z >= 80 && z <= 920) {
-            return { height: 5.05, type: 'water', name: 'Kanjoni jõgi (Canyon River)' };
-        }
-        // 3. Encircling Mountain Barrier elevation
+        // 2. Encircling Mountain Barrier elevation
         const distSq = x * x + z * z;
         if (distSq >= 1400 * 1400) {
             let maxElev = 5.0;
@@ -607,38 +581,7 @@ export class WorldEnvironment {
         }
     }
 
-    private buildBridge(): void {
-        const bridgeGroup = new THREE.Group();
-        const bridgeMat = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.4 });
 
-        // Road deck
-        const deck = new THREE.Mesh(new THREE.BoxGeometry(60, 6, 800), new THREE.MeshStandardMaterial({ color: 0x2f3640 }));
-        deck.position.set(0, 45, 0);
-        bridgeGroup.add(deck);
-
-        // 2 Main Suspension Towers
-        for (let z of [-200, 200]) {
-            const tower = new THREE.Mesh(new THREE.BoxGeometry(14, 180, 14), bridgeMat);
-            tower.position.set(0, 90, z);
-            bridgeGroup.add(tower);
-
-            // Cables
-            const cableL = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 380), bridgeMat);
-            cableL.rotation.x = Math.PI / 4;
-            cableL.position.set(18, 100, z);
-            bridgeGroup.add(cableL);
-        }
-
-        bridgeGroup.position.set(-600, 0, 500);
-        this.scene.add(bridgeGroup);
-
-        this.obstacles.push({
-            name: 'Kuldne Rippsild (Suspension Bridge)',
-            type: 'bridge',
-            bounds: new THREE.Box3(new THREE.Vector3(-660, 0, 100), new THREE.Vector3(-540, 180, 900)),
-            bonusMultiplier: 2.5
-        });
-    }
 
     private buildStuntRings(): void {
         const ringConfigs = [

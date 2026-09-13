@@ -41,6 +41,7 @@ export class PlaneCrashGame {
     private lastTime: number = performance.now();
     private isPlaying: boolean = false;
     private puffTimer: number = 0;
+    private lastBoundaryWarnTime: number = 0;
 
     constructor() {
         // 1. Access Verification (Playard Owner Only)
@@ -245,9 +246,18 @@ export class PlaneCrashGame {
         if (!this.physics.state.isCrashed) {
             this.physics.update(dt, this.input.inputs);
 
-            // Check collision with terrain, skyscrapers, water, and mountains immediately
+            // Check collision with terrain, skyscrapers, and mountain boundary immediately
             if (this.currentPlaneMesh) {
                 this.crashSys.checkCollisions(this.physics, this.currentPlaneMesh);
+            }
+
+            // Proximity warning when approaching forbidden mountain airspace
+            const distFromCenter = Math.sqrt(this.physics.position.x ** 2 + this.physics.position.z ** 2);
+            if (distFromCenter > 1900 && distFromCenter < 2200 && !this.physics.state.isCrashed) {
+                if (t - this.lastBoundaryWarnTime > 4000) {
+                    this.lastBoundaryWarnTime = t;
+                    this.hud.showStuntToast('⚠️ HOIATUS: Lähened mägedele! Üle mägede lendamine keelatud!');
+                }
             }
 
             // Sync visual mesh to physics (clamp so plane NEVER penetrates into ground)
