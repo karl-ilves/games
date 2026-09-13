@@ -45,7 +45,11 @@ export class CrashSystem {
                 .add(pos);
 
             const terrainL = this.environment.getTerrainAt(leftWingTip.x, leftWingTip.z);
-            if (leftWingTip.y <= terrainL.height + 0.4 || this.isPointInObstacle(leftWingTip)) {
+            const hitObstacle = this.getObstacleAtPoint(leftWingTip);
+            if (leftWingTip.y <= terrainL.height + 0.4 || hitObstacle) {
+                if (hitObstacle && (hitObstacle.type === 'tower' || hitObstacle.name.includes('Lennujuhtimistorn'))) {
+                    this.environment.damageControlTower(physics.config.mass, physics.state.speedKmh, physics.velocity, leftWingTip.y);
+                }
                 this.breakOffLeftWing(physics, plane, leftWingTip);
             }
         }
@@ -57,7 +61,11 @@ export class CrashSystem {
                 .add(pos);
 
             const terrainR = this.environment.getTerrainAt(rightWingTip.x, rightWingTip.z);
-            if (rightWingTip.y <= terrainR.height + 0.4 || this.isPointInObstacle(rightWingTip)) {
+            const hitObstacle = this.getObstacleAtPoint(rightWingTip);
+            if (rightWingTip.y <= terrainR.height + 0.4 || hitObstacle) {
+                if (hitObstacle && (hitObstacle.type === 'tower' || hitObstacle.name.includes('Lennujuhtimistorn'))) {
+                    this.environment.damageControlTower(physics.config.mass, physics.state.speedKmh, physics.velocity, rightWingTip.y);
+                }
                 this.breakOffRightWing(physics, plane, rightWingTip);
             }
         }
@@ -69,7 +77,11 @@ export class CrashSystem {
                 .add(pos);
 
             const terrainT = this.environment.getTerrainAt(tailTip.x, tailTip.z);
-            if (tailTip.y <= terrainT.height + 0.4 || this.isPointInObstacle(tailTip)) {
+            const hitObstacle = this.getObstacleAtPoint(tailTip);
+            if (tailTip.y <= terrainT.height + 0.4 || hitObstacle) {
+                if (hitObstacle && (hitObstacle.type === 'tower' || hitObstacle.name.includes('Lennujuhtimistorn'))) {
+                    this.environment.damageControlTower(physics.config.mass, physics.state.speedKmh, physics.velocity, tailTip.y);
+                }
                 this.breakOffTail(physics, plane, tailTip);
             }
         }
@@ -106,9 +118,10 @@ export class CrashSystem {
         const noseSphere = new THREE.Sphere(noseTip, 1.6);
         for (const obs of this.environment.obstacles) {
             if (obs.bounds.intersectsSphere(fuseSphere) || obs.bounds.intersectsSphere(noseSphere)) {
-                // If hitting the airport control tower, collapse and shatter it!
-                if (obs.type === 'tower' || obs.name.includes('Lennujuhtimistorn')) {
-                    this.environment.damageControlTower(physics.config.mass, physics.state.speedKmh, physics.velocity);
+                // If hitting the airport control tower, collapse and slice it at exact contact height!
+                if (obs.type === 'tower' || obs.name.includes('Lennujuhtimistorn') || obs.name.includes('lennutorn')) {
+                    const hitCutHeight = Math.max(pos.y, noseTip.y);
+                    this.environment.damageControlTower(physics.config.mass, physics.state.speedKmh, physics.velocity, hitCutHeight);
                 }
                 this.executeCrash(physics, plane, obs);
                 return true;
@@ -116,6 +129,15 @@ export class CrashSystem {
         }
 
         return false;
+    }
+
+    private getObstacleAtPoint(point: THREE.Vector3): CrashObstacle | null {
+        for (const obs of this.environment.obstacles) {
+            if (obs.bounds.containsPoint(point)) {
+                return obs;
+            }
+        }
+        return null;
     }
 
     private isPointInObstacle(point: THREE.Vector3): boolean {

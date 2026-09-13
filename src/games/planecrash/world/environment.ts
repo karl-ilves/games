@@ -17,6 +17,7 @@ export class WorldEnvironment {
     // Destructible Control Tower State
     public isTowerDestroyed: boolean = false;
     public towerDamageLevel: 'intact' | 'cab_destroyed' | 'upper_collapse' | 'full_collapse' = 'intact';
+    public towerCutHeight: number = 0;
     public towerGroup: THREE.Group = new THREE.Group();
     public towerRubbleGroup: THREE.Group = new THREE.Group();
     public towerObstacleRef: CrashObstacle | null = null;
@@ -196,6 +197,7 @@ export class WorldEnvironment {
 
         this.isTowerDestroyed = false;
         this.towerDamageLevel = 'intact';
+        this.towerCutHeight = 0;
 
         // Register or update obstacle in list
         const towerBounds = new THREE.Box3(new THREE.Vector3(100, 5, -230), new THREE.Vector3(160, 120, -170));
@@ -214,19 +216,33 @@ export class WorldEnvironment {
     }
 
     /**
-     * Inflicts realistic structural collapse on the Control Tower based on aircraft mass and velocity.
-     * Light planes destroy the cab; medium jets topple the upper half; heavy airliners level the entire tower!
+     * Inflicts realistic structural collapse on the Control Tower based on aircraft mass, velocity and exact impact height.
+     * Slices the tower at the cut line: the lower stump remains standing, while the sliced upper section topples in impact direction!
      */
-    public damageControlTower(planeMass: number, speedKmh: number, impactVel: THREE.Vector3): { destroyed: boolean; damageLevel: string } {
-        if (this.isTowerDestroyed) return { destroyed: true, damageLevel: this.towerDamageLevel };
+    public damageControlTower(planeMass: number, speedKmh: number, impactVel: THREE.Vector3, impactPointY?: number): { destroyed: boolean; damageLevel: string; cutHeight: number } {
+        if (this.isTowerDestroyed) return { destroyed: true, damageLevel: this.towerDamageLevel, cutHeight: this.towerCutHeight };
 
         const kineticEnergy = 0.5 * planeMass * Math.pow(speedKmh / 3.6, 2);
-        let damageLevel: 'cab_destroyed' | 'upper_collapse' | 'full_collapse';
+        
+        // Determine cut height Y (world coordinates: ground is y=5, cab is y=84, spire top is y=115)
+        let cutY: number;
+        if (typeof impactPointY === 'number' && !isNaN(impactPointY)) {
+            cutY = THREE.MathUtils.clamp(impactPointY, 10, 112);
+        } else {
+            // Default based on plane energy if height not explicitly provided
+            if (planeMass >= 15000 || kineticEnergy >= 4000000) {
+                cutY = 25;
+            } else if (planeMass >= 3000 || kineticEnergy >= 1400000 || speedKmh >= 250) {
+                cutY = 55;
+            } else {
+                cutY = 82;
+            }
+        }
 
-        // Heavy aircraft (Boeing 737: 42t, Concorde: 78t, Antonov: 175t) or massive kinetic energy -> complete collapse!
-        if (planeMass >= 15000 || kineticEnergy >= 4000000) {
+        let damageLevel: 'cab_destroyed' | 'upper_collapse' | 'full_collapse';
+        if (cutY < 38) {
             damageLevel = 'full_collapse';
-        } else if (planeMass >= 3000 || kineticEnergy >= 1400000 || speedKmh >= 250) {
+        } else if (cutY < 75) {
             damageLevel = 'upper_collapse';
         } else {
             damageLevel = 'cab_destroyed';
@@ -234,120 +250,152 @@ export class WorldEnvironment {
 
         this.isTowerDestroyed = true;
         this.towerDamageLevel = damageLevel;
+        this.towerCutHeight = cutY;
         planeAudio.playTowerCollapse();
 
         // Direction vector of impact
-        const dir = new THREE.Vector3(impactVel?.x || 1, impactVel?.y || 0, impactVel?.z || 0).normalize();
-        if (dir.lengthSq() < 0.1) dir.set(1, 0, 0);
+        const dir = new THREE.Vector3(impactVel?.x || 1, 0, impactVel?.z || 0).normalize();
+        if (dir.lengthSq() < 0.01) dir.set(1, 0, 0);
 
         // Hide pristine standing tower
         this.towerGroup.visible = false;
 
-        // Build persistent rubble & collapsed structures
-        this.buildTowerRubble(damageLevel, dir);
+        // Build dynamically sliced stump and toppled section
+        this.buildTowerRubble(damageLevel, dir, cutY);
 
-        // Update obstacle hitbox so player can fly over ruins or hit remaining stump
+        // Update obstacle hitbox so player can fly over sliced stump or crash into remaining base
         if (this.towerObstacleRef) {
+            const stumpTopY = Math.max(8, cutY);
             if (damageLevel === 'full_collapse') {
-                this.towerObstacleRef.bounds.set(new THREE.Vector3(70, 5, -260), new THREE.Vector3(190, 16, -140));
-                this.towerObstacleRef.name = 'Purustatud lennutorni varemed (Tower Ruins)';
+                this.towerObstacleRef.bounds.set(new THREE.Vector3(70, 5, -260), new THREE.Vector3(190, stumpTopY, -140));
+                this.towerObstacleRef.name = `Täielikult purustatud torni varemed (Stump ${Math.round(stumpTopY)}m)`;
             } else if (damageLevel === 'upper_collapse') {
-                this.towerObstacleRef.bounds.set(new THREE.Vector3(90, 5, -240), new THREE.Vector3(170, 48, -160));
-                this.towerObstacleRef.name = 'Poolenisti kokku kukkunud lennutorn (Toppled Tower)';
+                this.towerObstacleRef.bounds.set(new THREE.Vector3(90, 5, -240), new THREE.Vector3(170, stumpTopY, -160));
+                this.towerObstacleRef.name = `Maha lõigatud lennutorn (Sliced at ${Math.round(stumpTopY)}m)`;
             } else {
-                this.towerObstacleRef.bounds.set(new THREE.Vector3(100, 5, -230), new THREE.Vector3(160, 80, -170));
-                this.towerObstacleRef.name = 'Purustatud kupliga lennutorn (Cab Damaged Tower)';
+                this.towerObstacleRef.bounds.set(new THREE.Vector3(100, 5, -230), new THREE.Vector3(160, stumpTopY, -170));
+                this.towerObstacleRef.name = `Lõigatud kupliga torn (Cab sheared at ${Math.round(stumpTopY)}m)`;
             }
         }
 
-        return { destroyed: true, damageLevel };
+        return { destroyed: true, damageLevel, cutHeight: cutY };
     }
 
     /**
-     * Builds realistic toppled concrete blocks, crushed cab, and scorched rubble.
+     * Builds realistic sliced tower stump and toppled upper section based on cut height.
      */
-    private buildTowerRubble(damageLevel: string, dir: THREE.Vector3): void {
+    private buildTowerRubble(damageLevel: string, dir: THREE.Vector3, cutY: number = 55): void {
         this.clearTowerRubble();
 
-        const matCharred = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.95 });
-        const matCrushedGlass = new THREE.MeshStandardMaterial({ color: 0x0984e3, roughness: 0.3, transparent: true, opacity: 0.8 });
-        const matBentSteel = new THREE.MeshStandardMaterial({ color: 0x2f3640, roughness: 0.6 });
-        const matRoof = new THREE.MeshStandardMaterial({ color: 0xa82020, roughness: 0.8 });
+        const matCharred = new THREE.MeshStandardMaterial({ color: 0x242424, roughness: 0.95 });
+        const matJaggedCut = new THREE.MeshStandardMaterial({ color: 0xe17055, roughness: 0.9, metalness: 0.2 }); // scorched severed rebar/concrete
+        const matCrushedGlass = new THREE.MeshStandardMaterial({ color: 0x0984e3, roughness: 0.25, transparent: true, opacity: 0.85 });
+        const matBentSteel = new THREE.MeshStandardMaterial({ color: 0x2f3640, roughness: 0.5, metalness: 0.8 });
+        const matRoof = new THREE.MeshStandardMaterial({ color: 0xa82020, roughness: 0.7 });
 
         const origin = new THREE.Vector3(130, 5, -200);
+        const stumpHeight = Math.max(3, cutY - origin.y);
+        const toppledHeight = Math.max(10, 115 - cutY);
 
-        if (damageLevel === 'full_collapse') {
-            // 1. Toppled concrete lower column lying horizontally on the ground
-            const toppledCol = new THREE.Mesh(new THREE.CylinderGeometry(8, 10, 42, 10), matCharred);
-            toppledCol.position.set(origin.x + dir.x * 24, origin.y + 4.5, origin.z + dir.z * 24);
-            toppledCol.rotation.z = Math.PI / 2;
-            toppledCol.rotation.y = Math.atan2(dir.z, dir.x);
-            this.towerRubbleGroup.add(toppledCol);
+        // 1. Standing Jagged Stump (height from y=5 to y=cutY)
+        // Interpolate stump top radius from tower profile (bottom ~11m, mid ~8m, top ~7.5m)
+        const stumpRadiusBottom = 11;
+        const stumpRadiusTop = THREE.MathUtils.lerp(10.5, 7.5, Math.min(1, stumpHeight / 85));
+        const stump = new THREE.Mesh(new THREE.CylinderGeometry(stumpRadiusTop, stumpRadiusBottom, stumpHeight, 14), matCharred);
+        stump.position.set(origin.x, origin.y + stumpHeight / 2, origin.z);
+        stump.castShadow = true;
+        this.towerRubbleGroup.add(stump);
 
-            // 2. Toppled upper shaft further in direction of impact
-            const toppledUpper = new THREE.Mesh(new THREE.CylinderGeometry(7, 8, 36, 10), matCharred);
-            toppledUpper.position.set(origin.x + dir.x * 58, origin.y + 4.0, origin.z + dir.z * 58);
-            toppledUpper.rotation.z = Math.PI / 2 * 0.95;
-            toppledUpper.rotation.y = Math.atan2(dir.z, dir.x) + 0.2;
-            this.towerRubbleGroup.add(toppledUpper);
+        // Jagged cut rim on top of the stump
+        const jaggedRim = new THREE.Mesh(new THREE.CylinderGeometry(stumpRadiusTop + 0.4, stumpRadiusTop + 0.2, 1.8, 14), matJaggedCut);
+        jaggedRim.position.set(origin.x, origin.y + stumpHeight - 0.5, origin.z);
+        this.towerRubbleGroup.add(jaggedRim);
 
-            // 3. Crushed observation cab & roof
-            const crushedCab = new THREE.Mesh(new THREE.BoxGeometry(16, 4, 16), matCrushedGlass);
-            crushedCab.position.set(origin.x + dir.x * 82, origin.y + 2.5, origin.z + dir.z * 82);
-            crushedCab.rotation.y = 0.4;
+        // Exposed twisted reinforcement rebar rods sticking out of the cut stump
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const rebarH = 2.5 + (i % 3) * 1.5;
+            const rebar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, rebarH, 4), matBentSteel);
+            const rx = Math.cos(angle) * (stumpRadiusTop - 0.8);
+            const rz = Math.sin(angle) * (stumpRadiusTop - 0.8);
+            rebar.position.set(origin.x + rx, origin.y + stumpHeight + rebarH / 2, origin.z + rz);
+            rebar.rotation.x = (Math.random() - 0.5) * 0.4;
+            rebar.rotation.z = (Math.random() - 0.5) * 0.4;
+            this.towerRubbleGroup.add(rebar);
+        }
+
+        // 2. Toppled Upper Section (Length = toppledHeight, lying on ground in direction of impact dir)
+        const toppledCenterDist = stumpRadiusBottom + toppledHeight * 0.5 + 4;
+        const toppledRadiusTop = cutY >= 75 ? 6 : 7.5;
+        const toppledCol = new THREE.Mesh(new THREE.CylinderGeometry(toppledRadiusTop, stumpRadiusTop, toppledHeight, 12), matCharred);
+        toppledCol.position.set(
+            origin.x + dir.x * toppledCenterDist,
+            origin.y + stumpRadiusTop * 0.7,
+            origin.z + dir.z * toppledCenterDist
+        );
+        // Lay cylinder horizontally in direction of impact
+        const dirAngle = Math.atan2(dir.z, dir.x);
+        toppledCol.rotation.order = 'YXZ';
+        toppledCol.rotation.y = -dirAngle + Math.PI / 2;
+        toppledCol.rotation.z = Math.PI / 2;
+        toppledCol.castShadow = true;
+        this.towerRubbleGroup.add(toppledCol);
+
+        // 3. Smashed Cab / Roof / Spire at the far end of the toppled section if they were sheared off
+        const cabDist = origin.clone().add(dir.clone().multiplyScalar(toppledCenterDist + toppledHeight * 0.48));
+        if (cutY < 95) {
+            // Crushed observation glass cab
+            const crushedCab = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 14), matCrushedGlass);
+            crushedCab.position.set(cabDist.x, origin.y + 2.5, cabDist.z);
+            crushedCab.rotation.y = dirAngle + 0.3;
             this.towerRubbleGroup.add(crushedCab);
 
-            const crumpledRoof = new THREE.Mesh(new THREE.ConeGeometry(15, 4, 10), matRoof);
-            crumpledRoof.position.set(origin.x + dir.x * 92, origin.y + 3.0, origin.z + dir.z * 92);
-            crumpledRoof.rotation.x = 1.2;
-            this.towerRubbleGroup.add(crumpledRoof);
+            // Crumpled conical roof
+            const roofDist = cabDist.clone().add(dir.clone().multiplyScalar(10));
+            const crushedRoof = new THREE.Mesh(new THREE.ConeGeometry(14, 4, 10), matRoof);
+            crushedRoof.position.set(roofDist.x, origin.y + 2.5, roofDist.z);
+            crushedRoof.rotation.x = 1.3;
+            this.towerRubbleGroup.add(crushedRoof);
 
-            // 4. Broken antenna mast
+            // Bent antenna mast lying on ground
+            const spireDist = roofDist.clone().add(dir.clone().multiplyScalar(12));
             const bentSpire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.6, 16, 6), matBentSteel);
-            bentSpire.position.set(origin.x + dir.x * 102, origin.y + 1.2, origin.z + dir.z * 102);
+            bentSpire.position.set(spireDist.x, origin.y + 0.8, spireDist.z);
+            bentSpire.rotation.y = -dirAngle + Math.PI / 2;
             bentSpire.rotation.z = Math.PI / 2;
             this.towerRubbleGroup.add(bentSpire);
+        }
 
-            // 5. 16 Concrete Rubble blocks scattered across crash zone
-            for (let i = 0; i < 16; i++) {
-                const s = 2.5 + Math.random() * 3.5;
-                const block = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.7, s), matCharred);
-                const spreadX = (Math.random() - 0.5) * 40 + dir.x * (20 + i * 4);
-                const spreadZ = (Math.random() - 0.5) * 40 + dir.z * (20 + i * 4);
-                block.position.set(origin.x + spreadX, origin.y + s * 0.35, origin.z + spreadZ);
-                block.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
-                this.towerRubbleGroup.add(block);
-            }
-        } else if (damageLevel === 'upper_collapse') {
-            // Jagged standing stump (45m tall)
-            const stump = new THREE.Mesh(new THREE.CylinderGeometry(8.5, 11, 40, 14), matCharred);
-            stump.position.set(origin.x, origin.y + 20, origin.z);
-            this.towerRubbleGroup.add(stump);
+        // 4. Shattered debris & concrete chunks scattered along the fall corridor
+        const rubbleCount = damageLevel === 'full_collapse' ? 16 : 10;
+        for (let i = 0; i < rubbleCount; i++) {
+            const s = 1.8 + Math.random() * 2.8;
+            const block = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.6, s), matCharred);
+            const distOnPath = Math.random() * (toppledHeight + 20) + 10;
+            const lateralDev = (Math.random() - 0.5) * 22;
+            // perpendicular vector
+            const perpX = -dir.z * lateralDev;
+            const perpZ = dir.x * lateralDev;
+            block.position.set(
+                origin.x + dir.x * distOnPath + perpX,
+                origin.y + s * 0.3,
+                origin.z + dir.z * distOnPath + perpZ
+            );
+            block.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+            this.towerRubbleGroup.add(block);
+        }
 
-            // Upper shaft toppled onto ground
-            const toppledUpper = new THREE.Mesh(new THREE.CylinderGeometry(7, 8, 36, 10), matCharred);
-            toppledUpper.position.set(origin.x + dir.x * 32, origin.y + 4.0, origin.z + dir.z * 32);
-            toppledUpper.rotation.z = Math.PI / 2;
-            toppledUpper.rotation.y = Math.atan2(dir.z, dir.x);
-            this.towerRubbleGroup.add(toppledUpper);
-
-            // Crushed cab
-            const crushedCab = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 14), matCrushedGlass);
-            crushedCab.position.set(origin.x + dir.x * 55, origin.y + 2.5, origin.z + dir.z * 55);
-            this.towerRubbleGroup.add(crushedCab);
-        } else {
-            // Cab destroyed: standing column with charred top
-            const standingCol = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 11, 75, 14), matCharred);
-            standingCol.position.set(origin.x, origin.y + 37.5, origin.z);
-            this.towerRubbleGroup.add(standingCol);
-
-            // Shattered glass chunks on ground around base
-            for (let i = 0; i < 10; i++) {
-                const s = 1.5 + Math.random() * 2.5;
-                const glass = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.4, s), matCrushedGlass);
-                glass.position.set(origin.x + (Math.random() - 0.5) * 25, origin.y + 1, origin.z + (Math.random() - 0.5) * 25);
-                this.towerRubbleGroup.add(glass);
-            }
+        // 5. Shattered glass fragments around impact area
+        for (let i = 0; i < 8; i++) {
+            const s = 1.2 + Math.random() * 2.0;
+            const glass = new THREE.Mesh(new THREE.BoxGeometry(s, 0.3, s), matCrushedGlass);
+            glass.position.set(
+                cabDist.x + (Math.random() - 0.5) * 25,
+                origin.y + 0.4,
+                cabDist.z + (Math.random() - 0.5) * 25
+            );
+            glass.rotation.y = Math.random() * Math.PI;
+            this.towerRubbleGroup.add(glass);
         }
     }
 

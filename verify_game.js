@@ -5835,6 +5835,22 @@ try {
                 const afterResetDestroyed = env.isTowerDestroyed;
                 const afterResetRubbleCount = env.towerRubbleGroup.children.length;
 
+                // Test Height-Dependent Slicing: Mid-shaft slice at 60m height
+                const midSlice = env.damageControlTower(5000, 240, { x: 1, y: 0, z: 0 }, 60);
+                const midSliceDestroyed = env.isTowerDestroyed;
+                const midSliceHeight = env.towerCutHeight;
+                const midSliceLevel = env.towerDamageLevel;
+
+                // Reset again and test high cab slice at 90m
+                if (btnReset) btnReset.click();
+                const cabSlice = env.damageControlTower(1200, 180, { x: 0, y: 0, z: 1 }, 90);
+                const cabSliceDestroyed = env.isTowerDestroyed;
+                const cabSliceHeight = env.towerCutHeight;
+                const cabSliceLevel = env.towerDamageLevel;
+
+                // Clean up by resetting map
+                if (btnReset) btnReset.click();
+
                 return {
                     initialDestroyed,
                     initialRubbleCount,
@@ -5845,7 +5861,13 @@ try {
                     afterRespawnRubbleCount,
                     afterResetDestroyed,
                     afterResetRubbleCount,
-                    hasResetButton: !!btnReset
+                    hasResetButton: !!btnReset,
+                    midSliceDestroyed,
+                    midSliceHeight,
+                    midSliceLevel,
+                    cabSliceDestroyed,
+                    cabSliceHeight,
+                    cabSliceLevel
                 };
             });
 
@@ -5869,7 +5891,13 @@ try {
             if (towerTestResult.afterResetDestroyed !== false || towerTestResult.afterResetRubbleCount !== 0) {
                 throw new Error("Map Reset button must restore control tower to standing state and clear rubble!");
             }
-            console.log("   Destructible Control Tower & Map Reset: ✅");
+            if (towerTestResult.midSliceDestroyed !== true || towerTestResult.midSliceHeight !== 60 || towerTestResult.midSliceLevel !== 'upper_collapse') {
+                throw new Error(`Mid-shaft slice test failed! Expected height=60, level=upper_collapse; got height=${towerTestResult.midSliceHeight}, level=${towerTestResult.midSliceLevel}`);
+            }
+            if (towerTestResult.cabSliceDestroyed !== true || towerTestResult.cabSliceHeight !== 90 || towerTestResult.cabSliceLevel !== 'cab_destroyed') {
+                throw new Error(`Cab slice test failed! Expected height=90, level=cab_destroyed; got height=${towerTestResult.cabSliceHeight}, level=${towerTestResult.cabSliceLevel}`);
+            }
+            console.log("   Destructible Control Tower (Height-Dependent Slicing & Collapse) & Map Reset: ✅");
 
             // Verify Mobile Mode (?mobile=true)
             console.log("   Checking Mobile flight controls in Plane Crash Simulator (?mobile=true)...");
