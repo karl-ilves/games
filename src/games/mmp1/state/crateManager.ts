@@ -3,7 +3,7 @@ import { CRATE_CATALOG, WEAPON_SKIN_CATALOG } from "../catalog";
 
 export class MmpCrateManager {
     private moneyKey = 'mmp1_money';
-    private stocksKey = 'mmp1_crate_stocks_v2';
+    private stocksKey = 'mmp1_crate_stocks_v3';
     private inventoryKey = 'mmp1_inventory_v2';
 
     constructor() {
@@ -61,17 +61,18 @@ export class MmpCrateManager {
         let changed = false;
 
         for (const [tier, crate] of Object.entries(CRATE_CATALOG)) {
+            const maxStock = crate.initialStock * 2;
             if (!data[tier] || typeof data[tier].stock !== 'number') {
                 data[tier] = {
-                    stock: crate.defaultStock,
+                    stock: crate.initialStock,
                     nextRestock: now + crate.restockIntervalSec * 1000
                 };
                 changed = true;
             } else {
                 // If restock time passed, restock 1 item up to maxStock
                 while (now >= data[tier].nextRestock) {
-                    if (data[tier].stock < crate.maxStock) {
-                        data[tier].stock = Math.min(crate.maxStock, data[tier].stock + 1);
+                    if (data[tier].stock < maxStock) {
+                        data[tier].stock = Math.min(maxStock, data[tier].stock + 1);
                     }
                     data[tier].nextRestock += crate.restockIntervalSec * 1000;
                     changed = true;

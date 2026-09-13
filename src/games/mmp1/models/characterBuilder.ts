@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { AvatarRig } from '../../shared/avatar/AvatarRig';
-import { avatarService } from '../../shared/avatar/avatarService';
-import { getItemById } from '../../shared/avatar/avatarCatalog';
+import { AvatarRig } from '../../../shared/avatar/AvatarRig';
+import { avatarService } from '../../../shared/avatar/AvatarService';
+import { getItemById } from '../../../shared/avatar/catalog';
 import { createUltraRealisticKnife, createUltraRealisticRevolver } from './weaponBuilder';
 
 export function createCharacterMesh(
@@ -601,4 +601,3 @@ export function createCharacterMesh(
             rightArm: armRGroup
         };
     }
-}

@@ -44,16 +44,16 @@ export class FlightCamera {
             this.camera.up.set(0, 1, 0).applyQuaternion(planeQuat);
         } else {
             const speedFactor = Math.min(1.5, physics.state.speedKmh / 300);
-            const distBehind = 13.0 + speedFactor * 3.5;
-            const heightAbove = 3.2 + speedFactor * 1.2;
+            const distBehind = 10.5 + speedFactor * 2.5;
+            const heightAbove = 2.8 + speedFactor * 0.8;
             const idealOffset = new THREE.Vector3(0, heightAbove, distBehind).applyQuaternion(planeQuat);
             this.currentCamPos.copy(planePos).add(idealOffset);
             this.camera.position.copy(this.currentCamPos);
 
-            const lookAhead = new THREE.Vector3(0, 1.0, -10).applyQuaternion(planeQuat).add(planePos);
+            const lookAhead = new THREE.Vector3(0, 0.2, -15).applyQuaternion(planeQuat).add(planePos);
             this.currentTargetPos.copy(lookAhead);
-            this.camera.lookAt(this.currentTargetPos);
             this.camera.up.set(0, 1, 0).applyQuaternion(planeQuat);
+            this.camera.lookAt(this.currentTargetPos);
         }
     }
 
@@ -73,13 +73,13 @@ export class FlightCamera {
             this.camera.position.copy(planePos).add(offset);
 
             const lookTarget = new THREE.Vector3(0, 0.8, -20).applyQuaternion(planeQuat).add(planePos);
-            this.camera.lookAt(lookTarget);
             this.camera.up.set(0, 1, 0).applyQuaternion(planeQuat);
+            this.camera.lookAt(lookTarget);
         } else if (this.mode === 'chase') {
-            // Chase camera: sits behind and slightly above plane
+            // Chase camera: sits behind and slightly above plane, nicely framing plane and horizon
             const speedFactor = Math.min(1.5, physics.state.speedKmh / 300);
-            const distBehind = 13.0 + speedFactor * 3.5;
-            const heightAbove = 3.2 + speedFactor * 1.2;
+            const distBehind = 10.5 + speedFactor * 2.5;
+            const heightAbove = 2.8 + speedFactor * 0.8;
 
             const idealOffset = new THREE.Vector3(0, heightAbove, distBehind).applyQuaternion(planeQuat);
             const idealPos = planePos.clone().add(idealOffset);
@@ -89,14 +89,14 @@ export class FlightCamera {
             this.currentCamPos.lerp(idealPos, t);
             this.camera.position.copy(this.currentCamPos);
 
-            // Look slightly ahead of plane
-            const lookAhead = new THREE.Vector3(0, 1.0, -10).applyQuaternion(planeQuat).add(planePos);
+            // Look slightly through plane towards horizon
+            const lookAhead = new THREE.Vector3(0, 0.2, -15).applyQuaternion(planeQuat).add(planePos);
             this.currentTargetPos.lerp(lookAhead, t * 1.5);
-            this.camera.lookAt(this.currentTargetPos);
 
-            // Smooth up vector banking
+            // Set up vector first, then orient camera with lookAt
             const targetUp = new THREE.Vector3(0, 1, 0).applyQuaternion(planeQuat);
             this.camera.up.lerp(targetUp, THREE.MathUtils.clamp(dt * 4.0, 0, 1));
+            this.camera.lookAt(this.currentTargetPos);
         } else if (this.mode === 'cinematic_crash') {
             // Dramatic orbit around crash wreckage
             this.crashOrbitAngle += dt * 0.45;

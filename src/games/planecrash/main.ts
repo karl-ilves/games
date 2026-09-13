@@ -97,12 +97,14 @@ export class PlaneCrashGame {
 
         this.initEvents();
         this.spawnAircraft(this.currentConfig);
-        this.startFlight();
 
-        // Dismiss start menu on flight control keys or canvas click
-        const dismissStart = () => this.startMenu.hide();
+        // Start flight when interacting with controls, canvas or start card
+        const dismissStart = () => {
+            this.startMenu.hide();
+            if (!this.isPlaying) this.startFlight();
+        };
         window.addEventListener('keydown', (e) => {
-            if (['KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space', 'ShiftLeft', 'ArrowUp', 'ArrowDown'].includes(e.code)) dismissStart();
+            if (['KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space', 'ShiftLeft', 'ArrowUp', 'ArrowDown', 'Enter'].includes(e.code)) dismissStart();
         });
         container?.addEventListener('click', dismissStart);
 
@@ -262,11 +264,9 @@ export class PlaneCrashGame {
 
         // 2. Aerodynamics & Movement
         if (!this.physics.state.isCrashed) {
-            this.physics.update(dt, this.input.inputs);
-
-            // Check collision with terrain, skyscrapers, and mountain boundary immediately
-            if (this.currentPlaneMesh) {
-                this.crashSys.checkCollisions(this.physics, this.currentPlaneMesh);
+            if (this.isPlaying) {
+                this.physics.update(dt, this.input.inputs);
+                if (this.currentPlaneMesh) this.crashSys.checkCollisions(this.physics, this.currentPlaneMesh);
             }
 
             // Proximity warning when approaching forbidden mountain airspace

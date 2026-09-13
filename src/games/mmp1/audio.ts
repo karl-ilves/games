@@ -311,3 +311,4 @@ export class MmpAudio {
 }
 
 export const mmpAudio = new MmpAudio();
+export const audio = mmpAudio;
