@@ -183,7 +183,17 @@ try {
             throw new Error(`Expected punctuation error for ',', got '${authMsg}'`);
         }
 
-        // 6. Test Age Validation (must provide age between 3 and 120)
+        // 6. Test Age Select Field (must be a selectable dropdown, not a typed input)
+        const ageTagName = await page.$eval('#auth-age', el => el.tagName.toLowerCase());
+        const ageOptionsCount = await page.$eval('#auth-age', el => el.options.length);
+        console.log(`   Age field element: <${ageTagName}> with ${ageOptionsCount} selectable options`);
+        if (ageTagName !== 'select') {
+            throw new Error(`Expected #auth-age to be a <select> element, but found <${ageTagName}>!`);
+        }
+        if (ageOptionsCount < 50) {
+            throw new Error(`Expected #auth-age to have selectable options (at least 50), got ${ageOptionsCount}`);
+        }
+
         await page.evaluate(() => {
             const userInput = document.getElementById('auth-username');
             const passInput = document.getElementById('auth-password');

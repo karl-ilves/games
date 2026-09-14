@@ -520,7 +520,7 @@ export async function initAuth() {
     const registerFields = document.getElementById('register-fields');
     const btnGenderBoy = document.getElementById('btn-gender-boy');
     const btnGenderGirl = document.getElementById('btn-gender-girl');
-    const ageInput = document.getElementById('auth-age') as HTMLInputElement | null;
+    const ageInput = document.getElementById('auth-age') as HTMLSelectElement | HTMLInputElement | null;
     const loginBtn = document.getElementById('btn-login');
     const registerBtn = document.getElementById('btn-register');
     const logoutBtn = document.getElementById('btn-logout');
@@ -903,7 +903,7 @@ export async function initAuth() {
 
             const ageNum = parseInt(ageStr, 10);
             if (!ageStr || isNaN(ageNum) || ageNum < 3 || ageNum > 120) {
-                return showMsg('Please enter a valid age (3-120).', 'error');
+                return showMsg('Please select a valid age (3-120).', 'error');
             }
 
             const gender = selectedGender || 'boy';
