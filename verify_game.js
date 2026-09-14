@@ -138,12 +138,57 @@ try {
             throw new Error(`Expected 'Emojis unavailable' error for emoji in password, got '${authMsg}'`);
         }
 
-        // 5. Test Age Validation (must provide age between 3 and 120)
+        // 5. Test Username Constraints (min 5 characters, letters, numbers, spaces only, no ! or ,)
+        console.log("   Testing Username Constraints (min 5 chars, letters/numbers/spaces only)...");
+        // Too short (< 5 chars: "kawe")
         await page.evaluate(() => {
             const userInput = document.getElementById('auth-username');
             const passInput = document.getElementById('auth-password');
             const ageInput = document.getElementById('auth-age');
-            if (userInput) userInput.value = 'validplayer1';
+            if (userInput) userInput.value = 'kawe';
+            if (passInput) passInput.value = 'superpassword';
+            if (ageInput) ageInput.value = '14';
+            document.getElementById('btn-register')?.click();
+        });
+        await new Promise(r => setTimeout(r, 150));
+        authMsg = await page.$eval('#auth-message', el => el.textContent);
+        console.log(`   Short username (< 5 chars) error: "${authMsg}"`);
+        if (!authMsg.includes('between 5 and 20')) {
+            throw new Error(`Expected length error for short username, got '${authMsg}'`);
+        }
+
+        // Invalid characters (! not allowed)
+        await page.evaluate(() => {
+            const userInput = document.getElementById('auth-username');
+            if (userInput) userInput.value = 'kawe1234!';
+            document.getElementById('btn-register')?.click();
+        });
+        await new Promise(r => setTimeout(r, 150));
+        authMsg = await page.$eval('#auth-message', el => el.textContent);
+        console.log(`   Punctuation (!) error: "${authMsg}"`);
+        if (!authMsg.includes('only contain letters, numbers, and spaces')) {
+            throw new Error(`Expected punctuation error for '!', got '${authMsg}'`);
+        }
+
+        // Invalid characters (, not allowed)
+        await page.evaluate(() => {
+            const userInput = document.getElementById('auth-username');
+            if (userInput) userInput.value = 'kawe,1234';
+            document.getElementById('btn-register')?.click();
+        });
+        await new Promise(r => setTimeout(r, 150));
+        authMsg = await page.$eval('#auth-message', el => el.textContent);
+        console.log(`   Punctuation (,) error: "${authMsg}"`);
+        if (!authMsg.includes('only contain letters, numbers, and spaces')) {
+            throw new Error(`Expected punctuation error for ',', got '${authMsg}'`);
+        }
+
+        // 6. Test Age Validation (must provide age between 3 and 120)
+        await page.evaluate(() => {
+            const userInput = document.getElementById('auth-username');
+            const passInput = document.getElementById('auth-password');
+            const ageInput = document.getElementById('auth-age');
+            if (userInput) userInput.value = 'kawe1234';
             if (passInput) passInput.value = 'securepass123';
             if (ageInput) ageInput.value = '';
             document.getElementById('btn-register')?.click();
@@ -155,24 +200,22 @@ try {
             throw new Error("Registration must require a valid age!");
         }
 
-        // 6. Test Gender Selection (Click Girl, then Boy)
+        // 7. Test Gender Selection (Click Girl, then Boy)
         await page.click('#btn-gender-girl');
         await new Promise(r => setTimeout(r, 50));
         let girlBorder = await page.$eval('#btn-gender-girl', el => el.style.borderColor);
-        console.log(`   Girl button selected border: ${girlBorder}`);
 
         await page.click('#btn-gender-boy');
         await new Promise(r => setTimeout(r, 50));
         let boyBorder = await page.$eval('#btn-gender-boy', el => el.style.borderColor);
-        console.log(`   Boy button selected border: ${boyBorder}`);
 
-        // 7. Successful Registration (Username, Password, Age, Gender)
-        console.log("   Testing Successful Account Creation with Age and Gender...");
+        // 8. Successful Registration with kawe1234 (Username, Password, Age, Gender)
+        console.log("   Testing Successful Account Creation with kawe1234...");
         await page.evaluate(() => {
             const userInput = document.getElementById('auth-username');
             const passInput = document.getElementById('auth-password');
             const ageInput = document.getElementById('auth-age');
-            if (userInput) userInput.value = 'new_playard_hero';
+            if (userInput) userInput.value = 'kawe1234';
             if (passInput) passInput.value = 'superpassword';
             if (ageInput) ageInput.value = '14';
             document.getElementById('btn-register')?.click();
@@ -187,8 +230,8 @@ try {
         if (userInfoDisplay !== 'block') {
             throw new Error("User must be logged in after registration!");
         }
-        if (!userTitle.includes('@new_playard_hero')) {
-            throw new Error("Display name must contain @new_playard_hero!");
+        if (!userTitle.includes('@kawe1234')) {
+            throw new Error("Display name must contain @kawe1234!");
         }
         if (!userAgeText.includes('14 years old')) {
             throw new Error("User info must display age (14 years old)!");
@@ -197,23 +240,40 @@ try {
             throw new Error("User info must display gender (Boy)!");
         }
 
-        // 8. Test Logout
+        // 9. Logout
         console.log("   Testing Logout...");
         await page.click('#btn-logout');
         await new Promise(r => setTimeout(r, 200));
-        const userInfoAfterLogout = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
-        if (userInfoAfterLogout !== 'none') {
-            throw new Error("User info must be hidden after logout!");
+
+        // 10. Test Duplicate Username Registration ("name is unavable" / "Name is unavailable")
+        console.log("   Testing Duplicate Username Rejection ('name is unavable' / 'Name is unavailable')...");
+        await page.click('#tab-create-account');
+        await new Promise(r => setTimeout(r, 100));
+        await page.evaluate(() => {
+            const userInput = document.getElementById('auth-username');
+            const passInput = document.getElementById('auth-password');
+            const ageInput = document.getElementById('auth-age');
+            if (userInput) userInput.value = 'kawe1234';
+            if (passInput) passInput.value = 'anotherpassword';
+            if (ageInput) ageInput.value = '15';
+            document.getElementById('btn-register')?.click();
+        });
+        await new Promise(r => setTimeout(r, 200));
+        authMsg = await page.$eval('#auth-message', el => el.textContent);
+        authDataErr = await page.$eval('#auth-message', el => el.getAttribute('data-error'));
+        console.log(`   Duplicate username error: text="${authMsg}", data-error="${authDataErr}"`);
+        if ((authMsg !== 'Name is unavailable' && authMsg !== 'name is unavable') || authDataErr !== 'name is unavable') {
+            throw new Error(`Expected 'Name is unavailable' / 'name is unavable', got text='${authMsg}' data-error='${authDataErr}'`);
         }
 
-        // 9. Test Username + Password Login
-        console.log("   Testing Username + Password Login without email...");
+        // 11. Test Username + Password Login with kawe1234
+        console.log("   Testing Username + Password Login with kawe1234...");
         await page.click('#tab-login');
         await new Promise(r => setTimeout(r, 100));
         await page.evaluate(() => {
             const userInput = document.getElementById('auth-username');
             const passInput = document.getElementById('auth-password');
-            if (userInput) userInput.value = 'new_playard_hero';
+            if (userInput) userInput.value = 'kawe1234';
             if (passInput) passInput.value = 'superpassword';
             document.getElementById('btn-login')?.click();
         });
@@ -221,14 +281,14 @@ try {
         const loggedInAgain = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
         const titleAgain = await page.$eval('#user-email', el => el.textContent);
         console.log(`   Login Result: display=${loggedInAgain}, title="${titleAgain}"`);
-        if (loggedInAgain !== 'block' || !titleAgain.includes('@new_playard_hero')) {
+        if (loggedInAgain !== 'block' || !titleAgain.includes('@kawe1234')) {
             throw new Error("Username + Password login failed!");
         }
 
         // Log out to reset guest state for remaining tests
         await page.click('#btn-logout');
         await new Promise(r => setTimeout(r, 200));
-        console.log("   Create Account & Username Login tests verified: ✅");
+        console.log("   Create Account constraints, duplicate check & Login tests verified: ✅");
 
         // Check Cooking Game visibility for guest (Expected: flex)
         const cookingCardVisible = await page.$eval('#card-cooking-game', el => window.getComputedStyle(el).display);

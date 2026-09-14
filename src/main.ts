@@ -250,8 +250,8 @@ async function renderCommunityGames() {
     }
 
     container.innerHTML = '';
-    const currentUser = yardService.getCurrentUser();
-    const isAdmin = yardService.isAdmin();
+    const currentUser = getCurrentUserProfile();
+    const isAdmin = !!currentUser?.isAdmin || isUserAdminEmail(currentUser?.email);
 
     approvedGames.forEach(game => {
         const isOwner = currentUser && (currentUser.username === game.creatorUsername || isAdmin);

@@ -92,13 +92,13 @@ export function validateUsername(username: string, email?: string): { valid: boo
         return { valid: false, error: 'Emojis unavailable' };
     }
 
-    if (trimmed.length < 3 || trimmed.length > 20) {
-        return { valid: false, error: 'Username must be between 3 and 20 characters.' };
+    if (trimmed.length < 5 || trimmed.length > 20) {
+        return { valid: false, error: 'Username must be between 5 and 20 characters.' };
     }
 
-    const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
+    const usernameRegex = /^[a-zA-Z0-9 ]+$/;
     if (!usernameRegex.test(trimmed)) {
-        return { valid: false, error: 'Username can only contain letters, numbers, dots, and hyphens (no emojis).' };
+        return { valid: false, error: 'Username can only contain letters, numbers, and spaces.' };
     }
     return { valid: true };
 }
@@ -288,6 +288,8 @@ function showMsg(msg: string, type: 'error' | 'success' | 'info') {
     authMessage.innerText = msg;
     if (msg === 'Emojis unavailable') {
         authMessage.setAttribute('data-error', 'emoisis umavabible');
+    } else if (msg === 'Name is unavailable') {
+        authMessage.setAttribute('data-error', 'name is unavable');
     } else {
         authMessage.removeAttribute('data-error');
     }
@@ -909,7 +911,7 @@ export async function initAuth() {
             const localProfiles = getLocalProfiles();
             const taken = localProfiles.find(p => p.username.toLowerCase() === cleanUser);
             if (taken) {
-                return showMsg(`Username '@${username}' is already taken!`, 'error');
+                return showMsg('Name is unavailable', 'error');
             }
 
             showMsg('Creating account...', 'info');
@@ -952,7 +954,7 @@ export async function initAuth() {
                         .single();
 
                     if (existingUser) {
-                        return showMsg(`Username '@${username}' is already taken!`, 'error');
+                        return showMsg('Name is unavailable', 'error');
                     }
                 } catch (e) {}
 
@@ -972,27 +974,7 @@ export async function initAuth() {
 
                 if (error) {
                     if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('already exists')) {
-                        const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({ email: internalEmail, password });
-                        if (!loginErr && loginData.session) {
-                            const profile: UserProfile = {
-                                id: loginData.session.user.id,
-                                username: username,
-                                email: internalEmail,
-                                displayName: `@${username}`,
-                                isAdmin: isAdmin,
-                                age: ageNum,
-                                gender: gender
-                            };
-                            localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
-                            saveLocalProfile(profile);
-                            await yardService.onUserLogin(profile.id, profile.username);
-                            showMsg(`Welcome back, @${username}!`, 'success');
-                            if (usernameInput) usernameInput.value = '';
-                            if (passwordInput) passwordInput.value = '';
-                            if (ageInput) ageInput.value = '';
-                            updateAuthDisplay(profile);
-                            return;
-                        }
+                        return showMsg('Name is unavailable', 'error');
                     }
 
                     // Fallback to local profile on network or rate limit error
