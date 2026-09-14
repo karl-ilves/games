@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { yardService } from "../../shared/yardService";
-import { getCurrentUserProfile, isPlayardOwner, isTestMode, canAccessMmp1 } from "../../auth";
+import { getCurrentUserProfile, isPlayardOwner, isTestMode, canAccessMmp1, calculateAge } from "../../auth";
 import { applyMmp1Localization } from "./i18n";
 import { InGameEmotesWidget } from "../../shared/avatar/InGameEmotesWidget";
 
@@ -133,9 +133,21 @@ export class MurderMysteryGame {
         const prof = getCurrentUserProfile();
         const owner = isPlayardOwner(prof?.email);
         const testMode = isTestMode();
-        // MMP1 on nüüd avalik kõigile mängijatele!
+        const userAge = prof ? (prof.birthDate ? calculateAge(prof.birthDate) : (prof.age ?? 99)) : 99;
+        const isAgeRestricted = prof && !owner && !prof.isAdmin && userAge < 10;
+
         const denied = document.getElementById("access-denied-overlay");
-        if (denied) denied.style.display = "none";
+        if (isAgeRestricted) {
+            if (denied) {
+                denied.style.display = "flex";
+                const title = denied.querySelector("h2");
+                if (title) title.textContent = "🔒 Age 10+ Required";
+                const desc = denied.querySelector("p");
+                if (desc) desc.textContent = `You are currently ${userAge} years old. This game unlocks when you turn 10!`;
+            }
+        } else {
+            if (denied) denied.style.display = "none";
+        }
 
         const btnAdmin = document.getElementById("btn-admin-panel");
         if (btnAdmin) btnAdmin.style.display = (owner || testMode) ? "flex" : "none";

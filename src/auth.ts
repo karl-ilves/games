@@ -106,7 +106,13 @@ export function validateUsername(username: string, email?: string): { valid: boo
 export function getCurrentUserProfile(): UserProfile | null {
     try {
         const raw = localStorage.getItem(CURRENT_PROFILE_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+            const prof = JSON.parse(raw) as UserProfile;
+            if (prof.birthDate) {
+                prof.age = calculateAge(prof.birthDate);
+            }
+            return prof;
+        }
     } catch (e) {}
     return null;
 }
@@ -331,10 +337,23 @@ export function updateAuthDisplay(profile: UserProfile | null) {
         window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: profile }));
         _renderAgeInUI(profile);
         _renderGenderInUI(profile);
+        if (typeof (window as any).__updateGameAgeRestrictions === 'function') {
+            (window as any).__updateGameAgeRestrictions();
+        }
     } else {
         if (loginForm) loginForm.style.display = 'block';
         if (userInfo) userInfo.style.display = 'none';
+        const emailSpan = document.getElementById('user-email');
+        if (emailSpan) emailSpan.textContent = '';
+        const ageSpan = document.getElementById('user-age-display');
+        if (ageSpan) {
+            ageSpan.style.display = 'none';
+            ageSpan.textContent = '';
+        }
         window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: null }));
+        if (typeof (window as any).__updateGameAgeRestrictions === 'function') {
+            (window as any).__updateGameAgeRestrictions();
+        }
     }
 }
 
@@ -521,6 +540,57 @@ export async function initAuth() {
     const btnGenderBoy = document.getElementById('btn-gender-boy');
     const btnGenderGirl = document.getElementById('btn-gender-girl');
     const ageInput = document.getElementById('auth-age') as HTMLSelectElement | HTMLInputElement | null;
+    const birthYearSelect = document.getElementById('auth-birth-year') as HTMLSelectElement | null;
+    const birthMonthSelect = document.getElementById('auth-birth-month') as HTMLSelectElement | null;
+    const birthDaySelect = document.getElementById('auth-birth-day') as HTMLSelectElement | null;
+    const ageCalcPreview = document.getElementById('auth-age-calc-preview');
+
+    function updateCalculatedAgePreview(): { birthDateStr: string; age: number } | null {
+        const y = parseInt(birthYearSelect?.value || '', 10);
+        const m = parseInt(birthMonthSelect?.value || '', 10);
+        const d = parseInt(birthDaySelect?.value || '', 10);
+        if (y && m && d) {
+            const birthDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const age = calculateAge(birthDateStr);
+            if (age >= 0 && age <= 120) {
+                if (ageCalcPreview) {
+                    ageCalcPreview.style.color = '#0be881';
+                    ageCalcPreview.textContent = `🎂 Calculated Age: ${age} years old`;
+                }
+                if (ageInput) {
+                    ageInput.value = String(age);
+                }
+                return { birthDateStr, age };
+            } else {
+                if (ageCalcPreview) {
+                    ageCalcPreview.style.color = '#ff4757';
+                    ageCalcPreview.textContent = 'Invalid birth date';
+                }
+            }
+        } else if (ageCalcPreview) {
+            ageCalcPreview.textContent = '';
+        }
+        return null;
+    }
+
+    birthYearSelect?.addEventListener('change', updateCalculatedAgePreview);
+    birthMonthSelect?.addEventListener('change', updateCalculatedAgePreview);
+    birthDaySelect?.addEventListener('change', updateCalculatedAgePreview);
+
+    (window as any).__setUserBirthDate = (birthDateStr: string) => {
+        const prof = getCurrentUserProfile();
+        if (prof) {
+            prof.birthDate = birthDateStr;
+            prof.age = calculateAge(birthDateStr);
+            saveLocalProfile(prof);
+            localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(prof));
+            updateAuthDisplay(prof);
+            if (typeof (window as any).__updateGameAgeRestrictions === 'function') {
+                (window as any).__updateGameAgeRestrictions();
+            }
+        }
+    };
+
     const loginBtn = document.getElementById('btn-login');
     const registerBtn = document.getElementById('btn-register');
     const logoutBtn = document.getElementById('btn-logout');
@@ -901,8 +971,31 @@ export async function initAuth() {
                 return showMsg("The username 'admin' is reserved for administrators!", 'error');
             }
 
-            const ageNum = parseInt(ageStr, 10);
-            if (!ageStr || isNaN(ageNum) || ageNum < 3 || ageNum > 120) {
+            let birthDateStr: string | undefined;
+            let ageNum: number | undefined;
+
+            const calcRes = updateCalculatedAgePreview();
+            if (calcRes) {
+                birthDateStr = calcRes.birthDateStr;
+                ageNum = calcRes.age;
+            } else {
+                const y = parseInt(birthYearSelect?.value || '', 10);
+                const m = parseInt(birthMonthSelect?.value || '', 10);
+                const d = parseInt(birthDaySelect?.value || '', 10);
+                if (y && m && d) {
+                    birthDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    ageNum = calculateAge(birthDateStr);
+                } else if (ageInput?.value) {
+                    const parsed = parseInt(ageInput.value.trim(), 10);
+                    if (!isNaN(parsed) && parsed >= 3 && parsed <= 120) {
+                        ageNum = parsed;
+                        const currentYear = new Date().getFullYear();
+                        birthDateStr = `${currentYear - ageNum}-01-01`;
+                    }
+                }
+            }
+
+            if (ageNum === undefined || isNaN(ageNum) || ageNum < 3 || ageNum > 120) {
                 return showMsg('Please select a valid age (3-120).', 'error');
             }
 
@@ -927,6 +1020,7 @@ export async function initAuth() {
                     email: internalEmail,
                     displayName: displayName,
                     isAdmin: isAdmin,
+                    birthDate: birthDateStr,
                     age: ageNum,
                     gender: gender
                 };
@@ -940,6 +1034,10 @@ export async function initAuth() {
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
                 if (ageInput) ageInput.value = '';
+                if (birthYearSelect) birthYearSelect.value = '';
+                if (birthMonthSelect) birthMonthSelect.value = '';
+                if (birthDaySelect) birthDaySelect.value = '';
+                if (ageCalcPreview) ageCalcPreview.textContent = '';
                 updateAuthDisplay(profile);
                 return;
             }
@@ -966,6 +1064,7 @@ export async function initAuth() {
                         emailRedirectTo: redirectUrl,
                         data: {
                             username: username,
+                            birth_date: birthDateStr,
                             age: ageNum,
                             gender: gender
                         }
@@ -984,6 +1083,7 @@ export async function initAuth() {
                         email: internalEmail,
                         displayName: `@${username}`,
                         isAdmin: isAdmin,
+                        birthDate: birthDateStr,
                         age: ageNum,
                         gender: gender
                     };
@@ -994,6 +1094,10 @@ export async function initAuth() {
                     if (usernameInput) usernameInput.value = '';
                     if (passwordInput) passwordInput.value = '';
                     if (ageInput) ageInput.value = '';
+                    if (birthYearSelect) birthYearSelect.value = '';
+                    if (birthMonthSelect) birthMonthSelect.value = '';
+                    if (birthDaySelect) birthDaySelect.value = '';
+                    if (ageCalcPreview) ageCalcPreview.textContent = '';
                     updateAuthDisplay(profile);
                     return;
                 }
@@ -1004,6 +1108,7 @@ export async function initAuth() {
                     email: internalEmail,
                     displayName: `@${username}`,
                     isAdmin: isAdmin,
+                    birthDate: birthDateStr,
                     age: ageNum,
                     gender: gender
                 };
@@ -1017,6 +1122,7 @@ export async function initAuth() {
                         username: profile.username,
                         email: internalEmail,
                         display_name: profile.displayName,
+                        birth_date: birthDateStr,
                         age: ageNum,
                         gender: gender
                     });
@@ -1031,6 +1137,10 @@ export async function initAuth() {
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
                 if (ageInput) ageInput.value = '';
+                if (birthYearSelect) birthYearSelect.value = '';
+                if (birthMonthSelect) birthMonthSelect.value = '';
+                if (birthDaySelect) birthDaySelect.value = '';
+                if (ageCalcPreview) ageCalcPreview.textContent = '';
                 updateAuthDisplay(profile);
             } else {
                 const displayName = isAdmin ? 'Admin✅' : `@${username}`;

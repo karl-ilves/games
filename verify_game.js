@@ -298,6 +298,102 @@ try {
         // Log out to reset guest state for remaining tests
         await page.click('#btn-logout');
         await new Promise(r => setTimeout(r, 200));
+
+        // 12. Testing Date of Birth Selection (Year, Month, Day), Dynamic Age Calculation & Game Age Restrictions
+        console.log("   Testing Birth Date Dropdowns & Dynamic Age Calculation...");
+        await page.click('#tab-create-account');
+        await new Promise(r => setTimeout(r, 100));
+
+        // Check dropdowns existence
+        const hasBirthYear = await page.$('#auth-birth-year');
+        const hasBirthMonth = await page.$('#auth-birth-month');
+        const hasBirthDay = await page.$('#auth-birth-day');
+        if (!hasBirthYear || !hasBirthMonth || !hasBirthDay) {
+            throw new Error("Missing #auth-birth-year, #auth-birth-month or #auth-birth-day select elements!");
+        }
+
+        // Select Year 2017, Month 1, Day 1 (which gives age 9 in 2026)
+        await page.select('#auth-birth-year', '2017');
+        await page.select('#auth-birth-month', '1');
+        await page.select('#auth-birth-day', '1');
+        await new Promise(r => setTimeout(r, 100));
+
+        const previewText = await page.$eval('#auth-age-calc-preview', el => el.textContent);
+        console.log(`   Calculated Age Preview for 2017-01-01: "${previewText}"`);
+        if (!previewText.includes('9 years old')) {
+            throw new Error(`Expected preview to show '9 years old', got '${previewText}'`);
+        }
+
+        // Register 9-year old player 'player9yo'
+        await page.evaluate(() => {
+            const userInput = document.getElementById('auth-username');
+            const passInput = document.getElementById('auth-password');
+            if (userInput) userInput.value = 'player9yo';
+            if (passInput) passInput.value = 'superpassword';
+            document.getElementById('btn-register')?.click();
+        });
+        await new Promise(r => setTimeout(r, 350));
+
+        const p9yoMsg = await page.$eval('#auth-message', el => el.textContent);
+        const p9yoAge = await page.$eval('#user-age-display', el => el.textContent);
+        console.log(`   Registered player9yo authMsg: "${p9yoMsg}", age display: "${p9yoAge}"`);
+        if (!p9yoAge.includes('9 years old')) {
+            throw new Error(`Expected player9yo age to be 9 years old, got '${p9yoAge}' (authMsg: '${p9yoMsg}')`);
+        }
+
+        // Check that 10+ games are locked for 9-year old:
+        const warCardLocked = await page.$eval('#card-war-game', el => el.getAttribute('data-age-locked'));
+        const mmp1CardLocked = await page.$eval('#card-mmp1-game', el => el.getAttribute('data-age-locked'));
+        const warBadgeText = await page.$eval('#card-war-game .game-age-badge', el => el.textContent);
+        console.log(`   War Game locked for 9yo: ${warCardLocked}, badge="${warBadgeText}"`);
+        if (warCardLocked !== 'true' || mmp1CardLocked !== 'true') {
+            throw new Error("War Game and MMP1 must be locked for 9-year old player!");
+        }
+
+        // Test clicking locked War Game shows Age Restriction Modal
+        await page.click('#card-war-game');
+        await new Promise(r => setTimeout(r, 150));
+        const ageModalDisplay = await page.$eval('#age-restriction-modal', el => window.getComputedStyle(el).display);
+        const ageModalText = await page.$eval('#age-modal-desc', el => el.textContent);
+        console.log(`   Age Restriction Modal display: ${ageModalDisplay}, desc="${ageModalText}"`);
+        if (ageModalDisplay !== 'flex') {
+            throw new Error("Clicking age-locked game must display #age-restriction-modal!");
+        }
+        if (!ageModalText.includes('10') || !ageModalText.includes('9')) {
+            throw new Error("Age Restriction Modal must explain requirement (10) and current age (9)!");
+        }
+
+        // Close modal
+        await page.click('#btn-close-age-modal');
+        await new Promise(r => setTimeout(r, 100));
+        const modalAfterClose = await page.$eval('#age-restriction-modal', el => window.getComputedStyle(el).display);
+        if (modalAfterClose !== 'none') {
+            throw new Error("Age modal must close when clicking Got it!");
+        }
+
+        // TEST TURNING 10: "kui on ta 9 ja kasvab 10 siis ta saab nüüd seda mängu mängida"
+        console.log("   Testing player growing from 9 to 10 years old...");
+        await page.evaluate(() => {
+            window.__setUserBirthDate('2016-01-01');
+        });
+        await new Promise(r => setTimeout(r, 200));
+
+        const p10yoAge = await page.$eval('#user-age-display', el => el.textContent);
+        const warUnlocked = await page.$eval('#card-war-game', el => el.getAttribute('data-age-locked'));
+        const mmp1Unlocked = await page.$eval('#card-mmp1-game', el => el.getAttribute('data-age-locked'));
+        const warUnlockedBadge = await page.$eval('#card-war-game .game-age-badge', el => el.textContent);
+        console.log(`   Player aged to 10: age="${p10yoAge}", warUnlocked=${warUnlocked}, badge="${warUnlockedBadge}"`);
+        if (!p10yoAge.includes('10 years old')) {
+            throw new Error(`Expected age to update to 10 years old, got '${p10yoAge}'`);
+        }
+        if (warUnlocked !== 'false' || mmp1Unlocked !== 'false') {
+            throw new Error("War Game and MMP1 must unlock when player turns 10!");
+        }
+
+        // Log out player_9yo to reset guest state for remaining tests
+        await page.click('#btn-logout');
+        await new Promise(r => setTimeout(r, 200));
+        console.log("   Birth Date & Age-based Game Restrictions successfully verified: ✅");
         console.log("   Create Account constraints, duplicate check & Login tests verified: ✅");
 
         // Check Cooking Game visibility for guest (Expected: flex)
