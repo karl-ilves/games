@@ -115,6 +115,20 @@ export class InvisibilitySystem {
     private applyMeshInvisibility(isInvis: boolean) {
         if (!this.ctx.playerChar?.mesh) return;
         this.ctx.playerChar.mesh.traverse((child: any) => {
+            // Hide overhead name tag or any sprite elements so player is truly stealth
+            if (child.isSprite) {
+                if (isInvis) {
+                    if (child.userData.origVisible === undefined) {
+                        child.userData.origVisible = child.visible;
+                    }
+                    child.visible = false;
+                } else {
+                    if (child.userData.origVisible !== undefined) {
+                        child.visible = child.userData.origVisible;
+                    }
+                }
+            }
+
             if (child.isMesh && child.material) {
                 const mats = Array.isArray(child.material) ? child.material : [child.material];
                 for (const mat of mats) {
@@ -127,7 +141,7 @@ export class InvisibilitySystem {
                             });
                         }
                         mat.transparent = true;
-                        mat.opacity = 0.25;
+                        mat.opacity = 0.06; // Ultra-faint ghost silhouette: "isegi mina ei näe aga natuke näen"
                     } else {
                         const orig = this.origMaterialProps.get(mat);
                         if (orig) {

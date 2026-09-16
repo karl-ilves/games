@@ -6067,16 +6067,33 @@ try {
                 const activated = window.mmp1Game.activateInvisibility();
                 const isInvis = window.mmp1Game.isPlayerInvisible;
 
-                // Check player mesh opacity
+                // Check player mesh opacity and sprite visibility
                 let isMeshTranslucent = false;
+                let isUltraFaint = false;
+                let isSpriteHidden = true;
                 window.mmp1Game.playerChar.mesh.traverse((child) => {
+                    if (child.isSprite && child.visible) {
+                        isSpriteHidden = false;
+                    }
                     if (child.isMesh && child.material) {
                         const mats = Array.isArray(child.material) ? child.material : [child.material];
                         mats.forEach(m => {
                             if (m.opacity <= 0.3) isMeshTranslucent = true;
+                            if (m.opacity <= 0.1) isUltraFaint = true;
                         });
                     }
                 });
+
+                // Test killing while invisible - sheriff must NOT witness the murder
+                window.mmp1Game.playerChar.role = 'murderer';
+                window.mmp1Game.hasSheriffWitnessedMurder = false;
+                const victim = window.mmp1Game.characters.find(c => !c.isPlayer && c.isAlive);
+                const sheriff = window.mmp1Game.characters.find(c => !c.isPlayer && c !== victim && c.isAlive);
+                if (sheriff) sheriff.role = 'sheriff';
+                if (victim) {
+                    window.mmp1Game.combatSystem.eliminateCharacter(victim, window.mmp1Game.playerChar, 'knife');
+                }
+                const sheriffWitnessedWhileInvisible = window.mmp1Game.hasSheriffWitnessedMurder;
 
                 // Reset
                 window.mmp1Game.invisibilitySystem.reset();
@@ -6095,6 +6112,12 @@ try {
                     }
                 });
 
+                // Test clicking canvas in round_end doesn't request pointer lock
+                window.mmp1Game.state = 'round_end';
+                const canvasContainer = document.getElementById('canvas-container');
+                canvasContainer?.click();
+                const pointerLockedInRoundEnd = !!document.pointerLockElement;
+
                 return {
                     initialPassCount,
                     has2x,
@@ -6105,20 +6128,30 @@ try {
                     activated,
                     isInvis,
                     isMeshTranslucent,
+                    isUltraFaint,
+                    isSpriteHidden,
+                    sheriffWitnessedWhileInvisible,
+                    pointerLockedInRoundEnd,
                     isInvisAfterReset,
                     isMeshRestored
                 };
             });
 
-            console.log(`     Game Pass results: Passes in grid=${gamePassTest.initialPassCount}, 2X Money: owned=${gamePassTest.has2x} (delta=${gamePassTest.moneyDelta} €), Invis: owned=${gamePassTest.hasInvis}, slotVisible=${gamePassTest.slotNowVisible}, activated=${gamePassTest.activated}, isInvis=${gamePassTest.isInvis}, translucent=${gamePassTest.isMeshTranslucent}, restored=${gamePassTest.isMeshRestored}`);
+            console.log(`     Game Pass results: Passes in grid=${gamePassTest.initialPassCount}, 2X Money: owned=${gamePassTest.has2x} (delta=${gamePassTest.moneyDelta} €), Invis: owned=${gamePassTest.hasInvis}, slotVisible=${gamePassTest.slotNowVisible}, activated=${gamePassTest.activated}, isInvis=${gamePassTest.isInvis}, ultraFaint=${gamePassTest.isUltraFaint}, spriteHidden=${gamePassTest.isSpriteHidden}, sheriffWitnessed=${gamePassTest.sheriffWitnessedWhileInvisible}, pointerLockedInRoundEnd=${gamePassTest.pointerLockedInRoundEnd}, restored=${gamePassTest.isMeshRestored}`);
             if (!gamePassTest.has2x || gamePassTest.moneyDelta !== 100) {
                 throw new Error(`2X Money pass failed! Owned: ${gamePassTest.has2x}, Money gained for +50: ${gamePassTest.moneyDelta} € (expected 100)`);
             }
             if (!gamePassTest.hasInvis || !gamePassTest.slotNowVisible) {
                 throw new Error(`Invisibility Cloak purchase failed to unlock or show hotbar slot! Owned: ${gamePassTest.hasInvis}, Slot visible: ${gamePassTest.slotNowVisible}`);
             }
-            if (!gamePassTest.activated || !gamePassTest.isInvis || !gamePassTest.isMeshTranslucent) {
-                throw new Error(`Invisibility activation failed! Activated: ${gamePassTest.activated}, isInvis: ${gamePassTest.isInvis}, translucent: ${gamePassTest.isMeshTranslucent}`);
+            if (!gamePassTest.activated || !gamePassTest.isInvis || !gamePassTest.isUltraFaint || !gamePassTest.isSpriteHidden) {
+                throw new Error(`Invisibility stealth failed! Activated: ${gamePassTest.activated}, isInvis: ${gamePassTest.isInvis}, ultraFaint: ${gamePassTest.isUltraFaint}, spriteHidden: ${gamePassTest.isSpriteHidden}`);
+            }
+            if (gamePassTest.sheriffWitnessedWhileInvisible) {
+                throw new Error('Sheriff witnessed murder while killer was invisible! Sheriff must not see invisible killer.');
+            }
+            if (gamePassTest.pointerLockedInRoundEnd) {
+                throw new Error('Pointer lock was requested during round_end! Must not request pointer lock outside in_game.');
             }
             if (gamePassTest.isInvisAfterReset || !gamePassTest.isMeshRestored) {
                 throw new Error(`Invisibility reset failed! isInvisAfterReset: ${gamePassTest.isInvisAfterReset}, restored: ${gamePassTest.isMeshRestored}`);

@@ -141,7 +141,8 @@ export function createGameSystems(game: any): {
             const icon = document.getElementById("sound-icon");
             if (icon) icon.textContent = audio.soundEnabled ? "🔊" : "🔇";
         },
-        onActivateInvisibility: () => invisibilitySystem.activateInvisibility()
+        onActivateInvisibility: () => invisibilitySystem.activateInvisibility(),
+        getState: () => game.state
     });
 
     return { combatSystem, crateShopUI, adminPanelUI, roundManager, inputController, invisibilitySystem };

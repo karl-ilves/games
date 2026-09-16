@@ -265,7 +265,14 @@ export class RoundManager {
 
     public endRound(winner: "sheriff_win" | "murderer_win" | "time_out", reason: string) {
         this.ctx.setState("round_end");
-        if (this.ctx.isPointerLocked()) document.exitPointerLock?.();
+        if (typeof document !== 'undefined') {
+            if (document.fullscreenElement) {
+                document.exitFullscreen?.().catch(() => {});
+            }
+            if (document.pointerLockElement || this.ctx.isPointerLocked()) {
+                document.exitPointerLock?.();
+            }
+        }
         audio.playVictory();
 
         const crosshair = document.getElementById("crosshair");

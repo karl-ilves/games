@@ -234,13 +234,16 @@ export class CombatSystem {
         }
 
         if (killer && killer.role === "murderer") {
-            const sheriff = this.ctx.characters.find(c => c.role === "sheriff" && c.isAlive);
-            if (sheriff) {
-                const dist = sheriff.position.distanceTo(target.position);
-                const seesMurder = this.hasLineOfSight(sheriff.position, target.position) || this.hasLineOfSight(sheriff.position, killer.position);
-                if (seesMurder && dist < 36) {
-                    this.ctx.setHasSheriffWitnessedMurder(true);
-                    this.ctx.addIncidentFeed(texts.incidents.sheriffWitnessed);
+            const isKillerInvisible = killer.isPlayer && (typeof this.ctx.isPlayerInvisible === 'function' ? this.ctx.isPlayerInvisible() : false);
+            if (!isKillerInvisible) {
+                const sheriff = this.ctx.characters.find(c => c.role === "sheriff" && c.isAlive);
+                if (sheriff) {
+                    const dist = sheriff.position.distanceTo(target.position);
+                    const seesMurder = this.hasLineOfSight(sheriff.position, target.position) || this.hasLineOfSight(sheriff.position, killer.position);
+                    if (seesMurder && dist < 36) {
+                        this.ctx.setHasSheriffWitnessedMurder(true);
+                        this.ctx.addIncidentFeed(texts.incidents.sheriffWitnessed);
+                    }
                 }
             }
         }

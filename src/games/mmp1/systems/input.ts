@@ -29,6 +29,7 @@ export interface InputContext {
     setTouchDragging: (d: boolean) => void;
     toggleSound: () => void;
     onActivateInvisibility?: () => void;
+    getState?: () => string;
 }
 
 export class InputController {
@@ -95,6 +96,7 @@ export class InputController {
 
         this.ctx.container.addEventListener('click', (e: MouseEvent) => {
             if (hasMovedMouseSignificantly) return;
+            if (this.ctx.getState && this.ctx.getState() !== 'in_game') return;
             let coords = { x: 0, y: 0 };
             if (!this.ctx.isPointerLocked) {
                 const rect = this.ctx.container.getBoundingClientRect();
