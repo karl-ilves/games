@@ -5868,7 +5868,7 @@ try {
                 const initialYards = window.yardService.getYards();
                 const initialMoney = window.mmp1Game.crateManager.getMoney();
 
-                // Buy Pack 1: +100 € for 250 Y (250 Y > 100 €)
+                // Buy Pack 1: +100 € for 500 Y (500 Y > 100 €)
                 const buyBtn = document.getElementById('btn-buy-pack-money_pack_1');
                 buyBtn?.click();
 
@@ -5893,13 +5893,13 @@ try {
             if (!exchangeResult.isExchangeVisible || exchangeResult.packCount !== 4) {
                 throw new Error(`Exchange tab not properly displayed or pack count != 4: ${JSON.stringify(exchangeResult)}`);
             }
-            if (exchangeResult.moneyGained !== 100 || exchangeResult.yardsSpent !== 250) {
-                throw new Error(`Exchange math failed! Expected +100 € for 250 Y, got +${exchangeResult.moneyGained} € for ${exchangeResult.yardsSpent} Y`);
+            if (exchangeResult.moneyGained !== 100 || exchangeResult.yardsSpent !== 500) {
+                throw new Error(`Exchange math failed! Expected +100 € for 500 Y, got +${exchangeResult.moneyGained} € for ${exchangeResult.yardsSpent} Y`);
             }
             if (exchangeResult.yardsSpent <= exchangeResult.moneyGained) {
                 throw new Error(`Rule violated: Yards spent (${exchangeResult.yardsSpent}) must be more than money gained (${exchangeResult.moneyGained})!`);
             }
-            console.log('   Buying Game Cash with Yards verified (250 Y -> +100 €): ✅');
+            console.log('   Buying Game Cash with Yards verified (500 Y -> +100 €): ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 

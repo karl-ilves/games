@@ -647,15 +647,15 @@ export const MONEY_PACKS: MoneyPackDef[] = [
     {
         id: 'money_pack_1',
         moneyAmount: 100,
-        yardCost: 250,
+        yardCost: 500,
         badge: '💵',
         nameKey: 'pack1',
         color: '#2ecc71'
     },
     {
         id: 'money_pack_2',
-        moneyAmount: 250,
-        yardCost: 600,
+        moneyAmount: 500,
+        yardCost: 1000,
         badge: '💰',
         nameKey: 'pack2',
         color: '#3498db',
@@ -663,8 +663,8 @@ export const MONEY_PACKS: MoneyPackDef[] = [
     },
     {
         id: 'money_pack_3',
-        moneyAmount: 500,
-        yardCost: 1200,
+        moneyAmount: 2500,
+        yardCost: 5000,
         badge: '💎',
         nameKey: 'pack3',
         color: '#9b59b6',
@@ -672,8 +672,8 @@ export const MONEY_PACKS: MoneyPackDef[] = [
     },
     {
         id: 'money_pack_4',
-        moneyAmount: 1000,
-        yardCost: 2500,
+        moneyAmount: 5000,
+        yardCost: 10000,
         badge: '👑',
         nameKey: 'pack4',
         color: '#ffd32a'
