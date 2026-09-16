@@ -223,4 +223,41 @@ export class MmpCrateManager {
         this.saveInventory(inv);
         return true;
     }
+
+    public getSkinRefundAmount(skinId: string): number {
+        const skin = WEAPON_SKIN_CATALOG[skinId];
+        if (!skin) return 0;
+        const crate = CRATE_CATALOG[skin.tier];
+        if (!crate) return 100;
+        return Math.floor(crate.price / 2);
+    }
+
+    public deleteSkin(skinId: string): { success: boolean; refundAmount: number; message?: string } {
+        if (skinId === 'knife_default' || skinId === 'gun_default') {
+            return { success: false, refundAmount: 0, message: 'Algset vaikerelva ei saa kustutada!' };
+        }
+        const inv = this.getInventory();
+        const index = inv.skins.indexOf(skinId);
+        if (index === -1) {
+            return { success: false, refundAmount: 0, message: 'Relva ei leitud inventarist!' };
+        }
+
+        const refundAmount = this.getSkinRefundAmount(skinId);
+
+        // Remove from inventory skins
+        inv.skins.splice(index, 1);
+
+        // If equipped, reset to default
+        if (inv.equippedKnife === skinId) {
+            inv.equippedKnife = 'knife_default';
+        }
+        if (inv.equippedGun === skinId) {
+            inv.equippedGun = 'gun_default';
+        }
+
+        this.saveInventory(inv);
+        this.addMoney(refundAmount);
+
+        return { success: true, refundAmount };
+    }
 }

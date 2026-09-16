@@ -5,6 +5,7 @@ import { audio } from '../audio';
 import { MmpCrateManager } from '../state/crateManager';
 import { getLanguage, I18N } from '../i18n';
 import { yardService } from '../../../shared/yardService';
+import { showYardPurchaseConfirm } from '../../../shared/yardPurchaseModal';
 
 export interface CrateShopContext {
     crateManager: MmpCrateManager;
@@ -374,6 +375,8 @@ export class CrateShopUI {
             knifeSkins.forEach(skinId => {
                 const skin = WEAPON_SKIN_CATALOG[skinId];
                 const isEquipped = inv.equippedKnife === skinId;
+                const refund = this.ctx.crateManager.getSkinRefundAmount(skinId);
+                const isDefault = skinId === 'knife_default';
                 const card = document.createElement('div');
                 card.className = `inventory-item-card ${isEquipped ? 'equipped' : ''}`;
                 card.style.borderColor = skin.tierColor;
@@ -382,14 +385,33 @@ export class CrateShopUI {
                         ${getWeaponArtworkSvg(skin)}
                     </div>
                     <strong style="color: ${skin.tierColor}; font-size: 0.92rem;">${skin.name}</strong>
-                    <div style="font-size: 0.75rem; color: #aaa; margin: 2px 0 10px 0;">${skin.tierName}</div>
-                    <button class="btn-hud-action" id="btn-equip-${skinId}" style="width: 100%; justify-content: center; font-size: 0.8rem; background: ${isEquipped ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}; border-color: ${isEquipped ? '#2ecc71' : '#666'};">
-                        ${isEquipped ? texts.crateShop.equipped : texts.crateShop.equip}
-                    </button>
+                    <div style="font-size: 0.75rem; color: #aaa; margin: 2px 0 8px 0;">${skin.tierName}</div>
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        <button class="btn-hud-action" id="btn-equip-${skinId}" style="flex: 1; justify-content: center; font-size: 0.8rem; background: ${isEquipped ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}; border-color: ${isEquipped ? '#2ecc71' : '#666'};">
+                            ${isEquipped ? texts.crateShop.equipped : texts.crateShop.equip}
+                        </button>
+                        ${!isDefault ? `
+                            <button class="btn-delete-skin" id="btn-delete-${skinId}" title="Delete skin (+${refund} €)" style="background: rgba(255, 71, 87, 0.2); border: 1px solid #ff4757; color: #ff6b81; border-radius: 8px; padding: 4px 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; white-space: nowrap;">
+                                🗑️ +${refund}€
+                            </button>
+                        ` : ''}
+                    </div>
                 `;
                 const btnEquip = card.querySelector(`#btn-equip-${skinId}`) as HTMLButtonElement;
                 if (btnEquip && !isEquipped) {
                     btnEquip.onclick = () => this.ctx.equipSkin(skinId);
+                }
+                const btnDelete = card.querySelector(`#btn-delete-${skinId}`) as HTMLButtonElement;
+                if (btnDelete) {
+                    btnDelete.onclick = () => {
+                        const res = this.ctx.crateManager.deleteSkin(skinId);
+                        if (res.success) {
+                            audio.playCrateTick();
+                            this.renderInventory();
+                            this.updateYardUI();
+                            this.ctx.crateManager.updateMoneyUI();
+                        }
+                    };
                 }
                 knivesGrid.appendChild(card);
             });
@@ -403,6 +425,8 @@ export class CrateShopUI {
             gunSkins.forEach(skinId => {
                 const skin = WEAPON_SKIN_CATALOG[skinId];
                 const isEquipped = inv.equippedGun === skinId;
+                const refund = this.ctx.crateManager.getSkinRefundAmount(skinId);
+                const isDefault = skinId === 'gun_default';
                 const card = document.createElement('div');
                 card.className = `inventory-item-card ${isEquipped ? 'equipped' : ''}`;
                 card.style.borderColor = skin.tierColor;
@@ -411,14 +435,33 @@ export class CrateShopUI {
                         ${getWeaponArtworkSvg(skin)}
                     </div>
                     <strong style="color: ${skin.tierColor}; font-size: 0.92rem;">${skin.name}</strong>
-                    <div style="font-size: 0.75rem; color: #aaa; margin: 2px 0 10px 0;">${skin.tierName}</div>
-                    <button class="btn-hud-action" id="btn-equip-${skinId}" style="width: 100%; justify-content: center; font-size: 0.8rem; background: ${isEquipped ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}; border-color: ${isEquipped ? '#2ecc71' : '#666'};">
-                        ${isEquipped ? texts.crateShop.equipped : texts.crateShop.equip}
-                    </button>
+                    <div style="font-size: 0.75rem; color: #aaa; margin: 2px 0 8px 0;">${skin.tierName}</div>
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        <button class="btn-hud-action" id="btn-equip-${skinId}" style="flex: 1; justify-content: center; font-size: 0.8rem; background: ${isEquipped ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}; border-color: ${isEquipped ? '#2ecc71' : '#666'};">
+                            ${isEquipped ? texts.crateShop.equipped : texts.crateShop.equip}
+                        </button>
+                        ${!isDefault ? `
+                            <button class="btn-delete-skin" id="btn-delete-${skinId}" title="Delete skin (+${refund} €)" style="background: rgba(255, 71, 87, 0.2); border: 1px solid #ff4757; color: #ff6b81; border-radius: 8px; padding: 4px 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; white-space: nowrap;">
+                                🗑️ +${refund}€
+                            </button>
+                        ` : ''}
+                    </div>
                 `;
                 const btnEquip = card.querySelector(`#btn-equip-${skinId}`) as HTMLButtonElement;
                 if (btnEquip && !isEquipped) {
                     btnEquip.onclick = () => this.ctx.equipSkin(skinId);
+                }
+                const btnDelete = card.querySelector(`#btn-delete-${skinId}`) as HTMLButtonElement;
+                if (btnDelete) {
+                    btnDelete.onclick = () => {
+                        const res = this.ctx.crateManager.deleteSkin(skinId);
+                        if (res.success) {
+                            audio.playCrateTick();
+                            this.renderInventory();
+                            this.updateYardUI();
+                            this.ctx.crateManager.updateMoneyUI();
+                        }
+                    };
                 }
                 gunsGrid.appendChild(card);
             });
@@ -459,7 +502,7 @@ export class CrateShopUI {
                 <div style="font-size: 1.15rem; font-weight: 900; color: #fff; margin-bottom: 4px;">${packTitle}</div>
                 <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 12px;">${packDesc}</div>
                 <div style="font-size: 1.6rem; font-weight: 900; color: #2ecc71; margin-bottom: 8px;">+${pack.moneyAmount.toLocaleString()} €</div>
-                <button class="btn-buy-pack" id="btn-buy-pack-${pack.id}" ${!canAfford ? 'disabled' : ''}>
+                <button class="btn-buy-pack" id="btn-buy-pack-${pack.id}">
                     <span>${yardService.renderYardSvg(16)}</span>
                     <span>${texts.moneyExchange.buyBtn(pack.yardCost)}</span>
                 </button>
@@ -479,35 +522,41 @@ export class CrateShopUI {
         const texts = I18N[lang];
         const toastEl = document.getElementById('exchange-toast');
 
-        const success = yardService.spendYards(pack.yardCost, undefined, `MMP1 Money Pack: +${pack.moneyAmount} €`);
-        if (success) {
-            this.ctx.crateManager.addMoney(pack.moneyAmount);
-            audio.playCrateTick();
-            this.updateYardUI();
-            this.renderMoneyExchange();
+        showYardPurchaseConfirm({
+            itemName: `${pack.name} (+${pack.moneyAmount.toLocaleString()} €)`,
+            yardCost: pack.yardCost,
+            onConfirm: () => {
+                const success = yardService.spendYards(pack.yardCost, undefined, `MMP1 Money Pack: +${pack.moneyAmount} €`);
+                if (success) {
+                    this.ctx.crateManager.addMoney(pack.moneyAmount);
+                    audio.playCrateTick();
+                    this.updateYardUI();
+                    this.renderMoneyExchange();
 
-            if (toastEl) {
-                toastEl.textContent = texts.moneyExchange.successToast(pack.moneyAmount, pack.yardCost);
-                toastEl.style.display = 'block';
-                toastEl.style.background = 'rgba(46, 204, 113, 0.2)';
-                toastEl.style.border = '1px solid #2ecc71';
-                toastEl.style.color = '#2ecc71';
-                setTimeout(() => {
-                    if (toastEl) toastEl.style.display = 'none';
-                }, 4000);
+                    if (toastEl) {
+                        toastEl.textContent = texts.moneyExchange.successToast(pack.moneyAmount, pack.yardCost);
+                        toastEl.style.display = 'block';
+                        toastEl.style.background = 'rgba(46, 204, 113, 0.2)';
+                        toastEl.style.border = '1px solid #2ecc71';
+                        toastEl.style.color = '#2ecc71';
+                        setTimeout(() => {
+                            if (toastEl) toastEl.style.display = 'none';
+                        }, 4000);
+                    }
+                } else {
+                    if (toastEl) {
+                        toastEl.textContent = texts.moneyExchange.notEnoughYards(pack.yardCost, yardService.getYards());
+                        toastEl.style.display = 'block';
+                        toastEl.style.background = 'rgba(255, 46, 99, 0.2)';
+                        toastEl.style.border = '1px solid #ff2e63';
+                        toastEl.style.color = '#ff2e63';
+                        setTimeout(() => {
+                            if (toastEl) toastEl.style.display = 'none';
+                        }, 4000);
+                    }
+                }
             }
-        } else {
-            if (toastEl) {
-                toastEl.textContent = texts.moneyExchange.notEnoughYards(pack.yardCost, yardService.getYards());
-                toastEl.style.display = 'block';
-                toastEl.style.background = 'rgba(255, 46, 99, 0.2)';
-                toastEl.style.border = '1px solid #ff2e63';
-                toastEl.style.color = '#ff2e63';
-                setTimeout(() => {
-                    if (toastEl) toastEl.style.display = 'none';
-                }, 4000);
-            }
-        }
+        });
     }
 
     public triggerUnbox(tier: CrateTier): (WeaponSkinDef & { isDuplicate?: boolean; refundAmount?: number }) | null {

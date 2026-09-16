@@ -6,6 +6,7 @@ import { getItemThumbnailUrl } from '../shared/avatar/thumbnailGenerator';
 import { yardService } from '../shared/yardService';
 import { getPresetOutfits, getOutfitById } from '../shared/avatar/outfits';
 import { emoteAudio, EMOTE_SOUND_DEFS } from '../shared/avatar/EmoteAudio';
+import { showYardPurchaseConfirm } from '../shared/yardPurchaseModal';
 
 export class AvatarShopEditorModal {
     private modalEl: HTMLElement;
@@ -366,15 +367,35 @@ export class AvatarShopEditorModal {
                     const id = btn.getAttribute('data-equip-outfit-id');
                     const outfit = getOutfitById(id || '');
                     if (outfit) {
-                        const res = await avatarService.buyOutfit(outfit);
-                        this.updateYardBalance();
-                        if (res.success) {
-                            this.previewConfig = avatarService.getConfig();
-                            if (this.viewer) this.viewer.updateConfig(this.previewConfig);
-                            this.renderCatalogItems();
-                            this.showToast(res.message, '#2ecc71');
+                        const details = avatarService.getOutfitPriceDetails(outfit);
+                        if (details.unownedPrice > 0) {
+                            showYardPurchaseConfirm({
+                                itemName: outfit.name,
+                                yardCost: details.unownedPrice,
+                                onConfirm: async () => {
+                                    const res = await avatarService.buyOutfit(outfit);
+                                    this.updateYardBalance();
+                                    if (res.success) {
+                                        this.previewConfig = avatarService.getConfig();
+                                        if (this.viewer) this.viewer.updateConfig(this.previewConfig);
+                                        this.renderCatalogItems();
+                                        this.showToast(res.message, '#2ecc71');
+                                    } else {
+                                        this.showToast(res.message, '#ff4757');
+                                    }
+                                }
+                            });
                         } else {
-                            this.showToast(res.message, '#ff4757');
+                            const res = await avatarService.buyOutfit(outfit);
+                            this.updateYardBalance();
+                            if (res.success) {
+                                this.previewConfig = avatarService.getConfig();
+                                if (this.viewer) this.viewer.updateConfig(this.previewConfig);
+                                this.renderCatalogItems();
+                                this.showToast(res.message, '#2ecc71');
+                            } else {
+                                this.showToast(res.message, '#ff4757');
+                            }
                         }
                     }
                 });
@@ -463,16 +484,25 @@ export class AvatarShopEditorModal {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-buy-id');
                 if (!id) return;
-                const res = await avatarService.buyItem(id);
-                this.updateYardBalance();
-                if (res.success) {
-                    this.previewConfig = avatarService.getConfig();
-                    if (this.viewer) this.viewer.updateConfig(this.previewConfig);
-                    this.renderCatalogItems();
-                    this.showToast(res.message, '#2ecc71');
-                } else {
-                    this.showToast(res.message, '#ff4757');
-                }
+                const item = getItemById(id);
+                if (!item) return;
+
+                showYardPurchaseConfirm({
+                    itemName: item.name,
+                    yardCost: item.price,
+                    onConfirm: async () => {
+                        const res = await avatarService.buyItem(id);
+                        this.updateYardBalance();
+                        if (res.success) {
+                            this.previewConfig = avatarService.getConfig();
+                            if (this.viewer) this.viewer.updateConfig(this.previewConfig);
+                            this.renderCatalogItems();
+                            this.showToast(res.message, '#2ecc71');
+                        } else {
+                            this.showToast(res.message, '#ff4757');
+                        }
+                    }
+                });
             });
         });
 

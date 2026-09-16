@@ -1,4 +1,5 @@
 import { yardService } from '../../../shared/yardService';
+import { showYardPurchaseConfirm } from '../../../shared/yardPurchaseModal';
 import { VEHICLES } from '../catalog';
 import { RacingState } from '../state/racingState';
 
@@ -223,19 +224,21 @@ export class GarageUI {
     public buyVehicleWithYards(id: string): void {
         const vDef = VEHICLES.find(v => v.id === id);
         if (!vDef || this.state.unlockedVehicles.includes(id)) return;
-        if (yardService.getYards() < vDef.yardPrice) {
-            alert(`Not enough Yards! You need ${vDef.yardPrice} Yards. (You have: ${yardService.getYards()} Y)`);
-            return;
-        }
 
-        if (yardService.spendYards(vDef.yardPrice, vDef.id, vDef.name)) {
-            this.state.unlockedVehicles.push(id);
-            this.state.saveProgress();
-            this.state.vehicleType = id;
-            this.onVehicleSelected(id);
-            this.updateGarageUI();
-            alert(`💎 Unlocked ${vDef.name} for ${vDef.yardPrice} Yards!`);
-        }
+        showYardPurchaseConfirm({
+            itemName: vDef.name,
+            yardCost: vDef.yardPrice,
+            onConfirm: () => {
+                if (yardService.spendYards(vDef.yardPrice, vDef.id, vDef.name)) {
+                    this.state.unlockedVehicles.push(id);
+                    this.state.saveProgress();
+                    this.state.vehicleType = id;
+                    this.onVehicleSelected(id);
+                    this.updateGarageUI();
+                    alert(`💎 Unlocked ${vDef.name} for ${vDef.yardPrice} Yards!`);
+                }
+            }
+        });
     }
 
     public unlockLevel(level: number, method: 'cash' | 'yards'): void {
@@ -244,29 +247,49 @@ export class GarageUI {
             if (method === 'cash') {
                 if (this.state.money < 10000) return alert('Not enough cash! Level 2 costs $10,000.');
                 this.state.money -= 10000;
+                this.state.level2Unlocked = true;
+                this.state.selectedLevel = 2;
+                this.state.saveProgress();
+                this.updateGarageUI();
+                alert(`🌲 Level 2: Forest Track unlocked with $10,000 cash!`);
             } else {
-                if (yardService.getYards() < 50) return alert('Not enough Yards! Level 2 costs 50 Yards.');
-                if (!yardService.spendYards(50, 'level_2_forest', 'Level 2: Forest Track')) return;
+                showYardPurchaseConfirm({
+                    itemName: 'Level 2: Forest Track',
+                    yardCost: 50,
+                    onConfirm: () => {
+                        if (!yardService.spendYards(50, 'level_2_forest', 'Level 2: Forest Track')) return;
+                        this.state.level2Unlocked = true;
+                        this.state.selectedLevel = 2;
+                        this.state.saveProgress();
+                        this.updateGarageUI();
+                        alert(`🌲 Level 2: Forest Track unlocked with 50 Yards!`);
+                    }
+                });
             }
-            this.state.level2Unlocked = true;
-            this.state.selectedLevel = 2;
-            this.state.saveProgress();
-            this.updateGarageUI();
-            alert(`🌲 Level 2: Forest Track unlocked with ${method === 'cash' ? '$10,000 cash' : '50 Yards'}!`);
         } else if (level === 3) {
             if (this.state.level3Unlocked) return;
             if (method === 'cash') {
                 if (this.state.money < 100000) return alert('Not enough cash! Level 3 costs $100,000.');
                 this.state.money -= 100000;
+                this.state.level3Unlocked = true;
+                this.state.selectedLevel = 3;
+                this.state.saveProgress();
+                this.updateGarageUI();
+                alert(`🌾 Level 3: Field Track unlocked with $100,000 cash!`);
             } else {
-                if (yardService.getYards() < 200) return alert('Not enough Yards! Level 3 costs 200 Yards.');
-                if (!yardService.spendYards(200, 'level_3_field', 'Level 3: Field Track')) return;
+                showYardPurchaseConfirm({
+                    itemName: 'Level 3: Field Track',
+                    yardCost: 200,
+                    onConfirm: () => {
+                        if (!yardService.spendYards(200, 'level_3_field', 'Level 3: Field Track')) return;
+                        this.state.level3Unlocked = true;
+                        this.state.selectedLevel = 3;
+                        this.state.saveProgress();
+                        this.updateGarageUI();
+                        alert(`🌾 Level 3: Field Track unlocked with 200 Yards!`);
+                    }
+                });
             }
-            this.state.level3Unlocked = true;
-            this.state.selectedLevel = 3;
-            this.state.saveProgress();
-            this.updateGarageUI();
-            alert(`🌾 Level 3: Field Track unlocked with ${method === 'cash' ? '$100,000 cash' : '200 Yards'}!`);
         }
     }
 

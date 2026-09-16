@@ -134,9 +134,12 @@ export const I18N = {
             itemTypeDuplicate: (amount: number) => `♻️ DUPLIKAAT (+${amount} €)`,
             itemTypeKnife: '🔪 UUS NOANAHK',
             itemTypeGun: '🔫 UUS REVOLVRINAHK',
-            equipSetBtn: 'VARUSTA KOMPLEKT 👑',
-            equipNowBtn: 'VARUSTA KOHE ⚔️',
-            closeBtn: 'SULGE ✕'
+            equipSetBtn: 'TAKE SET 👑',
+            equipNowBtn: 'TAKE ⚔️',
+            closeBtn: 'CLOSE ✕',
+            deleteBtn: (amount: number) => `🗑️ +${amount} €`,
+            deleteBtnTitle: (amount: number) => `Kustuta relv ja saa tagasi +${amount} € (sama mis kasti duplikaadist)`,
+            deleteConfirm: (name: string, amount: number) => `Kas soovid kindlasti relva "${name}" kustutada? Saad selle eest +${amount} €!`
         },
         moneyExchange: {
             title: 'OSTA MÄNGURAHA YARDIDE EEST',
@@ -289,9 +292,12 @@ export const I18N = {
             itemTypeDuplicate: (amount: number) => `♻️ DUPLICATE (+${amount} €)`,
             itemTypeKnife: '🔪 NEW KNIFE SKIN',
             itemTypeGun: '🔫 NEW REVOLVER SKIN',
-            equipSetBtn: 'EQUIP BUNDLE 👑',
-            equipNowBtn: 'EQUIP NOW ⚔️',
-            closeBtn: 'CLOSE ✕'
+            equipSetBtn: 'TAKE SET 👑',
+            equipNowBtn: 'TAKE ⚔️',
+            closeBtn: 'CLOSE ✕',
+            deleteBtn: (amount: number) => `🗑️ +${amount} €`,
+            deleteBtnTitle: (amount: number) => `Delete weapon and receive +${amount} € (same as crate duplicate refund)`,
+            deleteConfirm: (name: string, amount: number) => `Are you sure you want to delete "${name}"? You will receive +${amount} €!`
         },
         moneyExchange: {
             title: 'BUY GAME CASH WITH YARDS',

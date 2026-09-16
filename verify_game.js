@@ -953,8 +953,17 @@ try {
         // Test Buying and Equipping an Outfit (Golden Monarch / Emperor)
         const equipOutfitBtn = await page.$('[data-equip-outfit-id="outfit_golden_emperor"]');
         if (!equipOutfitBtn) throw new Error("Missing 'Equip Outfit' button for outfit_golden_emperor");
+        await page.evaluate(() => {
+            window.__YARD_COUNTDOWN_TICK_MS__ = 40;
+        });
         await page.click('[data-equip-outfit-id="outfit_golden_emperor"]');
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 300));
+        const confirmBuyBtn = await page.$('#btn-yard-purchase-confirm');
+        if (confirmBuyBtn) {
+            await page.click('#btn-yard-purchase-confirm');
+            await new Promise(r => setTimeout(r, 200));
+        }
+        await new Promise(r => setTimeout(r, 300));
         await page.evaluate(() => {
             if (window.__origHasItem) window.playardAvatar.hasItem = window.__origHasItem;
             window.playardAvatarShop?.renderCatalogItems();
@@ -5844,62 +5853,160 @@ try {
             }
             console.log('   MMP1 Dual Localization verified (English for everyone, Estonian for Playard Owner): ✅');
 
-            // Test Buying Money with Yards (More Yards than cash received: 250 Y > 100 €)
-            console.log('   Testing Buying Game Cash (€) with Yards (Yard cost > Cash amount):');
-            const exchangeResult = await page.evaluate(() => {
-                // Ensure guest mode so Yards are finite and decremented on spend
+            // Test Yard Purchase Confirmation Modal & Buying Money Pack
+            console.log('   Testing Yard Purchase Confirmation Modal (Are you sure, 54321 countdown, Not enough Yards):');
+            
+            // 1. Test "Not enough Yards" state in Confirmation Modal
+            const lowBalanceTest = await page.evaluate(async () => {
+                // Ensure guest mode so Yards are finite
                 localStorage.removeItem('playard_current_user_profile');
                 window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: null } }));
                 window.yardService.onUserLogout();
 
-                window.yardService.data.yards = 5000;
+                window.yardService.data.yards = 50; // Not enough for 500 Y pack
                 window.yardService.saveLocally(window.yardService.data);
 
                 const crateUI = window.mmp1Game.crateShopUI;
                 crateUI.openCrateShop();
                 crateUI.switchCrateShopTab('exchange');
 
-                const exchangeView = document.getElementById('tab-exchange-view');
-                const isExchangeVisible = window.getComputedStyle(exchangeView).display !== 'none';
+                const buyBtn = document.getElementById('btn-buy-pack-money_pack_1');
+                buyBtn?.click();
 
-                const packCards = document.querySelectorAll('.money-pack-card');
-                const packCount = packCards.length;
+                const overlay = document.getElementById('yard-purchase-modal-overlay');
+                const title = document.getElementById('yard-purchase-title')?.textContent?.trim() || '';
+                const cost = document.getElementById('yard-purchase-cost')?.textContent?.trim() || '';
+                const error = document.getElementById('yard-purchase-error')?.textContent?.trim() || '';
+                const confirmBtn = document.getElementById('btn-yard-purchase-confirm');
+                const cancelBtn = document.getElementById('btn-yard-purchase-cancel');
+
+                const isConfirmDisabled = confirmBtn ? confirmBtn.disabled : false;
+                const confirmText = confirmBtn ? confirmBtn.textContent?.trim() : '';
+
+                // Close modal
+                cancelBtn?.click();
+
+                return {
+                    hasOverlay: !!overlay,
+                    title,
+                    cost,
+                    error,
+                    isConfirmDisabled,
+                    confirmText
+                };
+            });
+            console.log(`     Low balance modal test: title="${lowBalanceTest.title}", error="${lowBalanceTest.error}", btnText="${lowBalanceTest.confirmText}", disabled=${lowBalanceTest.isConfirmDisabled}`);
+            if (!lowBalanceTest.title.includes('Are you sure') || !lowBalanceTest.error.includes('Not enough Yards') || !lowBalanceTest.isConfirmDisabled) {
+                throw new Error(`Yard purchase modal should show 'Are you sure?', 'Not enough Yards!' and disabled button when funds insufficient! Got: ${JSON.stringify(lowBalanceTest)}`);
+            }
+
+            // 2. Test 5-4-3-2-1 countdown and successful purchase
+            const confirmTest = await page.evaluate(async () => {
+                window.yardService.data.yards = 5000;
+                window.yardService.saveLocally(window.yardService.data);
+                window.__YARD_COUNTDOWN_TICK_MS__ = 50; // Fast tick for test
 
                 const initialYards = window.yardService.getYards();
                 const initialMoney = window.mmp1Game.crateManager.getMoney();
 
-                // Buy Pack 1: +100 € for 500 Y (500 Y > 100 €)
                 const buyBtn = document.getElementById('btn-buy-pack-money_pack_1');
                 buyBtn?.click();
+
+                const confirmBtn = document.getElementById('btn-yard-purchase-confirm');
+                const initialBtnText = confirmBtn?.textContent?.trim() || '';
+                const initialDisabled = confirmBtn?.disabled;
+
+                // Wait 350ms for 50ms * 5 ticks to finish
+                await new Promise(r => setTimeout(r, 350));
+
+                const readyBtnText = confirmBtn?.textContent?.trim() || '';
+                const readyDisabled = confirmBtn?.disabled;
+
+                // Click Buy
+                confirmBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
 
                 const afterYards = window.yardService.getYards();
                 const afterMoney = window.mmp1Game.crateManager.getMoney();
 
-                const toast = document.getElementById('exchange-toast')?.textContent || '';
-
                 return {
-                    isExchangeVisible,
-                    packCount,
+                    initialBtnText,
+                    initialDisabled,
+                    readyBtnText,
+                    readyDisabled,
                     initialYards,
                     afterYards,
                     yardsSpent: initialYards - afterYards,
                     initialMoney,
                     afterMoney,
-                    moneyGained: afterMoney - initialMoney,
-                    toast
+                    moneyGained: afterMoney - initialMoney
                 };
             });
-            console.log(`     Exchange test: visible=${exchangeResult.isExchangeVisible}, packs=${exchangeResult.packCount}, spent=${exchangeResult.yardsSpent} Y, gained=${exchangeResult.moneyGained} €`);
-            if (!exchangeResult.isExchangeVisible || exchangeResult.packCount !== 4) {
-                throw new Error(`Exchange tab not properly displayed or pack count != 4: ${JSON.stringify(exchangeResult)}`);
+            console.log(`     Countdown test: initial="${confirmTest.initialBtnText}" (disabled=${confirmTest.initialDisabled}), ready="${confirmTest.readyBtnText}" (disabled=${confirmTest.readyDisabled}), spent=${confirmTest.yardsSpent} Y, gained=${confirmTest.moneyGained} €`);
+            if (!confirmTest.initialBtnText.includes('Buy (5)') || !confirmTest.initialDisabled) {
+                throw new Error(`Buy button should initially show 'Buy (5)' and be disabled! Got: ${confirmTest.initialBtnText}`);
             }
-            if (exchangeResult.moneyGained !== 100 || exchangeResult.yardsSpent !== 500) {
-                throw new Error(`Exchange math failed! Expected +100 € for 500 Y, got +${exchangeResult.moneyGained} € for ${exchangeResult.yardsSpent} Y`);
+            if (confirmTest.readyBtnText !== 'Buy' || confirmTest.readyDisabled) {
+                throw new Error(`Buy button should unlock to 'Buy' after countdown! Got: ${confirmTest.readyBtnText}`);
             }
-            if (exchangeResult.yardsSpent <= exchangeResult.moneyGained) {
-                throw new Error(`Rule violated: Yards spent (${exchangeResult.yardsSpent}) must be more than money gained (${exchangeResult.moneyGained})!`);
+            if (confirmTest.moneyGained !== 100 || confirmTest.yardsSpent !== 500) {
+                throw new Error(`Exchange math failed! Expected +100 € for 500 Y, got +${confirmTest.moneyGained} € for ${confirmTest.yardsSpent} Y`);
             }
-            console.log('   Buying Game Cash with Yards verified (500 Y -> +100 €): ✅');
+            console.log('   Yard Purchase confirmation modal and countdown verified: ✅');
+
+            // 3. Test Unboxing Modal Buttons (TAKE ⚔️ and CLOSE ✕)
+            const unboxingButtonsTest = await page.evaluate(() => {
+                const btnEquip = document.getElementById('btn-unboxing-equip');
+                const btnClose = document.getElementById('btn-unboxing-close');
+                return {
+                    equipText: btnEquip?.textContent?.trim() || '',
+                    closeText: btnClose?.textContent?.trim() || ''
+                };
+            });
+            console.log(`     Unboxing buttons: Equip="${unboxingButtonsTest.equipText}", Close="${unboxingButtonsTest.closeText}"`);
+            if (!unboxingButtonsTest.equipText.includes('TAKE') || !unboxingButtonsTest.closeText.includes('CLOSE')) {
+                throw new Error(`Unboxing buttons should be TAKE and CLOSE! Got: ${JSON.stringify(unboxingButtonsTest)}`);
+            }
+            console.log('   MMP1 Unboxing buttons (TAKE ⚔️ and CLOSE ✕) verified: ✅');
+
+            // 4. Test Weapon Deletion with duplicate refund in MMP1 inventory
+            const weaponDeleteTest = await page.evaluate(() => {
+                const crateMgr = window.mmp1Game.crateManager;
+                // Add knife_epic (epic crate, price 400 €, refund = Math.floor(400/2) = 200 €)
+                const inv = crateMgr.getInventory();
+                if (!inv.skins.includes('knife_epic')) {
+                    inv.skins.push('knife_epic');
+                    crateMgr.saveInventory(inv);
+                }
+                const moneyBefore = crateMgr.getMoney();
+                const expectedRefund = crateMgr.getSkinRefundAmount('knife_epic');
+
+                const crateUI = window.mmp1Game.crateShopUI;
+                crateUI.switchCrateShopTab('inventory');
+
+                const deleteBtn = document.getElementById('btn-delete-knife_epic');
+                if (!deleteBtn) {
+                    return { success: false, reason: 'Missing delete button for knife_epic' };
+                }
+
+                deleteBtn.click();
+
+                const moneyAfter = crateMgr.getMoney();
+                const invAfter = crateMgr.getInventory();
+                const skinStillExists = invAfter.skins.includes('knife_epic');
+
+                return {
+                    success: true,
+                    expectedRefund,
+                    moneyGained: moneyAfter - moneyBefore,
+                    skinDeleted: !skinStillExists
+                };
+            });
+            console.log(`     Weapon delete test: refund=${weaponDeleteTest.moneyGained} € (expected: ${weaponDeleteTest.expectedRefund} €), deleted=${weaponDeleteTest.skinDeleted}`);
+            if (!weaponDeleteTest.success || !weaponDeleteTest.skinDeleted || weaponDeleteTest.moneyGained !== weaponDeleteTest.expectedRefund) {
+                throw new Error(`Weapon deletion test failed: ${JSON.stringify(weaponDeleteTest)}`);
+            }
+            console.log('   MMP1 Weapon deletion and duplicate refund verified: ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 

@@ -1,4 +1,5 @@
 import { yardService } from '../../../shared/yardService';
+import { showYardPurchaseConfirm } from '../../../shared/yardPurchaseModal';
 import { trainAudio } from '../audio';
 import { TRAINS_CATALOG } from '../catalog';
 import { getT, getTrainDesc, getTrainName } from '../i18n';
@@ -194,19 +195,25 @@ function buyTrainWithYards(
     const train = TRAINS_CATALOG.find(tr => tr.id === trainId);
     if (!train) return;
 
-    const success = yardService.spendYards(yardPrice, train.id, `Train purchase: ${getTrainName(train)}`);
-    if (!success) {
-        showDepotMessage(t.notEnoughYards(yardPrice, yardService.getYards()), true);
-        return;
-    }
+    showYardPurchaseConfirm({
+        itemName: getTrainName(train),
+        yardCost: yardPrice,
+        onConfirm: () => {
+            const success = yardService.spendYards(yardPrice, train.id, `Train purchase: ${getTrainName(train)}`);
+            if (!success) {
+                showDepotMessage(t.notEnoughYards(yardPrice, yardService.getYards()), true);
+                return;
+            }
 
-    const unlocked = getUnlockedTrainIds();
-    if (!unlocked.includes(trainId)) {
-        unlocked.push(trainId);
-        saveUnlockedTrainIds(unlocked);
-    }
+            const unlocked = getUnlockedTrainIds();
+            if (!unlocked.includes(trainId)) {
+                unlocked.push(trainId);
+                saveUnlockedTrainIds(unlocked);
+            }
 
-    trainAudio.playCoinReward();
-    showDepotMessage(t.boughtSuccessYard(getTrainName(train), yardPrice), false);
-    onSelectTrain(train);
+            trainAudio.playCoinReward();
+            showDepotMessage(t.boughtSuccessYard(getTrainName(train), yardPrice), false);
+            onSelectTrain(train);
+        }
+    });
 }
