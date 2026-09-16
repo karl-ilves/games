@@ -5842,14 +5842,14 @@ try {
             if (!localizationCheck.guestShopBtn.includes('CRATE SHOP') && !localizationCheck.guestShopBtn.includes('SHOP')) {
                 throw new Error(`Guest should see English 'CRATE SHOP' tab! Got: ${localizationCheck.guestShopBtn}`);
             }
-            if (!localizationCheck.guestExchangeBtn.includes('BUY CASH')) {
-                throw new Error(`Guest should see English 'BUY CASH' tab! Got: ${localizationCheck.guestExchangeBtn}`);
+            if (!localizationCheck.guestExchangeBtn.includes('SHOP')) {
+                throw new Error(`Guest should see English 'SHOP' tab! Got: ${localizationCheck.guestExchangeBtn}`);
             }
             if (!localizationCheck.ownerShopBtn.includes('KASTIPOOD')) {
                 throw new Error(`Owner should see Estonian 'KASTIPOOD' tab! Got: ${localizationCheck.ownerShopBtn}`);
             }
-            if (!localizationCheck.ownerExchangeBtn.includes('OSTA RAHA')) {
-                throw new Error(`Owner should see Estonian 'OSTA RAHA' tab! Got: ${localizationCheck.ownerExchangeBtn}`);
+            if (!localizationCheck.ownerExchangeBtn.includes('POOD')) {
+                throw new Error(`Owner should see Estonian 'POOD' tab! Got: ${localizationCheck.ownerExchangeBtn}`);
             }
             console.log('   MMP1 Dual Localization verified (English for everyone, Estonian for Playard Owner): ✅');
 
@@ -6007,6 +6007,123 @@ try {
                 throw new Error(`Weapon deletion test failed: ${JSON.stringify(weaponDeleteTest)}`);
             }
             console.log('   MMP1 Weapon deletion and duplicate refund verified: ✅');
+
+            // 5. Test Game Passes (2X Money and Invisibility Cloak)
+            console.log('   Testing MMP1 Game Passes (2X Money Forever & Invisibility Cloak):');
+            const gamePassTest = await page.evaluate(async () => {
+                const crateMgr = window.mmp1Game.crateManager;
+                const crateUI = window.mmp1Game.crateShopUI;
+                crateUI.switchCrateShopTab('exchange');
+
+                // Check UI grid
+                const passGrid = document.getElementById('game-passes-grid');
+                const btn2x = document.getElementById('btn-buy-pass-gamepass_2x_money');
+                const btnInvis = document.getElementById('btn-buy-pass-gamepass_invis_cloak');
+                const hotbarSlot = document.getElementById('slot-invis');
+
+                const initialPassCount = passGrid?.children?.length || 0;
+                const slotInitiallyHidden = hotbarSlot?.style.display === 'none';
+
+                // Give player plenty of Yards and set fast countdown tick
+                window.yardService.data.yards = 10000;
+                window.yardService.saveLocally(window.yardService.data);
+                window.__YARD_COUNTDOWN_TICK_MS__ = 50;
+
+                // Purchase 2X Money pass
+                btn2x?.click();
+                const confirm2x = document.getElementById('btn-yard-purchase-confirm');
+                await new Promise(r => setTimeout(r, 350));
+                confirm2x?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const has2x = crateMgr.hasGamePass('gamepass_2x_money');
+                const moneyBefore = crateMgr.getMoney();
+                crateMgr.addMoney(50); // Should add 100 € due to 2X multiplier
+                const moneyAfter = crateMgr.getMoney();
+                const moneyDelta = moneyAfter - moneyBefore;
+
+                // Purchase Invisibility Cloak pass
+                btnInvis?.click();
+                const confirmInvis = document.getElementById('btn-yard-purchase-confirm');
+                await new Promise(r => setTimeout(r, 350));
+                confirmInvis?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const hasInvis = crateMgr.hasGamePass('gamepass_invis_cloak');
+                const slotNowVisible = hotbarSlot?.style.display === 'flex' || hotbarSlot?.style.display === '';
+
+                // Record initial mesh opacities
+                const initialOpacities = [];
+                window.mmp1Game.playerChar.mesh.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        const mats = Array.isArray(child.material) ? child.material : [child.material];
+                        mats.forEach(m => initialOpacities.push(m.opacity ?? 1.0));
+                    }
+                });
+
+                // Test Invisibility activation during game
+                window.mmp1Game.state = 'in_game';
+                window.mmp1Game.playerChar.isAlive = true;
+                const activated = window.mmp1Game.activateInvisibility();
+                const isInvis = window.mmp1Game.isPlayerInvisible;
+
+                // Check player mesh opacity
+                let isMeshTranslucent = false;
+                window.mmp1Game.playerChar.mesh.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        const mats = Array.isArray(child.material) ? child.material : [child.material];
+                        mats.forEach(m => {
+                            if (m.opacity <= 0.3) isMeshTranslucent = true;
+                        });
+                    }
+                });
+
+                // Reset
+                window.mmp1Game.invisibilitySystem.reset();
+                const isInvisAfterReset = window.mmp1Game.isPlayerInvisible;
+                let isMeshRestored = true;
+                let idx = 0;
+                window.mmp1Game.playerChar.mesh.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        const mats = Array.isArray(child.material) ? child.material : [child.material];
+                        mats.forEach(m => {
+                            if (Math.abs((m.opacity ?? 1.0) - initialOpacities[idx]) > 0.01) {
+                                isMeshRestored = false;
+                            }
+                            idx++;
+                        });
+                    }
+                });
+
+                return {
+                    initialPassCount,
+                    has2x,
+                    moneyDelta,
+                    hasInvis,
+                    slotInitiallyHidden,
+                    slotNowVisible,
+                    activated,
+                    isInvis,
+                    isMeshTranslucent,
+                    isInvisAfterReset,
+                    isMeshRestored
+                };
+            });
+
+            console.log(`     Game Pass results: Passes in grid=${gamePassTest.initialPassCount}, 2X Money: owned=${gamePassTest.has2x} (delta=${gamePassTest.moneyDelta} €), Invis: owned=${gamePassTest.hasInvis}, slotVisible=${gamePassTest.slotNowVisible}, activated=${gamePassTest.activated}, isInvis=${gamePassTest.isInvis}, translucent=${gamePassTest.isMeshTranslucent}, restored=${gamePassTest.isMeshRestored}`);
+            if (!gamePassTest.has2x || gamePassTest.moneyDelta !== 100) {
+                throw new Error(`2X Money pass failed! Owned: ${gamePassTest.has2x}, Money gained for +50: ${gamePassTest.moneyDelta} € (expected 100)`);
+            }
+            if (!gamePassTest.hasInvis || !gamePassTest.slotNowVisible) {
+                throw new Error(`Invisibility Cloak purchase failed to unlock or show hotbar slot! Owned: ${gamePassTest.hasInvis}, Slot visible: ${gamePassTest.slotNowVisible}`);
+            }
+            if (!gamePassTest.activated || !gamePassTest.isInvis || !gamePassTest.isMeshTranslucent) {
+                throw new Error(`Invisibility activation failed! Activated: ${gamePassTest.activated}, isInvis: ${gamePassTest.isInvis}, translucent: ${gamePassTest.isMeshTranslucent}`);
+            }
+            if (gamePassTest.isInvisAfterReset || !gamePassTest.isMeshRestored) {
+                throw new Error(`Invisibility reset failed! isInvisAfterReset: ${gamePassTest.isInvisAfterReset}, restored: ${gamePassTest.isMeshRestored}`);
+            }
+            console.log('   MMP1 Game Passes (2X Money & Invisibility Cloak) verified: ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 

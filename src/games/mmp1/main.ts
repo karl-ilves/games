@@ -21,6 +21,7 @@ import { RoundManager } from "./world/roundManager";
 import { handleSetAdminRole } from "./systems/roleManager";
 import { handleEquipSkin } from "./systems/weaponLoadout";
 import { createGameSystems } from "./systems/systemFactories";
+import { InvisibilitySystem } from "./systems/invisibilitySystem";
 
 (window as any).yardService = yardService;
 
@@ -67,6 +68,7 @@ export class MurderMysteryGame {
     public hudUI!: HudUI;
     public roundManager!: RoundManager;
     public inputController!: InputController;
+    public invisibilitySystem!: InvisibilitySystem;
     public muzzleFlashLight: THREE.PointLight | null = null;
 
     constructor() {
@@ -105,6 +107,7 @@ export class MurderMysteryGame {
         this.adminPanelUI = sys.adminPanelUI;
         this.roundManager = sys.roundManager;
         this.inputController = sys.inputController;
+        this.invisibilitySystem = sys.invisibilitySystem;
 
         this.buildMansion();
         this.emotesWidget = new InGameEmotesWidget({ getAvatarRig: () => this.playerChar?.avatarRig, topOffset: 70, leftOffset: 16 });
@@ -122,6 +125,7 @@ export class MurderMysteryGame {
             this.hudUI?.updateRoleHud();
             this.crateShopUI?.renderCrateShop();
             this.crateShopUI?.renderInventory();
+            this.invisibilitySystem?.updateSlotVisibility();
         });
 
         this.updateYardDisplay();
@@ -205,7 +209,12 @@ export class MurderMysteryGame {
         else if (this.playerChar.role === "sheriff") this.combatSystem.performSheriffShoot(this.playerChar, coords);
     }
 
-    public endRound(winner: "sheriff_win" | "murderer_win" | "time_out", reason: string) { this.roundManager.endRound(winner, reason); }
+    public endRound(winner: "sheriff_win" | "murderer_win" | "time_out", reason: string) {
+        this.invisibilitySystem?.reset();
+        this.roundManager.endRound(winner, reason);
+    }
+    public activateInvisibility() { return this.invisibilitySystem?.activateInvisibility(); }
+    public get isPlayerInvisible(): boolean { return !!this.invisibilitySystem?.getIsInvisible(); }
     public triggerUnbox(tier: any) { return this.crateShopUI.triggerUnbox(tier); }
     public renderCrateShop() { this.crateShopUI.renderCrateShop(); }
     public renderInventory() { this.crateShopUI.renderInventory(); }
@@ -247,7 +256,8 @@ export class MurderMysteryGame {
             addIncidentFeed: (t) => this.addIncidentFeed(t),
             performMurdererSlash: (c) => this.combatSystem.performMurdererSlash(c),
             performSheriffShoot: (c) => this.combatSystem.performSheriffShoot(c),
-            pickUpDroppedGun: (c) => this.combatSystem.pickUpDroppedGun(c)
+            pickUpDroppedGun: (c) => this.combatSystem.pickUpDroppedGun(c),
+            isPlayerInvisible: this.isPlayerInvisible
         });
     }
 
@@ -255,7 +265,10 @@ export class MurderMysteryGame {
         handleEquipSkin(skinId, this.playerChar, this.crateManager, this.crateShopUI, () => this.updateRoleHud());
     }
 
-    public returnToLobby() { this.roundManager.returnToLobby(); }
+    public returnToLobby() {
+        this.invisibilitySystem?.reset();
+        this.roundManager.returnToLobby();
+    }
 
     public setAdminRole(role: Role) {
         handleSetAdminRole(

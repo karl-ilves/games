@@ -1365,6 +1365,11 @@
             <span>🪙</span>
             <span class="hotbar-name">Mündid</span>
         </div>
+        <div class="hotbar-slot" id="slot-invis" style="display: none; border-color: #a55eea; color: #a55eea; cursor: pointer;">
+            <span class="hotbar-key">3</span>
+            <span>🧥</span>
+            <span class="hotbar-name" id="slot-invis-name">Invisible</span>
+        </div>
     </div>
 
     <!-- Mobile Virtual Controls (Touch Joystick & Buttons) -->
@@ -1373,6 +1378,7 @@
             <div class="touch-joystick-knob" id="touch-joystick-knob"></div>
         </div>
         <div class="touch-action-buttons">
+            <button class="mobile-btn" id="btn-mobile-invis" style="display: none; background: rgba(165, 94, 234, 0.7); border-color: #a55eea;" title="Invisible Cloak">🧥</button>
             <button class="mobile-btn" id="btn-mobile-action" style="background: rgba(255, 46, 99, 0.65);" title="Attack / Shoot">⚔️</button>
             <button class="mobile-btn" id="btn-mobile-interact" style="background: rgba(255, 211, 42, 0.65); border-color: #ffd32a;" title="Interact / Pick up Gun">✋</button>
         </div>
@@ -1429,7 +1435,7 @@
             <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-shrink: 0; flex-wrap: wrap;">
                 <button class="crate-tab-btn active" id="btn-tab-shop">📦 KASTIPOOD (SHOP)</button>
                 <button class="crate-tab-btn" id="btn-tab-inventory">🎒 MINU INVENTAR (INVENTORY)</button>
-                <button class="crate-tab-btn" id="btn-tab-exchange" style="border-color: #2ecc71; color: #2ecc71;">💶 OSTA RAHA (BUY CASH)</button>
+                <button class="crate-tab-btn" id="btn-tab-exchange" style="border-color: #2ecc71; color: #2ecc71;">🛒 POOD (SHOP)</button>
             </div>
 
             <!-- Shop Tab -->
@@ -1439,13 +1445,26 @@
                 </div>
             </div>
 
-            <!-- Money Exchange Tab -->
+            <!-- Shop Tab (Game Passes & Cash Packs) -->
             <div id="tab-exchange-view" style="display: none;" class="exchange-section">
                 <div style="margin-bottom: 16px; background: rgba(46, 204, 113, 0.08); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 14px; padding: 14px 18px;">
-                    <h3 id="exchange-view-title" style="margin: 0 0 6px 0; color: #2ecc71; font-size: 1.25rem; letter-spacing: 0.5px;">OSTA MÄNGURAHA YARDIDE EEST</h3>
-                    <div id="exchange-view-subtitle" style="font-size: 0.88rem; color: #ccc;">Vaheta oma Playard Yardid mänguraha (€) vastu! Yarde maksad rohkem kui saad raha.</div>
+                    <h3 id="exchange-view-title" style="margin: 0 0 6px 0; color: #2ecc71; font-size: 1.25rem; letter-spacing: 0.5px;">MMP1 POOD (GAME PASSID JA MÄNGURAHA)</h3>
+                    <div id="exchange-view-subtitle" style="font-size: 0.88rem; color: #ccc;">Osta spetsiaalseid Game Passe ja mänguraha Yardide eest!</div>
                     <div id="exchange-toast" style="display: none; margin-top: 10px; padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;"></div>
                 </div>
+
+                <!-- 1. Game Passes Section -->
+                <h3 id="game-passes-section-title" style="color: #ffd32a; margin: 0 0 12px 0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <span>👑</span> <span>GAME PASSID</span>
+                </h3>
+                <div class="game-passes-grid" id="game-passes-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 24px;">
+                    <!-- Game passes dynamically rendered -->
+                </div>
+
+                <!-- 2. Cash Packs Section -->
+                <h3 id="cash-packs-section-title" style="color: #2ecc71; margin: 0 0 12px 0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <span>💶</span> <span>RAHAPAKETID</span>
+                </h3>
                 <div class="money-packs-grid" id="money-packs-grid">
                     <!-- Money packs dynamically rendered -->
                 </div>

@@ -107,6 +107,7 @@ export interface InventoryData {
     skins: string[];
     equippedKnife: string;
     equippedGun: string;
+    gamepasses?: string[];
 }
 
 export interface CrateStockData {
@@ -124,3 +125,14 @@ export interface MoneyPackDef {
     isPopular?: boolean;
     isBestValue?: boolean;
 }
+
+export interface GamePassDef {
+    id: string;
+    name: string;
+    nameKey: string;
+    yardCost: number;
+    icon: string;
+    badge: string;
+    description: string;
+}
+

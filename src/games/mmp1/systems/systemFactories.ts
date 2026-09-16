@@ -8,6 +8,7 @@ import { InputController } from "./input";
 import { HudUI } from "../ui/hud";
 import { MmpCrateManager } from "../state/crateManager";
 import { audio } from "../audio";
+import { InvisibilitySystem } from "./invisibilitySystem";
 
 export function createGameSystems(game: any): {
     combatSystem: CombatSystem;
@@ -15,6 +16,7 @@ export function createGameSystems(game: any): {
     adminPanelUI: AdminPanelUI;
     roundManager: RoundManager;
     inputController: InputController;
+    invisibilitySystem: InvisibilitySystem;
 } {
     const combatSystem = new CombatSystem({
         characters: game.characters,
@@ -37,14 +39,24 @@ export function createGameSystems(game: any): {
         endRound: (w: any, r: string) => game.endRound(w, r),
         setDroppedGun: (g: any) => { game.droppedGun = g; },
         setHasSheriffWitnessedMurder: (v: boolean) => { game.hasSheriffWitnessedMurder = v; },
-        setLastHero: (h: any) => { game.lastHero = h; }
+        setLastHero: (h: any) => { game.lastHero = h; },
+        isPlayerInvisible: () => game.isPlayerInvisible
     });
+
+    const invisibilitySystem = new InvisibilitySystem({
+        playerChar: game.playerChar,
+        crateManager: game.crateManager,
+        getState: () => game.state,
+        addIncidentFeed: (t: string) => game.addIncidentFeed(t)
+    });
+    invisibilitySystem.init();
 
     const crateShopUI = new CrateShopUI({
         crateManager: game.crateManager,
         getState: () => game.state,
         get isPointerLocked() { return game.isPointerLocked; },
-        equipSkin: (s: string) => game.equipSkin(s)
+        equipSkin: (s: string) => game.equipSkin(s),
+        onGamePassUnlocked: () => invisibilitySystem.updateSlotVisibility()
     });
     crateShopUI.init();
 
@@ -128,8 +140,9 @@ export function createGameSystems(game: any): {
             audio.soundEnabled = !audio.soundEnabled;
             const icon = document.getElementById("sound-icon");
             if (icon) icon.textContent = audio.soundEnabled ? "🔊" : "🔇";
-        }
+        },
+        onActivateInvisibility: () => invisibilitySystem.activateInvisibility()
     });
 
-    return { combatSystem, crateShopUI, adminPanelUI, roundManager, inputController };
+    return { combatSystem, crateShopUI, adminPanelUI, roundManager, inputController, invisibilitySystem };
 }

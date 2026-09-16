@@ -14,6 +14,7 @@ export interface AIContext {
     performMurdererSlash: (c: Character) => void;
     performSheriffShoot: (c: Character) => void;
     pickUpDroppedGun: (c: Character) => void;
+    isPlayerInvisible?: boolean;
 }
 
 export function updateAI(delta: number, ctx: AIContext) {
@@ -39,7 +40,7 @@ export function updateAI(delta: number, ctx: AIContext) {
                 );
             } else if (ctx.state === 'in_game') {
                 if (c.role === 'murderer') {
-                    const victims = ctx.characters.filter(v => v !== c && v.isAlive);
+                    const victims = ctx.characters.filter(v => v !== c && v.isAlive && !(ctx.isPlayerInvisible && v.isPlayer));
                     if (victims.length > 0) {
                         victims.sort((a, b) => c.position.distanceTo(a.position) - c.position.distanceTo(b.position));
                         c.aiTarget = victims[0].position.clone();
@@ -47,7 +48,7 @@ export function updateAI(delta: number, ctx: AIContext) {
                         if (c.knifeMesh) c.knifeMesh.visible = c.hasWeaponEquipped;
                     }
                 } else if (c.role === 'sheriff') {
-                    if (murderer && murderer.isAlive) {
+                    if (murderer && murderer.isAlive && !(ctx.isPlayerInvisible && murderer.isPlayer)) {
                         const canSee = hasLineOfSight(c.position, murderer.position, ctx.wallMeshes);
                         const dist = c.position.distanceTo(murderer.position);
 
@@ -85,7 +86,7 @@ export function updateAI(delta: number, ctx: AIContext) {
                 } else {
                     if (ctx.droppedGun && ctx.droppedGun.active && Math.random() < 0.6) {
                         c.aiTarget = ctx.droppedGun.position.clone();
-                    } else if (murderer && murderer.hasWeaponEquipped && c.position.distanceTo(murderer.position) < 14) {
+                    } else if (murderer && murderer.hasWeaponEquipped && !(ctx.isPlayerInvisible && murderer.isPlayer) && c.position.distanceTo(murderer.position) < 14) {
                         const away = c.position.clone().sub(murderer.position).normalize().multiplyScalar(20);
                         c.aiTarget = c.position.clone().add(away);
                         c.aiTarget.x = Math.max(-42, Math.min(42, c.aiTarget.x));
@@ -217,7 +218,7 @@ export function updateAI(delta: number, ctx: AIContext) {
             if (ctx.state === 'in_game') {
                 if (c.role === 'murderer' && dist < 3.2) {
                     ctx.performMurdererSlash(c);
-                } else if (c.role === 'sheriff' && murderer && murderer.isAlive) {
+                } else if (c.role === 'sheriff' && murderer && murderer.isAlive && !(ctx.isPlayerInvisible && murderer.isPlayer)) {
                     if (ctx.hasSheriffWitnessedMurder) {
                         const distToMurderer = c.position.distanceTo(murderer.position);
                         const hasClearLOS = hasLineOfSight(c.position, murderer.position, ctx.wallMeshes);

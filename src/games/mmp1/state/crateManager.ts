@@ -25,8 +25,9 @@ export class MmpCrateManager {
         this.updateMoneyUI();
     }
 
-    public addMoney(amount: number) {
-        this.setMoney(this.getMoney() + amount);
+    public addMoney(amount: number, allowMultiplier = true) {
+        const mult = (allowMultiplier && this.hasGamePass('gamepass_2x_money')) ? 2 : 1;
+        this.setMoney(this.getMoney() + amount * mult);
     }
 
     public spendMoney(amount: number): boolean {
@@ -125,7 +126,8 @@ export class MmpCrateManager {
             crates: {},
             skins: ['knife_default', 'gun_default'],
             equippedKnife: 'knife_default',
-            equippedGun: 'gun_default'
+            equippedGun: 'gun_default',
+            gamepasses: []
         };
         try {
             const raw = localStorage.getItem(this.inventoryKey);
@@ -136,7 +138,23 @@ export class MmpCrateManager {
         } catch (e) {}
         if (!inv.skins.includes('knife_default')) inv.skins.push('knife_default');
         if (!inv.skins.includes('gun_default')) inv.skins.push('gun_default');
+        if (!Array.isArray(inv.gamepasses)) inv.gamepasses = [];
         return inv;
+    }
+
+    public hasGamePass(id: string): boolean {
+        const inv = this.getInventory();
+        return !!(inv.gamepasses && inv.gamepasses.includes(id));
+    }
+
+    public unlockGamePass(id: string): boolean {
+        const inv = this.getInventory();
+        if (!Array.isArray(inv.gamepasses)) inv.gamepasses = [];
+        if (!inv.gamepasses.includes(id)) {
+            inv.gamepasses.push(id);
+            this.saveInventory(inv);
+        }
+        return true;
     }
 
     public saveInventory(inv: InventoryData) {

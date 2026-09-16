@@ -1,5 +1,5 @@
-import { CrateTier, WeaponSkinDef, MoneyPackDef } from '../types';
-import { CRATE_CATALOG, WEAPON_SKIN_CATALOG, MONEY_PACKS } from '../catalog';
+import { CrateTier, WeaponSkinDef, MoneyPackDef, GamePassDef } from '../types';
+import { CRATE_CATALOG, WEAPON_SKIN_CATALOG, MONEY_PACKS, GAME_PASS_CATALOG } from '../catalog';
 import { getCrateArtworkSvg, getWeaponArtworkSvg } from './svgArtwork';
 import { audio } from '../audio';
 import { MmpCrateManager } from '../state/crateManager';
@@ -12,6 +12,7 @@ export interface CrateShopContext {
     getState: () => string;
     isPointerLocked: boolean;
     equipSkin: (skinId: string) => void;
+    onGamePassUnlocked?: (passId: string) => void;
 }
 
 export class CrateShopUI {
@@ -469,13 +470,89 @@ export class CrateShopUI {
     }
 
     public renderMoneyExchange() {
-        const grid = document.getElementById('money-packs-grid');
-        if (!grid) return;
-
         const lang = getLanguage();
         const texts = I18N[lang];
         const yards = yardService.getYards();
         const hasInfinite = yardService.hasInfiniteYards();
+
+        const btnTabExchange = document.getElementById('btn-tab-exchange');
+        if (btnTabExchange) btnTabExchange.textContent = texts.crateShop.tabExchange;
+
+        const titleEl = document.getElementById('exchange-view-title');
+        const subtitleEl = document.getElementById('exchange-view-subtitle');
+        const gamePassTitleEl = document.getElementById('game-passes-section-title');
+        const cashPacksTitleEl = document.getElementById('cash-packs-section-title');
+
+        if (titleEl) titleEl.textContent = texts.moneyExchange.title;
+        if (subtitleEl) subtitleEl.textContent = texts.moneyExchange.subtitle;
+        if (gamePassTitleEl) gamePassTitleEl.innerHTML = `<span>👑</span> <span>${texts.moneyExchange.gamePassesSectionTitle}</span>`;
+        if (cashPacksTitleEl) cashPacksTitleEl.innerHTML = `<span>💶</span> <span>${texts.moneyExchange.cashPacksSectionTitle}</span>`;
+
+        // 1. Game Passes Grid
+        const passGrid = document.getElementById('game-passes-grid');
+        if (passGrid) {
+            passGrid.innerHTML = '';
+            Object.values(GAME_PASS_CATALOG).forEach(pass => {
+                const isOwned = this.ctx.crateManager.hasGamePass(pass.id);
+                const card = document.createElement('div');
+                card.className = `game-pass-card ${isOwned ? 'owned' : ''}`;
+                card.id = `game-pass-card-${pass.id}`;
+                card.style.cssText = `
+                    background: linear-gradient(145deg, rgba(27, 40, 56, 0.95), rgba(14, 22, 34, 0.95));
+                    border: 2px solid ${isOwned ? '#2ecc71' : '#ffd32a'};
+                    border-radius: 16px;
+                    padding: 16px;
+                    text-align: center;
+                    position: relative;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                `;
+
+                card.innerHTML = `
+                    <div style="position: absolute; top: 10px; right: 10px; background: ${isOwned ? '#2ecc71' : '#ffd32a'}; color: #111; font-weight: 900; font-size: 0.68rem; padding: 2px 8px; border-radius: 8px; letter-spacing: 0.5px;">
+                        ${pass.badge}
+                    </div>
+                    <div>
+                        <div style="font-size: 2.6rem; margin: 4px 0 6px 0;">${pass.icon}</div>
+                        <div style="font-size: 1.12rem; font-weight: 900; color: #fff; margin-bottom: 4px;">${pass.name}</div>
+                        <div style="font-size: 0.8rem; color: #aaa; margin-bottom: 12px; min-height: 38px; line-height: 1.35;">${pass.description}</div>
+                    </div>
+                    <button class="btn-buy-gamepass" id="btn-buy-pass-${pass.id}" ${isOwned ? 'disabled' : ''} style="
+                        width: 100%;
+                        padding: 10px 14px;
+                        border-radius: 10px;
+                        border: none;
+                        font-weight: 900;
+                        font-size: 0.95rem;
+                        background: ${isOwned ? 'rgba(46, 204, 113, 0.25)' : 'linear-gradient(135deg, #ffd32a, #ff9f1a)'};
+                        color: ${isOwned ? '#2ecc71' : '#111'};
+                        cursor: ${isOwned ? 'default' : 'pointer'};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        box-shadow: ${isOwned ? 'none' : '0 0 15px rgba(255, 211, 42, 0.4)'};
+                    ">
+                        ${isOwned 
+                            ? texts.moneyExchange.gamePassOwned 
+                            : `<span>${yardService.renderYardSvg(16)}</span><span>${texts.moneyExchange.buyBtn(pass.yardCost)}</span>`}
+                    </button>
+                `;
+
+                const btnBuy = card.querySelector(`#btn-buy-pass-${pass.id}`) as HTMLButtonElement;
+                if (btnBuy && !isOwned) {
+                    btnBuy.onclick = () => this.buyGamePass(pass);
+                }
+
+                passGrid.appendChild(card);
+            });
+        }
+
+        // 2. Cash Packs Grid
+        const grid = document.getElementById('money-packs-grid');
+        if (!grid) return;
 
         grid.innerHTML = '';
 
@@ -483,8 +560,6 @@ export class CrateShopUI {
             const card = document.createElement('div');
             card.className = `money-pack-card ${pack.isPopular ? 'popular' : ''} ${pack.isBestValue ? 'best-value' : ''}`;
             card.id = `money-pack-card-${pack.id}`;
-
-            const canAfford = hasInfinite || yards >= pack.yardCost;
 
             const packTitle = texts.moneyExchange[`${pack.nameKey}Title` as keyof typeof texts.moneyExchange] as string || `+${pack.moneyAmount} €`;
             const packDesc = texts.moneyExchange[`${pack.nameKey}Desc` as keyof typeof texts.moneyExchange] as string || `+${pack.moneyAmount} €`;
@@ -514,6 +589,38 @@ export class CrateShopUI {
             }
 
             grid.appendChild(card);
+        });
+    }
+
+    public buyGamePass(pass: GamePassDef) {
+        const lang = getLanguage();
+        const texts = I18N[lang];
+        const toastEl = document.getElementById('exchange-toast');
+
+        showYardPurchaseConfirm({
+            itemName: `${pass.name} (${pass.badge})`,
+            yardCost: pass.yardCost,
+            onConfirm: () => {
+                const success = yardService.spendYards(pass.yardCost, pass.id, `MMP1 Game Pass: ${pass.name}`);
+                if (success) {
+                    this.ctx.crateManager.unlockGamePass(pass.id);
+                    audio.playCrateTick();
+                    this.updateYardUI();
+                    this.renderMoneyExchange();
+                    this.ctx.onGamePassUnlocked?.(pass.id);
+
+                    if (toastEl) {
+                        toastEl.textContent = texts.moneyExchange.gamepassSuccessToast(pass.name);
+                        toastEl.style.display = 'block';
+                        toastEl.style.background = 'rgba(46, 204, 113, 0.2)';
+                        toastEl.style.border = '1px solid #2ecc71';
+                        toastEl.style.color = '#2ecc71';
+                        setTimeout(() => {
+                            if (toastEl) toastEl.style.display = 'none';
+                        }, 4000);
+                    }
+                }
+            }
         });
     }
 

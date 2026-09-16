@@ -1,4 +1,4 @@
-import { CrateDef, CrateTier, MapConfig, MapId, WeaponSkinDef, MoneyPackDef } from './types';
+import { CrateDef, CrateTier, MapConfig, MapId, WeaponSkinDef, MoneyPackDef, GamePassDef } from './types';
 
 export const MAP_CATALOG: Record<MapId, MapConfig> = {
     hotel2: {
@@ -679,5 +679,26 @@ export const MONEY_PACKS: MoneyPackDef[] = [
         color: '#ffd32a'
     }
 ];
+
+export const GAME_PASS_CATALOG: Record<string, GamePassDef> = {
+    gamepass_2x_money: {
+        id: 'gamepass_2x_money',
+        name: '2X Money Forever',
+        nameKey: 'gamepass2xMoney',
+        yardCost: 1500,
+        icon: '⚡',
+        badge: 'DOUBLE CASH',
+        description: 'Earn 2x more cash (€) forever from all match wins, coin pickups & rewards!'
+    },
+    gamepass_invis_cloak: {
+        id: 'gamepass_invis_cloak',
+        name: 'Invisible Cloak',
+        nameKey: 'gamepassInvisCloak',
+        yardCost: 2500,
+        icon: '🧥',
+        badge: 'ACTIVE ABILITY',
+        description: 'Equip an Invisibility Cloak! Press [3] or click the slot in-game to vanish for 10s!'
+    }
+};
 
 export { getCrateArtworkSvg, getWeaponArtworkSvg } from './ui/svgArtwork';

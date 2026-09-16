@@ -28,6 +28,7 @@ export interface InputContext {
     isTouchDragging: boolean;
     setTouchDragging: (d: boolean) => void;
     toggleSound: () => void;
+    onActivateInvisibility?: () => void;
 }
 
 export class InputController {
@@ -47,6 +48,8 @@ export class InputController {
                 this.ctx.onPickUpGun();
             } else if (e.code === 'Digit1' || e.code === 'KeyQ') {
                 this.ctx.onToggleWeapon();
+            } else if (e.code === 'Digit3') {
+                this.ctx.onActivateInvisibility?.();
             } else if (e.code === 'Space') {
                 this.ctx.onAction();
             } else if (e.code === 'KeyP') {

@@ -61,6 +61,7 @@ export interface CombatContext {
     setDroppedGun: (gun: DroppedGun | null) => void;
     setHasSheriffWitnessedMurder: (val: boolean) => void;
     setLastHero: (hero: Character | null) => void;
+    isPlayerInvisible?: () => boolean;
 }
 
 export class CombatSystem {
@@ -85,6 +86,7 @@ export class CombatSystem {
             const attackRange = 3.2;
             for (const target of this.ctx.characters) {
                 if (target === attacker || !target.isAlive) continue;
+                if (target.isPlayer && this.ctx.isPlayerInvisible && this.ctx.isPlayerInvisible()) continue;
                 const dist = attacker.position.distanceTo(target.position);
                 if (dist < attackRange && this.hasLineOfSight(attacker.position, target.position)) {
                     this.eliminateCharacter(target, attacker, "knife");
@@ -155,7 +157,11 @@ export class CombatSystem {
             }, 70);
         }
 
-        const charMeshes = this.ctx.characters.filter(c => c !== shooter && c.isAlive && c.mesh).map(c => c.mesh);
+        const charMeshes = this.ctx.characters.filter(c => {
+            if (c === shooter || !c.isAlive || !c.mesh) return false;
+            if (!shooter.isPlayer && c.isPlayer && this.ctx.isPlayerInvisible && this.ctx.isPlayerInvisible()) return false;
+            return true;
+        }).map(c => c.mesh);
         const allShootables = [...charMeshes, ...this.ctx.wallMeshes];
         if (allShootables.length === 0) return;
 

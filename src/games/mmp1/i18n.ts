@@ -104,7 +104,7 @@ export const I18N = {
             subtitle: 'Osta kaste, ava unikaalseid relvanahku ja varusta need 3D-s!',
             tabShop: '📦 KASTIPOOD (SHOP)',
             tabInventory: '🎒 MINU INVENTAR (INVENTORY)',
-            tabExchange: '💶 OSTA RAHA (BUY CASH)',
+            tabExchange: '🛒 POOD (SHOP)',
             inGameNotice: '🔒 KASTIDE OSTMINE ON LUKUSTATUD! Kaste saab osta ainult ooteruumis (lobis) enne mängu algust.',
             inGameNoticeAlert: 'Kaste saab osta ainult ooteruumis (lobis) enne mängu algust!',
             buyBtn: (price: number) => `OSTA ${price} €`,
@@ -142,8 +142,11 @@ export const I18N = {
             deleteConfirm: (name: string, amount: number) => `Kas soovid kindlasti relva "${name}" kustutada? Saad selle eest +${amount} €!`
         },
         moneyExchange: {
-            title: 'OSTA MÄNGURAHA YARDIDE EEST',
-            subtitle: 'Vaheta oma Playard Yardid mänguraha (€) vastu! Yarde maksad rohkem kui saad raha.',
+            title: 'MMP1 POOD (GAME PASSID JA MÄNGURAHA)',
+            subtitle: 'Osta spetsiaalseid Game Passe ja mänguraha Yardide eest!',
+            gamePassesSectionTitle: '👑 GAME PASSID',
+            cashPacksSectionTitle: '💶 RAHAPAKETID',
+            gamePassOwned: 'OMATUD ✅',
             yourYards: 'Sinu Yardid:',
             yourCash: 'Sinu Mänguraha:',
             buyBtn: (yards: number) => `OSTA ${yards} Y`,
@@ -158,6 +161,7 @@ export const I18N = {
             popularBadge: 'POPULAARNE ⭐',
             bestValueBadge: 'PARIM VÄÄRTUS 💎',
             successToast: (amount: number, yards: number) => `+${amount} € lisatud! Kulutatud ${yards} Yardi.`,
+            gamepassSuccessToast: (name: string) => `🎉 Game Pass "${name}" edukalt ostetud ja aktiveeritud!`,
             notEnoughYards: (needed: number, have: number) => `Pole piisavalt Yarde! Vajad ${needed} Y, sul on ${have} Y.`
         },
         adminPanel: {
@@ -262,7 +266,7 @@ export const I18N = {
             subtitle: 'Buy crates, unlock unique weapon skins, and equip them in 3D!',
             tabShop: '📦 CRATE SHOP',
             tabInventory: '🎒 MY INVENTORY',
-            tabExchange: '💶 BUY CASH',
+            tabExchange: '🛒 SHOP',
             inGameNotice: '🔒 CRATE PURCHASES LOCKED! Crates can only be purchased in the lobby before match starts.',
             inGameNoticeAlert: 'Crates can only be purchased in the lobby before match starts!',
             buyBtn: (price: number) => `BUY ${price} €`,
@@ -300,8 +304,11 @@ export const I18N = {
             deleteConfirm: (name: string, amount: number) => `Are you sure you want to delete "${name}"? You will receive +${amount} €!`
         },
         moneyExchange: {
-            title: 'BUY GAME CASH WITH YARDS',
-            subtitle: 'Exchange your Playard Yards for in-game Cash (€)! Pay more Yards than the cash received.',
+            title: 'MMP1 SHOP (GAME PASSES & CASH)',
+            subtitle: 'Get special Game Passes and in-game Cash with your Playard Yards!',
+            gamePassesSectionTitle: '👑 GAME PASSES',
+            cashPacksSectionTitle: '💶 CASH PACKS',
+            gamePassOwned: 'OWNED ✅',
             yourYards: 'Your Yards:',
             yourCash: 'Your Cash:',
             buyBtn: (yards: number) => `BUY FOR ${yards} Y`,
@@ -316,6 +323,7 @@ export const I18N = {
             popularBadge: 'POPULAR ⭐',
             bestValueBadge: 'BEST VALUE 💎',
             successToast: (amount: number, yards: number) => `+${amount} € added! Spent ${yards} Yards.`,
+            gamepassSuccessToast: (name: string) => `🎉 Game Pass "${name}" successfully purchased and activated!`,
             notEnoughYards: (needed: number, have: number) => `Not enough Yards! Need ${needed} Y, you have ${have} Y.`
         },
         adminPanel: {
