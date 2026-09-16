@@ -876,6 +876,85 @@
             box-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
         }
 
+        .exchange-section {
+            flex: 1 1 0%;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 10px 8px 24px 4px;
+            scrollbar-width: thin;
+            scrollbar-color: #2ecc71 rgba(255, 255, 255, 0.12);
+        }
+        .money-packs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .money-pack-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 2px solid rgba(46, 204, 113, 0.25);
+            border-radius: 18px;
+            padding: 20px 14px 16px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+        .money-pack-card:hover {
+            transform: translateY(-4px);
+            border-color: #2ecc71;
+            box-shadow: 0 8px 24px rgba(46, 204, 113, 0.25);
+        }
+        .money-pack-card.popular {
+            border-color: #3498db;
+            box-shadow: 0 0 16px rgba(52, 152, 219, 0.2);
+        }
+        .money-pack-card.best-value {
+            border-color: #ffd32a;
+            box-shadow: 0 0 18px rgba(255, 211, 42, 0.25);
+        }
+        .money-pack-badge {
+            position: absolute;
+            top: -11px;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .btn-buy-pack {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: #111;
+            font-weight: 900;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 16px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 0 14px rgba(46, 204, 113, 0.35);
+        }
+        .btn-buy-pack:hover:not(:disabled) {
+            transform: scale(1.03);
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.6);
+        }
+        .btn-buy-pack:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            background: #555;
+            box-shadow: none;
+        }
+
         /* In-game disabled style for crate shop button */
         .btn-hud-action.in-game-disabled {
             opacity: 0.45;
@@ -1332,24 +1411,43 @@
                         <div style="font-size: 0.82rem; color: #aaa;">Osta kaste, ava unikaalseid relvanahku ja varusta need 3D-s!</div>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 14px;">
-                    <div style="background: rgba(46, 204, 113, 0.18); border: 1px solid #2ecc71; color: #2ecc71; padding: 6px 14px; border-radius: 18px; font-weight: 900; font-size: 1.05rem;">
-                        💶 <span id="shop-modal-money-val">100</span> €
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: rgba(46, 204, 113, 0.18); border: 1px solid #2ecc71; color: #2ecc71; padding: 6px 14px; border-radius: 18px; font-weight: 900; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                        <span>💶 <span id="shop-modal-money-val">100</span> €</span>
+                        <button id="btn-shop-add-money" style="background: #2ecc71; color: #111; border: none; border-radius: 50%; width: 22px; height: 22px; font-weight: 900; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Osta raha Yardide eest">+</button>
+                    </div>
+                    <div style="background: rgba(255, 211, 42, 0.18); border: 1px solid #ffd32a; color: #ffd32a; padding: 6px 14px; border-radius: 18px; font-weight: 900; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+                        <span id="shop-modal-yard-icon"></span>
+                        <span id="shop-modal-yard-val">0</span>
+                        <span>Y</span>
                     </div>
                     <button class="btn-hud-action" id="btn-close-crate-shop" style="background: rgba(255,255,255,0.1); border-color: #666; font-size: 1.2rem; padding: 4px 10px;">✕</button>
                 </div>
             </div>
 
             <!-- Tab Buttons -->
-            <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-shrink: 0;">
+            <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-shrink: 0; flex-wrap: wrap;">
                 <button class="crate-tab-btn active" id="btn-tab-shop">📦 KASTIPOOD (SHOP)</button>
                 <button class="crate-tab-btn" id="btn-tab-inventory">🎒 MINU INVENTAR (INVENTORY)</button>
+                <button class="crate-tab-btn" id="btn-tab-exchange" style="border-color: #2ecc71; color: #2ecc71;">💶 OSTA RAHA (BUY CASH)</button>
             </div>
 
             <!-- Shop Tab -->
             <div id="tab-shop-view">
                 <div class="crates-grid" id="shop-crates-grid">
                     <!-- 8 Crates dynamically rendered & verified -->
+                </div>
+            </div>
+
+            <!-- Money Exchange Tab -->
+            <div id="tab-exchange-view" style="display: none;" class="exchange-section">
+                <div style="margin-bottom: 16px; background: rgba(46, 204, 113, 0.08); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 14px; padding: 14px 18px;">
+                    <h3 id="exchange-view-title" style="margin: 0 0 6px 0; color: #2ecc71; font-size: 1.25rem; letter-spacing: 0.5px;">OSTA MÄNGURAHA YARDIDE EEST</h3>
+                    <div id="exchange-view-subtitle" style="font-size: 0.88rem; color: #ccc;">Vaheta oma Playard Yardid mänguraha (€) vastu! Yarde maksad rohkem kui saad raha.</div>
+                    <div id="exchange-toast" style="display: none; margin-top: 10px; padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;"></div>
+                </div>
+                <div class="money-packs-grid" id="money-packs-grid">
+                    <!-- Money packs dynamically rendered -->
                 </div>
             </div>
 

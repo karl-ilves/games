@@ -5808,6 +5808,8 @@ try {
                 const guestInvBtn = document.getElementById('btn-tab-inventory')?.textContent || '';
                 const guestHudRole = document.getElementById('hud-role-sub')?.textContent || '';
 
+                const guestExchangeBtn = document.getElementById('btn-tab-exchange')?.textContent || '';
+
                 // 2. Check as Playard Owner
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
@@ -5815,23 +5817,89 @@ try {
                 const ownerNotice = document.getElementById('shop-in-game-notice')?.textContent || '';
                 const ownerShopBtn = document.getElementById('btn-tab-shop')?.textContent || '';
                 const ownerInvBtn = document.getElementById('btn-tab-inventory')?.textContent || '';
+                const ownerExchangeBtn = document.getElementById('btn-tab-exchange')?.textContent || '';
 
                 return {
                     guestShopBtn,
                     guestInvBtn,
+                    guestExchangeBtn,
                     ownerShopBtn,
-                    ownerInvBtn
+                    ownerInvBtn,
+                    ownerExchangeBtn
                 };
             });
-            console.log(`     Guest tabs: Shop="${localizationCheck.guestShopBtn}", Inv="${localizationCheck.guestInvBtn}"`);
-            console.log(`     Owner tabs: Shop="${localizationCheck.ownerShopBtn}", Inv="${localizationCheck.ownerInvBtn}"`);
+            console.log(`     Guest tabs: Shop="${localizationCheck.guestShopBtn}", Inv="${localizationCheck.guestInvBtn}", Exchange="${localizationCheck.guestExchangeBtn}"`);
+            console.log(`     Owner tabs: Shop="${localizationCheck.ownerShopBtn}", Inv="${localizationCheck.ownerInvBtn}", Exchange="${localizationCheck.ownerExchangeBtn}"`);
             if (!localizationCheck.guestShopBtn.includes('CRATE SHOP') && !localizationCheck.guestShopBtn.includes('SHOP')) {
                 throw new Error(`Guest should see English 'CRATE SHOP' tab! Got: ${localizationCheck.guestShopBtn}`);
+            }
+            if (!localizationCheck.guestExchangeBtn.includes('BUY CASH')) {
+                throw new Error(`Guest should see English 'BUY CASH' tab! Got: ${localizationCheck.guestExchangeBtn}`);
             }
             if (!localizationCheck.ownerShopBtn.includes('KASTIPOOD')) {
                 throw new Error(`Owner should see Estonian 'KASTIPOOD' tab! Got: ${localizationCheck.ownerShopBtn}`);
             }
+            if (!localizationCheck.ownerExchangeBtn.includes('OSTA RAHA')) {
+                throw new Error(`Owner should see Estonian 'OSTA RAHA' tab! Got: ${localizationCheck.ownerExchangeBtn}`);
+            }
             console.log('   MMP1 Dual Localization verified (English for everyone, Estonian for Playard Owner): ✅');
+
+            // Test Buying Money with Yards (More Yards than cash received: 250 Y > 100 €)
+            console.log('   Testing Buying Game Cash (€) with Yards (Yard cost > Cash amount):');
+            const exchangeResult = await page.evaluate(() => {
+                // Ensure guest mode so Yards are finite and decremented on spend
+                localStorage.removeItem('playard_current_user_profile');
+                window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: null } }));
+                window.yardService.onUserLogout();
+
+                window.yardService.data.yards = 5000;
+                window.yardService.saveLocally(window.yardService.data);
+
+                const crateUI = window.mmp1Game.crateShopUI;
+                crateUI.openCrateShop();
+                crateUI.switchCrateShopTab('exchange');
+
+                const exchangeView = document.getElementById('tab-exchange-view');
+                const isExchangeVisible = window.getComputedStyle(exchangeView).display !== 'none';
+
+                const packCards = document.querySelectorAll('.money-pack-card');
+                const packCount = packCards.length;
+
+                const initialYards = window.yardService.getYards();
+                const initialMoney = window.mmp1Game.crateManager.getMoney();
+
+                // Buy Pack 1: +100 € for 250 Y (250 Y > 100 €)
+                const buyBtn = document.getElementById('btn-buy-pack-money_pack_1');
+                buyBtn?.click();
+
+                const afterYards = window.yardService.getYards();
+                const afterMoney = window.mmp1Game.crateManager.getMoney();
+
+                const toast = document.getElementById('exchange-toast')?.textContent || '';
+
+                return {
+                    isExchangeVisible,
+                    packCount,
+                    initialYards,
+                    afterYards,
+                    yardsSpent: initialYards - afterYards,
+                    initialMoney,
+                    afterMoney,
+                    moneyGained: afterMoney - initialMoney,
+                    toast
+                };
+            });
+            console.log(`     Exchange test: visible=${exchangeResult.isExchangeVisible}, packs=${exchangeResult.packCount}, spent=${exchangeResult.yardsSpent} Y, gained=${exchangeResult.moneyGained} €`);
+            if (!exchangeResult.isExchangeVisible || exchangeResult.packCount !== 4) {
+                throw new Error(`Exchange tab not properly displayed or pack count != 4: ${JSON.stringify(exchangeResult)}`);
+            }
+            if (exchangeResult.moneyGained !== 100 || exchangeResult.yardsSpent !== 250) {
+                throw new Error(`Exchange math failed! Expected +100 € for 250 Y, got +${exchangeResult.moneyGained} € for ${exchangeResult.yardsSpent} Y`);
+            }
+            if (exchangeResult.yardsSpent <= exchangeResult.moneyGained) {
+                throw new Error(`Rule violated: Yards spent (${exchangeResult.yardsSpent}) must be more than money gained (${exchangeResult.moneyGained})!`);
+            }
+            console.log('   Buying Game Cash with Yards verified (250 Y -> +100 €): ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 

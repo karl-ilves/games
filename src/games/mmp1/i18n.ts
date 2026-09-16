@@ -104,6 +104,7 @@ export const I18N = {
             subtitle: 'Osta kaste, ava unikaalseid relvanahku ja varusta need 3D-s!',
             tabShop: '📦 KASTIPOOD (SHOP)',
             tabInventory: '🎒 MINU INVENTAR (INVENTORY)',
+            tabExchange: '💶 OSTA RAHA (BUY CASH)',
             inGameNotice: '🔒 KASTIDE OSTMINE ON LUKUSTATUD! Kaste saab osta ainult ooteruumis (lobis) enne mängu algust.',
             inGameNoticeAlert: 'Kaste saab osta ainult ooteruumis (lobis) enne mängu algust!',
             buyBtn: (price: number) => `OSTA ${price} €`,
@@ -136,6 +137,25 @@ export const I18N = {
             equipSetBtn: 'VARUSTA KOMPLEKT 👑',
             equipNowBtn: 'VARUSTA KOHE ⚔️',
             closeBtn: 'SULGE ✕'
+        },
+        moneyExchange: {
+            title: 'OSTA MÄNGURAHA YARDIDE EEST',
+            subtitle: 'Vaheta oma Playard Yardid mänguraha (€) vastu! Yarde maksad rohkem kui saad raha.',
+            yourYards: 'Sinu Yardid:',
+            yourCash: 'Sinu Mänguraha:',
+            buyBtn: (yards: number) => `OSTA ${yards} Y`,
+            pack1Title: 'Taskuraha (Pocket Cash)',
+            pack1Desc: '+100 € mänguraha',
+            pack2Title: 'Rahapakk (Banker Stack)',
+            pack2Desc: '+250 € mänguraha',
+            pack3Title: 'Suurmängija (High Roller)',
+            pack3Desc: '+500 € mänguraha',
+            pack4Title: 'Kullaait (Jackpot Vault)',
+            pack4Desc: '+1,000 € mänguraha',
+            popularBadge: 'POPULAARNE ⭐',
+            bestValueBadge: 'PARIM VÄÄRTUS 💎',
+            successToast: (amount: number, yards: number) => `+${amount} € lisatud! Kulutatud ${yards} Yardi.`,
+            notEnoughYards: (needed: number, have: number) => `Pole piisavalt Yarde! Vajad ${needed} Y, sul on ${have} Y.`
         },
         adminPanel: {
             title: 'PLAYARD ADMIN PANEEL',
@@ -239,6 +259,7 @@ export const I18N = {
             subtitle: 'Buy crates, unlock unique weapon skins, and equip them in 3D!',
             tabShop: '📦 CRATE SHOP',
             tabInventory: '🎒 MY INVENTORY',
+            tabExchange: '💶 BUY CASH',
             inGameNotice: '🔒 CRATE PURCHASES LOCKED! Crates can only be purchased in the lobby before match starts.',
             inGameNoticeAlert: 'Crates can only be purchased in the lobby before match starts!',
             buyBtn: (price: number) => `BUY ${price} €`,
@@ -271,6 +292,25 @@ export const I18N = {
             equipSetBtn: 'EQUIP BUNDLE 👑',
             equipNowBtn: 'EQUIP NOW ⚔️',
             closeBtn: 'CLOSE ✕'
+        },
+        moneyExchange: {
+            title: 'BUY GAME CASH WITH YARDS',
+            subtitle: 'Exchange your Playard Yards for in-game Cash (€)! Pay more Yards than the cash received.',
+            yourYards: 'Your Yards:',
+            yourCash: 'Your Cash:',
+            buyBtn: (yards: number) => `BUY FOR ${yards} Y`,
+            pack1Title: 'Pocket Cash',
+            pack1Desc: '+100 € Cash',
+            pack2Title: 'Banker Stack',
+            pack2Desc: '+250 € Cash',
+            pack3Title: 'High Roller',
+            pack3Desc: '+500 € Cash',
+            pack4Title: 'Jackpot Vault',
+            pack4Desc: '+1,000 € Cash',
+            popularBadge: 'POPULAR ⭐',
+            bestValueBadge: 'BEST VALUE 💎',
+            successToast: (amount: number, yards: number) => `+${amount} € added! Spent ${yards} Yards.`,
+            notEnoughYards: (needed: number, have: number) => `Not enough Yards! Need ${needed} Y, you have ${have} Y.`
         },
         adminPanel: {
             title: 'PLAYARD ADMIN PANEL',
@@ -413,6 +453,13 @@ export function applyMmp1Localization() {
     if (btnTabShop) btnTabShop.textContent = texts.crateShop.tabShop;
     const btnTabInv = document.getElementById('btn-tab-inventory');
     if (btnTabInv) btnTabInv.textContent = texts.crateShop.tabInventory;
+    const btnTabExchange = document.getElementById('btn-tab-exchange');
+    if (btnTabExchange) btnTabExchange.textContent = texts.crateShop.tabExchange;
+
+    const exchangeTitle = document.getElementById('exchange-view-title');
+    if (exchangeTitle) exchangeTitle.textContent = texts.moneyExchange.title;
+    const exchangeSub = document.getElementById('exchange-view-subtitle');
+    if (exchangeSub) exchangeSub.textContent = texts.moneyExchange.subtitle;
 
     const invCratesTitle = document.querySelector('#tab-inventory-view h3:nth-of-type(1) span:last-child');
     if (invCratesTitle) invCratesTitle.textContent = texts.crateShop.ownedCratesTitle;

@@ -1,4 +1,4 @@
-import { CrateDef, CrateTier, MapConfig, MapId, WeaponSkinDef } from './types';
+import { CrateDef, CrateTier, MapConfig, MapId, WeaponSkinDef, MoneyPackDef } from './types';
 
 export const MAP_CATALOG: Record<MapId, MapConfig> = {
     hotel2: {
@@ -642,5 +642,42 @@ export const WEAPON_SKIN_CATALOG: Record<string, WeaponSkinDef> = {
         emissive: 0x5f27cd
     }
 };
+
+export const MONEY_PACKS: MoneyPackDef[] = [
+    {
+        id: 'money_pack_1',
+        moneyAmount: 100,
+        yardCost: 250,
+        badge: '💵',
+        nameKey: 'pack1',
+        color: '#2ecc71'
+    },
+    {
+        id: 'money_pack_2',
+        moneyAmount: 250,
+        yardCost: 600,
+        badge: '💰',
+        nameKey: 'pack2',
+        color: '#3498db',
+        isPopular: true
+    },
+    {
+        id: 'money_pack_3',
+        moneyAmount: 500,
+        yardCost: 1200,
+        badge: '💎',
+        nameKey: 'pack3',
+        color: '#9b59b6',
+        isBestValue: true
+    },
+    {
+        id: 'money_pack_4',
+        moneyAmount: 1000,
+        yardCost: 2500,
+        badge: '👑',
+        nameKey: 'pack4',
+        color: '#ffd32a'
+    }
+];
 
 export { getCrateArtworkSvg, getWeaponArtworkSvg } from './ui/svgArtwork';

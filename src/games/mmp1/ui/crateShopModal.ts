@@ -1,9 +1,10 @@
-import { CrateTier, WeaponSkinDef } from '../types';
-import { CRATE_CATALOG, WEAPON_SKIN_CATALOG } from '../catalog';
+import { CrateTier, WeaponSkinDef, MoneyPackDef } from '../types';
+import { CRATE_CATALOG, WEAPON_SKIN_CATALOG, MONEY_PACKS } from '../catalog';
 import { getCrateArtworkSvg, getWeaponArtworkSvg } from './svgArtwork';
 import { audio } from '../audio';
 import { MmpCrateManager } from '../state/crateManager';
 import { getLanguage, I18N } from '../i18n';
+import { yardService } from '../../../shared/yardService';
 
 export interface CrateShopContext {
     crateManager: MmpCrateManager;
@@ -38,10 +39,31 @@ export class CrateShopUI {
 
         const btnTabShop = document.getElementById('btn-tab-shop');
         const btnTabInv = document.getElementById('btn-tab-inventory');
-        if (btnTabShop && btnTabInv) {
-            btnTabShop.onclick = () => this.switchCrateShopTab('shop');
-            btnTabInv.onclick = () => this.switchCrateShopTab('inventory');
+        const btnTabExchange = document.getElementById('btn-tab-exchange');
+        if (btnTabShop) btnTabShop.onclick = () => this.switchCrateShopTab('shop');
+        if (btnTabInv) btnTabInv.onclick = () => this.switchCrateShopTab('inventory');
+        if (btnTabExchange) btnTabExchange.onclick = () => this.switchCrateShopTab('exchange');
+
+        const btnAddMoney = document.getElementById('btn-shop-add-money');
+        if (btnAddMoney) {
+            btnAddMoney.onclick = () => {
+                this.openCrateShop();
+                this.switchCrateShopTab('exchange');
+            };
         }
+
+        const hudMoneyBadge = document.getElementById('hud-money-badge');
+        if (hudMoneyBadge) {
+            hudMoneyBadge.style.cursor = 'pointer';
+            hudMoneyBadge.onclick = () => {
+                this.openCrateShop();
+                this.switchCrateShopTab('exchange');
+            };
+        }
+
+        yardService.subscribe(() => {
+            this.updateYardUI();
+        });
 
         const btnUnboxClose = document.getElementById('btn-unboxing-close');
         if (btnUnboxClose) {
@@ -67,8 +89,28 @@ export class CrateShopUI {
             this.updateCrateShopTimers();
         }, 1000);
 
+        this.updateYardUI();
         this.renderCrateShop();
         this.renderInventory();
+    }
+
+    public updateYardUI() {
+        const yards = yardService.getYards();
+        const shopYardVal = document.getElementById('shop-modal-yard-val');
+        if (shopYardVal) shopYardVal.textContent = yards.toLocaleString();
+
+        const shopYardIcon = document.getElementById('shop-modal-yard-icon');
+        if (shopYardIcon && !shopYardIcon.hasChildNodes()) {
+            shopYardIcon.innerHTML = yardService.renderYardSvg(16);
+        }
+
+        const gameYardVal = document.getElementById('game-yard-val');
+        if (gameYardVal) gameYardVal.textContent = yards.toLocaleString();
+
+        const gameYardIcon = document.getElementById('game-yard-icon');
+        if (gameYardIcon && !gameYardIcon.hasChildNodes()) {
+            gameYardIcon.innerHTML = yardService.renderYardSvg(16);
+        }
     }
 
     public openCrateShop() {
@@ -82,12 +124,17 @@ export class CrateShopUI {
         if (this.crateShopModal) {
             this.crateShopModal.style.display = 'flex';
         }
+        this.updateYardUI();
         this.ctx.crateManager.updateMoneyUI();
         if (this.ctx.getState() !== 'lobby') {
-            this.switchCrateShopTab('inventory');
+            const currentActive = document.querySelector('.crate-tab-btn.active')?.id;
+            if (currentActive === 'btn-tab-shop') {
+                this.switchCrateShopTab('inventory');
+            }
         }
         this.renderCrateShop();
         this.renderInventory();
+        this.renderMoneyExchange();
     }
 
     public closeCrateShop() {
@@ -96,24 +143,28 @@ export class CrateShopUI {
         }
     }
 
-    public switchCrateShopTab(tab: 'shop' | 'inventory') {
+    public switchCrateShopTab(tab: 'shop' | 'inventory' | 'exchange') {
         const btnTabShop = document.getElementById('btn-tab-shop');
         const btnTabInv = document.getElementById('btn-tab-inventory');
+        const btnTabExchange = document.getElementById('btn-tab-exchange');
         const shopView = document.getElementById('tab-shop-view');
         const invView = document.getElementById('tab-inventory-view');
+        const exchangeView = document.getElementById('tab-exchange-view');
+
+        btnTabShop?.classList.toggle('active', tab === 'shop');
+        btnTabInv?.classList.toggle('active', tab === 'inventory');
+        btnTabExchange?.classList.toggle('active', tab === 'exchange');
+
+        if (shopView) shopView.style.display = tab === 'shop' ? 'block' : 'none';
+        if (invView) invView.style.display = tab === 'inventory' ? 'block' : 'none';
+        if (exchangeView) exchangeView.style.display = tab === 'exchange' ? 'block' : 'none';
 
         if (tab === 'shop') {
-            btnTabShop?.classList.add('active');
-            btnTabInv?.classList.remove('active');
-            if (shopView) shopView.style.display = 'block';
-            if (invView) invView.style.display = 'none';
             this.renderCrateShop();
-        } else {
-            btnTabInv?.classList.add('active');
-            btnTabShop?.classList.remove('active');
-            if (invView) invView.style.display = 'block';
-            if (shopView) shopView.style.display = 'none';
+        } else if (tab === 'inventory') {
             this.renderInventory();
+        } else if (tab === 'exchange') {
+            this.renderMoneyExchange();
         }
     }
 
@@ -371,6 +422,91 @@ export class CrateShopUI {
                 }
                 gunsGrid.appendChild(card);
             });
+        }
+    }
+
+    public renderMoneyExchange() {
+        const grid = document.getElementById('money-packs-grid');
+        if (!grid) return;
+
+        const lang = getLanguage();
+        const texts = I18N[lang];
+        const yards = yardService.getYards();
+        const hasInfinite = yardService.hasInfiniteYards();
+
+        grid.innerHTML = '';
+
+        MONEY_PACKS.forEach(pack => {
+            const card = document.createElement('div');
+            card.className = `money-pack-card ${pack.isPopular ? 'popular' : ''} ${pack.isBestValue ? 'best-value' : ''}`;
+            card.id = `money-pack-card-${pack.id}`;
+
+            const canAfford = hasInfinite || yards >= pack.yardCost;
+
+            const packTitle = texts.moneyExchange[`${pack.nameKey}Title` as keyof typeof texts.moneyExchange] as string || `+${pack.moneyAmount} €`;
+            const packDesc = texts.moneyExchange[`${pack.nameKey}Desc` as keyof typeof texts.moneyExchange] as string || `+${pack.moneyAmount} €`;
+
+            let badgeHtml = '';
+            if (pack.isPopular) {
+                badgeHtml = `<div class="money-pack-badge" style="background: #3498db; color: #fff;">${texts.moneyExchange.popularBadge}</div>`;
+            } else if (pack.isBestValue) {
+                badgeHtml = `<div class="money-pack-badge" style="background: #ffd32a; color: #111;">${texts.moneyExchange.bestValueBadge}</div>`;
+            }
+
+            card.innerHTML = `
+                ${badgeHtml}
+                <div style="font-size: 2.4rem; margin-bottom: 6px;">${pack.badge}</div>
+                <div style="font-size: 1.15rem; font-weight: 900; color: #fff; margin-bottom: 4px;">${packTitle}</div>
+                <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 12px;">${packDesc}</div>
+                <div style="font-size: 1.6rem; font-weight: 900; color: #2ecc71; margin-bottom: 8px;">+${pack.moneyAmount.toLocaleString()} €</div>
+                <button class="btn-buy-pack" id="btn-buy-pack-${pack.id}" ${!canAfford ? 'disabled' : ''}>
+                    <span>${yardService.renderYardSvg(16)}</span>
+                    <span>${texts.moneyExchange.buyBtn(pack.yardCost)}</span>
+                </button>
+            `;
+
+            const btnBuy = card.querySelector(`#btn-buy-pack-${pack.id}`) as HTMLButtonElement;
+            if (btnBuy) {
+                btnBuy.onclick = () => this.buyMoneyPack(pack);
+            }
+
+            grid.appendChild(card);
+        });
+    }
+
+    public buyMoneyPack(pack: MoneyPackDef) {
+        const lang = getLanguage();
+        const texts = I18N[lang];
+        const toastEl = document.getElementById('exchange-toast');
+
+        const success = yardService.spendYards(pack.yardCost, undefined, `MMP1 Money Pack: +${pack.moneyAmount} €`);
+        if (success) {
+            this.ctx.crateManager.addMoney(pack.moneyAmount);
+            audio.playCrateTick();
+            this.updateYardUI();
+            this.renderMoneyExchange();
+
+            if (toastEl) {
+                toastEl.textContent = texts.moneyExchange.successToast(pack.moneyAmount, pack.yardCost);
+                toastEl.style.display = 'block';
+                toastEl.style.background = 'rgba(46, 204, 113, 0.2)';
+                toastEl.style.border = '1px solid #2ecc71';
+                toastEl.style.color = '#2ecc71';
+                setTimeout(() => {
+                    if (toastEl) toastEl.style.display = 'none';
+                }, 4000);
+            }
+        } else {
+            if (toastEl) {
+                toastEl.textContent = texts.moneyExchange.notEnoughYards(pack.yardCost, yardService.getYards());
+                toastEl.style.display = 'block';
+                toastEl.style.background = 'rgba(255, 46, 99, 0.2)';
+                toastEl.style.border = '1px solid #ff2e63';
+                toastEl.style.color = '#ff2e63';
+                setTimeout(() => {
+                    if (toastEl) toastEl.style.display = 'none';
+                }, 4000);
+            }
         }
     }
 

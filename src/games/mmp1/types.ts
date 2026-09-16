@@ -113,3 +113,14 @@ export interface CrateStockData {
     stock: number;
     nextRestockTime: number;
 }
+
+export interface MoneyPackDef {
+    id: string;
+    moneyAmount: number;
+    yardCost: number;
+    badge: string;
+    nameKey: 'pack1' | 'pack2' | 'pack3' | 'pack4';
+    color: string;
+    isPopular?: boolean;
+    isBestValue?: boolean;
+}
