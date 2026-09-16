@@ -39,7 +39,7 @@ function getBaseUrl(): string {
         const b = import.meta.env.BASE_URL;
         return b.endsWith('/') ? b : b + '/';
     }
-    return '/games/';
+    return '/';
 }
 
 /** Mapping to real audio files (MP3 / OGG) stored in public/audio/emotes/ */

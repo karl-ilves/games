@@ -1455,7 +1455,7 @@ export class MetroAudioEngine {
         this.initContext();
         this.isCarriage200MusicActive = true;
         if (!this.carriage200Audio) {
-            const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) ? import.meta.env.BASE_URL : '/games/';
+            const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) ? import.meta.env.BASE_URL : '/';
             const cleanBase = base.endsWith('/') ? base : base + '/';
             const audioUrl = `${cleanBase}audio/last_metro_200.mp3`;
             this.carriage200Audio = new Audio(audioUrl);

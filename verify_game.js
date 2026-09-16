@@ -28,7 +28,7 @@ try {
     // Wait for preview server to be responsive
     for (let i = 0; i < 30; i++) {
         try {
-            const res = await fetch('http://localhost:4173/games/');
+            const res = await fetch('http://localhost:4173/');
             if (res.ok) break;
         } catch (e) {}
         await new Promise(r => setTimeout(r, 300));
@@ -64,7 +64,7 @@ try {
 
     try {
         console.log("1. Checking Playard Hub Homepage...");
-        await page.goto('http://localhost:4173/games/', { waitUntil: 'domcontentloaded' });
+        await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(() => {
             localStorage.clear();
             sessionStorage.clear();
@@ -332,7 +332,10 @@ try {
             if (passInput) passInput.value = 'superpassword';
             document.getElementById('btn-register')?.click();
         });
-        await new Promise(r => setTimeout(r, 350));
+        await page.waitForFunction(() => {
+            const ageEl = document.getElementById('user-age-display');
+            return ageEl && ageEl.textContent && ageEl.textContent.includes('9 years old');
+        }, { timeout: 4000 }).catch(() => {});
 
         const p9yoMsg = await page.$eval('#auth-message', el => el.textContent);
         const p9yoAge = await page.$eval('#user-age-display', el => el.textContent);
@@ -1169,7 +1172,7 @@ try {
             // If fetch within browser context had an ephemeral network hiccup, verify directly via node http
             const http = await import('http');
             const nodeFetchResult = await new Promise(resolve => {
-                http.get('http://localhost:4173/games/audio/emotes/guitar.ogg', res => {
+                http.get('http://localhost:4173/audio/emotes/guitar.ogg', res => {
                     let size = 0;
                     res.on('data', chunk => { size += chunk.length; });
                     res.on('end', () => resolve({ ok: res.statusCode === 200, status: res.statusCode, length: size }));
@@ -1258,7 +1261,7 @@ try {
 
         // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 10,000 Objects)
         console.log("5. Testing 3D Game Creator Studio...");
-        await page.goto('http://localhost:4173/games/games/creator/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/creator/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
         await new Promise(r => setTimeout(r, 2500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -2539,7 +2542,7 @@ try {
 
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
-        await page.goto('http://localhost:4173/games/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 15000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.waitForSelector('#btn-open-bug-report', { visible: true, timeout: 5000 });
         const bugBtnVisible = await page.$eval('#btn-open-bug-report', el => window.getComputedStyle(el).display);
@@ -2618,7 +2621,7 @@ try {
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");
-        await page.goto('http://localhost:4173/games/games/racing/index.html', { waitUntil: 'load', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'load', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
         await page.waitForSelector('#garage-screen', { visible: true, timeout: 5000 });
@@ -2628,7 +2631,7 @@ try {
 
         // 9. Test 3D Master Chef Cooking Simulator
         console.log("9. Checking 3D Master Chef Cooking Simulator...");
-        await page.goto('http://localhost:4173/games/games/cooking/index.html', { waitUntil: 'load', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/cooking/index.html', { waitUntil: 'load', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -2638,7 +2641,7 @@ try {
         // 10. Test 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)
         console.log("10. Checking 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)...");
         await page.goto('about:blank');
-        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -2876,7 +2879,7 @@ try {
                 window.warGameEngine.isMissileUnlocked = false;
             }
         });
-        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
         await new Promise(r => setTimeout(r, 600));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -2958,7 +2961,7 @@ try {
 
         // 5. Test Persistence on Page Reload (Must NOT reset to 200,000 €!)
         console.log("   Testing War Cash and Unlocks Persistence across Page Reload (No reset to 200k)...");
-        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
         await new Promise(r => setTimeout(r, 600));
 
@@ -2982,7 +2985,7 @@ try {
             const guestUser = { id: 'guest_player_99', username: 'combat_warrior', email: 'warrior@gmail.com', displayName: 'Warrior', isAdmin: false };
             localStorage.setItem('playard_current_user_profile', JSON.stringify(guestUser));
         });
-        await page.goto('http://localhost:4173/games/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
         await new Promise(r => setTimeout(r, 600));
 
@@ -3016,7 +3019,7 @@ try {
         // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)
             console.log("11. Checking 3D Train Simulator (Guest English Localization)...");
             await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1500));
             await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -3196,7 +3199,7 @@ try {
                 window.__PLAYARD_TEST_MODE__ = true;
             });
             await mobilePage.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
-            await mobilePage.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await mobilePage.goto('http://localhost:4173/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             // Verify desktop-only overlay is displayed on phone/tablet
@@ -3214,7 +3217,7 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('http://localhost:4173/games/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1500));
 
             const ownerStationName = await page.$eval('#target-station-name', el => el.textContent);
@@ -3254,7 +3257,7 @@ try {
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
             await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await page.waitForSelector('#hud-owner-pill', { timeout: 10000 });
             await page.waitForSelector('#hud-stage-val', { timeout: 10000 });
             await page.waitForSelector('#hud-deaths-val', { timeout: 10000 });
@@ -3395,7 +3398,7 @@ try {
                 localStorage.removeItem('playard_obby_cooldown_until');
             });
             await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/obby/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await page.waitForSelector('#hud-stage-val', { timeout: 10000 });
             await new Promise(r => setTimeout(r, 600));
 
@@ -3431,7 +3434,7 @@ try {
                 localStorage.removeItem('playard_current_user_profile');
             });
             await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'load', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/metro/index.html', { waitUntil: 'load', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const guestVipDisplay = await page.$eval('#vip-restricted-overlay', el => window.getComputedStyle(el).display).catch(() => 'none');
@@ -3453,7 +3456,7 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('http://localhost:4173/games/games/metro/index.html', { waitUntil: 'load', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/metro/index.html', { waitUntil: 'load', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1000));
 
             await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
@@ -4551,7 +4554,7 @@ try {
 
             // ── TEST: Sünnipäeva / Vanuse süsteem ──────────────────────────────────
             console.log("\n--- Testing Birthday / Age System ---");
-            await page.goto('http://localhost:4173/games/');
+            await page.goto('http://localhost:4173/');
             await new Promise(r => setTimeout(r, 1000));
 
             // 1. calculateAge funktsioon töötab õigesti
@@ -4625,7 +4628,7 @@ try {
             // ==========================================
             console.log("7. Checking MMP1 (3D Murder Mystery) Game Page...");
             await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/mmp1/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/mmp1/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1200));
 
             // Verify Canvas and 3D Scene Initialization
@@ -5837,7 +5840,7 @@ try {
             // ==========================================
             console.log("8. Checking 🚀 ROCKET PLAYARD Game Page (3D Arcade Arena, Rockets, Mobile Controls, Shop & Winner Modal)...");
             await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/games/rocket/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/rocket/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1200));
 
             // Verify Three.js Canvas in Rocket Playard
@@ -5866,7 +5869,7 @@ try {
 
             // Verify Mobile Mode with ?mobile=true
             console.log("   Checking Mobile Mode in Rocket Playard (with ?mobile=true)...");
-            await page.goto('http://localhost:4173/games/games/rocket/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/rocket/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1000));
 
             const rocketMobileControls = await page.evaluate(() => {
@@ -5961,7 +5964,7 @@ try {
             
             // 1. Verify PC Mode: Mobile controls layer should NOT exist or should be hidden
             console.log("   Checking PC Mode in Racing Simulator (Expected: Mobile controls OFF)...");
-            await page.goto('http://localhost:4173/games/games/racing/index.html');
+            await page.goto('http://localhost:4173/games/racing/index.html');
             await new Promise(r => setTimeout(r, 600));
             const pcControlsExists = await page.evaluate(() => {
                 const layer = document.getElementById('playard-universal-mobile-controls');
@@ -5974,7 +5977,7 @@ try {
 
             // 2. Verify Mobile / Tablet Mode: With mobile parameter or touch, virtual joystick and jump button appear
             console.log("   Checking Mobile Mode in Racing Simulator (with ?mobile=true)...");
-            await page.goto('http://localhost:4173/games/games/racing/index.html?mobile=true');
+            await page.goto('http://localhost:4173/games/racing/index.html?mobile=true');
             await new Promise(r => setTimeout(r, 800));
             const mobileElements = await page.evaluate(() => {
                 const layer = document.getElementById('playard-universal-mobile-controls');
@@ -5996,7 +5999,7 @@ try {
 
             // 3. Verify Desktop-Only Enforcement for War Game & Train Game on Mobile
             console.log("   Checking Mobile Block for War Game (Expected: Desktop-Only Overlay)...");
-            await page.goto('http://localhost:4173/games/games/war/index.html?mobile=true');
+            await page.goto('http://localhost:4173/games/war/index.html?mobile=true');
             await new Promise(r => setTimeout(r, 800));
             const warMobileBlocked = await page.evaluate(() => {
                 const overlay = document.getElementById('playard-desktop-only-overlay');
@@ -6012,7 +6015,7 @@ try {
             }
 
             console.log("   Checking Mobile Block for Train Simulator (Expected: Desktop-Only Overlay)...");
-            await page.goto('http://localhost:4173/games/games/train/index.html?mobile=true');
+            await page.goto('http://localhost:4173/games/train/index.html?mobile=true');
             await new Promise(r => setTimeout(r, 800));
             const trainMobileBlocked = await page.evaluate(() => {
                 const overlay = document.getElementById('playard-desktop-only-overlay');
@@ -6029,7 +6032,7 @@ try {
 
             // 4. Verify Mobile Mode in Community Game Player
             console.log("   Checking Mobile Mode in Community Game Player (with ?mobile=true)...");
-            await page.goto('http://localhost:4173/games/games/play/index.html?mobile=true');
+            await page.goto('http://localhost:4173/games/play/index.html?mobile=true');
             await new Promise(r => setTimeout(r, 800));
             const playMobile = await page.evaluate(() => {
                 const layer = document.getElementById('playard-universal-mobile-controls');
@@ -6059,7 +6062,7 @@ try {
             });
             for (let retry = 0; retry < 3; retry++) {
                 try {
-                    await page.goto('http://localhost:4173/games/games/metro/index.html?mobile=true');
+                    await page.goto('http://localhost:4173/games/metro/index.html?mobile=true');
                     break;
                 } catch (err) {
                     if (retry === 2) throw err;
@@ -6088,7 +6091,7 @@ try {
 
             // 6. Verify Cross-Device Cloud Synchronization
             console.log("--- Testing Cross-Device Cloud Synchronization (PC <-> Mobile / Tablet) ---");
-            await page.goto('http://localhost:4173/games/index.html', { waitUntil: 'load', timeout: 30000 });
+            await page.goto('http://localhost:4173/index.html', { waitUntil: 'load', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1200));
 
             const syncResults = await page.evaluate(async () => {
