@@ -153,7 +153,7 @@ export class PlayerController {
 
         // Camera looks forward towards +Z
         const forward = new THREE.Vector3(Math.sin(cameraYaw), 0, Math.cos(cameraYaw));
-        const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+        const right = new THREE.Vector3(-Math.cos(cameraYaw), 0, Math.sin(cameraYaw));
 
         const moveDir = new THREE.Vector3();
         moveDir.addScaledVector(forward, -inputZ);

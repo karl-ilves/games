@@ -6969,9 +6969,28 @@ try {
                 const lbRows = leaderboard?.querySelectorAll('.leaderboard-row')?.length || 0;
 
                 const hasSearchingRow = !!leaderboard?.querySelector('.leaderboard-searching-row');
+                const searchingWaveLetters = document.querySelectorAll('.leaderboard-searching-row .wave-letter-search').length;
+                const hasSeparateStats = !!document.querySelector('.leaderboard-stage') && !!document.querySelector('.leaderboard-percent');
                 const hasCenterBanner = !!document.getElementById('playard-center-banner');
                 const waveLettersCount = document.querySelectorAll('#playard-center-banner .wave-letter').length;
                 const cameraBehindPlayer = game?.camera && game?.playerController ? (game.camera.position.z < game.playerController.getPosition().z) : false;
+
+                // Test strafing direction (KeyD should move to right of screen = -X, KeyA to left = +X)
+                let strafingCorrect = false;
+                if (game?.playerController) {
+                    const startX = game.playerController.getPosition().x;
+                    game.playerController.keys['KeyD'] = true;
+                    game.playerController.update(0.1, 0);
+                    const movedRightX = game.playerController.getPosition().x;
+                    game.playerController.keys['KeyD'] = false;
+
+                    game.playerController.keys['KeyA'] = true;
+                    game.playerController.update(0.1, 0);
+                    const movedLeftX = game.playerController.getPosition().x;
+                    game.playerController.keys['KeyA'] = false;
+
+                    strafingCorrect = (movedRightX < startX) && (movedLeftX > movedRightX);
+                }
 
                 return {
                     hasGameInstance: !!game,
@@ -6986,6 +7005,9 @@ try {
                     hasLeaderboard: !!leaderboard,
                     lbRows,
                     hasSearchingRow,
+                    searchingWaveLetters,
+                    hasSeparateStats,
+                    strafingCorrect,
                     hasCenterBanner,
                     waveLettersCount,
                     cameraBehindPlayer
@@ -6999,13 +7021,16 @@ try {
             if (!crownGamePageTest.testMessageSent || !crownGamePageTest.botMessageRejected) {
                 throw new Error("Crown Obby Anti-AI chat verification failed: " + JSON.stringify(crownGamePageTest));
             }
-            if (crownGamePageTest.lbRows < 1 || !crownGamePageTest.hasSearchingRow) {
+            if (crownGamePageTest.lbRows < 1 || !crownGamePageTest.hasSearchingRow || crownGamePageTest.searchingWaveLetters < 15 || !crownGamePageTest.hasSeparateStats) {
                 throw new Error("Crown Obby Live Progress table verification failed: " + JSON.stringify(crownGamePageTest));
+            }
+            if (!crownGamePageTest.strafingCorrect) {
+                throw new Error("Crown Obby strafing direction verification failed (Left/Right inverted): " + JSON.stringify(crownGamePageTest));
             }
             if (!crownGamePageTest.hasCenterBanner || crownGamePageTest.waveLettersCount !== 12 || !crownGamePageTest.cameraBehindPlayer) {
                 throw new Error("Crown Obby visual polish check failed: " + JSON.stringify(crownGamePageTest));
             }
-            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, No-AI Chat, Progress Table) testid edukalt läbitud!");
+            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, Strafing, Slow Waves, Separated Stats) testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
