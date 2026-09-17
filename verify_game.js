@@ -117,14 +117,15 @@ try {
                 hasPbxSvg: pbxSvg.includes('<svg') && (pbxSvg.includes('Playbux') || pbxSvg.includes('pbx')),
                 hasCoinSvg: coinSvg.includes('<svg') && coinSvg.includes('PlayCoin'),
                 has360Rotation: pbxSvg.includes('pbxSpin360') || pbxSvg.includes('animateTransform') || pbxSvg.includes('rotate'),
+                has3dYRotation: pbxSvg.includes('rotateY') && pbxSvg.includes('pbx-face-front') && pbxSvg.includes('pbx-face-back') && pbxSvg.includes('pbx-edge-glint'),
                 isLargerSize: pbxSvg.includes('width="30"') || pbxSvg.includes('width="32"') || pbxSvg.includes('width="34"') || pbxSvg.includes('width="36"'),
                 headerHasPlaybux: headerPill.toLowerCase().includes('playbux') || headerPill.toLowerCase().includes('pbx')
             };
         });
 
         console.log("   Playbux & PlayCoins System Test:", playbuxSystemTest);
-        if (!playbuxSystemTest.success || !playbuxSystemTest.hasPbxSvg || !playbuxSystemTest.hasCoinSvg || !playbuxSystemTest.has360Rotation) {
-            throw new Error(`Playbux & PlayCoins SVG/API/360-rotation failed: ${JSON.stringify(playbuxSystemTest)}`);
+        if (!playbuxSystemTest.success || !playbuxSystemTest.hasPbxSvg || !playbuxSystemTest.hasCoinSvg || !playbuxSystemTest.has360Rotation || !playbuxSystemTest.has3dYRotation) {
+            throw new Error(`Playbux & PlayCoins SVG/API/3D-Y-rotation failed: ${JSON.stringify(playbuxSystemTest)}`);
         }
         if (playbuxSystemTest.afterCoins !== playbuxSystemTest.initialCoins + 25 || !playbuxSystemTest.spendCoinsOk || playbuxSystemTest.finalCoins !== 15) {
             throw new Error(`PlayCoins earn/spend failed: ${JSON.stringify(playbuxSystemTest)}`);

@@ -1884,7 +1884,7 @@ class YardService {
 
     public renderPlaybuxSvg(size = 30, className = ''): string {
         return `
-        <svg data-currency="playbux" aria-label="Playbux (pbx)" class="${className} pbx-animated-logo" width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.75));">
+        <svg data-currency="playbux" aria-label="Playbux (pbx)" class="${className} pbx-animated-logo" width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; transform-style: preserve-3d; animation: pbxSpin360 4.5s linear infinite; filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.75));">
             <defs>
                 <linearGradient id="pbxDiamondGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#00f2fe"/>
@@ -1897,15 +1897,35 @@ class YardService {
                     <stop offset="70%" stop-color="#00f2fe"/>
                     <stop offset="100%" stop-color="#e056fd"/>
                 </linearGradient>
+                <linearGradient id="pbxBackRimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ffd32a"/>
+                    <stop offset="40%" stop-color="#ff793f"/>
+                    <stop offset="100%" stop-color="#7000ff"/>
+                </linearGradient>
                 <radialGradient id="pbxCorePlate" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stop-color="#0f172a"/>
                     <stop offset="65%" stop-color="#090d16"/>
                     <stop offset="100%" stop-color="#030712"/>
                 </radialGradient>
+                <radialGradient id="pbxBackPlate" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#18132b"/>
+                    <stop offset="65%" stop-color="#0e0a1e"/>
+                    <stop offset="100%" stop-color="#030209"/>
+                </radialGradient>
                 <linearGradient id="pbxTextGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#ffffff"/>
                     <stop offset="40%" stop-color="#e0f7fa"/>
                     <stop offset="100%" stop-color="#00f2fe"/>
+                </linearGradient>
+                <linearGradient id="pbxGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#fff275"/>
+                    <stop offset="50%" stop-color="#ffd32a"/>
+                    <stop offset="100%" stop-color="#ff9f1a"/>
+                </linearGradient>
+                <linearGradient id="pbxEdgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="rgba(0,242,254,0.1)"/>
+                    <stop offset="50%" stop-color="#ffffff"/>
+                    <stop offset="100%" stop-color="rgba(0,242,254,0.1)"/>
                 </linearGradient>
                 <filter id="pbxGlowEffect" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="2.5" result="blur"/>
@@ -1913,18 +1933,42 @@ class YardService {
                 </filter>
                 <style>
                     @keyframes pbxSpin360 {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
+                        0% { transform: perspective(320px) rotateY(0deg); }
+                        25% { transform: perspective(320px) rotateY(90deg); }
+                        50% { transform: perspective(320px) rotateY(180deg); }
+                        75% { transform: perspective(320px) rotateY(270deg); }
+                        100% { transform: perspective(320px) rotateY(360deg); }
                     }
-                    .pbx-spin-360 {
-                        transform-origin: 50px 50px;
-                        animation: pbxSpin360 6s linear infinite;
+                    @keyframes pbxShowFront {
+                        0%, 24.9% { opacity: 1; visibility: visible; }
+                        25%, 74.9% { opacity: 0; visibility: hidden; }
+                        75%, 100% { opacity: 1; visibility: visible; }
+                    }
+                    @keyframes pbxShowBack {
+                        0%, 24.9% { opacity: 0; visibility: hidden; }
+                        25%, 74.9% { opacity: 1; visibility: visible; }
+                        75%, 100% { opacity: 0; visibility: hidden; }
+                    }
+                    @keyframes pbxEdgeShine {
+                        0%, 20% { opacity: 0; }
+                        24%, 26% { opacity: 0.95; }
+                        30%, 70% { opacity: 0; }
+                        74%, 76% { opacity: 0.95; }
+                        80%, 100% { opacity: 0; }
+                    }
+                    .pbx-face-front {
+                        animation: pbxShowFront 4.5s linear infinite;
+                    }
+                    .pbx-face-back {
+                        animation: pbxShowBack 4.5s linear infinite;
+                    }
+                    .pbx-edge-glint {
+                        animation: pbxEdgeShine 4.5s linear infinite;
                     }
                 </style>
             </defs>
-            <!-- 360-Degree Continuously Rotating Cyber-Diamond Group -->
-            <g class="pbx-spin-360">
-                <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="6s" repeatCount="indefinite"/>
+            <!-- FRONT FACE (EEST): 0deg to 90deg and 270deg to 360deg -->
+            <g class="pbx-face-front">
                 <!-- Outer Tilted Cyber-Diamond Base (Rotated 45deg) -->
                 <rect x="18" y="18" width="64" height="64" rx="16" transform="rotate(45 50 50)" fill="url(#pbxCorePlate)" stroke="url(#pbxRimGrad)" stroke-width="4.5"/>
                 <!-- Inner Metallic Diamond Rim -->
@@ -1939,8 +1983,31 @@ class YardService {
                 <circle cx="8" cy="50" r="2" fill="#00f2fe"/>
                 <!-- Neon Play Arrow Accent -->
                 <path d="M 44 26 L 56 32 L 44 38 Z" fill="#00f2fe" opacity="0.95" filter="url(#pbxGlowEffect)"/>
-                <!-- Stylized Bold "pbx" Brandmark -->
+                <!-- Stylized Bold 'pbx' Brandmark -->
                 <text x="50" y="63" text-anchor="middle" font-family="'Montserrat', 'Arial Black', 'Trebuchet MS', system-ui, sans-serif" font-weight="900" font-size="25" letter-spacing="-0.5px" fill="url(#pbxTextGrad)" filter="url(#pbxGlowEffect)">pbx</text>
+            </g>
+            <!-- BACK FACE (TAGA): 90deg to 270deg (Un-mirrored horizontally via scale(-1, 1)) -->
+            <g class="pbx-face-back" transform="translate(100, 0) scale(-1, 1)">
+                <!-- Outer Reverse Cyber-Medallion Base -->
+                <rect x="18" y="18" width="64" height="64" rx="16" transform="rotate(45 50 50)" fill="url(#pbxBackPlate)" stroke="url(#pbxBackRimGrad)" stroke-width="4.5"/>
+                <!-- Inner Reverse Diamond Border -->
+                <rect x="25" y="25" width="50" height="50" rx="11" transform="rotate(45 50 50)" fill="#070414" stroke="url(#pbxGoldGrad)" stroke-width="2" stroke-opacity="0.9"/>
+                <!-- High-tech Radial Circuit Lines -->
+                <line x1="50" y1="12" x2="50" y2="28" stroke="#ffd32a" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.8"/>
+                <line x1="50" y1="72" x2="50" y2="88" stroke="#ffd32a" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.8"/>
+                <line x1="12" y1="50" x2="28" y2="50" stroke="#ffd32a" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.8"/>
+                <line x1="72" y1="50" x2="88" y2="50" stroke="#ffd32a" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.8"/>
+                <!-- Reverse Center Cyber Playard Emblem ▶ -->
+                <polygon points="42,34 66,50 42,66" fill="url(#pbxGoldGrad)" filter="url(#pbxGlowEffect)"/>
+                <!-- Center Cyber Star Pip -->
+                <circle cx="49" cy="50" r="3" fill="#ffffff"/>
+                <!-- Stylized Bottom Subtext 'pbx' -->
+                <text x="50" y="80" text-anchor="middle" font-family="'Montserrat', 'Arial Black', system-ui, sans-serif" font-weight="900" font-size="13" letter-spacing="1.5px" fill="url(#pbxGoldGrad)" opacity="0.95">PBX</text>
+            </g>
+            <!-- SIDE EDGE GLINT (KÜLG): Lights up sharply at 90deg and 270deg (25% and 75%) -->
+            <g class="pbx-edge-glint" opacity="0">
+                <rect x="46" y="8" width="8" height="84" rx="4" fill="url(#pbxEdgeGrad)" filter="url(#pbxGlowEffect)"/>
+                <line x1="50" y1="6" x2="50" y2="94" stroke="#ffffff" stroke-width="2.5"/>
             </g>
         </svg>
         `;
