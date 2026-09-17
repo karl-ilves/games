@@ -230,7 +230,34 @@
         }
         .leaderboard-row.is-current-player {
             border-color: #ffd700;
-            background: rgba(255, 215, 0, 0.1);
+            background: rgba(255, 215, 0, 0.12);
+        }
+        .leaderboard-rank {
+            font-weight: 900;
+            color: #ffd700;
+            font-size: 0.76rem;
+            min-width: 24px;
+        }
+        .leaderboard-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+            padding-right: 6px;
+        }
+        .leaderboard-progress-bar {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .leaderboard-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f2fe, #ffd700);
+            border-radius: 3px;
+            transition: width 0.4s ease;
         }
         .lb-player, .leaderboard-name {
             font-weight: 800;

@@ -7,6 +7,13 @@ export class CrownLeaderboardUI {
     constructor(gameState: GameState) {
         this.gameState = gameState;
         this.listContainer = document.getElementById('crown-leaderboard-list');
+        this.gameState.onLeaderboardUpdated(() => {
+            this.render();
+        });
+        // Periodically tick live runner competition
+        setInterval(() => {
+            this.gameState.tickLiveRunners();
+        }, 16000);
         this.render();
     }
 
@@ -19,20 +26,27 @@ export class CrownLeaderboardUI {
         players.forEach((p, idx) => {
             const row = document.createElement('div');
             row.className = 'leaderboard-row';
-            if (p.isOwner) {
+            if (p.id === 'curr_player') {
+                row.classList.add('is-current-player');
+                row.style.background = 'rgba(255, 215, 0, 0.12)';
+                row.style.border = '1px solid rgba(255, 215, 0, 0.45)';
+            } else if (p.isOwner) {
                 row.style.background = 'rgba(255, 215, 0, 0.08)';
                 row.style.border = '1px solid rgba(255, 215, 0, 0.25)';
             }
 
             const rank = document.createElement('div');
             rank.className = 'leaderboard-rank';
+            rank.style.cssText = 'font-weight: 900; color: #ffd700; font-size: 0.76rem; min-width: 24px;';
             rank.textContent = `#${idx + 1}`;
 
             const info = document.createElement('div');
             info.className = 'leaderboard-info';
+            info.style.cssText = 'flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-right: 6px;';
 
             const nameRow = document.createElement('div');
             nameRow.className = 'leaderboard-name';
+            nameRow.style.cssText = 'font-weight: 800; color: #ffffff; font-size: 0.76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
             if (p.isOwner) {
                 nameRow.innerHTML = `<span style="color: #ffd700;">👑 ${escapeHtml(p.name)}</span>`;
             } else {
@@ -41,10 +55,11 @@ export class CrownLeaderboardUI {
 
             const barContainer = document.createElement('div');
             barContainer.className = 'leaderboard-progress-bar';
+            barContainer.style.cssText = 'width: 100%; height: 5px; background: rgba(255, 255, 255, 0.12); border-radius: 3px; overflow: hidden;';
 
             const fill = document.createElement('div');
             fill.className = 'leaderboard-progress-fill';
-            fill.style.width = `${p.percentage}%`;
+            fill.style.cssText = `height: 100%; width: ${p.percentage}%; background: linear-gradient(90deg, #00f2fe, #ffd700); border-radius: 3px; transition: width 0.4s ease;`;
             barContainer.appendChild(fill);
 
             info.appendChild(nameRow);

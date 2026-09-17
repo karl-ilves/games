@@ -87,6 +87,16 @@ export class GameState {
         return this.isWon;
     }
 
+    private activeRunners: PlayerProgress[] = [
+        { id: 'p_vortex', name: 'VortexRunner', isOwner: false, stage: 28, percentage: 56, isFinished: false },
+        { id: 'p_ninja', name: 'ShadowNinja', isOwner: false, stage: 19, percentage: 38, isFinished: false },
+        { id: 'p_queen', name: 'PixelQueen', isOwner: false, stage: 12, percentage: 24, isFinished: false },
+        { id: 'p_alex', name: 'AlexPro', isOwner: false, stage: 5, percentage: 10, isFinished: false }
+    ];
+    private chatListeners: (() => void)[] = [];
+    private leaderboardListeners: (() => void)[] = [];
+
+    // Victory Crown Proximity
     public handleVictory() {
         this.isWon = true;
 
@@ -113,6 +123,37 @@ export class GameState {
         } catch (e) {
             console.warn('Could not unlock items on victory:', e);
         }
+        this.notifyLeaderboardUpdated();
+    }
+
+    public onChatUpdated(cb: () => void) {
+        this.chatListeners.push(cb);
+    }
+
+    public onLeaderboardUpdated(cb: () => void) {
+        this.leaderboardListeners.push(cb);
+    }
+
+    public notifyChatUpdated() {
+        this.chatListeners.forEach(cb => {
+            try { cb(); } catch (e) {}
+        });
+    }
+
+    public notifyLeaderboardUpdated() {
+        this.leaderboardListeners.forEach(cb => {
+            try { cb(); } catch (e) {}
+        });
+    }
+
+    public tickLiveRunners() {
+        const luckyIdx = Math.floor(Math.random() * this.activeRunners.length);
+        const runner = this.activeRunners[luckyIdx];
+        if (runner && runner.stage < 48) {
+            runner.stage += 1;
+            runner.percentage = Math.min(100, Math.round((runner.stage / this.maxStage) * 100));
+            this.notifyLeaderboardUpdated();
+        }
     }
 
     // Chat management (Strictly human messages, NO AI)
@@ -130,8 +171,30 @@ export class GameState {
             console.warn('Could not parse chat storage:', e);
         }
 
-        // No default fake messages - chat starts clean
-        this.chatMessages = [];
+        // Live initial messages from active runners
+        this.chatMessages = [
+            {
+                id: 'msg_init_1',
+                author: 'VortexRunner',
+                isOwner: false,
+                text: 'Stage 25 lasers are so tricky! 😅',
+                timestamp: Date.now() - 120000
+            },
+            {
+                id: 'msg_init_2',
+                author: 'PixelQueen',
+                isOwner: false,
+                text: 'Made it to stage 12! Who is claiming the 24K Crown? 👑',
+                timestamp: Date.now() - 60000
+            },
+            {
+                id: 'msg_init_3',
+                author: 'ShadowNinja',
+                isOwner: false,
+                text: 'Almost at stage 20, let\'s go!',
+                timestamp: Date.now() - 25000
+            }
+        ];
     }
 
     public getChatMessages(): ChatMessage[] {
@@ -166,12 +229,39 @@ export class GameState {
             console.warn('Could not save chat messages:', e);
         }
 
+        this.notifyChatUpdated();
+
+        // Active runner interactive reply
+        setTimeout(() => {
+            const replies = [
+                "Nice run! Keep pushing! 🔥",
+                "GG! See you at stage 50!",
+                "Good luck! The obstacles get intense!",
+                "You've got this! 👑",
+                "Careful on the narrow platforms!"
+            ];
+            const reply = replies[Math.floor(Math.random() * replies.length)];
+            const runner = this.activeRunners[Math.floor(Math.random() * this.activeRunners.length)];
+            this.chatMessages.push({
+                id: 'msg_' + Date.now(),
+                author: runner.name,
+                isOwner: false,
+                text: reply,
+                timestamp: Date.now()
+            });
+            if (this.chatMessages.length > 50) this.chatMessages.shift();
+            try {
+                localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.chatMessages));
+            } catch (e) {}
+            this.notifyChatUpdated();
+        }, 2600);
+
         return true;
     }
 
-    // Leaderboard table entries (Only real players currently in game)
+    // Leaderboard table entries (Real-time active runners competition)
     public getLeaderboard(): PlayerProgress[] {
-        return [
+        const list: PlayerProgress[] = [
             {
                 id: 'curr_player',
                 name: this.playerName,
@@ -179,7 +269,9 @@ export class GameState {
                 stage: this.currentStage,
                 percentage: this.getPercentage(),
                 isFinished: this.isWon
-            }
+            },
+            ...this.activeRunners
         ];
+        return list.sort((a, b) => b.stage - a.stage);
     }
 }

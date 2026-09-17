@@ -18,12 +18,34 @@ export class CrownChatUI {
     }
 
     private init() {
-        if (this.form && this.input) {
+        if (this.form) {
             this.form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.handleSendMessage();
             });
         }
+
+        const sendBtn = document.getElementById('crown-chat-send');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleSendMessage();
+            });
+        }
+
+        if (this.input) {
+            this.input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.handleSendMessage();
+                }
+            });
+        }
+
+        // Auto-subscribe to live chat updates
+        this.gameState.onChatUpdated(() => {
+            this.renderMessages();
+        });
 
         this.renderMessages();
     }

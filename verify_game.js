@@ -3144,7 +3144,6 @@ try {
 
         // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)
             console.log("11. Checking 3D Train Simulator (Guest English Localization)...");
-            await page.goto('about:blank');
             await page.goto('http://localhost:4173/games/train/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1500));
             await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -6895,7 +6894,7 @@ try {
                 if (passInput && submitBtn && errBox) {
                     passInput.value = '123456';
                     submitBtn.click();
-                    wrongCodeRejected = (errBox.textContent?.includes('petter luck next time') && errBox.style.display !== 'none');
+                    wrongCodeRejected = ((errBox.textContent?.includes('Better luck next time') || errBox.textContent?.includes('petter luck next time')) && errBox.style.display !== 'none');
 
                     passInput.value = '133731';
                     submitBtn.click();

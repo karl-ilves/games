@@ -589,7 +589,7 @@ function setupModals() {
             window.location.href = './games/crown/index.html';
         } else {
             if (homeCrownPassErr) {
-                homeCrownPassErr.textContent = 'petter luck next time 😂';
+                homeCrownPassErr.textContent = 'Better luck next time 😂';
                 homeCrownPassErr.style.display = 'block';
             }
             if (homeCrownPassInput) {

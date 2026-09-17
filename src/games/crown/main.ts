@@ -66,7 +66,7 @@ export class CrownObbyGame {
                 }
             } else {
                 if (errorMsg) {
-                    errorMsg.textContent = 'petter luck next time 😂';
+                    errorMsg.textContent = 'Better luck next time 😂';
                     errorMsg.style.display = 'block';
                 }
                 if (input) {
