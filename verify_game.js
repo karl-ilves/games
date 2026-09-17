@@ -2758,7 +2758,6 @@ try {
 
         // 9. Test 3D Master Chef Cooking Simulator
         console.log("9. Checking 3D Master Chef Cooking Simulator...");
-        await page.goto('about:blank');
         await page.goto('http://localhost:4173/games/cooking/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -2768,7 +2767,6 @@ try {
 
         // 10. Test 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)
         console.log("10. Checking 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)...");
-        await page.goto('about:blank');
         await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -6886,6 +6884,24 @@ try {
                 card.click();
                 const modalVisibleAfterGuestClick = modal.style.display === 'flex';
 
+                // Test Passcode Input: wrong code displays "petter luck next time 😂", correct 133731 unlocks
+                const passInput = document.getElementById('home-crown-passcode-input');
+                const submitBtn = document.getElementById('btn-submit-home-crown-passcode');
+                const errBox = document.getElementById('home-crown-passcode-error');
+
+                let wrongCodeRejected = false;
+                let correctCodeAccepted = false;
+
+                if (passInput && submitBtn && errBox) {
+                    passInput.value = '123456';
+                    submitBtn.click();
+                    wrongCodeRejected = (errBox.textContent?.includes('petter luck next time') && errBox.style.display !== 'none');
+
+                    passInput.value = '133731';
+                    submitBtn.click();
+                    correctCodeAccepted = sessionStorage.getItem('crown_passcode_unlocked') === 'true';
+                }
+
                 // Close modal
                 const closeBtn = document.getElementById('btn-close-crown-coming-soon');
                 if (closeBtn) closeBtn.click();
@@ -6909,12 +6925,15 @@ try {
                     hasPrizeNote,
                     hasStagesNote,
                     modalVisibleAfterGuestClick,
+                    hasPasscodeInput: !!passInput,
+                    wrongCodeRejected,
+                    correctCodeAccepted,
                     modalClosedAfterBtn
                 };
             });
 
             console.log("   Homepage Crown Obby Card & Access Control:", homepageCrownTest);
-            if (!homepageCrownTest.success || !homepageCrownTest.hasCrownTitle || !homepageCrownTest.hasPrizeNote || !homepageCrownTest.modalVisibleAfterGuestClick) {
+            if (!homepageCrownTest.success || !homepageCrownTest.hasCrownTitle || !homepageCrownTest.hasPrizeNote || !homepageCrownTest.modalVisibleAfterGuestClick || !homepageCrownTest.wrongCodeRejected || !homepageCrownTest.correctCodeAccepted) {
                 throw new Error("Homepage Crown Obby Card check failed: " + JSON.stringify(homepageCrownTest));
             }
 

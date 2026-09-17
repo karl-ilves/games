@@ -36,15 +36,55 @@ export class CrownObbyGame {
 
         const isOwner = this.gameState.getIsOwner();
         const inTest = isTestMode() || (window as any).__PLAYARD_TEST_MODE__;
+        const isUnlocked = this.gameState.isUnlockedWithPasscode();
 
         const comingSoonModal = document.getElementById('coming-soon-modal');
-        if (!isOwner && !inTest) {
-            // Non-owner: Show Coming Soon modal
+        if (!isOwner && !inTest && !isUnlocked) {
+            // Non-owner: Show Coming Soon modal with 6-digit passcode option
             if (comingSoonModal) comingSoonModal.style.display = 'flex';
+            this.setupPasscodeUnlock();
             return;
         } else {
             if (comingSoonModal) comingSoonModal.style.display = 'none';
         }
+
+        this.startPlay();
+    }
+
+    private setupPasscodeUnlock() {
+        const input = document.getElementById('crown-passcode-input') as HTMLInputElement | null;
+        const submitBtn = document.getElementById('btn-submit-crown-passcode');
+        const errorMsg = document.getElementById('crown-passcode-error');
+        const comingSoonModal = document.getElementById('coming-soon-modal');
+
+        const tryUnlock = () => {
+            const val = input?.value.trim() || '';
+            if (this.gameState.checkPasscode(val)) {
+                if (comingSoonModal) comingSoonModal.style.display = 'none';
+                if (!this.isRunning) {
+                    this.startPlay();
+                }
+            } else {
+                if (errorMsg) {
+                    errorMsg.textContent = 'petter luck next time 😂';
+                    errorMsg.style.display = 'block';
+                }
+                if (input) {
+                    input.style.borderColor = '#ff4757';
+                    input.value = '';
+                    input.focus();
+                }
+            }
+        };
+
+        submitBtn?.addEventListener('click', tryUnlock);
+        input?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') tryUnlock();
+        });
+    }
+
+    private startPlay() {
+        if (this.isRunning) return;
 
         // Record in Recently Played Games with prize description
         try {

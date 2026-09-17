@@ -572,14 +572,44 @@ function setupModals() {
         closeStreakBtn.addEventListener('click', () => modalStreak.style.display = 'none');
     }
 
-    // Crown Obby Coming Soon Modal
+    // Crown Obby Coming Soon Modal & Passcode Unlock (133731)
     const closeCrownBtn = document.getElementById('btn-close-crown-coming-soon');
     const crownModal = document.getElementById('modal-crown-coming-soon');
+    const homeCrownPassInput = document.getElementById('home-crown-passcode-input') as HTMLInputElement | null;
+    const homeCrownPassBtn = document.getElementById('btn-submit-home-crown-passcode');
+    const homeCrownPassErr = document.getElementById('home-crown-passcode-error');
+
+    const tryHomeCrownUnlock = () => {
+        const val = homeCrownPassInput?.value.trim() || '';
+        if (val === '133731') {
+            try {
+                sessionStorage.setItem('crown_passcode_unlocked', 'true');
+            } catch (e) {}
+            if (crownModal) crownModal.style.display = 'none';
+            window.location.href = './games/crown/index.html';
+        } else {
+            if (homeCrownPassErr) {
+                homeCrownPassErr.textContent = 'petter luck next time 😂';
+                homeCrownPassErr.style.display = 'block';
+            }
+            if (homeCrownPassInput) {
+                homeCrownPassInput.style.borderColor = '#ff4757';
+                homeCrownPassInput.value = '';
+                homeCrownPassInput.focus();
+            }
+        }
+    };
+
     if (closeCrownBtn && crownModal) {
         closeCrownBtn.addEventListener('click', () => {
             crownModal.style.display = 'none';
+            if (homeCrownPassErr) homeCrownPassErr.style.display = 'none';
         });
     }
+    homeCrownPassBtn?.addEventListener('click', tryHomeCrownUnlock);
+    homeCrownPassInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') tryHomeCrownUnlock();
+    });
 
     // 2. Claim Daily Button
     const claimDailyBtn = document.getElementById('btn-claim-daily');
@@ -1012,7 +1042,8 @@ function renderRecentlyPlayed() {
             if (gameId === 'crown') {
                 const prof = getCurrentUserProfile();
                 const isOwner = isPlayardOwner(prof?.email) || !!(prof?.username?.toLowerCase().includes('owner'));
-                if (!isOwner) {
+                const isUnlocked = sessionStorage.getItem('crown_passcode_unlocked') === 'true';
+                if (!isOwner && !isUnlocked) {
                     e.preventDefault();
                     const modal = document.getElementById('modal-crown-coming-soon');
                     if (modal) modal.style.display = 'flex';
@@ -1094,7 +1125,8 @@ function setupGameCardTracking() {
                 if (href === './games/crown/index.html') {
                     const prof = getCurrentUserProfile();
                     const isOwner = isPlayardOwner(prof?.email) || !!(prof?.username?.toLowerCase().includes('owner'));
-                    if (!isOwner) {
+                    const isUnlocked = sessionStorage.getItem('crown_passcode_unlocked') === 'true';
+                    if (!isOwner && !isUnlocked) {
                         e.preventDefault();
                         const modal = document.getElementById('modal-crown-coming-soon');
                         if (modal) modal.style.display = 'flex';

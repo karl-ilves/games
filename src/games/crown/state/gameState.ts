@@ -27,6 +27,24 @@ export class GameState {
         return this.isOwner;
     }
 
+    public isUnlockedWithPasscode(): boolean {
+        try {
+            return sessionStorage.getItem('crown_passcode_unlocked') === 'true' || localStorage.getItem('crown_passcode_unlocked') === 'true';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    public checkPasscode(code: string): boolean {
+        if (code.trim() === '133731') {
+            try {
+                sessionStorage.setItem('crown_passcode_unlocked', 'true');
+            } catch (e) {}
+            return true;
+        }
+        return false;
+    }
+
     public getPlayerName(): string {
         return this.playerName;
     }
