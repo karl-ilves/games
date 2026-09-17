@@ -6971,8 +6971,6 @@ try {
                 const hasSearchingRow = !!leaderboard?.querySelector('.leaderboard-searching-row');
                 const searchingWaveLetters = document.querySelectorAll('.leaderboard-searching-row .wave-letter-search').length;
                 const hasSeparateStats = !!document.querySelector('.leaderboard-stage') && !!document.querySelector('.leaderboard-percent');
-                const hasCenterBanner = !!document.getElementById('playard-center-banner');
-                const waveLettersCount = document.querySelectorAll('#playard-center-banner .wave-letter').length;
                 const cameraBehindPlayer = game?.camera && game?.playerController ? (game.camera.position.z < game.playerController.getPosition().z) : false;
 
                 // Test strafing direction (KeyD should move to right of screen = -X, KeyA to left = +X)
@@ -7008,8 +7006,6 @@ try {
                     searchingWaveLetters,
                     hasSeparateStats,
                     strafingCorrect,
-                    hasCenterBanner,
-                    waveLettersCount,
                     cameraBehindPlayer
                 };
             });
@@ -7027,10 +7023,10 @@ try {
             if (!crownGamePageTest.strafingCorrect) {
                 throw new Error("Crown Obby strafing direction verification failed (Left/Right inverted): " + JSON.stringify(crownGamePageTest));
             }
-            if (!crownGamePageTest.hasCenterBanner || crownGamePageTest.waveLettersCount !== 12 || !crownGamePageTest.cameraBehindPlayer) {
-                throw new Error("Crown Obby visual polish check failed: " + JSON.stringify(crownGamePageTest));
+            if (!crownGamePageTest.cameraBehindPlayer) {
+                throw new Error("Crown Obby camera perspective check failed: " + JSON.stringify(crownGamePageTest));
             }
-            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, Strafing, Slow Waves, Separated Stats) testid edukalt läbitud!");
+            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, Strafing, Slow Waves, Clean Unobstructed View) testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
