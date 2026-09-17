@@ -181,9 +181,9 @@ export class RocketShopUI {
         const yardsDisplay = document.getElementById('shop-current-yards-display');
         if (yardsDisplay) {
             try {
-                yardsDisplay.textContent = `${yardService.getYards().toLocaleString()} PBX`;
+                yardsDisplay.textContent = `${yardService.getYards().toLocaleString()} pbx`;
             } catch (e) {
-                yardsDisplay.textContent = '0 PBX';
+                yardsDisplay.textContent = '0 pbx';
             }
         }
 
@@ -239,7 +239,7 @@ export class RocketShopUI {
                         box-shadow: 0 2px 10px rgba(0, 242, 254, 0.35);
                     ">
                         <span>💎</span>
-                        <span>${pack.yardCost.toLocaleString()} PBX</span>
+                        <span>${pack.yardCost.toLocaleString()} pbx</span>
                     </button>
                 </div>
             `;
@@ -314,7 +314,7 @@ export class RocketShopUI {
                         box-shadow: ${isOwned ? 'none' : '0 2px 10px rgba(255, 211, 42, 0.4)'};
                     ">
                         <span>💎</span>
-                        <span>${isOwned ? '✓ OMATUD' : `${pass.yardCost.toLocaleString()} PBX`}</span>
+                        <span>${isOwned ? '✓ OMATUD' : `${pass.yardCost.toLocaleString()} pbx`}</span>
                     </button>
                 </div>
             `;

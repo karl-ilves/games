@@ -70,7 +70,7 @@ export function renderDepotModal(onSelectTrain: (train: TrainDef) => void) {
         if (train.price === 0) {
             priceBadgeHtml = `<span class="train-price-badge badge-free">${t.free}</span>`;
         } else {
-            priceBadgeHtml = `<span class="train-price-badge badge-price">🪙 ${train.price} €  ${t.or}  💎 ${yardPrice} PBX</span>`;
+            priceBadgeHtml = `<span class="train-price-badge badge-price">🪙 ${train.price} €  ${t.or}  💎 ${yardPrice} pbx</span>`;
         }
 
         let actionBtnHtml = '';

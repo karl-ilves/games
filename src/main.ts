@@ -338,7 +338,7 @@ function renderStreakCards() {
         if (streakInfo.canClaim) {
             statusMsg.innerText = streakInfo.nextDayIndex === 7
                 ? '🔥 Day 7 Jackpot ready: Claim 500 Playbux now!'
-                : `🎁 Day ${streakInfo.nextDayIndex} Streak Reward Ready! (+${streakInfo.nextRewardAmount} PBX)`;
+                : `🎁 Day ${streakInfo.nextDayIndex} Streak Reward Ready! (+${streakInfo.nextRewardAmount} pbx)`;
             statusMsg.style.color = '#00f2fe';
         } else {
             statusMsg.innerText = `Current streak: ${streakInfo.currentStreak} / 7 Days.`;

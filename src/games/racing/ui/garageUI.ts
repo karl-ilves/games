@@ -124,7 +124,7 @@ export class GarageUI {
                 buttonsHtml = `
                     <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
                         <button class="btn shop-buy-cash-btn" data-id="${v.id}" style="background: #27ae60; flex: 1; min-width: 90px; font-size: 12px; padding: 8px 4px; margin: 0;">$${v.price.toLocaleString()}</button>
-                        <button class="btn shop-buy-yard-btn" data-id="${v.id}" style="background: #00f2fe; color: #111; flex: 1; min-width: 90px; font-size: 12px; padding: 8px 4px; margin: 0; font-weight: 800;">💎 ${v.yardPrice} PBX</button>
+                        <button class="btn shop-buy-yard-btn" data-id="${v.id}" style="background: #00f2fe; color: #111; flex: 1; min-width: 90px; font-size: 12px; padding: 8px 4px; margin: 0; font-weight: 800;">💎 ${v.yardPrice} pbx</button>
                     </div>
                 `;
             }

@@ -83,12 +83,12 @@ export class YardPurchaseModal {
 
                     <div id="yard-purchase-cost" style="font-size: 1.25rem; font-weight: 900; color: #ffd32a; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <span>${yardService.renderYardSvg(24)}</span>
-                        <span>Price: ${options.yardCost.toLocaleString()} Playbux</span>
+                        <span>Price: ${options.yardCost.toLocaleString()} pbx</span>
                     </div>
 
                     <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 10px 16px; margin-bottom: 18px; font-size: 0.92rem; color: #a4b0be; display: flex; justify-content: space-between; align-items: center;">
                         <span>Your Balance:</span>
-                        <strong style="color: ${hasEnough ? '#2ecc71' : '#ff4757'}; font-size: 1rem;">${currentYards.toLocaleString()} Playbux</strong>
+                        <strong style="color: ${hasEnough ? '#2ecc71' : '#ff4757'}; font-size: 1rem;">${currentYards.toLocaleString()} pbx</strong>
                     </div>
 
                     ${!hasEnough ? `

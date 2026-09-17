@@ -114,9 +114,9 @@ try {
                 pbxAfterGameCoinGain,
                 spendCoinsOk,
                 finalCoins,
-                hasPbxSvg: pbxSvg.includes('<svg') && pbxSvg.includes('Playbux'),
+                hasPbxSvg: pbxSvg.includes('<svg') && (pbxSvg.includes('Playbux') || pbxSvg.includes('pbx')),
                 hasCoinSvg: coinSvg.includes('<svg') && coinSvg.includes('PlayCoin'),
-                headerHasPlaybux: headerPill.includes('PLAYBUX')
+                headerHasPlaybux: headerPill.toLowerCase().includes('playbux') || headerPill.toLowerCase().includes('pbx')
             };
         });
 
@@ -1002,7 +1002,7 @@ try {
         // Verify Outfit bundle pricing (Sum of all items inside)
         const goldenPriceText = await page.$eval('[data-outfit-id="outfit_golden_emperor"] .price-tag', el => el.textContent);
         console.log("   Golden Emperor outfit bundle price (Sum of items):", goldenPriceText);
-        if (!goldenPriceText || (!goldenPriceText.includes('Y') && !goldenPriceText.includes('PBX'))) {
+        if (!goldenPriceText || (!goldenPriceText.includes('Y') && !goldenPriceText.includes('PBX') && !goldenPriceText.includes('pbx'))) {
             throw new Error("Outfit card must display bundle price as sum of items inside!");
         }
 
@@ -1085,8 +1085,8 @@ try {
         if (!breakdanceBuyBtn) throw new Error("Unowned emote 'emote_breakdance' must have a Buy button!");
         const breakdanceBtnText = await page.$eval('[data-buy-id="emote_breakdance"]', el => el.textContent);
         console.log("   Unowned Breakdance button text (Expected: Buy 2600 Y or PBX):", breakdanceBtnText);
-        if ((!breakdanceBtnText.includes('2600 Y') && !breakdanceBtnText.includes('2600 PBX')) || breakdanceBtnText.includes('Equipped')) {
-            throw new Error("Breakdance emote must show Buy button with 2600 Y/PBX!");
+        if ((!breakdanceBtnText.includes('2600 Y') && !breakdanceBtnText.includes('2600 PBX') && !breakdanceBtnText.includes('2600 pbx')) || breakdanceBtnText.includes('Equipped')) {
+            throw new Error("Breakdance emote must show Buy button with 2600 Y/pbx!");
         }
 
         // Test switching between complex emotes (Levitate -> Breakdance -> Wave) and verify clean bone reset
@@ -3129,8 +3129,8 @@ try {
             }
 
             const metroDepotText = await page.$eval('#trains-grid-container', el => el.textContent);
-            if (!metroDepotText.includes('100 €') || (!metroDepotText.includes('500 Y') && !metroDepotText.includes('500 PBX')) || (!metroDepotText.includes('FREE') && !metroDepotText.includes('TASUTA'))) {
-                throw new Error(`Metro category must contain starter metro and purchasable metros with 5x Yard/PBX price! Got: ${metroDepotText.substring(0, 120)}`);
+            if (!metroDepotText.includes('100 €') || (!metroDepotText.includes('500 Y') && !metroDepotText.includes('500 PBX') && !metroDepotText.includes('500 pbx')) || (!metroDepotText.includes('FREE') && !metroDepotText.includes('TASUTA'))) {
+                throw new Error(`Metro category must contain starter metro and purchasable metros with 5x Yard/pbx price! Got: ${metroDepotText.substring(0, 120)}`);
             }
 
             const depotYardVal = await page.$eval('#depot-yard-val', el => el.textContent);
@@ -6566,7 +6566,7 @@ try {
 
                 // Check all buttons inside view-yard-shop
                 const yardButtons = Array.from(viewYardShop.querySelectorAll('button'));
-                const allYardButtonsCostYards = yardButtons.every(btn => btn.textContent.includes('Y') || btn.textContent.includes('PBX') || btn.textContent.includes('OMATUD'));
+                const allYardButtonsCostYards = yardButtons.every(btn => btn.textContent.includes('Y') || btn.textContent.includes('PBX') || btn.textContent.includes('pbx') || btn.textContent.includes('OMATUD'));
                 const noPtsButtonsInYardShop = !yardButtons.some(btn => btn.textContent.includes('PTS') && btn.textContent.includes('OSTA'));
 
                 // Switch to Rockets tab
