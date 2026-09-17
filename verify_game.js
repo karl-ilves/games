@@ -5916,8 +5916,11 @@ try {
                 const initialBtnText = confirmBtn?.textContent?.trim() || '';
                 const initialDisabled = confirmBtn?.disabled;
 
-                // Wait 350ms for 50ms * 5 ticks to finish
-                await new Promise(r => setTimeout(r, 350));
+                // Wait for 50ms * 5 ticks to finish, checking dynamically
+                for (let i = 0; i < 30; i++) {
+                    if (confirmBtn && !confirmBtn.disabled) break;
+                    await new Promise(r => setTimeout(r, 50));
+                }
 
                 const readyBtnText = confirmBtn?.textContent?.trim() || '';
                 const readyDisabled = confirmBtn?.disabled;
@@ -6328,9 +6331,96 @@ try {
                 const itemsCount = document.querySelectorAll('#rocket-catalog-list .rocket-item-card').length;
                 return { isVisible, itemsCount };
             });
-            console.log(`   Rocket Shop open: ${shopResult.isVisible}, Catalog items: ${shopResult.itemsCount} (Expected: 4)`);
-            if (!shopResult.isVisible || shopResult.itemsCount < 4) {
-                throw new Error("Rocket Shop must open and render all 4 arcade rocket upgrade options!");
+            console.log(`   Rocket Shop open: ${shopResult.isVisible}, Catalog items: ${shopResult.itemsCount} (Expected: >= 50)`);
+            if (!shopResult.isVisible || shopResult.itemsCount < 50) {
+                throw new Error(`Rocket Shop must open and render at least 50 arcade rocket upgrade options, found: ${shopResult.itemsCount}!`);
+            }
+
+            // Test Yard Points Exchange in Rocket Shop (500Y -> 100PTS, 1000Y -> 200PTS, 5000Y -> 1000PTS)
+            console.log("   Testing Yard Points Exchange (500Y/1000Y/5000Y) & Confirmation Modal...");
+            const yardExchangeResult = await page.evaluate(async () => {
+                const game = window.rocketGame;
+                if (!game) return { success: false, reason: 'no rocketGame' };
+
+                // Enable auto-confirm for yard purchase modal
+                window.__AUTO_CONFIRM_YARD_PURCHASE__ = true;
+
+                // Ensure player has sufficient Yards for testing via window.yardService
+                if (window.yardService) {
+                    window.yardService.data.yards = 25000;
+                    window.yardService.saveLocally(window.yardService.data);
+                }
+
+                // Check packs in DOM
+                const pack100Btn = document.getElementById('btn-buy-yard-yard_pack_100');
+                const pack200Btn = document.getElementById('btn-buy-yard-yard_pack_200');
+                const pack1000Btn = document.getElementById('btn-buy-yard-yard_pack_1000');
+
+                if (!pack100Btn || !pack200Btn || !pack1000Btn) {
+                    return { success: false, reason: 'Yard exchange pack buttons not found in DOM' };
+                }
+
+                const initialBank = game.totalPointsBank;
+                const initialYards = window.yardService ? window.yardService.getYards() : 0;
+
+                // Buy 100 PTS pack (costs 500 Y)
+                pack100Btn.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const afterBank1 = game.totalPointsBank;
+                const afterYards1 = window.yardService ? window.yardService.getYards() : 0;
+
+                // Buy 200 PTS pack (costs 1000 Y)
+                pack200Btn.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const afterBank2 = game.totalPointsBank;
+                const afterYards2 = window.yardService ? window.yardService.getYards() : 0;
+
+                // Buy 1000 PTS pack (costs 5000 Y)
+                pack1000Btn.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const afterBank3 = game.totalPointsBank;
+                const afterYards3 = window.yardService ? window.yardService.getYards() : 0;
+
+                // Test Filter Tab for Yards
+                const yardFilterTab = document.querySelector('.filter-tab-btn[data-cat="yards"]');
+                if (yardFilterTab) yardFilterTab.click();
+                const activeCategory = game.shopUI.activeCategory;
+
+                return {
+                    success: true,
+                    initialBank,
+                    afterBank1,
+                    afterBank2,
+                    afterBank3,
+                    ptsGained1: afterBank1 - initialBank,
+                    ptsGained2: afterBank2 - afterBank1,
+                    ptsGained3: afterBank3 - afterBank2,
+                    yardsSpent1: initialYards - afterYards1,
+                    yardsSpent2: afterYards1 - afterYards2,
+                    yardsSpent3: afterYards2 - afterYards3,
+                    activeCategory
+                };
+            });
+
+            console.log(`   Yard Exchange Results: Pack 1 (+${yardExchangeResult.ptsGained1} PTS for -${yardExchangeResult.yardsSpent1} Y), Pack 2 (+${yardExchangeResult.ptsGained2} PTS for -${yardExchangeResult.yardsSpent2} Y), Pack 3 (+${yardExchangeResult.ptsGained3} PTS for -${yardExchangeResult.yardsSpent3} Y), Category: ${yardExchangeResult.activeCategory}`);
+
+            if (!yardExchangeResult.success) {
+                throw new Error(`Yard exchange test failed: ${yardExchangeResult.reason}`);
+            }
+            if (yardExchangeResult.ptsGained1 !== 100 || yardExchangeResult.yardsSpent1 !== 500) {
+                throw new Error(`Expected 500 Y -> 100 PTS, got -${yardExchangeResult.yardsSpent1} Y -> +${yardExchangeResult.ptsGained1} PTS`);
+            }
+            if (yardExchangeResult.ptsGained2 !== 200 || yardExchangeResult.yardsSpent2 !== 1000) {
+                throw new Error(`Expected 1000 Y -> 200 PTS, got -${yardExchangeResult.yardsSpent2} Y -> +${yardExchangeResult.ptsGained2} PTS`);
+            }
+            if (yardExchangeResult.ptsGained3 !== 1000 || yardExchangeResult.yardsSpent3 !== 5000) {
+                throw new Error(`Expected 5000 Y -> 1000 PTS, got -${yardExchangeResult.yardsSpent3} Y -> +${yardExchangeResult.ptsGained3} PTS`);
+            }
+            if (yardExchangeResult.activeCategory !== 'yards') {
+                throw new Error("Yard exchange category tab must filter to 'yards'!");
             }
 
             // Test Round End & WINNER Modal
