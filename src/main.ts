@@ -1,5 +1,5 @@
 import { supabase } from './lib/supabase';
-import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner, canAccessMmp1, calculateAge } from './auth';
+import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner, canAccessMmp1, calculateAge, isTestMode } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
 import { setLanguage, applyLocalization, getLanguage } from './shared/i18n';
 import { AvatarWidget } from './components/AvatarWidget';
@@ -572,6 +572,15 @@ function setupModals() {
         closeStreakBtn.addEventListener('click', () => modalStreak.style.display = 'none');
     }
 
+    // Crown Obby Coming Soon Modal
+    const closeCrownBtn = document.getElementById('btn-close-crown-coming-soon');
+    const crownModal = document.getElementById('modal-crown-coming-soon');
+    if (closeCrownBtn && crownModal) {
+        closeCrownBtn.addEventListener('click', () => {
+            crownModal.style.display = 'none';
+        });
+    }
+
     // 2. Claim Daily Button
     const claimDailyBtn = document.getElementById('btn-claim-daily');
     if (claimDailyBtn) {
@@ -890,10 +899,6 @@ function renderRecentlyPlayed() {
             ? 'background: linear-gradient(135deg, #00f2fe, #4facfe); color: #0b1a2d; font-weight: 900; box-shadow: 0 0 12px rgba(0, 242, 254, 0.4);'
             : (index === 1 ? 'background: rgba(255, 211, 42, 0.18); color: #ffd32a; border: 1px solid rgba(255, 211, 42, 0.4); font-weight: 800;' : 'background: rgba(255, 255, 255, 0.08); color: #a4b0be; border: 1px solid rgba(255, 255, 255, 0.15); font-weight: 700;');
 
-        const cardBorder = isLatest
-            ? 'border: 1.5px solid rgba(0, 242, 254, 0.6); box-shadow: 0 12px 32px rgba(0, 242, 254, 0.22); background: linear-gradient(145deg, #162432 0%, #111a24 100%);'
-            : 'border: 1px solid rgba(255, 255, 255, 0.08); background: #1e272e;';
-
         const timeStr = formatTimeAgo(game.lastPlayed, isEt);
         const badgeColor = game.badgeColor || '#00f2fe';
         const playAgainText = isEt ? 'Mängi uuesti ▶' : 'Play again ▶';
@@ -928,6 +933,10 @@ function renderRecentlyPlayed() {
                 gameTitle = '🏃‍♂️ 3D Parkour Obby';
                 gameDesc = 'Challenging 10-stage obstacle course with moving platforms and hazards.';
                 badgeText = '🏆 10 Stages Obby';
+            } else if (game.id === 'crown') {
+                gameTitle = '👑 24K Crown Obby';
+                gameDesc = "The world's only 👑 24K Royal Crown & Golden Monarch outfit!";
+                badgeText = '👑 Grand Prize (50 Stages)';
             }
         } else {
             if (game.id === 'racing') {
@@ -954,8 +963,19 @@ function renderRecentlyPlayed() {
                 gameTitle = '🏃‍♂️ 3D Parkour Obby';
                 gameDesc = 'Väljakutsuv 10-tasemeline takistusrada ja parkour.';
                 badgeText = '🏆 10-Tasemeline Obby';
+            } else if (game.id === 'crown') {
+                gameTitle = '👑 24K Crown Obby';
+                gameDesc = 'Maailma ainus 👑 24K Royal Crown & Golden Monarch komplekt!';
+                badgeText = '👑 50 Etappi (Grand Prize)';
             }
         }
+
+        const isCrown = game.id === 'crown';
+        const cardBorder = isCrown
+            ? 'border: 1.5px solid rgba(255, 215, 0, 0.85); box-shadow: 0 12px 32px rgba(255, 215, 0, 0.35); background: linear-gradient(145deg, #241d0b 0%, #171205 100%);'
+            : (isLatest
+                ? 'border: 1.5px solid rgba(0, 242, 254, 0.6); box-shadow: 0 12px 32px rgba(0, 242, 254, 0.22); background: linear-gradient(145deg, #162432 0%, #111a24 100%);'
+                : 'border: 1px solid rgba(255, 255, 255, 0.08); background: #1e272e;');
 
         return `
             <a href="${game.url}" class="game-card recently-played-card" data-game-id="${game.id}" style="${cardBorder}">
@@ -987,8 +1007,18 @@ function renderRecentlyPlayed() {
 
     // Attach click listeners to update recently played immediately
     container.querySelectorAll('.recently-played-card').forEach(el => {
-        el.addEventListener('click', () => {
+        el.addEventListener('click', (e) => {
             const gameId = el.getAttribute('data-game-id');
+            if (gameId === 'crown') {
+                const prof = getCurrentUserProfile();
+                const isOwner = isPlayardOwner(prof?.email) || !!(prof?.username?.toLowerCase().includes('owner'));
+                if (!isOwner) {
+                    e.preventDefault();
+                    const modal = document.getElementById('modal-crown-coming-soon');
+                    if (modal) modal.style.display = 'flex';
+                    return;
+                }
+            }
             const targetGame = top3.find(g => g.id === gameId);
             if (targetGame) {
                 yardService.recordPlayedGame(targetGame);
@@ -1000,6 +1030,15 @@ function renderRecentlyPlayed() {
 function setupGameCardTracking() {
     // Track clicks on official and community cards
     const officialGameMap: Record<string, { id: string; title: string; description: string; url: string; icon: string; badgeText: string; badgeColor: string }> = {
+        './games/crown/index.html': {
+            id: 'crown',
+            title: '👑 24K Crown Obby',
+            description: 'Maailma ainus 👑 24K Royal Crown & Golden Monarch komplekt!',
+            url: './games/crown/index.html',
+            icon: '👑',
+            badgeText: '🏆 50 Stages Obby',
+            badgeColor: '#ffd700'
+        },
         './games/racing/index.html': {
             id: 'racing',
             title: '🏎️ Racing Simulator',
@@ -1051,7 +1090,17 @@ function setupGameCardTracking() {
         if (card.classList.contains('recently-played-card')) return;
         const href = card.getAttribute('href');
         if (href && officialGameMap[href]) {
-            card.addEventListener('click', () => {
+            card.addEventListener('click', (e) => {
+                if (href === './games/crown/index.html') {
+                    const prof = getCurrentUserProfile();
+                    const isOwner = isPlayardOwner(prof?.email) || !!(prof?.username?.toLowerCase().includes('owner'));
+                    if (!isOwner) {
+                        e.preventDefault();
+                        const modal = document.getElementById('modal-crown-coming-soon');
+                        if (modal) modal.style.display = 'flex';
+                        return;
+                    }
+                }
                 yardService.recordPlayedGame(officialGameMap[href]);
             });
         }

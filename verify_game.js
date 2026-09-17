@@ -978,7 +978,10 @@ try {
 
         // Reset Golden Emperor items for test account so it is in unowned state
         await page.evaluate(() => {
-            const outfitItems = ['hat_royal_crown', 'hair_golden_super', 'face_golden_snarl_grill', 'top_golden_dragon_kimono', 'pants_golden_monarch_trousers', 'shoes_golden_emperor_boots', 'back_golden_archangel_wings', 'anim_style_monarch'];
+            const outfitItems = [
+                'hat_royal_crown', 'hair_golden_super', 'face_golden_snarl_grill', 'top_golden_dragon_kimono', 'pants_golden_monarch_trousers', 'shoes_golden_emperor_boots', 'back_golden_archangel_wings', 'anim_style_monarch',
+                'top_galactic_space_suit', 'pants_ice_white_cargo', 'shoes_cyber_mag_boots', 'hat_astronaut_bubble_helmet', 'back_cyber_rocket_thruster', 'anim_style_glider', 'face_holographic_ar_glasses'
+            ];
             if (window.playardAvatar?.userInventory) {
                 outfitItems.forEach(id => window.playardAvatar.userInventory.delete(id));
             }
@@ -6860,6 +6863,137 @@ try {
                 throw new Error(`Avatar database cloud sync failed! Expected hat 'hat_royal_crown', got: '${syncResults.pulledHatId}'`);
             }
             console.log("✅ Cross-Device Cloud Synchronization testid edukalt läbitud!");
+
+            // 112. Testing 👑 24K Crown Obby (50 Stages), Grand Prize, Access Control, Global Chat without AI, Live Progress Table, and Catalog Visibility
+            console.log("112. Testing 👑 24K Crown Obby (50 Stages), Grand Prize, Access Control, Global Chat without AI, Live Progress Table...");
+            await page.goto('http://localhost:4173/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1000));
+
+            const homepageCrownTest = await page.evaluate(() => {
+                const card = document.getElementById('card-crown-game');
+                if (!card) return { success: false, reason: 'card-crown-game not found' };
+
+                const cardText = card.textContent || '';
+                const hasCrownTitle = cardText.includes('24K Crown Obby');
+                const hasPrizeNote = cardText.includes('24K Royal Crown & Golden Monarch');
+                const hasStagesNote = cardText.includes('50 STAGES');
+
+                const modal = document.getElementById('modal-crown-coming-soon');
+                if (!modal) return { success: false, reason: 'modal-crown-coming-soon not found' };
+
+                // Simulate guest clicking the crown card
+                localStorage.removeItem('playard_current_user_profile');
+                card.click();
+                const modalVisibleAfterGuestClick = modal.style.display === 'flex';
+
+                // Close modal
+                const closeBtn = document.getElementById('btn-close-crown-coming-soon');
+                if (closeBtn) closeBtn.click();
+                const modalClosedAfterBtn = modal.style.display === 'none';
+
+                // Test Recently Played Game recording for Crown
+                if (window.yardService) {
+                    window.yardService.recordPlayedGame({
+                        id: 'crown',
+                        title: '👑 24K Crown Obby',
+                        description: 'Maailma ainus 👑 24K Royal Crown & Golden Monarch komplekt!',
+                        url: './games/crown/index.html',
+                        icon: '👑',
+                        badgeText: '🏆 50 Stages Obby'
+                    });
+                }
+
+                return {
+                    success: true,
+                    hasCrownTitle,
+                    hasPrizeNote,
+                    hasStagesNote,
+                    modalVisibleAfterGuestClick,
+                    modalClosedAfterBtn
+                };
+            });
+
+            console.log("   Homepage Crown Obby Card & Access Control:", homepageCrownTest);
+            if (!homepageCrownTest.success || !homepageCrownTest.hasCrownTitle || !homepageCrownTest.hasPrizeNote || !homepageCrownTest.modalVisibleAfterGuestClick) {
+                throw new Error("Homepage Crown Obby Card check failed: " + JSON.stringify(homepageCrownTest));
+            }
+
+            // Check recently played updated with crown card
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 800));
+
+            const recentlyPlayedCrownTest = await page.evaluate(() => {
+                const recentCard = document.querySelector('.recently-played-card[data-game-id="crown"]');
+                if (!recentCard) return { success: false, reason: 'recent crown card not found' };
+                const text = recentCard.textContent || '';
+                return {
+                    success: true,
+                    hasTitle: text.includes('Crown Obby'),
+                    hasPrize: text.includes('24K Royal Crown')
+                };
+            });
+            console.log("   Recently Played Crown Obby Card:", recentlyPlayedCrownTest);
+            if (!recentlyPlayedCrownTest.success) {
+                throw new Error("Recently played Crown Obby Card check failed: " + JSON.stringify(recentlyPlayedCrownTest));
+            }
+
+            // Check Crown Obby Game standalone page
+            console.log("   Navigating to Crown Obby game page (/games/crown/index.html)...");
+            await page.goto('http://localhost:4173/games/crown/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1500));
+
+            const crownGamePageTest = await page.evaluate(() => {
+                const game = window.crownGame;
+                const canvas = document.querySelector('#canvas-container canvas');
+                const hudStage = document.getElementById('hud-stage-pill')?.textContent || '';
+                const chatContainer = document.getElementById('crown-chat-container');
+                const chatMessages = document.getElementById('crown-chat-messages');
+                const chatInput = document.getElementById('crown-chat-input');
+                const chatForm = document.getElementById('crown-chat-form');
+                const leaderboard = document.getElementById('crown-leaderboard-list');
+
+                // Test Chat message submission
+                let testMessageSent = false;
+                let botMessageRejected = false;
+
+                if (game?.gameState) {
+                    testMessageSent = game.gameState.addChatMessage('Tere kõigile! Olen teel krooni poole!');
+                    // Test anti-AI bot filter: should reject [AI] or bot
+                    botMessageRejected = !game.gameState.addChatMessage('[AI] Hello I am an automated bot');
+                }
+
+                // Verify 50 stages in catalog
+                const stageCount = game?.gameState?.getMaxStage() || 0;
+                const currentStage = game?.gameState?.getStage() || 0;
+                const pct = game?.gameState?.getPercentage() || 0;
+                const lbRows = leaderboard?.querySelectorAll('.leaderboard-row')?.length || 0;
+
+                return {
+                    hasGameInstance: !!game,
+                    hasCanvas: !!canvas,
+                    hudStage,
+                    hasChat: !!chatContainer && !!chatMessages,
+                    testMessageSent,
+                    botMessageRejected,
+                    stageCount,
+                    currentStage,
+                    pct,
+                    hasLeaderboard: !!leaderboard,
+                    lbRows
+                };
+            });
+
+            console.log("   Crown Obby Game In-Game Verification:", crownGamePageTest);
+            if (!crownGamePageTest.hasCanvas || !crownGamePageTest.hudStage.includes('STAGE 1 / 50') || crownGamePageTest.stageCount !== 50) {
+                throw new Error("Crown Obby In-game verification failed: " + JSON.stringify(crownGamePageTest));
+            }
+            if (!crownGamePageTest.testMessageSent || !crownGamePageTest.botMessageRejected) {
+                throw new Error("Crown Obby Anti-AI chat verification failed: " + JSON.stringify(crownGamePageTest));
+            }
+            if (crownGamePageTest.lbRows < 1) {
+                throw new Error("Crown Obby Live Progress table verification failed: " + JSON.stringify(crownGamePageTest));
+            }
+            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, No-AI Chat, Progress Table) testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
