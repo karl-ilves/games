@@ -287,6 +287,18 @@ class AvatarService {
     }
 
     public async buyOutfit(outfit: AvatarOutfitBundle): Promise<{ success: boolean; message: string; cost: number }> {
+        if (!outfit) {
+            return { success: false, message: 'Outfit not found!', cost: 0 };
+        }
+
+        if (outfit.unbuyable) {
+            return {
+                success: false,
+                message: outfit.obtainableNote ? `🔒 ${outfit.obtainableNote}` : 'Seda komplekti ei saa osta! On saada võimalik spetsiaalsest mängust.',
+                cost: 0
+            };
+        }
+
         const details = this.getOutfitPriceDetails(outfit);
 
         // If user already owns all items in the bundle, equip directly for 0 cost

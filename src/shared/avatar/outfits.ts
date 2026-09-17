@@ -9,6 +9,8 @@ export interface AvatarOutfitBundle {
     description: string;
     badgeEmoji: string;
     config: Partial<AvatarConfig>;
+    unbuyable?: boolean;
+    obtainableNote?: string;
 }
 
 export const PRESET_OUTFITS: AvatarOutfitBundle[] = [
@@ -19,6 +21,8 @@ export const PRESET_OUTFITS: AvatarOutfitBundle[] = [
         rarity: "Legendary",
         badgeEmoji: "👑",
         description: "Pure liquid 24K gold skin, royal crown, emperor robes, golden wings, diamond grill, and monarch strut.",
+        unbuyable: true,
+        obtainableNote: "On saada võimalik spetsiaalsest mängust",
         config: {
             skinColor: "#ffd700",
             hairId: "hair_golden_super",
@@ -224,7 +228,7 @@ export function getOutfitById(id: string): AvatarOutfitBundle | undefined {
 
 export function getOutfitItems(outfit: AvatarOutfitBundle): AvatarItem[] {
     const items: AvatarItem[] = [];
-    const cfg = outfit.config;
+    const cfg = outfit?.config || {};
     const ids = [
         cfg.hatId,
         cfg.hairId,

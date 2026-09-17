@@ -312,10 +312,14 @@ export class AvatarShopEditorModal {
 
                 let priceBadge = '';
                 let actionBtn = '';
+                let obtainNoteHtml = '';
 
                 if (details.isFullyOwned) {
                     priceBadge = `<span class="price-tag" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.4);">OWNED</span>`;
                     actionBtn = `<button class="btn-item-action equip" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #2ecc71, #1abc9c); color: #070a10; font-weight: 900;">✨ Equip Outfit</button>`;
+                } else if (outfit.unbuyable) {
+                    priceBadge = `<span class="price-tag" style="background: rgba(255, 215, 0, 0.15); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.4); font-weight: 800;">🔒 Ostmatu</span>`;
+                    actionBtn = `<button class="btn-item-action unbuyable" disabled style="background: rgba(255, 255, 255, 0.05); color: #8899a6; border: 1px dashed rgba(255,255,255,0.2); cursor: not-allowed; font-size: 0.74rem;">🔒 Ostmatu</button>`;
                 } else {
                     const priceLabel = details.unownedPrice < details.totalPrice
                         ? `${details.unownedPrice.toLocaleString()} pbx <span style="font-size: 0.68rem; color: #8899a6; text-decoration: line-through;">${details.totalPrice.toLocaleString()} pbx</span>`
@@ -323,6 +327,14 @@ export class AvatarShopEditorModal {
 
                     priceBadge = `<span class="price-tag" style="background: rgba(255, 215, 0, 0.15); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.4); font-weight: 800;">${priceLabel}</span>`;
                     actionBtn = `<button class="btn-item-action buy" data-buy-outfit-id="${outfit.id}" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #ffd700, #ff9f43); color: #070a10; font-weight: 900;">🛍️ Buy Set (${details.unownedPrice.toLocaleString()} pbx)</button>`;
+                }
+
+                if (outfit.obtainableNote && !details.isFullyOwned) {
+                    obtainNoteHtml = `
+                        <div class="item-obtain-note" style="margin-top: 4px; font-size: 0.72rem; color: #ffd700; background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.25); border-radius: 8px; padding: 6px 8px; text-align: center; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1.25;">
+                            🏆 ${outfit.obtainableNote}
+                        </div>
+                    `;
                 }
 
                 return `
@@ -346,6 +358,7 @@ export class AvatarShopEditorModal {
                             <button class="btn-item-preview" data-preview-outfit-id="${outfit.id}">👁️ Try On</button>
                             ${actionBtn}
                         </div>
+                        ${obtainNoteHtml}
                     </div>
                 `;
             }).join('');

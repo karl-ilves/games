@@ -976,7 +976,7 @@ try {
             throw new Error("Previewing Cyber Ninja outfit must update previewConfig with outfit components!");
         }
 
-        // Reset Golden Emperor items for test account in case previously synced from cloud DB
+        // Reset Golden Emperor items for test account so it is in unowned state
         await page.evaluate(() => {
             const outfitItems = ['hat_royal_crown', 'hair_golden_super', 'face_golden_snarl_grill', 'top_golden_dragon_kimono', 'pants_golden_monarch_trousers', 'shoes_golden_emperor_boots', 'back_golden_archangel_wings', 'anim_style_monarch'];
             if (window.playardAvatar?.userInventory) {
@@ -985,27 +985,45 @@ try {
             if (window.yardService?.data?.inventory) {
                 window.yardService.data.inventory = window.yardService.data.inventory.filter(id => !outfitItems.includes(id));
             }
-            window.__origHasItem = window.playardAvatar.hasItem.bind(window.playardAvatar);
-            let purchaseCompleted = false;
-            window.playardAvatar.hasItem = (id) => {
-                if (!purchaseCompleted && outfitItems.includes(id)) return false;
-                return window.__origHasItem(id);
-            };
-            const origBuy = window.playardAvatar.buyOutfit.bind(window.playardAvatar);
-            window.playardAvatar.buyOutfit = async (outfit) => {
-                const res = await origBuy(outfit);
-                purchaseCompleted = true;
-                window.playardAvatar.hasItem = window.__origHasItem;
-                return res;
-            };
             window.playardAvatarShop?.renderCatalogItems();
         });
-        await new Promise(r => setTimeout(r, 250));
+        await new Promise(r => setTimeout(r, 200));
 
-        // Verify Outfit bundle pricing (Sum of all items inside)
-        const goldenPriceText = await page.$eval('[data-outfit-id="outfit_golden_emperor"] .price-tag', el => el.textContent);
-        console.log("   Golden Emperor outfit bundle price (Sum of items):", goldenPriceText);
-        if (!goldenPriceText || (!goldenPriceText.includes('Y') && !goldenPriceText.includes('PBX') && !goldenPriceText.includes('pbx') && !goldenPriceText.includes('Playbux'))) {
+        // Verify Golden Emperor outfit is unbuyable and displays special game obtain note
+        const goldenCheck = await page.evaluate(async () => {
+            const goldenCard = document.querySelector('[data-outfit-id="outfit_golden_emperor"]');
+            const priceTag = goldenCard?.querySelector('.price-tag')?.textContent?.trim();
+            const btn = goldenCard?.querySelector('.btn-item-action')?.textContent?.trim();
+            const note = goldenCard?.querySelector('.item-obtain-note')?.textContent?.trim();
+            const bundleText = goldenCard?.querySelector('div[style*="Bundle contains"]')?.textContent?.trim();
+            
+            const goldenOutfit = { id: 'outfit_golden_emperor', unbuyable: true, obtainableNote: 'On saada võimalik spetsiaalsest mängust', config: {} };
+            const buyAttempt = await window.playardAvatar?.buyOutfit(goldenOutfit);
+
+            return {
+                buySuccess: buyAttempt?.success,
+                buyMessage: buyAttempt?.message,
+                priceTag,
+                btn,
+                note,
+                bundleText
+            };
+        });
+        console.log("   Golden Emperor Outfit Unbuyable Verification:", goldenCheck);
+        if (goldenCheck.buySuccess !== false) {
+            throw new Error("Golden Emperor outfit must be unbuyable and direct purchase rejected!");
+        }
+        if (!goldenCheck.priceTag?.includes('Ostmatu') || !goldenCheck.btn?.includes('Ostmatu')) {
+            throw new Error(`Expected outfit card priceTag and button to show 'Ostmatu', got priceTag='${goldenCheck.priceTag}', btn='${goldenCheck.btn}'`);
+        }
+        if (!goldenCheck.note?.includes('spetsiaalsest mängust')) {
+            throw new Error(`Expected outfit note to mention 'spetsiaalsest mängust', got: '${goldenCheck.note}'`);
+        }
+
+        // Verify Outfit bundle pricing on Space Explorer (Sum of all items inside)
+        const spacePriceText = await page.$eval('[data-outfit-id="outfit_space_explorer"] .price-tag', el => el.textContent);
+        console.log("   Space Explorer outfit bundle price (Sum of items):", spacePriceText);
+        if (!spacePriceText || (!spacePriceText.includes('Y') && !spacePriceText.includes('PBX') && !spacePriceText.includes('pbx') && !spacePriceText.includes('Playbux'))) {
             throw new Error("Outfit card must display bundle price as sum of items inside!");
         }
 
@@ -1015,13 +1033,13 @@ try {
             return window.yardService.getYards();
         });
 
-        // Test Buying and Equipping an Outfit (Golden Monarch / Emperor)
-        const equipOutfitBtn = await page.$('[data-equip-outfit-id="outfit_golden_emperor"]');
-        if (!equipOutfitBtn) throw new Error("Missing 'Equip Outfit' button for outfit_golden_emperor");
+        // Test Buying and Equipping an Outfit (Space Explorer / Orbital Cosmonaut)
+        const equipOutfitBtn = await page.$('[data-equip-outfit-id="outfit_space_explorer"]');
+        if (!equipOutfitBtn) throw new Error("Missing 'Equip Outfit' button for outfit_space_explorer");
         await page.evaluate(() => {
             window.__YARD_COUNTDOWN_TICK_MS__ = 40;
         });
-        await page.click('[data-equip-outfit-id="outfit_golden_emperor"]');
+        await page.click('[data-equip-outfit-id="outfit_space_explorer"]');
         await new Promise(r => setTimeout(r, 300));
         const confirmBuyBtn = await page.$('#btn-yard-purchase-confirm');
         if (confirmBuyBtn) {
@@ -1030,7 +1048,6 @@ try {
         }
         await new Promise(r => setTimeout(r, 300));
         await page.evaluate(() => {
-            if (window.__origHasItem) window.playardAvatar.hasItem = window.__origHasItem;
             window.playardAvatarShop?.renderCatalogItems();
         });
 
@@ -1041,15 +1058,15 @@ try {
         }
 
         const equippedHat = await page.evaluate(() => window.playardAvatar?.getConfig().hatId);
-        const hasCrownOwned = await page.evaluate(() => window.playardAvatar?.hasItem('hat_royal_crown'));
-        console.log("   Equipped Hat after equipping Golden Emperor (Expected: hat_royal_crown):", equippedHat, "Owned:", hasCrownOwned);
-        if (equippedHat !== 'hat_royal_crown' || !hasCrownOwned) {
-            throw new Error("Equipping Golden Emperor outfit must unlock all bundle items in inventory and equip hat_royal_crown!");
+        const hasHelmetOwned = await page.evaluate(() => window.playardAvatar?.hasItem('hat_astronaut_bubble_helmet'));
+        console.log("   Equipped Hat after equipping Space Explorer (Expected: hat_astronaut_bubble_helmet):", equippedHat, "Owned:", hasHelmetOwned);
+        if (equippedHat !== 'hat_astronaut_bubble_helmet' || !hasHelmetOwned) {
+            throw new Error("Equipping Space Explorer outfit must unlock all bundle items in inventory and equip hat_astronaut_bubble_helmet!");
         }
 
         // Verify card now shows OWNED
-        const cardStatusAfterBuy = await page.$eval('[data-outfit-id="outfit_golden_emperor"] .price-tag', el => el.textContent);
-        console.log("   Golden Emperor status after purchase (Expected: OWNED):", cardStatusAfterBuy);
+        const cardStatusAfterBuy = await page.$eval('[data-outfit-id="outfit_space_explorer"] .price-tag', el => el.textContent);
+        console.log("   Space Explorer status after purchase (Expected: OWNED):", cardStatusAfterBuy);
         if (!cardStatusAfterBuy.includes('OWNED')) {
             throw new Error("Outfit card must update to OWNED after purchasing all items in the bundle!");
         }
