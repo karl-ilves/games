@@ -181,9 +181,9 @@ export class RocketShopUI {
         const yardsDisplay = document.getElementById('shop-current-yards-display');
         if (yardsDisplay) {
             try {
-                yardsDisplay.textContent = `${yardService.getYards().toLocaleString()} pbx`;
+                yardsDisplay.textContent = `${yardService.getYards().toLocaleString()} Playbux`;
             } catch (e) {
-                yardsDisplay.textContent = '0 pbx';
+                yardsDisplay.textContent = '0 Playbux';
             }
         }
 

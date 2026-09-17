@@ -76,9 +76,9 @@ export class HudManager {
         const yardText = document.getElementById('hud-yard-text');
         if (yardText) {
             try {
-                yardText.textContent = `${yardService.getYards()} pbx`;
+                yardText.textContent = `${yardService.getYards()} Playbux`;
             } catch (e) {
-                yardText.textContent = '0 pbx';
+                yardText.textContent = '0 Playbux';
             }
         }
     }

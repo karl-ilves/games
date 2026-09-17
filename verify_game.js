@@ -1005,7 +1005,7 @@ try {
         // Verify Outfit bundle pricing (Sum of all items inside)
         const goldenPriceText = await page.$eval('[data-outfit-id="outfit_golden_emperor"] .price-tag', el => el.textContent);
         console.log("   Golden Emperor outfit bundle price (Sum of items):", goldenPriceText);
-        if (!goldenPriceText || (!goldenPriceText.includes('Y') && !goldenPriceText.includes('PBX') && !goldenPriceText.includes('pbx'))) {
+        if (!goldenPriceText || (!goldenPriceText.includes('Y') && !goldenPriceText.includes('PBX') && !goldenPriceText.includes('pbx') && !goldenPriceText.includes('Playbux'))) {
             throw new Error("Outfit card must display bundle price as sum of items inside!");
         }
 
@@ -6569,7 +6569,7 @@ try {
 
                 // Check all buttons inside view-yard-shop
                 const yardButtons = Array.from(viewYardShop.querySelectorAll('button'));
-                const allYardButtonsCostYards = yardButtons.every(btn => btn.textContent.includes('Y') || btn.textContent.includes('PBX') || btn.textContent.includes('pbx') || btn.textContent.includes('OMATUD'));
+                const allYardButtonsCostYards = yardButtons.every(btn => btn.textContent.includes('Y') || btn.textContent.includes('PBX') || btn.textContent.includes('pbx') || btn.textContent.includes('Playbux') || btn.textContent.includes('OMATUD'));
                 const noPtsButtonsInYardShop = !yardButtons.some(btn => btn.textContent.includes('PTS') && btn.textContent.includes('OSTA'));
 
                 // Switch to Rockets tab

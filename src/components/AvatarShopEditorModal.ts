@@ -45,7 +45,7 @@ export class AvatarShopEditorModal {
                     <div style="display: flex; align-items: center; gap: 16px;">
                         <div class="avatar-modal-yard-pill">
                             <span id="modal-yard-icon"></span>
-                            <strong id="modal-shop-yard-val">0</strong> pbx
+                            <strong id="modal-shop-yard-val">0</strong> Playbux
                         </div>
                         <button class="avatar-modal-close-btn" id="btn-close-avatar-shop">&times;</button>
                     </div>
