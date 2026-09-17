@@ -49,6 +49,15 @@ export class CrownChatUI {
 
         this.messagesContainer.innerHTML = '';
 
+        if (messages.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'chat-empty-state';
+            empty.style.cssText = 'text-align: center; color: #8899a6; padding: 25px 10px; font-size: 0.78rem;';
+            empty.innerHTML = '💬 No messages yet.<br><span style="color: #ffd700; font-size: 0.72rem;">Say hello to other players!</span>';
+            this.messagesContainer.appendChild(empty);
+            return;
+        }
+
         messages.forEach((msg) => {
             const row = document.createElement('div');
             row.className = 'chat-msg';

@@ -70,6 +70,16 @@ export class CrownLeaderboardUI {
 
             this.listContainer!.appendChild(row);
         });
+
+        // Searching for other players row (since only current player is in early access)
+        const searchingRow = document.createElement('div');
+        searchingRow.className = 'leaderboard-searching-row';
+        searchingRow.style.cssText = 'display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 10px; color: #ffd700; font-size: 0.76rem; font-weight: 800; background: rgba(255, 215, 0, 0.05); border: 1.5px dashed rgba(255, 215, 0, 0.35); border-radius: 8px; margin-top: 8px; letter-spacing: 0.5px;';
+        searchingRow.innerHTML = `
+            <span style="font-size: 0.9rem; animation: pulse 1s infinite;">🔍</span>
+            <span>Searching for players...</span>
+        `;
+        this.listContainer!.appendChild(searchingRow);
     }
 }
 

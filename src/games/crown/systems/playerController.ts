@@ -129,6 +129,7 @@ export class PlayerController {
     public respawn(resetVelocity: boolean = true) {
         const spawn = this.gameState.getRespawnPos();
         this.playerGroup.position.set(spawn.x, spawn.y + 0.5, spawn.z);
+        this.playerGroup.rotation.y = 0; // Face forward along the track
         if (resetVelocity) {
             this.velocity.set(0, 0, 0);
         }
@@ -150,7 +151,8 @@ export class PlayerController {
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) inputX -= 1;
         if (this.keys['KeyD'] || this.keys['ArrowRight']) inputX += 1;
 
-        const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+        // Camera looks forward towards +Z
+        const forward = new THREE.Vector3(Math.sin(cameraYaw), 0, Math.cos(cameraYaw));
         const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
 
         const moveDir = new THREE.Vector3();

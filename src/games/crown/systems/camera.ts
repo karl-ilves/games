@@ -44,9 +44,10 @@ export class CameraController {
         const rotX = this.cameraRotation.x;
         const dist = this.cameraOffset.z;
 
-        const cx = playerPos.x + Math.sin(rotY) * Math.cos(rotX) * dist;
+        // Position camera behind the player looking forward towards +Z
+        const cx = playerPos.x - Math.sin(rotY) * Math.cos(rotX) * dist;
         const cy = playerPos.y + this.cameraOffset.y + Math.sin(rotX) * dist;
-        const cz = playerPos.z + Math.cos(rotY) * Math.cos(rotX) * dist;
+        const cz = playerPos.z - Math.cos(rotY) * Math.cos(rotX) * dist;
 
         camera.position.set(cx, cy, cz);
         camera.lookAt(playerPos.x, playerPos.y + 1.2, playerPos.z);

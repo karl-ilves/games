@@ -112,23 +112,8 @@ export class GameState {
             console.warn('Could not parse chat storage:', e);
         }
 
-        // Initial welcome messages from real players
-        this.chatMessages = [
-            {
-                id: 'msg_1',
-                author: 'Playard Owner👑',
-                isOwner: true,
-                text: 'Welcome to the 50-stage 24K Crown Obby! The Royal Crown awaits at the summit!',
-                timestamp: Date.now() - 120000
-            },
-            {
-                id: 'msg_2',
-                author: 'ProJumper99',
-                isOwner: false,
-                text: 'Stage 30 lava jumps are tricky, keep your momentum!',
-                timestamp: Date.now() - 60000
-            }
-        ];
+        // No default fake messages - chat starts clean
+        this.chatMessages = [];
     }
 
     public getChatMessages(): ChatMessage[] {
@@ -166,9 +151,9 @@ export class GameState {
         return true;
     }
 
-    // Leaderboard table entries
+    // Leaderboard table entries (Only real players currently in game)
     public getLeaderboard(): PlayerProgress[] {
-        const list: PlayerProgress[] = [
+        return [
             {
                 id: 'curr_player',
                 name: this.playerName,
@@ -176,34 +161,7 @@ export class GameState {
                 stage: this.currentStage,
                 percentage: this.getPercentage(),
                 isFinished: this.isWon
-            },
-            {
-                id: 'p_1',
-                name: 'SpeedyKnight',
-                isOwner: false,
-                stage: 44,
-                percentage: 88,
-                isFinished: false
-            },
-            {
-                id: 'p_2',
-                name: 'ParkourMaster',
-                isOwner: false,
-                stage: 32,
-                percentage: 64,
-                isFinished: false
-            },
-            {
-                id: 'p_3',
-                name: 'NinjaRunner',
-                isOwner: false,
-                stage: 18,
-                percentage: 36,
-                isFinished: false
             }
         ];
-
-        // Sort descending by stage
-        return list.sort((a, b) => b.stage - a.stage);
     }
 }

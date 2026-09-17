@@ -6968,6 +6968,11 @@ try {
                 const pct = game?.gameState?.getPercentage() || 0;
                 const lbRows = leaderboard?.querySelectorAll('.leaderboard-row')?.length || 0;
 
+                const hasSearchingRow = !!leaderboard?.querySelector('.leaderboard-searching-row');
+                const hasCenterBanner = !!document.getElementById('playard-center-banner');
+                const waveLettersCount = document.querySelectorAll('#playard-center-banner .wave-letter').length;
+                const cameraBehindPlayer = game?.camera && game?.playerController ? (game.camera.position.z < game.playerController.getPosition().z) : false;
+
                 return {
                     hasGameInstance: !!game,
                     hasCanvas: !!canvas,
@@ -6979,7 +6984,11 @@ try {
                     currentStage,
                     pct,
                     hasLeaderboard: !!leaderboard,
-                    lbRows
+                    lbRows,
+                    hasSearchingRow,
+                    hasCenterBanner,
+                    waveLettersCount,
+                    cameraBehindPlayer
                 };
             });
 
@@ -6990,8 +6999,11 @@ try {
             if (!crownGamePageTest.testMessageSent || !crownGamePageTest.botMessageRejected) {
                 throw new Error("Crown Obby Anti-AI chat verification failed: " + JSON.stringify(crownGamePageTest));
             }
-            if (crownGamePageTest.lbRows < 1) {
+            if (crownGamePageTest.lbRows < 1 || !crownGamePageTest.hasSearchingRow) {
                 throw new Error("Crown Obby Live Progress table verification failed: " + JSON.stringify(crownGamePageTest));
+            }
+            if (!crownGamePageTest.hasCenterBanner || crownGamePageTest.waveLettersCount !== 12 || !crownGamePageTest.cameraBehindPlayer) {
+                throw new Error("Crown Obby visual polish check failed: " + JSON.stringify(crownGamePageTest));
             }
             console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, No-AI Chat, Progress Table) testid edukalt läbitud!");
 

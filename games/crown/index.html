@@ -349,11 +349,105 @@
                 top: 236px;
                 right: 8px;
             }
+            .wave-letter {
+                font-size: 1.8rem;
+            }
+        }
+
+        /* Center Screen PLAYARD GAMES Wave Animation */
+        #playard-center-banner {
+            position: absolute;
+            top: 14%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            user-select: none;
+        }
+
+        .playard-wave-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .wave-letter {
+            display: inline-block;
+            font-size: 3.2rem;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 0 0 16px rgba(255, 215, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.9);
+            letter-spacing: 2px;
+            animation: letterPulseWave 2.2s infinite ease-in-out;
+            transform-origin: center bottom;
+        }
+
+        .wave-space {
+            display: inline-block;
+            width: 16px;
+        }
+
+        @keyframes letterPulseWave {
+            0%, 100% {
+                transform: scale(1) translateY(0);
+                color: #ffd700;
+                text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+            }
+            30% {
+                transform: scale(1.65) translateY(-14px);
+                color: #00f2fe;
+                text-shadow: 0 0 28px rgba(0, 242, 254, 0.95), 0 0 40px rgba(255, 215, 0, 0.9);
+            }
+            60% {
+                transform: scale(0.9) translateY(2px);
+                color: #ffd700;
+            }
+        }
+
+        .playard-sub-badge {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #00f2fe;
+            background: rgba(0, 242, 254, 0.12);
+            border: 1.5px solid rgba(0, 242, 254, 0.35);
+            padding: 5px 18px;
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.25);
         }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
+
+    <!-- Center Screen PLAYARD GAMES Animated Wave Display -->
+    <div id="playard-center-banner">
+        <div class="playard-wave-container">
+            <span class="wave-letter" style="animation-delay: 0.00s;">P</span>
+            <span class="wave-letter" style="animation-delay: 0.12s;">L</span>
+            <span class="wave-letter" style="animation-delay: 0.24s;">A</span>
+            <span class="wave-letter" style="animation-delay: 0.36s;">Y</span>
+            <span class="wave-letter" style="animation-delay: 0.48s;">A</span>
+            <span class="wave-letter" style="animation-delay: 0.60s;">R</span>
+            <span class="wave-letter" style="animation-delay: 0.72s;">D</span>
+            <span class="wave-space">&nbsp;</span>
+            <span class="wave-letter" style="animation-delay: 0.96s;">G</span>
+            <span class="wave-letter" style="animation-delay: 1.08s;">A</span>
+            <span class="wave-letter" style="animation-delay: 1.20s;">M</span>
+            <span class="wave-letter" style="animation-delay: 1.32s;">E</span>
+            <span class="wave-letter" style="animation-delay: 1.44s;">S</span>
+        </div>
+        <div class="playard-sub-badge">👑 24K CROWN OBBY · 50 STAGES</div>
+    </div>
 
     <!-- Top HUD -->
     <div class="top-hud">
