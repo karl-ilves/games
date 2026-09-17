@@ -44,6 +44,42 @@ export const YARD_POINTS_PACKS: YardPointsPack[] = [
     }
 ];
 
+export interface YardGamePass {
+    id: string;
+    name: string;
+    description: string;
+    yardCost: number;
+    icon: string;
+    badge: string;
+}
+
+export const YARD_GAME_PASSES: YardGamePass[] = [
+    {
+        id: 'pass_2x_score',
+        name: '2X Score Booster',
+        description: 'Kõik tabamused ja hävitustööd annavad mängus 2x rohkem punkte!',
+        yardCost: 1500,
+        icon: '⚡',
+        badge: 'GAME PASS'
+    },
+    {
+        id: 'pass_nuke_access',
+        name: 'Nuclear Arsenal Pass',
+        description: 'Kohene ligipääs kõigile tuuma- ja termobaarilistele rakettidele!',
+        yardCost: 2500,
+        icon: '☢️',
+        badge: 'VIP PASS'
+    },
+    {
+        id: 'pass_all_rockets',
+        name: 'All 54 Rockets Mega Unlock',
+        description: 'Avab koheselt kõik 54 unikaalset mängusisest raketti arsenalis!',
+        yardCost: 5000,
+        icon: '👑',
+        badge: 'MEGA PASS'
+    }
+];
+
 export interface ShopContext {
     audio: RocketAudio;
     hud: HudManager;
@@ -54,10 +90,13 @@ export interface ShopContext {
     setTotalPointsBank: (pts: number) => void;
     onProgressSave: () => void;
     onYardBalanceChanged?: () => void;
+    has2xScorePass?: () => boolean;
+    set2xScorePass?: (has: boolean) => void;
 }
 
 export class RocketShopUI {
     private ctx: ShopContext;
+    public activeTab: 'shop' | 'rockets' = 'shop';
     public activeCategory: string = 'all';
 
     constructor(ctx: ShopContext) {
@@ -65,7 +104,47 @@ export class RocketShopUI {
     }
 
     public init() {
+        this.setupTabs();
         this.setupShopFilterTabs();
+    }
+
+    public setupTabs() {
+        const tabShop = document.getElementById('modal-tab-shop');
+        const tabRockets = document.getElementById('modal-tab-rockets');
+        const btnGoToYardShop = document.getElementById('btn-go-to-yard-shop');
+
+        tabShop?.addEventListener('click', () => this.switchTab('shop'));
+        tabRockets?.addEventListener('click', () => this.switchTab('rockets'));
+        btnGoToYardShop?.addEventListener('click', () => this.switchTab('shop'));
+    }
+
+    public switchTab(tab: 'shop' | 'rockets') {
+        this.activeTab = tab;
+        const tabShop = document.getElementById('modal-tab-shop');
+        const tabRockets = document.getElementById('modal-tab-rockets');
+        const viewShop = document.getElementById('view-yard-shop');
+        const viewRockets = document.getElementById('view-rockets-catalog');
+
+        tabShop?.classList.toggle('active', tab === 'shop');
+        tabRockets?.classList.toggle('active', tab === 'rockets');
+
+        if (viewShop) viewShop.style.display = tab === 'shop' ? 'flex' : 'none';
+        if (viewRockets) viewRockets.style.display = tab === 'rockets' ? 'flex' : 'none';
+
+        if (tab === 'shop') {
+            this.renderYardShop();
+        } else {
+            if (this.activeCategory === 'yards') {
+                this.activeCategory = 'all';
+                const filterBar = document.getElementById('shop-filter-bar');
+                if (filterBar) {
+                    filterBar.querySelectorAll('.filter-tab-btn').forEach(b => {
+                        b.classList.toggle('active', (b.getAttribute('data-cat') || 'all') === 'all');
+                    });
+                }
+            }
+            this.renderRocketsCatalog();
+        }
     }
 
     public setupShopFilterTabs() {
@@ -74,44 +153,46 @@ export class RocketShopUI {
 
         filterBar.querySelectorAll('.filter-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                const cat = btn.getAttribute('data-cat') || 'all';
+                this.activeCategory = cat;
                 filterBar.querySelectorAll('.filter-tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                this.activeCategory = btn.getAttribute('data-cat') || 'all';
-                this.renderShopCatalog();
+
+                if (cat === 'yards') {
+                    this.switchTab('shop');
+                    return;
+                }
+                this.renderRocketsCatalog();
             });
         });
     }
 
-    public toggleShop(show: boolean) {
+    public toggleShop(show: boolean, tab: 'shop' | 'rockets' = 'shop') {
         this.ctx.hud.toggleModal('rocket-shop-modal', show);
         if (show) {
-            this.renderShopCatalog();
+            this.switchTab(tab);
+            this.renderYardShop();
+            this.renderRocketsCatalog();
         }
+    }
+
+    // --- YARD SHOP (AINULT ASJAD MIDA SAAB OSTA YARDIDE EEST) ---
+    public renderYardShop() {
+        const yardsDisplay = document.getElementById('shop-current-yards-display');
+        if (yardsDisplay) {
+            try {
+                yardsDisplay.textContent = `${yardService.getYards().toLocaleString()} Y`;
+            } catch (e) {
+                yardsDisplay.textContent = '0 Y';
+            }
+        }
+
+        this.renderYardExchangePacks();
+        this.renderYardGamePasses();
     }
 
     public renderYardExchangePacks() {
         const grid = document.getElementById('yard-points-packs-grid');
-        const yardsDisplay = document.getElementById('shop-current-yards-display');
-        const exchangeBox = document.getElementById('shop-yard-exchange');
-
-        if (yardsDisplay) {
-            try {
-                yardsDisplay.textContent = `Sinu Jardid: ${yardService.getYards().toLocaleString()} Y`;
-            } catch (e) {
-                yardsDisplay.textContent = 'Sinu Jardid: 0 Y';
-            }
-        }
-
-        if (exchangeBox) {
-            if (this.activeCategory === 'yards') {
-                exchangeBox.style.borderColor = '#ffd32a';
-                exchangeBox.style.boxShadow = '0 0 25px rgba(255, 211, 42, 0.4)';
-            } else {
-                exchangeBox.style.borderColor = 'rgba(0, 242, 254, 0.4)';
-                exchangeBox.style.boxShadow = 'none';
-            }
-        }
-
         if (!grid) return;
         grid.innerHTML = '';
 
@@ -174,6 +255,81 @@ export class RocketShopUI {
         });
     }
 
+    public renderYardGamePasses() {
+        const grid = document.getElementById('yard-gamepasses-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const has2x = this.ctx.has2xScorePass?.() || false;
+        const unlocked = this.ctx.getUnlockedRockets();
+        const hasAllRockets = ROCKET_CATALOG.every(r => unlocked.has(r.id));
+        const hasNukes = ROCKET_CATALOG.filter(r => r.category === 'singularity' || r.category === 'thermobaric').every(r => unlocked.has(r.id));
+
+        YARD_GAME_PASSES.forEach(pass => {
+            let isOwned = false;
+            if (pass.id === 'pass_2x_score') isOwned = has2x;
+            else if (pass.id === 'pass_nuke_access') isOwned = hasNukes;
+            else if (pass.id === 'pass_all_rockets') isOwned = hasAllRockets;
+
+            const card = document.createElement('div');
+            card.className = 'yard-pack-card';
+            card.id = `yard-pass-card-${pass.id}`;
+            card.style.cssText = `
+                background: rgba(14, 20, 34, 0.9);
+                border: 1.5px solid ${isOwned ? '#2ecc71' : 'rgba(255, 211, 42, 0.4)'};
+                border-radius: 12px;
+                padding: 12px 14px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                gap: 8px;
+                position: relative;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            `;
+
+            card.innerHTML = `
+                <div style="position: absolute; top: -8px; right: 10px; background: ${isOwned ? '#2ecc71' : '#ffd32a'}; color: #111; font-weight: 900; font-size: 0.65rem; padding: 2px 7px; border-radius: 6px;">
+                    ${isOwned ? '✓ OMATUD' : pass.badge}
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.8rem; line-height: 1;">${pass.icon}</span>
+                    <div>
+                        <div style="font-weight: 900; color: #fff; font-size: 0.95rem;">${pass.name}</div>
+                        <div style="font-size: 0.75rem; color: #94a3b8; line-height: 1.2;">${pass.description}</div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 4px;">
+                    <button type="button" class="btn-buy-yard-pass" id="btn-buy-pass-${pass.id}" ${isOwned ? 'disabled' : ''} style="
+                        background: ${isOwned ? 'rgba(46, 204, 113, 0.25)' : 'linear-gradient(135deg, #ffd32a 0%, #ff9f1a 100%)'};
+                        border: ${isOwned ? '1px solid #2ecc71' : 'none'};
+                        color: ${isOwned ? '#2ecc71' : '#111'};
+                        font-weight: 900;
+                        padding: 7px 14px;
+                        border-radius: 8px;
+                        cursor: ${isOwned ? 'default' : 'pointer'};
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                        font-size: 0.85rem;
+                        box-shadow: ${isOwned ? 'none' : '0 2px 10px rgba(255, 211, 42, 0.4)'};
+                    ">
+                        <span>💎</span>
+                        <span>${isOwned ? '✓ OMATUD' : `${pass.yardCost.toLocaleString()} Y`}</span>
+                    </button>
+                </div>
+            `;
+
+            const btnBuy = card.querySelector(`#btn-buy-pass-${pass.id}`) as HTMLButtonElement;
+            if (btnBuy && !isOwned) {
+                btnBuy.addEventListener('click', () => {
+                    this.buyYardGamePass(pass);
+                });
+            }
+
+            grid.appendChild(card);
+        });
+    }
+
     public buyYardPointsPack(pack: YardPointsPack) {
         showYardPurchaseConfirm({
             title: 'Osta Punkte Yardide Eest',
@@ -192,7 +348,8 @@ export class RocketShopUI {
                     this.ctx.onProgressSave();
                     this.ctx.audio.playPurchase();
                     this.ctx.hud.showImpactToast(`+${pack.points} PTS OSTETUD! 💎`);
-                    this.renderShopCatalog();
+                    this.renderYardShop();
+                    this.renderRocketsCatalog();
                     this.ctx.onYardBalanceChanged?.();
                 } else {
                     this.ctx.hud.showImpactToast('POLE PIISAVALT JARDE!');
@@ -201,42 +358,50 @@ export class RocketShopUI {
         });
     }
 
-    public renderShopCatalog() {
+    public buyYardGamePass(pass: YardGamePass) {
+        showYardPurchaseConfirm({
+            title: 'Osta Mängupass Yardide Eest',
+            itemName: `${pass.icon} ${pass.name}`,
+            yardCost: pass.yardCost,
+            description: `Kas soovid osta "${pass.name}" ${pass.yardCost.toLocaleString()} Yardi eest?`,
+            onConfirm: () => {
+                const success = yardService.spendYards(
+                    pass.yardCost,
+                    pass.id,
+                    `Rocket Playard Game Pass: ${pass.name}`
+                );
+                if (success) {
+                    if (pass.id === 'pass_2x_score') {
+                        this.ctx.set2xScorePass?.(true);
+                    } else if (pass.id === 'pass_nuke_access') {
+                        ROCKET_CATALOG.filter(r => r.category === 'singularity' || r.category === 'thermobaric')
+                            .forEach(r => this.ctx.getUnlockedRockets().add(r.id));
+                    } else if (pass.id === 'pass_all_rockets') {
+                        ROCKET_CATALOG.forEach(r => this.ctx.getUnlockedRockets().add(r.id));
+                    }
+                    this.ctx.onProgressSave();
+                    this.ctx.audio.playPurchase();
+                    this.ctx.hud.showImpactToast(`AVATUD: ${pass.name}! 💎⚡`);
+                    this.renderYardShop();
+                    this.renderRocketsCatalog();
+                    this.ctx.onYardBalanceChanged?.();
+                } else {
+                    this.ctx.hud.showImpactToast('POLE PIISAVALT JARDE!');
+                }
+            }
+        });
+    }
+
+    // --- ROCKETS CATALOG (54 TYYPI - AVAMINE PUNKTIDE EEST) ---
+    public renderRocketsCatalog() {
         const list = document.getElementById('rocket-catalog-list');
         const pointsDisp = document.getElementById('shop-points-display');
-        const countBadge = document.getElementById('shop-count-badge');
-
         const totalPointsBank = this.ctx.getTotalPointsBank();
+
         if (pointsDisp) pointsDisp.textContent = `${totalPointsBank.toLocaleString()} PTS`;
-        if (countBadge) countBadge.textContent = `${ROCKET_CATALOG.length} unikaalset raketti`;
-
-        // Render Yard points exchange packs
-        this.renderYardExchangePacks();
-
         if (!list) return;
-        list.innerHTML = '';
 
-        if (this.activeCategory === 'yards') {
-            const banner = document.createElement('div');
-            banner.style.cssText = `
-                grid-column: 1 / -1;
-                text-align: center;
-                padding: 30px 20px;
-                background: linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(255, 211, 42, 0.08) 100%);
-                border: 2px dashed rgba(0, 242, 254, 0.5);
-                border-radius: 16px;
-            `;
-            banner.innerHTML = `
-                <div style="font-size: 2.8rem; margin-bottom: 8px;">💎 ➔ ⭐</div>
-                <h3 style="color: #00f2fe; margin-bottom: 8px; font-size: 1.3rem;">Yardide vahetus punktideks</h3>
-                <p style="color: #cbd5e1; font-size: 0.95rem; max-width: 500px; margin: 0 auto; line-height: 1.5;">
-                    Vali ülalolevast paneelist sobiv pakett: <strong>500 Y (100 PTS)</strong>, <strong>1,000 Y (200 PTS)</strong> või <strong>5,000 Y (1,000 PTS)</strong>.
-                    Punkte saad kasutada kõigi 54 unikaalse raketi ostmiseks!
-                </p>
-            `;
-            list.appendChild(banner);
-            return;
-        }
+        list.innerHTML = '';
 
         const filtered = ROCKET_CATALOG.filter(r => {
             if (this.activeCategory === 'all') return true;
@@ -261,7 +426,7 @@ export class RocketShopUI {
                 <div class="rocket-item-desc">${rocket.desc}</div>
                 <div class="rocket-item-stats">Kiirus: ${rocket.speed} m/s · Raadius: ${rocket.blastRadius}m · ${rocket.scoreMultiplier}x punktid</div>
                 <button type="button" class="rocket-action-btn ${isEquipped ? 'btn-equipped' : (isUnlocked ? 'btn-equip' : 'btn-buy')}" data-id="${rocket.id}">
-                    ${isEquipped ? '✓ KASUTUSES' : (isUnlocked ? 'KASUTA' : `OSTA (${rocket.price} PTS)`)}
+                    ${isEquipped ? '✓ KASUTUSES' : (isUnlocked ? 'KASUTA' : `AVA (${rocket.price} PTS)`)}
                 </button>
             `;
 
@@ -276,6 +441,11 @@ export class RocketShopUI {
         });
     }
 
+    public renderShopCatalog() {
+        this.renderYardShop();
+        this.renderRocketsCatalog();
+    }
+
     private handleRocketAction(rocket: RocketType) {
         const unlockedRockets = this.ctx.getUnlockedRockets();
         let totalPoints = this.ctx.getTotalPointsBank();
@@ -283,7 +453,7 @@ export class RocketShopUI {
         if (unlockedRockets.has(rocket.id)) {
             this.ctx.setEquippedRocket(rocket);
             this.ctx.onProgressSave();
-            this.renderShopCatalog();
+            this.renderRocketsCatalog();
             this.ctx.audio.playPurchase();
         } else if (totalPoints >= rocket.price) {
             totalPoints -= rocket.price;
@@ -291,11 +461,11 @@ export class RocketShopUI {
             unlockedRockets.add(rocket.id);
             this.ctx.setEquippedRocket(rocket);
             this.ctx.onProgressSave();
-            this.renderShopCatalog();
+            this.renderRocketsCatalog();
             this.ctx.audio.playPurchase();
             this.ctx.hud.showImpactToast(`AVATUD: ${rocket.name}! 🚀`);
         } else {
-            this.ctx.hud.showImpactToast('POLE PIISAVALT PUNKTE!');
+            this.ctx.hud.showImpactToast('POLE PIISAVALT PUNKTE! Osta punkte Shopist 💎');
         }
     }
 }

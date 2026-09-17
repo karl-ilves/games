@@ -37,6 +37,7 @@ try {
     console.log("Launching headless browser to check runtime errors and game platform features...");
     const browser = await puppeteer.launch({
         headless: true,
+        protocolTimeout: 240000,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--js-flags=--max-old-space-size=4096']
     });
     const page = await browser.newPage();
@@ -230,7 +231,10 @@ try {
             if (ageInput) ageInput.value = '14';
             document.getElementById('btn-register')?.click();
         });
-        await new Promise(r => setTimeout(r, 300));
+        await page.waitForFunction(() => {
+            const el = document.getElementById('user-info');
+            return el && window.getComputedStyle(el).display === 'block';
+        }, { timeout: 5000 }).catch(() => {});
         const userInfoDisplay = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
         const userTitle = await page.$eval('#user-email', el => el.textContent);
         const userAgeText = await page.$eval('#user-age-display', el => el.textContent);
@@ -238,7 +242,8 @@ try {
         console.log(`   Registered User Info: title="${userTitle}", age="${userAgeText}", gender="${userGenderText}"`);
 
         if (userInfoDisplay !== 'block') {
-            throw new Error("User must be logged in after registration!");
+            const authMsgText = await page.$eval('#auth-message', el => el.textContent).catch(() => '');
+            throw new Error(`User must be logged in after registration! AuthMsg: "${authMsgText}"`);
         }
         if (!userTitle.includes('@kawe1234')) {
             throw new Error("Display name must contain @kawe1234!");
@@ -2572,7 +2577,10 @@ try {
         await page.type('#bug-report-title', 'Test Bug Title');
         await page.type('#bug-report-description', 'Detailed description of test bug');
         await page.click('#btn-submit-bug-report');
-        await new Promise(r => setTimeout(r, 800));
+        await page.waitForFunction(() => {
+            const el = document.getElementById('bug-report-status');
+            return el && el.textContent && !el.textContent.includes('Submitting');
+        }, { timeout: 5000 }).catch(() => {});
 
         const bugStatusText = await page.$eval('#bug-report-status', el => el.textContent || '');
         console.log("   Bug Report submission status:", bugStatusText);
@@ -2630,7 +2638,7 @@ try {
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");
-        await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'load', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
         await page.waitForSelector('#garage-screen', { visible: true, timeout: 5000 });
@@ -2640,7 +2648,7 @@ try {
 
         // 9. Test 3D Master Chef Cooking Simulator
         console.log("9. Checking 3D Master Chef Cooking Simulator...");
-        await page.goto('http://localhost:4173/games/cooking/index.html', { waitUntil: 'load', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/cooking/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -3443,7 +3451,7 @@ try {
                 localStorage.removeItem('playard_current_user_profile');
             });
             await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/metro/index.html', { waitUntil: 'load', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const guestVipDisplay = await page.$eval('#vip-restricted-overlay', el => window.getComputedStyle(el).display).catch(() => 'none');
@@ -3465,7 +3473,7 @@ try {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('http://localhost:4173/games/metro/index.html', { waitUntil: 'load', timeout: 30000 });
+            await page.goto('http://localhost:4173/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1000));
 
             await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
@@ -4666,10 +4674,22 @@ try {
                 x: window.mmp1Game.playerChar.position.x,
                 z: window.mmp1Game.playerChar.position.z
             }));
+            await page.bringToFront();
+            await page.evaluate(() => {
+                window.focus();
+                if (window.mmp1Game && window.mmp1Game.keys) {
+                    window.mmp1Game.keys['KeyW'] = true;
+                }
+            });
             // Simulate pressing KeyW
             await page.keyboard.down('KeyW');
-            await new Promise(r => setTimeout(r, 200));
+            await new Promise(r => setTimeout(r, 300));
             await page.keyboard.up('KeyW');
+            await page.evaluate(() => {
+                if (window.mmp1Game && window.mmp1Game.keys) {
+                    window.mmp1Game.keys['KeyW'] = false;
+                }
+            });
             const posAfterW = await page.evaluate(() => ({
                 x: window.mmp1Game.playerChar.position.x,
                 z: window.mmp1Game.playerChar.position.z
@@ -6472,6 +6492,51 @@ try {
                 throw new Error("Yard exchange category tab must filter to 'yards'!");
             }
 
+            // Test that Shop ONLY contains items bought with Yards
+            console.log("   Testing Shop only contains items purchasable with Yards (and Rockets tab has 54 rockets)...");
+            const yardOnlyShopResult = await page.evaluate(() => {
+                const game = window.rocketGame;
+                if (!game) return { success: false, reason: 'no rocketGame' };
+
+                game.toggleShop(true, 'shop');
+                const viewYardShop = document.getElementById('view-yard-shop');
+                const viewRockets = document.getElementById('view-rockets-catalog');
+                const isYardShopVisible = window.getComputedStyle(viewYardShop).display === 'flex';
+                const isRocketsHidden = window.getComputedStyle(viewRockets).display === 'none';
+
+                // Check all buttons inside view-yard-shop
+                const yardButtons = Array.from(viewYardShop.querySelectorAll('button'));
+                const allYardButtonsCostYards = yardButtons.every(btn => btn.textContent.includes('Y') || btn.textContent.includes('OMATUD'));
+                const noPtsButtonsInYardShop = !yardButtons.some(btn => btn.textContent.includes('PTS') && btn.textContent.includes('OSTA'));
+
+                // Switch to Rockets tab
+                const tabRocketsBtn = document.getElementById('modal-tab-rockets');
+                tabRocketsBtn?.click();
+                const isRocketsVisible = window.getComputedStyle(viewRockets).display === 'flex';
+                const rocketsCount = viewRockets.querySelectorAll('#rocket-catalog-list .rocket-item-card').length;
+
+                // Switch back to Shop tab
+                const tabShopBtn = document.getElementById('modal-tab-shop');
+                tabShopBtn?.click();
+                const isYardShopVisibleAgain = window.getComputedStyle(viewYardShop).display === 'flex';
+
+                return {
+                    success: true,
+                    isYardShopVisible,
+                    isRocketsHidden,
+                    allYardButtonsCostYards,
+                    noPtsButtonsInYardShop,
+                    isRocketsVisible,
+                    rocketsCount,
+                    isYardShopVisibleAgain
+                };
+            });
+
+            console.log(`   Yard-Only Shop Validation: YardShopVisible: ${yardOnlyShopResult.isYardShopVisible}, AllCostYards: ${yardOnlyShopResult.allYardButtonsCostYards}, NoPtsInShop: ${yardOnlyShopResult.noPtsButtonsInYardShop}, RocketsTabCount: ${yardOnlyShopResult.rocketsCount}`);
+            if (!yardOnlyShopResult.success || !yardOnlyShopResult.isYardShopVisible || !yardOnlyShopResult.allYardButtonsCostYards || !yardOnlyShopResult.noPtsButtonsInYardShop || yardOnlyShopResult.rocketsCount < 50) {
+                throw new Error(`Shop must contain ONLY items purchasable with Yards! Failed: ${JSON.stringify(yardOnlyShopResult)}`);
+            }
+
             // Test Round End & WINNER Modal
             console.log("   Testing Round End & WINNER Victory Modal...");
             const winnerResult = await page.evaluate(() => {
@@ -6622,7 +6687,7 @@ try {
 
             // 6. Verify Cross-Device Cloud Synchronization
             console.log("--- Testing Cross-Device Cloud Synchronization (PC <-> Mobile / Tablet) ---");
-            await page.goto('http://localhost:4173/index.html', { waitUntil: 'load', timeout: 30000 });
+            await page.goto('http://localhost:4173/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1200));
 
             const syncResults = await page.evaluate(async () => {

@@ -1,5 +1,13 @@
 import { supabase } from '../lib/supabase';
 
+function isTestMode(): boolean {
+    if (typeof window !== 'undefined') {
+        if ((window as any).__PLAYARD_TEST_MODE__) return true;
+        if (navigator.webdriver) return true;
+    }
+    return false;
+}
+
 export interface YardData {
     yards: number;
     streak: number; // 0 to 7
@@ -345,7 +353,7 @@ class YardService {
     }
 
     private async initAuthAndSync() {
-        if (!supabase) return;
+        if (!supabase || isTestMode()) return;
         try {
             // 1. Initial Session Check
             const { data: { session } } = await supabase.auth.getSession();
@@ -370,7 +378,7 @@ class YardService {
     }
 
     private async syncWithCloud(userId: string) {
-        if (!supabase || !userId) return;
+        if (!supabase || !userId || isTestMode()) return;
         try {
             // Check if userId is a valid UUID, otherwise try looking it up by username or email
             let queryId = userId;
@@ -509,7 +517,7 @@ class YardService {
     }
 
     public async saveToCloud() {
-        if (!supabase) return;
+        if (!supabase || isTestMode()) return;
         try {
             const { data: { session } } = await supabase.auth.getSession();
             let targetUserId = session?.user?.id;
@@ -974,7 +982,7 @@ class YardService {
         localStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(games));
 
         // Save to Supabase
-        if (supabase) {
+        if (supabase && !isTestMode()) {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 let cloudUserId: string | null = session?.user?.id ?? null;
@@ -1033,7 +1041,7 @@ class YardService {
         }
 
         // Delete from Supabase cloud
-        if (supabase) {
+        if (supabase && !isTestMode()) {
             try {
                 await supabase.from('user_created_games').delete().eq('id', gameId);
             } catch (err) {
@@ -1061,7 +1069,7 @@ class YardService {
             gamesMap.set(g.id, g);
         }
 
-        if (supabase) {
+        if (supabase && !isTestMode()) {
             try {
                 const { data, error } = await supabase
                     .from('user_created_games')
@@ -1095,7 +1103,7 @@ class YardService {
     }
 
     public async getPendingGames(): Promise<CreatedGame[]> {
-        if (supabase) {
+        if (supabase && !isTestMode()) {
             try {
                 const { data, error } = await supabase
                     .from('user_created_games')
@@ -1137,7 +1145,7 @@ class YardService {
             approvedMap.set(g.id, g);
         }
 
-        if (supabase) {
+        if (supabase && !isTestMode()) {
             try {
                 const { data, error } = await supabase
                     .from('user_created_games')

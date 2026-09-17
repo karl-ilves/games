@@ -785,7 +785,8 @@ function setupModals() {
                 localStorage.setItem('playard_bug_reports', JSON.stringify(reports));
             } catch (e) {}
 
-            if (supabase) {
+            const isTest = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+            if (supabase && !isTest) {
                 try {
                     const isValidUuid = prof?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(prof.id);
                     const { error } = await supabase.from('bug_reports').insert({

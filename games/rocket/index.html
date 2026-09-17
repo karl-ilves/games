@@ -584,6 +584,37 @@
             background: linear-gradient(135deg, #ffd32a, #ff9f1a);
             color: #000000;
         }
+
+        /* Shop Top Level Tabs */
+        .shop-top-tabs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .shop-top-tab {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            color: #94a3b8;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .shop-top-tab:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        .shop-top-tab.active {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.25) 0%, rgba(0, 114, 255, 0.25) 100%);
+            border-color: #00f2fe;
+            color: #00f2fe;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+        }
         .rocket-action-btn.btn-equip {
             background: linear-gradient(135deg, #00f2fe, #0072ff);
             color: #ffffff;
@@ -770,48 +801,91 @@
         </div>
     </div>
 
-    <!-- Rocket Shop Modal -->
+    <!-- Rocket & Yard Shop Modal -->
     <div class="game-modal-backdrop" id="rocket-shop-modal">
         <div class="game-modal-box">
             <div class="modal-header">
-                <h2>🚀 ROCKET POOD (54 TYYPI)</h2>
+                <div class="shop-top-tabs">
+                    <button type="button" class="shop-top-tab active" id="modal-tab-shop">
+                        <span>💎</span>
+                        <span>SHOP (AINULT YARDID)</span>
+                    </button>
+                    <button type="button" class="shop-top-tab" id="modal-tab-rockets">
+                        <span>🚀</span>
+                        <span>RAKETID (54 TYYPI)</span>
+                    </button>
+                </div>
                 <button class="close-modal-btn" id="btn-close-shop">&times;</button>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,211,42,0.3); flex-wrap: wrap; gap: 8px;">
-                <span style="font-weight: 700; color: #cbd5e1;">Sinu punktid ostmiseks: <span style="font-weight: 900; color: #ffd32a; font-size: 1.15rem;" id="shop-points-display">0 PTS</span></span>
-                <span style="font-size: 0.8rem; color: #00f2fe; font-weight: 800;" id="shop-count-badge">54 unikaalset raketti</span>
+
+            <!-- VIEW 1: YARD SHOP (AINULT ASJAD MIDA SAAB OSTA YARDIDE EEST) -->
+            <div id="view-yard-shop" style="display: flex; flex-direction: column; gap: 14px;">
+                <!-- Header Card with Yard Balance -->
+                <div style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(255, 211, 42, 0.12) 100%); border: 1.5px solid rgba(0, 242, 254, 0.5); border-radius: 14px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div style="font-size: 1.25rem; font-weight: 900; color: #00f2fe; display: flex; align-items: center; gap: 8px;">
+                            <span>💎</span>
+                            <span>Playard Yard Shop</span>
+                        </div>
+                        <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 2px;">
+                            Siin poes on <strong>ainult asjad, mida saab osta Yardide eest</strong>.
+                        </div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255, 211, 42, 0.4); padding: 8px 16px; border-radius: 12px; text-align: right;">
+                        <span style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; font-weight: 800;">Sinu Yard Saldo</span>
+                        <div style="font-size: 1.35rem; font-weight: 900; color: #ffd32a;" id="shop-current-yards-display">0 Y</div>
+                    </div>
+                </div>
+
+                <!-- Section 1: Points Exchange Packs (500Y, 1000Y, 5000Y) -->
+                <div>
+                    <div style="font-size: 0.95rem; font-weight: 900; color: #ffd32a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <span>🪙</span>
+                        <span>Osta Punkte Yardide Eest (Vahetus)</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;" id="yard-points-packs-grid">
+                        <!-- Injected via TypeScript -->
+                    </div>
+                </div>
+
+                <!-- Section 2: Special Game Passes for Yards -->
+                <div>
+                    <div style="font-size: 0.95rem; font-weight: 900; color: #00f2fe; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <span>⚡</span>
+                        <span>Erilised Mängupassid & VIP (Ainult Yardide eest)</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;" id="yard-gamepasses-grid">
+                        <!-- Injected via TypeScript: 2X Score, Nuclear Access, All 54 Rockets -->
+                    </div>
+                </div>
             </div>
 
-            <!-- Yard Points Exchange Container -->
-            <div id="shop-yard-exchange" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(255, 211, 42, 0.1) 100%); border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-                    <span style="font-weight: 900; color: #00f2fe; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
-                        💎 Osta Punkte Yardide Eest
-                    </span>
-                    <span style="font-size: 0.82rem; color: #ffd32a; font-weight: 800;" id="shop-current-yards-display">
-                        Sinu Jardid: 0 Y
-                    </span>
+            <!-- VIEW 2: ROCKETS CATALOG (54 TYYPI - AVAMINE PUNKTIDE EEST) -->
+            <div id="view-rockets-catalog" style="display: none; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,211,42,0.3); flex-wrap: wrap; gap: 8px;">
+                    <span style="font-weight: 700; color: #cbd5e1;">Sinu punktid rakettide avamiseks: <span style="font-weight: 900; color: #ffd32a; font-size: 1.15rem;" id="shop-points-display">0 PTS</span></span>
+                    <button type="button" class="shop-btn" id="btn-go-to-yard-shop" style="padding: 5px 12px; font-size: 0.78rem;">
+                        <span>💎</span>
+                        <span>Osta punkte Shopist (Yardid)</span>
+                    </button>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px;" id="yard-points-packs-grid">
-                    <!-- Injected dynamically via TypeScript with 500 Y, 1000 Y, 5000 Y packs -->
-                </div>
-            </div>
 
-            <!-- Category Filter Tabs -->
-            <div class="shop-filter-bar" id="shop-filter-bar">
-                <button type="button" class="filter-tab-btn active" data-cat="all">Kõik (54)</button>
-                <button type="button" class="filter-tab-btn" data-cat="yards">💎 Yard Vahetus</button>
-                <button type="button" class="filter-tab-btn" data-cat="tactical">Taktikalised 🚀</button>
-                <button type="button" class="filter-tab-btn" data-cat="incendiary">Süüte/Tuli 🔥</button>
-                <button type="button" class="filter-tab-btn" data-cat="demolition">Purustus 💥</button>
-                <button type="button" class="filter-tab-btn" data-cat="plasma">Plasma ⚡</button>
-                <button type="button" class="filter-tab-btn" data-cat="cluster">Kobar 💣</button>
-                <button type="button" class="filter-tab-btn" data-cat="cosmic">Kosmiline 🌌</button>
-                <button type="button" class="filter-tab-btn" data-cat="thermobaric">Termobaariline 💨</button>
-                <button type="button" class="filter-tab-btn" data-cat="singularity">Tuuma/Võimsad ☢️</button>
-            </div>
-            <div class="rocket-catalog-grid" id="rocket-catalog-list">
-                <!-- Injected via TypeScript -->
+                <!-- Category Filter Tabs -->
+                <div class="shop-filter-bar" id="shop-filter-bar">
+                    <button type="button" class="filter-tab-btn active" data-cat="all">Kõik (54)</button>
+                    <button type="button" class="filter-tab-btn" data-cat="yards">💎 Yard Shop</button>
+                    <button type="button" class="filter-tab-btn" data-cat="tactical">Taktikalised 🚀</button>
+                    <button type="button" class="filter-tab-btn" data-cat="incendiary">Süüte/Tuli 🔥</button>
+                    <button type="button" class="filter-tab-btn" data-cat="demolition">Purustus 💥</button>
+                    <button type="button" class="filter-tab-btn" data-cat="plasma">Plasma ⚡</button>
+                    <button type="button" class="filter-tab-btn" data-cat="cluster">Kobar 💣</button>
+                    <button type="button" class="filter-tab-btn" data-cat="cosmic">Kosmiline 🌌</button>
+                    <button type="button" class="filter-tab-btn" data-cat="thermobaric">Termobaariline 💨</button>
+                    <button type="button" class="filter-tab-btn" data-cat="singularity">Tuuma/Võimsad ☢️</button>
+                </div>
+                <div class="rocket-catalog-grid" id="rocket-catalog-list">
+                    <!-- Injected via TypeScript -->
+                </div>
             </div>
         </div>
     </div>

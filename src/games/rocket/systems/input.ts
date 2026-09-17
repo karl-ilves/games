@@ -2,7 +2,7 @@ import { isMobileOrTabletDevice } from '../../../shared/mobileControls';
 
 export interface InputContext {
     onFireRocket: () => void;
-    onToggleShop: (show: boolean) => void;
+    onToggleShop: (show: boolean, tab?: 'shop' | 'rockets') => void;
     onPlayAgain: () => void;
     onToggleSound: () => void;
     onCenterLock: () => void;
@@ -85,16 +85,16 @@ export class InputManager {
         }
 
         const openShopBtn = document.getElementById('btn-open-shop');
-        if (openShopBtn) openShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true));
+        if (openShopBtn) openShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true, 'shop'));
 
         const hudShopBtn = document.getElementById('btn-hud-shop');
-        if (hudShopBtn) hudShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true));
+        if (hudShopBtn) hudShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true, 'shop'));
 
         const quickBarShopBtn = document.getElementById('btn-quick-bar-shop');
-        if (quickBarShopBtn) quickBarShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true));
+        if (quickBarShopBtn) quickBarShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true, 'shop'));
 
         const activeRocketBox = document.getElementById('hud-active-rocket-box');
-        if (activeRocketBox) activeRocketBox.addEventListener('click', () => this.ctx.onToggleShop(true));
+        if (activeRocketBox) activeRocketBox.addEventListener('click', () => this.ctx.onToggleShop(true, 'rockets'));
 
         const closeShopBtn = document.getElementById('btn-close-shop');
         if (closeShopBtn) closeShopBtn.addEventListener('click', () => this.ctx.onToggleShop(false));
@@ -102,7 +102,7 @@ export class InputManager {
         const winnerShopBtn = document.getElementById('btn-winner-shop');
         if (winnerShopBtn) {
             winnerShopBtn.addEventListener('click', () => {
-                this.ctx.onToggleShop(true);
+                this.ctx.onToggleShop(true, 'shop');
             });
         }
 

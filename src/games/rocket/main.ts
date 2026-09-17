@@ -38,6 +38,7 @@ export class RocketGame {
 
     public equippedRocket: RocketType = ROCKET_CATALOG[0];
     public unlockedRockets: Set<string> = new Set(['red_dart']);
+    public has2xScorePass: boolean = false;
 
     public get activeRockets(): InFlightRocket[] {
         return this.combat.activeRockets;
@@ -75,8 +76,9 @@ export class RocketGame {
             targeting: this.targeting,
             getTargets: () => this.targets,
             onScoreAwarded: (pts) => {
-                this.currentScore += pts;
-                this.totalPointsBank += pts;
+                const earned = this.has2xScorePass ? pts * 2 : pts;
+                this.currentScore += earned;
+                this.totalPointsBank += earned;
                 this.saveProgress();
                 this.updateHUD();
             },
@@ -100,12 +102,14 @@ export class RocketGame {
                 this.totalPointsBank = pts;
             },
             onProgressSave: () => this.saveProgress(),
-            onYardBalanceChanged: () => this.updateHUD()
+            onYardBalanceChanged: () => this.updateHUD(),
+            has2xScorePass: () => this.has2xScorePass,
+            set2xScorePass: (has) => { this.has2xScorePass = has; }
         });
 
         this.input = new InputManager({
             onFireRocket: () => this.fireRocket(),
-            onToggleShop: (show) => this.toggleShop(show),
+            onToggleShop: (show, tab) => this.toggleShop(show, tab),
             onPlayAgain: () => {
                 this.hud.toggleModal('round-end-modal', false);
                 this.resetRound();
@@ -178,8 +182,8 @@ export class RocketGame {
         this.combat.triggerExplosion(impactPos, rocketType, hitTarget, hitDistFromCenter);
     }
 
-    public toggleShop(show: boolean) {
-        this.shopUI.toggleShop(show);
+    public toggleShop(show: boolean, tab: 'shop' | 'rockets' = 'shop') {
+        this.shopUI.toggleShop(show, tab);
     }
 
     public renderShopCatalog() {
@@ -261,7 +265,8 @@ export class RocketGame {
             const data = {
                 bank: this.totalPointsBank,
                 unlocked: Array.from(this.unlockedRockets),
-                equipped: this.equippedRocket.id
+                equipped: this.equippedRocket.id,
+                has2xScorePass: this.has2xScorePass
             };
             localStorage.setItem('playard_rocket_save', JSON.stringify(data));
         } catch (e) {}
@@ -273,6 +278,7 @@ export class RocketGame {
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (typeof parsed.bank === 'number') this.totalPointsBank = parsed.bank;
+                if (typeof parsed.has2xScorePass === 'boolean') this.has2xScorePass = parsed.has2xScorePass;
                 if (Array.isArray(parsed.unlocked)) {
                     parsed.unlocked.forEach((id: string) => this.unlockedRockets.add(id));
                 }
