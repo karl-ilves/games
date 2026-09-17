@@ -224,10 +224,10 @@ export class RocketGame {
         this.audio.playFanfare();
 
         const acc = this.shotsFired > 0 ? Math.round((this.targetsHit / this.shotsFired) * 100) : 0;
-        const yardsReward = Math.max(10, Math.min(100, Math.floor(this.currentScore / 80)));
-        try {
-            yardService.awardYards(yardsReward);
-        } catch (e) {}
+        const bonusPts = Math.max(50, Math.min(500, Math.floor(this.currentScore * 0.25)));
+        this.currentScore += bonusPts;
+        this.totalPointsBank += bonusPts;
+        this.saveProgress();
 
         const scoreDisp = document.getElementById('winner-score-display');
         if (scoreDisp) scoreDisp.textContent = `${this.currentScore} PTS`;
@@ -242,7 +242,7 @@ export class RocketGame {
         if (accDisp) accDisp.textContent = `${acc}%`;
 
         const rewardDisp = document.getElementById('winner-yards-reward');
-        if (rewardDisp) rewardDisp.textContent = `+${yardsReward} Y`;
+        if (rewardDisp) rewardDisp.textContent = `+${bonusPts} PTS`;
 
         this.hud.toggleModal('round-end-modal', true);
     }

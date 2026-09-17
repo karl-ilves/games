@@ -22,7 +22,7 @@ export const YARD_POINTS_PACKS: YardPointsPack[] = [
         points: 100,
         yardCost: 500,
         icon: '🪙',
-        description: 'Vaheta 500 Yardi 100 Rocketi punkti vastu'
+        description: 'Vaheta 500 Playbuxi 100 Rocketi punkti vastu'
     },
     {
         id: 'yard_pack_200',
@@ -31,7 +31,7 @@ export const YARD_POINTS_PACKS: YardPointsPack[] = [
         yardCost: 1000,
         icon: '💰',
         badge: 'POPULAARNE',
-        description: 'Vaheta 1,000 Yardi 200 Rocketi punkti vastu'
+        description: 'Vaheta 1,000 Playbuxi 200 Rocketi punkti vastu'
     },
     {
         id: 'yard_pack_1000',
@@ -40,7 +40,7 @@ export const YARD_POINTS_PACKS: YardPointsPack[] = [
         yardCost: 5000,
         icon: '💎',
         badge: 'PARIM VÄÄRTUS',
-        description: 'Vaheta 5,000 Yardi 1,000 Rocketi punkti vastu'
+        description: 'Vaheta 5,000 Playbuxi 1,000 Rocketi punkti vastu'
     }
 ];
 
@@ -181,9 +181,9 @@ export class RocketShopUI {
         const yardsDisplay = document.getElementById('shop-current-yards-display');
         if (yardsDisplay) {
             try {
-                yardsDisplay.textContent = `${yardService.getYards().toLocaleString()} Y`;
+                yardsDisplay.textContent = `${yardService.getYards().toLocaleString()} PBX`;
             } catch (e) {
-                yardsDisplay.textContent = '0 Y';
+                yardsDisplay.textContent = '0 PBX';
             }
         }
 
@@ -239,7 +239,7 @@ export class RocketShopUI {
                         box-shadow: 0 2px 10px rgba(0, 242, 254, 0.35);
                     ">
                         <span>💎</span>
-                        <span>${pack.yardCost.toLocaleString()} Y</span>
+                        <span>${pack.yardCost.toLocaleString()} PBX</span>
                     </button>
                 </div>
             `;
@@ -314,7 +314,7 @@ export class RocketShopUI {
                         box-shadow: ${isOwned ? 'none' : '0 2px 10px rgba(255, 211, 42, 0.4)'};
                     ">
                         <span>💎</span>
-                        <span>${isOwned ? '✓ OMATUD' : `${pass.yardCost.toLocaleString()} Y`}</span>
+                        <span>${isOwned ? '✓ OMATUD' : `${pass.yardCost.toLocaleString()} PBX`}</span>
                     </button>
                 </div>
             `;
@@ -332,10 +332,10 @@ export class RocketShopUI {
 
     public buyYardPointsPack(pack: YardPointsPack) {
         showYardPurchaseConfirm({
-            title: 'Osta Punkte Yardide Eest',
+            title: 'Osta Punkte Playbuxi Eest',
             itemName: `${pack.icon} ${pack.name} (+${pack.points.toLocaleString()} PTS)`,
             yardCost: pack.yardCost,
-            description: `Kas soovid vahetada ${pack.yardCost.toLocaleString()} Yardi ${pack.points.toLocaleString()} Rocket punkti vastu?`,
+            description: `Kas soovid vahetada ${pack.yardCost.toLocaleString()} Playbuxi ${pack.points.toLocaleString()} Rocket punkti vastu?`,
             onConfirm: () => {
                 const success = yardService.spendYards(
                     pack.yardCost,
@@ -352,7 +352,7 @@ export class RocketShopUI {
                     this.renderRocketsCatalog();
                     this.ctx.onYardBalanceChanged?.();
                 } else {
-                    this.ctx.hud.showImpactToast('POLE PIISAVALT JARDE!');
+                    this.ctx.hud.showImpactToast('POLE PIISAVALT PLAYBUXI!');
                 }
             }
         });
@@ -360,10 +360,10 @@ export class RocketShopUI {
 
     public buyYardGamePass(pass: YardGamePass) {
         showYardPurchaseConfirm({
-            title: 'Osta Mängupass Yardide Eest',
+            title: 'Osta Mängupass Playbuxi Eest',
             itemName: `${pass.icon} ${pass.name}`,
             yardCost: pass.yardCost,
-            description: `Kas soovid osta "${pass.name}" ${pass.yardCost.toLocaleString()} Yardi eest?`,
+            description: `Kas soovid osta "${pass.name}" ${pass.yardCost.toLocaleString()} Playbuxi eest?`,
             onConfirm: () => {
                 const success = yardService.spendYards(
                     pass.yardCost,

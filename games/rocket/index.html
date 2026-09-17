@@ -760,7 +760,7 @@
                 <button class="icon-btn" id="btn-toggle-sound" title="Heli sisse/välja">🔊</button>
                 <div class="stat-pill" style="border-color: rgba(0, 242, 254, 0.4); color: #00f2fe;">
                     <span id="hud-yard-icon">💎</span>
-                    <span id="hud-yard-text">0 Y</span>
+                    <span id="hud-yard-text">0 PBX</span>
                 </div>
             </div>
         </div>
@@ -801,80 +801,86 @@
         </div>
     </div>
 
-    <!-- Rocket & Yard Shop Modal -->
-    <div class="game-modal-backdrop" id="rocket-shop-modal">
-        <div class="game-modal-box">
-            <div class="modal-header">
-                <div class="shop-top-tabs">
-                    <button type="button" class="shop-top-tab active" id="modal-tab-shop">
+    <!-- Rocket & Playbux Shop Modal -->
+    <div id="rocket-shop-modal" class="modal-overlay">
+        <div class="shop-modal-card">
+            <!-- Modal Header -->
+            <div class="shop-header">
+                <div class="shop-nav-tabs">
+                    <button type="button" class="shop-nav-tab active" id="modal-tab-shop" data-tab="yard_shop">
                         <span>💎</span>
-                        <span>SHOP (AINULT YARDID)</span>
+                        <span>SHOP (AINULT PLAYBUX)</span>
                     </button>
-                    <button type="button" class="shop-top-tab" id="modal-tab-rockets">
+                    <button type="button" class="shop-nav-tab" id="modal-tab-rockets" data-tab="rockets">
                         <span>🚀</span>
-                        <span>RAKETID (54 TYYPI)</span>
+                        <span>54 RAKETTI (VAATA)</span>
                     </button>
                 </div>
-                <button class="close-modal-btn" id="btn-close-shop">&times;</button>
+                <button type="button" class="btn-close-modal" id="btn-close-shop" title="Sulge">✕</button>
             </div>
 
-            <!-- VIEW 1: YARD SHOP (AINULT ASJAD MIDA SAAB OSTA YARDIDE EEST) -->
+            <!-- VIEW 1: PLAYBUX SHOP (AINULT ASJAD MIDA SAAB OSTA PLAYBUXI EEST) -->
             <div id="view-yard-shop" style="display: flex; flex-direction: column; gap: 14px;">
-                <!-- Header Card with Yard Balance -->
-                <div style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(255, 211, 42, 0.12) 100%); border: 1.5px solid rgba(0, 242, 254, 0.5); border-radius: 14px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <!-- Header Card with Playbux Balance -->
+                <div style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(11, 232, 129, 0.15)); border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
                         <div style="font-size: 1.25rem; font-weight: 900; color: #00f2fe; display: flex; align-items: center; gap: 8px;">
                             <span>💎</span>
-                            <span>Playard Yard Shop</span>
+                            <span>Playard Playbux Shop</span>
                         </div>
-                        <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 2px;">
-                            Siin poes on <strong>ainult asjad, mida saab osta Yardide eest</strong>.
+                        <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 3px;">
+                            Siin poes on <strong>ainult asjad, mida saab osta Playbuxi eest</strong>.
                         </div>
                     </div>
-                    <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255, 211, 42, 0.4); padding: 8px 16px; border-radius: 12px; text-align: right;">
-                        <span style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; font-weight: 800;">Sinu Yard Saldo</span>
-                        <div style="font-size: 1.35rem; font-weight: 900; color: #ffd32a;" id="shop-current-yards-display">0 Y</div>
+                    <div style="text-align: right; background: rgba(0,0,0,0.35); padding: 8px 18px; border-radius: 10px; border: 1px solid rgba(255,211,42,0.3);">
+                        <span style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; font-weight: 800;">Sinu Playbux Saldo</span>
+                        <div style="font-size: 1.35rem; font-weight: 900; color: #ffd32a;" id="shop-current-yards-display">0 PBX</div>
                     </div>
                 </div>
 
-                <!-- Section 1: Points Exchange Packs (500Y, 1000Y, 5000Y) -->
+                <!-- Section 1: Points Packs for Playbux -->
                 <div>
                     <div style="font-size: 0.95rem; font-weight: 900; color: #ffd32a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                         <span>🪙</span>
-                        <span>Osta Punkte Yardide Eest (Vahetus)</span>
+                        <span>Osta Punkte Playbuxi Eest (Vahetus)</span>
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;" id="yard-points-packs-grid">
-                        <!-- Injected via TypeScript -->
+                        <!-- Populated by JS -->
                     </div>
                 </div>
 
-                <!-- Section 2: Special Game Passes for Yards -->
+                <!-- Section 2: Special Game Passes for Playbux -->
                 <div>
-                    <div style="font-size: 0.95rem; font-weight: 900; color: #00f2fe; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                        <span>⚡</span>
-                        <span>Erilised Mängupassid & VIP (Ainult Yardide eest)</span>
+                    <div style="font-size: 0.95rem; font-weight: 900; color: #ffd32a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <span>👑</span>
+                        <span>Erilised Mängupassid & VIP (Ainult Playbuxi eest)</span>
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;" id="yard-gamepasses-grid">
-                        <!-- Injected via TypeScript: 2X Score, Nuclear Access, All 54 Rockets -->
+                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW 2: ROCKETS CATALOG (54 TYYPI - AVAMINE PUNKTIDE EEST) -->
+            <!-- VIEW 2: 54 ROCKETS VIEW (KÕIK 54 RAKETTI NÄHTAVAL) -->
             <div id="view-rockets-catalog" style="display: none; flex-direction: column; gap: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,211,42,0.3); flex-wrap: wrap; gap: 8px;">
-                    <span style="font-weight: 700; color: #cbd5e1;">Sinu punktid rakettide avamiseks: <span style="font-weight: 900; color: #ffd32a; font-size: 1.15rem;" id="shop-points-display">0 PTS</span></span>
+                <!-- Balance & Info Bar -->
+                <div class="shop-balance-bar">
+                    <div class="points-badge">
+                        <span>🪙</span>
+                        <span style="font-size: 0.85rem; color: #94a3b8;">Rocket Punkte:</span>
+                        <strong id="shop-points-display">0 PTS</strong>
+                    </div>
                     <button type="button" class="shop-btn" id="btn-go-to-yard-shop" style="padding: 5px 12px; font-size: 0.78rem;">
                         <span>💎</span>
-                        <span>Osta punkte Shopist (Yardid)</span>
+                        <span>Osta punkte Shopist (Playbux)</span>
                     </button>
                 </div>
 
-                <!-- Category Filter Tabs -->
+                <!-- Category Filters -->
                 <div class="shop-filter-bar" id="shop-filter-bar">
                     <button type="button" class="filter-tab-btn active" data-cat="all">Kõik (54)</button>
-                    <button type="button" class="filter-tab-btn" data-cat="yards">💎 Yard Shop</button>
-                    <button type="button" class="filter-tab-btn" data-cat="tactical">Taktikalised 🚀</button>
+                    <button type="button" class="filter-tab-btn" data-cat="starter">🚀 Algaja</button>
+                    <button type="button" class="filter-tab-btn" data-cat="yards">💎 Playbux Shop</button>
                     <button type="button" class="filter-tab-btn" data-cat="incendiary">Süüte/Tuli 🔥</button>
                     <button type="button" class="filter-tab-btn" data-cat="demolition">Purustus 💥</button>
                     <button type="button" class="filter-tab-btn" data-cat="plasma">Plasma ⚡</button>
@@ -908,8 +914,8 @@
                     <div>⚡ Täpsus: <strong id="winner-accuracy">0%</strong></div>
                 </div>
 
-                <div style="background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 10px; padding: 8px 16px; color: #00f2fe; font-weight: 800;">
-                    💎 Teenitud Jarde: <span id="winner-yards-reward">+25 Y</span>
+                <div style="background: rgba(255, 211, 42, 0.1); border: 1px solid rgba(255, 211, 42, 0.3); border-radius: 10px; padding: 8px 16px; color: #ffd32a; font-weight: 800;">
+                    🪙 Vooru Boonuspunktid: <span id="winner-yards-reward">+50 PTS</span>
                 </div>
 
                 <div class="modal-action-row">

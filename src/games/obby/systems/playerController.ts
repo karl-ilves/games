@@ -217,7 +217,7 @@ export class PlayerController {
         this.ctx.setIsVictory(true);
         this.ctx.audio.playVictory();
 
-        yardService.addYards(100, 'Parkour Obby Grand Victory 10/10');
+        yardService.addPlayCoins(100, 'Parkour Obby Grand Victory 10/10');
 
         const cooldownExpiry = Date.now() + 24 * 60 * 60 * 1000;
         localStorage.setItem('playard_obby_cooldown_until', cooldownExpiry.toString());
@@ -413,7 +413,7 @@ export class PlayerController {
                     this.ctx.setCurrentStageIndex(idx);
                     this.ctx.setMaxUnlockedStage(Math.max(this.ctx.getMaxUnlockedStage(), idx + 1));
 
-                    yardService.addYards(5, `Parkour Obby Stage ${idx + 1} Checkpoint`);
+                    yardService.addPlayCoins(5, `Parkour Obby Stage ${idx + 1} Checkpoint`);
                     this.ctx.audio.playCheckpoint();
                     this.ctx.onSaveGameData();
                     this.ctx.onUpdateHUD();

@@ -21,7 +21,7 @@ export class HudManager {
         const banner = document.getElementById('checkpoint-banner');
         const bannerText = document.getElementById('checkpoint-banner-text');
         if (banner && bannerText) {
-            bannerText.textContent = isOwner ? `KONTROLLPUNKT ${stageIndex + 1}/10! (+5 YARDS)` : `CHECKPOINT ${stageIndex + 1}/10! (+5 YARDS)`;
+            bannerText.textContent = isOwner ? `KONTROLLPUNKT ${stageIndex + 1}/10! (+5 PLAYCOINS)` : `CHECKPOINT ${stageIndex + 1}/10! (+5 PLAYCOINS)`;
             banner.classList.add('show');
             setTimeout(() => banner.classList.remove('show'), 2200);
         }

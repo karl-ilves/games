@@ -162,19 +162,7 @@ export class RacingHud {
         state.money += prize;
         state.saveProgress();
 
-        let yardPrize = 0;
-        if (pos === 1) yardPrize = 3;
-        else if (pos === 2) yardPrize = 1;
-
-        if (yardPrize > 0) {
-            yardService.addYards(yardPrize, `Racing Circuit ${pos}. Place`);
-        }
-
-        alert(
-            `🏁 Race Finished: Place ${pos}!\n⏱️ Time: ${timeStr}\n💵 Won: $${prize}${
-                yardPrize > 0 ? `\n💎 Yards: +${yardPrize}` : ''
-            }`
-        );
+        alert(`🏁 Race Finished: Place ${pos}!\n⏱️ Time: ${timeStr}\n💵 Won: $${prize}`);
         location.reload();
     }
 }

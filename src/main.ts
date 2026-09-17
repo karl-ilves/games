@@ -324,7 +324,7 @@ function renderStreakCards() {
     if (claimBtn) {
         claimBtn.disabled = !streakInfo.canClaim;
         if (streakInfo.canClaim) {
-            claimBtn.innerText = `CLAIM DAY ${streakInfo.nextDayIndex} (+${streakInfo.nextRewardAmount} YARDS)`;
+            claimBtn.innerText = `CLAIM DAY ${streakInfo.nextDayIndex} (+${streakInfo.nextRewardAmount} PLAYBUX)`;
             claimBtn.style.background = streakInfo.nextDayIndex === 7
                 ? 'linear-gradient(135deg, #ffd32a, #ff9f1a)'
                 : 'linear-gradient(135deg, #00f2fe, #4facfe)';
@@ -337,8 +337,8 @@ function renderStreakCards() {
     if (statusMsg && !statusMsg.dataset.custom) {
         if (streakInfo.canClaim) {
             statusMsg.innerText = streakInfo.nextDayIndex === 7
-                ? '🔥 Day 7 Jackpot ready: Claim 500 Yards now!'
-                : `🎁 Day ${streakInfo.nextDayIndex} Streak Reward Ready! (+${streakInfo.nextRewardAmount} Y)`;
+                ? '🔥 Day 7 Jackpot ready: Claim 500 Playbux now!'
+                : `🎁 Day ${streakInfo.nextDayIndex} Streak Reward Ready! (+${streakInfo.nextRewardAmount} PBX)`;
             statusMsg.style.color = '#00f2fe';
         } else {
             statusMsg.innerText = `Current streak: ${streakInfo.currentStreak} / 7 Days.`;

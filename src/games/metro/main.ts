@@ -4237,9 +4237,9 @@ export class LastMetroGame {
         this.carriage300ExitTriggered = true;
         this.state = 'dead'; // disable controls
 
-        // Give +1000 Yards to player
+        // Give +1000 PlayCoins to player (no Playbux earned in games)
         try {
-            yardService.awardYards(1000, 'Metro 200 Väljapääs');
+            yardService.addPlayCoins(1000, 'Metro 200 Väljapääs');
         } catch (e) {}
 
         const victoryModal = document.getElementById('victory-300-modal');

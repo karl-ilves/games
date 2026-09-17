@@ -29,8 +29,8 @@ export class CookingHud {
 
         const ordersTitle = document.querySelector('.orders-header-title span:last-child');
         if (ordersTitle) ordersTitle.textContent = isEt
-            ? 'Aktiivsed Klienditellimused (Valmista retsepti järgi ja teeni Jarde):'
-            : 'Active Customer Orders (Follow recipes and earn Yards):';
+            ? 'Aktiivsed Klienditellimused (Valmista retsepti järgi ja teeni raha):'
+            : 'Active Customer Orders (Follow recipes and earn Chef Cash):';
 
         const tabAssembly = document.querySelector('#tab-btn-assembly span:last-child');
         if (tabAssembly) tabAssembly.textContent = isEt ? '1. Taldrik & Komplekteerimine' : '1. Plate Assembly';

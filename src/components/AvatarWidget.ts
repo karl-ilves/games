@@ -30,7 +30,7 @@ export class AvatarWidget {
                     <div class="avatar-stats-row">
                         <span class="avatar-yard-pill">
                             <span id="widget-yard-icon"></span>
-                            <strong id="widget-yard-val">0</strong> YARDS
+                            <strong id="widget-yard-val">0</strong> PLAYBUX
                         </span>
                         <button class="btn-open-avatar-shop" id="btn-widget-open-shop">
                             🛍️ Avatar Shop

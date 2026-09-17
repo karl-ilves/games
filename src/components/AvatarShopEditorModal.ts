@@ -38,14 +38,14 @@ export class AvatarShopEditorModal {
                                 3D Avatar Shop & Editor
                             </h2>
                             <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #8899a6;">
-                                Customize your 3D avatar, preview and purchase exclusive items with Playard Yards!
+                                Customize your 3D avatar, preview and purchase exclusive items with Playard Playbux!
                             </p>
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 16px;">
                         <div class="avatar-modal-yard-pill">
                             <span id="modal-yard-icon"></span>
-                            <strong id="modal-shop-yard-val">0</strong> YARDS
+                            <strong id="modal-shop-yard-val">0</strong> PLAYBUX
                         </div>
                         <button class="avatar-modal-close-btn" id="btn-close-avatar-shop">&times;</button>
                     </div>
@@ -318,11 +318,11 @@ export class AvatarShopEditorModal {
                     actionBtn = `<button class="btn-item-action equip" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #2ecc71, #1abc9c); color: #070a10; font-weight: 900;">✨ Equip Outfit</button>`;
                 } else {
                     const priceLabel = details.unownedPrice < details.totalPrice
-                        ? `${details.unownedPrice.toLocaleString()} Y <span style="font-size: 0.68rem; color: #8899a6; text-decoration: line-through;">${details.totalPrice.toLocaleString()} Y</span>`
-                        : `${details.totalPrice.toLocaleString()} Y`;
+                        ? `${details.unownedPrice.toLocaleString()} PBX <span style="font-size: 0.68rem; color: #8899a6; text-decoration: line-through;">${details.totalPrice.toLocaleString()} PBX</span>`
+                        : `${details.totalPrice.toLocaleString()} PBX`;
 
                     priceBadge = `<span class="price-tag" style="background: rgba(255, 215, 0, 0.15); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.4); font-weight: 800;">${priceLabel}</span>`;
-                    actionBtn = `<button class="btn-item-action buy" data-buy-outfit-id="${outfit.id}" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #ffd700, #ff9f43); color: #070a10; font-weight: 900;">🛍️ Buy Set (${details.unownedPrice.toLocaleString()} Y)</button>`;
+                    actionBtn = `<button class="btn-item-action buy" data-buy-outfit-id="${outfit.id}" data-equip-outfit-id="${outfit.id}" style="background: linear-gradient(135deg, #ffd700, #ff9f43); color: #070a10; font-weight: 900;">🛍️ Buy Set (${details.unownedPrice.toLocaleString()} PBX)</button>`;
                 }
 
                 return `
@@ -340,7 +340,7 @@ export class AvatarShopEditorModal {
 
                         <div class="item-title" style="font-size: 1.05rem; font-weight: 900; color: #fff; margin-top: 6px;">${outfit.name}</div>
                         <div class="item-desc" style="font-size: 0.8rem; line-height: 1.4; color: #a4b0be; margin-bottom: 4px; min-height: 38px;">${outfit.description}</div>
-                        <div style="font-size: 0.72rem; color: #00f2fe; margin-bottom: 10px; font-weight: 700;">📦 Bundle contains ${details.totalItemsCount} pieces (Sum: ${details.totalPrice.toLocaleString()} Y)</div>
+                        <div style="font-size: 0.72rem; color: #00f2fe; margin-bottom: 10px; font-weight: 700;">📦 Bundle contains ${details.totalItemsCount} pieces (Sum: ${details.totalPrice.toLocaleString()} PBX)</div>
 
                         <div class="item-actions-row">
                             <button class="btn-item-preview" data-preview-outfit-id="${outfit.id}">👁️ Try On</button>
@@ -429,7 +429,7 @@ export class AvatarShopEditorModal {
             } else if (owned) {
                 actionBtn = `<button class="btn-item-action equip" data-equip-id="${item.id}">👕 Equip</button>`;
             } else {
-                actionBtn = `<button class="btn-item-action buy" data-buy-id="${item.id}">🛍️ Buy ${item.price} Y</button>`;
+                actionBtn = `<button class="btn-item-action buy" data-buy-id="${item.id}">🛍️ Buy ${item.price} PBX</button>`;
             }
 
             return `
@@ -439,7 +439,7 @@ export class AvatarShopEditorModal {
                             ${item.rarity}
                         </span>
                         <span class="price-tag">
-                            ${item.price === 0 ? 'Free' : `${item.price} Y`}
+                            ${item.price === 0 ? 'Free' : `${item.price} PBX`}
                         </span>
                     </div>
 

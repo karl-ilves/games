@@ -237,16 +237,16 @@ export class ParkourObbyGame {
         });
 
         yardService.subscribe((data) => {
-            const yardVal = document.getElementById('hud-yards-val');
-            if (yardVal) yardVal.textContent = data.yards.toLocaleString();
+            const coinVal = document.getElementById('hud-yards-val');
+            if (coinVal) coinVal.textContent = (data.playCoins || 0).toLocaleString();
         });
 
-        const initialYards = yardService.getYards();
-        const yardVal = document.getElementById('hud-yards-val');
-        if (yardVal) yardVal.textContent = initialYards.toLocaleString();
+        const initialCoins = yardService.getPlayCoins();
+        const coinVal = document.getElementById('hud-yards-val');
+        if (coinVal) coinVal.textContent = initialCoins.toLocaleString();
 
         const obbyYardIcon = document.getElementById('obby-yard-icon');
-        if (obbyYardIcon) obbyYardIcon.innerHTML = yardService.renderYardSvg(20);
+        if (obbyYardIcon) obbyYardIcon.innerHTML = yardService.renderPlayCoinSvg(20);
     }
 
     public toggleCamera() {

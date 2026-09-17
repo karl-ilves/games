@@ -93,20 +93,20 @@ export class OrderManager {
             kitchenAudio.playSuccess();
 
             if (this.state.streakPoints >= 300) {
-                const bonusYards = 50;
-                yardService.addYards(bonusYards, 'Master Chef 3D: 300 Punkti Seeria Boonus (+50 Y)');
+                const bonusCash = 50;
+                this.state.money = (this.state.money || 0) + bonusCash;
                 kitchenAudio.playCoin();
                 this.showPopup(
                     this.state.isEt
-                        ? `🎉🏆 VÕIMAS! 300 PUNKTI TÄIS! SAID +50 YARDI (50 Y)! ⭐✨`
-                        : `🎉🏆 AMAZING! 300 POINTS STREAK! +50 YARDS (50 Y) AWARDED! ⭐✨`
+                        ? `🎉🏆 VÕIMAS! 300 PUNKTI TÄIS! SAID +50 € BOONUST! ⭐✨`
+                        : `🎉🏆 AMAZING! 300 POINTS STREAK! +50 € CASH BONUS AWARDED! ⭐✨`
                 );
                 this.state.streakPoints = 0;
             } else {
                 this.showPopup(
                     this.state.isEt
-                        ? `🎉 +30 Punkti! (Seeria: ${this.state.streakPoints}/300 p ➔ +50 Y)`
-                        : `🎉 +30 Points! (Streak: ${this.state.streakPoints}/300 pts ➔ +50 Y)`
+                        ? `🎉 +30 Punkti! (Seeria: ${this.state.streakPoints}/300 p ➔ +50 €)`
+                        : `🎉 +30 Points! (Streak: ${this.state.streakPoints}/300 pts ➔ +50 €)`
                 );
             }
 

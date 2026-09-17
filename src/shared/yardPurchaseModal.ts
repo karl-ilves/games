@@ -83,17 +83,17 @@ export class YardPurchaseModal {
 
                     <div id="yard-purchase-cost" style="font-size: 1.25rem; font-weight: 900; color: #ffd32a; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <span>${yardService.renderYardSvg(24)}</span>
-                        <span>Price: ${options.yardCost.toLocaleString()} Yards</span>
+                        <span>Price: ${options.yardCost.toLocaleString()} Playbux</span>
                     </div>
 
                     <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 10px 16px; margin-bottom: 18px; font-size: 0.92rem; color: #a4b0be; display: flex; justify-content: space-between; align-items: center;">
                         <span>Your Balance:</span>
-                        <strong style="color: ${hasEnough ? '#2ecc71' : '#ff4757'}; font-size: 1rem;">${currentYards.toLocaleString()} Yards</strong>
+                        <strong style="color: ${hasEnough ? '#2ecc71' : '#ff4757'}; font-size: 1rem;">${currentYards.toLocaleString()} Playbux</strong>
                     </div>
 
                     ${!hasEnough ? `
                         <div id="yard-purchase-error" style="background: rgba(255, 46, 99, 0.2); border: 1px solid #ff2e63; border-radius: 12px; padding: 12px 16px; color: #ff6b81; font-weight: 800; font-size: 0.95rem; margin-bottom: 20px;">
-                            ⚠️ Not enough Yards!
+                            ⚠️ Not enough Playbux!
                         </div>
                     ` : ''}
 
@@ -126,7 +126,7 @@ export class YardPurchaseModal {
                             opacity: ${hasEnough ? '0.6' : '0.4'};
                             transition: all 0.2s;
                         ">
-                            ${!hasEnough ? 'Not enough Yards' : 'Buy (5)'}
+                            ${!hasEnough ? 'Not enough Playbux' : 'Buy (5)'}
                         </button>
                     </div>
                 </div>
@@ -201,7 +201,9 @@ export class YardPurchaseModal {
 export function showYardPurchaseConfirm(options: YardPurchaseConfirmOptions): Promise<boolean> {
     return YardPurchaseModal.getInstance().show(options);
 }
+export const showPlaybuxPurchaseConfirm = showYardPurchaseConfirm;
 
 if (typeof window !== 'undefined') {
     (window as any).showYardPurchaseConfirm = showYardPurchaseConfirm;
+    (window as any).showPlaybuxPurchaseConfirm = showPlaybuxPurchaseConfirm;
 }

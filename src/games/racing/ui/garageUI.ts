@@ -124,7 +124,7 @@ export class GarageUI {
                 buttonsHtml = `
                     <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
                         <button class="btn shop-buy-cash-btn" data-id="${v.id}" style="background: #27ae60; flex: 1; min-width: 90px; font-size: 12px; padding: 8px 4px; margin: 0;">$${v.price.toLocaleString()}</button>
-                        <button class="btn shop-buy-yard-btn" data-id="${v.id}" style="background: #00f2fe; color: #111; flex: 1; min-width: 90px; font-size: 12px; padding: 8px 4px; margin: 0; font-weight: 800;">💎 ${v.yardPrice} Y</button>
+                        <button class="btn shop-buy-yard-btn" data-id="${v.id}" style="background: #00f2fe; color: #111; flex: 1; min-width: 90px; font-size: 12px; padding: 8px 4px; margin: 0; font-weight: 800;">💎 ${v.yardPrice} PBX</button>
                     </div>
                 `;
             }
@@ -235,7 +235,7 @@ export class GarageUI {
                     this.state.vehicleType = id;
                     this.onVehicleSelected(id);
                     this.updateGarageUI();
-                    alert(`💎 Unlocked ${vDef.name} for ${vDef.yardPrice} Yards!`);
+                    alert(`💎 Unlocked ${vDef.name} for ${vDef.yardPrice} Playbux!`);
                 }
             }
         });
@@ -262,7 +262,7 @@ export class GarageUI {
                         this.state.selectedLevel = 2;
                         this.state.saveProgress();
                         this.updateGarageUI();
-                        alert(`🌲 Level 2: Forest Track unlocked with 50 Yards!`);
+                        alert(`🌲 Level 2: Forest Track unlocked with 50 Playbux!`);
                     }
                 });
             }
@@ -286,7 +286,7 @@ export class GarageUI {
                         this.state.selectedLevel = 3;
                         this.state.saveProgress();
                         this.updateGarageUI();
-                        alert(`🌾 Level 3: Field Track unlocked with 200 Yards!`);
+                        alert(`🌾 Level 3: Field Track unlocked with 200 Playbux!`);
                     }
                 });
             }

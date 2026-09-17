@@ -144,13 +144,13 @@ export const I18N = {
         },
         moneyExchange: {
             title: 'MMP1 POOD (GAME PASSID JA MÄNGURAHA)',
-            subtitle: 'Osta spetsiaalseid Game Passe ja mänguraha Yardide eest!',
+            subtitle: 'Osta spetsiaalseid Game Passe ja mänguraha Playbuxide eest!',
             gamePassesSectionTitle: '👑 GAME PASSID',
             cashPacksSectionTitle: '💶 RAHAPAKETID',
             gamePassOwned: 'OMATUD ✅',
-            yourYards: 'Sinu Yardid:',
+            yourYards: 'Sinu Playbux:',
             yourCash: 'Sinu Mänguraha:',
-            buyBtn: (yards: number) => `OSTA ${yards} Y`,
+            buyBtn: (yards: number) => `OSTA ${yards} PBX`,
             pack1Title: 'Taskuraha (Pocket Cash)',
             pack1Desc: '+100 € mänguraha',
             pack2Title: 'Rahapakk (Banker Stack)',
@@ -161,9 +161,9 @@ export const I18N = {
             pack4Desc: '+5,000 € mänguraha',
             popularBadge: 'POPULAARNE ⭐',
             bestValueBadge: 'PARIM VÄÄRTUS 💎',
-            successToast: (amount: number, yards: number) => `+${amount} € lisatud! Kulutatud ${yards} Yardi.`,
+            successToast: (amount: number, yards: number) => `+${amount} € lisatud! Kulutatud ${yards} Playbuxi.`,
             gamepassSuccessToast: (name: string) => `🎉 Game Pass "${name}" edukalt ostetud ja aktiveeritud!`,
-            notEnoughYards: (needed: number, have: number) => `Pole piisavalt Yarde! Vajad ${needed} Y, sul on ${have} Y.`
+            notEnoughYards: (needed: number, have: number) => `Pole piisavalt Playbuxi! Vajad ${needed} PBX, sul on ${have} PBX.`
         },
         adminPanel: {
             title: 'PLAYARD ADMIN PANEEL',
@@ -307,13 +307,13 @@ export const I18N = {
         },
         moneyExchange: {
             title: 'MMP1 SHOP (GAME PASSES & CASH)',
-            subtitle: 'Get special Game Passes and in-game Cash with your Playard Yards!',
+            subtitle: 'Get special Game Passes and in-game Cash with your Playard Playbux!',
             gamePassesSectionTitle: '👑 GAME PASSES',
             cashPacksSectionTitle: '💶 CASH PACKS',
             gamePassOwned: 'OWNED ✅',
-            yourYards: 'Your Yards:',
+            yourYards: 'Your Playbux:',
             yourCash: 'Your Cash:',
-            buyBtn: (yards: number) => `BUY FOR ${yards} Y`,
+            buyBtn: (yards: number) => `BUY FOR ${yards} PBX`,
             pack1Title: 'Pocket Cash',
             pack1Desc: '+100 € Cash',
             pack2Title: 'Banker Stack',
@@ -324,9 +324,9 @@ export const I18N = {
             pack4Desc: '+5,000 € Cash',
             popularBadge: 'POPULAR ⭐',
             bestValueBadge: 'BEST VALUE 💎',
-            successToast: (amount: number, yards: number) => `+${amount} € added! Spent ${yards} Yards.`,
+            successToast: (amount: number, yards: number) => `+${amount} € added! Spent ${yards} Playbux.`,
             gamepassSuccessToast: (name: string) => `🎉 Game Pass "${name}" successfully purchased and activated!`,
-            notEnoughYards: (needed: number, have: number) => `Not enough Yards! Need ${needed} Y, you have ${have} Y.`
+            notEnoughYards: (needed: number, have: number) => `Not enough Playbux! Need ${needed} PBX, you have ${have} PBX.`
         },
         adminPanel: {
             title: 'PLAYARD ADMIN PANEL',

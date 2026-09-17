@@ -76,10 +76,64 @@ try {
         await page.reload({ waitUntil: 'domcontentloaded' });
         await new Promise(r => setTimeout(r, 800));
         
-        // Check initial Yard display
+        // Check initial Yard / Playbux display
         await page.waitForSelector('#header-yard-val', { visible: true, timeout: 5000 });
         const startYards = await page.$eval('#header-yard-val', el => el.textContent);
-        console.log("   Initial Guest Yard Balance (Expected: 0):", startYards);
+        console.log("   Initial Guest Playbux Balance (Expected: 0):", startYards);
+
+        // Verify Playbux & PlayCoins Currency System
+        console.log("   Testing Playbux & PlayCoins Currency System (PBX, PlayCoins, SVG badges)...");
+        const playbuxSystemTest = await page.evaluate(() => {
+            const svc = window.yardService;
+            if (!svc) return { success: false, reason: 'yardService not found' };
+
+            const initialPbx = svc.getPlaybux ? svc.getPlaybux() : svc.getYards();
+            const initialCoins = svc.getPlayCoins ? svc.getPlayCoins() : -1;
+            
+            // Test PlayCoins earning
+            svc.addPlayCoins(25, 'Test PlayCoin Gain');
+            const afterCoins = svc.getPlayCoins();
+            const pbxAfterGameCoinGain = svc.getPlaybux ? svc.getPlaybux() : svc.getYards();
+
+            // Test PlayCoins spending
+            const spendCoinsOk = svc.spendPlayCoins(10, 'test_item', 'Test Item');
+            const finalCoins = svc.getPlayCoins();
+
+            // Test SVG rendering
+            const pbxSvg = svc.renderPlaybuxSvg ? svc.renderPlaybuxSvg(20) : '';
+            const coinSvg = svc.renderPlayCoinSvg ? svc.renderPlayCoinSvg(20) : '';
+
+            // Check header text mentions PLAYBUX
+            const headerPill = document.getElementById('btn-wallet-badge')?.textContent || document.querySelector('.yard-badge')?.textContent || '';
+
+            return {
+                success: true,
+                initialPbx,
+                initialCoins,
+                afterCoins,
+                pbxAfterGameCoinGain,
+                spendCoinsOk,
+                finalCoins,
+                hasPbxSvg: pbxSvg.includes('<svg') && pbxSvg.includes('Playbux'),
+                hasCoinSvg: coinSvg.includes('<svg') && coinSvg.includes('PlayCoin'),
+                headerHasPlaybux: headerPill.includes('PLAYBUX')
+            };
+        });
+
+        console.log("   Playbux & PlayCoins System Test:", playbuxSystemTest);
+        if (!playbuxSystemTest.success || !playbuxSystemTest.hasPbxSvg || !playbuxSystemTest.hasCoinSvg) {
+            throw new Error(`Playbux & PlayCoins SVG/API failed: ${JSON.stringify(playbuxSystemTest)}`);
+        }
+        if (playbuxSystemTest.afterCoins !== playbuxSystemTest.initialCoins + 25 || !playbuxSystemTest.spendCoinsOk || playbuxSystemTest.finalCoins !== 15) {
+            throw new Error(`PlayCoins earn/spend failed: ${JSON.stringify(playbuxSystemTest)}`);
+        }
+        if (playbuxSystemTest.pbxAfterGameCoinGain !== playbuxSystemTest.initialPbx) {
+            throw new Error(`Playbux must NOT change when earning PlayCoins in-game!`);
+        }
+        if (!playbuxSystemTest.headerHasPlaybux) {
+            throw new Error(`Top header pill must display PLAYBUX label!`);
+        }
+        console.log("   ✅ Playbux & PlayCoins Currency System passed verification!");
 
         // Test Account Registration and Login System (Create Account, Login, Age, Gender, Emojis)
         console.log("   Testing Create Account & Login Tabs, Age, Gender and Emoji rejection...");
@@ -889,8 +943,11 @@ try {
 
         // Test Ready-Made Outfits Tab (Valmis Skinnid)
         console.log("   Testing Ready-Made Outfits tab...");
-        await page.click('[data-category="outfits"]');
-        await new Promise(r => setTimeout(r, 250));
+        await page.evaluate(() => {
+            const btn = document.querySelector('[data-category="outfits"]');
+            if (btn) btn.click();
+        });
+        await page.waitForSelector('[data-outfit-id="outfit_cyber_ninja"]', { visible: true, timeout: 5000 });
 
         const outfitCardsCount = await page.$$eval('#avatar-items-container .avatar-item-card', cards => cards.length);
         console.log("   Avatar Outfits count (Expected: 10):", outfitCardsCount);
@@ -945,7 +1002,7 @@ try {
         // Verify Outfit bundle pricing (Sum of all items inside)
         const goldenPriceText = await page.$eval('[data-outfit-id="outfit_golden_emperor"] .price-tag', el => el.textContent);
         console.log("   Golden Emperor outfit bundle price (Sum of items):", goldenPriceText);
-        if (!goldenPriceText || !goldenPriceText.includes('Y')) {
+        if (!goldenPriceText || (!goldenPriceText.includes('Y') && !goldenPriceText.includes('PBX'))) {
             throw new Error("Outfit card must display bundle price as sum of items inside!");
         }
 
@@ -1027,9 +1084,9 @@ try {
         const breakdanceBuyBtn = await page.$('[data-buy-id="emote_breakdance"]');
         if (!breakdanceBuyBtn) throw new Error("Unowned emote 'emote_breakdance' must have a Buy button!");
         const breakdanceBtnText = await page.$eval('[data-buy-id="emote_breakdance"]', el => el.textContent);
-        console.log("   Unowned Breakdance button text (Expected: Buy 2600 Y):", breakdanceBtnText);
-        if (!breakdanceBtnText.includes('2600 Y') || breakdanceBtnText.includes('Equipped')) {
-            throw new Error("Breakdance emote must show Buy button with 2600 Y!");
+        console.log("   Unowned Breakdance button text (Expected: Buy 2600 Y or PBX):", breakdanceBtnText);
+        if ((!breakdanceBtnText.includes('2600 Y') && !breakdanceBtnText.includes('2600 PBX')) || breakdanceBtnText.includes('Equipped')) {
+            throw new Error("Breakdance emote must show Buy button with 2600 Y/PBX!");
         }
 
         // Test switching between complex emotes (Levitate -> Breakdance -> Wave) and verify clean bone reset
@@ -2648,6 +2705,7 @@ try {
 
         // 9. Test 3D Master Chef Cooking Simulator
         console.log("9. Checking 3D Master Chef Cooking Simulator...");
+        await page.goto('about:blank');
         await page.goto('http://localhost:4173/games/cooking/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
@@ -3071,8 +3129,8 @@ try {
             }
 
             const metroDepotText = await page.$eval('#trains-grid-container', el => el.textContent);
-            if (!metroDepotText.includes('100 €') || !metroDepotText.includes('500 Y') || (!metroDepotText.includes('FREE') && !metroDepotText.includes('TASUTA'))) {
-                throw new Error(`Metro category must contain starter metro and purchasable metros with 5x Yard price! Got: ${metroDepotText.substring(0, 120)}`);
+            if (!metroDepotText.includes('100 €') || (!metroDepotText.includes('500 Y') && !metroDepotText.includes('500 PBX')) || (!metroDepotText.includes('FREE') && !metroDepotText.includes('TASUTA'))) {
+                throw new Error(`Metro category must contain starter metro and purchasable metros with 5x Yard/PBX price! Got: ${metroDepotText.substring(0, 120)}`);
             }
 
             const depotYardVal = await page.$eval('#depot-yard-val', el => el.textContent);
@@ -3358,18 +3416,20 @@ try {
             await page.click('#btn-close-shop');
             await new Promise(r => setTimeout(r, 200));
 
-            // Test Checkpoint Reward (+5 Yards)
+            // Test Checkpoint Reward (+5 PlayCoins, 0 Playbux)
+            const initialObbyPlayCoins = await page.evaluate(() => window.yardService ? window.yardService.getPlayCoins() : 0);
             const initialObbyYards = await page.evaluate(() => window.yardService ? window.yardService.getYards() : 0);
             await page.evaluate(() => {
-                if (window.yardService) window.yardService.addYards(5, 'Test Checkpoint');
+                if (window.yardService) window.yardService.addPlayCoins(5, 'Test Checkpoint');
             });
             await new Promise(r => setTimeout(r, 200));
+            const updatedObbyPlayCoins = await page.evaluate(() => window.yardService ? window.yardService.getPlayCoins() : 0);
             const updatedObbyYards = await page.evaluate(() => window.yardService ? window.yardService.getYards() : 0);
-            console.log(`   Yards Balance after checkpoint: ${initialObbyYards} -> ${updatedObbyYards}`);
-            if (initialObbyYards === 999999999) {
-                if (updatedObbyYards !== 999999999) throw new Error("Playard Owner must maintain infinite yards in Obby!");
-            } else {
-                if (updatedObbyYards !== initialObbyYards + 5) throw new Error("Checkpoint Yard reward failed!");
+            console.log(`   PlayCoins Balance after checkpoint: ${initialObbyPlayCoins} -> ${updatedObbyPlayCoins}`);
+            console.log(`   Playbux Balance after checkpoint (must NOT increase in game): ${initialObbyYards} -> ${updatedObbyYards}`);
+            if (updatedObbyPlayCoins !== initialObbyPlayCoins + 5) throw new Error("Checkpoint PlayCoins reward failed!");
+            if (initialObbyYards !== 999999999 && updatedObbyYards !== initialObbyYards) {
+                throw new Error("Playbux must NOT be earned in games!");
             }
 
             // Test Help Modal
@@ -5916,8 +5976,8 @@ try {
                 };
             });
             console.log(`     Low balance modal test: title="${lowBalanceTest.title}", error="${lowBalanceTest.error}", btnText="${lowBalanceTest.confirmText}", disabled=${lowBalanceTest.isConfirmDisabled}`);
-            if (!lowBalanceTest.title.includes('Are you sure') || !lowBalanceTest.error.includes('Not enough Yards') || !lowBalanceTest.isConfirmDisabled) {
-                throw new Error(`Yard purchase modal should show 'Are you sure?', 'Not enough Yards!' and disabled button when funds insufficient! Got: ${JSON.stringify(lowBalanceTest)}`);
+            if (!lowBalanceTest.title.includes('Are you sure') || (!lowBalanceTest.error.includes('Not enough Yards') && !lowBalanceTest.error.includes('Not enough Playbux')) || !lowBalanceTest.isConfirmDisabled) {
+                throw new Error(`Yard purchase modal should show 'Are you sure?', 'Not enough Playbux!' and disabled button when funds insufficient! Got: ${JSON.stringify(lowBalanceTest)}`);
             }
 
             // 2. Test 5-4-3-2-1 countdown and successful purchase
@@ -6506,7 +6566,7 @@ try {
 
                 // Check all buttons inside view-yard-shop
                 const yardButtons = Array.from(viewYardShop.querySelectorAll('button'));
-                const allYardButtonsCostYards = yardButtons.every(btn => btn.textContent.includes('Y') || btn.textContent.includes('OMATUD'));
+                const allYardButtonsCostYards = yardButtons.every(btn => btn.textContent.includes('Y') || btn.textContent.includes('PBX') || btn.textContent.includes('OMATUD'));
                 const noPtsButtonsInYardShop = !yardButtons.some(btn => btn.textContent.includes('PTS') && btn.textContent.includes('OSTA'));
 
                 // Switch to Rockets tab

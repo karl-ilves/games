@@ -10,6 +10,7 @@ function isTestMode(): boolean {
 
 export interface YardData {
     yards: number;
+    playCoins?: number;
     streak: number; // 0 to 7
     lastClaimTimestamp: number; // ms
     inventory: string[];
@@ -196,6 +197,7 @@ class YardService {
                     if (typeof parsed.yards === 'number') {
                         return {
                             yards: parsed.yards,
+                            playCoins: typeof parsed.playCoins === 'number' ? parsed.playCoins : 0,
                             streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
                             lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
                             inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
@@ -211,6 +213,7 @@ class YardService {
                 const parsed = JSON.parse(raw);
                 return {
                     yards: typeof parsed.yards === 'number' ? parsed.yards : 0,
+                    playCoins: typeof parsed.playCoins === 'number' ? parsed.playCoins : 0,
                     streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
                     lastClaimTimestamp: typeof parsed.lastClaimTimestamp === 'number' ? parsed.lastClaimTimestamp : 0,
                     inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
@@ -225,6 +228,7 @@ class YardService {
         const isInfinite = this.hasInfiniteYards();
         return {
             yards: isInfinite ? 999999999 : 0,
+            playCoins: 0,
             streak: 0,
             lastClaimTimestamp: 0,
             inventory: [],
@@ -630,6 +634,43 @@ class YardService {
             return 999999999;
         }
         return this.data.yards;
+    }
+
+    public getPlaybux(targetUsername?: string | null): number {
+        return this.getYards(targetUsername);
+    }
+
+    public spendPlaybux(amount: number, itemId?: string, reason = 'Purchase'): boolean {
+        return this.spendYards(amount, itemId, reason);
+    }
+
+    public hasInfinitePlaybux(targetUsername?: string | null): boolean {
+        return this.hasInfiniteYards(targetUsername);
+    }
+
+    public getPlayCoins(): number {
+        return this.data.playCoins || 0;
+    }
+
+    public addPlayCoins(amount: number, reason = 'Game Reward'): number {
+        if (amount <= 0) return this.getPlayCoins();
+        const current = this.getPlayCoins();
+        this.data.playCoins = current + amount;
+        this.saveLocally(this.data);
+        this.saveToCloud();
+        this.notifyListeners();
+        return this.data.playCoins;
+    }
+
+    public spendPlayCoins(amount: number, reason = 'Purchase'): boolean {
+        if (amount <= 0) return true;
+        const current = this.getPlayCoins();
+        if (current < amount) return false;
+        this.data.playCoins = current - amount;
+        this.saveLocally(this.data);
+        this.saveToCloud();
+        this.notifyListeners();
+        return true;
     }
 
     public getInventory(): string[] {
@@ -1475,8 +1516,8 @@ class YardService {
             amount: rewardAmount,
             day: nextStreak,
             message: nextStreak === 7
-                ? `🎉 DAY 7 JACKPOT CLAIMED: +${rewardAmount} YARDS! 🎉`
-                : `🎁 Day ${nextStreak} claimed: +${rewardAmount} Yards!`
+                ? `🎉 DAY 7 JACKPOT CLAIMED: +${rewardAmount} PLAYBUX! 🎉`
+                : `🎁 Day ${nextStreak} claimed: +${rewardAmount} Playbux!`
         };
     }
 
@@ -1838,41 +1879,69 @@ class YardService {
     }
 
     public renderYardSvg(size = 22, className = ''): string {
+        return this.renderPlaybuxSvg(size, className);
+    }
+
+    public renderPlaybuxSvg(size = 22, className = ''): string {
         return `
-        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; filter: drop-shadow(0 0 5px rgba(0, 242, 254, 0.6));">
+        <svg data-currency="playbux" aria-label="Playbux" class="${className}" width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; filter: drop-shadow(0 0 5px rgba(0, 242, 254, 0.6));">
             <defs>
-                <linearGradient id="yardBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="pbxBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#00f2fe"/>
                     <stop offset="50%" stop-color="#4facfe"/>
                     <stop offset="100%" stop-color="#0be881"/>
                 </linearGradient>
-                <linearGradient id="yardGoldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="pbxGoldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#ffeaa7"/>
                     <stop offset="50%" stop-color="#fdcb6e"/>
                     <stop offset="100%" stop-color="#e67e22"/>
                 </linearGradient>
-                <linearGradient id="yardYGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="pbxPGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#ffffff"/>
                     <stop offset="60%" stop-color="#e0f7fa"/>
                     <stop offset="100%" stop-color="#00f2fe"/>
                 </linearGradient>
-                <filter id="yardGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <filter id="pbxGlow" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="3" result="blur"/>
                     <feComposite in="SourceGraphic" in2="blur" operator="over"/>
                 </filter>
             </defs>
-            <polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="url(#yardBgGrad)" stroke="url(#yardGoldBorder)" stroke-width="6" stroke-linejoin="round"/>
-            <polygon points="50,12 85,31 85,69 50,88 15,69 15,31" fill="#0b2447" fill-opacity="0.45" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.6"/>
+            <polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="url(#pbxBgGrad)" stroke="url(#pbxGoldBorder)" stroke-width="6" stroke-linejoin="round"/>
+            <polygon points="50,12 85,31 85,69 50,88 15,69 15,31" fill="#0b2447" fill-opacity="0.5" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.6"/>
             <polygon points="50,12 85,31 50,50 15,31" fill="#ffffff" fill-opacity="0.15"/>
-            <path d="M30 26 L45 50 L45 74 L55 74 L55 50 L70 26 L58 26 L50 40 L42 26 Z" fill="url(#yardYGrad)" stroke="#0984e3" stroke-width="1.5" filter="url(#yardGlow)"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M33 24 H56 C65 24 72 30 72 39 C72 48 65 54 56 54 H45 V76 H33 V24 Z M45 34 H55 C58 34 60 36 60 39 C60 42 58 44 55 44 H45 V34 Z" fill="url(#pbxPGrad)" stroke="#0984e3" stroke-width="1.5" filter="url(#pbxGlow)"/>
+        </svg>
+        `;
+    }
+
+    public renderPlayCoinSvg(size = 22, className = ''): string {
+        return `
+        <svg data-currency="playcoin" aria-label="PlayCoin" class="${className}" width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; filter: drop-shadow(0 0 5px rgba(255, 211, 42, 0.6));">
+            <defs>
+                <linearGradient id="coinGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#fff275"/>
+                    <stop offset="40%" stop-color="#ffd32a"/>
+                    <stop offset="100%" stop-color="#f39c12"/>
+                </linearGradient>
+                <linearGradient id="coinBorderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="60%" stop-color="#ffd32a"/>
+                    <stop offset="100%" stop-color="#d35400"/>
+                </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="46" fill="url(#coinGoldGrad)" stroke="url(#coinBorderGrad)" stroke-width="5"/>
+            <circle cx="50" cy="50" r="37" fill="#d35400" fill-opacity="0.25" stroke="#ffffff" stroke-width="2" stroke-opacity="0.7" stroke-dasharray="3 3"/>
+            <polygon points="50,22 58,38 76,40 62,53 66,71 50,62 34,71 38,53 24,40 42,38" fill="#ffffff" stroke="#e67e22" stroke-width="1.5" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"/>
         </svg>
         `;
     }
 }
 
 export const yardService = new YardService();
+export const playbuxService = yardService;
 
 // Expose globally on window for all platform pages & tests
 if (typeof window !== 'undefined') {
     (window as any).yardService = yardService;
+    (window as any).playbuxService = yardService;
 }

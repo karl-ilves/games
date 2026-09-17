@@ -103,10 +103,10 @@ export class CookingGame {
         yardService.recordPlayedGame({
             id: 'cooking',
             title: '🍳 3D Master Chef',
-            description: 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!',
+            description: 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Chef Cash!',
             url: './games/cooking/index.html',
             icon: '🍳',
-            badgeText: '💎 +20Y to +40Y',
+            badgeText: '🍳 +20 € to +40 €',
             badgeColor: '#ffd32a'
         });
 
