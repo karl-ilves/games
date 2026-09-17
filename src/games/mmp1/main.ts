@@ -22,6 +22,7 @@ import { handleSetAdminRole } from "./systems/roleManager";
 import { handleEquipSkin } from "./systems/weaponLoadout";
 import { createGameSystems } from "./systems/systemFactories";
 import { InvisibilitySystem } from "./systems/invisibilitySystem";
+import { SpectatorSystem } from "./systems/spectatorSystem";
 
 (window as any).yardService = yardService;
 
@@ -69,6 +70,7 @@ export class MurderMysteryGame {
     public roundManager!: RoundManager;
     public inputController!: InputController;
     public invisibilitySystem!: InvisibilitySystem;
+    public spectatorSystem!: SpectatorSystem;
     public muzzleFlashLight: THREE.PointLight | null = null;
 
     constructor() {
@@ -108,6 +110,7 @@ export class MurderMysteryGame {
         this.roundManager = sys.roundManager;
         this.inputController = sys.inputController;
         this.invisibilitySystem = sys.invisibilitySystem;
+        this.spectatorSystem = sys.spectatorSystem;
 
         this.buildMansion();
         this.emotesWidget = new InGameEmotesWidget({ getAvatarRig: () => this.playerChar?.avatarRig, topOffset: 70, leftOffset: 16 });
@@ -211,6 +214,7 @@ export class MurderMysteryGame {
 
     public endRound(winner: "sheriff_win" | "murderer_win" | "time_out", reason: string) {
         this.invisibilitySystem?.reset();
+        this.spectatorSystem?.reset();
         this.roundManager.endRound(winner, reason);
     }
     public activateInvisibility() { return this.invisibilitySystem?.activateInvisibility(); }
@@ -240,7 +244,8 @@ export class MurderMysteryGame {
             interactionPrompt: document.getElementById("interaction-prompt"),
             hudCoinsVal: document.getElementById("hud-coins-val"),
             setCameraYaw: (v) => { this.cameraYaw = v; },
-            setCameraPitch: (v) => { this.cameraPitch = v; }
+            setCameraPitch: (v) => { this.cameraPitch = v; },
+            spectatorSystem: this.spectatorSystem
         });
     }
 
@@ -267,6 +272,7 @@ export class MurderMysteryGame {
 
     public returnToLobby() {
         this.invisibilitySystem?.reset();
+        this.spectatorSystem?.reset();
         this.roundManager.returnToLobby();
     }
 

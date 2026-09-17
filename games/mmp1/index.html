@@ -408,6 +408,73 @@
             }
         }
 
+        /* Spectator Bar */
+        #spectator-bar {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            align-items: center;
+            gap: 16px;
+            background: rgba(15, 12, 22, 0.92);
+            border: 2px solid #ffd32a;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 211, 42, 0.35);
+            backdrop-filter: blur(12px);
+            border-radius: 35px;
+            padding: 8px 20px;
+            z-index: 250;
+            pointer-events: auto;
+            user-select: none;
+        }
+
+        .btn-spec-arrow {
+            background: linear-gradient(135deg, #ffd32a, #ff9f1a);
+            color: #111;
+            border: none;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            font-size: 1.3rem;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 4px 14px rgba(255, 211, 42, 0.4);
+        }
+
+        .btn-spec-arrow:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 211, 42, 0.6);
+        }
+
+        .btn-spec-arrow:active {
+            transform: scale(0.92);
+        }
+
+        .spectator-info {
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .spectator-label {
+            font-size: 0.72rem;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            color: #ffd32a;
+            text-transform: uppercase;
+        }
+
+        .spectator-name {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
         /* Victory / Game Over Notification (Ei ole full screen taustaga!) */
         #round-end-overlay {
             position: absolute;
@@ -1351,6 +1418,16 @@
             <div class="role-desc" id="role-reveal-desc">Tapa salaja kõik süütud ja väldi detektiivi kuule enne aja lõppu!</div>
             <button class="btn-play-again" id="btn-role-reveal-close">MÕISTETUD! ⚔️</button>
         </div>
+    </div>
+
+    <!-- Spectator Mode Bottom Bar -->
+    <div id="spectator-bar">
+        <button id="btn-spec-prev" class="btn-spec-arrow" title="Previous Player (◀ / A)">◀</button>
+        <div class="spectator-info">
+            <div class="spectator-label" id="spectator-label-text">👁️ VAATAD MÄNGIJAT</div>
+            <div id="spectator-target-name" class="spectator-name">Alex 👤 (1/7)</div>
+        </div>
+        <button id="btn-spec-next" class="btn-spec-arrow" title="Next Player (▶ / D)">▶</button>
     </div>
 
     <!-- Bottom Weapon Hotbar -->

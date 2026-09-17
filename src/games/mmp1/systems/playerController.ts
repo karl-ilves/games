@@ -26,10 +26,14 @@ export interface PlayerControllerContext {
     hudCoinsVal: HTMLElement | null;
     setCameraYaw: (v: number) => void;
     setCameraPitch: (v: number) => void;
+    spectatorSystem?: { update: (delta: number) => void };
 }
 
 export function updatePlayer(delta: number, ctx: PlayerControllerContext) {
-    if (!ctx.playerChar.isAlive) return;
+    if (!ctx.playerChar.isAlive) {
+        ctx.spectatorSystem?.update(delta);
+        return;
+    }
 
     // 1. Keyboard Camera View Look (I/J/K/L)
     const lookSpeed = 3.0;

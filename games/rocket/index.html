@@ -657,9 +657,26 @@
                 <span style="font-weight: 700; color: #cbd5e1;">Sinu punktid ostmiseks: <span style="font-weight: 900; color: #ffd32a; font-size: 1.15rem;" id="shop-points-display">0 PTS</span></span>
                 <span style="font-size: 0.8rem; color: #00f2fe; font-weight: 800;" id="shop-count-badge">54 unikaalset raketti</span>
             </div>
+
+            <!-- Yard Points Exchange Container -->
+            <div id="shop-yard-exchange" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(255, 211, 42, 0.1) 100%); border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <span style="font-weight: 900; color: #00f2fe; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                        💎 Osta Punkte Yardide Eest
+                    </span>
+                    <span style="font-size: 0.82rem; color: #ffd32a; font-weight: 800;" id="shop-current-yards-display">
+                        Sinu Jardid: 0 Y
+                    </span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px;" id="yard-points-packs-grid">
+                    <!-- Injected dynamically via TypeScript with 500 Y, 1000 Y, 5000 Y packs -->
+                </div>
+            </div>
+
             <!-- Category Filter Tabs -->
             <div class="shop-filter-bar" id="shop-filter-bar">
                 <button type="button" class="filter-tab-btn active" data-cat="all">Kõik (54)</button>
+                <button type="button" class="filter-tab-btn" data-cat="yards">💎 Yard Vahetus</button>
                 <button type="button" class="filter-tab-btn" data-cat="tactical">Taktikalised 🚀</button>
                 <button type="button" class="filter-tab-btn" data-cat="incendiary">Süüte/Tuli 🔥</button>
                 <button type="button" class="filter-tab-btn" data-cat="demolition">Purustus 💥</button>

@@ -99,7 +99,8 @@ export class RocketGame {
             setTotalPointsBank: (pts) => {
                 this.totalPointsBank = pts;
             },
-            onProgressSave: () => this.saveProgress()
+            onProgressSave: () => this.saveProgress(),
+            onYardBalanceChanged: () => this.updateHUD()
         });
 
         this.input = new InputManager({
@@ -149,7 +150,7 @@ export class RocketGame {
             description: 'Vaade õhust: 54 unikaalset raketti, põlevad ja tükkideks lendavad majad ning ultra-realistlikud plahvatused!',
             url: './games/rocket/index.html',
             icon: '🚀',
-            badgeText: '👑 OWNER EXCLUSIVE'
+            badgeText: '🚀 3D ARCADE'
         });
 
         return true;

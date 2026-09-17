@@ -6158,6 +6158,73 @@ try {
             }
             console.log('   MMP1 Game Passes (2X Money & Invisibility Cloak) verified: ✅');
 
+            // 6. Test Spectator Mode upon player death
+            console.log('   Testing MMP1 Spectator Mode (Follow alive players, 3rd person camera & arrow switcher):');
+            const spectatorTest = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                game.state = 'in_game';
+                game.playerChar.isAlive = false;
+
+                // Trigger updatePlayer when dead
+                game.updatePlayer(0.016);
+
+                const specBar = document.getElementById('spectator-bar');
+                const specBarDisplay = specBar?.style.display;
+                const targetNameEl = document.getElementById('spectator-target-name');
+                const initialTargetText = targetNameEl?.textContent || '';
+
+                const initialTarget = game.spectatorSystem.getSpectatedTarget();
+                const isInitialTargetAlive = initialTarget?.isAlive;
+                const isInitialTargetOther = initialTarget !== game.playerChar;
+
+                // Check camera distance to target
+                const distToTarget = game.camera.position.distanceTo(initialTarget.position);
+
+                // Test Next Button Click
+                const btnNext = document.getElementById('btn-spec-next');
+                btnNext?.click();
+                const nextTarget = game.spectatorSystem.getSpectatedTarget();
+                const nextTargetText = targetNameEl?.textContent || '';
+
+                // Test Prev Button Click
+                const btnPrev = document.getElementById('btn-spec-prev');
+                btnPrev?.click();
+                const prevTarget = game.spectatorSystem.getSpectatedTarget();
+
+                // Test Reset
+                game.spectatorSystem.reset();
+                const specBarAfterReset = specBar?.style.display;
+
+                return {
+                    barShown: specBarDisplay === 'flex',
+                    initialTargetName: initialTarget?.name,
+                    initialTargetText,
+                    isInitialTargetAlive,
+                    isInitialTargetOther,
+                    distToTarget,
+                    switchedOnNext: nextTarget !== initialTarget,
+                    nextTargetName: nextTarget?.name,
+                    nextTargetText,
+                    switchedBackOnPrev: prevTarget === initialTarget,
+                    barHiddenAfterReset: specBarAfterReset === 'none'
+                };
+            });
+
+            console.log(`     Spectator test results: barShown=${spectatorTest.barShown}, target=${spectatorTest.initialTargetName} (text="${spectatorTest.initialTargetText}"), distToTarget=${spectatorTest.distToTarget.toFixed(2)}m, switchedNext=${spectatorTest.switchedOnNext} (${spectatorTest.nextTargetName}), switchedBack=${spectatorTest.switchedBackOnPrev}, barHidden=${spectatorTest.barHiddenAfterReset}`);
+            if (!spectatorTest.barShown || !spectatorTest.isInitialTargetAlive || !spectatorTest.isInitialTargetOther) {
+                throw new Error(`Spectator bar should be shown and target an alive bot! Got: ${JSON.stringify(spectatorTest)}`);
+            }
+            if (!spectatorTest.switchedOnNext || !spectatorTest.switchedBackOnPrev) {
+                throw new Error(`Spectator arrow navigation failed! Got: ${JSON.stringify(spectatorTest)}`);
+            }
+            if (spectatorTest.distToTarget < 1.0 || spectatorTest.distToTarget > 6.0) {
+                throw new Error(`Spectator camera follow distance out of range: ${spectatorTest.distToTarget}m`);
+            }
+            if (!spectatorTest.barHiddenAfterReset) {
+                throw new Error('Spectator bar should hide on reset!');
+            }
+            console.log('   MMP1 Spectator Mode (Follow alive players & arrow switcher) verified: ✅');
+
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 
             // ==========================================

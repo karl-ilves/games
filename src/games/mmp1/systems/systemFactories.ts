@@ -9,6 +9,7 @@ import { HudUI } from "../ui/hud";
 import { MmpCrateManager } from "../state/crateManager";
 import { audio } from "../audio";
 import { InvisibilitySystem } from "./invisibilitySystem";
+import { SpectatorSystem } from "./spectatorSystem";
 
 export function createGameSystems(game: any): {
     combatSystem: CombatSystem;
@@ -17,6 +18,7 @@ export function createGameSystems(game: any): {
     roundManager: RoundManager;
     inputController: InputController;
     invisibilitySystem: InvisibilitySystem;
+    spectatorSystem: SpectatorSystem;
 } {
     const combatSystem = new CombatSystem({
         characters: game.characters,
@@ -50,6 +52,20 @@ export function createGameSystems(game: any): {
         addIncidentFeed: (t: string) => game.addIncidentFeed(t)
     });
     invisibilitySystem.init();
+
+    const spectatorSystem = new SpectatorSystem({
+        playerChar: game.playerChar,
+        characters: game.characters,
+        camera: game.camera,
+        getState: () => game.state,
+        getCameraYaw: () => game.cameraYaw,
+        getCameraPitch: () => game.cameraPitch,
+        getCameraDistance: () => game.cameraDistance,
+        setCameraYaw: (y: number) => { game.cameraYaw = y; },
+        setCameraPitch: (p: number) => { game.cameraPitch = p; },
+        addIncidentFeed: (t: string) => game.addIncidentFeed(t)
+    });
+    spectatorSystem.init();
 
     const crateShopUI = new CrateShopUI({
         crateManager: game.crateManager,
@@ -145,5 +161,5 @@ export function createGameSystems(game: any): {
         getState: () => game.state
     });
 
-    return { combatSystem, crateShopUI, adminPanelUI, roundManager, inputController, invisibilitySystem };
+    return { combatSystem, crateShopUI, adminPanelUI, roundManager, inputController, invisibilitySystem, spectatorSystem };
 }

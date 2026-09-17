@@ -56,7 +56,8 @@ export const I18N = {
             gunDropped: 'DETEKTIIV ON LANGENUD! RELV ON PÕRANDAL!',
             interactPickupGun: '[E] Võta maast detektiivi relv',
             hotbarHands: 'Käed',
-            hotbarCoins: 'Mündid'
+            hotbarCoins: 'Mündid',
+            spectating: '👁️ VAATAD MÄNGIJAT'
         },
         incidents: {
             sheriffMistake: '⚠️ Šerif eksis ja lasi süütu! Šerif langes!',
@@ -218,7 +219,8 @@ export const I18N = {
             gunDropped: 'SHERIFF HAS FALLEN! GUN IS ON THE FLOOR!',
             interactPickupGun: '[E] Pick up Sheriff\'s dropped gun',
             hotbarHands: 'Hands',
-            hotbarCoins: 'Coins'
+            hotbarCoins: 'Coins',
+            spectating: '👁️ SPECTATING'
         },
         incidents: {
             sheriffMistake: '⚠️ Sheriff made a mistake and shot an innocent! Sheriff fell!',
@@ -425,6 +427,10 @@ export function applyMmp1Localization() {
     if (descVacation) descVacation.textContent = texts.mapVote.vacationDesc;
     const descYatchy = document.querySelector('.map-vote-btn[data-map="yatchy"] span:last-child');
     if (descYatchy) descYatchy.textContent = texts.mapVote.yatchyDesc;
+
+    // 5b. Spectator Mode
+    const specLabel = document.getElementById('spectator-label-text');
+    if (specLabel) specLabel.textContent = texts.hud.spectating;
 
     // 6. Role Reveal Modal
     const roleRevealBtn = document.getElementById('btn-role-reveal-close');
