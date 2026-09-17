@@ -1324,7 +1324,37 @@ try {
             throw new Error(`Expected doubled 2x prices (Viking=900, Crown=4000), got Viking=${catalogStats.vikingPrice}, Crown=${catalogStats.crownPrice}`);
         }
 
-        console.log("   Successfully verified 3D Avatar System, 10x Catalog (280+ items), 2x Prices, Yard purchasing and Equipping!");
+        // Verify 24K Royal Crown is unbuyable and displays special game obtain note
+        const crownCheck = await page.evaluate(async () => {
+            const crown = window.playardAvatar?.catalog?.find(i => i.id === 'hat_royal_crown');
+            const tryBuyResult = await window.playardAvatar?.buyItem('hat_royal_crown');
+            
+            // Switch to hats category tab in shop
+            document.querySelector('[data-category="hats"]')?.click();
+            const crownCard = document.querySelector('[data-item-id="hat_royal_crown"]');
+            const crownPriceTag = crownCard?.querySelector('.price-tag')?.textContent?.trim();
+            const crownBtn = crownCard?.querySelector('.btn-item-action')?.textContent?.trim();
+            const crownNote = crownCard?.querySelector('.item-obtain-note')?.textContent?.trim();
+
+            return {
+                unbuyable: crown?.unbuyable,
+                obtainableNote: crown?.obtainableNote,
+                tryBuySuccess: tryBuyResult?.success,
+                tryBuyMessage: tryBuyResult?.message,
+                crownPriceTag,
+                crownBtn,
+                crownNote
+            };
+        });
+        console.log("   24K Royal Crown Unbuyable Verification:", crownCheck);
+        if (!crownCheck.unbuyable || crownCheck.tryBuySuccess !== false) {
+            throw new Error("24K Royal Crown must be marked unbuyable and direct purchase must be rejected!");
+        }
+        if (!crownCheck.obtainableNote?.includes('spetsiaalsest mängust')) {
+            throw new Error(`Expected obtainable note to mention 'spetsiaalsest mängust', got: ${crownCheck.obtainableNote}`);
+        }
+
+        console.log("   Successfully verified 3D Avatar System, 10x Catalog (280+ items), 2x Prices, Unbuyable Crown restriction, Yard purchasing and Equipping!");
 
         // Reset to guest for remaining tests
         await page.evaluate(() => {

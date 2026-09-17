@@ -1871,7 +1871,9 @@ export const AVATAR_CATALOG: AvatarItem[] = [
         currency: 'Yard',
         attachmentSocket: 'head',
         defaultColor: '#ffd700',
-        description: 'Prestigious monarch crown with rubies and sapphires.'
+        description: 'Prestigious monarch crown with rubies and sapphires.',
+        unbuyable: true,
+        obtainableNote: 'On saada võimalik spetsiaalsest mängust'
     },
     {
         id: 'hat_cowboy_leather',

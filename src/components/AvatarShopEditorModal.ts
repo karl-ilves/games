@@ -424,12 +424,23 @@ export class AvatarShopEditorModal {
             const rarityColor = rarityColors[item.rarity] || '#00f2fe';
 
             let actionBtn = '';
+            let obtainNoteHtml = '';
             if (equipped) {
                 actionBtn = `<button class="btn-item-action equipped" disabled>✨ Equipped</button>`;
             } else if (owned) {
                 actionBtn = `<button class="btn-item-action equip" data-equip-id="${item.id}">👕 Equip</button>`;
+            } else if (item.unbuyable) {
+                actionBtn = `<button class="btn-item-action unbuyable" disabled style="background: rgba(255, 255, 255, 0.05); color: #8899a6; border: 1px dashed rgba(255,255,255,0.2); cursor: not-allowed; font-size: 0.74rem;">🔒 Ostmatu</button>`;
             } else {
                 actionBtn = `<button class="btn-item-action buy" data-buy-id="${item.id}">🛍️ Buy ${item.price} pbx</button>`;
+            }
+
+            if (item.obtainableNote && !owned) {
+                obtainNoteHtml = `
+                    <div class="item-obtain-note" style="margin-top: 2px; font-size: 0.72rem; color: #ffd700; background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.25); border-radius: 8px; padding: 5px 8px; text-align: center; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1.25;">
+                        🏆 ${item.obtainableNote}
+                    </div>
+                `;
             }
 
             return `
@@ -438,8 +449,8 @@ export class AvatarShopEditorModal {
                         <span class="rarity-badge" style="border-color: ${rarityColor}; color: ${rarityColor};">
                             ${item.rarity}
                         </span>
-                        <span class="price-tag">
-                            ${item.price === 0 ? 'Free' : `${item.price} pbx`}
+                        <span class="price-tag" style="${item.unbuyable ? 'color: #ffd700; font-size: 0.75rem;' : ''}">
+                            ${item.unbuyable ? '🔒 Ostmatu' : (item.price === 0 ? 'Free' : `${item.price} pbx`)}
                         </span>
                     </div>
 
@@ -454,6 +465,7 @@ export class AvatarShopEditorModal {
                         <button class="btn-item-preview" data-preview-id="${item.id}">👁️ Try On</button>
                         ${actionBtn}
                     </div>
+                    ${obtainNoteHtml}
                 </div>
             `;
         }).join('');

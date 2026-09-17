@@ -45,6 +45,8 @@ export interface AvatarItem {
     description: string;
     thumbnail?: string; // WebP, SVG data uri or icon
     isDefault?: boolean; // Granted to all players for free
+    unbuyable?: boolean;
+    obtainableNote?: string;
 }
 
 export interface AvatarConfig {

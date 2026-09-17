@@ -169,6 +169,13 @@ class AvatarService {
             return { success: false, message: 'You already own this item!' };
         }
 
+        if (item.unbuyable) {
+            return {
+                success: false,
+                message: item.obtainableNote ? `🔒 ${item.obtainableNote}` : 'Seda eset ei saa osta!'
+            };
+        }
+
         const currentYards = yardService.getYards();
         if (currentYards < item.price) {
             return {
