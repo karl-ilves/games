@@ -132,7 +132,7 @@ export class AvatarShopEditorModal {
     private setupEvents() {
         // Yard Icon
         const iconSlot = this.modalEl.querySelector('#modal-yard-icon');
-        if (iconSlot) iconSlot.innerHTML = yardService.renderYardSvg(16);
+        if (iconSlot) iconSlot.innerHTML = yardService.renderYardSvg(26);
 
         // Close button
         const closeBtn = this.modalEl.querySelector('#btn-close-avatar-shop');

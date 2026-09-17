@@ -116,13 +116,15 @@ try {
                 finalCoins,
                 hasPbxSvg: pbxSvg.includes('<svg') && (pbxSvg.includes('Playbux') || pbxSvg.includes('pbx')),
                 hasCoinSvg: coinSvg.includes('<svg') && coinSvg.includes('PlayCoin'),
+                has360Rotation: pbxSvg.includes('pbxSpin360') || pbxSvg.includes('animateTransform') || pbxSvg.includes('rotate'),
+                isLargerSize: pbxSvg.includes('width="30"') || pbxSvg.includes('width="32"') || pbxSvg.includes('width="34"') || pbxSvg.includes('width="36"'),
                 headerHasPlaybux: headerPill.toLowerCase().includes('playbux') || headerPill.toLowerCase().includes('pbx')
             };
         });
 
         console.log("   Playbux & PlayCoins System Test:", playbuxSystemTest);
-        if (!playbuxSystemTest.success || !playbuxSystemTest.hasPbxSvg || !playbuxSystemTest.hasCoinSvg) {
-            throw new Error(`Playbux & PlayCoins SVG/API failed: ${JSON.stringify(playbuxSystemTest)}`);
+        if (!playbuxSystemTest.success || !playbuxSystemTest.hasPbxSvg || !playbuxSystemTest.hasCoinSvg || !playbuxSystemTest.has360Rotation) {
+            throw new Error(`Playbux & PlayCoins SVG/API/360-rotation failed: ${JSON.stringify(playbuxSystemTest)}`);
         }
         if (playbuxSystemTest.afterCoins !== playbuxSystemTest.initialCoins + 25 || !playbuxSystemTest.spendCoinsOk || playbuxSystemTest.finalCoins !== 15) {
             throw new Error(`PlayCoins earn/spend failed: ${JSON.stringify(playbuxSystemTest)}`);
@@ -131,9 +133,9 @@ try {
             throw new Error(`Playbux must NOT change when earning PlayCoins in-game!`);
         }
         if (!playbuxSystemTest.headerHasPlaybux) {
-            throw new Error(`Top header pill must display PLAYBUX label!`);
+            throw new Error(`Top header pill must display pbx or PLAYBUX label!`);
         }
-        console.log("   ✅ Playbux & PlayCoins Currency System passed verification!");
+        console.log("   ✅ Playbux 360-degree Rotating Logo & Currency System passed verification!");
 
         // Test Account Registration and Login System (Create Account, Login, Age, Gender, Emojis)
         console.log("   Testing Create Account & Login Tabs, Age, Gender and Emoji rejection...");

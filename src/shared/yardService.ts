@@ -1878,13 +1878,13 @@ class YardService {
         return defaultShowcase;
     }
 
-    public renderYardSvg(size = 22, className = ''): string {
+    public renderYardSvg(size = 30, className = ''): string {
         return this.renderPlaybuxSvg(size, className);
     }
 
-    public renderPlaybuxSvg(size = 22, className = ''): string {
+    public renderPlaybuxSvg(size = 30, className = ''): string {
         return `
-        <svg data-currency="playbux" aria-label="Playbux (pbx)" class="${className}" width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.75));">
+        <svg data-currency="playbux" aria-label="Playbux (pbx)" class="${className} pbx-animated-logo" width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; display: inline-block; filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.75));">
             <defs>
                 <linearGradient id="pbxDiamondGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#00f2fe"/>
@@ -1911,23 +1911,37 @@ class YardService {
                     <feGaussianBlur stdDeviation="2.5" result="blur"/>
                     <feComposite in="SourceGraphic" in2="blur" operator="over"/>
                 </filter>
+                <style>
+                    @keyframes pbxSpin360 {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .pbx-spin-360 {
+                        transform-origin: 50px 50px;
+                        animation: pbxSpin360 6s linear infinite;
+                    }
+                </style>
             </defs>
-            <!-- Outer Tilted Cyber-Diamond Base (Rotated 45deg) -->
-            <rect x="18" y="18" width="64" height="64" rx="16" transform="rotate(45 50 50)" fill="url(#pbxCorePlate)" stroke="url(#pbxRimGrad)" stroke-width="4.5"/>
-            <!-- Inner Metallic Diamond Rim -->
-            <rect x="25" y="25" width="50" height="50" rx="11" transform="rotate(45 50 50)" fill="#060913" stroke="url(#pbxDiamondGrad)" stroke-width="2" stroke-opacity="0.85"/>
-            <!-- 3D Glass Light Reflection Facet -->
-            <path d="M 50 8 L 88 46 L 50 50 L 12 46 Z" fill="#ffffff" fill-opacity="0.12"/>
-            <path d="M 50 14 L 78 44 L 50 47 Z" fill="#00f2fe" fill-opacity="0.15"/>
-            <!-- Mini Neon Corner Pips -->
-            <circle cx="50" cy="8" r="2.5" fill="#00f2fe" filter="url(#pbxGlowEffect)"/>
-            <circle cx="92" cy="50" r="2" fill="#e056fd"/>
-            <circle cx="50" cy="92" r="2" fill="#00f2fe"/>
-            <circle cx="8" cy="50" r="2" fill="#00f2fe"/>
-            <!-- Neon Play Arrow Accent -->
-            <path d="M 44 26 L 56 32 L 44 38 Z" fill="#00f2fe" opacity="0.95" filter="url(#pbxGlowEffect)"/>
-            <!-- Stylized Bold "pbx" Brandmark -->
-            <text x="50" y="63" text-anchor="middle" font-family="'Montserrat', 'Arial Black', 'Trebuchet MS', system-ui, sans-serif" font-weight="900" font-size="25" letter-spacing="-0.5px" fill="url(#pbxTextGrad)" filter="url(#pbxGlowEffect)">pbx</text>
+            <!-- 360-Degree Continuously Rotating Cyber-Diamond Group -->
+            <g class="pbx-spin-360">
+                <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="6s" repeatCount="indefinite"/>
+                <!-- Outer Tilted Cyber-Diamond Base (Rotated 45deg) -->
+                <rect x="18" y="18" width="64" height="64" rx="16" transform="rotate(45 50 50)" fill="url(#pbxCorePlate)" stroke="url(#pbxRimGrad)" stroke-width="4.5"/>
+                <!-- Inner Metallic Diamond Rim -->
+                <rect x="25" y="25" width="50" height="50" rx="11" transform="rotate(45 50 50)" fill="#060913" stroke="url(#pbxDiamondGrad)" stroke-width="2" stroke-opacity="0.85"/>
+                <!-- 3D Glass Light Reflection Facet -->
+                <path d="M 50 8 L 88 46 L 50 50 L 12 46 Z" fill="#ffffff" fill-opacity="0.12"/>
+                <path d="M 50 14 L 78 44 L 50 47 Z" fill="#00f2fe" fill-opacity="0.15"/>
+                <!-- Mini Neon Corner Pips -->
+                <circle cx="50" cy="8" r="2.5" fill="#00f2fe" filter="url(#pbxGlowEffect)"/>
+                <circle cx="92" cy="50" r="2" fill="#e056fd"/>
+                <circle cx="50" cy="92" r="2" fill="#00f2fe"/>
+                <circle cx="8" cy="50" r="2" fill="#00f2fe"/>
+                <!-- Neon Play Arrow Accent -->
+                <path d="M 44 26 L 56 32 L 44 38 Z" fill="#00f2fe" opacity="0.95" filter="url(#pbxGlowEffect)"/>
+                <!-- Stylized Bold "pbx" Brandmark -->
+                <text x="50" y="63" text-anchor="middle" font-family="'Montserrat', 'Arial Black', 'Trebuchet MS', system-ui, sans-serif" font-weight="900" font-size="25" letter-spacing="-0.5px" fill="url(#pbxTextGrad)" filter="url(#pbxGlowEffect)">pbx</text>
+            </g>
         </svg>
         `;
     }

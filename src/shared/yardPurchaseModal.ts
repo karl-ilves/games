@@ -82,7 +82,7 @@ export class YardPurchaseModal {
                     ` : ''}
 
                     <div id="yard-purchase-cost" style="font-size: 1.25rem; font-weight: 900; color: #ffd32a; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <span>${yardService.renderYardSvg(24)}</span>
+                        <span>${yardService.renderYardSvg(32)}</span>
                         <span>Price: ${options.yardCost.toLocaleString()} pbx</span>
                     </div>
 
