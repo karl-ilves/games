@@ -51,7 +51,7 @@ export class CrownObbyGame {
             yardService.recordPlayedGame({
                 id: 'crown',
                 title: '👑 24K Crown Obby',
-                description: 'Maailma ainus 👑 24K Royal Crown & Golden Monarch komplekt!',
+                description: "The world's only 👑 24K Royal Crown & Golden Monarch outfit!",
                 url: './games/crown/index.html',
                 icon: '👑',
                 badgeText: '🏆 50 Stages Obby'

@@ -6896,7 +6896,7 @@ try {
                     window.yardService.recordPlayedGame({
                         id: 'crown',
                         title: '👑 24K Crown Obby',
-                        description: 'Maailma ainus 👑 24K Royal Crown & Golden Monarch komplekt!',
+                        description: "The world's only 👑 24K Royal Crown & Golden Monarch outfit!",
                         url: './games/crown/index.html',
                         icon: '👑',
                         badgeText: '🏆 50 Stages Obby'
@@ -6957,7 +6957,7 @@ try {
                 let botMessageRejected = false;
 
                 if (game?.gameState) {
-                    testMessageSent = game.gameState.addChatMessage('Tere kõigile! Olen teel krooni poole!');
+                    testMessageSent = game.gameState.addChatMessage('Hello everyone! On my way to the Royal Crown!');
                     // Test anti-AI bot filter: should reject [AI] or bot
                     botMessageRejected = !game.gameState.addChatMessage('[AI] Hello I am an automated bot');
                 }

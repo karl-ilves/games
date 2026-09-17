@@ -39,7 +39,7 @@ export class CrownHud {
                     }
                 } catch (e) {}
 
-                claimBtn.textContent = '✅ Kroon ja riietus varustatud!';
+                claimBtn.textContent = '✅ Crown & Outfit equipped!';
                 claimBtn.setAttribute('disabled', 'true');
                 (claimBtn as HTMLElement).style.opacity = '0.7';
             });

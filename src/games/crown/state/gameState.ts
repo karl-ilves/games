@@ -20,7 +20,7 @@ export class GameState {
     private checkAuth() {
         const prof = getCurrentUserProfile();
         this.isOwner = isPlayardOwner(prof?.email) || isTestMode() || !!(prof?.username?.toLowerCase().includes('owner'));
-        this.playerName = prof?.displayName || prof?.username || (this.isOwner ? 'Playard Owner👑' : 'Mängija');
+        this.playerName = prof?.displayName || prof?.username || (this.isOwner ? 'Playard Owner👑' : 'Player');
     }
 
     public getIsOwner(): boolean {
@@ -118,14 +118,14 @@ export class GameState {
                 id: 'msg_1',
                 author: 'Playard Owner👑',
                 isOwner: true,
-                text: 'Tere tulemast 50-etapilisse 24K Crown Obbysse! Finišis ootab kuninglik kroon!',
+                text: 'Welcome to the 50-stage 24K Crown Obby! The Royal Crown awaits at the summit!',
                 timestamp: Date.now() - 120000
             },
             {
                 id: 'msg_2',
                 author: 'ProJumper99',
                 isOwner: false,
-                text: 'Stage 30 laavahüpped on päris keerulised, hoidke tempot!',
+                text: 'Stage 30 lava jumps are tricky, keep your momentum!',
                 timestamp: Date.now() - 60000
             }
         ];

@@ -39,7 +39,7 @@ export class CrownChatUI {
             this.input.value = '';
             this.renderMessages();
         } else {
-            alert('Sõnumit ei saanud saata. AI robotid ei ole siin vestluses lubatud!');
+            alert('Could not send message. AI bots are strictly prohibited in this chat!');
         }
     }
 

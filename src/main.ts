@@ -965,8 +965,8 @@ function renderRecentlyPlayed() {
                 badgeText = '🏆 10-Tasemeline Obby';
             } else if (game.id === 'crown') {
                 gameTitle = '👑 24K Crown Obby';
-                gameDesc = 'Maailma ainus 👑 24K Royal Crown & Golden Monarch komplekt!';
-                badgeText = '👑 50 Etappi (Grand Prize)';
+                gameDesc = "The world's only 👑 24K Royal Crown & Golden Monarch outfit!";
+                badgeText = '👑 Grand Prize (50 Stages)';
             }
         }
 
@@ -1033,7 +1033,7 @@ function setupGameCardTracking() {
         './games/crown/index.html': {
             id: 'crown',
             title: '👑 24K Crown Obby',
-            description: 'Maailma ainus 👑 24K Royal Crown & Golden Monarch komplekt!',
+            description: "The world's only 👑 24K Royal Crown & Golden Monarch outfit!",
             url: './games/crown/index.html',
             icon: '👑',
             badgeText: '🏆 50 Stages Obby',
