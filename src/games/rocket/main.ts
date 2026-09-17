@@ -120,7 +120,19 @@ export class RocketGame {
             onMouseMove: (cx, cy) => {
                 this.targeting.handleMouseMove(cx, cy, this.groundPlaneMesh);
             },
-            isSoundEnabled: () => this.audio.soundEnabled
+            isSoundEnabled: () => this.audio.soundEnabled,
+            onSelectRocketIndex: (idx) => {
+                const unlockedList = ROCKET_CATALOG.filter(r => this.unlockedRockets.has(r.id));
+                if (idx >= 0 && idx < unlockedList.length) {
+                    const selected = unlockedList[idx];
+                    this.equippedRocket = selected;
+                    this.targeting.updateColor(selected.color);
+                    this.saveProgress();
+                    this.updateHUD();
+                    this.audio.playPurchase();
+                    this.hud.showImpactToast(`VALITUD: ${selected.name} ${selected.icon}`);
+                }
+            }
         });
     }
 
@@ -176,6 +188,14 @@ export class RocketGame {
 
     public updateHUD() {
         this.hud.updateHUD(this.roundRemaining, this.currentScore, this.equippedRocket);
+        this.hud.renderRocketQuickBar(this.unlockedRockets, this.equippedRocket, ROCKET_CATALOG, (rocket) => {
+            this.equippedRocket = rocket;
+            this.targeting.updateColor(rocket.color);
+            this.saveProgress();
+            this.updateHUD();
+            this.audio.playPurchase();
+            this.hud.showImpactToast(`VALITUD: ${rocket.name} ${rocket.icon}`);
+        });
     }
 
     public startRoundTimer() {

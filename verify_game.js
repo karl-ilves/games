@@ -6336,6 +6336,55 @@ try {
                 throw new Error(`Rocket Shop must open and render at least 50 arcade rocket upgrade options, found: ${shopResult.itemsCount}!`);
             }
 
+            // Test Separate "Shop" Button Next to Rockets (HUD & Quick Rocket Bar)
+            console.log("   Testing Separate 'Shop' Buttons next to Rockets (HUD & Quick Bar)...");
+            const rocketShopButtonsResult = await page.evaluate(async () => {
+                const game = window.rocketGame;
+                if (!game) return { success: false, reason: 'no rocketGame' };
+
+                const hudRocketBox = document.getElementById('hud-active-rocket-box');
+                const hudShopBtn = document.getElementById('btn-hud-shop');
+                const quickBar = document.getElementById('rocket-quick-bar');
+                const quickSlots = document.getElementById('rocket-quick-slots');
+                const quickBarShopBtn = document.getElementById('btn-quick-bar-shop');
+                const modal = document.getElementById('rocket-shop-modal');
+
+                if (!hudShopBtn) return { success: false, reason: 'btn-hud-shop not found next to rocket info' };
+                if (!quickBarShopBtn) return { success: false, reason: 'btn-quick-bar-shop not found in quick rocket bar' };
+                if (!quickSlots) return { success: false, reason: 'rocket-quick-slots not found' };
+
+                // Verify HUD Shop Button opens shop
+                game.toggleShop(false);
+                hudShopBtn.click();
+                await new Promise(r => setTimeout(r, 50));
+                const openedViaHud = window.getComputedStyle(modal).display === 'flex';
+
+                // Verify Quick Bar Shop Button opens shop
+                game.toggleShop(false);
+                quickBarShopBtn.click();
+                await new Promise(r => setTimeout(r, 50));
+                const openedViaQuickBar = window.getComputedStyle(modal).display === 'flex';
+
+                // Verify Quick Slots have at least 1 unlocked rocket and active state
+                const slotsCount = quickSlots.querySelectorAll('.rocket-quick-slot').length;
+                const activeSlot = quickSlots.querySelector('.rocket-quick-slot.active');
+
+                return {
+                    success: true,
+                    hasHudShopBtn: !!hudShopBtn,
+                    hasQuickBarShopBtn: !!quickBarShopBtn,
+                    openedViaHud,
+                    openedViaQuickBar,
+                    slotsCount,
+                    hasActiveSlot: !!activeSlot
+                };
+            });
+
+            console.log(`   Separate Rocket Shop Buttons: HUD Shop: ${rocketShopButtonsResult.openedViaHud}, QuickBar Shop: ${rocketShopButtonsResult.openedViaQuickBar}, Quick Slots: ${rocketShopButtonsResult.slotsCount}`);
+            if (!rocketShopButtonsResult.success || !rocketShopButtonsResult.openedViaHud || !rocketShopButtonsResult.openedViaQuickBar || rocketShopButtonsResult.slotsCount < 1) {
+                throw new Error(`Separate Shop buttons next to rockets failed validation! ${JSON.stringify(rocketShopButtonsResult)}`);
+            }
+
             // Test Yard Points Exchange in Rocket Shop (500Y -> 100PTS, 1000Y -> 200PTS, 5000Y -> 1000PTS)
             console.log("   Testing Yard Points Exchange (500Y/1000Y/5000Y) & Confirmation Modal...");
             const yardExchangeResult = await page.evaluate(async () => {

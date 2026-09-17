@@ -82,4 +82,36 @@ export class HudManager {
             }
         }
     }
+
+    public renderRocketQuickBar(
+        unlockedRockets: Set<string>,
+        equippedRocket: RocketType,
+        catalog: RocketType[],
+        onSelectRocket: (rocket: RocketType) => void
+    ) {
+        const slotsContainer = document.getElementById('rocket-quick-slots');
+        if (!slotsContainer) return;
+
+        slotsContainer.innerHTML = '';
+        const unlockedList = catalog.filter(r => unlockedRockets.has(r.id));
+
+        unlockedList.forEach((rocket, index) => {
+            const isEquipped = rocket.id === equippedRocket.id;
+            const slot = document.createElement('div');
+            slot.className = `rocket-quick-slot ${isEquipped ? 'active' : ''}`;
+            slot.id = `quick-rocket-${rocket.id}`;
+            slot.title = `${rocket.name} - ${rocket.desc} (${rocket.speed} m/s) [Klahv: ${index + 1}]`;
+            slot.innerHTML = `
+                <span style="font-size: 0.72rem; color: #00f2fe; opacity: 0.7;">${index + 1}</span>
+                <span>${rocket.icon}</span>
+                <span>${rocket.name}</span>
+            `;
+
+            slot.addEventListener('click', () => {
+                onSelectRocket(rocket);
+            });
+
+            slotsContainer.appendChild(slot);
+        });
+    }
 }

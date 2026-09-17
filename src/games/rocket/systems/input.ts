@@ -8,6 +8,7 @@ export interface InputContext {
     onCenterLock: () => void;
     onMouseMove: (clientX: number, clientY: number) => void;
     isSoundEnabled: () => boolean;
+    onSelectRocketIndex?: (index: number) => void;
 }
 
 export class InputManager {
@@ -42,6 +43,13 @@ export class InputManager {
 
             if (e.code === 'KeyE') {
                 this.ctx.onToggleShop(true);
+            }
+
+            if (e.code.startsWith('Digit') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                const digit = parseInt(e.code.replace('Digit', ''), 10);
+                if (!isNaN(digit) && digit >= 1 && digit <= 9) {
+                    this.ctx.onSelectRocketIndex?.(digit - 1);
+                }
             }
         });
 
@@ -78,6 +86,15 @@ export class InputManager {
 
         const openShopBtn = document.getElementById('btn-open-shop');
         if (openShopBtn) openShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true));
+
+        const hudShopBtn = document.getElementById('btn-hud-shop');
+        if (hudShopBtn) hudShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true));
+
+        const quickBarShopBtn = document.getElementById('btn-quick-bar-shop');
+        if (quickBarShopBtn) quickBarShopBtn.addEventListener('click', () => this.ctx.onToggleShop(true));
+
+        const activeRocketBox = document.getElementById('hud-active-rocket-box');
+        if (activeRocketBox) activeRocketBox.addEventListener('click', () => this.ctx.onToggleShop(true));
 
         const closeShopBtn = document.getElementById('btn-close-shop');
         if (closeShopBtn) closeShopBtn.addEventListener('click', () => this.ctx.onToggleShop(false));

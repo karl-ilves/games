@@ -139,10 +139,117 @@
             align-items: center;
             gap: 6px;
             box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
-            transition: transform 0.15s ease;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            white-space: nowrap;
         }
         .shop-btn:hover {
             transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.8);
+        }
+
+        /* Quick Rocket Bar with Separate Shop Button */
+        .rocket-quick-bar {
+            position: absolute;
+            bottom: 64px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(12, 17, 30, 0.9);
+            border: 1.5px solid rgba(0, 242, 254, 0.35);
+            border-radius: 16px;
+            padding: 6px 12px;
+            z-index: 75;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 242, 254, 0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            max-width: calc(100vw - 30px);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .rocket-quick-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .rocket-quick-label {
+            font-size: 0.76rem;
+            font-weight: 900;
+            color: #00f2fe;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        .rocket-quick-slots {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .rocket-quick-slot {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 5px 10px;
+            color: #e2e8f0;
+            font-size: 0.82rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        .rocket-quick-slot:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(255, 255, 255, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .rocket-quick-slot.active {
+            background: rgba(0, 242, 254, 0.22);
+            border-color: #00f2fe;
+            color: #ffffff;
+            box-shadow: 0 0 14px rgba(0, 242, 254, 0.6);
+        }
+
+        .rocket-quick-shop-btn {
+            background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-weight: 900;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .rocket-quick-shop-btn:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 22px rgba(255, 71, 87, 0.8);
+        }
+
+        @media (max-width: 768px) {
+            .rocket-quick-bar {
+                bottom: 18px;
+                padding: 4px 8px;
+                gap: 5px;
+                z-index: 10000;
+            }
+            .rocket-quick-slot {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+            }
         }
 
         .icon-btn {
@@ -607,10 +714,14 @@
                     <span>⭐</span>
                     <span id="hud-score-text">0 PTS</span>
                 </div>
-                <div class="stat-pill" id="hud-active-rocket-box" style="border-color: rgba(255, 107, 107, 0.4);">
+                <div class="stat-pill" id="hud-active-rocket-box" style="border-color: rgba(255, 107, 107, 0.4); cursor: pointer;" title="Aktiivne rakett (klõpsa poe avamiseks)">
                     <span id="hud-rocket-icon">🔴</span>
                     <span id="hud-rocket-name">Red Dart</span>
                 </div>
+                <button type="button" class="shop-btn rocket-quick-shop-btn" id="btn-hud-shop" title="Ava raketipood">
+                    <span>🛒</span>
+                    <span>Shop</span>
+                </button>
             </div>
 
             <div class="hud-group">
@@ -631,6 +742,18 @@
         <!-- Floating Hit Toasts Container -->
         <div id="impact-toast-container"></div>
 
+        <!-- Quick Rocket Bar with Separate Shop Button -->
+        <div class="rocket-quick-bar" id="rocket-quick-bar">
+            <span class="rocket-quick-label">🚀 Raketid:</span>
+            <div class="rocket-quick-slots" id="rocket-quick-slots">
+                <!-- Dynamically rendered unlocked rockets -->
+            </div>
+            <button type="button" class="shop-btn rocket-quick-shop-btn" id="btn-quick-bar-shop" title="Ava raketipood (Shop)">
+                <span>🛒</span>
+                <span>Shop</span>
+            </button>
+        </div>
+
         <!-- PC Fire Button (also triggers firing on desktop click) -->
         <button type="button" class="desktop-fire-btn" id="btn-fire" title="Tulista rakett (F / Klõps / Space)">
             <span class="desktop-fire-icon">🚀</span>
@@ -641,6 +764,7 @@
         <div class="pc-controls-bar" id="pc-controls-bar">
             <div><span class="kbd-badge">HIIR / W A S D</span> Liiguta sihtimisringi</div>
             <div><span class="kbd-badge">KLÕPS / SPACE</span> Tulista rakett sihtimisringi</div>
+            <div><span class="kbd-badge">1 - 9</span> Vaheta raketti</div>
             <div><span class="kbd-badge">🚀 FIRE</span> Tulista</div>
             <div><span class="kbd-badge">E</span> Pood</div>
         </div>
