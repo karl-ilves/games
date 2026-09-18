@@ -82,17 +82,24 @@ export class PlayerController {
         window.addEventListener('keydown', (e) => {
             // If typing in chat input, do not capture WASD or Space
             const target = e.target as HTMLElement;
-            if (target && target.tagName === 'INPUT') return;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
 
             this.keys[e.code] = true;
 
             if (e.code === 'Space') {
                 this.performJump();
+            } else if (e.code === 'KeyR') {
+                // Quick reset / unstuck shortcut to current checkpoint
+                this.respawn(true);
             }
         });
 
         window.addEventListener('keyup', (e) => {
             this.keys[e.code] = false;
+        });
+
+        window.addEventListener('blur', () => {
+            this.keys = {};
         });
     }
 
@@ -208,9 +215,8 @@ export class PlayerController {
 
         // Collision detection Box
         const pPos = this.playerGroup.position;
-        const playerMin = new THREE.Vector3(pPos.x - 0.45, pPos.y, pPos.z - 0.45);
-        const playerMax = new THREE.Vector3(pPos.x + 0.45, pPos.y + 2.0, pPos.z + 0.45);
-        const playerBox = new THREE.Box3(playerMin, playerMax);
+        const halfW = 0.42;
+        const playerHeight = 2.0;
 
         this.isGrounded = false;
 
@@ -218,25 +224,69 @@ export class PlayerController {
         const platforms = this.stageBuilder.getPlatforms();
         for (let i = 0; i < platforms.length; i++) {
             const platMesh = platforms[i];
-            const pMeshBox = new THREE.Box3().setFromObject(platMesh);
+            const pMeshBox = platMesh.userData.box || new THREE.Box3().setFromObject(platMesh);
+
+            const playerMin = new THREE.Vector3(pPos.x - halfW, pPos.y, pPos.z - halfW);
+            const playerMax = new THREE.Vector3(pPos.x + halfW, pPos.y + playerHeight, pPos.z + halfW);
+            const playerBox = new THREE.Box3(playerMin, playerMax);
 
             if (playerBox.intersectsBox(pMeshBox)) {
-                // Check if landing on top
-                if (pPos.y - (this.velocity.y * dt) >= pMeshBox.max.y - 0.45 && this.velocity.y <= 0) {
+                // 1. Landing on top or walking along flat/step surface (step tolerance up to 0.75m)
+                const isAbovePlatform = (pPos.y - (this.velocity.y * dt) >= pMeshBox.max.y - 0.5) || (pPos.y >= pMeshBox.max.y - 0.25);
+                const canStepUp = (pMeshBox.max.y - pPos.y <= 0.75) && (pMeshBox.max.y >= pPos.y - 0.1);
+
+                if ((isAbovePlatform && this.velocity.y <= 0) || canStepUp) {
                     pPos.y = pMeshBox.max.y;
                     this.velocity.y = 0;
                     this.isGrounded = true;
                     this.jumpsRemaining = 2;
+
+                    // Carry player along if platform is moving
+                    if (platMesh.userData.deltaX || platMesh.userData.deltaZ) {
+                        pPos.x += (platMesh.userData.deltaX || 0);
+                        pPos.z += (platMesh.userData.deltaZ || 0);
+                    }
+                } else {
+                    // 2. Side wall collision: resolve horizontal penetration so player slides smoothly and never gets stuck
+                    const overlapX = Math.min(playerBox.max.x, pMeshBox.max.x) - Math.max(playerBox.min.x, pMeshBox.min.x);
+                    const overlapZ = Math.min(playerBox.max.z, pMeshBox.max.z) - Math.max(playerBox.min.z, pMeshBox.min.z);
+
+                    if (overlapX > 0.001 && overlapZ > 0.001) {
+                        const pCenterX = (playerBox.min.x + playerBox.max.x) * 0.5;
+                        const pCenterZ = (playerBox.min.z + playerBox.max.z) * 0.5;
+                        const bCenterX = (pMeshBox.min.x + pMeshBox.max.x) * 0.5;
+                        const bCenterZ = (pMeshBox.min.z + pMeshBox.max.z) * 0.5;
+
+                        if (overlapX < overlapZ) {
+                            if (pCenterX < bCenterX) {
+                                pPos.x -= (overlapX + 0.005);
+                            } else {
+                                pPos.x += (overlapX + 0.005);
+                            }
+                            this.velocity.x = 0;
+                        } else {
+                            if (pCenterZ < bCenterZ) {
+                                pPos.z -= (overlapZ + 0.005);
+                            } else {
+                                pPos.z += (overlapZ + 0.005);
+                            }
+                            this.velocity.z = 0;
+                        }
+                    }
                 }
             }
         }
 
-        // Check hazard collisions
+        // Check hazard collisions using cached boxes
         const hazards = this.stageBuilder.getHazards();
+        const hazardPlayerBox = new THREE.Box3(
+            new THREE.Vector3(pPos.x - halfW, pPos.y, pPos.z - halfW),
+            new THREE.Vector3(pPos.x + halfW, pPos.y + playerHeight, pPos.z + halfW)
+        );
         for (let i = 0; i < hazards.length; i++) {
             const haz = hazards[i];
-            const hazBox = new THREE.Box3().setFromObject(haz.mesh);
-            if (playerBox.intersectsBox(hazBox)) {
+            const hazBox = haz.box || haz.mesh.userData.box || new THREE.Box3().setFromObject(haz.mesh);
+            if (hazardPlayerBox.intersectsBox(hazBox)) {
                 this.respawn(true);
                 return;
             }

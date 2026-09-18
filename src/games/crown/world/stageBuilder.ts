@@ -98,9 +98,11 @@ export class StageBuilder {
             mesh.receiveShadow = true;
             mesh.castShadow = true;
             this.scene.add(mesh);
+            mesh.updateMatrixWorld(true);
 
             if (plat.isHazard) {
                 const box = new THREE.Box3().setFromObject(mesh);
+                mesh.userData.box = box;
                 this.hazards.push({
                     stage: stage.stageNumber,
                     type: plat.hazardType || 'laser',
@@ -111,10 +113,12 @@ export class StageBuilder {
                     this.rotatingBars.push(mesh);
                 }
             } else {
+                const box = new THREE.Box3().setFromObject(mesh);
+                mesh.userData.box = box;
                 this.platforms.push(mesh);
 
                 if (isCheckpointPad) {
-                    const padBox = new THREE.Box3().setFromObject(mesh);
+                    const padBox = box.clone();
                     this.checkpoints.push({
                         stage: stage.stageNumber,
                         pos: new THREE.Vector3(plat.x, plat.y + plat.height + 0.1, plat.z),
@@ -210,17 +214,27 @@ export class StageBuilder {
     public update(delta: number, time: number) {
         // Move floating platforms
         this.movingPlatforms.forEach(mp => {
+            const prevX = mp.mesh.position.x;
+            const prevZ = mp.mesh.position.z;
             const offset = Math.sin(time * mp.speed) * mp.dist;
             if (mp.axis === 'x') {
                 mp.mesh.position.x = mp.origX + offset;
             } else if (mp.axis === 'z') {
                 mp.mesh.position.z = mp.origZ + offset;
             }
+            mp.mesh.userData.deltaX = mp.mesh.position.x - prevX;
+            mp.mesh.userData.deltaZ = mp.mesh.position.z - prevZ;
+            if (mp.mesh.userData.box) {
+                mp.mesh.userData.box.setFromObject(mp.mesh);
+            }
         });
 
         // Rotate hazardous bars
         this.rotatingBars.forEach(bar => {
             bar.rotation.y += delta * 2;
+            if (bar.userData.box) {
+                bar.userData.box.setFromObject(bar);
+            }
         });
 
         // Hover and rotate 24K Royal Crown

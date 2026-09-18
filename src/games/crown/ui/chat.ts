@@ -40,9 +40,28 @@ export class CrownChatUI {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     this.handleSendMessage();
+                } else if (e.key === 'Escape') {
+                    this.input?.blur();
                 }
             });
         }
+
+        // Auto-blur input when clicking 3D game canvas so controls immediately resume
+        const canvasContainer = document.getElementById('canvas-container');
+        if (canvasContainer) {
+            canvasContainer.addEventListener('pointerdown', () => {
+                if (this.input && document.activeElement === this.input) {
+                    this.input.blur();
+                }
+            });
+        }
+        window.addEventListener('pointerdown', (e) => {
+            if (this.container && !this.container.contains(e.target as Node)) {
+                if (this.input && document.activeElement === this.input) {
+                    this.input.blur();
+                }
+            }
+        });
 
         // Auto-subscribe to live chat updates
         this.gameState.onChatUpdated(() => {
@@ -70,15 +89,20 @@ export class CrownChatUI {
     private handleSendMessage() {
         if (!this.input) return;
         const text = this.input.value.trim();
-        if (!text) return;
+        if (!text) {
+            this.input.blur();
+            return;
+        }
 
         // Strict Anti-AI protection: Only humans can write
         const ok = this.gameState.addChatMessage(text);
         if (ok) {
             this.input.value = '';
+            this.input.blur();
             this.renderMessages();
         } else {
             alert('Could not send message. AI bots are strictly prohibited in this chat!');
+            this.input.blur();
         }
     }
 

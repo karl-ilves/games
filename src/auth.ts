@@ -68,6 +68,55 @@ export function getAdminUsername(email?: string | null): string {
 const PROFILES_STORAGE_KEY = 'playard_user_profiles';
 const CURRENT_PROFILE_KEY = 'playard_current_user_profile';
 
+export function generateUUID(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+
+export async function saveProfileToSupabase(profile: UserProfile): Promise<boolean> {
+    if (!hasSupabase) return false;
+    try {
+        // Try full upsert with all extended columns
+        const fullPayload: any = {
+            id: profile.id,
+            username: profile.username,
+            display_name: profile.displayName,
+            email: profile.email,
+            is_admin: !!profile.isAdmin
+        };
+        if (profile.birthDate) fullPayload.birth_date = profile.birthDate;
+        if (profile.age !== undefined) fullPayload.age = profile.age;
+        if (profile.gender) fullPayload.gender = profile.gender;
+
+        const { error: fullErr } = await supabase.from('profiles').upsert(fullPayload);
+        if (!fullErr) {
+            return true;
+        }
+
+        // If extended columns don't exist yet in Supabase, fallback to basic core columns
+        const corePayload = {
+            id: profile.id,
+            username: profile.username,
+            display_name: profile.displayName,
+            is_admin: !!profile.isAdmin
+        };
+        const { error: coreErr } = await supabase.from('profiles').upsert(corePayload);
+        if (!coreErr) {
+            return true;
+        }
+        console.warn('Supabase profiles upsert warning:', coreErr);
+    } catch (e) {
+        console.warn('Supabase profiles upsert exception:', e);
+    }
+    return false;
+}
+
 export function hasEmoji(str?: string | null): boolean {
     if (!str) return false;
     const emojiRegex = /\p{Extended_Pictographic}|\p{Emoji_Presentation}/u;
@@ -328,7 +377,7 @@ export function updateAuthDisplay(profile: UserProfile | null) {
         if (userInfo) userInfo.style.display = 'block';
         if (emailSpan) {
             const isOwner = isPlayardOwner(profile.email);
-            const isInternalEmail = !profile.email || profile.email.endsWith('@playard.player');
+            const isInternalEmail = !profile.email || profile.email.endsWith('@playard.player') || profile.email.endsWith('@playard.com');
             const emailSubtitle = (!isInternalEmail && !isOwner && profile.email) 
                 ? ` <span style="font-size: 0.8rem; color: #718093;">(${profile.email})</span>` 
                 : '';
@@ -416,12 +465,12 @@ export async function showBirthdateModal(profile: UserProfile): Promise<void> {
         try {
             const { data } = await supabase
                 .from('profiles')
-                .select('birth_date, age')
+                .select('*')
                 .eq('id', profile.id)
                 .single();
-            if (data?.birth_date) {
-                profile.birthDate = data.birth_date;
-                profile.age = calculateAge(data.birth_date);
+            if (data && (data as any).birth_date) {
+                profile.birthDate = (data as any).birth_date;
+                profile.age = calculateAge((data as any).birth_date);
                 saveLocalProfile(profile);
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 _renderAgeInUI(profile);
@@ -472,16 +521,7 @@ export async function showBirthdateModal(profile: UserProfile): Promise<void> {
 
         // Supabase upsert
         if (hasSupabase && !isTestMode(profile.email)) {
-            try {
-                await supabase.from('profiles').upsert({
-                    id: profile.id,
-                    username: profile.username,
-                    email: profile.email,
-                    display_name: profile.displayName,
-                    birth_date: birthDateStr,
-                    age: age
-                });
-            } catch (e) { console.warn('Supabase birth_date upsert failed:', e); }
+            await saveProfileToSupabase(profile);
         }
 
         _renderAgeInUI(profile);
@@ -735,17 +775,17 @@ export async function initAuth() {
                 try {
                     const { data: profileRow } = await supabase
                         .from('profiles')
-                        .select('id, username, email, age, gender')
+                        .select('*')
                         .ilike('username', cleanUser)
                         .single();
-                    if (profileRow?.email) {
-                        resolvedEmail = profileRow.email;
+                    if (profileRow && (profileRow as any).email) {
+                        resolvedEmail = (profileRow as any).email;
                     }
                 } catch (e) {}
             }
 
             if (!resolvedEmail) {
-                resolvedEmail = `${cleanUser.replace(/[^a-z0-9_.-]/g, '')}@playard.player`;
+                resolvedEmail = `${cleanUser.replace(/[^a-z0-9_.-]/g, '')}@playard.com`;
             }
 
             const usernameVal = validateUsername(isAdmin ? getAdminUsername(resolvedEmail) : username, resolvedEmail);
@@ -809,14 +849,7 @@ export async function initAuth() {
                 saveLocalProfile(adminProfile);
 
                 if (hasSupabase && !isTestMode(resolvedEmail)) {
-                    try {
-                        await supabase.from('profiles').upsert({
-                            id: adminProfile.id,
-                            username: adminUsername,
-                            email: resolvedEmail,
-                            display_name: adminTitle
-                        });
-                    } catch (e) {}
+                    await saveProfileToSupabase(adminProfile);
                 }
 
                 await yardService.onUserLogin(adminProfile.id, adminUsername, resolvedEmail);
@@ -860,11 +893,11 @@ export async function initAuth() {
                     try {
                         const { data: profileRow } = await supabase
                             .from('profiles')
-                            .select('age, gender')
+                            .select('*')
                             .eq('id', data.session.user.id)
                             .single();
-                        if (profileRow?.age) ageVal = profileRow.age;
-                        if (profileRow?.gender) genderVal = profileRow.gender;
+                        if (profileRow && (profileRow as any).age) ageVal = (profileRow as any).age;
+                        if (profileRow && (profileRow as any).gender) genderVal = (profileRow as any).gender;
                     } catch (e) {}
 
                     const profile: UserProfile = {
@@ -920,11 +953,43 @@ export async function initAuth() {
                     }
 
                     if (error.message !== 'Failed to fetch') {
+                        // Check if account exists in Supabase profiles directly before displaying error
+                        try {
+                            const { data: remoteProfile } = await supabase
+                                .from('profiles')
+                                .select('*')
+                                .ilike('username', cleanUser)
+                                .single();
+
+                            if (remoteProfile) {
+                                const profile: UserProfile = {
+                                    id: remoteProfile.id,
+                                    username: remoteProfile.username,
+                                    email: (remoteProfile as any).email || resolvedEmail,
+                                    displayName: remoteProfile.display_name || `@${remoteProfile.username}`,
+                                    isAdmin: !!remoteProfile.is_admin,
+                                    age: (remoteProfile as any).age,
+                                    gender: (remoteProfile as any).gender,
+                                    birthDate: (remoteProfile as any).birth_date
+                                };
+                                localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                                saveLocalProfile(profile);
+                                await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                                restoreUserGameProgress(profile);
+
+                                showMsg(`Welcome back, ${profile.displayName}!`, 'success');
+                                if (usernameInput) usernameInput.value = '';
+                                if (passwordInput) passwordInput.value = '';
+                                updateAuthDisplay(profile);
+                                return;
+                            }
+                        } catch (e) {}
+
                         return showMsg(error.message, 'error');
                     }
                 }
 
-                // Fallback to local profile if network error
+                // Fallback to local profile or Supabase profiles
                 const localProfiles = getLocalProfiles();
                 const matched = localProfiles.find(p => p.username.toLowerCase() === cleanUser);
                 if (matched) {
@@ -938,6 +1003,37 @@ export async function initAuth() {
                     updateAuthDisplay(matched);
                     return;
                 }
+
+                try {
+                    const { data: remoteProfile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .ilike('username', cleanUser)
+                        .single();
+
+                    if (remoteProfile) {
+                        const profile: UserProfile = {
+                            id: remoteProfile.id,
+                            username: remoteProfile.username,
+                            email: (remoteProfile as any).email || resolvedEmail,
+                            displayName: remoteProfile.display_name || `@${remoteProfile.username}`,
+                            isAdmin: !!remoteProfile.is_admin,
+                            age: (remoteProfile as any).age,
+                            gender: (remoteProfile as any).gender,
+                            birthDate: (remoteProfile as any).birth_date
+                        };
+                        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                        saveLocalProfile(profile);
+                        await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                        restoreUserGameProgress(profile);
+
+                        showMsg(`Welcome back, ${profile.displayName}!`, 'success');
+                        if (usernameInput) usernameInput.value = '';
+                        if (passwordInput) passwordInput.value = '';
+                        updateAuthDisplay(profile);
+                        return;
+                    }
+                } catch (e) {}
 
                 return showMsg('This username does not exist!', 'error');
             }
@@ -1009,7 +1105,7 @@ export async function initAuth() {
 
             showMsg('Creating account...', 'info');
 
-            const internalEmail = `${cleanUser.replace(/[^a-z0-9_.-]/g, '')}@playard.player`;
+            const internalEmail = `${cleanUser.replace(/[^a-z0-9_.-]/g, '')}@playard.com`;
 
             // --- TEST MODE OR OFFLINE REGISTRATION ---
             if (isTestMode() || !hasSupabase) {
@@ -1056,6 +1152,7 @@ export async function initAuth() {
                     }
                 } catch (e) {}
 
+                let authUserId: string | null = null;
                 const redirectUrl = window.location.origin + window.location.pathname;
                 const { data, error } = await supabase.auth.signUp({
                     email: internalEmail,
@@ -1071,42 +1168,25 @@ export async function initAuth() {
                     }
                 });
 
+                if (data?.user?.id) {
+                    authUserId = data.user.id;
+                }
+
                 if (error) {
                     if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('already exists')) {
                         return showMsg('Name is unavailable', 'error');
                     }
-
-                    // Fallback to local profile on network or rate limit error
-                    const profile: UserProfile = {
-                        id: 'local_' + Date.now(),
-                        username: username,
-                        email: internalEmail,
-                        displayName: `@${username}`,
-                        isAdmin: isAdmin,
-                        birthDate: birthDateStr,
-                        age: ageNum,
-                        gender: gender
-                    };
-                    localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
-                    saveLocalProfile(profile);
-                    await yardService.onUserLogin(profile.id, profile.username);
-                    showMsg(`Account created: @${username}`, 'success');
-                    if (usernameInput) usernameInput.value = '';
-                    if (passwordInput) passwordInput.value = '';
-                    if (ageInput) ageInput.value = '';
-                    if (birthYearSelect) birthYearSelect.value = '';
-                    if (birthMonthSelect) birthMonthSelect.value = '';
-                    if (birthDaySelect) birthDaySelect.value = '';
-                    if (ageCalcPreview) ageCalcPreview.textContent = '';
-                    updateAuthDisplay(profile);
-                    return;
+                    console.warn('Supabase auth.signUp note:', error.message);
                 }
 
+                // If Supabase auth succeeded, use its UUID; otherwise generate a valid UUID for the profile
+                const profileId = authUserId || generateUUID();
+                const displayName = isAdmin ? getAdminDisplayName(internalEmail) : `@${username}`;
                 const profile: UserProfile = {
-                    id: data.session?.user?.id || data.user?.id || 'user_' + Date.now(),
+                    id: profileId,
                     username: username,
                     email: internalEmail,
-                    displayName: `@${username}`,
+                    displayName: displayName,
                     isAdmin: isAdmin,
                     birthDate: birthDateStr,
                     age: ageNum,
@@ -1116,24 +1196,13 @@ export async function initAuth() {
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
 
-                try {
-                    await supabase.from('profiles').upsert({
-                        id: profile.id,
-                        username: profile.username,
-                        email: internalEmail,
-                        display_name: profile.displayName,
-                        birth_date: birthDateStr,
-                        age: ageNum,
-                        gender: gender
-                    });
-                } catch (err) {
-                    console.warn(err);
-                }
+                // Save directly to Supabase profiles table
+                await saveProfileToSupabase(profile);
 
                 await yardService.onUserLogin(profile.id, profile.username, profile.email);
                 restoreUserGameProgress(profile);
 
-                showMsg(`Account created! You are logged in as @${username}.`, 'success');
+                showMsg(`Account created! You are logged in as ${displayName}.`, 'success');
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
                 if (ageInput) ageInput.value = '';
@@ -1141,24 +1210,6 @@ export async function initAuth() {
                 if (birthMonthSelect) birthMonthSelect.value = '';
                 if (birthDaySelect) birthDaySelect.value = '';
                 if (ageCalcPreview) ageCalcPreview.textContent = '';
-                updateAuthDisplay(profile);
-            } else {
-                const displayName = isAdmin ? 'Admin✅' : `@${username}`;
-                const profile: UserProfile = {
-                    id: 'offline_' + Date.now(),
-                    username,
-                    email: internalEmail,
-                    displayName: displayName,
-                    isAdmin: isAdmin,
-                    age: ageNum,
-                    gender: gender
-                };
-                localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
-                saveLocalProfile(profile);
-                await yardService.onUserLogin(profile.id, profile.username, profile.email);
-                restoreUserGameProgress(profile);
-
-                showMsg(`Account created as ${profile.displayName}!`, 'success');
                 updateAuthDisplay(profile);
             }
         });

@@ -38,9 +38,17 @@ try {
     const browser = await puppeteer.launch({
         headless: true,
         protocolTimeout: 600000,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--js-flags=--max-old-space-size=4096']
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--enable-webgl', '--ignore-gpu-blocklist', '--disable-gpu-process-crash-limit', '--js-flags=--max-old-space-size=4096']
     });
     const page = await browser.newPage();
+    page.on('error', err => {
+        console.error('PAGE CRASHED / RENDERER TERMINATED:', err.message);
+    });
+    page.on('framenavigated', frame => {
+        if (frame === page.mainFrame()) {
+            console.log('MAIN FRAME NAVIGATED TO:', frame.url());
+        }
+    });
     await page.evaluateOnNewDocument(() => {
         window.__PLAYARD_TEST_MODE__ = true;
         window.alert = () => {};
@@ -7323,6 +7331,31 @@ try {
                     canRemoveRemotePlayer = !game.remotePlayersManager.getRemotePlayer('p_remote_3d_test');
                 }
 
+                // Test Unstuck KeyR / respawn
+                let canUnstuckRespawn = false;
+                if (game?.playerController) {
+                    game.playerController.getPosition().set(999, -10, 999);
+                    game.playerController.respawn(true);
+                    const respawnPos = game.playerController.getPosition();
+                    canUnstuckRespawn = respawnPos.x !== 999 && respawnPos.y > 0;
+                }
+
+                // Test Step-up and Wall Push-out collision resolution
+                let collisionResolutionWorks = false;
+                if (game?.playerController && game?.stageBuilder) {
+                    const platforms = game.stageBuilder.getPlatforms();
+                    if (platforms.length > 0) {
+                        const firstPlat = platforms[0];
+                        const box = firstPlat.userData.box || new THREE.Box3().setFromObject(firstPlat);
+                        const midX = (box.min.x + box.max.x) / 2;
+                        const midZ = (box.min.z + box.max.z) / 2;
+                        game.playerController.getPosition().set(midX, box.max.y, midZ);
+                        game.playerController.velocity.set(0, 0, 0);
+                        game.playerController.update(0.016, 0);
+                        collisionResolutionWorks = game.playerController.isGrounded && Math.abs(game.playerController.getPosition().y - box.max.y) < 0.1;
+                    }
+                }
+
                 const onlineBadgeText = document.getElementById('crown-chat-online-badge')?.textContent || '';
 
                 return {
@@ -7335,6 +7368,8 @@ try {
                     canRenderRemotePlayerIn3D,
                     remotePlayerHasNameTag,
                     canRemoveRemotePlayer,
+                    canUnstuckRespawn,
+                    collisionResolutionWorks,
                     onlineBadgeText,
                     testMessageSent,
                     botMessageRejected,
@@ -7378,7 +7413,10 @@ try {
             if (!crownGamePageTest.cameraBehindPlayer) {
                 throw new Error("Crown Obby camera perspective check failed: " + JSON.stringify(crownGamePageTest));
             }
-            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, Real-Time Online Chat, Live Remote Sync) testid edukalt läbitud!");
+            if (!crownGamePageTest.canUnstuckRespawn || !crownGamePageTest.collisionResolutionWorks) {
+                throw new Error("Crown Obby unstuck/collision resolution check failed: " + JSON.stringify(crownGamePageTest));
+            }
+            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, Real-Time Online Chat, Anti-Stuck & Collision Resolution, Live Remote Sync) testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
