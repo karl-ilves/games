@@ -1,4 +1,5 @@
 import { getLocalProfiles } from '../../auth';
+import { supabase } from '../../lib/supabase';
 
 export interface Friend {
     username: string;
@@ -26,19 +27,25 @@ export interface PlayerSearchResult {
     hasPendingIncoming: boolean;
 }
 
-const DEFAULT_COMMUNITY_PLAYERS: { username: string; displayName: string; color: string }[] = [
-    { username: 'Alex', displayName: 'Alex 👤', color: '#3498db' },
-    { username: 'Sam', displayName: 'Sam 👤', color: '#e67e22' },
-    { username: 'Jordan', displayName: 'Jordan 👤', color: '#9b59b6' },
-    { username: 'Charlie', displayName: 'Charlie 👤', color: '#1abc9c' },
-    { username: 'ProGamer99', displayName: 'ProGamer99 🎮', color: '#e74c3c' },
-    { username: 'BuildMaster', displayName: 'BuildMaster 🔨', color: '#f39c12' },
-    { username: 'DragonSlayer', displayName: 'DragonSlayer 🐉', color: '#8e44ad' },
-    { username: 'SpeedyRunner', displayName: 'SpeedyRunner ⚡', color: '#2ecc71' },
-    { username: 'RoboGamer', displayName: 'RoboGamer 🤖', color: '#00cec9' }
-];
+function getPlayerColor(username: string): string {
+    const colors = ['#3498db', '#e67e22', '#9b59b6', '#1abc9c', '#e74c3c', '#0be881', '#00f2fe', '#f39c12', '#fd79a8'];
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+        hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+}
 
 export class FriendService {
+    private cachedSupabasePlayers: { username: string; displayName: string; color: string }[] = [];
+    private broadcastChannel: BroadcastChannel | null = null;
+    private supabaseChannel: any = null;
+
+    constructor() {
+        this.fetchSupabaseProfiles();
+        this.initSyncChannels();
+    }
+
     private getFriendsKey(username: string): string {
         return `playard_friends_${username.toLowerCase()}`;
     }
@@ -51,32 +58,80 @@ export class FriendService {
         return `playard_friend_requests_out_${username.toLowerCase()}`;
     }
 
+    public async fetchSupabaseProfiles() {
+        if (!supabase) return;
+        try {
+            const { data, error } = await supabase.from('profiles').select('id, username, display_name, is_admin');
+            if (data && Array.isArray(data) && !error) {
+                this.cachedSupabasePlayers = data
+                    .filter(p => p.username && p.username.trim())
+                    .map(p => ({
+                        username: p.username.trim(),
+                        displayName: p.display_name || p.username.trim(),
+                        color: getPlayerColor(p.username.trim())
+                    }));
+                window.dispatchEvent(new CustomEvent('playard_friends_updated'));
+            }
+        } catch (e) {
+            console.warn('Could not fetch Supabase profiles:', e);
+        }
+    }
+
+    private initSyncChannels() {
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                this.broadcastChannel = new BroadcastChannel('playard_friends_sync');
+                this.broadcastChannel.onmessage = (event) => {
+                    const data = event.data;
+                    if (!data || !data.type) return;
+                    this.handleIncomingSyncEvent(data);
+                };
+            } catch (e) {}
+        }
+
+        if (supabase) {
+            try {
+                this.supabaseChannel = supabase.channel('playard_global_friends_sync', {
+                    config: { broadcast: { self: false } }
+                });
+                this.supabaseChannel.on('broadcast', { event: 'friend_action' }, (payload: any) => {
+                    if (payload && payload.payload) {
+                        this.handleIncomingSyncEvent(payload.payload);
+                    }
+                }).subscribe();
+            } catch (e) {}
+        }
+    }
+
+    private broadcastAction(eventData: any) {
+        try {
+            this.broadcastChannel?.postMessage(eventData);
+        } catch (e) {}
+
+        try {
+            this.supabaseChannel?.send({
+                type: 'broadcast',
+                event: 'friend_action',
+                payload: eventData
+            });
+        } catch (e) {}
+    }
+
+    private handleIncomingSyncEvent(data: any) {
+        if (!data || !data.type) return;
+        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: data }));
+    }
+
     public initUser(username: string, _displayName?: string) {
         if (!username) return;
         const inKey = this.getIncomingRequestsKey(username);
         const frKey = this.getFriendsKey(username);
 
-        // If newly initialized user has never been set up, seed initial sample incoming request so user can immediately experience the (+) circle feature!
-        if (localStorage.getItem(inKey) === null && localStorage.getItem(frKey) === null) {
-            const initialRequests: FriendRequest[] = [
-                {
-                    id: 'req_alex_' + Date.now(),
-                    fromUsername: 'Alex',
-                    fromDisplayName: 'Alex 👤',
-                    fromColor: '#3498db',
-                    toUsername: username,
-                    timestamp: Date.now() - 3600000
-                },
-                {
-                    id: 'req_progamer_' + Date.now(),
-                    fromUsername: 'ProGamer99',
-                    fromDisplayName: 'ProGamer99 🎮',
-                    fromColor: '#e74c3c',
-                    toUsername: username,
-                    timestamp: Date.now() - 7200000
-                }
-            ];
-            localStorage.setItem(inKey, JSON.stringify(initialRequests));
+        // Initialize empty lists if not already present
+        if (localStorage.getItem(inKey) === null) {
+            localStorage.setItem(inKey, JSON.stringify([]));
+        }
+        if (localStorage.getItem(frKey) === null) {
             localStorage.setItem(frKey, JSON.stringify([]));
         }
     }
@@ -123,16 +178,28 @@ export class FriendService {
         // Add to recipient's incoming requests
         const inList = this.getIncomingRequests(toUsername);
         const exists = inList.some(r => r.fromUsername.toLowerCase() === fromUsername.toLowerCase());
+        const newReq: FriendRequest = {
+            id: `req_${fromUsername}_${Date.now()}`,
+            fromUsername,
+            fromDisplayName: fromDisplayName || fromUsername,
+            fromColor: getPlayerColor(fromUsername),
+            toUsername,
+            timestamp: Date.now()
+        };
+
         if (!exists) {
-            inList.push({
-                id: `req_${fromUsername}_${Date.now()}`,
-                fromUsername,
-                fromDisplayName: fromDisplayName || fromUsername,
-                toUsername,
-                timestamp: Date.now()
-            });
+            inList.push(newReq);
             localStorage.setItem(this.getIncomingRequestsKey(toUsername), JSON.stringify(inList));
         }
+
+        // Broadcast to other tabs/players
+        this.broadcastAction({
+            type: 'friend_request',
+            fromUsername,
+            fromDisplayName: fromDisplayName || fromUsername,
+            toUsername,
+            timestamp: Date.now()
+        });
 
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: fromUsername } }));
         return true;
@@ -158,7 +225,7 @@ export class FriendService {
             myFriends.push({
                 username: fromUsername,
                 displayName: req?.fromDisplayName || fromUsername,
-                avatarColor: req?.fromColor || '#00f2fe',
+                avatarColor: req?.fromColor || getPlayerColor(fromUsername),
                 isOnline: true
             });
             localStorage.setItem(this.getFriendsKey(currentUsername), JSON.stringify(myFriends));
@@ -170,11 +237,19 @@ export class FriendService {
             theirFriends.push({
                 username: currentUsername,
                 displayName: currentUsername,
-                avatarColor: '#2ecc71',
+                avatarColor: getPlayerColor(currentUsername),
                 isOnline: true
             });
             localStorage.setItem(this.getFriendsKey(fromUsername), JSON.stringify(theirFriends));
         }
+
+        // Broadcast acceptance
+        this.broadcastAction({
+            type: 'friend_accept',
+            fromUsername,
+            toUsername: currentUsername,
+            timestamp: Date.now()
+        });
 
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: currentUsername } }));
         return true;
@@ -191,6 +266,13 @@ export class FriendService {
         const filteredOut = outList.filter(u => u.toLowerCase() !== currentUsername.toLowerCase());
         localStorage.setItem(this.getOutgoingRequestsKey(fromUsername), JSON.stringify(filteredOut));
 
+        this.broadcastAction({
+            type: 'friend_decline',
+            fromUsername,
+            toUsername: currentUsername,
+            timestamp: Date.now()
+        });
+
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: currentUsername } }));
         return true;
     }
@@ -203,6 +285,13 @@ export class FriendService {
 
         const theirFriends = this.getFriends(friendUsername).filter(f => f.username.toLowerCase() !== currentUsername.toLowerCase());
         localStorage.setItem(this.getFriendsKey(friendUsername), JSON.stringify(theirFriends));
+
+        this.broadcastAction({
+            type: 'friend_remove',
+            fromUsername: currentUsername,
+            toUsername: friendUsername,
+            timestamp: Date.now()
+        });
 
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: currentUsername } }));
         return true;
@@ -218,21 +307,23 @@ export class FriendService {
         const outgoingSet = new Set(outgoing.map(u => u.toLowerCase()));
         const incomingSet = new Set(incoming.map(r => r.fromUsername.toLowerCase()));
 
-        // Pool together: Community players + local registered profiles
+        // Pool together only REAL players: Supabase profiles + locally registered profiles
         const allCandidatesMap = new Map<string, { username: string; displayName: string; color: string }>();
 
-        DEFAULT_COMMUNITY_PLAYERS.forEach(p => {
+        // 1. Supabase real users
+        this.cachedSupabasePlayers.forEach(p => {
             allCandidatesMap.set(p.username.toLowerCase(), p);
         });
 
+        // 2. Local registered profiles
         try {
             const localProfiles = getLocalProfiles();
             localProfiles.forEach(p => {
-                if (p.username && !allCandidatesMap.has(p.username.toLowerCase())) {
+                if (p.username && p.username.trim() && !allCandidatesMap.has(p.username.toLowerCase())) {
                     allCandidatesMap.set(p.username.toLowerCase(), {
-                        username: p.username,
-                        displayName: p.displayName || p.username,
-                        color: '#0be881'
+                        username: p.username.trim(),
+                        displayName: p.displayName || p.username.trim(),
+                        color: getPlayerColor(p.username.trim())
                     });
                 }
             });

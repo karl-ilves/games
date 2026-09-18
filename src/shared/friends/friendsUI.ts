@@ -126,6 +126,9 @@ function setupModals() {
         renderSearchResults('', profile.username);
         if (inviteModal) inviteModal.style.display = 'flex';
         setTimeout(() => searchInput?.focus(), 50);
+        friendService.fetchSupabaseProfiles().then(() => {
+            renderSearchResults(searchInput?.value || '', profile.username);
+        });
     });
 
     closeInviteBtn?.addEventListener('click', () => {

@@ -329,9 +329,18 @@ try {
         const plusCircleExists = await page.$('#btn-friend-requests-circle');
         if (!plusCircleExists) throw new Error("Missing leftmost plus circle #btn-friend-requests-circle!");
 
+        // Simulate a real player sending a friend request to kawe1234
+        await page.evaluate(() => {
+            window.friendService.sendFriendRequest('Minionbanana0_0', 'Minionbanana0_0 👤', 'kawe1234');
+        });
+        await new Promise(r => setTimeout(r, 100));
+
         // Check badge on plus circle
         const badgeCount = await page.$eval('#friend-requests-badge', el => el.textContent);
-        console.log(`   Initial Incoming Requests Badge: ${badgeCount}`);
+        console.log(`   Real Incoming Requests Badge: ${badgeCount}`);
+        if (badgeCount !== '1') {
+            throw new Error(`Expected badge count to be 1 for incoming request, got "${badgeCount}"`);
+        }
 
         // Click (+) circle to open Incoming Requests Modal
         await page.click('#btn-friend-requests-circle');
@@ -342,9 +351,9 @@ try {
             throw new Error("Expected #modal-friend-requests to open on plus circle click!");
         }
 
-        // Accept the first request in modal
+        // Accept the real request from Minionbanana0_0
         const requestRowsCount = await page.$$eval('#friend-requests-list .request-row', rows => rows.length);
-        console.log(`   Incoming Requests Count in Modal: ${requestRowsCount}`);
+        console.log(`   Real Incoming Requests Count in Modal: ${requestRowsCount}`);
         if (requestRowsCount > 0) {
             await page.click('#friend-requests-list .btn-accept-request');
             await new Promise(r => setTimeout(r, 100));
@@ -352,36 +361,37 @@ try {
         await page.click('#btn-close-friend-requests');
         await new Promise(r => setTimeout(r, 100));
 
-        // Verify friend added to friends list
+        // Verify real player Minionbanana0_0 added to friends list
         const friendsCountText = await page.$eval('#friends-count', el => el.textContent);
-        console.log(`   Friends Count after accepting request: ${friendsCountText}`);
+        console.log(`   Friends Count after accepting real player: ${friendsCountText}`);
         if (friendsCountText === '(0)') {
-            throw new Error("Expected friends count to increase after accepting a request!");
+            throw new Error("Expected friends count to increase after accepting a real player request!");
         }
 
-        // Test "Invite Friend" button & Search Modal
+        // Test "Invite Friend" button & Real Players Search Modal
         await page.click('#btn-invite-friend');
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 200));
         const inviteModalDisplay = await page.$eval('#modal-invite-friends', el => window.getComputedStyle(el).display);
         console.log(`   Invite Friends Modal Display: ${inviteModalDisplay}`);
         if (inviteModalDisplay !== 'flex') {
             throw new Error("Expected #modal-invite-friends to open on Invite Friend button click!");
         }
 
-        // Test real-time search filtering by typing in search bar
-        await page.type('#friend-search-input', 'Dragon');
-        await new Promise(r => setTimeout(r, 100));
+        // Test real-time search filtering for real Supabase player 'admin'
+        await page.type('#friend-search-input', 'admin');
+        await new Promise(r => setTimeout(r, 150));
         const searchResults = await page.$$eval('#friend-search-results .player-search-card', cards => cards.map(c => c.getAttribute('data-username')));
-        console.log(`   Search results for 'Dragon':`, searchResults);
-        if (!searchResults.includes('DragonSlayer')) {
-            throw new Error("Expected search results to include 'DragonSlayer' when searching for 'Dragon'!");
+        console.log(`   Real player search results for 'admin':`, searchResults);
+        if (!searchResults.some(u => u && u.toLowerCase().includes('admin'))) {
+            throw new Error("Expected search results to include real player 'admin' when searching for 'admin'!");
         }
 
-        // Send friend request to searched player
-        await page.click('.btn-send-invite[data-username="DragonSlayer"]');
+        // Send friend request to real player
+        const targetRealPlayer = searchResults.find(u => u && u.toLowerCase().includes('admin')) || 'admin';
+        await page.click(`.btn-send-invite[data-username="${targetRealPlayer}"]`);
         await new Promise(r => setTimeout(r, 100));
-        const inviteBtnDisabledText = await page.$eval('.player-search-card[data-username="DragonSlayer"] button', btn => btn.textContent);
-        console.log(`   Button text after sending invite: "${inviteBtnDisabledText}"`);
+        const inviteBtnDisabledText = await page.$eval(`.player-search-card[data-username="${targetRealPlayer}"] button`, btn => btn.textContent);
+        console.log(`   Button text after sending invite to real player: "${inviteBtnDisabledText}"`);
         if (!inviteBtnDisabledText.includes('Sent') && !inviteBtnDisabledText.includes('Saadetud')) {
             throw new Error(`Expected button text to show request sent, got: "${inviteBtnDisabledText}"`);
         }
@@ -389,7 +399,7 @@ try {
         // Close search modal
         await page.click('#btn-close-invite-friends');
         await new Promise(r => setTimeout(r, 100));
-        console.log("   ✅ Friends List, Plus Circle Requests, and Search/Invite Modal verified!");
+        console.log("   ✅ Real Players Friends List, Plus Circle Requests, and Search/Invite Modal verified!");
 
         // 9. Logout
         console.log("   Testing Logout...");
