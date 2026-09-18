@@ -6,6 +6,7 @@ export class CrownChatUI {
     private messagesContainer: HTMLElement | null;
     private form: HTMLFormElement | null;
     private input: HTMLInputElement | null;
+    private onlineBadge: HTMLElement | null;
 
     constructor(gameState: GameState) {
         this.gameState = gameState;
@@ -13,6 +14,7 @@ export class CrownChatUI {
         this.messagesContainer = document.getElementById('crown-chat-messages');
         this.form = document.getElementById('crown-chat-form') as HTMLFormElement;
         this.input = document.getElementById('crown-chat-input') as HTMLInputElement;
+        this.onlineBadge = document.getElementById('crown-chat-online-badge');
 
         this.init();
     }
@@ -47,7 +49,22 @@ export class CrownChatUI {
             this.renderMessages();
         });
 
+        // Auto-subscribe to online player count updates
+        this.gameState.onOnlineCountUpdated((count) => {
+            this.updateOnlineBadge(count);
+        });
+
+        this.updateOnlineBadge(this.gameState.getOnlineCount());
         this.renderMessages();
+    }
+
+    private updateOnlineBadge(count: number) {
+        if (!this.onlineBadge) {
+            this.onlineBadge = document.getElementById('crown-chat-online-badge');
+        }
+        if (this.onlineBadge) {
+            this.onlineBadge.textContent = `🟢 ${count} ONLINE`;
+        }
     }
 
     private handleSendMessage() {
@@ -75,7 +92,7 @@ export class CrownChatUI {
             const empty = document.createElement('div');
             empty.className = 'chat-empty-state';
             empty.style.cssText = 'text-align: center; color: #8899a6; padding: 25px 10px; font-size: 0.78rem;';
-            empty.innerHTML = '💬 No messages yet.<br><span style="color: #ffd700; font-size: 0.72rem;">Say hello to other players!</span>';
+            empty.innerHTML = '💬 Global chat is online.<br><span style="color: #ffd700; font-size: 0.72rem;">Say hello to other players!</span>';
             this.messagesContainer.appendChild(empty);
             return;
         }

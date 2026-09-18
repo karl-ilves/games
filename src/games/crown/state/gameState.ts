@@ -3,6 +3,12 @@ import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../../auth
 
 const CHAT_STORAGE_KEY = 'playard_crown_chat_v1';
 
+export interface INetworkHandler {
+    broadcastChatMessage(msg: ChatMessage): void;
+    broadcastProgress(stage: number, percentage: number, isFinished: boolean): void;
+    trackPresence(): void;
+}
+
 export class GameState {
     private currentStage: number = 1;
     private maxStage: number = 50;
@@ -12,9 +18,22 @@ export class GameState {
     private isOwner: boolean = false;
     private playerName: string = 'Külaline';
 
+    private onlinePlayers: PlayerProgress[] = [];
+    private onlineCount: number = 1;
+
+    private chatListeners: (() => void)[] = [];
+    private leaderboardListeners: (() => void)[] = [];
+    private onlineCountListeners: ((count: number) => void)[] = [];
+
+    private network: INetworkHandler | null = null;
+
     constructor() {
         this.checkAuth();
         this.loadChat();
+    }
+
+    public setNetwork(network: INetworkHandler) {
+        this.network = network;
     }
 
     private checkAuth() {
@@ -77,6 +96,8 @@ export class GameState {
             }
             if (stageNum === this.maxStage) {
                 this.handleVictory();
+            } else {
+                this.network?.broadcastProgress(this.currentStage, this.getPercentage(), false);
             }
             return true;
         }
@@ -86,15 +107,6 @@ export class GameState {
     public isGameWon(): boolean {
         return this.isWon;
     }
-
-    private activeRunners: PlayerProgress[] = [
-        { id: 'p_vortex', name: 'VortexRunner', isOwner: false, stage: 28, percentage: 56, isFinished: false },
-        { id: 'p_ninja', name: 'ShadowNinja', isOwner: false, stage: 19, percentage: 38, isFinished: false },
-        { id: 'p_queen', name: 'PixelQueen', isOwner: false, stage: 12, percentage: 24, isFinished: false },
-        { id: 'p_alex', name: 'AlexPro', isOwner: false, stage: 5, percentage: 10, isFinished: false }
-    ];
-    private chatListeners: (() => void)[] = [];
-    private leaderboardListeners: (() => void)[] = [];
 
     // Victory Crown Proximity
     public handleVictory() {
@@ -123,6 +135,8 @@ export class GameState {
         } catch (e) {
             console.warn('Could not unlock items on victory:', e);
         }
+
+        this.network?.broadcastProgress(this.currentStage, 100, true);
         this.notifyLeaderboardUpdated();
     }
 
@@ -132,6 +146,10 @@ export class GameState {
 
     public onLeaderboardUpdated(cb: () => void) {
         this.leaderboardListeners.push(cb);
+    }
+
+    public onOnlineCountUpdated(cb: (count: number) => void) {
+        this.onlineCountListeners.push(cb);
     }
 
     public notifyChatUpdated() {
@@ -146,17 +164,42 @@ export class GameState {
         });
     }
 
-    public tickLiveRunners() {
-        const luckyIdx = Math.floor(Math.random() * this.activeRunners.length);
-        const runner = this.activeRunners[luckyIdx];
-        if (runner && runner.stage < 48) {
-            runner.stage += 1;
-            runner.percentage = Math.min(100, Math.round((runner.stage / this.maxStage) * 100));
-            this.notifyLeaderboardUpdated();
-        }
+    public notifyOnlineCountUpdated() {
+        this.onlineCountListeners.forEach(cb => {
+            try { cb(this.onlineCount); } catch (e) {}
+        });
     }
 
-    // Chat management (Strictly human messages, NO AI)
+    public getOnlineCount(): number {
+        return this.onlineCount;
+    }
+
+    public setOnlineCount(count: number) {
+        this.onlineCount = Math.max(1, count);
+        this.notifyOnlineCountUpdated();
+    }
+
+    // Leaderboard management with real online players
+    public updateOnlinePlayers(remotePlayers: PlayerProgress[]) {
+        this.onlinePlayers = remotePlayers;
+        this.notifyLeaderboardUpdated();
+    }
+
+    public updateRemotePlayerProgress(progress: PlayerProgress) {
+        const idx = this.onlinePlayers.findIndex(p => p.id === progress.id);
+        if (idx >= 0) {
+            this.onlinePlayers[idx] = { ...this.onlinePlayers[idx], ...progress };
+        } else {
+            this.onlinePlayers.push(progress);
+        }
+        this.notifyLeaderboardUpdated();
+    }
+
+    public tickLiveRunners() {
+        // Safe no-op: no fake runners, only real players
+    }
+
+    // Chat management (Strictly human messages, real online players, NO AI)
     private loadChat() {
         try {
             const raw = localStorage.getItem(CHAT_STORAGE_KEY);
@@ -171,47 +214,25 @@ export class GameState {
             console.warn('Could not parse chat storage:', e);
         }
 
-        // Live initial messages from active runners
-        this.chatMessages = [
-            {
-                id: 'msg_init_1',
-                author: 'VortexRunner',
-                isOwner: false,
-                text: 'Stage 25 lasers are so tricky! 😅',
-                timestamp: Date.now() - 120000
-            },
-            {
-                id: 'msg_init_2',
-                author: 'PixelQueen',
-                isOwner: false,
-                text: 'Made it to stage 12! Who is claiming the 24K Crown? 👑',
-                timestamp: Date.now() - 60000
-            },
-            {
-                id: 'msg_init_3',
-                author: 'ShadowNinja',
-                isOwner: false,
-                text: 'Almost at stage 20, let\'s go!',
-                timestamp: Date.now() - 25000
-            }
-        ];
+        this.chatMessages = [];
     }
 
     public getChatMessages(): ChatMessage[] {
         return [...this.chatMessages];
     }
 
+    // Real player sends chat message
     public addChatMessage(text: string): boolean {
         const clean = text.trim();
         if (!clean || clean.length > 120) return false;
 
-        // Anti-AI Bot filter: AI cannot post to this chat
+        // Anti-AI Bot filter: AI bots cannot post to this chat
         if (/\[AI\]|\bbot\b|openai|gpt|gemini|assistant|chatbot/i.test(clean)) {
             return false;
         }
 
         const msg: ChatMessage = {
-            id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
             author: this.playerName,
             isOwner: this.isOwner,
             text: clean,
@@ -219,47 +240,82 @@ export class GameState {
         };
 
         this.chatMessages.push(msg);
-        if (this.chatMessages.length > 50) {
+        if (this.chatMessages.length > 60) {
             this.chatMessages.shift();
         }
 
+        this.saveChatMessages();
+        this.notifyChatUpdated();
+
+        // Broadcast to other real online players worldwide
+        this.network?.broadcastChatMessage(msg);
+
+        return true;
+    }
+
+    // Incoming chat message from another real player via network
+    public receiveOnlineMessage(msg: ChatMessage) {
+        if (!msg || !msg.id || !msg.text) return;
+
+        // Anti-AI Bot filter on incoming messages as well
+        if (/\[AI\]|\bbot\b|openai|gpt|gemini|assistant|chatbot/i.test(msg.text)) {
+            return;
+        }
+
+        // Deduplicate
+        if (this.chatMessages.some(m => m.id === msg.id)) {
+            return;
+        }
+
+        this.chatMessages.push(msg);
+        if (this.chatMessages.length > 60) {
+            this.chatMessages.shift();
+        }
+
+        this.saveChatMessages();
+        this.notifyChatUpdated();
+    }
+
+    // Sync history received from other active players or storage
+    public mergeHistory(msgs: ChatMessage[]) {
+        if (!Array.isArray(msgs) || msgs.length === 0) return;
+
+        let hasNew = false;
+        const existingIds = new Set(this.chatMessages.map(m => m.id));
+
+        msgs.forEach(m => {
+            if (m && m.id && !existingIds.has(m.id)) {
+                if (!/\[AI\]|\bbot\b|openai|gpt|gemini|assistant|chatbot/i.test(m.text)) {
+                    this.chatMessages.push(m);
+                    existingIds.add(m.id);
+                    hasNew = true;
+                }
+            }
+        });
+
+        if (hasNew) {
+            this.chatMessages.sort((a, b) => a.timestamp - b.timestamp);
+            if (this.chatMessages.length > 60) {
+                this.chatMessages = this.chatMessages.slice(-60);
+            }
+            this.saveChatMessages();
+            this.notifyChatUpdated();
+        }
+    }
+
+    public syncChatFromStorage(msgs: ChatMessage[]) {
+        this.mergeHistory(msgs);
+    }
+
+    private saveChatMessages() {
         try {
             localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.chatMessages));
         } catch (e) {
             console.warn('Could not save chat messages:', e);
         }
-
-        this.notifyChatUpdated();
-
-        // Active runner interactive reply
-        setTimeout(() => {
-            const replies = [
-                "Nice run! Keep pushing! 🔥",
-                "GG! See you at stage 50!",
-                "Good luck! The obstacles get intense!",
-                "You've got this! 👑",
-                "Careful on the narrow platforms!"
-            ];
-            const reply = replies[Math.floor(Math.random() * replies.length)];
-            const runner = this.activeRunners[Math.floor(Math.random() * this.activeRunners.length)];
-            this.chatMessages.push({
-                id: 'msg_' + Date.now(),
-                author: runner.name,
-                isOwner: false,
-                text: reply,
-                timestamp: Date.now()
-            });
-            if (this.chatMessages.length > 50) this.chatMessages.shift();
-            try {
-                localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.chatMessages));
-            } catch (e) {}
-            this.notifyChatUpdated();
-        }, 2600);
-
-        return true;
     }
 
-    // Leaderboard table entries (Real-time active runners competition)
+    // Leaderboard table entries (Local player + any real online players)
     public getLeaderboard(): PlayerProgress[] {
         const list: PlayerProgress[] = [
             {
@@ -270,7 +326,7 @@ export class GameState {
                 percentage: this.getPercentage(),
                 isFinished: this.isWon
             },
-            ...this.activeRunners
+            ...this.onlinePlayers
         ];
         return list.sort((a, b) => b.stage - a.stage);
     }

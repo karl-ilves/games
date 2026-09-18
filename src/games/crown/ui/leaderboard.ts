@@ -10,10 +10,6 @@ export class CrownLeaderboardUI {
         this.gameState.onLeaderboardUpdated(() => {
             this.render();
         });
-        // Periodically tick live runner competition
-        setInterval(() => {
-            this.gameState.tickLiveRunners();
-        }, 16000);
         this.render();
     }
 

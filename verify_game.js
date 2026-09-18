@@ -7008,13 +7008,48 @@ try {
                     strafingCorrect = (movedRightX < startX) && (movedLeftX > movedRightX);
                 }
 
+                // Test receiving incoming online message from another real player
+                let canReceiveOnlineMessage = false;
+                if (game?.gameState) {
+                    game.gameState.receiveOnlineMessage({
+                        id: 'test_remote_msg_1',
+                        author: 'RealProGamer',
+                        isOwner: false,
+                        text: 'Hello from another real player!',
+                        timestamp: Date.now()
+                    });
+                    const chatHtml = chatMessages?.textContent || '';
+                    canReceiveOnlineMessage = chatHtml.includes('RealProGamer') && chatHtml.includes('Hello from another real player!');
+                }
+
+                // Test receiving progress update from another online real player
+                let canReceiveRemotePlayerProgress = false;
+                if (game?.gameState) {
+                    game.gameState.updateRemotePlayerProgress({
+                        id: 'p_remote_1',
+                        name: 'SpeedyRunner',
+                        isOwner: false,
+                        stage: 15,
+                        percentage: 30,
+                        isFinished: false
+                    });
+                    const lbHtml = leaderboard?.textContent || '';
+                    canReceiveRemotePlayerProgress = lbHtml.includes('SpeedyRunner') && lbHtml.includes('Stage 15');
+                }
+
+                const onlineBadgeText = document.getElementById('crown-chat-online-badge')?.textContent || '';
+
                 return {
                     hasGameInstance: !!game,
                     hasCanvas: !!canvas,
                     hudStage,
                     hasChat: !!chatContainer && !!chatMessages,
+                    hasOnlineNetwork: !!game?.onlineNetwork,
+                    onlineBadgeText,
                     testMessageSent,
                     botMessageRejected,
+                    canReceiveOnlineMessage,
+                    canReceiveRemotePlayerProgress,
                     stageCount,
                     currentStage,
                     pct,
@@ -7035,6 +7070,12 @@ try {
             if (!crownGamePageTest.testMessageSent || !crownGamePageTest.botMessageRejected) {
                 throw new Error("Crown Obby Anti-AI chat verification failed: " + JSON.stringify(crownGamePageTest));
             }
+            if (!crownGamePageTest.hasOnlineNetwork || !crownGamePageTest.canReceiveOnlineMessage || !crownGamePageTest.onlineBadgeText.includes('ONLINE')) {
+                throw new Error("Crown Obby Online Chat Network verification failed: " + JSON.stringify(crownGamePageTest));
+            }
+            if (!crownGamePageTest.canReceiveRemotePlayerProgress) {
+                throw new Error("Crown Obby Remote Player Live Progress verification failed: " + JSON.stringify(crownGamePageTest));
+            }
             if (crownGamePageTest.lbRows < 1 || !crownGamePageTest.hasSearchingRow || crownGamePageTest.searchingWaveLetters < 15 || !crownGamePageTest.hasSeparateStats) {
                 throw new Error("Crown Obby Live Progress table verification failed: " + JSON.stringify(crownGamePageTest));
             }
@@ -7044,7 +7085,7 @@ try {
             if (!crownGamePageTest.cameraBehindPlayer) {
                 throw new Error("Crown Obby camera perspective check failed: " + JSON.stringify(crownGamePageTest));
             }
-            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, Strafing, Slow Waves, Clean Unobstructed View) testid edukalt läbitud!");
+            console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, Real-Time Online Chat, Live Remote Sync) testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

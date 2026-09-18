@@ -6,6 +6,7 @@ import { PlayerController } from './systems/playerController';
 import { CrownHud } from './ui/hud';
 import { CrownChatUI } from './ui/chat';
 import { CrownLeaderboardUI } from './ui/leaderboard';
+import { CrownOnlineNetwork } from './systems/onlineNetwork';
 import { yardService } from '../../shared/yardService';
 import { isTestMode } from '../../auth';
 
@@ -15,6 +16,7 @@ export class CrownObbyGame {
     public renderer!: THREE.WebGLRenderer;
 
     public gameState: GameState;
+    public onlineNetwork!: CrownOnlineNetwork;
     public stageBuilder!: StageBuilder;
     public cameraController!: CameraController;
     public playerController!: PlayerController;
@@ -28,6 +30,8 @@ export class CrownObbyGame {
 
     constructor() {
         this.gameState = new GameState();
+        this.onlineNetwork = new CrownOnlineNetwork(this.gameState);
+        this.gameState.setNetwork(this.onlineNetwork);
         this.init();
     }
 
