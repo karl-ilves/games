@@ -21,7 +21,7 @@ export function updateAI(delta: number, ctx: AIContext) {
     const murderer = ctx.characters.find(c => c.role === 'murderer' && c.isAlive);
 
     ctx.characters.forEach(c => {
-        if (c.isPlayer || !c.isAlive) return;
+        if (c.isPlayer || c.isRemotePlayer || !c.isAlive) return;
 
         if (ctx.state === 'role_reveal' || ctx.state === 'map_vote') {
             c.aiTarget = undefined;

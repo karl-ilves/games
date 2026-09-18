@@ -10,6 +10,9 @@ import { MmpCrateManager } from "../state/crateManager";
 import { audio } from "../audio";
 import { InvisibilitySystem } from "./invisibilitySystem";
 import { SpectatorSystem } from "./spectatorSystem";
+import { MmpOnlineNetwork } from "./mmpOnlineNetwork";
+import { MmpRosterManager } from "./mmpRosterManager";
+import { getCurrentUserProfile, isPlayardOwner } from "../../../auth";
 
 export function createGameSystems(game: any): {
     combatSystem: CombatSystem;
@@ -19,6 +22,8 @@ export function createGameSystems(game: any): {
     inputController: InputController;
     invisibilitySystem: InvisibilitySystem;
     spectatorSystem: SpectatorSystem;
+    onlineNetwork: MmpOnlineNetwork;
+    rosterManager: MmpRosterManager;
 } {
     const combatSystem = new CombatSystem({
         characters: game.characters,
@@ -161,5 +166,35 @@ export function createGameSystems(game: any): {
         getState: () => game.state
     });
 
-    return { combatSystem, crateShopUI, adminPanelUI, roundManager, inputController, invisibilitySystem, spectatorSystem };
+    const prof = getCurrentUserProfile();
+    const username = prof?.username || "Player";
+    const isOwner = isPlayardOwner(prof?.email);
+    const playerId = "mmp_" + Math.random().toString(36).substring(2, 9);
+
+    const onlineNetwork = new MmpOnlineNetwork(playerId, username, isOwner);
+    const rosterManager = new MmpRosterManager({
+        scene: game.scene,
+        characters: game.characters,
+        playerChar: game.playerChar,
+        crateManager: game.crateManager,
+        getState: () => game.state,
+        addIncidentFeed: (msg: string) => game.addIncidentFeed(msg),
+        updateAliveCount: () => game.updateAliveCount()
+    });
+
+    onlineNetwork.onRemotePlayerState((s) => rosterManager.handleRemotePlayerState(s));
+    onlineNetwork.onRemotePlayerLeave((id) => rosterManager.handleRemotePlayerLeave(id));
+    onlineNetwork.onRemotePlayerAction((e) => rosterManager.handleRemotePlayerAction(e));
+
+    return {
+        combatSystem,
+        crateShopUI,
+        adminPanelUI,
+        roundManager,
+        inputController,
+        invisibilitySystem,
+        spectatorSystem,
+        onlineNetwork,
+        rosterManager
+    };
 }

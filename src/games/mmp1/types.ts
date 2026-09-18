@@ -18,6 +18,8 @@ export interface Character {
     id: string;
     name: string;
     isPlayer: boolean;
+    isRemotePlayer?: boolean;
+    remotePlayerId?: string;
     role: Role;
     isAlive: boolean;
     hasWeaponEquipped: boolean;
@@ -38,6 +40,10 @@ export interface Character {
     aiTimer: number;
     coins: number;
     walkAnimTimer?: number;
+    targetPos?: THREE.Vector3;
+    targetRotY?: number;
+    isWalking?: boolean;
+    lastSeenTime?: number;
 }
 
 export interface DroppedGun {

@@ -43,7 +43,7 @@ export function applyLocalization() {
     if (loginTitle) loginTitle.textContent = isEt ? 'Konto sisselogimine / Registreerimine' : 'Account Login / Register';
 
     const loginSub = document.querySelector('#login-form p');
-    if (loginSub) loginSub.textContent = isEt ? 'Logi sisse, et luua mänge ja salvestada oma progress' : 'Log in to create games & save your progress';
+    if (loginSub) loginSub.textContent = isEt ? 'Logi sisse, et luua mänge, mängida sõpradega ja salvestada oma progress' : 'Log in to create games, play with friends & save your progress';
 
     const emailInput = document.getElementById('auth-email') as HTMLInputElement | null;
     if (emailInput) emailInput.placeholder = isEt ? 'E-post' : 'E-mail';

@@ -380,8 +380,9 @@ export class RoundManager {
         this.ctx.playerChar.mesh.position.copy(this.ctx.playerChar.position);
         this.ctx.playerChar.mesh.rotation.y = this.ctx.playerChar.rotation;
 
-        const botNames = ["Alex", "Sam", "Jordan", "Charlie", "Taylor", "Morgan", "Riley"];
-        this.ctx.characters.forEach((c, i) => {
+        const otherCount = Math.max(1, this.ctx.characters.length - 1);
+        let otherIndex = 0;
+        this.ctx.characters.forEach((c) => {
             c.role = "innocent";
             c.isAlive = true;
             c.hasWeaponEquipped = false;
@@ -391,12 +392,13 @@ export class RoundManager {
             c.aiTarget = undefined;
             c.aiTimer = 1.5 + Math.random() * 2;
             if (!c.isPlayer) {
-                const angle = -Math.PI * 0.7 + ((i - 1) / (botNames.length - 1)) * (Math.PI * 1.4);
-                const radius = 7.0 + (i % 2) * 1.2;
+                const angle = -Math.PI * 0.7 + (otherIndex / Math.max(1, otherCount - 1)) * (Math.PI * 1.4);
+                const radius = 7.0 + (otherIndex % 2) * 1.2;
                 c.position.set(Math.sin(angle) * radius, 0, 150 - Math.cos(angle) * radius);
                 c.mesh.position.copy(c.position);
                 c.rotation = Math.atan2(-c.position.x, 150 - c.position.z);
                 c.mesh.rotation.y = c.rotation;
+                otherIndex++;
             }
         });
 

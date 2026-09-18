@@ -643,7 +643,7 @@ export async function initAuth() {
                 tabCreateAccount.style.color = '#a4b0be';
             }
             if (authTitle) authTitle.textContent = 'Login to Playard';
-            if (authSubtitle) authSubtitle.textContent = 'Log in to create games & save your progress';
+            if (authSubtitle) authSubtitle.textContent = 'Log in to create games, play with friends & save your progress';
             if (registerFields) registerFields.style.display = 'none';
             if (loginBtn) loginBtn.style.display = 'block';
             if (registerBtn) registerBtn.style.display = 'none';

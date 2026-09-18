@@ -23,6 +23,8 @@ import { handleEquipSkin } from "./systems/weaponLoadout";
 import { createGameSystems } from "./systems/systemFactories";
 import { InvisibilitySystem } from "./systems/invisibilitySystem";
 import { SpectatorSystem } from "./systems/spectatorSystem";
+import { MmpOnlineNetwork } from "./systems/mmpOnlineNetwork";
+import { MmpRosterManager } from "./systems/mmpRosterManager";
 
 (window as any).yardService = yardService;
 
@@ -71,6 +73,9 @@ export class MurderMysteryGame {
     public inputController!: InputController;
     public invisibilitySystem!: InvisibilitySystem;
     public spectatorSystem!: SpectatorSystem;
+    public onlineNetwork!: MmpOnlineNetwork;
+    public rosterManager!: MmpRosterManager;
+    private lastBroadcastTime = 0;
     public muzzleFlashLight: THREE.PointLight | null = null;
 
     constructor() {
@@ -111,6 +116,8 @@ export class MurderMysteryGame {
         this.inputController = sys.inputController;
         this.invisibilitySystem = sys.invisibilitySystem;
         this.spectatorSystem = sys.spectatorSystem;
+        this.onlineNetwork = sys.onlineNetwork;
+        this.rosterManager = sys.rosterManager;
 
         this.buildMansion();
         this.emotesWidget = new InGameEmotesWidget({ getAvatarRig: () => this.playerChar?.avatarRig, topOffset: 70, leftOffset: 16 });
@@ -137,28 +144,12 @@ export class MurderMysteryGame {
     }
 
     public checkAccessAuthorization() {
-        const prof = getCurrentUserProfile();
-        const owner = isPlayardOwner(prof?.email);
-        const testMode = isTestMode();
+        const prof = getCurrentUserProfile(), owner = isPlayardOwner(prof?.email);
         const userAge = prof ? (prof.birthDate ? calculateAge(prof.birthDate) : (prof.age ?? 99)) : 99;
-        const isAgeRestricted = prof && !owner && !prof.isAdmin && userAge < 10;
-
         const denied = document.getElementById("access-denied-overlay");
-        if (isAgeRestricted) {
-            if (denied) {
-                denied.style.display = "flex";
-                const title = denied.querySelector("h2");
-                if (title) title.textContent = "🔒 Age 10+ Required";
-                const desc = denied.querySelector("p");
-                if (desc) desc.textContent = `You are currently ${userAge} years old. This game unlocks when you turn 10!`;
-            }
-        } else {
-            if (denied) denied.style.display = "none";
-        }
-
+        if (denied) denied.style.display = (prof && !owner && !prof.isAdmin && userAge < 10) ? "flex" : "none";
         const btnAdmin = document.getElementById("btn-admin-panel");
-        if (btnAdmin) btnAdmin.style.display = (owner || testMode) ? "flex" : "none";
-
+        if (btnAdmin) btnAdmin.style.display = (owner || isTestMode()) ? "flex" : "none";
         applyMmp1Localization();
     }
 
@@ -208,8 +199,13 @@ export class MurderMysteryGame {
         if (this.state !== "in_game" || !this.playerChar.isAlive) return;
         if (!this.playerChar.hasWeaponEquipped && this.playerChar.role !== "innocent") this.toggleWeapon();
         const coords = screenPos ?? { x: 0, y: 0 };
-        if (this.playerChar.role === "murderer") this.combatSystem.performMurdererSlash(this.playerChar, coords);
-        else if (this.playerChar.role === "sheriff") this.combatSystem.performSheriffShoot(this.playerChar, coords);
+        if (this.playerChar.role === "murderer") {
+            this.combatSystem.performMurdererSlash(this.playerChar, coords);
+            this.onlineNetwork?.broadcastAction("slash");
+        } else if (this.playerChar.role === "sheriff") {
+            this.combatSystem.performSheriffShoot(this.playerChar, coords);
+            this.onlineNetwork?.broadcastAction("shoot");
+        }
     }
 
     public endRound(winner: "sheriff_win" | "murderer_win" | "time_out", reason: string) {
@@ -225,38 +221,24 @@ export class MurderMysteryGame {
 
     public updatePlayer(delta: number = 0.016) {
         updatePlayer(delta, {
-            playerChar: this.playerChar,
-            characters: this.characters,
-            wallMeshes: this.wallMeshes,
-            mapColliders: this.mapColliders,
-            keys: this.keys,
-            joystickInput: this.joystickInput,
-            isSprinting: this.isSprinting,
-            cameraYaw: this.cameraYaw,
-            cameraPitch: this.cameraPitch,
-            cameraDistance: this.cameraDistance,
-            camera: this.camera,
-            scene: this.scene,
-            state: this.state,
-            coins: this.coins,
-            droppedGun: this.droppedGun,
-            emotesWidget: this.emotesWidget,
+            playerChar: this.playerChar, characters: this.characters,
+            wallMeshes: this.wallMeshes, mapColliders: this.mapColliders,
+            keys: this.keys, joystickInput: this.joystickInput, isSprinting: this.isSprinting,
+            cameraYaw: this.cameraYaw, cameraPitch: this.cameraPitch, cameraDistance: this.cameraDistance,
+            camera: this.camera, scene: this.scene, state: this.state, coins: this.coins,
+            droppedGun: this.droppedGun, emotesWidget: this.emotesWidget,
             interactionPrompt: document.getElementById("interaction-prompt"),
             hudCoinsVal: document.getElementById("hud-coins-val"),
-            setCameraYaw: (v) => { this.cameraYaw = v; },
-            setCameraPitch: (v) => { this.cameraPitch = v; },
+            setCameraYaw: (v) => { this.cameraYaw = v; }, setCameraPitch: (v) => { this.cameraPitch = v; },
             spectatorSystem: this.spectatorSystem
         });
     }
 
     public updateAI(delta: number = 0.016) {
         updateAI(delta, {
-            characters: this.characters,
-            state: this.state,
-            mapColliders: this.mapColliders,
-            wallMeshes: this.wallMeshes,
-            droppedGun: this.droppedGun,
-            hasSheriffWitnessedMurder: this.hasSheriffWitnessedMurder,
+            characters: this.characters, state: this.state,
+            mapColliders: this.mapColliders, wallMeshes: this.wallMeshes,
+            droppedGun: this.droppedGun, hasSheriffWitnessedMurder: this.hasSheriffWitnessedMurder,
             setHasSheriffWitnessedMurder: (v) => { this.hasSheriffWitnessedMurder = v; },
             addIncidentFeed: (t) => this.addIncidentFeed(t),
             performMurdererSlash: (c) => this.combatSystem.performMurdererSlash(c),
@@ -277,26 +259,15 @@ export class MurderMysteryGame {
     }
 
     public setAdminRole(role: Role) {
-        handleSetAdminRole(
-            role,
-            this.characters,
-            this.playerChar,
-            this.state,
-            this.adminPanelUI,
-            this.hudUI,
-            (r) => { this.adminForcedRole = r; },
-            (msg) => this.addIncidentFeed(msg),
-            () => this.updateRoleHud()
-        );
+        handleSetAdminRole(role, this.characters, this.playerChar, this.state, this.adminPanelUI, this.hudUI,
+            (r) => { this.adminForcedRole = r; }, (msg) => this.addIncidentFeed(msg), () => this.updateRoleHud());
     }
 
     public addIncidentFeed(text: string) { this.hudUI.addIncidentFeed(text); }
 
     private updateYardDisplay() {
-        const yards = yardService.getYards();
-        const el = document.getElementById("game-yard-val");
-        if (el) el.textContent = yards.toLocaleString();
-        const icon = document.getElementById("game-yard-icon");
+        const el = document.getElementById("game-yard-val"), icon = document.getElementById("game-yard-icon");
+        if (el) el.textContent = yardService.getYards().toLocaleString();
         if (icon) icon.innerHTML = yardService.renderYardSvg(18);
     }
 
@@ -316,8 +287,7 @@ export class MurderMysteryGame {
             if (this.roundManager.mapVoteCountdown <= 0) this.finishMapVoting();
         } else if (this.state === "in_game") {
             this.roundTimer -= delta;
-            const mins = Math.floor(Math.max(0, this.roundTimer) / 60);
-            const secs = Math.floor(Math.max(0, this.roundTimer) % 60);
+            const mins = Math.floor(Math.max(0, this.roundTimer) / 60), secs = Math.floor(Math.max(0, this.roundTimer) % 60);
             const hudTimer = document.getElementById("hud-timer-val");
             if (hudTimer) hudTimer.textContent = mins.toString().padStart(2, "0") + ":" + secs.toString().padStart(2, "0");
             if (this.roundTimer <= 0) this.endRound("time_out", "Aeg sai otsa! Mõrvar ei suutnud kõiki elimineerida!");
@@ -328,8 +298,33 @@ export class MurderMysteryGame {
 
         this.updatePlayer(delta);
         this.updateAI(delta);
+        this.rosterManager?.update(delta, this.clock.getElapsedTime());
+        this.broadcastPlayerState();
         this.renderer.render(this.scene, this.camera);
     };
+
+    private broadcastPlayerState() {
+        if (!this.playerChar || !this.onlineNetwork) return;
+        const now = performance.now();
+        const isMoving = !!(this.keys["KeyW"] || this.keys["KeyS"] || this.keys["KeyA"] || this.keys["KeyD"] ||
+            Math.abs(this.joystickInput.x) > 0.1 || Math.abs(this.joystickInput.y) > 0.1);
+        if (isMoving && now - this.lastBroadcastTime < 65) return;
+        this.lastBroadcastTime = now;
+        this.onlineNetwork.broadcastPlayerState({
+            id: this.onlineNetwork.getPlayerId(),
+            name: this.playerChar.name,
+            isOwner: isPlayardOwner(getCurrentUserProfile()?.email),
+            x: this.playerChar.position.x,
+            y: this.playerChar.position.y,
+            z: this.playerChar.position.z,
+            rotY: this.playerChar.rotation,
+            isMoving,
+            isAlive: this.playerChar.isAlive,
+            hasWeaponEquipped: this.playerChar.hasWeaponEquipped,
+            role: this.playerChar.role,
+            coins: this.playerChar.coins
+        });
+    }
 }
 
 function initMmp1() {

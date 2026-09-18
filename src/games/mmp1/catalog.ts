@@ -8,7 +8,7 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         description: 'Luksuslik kahekorruseline hotell fuajee, tubade, koridoride ja rõdudega.',
         spawnPoints: [
             [0, 0, 0], [-10, 0, -8], [10, 0, -8], [-12, 0, 10], [12, 0, 10],
-            [-22, 0, -2], [22, 0, -2], [0, 0, -12]
+            [-22, 0, -2], [22, 0, -2], [0, 0, -12], [-6, 0, 16], [6, 0, 16]
         ],
         coinSpawns: [
             [0, 1, 0], [-8, 1, -12], [8, 1, -12], [-14, 1, 8], [14, 1, 8],
@@ -23,7 +23,7 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         description: 'Militaarbaas kasarmute, radaripunkri, varustuse angaari ja siseõuega.',
         spawnPoints: [
             [0, 0, 0], [-14, 0, -10], [14, 0, -10], [-14, 0, 12], [14, 0, 12],
-            [-24, 0, 0], [24, 0, 0], [0, 0, -22]
+            [-24, 0, 0], [24, 0, 0], [0, 0, -22], [-8, 0, 20], [8, 0, 20]
         ],
         coinSpawns: [
             [0, 1, 0], [-12, 1, -14], [12, 1, -14], [-16, 1, 12], [16, 1, 12],
@@ -38,7 +38,7 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         description: 'Suur büroohoone boksikontorite, koosolekuruumi, serveriruumi ja puhkealaga.',
         spawnPoints: [
             [0, 0, 0], [-14, 0, -12], [14, 0, -12], [-14, 0, 14], [14, 0, 14],
-            [-22, 0, 0], [22, 0, 0], [0, 0, -18]
+            [-22, 0, 0], [22, 0, 0], [0, 0, -18], [-8, 0, 20], [8, 0, 20]
         ],
         coinSpawns: [
             [0, 1, 0], [-10, 1, -10], [10, 1, -10], [-14, 1, 14], [14, 1, 14],
@@ -53,7 +53,7 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         description: 'Rannakuurort kuldse liiva, palmide, bangalote, tiki-baari ja vaateplatvormiga.',
         spawnPoints: [
             [0, 0, 0], [-14, 0, -8], [14, 0, -8], [-12, 0, 14], [12, 0, 14],
-            [-22, 0, 0], [22, 0, 0], [0, 0, -16]
+            [-22, 0, 0], [22, 0, 0], [0, 0, -16], [-6, 0, 20], [6, 0, 20]
         ],
         coinSpawns: [
             [0, 1, 0], [-12, 1, -12], [12, 1, -12], [-16, 1, 12], [16, 1, 12],
@@ -68,7 +68,7 @@ export const MAP_CATALOG: Record<MapId, MapConfig> = {
         description: 'Mitmetasandiline luksusjaht salongi, kajutite, kaptenisilla ja mullivanniga.',
         spawnPoints: [
             [0, 0, 8], [-8, 0, -12], [8, 0, -12], [-8, 0, 14], [8, 0, 14],
-            [-14, 0, 0], [14, 0, 0], [0, 0, -22]
+            [-14, 0, 0], [14, 0, 0], [0, 0, -22], [-6, 0, -4], [6, 0, -4]
         ],
         coinSpawns: [
             [0, 1, 8], [-8, 1, -10], [8, 1, -10], [-8, 1, 12], [8, 1, 12],
