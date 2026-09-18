@@ -25,6 +25,7 @@ import { InvisibilitySystem } from "./systems/invisibilitySystem";
 import { SpectatorSystem } from "./systems/spectatorSystem";
 import { MmpOnlineNetwork } from "./systems/mmpOnlineNetwork";
 import { MmpRosterManager } from "./systems/mmpRosterManager";
+import { MmpSyncSystem } from "./systems/mmpSyncSystem";
 
 (window as any).yardService = yardService;
 
@@ -75,6 +76,7 @@ export class MurderMysteryGame {
     public spectatorSystem!: SpectatorSystem;
     public onlineNetwork!: MmpOnlineNetwork;
     public rosterManager!: MmpRosterManager;
+    public syncSystem!: MmpSyncSystem;
     private lastBroadcastTime = 0;
     public muzzleFlashLight: THREE.PointLight | null = null;
 
@@ -118,6 +120,7 @@ export class MurderMysteryGame {
         this.spectatorSystem = sys.spectatorSystem;
         this.onlineNetwork = sys.onlineNetwork;
         this.rosterManager = sys.rosterManager;
+        this.syncSystem = sys.syncSystem;
 
         this.buildMansion();
         this.emotesWidget = new InGameEmotesWidget({ getAvatarRig: () => this.playerChar?.avatarRig, topOffset: 70, leftOffset: 16 });
@@ -161,7 +164,7 @@ export class MurderMysteryGame {
     public startMapVoting() { this.roundManager.startMapVoting(); }
     public castMapVote(mapId: MapId) { this.roundManager.castMapVote(mapId); }
     public finishMapVoting() { this.startRound(this.roundManager.finishMapVoting()); }
-    public startRound(forcedMap?: MapId) { this.mansionGroup = this.roundManager.startRound(forcedMap); }
+    public startRound(forcedMap?: MapId, forcedRoles?: { murdererId?: string; sheriffId?: string }) { this.mansionGroup = this.roundManager.startRound(forcedMap, forcedRoles); }
     public get playerVotedMap(): MapId | null { return this.roundManager?.playerVotedMap ?? null; }
     public set playerVotedMap(v: MapId | null) { if (this.roundManager) this.roundManager.playerVotedMap = v; }
     public get mapVotes(): Record<MapId, number> { return this.roundManager?.mapVotes ?? ({} as any); }
@@ -275,16 +278,8 @@ export class MurderMysteryGame {
         requestAnimationFrame(this.animate);
         const delta = Math.min(this.clock.getDelta(), 0.1);
 
-        if (this.state === "lobby") {
-            this.lobbyCountdown -= delta;
-            const lobbySec = document.getElementById("lobby-countdown-sec");
-            if (lobbySec) lobbySec.textContent = Math.max(0, Math.ceil(this.lobbyCountdown)) + "s";
-            if (this.lobbyCountdown <= 0) this.startMapVoting();
-        } else if (this.state === "map_vote") {
-            this.roundManager.mapVoteCountdown -= delta;
-            const mapTimer = document.getElementById("map-vote-timer");
-            if (mapTimer) mapTimer.textContent = Math.max(0, Math.ceil(this.roundManager.mapVoteCountdown)) + "s";
-            if (this.roundManager.mapVoteCountdown <= 0) this.finishMapVoting();
+        if (this.state === "lobby" || this.state === "map_vote") {
+            this.syncSystem?.update(delta);
         } else if (this.state === "in_game") {
             this.roundTimer -= delta;
             const mins = Math.floor(Math.max(0, this.roundTimer) / 60), secs = Math.floor(Math.max(0, this.roundTimer) % 60);

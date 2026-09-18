@@ -12,6 +12,7 @@ import { InvisibilitySystem } from "./invisibilitySystem";
 import { SpectatorSystem } from "./spectatorSystem";
 import { MmpOnlineNetwork } from "./mmpOnlineNetwork";
 import { MmpRosterManager } from "./mmpRosterManager";
+import { MmpSyncSystem } from "./mmpSyncSystem";
 import { getCurrentUserProfile, isPlayardOwner } from "../../../auth";
 
 export function createGameSystems(game: any): {
@@ -24,6 +25,7 @@ export function createGameSystems(game: any): {
     spectatorSystem: SpectatorSystem;
     onlineNetwork: MmpOnlineNetwork;
     rosterManager: MmpRosterManager;
+    syncSystem: MmpSyncSystem;
 } {
     const combatSystem = new CombatSystem({
         characters: game.characters,
@@ -172,6 +174,9 @@ export function createGameSystems(game: any): {
     const playerId = "mmp_" + Math.random().toString(36).substring(2, 9);
 
     const onlineNetwork = new MmpOnlineNetwork(playerId, username, isOwner);
+    (roundManager as any).ctx.onlineNetwork = onlineNetwork;
+    (roundManager as any).ctx.broadcastAction = (action: any, payload?: any) => onlineNetwork.broadcastAction(action, payload);
+
     const rosterManager = new MmpRosterManager({
         scene: game.scene,
         characters: game.characters,
@@ -186,6 +191,21 @@ export function createGameSystems(game: any): {
     onlineNetwork.onRemotePlayerLeave((id) => rosterManager.handleRemotePlayerLeave(id));
     onlineNetwork.onRemotePlayerAction((e) => rosterManager.handleRemotePlayerAction(e));
 
+    const syncSystem = new MmpSyncSystem(
+        {
+            get state() { return game.state; },
+            get lobbyCountdown() { return game.lobbyCountdown; },
+            set lobbyCountdown(v: number) { game.lobbyCountdown = v; },
+            get adminForcedRole() { return game.adminForcedRole; },
+            get characters() { return game.characters; },
+            startMapVoting: () => game.startMapVoting(),
+            startRound: (map, forcedRoles) => game.startRound(map, forcedRoles)
+        },
+        onlineNetwork,
+        rosterManager,
+        roundManager
+    );
+
     return {
         combatSystem,
         crateShopUI,
@@ -195,6 +215,7 @@ export function createGameSystems(game: any): {
         invisibilitySystem,
         spectatorSystem,
         onlineNetwork,
-        rosterManager
+        rosterManager,
+        syncSystem
     };
 }

@@ -18,7 +18,7 @@ export interface MmpPlayerState {
 
 export interface MmpActionEvent {
     id: string;
-    action: 'slash' | 'shoot' | 'vote_map' | 'pickup_gun';
+    action: 'slash' | 'shoot' | 'vote_map' | 'pickup_gun' | 'lobby_sync' | 'start_map_vote' | 'start_round' | 'return_lobby';
     payload?: any;
 }
 
@@ -180,7 +180,7 @@ export class MmpOnlineNetwork {
         }
     }
 
-    public broadcastAction(action: 'slash' | 'shoot' | 'vote_map' | 'pickup_gun', payload?: any) {
+    public broadcastAction(action: 'slash' | 'shoot' | 'vote_map' | 'pickup_gun' | 'lobby_sync' | 'start_map_vote' | 'start_round' | 'return_lobby', payload?: any) {
         const evt: MmpActionEvent = {
             id: this.localPlayerId,
             action,

@@ -383,8 +383,6 @@ export function applyMmp1Localization() {
         const span = lobbyBanner.querySelector('span:first-child');
         if (span) span.textContent = texts.hud.lobbyBannerPrefix;
     }
-    const forceStartBtn = document.getElementById('btn-force-start');
-    if (forceStartBtn) forceStartBtn.textContent = texts.hud.forceStartBtn;
 
     // 3. Gun Dropped Banner & Interaction Prompt
     const gunDroppedText = document.getElementById('gun-dropped-text');

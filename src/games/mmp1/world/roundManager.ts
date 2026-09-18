@@ -36,6 +36,8 @@ export interface RoundContext {
     updateRoleHud: () => void;
     updateAliveCount: () => void;
     isPointerLocked: () => boolean;
+    onlineNetwork?: any;
+    broadcastAction?: (action: any, payload?: any) => void;
 }
 
 export class RoundManager {
@@ -117,6 +119,14 @@ export class RoundManager {
         audio.playVoteSound();
         this.updateMapVoteUI();
         this.ctx.addIncidentFeed("🗳️ Hääletasid kaardi poolt: " + (MAP_CATALOG[mapId]?.name || mapId));
+        this.ctx.broadcastAction?.('vote_map', { mapId });
+    }
+
+    public registerRemoteVote(mapId: MapId) {
+        if (this.mapVotes[mapId] !== undefined) {
+            this.mapVotes[mapId]++;
+            this.updateMapVoteUI();
+        }
     }
 
     public updateMapVoteUI() {
@@ -161,7 +171,7 @@ export class RoundManager {
         return winningMap;
     }
 
-    public startRound(forcedMap?: MapId) {
+    public startRound(forcedMap?: MapId, forcedRoles?: { murdererId?: string; sheriffId?: string }) {
         this.ctx.setState("role_reveal");
         this.ctx.setLastHero(null);
         this.ctx.setHasSheriffWitnessedMurder(false);
@@ -202,6 +212,18 @@ export class RoundManager {
                 livingBots[0].role = "murderer";
                 livingBots[1].role = "sheriff";
             }
+        } else if (forcedRoles?.murdererId && forcedRoles?.sheriffId) {
+            const localId = this.ctx.onlineNetwork?.getPlayerId() || 'player';
+            this.ctx.characters.forEach(c => {
+                const charId = c.isPlayer ? localId : (c.remotePlayerId || c.id);
+                if (charId === forcedRoles.murdererId) {
+                    c.role = "murderer";
+                } else if (charId === forcedRoles.sheriffId) {
+                    c.role = "sheriff";
+                } else {
+                    c.role = "innocent";
+                }
+            });
         } else {
             const shuffled = [...this.ctx.characters].sort(() => Math.random() - 0.5);
             shuffled[0].role = "murderer";

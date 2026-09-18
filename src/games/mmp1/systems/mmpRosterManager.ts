@@ -33,6 +33,10 @@ export class MmpRosterManager {
         return this.remotePlayers.size;
     }
 
+    public getRemotePlayerIds(): string[] {
+        return Array.from(this.remotePlayers.keys());
+    }
+
     public getTotalPlayerCount(): number {
         return 1 + this.remotePlayers.size;
     }

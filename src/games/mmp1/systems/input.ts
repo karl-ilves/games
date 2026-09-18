@@ -197,10 +197,6 @@ export class InputController {
             }
         });
 
-        document.getElementById('btn-force-start')?.addEventListener('click', () => {
-            this.ctx.onStartMapVoting();
-        });
-
         document.querySelectorAll('.map-vote-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const target = e.currentTarget as HTMLElement;

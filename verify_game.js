@@ -4945,6 +4945,26 @@ try {
             if (lobbyBannerDisplay === 'none') throw new Error('MMP1 Lobby Banner must be visible at start!');
             console.log('   MMP1 Lobby Intermission Banner visible: ✅');
 
+            // Verify force start button was removed per user request
+            const forceStartBtn = await page.$('#btn-force-start');
+            if (forceStartBtn) throw new Error('MMP1 #btn-force-start button must be removed from lobby banner!');
+            console.log('   MMP1 Force Start button removed: ✅');
+
+            // Verify synchronized countdown & MmpSyncSystem active
+            const syncCheck = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                return {
+                    hasSyncSystem: !!game?.syncSystem,
+                    countdown: game?.lobbyCountdown,
+                    isHost: game?.syncSystem?.isHost()
+                };
+            });
+            console.log(`   MMP1 Sync System active: ${syncCheck.hasSyncSystem}, Countdown: ${syncCheck.countdown?.toFixed(1)}s, Host: ${syncCheck.isHost}`);
+            if (!syncCheck.hasSyncSystem || typeof syncCheck.countdown !== 'number') {
+                throw new Error('MMP1 Sync System and countdown must be active for synchronized game start!');
+            }
+            console.log('   MMP1 Synchronized Game Start system verified: ✅');
+
             // Verify Initial Role HUD (LOBBY)
             const roleText = await page.$eval('#hud-role-text', el => el.textContent);
             console.log(`   MMP1 Initial Role (Expected: LOBBY): ${roleText}`);
