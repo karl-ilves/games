@@ -126,6 +126,9 @@ export class CrownObbyGame {
             onVictory: () => {
                 this.hud.showVictory();
                 this.leaderboardUI.render();
+            },
+            onRespawn: () => {
+                this.broadcastCurrentPlayerState();
             }
         });
 
@@ -197,26 +200,34 @@ export class CrownObbyGame {
         }
 
         // Broadcast local 3D player position & animation to all online players
-        if (currentTime - this.lastBroadcastTime > 55) {
-            this.lastBroadcastTime = currentTime;
-            const pos = this.playerController.getPosition();
-            this.onlineNetwork.broadcastPlayerState({
-                id: this.onlineNetwork.getPlayerId(),
-                name: this.gameState.getPlayerName(),
-                isOwner: this.gameState.getIsOwner(),
-                x: pos.x,
-                y: pos.y,
-                z: pos.z,
-                rotY: this.playerController.getRotationY(),
-                action: this.playerController.getCurrentAction(),
-                stage: this.gameState.getStage(),
-                percentage: this.gameState.getPercentage(),
-                isFinished: this.gameState.isGameWon(),
-                avatarConfig: avatarService.getConfig()
-            });
+        if (currentTime - this.lastBroadcastTime > 65) {
+            this.broadcastCurrentPlayerState(currentTime);
         }
 
         this.renderer.render(this.scene, this.camera);
+    }
+
+    public broadcastCurrentPlayerState(currentTime: number = performance.now()) {
+        if (!this.playerController || !this.onlineNetwork) return;
+        const pos = this.playerController.getPosition();
+        // Do not broadcast while falling deep into void (< -10)
+        if (pos.y < -10) return;
+
+        this.lastBroadcastTime = currentTime;
+        this.onlineNetwork.broadcastPlayerState({
+            id: this.onlineNetwork.getPlayerId(),
+            name: this.gameState.getPlayerName(),
+            isOwner: this.gameState.getIsOwner(),
+            x: pos.x,
+            y: pos.y,
+            z: pos.z,
+            rotY: this.playerController.getRotationY(),
+            action: this.playerController.getCurrentAction(),
+            stage: this.gameState.getStage(),
+            percentage: this.gameState.getPercentage(),
+            isFinished: this.gameState.isGameWon(),
+            avatarConfig: avatarService.getConfig()
+        });
     }
 }
 

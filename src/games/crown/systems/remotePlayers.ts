@@ -29,6 +29,11 @@ export class RemotePlayersManager {
     public updatePlayerState(state: RemotePlayerState) {
         if (!state || !state.id) return;
 
+        // If player is deep in void fall (< -10), ignore packet so they don't get dragged underground
+        if (state.y !== undefined && state.y < -10) {
+            return;
+        }
+
         let entity = this.remotePlayers.get(state.id);
         if (!entity) {
             entity = this.createRemotePlayer(state);
@@ -39,6 +44,11 @@ export class RemotePlayersManager {
         entity.targetRotY = state.rotY || 0;
         entity.currentAction = state.action || 'idle';
         entity.lastUpdateTime = performance.now();
+
+        // If distance is large (e.g. respawn, checkpoint teleport), immediately snap instead of slow lerp
+        if (entity.group.position.distanceTo(entity.targetPos) > 4.5) {
+            entity.group.position.copy(entity.targetPos);
+        }
 
         if (entity.currentStage !== state.stage || entity.currentPercentage !== state.percentage || entity.name !== state.name) {
             entity.name = state.name;
@@ -58,7 +68,8 @@ export class RemotePlayersManager {
 
     public update(dt: number, elapsedTime: number) {
         const now = performance.now();
-        const staleTimeout = 14000; // 14 seconds without packet = disconnected
+        // Stale timeout 2 minutes (never delete stationary players who are reading or typing in chat)
+        const staleTimeout = 120000;
 
         const toRemove: string[] = [];
 
@@ -68,15 +79,20 @@ export class RemotePlayersManager {
                 return;
             }
 
-            // Smooth position interpolation
-            const lerpFactor = Math.min(1.0, dt * 14.0);
-            entity.group.position.lerp(entity.targetPos, lerpFactor);
+            // Smooth position interpolation or snap if large jump
+            const dist = entity.group.position.distanceTo(entity.targetPos);
+            if (dist > 4.5) {
+                entity.group.position.copy(entity.targetPos);
+            } else {
+                const lerpFactor = Math.min(1.0, dt * 14.0);
+                entity.group.position.lerp(entity.targetPos, lerpFactor);
+            }
 
             // Smooth rotation interpolation
             let diff = entity.targetRotY - entity.group.rotation.y;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            entity.group.rotation.y += diff * lerpFactor;
+            entity.group.rotation.y += diff * Math.min(1.0, dt * 14.0);
 
             // Animate 3D avatar rig (walking, jumping, idle, running)
             if (entity.avatarRig) {
@@ -124,7 +140,15 @@ export class RemotePlayersManager {
         const sprite = new THREE.Sprite(spriteMat);
         sprite.position.y = 2.9;
         sprite.scale.set(3.4, 1.02, 1);
+        sprite.frustumCulled = false;
         group.add(sprite);
+
+        // Crucial: Disable frustum culling on all child meshes so camera angles never hide parts/avatar
+        group.traverse((obj) => {
+            if ((obj as THREE.Mesh).isMesh) {
+                obj.frustumCulled = false;
+            }
+        });
 
         this.scene.add(group);
 

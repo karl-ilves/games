@@ -12,6 +12,8 @@ export class CrownOnlineNetwork {
     private localBroadcast: BroadcastChannel | null = null;
     private playerId: string;
     private isConnected: boolean = false;
+    private lastSentState: RemotePlayerState | null = null;
+    private heartbeatTimer: any = null;
 
     private onPlayerStateCallbacks: ((state: RemotePlayerState) => void)[] = [];
     private onPlayerLeaveCallbacks: ((playerId: string) => void)[] = [];
@@ -50,6 +52,13 @@ export class CrownOnlineNetwork {
         this.initBroadcastChannel();
         this.initStorageListener();
         this.initSupabaseRealtime();
+
+        // Regular heartbeat every 600ms to guarantee player presence even when stationary or chatting
+        this.heartbeatTimer = setInterval(() => {
+            if (this.lastSentState) {
+                this.broadcastPlayerState(this.lastSentState);
+            }
+        }, 600);
     }
 
     // 1. Cross-tab instant sync on same PC / browser (0ms latency)
@@ -260,6 +269,8 @@ export class CrownOnlineNetwork {
 
     // Broadcast real-time 3D player position & animation state to other players
     public broadcastPlayerState(state: RemotePlayerState) {
+        this.lastSentState = state;
+
         // 1. Cross-tab local broadcast
         try {
             this.localBroadcast?.postMessage({
@@ -332,6 +343,10 @@ export class CrownOnlineNetwork {
     }
 
     public destroy() {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
         this.broadcastPlayerLeave();
         try {
             this.localBroadcast?.close();

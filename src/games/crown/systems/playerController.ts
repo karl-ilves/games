@@ -10,6 +10,7 @@ export interface PlayerControllerOptions {
     stageBuilder: StageBuilder;
     onStageChanged?: (stage: number) => void;
     onVictory?: () => void;
+    onRespawn?: () => void;
 }
 
 export class PlayerController {
@@ -18,6 +19,7 @@ export class PlayerController {
     private stageBuilder: StageBuilder;
     private onStageChanged?: (stage: number) => void;
     private onVictory?: () => void;
+    private onRespawn?: () => void;
 
     public playerGroup: THREE.Group;
     public avatarRig: AvatarRig | null = null;
@@ -36,6 +38,7 @@ export class PlayerController {
         this.stageBuilder = options.stageBuilder;
         this.onStageChanged = options.onStageChanged;
         this.onVictory = options.onVictory;
+        this.onRespawn = options.onRespawn;
 
         this.playerGroup = new THREE.Group();
         this.playerGroup.name = 'Crown_PlayerGroup';
@@ -67,6 +70,12 @@ export class PlayerController {
             mesh.position.y = 1.1;
             this.playerGroup.add(mesh);
         }
+
+        this.playerGroup.traverse((obj) => {
+            if ((obj as THREE.Mesh).isMesh) {
+                obj.frustumCulled = false;
+            }
+        });
     }
 
     private initInputListeners() {
@@ -135,6 +144,9 @@ export class PlayerController {
         }
         this.isGrounded = false;
         this.jumpsRemaining = 2;
+        if (this.onRespawn) {
+            this.onRespawn();
+        }
     }
 
     public getPosition(): THREE.Vector3 {
