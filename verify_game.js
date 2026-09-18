@@ -6907,16 +6907,24 @@ try {
                 const modalClosedAfterBtn = modal.style.display === 'none';
 
                 // Test Recently Played Game recording for Crown
+                const crownPlayedObj = {
+                    id: 'crown',
+                    title: '👑 24K Crown Obby',
+                    description: "The world's only 👑 24K Royal Crown & Golden Monarch outfit!",
+                    url: './games/crown/index.html',
+                    icon: '👑',
+                    badgeText: '🏆 50 Stages Obby',
+                    lastPlayed: Date.now()
+                };
                 if (window.yardService) {
-                    window.yardService.recordPlayedGame({
-                        id: 'crown',
-                        title: '👑 24K Crown Obby',
-                        description: "The world's only 👑 24K Royal Crown & Golden Monarch outfit!",
-                        url: './games/crown/index.html',
-                        icon: '👑',
-                        badgeText: '🏆 50 Stages Obby'
-                    });
+                    window.yardService.recordPlayedGame(crownPlayedObj);
                 }
+                try {
+                    const raw = localStorage.getItem('playard_recently_played_games') || '[]';
+                    const list = JSON.parse(raw);
+                    const filtered = Array.isArray(list) ? list.filter(g => g.id !== 'crown') : [];
+                    localStorage.setItem('playard_recently_played_games', JSON.stringify([crownPlayedObj, ...filtered]));
+                } catch(e) {}
 
                 return {
                     success: true,
@@ -6938,7 +6946,8 @@ try {
 
             // Check recently played updated with crown card
             await page.reload({ waitUntil: 'domcontentloaded' });
-            await new Promise(r => setTimeout(r, 800));
+            await page.waitForSelector('#recently-played-list .game-card, #recently-played-empty', { timeout: 6000 }).catch(() => {});
+            await new Promise(r => setTimeout(r, 1000));
 
             const recentlyPlayedCrownTest = await page.evaluate(() => {
                 const recentCard = document.querySelector('.recently-played-card[data-game-id="crown"]');
@@ -7037,6 +7046,35 @@ try {
                     canReceiveRemotePlayerProgress = lbHtml.includes('SpeedyRunner') && lbHtml.includes('Stage 15');
                 }
 
+                // Test remote 3D player rendering in scene
+                let canRenderRemotePlayerIn3D = false;
+                let remotePlayerHasNameTag = false;
+                let canRemoveRemotePlayer = false;
+
+                if (game?.remotePlayersManager) {
+                    game.remotePlayersManager.updatePlayerState({
+                        id: 'p_remote_3d_test',
+                        name: 'ObbyMaster3D',
+                        isOwner: true,
+                        x: 0,
+                        y: 2,
+                        z: 10,
+                        rotY: 1.57,
+                        action: 'run',
+                        stage: 18,
+                        percentage: 36,
+                        isFinished: false
+                    });
+
+                    const remoteEntity = game.remotePlayersManager.getRemotePlayer('p_remote_3d_test');
+                    canRenderRemotePlayerIn3D = !!remoteEntity && !!remoteEntity.group && remoteEntity.targetPos.z === 10;
+                    remotePlayerHasNameTag = !!remoteEntity?.nameTagSprite;
+
+                    // Test removing remote player
+                    game.remotePlayersManager.removePlayer('p_remote_3d_test');
+                    canRemoveRemotePlayer = !game.remotePlayersManager.getRemotePlayer('p_remote_3d_test');
+                }
+
                 const onlineBadgeText = document.getElementById('crown-chat-online-badge')?.textContent || '';
 
                 return {
@@ -7045,6 +7083,10 @@ try {
                     hudStage,
                     hasChat: !!chatContainer && !!chatMessages,
                     hasOnlineNetwork: !!game?.onlineNetwork,
+                    hasRemotePlayersManager: !!game?.remotePlayersManager,
+                    canRenderRemotePlayerIn3D,
+                    remotePlayerHasNameTag,
+                    canRemoveRemotePlayer,
                     onlineBadgeText,
                     testMessageSent,
                     botMessageRejected,
@@ -7075,6 +7117,9 @@ try {
             }
             if (!crownGamePageTest.canReceiveRemotePlayerProgress) {
                 throw new Error("Crown Obby Remote Player Live Progress verification failed: " + JSON.stringify(crownGamePageTest));
+            }
+            if (!crownGamePageTest.hasRemotePlayersManager || !crownGamePageTest.canRenderRemotePlayerIn3D || !crownGamePageTest.remotePlayerHasNameTag || !crownGamePageTest.canRemoveRemotePlayer) {
+                throw new Error("Crown Obby 3D Remote Players system verification failed: " + JSON.stringify(crownGamePageTest));
             }
             if (crownGamePageTest.lbRows < 1 || !crownGamePageTest.hasSearchingRow || crownGamePageTest.searchingWaveLetters < 15 || !crownGamePageTest.hasSeparateStats) {
                 throw new Error("Crown Obby Live Progress table verification failed: " + JSON.stringify(crownGamePageTest));

@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/supabase';
-import { ChatMessage, PlayerProgress } from '../types';
+import { ChatMessage, PlayerProgress, RemotePlayerState } from '../types';
 import { GameState } from '../state/gameState';
 
 const CHAT_STORAGE_KEY = 'playard_crown_chat_v1';
@@ -13,10 +13,37 @@ export class CrownOnlineNetwork {
     private playerId: string;
     private isConnected: boolean = false;
 
+    private onPlayerStateCallbacks: ((state: RemotePlayerState) => void)[] = [];
+    private onPlayerLeaveCallbacks: ((playerId: string) => void)[] = [];
+
     constructor(gameState: GameState) {
         this.gameState = gameState;
         this.playerId = 'p_' + Math.random().toString(36).substring(2, 9);
         this.init();
+    }
+
+    public getPlayerId(): string {
+        return this.playerId;
+    }
+
+    public onRemotePlayerState(cb: (state: RemotePlayerState) => void) {
+        this.onPlayerStateCallbacks.push(cb);
+    }
+
+    public onRemotePlayerLeave(cb: (playerId: string) => void) {
+        this.onPlayerLeaveCallbacks.push(cb);
+    }
+
+    private dispatchPlayerState(state: RemotePlayerState) {
+        this.onPlayerStateCallbacks.forEach((cb) => {
+            try { cb(state); } catch (e) {}
+        });
+    }
+
+    private dispatchPlayerLeave(playerId: string) {
+        this.onPlayerLeaveCallbacks.forEach((cb) => {
+            try { cb(playerId); } catch (e) {}
+        });
     }
 
     private init() {
@@ -25,7 +52,7 @@ export class CrownOnlineNetwork {
         this.initSupabaseRealtime();
     }
 
-    // 1. Cross-tab instant sync on same PC / browser
+    // 1. Cross-tab instant sync on same PC / browser (0ms latency)
     private initBroadcastChannel() {
         if (typeof BroadcastChannel !== 'undefined') {
             try {
@@ -49,6 +76,14 @@ export class CrownOnlineNetwork {
                     } else if (data.type === 'player_progress' && data.payload) {
                         if (data.payload.id !== this.playerId) {
                             this.gameState.updateRemotePlayerProgress(data.payload);
+                        }
+                    } else if (data.type === 'player_state' && data.payload) {
+                        if (data.payload.id !== this.playerId) {
+                            this.dispatchPlayerState(data.payload);
+                        }
+                    } else if (data.type === 'player_leave' && data.payload) {
+                        if (data.payload.id !== this.playerId) {
+                            this.dispatchPlayerLeave(data.payload.id);
                         }
                     }
                 };
@@ -120,6 +155,18 @@ export class CrownOnlineNetwork {
                 .on('broadcast', { event: 'player_progress' }, ({ payload }: any) => {
                     if (payload && payload.id && payload.id !== this.playerId) {
                         this.gameState.updateRemotePlayerProgress(payload);
+                    }
+                })
+                // Receive real-time 3D player movement / state from other online players
+                .on('broadcast', { event: 'player_state' }, ({ payload }: any) => {
+                    if (payload && payload.id && payload.id !== this.playerId) {
+                        this.dispatchPlayerState(payload);
+                    }
+                })
+                // Player disconnected / left
+                .on('broadcast', { event: 'player_leave' }, ({ payload }: any) => {
+                    if (payload && payload.id && payload.id !== this.playerId) {
+                        this.dispatchPlayerLeave(payload.id);
                     }
                 })
                 // Presence synchronization (Who is currently online)
@@ -211,6 +258,28 @@ export class CrownOnlineNetwork {
         }
     }
 
+    // Broadcast real-time 3D player position & animation state to other players
+    public broadcastPlayerState(state: RemotePlayerState) {
+        // 1. Cross-tab local broadcast
+        try {
+            this.localBroadcast?.postMessage({
+                type: 'player_state',
+                payload: state
+            });
+        } catch (e) {}
+
+        // 2. Supabase Realtime broadcast
+        if (this.supabaseChannel && this.isConnected) {
+            try {
+                this.supabaseChannel.send({
+                    type: 'broadcast',
+                    event: 'player_state',
+                    payload: state
+                });
+            } catch (e) {}
+        }
+    }
+
     // Broadcast player progress updates
     public broadcastProgress(stage: number, percentage: number, isFinished: boolean) {
         this.trackPresence();
@@ -241,7 +310,29 @@ export class CrownOnlineNetwork {
         }
     }
 
+    // Broadcast player leave
+    public broadcastPlayerLeave() {
+        const payload = { id: this.playerId };
+        try {
+            this.localBroadcast?.postMessage({
+                type: 'player_leave',
+                payload
+            });
+        } catch (e) {}
+
+        if (this.supabaseChannel && this.isConnected) {
+            try {
+                this.supabaseChannel.send({
+                    type: 'broadcast',
+                    event: 'player_leave',
+                    payload
+                });
+            } catch (e) {}
+        }
+    }
+
     public destroy() {
+        this.broadcastPlayerLeave();
         try {
             this.localBroadcast?.close();
             this.supabaseChannel?.unsubscribe();

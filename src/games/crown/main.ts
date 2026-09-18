@@ -7,6 +7,8 @@ import { CrownHud } from './ui/hud';
 import { CrownChatUI } from './ui/chat';
 import { CrownLeaderboardUI } from './ui/leaderboard';
 import { CrownOnlineNetwork } from './systems/onlineNetwork';
+import { RemotePlayersManager } from './systems/remotePlayers';
+import { avatarService } from '../../shared/avatar/AvatarService';
 import { yardService } from '../../shared/yardService';
 import { isTestMode } from '../../auth';
 
@@ -17,6 +19,7 @@ export class CrownObbyGame {
 
     public gameState: GameState;
     public onlineNetwork!: CrownOnlineNetwork;
+    public remotePlayersManager!: RemotePlayersManager;
     public stageBuilder!: StageBuilder;
     public cameraController!: CameraController;
     public playerController!: PlayerController;
@@ -26,6 +29,7 @@ export class CrownObbyGame {
     public leaderboardUI!: CrownLeaderboardUI;
 
     private lastTime: number = 0;
+    private lastBroadcastTime: number = 0;
     private isRunning: boolean = false;
 
     constructor() {
@@ -129,6 +133,14 @@ export class CrownObbyGame {
             this.playerController.respawn(true);
         });
 
+        this.remotePlayersManager = new RemotePlayersManager(this.scene);
+        this.onlineNetwork.onRemotePlayerState((state) => {
+            this.remotePlayersManager.updatePlayerState(state);
+        });
+        this.onlineNetwork.onRemotePlayerLeave((id) => {
+            this.remotePlayersManager.removePlayer(id);
+        });
+
         this.chatUI = new CrownChatUI(this.gameState);
         this.leaderboardUI = new CrownLeaderboardUI(this.gameState);
 
@@ -180,6 +192,29 @@ export class CrownObbyGame {
         this.stageBuilder.update(dt, timeInSec);
         this.playerController.update(dt, this.cameraController.cameraRotation.y);
         this.cameraController.update(this.camera, this.playerController.getPosition());
+        if (this.remotePlayersManager) {
+            this.remotePlayersManager.update(dt, timeInSec);
+        }
+
+        // Broadcast local 3D player position & animation to all online players
+        if (currentTime - this.lastBroadcastTime > 55) {
+            this.lastBroadcastTime = currentTime;
+            const pos = this.playerController.getPosition();
+            this.onlineNetwork.broadcastPlayerState({
+                id: this.onlineNetwork.getPlayerId(),
+                name: this.gameState.getPlayerName(),
+                isOwner: this.gameState.getIsOwner(),
+                x: pos.x,
+                y: pos.y,
+                z: pos.z,
+                rotY: this.playerController.getRotationY(),
+                action: this.playerController.getCurrentAction(),
+                stage: this.gameState.getStage(),
+                percentage: this.gameState.getPercentage(),
+                isFinished: this.gameState.isGameWon(),
+                avatarConfig: avatarService.getConfig()
+            });
+        }
 
         this.renderer.render(this.scene, this.camera);
     }

@@ -44,3 +44,19 @@ export interface PlayerProgress {
     percentage: number;
     isFinished: boolean;
 }
+
+export interface RemotePlayerState {
+    id: string;
+    name: string;
+    isOwner: boolean;
+    x: number;
+    y: number;
+    z: number;
+    rotY: number;
+    action: 'idle' | 'walk' | 'run' | 'jump';
+    stage: number;
+    percentage: number;
+    isFinished: boolean;
+    avatarConfig?: any;
+    timestamp?: number;
+}

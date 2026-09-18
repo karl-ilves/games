@@ -141,6 +141,19 @@ export class PlayerController {
         return this.playerGroup.position;
     }
 
+    public getRotationY(): number {
+        return this.playerGroup.rotation.y;
+    }
+
+    public getCurrentAction(): 'idle' | 'walk' | 'run' | 'jump' {
+        if (!this.isGrounded) return 'jump';
+        const horizontalSpeedSq = this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z;
+        if (horizontalSpeedSq > 0.05) {
+            return (this.keys['ShiftLeft'] || this.keys['ShiftRight']) ? 'run' : 'walk';
+        }
+        return 'idle';
+    }
+
     public update(dt: number, cameraYaw: number) {
         // Horizontal Movement Input
         let inputX = 0;
