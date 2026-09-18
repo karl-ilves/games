@@ -318,10 +318,88 @@ try {
             throw new Error("User info must display gender (Boy)!");
         }
 
+        // 8b. Testing Friends List, Requests Plus Circle & Invite Friend Search Modal
+        console.log("   Testing Friends List, Incoming Requests Plus Circle, and Invite Friend Search...");
+        const friendsContainerDisplay = await page.$eval('#friends-container', el => window.getComputedStyle(el).display);
+        console.log(`   Friends Container Display: ${friendsContainerDisplay}`);
+        if (friendsContainerDisplay !== 'block') {
+            throw new Error("Expected #friends-container to be visible (display: block) when user is logged in!");
+        }
+
+        const plusCircleExists = await page.$('#btn-friend-requests-circle');
+        if (!plusCircleExists) throw new Error("Missing leftmost plus circle #btn-friend-requests-circle!");
+
+        // Check badge on plus circle
+        const badgeCount = await page.$eval('#friend-requests-badge', el => el.textContent);
+        console.log(`   Initial Incoming Requests Badge: ${badgeCount}`);
+
+        // Click (+) circle to open Incoming Requests Modal
+        await page.click('#btn-friend-requests-circle');
+        await new Promise(r => setTimeout(r, 100));
+        const requestsModalDisplay = await page.$eval('#modal-friend-requests', el => window.getComputedStyle(el).display);
+        console.log(`   Friend Requests Modal Display: ${requestsModalDisplay}`);
+        if (requestsModalDisplay !== 'flex') {
+            throw new Error("Expected #modal-friend-requests to open on plus circle click!");
+        }
+
+        // Accept the first request in modal
+        const requestRowsCount = await page.$$eval('#friend-requests-list .request-row', rows => rows.length);
+        console.log(`   Incoming Requests Count in Modal: ${requestRowsCount}`);
+        if (requestRowsCount > 0) {
+            await page.click('#friend-requests-list .btn-accept-request');
+            await new Promise(r => setTimeout(r, 100));
+        }
+        await page.click('#btn-close-friend-requests');
+        await new Promise(r => setTimeout(r, 100));
+
+        // Verify friend added to friends list
+        const friendsCountText = await page.$eval('#friends-count', el => el.textContent);
+        console.log(`   Friends Count after accepting request: ${friendsCountText}`);
+        if (friendsCountText === '(0)') {
+            throw new Error("Expected friends count to increase after accepting a request!");
+        }
+
+        // Test "Invite Friend" button & Search Modal
+        await page.click('#btn-invite-friend');
+        await new Promise(r => setTimeout(r, 100));
+        const inviteModalDisplay = await page.$eval('#modal-invite-friends', el => window.getComputedStyle(el).display);
+        console.log(`   Invite Friends Modal Display: ${inviteModalDisplay}`);
+        if (inviteModalDisplay !== 'flex') {
+            throw new Error("Expected #modal-invite-friends to open on Invite Friend button click!");
+        }
+
+        // Test real-time search filtering by typing in search bar
+        await page.type('#friend-search-input', 'Dragon');
+        await new Promise(r => setTimeout(r, 100));
+        const searchResults = await page.$$eval('#friend-search-results .player-search-card', cards => cards.map(c => c.getAttribute('data-username')));
+        console.log(`   Search results for 'Dragon':`, searchResults);
+        if (!searchResults.includes('DragonSlayer')) {
+            throw new Error("Expected search results to include 'DragonSlayer' when searching for 'Dragon'!");
+        }
+
+        // Send friend request to searched player
+        await page.click('.btn-send-invite[data-username="DragonSlayer"]');
+        await new Promise(r => setTimeout(r, 100));
+        const inviteBtnDisabledText = await page.$eval('.player-search-card[data-username="DragonSlayer"] button', btn => btn.textContent);
+        console.log(`   Button text after sending invite: "${inviteBtnDisabledText}"`);
+        if (!inviteBtnDisabledText.includes('Sent') && !inviteBtnDisabledText.includes('Saadetud')) {
+            throw new Error(`Expected button text to show request sent, got: "${inviteBtnDisabledText}"`);
+        }
+
+        // Close search modal
+        await page.click('#btn-close-invite-friends');
+        await new Promise(r => setTimeout(r, 100));
+        console.log("   ✅ Friends List, Plus Circle Requests, and Search/Invite Modal verified!");
+
         // 9. Logout
         console.log("   Testing Logout...");
         await page.click('#btn-logout');
         await new Promise(r => setTimeout(r, 200));
+
+        const friendsContainerAfterLogout = await page.$eval('#friends-container', el => window.getComputedStyle(el).display);
+        if (friendsContainerAfterLogout !== 'none') {
+            throw new Error("Expected #friends-container to be hidden (display: none) after logout!");
+        }
 
         // 10. Test Duplicate Username Registration ("name is unavable" / "Name is unavailable")
         console.log("   Testing Duplicate Username Rejection ('name is unavable' / 'Name is unavailable')...");

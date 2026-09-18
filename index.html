@@ -1277,6 +1277,73 @@
                 <button id="btn-logout" style="padding: 8px 22px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Logout</button>
             </div>
             <div id="auth-message" style="margin-top: 12px; font-weight: bold; font-size: 0.9rem;"></div>
+
+            <!-- Friends Section -->
+            <div id="friends-container" style="display: none; margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <div style="font-weight: 700; color: #00f2fe; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                        <span>👥</span>
+                        <span id="friends-title">Sõbrad</span>
+                        <span id="friends-count" style="color: #8899a6; font-size: 0.85rem; font-weight: normal;">(0)</span>
+                    </div>
+                    <button id="btn-invite-friend" style="padding: 6px 14px; background: #3498db; color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(52, 152, 219, 0.35); transition: all 0.2s ease;">
+                        <span>➕</span>
+                        <span id="btn-invite-friend-text">Invite Friend</span>
+                    </button>
+                </div>
+
+                <!-- Horizontal scrollable friends row with the (+) circle on the very left -->
+                <div id="friends-list-row" style="display: flex; align-items: center; gap: 12px; overflow-x: auto; padding: 4px 2px 10px 2px; scrollbar-width: thin;">
+                    <!-- Leftmost circle with plus for incoming friend requests -->
+                    <div id="btn-friend-requests-circle" title="Sissetulevad kutsed / Friend Requests" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 58px; cursor: pointer;">
+                        <div style="position: relative; width: 48px; height: 48px; border-radius: 50%; background: #182029; border: 2px dashed #00f2fe; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #00f2fe; font-weight: bold; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(0,242,254,0.15);">
+                            +
+                            <span id="friend-requests-badge" style="display: none; position: absolute; top: -4px; right: -4px; background: #ff4757; color: white; border-radius: 10px; min-width: 18px; height: 18px; font-size: 0.72rem; font-weight: 800; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid #242f3d;">0</span>
+                        </div>
+                        <span id="label-friend-requests" style="font-size: 0.72rem; font-weight: 700; color: #00f2fe; text-align: center;">Kutsed</span>
+                    </div>
+
+                    <!-- Existing Friends Avatars -->
+                    <div id="friends-list-items" style="display: flex; align-items: center; gap: 10px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incoming Friend Requests Modal -->
+        <div id="modal-friend-requests" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 10000; justify-content: center; align-items: center; padding: 20px;">
+            <div style="background: #1e272e; border: 1px solid rgba(0,242,254,0.3); border-radius: 18px; padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.8); text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.3rem;">💌</span>
+                        <h3 id="friend-requests-modal-title" style="margin: 0; color: #00f2fe; font-size: 1.15rem;">Sõbrakutsed (Friend Requests)</h3>
+                    </div>
+                    <button id="btn-close-friend-requests" style="background: transparent; border: none; color: #a4b0be; font-size: 1.4rem; cursor: pointer; line-height: 1;">✕</button>
+                </div>
+                <div id="friend-requests-list" style="max-height: 340px; overflow-y: auto; padding-right: 4px;"></div>
+            </div>
+        </div>
+
+        <!-- Invite Friends Modal with Search Bar -->
+        <div id="modal-invite-friends" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 10000; justify-content: center; align-items: center; padding: 20px;">
+            <div style="background: #1e272e; border: 1px solid rgba(52,152,219,0.4); border-radius: 18px; padding: 24px; max-width: 460px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.8); text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.3rem;">👥</span>
+                        <h3 id="invite-modal-title" style="margin: 0; color: #3498db; font-size: 1.15rem;">Kutsu sõpru (Invite Friends)</h3>
+                    </div>
+                    <button id="btn-close-invite-friends" style="background: transparent; border: none; color: #a4b0be; font-size: 1.4rem; cursor: pointer; line-height: 1;">✕</button>
+                </div>
+
+                <!-- Search Bar at the Top -->
+                <div style="margin-bottom: 16px; position: relative;">
+                    <input type="text" id="friend-search-input" placeholder="Otsi mängijaid nime järgi... / Search players..." style="width: 100%; box-sizing: border-box; padding: 12px 14px 12px 38px; border-radius: 10px; border: 1px solid #485460; background: #131920; color: white; font-size: 0.95rem; outline: none;">
+                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8899a6; font-size: 1rem;">🔍</span>
+                </div>
+
+                <!-- Players matching search results -->
+                <div style="margin-bottom: 8px; font-size: 0.8rem; font-weight: 700; color: #8899a6; text-transform: uppercase;" id="invite-modal-subtitle">Mängijad / Players</div>
+                <div id="friend-search-results" style="max-height: 300px; overflow-y: auto; padding-right: 4px;"></div>
+            </div>
         </div>
 
         <!-- Birthday Modal -->

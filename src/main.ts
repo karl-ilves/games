@@ -5,6 +5,7 @@ import { setLanguage, applyLocalization, getLanguage } from './shared/i18n';
 import { AvatarWidget } from './components/AvatarWidget';
 import { AvatarShopEditorModal } from './components/AvatarShopEditorModal';
 import { avatarService } from './shared/avatar/AvatarService';
+import { initFriendsUI } from './shared/friends/friendsUI';
 
 console.log("Playard Hub & Platform Loaded.");
 initAuth();
@@ -1142,6 +1143,7 @@ function setupGameCardTracking() {
 // Initialise
 setupIcons();
 setupModals();
+initFriendsUI();
 renderRecentlyPlayed();
 setupGameCardTracking();
 renderCommunityGames();

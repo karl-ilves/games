@@ -70,6 +70,25 @@ export function applyLocalization() {
         loggedInAs.innerHTML = isEt ? `Sisse logitud kui: ${spanHtml}` : `Logged in as: ${spanHtml}`;
     }
 
+    // Friends Section
+    const friendsTitle = document.getElementById('friends-title');
+    if (friendsTitle) friendsTitle.textContent = isEt ? 'Sõbrad' : 'Friends';
+
+    const inviteFriendBtnText = document.getElementById('btn-invite-friend-text');
+    if (inviteFriendBtnText) inviteFriendBtnText.textContent = isEt ? 'Kutsu sõber' : 'Invite Friend';
+
+    const labelFriendRequests = document.getElementById('label-friend-requests');
+    if (labelFriendRequests) labelFriendRequests.textContent = isEt ? 'Kutsed' : 'Requests';
+
+    const requestsModalTitle = document.getElementById('friend-requests-modal-title');
+    if (requestsModalTitle) requestsModalTitle.textContent = isEt ? 'Sõbrakutsed (Friend Requests)' : 'Friend Requests';
+
+    const inviteModalTitle = document.getElementById('invite-modal-title');
+    if (inviteModalTitle) inviteModalTitle.textContent = isEt ? 'Kutsu sõpru (Invite Friends)' : 'Invite Friends';
+
+    const searchInput = document.getElementById('friend-search-input') as HTMLInputElement | null;
+    if (searchInput) searchInput.placeholder = isEt ? 'Otsi mängijaid nime järgi...' : 'Search players by username...';
+
     // Recently Played Games Section Header
     const recSub = document.getElementById('recently-played-subheading-text');
     if (recSub) recSub.textContent = isEt ? 'MÄNGUDE AJALUGU' : 'GAME HISTORY';
