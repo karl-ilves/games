@@ -401,6 +401,81 @@ try {
         await new Promise(r => setTimeout(r, 100));
         console.log("   ✅ Real Players Friends List, Plus Circle Requests, and Search/Invite Modal verified!");
 
+        // 8c. Test Clicking on a Friend -> Friend Activity / Profile Modal
+        console.log("   Testing Friend Click -> Activity Profile Modal ('He is not playing yet' vs 'Currently Playing' & Join)...");
+        
+        // 1) Click Minionbanana0_0 (who hasn't started playing any game yet)
+        const friendCard = await page.$('.friend-item[data-username="Minionbanana0_0"]');
+        if (!friendCard) {
+            throw new Error("Expected .friend-item for 'Minionbanana0_0' to exist in friends list!");
+        }
+        await friendCard.click();
+        await new Promise(r => setTimeout(r, 150));
+
+        const friendProfileModalDisplay = await page.$eval('#modal-friend-profile', el => window.getComputedStyle(el).display);
+        console.log(`   Friend Profile Modal Display: ${friendProfileModalDisplay}`);
+        if (friendProfileModalDisplay !== 'flex') {
+            throw new Error("Expected #modal-friend-profile to open with display: flex when clicking a friend!");
+        }
+
+        // Check that friend name is set
+        const friendProfileName = await page.$eval('#friend-profile-name', el => el.textContent);
+        if (!friendProfileName.includes('Minionbanana0_0')) {
+            throw new Error(`Expected #friend-profile-name to contain 'Minionbanana0_0', got: "${friendProfileName}"`);
+        }
+
+        // Since Minionbanana0_0 is not playing yet:
+        const idleDisplay = await page.$eval('#friend-status-idle', el => window.getComputedStyle(el).display);
+        const playingDisplay = await page.$eval('#friend-status-playing', el => window.getComputedStyle(el).display);
+        const notPlayingText = await page.$eval('#friend-not-playing-text', el => el.textContent.trim());
+        console.log(`   Friend Activity Status (idle): "${notPlayingText}", idle display: ${idleDisplay}, playing display: ${playingDisplay}`);
+
+        if (idleDisplay === 'none' || playingDisplay !== 'none') {
+            throw new Error("Expected friend status to be idle (not playing)!");
+        }
+        if (notPlayingText !== 'He is not playing yet') {
+            throw new Error(`Expected text 'He is not playing yet', got: "${notPlayingText}"`);
+        }
+
+        // Close friend profile modal
+        await page.click('#btn-close-friend-profile');
+        await new Promise(r => setTimeout(r, 100));
+
+        // 2) Now simulate Minionbanana0_0 actively playing a game (e.g. MMP1)
+        console.log("   Simulating Minionbanana0_0 playing MMP1 battle arena...");
+        await page.evaluate(() => {
+            window.friendService.setPlayerActiveGame('Minionbanana0_0', {
+                id: 'mmp1',
+                title: 'MMP1: Multi-Map Battle Arena',
+                url: '/src/games/mmp1/index.html'
+            });
+        });
+
+        // Click Minionbanana0_0 friend card again
+        await (await page.$('.friend-item[data-username="Minionbanana0_0"]')).click();
+        await new Promise(r => setTimeout(r, 150));
+
+        const idleDisplayAfter = await page.$eval('#friend-status-idle', el => window.getComputedStyle(el).display);
+        const playingDisplayAfter = await page.$eval('#friend-status-playing', el => window.getComputedStyle(el).display);
+        const gameTitleText = await page.$eval('#friend-playing-game-title', el => el.textContent);
+        const joinBtnText = await page.$eval('#btn-join-friend-game', el => el.textContent);
+
+        console.log(`   Friend Activity Status (playing): "${gameTitleText}", join text: "${joinBtnText.trim()}", playing display: ${playingDisplayAfter}`);
+        if (playingDisplayAfter === 'none' || idleDisplayAfter !== 'none') {
+            throw new Error("Expected friend status to be playing when active game is set!");
+        }
+        if (!gameTitleText.includes('MMP1')) {
+            throw new Error(`Expected #friend-playing-game-title to include 'MMP1', got: "${gameTitleText}"`);
+        }
+        if (!joinBtnText.includes('Join')) {
+            throw new Error(`Expected join button to have Join text, got: "${joinBtnText}"`);
+        }
+
+        // Close friend profile modal
+        await page.click('#btn-close-friend-profile');
+        await new Promise(r => setTimeout(r, 100));
+        console.log("   ✅ Friend Activity & Join Game Modal verified ('He is not playing yet' & 'Currently Playing')!");
+
         // 9. Logout
         console.log("   Testing Logout...");
         await page.click('#btn-logout');

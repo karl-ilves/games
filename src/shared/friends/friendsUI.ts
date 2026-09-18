@@ -79,21 +79,96 @@ function renderFriendsSection(profile: UserProfile | null) {
                 </div>
             `).join('');
 
-            // Allow clicking a friend to show a mini unfriend option
+            // Allow clicking a friend to view their profile & activity
             listRow.querySelectorAll('.friend-item').forEach(el => {
                 el.addEventListener('click', () => {
                     const targetUser = el.getAttribute('data-username');
                     if (!targetUser) return;
-                    const confirmRemove = window.confirm(
-                        isEt ? `Kas soovid eemaldada kasutaja ${targetUser} sõprade nimekirjast?` : `Remove ${targetUser} from your friends?`
-                    );
-                    if (confirmRemove) {
-                        friendService.removeFriend(profile.username, targetUser);
-                    }
+                    openFriendProfile(targetUser);
                 });
             });
         }
     }
+}
+
+export function openFriendProfile(friendUsername: string) {
+    const profile = getCurrentUserProfile();
+    if (!profile || !profile.username) return;
+
+    const modal = document.getElementById('modal-friend-profile');
+    if (!modal) return;
+
+    const friends = friendService.getFriends(profile.username);
+    const friend = friends.find(f => f.username.toLowerCase() === friendUsername.toLowerCase()) || {
+        username: friendUsername,
+        displayName: friendUsername,
+        avatarColor: '#3498db'
+    };
+
+    const isEt = getLanguage() === 'et';
+
+    // Set Avatar & Name
+    const avatarEl = document.getElementById('friend-profile-avatar');
+    if (avatarEl) {
+        avatarEl.style.background = friend.avatarColor || '#3498db';
+    }
+
+    const nameEl = document.getElementById('friend-profile-name');
+    if (nameEl) {
+        nameEl.textContent = friend.displayName || friend.username;
+    }
+
+    const usernameEl = document.getElementById('friend-profile-username');
+    if (usernameEl) {
+        usernameEl.textContent = `@${friend.username.toLowerCase()}`;
+    }
+
+    // Status / Activity
+    const activity = friendService.getPlayerActivity(friend.username);
+    const playingContainer = document.getElementById('friend-status-playing');
+    const idleContainer = document.getElementById('friend-status-idle');
+    const playingTitleEl = document.getElementById('friend-playing-game-title');
+    const joinBtn = document.getElementById('btn-join-friend-game');
+    const notPlayingTextEl = document.getElementById('friend-not-playing-text');
+    const joinBtnText = document.getElementById('btn-join-friend-game-text');
+    const playingLabel = document.getElementById('friend-status-playing-label');
+
+    if (activity.isPlaying && activity.gameTitle && activity.gameUrl) {
+        if (playingContainer) playingContainer.style.display = 'block';
+        if (idleContainer) idleContainer.style.display = 'none';
+        if (playingTitleEl) playingTitleEl.textContent = `🎮 ${activity.gameTitle}`;
+        if (playingLabel) playingLabel.textContent = isEt ? 'Hetkel mängib' : 'Currently Playing';
+        if (joinBtnText) joinBtnText.textContent = isEt ? 'Liitu mänguga' : 'Join Game';
+        if (joinBtn) {
+            joinBtn.onclick = () => {
+                if (activity.gameUrl) {
+                    window.location.href = activity.gameUrl;
+                }
+            };
+        }
+    } else {
+        if (playingContainer) playingContainer.style.display = 'none';
+        if (idleContainer) idleContainer.style.display = 'block';
+        if (notPlayingTextEl) {
+            notPlayingTextEl.textContent = 'He is not playing yet';
+        }
+    }
+
+    // Unfriend button
+    const unfriendBtn = document.getElementById('btn-unfriend-player');
+    if (unfriendBtn) {
+        unfriendBtn.onclick = () => {
+            const confirmMsg = isEt 
+                ? `Kas oled kindel, et soovid eemaldada sõbra ${friend.displayName || friend.username}?`
+                : `Are you sure you want to remove ${friend.displayName || friend.username} from your friends?`;
+            if (window.confirm(confirmMsg)) {
+                friendService.removeFriend(profile.username, friend.username);
+                modal.style.display = 'none';
+            }
+        };
+    }
+
+    modal.style.display = 'flex';
 }
 
 function setupModals() {
@@ -135,7 +210,14 @@ function setupModals() {
         if (inviteModal) inviteModal.style.display = 'none';
     });
 
-    // 3. Search input live filtering
+    // 3. Friend Profile Modal Close
+    const profileModal = document.getElementById('modal-friend-profile');
+    const closeProfileBtn = document.getElementById('btn-close-friend-profile');
+    closeProfileBtn?.addEventListener('click', () => {
+        if (profileModal) profileModal.style.display = 'none';
+    });
+
+    // 4. Search input live filtering
     searchInput?.addEventListener('input', () => {
         const profile = getCurrentUserProfile();
         if (!profile || !profile.username) return;
@@ -146,6 +228,7 @@ function setupModals() {
     window.addEventListener('click', (e) => {
         if (e.target === requestsModal && requestsModal) requestsModal.style.display = 'none';
         if (e.target === inviteModal && inviteModal) inviteModal.style.display = 'none';
+        if (e.target === profileModal && profileModal) profileModal.style.display = 'none';
     });
 }
 
@@ -289,4 +372,8 @@ function renderSearchResults(query: string, currentUsername: string) {
             renderSearchResults(query, currentUsername);
         });
     });
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).openFriendProfile = openFriendProfile;
 }

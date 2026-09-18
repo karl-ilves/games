@@ -1,4 +1,4 @@
-import { getLocalProfiles } from '../../auth';
+import { getLocalProfiles, getCurrentUserProfile } from '../../auth';
 import { supabase } from '../../lib/supabase';
 
 export interface Friend {
@@ -44,6 +44,21 @@ export class FriendService {
     constructor() {
         this.fetchSupabaseProfiles();
         this.initSyncChannels();
+        if (typeof window !== 'undefined') {
+            window.addEventListener('playard_game_played', (evt: any) => {
+                try {
+                    const game = evt.detail;
+                    const profile = getCurrentUserProfile();
+                    if (profile && profile.username && game) {
+                        this.setPlayerActiveGame(profile.username, {
+                            id: game.id,
+                            title: game.title,
+                            url: game.url
+                        });
+                    }
+                } catch (e) {}
+            });
+        }
     }
 
     private getFriendsKey(username: string): string {
@@ -119,7 +134,80 @@ export class FriendService {
 
     private handleIncomingSyncEvent(data: any) {
         if (!data || !data.type) return;
+        if (data.type === 'player_active_game' && data.username && data.game) {
+            try {
+                localStorage.setItem(`playard_active_game_${data.username.toLowerCase()}`, JSON.stringify(data.game));
+            } catch (e) {}
+        }
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: data }));
+    }
+
+    public setPlayerActiveGame(username: string, game: { id: string; title: string; url: string }) {
+        if (!username || !game) return;
+        const data = {
+            ...game,
+            timestamp: Date.now()
+        };
+        try {
+            localStorage.setItem(`playard_active_game_${username.toLowerCase()}`, JSON.stringify(data));
+        } catch (e) {}
+
+        this.broadcastAction({
+            type: 'player_active_game',
+            username,
+            game: data
+        });
+        window.dispatchEvent(new CustomEvent('playard_friends_updated'));
+    }
+
+    public clearPlayerActiveGame(username: string) {
+        if (!username) return;
+        try {
+            localStorage.removeItem(`playard_active_game_${username.toLowerCase()}`);
+        } catch (e) {}
+        this.broadcastAction({
+            type: 'player_active_game',
+            username,
+            game: null
+        });
+        window.dispatchEvent(new CustomEvent('playard_friends_updated'));
+    }
+
+    public getPlayerActivity(username: string): { isPlaying: boolean; gameId?: string; gameTitle?: string; gameUrl?: string } {
+        if (!username) return { isPlaying: false };
+        try {
+            const raw = localStorage.getItem(`playard_active_game_${username.toLowerCase()}`);
+            if (raw) {
+                const data = JSON.parse(raw);
+                // Active within last 30 minutes
+                if (data && data.url && (Date.now() - (data.timestamp || 0) < 1800000)) {
+                    return {
+                        isPlaying: true,
+                        gameId: data.id,
+                        gameTitle: data.title,
+                        gameUrl: data.url
+                    };
+                }
+            }
+
+            // Check recently played by this user within last 15 minutes
+            const rawRecent = localStorage.getItem(`playard_recently_played_${username.toLowerCase()}`);
+            if (rawRecent) {
+                const list = JSON.parse(rawRecent);
+                if (Array.isArray(list) && list.length > 0) {
+                    const top = list[0];
+                    if (top && top.url && (Date.now() - (top.lastPlayed || 0) < 900000)) {
+                        return {
+                            isPlaying: true,
+                            gameId: top.id,
+                            gameTitle: top.title,
+                            gameUrl: top.url
+                        };
+                    }
+                }
+            }
+        } catch (e) {}
+        return { isPlaying: false };
     }
 
     public initUser(username: string, _displayName?: string) {
