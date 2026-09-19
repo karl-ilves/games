@@ -14,6 +14,7 @@ export const MAP_BOUNDS = {
 export class CarPhysicsController {
     public state: CarPhysicsState;
     public onLampHit?: () => void;
+    public onTreeHit?: () => void;
     public onBuildingHit?: () => void;
     public onWaterDive?: () => void;
     public onOffroadDrive?: () => void;
@@ -166,7 +167,35 @@ export class CarPhysicsController {
             }
         }
 
-        // Collision detection with buildings, perimeter walls and tree trunks
+        // Collision detection with trees (breaks into 2 pieces: stump + toppling crown)
+        // User: "puud lähevvad ka tänavapostide alla" -> counts under lamp hits!
+        if (this.world.trees) {
+            for (const tree of this.world.trees) {
+                if (!tree.isFalling && !tree.isFallen) {
+                    const dx = nextX - tree.basePos.x;
+                    const dz = nextZ - tree.basePos.z;
+                    const distSq = dx * dx + dz * dz;
+                    if (distSq < 4.8) { // hit radius ~2.2m
+                        tree.isFalling = true;
+                        let hitX = Math.sin(this.yaw);
+                        let hitZ = Math.cos(this.yaw);
+                        if (Math.abs(this.forwardSpeedMps) < 1.0) {
+                            hitX = dx;
+                            hitZ = dz;
+                        }
+                        const hitDir = new THREE.Vector3(hitX, 0, hitZ).normalize();
+                        tree.fallAxis.set(-hitDir.z, 0, hitDir.x).normalize();
+
+                        // Resistance from snapping trunk
+                        this.forwardSpeedMps *= 0.75;
+                        this.onTreeHit?.();
+                        this.onLampHit?.();
+                    }
+                }
+            }
+        }
+
+        // Collision detection with buildings and perimeter walls
         const carBox = new THREE.Box3(
             new THREE.Vector3(nextX - 1.2, this.state.position.y, nextZ - 1.2),
             new THREE.Vector3(nextX + 1.2, this.state.position.y + 2.0, nextZ + 1.2)

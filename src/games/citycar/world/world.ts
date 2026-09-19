@@ -21,12 +21,24 @@ export interface StreetLampObject {
     fallenTime: number; // elapsed time when lamp fell, used for 10s respawn
 }
 
+export interface DestructibleTreeObject {
+    group: THREE.Group;
+    topGroup: THREE.Group;
+    basePos: THREE.Vector3;
+    isFalling: boolean;
+    isFallen: boolean;
+    fallProgress: number;
+    fallAxis: THREE.Vector3;
+    fallenTime: number;
+}
+
 export interface WorldEnvironment {
     scene: THREE.Scene;
     waterMesh: THREE.Mesh;
     colliders: THREE.Box3[];
     bridges: { box: THREE.Box3; height: number }[];
     streetLamps: StreetLampObject[];
+    trees: DestructibleTreeObject[];
     update: (timeSec: number, delta?: number) => void;
     getGroundHeight: (x: number, z: number) => number;
     getZoneAt: (x: number, z: number) => WorldZone;
@@ -283,17 +295,23 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         }
     }
 
+    const trees: DestructibleTreeObject[] = [];
     treePositions.forEach(t => {
         const tree = t.type === 'pine' ? createPineTree(t.scale) : createOakTree(t.scale);
         tree.position.set(t.x, 0, t.z);
         scene.add(tree);
 
-        // Trunk collision cylinder box
-        const treeBox = new THREE.Box3(
-            new THREE.Vector3(t.x - 0.8, 0, t.z - 0.8),
-            new THREE.Vector3(t.x + 0.8, 8, t.z + 0.8)
-        );
-        colliders.push(treeBox);
+        const top = (tree.userData?.top as THREE.Group) || tree;
+        trees.push({
+            group: tree,
+            topGroup: top,
+            basePos: new THREE.Vector3(t.x, 0, t.z),
+            isFalling: false,
+            isFallen: false,
+            fallProgress: 0,
+            fallAxis: new THREE.Vector3(1, 0, 0),
+            fallenTime: 0
+        });
     });
 
     // Forest Rocks
@@ -389,6 +407,7 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         colliders,
         bridges,
         streetLamps,
+        trees,
         update: (timeSec: number, delta = 0.016) => {
             // Subtle water wave ripple
             if (waterMesh) {
@@ -426,6 +445,27 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
                         headMat.emissive?.setHex(0xffeaa7);
                         headMat.color?.setHex(0xffeaa7);
                     }
+                }
+            }
+
+            // Animate breaking trees when crashed into (breaks into 2 pieces) & respawn after 10s
+            for (const tree of trees) {
+                if (tree.isFalling) {
+                    tree.fallProgress += delta * 3.5;
+                    const progress = Math.min(tree.fallProgress, 1.0);
+                    const angle = progress * (Math.PI / 2.05);
+                    tree.topGroup.setRotationFromAxisAngle(tree.fallAxis, angle);
+                    if (progress >= 1.0) {
+                        tree.isFalling = false;
+                        tree.isFallen = true;
+                        tree.fallenTime = timeSec;
+                    }
+                } else if (tree.isFallen && tree.fallenTime > 0 && timeSec - tree.fallenTime >= 10.0) {
+                    // Respawn: stand the tree back up on stump in 1 piece after 10 seconds
+                    tree.isFallen = false;
+                    tree.fallProgress = 0;
+                    tree.fallenTime = 0;
+                    tree.topGroup.rotation.set(0, 0, 0);
                 }
             }
         },

@@ -102,40 +102,87 @@ export function createStreetLamp(): THREE.Group {
     return lamp;
 }
 
-// 3. Pine Tree
+// 3. Pine Tree (2 pieces: stump + falling upper top)
 export function createPineTree(scale = 1): THREE.Group {
     const tree = new THREE.Group();
 
-    // Trunk
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25 * scale, 0.4 * scale, 2.5 * scale, 6), materials.trunk);
-    trunk.position.y = (2.5 * scale) / 2;
-    tree.add(trunk);
+    // Piece 1: Lower Rooted Stump
+    const stumpHeight = 0.7 * scale;
+    const stump = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.32 * scale, 0.42 * scale, stumpHeight, 7),
+        materials.trunk
+    );
+    stump.position.y = stumpHeight / 2;
+    stump.castShadow = true;
+    tree.add(stump);
+
+    // Piece 2: Upper Breakable Top (Upper Trunk + Foliage Cones)
+    const top = new THREE.Group();
+    top.position.set(0, stumpHeight, 0);
+
+    const upperTrunkHeight = 1.9 * scale;
+    const upperTrunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.24 * scale, 0.32 * scale, upperTrunkHeight, 6),
+        materials.trunk
+    );
+    upperTrunk.position.y = upperTrunkHeight / 2;
+    upperTrunk.castShadow = true;
+    top.add(upperTrunk);
 
     // Cones
     const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.4 * scale, 3.2 * scale, 7), materials.pineFoliage);
-    c1.position.y = 3.0 * scale;
+    c1.position.y = 2.4 * scale;
+    c1.castShadow = true;
     const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.8 * scale, 2.8 * scale, 7), materials.pineFoliage);
-    c2.position.y = 4.6 * scale;
+    c2.position.y = 4.0 * scale;
+    c2.castShadow = true;
     const c3 = new THREE.Mesh(new THREE.ConeGeometry(1.2 * scale, 2.2 * scale, 7), materials.pineFoliage);
-    c3.position.y = 6.0 * scale;
+    c3.position.y = 5.4 * scale;
+    c3.castShadow = true;
 
-    tree.add(c1, c2, c3);
+    top.add(c1, c2, c3);
+    tree.add(top);
+
+    tree.userData = { stump, top };
     return tree;
 }
 
-// 4. Oak Tree
+// 4. Oak Tree (2 pieces: stump + falling upper top)
 export function createOakTree(scale = 1): THREE.Group {
     const tree = new THREE.Group();
 
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3 * scale, 0.45 * scale, 3 * scale, 8), materials.trunk);
-    trunk.position.y = (3 * scale) / 2;
-    tree.add(trunk);
+    // Piece 1: Lower Rooted Stump
+    const stumpHeight = 0.75 * scale;
+    const stump = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.36 * scale, 0.46 * scale, stumpHeight, 8),
+        materials.trunk
+    );
+    stump.position.y = stumpHeight / 2;
+    stump.castShadow = true;
+    tree.add(stump);
+
+    // Piece 2: Upper Breakable Top (Upper Trunk + Dodecahedron Foliage)
+    const top = new THREE.Group();
+    top.position.set(0, stumpHeight, 0);
+
+    const upperTrunkHeight = 2.3 * scale;
+    const upperTrunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28 * scale, 0.36 * scale, upperTrunkHeight, 8),
+        materials.trunk
+    );
+    upperTrunk.position.y = upperTrunkHeight / 2;
+    upperTrunk.castShadow = true;
+    top.add(upperTrunk);
 
     const foliageGeo = new THREE.DodecahedronGeometry(2.2 * scale, 1);
     const foliage = new THREE.Mesh(foliageGeo, materials.oakFoliage);
-    foliage.position.y = 4.2 * scale;
-    tree.add(foliage);
+    foliage.position.y = 3.5 * scale;
+    foliage.castShadow = true;
+    top.add(foliage);
 
+    tree.add(top);
+
+    tree.userData = { stump, top };
     return tree;
 }
 

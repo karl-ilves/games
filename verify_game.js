@@ -7775,6 +7775,26 @@ await (async () => {
                 const rampHeight = world.getGroundHeight(-115, 0);
                 const hasJumpRamps = rampHeight > 0.5; // center of ramp should be elevated
 
+                // Test Destructible Trees (breaks into 2 pieces, resets after 10s, counts under lamp hits)
+                const tree = world.trees?.[0];
+                let treeBroken = false;
+                let treeRespawned = false;
+                const treesAvailable = (world.trees?.length || 0) > 0;
+                if (tree) {
+                    physics.state.position.set(tree.basePos.x, 0.1, tree.basePos.z - 1.2);
+                    physics.yaw = 0; // facing towards tree
+                    physics.update(0.1, { throttle: 1, brake: 0, steer: 0, handbrake: false, horn: false, reset: false });
+                    treeBroken = tree.isFalling || tree.isFallen;
+
+                    // Simulate tree fully fallen
+                    tree.isFalling = false;
+                    tree.isFallen = true;
+                    tree.fallenTime = 1.0;
+                    // Call update at t=12s (>10s)
+                    world.update(12.0, 0.016);
+                    treeRespawned = !tree.isFallen && !tree.isFalling && tree.fallProgress === 0;
+                }
+
                 // Test Map Boundary Protection (cannot drive out of map)
                 physics.state.position.set(-358, 0.1, 0);
                 physics.yaw = -Math.PI / 2; // facing West toward edge
@@ -7876,6 +7896,9 @@ await (async () => {
                     lampCollapsed,
                     lampRespawned,
                     hasJumpRamps,
+                    treesAvailable,
+                    treeBroken,
+                    treeRespawned,
                     boundaryProtected,
                     initialWanted,
                     initialPoliceCount,
@@ -7924,6 +7947,12 @@ await (async () => {
             }
             if (!cityCarTest.hasJumpRamps) {
                 throw new Error("CityCar must have functional elevated jump ramps on the map!");
+            }
+            if (!cityCarTest.treesAvailable || !cityCarTest.treeBroken) {
+                throw new Error("CityCar Trees must break into 2 pieces when hit by car!");
+            }
+            if (!cityCarTest.treeRespawned) {
+                throw new Error("CityCar Trees must respawn (stand back up) after 10 seconds!");
             }
             if (cityCarTest.bridgeHeight > 0.1) {
                 throw new Error("CityCar Bridge must be flush with road height (<= 0.1m)!");
