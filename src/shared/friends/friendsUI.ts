@@ -9,13 +9,36 @@ export function initFriendsUI() {
     window.addEventListener('playard_auth_changed', (evt: any) => {
         const profile = evt.detail as UserProfile | null;
         renderFriendsSection(profile);
+        if (profile?.username) {
+            friendService.syncCloudFriends(profile.username);
+        }
     });
 
     // Listen for friends state updates
     window.addEventListener('playard_friends_updated', () => {
         const profile = getCurrentUserProfile();
         renderFriendsSection(profile);
+        const reqModal = document.getElementById('modal-friend-requests');
+        if (reqModal && reqModal.style.display === 'flex' && profile?.username) {
+            renderIncomingRequestsModal(profile.username);
+        }
     });
+
+    // Re-sync on window focus (e.g. switching back from other tab/app)
+    window.addEventListener('focus', () => {
+        const profile = getCurrentUserProfile();
+        if (profile?.username) {
+            friendService.syncCloudFriends(profile.username);
+        }
+    });
+
+    // Periodic cloud sync every 8 seconds for background real-time updates
+    setInterval(() => {
+        const profile = getCurrentUserProfile();
+        if (profile?.username) {
+            friendService.syncCloudFriends(profile.username);
+        }
+    }, 8000);
 
     // Initial render if user is already logged in
     const initialProfile = getCurrentUserProfile();
@@ -182,6 +205,7 @@ function setupModals() {
         if (!profile || !profile.username) return;
         renderIncomingRequestsModal(profile.username);
         if (requestsModal) requestsModal.style.display = 'flex';
+        friendService.syncCloudFriends(profile.username);
     });
 
     closeRequestsBtn?.addEventListener('click', () => {
@@ -201,9 +225,8 @@ function setupModals() {
         renderSearchResults('', profile.username);
         if (inviteModal) inviteModal.style.display = 'flex';
         setTimeout(() => searchInput?.focus(), 50);
-        friendService.fetchSupabaseProfiles().then(() => {
-            renderSearchResults(searchInput?.value || '', profile.username);
-        });
+        friendService.fetchSupabaseProfiles();
+        friendService.syncCloudFriends(profile.username);
     });
 
     closeInviteBtn?.addEventListener('click', () => {
@@ -272,20 +295,24 @@ function renderIncomingRequestsModal(username: string) {
 
     // Bind Accept buttons
     listEl.querySelectorAll('.btn-accept-request').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const fromUser = btn.getAttribute('data-from');
             if (!fromUser) return;
-            friendService.acceptFriendRequest(username, fromUser);
+            btn.innerHTML = '⏳...';
+            (btn as HTMLButtonElement).disabled = true;
+            await friendService.acceptFriendRequest(username, fromUser);
             renderIncomingRequestsModal(username);
         });
     });
 
     // Bind Decline buttons
     listEl.querySelectorAll('.btn-decline-request').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const fromUser = btn.getAttribute('data-from');
             if (!fromUser) return;
-            friendService.declineFriendRequest(username, fromUser);
+            btn.innerHTML = '⏳...';
+            (btn as HTMLButtonElement).disabled = true;
+            await friendService.declineFriendRequest(username, fromUser);
             renderIncomingRequestsModal(username);
         });
     });
@@ -353,23 +380,31 @@ function renderSearchResults(query: string, currentUsername: string) {
 
     // Bind invite buttons
     resultsContainer.querySelectorAll('.btn-send-invite').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const target = btn.getAttribute('data-username');
             if (!target) return;
             const profile = getCurrentUserProfile();
             if (!profile) return;
-            friendService.sendFriendRequest(profile.username, profile.displayName, target);
-            renderSearchResults(query, currentUsername);
+            
+            btn.innerHTML = isEt ? '⏳ Saadetakse...' : '⏳ Sending...';
+            (btn as HTMLButtonElement).disabled = true;
+
+            await friendService.sendFriendRequest(profile.username, profile.displayName, target);
+            const curInput = (document.getElementById('friend-search-input') as HTMLInputElement)?.value || '';
+            renderSearchResults(curInput, currentUsername);
         });
     });
 
     // Bind accept buttons in search if applicable
     resultsContainer.querySelectorAll('.btn-accept-search').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const target = btn.getAttribute('data-username');
             if (!target) return;
-            friendService.acceptFriendRequest(currentUsername, target);
-            renderSearchResults(query, currentUsername);
+            btn.innerHTML = '⏳...';
+            (btn as HTMLButtonElement).disabled = true;
+            await friendService.acceptFriendRequest(currentUsername, target);
+            const curInput = (document.getElementById('friend-search-input') as HTMLInputElement)?.value || '';
+            renderSearchResults(curInput, currentUsername);
         });
     });
 }

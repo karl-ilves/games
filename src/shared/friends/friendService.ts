@@ -27,6 +27,16 @@ export interface PlayerSearchResult {
     hasPendingIncoming: boolean;
 }
 
+function generateUUID(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 function getPlayerColor(username: string): string {
     const colors = ['#3498db', '#e67e22', '#9b59b6', '#1abc9c', '#e74c3c', '#0be881', '#00f2fe', '#f39c12', '#fd79a8'];
     let hash = 0;
@@ -115,6 +125,21 @@ export class FriendService {
                     }
                 }).subscribe();
             } catch (e) {}
+
+            try {
+                supabase.channel('playard_friends_db_sync')
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'user_created_games'
+                    }, () => {
+                        const profile = getCurrentUserProfile();
+                        if (profile?.username) {
+                            this.syncCloudFriends(profile.username);
+                        }
+                    })
+                    .subscribe();
+            } catch (e) {}
         }
     }
 
@@ -132,14 +157,165 @@ export class FriendService {
         } catch (e) {}
     }
 
+    private cleanRequestsAfterAccept(userA: string, userB: string) {
+        const uA = userA.toLowerCase().trim();
+        const uB = userB.toLowerCase().trim();
+
+        const inA = this.getIncomingRequests(uA).filter(r => r.fromUsername.toLowerCase().trim() !== uB);
+        localStorage.setItem(this.getIncomingRequestsKey(uA), JSON.stringify(inA));
+
+        const inB = this.getIncomingRequests(uB).filter(r => r.fromUsername.toLowerCase().trim() !== uA);
+        localStorage.setItem(this.getIncomingRequestsKey(uB), JSON.stringify(inB));
+
+        const outA = this.getOutgoingRequests(uA).filter(u => u.toLowerCase().trim() !== uB);
+        localStorage.setItem(this.getOutgoingRequestsKey(uA), JSON.stringify(outA));
+
+        const outB = this.getOutgoingRequests(uB).filter(u => u.toLowerCase().trim() !== uA);
+        localStorage.setItem(this.getOutgoingRequestsKey(uB), JSON.stringify(outB));
+    }
+
+    private addFriendDirect(ownerUsername: string, friendUsername: string, friendDisplayName?: string) {
+        const owner = ownerUsername.toLowerCase().trim();
+        const list = this.getFriends(owner);
+        if (!list.some(f => f.username.toLowerCase().trim() === friendUsername.toLowerCase().trim())) {
+            list.push({
+                username: friendUsername,
+                displayName: friendDisplayName || friendUsername,
+                avatarColor: getPlayerColor(friendUsername),
+                isOnline: true
+            });
+            localStorage.setItem(this.getFriendsKey(owner), JSON.stringify(list));
+        }
+    }
+
+    private removeFriendDirect(ownerUsername: string, friendUsername: string) {
+        const owner = ownerUsername.toLowerCase().trim();
+        const list = this.getFriends(owner).filter(f => f.username.toLowerCase().trim() !== friendUsername.toLowerCase().trim());
+        localStorage.setItem(this.getFriendsKey(owner), JSON.stringify(list));
+    }
+
     private handleIncomingSyncEvent(data: any) {
         if (!data || !data.type) return;
-        if (data.type === 'player_active_game' && data.username && data.game) {
+
+        if (data.type === 'friend_request' && data.toUsername) {
+            const toUser = data.toUsername.toLowerCase().trim();
+            const fromUser = data.fromUsername;
+            const inKey = this.getIncomingRequestsKey(toUser);
+            const inList = this.getIncomingRequests(toUser);
+            if (!inList.some(r => r.fromUsername.toLowerCase().trim() === fromUser.toLowerCase().trim())) {
+                inList.push({
+                    id: data.id || `req_${fromUser}_${Date.now()}`,
+                    fromUsername: fromUser,
+                    fromDisplayName: data.fromDisplayName || fromUser,
+                    fromColor: data.fromColor || getPlayerColor(fromUser),
+                    toUsername: data.toUsername,
+                    timestamp: data.timestamp || Date.now()
+                });
+                localStorage.setItem(inKey, JSON.stringify(inList));
+            }
+        } else if (data.type === 'friend_accept' && data.fromUsername && data.toUsername) {
+            const userA = data.fromUsername;
+            const userB = data.toUsername;
+
+            this.cleanRequestsAfterAccept(userA, userB);
+            this.addFriendDirect(userA, userB, data.displayNameB || userB);
+            this.addFriendDirect(userB, userA, data.displayNameA || userA);
+        } else if (data.type === 'friend_decline' && data.fromUsername && data.toUsername) {
+            this.cleanRequestsAfterAccept(data.fromUsername, data.toUsername);
+        } else if (data.type === 'friend_remove' && data.fromUsername && data.toUsername) {
+            this.removeFriendDirect(data.fromUsername, data.toUsername);
+            this.removeFriendDirect(data.toUsername, data.fromUsername);
+        } else if (data.type === 'player_active_game' && data.username && data.game) {
             try {
-                localStorage.setItem(`playard_active_game_${data.username.toLowerCase()}`, JSON.stringify(data.game));
+                localStorage.setItem(`playard_active_game_${data.username.toLowerCase().trim()}`, JSON.stringify(data.game));
             } catch (e) {}
         }
+
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: data }));
+    }
+
+    public async syncCloudFriends(currentUsername: string) {
+        if (!supabase || !currentUsername) return;
+        const cleanUser = currentUsername.toLowerCase().trim();
+        try {
+            // 1. Fetch pending friend requests for current user from cloud
+            const { data: reqs } = await supabase
+                .from('user_created_games')
+                .select('*')
+                .eq('category', 'friend_request')
+                .eq('status', 'pending');
+
+            if (Array.isArray(reqs)) {
+                const inList = this.getIncomingRequests(cleanUser);
+                let inChanged = false;
+
+                reqs.forEach(r => {
+                    try {
+                        const parsed = typeof r.description === 'string' ? JSON.parse(r.description) : r.description;
+                        if (parsed && parsed.toUsername && parsed.toUsername.toLowerCase().trim() === cleanUser) {
+                            if (!inList.some(item => item.fromUsername.toLowerCase().trim() === parsed.fromUsername.toLowerCase().trim())) {
+                                inList.push({
+                                    id: r.id,
+                                    fromUsername: parsed.fromUsername,
+                                    fromDisplayName: parsed.fromDisplayName || parsed.fromUsername,
+                                    fromColor: parsed.fromColor || getPlayerColor(parsed.fromUsername),
+                                    toUsername: parsed.toUsername,
+                                    timestamp: parsed.timestamp || (r.created_at ? new Date(r.created_at).getTime() : Date.now())
+                                });
+                                inChanged = true;
+                            }
+                        }
+                    } catch (e) {}
+                });
+
+                if (inChanged) {
+                    localStorage.setItem(this.getIncomingRequestsKey(cleanUser), JSON.stringify(inList));
+                }
+            }
+
+            // 2. Fetch active friendships from cloud
+            const { data: rels } = await supabase
+                .from('user_created_games')
+                .select('*')
+                .eq('category', 'friend_relation')
+                .eq('status', 'active');
+
+            if (Array.isArray(rels)) {
+                const myFriends = this.getFriends(cleanUser);
+                let frChanged = false;
+
+                rels.forEach(rel => {
+                    try {
+                        const parsed = typeof rel.description === 'string' ? JSON.parse(rel.description) : rel.description;
+                        if (parsed && (parsed.user1?.toLowerCase().trim() === cleanUser || parsed.user2?.toLowerCase().trim() === cleanUser)) {
+                            const otherUser = parsed.user1?.toLowerCase().trim() === cleanUser ? parsed.user2 : parsed.user1;
+                            const otherDisplayName = parsed.user1?.toLowerCase().trim() === cleanUser 
+                                ? (parsed.displayName2 || otherUser) 
+                                : (parsed.displayName1 || otherUser);
+                            if (otherUser && !myFriends.some(f => f.username.toLowerCase().trim() === otherUser.toLowerCase().trim())) {
+                                myFriends.push({
+                                    username: otherUser,
+                                    displayName: otherDisplayName,
+                                    avatarColor: getPlayerColor(otherUser),
+                                    isOnline: true
+                                });
+                                frChanged = true;
+                            }
+                        }
+                    } catch (e) {}
+                });
+
+                if (frChanged) {
+                    localStorage.setItem(this.getFriendsKey(cleanUser), JSON.stringify(myFriends));
+                }
+            }
+
+            if (inChanged || frChanged) {
+                window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanUser } }));
+            }
+        } catch (e) {
+            console.warn('Could not sync cloud friends:', e);
+        }
     }
 
     public setPlayerActiveGame(username: string, game: { id: string; title: string; url: string }) {
@@ -212,8 +388,9 @@ export class FriendService {
 
     public initUser(username: string, _displayName?: string) {
         if (!username) return;
-        const inKey = this.getIncomingRequestsKey(username);
-        const frKey = this.getFriendsKey(username);
+        const clean = username.toLowerCase().trim();
+        const inKey = this.getIncomingRequestsKey(clean);
+        const frKey = this.getFriendsKey(clean);
 
         // Initialize empty lists if not already present
         if (localStorage.getItem(inKey) === null) {
@@ -251,137 +428,192 @@ export class FriendService {
         return [];
     }
 
-    public sendFriendRequest(fromUsername: string, fromDisplayName: string, toUsername: string): boolean {
-        if (!fromUsername || !toUsername || fromUsername.toLowerCase() === toUsername.toLowerCase()) {
+    public async sendFriendRequest(fromUsername: string, fromDisplayName: string, toUsername: string): Promise<boolean> {
+        if (!fromUsername || !toUsername || fromUsername.toLowerCase().trim() === toUsername.toLowerCase().trim()) {
             return false;
         }
 
-        // Add to sender's outgoing requests
-        const outList = this.getOutgoingRequests(fromUsername);
-        if (!outList.includes(toUsername)) {
-            outList.push(toUsername);
-            localStorage.setItem(this.getOutgoingRequestsKey(fromUsername), JSON.stringify(outList));
+        const cleanFrom = fromUsername.trim();
+        const cleanTo = toUsername.trim();
+
+        // 1. Add to sender's outgoing requests locally
+        const outList = this.getOutgoingRequests(cleanFrom);
+        if (!outList.some(u => u.toLowerCase().trim() === cleanTo.toLowerCase().trim())) {
+            outList.push(cleanTo);
+            localStorage.setItem(this.getOutgoingRequestsKey(cleanFrom), JSON.stringify(outList));
         }
 
-        // Add to recipient's incoming requests
-        const inList = this.getIncomingRequests(toUsername);
-        const exists = inList.some(r => r.fromUsername.toLowerCase() === fromUsername.toLowerCase());
+        // 2. Add to recipient's incoming requests locally (for local tab/browser testing)
+        const inList = this.getIncomingRequests(cleanTo);
+        const exists = inList.some(r => r.fromUsername.toLowerCase().trim() === cleanFrom.toLowerCase().trim());
         const newReq: FriendRequest = {
-            id: `req_${fromUsername}_${Date.now()}`,
-            fromUsername,
-            fromDisplayName: fromDisplayName || fromUsername,
-            fromColor: getPlayerColor(fromUsername),
-            toUsername,
+            id: generateUUID(),
+            fromUsername: cleanFrom,
+            fromDisplayName: fromDisplayName || cleanFrom,
+            fromColor: getPlayerColor(cleanFrom),
+            toUsername: cleanTo,
             timestamp: Date.now()
         };
 
         if (!exists) {
             inList.push(newReq);
-            localStorage.setItem(this.getIncomingRequestsKey(toUsername), JSON.stringify(inList));
+            localStorage.setItem(this.getIncomingRequestsKey(cleanTo), JSON.stringify(inList));
         }
 
-        // Broadcast to other tabs/players
+        // 3. Save to Supabase Cloud so offline users receive it!
+        if (supabase) {
+            try {
+                const reqTitle = `FRIEND_REQ:${cleanFrom.toLowerCase()}->${cleanTo.toLowerCase()}`;
+                const { data: existing } = await supabase
+                    .from('user_created_games')
+                    .select('id')
+                    .eq('category', 'friend_request')
+                    .eq('title', reqTitle)
+                    .eq('status', 'pending');
+
+                if (!existing || existing.length === 0) {
+                    await supabase.from('user_created_games').insert({
+                        id: newReq.id,
+                        creator_username: cleanFrom.toLowerCase(),
+                        title: reqTitle,
+                        description: JSON.stringify(newReq),
+                        category: 'friend_request',
+                        status: 'pending'
+                    });
+                }
+            } catch (e) {
+                console.warn('Could not persist friend request to Supabase:', e);
+            }
+        }
+
+        // 4. Broadcast to other tabs/players in real time
         this.broadcastAction({
             type: 'friend_request',
-            fromUsername,
-            fromDisplayName: fromDisplayName || fromUsername,
-            toUsername,
-            timestamp: Date.now()
+            ...newReq
         });
 
-        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: fromUsername } }));
+        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanFrom } }));
         return true;
     }
 
-    public acceptFriendRequest(currentUsername: string, fromUsername: string): boolean {
+    public async acceptFriendRequest(currentUsername: string, fromUsername: string): Promise<boolean> {
         if (!currentUsername || !fromUsername) return false;
+        const cleanCurrent = currentUsername.trim();
+        const cleanFrom = fromUsername.trim();
 
-        // Remove from current user's incoming requests
-        const inList = this.getIncomingRequests(currentUsername);
-        const req = inList.find(r => r.fromUsername.toLowerCase() === fromUsername.toLowerCase());
-        const filteredIn = inList.filter(r => r.fromUsername.toLowerCase() !== fromUsername.toLowerCase());
-        localStorage.setItem(this.getIncomingRequestsKey(currentUsername), JSON.stringify(filteredIn));
+        // 1. Remove from requests locally
+        this.cleanRequestsAfterAccept(cleanFrom, cleanCurrent);
 
-        // Remove from sender's outgoing requests
-        const outList = this.getOutgoingRequests(fromUsername);
-        const filteredOut = outList.filter(u => u.toLowerCase() !== currentUsername.toLowerCase());
-        localStorage.setItem(this.getOutgoingRequestsKey(fromUsername), JSON.stringify(filteredOut));
+        // 2. Add to friends locally
+        this.addFriendDirect(cleanCurrent, cleanFrom);
+        this.addFriendDirect(cleanFrom, cleanCurrent);
 
-        // Add to current user's friends
-        const myFriends = this.getFriends(currentUsername);
-        if (!myFriends.some(f => f.username.toLowerCase() === fromUsername.toLowerCase())) {
-            myFriends.push({
-                username: fromUsername,
-                displayName: req?.fromDisplayName || fromUsername,
-                avatarColor: req?.fromColor || getPlayerColor(fromUsername),
-                isOnline: true
-            });
-            localStorage.setItem(this.getFriendsKey(currentUsername), JSON.stringify(myFriends));
+        // 3. Update in Supabase Cloud
+        if (supabase) {
+            try {
+                await supabase
+                    .from('user_created_games')
+                    .update({ status: 'accepted' })
+                    .eq('category', 'friend_request')
+                    .in('title', [
+                        `FRIEND_REQ:${cleanFrom.toLowerCase()}->${cleanCurrent.toLowerCase()}`,
+                        `FRIEND_REQ:${cleanCurrent.toLowerCase()}->${cleanFrom.toLowerCase()}`
+                    ]);
+
+                const relId = generateUUID();
+                await supabase.from('user_created_games').insert({
+                    id: relId,
+                    creator_username: cleanCurrent.toLowerCase(),
+                    title: `FRIEND:${cleanCurrent.toLowerCase()}<->${cleanFrom.toLowerCase()}`,
+                    description: JSON.stringify({
+                        user1: cleanCurrent.toLowerCase(),
+                        user2: cleanFrom.toLowerCase(),
+                        displayName1: cleanCurrent,
+                        displayName2: cleanFrom,
+                        timestamp: Date.now()
+                    }),
+                    category: 'friend_relation',
+                    status: 'active'
+                });
+            } catch (e) {
+                console.warn('Could not update friend acceptance in cloud:', e);
+            }
         }
 
-        // Add to sender's friends as well
-        const theirFriends = this.getFriends(fromUsername);
-        if (!theirFriends.some(f => f.username.toLowerCase() === currentUsername.toLowerCase())) {
-            theirFriends.push({
-                username: currentUsername,
-                displayName: currentUsername,
-                avatarColor: getPlayerColor(currentUsername),
-                isOnline: true
-            });
-            localStorage.setItem(this.getFriendsKey(fromUsername), JSON.stringify(theirFriends));
-        }
-
-        // Broadcast acceptance
+        // 4. Broadcast acceptance
         this.broadcastAction({
             type: 'friend_accept',
-            fromUsername,
-            toUsername: currentUsername,
+            fromUsername: cleanFrom,
+            toUsername: cleanCurrent,
+            displayNameA: cleanFrom,
+            displayNameB: cleanCurrent,
             timestamp: Date.now()
         });
 
-        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: currentUsername } }));
+        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanCurrent } }));
         return true;
     }
 
-    public declineFriendRequest(currentUsername: string, fromUsername: string): boolean {
+    public async declineFriendRequest(currentUsername: string, fromUsername: string): Promise<boolean> {
         if (!currentUsername || !fromUsername) return false;
+        const cleanCurrent = currentUsername.trim();
+        const cleanFrom = fromUsername.trim();
 
-        const inList = this.getIncomingRequests(currentUsername);
-        const filteredIn = inList.filter(r => r.fromUsername.toLowerCase() !== fromUsername.toLowerCase());
-        localStorage.setItem(this.getIncomingRequestsKey(currentUsername), JSON.stringify(filteredIn));
+        this.cleanRequestsAfterAccept(cleanFrom, cleanCurrent);
 
-        const outList = this.getOutgoingRequests(fromUsername);
-        const filteredOut = outList.filter(u => u.toLowerCase() !== currentUsername.toLowerCase());
-        localStorage.setItem(this.getOutgoingRequestsKey(fromUsername), JSON.stringify(filteredOut));
+        if (supabase) {
+            try {
+                await supabase
+                    .from('user_created_games')
+                    .update({ status: 'declined' })
+                    .eq('category', 'friend_request')
+                    .in('title', [
+                        `FRIEND_REQ:${cleanFrom.toLowerCase()}->${cleanCurrent.toLowerCase()}`,
+                        `FRIEND_REQ:${cleanCurrent.toLowerCase()}->${cleanFrom.toLowerCase()}`
+                    ]);
+            } catch (e) {}
+        }
 
         this.broadcastAction({
             type: 'friend_decline',
-            fromUsername,
-            toUsername: currentUsername,
+            fromUsername: cleanFrom,
+            toUsername: cleanCurrent,
             timestamp: Date.now()
         });
 
-        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: currentUsername } }));
+        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanCurrent } }));
         return true;
     }
 
-    public removeFriend(currentUsername: string, friendUsername: string): boolean {
+    public async removeFriend(currentUsername: string, friendUsername: string): Promise<boolean> {
         if (!currentUsername || !friendUsername) return false;
+        const cleanCurrent = currentUsername.trim();
+        const cleanFriend = friendUsername.trim();
 
-        const myFriends = this.getFriends(currentUsername).filter(f => f.username.toLowerCase() !== friendUsername.toLowerCase());
-        localStorage.setItem(this.getFriendsKey(currentUsername), JSON.stringify(myFriends));
+        this.removeFriendDirect(cleanCurrent, cleanFriend);
+        this.removeFriendDirect(cleanFriend, cleanCurrent);
 
-        const theirFriends = this.getFriends(friendUsername).filter(f => f.username.toLowerCase() !== currentUsername.toLowerCase());
-        localStorage.setItem(this.getFriendsKey(friendUsername), JSON.stringify(theirFriends));
+        if (supabase) {
+            try {
+                await supabase
+                    .from('user_created_games')
+                    .update({ status: 'removed' })
+                    .eq('category', 'friend_relation')
+                    .in('title', [
+                        `FRIEND:${cleanCurrent.toLowerCase()}<->${cleanFriend.toLowerCase()}`,
+                        `FRIEND:${cleanFriend.toLowerCase()}<->${cleanCurrent.toLowerCase()}`
+                    ]);
+            } catch (e) {}
+        }
 
         this.broadcastAction({
             type: 'friend_remove',
-            fromUsername: currentUsername,
-            toUsername: friendUsername,
+            fromUsername: cleanCurrent,
+            toUsername: cleanFriend,
             timestamp: Date.now()
         });
 
-        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: currentUsername } }));
+        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanCurrent } }));
         return true;
     }
 

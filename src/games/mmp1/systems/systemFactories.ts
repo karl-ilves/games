@@ -205,6 +205,7 @@ export function createGameSystems(game: any): {
         rosterManager,
         roundManager
     );
+    (roundManager as any).ctx.syncSystem = syncSystem;
 
     return {
         combatSystem,

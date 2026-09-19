@@ -98,7 +98,12 @@ export class MurderMysteryGame {
         this.container.appendChild(this.renderer.domElement);
         this.clock = new THREE.Clock();
 
-        this.hudUI = new HudUI({ playerChar: null as any, characters: this.characters, crateManager: this.crateManager });
+        this.hudUI = new HudUI({
+            playerChar: null as any,
+            characters: this.characters,
+            crateManager: this.crateManager,
+            getState: () => this.state
+        });
         this.checkAccessAuthorization();
         const { muzzleFlashLight } = setupLights(this.scene);
         this.muzzleFlashLight = muzzleFlashLight;
@@ -258,6 +263,7 @@ export class MurderMysteryGame {
     public returnToLobby() {
         this.invisibilitySystem?.reset();
         this.spectatorSystem?.reset();
+        this.syncSystem?.resetForLobby();
         this.roundManager.returnToLobby();
     }
 

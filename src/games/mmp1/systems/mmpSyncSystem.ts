@@ -78,25 +78,32 @@ export class MmpSyncSystem {
         });
     }
 
+    public resetForLobby() {
+        this.votingTransitioned = false;
+        this.roundTransitioned = false;
+        this.lobbyEndTime = Date.now() + 30000;
+        this.mapVoteEndTime = 0;
+    }
+
     public update(delta: number) {
         const now = Date.now();
 
         if (this.game.state === 'lobby') {
             this.roundTransitioned = false;
-            const CYCLE_MS = 40000;
-            if (!this.lobbyEndTime || this.lobbyEndTime <= now) {
+            const CYCLE_MS = 30000;
+            if (!this.lobbyEndTime) {
                 this.lobbyEndTime = Math.ceil(now / CYCLE_MS) * CYCLE_MS;
-                if (this.lobbyEndTime - now < 4000) {
+                if (this.lobbyEndTime - now < 5000) {
                     this.lobbyEndTime += CYCLE_MS;
                 }
             }
 
-            const remainingSec = Math.max(0, (this.lobbyEndTime - now) / 1000);
-            this.game.lobbyCountdown = remainingSec;
+            const remainingSec = (this.lobbyEndTime - now) / 1000;
+            this.game.lobbyCountdown = Math.max(0, remainingSec);
 
             const lobbySec = document.getElementById('lobby-countdown-sec');
             if (lobbySec) {
-                lobbySec.textContent = Math.ceil(remainingSec) + 's';
+                lobbySec.textContent = Math.max(0, Math.ceil(remainingSec)) + 's';
             }
 
             if (this.isHost() && now - this.lastSyncBroadcast > 3000) {
@@ -106,7 +113,8 @@ export class MmpSyncSystem {
 
             if (remainingSec <= 0 && !this.votingTransitioned) {
                 this.votingTransitioned = true;
-                const voteDurationMs = 8000;
+                this.lobbyEndTime = 0;
+                const voteDurationMs = 6000;
                 this.mapVoteEndTime = now + voteDurationMs;
                 if (this.isHost()) {
                     this.onlineNetwork.broadcastAction('start_map_vote', { voteEndTime: this.mapVoteEndTime });
@@ -115,35 +123,31 @@ export class MmpSyncSystem {
             }
         } else if (this.game.state === 'map_vote') {
             this.votingTransitioned = false;
-            if (!this.mapVoteEndTime || this.mapVoteEndTime <= now - 15000) {
-                this.mapVoteEndTime = now + 8000;
+            if (!this.mapVoteEndTime) {
+                this.mapVoteEndTime = now + 6000;
             }
 
-            const remainingVote = Math.max(0, (this.mapVoteEndTime - now) / 1000);
-            this.roundManager.mapVoteCountdown = remainingVote;
+            const remainingVote = (this.mapVoteEndTime - now) / 1000;
+            this.roundManager.mapVoteCountdown = Math.max(0, remainingVote);
 
             const mapTimer = document.getElementById('map-vote-timer');
             if (mapTimer) {
-                mapTimer.textContent = Math.ceil(remainingVote) + 's';
+                mapTimer.textContent = Math.max(0, Math.ceil(remainingVote)) + 's';
             }
 
             if (remainingVote <= 0 && !this.roundTransitioned) {
                 this.roundTransitioned = true;
+                this.mapVoteEndTime = 0;
+                const winningMap = this.roundManager.finishMapVoting();
+                const roles = this.assignRolesSynchronized();
                 if (this.isHost()) {
-                    const winningMap = this.roundManager.finishMapVoting();
-                    const roles = this.assignRolesSynchronized();
                     this.onlineNetwork.broadcastAction('start_round', {
                         winningMap,
                         murdererId: roles.murdererId,
                         sheriffId: roles.sheriffId
                     });
-                    this.game.startRound(winningMap, roles);
-                } else if (remainingVote <= -2) {
-                    // Fallback in case host packet was lost
-                    const winningMap = this.roundManager.finishMapVoting();
-                    const roles = this.assignRolesSynchronized();
-                    this.game.startRound(winningMap, roles);
                 }
+                this.game.startRound(winningMap, roles);
             }
         }
     }

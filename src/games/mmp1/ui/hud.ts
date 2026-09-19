@@ -1,4 +1,4 @@
-import { Role, Character } from '../types';
+import { Role, Character, GameState } from '../types';
 import { WEAPON_SKIN_CATALOG } from '../catalog';
 import { getWeaponArtworkSvg } from './svgArtwork';
 import { MmpCrateManager } from '../state/crateManager';
@@ -8,6 +8,7 @@ export interface HudContext {
     playerChar: Character;
     characters: Character[];
     crateManager: MmpCrateManager;
+    getState?: () => GameState;
 }
 
 export class HudUI {
@@ -50,6 +51,18 @@ export class HudUI {
 
         const lang = getLanguage();
         const texts = I18N[lang];
+
+        const state = this.ctx.getState ? this.ctx.getState() : undefined;
+        if (state === 'lobby') {
+            this.hudRoleIcon.textContent = '⏳';
+            this.hudRoleText.textContent = 'LOBBY';
+            this.hudRoleBadge.style.borderColor = '#ffd32a';
+            this.hudRoleBadge.style.color = '#ffd32a';
+            if (this.slotWeaponIcon) this.slotWeaponIcon.textContent = '✊';
+            if (this.slotWeaponName) this.slotWeaponName.textContent = texts.hud.hotbarHands;
+            if (this.slotWeapon) this.slotWeapon.classList.remove('active');
+            return;
+        }
 
         const inv = this.ctx.crateManager?.getInventory();
         const equippedKnifeId = inv?.equippedKnife || 'knife_default';

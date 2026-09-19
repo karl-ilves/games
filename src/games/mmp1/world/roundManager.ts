@@ -38,6 +38,7 @@ export interface RoundContext {
     isPointerLocked: () => boolean;
     onlineNetwork?: any;
     broadcastAction?: (action: any, payload?: any) => void;
+    syncSystem?: any;
 }
 
 export class RoundManager {
@@ -385,7 +386,8 @@ export class RoundManager {
         const roundEndOverlay = document.getElementById("round-end-overlay");
         if (roundEndOverlay) roundEndOverlay.style.display = "none";
         this.ctx.setState("lobby");
-        this.ctx.setLobbyCountdown(40);
+        this.ctx.setLobbyCountdown(30);
+        this.ctx.syncSystem?.resetForLobby?.();
 
         const lobbyBanner = document.getElementById("lobby-banner");
         const hudAliveBadge = document.getElementById("hud-alive-badge");

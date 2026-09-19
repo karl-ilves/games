@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase';
+import { isTestMode } from '../../../auth';
 
 export interface MmpPlayerState {
     id: string;
@@ -96,7 +97,7 @@ export class MmpOnlineNetwork {
 
     // 2. Supabase Realtime WebSocket (Global internet multiplayer)
     private initSupabase() {
-        if (!supabase) return;
+        if (!supabase || isTestMode()) return;
         try {
             this.supabaseChannel = supabase.channel('mmp1_global_channel_v1', {
                 config: {
