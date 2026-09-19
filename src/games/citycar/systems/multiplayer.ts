@@ -148,7 +148,7 @@ export class CityCarMultiplayerSystem {
         });
     }
 
-    private handlePacket(packet: CarNetworkPacket): void {
+    public handlePacket(packet: CarNetworkPacket): void {
         let remote = this.remoteDrivers.get(packet.id);
         if (!remote) {
             // Spawn new opponent car mesh
@@ -184,6 +184,7 @@ export class CityCarMultiplayerSystem {
         remote.info.lastSeen = Date.now();
         remote.info.speed = packet.speed;
         remote.info.zone = packet.zone;
+        remote.info.wantedLevel = packet.wantedLevel || 0;
         remote.targetPos.set(packet.x, packet.y, packet.z);
         remote.targetRotY = packet.rotY;
         remote.currentWheelRot = packet.wheelRot || 0;
@@ -203,7 +204,8 @@ export class CityCarMultiplayerSystem {
         speed: number,
         wheelRot: number,
         steerAngle: number,
-        zone: WorldZone
+        zone: WorldZone,
+        wantedLevel: WantedLevel = 0
     ): void {
         const now = performance.now();
         if (now - this.lastBroadcastTime < 45) return; // ~22 updates/sec max
@@ -221,6 +223,7 @@ export class CityCarMultiplayerSystem {
             wheelRot,
             steerAngle,
             zone,
+            wantedLevel,
             time: Date.now()
         };
 
@@ -305,5 +308,9 @@ export class CityCarMultiplayerSystem {
 
     public getRemoteCount(): number {
         return this.remoteDrivers.size;
+    }
+
+    public getRemoteDrivers(): RemoteDriver[] {
+        return Array.from(this.remoteDrivers.values());
     }
 }

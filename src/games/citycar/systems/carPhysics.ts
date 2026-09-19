@@ -209,6 +209,22 @@ export class CarPhysicsController {
             }
         }
 
+        // Ramp side collision check (User: "kui ma sõidan rambile küljepealt jääb auto seisma ja aga kui ma lähen õigest kohast siis lendan")
+        const rampInteraction = this.world.checkRampInteraction(
+            this.state.position.x,
+            this.state.position.y,
+            this.state.position.z,
+            nextX,
+            nextZ
+        );
+
+        if (rampInteraction.isSideHit) {
+            // Hit the solid side wall of the ramp -> Stop the car dead!
+            this.forwardSpeedMps = 0;
+            this.onBuildingHit?.();
+            collided = true;
+        }
+
         // Strict map boundary clamping (User: "mapist välja sõita ei saa")
         let hitBoundary = false;
         let clampedX = nextX;
@@ -236,7 +252,7 @@ export class CarPhysicsController {
             this.state.position.x = clampedX;
             this.state.position.z = clampedZ;
         } else if (collided) {
-            // Rebound bounce
+            // Rebound bounce / stop against obstacle
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
             this.onBuildingHit?.();
         } else {
@@ -278,6 +294,11 @@ export class CarPhysicsController {
                 this.verticalVelocity = Math.min(climbSpeed * 0.9, 16.0);
             } else {
                 this.verticalVelocity = 0;
+            }
+            // User: "aga kui ma lähen õigest kohast siis lendan" -> Launch with huge upward momentum at ramp peak!
+            if (rampInteraction.isLaunching && Math.abs(this.forwardSpeedMps) > 3.5) {
+                const launchKick = Math.abs(this.forwardSpeedMps) * 0.45 + 5.5;
+                this.verticalVelocity = Math.max(this.verticalVelocity, launchKick);
             }
             this.state.position.y = groundY;
             this.state.isGrounded = true;

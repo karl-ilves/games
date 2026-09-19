@@ -229,7 +229,8 @@ function animate() {
                 physics.state.speed,
                 physics.state.wheelRotation,
                 physics.state.steeringAngle,
-                physics.state.currentZone
+                physics.state.currentZone,
+                wantedSystem.getWantedLevel()
             );
 
             // Police cruisers
@@ -249,6 +250,12 @@ function animate() {
 
             // Military Tanks
             tankSystem.update(delta, physics.state.position);
+
+            // Remote multiplayer chases (see police, helis, planes & tanks pursuing other drivers)
+            const remotes = multiplayer.getRemoteDrivers();
+            policeSystem.updateRemoteChases(delta, remotes);
+            airSupportSystem.updateRemoteAirSupport(delta, remotes);
+            tankSystem.updateRemoteTanks(delta, remotes);
 
             // Audio for sirens and helicopter blades
             const hasActivePolice = policeSystem.getActiveCount() > 0;

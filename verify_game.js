@@ -7803,9 +7803,11 @@ await (async () => {
                     lampRespawned = !lamp.isFallen && !lamp.isFalling && lamp.fallProgress === 0;
                 }
 
-                // Test Jump Ramps (ramp at x=-115, z=0 should elevate ground height)
-                const rampHeight = world.getGroundHeight(-115, 0);
-                const hasJumpRamps = rampHeight > 0.5; // center of ramp should be elevated
+                // Test Jump Ramps (roadside parallel ramps on the right side of the road)
+                const rampHeight = world.getGroundHeight(-110, 12.0);
+                const hasJumpRamps = rampHeight > 0.5; // center of roadside ramp should be elevated
+                const rampSideBlocked = world.checkRampInteraction(-110, 0.1, 8.0, -110, 9.5).isSideHit;
+                const rampBaseEnterable = !world.checkRampInteraction(-120, 0.1, 12.0, -116, 12.0).isSideHit;
 
                 // Test Destructible Trees (breaks into 2 pieces, resets after 10s, counts under lamp hits)
                 const tree = world.trees?.[0];
@@ -7888,6 +7890,21 @@ await (async () => {
                 tankSys?.update?.(3.0, physics.state.position);
                 const rocketsCount = tankSys?.getActiveRockets?.()?.length || 0;
 
+                // Test Tank Visibility & Non-NaN positions (User: "ma ei näe tanke")
+                const tanks = tankSys?.getTanks?.() || [];
+                const tanksVisibleAndValid = tanks.length === 5 && tanks.every(t => !isNaN(t.position.x) && !isNaN(t.position.z) && t.mesh?.beaconMat);
+
+                // Test Remote Player Chases (User: "ma pean teisi jälitavaid politseisi ja lennukeid ka nägema")
+                const testRemotePos = physics.state.position.clone().set(10, 0, 0);
+                police.updateRemoteChases(0.1, [{
+                    id: 'driver_taavi2_test',
+                    targetPos: testRemotePos,
+                    targetRotY: 1.57,
+                    info: { wantedLevel: 2, speed: 60 }
+                }]);
+                const remotePoliceDistance = police.getClosestDistance(testRemotePos);
+                const hasRemotePolice = remotePoliceDistance < 80;
+
                 // Test Arrest Modal and Reset
                 dbg.triggerArrest?.();
                 const modal = document.getElementById('arrested-modal');
@@ -7952,6 +7969,10 @@ await (async () => {
                     resetHelis,
                     resetTanks,
                     modalHiddenAfterReset,
+                    rampSideBlocked,
+                    rampBaseEnterable,
+                    tanksVisibleAndValid,
+                    hasRemotePolice,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
                 };
             });
@@ -7981,8 +8002,8 @@ await (async () => {
             if (!cityCarTest.lampRespawned) {
                 throw new Error("CityCar Streetlamp must respawn (stand back up) after 10 seconds!");
             }
-            if (!cityCarTest.hasJumpRamps) {
-                throw new Error("CityCar must have functional elevated jump ramps on the map!");
+            if (!cityCarTest.hasJumpRamps || !cityCarTest.rampSideBlocked || !cityCarTest.rampBaseEnterable) {
+                throw new Error("CityCar Jump ramps must be parallel beside roads, block side collisions, and allow smooth launch from base!");
             }
             if (!cityCarTest.treesAvailable || !cityCarTest.treeBroken) {
                 throw new Error("CityCar Trees must break into 2 pieces when hit by car!");
@@ -8011,8 +8032,11 @@ await (async () => {
             if (cityCarTest.star3Level !== 3 || cityCarTest.star3PoliceCount !== 5 || cityCarTest.star3HeliCount !== 2 || !cityCarTest.star3HasPlane) {
                 throw new Error("CityCar 3 Stars must feature 5 police cars, 2 helicopters, and 1 bomber plane!");
             }
-            if (cityCarTest.star4Level !== 4 || cityCarTest.star4TankCount !== 5) {
-                throw new Error("CityCar 4 Stars must spawn exactly 5 military tanks!");
+            if (cityCarTest.star4Level !== 4 || cityCarTest.star4TankCount !== 5 || !cityCarTest.tanksVisibleAndValid) {
+                throw new Error("CityCar 4 Stars must spawn exactly 5 visible military tanks with headlights and beacons!");
+            }
+            if (!cityCarTest.hasRemotePolice) {
+                throw new Error("CityCar must render chase vehicles pursuing other drivers in multiplayer!");
             }
             if (!cityCarTest.modalVisible) {
                 throw new Error("CityCar Arrest modal must be visible upon arrest!");

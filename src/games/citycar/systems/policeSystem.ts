@@ -208,13 +208,106 @@ export class PoliceChaseSystem {
         }
     }
 
+    private remoteCruisers: Map<string, PoliceCarEntity[]> = new Map();
+
+    public updateRemoteChases(
+        dt: number,
+        remoteDrivers: { id: string; targetPos: THREE.Vector3; targetRotY: number; info: { wantedLevel?: WantedLevel; speed: number } }[]
+    ): void {
+        const activeRemoteIds = new Set<string>();
+
+        remoteDrivers.forEach(driver => {
+            const level = driver.info.wantedLevel || 0;
+            if (level <= 0) return;
+            activeRemoteIds.add(driver.id);
+
+            const targetCount = level === 1 ? 2 : 5;
+            let list = this.remoteCruisers.get(driver.id);
+            if (!list) {
+                list = [];
+                this.remoteCruisers.set(driver.id, list);
+            }
+
+            while (list.length < targetCount) {
+                const idx = list.length;
+                const spawnAngle = driver.targetRotY + (idx % 2 === 0 ? 0.8 : -0.8) + idx * 0.5;
+                const dist = 30 + idx * 8;
+                let sx = driver.targetPos.x + Math.sin(spawnAngle) * dist;
+                let sz = driver.targetPos.z + Math.cos(spawnAngle) * dist;
+                sx = THREE.MathUtils.clamp(sx, MAP_BOUNDS.minX + 20, MAP_BOUNDS.maxX - 20);
+                sz = THREE.MathUtils.clamp(sz, MAP_BOUNDS.minZ + 20, MAP_BOUNDS.maxZ - 20);
+                const sy = this.world.getGroundHeight(sx, sz);
+
+                const mesh = createPoliceCarMesh('remote_cruiser_' + driver.id + '_' + idx);
+                mesh.group.position.set(sx, sy, sz);
+                this.scene.add(mesh.group);
+
+                list.push({
+                    id: 'rc_' + driver.id + '_' + idx,
+                    mesh,
+                    position: new THREE.Vector3(sx, sy, sz),
+                    yaw: spawnAngle + Math.PI,
+                    speedMps: 14 + idx * 2,
+                    steerAngle: 0,
+                    wheelSpin: 0,
+                    flankOffset: new THREE.Vector3((idx % 2 === 0 ? 3.5 : -3.5), 0, (idx > 1 ? -4 : 1))
+                });
+            }
+
+            while (list.length > targetCount) {
+                const c = list.pop();
+                if (c) this.scene.remove(c.mesh.group);
+            }
+
+            list.forEach(cruiser => {
+                cruiser.mesh.updateStrobes(this.elapsedTime);
+
+                const targetX = driver.targetPos.x + cruiser.flankOffset.x;
+                const targetZ = driver.targetPos.z + cruiser.flankOffset.z;
+                const dx = targetX - cruiser.position.x;
+                const dz = targetZ - cruiser.position.z;
+                const dist = Math.hypot(dx, dz);
+
+                const desiredYaw = Math.atan2(dx, dz);
+                let diffYaw = desiredYaw - cruiser.yaw;
+                while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+                while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+                cruiser.yaw += THREE.MathUtils.clamp(diffYaw, -2.4 * dt, 2.4 * dt);
+
+                const targetSpeed = Math.min(26, 12 + dist * 0.35);
+                cruiser.speedMps = THREE.MathUtils.damp(cruiser.speedMps, targetSpeed, 3.0, dt);
+
+                cruiser.position.x += Math.sin(cruiser.yaw) * cruiser.speedMps * dt;
+                cruiser.position.z += Math.cos(cruiser.yaw) * cruiser.speedMps * dt;
+                cruiser.position.y = this.world.getGroundHeight(cruiser.position.x, cruiser.position.z);
+
+                cruiser.wheelSpin += (cruiser.speedMps / 0.38) * dt;
+                cruiser.mesh.updateSteeringAndSpin(0, cruiser.wheelSpin);
+                cruiser.mesh.group.position.copy(cruiser.position);
+                cruiser.mesh.group.rotation.y = cruiser.yaw;
+            });
+        });
+
+        this.remoteCruisers.forEach((list, driverId) => {
+            if (!activeRemoteIds.has(driverId)) {
+                list.forEach(c => this.scene.remove(c.mesh.group));
+                this.remoteCruisers.delete(driverId);
+            }
+        });
+    }
+
     public getClosestDistance(playerPos: THREE.Vector3): number {
-        if (this.cruisers.length === 0) return Infinity;
         let minD = Infinity;
         for (const c of this.cruisers) {
             const d = c.position.distanceTo(playerPos);
             if (d < minD) minD = d;
         }
+        this.remoteCruisers.forEach(list => {
+            for (const c of list) {
+                const d = c.position.distanceTo(playerPos);
+                if (d < minD) minD = d;
+            }
+        });
         return minD;
     }
 }

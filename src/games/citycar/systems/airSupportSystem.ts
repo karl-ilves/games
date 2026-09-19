@@ -233,4 +233,64 @@ export class AirSupportSystem {
         };
         anim();
     }
+
+    private remoteAirUnits: Map<string, { helis: HelicopterMeshContainer[]; plane: BomberPlaneMeshContainer | null }> = new Map();
+
+    public updateRemoteAirSupport(
+        dt: number,
+        remoteDrivers: { id: string; targetPos: THREE.Vector3; info: { wantedLevel?: WantedLevel } }[]
+    ): void {
+        const activeIds = new Set<string>();
+
+        remoteDrivers.forEach(driver => {
+            const level = driver.info.wantedLevel || 0;
+            if (level < 3) return;
+            activeIds.add(driver.id);
+
+            let unit = this.remoteAirUnits.get(driver.id);
+            if (!unit) {
+                const helis: HelicopterMeshContainer[] = [];
+                [-14, 14].forEach((ox, idx) => {
+                    const h = createPoliceHelicopterMesh('remote_heli_' + driver.id + '_' + idx);
+                    h.group.position.set(driver.targetPos.x + ox, 25, driver.targetPos.z + (idx === 0 ? -10 : 10));
+                    this.scene.add(h.group);
+                    helis.push(h);
+                });
+
+                const plane = createBomberPlaneMesh('remote_bomber_' + driver.id);
+                plane.group.position.set(driver.targetPos.x - 80, 44, driver.targetPos.z);
+                this.scene.add(plane.group);
+
+                unit = { helis, plane };
+                this.remoteAirUnits.set(driver.id, unit);
+            }
+
+            // Animate remote helis
+            unit.helis.forEach((heli, idx) => {
+                heli.updateRotors(dt);
+                const ox = idx === 0 ? -14 : 14;
+                const oz = idx === 0 ? -10 : 10;
+                heli.group.position.lerp(new THREE.Vector3(driver.targetPos.x + ox, 25, driver.targetPos.z + oz), dt * 3.0);
+                const toTarget = new THREE.Vector3().subVectors(driver.targetPos, heli.group.position);
+                heli.group.rotation.y = Math.atan2(toTarget.x, toTarget.z);
+            });
+
+            // Animate remote plane
+            if (unit.plane) {
+                unit.plane.group.position.x += 35 * dt;
+                if (unit.plane.group.position.x > driver.targetPos.x + 160) {
+                    unit.plane.group.position.x = driver.targetPos.x - 160;
+                    unit.plane.group.position.z = driver.targetPos.z;
+                }
+            }
+        });
+
+        this.remoteAirUnits.forEach((unit, id) => {
+            if (!activeIds.has(id)) {
+                unit.helis.forEach(h => this.scene.remove(h.group));
+                if (unit.plane) this.scene.remove(unit.plane.group);
+                this.remoteAirUnits.delete(id);
+            }
+        });
+    }
 }

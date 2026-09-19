@@ -47,6 +47,7 @@ export interface CarNetworkPacket {
     wheelRot: number;
     steerAngle: number;
     zone: WorldZone;
+    wantedLevel?: WantedLevel;
     time: number;
 }
 
@@ -58,6 +59,7 @@ export interface DriverInfo {
     lastSeen: number;
     speed: number;
     zone: WorldZone;
+    wantedLevel?: WantedLevel;
 }
 
 export type WantedLevel = 0 | 1 | 2 | 3 | 4;

@@ -43,6 +43,10 @@ export class TankSystem {
         return this.tanks.length;
     }
 
+    public getTanks(): TankEntity[] {
+        return this.tanks;
+    }
+
     public getActiveRockets(): ActiveRocket[] {
         return this.rockets;
     }
@@ -59,23 +63,26 @@ export class TankSystem {
     private spawnTanks(playerPos: THREE.Vector3): void {
         if (this.tanks.length >= 5) return;
 
-        // 5 tank positions surrounding player at varying distances
+        // 5 tank positions surrounding player closely in full clear view (22-26m)
         const spawnConfigs = [
-            { angle: 0, dist: 55 },
-            { angle: 1.25, dist: 65 },
-            { angle: 2.5, dist: 70 },
-            { angle: -1.25, dist: 60 },
-            { angle: -2.5, dist: 75 }
+            { angle: 0.35, dist: 24, offsetX: 8, offsetZ: 18 },    // Front right in headlights view
+            { angle: -0.35, dist: 24, offsetX: -8, offsetZ: 18 },  // Front left in headlights view
+            { angle: 1.45, dist: 22, offsetX: 18, offsetZ: 2 },    // Right flank
+            { angle: -1.45, dist: 22, offsetX: -18, offsetZ: 2 },  // Left flank
+            { angle: Math.PI, dist: 20, offsetX: 0, offsetZ: -20 } // Rear pursuit
         ];
 
         while (this.tanks.length < 5) {
             const idx = this.tanks.length;
             const cfg = spawnConfigs[idx];
-            const x = playerPos.x + Math.sin(cfg.angle) * cfg.dist;
-            const z = playerPos.z + Math.cos(cfg.angle) * cfg.dist;
+            let x = playerPos.x + Math.sin(cfg.angle) * cfg.dist;
+            let z = playerPos.z + Math.cos(cfg.angle) * cfg.dist;
+
+            x = THREE.MathUtils.clamp(x, MAP_BOUNDS.minX + 20, MAP_BOUNDS.maxX - 20);
+            z = THREE.MathUtils.clamp(z, MAP_BOUNDS.minZ + 20, MAP_BOUNDS.maxZ - 20);
             const y = this.world.getGroundHeight(x, z);
 
-            const tankMesh = createTankMesh('tank_' + idx);
+            const tankMesh = createTankMesh('tank_' + idx + '_' + Date.now());
             tankMesh.group.position.set(x, y, z);
             this.scene.add(tankMesh.group);
 
@@ -85,11 +92,7 @@ export class TankSystem {
                 position: new THREE.Vector3(x, y, z),
                 yaw: cfg.angle + Math.PI,
                 speedMps: 0,
-                targetOffset: new THREE.Vector3(
-                    Math.sin(cfg.angle) * 25,
-                    0,
-                    Math.cos(cfg.angle) * 25
-                ),
+                targetOffset: new THREE.Vector3(cfg.offsetX, 0, cfg.offsetZ),
                 // Stagger initial shots slightly around 3-10s so all 5 don't fire at exact same millisecond
                 fireCooldown: 2.0 + idx * 1.8
             });
@@ -101,6 +104,12 @@ export class TankSystem {
 
         // Update Tanks
         this.tanks.forEach(tank => {
+            // Pulse flashing red beacon on tank turret
+            if (tank.mesh.beaconMat) {
+                const isFlash = Math.sin(performance.now() * 0.008) > 0;
+                tank.mesh.beaconMat.emissiveIntensity = isFlash ? 3.0 : 0.3;
+            }
+
             // Move tank towards desired standoff distance from player
             const targetX = playerPos.x + tank.targetOffset.x;
             const targetZ = playerPos.z + tank.targetOffset.z;
@@ -113,21 +122,22 @@ export class TankSystem {
             let diffYaw = desiredYaw - tank.yaw;
             while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
             while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
-            tank.yaw += THREE.MathUtils.clamp(diffYaw, -1.2 * dt, 1.2 * dt);
+            tank.yaw += THREE.MathUtils.clamp(diffYaw, -1.8 * dt, 1.8 * dt);
 
-            // Speed
-            if (dist > 4.0) {
-                tank.speedMps = THREE.MathUtils.damp(tank.speedMps, 9.0, 2.0, dt);
+            // Speed: fast enough to keep up with player car
+            if (dist > 3.5) {
+                const targetSpeed = Math.min(22.0, 10.0 + dist * 0.5);
+                tank.speedMps = THREE.MathUtils.damp(tank.speedMps, targetSpeed, 3.0, dt);
             } else {
-                tank.speedMps = THREE.MathUtils.damp(tank.speedMps, 0, 3.0, dt);
+                tank.speedMps = THREE.MathUtils.damp(tank.speedMps, 0, 4.0, dt);
             }
 
             tank.position.x += Math.sin(tank.yaw) * tank.speedMps * dt;
             tank.position.z += Math.cos(tank.yaw) * tank.speedMps * dt;
 
-            // Map clamp
-            tank.position.x = THREE.MathUtils.clamp(tank.position.x, -MAP_BOUNDS + 8, MAP_BOUNDS - 8);
-            tank.position.z = THREE.MathUtils.clamp(tank.position.z, -MAP_BOUNDS + 8, MAP_BOUNDS - 8);
+            // Map clamp - fixed bug with MAP_BOUNDS object
+            tank.position.x = THREE.MathUtils.clamp(tank.position.x, MAP_BOUNDS.minX + 8, MAP_BOUNDS.maxX - 8);
+            tank.position.z = THREE.MathUtils.clamp(tank.position.z, MAP_BOUNDS.minZ + 8, MAP_BOUNDS.maxZ - 8);
 
             const groundY = this.world.getGroundHeight(tank.position.x, tank.position.z);
             tank.position.y = THREE.MathUtils.damp(tank.position.y, groundY, 8.0, dt);
@@ -269,5 +279,94 @@ export class TankSystem {
             this.scene.remove(rocket.mesh);
         });
         this.rockets = [];
+    }
+
+    private remoteTanks: Map<string, TankEntity[]> = new Map();
+
+    public updateRemoteTanks(
+        dt: number,
+        remoteDrivers: { id: string; targetPos: THREE.Vector3; targetRotY: number; info: { wantedLevel?: WantedLevel } }[]
+    ): void {
+        const activeIds = new Set<string>();
+
+        remoteDrivers.forEach(driver => {
+            const level = driver.info.wantedLevel || 0;
+            if (level < 4) return;
+            activeIds.add(driver.id);
+
+            let list = this.remoteTanks.get(driver.id);
+            if (!list) {
+                list = [];
+                for (let i = 0; i < 3; i++) {
+                    const ang = driver.targetRotY + (i === 0 ? 0.4 : i === 1 ? -0.4 : Math.PI);
+                    const dist = 22;
+                    let tx = driver.targetPos.x + Math.sin(ang) * dist;
+                    let tz = driver.targetPos.z + Math.cos(ang) * dist;
+                    tx = THREE.MathUtils.clamp(tx, MAP_BOUNDS.minX + 15, MAP_BOUNDS.maxX - 15);
+                    tz = THREE.MathUtils.clamp(tz, MAP_BOUNDS.minZ + 15, MAP_BOUNDS.maxZ - 15);
+                    const ty = this.world.getGroundHeight(tx, tz);
+
+                    const mesh = createTankMesh('remote_tank_' + driver.id + '_' + i);
+                    mesh.group.position.set(tx, ty, tz);
+                    this.scene.add(mesh.group);
+
+                    list.push({
+                        id: 'rt_' + driver.id + '_' + i,
+                        mesh,
+                        position: new THREE.Vector3(tx, ty, tz),
+                        yaw: ang + Math.PI,
+                        speedMps: 0,
+                        targetOffset: new THREE.Vector3((i === 0 ? 8 : i === 1 ? -8 : 0), 0, (i === 2 ? -18 : 16)),
+                        fireCooldown: 4.0 + i * 2.0
+                    });
+                }
+                this.remoteTanks.set(driver.id, list);
+            }
+
+            list.forEach(tank => {
+                if (tank.mesh.beaconMat) {
+                    tank.mesh.beaconMat.emissiveIntensity = Math.sin(performance.now() * 0.008) > 0 ? 3.0 : 0.3;
+                }
+
+                const targetX = driver.targetPos.x + tank.targetOffset.x;
+                const targetZ = driver.targetPos.z + tank.targetOffset.z;
+                const dx = targetX - tank.position.x;
+                const dz = targetZ - tank.position.z;
+                const dist = Math.hypot(dx, dz);
+
+                const desiredYaw = Math.atan2(dx, dz);
+                let diffYaw = desiredYaw - tank.yaw;
+                while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+                while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+                tank.yaw += THREE.MathUtils.clamp(diffYaw, -1.8 * dt, 1.8 * dt);
+
+                if (dist > 3.5) {
+                    const targetSpeed = Math.min(22.0, 10.0 + dist * 0.5);
+                    tank.speedMps = THREE.MathUtils.damp(tank.speedMps, targetSpeed, 3.0, dt);
+                } else {
+                    tank.speedMps = THREE.MathUtils.damp(tank.speedMps, 0, 4.0, dt);
+                }
+
+                tank.position.x += Math.sin(tank.yaw) * tank.speedMps * dt;
+                tank.position.z += Math.cos(tank.yaw) * tank.speedMps * dt;
+                tank.position.x = THREE.MathUtils.clamp(tank.position.x, MAP_BOUNDS.minX + 8, MAP_BOUNDS.maxX - 8);
+                tank.position.z = THREE.MathUtils.clamp(tank.position.z, MAP_BOUNDS.minZ + 8, MAP_BOUNDS.maxZ - 8);
+
+                tank.position.y = this.world.getGroundHeight(tank.position.x, tank.position.z);
+                tank.mesh.group.position.copy(tank.position);
+                tank.mesh.group.rotation.y = tank.yaw;
+
+                const toDriverX = driver.targetPos.x - tank.position.x;
+                const toDriverZ = driver.targetPos.z - tank.position.z;
+                tank.mesh.updateTurretAim(Math.atan2(toDriverX, toDriverZ) - tank.yaw);
+            });
+        });
+
+        this.remoteTanks.forEach((list, id) => {
+            if (!activeIds.has(id)) {
+                list.forEach(t => this.scene.remove(t.mesh.group));
+                this.remoteTanks.delete(id);
+            }
+        });
     }
 }
