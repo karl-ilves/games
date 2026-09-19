@@ -7,16 +7,26 @@ import {
     createOakTree,
     createRock,
     createSuspensionBridge,
-    createBorderCheckpoint,
-    createStuntRamp
+    createBorderCheckpoint
 } from '../models/environmentModels';
+
+export interface StreetLampObject {
+    group: THREE.Group;
+    basePos: THREE.Vector3;
+    isFalling: boolean;
+    isFallen: boolean;
+    fallProgress: number;
+    fallAxis: THREE.Vector3;
+    headMesh?: THREE.Mesh;
+}
 
 export interface WorldEnvironment {
     scene: THREE.Scene;
     waterMesh: THREE.Mesh;
     colliders: THREE.Box3[];
     bridges: { box: THREE.Box3; height: number }[];
-    update: (timeSec: number) => void;
+    streetLamps: StreetLampObject[];
+    update: (timeSec: number, delta?: number) => void;
     getGroundHeight: (x: number, z: number) => number;
     getZoneAt: (x: number, z: number) => WorldZone;
 }
@@ -145,27 +155,38 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         colliders.push(bbox);
     });
 
-    // Street Lamps along city roads
+    // Street Lamps along city roads (Collapsible when hit by car!)
+    const streetLamps: StreetLampObject[] = [];
     for (let z = -140; z <= 140; z += 40) {
         [-72, -88, -152, -168].forEach(x => {
             const lamp = createStreetLamp();
             lamp.position.set(x, 0, z);
             lamp.rotation.y = x > -100 ? -Math.PI / 2 : Math.PI / 2;
             scene.add(lamp);
+
+            streetLamps.push({
+                group: lamp,
+                basePos: new THREE.Vector3(x, 0, z),
+                isFalling: false,
+                isFallen: false,
+                fallProgress: 0,
+                fallAxis: new THREE.Vector3(1, 0, 0),
+                headMesh: lamp.userData?.head
+            });
         });
     }
 
-    // 5. River Bridges & Crossings (User: "ja on piirid kust mängja üle saab")
+    // 5. River Bridges & Crossings (Flush at road height Y = 0.05, no flying ramps!)
     // Bridge 1: Central Suspension Bridge (Z = 0)
     const centralBridge = createSuspensionBridge(100, 15);
     centralBridge.position.set(0, 0, 0);
     centralBridge.rotation.y = Math.PI / 2;
     scene.add(centralBridge);
     const bridgeBox1 = new THREE.Box3(
-        new THREE.Vector3(-55, 0, -8),
-        new THREE.Vector3(55, 10, 8)
+        new THREE.Vector3(-55, -0.5, -8),
+        new THREE.Vector3(55, 3.0, 8)
     );
-    bridges.push({ box: bridgeBox1, height: 3.1 });
+    bridges.push({ box: bridgeBox1, height: 0.05 });
 
     // Bridge 2: North Border Checkpoint & Bridge (Z = 120)
     const northBridge = createSuspensionBridge(100, 13);
@@ -179,10 +200,10 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
     scene.add(borderCheckpoint);
 
     const bridgeBox2 = new THREE.Box3(
-        new THREE.Vector3(-55, 0, 112),
-        new THREE.Vector3(55, 10, 128)
+        new THREE.Vector3(-55, -0.5, 112),
+        new THREE.Vector3(55, 3.0, 128)
     );
-    bridges.push({ box: bridgeBox2, height: 3.1 });
+    bridges.push({ box: bridgeBox2, height: 0.05 });
 
     // Bridge 3: South Timber Bridge (Z = -120)
     const timberBridge = createSuspensionBridge(100, 11);
@@ -190,21 +211,37 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
     timberBridge.rotation.y = Math.PI / 2;
     scene.add(timberBridge);
     const bridgeBox3 = new THREE.Box3(
-        new THREE.Vector3(-55, 0, -126),
-        new THREE.Vector3(55, 10, -114)
+        new THREE.Vector3(-55, -0.5, -126),
+        new THREE.Vector3(55, 3.0, -114)
     );
-    bridges.push({ box: bridgeBox3, height: 3.1 });
+    bridges.push({ box: bridgeBox3, height: 0.05 });
 
-    // Stunt Jump Ramps over the river!
-    const rampWest = createStuntRamp(8, 12, 3.5);
-    rampWest.position.set(-48, 0, 50);
-    rampWest.rotation.y = Math.PI / 2;
-    scene.add(rampWest);
+    // 5b. Map Perimeter Barriers (Cannot drive out of the map!)
+    const barrierMat = new THREE.MeshStandardMaterial({ color: 0x4b6584, roughness: 0.65, metalness: 0.25 });
+    const barrierStripeMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
 
-    const rampEast = createStuntRamp(8, 12, 3.5);
-    rampEast.position.set(48, 0, -50);
-    rampEast.rotation.y = -Math.PI / 2;
-    scene.add(rampEast);
+    function addPerimeterFence(cx: number, cz: number, width: number, length: number) {
+        const fence = new THREE.Mesh(new THREE.BoxGeometry(width, 2.0, length), barrierMat);
+        fence.position.set(cx, 1.0, cz);
+        scene.add(fence);
+
+        const stripeW = width > length ? width : 0.45;
+        const stripeL = width > length ? 0.45 : length;
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(stripeW, 0.4, stripeL), barrierStripeMat);
+        stripe.position.set(cx, 1.4, cz);
+        scene.add(stripe);
+
+        colliders.push(new THREE.Box3().setFromObject(fence));
+    }
+
+    // West map boundary
+    addPerimeterFence(-365, 0, 4, 560);
+    // East map boundary
+    addPerimeterFence(365, 0, 4, 560);
+    // North map boundary
+    addPerimeterFence(0, 275, 734, 4);
+    // South map boundary
+    addPerimeterFence(0, -275, 734, 4);
 
     // 6. Forest Zone (East, X > 40)
     // Dirt Road leading from bridges into forest
@@ -271,29 +308,38 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         waterMesh,
         colliders,
         bridges,
-        update: (timeSec: number) => {
+        streetLamps,
+        update: (timeSec: number, delta = 0.016) => {
             // Subtle water wave ripple
             if (waterMesh) {
                 waterMesh.position.y = -0.4 + Math.sin(timeSec * 2.0) * 0.08;
             }
-        },
-        getGroundHeight: (x: number, z: number): number => {
-            // Check if car is on any of the bridges or ramps
-            for (const b of bridges) {
-                if (b.box.containsPoint(new THREE.Vector3(x, 2.0, z))) {
-                    return b.height;
+
+            // Animate falling street lamps when crashed into
+            for (const lamp of streetLamps) {
+                if (lamp.isFalling) {
+                    lamp.fallProgress += delta * 3.5;
+                    const progress = Math.min(lamp.fallProgress, 1.0);
+                    const angle = progress * (Math.PI / 2.05);
+                    lamp.group.setRotationFromAxisAngle(lamp.fallAxis, angle);
+                    if (progress >= 1.0) {
+                        lamp.isFalling = false;
+                        lamp.isFallen = true;
+                        const headMat = lamp.group.userData?.headMat as THREE.MeshStandardMaterial | undefined;
+                        if (headMat) {
+                            headMat.emissive?.setHex(0x111111);
+                            headMat.color?.setHex(0x222222);
+                        }
+                    }
                 }
             }
-
-            // Check ramp west
-            if (x >= -54 && x <= -42 && Math.abs(z - 50) <= 4.5) {
-                const progress = (x - (-54)) / 12;
-                return progress * 3.5;
-            }
-            // Check ramp east
-            if (x >= 42 && x <= 54 && Math.abs(z - (-50)) <= 4.5) {
-                const progress = (54 - x) / 12;
-                return progress * 3.5;
+        },
+        getGroundHeight: (x: number, z: number): number => {
+            // Check if car is on any of the bridges
+            for (const b of bridges) {
+                if (b.box.containsPoint(new THREE.Vector3(x, 0.5, z))) {
+                    return b.height;
+                }
             }
 
             // River area without bridge = in river!
@@ -306,7 +352,7 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         },
         getZoneAt: (x: number, z: number): WorldZone => {
             for (const b of bridges) {
-                if (b.box.containsPoint(new THREE.Vector3(x, 2.0, z))) {
+                if (b.box.containsPoint(new THREE.Vector3(x, 0.5, z))) {
                     if (Math.abs(z - 120) < 15) return 'border';
                     return 'bridge';
                 }

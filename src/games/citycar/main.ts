@@ -52,6 +52,7 @@ scene.add(carMesh.group);
 const physics = new CarPhysicsController(carMesh, world, new THREE.Vector3(-60, 0.1, 0));
 const cameraSystem = new CameraFollowSystem(camera);
 const audioSystem = new CityCarAudioSystem(cityCarState.isAudioEnabled());
+physics.onLampHit = () => audioSystem.playLampHit();
 
 let activeDrivers: DriverInfo[] = [];
 const multiplayer = new CityCarMultiplayerSystem(
@@ -162,8 +163,8 @@ function animate() {
         cityCarState.addDistanceTraveled(distanceStepKm);
     }
 
-    // World animation (river ripples)
-    world.update(elapsedSec);
+    // World animation (river ripples & falling street lamps)
+    world.update(elapsedSec, delta);
 
     // Remote multiplayer car interpolation
     multiplayer.update(delta);

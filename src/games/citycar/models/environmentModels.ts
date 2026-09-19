@@ -80,7 +80,7 @@ export function createBuilding(width: number, depth: number, height: number, col
 export function createStreetLamp(): THREE.Group {
     const lamp = new THREE.Group();
 
-    // Pole
+    // Pole (Base starts at y=0, height=6.0)
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 6.0, 8), materials.concrete);
     pole.position.y = 3.0;
     lamp.add(pole);
@@ -91,10 +91,13 @@ export function createStreetLamp(): THREE.Group {
     arm.rotation.x = -0.2;
     lamp.add(arm);
 
-    // Lantern Head
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.6), materials.lampEmissive);
+    // Lantern Head with unique emissive material instance so light turns off when fallen
+    const headMat = materials.lampEmissive.clone();
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.6), headMat);
     head.position.set(0, 5.6, 1.6);
     lamp.add(head);
+
+    lamp.userData = { head, pole, headMat };
 
     return lamp;
 }
@@ -145,40 +148,40 @@ export function createRock(scale = 1): THREE.Mesh {
     return rock;
 }
 
-// 6. Grand Suspension Bridge
+// 6. Grand Suspension Bridge (Flush with road height at Y = 0.05)
 export function createSuspensionBridge(length: number, width: number): THREE.Group {
     const bridge = new THREE.Group();
 
-    // Road Deck
-    const deckGeo = new THREE.BoxGeometry(width, 1.2, length);
+    // Road Deck - Top surface flush with road at Y = 0.05
+    const deckGeo = new THREE.BoxGeometry(width, 0.5, length);
     const deck = new THREE.Mesh(deckGeo, materials.asphalt);
-    deck.position.y = 2.5;
+    deck.position.y = -0.2;
     deck.receiveShadow = true;
     bridge.add(deck);
 
-    // Guard Rails
-    const railGeo = new THREE.BoxGeometry(0.4, 1.2, length);
+    // Guard Rails along sides from road deck Y=0.05 up to Y=1.05
+    const railGeo = new THREE.BoxGeometry(0.35, 1.0, length);
     const railL = new THREE.Mesh(railGeo, materials.metalRed);
-    railL.position.set(-width / 2 + 0.2, 3.2, 0);
+    railL.position.set(-width / 2 + 0.2, 0.55, 0);
     const railR = new THREE.Mesh(railGeo, materials.metalRed);
-    railR.position.set(width / 2 - 0.2, 3.2, 0);
+    railR.position.set(width / 2 - 0.2, 0.55, 0);
     bridge.add(railL, railR);
 
     // Center Dashed White Line
-    const lineGeo = new THREE.BoxGeometry(0.3, 0.05, length);
+    const lineGeo = new THREE.BoxGeometry(0.3, 0.04, length);
     const line = new THREE.Mesh(lineGeo, materials.roadLine);
-    line.position.set(0, 3.12, 0);
+    line.position.set(0, 0.07, 0);
     bridge.add(line);
 
-    // Towers at 1/3 and 2/3 of length
-    const towerH = 26;
+    // Towers at 1/3 and 2/3 of length (from ground y=0 up to y=22)
+    const towerH = 22;
     [-length * 0.25, length * 0.25].forEach(zPos => {
-        const p1 = new THREE.Mesh(new THREE.BoxGeometry(1.6, towerH, 1.6), materials.metalRed);
-        p1.position.set(-width / 2 - 1.0, towerH / 2, zPos);
-        const p2 = new THREE.Mesh(new THREE.BoxGeometry(1.6, towerH, 1.6), materials.metalRed);
-        p2.position.set(width / 2 + 1.0, towerH / 2, zPos);
+        const p1 = new THREE.Mesh(new THREE.BoxGeometry(1.4, towerH, 1.4), materials.metalRed);
+        p1.position.set(-width / 2 - 0.9, towerH / 2, zPos);
+        const p2 = new THREE.Mesh(new THREE.BoxGeometry(1.4, towerH, 1.4), materials.metalRed);
+        p2.position.set(width / 2 + 0.9, towerH / 2, zPos);
 
-        const crossBar = new THREE.Mesh(new THREE.BoxGeometry(width + 4.0, 1.8, 1.6), materials.metalRed);
+        const crossBar = new THREE.Mesh(new THREE.BoxGeometry(width + 3.2, 1.4, 1.4), materials.metalRed);
         crossBar.position.set(0, towerH - 2, zPos);
 
         bridge.add(p1, p2, crossBar);
@@ -187,26 +190,26 @@ export function createSuspensionBridge(length: number, width: number): THREE.Gro
     return bridge;
 }
 
-// 7. Border Checkpoint Booth with Barriers
+// 7. Border Checkpoint Booth with Barriers (Flush with road at Y = 0.05)
 export function createBorderCheckpoint(width: number): THREE.Group {
     const cp = new THREE.Group();
 
     // Checkpoint Base Road
-    const baseGeo = new THREE.BoxGeometry(width, 0.4, 25);
+    const baseGeo = new THREE.BoxGeometry(width, 0.3, 25);
     const base = new THREE.Mesh(baseGeo, materials.asphalt);
-    base.position.y = 0.2;
+    base.position.y = -0.1; // Top at Y = 0.05
     cp.add(base);
 
     // Toll Booth Building
-    const boothGeo = new THREE.BoxGeometry(2.4, 3.5, 4.5);
+    const boothGeo = new THREE.BoxGeometry(2.4, 3.2, 4.5);
     const booth = new THREE.Mesh(boothGeo, materials.concrete);
-    booth.position.set(0, 1.75, 0);
+    booth.position.set(0, 1.6, 0);
     cp.add(booth);
 
     // Canopy Roof
     const roofGeo = new THREE.BoxGeometry(width + 4, 0.6, 12);
     const roof = new THREE.Mesh(roofGeo, materials.metalYellow);
-    roof.position.set(0, 4.8, 0);
+    roof.position.set(0, 4.5, 0);
     cp.add(roof);
 
     // Barrier arms (striped look)

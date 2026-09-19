@@ -4,8 +4,16 @@ import { VEHICLE_CONFIG } from '../catalog';
 import { CarMeshContainer } from '../models/carModel';
 import { WorldEnvironment } from '../world/world';
 
+export const MAP_BOUNDS = {
+    minX: -360,
+    maxX: 360,
+    minZ: -270,
+    maxZ: 270
+};
+
 export class CarPhysicsController {
     public state: CarPhysicsState;
+    public onLampHit?: () => void;
     private meshContainer: CarMeshContainer;
     private world: WorldEnvironment;
 
@@ -129,7 +137,33 @@ export class CarPhysicsController {
         const nextX = this.state.position.x + moveVector.x;
         const nextZ = this.state.position.z + moveVector.z;
 
-        // Collision detection with buildings and tree trunks
+        // Collision detection with street lamps (knock down / topple over)
+        if (this.world.streetLamps) {
+            for (const lamp of this.world.streetLamps) {
+                if (!lamp.isFalling && !lamp.isFallen) {
+                    const dx = nextX - lamp.basePos.x;
+                    const dz = nextZ - lamp.basePos.z;
+                    const distSq = dx * dx + dz * dz;
+                    if (distSq < 4.2) { // hit radius ~2.0m
+                        lamp.isFalling = true;
+                        let hitX = Math.sin(this.yaw);
+                        let hitZ = Math.cos(this.yaw);
+                        if (Math.abs(this.forwardSpeedMps) < 1.0) {
+                            hitX = dx;
+                            hitZ = dz;
+                        }
+                        const hitDir = new THREE.Vector3(hitX, 0, hitZ).normalize();
+                        lamp.fallAxis.set(-hitDir.z, 0, hitDir.x).normalize();
+
+                        // Resistance from knocking down the post
+                        this.forwardSpeedMps *= 0.75;
+                        this.onLampHit?.();
+                    }
+                }
+            }
+        }
+
+        // Collision detection with buildings, perimeter walls and tree trunks
         const carBox = new THREE.Box3(
             new THREE.Vector3(nextX - 1.2, this.state.position.y, nextZ - 1.2),
             new THREE.Vector3(nextX + 1.2, this.state.position.y + 2.0, nextZ + 1.2)
@@ -143,12 +177,43 @@ export class CarPhysicsController {
             }
         }
 
-        if (collided) {
+        // Strict map boundary clamping (User: "mapist välja sõita ei saa")
+        let hitBoundary = false;
+        let clampedX = nextX;
+        let clampedZ = nextZ;
+
+        if (clampedX < MAP_BOUNDS.minX) {
+            clampedX = MAP_BOUNDS.minX;
+            hitBoundary = true;
+        } else if (clampedX > MAP_BOUNDS.maxX) {
+            clampedX = MAP_BOUNDS.maxX;
+            hitBoundary = true;
+        }
+
+        if (clampedZ < MAP_BOUNDS.minZ) {
+            clampedZ = MAP_BOUNDS.minZ;
+            hitBoundary = true;
+        } else if (clampedZ > MAP_BOUNDS.maxZ) {
+            clampedZ = MAP_BOUNDS.maxZ;
+            hitBoundary = true;
+        }
+
+        if (hitBoundary) {
+            // Rebound slightly from boundary fence and clamp position
+            this.forwardSpeedMps = -this.forwardSpeedMps * 0.3;
+            this.state.position.x = clampedX;
+            this.state.position.z = clampedZ;
+        } else if (collided) {
             // Rebound bounce
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
         } else {
-            this.state.position.x = nextX;
-            this.state.position.z = nextZ;
+            this.state.position.x = clampedX;
+            this.state.position.z = clampedZ;
+        }
+
+        // Safeguard against falling into void / deep river
+        if (this.state.position.y < -3.5) {
+            this.resetCar();
         }
 
         // 5. Vertical Height & Gravity / Grounding

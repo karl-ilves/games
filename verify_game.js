@@ -7749,6 +7749,27 @@ await (async () => {
                 dbg.state.setCarColor('#ff3838');
                 const changedColor = dbg.state.getCarColor();
 
+                // Test Minimap Removed
+                const minimapRemoved = !document.getElementById('minimap-canvas');
+
+                // Test Streetlamp Collapse on collision
+                const lamp = world.streetLamps?.[0];
+                let lampCollapsed = false;
+                if (lamp) {
+                    physics.state.position.set(lamp.basePos.x, 0.1, lamp.basePos.z - 1.2);
+                    physics.yaw = 0; // facing towards lamp
+                    physics.update(0.1, { throttle: 1, brake: 0, steer: 0, handbrake: false, horn: false, reset: false });
+                    lampCollapsed = lamp.isFalling || lamp.isFallen;
+                }
+
+                // Test Map Boundary Protection (cannot drive out of map)
+                physics.state.position.set(-358, 0.1, 0);
+                physics.yaw = -Math.PI / 2; // facing West toward edge
+                for (let i = 0; i < 15; i++) {
+                    physics.update(0.1, { throttle: 1, brake: 0, steer: 0, handbrake: false, horn: false, reset: false });
+                }
+                const boundaryProtected = physics.state.position.x >= -360 && physics.state.position.x <= 360;
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
@@ -7770,7 +7791,10 @@ await (async () => {
                     initialRemoteCount,
                     countAfterReceive,
                     rosterHasTaavi2,
-                    changedColor
+                    changedColor,
+                    minimapRemoved,
+                    lampCollapsed,
+                    boundaryProtected
                 };
             });
 
@@ -7786,6 +7810,18 @@ await (async () => {
             }
             if (cityCarTest.countAfterReceive !== 1 || !cityCarTest.rosterHasTaavi2) {
                 throw new Error("CityCar Multiplayer sync and driver roster check failed: " + JSON.stringify(cityCarTest));
+            }
+            if (!cityCarTest.minimapRemoved) {
+                throw new Error("CityCar Minimap must be removed per user request!");
+            }
+            if (!cityCarTest.lampCollapsed) {
+                throw new Error("CityCar Streetlamp must collapse when hit by car!");
+            }
+            if (cityCarTest.bridgeHeight > 0.1) {
+                throw new Error("CityCar Bridge must be flush with road height (<= 0.1m)!");
+            }
+            if (!cityCarTest.boundaryProtected) {
+                throw new Error("CityCar Map boundary must prevent driving out of map!");
             }
 
             console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad & Piirid, Multiplayer, Owner & taavi2 Access) testid edukalt läbitud!");

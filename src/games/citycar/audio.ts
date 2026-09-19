@@ -113,4 +113,28 @@ export class CityCarAudioSystem {
             } catch (e) {}
         }
     }
+
+    public playLampHit(): void {
+        if (!this.enabled || !this.ensureContext() || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            // Metallic clang and thump
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, now);
+            osc.frequency.exponentialRampToValueAtTime(45, now + 0.25);
+
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } catch (e) {}
+    }
 }
+
