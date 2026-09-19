@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard Games - 3D City & Nature Drive</title>
+    <meta name="description" content="Explore city skyscrapers, cross majestic bridges over the river, and drive through dense scenic forests in this realtime 3D multiplayer driving simulator!">
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b1118;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #game-canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Top HUD Overlay */
+        #ui-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+        }
+
+        .hud-interactive {
+            pointer-events: auto;
+        }
+
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .top-left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-hub-back {
+            background: rgba(20, 28, 38, 0.85);
+            border: 1.5px solid rgba(0, 242, 254, 0.4);
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-weight: 800;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+        .btn-hub-back:hover {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .game-title-badge {
+            background: rgba(14, 23, 34, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            padding: 6px 14px;
+            border-radius: 10px;
+            color: #d2dae2;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2ecc71;
+            box-shadow: 0 0 8px #2ecc71;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.9); }
+        }
+
+        /* Top Right Roster */
+        .top-right-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .drivers-card {
+            background: rgba(14, 23, 34, 0.85);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.85rem;
+            min-width: 170px;
+            text-align: right;
+        }
+        .drivers-title {
+            font-weight: 800;
+            color: #00f2fe;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        .drivers-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .driver-item {
+            font-size: 0.8rem;
+            color: #d2dae2;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Zone Notification Banner */
+        #zone-banner {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(14, 23, 34, 0.95), rgba(20, 36, 54, 0.95));
+            border: 1.5px solid rgba(0, 242, 254, 0.6);
+            border-radius: 20px;
+            padding: 8px 24px;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 242, 254, 0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        #zone-banner.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Bottom Controls & Speedometer */
+        .hud-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 16px;
+        }
+
+        /* Left Bottom Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            background: rgba(14, 23, 34, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-action:hover {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Speedometer & Gear */
+        .speedometer-container {
+            background: radial-gradient(circle at center, rgba(14, 28, 44, 0.9) 0%, rgba(10, 16, 26, 0.95) 100%);
+            border: 2px solid rgba(0, 242, 254, 0.4);
+            border-radius: 20px;
+            padding: 14px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 242, 254, 0.2);
+            min-width: 170px;
+        }
+        .speed-readout {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: #ffffff;
+            line-height: 1;
+            text-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
+            letter-spacing: -1px;
+        }
+        .speed-unit {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #00f2fe;
+            letter-spacing: 1px;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+        .gear-indicator {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .gear-letter {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #57606f;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .gear-letter.active {
+            color: #ffffff;
+            background: rgba(0, 242, 254, 0.3);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        }
+
+        /* Minimap Container */
+        .minimap-wrapper {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 242, 254, 0.45);
+            background: rgba(10, 16, 24, 0.85);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            backdrop-filter: blur(6px);
+        }
+        #minimap-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Access Denied Modal */
+        #access-restricted-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .access-card {
+            background: #151d28;
+            border: 2px solid #ff4757;
+            border-radius: 20px;
+            padding: 32px 28px;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(255, 71, 87, 0.3);
+            color: white;
+        }
+        .access-title {
+            font-size: 1.5rem;
+            color: #ff4757;
+            font-weight: 900;
+            margin: 10px 0;
+        }
+        .access-desc {
+            color: #a4b0be;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+        .btn-access-back {
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            color: #0b1118;
+            font-weight: 800;
+            font-size: 1rem;
+            padding: 12px 28px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        /* Color Customizer Modal */
+        #color-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .color-modal-card {
+            background: #141c26;
+            border: 1.5px solid rgba(0, 242, 254, 0.4);
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+        }
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 16px 0;
+        }
+        .color-swatch {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-swatch:hover, .color-swatch.active {
+            transform: scale(1.1);
+            border-color: #ffffff;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+
+    <div id="ui-layer">
+        <!-- Header -->
+        <div class="hud-header">
+            <div class="top-left-panel hud-interactive">
+                <a href="../../index.html" class="btn-hub-back">
+                    <span>⬅</span>
+                    <span>Playard Hub</span>
+                </a>
+                <div class="game-title-badge">
+                    <span class="status-dot"></span>
+                    <strong style="color: #ffffff;">3D City & Nature Drive</strong>
+                    <span style="color: #00f2fe; font-size: 0.74rem; background: rgba(0, 242, 254, 0.15); padding: 2px 6px; border-radius: 4px; font-weight: 800;">PREVIEW</span>
+                </div>
+            </div>
+
+            <!-- Active Drivers Roster -->
+            <div class="top-right-panel hud-interactive">
+                <div class="drivers-card">
+                    <div class="drivers-title">
+                        <span>👥</span>
+                        <span>Drivers Online (<span id="online-count">1</span>)</span>
+                    </div>
+                    <ul class="drivers-list" id="drivers-roster">
+                        <li class="driver-item" id="local-driver-item">
+                            <span style="color: #2ecc71;">●</span>
+                            <span id="local-driver-name">You</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Zone Banner -->
+        <div id="zone-banner">🏙️ Welcome to Downtown City</div>
+
+        <!-- Footer -->
+        <div class="hud-footer">
+            <div class="quick-actions hud-interactive">
+                <button class="btn-action" id="btn-toggle-cam" title="Toggle Camera View (C)">
+                    <span>📷</span>
+                    <span id="cam-view-label">Chase Cam</span>
+                </button>
+                <button class="btn-action" id="btn-car-color" title="Change Car Color">
+                    <span>🎨</span>
+                    <span>Paint</span>
+                </button>
+                <button class="btn-action" id="btn-reset-car" title="Reset Car / Flip Recovery (R)">
+                    <span>🔄</span>
+                    <span>Reset (R)</span>
+                </button>
+                <button class="btn-action" id="btn-car-horn" title="Honk Horn (H)">
+                    <span>📢</span>
+                    <span>Horn (H)</span>
+                </button>
+                <button class="btn-action" id="btn-toggle-audio" title="Toggle Sound (M)">
+                    <span id="audio-icon">🔊</span>
+                </button>
+            </div>
+
+            <!-- Speedometer -->
+            <div class="speedometer-container">
+                <div class="speed-readout" id="speed-val">0</div>
+                <div class="speed-unit">KM / H</div>
+                <div class="gear-indicator">
+                    <span class="gear-letter active" id="gear-p">P</span>
+                    <span class="gear-letter" id="gear-d">D</span>
+                    <span class="gear-letter" id="gear-r">R</span>
+                </div>
+            </div>
+
+            <!-- Minimap -->
+            <div class="minimap-wrapper hud-interactive">
+                <canvas id="minimap-canvas" width="140" height="140"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Access Restricted Modal -->
+    <div id="access-restricted-modal">
+        <div class="access-card">
+            <div style="font-size: 3rem;">🔒</div>
+            <h2 class="access-title">Piiratud Ligipääs</h2>
+            <p class="access-desc">
+                See mäng on praegu eksklusiivses eelvaates ja nähtav ainult <strong>Playard Ownerile</strong> ja kasutajale <strong>taavi2</strong>.<br><br>
+                Palun logi sisse vastava kasutajakontoga Playard Hubis!
+            </p>
+            <a href="../../index.html" class="btn-access-back">Tagasi Avalehele</a>
+        </div>
+    </div>
+
+    <!-- Color Palette Modal -->
+    <div id="color-modal">
+        <div class="color-modal-card hud-interactive">
+            <h3 style="margin: 0 0 12px 0; color: #00f2fe;">Vali Auto Värv</h3>
+            <div class="color-palette" id="color-palette-container">
+                <!-- Injected colors -->
+            </div>
+            <button class="btn-action" id="btn-close-color-modal" style="width: 100%; justify-content: center; margin-top: 8px;">Valmis</button>
+        </div>
+    </div>
+
+    <script type="module" src="/src/games/citycar/main.ts"></script>
+</body>
+</html>

@@ -77,6 +77,7 @@ export class MurderMysteryGame {
     public onlineNetwork!: MmpOnlineNetwork;
     public rosterManager!: MmpRosterManager;
     public syncSystem!: MmpSyncSystem;
+    public audio: any;
     private lastBroadcastTime = 0;
     public muzzleFlashLight: THREE.PointLight | null = null;
 
@@ -126,6 +127,7 @@ export class MurderMysteryGame {
         this.onlineNetwork = sys.onlineNetwork;
         this.rosterManager = sys.rosterManager;
         this.syncSystem = sys.syncSystem;
+        this.audio = sys.audio;
 
         this.buildMansion();
         this.emotesWidget = new InGameEmotesWidget({ getAvatarRig: () => this.playerChar?.avatarRig, topOffset: 70, leftOffset: 16 });

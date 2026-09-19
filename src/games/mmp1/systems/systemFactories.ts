@@ -26,6 +26,7 @@ export function createGameSystems(game: any): {
     onlineNetwork: MmpOnlineNetwork;
     rosterManager: MmpRosterManager;
     syncSystem: MmpSyncSystem;
+    audio: typeof audio;
 } {
     const combatSystem = new CombatSystem({
         characters: game.characters,
@@ -99,8 +100,8 @@ export function createGameSystems(game: any): {
 
     const roundManager = new RoundManager({
         scene: game.scene,
-        characters: game.characters,
-        playerChar: game.playerChar,
+        get characters() { return game.characters; },
+        get playerChar() { return game.playerChar; },
         mapColliders: game.mapColliders,
         wallMeshes: game.wallMeshes,
         get mansionGroup() { return game.mansionGroup; },
@@ -199,7 +200,8 @@ export function createGameSystems(game: any): {
             get adminForcedRole() { return game.adminForcedRole; },
             get characters() { return game.characters; },
             startMapVoting: () => game.startMapVoting(),
-            startRound: (map, forcedRoles) => game.startRound(map, forcedRoles)
+            startRound: (map, forcedRoles) => game.startRound(map, forcedRoles),
+            endRound: (winner, reason) => game.endRound(winner, reason)
         },
         onlineNetwork,
         rosterManager,
@@ -217,6 +219,7 @@ export function createGameSystems(game: any): {
         spectatorSystem,
         onlineNetwork,
         rosterManager,
-        syncSystem
+        syncSystem,
+        audio
     };
 }

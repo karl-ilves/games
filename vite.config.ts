@@ -17,7 +17,8 @@ export default defineConfig({
         metro: resolve(__dirname, 'games/metro/index.html'),
         mmp1: resolve(__dirname, 'games/mmp1/index.html'),
         rocket: resolve(__dirname, 'games/rocket/index.html'),
-        crown: resolve(__dirname, 'games/crown/index.html')
+        crown: resolve(__dirname, 'games/crown/index.html'),
+        citycar: resolve(__dirname, 'games/citycar/index.html')
       }
     }
   }

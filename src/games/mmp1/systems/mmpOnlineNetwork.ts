@@ -217,7 +217,7 @@ export class MmpOnlineNetwork {
         });
     }
 
-    private dispatchPlayerAction(evt: MmpActionEvent) {
+    public dispatchPlayerAction(evt: MmpActionEvent) {
         this.onPlayerActionCbs.forEach(cb => {
             try { cb(evt); } catch (e) {}
         });

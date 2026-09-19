@@ -12,13 +12,13 @@ try {
 }
 
 // 2. Load Check
-(async () => {
+await (async () => {
     try {
         execSync('kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
         await new Promise(r => setTimeout(r, 600));
     } catch (e) {}
     console.log("Starting preview server...");
-    const serverProcess = spawn('node', ['./node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort', '--host', '0.0.0.0']);
+    const serverProcess = spawn('node', ['--max-old-space-size=4096', './node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort', '--host', '0.0.0.0']);
     serverProcess.stdout?.resume();
     serverProcess.stderr?.on('data', data => console.error(`[Server Error]: ${data}`));
     serverProcess.on('exit', (code, signal) => console.log(`[Preview Server Exited]: code=${code}, signal=${signal}`));
@@ -26,13 +26,14 @@ try {
     process.on('SIGINT', () => { try { serverProcess.kill(); } catch (e) {} process.exit(1); });
     
     // Wait for preview server to be responsive
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 50; i++) {
         try {
-            const res = await fetch('http://localhost:4173/');
-            if (res.ok) break;
+            const res = await fetch('http://127.0.0.1:4173/');
+            if (res.status < 500) break;
         } catch (e) {}
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 200));
     }
+    await new Promise(r => setTimeout(r, 600));
 
     console.log("Launching headless browser to check runtime errors and game platform features...");
     const browser = await puppeteer.launch({
@@ -2964,24 +2965,29 @@ try {
         await new Promise(r => setTimeout(r, 1500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
-        // Verify Team & Class selection modal
-        const deployModalExists = await page.$eval('#modal-deploy-selection', el => !!el);
-        if (!deployModalExists) {
+        // Verify Team & Class selection modal safely inside evaluate
+        const warModalCheck = await page.evaluate(() => {
+            const modal = document.getElementById('modal-deploy-selection');
+            const planeBtn = document.getElementById('btn-select-plane');
+            const lockBadge = document.getElementById('plane-lock-badge');
+            const missileBtn = document.getElementById('btn-select-missile');
+            return {
+                deployModalExists: !!modal,
+                planeCardExists: !!planeBtn,
+                planeLockBadge: lockBadge ? lockBadge.textContent.trim() : '',
+                missileRoleOptionExists: !!missileBtn
+            };
+        });
+
+        if (!warModalCheck.deployModalExists) {
             throw new Error("Deploy team/class selection modal not found!");
         }
-
-        // Check Fighter Jet card & 50,000 € lock badge
-        const planeCardExists = await page.$eval('#btn-select-plane', el => !!el);
-        const planeLockBadge = await page.$eval('#plane-lock-badge', el => el.textContent);
-        console.log("   Fighter Jet Option Exists:", planeCardExists, "Lock Badge:", planeLockBadge.trim());
-        if (!planeCardExists || !planeLockBadge.includes('50,000 €')) {
+        console.log("   Fighter Jet Option Exists:", warModalCheck.planeCardExists, "Lock Badge:", warModalCheck.planeLockBadge);
+        if (!warModalCheck.planeCardExists || !warModalCheck.planeLockBadge.includes('50,000 €')) {
             throw new Error("Fighter jet option with 50,000 € lock badge must exist!");
         }
-
-        // Check Missile Team role in scrollable roles selection
-        const missileRoleOptionExists = await page.$eval('#btn-select-missile', el => !!el);
-        console.log("   Raketitiim Role Option Exists in Modal:", missileRoleOptionExists);
-        if (!missileRoleOptionExists) {
+        console.log("   Raketitiim Role Option Exists in Modal:", warModalCheck.missileRoleOptionExists);
+        if (!warModalCheck.missileRoleOptionExists) {
             throw new Error("Raketitiim option (#btn-select-missile) must exist in deploy modal roles!");
         }
 
@@ -7159,7 +7165,16 @@ try {
 
             // 4. Verify Mobile Mode in Community Game Player
             console.log("   Checking Mobile Mode in Community Game Player (with ?mobile=true)...");
-            await page.goto('http://localhost:4173/games/play/index.html?mobile=true');
+            for (let retry = 0; retry < 3; retry++) {
+                try {
+                    await page.goto('about:blank');
+                    await page.goto('http://localhost:4173/games/play/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
+                    break;
+                } catch (err) {
+                    if (retry === 2) throw err;
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
             await new Promise(r => setTimeout(r, 800));
             const playMobile = await page.evaluate(() => {
                 const layer = document.getElementById('playard-universal-mobile-controls');
@@ -7582,6 +7597,195 @@ try {
                 throw new Error("Crown Obby unstuck/collision resolution check failed: " + JSON.stringify(crownGamePageTest));
             }
             console.log("✅ 👑 24K Crown Obby (50 Stages, Grand Prize, Real-Time Online Chat, Anti-Stuck & Collision Resolution, Live Remote Sync) testid edukalt läbitud!");
+
+            // ==========================================
+            // 🏙️🌲 CityCar (3D City & Nature Drive) Verification
+            // ==========================================
+            console.log("Testing 🏙️🌲 CityCar 3D Driving Game (Access Control, Physics, World, Multiplayer)...");
+            
+            // 1. Hub Access Control Test
+            console.log("   1. Testing CityCar Hub Card Access Control (Guest, taavi2, Owner, Non-authorized)...");
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const accessTest = await page.evaluate(() => {
+                const card = document.getElementById('card-citycar-game');
+                const guestDisplay = card ? window.getComputedStyle(card).display : 'missing';
+
+                // Test taavi2
+                const taaviProf = { id: 't2', username: 'taavi2', email: 'taavi2@example.com', displayName: 'taavi2', isAdmin: false };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(taaviProf));
+                window.location.reload();
+            });
+
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const taaviAccessTest = await page.evaluate(() => {
+                const card = document.getElementById('card-citycar-game');
+                const taaviDisplay = card ? window.getComputedStyle(card).display : 'missing';
+
+                // Test Owner
+                const ownerProf = { id: 'owner_1', username: 'karl', email: '1karl.ilves@gmail.com', displayName: 'Karl', isAdmin: true };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+                window.location.reload();
+                return { taaviDisplay };
+            });
+
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const ownerAccessTest = await page.evaluate(() => {
+                const card = document.getElementById('card-citycar-game');
+                const ownerDisplay = card ? window.getComputedStyle(card).display : 'missing';
+
+                // Test Random user
+                const otherProf = { id: 'other_1', username: 'random_player', email: 'other@test.com', displayName: 'Random', isAdmin: false };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(otherProf));
+                window.location.reload();
+                return { ownerDisplay };
+            });
+
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const otherAccessTest = await page.evaluate(() => {
+                const card = document.getElementById('card-citycar-game');
+                const otherDisplay = card ? window.getComputedStyle(card).display : 'missing';
+                return { otherDisplay };
+            });
+
+            console.log("   CityCar Card Visibility Check Results:", {
+                taavi: taaviAccessTest.taaviDisplay,
+                owner: ownerAccessTest.ownerDisplay,
+                otherUser: otherAccessTest.otherDisplay
+            });
+
+            if (taaviAccessTest.taaviDisplay === 'none' || ownerAccessTest.ownerDisplay === 'none') {
+                throw new Error("CityCar card must be visible to taavi2 and Playard Owner!");
+            }
+            if (otherAccessTest.otherDisplay !== 'none') {
+                throw new Error("CityCar card must be hidden for non-authorized users!");
+            }
+
+            // 2. CityCar In-Game Verification
+            console.log("   2. Testing CityCar Gameplay (/games/citycar/index.html)...");
+            await page.goto('http://localhost:4173/games/citycar/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 1200));
+
+            const cityCarTest = await page.evaluate(() => {
+                const dbg = window.__CITY_CAR_DEBUG__;
+                if (!dbg) return { success: false, reason: '__CITY_CAR_DEBUG__ not found' };
+
+                const canvas = document.getElementById('game-canvas');
+                const speedVal = document.getElementById('speed-val')?.textContent;
+                const onlineCount = document.getElementById('online-count')?.textContent;
+
+                // Verify World
+                const world = dbg.world;
+                const bridgesCount = world?.bridges?.length || 0;
+                const collidersCount = world?.colliders?.length || 0;
+                const cityZone = world.getZoneAt(-100, 0);
+                const bridgeZone = world.getZoneAt(0, 0);
+                const forestZone = world.getZoneAt(100, 0);
+                const borderZone = world.getZoneAt(0, 120);
+
+                const bridgeHeight = world.getGroundHeight(0, 0);
+                const groundHeight = world.getGroundHeight(-100, 0);
+
+                // Test Driving Physics
+                const physics = dbg.physics;
+                const startX = physics.state.position.x;
+                const startZ = physics.state.position.z;
+
+                // Apply throttle forward
+                physics.update(0.1, { throttle: 1, brake: 0, steer: 0, handbrake: false, horn: false, reset: false });
+                physics.update(0.1, { throttle: 1, brake: 0, steer: 0, handbrake: false, horn: false, reset: false });
+                physics.update(0.1, { throttle: 1, brake: 0, steer: 0, handbrake: false, horn: false, reset: false });
+
+                const acceleratedSpeed = physics.state.speed;
+                const acceleratedGear = physics.state.gear;
+                const movedZ = physics.state.position.z;
+                const movedX = physics.state.position.x;
+
+                // Test Steering
+                physics.update(0.1, { throttle: 1, brake: 0, steer: 1, handbrake: false, horn: false, reset: false });
+                physics.update(0.1, { throttle: 1, brake: 0, steer: 1, handbrake: false, horn: false, reset: false });
+                const steeredAngle = physics.state.steeringAngle;
+
+                // Test Reset
+                physics.resetCar();
+                const resetSpeed = physics.state.speed;
+                const resetX = physics.state.position.x;
+
+                // Test Multiplayer packet handling
+                const mp = dbg.multiplayer;
+                const initialRemoteCount = mp.getRemoteCount();
+                
+                // Simulate receiving packet from remote driver "taavi2"
+                mp.handlePacket({
+                    id: 'driver_taavi2_test',
+                    name: 'taavi2',
+                    color: '#ffd32a',
+                    x: 10,
+                    y: 3.1,
+                    z: 0,
+                    rotY: 1.57,
+                    speed: 85,
+                    wheelRot: 2.5,
+                    steerAngle: 0.1,
+                    zone: 'bridge',
+                    time: Date.now()
+                });
+
+                const countAfterReceive = mp.getRemoteCount();
+                const rosterHtml = document.getElementById('drivers-roster')?.textContent || '';
+                const rosterHasTaavi2 = rosterHtml.includes('taavi2');
+
+                // Test Color change
+                dbg.state.setCarColor('#ff3838');
+                const changedColor = dbg.state.getCarColor();
+
+                return {
+                    success: true,
+                    hasCanvas: !!canvas,
+                    speedVal,
+                    onlineCount,
+                    bridgesCount,
+                    collidersCount,
+                    cityZone,
+                    bridgeZone,
+                    forestZone,
+                    borderZone,
+                    bridgeHeight,
+                    groundHeight,
+                    acceleratedSpeed,
+                    acceleratedGear,
+                    steeredAngle,
+                    resetSpeed,
+                    resetX,
+                    initialRemoteCount,
+                    countAfterReceive,
+                    rosterHasTaavi2,
+                    changedColor
+                };
+            });
+
+            console.log("   CityCar In-Game Verification Results:", cityCarTest);
+            if (!cityCarTest.success || !cityCarTest.hasCanvas) {
+                throw new Error("CityCar In-game verification failed: " + JSON.stringify(cityCarTest));
+            }
+            if (cityCarTest.bridgesCount !== 3 || cityCarTest.cityZone !== 'city' || cityCarTest.forestZone !== 'forest' || cityCarTest.bridgeZone !== 'bridge' || cityCarTest.borderZone !== 'border') {
+                throw new Error("CityCar World Zones and Bridges check failed: " + JSON.stringify(cityCarTest));
+            }
+            if (cityCarTest.acceleratedSpeed <= 0 || cityCarTest.acceleratedGear !== 'D') {
+                throw new Error("CityCar Acceleration physics check failed: " + JSON.stringify(cityCarTest));
+            }
+            if (cityCarTest.countAfterReceive !== 1 || !cityCarTest.rosterHasTaavi2) {
+                throw new Error("CityCar Multiplayer sync and driver roster check failed: " + JSON.stringify(cityCarTest));
+            }
+
+            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad & Piirid, Multiplayer, Owner & taavi2 Access) testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

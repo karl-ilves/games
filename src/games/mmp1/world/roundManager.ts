@@ -287,9 +287,9 @@ export class RoundManager {
     }
 
     public endRound(winner: "sheriff_win" | "murderer_win" | "time_out", reason: string) {
-        if (this.ctx.getState() === "round_end") return;
+        const wasRoundEnd = (this.ctx.getState() === "round_end");
         this.ctx.setState("round_end");
-        if (this.ctx.broadcastAction) {
+        if (!wasRoundEnd && this.ctx.broadcastAction) {
             this.ctx.broadcastAction('end_round', { winner, reason });
         }
         if (typeof document !== 'undefined') {

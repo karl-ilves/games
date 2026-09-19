@@ -1,5 +1,5 @@
 import { supabase } from './lib/supabase';
-import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner, canAccessMmp1, calculateAge, isTestMode } from './auth';
+import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner, canAccessMmp1, canAccessCityCar, calculateAge, isTestMode } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
 import { setLanguage, applyLocalization, getLanguage } from './shared/i18n';
 import { AvatarWidget } from './components/AvatarWidget';
@@ -86,6 +86,13 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
     const rocketGameCard = document.getElementById('card-rocket-game');
     if (rocketGameCard) {
         rocketGameCard.style.display = 'flex';
+    }
+
+    // CityCar (3D Linna & Looduse Autosõit) - Nähtav AINULT Playard Ownerile ja taavi2!
+    const cityCarCard = document.getElementById('card-citycar-game');
+    if (cityCarCard) {
+        const canAccess = canAccessCityCar(prof, usernameToCheck || prof?.username);
+        cityCarCard.style.display = canAccess ? 'flex' : 'none';
     }
 
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
