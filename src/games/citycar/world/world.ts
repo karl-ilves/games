@@ -305,6 +305,84 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         scene.add(rock);
     }
 
+    // 7. Jump Ramps scattered across the map
+    interface RampDef {
+        x: number; z: number; // center position
+        dirAngle: number;     // direction the ramp faces (radians, 0 = +Z)
+        length: number;       // ramp slope length
+        width: number;        // ramp width
+        peakHeight: number;   // max height at the top edge
+    }
+
+    const rampDefs: RampDef[] = [
+        // City ramp on Main Avenue heading east toward bridge
+        { x: -115, z: 0, dirAngle: Math.PI / 2, length: 12, width: 10, peakHeight: 2.8 },
+        // City ramp on North Boulevard
+        { x: -140, z: 120, dirAngle: Math.PI / 2, length: 10, width: 9, peakHeight: 2.4 },
+        // Forest ramp on central dirt trail
+        { x: 120, z: 0, dirAngle: -Math.PI / 2, length: 11, width: 9, peakHeight: 2.6 },
+        // Forest ramp on south trail
+        { x: 200, z: -120, dirAngle: Math.PI / 2, length: 10, width: 9, peakHeight: 2.2 },
+        // City cross-street ramp heading north
+        { x: -80, z: -60, dirAngle: 0, length: 10, width: 9, peakHeight: 2.5 },
+    ];
+
+    const rampMat = new THREE.MeshStandardMaterial({ color: 0xff9f43, roughness: 0.6, metalness: 0.15 });
+    const rampStripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const rampWarningMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
+
+    // Ramp collision-free zone rectangles (for getGroundHeight)
+    const ramps: { def: RampDef; cosA: number; sinA: number }[] = [];
+
+    rampDefs.forEach((def, idx) => {
+        const cosA = Math.cos(def.dirAngle);
+        const sinA = Math.sin(def.dirAngle);
+        ramps.push({ def, cosA, sinA });
+
+        // Build ramp mesh: a wedge shape (triangular prism)
+        const rampGroup = new THREE.Group();
+        rampGroup.name = 'Ramp_' + idx;
+
+        // Main ramp surface (custom geometry: a right-angle wedge)
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0);
+        shape.lineTo(def.length, 0);
+        shape.lineTo(def.length, def.peakHeight);
+        shape.lineTo(0, 0);
+
+        const extrudeSettings = { depth: def.width, bevelEnabled: false };
+        const wedgeGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        const wedge = new THREE.Mesh(wedgeGeo, rampMat);
+        wedge.castShadow = true;
+        wedge.receiveShadow = true;
+        // Position wedge so it's centered on width
+        wedge.position.set(-def.length / 2, 0, -def.width / 2);
+        rampGroup.add(wedge);
+
+        // Chevron warning stripes on the face
+        const stripeGeo = new THREE.PlaneGeometry(def.width * 0.8, 0.3);
+        for (let s = 0; s < 3; s++) {
+            const stripe = new THREE.Mesh(stripeGeo, s % 2 === 0 ? rampWarningMat : rampStripeMat);
+            stripe.position.set(def.length / 2 + 0.02, def.peakHeight * (0.25 + s * 0.25), 0);
+            stripe.rotation.y = Math.PI / 2;
+            rampGroup.add(stripe);
+        }
+
+        // Arrow on the slope surface pointing up
+        const arrowGeo = new THREE.PlaneGeometry(2.0, 4.0);
+        const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
+        const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+        const slopeAngle = Math.atan2(def.peakHeight, def.length);
+        arrow.rotation.x = -(Math.PI / 2 - slopeAngle);
+        arrow.position.set(0, def.peakHeight * 0.35, 0);
+        rampGroup.add(arrow);
+
+        // Position and orient the ramp group in world space
+        rampGroup.position.set(def.x, 0, def.z);
+        rampGroup.rotation.y = def.dirAngle;
+        scene.add(rampGroup);
+    });
+
     return {
         scene,
         waterMesh,
@@ -356,6 +434,26 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
             for (const b of bridges) {
                 if (b.box.containsPoint(new THREE.Vector3(x, 0.5, z))) {
                     return b.height;
+                }
+            }
+
+            // Check if car is on a ramp slope
+            for (const ramp of ramps) {
+                const { def, cosA, sinA } = ramp;
+                // Transform world position into ramp-local coordinates
+                const dx = x - def.x;
+                const dz = z - def.z;
+                // Rotate into ramp's local frame (forward = +local X)
+                const localForward = dx * sinA + dz * cosA;
+                const localSide = dx * cosA - dz * sinA;
+
+                // Check if within ramp bounds
+                const halfLen = def.length / 2;
+                const halfWid = def.width / 2;
+                if (localForward >= -halfLen && localForward <= halfLen && Math.abs(localSide) <= halfWid) {
+                    // Linear slope: 0 at back edge, peakHeight at front edge
+                    const t = (localForward + halfLen) / def.length;
+                    return t * def.peakHeight;
                 }
             }
 

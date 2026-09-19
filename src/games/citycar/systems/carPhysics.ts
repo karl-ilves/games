@@ -243,9 +243,14 @@ export class CarPhysicsController {
                 this.state.isGrounded = false;
             }
         } else {
-            // Smoothly climb slope or snap to ground
-            this.state.position.y = THREE.MathUtils.damp(this.state.position.y, groundY, 15, delta);
-            this.verticalVelocity = 0;
+            // When driving onto a ramp or slope, capture climb speed for launch momentum
+            const climbSpeed = (groundY - this.state.position.y) / Math.max(delta, 0.001);
+            if (climbSpeed > 0.6) {
+                this.verticalVelocity = Math.min(climbSpeed * 0.9, 16.0);
+            } else {
+                this.verticalVelocity = 0;
+            }
+            this.state.position.y = groundY;
             this.state.isGrounded = true;
         }
 
@@ -263,9 +268,11 @@ export class CarPhysicsController {
         this.meshContainer.group.position.copy(this.state.position);
         this.meshContainer.group.rotation.set(0, this.yaw, 0);
 
-        // Body roll / tilt during hard turns or speed
+        // Body roll / tilt during hard turns or speed & pitch tilt in mid-air
         const rollTilt = -this.currentSteerAngle * (this.forwardSpeedMps / maxForwardSpeedMps) * 0.08;
+        const pitchTilt = !this.state.isGrounded ? THREE.MathUtils.clamp(-this.verticalVelocity * 0.025, -0.3, 0.3) : 0;
         this.meshContainer.bodyMesh.rotation.z = rollTilt;
+        this.meshContainer.bodyMesh.rotation.x = pitchTilt;
 
         // 8. Update State metrics
         const speedKmh = Math.round(Math.abs(this.forwardSpeedMps) * 3.6);
