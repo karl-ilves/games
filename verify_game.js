@@ -6716,11 +6716,14 @@ await (async () => {
                 const assigned = game.syncSystem.assignRolesSynchronized();
                 const murdererId = assigned.murdererId;
                 const sheriffId = assigned.sheriffId;
+                const localId = game.syncSystem?.onlineNetwork?.getPlayerId?.() || 'player';
 
                 // Apply assigned roles
                 game.characters.forEach(c => {
-                    if (c.id === murdererId) c.role = 'murderer';
-                    else if (c.id === sheriffId) c.role = 'sheriff';
+                    const isM = c.id === murdererId || (c.isPlayer && (murdererId === localId || murdererId === c.id));
+                    const isS = c.id === sheriffId || (c.isPlayer && (sheriffId === localId || sheriffId === c.id));
+                    if (isM) c.role = 'murderer';
+                    else if (isS) c.role = 'sheriff';
                     else c.role = 'innocent';
                 });
 
