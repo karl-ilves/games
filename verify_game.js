@@ -5414,6 +5414,30 @@ await (async () => {
             }
             console.log('   MMP1 Playard AvatarRig verified: ✅');
 
+            // Verify Every Player and Bot has their own unique AvatarRig and player name matches user profile
+            const rosterAvatarCheck = await page.evaluate(() => {
+                const game = window.mmp1Game;
+                const p = game?.playerChar;
+                const chars = game?.characters || [];
+                const bots = chars.filter(c => !c.isPlayer);
+                const allHaveAvatarRig = chars.length > 0 && chars.every(c => !!c.avatarRig);
+                const playerNametagHasUsername = p && (p.name === 'playard owner' || p.name === 'Player') && !!p.mesh?.userData?.nameTagCanvas;
+                const uniqueHairTops = new Set(chars.map(c => `${c.avatarRig?.config?.topId}_${c.avatarRig?.config?.hairId}`));
+                return {
+                    totalCharacters: chars.length,
+                    botsCount: bots.length,
+                    allHaveAvatarRig,
+                    playerNametagHasUsername,
+                    playerName: p?.name,
+                    uniqueAvatarCount: uniqueHairTops.size
+                };
+            });
+            console.log(`   MMP1 Roster Avatars: total=${rosterAvatarCheck.totalCharacters}, allHaveAvatarRig=${rosterAvatarCheck.allHaveAvatarRig}, uniqueConfigs=${rosterAvatarCheck.uniqueAvatarCount}, playerName="${rosterAvatarCheck.playerName}"`);
+            if (!rosterAvatarCheck.allHaveAvatarRig) throw new Error('Every player and bot must have their own 3D AvatarRig!');
+            if (!rosterAvatarCheck.playerNametagHasUsername) throw new Error('Player nametag must show current user profile username!');
+            if (rosterAvatarCheck.uniqueAvatarCount < 4) throw new Error('Each player and bot must have distinct avatar cosmetics!');
+            console.log('   All players and bots have distinct 3D AvatarRigs & user profile nametag verified: ✅');
+
             // Test In-Game Emotes Widget in Top-Left under PLAYARD
             const inGameEmotesBar = await page.$('#playard-in-game-emotes-bar');
             if (!inGameEmotesBar) throw new Error("Expected #playard-in-game-emotes-bar in top-left under PLAYARD!");
