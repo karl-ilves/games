@@ -14,6 +14,9 @@ export const MAP_BOUNDS = {
 export class CarPhysicsController {
     public state: CarPhysicsState;
     public onLampHit?: () => void;
+    public onBuildingHit?: () => void;
+    public onWaterDive?: () => void;
+    public onOffroadDrive?: () => void;
     private meshContainer: CarMeshContainer;
     private world: WorldEnvironment;
 
@@ -206,9 +209,20 @@ export class CarPhysicsController {
         } else if (collided) {
             // Rebound bounce
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
+            this.onBuildingHit?.();
         } else {
             this.state.position.x = clampedX;
             this.state.position.z = clampedZ;
+
+            // Check off-road driving in city grass
+            if (this.state.currentZone === 'city' && Math.abs(this.forwardSpeedMps) > 4.0) {
+                // If far from all roads
+                const distZ = Math.min(Math.abs(this.state.position.z), Math.abs(this.state.position.z - 120), Math.abs(this.state.position.z + 120));
+                const distX = Math.min(Math.abs(this.state.position.x - (-80)), Math.abs(this.state.position.x - (-160)), Math.abs(this.state.position.x - (-240)));
+                if (distZ > 10.0 && distX > 10.0) {
+                    this.onOffroadDrive?.();
+                }
+            }
         }
 
         // Safeguard against falling into void / deep river
@@ -238,6 +252,7 @@ export class CarPhysicsController {
         // River water slow down if car plunged into water without bridge
         if (this.state.position.y < -0.2 && Math.abs(this.state.position.x) < 40) {
             this.forwardSpeedMps *= 0.88; // water resistance drag
+            this.onWaterDive?.();
         }
 
         // 6. Wheel Visual Updates

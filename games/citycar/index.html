@@ -153,6 +153,57 @@
             gap: 6px;
         }
 
+        /* Wanted Level Card */
+        .wanted-card {
+            background: rgba(20, 10, 14, 0.92);
+            border: 1.5px solid #ff4757;
+            border-radius: 12px;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(255, 71, 87, 0.45);
+            animation: pulseWanted 1.2s infinite alternate;
+            backdrop-filter: blur(8px);
+        }
+        @keyframes pulseWanted {
+            0% { box-shadow: 0 0 10px rgba(255, 71, 87, 0.4); border-color: #ff4757; }
+            100% { box-shadow: 0 0 25px rgba(255, 71, 87, 0.85); border-color: #ff6b81; }
+        }
+        .wanted-title {
+            color: #ff4757;
+            font-weight: 900;
+            font-size: 0.85rem;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 10px rgba(255, 71, 87, 0.8);
+        }
+        .wanted-stars-row {
+            display: flex;
+            gap: 3px;
+            font-size: 1.25rem;
+        }
+        .wanted-star {
+            filter: drop-shadow(0 0 6px #ffd32a);
+        }
+
+        /* Center screen dramatic flying star */
+        #flying-star-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 99999;
+            display: none;
+        }
+        #flying-star-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 92px;
+            filter: drop-shadow(0 0 35px #ffd32a) drop-shadow(0 0 70px #ff9f1a);
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
         /* Zone Notification Banner */
         #zone-banner {
             position: absolute;
@@ -386,8 +437,17 @@
                 </div>
             </div>
 
-            <!-- Active Drivers Roster -->
+            <!-- Active Drivers Roster & Wanted Level -->
             <div class="top-right-panel hud-interactive">
+                <!-- Wanted Level Display -->
+                <div class="wanted-card" id="wanted-card" style="display: none;">
+                    <div class="wanted-title">WANTED</div>
+                    <div class="wanted-stars-row">
+                        <span class="wanted-star" id="hud-star-1" style="display: none;">⭐</span>
+                        <span class="wanted-star" id="hud-star-2" style="display: none;">⭐</span>
+                    </div>
+                </div>
+
                 <div class="drivers-card">
                     <div class="drivers-title">
                         <span>👥</span>
@@ -465,6 +525,11 @@
             </div>
             <button class="btn-action" id="btn-close-color-modal" style="width: 100%; justify-content: center; margin-top: 8px;">Valmis</button>
         </div>
+    </div>
+
+    <!-- Center Screen Flying Star Overlay -->
+    <div id="flying-star-container">
+        <div id="flying-star-icon">⭐</div>
     </div>
 
     <script type="module" src="/src/games/citycar/main.ts"></script>

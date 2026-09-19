@@ -114,6 +114,12 @@ export class CityCarAudioSystem {
         }
     }
 
+    private sirenOsc: OscillatorNode | null = null;
+    private sirenLfo: OscillatorNode | null = null;
+    private sirenLfoGain: GainNode | null = null;
+    private sirenGain: GainNode | null = null;
+    private isSirenActive = false;
+
     public playLampHit(): void {
         if (!this.enabled || !this.ensureContext() || !this.ctx) return;
         try {
@@ -136,5 +142,108 @@ export class CityCarAudioSystem {
             osc.stop(now + 0.3);
         } catch (e) {}
     }
+
+    public playStarAwarded(): void {
+        if (!this.enabled || !this.ensureContext() || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            // Two-tone rising star chime (E5 -> B5)
+            const osc1 = this.ctx.createOscillator();
+            const osc2 = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc1.type = 'triangle';
+            osc1.frequency.setValueAtTime(659.25, now);
+            osc1.frequency.exponentialRampToValueAtTime(987.77, now + 0.18);
+
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1318.5, now);
+            osc2.frequency.exponentialRampToValueAtTime(1975.5, now + 0.22);
+
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.95);
+            osc2.stop(now + 0.95);
+        } catch (e) {}
+    }
+
+    public updatePoliceSiren(active: boolean, targetVol = 0.12): void {
+        if (!this.enabled || !this.ensureContext() || !this.ctx) {
+            this.stopPoliceSiren();
+            return;
+        }
+
+        if (active) {
+            if (!this.isSirenActive) {
+                this.isSirenActive = true;
+                try {
+                    const now = this.ctx.currentTime;
+                    this.sirenOsc = this.ctx.createOscillator();
+                    this.sirenLfo = this.ctx.createOscillator();
+                    this.sirenLfoGain = this.ctx.createGain();
+                    this.sirenGain = this.ctx.createGain();
+
+                    // Siren base tone 750 Hz
+                    this.sirenOsc.type = 'sawtooth';
+                    this.sirenOsc.frequency.setValueAtTime(750, now);
+
+                    // Lowpass filter to avoid harshness
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1600, now);
+
+                    // LFO wails up and down at 1.5 Hz (0.66s cycle)
+                    this.sirenLfo.type = 'sine';
+                    this.sirenLfo.frequency.setValueAtTime(1.5, now);
+                    this.sirenLfoGain.gain.setValueAtTime(220, now); // modulates +- 220 Hz
+
+                    this.sirenLfo.connect(this.sirenLfoGain);
+                    this.sirenLfoGain.connect(this.sirenOsc.frequency);
+
+                    this.sirenGain.gain.setValueAtTime(0.001, now);
+                    this.sirenGain.gain.setTargetAtTime(targetVol, now, 0.2);
+
+                    this.sirenOsc.connect(filter);
+                    filter.connect(this.sirenGain);
+                    this.sirenGain.connect(this.ctx.destination);
+
+                    this.sirenOsc.start(now);
+                    this.sirenLfo.start(now);
+                } catch (e) {}
+            } else if (this.sirenGain) {
+                this.sirenGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.15);
+            }
+        } else {
+            this.stopPoliceSiren();
+        }
+    }
+
+    private stopPoliceSiren(): void {
+        if (!this.isSirenActive) return;
+        this.isSirenActive = false;
+        if (this.sirenGain && this.ctx) {
+            this.sirenGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.2);
+            setTimeout(() => {
+                this.sirenOsc?.stop();
+                this.sirenLfo?.stop();
+                this.sirenOsc?.disconnect();
+                this.sirenLfo?.disconnect();
+                this.sirenLfoGain?.disconnect();
+                this.sirenGain?.disconnect();
+                this.sirenOsc = null;
+                this.sirenLfo = null;
+                this.sirenLfoGain = null;
+                this.sirenGain = null;
+            }, 250);
+        }
+    }
 }
+
 

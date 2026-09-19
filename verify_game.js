@@ -7770,6 +7770,31 @@ await (async () => {
                 }
                 const boundaryProtected = physics.state.position.x >= -360 && physics.state.position.x <= 360;
 
+                // Test Wanted Level System & Police Chase
+                const wanted = dbg.wantedSystem;
+                const police = dbg.policeSystem;
+
+                wanted?.reset?.();
+                const initialWanted = wanted?.getWantedLevel?.() || 0;
+                const initialPoliceCount = police?.getActiveCount?.() || 0;
+
+                // Trigger 1 Star (first crime)
+                wanted.reportLampCrash();
+                const star1Level = wanted.getWantedLevel();
+                const star1PoliceCount = police.getActiveCount();
+
+                // Trigger 2 Stars (5 more lamp crashes)
+                for (let i = 0; i < 5; i++) {
+                    wanted.reportLampCrash();
+                }
+                const star2Level = wanted.getWantedLevel();
+                const star2PoliceCount = police.getActiveCount();
+
+                // Update police chase AI
+                police.update(0.1, physics.state.position, 0, 30);
+                const cruisers = police.getCruisers();
+                const cruisersActive = cruisers.length === 5 && cruisers.every(c => c.speedMps > 0);
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
@@ -7794,7 +7819,14 @@ await (async () => {
                     changedColor,
                     minimapRemoved,
                     lampCollapsed,
-                    boundaryProtected
+                    boundaryProtected,
+                    initialWanted,
+                    initialPoliceCount,
+                    star1Level,
+                    star1PoliceCount,
+                    star2Level,
+                    star2PoliceCount,
+                    cruisersActive
                 };
             });
 
@@ -7822,6 +7854,15 @@ await (async () => {
             }
             if (!cityCarTest.boundaryProtected) {
                 throw new Error("CityCar Map boundary must prevent driving out of map!");
+            }
+            if (cityCarTest.initialWanted !== 0 || cityCarTest.initialPoliceCount !== 0) {
+                throw new Error("CityCar must start at 0 wanted stars and 0 police cars!");
+            }
+            if (cityCarTest.star1Level !== 1 || cityCarTest.star1PoliceCount !== 2) {
+                throw new Error("CityCar 1 Star must spawn exactly 2 chasing police cars!");
+            }
+            if (cityCarTest.star2Level !== 2 || cityCarTest.star2PoliceCount !== 5 || !cityCarTest.cruisersActive) {
+                throw new Error("CityCar 2 Stars must spawn exactly 5 active chasing police cars!");
             }
 
             console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad & Piirid, Multiplayer, Owner & taavi2 Access) testid edukalt läbitud!");

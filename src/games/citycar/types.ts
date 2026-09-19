@@ -59,3 +59,19 @@ export interface DriverInfo {
     speed: number;
     zone: WorldZone;
 }
+
+export type WantedLevel = 0 | 1 | 2;
+
+export interface CrimeStats {
+    totalLampHits: number;
+    totalBuildingHits: number;
+    totalWaterDives: number;
+    totalOffroadDrives: number;
+    totalPoliceRamHits: number;
+    // Infractions counted specifically while at 1 Star
+    star1LampHits: number;
+    star1BuildingHits: number;
+    star1WaterDives: number;
+    star1PoliceRamHits: number;
+}
+

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CameraMode, DriverInfo, WorldZone } from '../types';
+import { CameraMode, DriverInfo, WantedLevel, WorldZone } from '../types';
 import { CAR_COLORS, CAMERA_CONFIGS } from '../catalog';
 
 export class CityCarHUD {
@@ -16,6 +16,11 @@ export class CityCarHUD {
     private minimapCtx: CanvasRenderingContext2D | null = null;
     private accessModalEl: HTMLElement | null = null;
     private colorModalEl: HTMLElement | null = null;
+    private wantedCardEl: HTMLElement | null = null;
+    private star1El: HTMLElement | null = null;
+    private star2El: HTMLElement | null = null;
+    private flyingStarContainerEl: HTMLElement | null = null;
+    private flyingStarIconEl: HTMLElement | null = null;
 
     private lastZone: WorldZone | null = null;
     private bannerTimeout: any = null;
@@ -48,6 +53,11 @@ export class CityCarHUD {
         }
         this.accessModalEl = document.getElementById('access-restricted-modal');
         this.colorModalEl = document.getElementById('color-modal');
+        this.wantedCardEl = document.getElementById('wanted-card');
+        this.star1El = document.getElementById('hud-star-1');
+        this.star2El = document.getElementById('hud-star-2');
+        this.flyingStarContainerEl = document.getElementById('flying-star-container');
+        this.flyingStarIconEl = document.getElementById('flying-star-icon');
     }
 
     private setupButtons(
@@ -164,6 +174,76 @@ export class CityCarHUD {
         if (this.accessModalEl) {
             this.accessModalEl.style.display = 'flex';
         }
+    }
+
+    public updateWantedLevel(level: WantedLevel): void {
+        if (!this.wantedCardEl) return;
+        if (level === 0) {
+            this.wantedCardEl.style.display = 'none';
+            if (this.star1El) this.star1El.style.display = 'none';
+            if (this.star2El) this.star2El.style.display = 'none';
+        } else {
+            this.wantedCardEl.style.display = 'flex';
+            if (this.star1El) this.star1El.style.display = level >= 1 ? 'inline-block' : 'none';
+            if (this.star2El) this.star2El.style.display = level >= 2 ? 'inline-block' : 'none';
+        }
+    }
+
+    public triggerStarAwardAnimation(newLevel: WantedLevel): void {
+        if (!this.flyingStarContainerEl || !this.flyingStarIconEl) {
+            this.updateWantedLevel(newLevel);
+            return;
+        }
+
+        const container = this.flyingStarContainerEl;
+        const icon = this.flyingStarIconEl;
+
+        // 1. Show star in center of the screen
+        container.style.display = 'block';
+        icon.style.transition = 'none';
+        icon.style.top = '50%';
+        icon.style.left = '50%';
+        icon.style.transform = 'translate(-50%, -50%) scale(0.1)';
+        icon.style.opacity = '1';
+
+        // 2. Animate star pop
+        requestAnimationFrame(() => {
+            icon.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            icon.style.transform = 'translate(-50%, -50%) scale(1.35)';
+        });
+
+        // 3. Hold in center for 1.0s, then fly to top-right corner
+        // (User: "ilmub su ette üks täht ja ja püsib 1 sek ja siis läheb paremale ülesse nurka")
+        setTimeout(() => {
+            let targetX = window.innerWidth - 80;
+            let targetY = 28;
+
+            if (this.wantedCardEl) {
+                this.wantedCardEl.style.display = 'flex';
+            }
+
+            const targetStar = newLevel === 2 ? this.star2El : this.star1El;
+            if (targetStar) {
+                targetStar.style.display = 'inline-block';
+                targetStar.style.opacity = '0.3';
+                const rect = targetStar.getBoundingClientRect();
+                if (rect.left > 0 && rect.top > 0) {
+                    targetX = rect.left;
+                    targetY = rect.top;
+                }
+            }
+
+            icon.style.transition = 'all 0.65s cubic-bezier(0.2, 0.85, 0.25, 1)';
+            icon.style.top = `${targetY}px`;
+            icon.style.left = `${targetX}px`;
+            icon.style.transform = 'translate(0, 0) scale(0.3)';
+            icon.style.opacity = '0.6';
+
+            setTimeout(() => {
+                container.style.display = 'none';
+                this.updateWantedLevel(newLevel);
+            }, 680);
+        }, 1000);
     }
 
     public updateMinimap(localPos: THREE.Vector3, localYaw: number, otherDrivers: DriverInfo[]): void {

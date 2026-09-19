@@ -8,35 +8,33 @@ import { CameraFollowSystem } from './systems/camera';
 import { CityCarMultiplayerSystem } from './systems/multiplayer';
 import { CityCarInputController } from './systems/input';
 import { CityCarAudioSystem } from './audio';
+import { PoliceChaseSystem } from './systems/policeSystem';
+import { WantedSystem } from './systems/wantedSystem';
 import { CityCarHUD } from './ui/hud';
 import { DriverInfo } from './types';
 
 console.log('[CityCar] 3D City & Nature Drive Simulator initializing...');
 
-// 1. Access Control Verification
+// 1. Auth & Access Verification
 const profile = getCurrentUserProfile();
 const isTestMode = typeof window !== 'undefined' && (window as any).__PLAYARD_TEST_MODE__;
 const hasAccess = isTestMode || canAccessCityCar(profile, profile?.username);
 
-// 2. Setup Three.js Scene, Camera, and Renderer
+// 2. Three.js Scene, Camera & Renderer
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.2, 1200);
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas || undefined,
-    antialias: true,
-    powerPreference: 'high-performance'
-});
-renderer.setSize(window.innerWidth, window.innerHeight);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// 3. Build Procedural World (City, River, Bridges, Borders, Forest)
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 800);
+
+// 3. Build Modular 3D World (City, River, Bridges, Forest)
 const world = buildWorld(scene);
 
-// 4. Create Player's 3D Car
+// 4. Local Player Car Mesh
 const driverName = profile?.username || profile?.displayName || cityCarState.getUserName();
 cityCarState.setUserName(driverName);
 
@@ -52,7 +50,7 @@ scene.add(carMesh.group);
 const physics = new CarPhysicsController(carMesh, world, new THREE.Vector3(-60, 0.1, 0));
 const cameraSystem = new CameraFollowSystem(camera);
 const audioSystem = new CityCarAudioSystem(cityCarState.isAudioEnabled());
-physics.onLampHit = () => audioSystem.playLampHit();
+const policeSystem = new PoliceChaseSystem(scene, world);
 
 let activeDrivers: DriverInfo[] = [];
 const multiplayer = new CityCarMultiplayerSystem(
@@ -65,6 +63,35 @@ const multiplayer = new CityCarMultiplayerSystem(
         hud.updateDriversRoster(drivers);
     }
 );
+
+// 6. Wanted Level & Crime Detection Setup
+const wantedSystem = new WantedSystem({
+    onStarAwarded: (newLevel) => {
+        audioSystem.playStarAwarded();
+        hud.triggerStarAwardAnimation(newLevel);
+    },
+    onWantedLevelChanged: (level) => {
+        policeSystem.setWantedLevel(level, physics.state.position, carMesh.group.rotation.y);
+    }
+});
+
+physics.onLampHit = () => {
+    audioSystem.playLampHit();
+    wantedSystem.reportLampCrash();
+};
+physics.onBuildingHit = () => {
+    wantedSystem.reportBuildingCollision();
+};
+physics.onWaterDive = () => {
+    wantedSystem.reportOffroadOrWater(true);
+};
+physics.onOffroadDrive = () => {
+    wantedSystem.reportOffroadOrWater(false);
+};
+
+policeSystem.onPlayerRam = () => {
+    wantedSystem.reportPoliceCollision();
+};
 
 // 6. UI HUD Setup
 const hud = new CityCarHUD(
@@ -153,6 +180,23 @@ function animate() {
             physics.state.currentZone
         );
 
+        // Update police cruisers
+        policeSystem.update(
+            delta,
+            physics.state.position,
+            carYaw,
+            physics.state.speed,
+            () => {
+                wantedSystem.reportPoliceCollision();
+            }
+        );
+
+        // Siren audio when cruisers are actively chasing
+        const hasActivePolice = policeSystem.getActiveCount() > 0;
+        const distToPolice = policeSystem.getClosestDistance(physics.state.position);
+        const sirenVol = hasActivePolice ? Math.max(0.04, Math.min(0.18, 1.0 - distToPolice / 120)) : 0;
+        audioSystem.updatePoliceSiren(hasActivePolice, sirenVol);
+
         // HUD updates
         hud.updateSpeedAndGear(physics.state.speed, physics.state.gear);
         hud.updateZone(physics.state.currentZone);
@@ -179,7 +223,9 @@ function animate() {
     world,
     multiplayer,
     state: cityCarState,
-    hud
+    hud,
+    wantedSystem,
+    policeSystem
 };
 
 animate();
