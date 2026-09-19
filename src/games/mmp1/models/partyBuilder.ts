@@ -10,7 +10,9 @@ export const MMP_BOT_PRESETS = [
     { name: "Charlie", color: 0x1abc9c },
     { name: "Taylor", color: 0xf1c40f },
     { name: "Morgan", color: 0xe74c3c },
-    { name: "Riley", color: 0x34495e }
+    { name: "Riley", color: 0x34495e },
+    { name: "Casey", color: 0x8e44ad },
+    { name: "Dakota", color: 0x16a085 }
 ];
 
 export function createBotCharacter(

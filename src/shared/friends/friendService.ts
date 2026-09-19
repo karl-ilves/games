@@ -50,6 +50,8 @@ export class FriendService {
     private cachedSupabasePlayers: { username: string; displayName: string; color: string }[] = [];
     private broadcastChannel: BroadcastChannel | null = null;
     private supabaseChannel: any = null;
+    private heartbeatInterval: any = null;
+    private isTrackingCurrentGame: boolean = false;
 
     constructor() {
         this.fetchSupabaseProfiles();
@@ -68,6 +70,11 @@ export class FriendService {
                     }
                 } catch (e) {}
             });
+            window.addEventListener('playard_auth_changed', () => {
+                this.autoTrackCurrentGame();
+            });
+            // Auto track current game if opened directly
+            setTimeout(() => this.autoTrackCurrentGame(), 100);
         }
     }
 
@@ -225,10 +232,17 @@ export class FriendService {
         } else if (data.type === 'friend_remove' && data.fromUsername && data.toUsername) {
             this.removeFriendDirect(data.fromUsername, data.toUsername);
             this.removeFriendDirect(data.toUsername, data.fromUsername);
-        } else if (data.type === 'player_active_game' && data.username && data.game) {
+        } else if (data.type === 'player_active_game' && data.username) {
+            const u = data.username.toLowerCase().trim();
             try {
-                localStorage.setItem(`playard_active_game_${data.username.toLowerCase().trim()}`, JSON.stringify(data.game));
+                if (data.game && data.game.url) {
+                    localStorage.setItem(`playard_active_game_${u}`, JSON.stringify(data.game));
+                } else {
+                    localStorage.removeItem(`playard_active_game_${u}`);
+                }
             } catch (e) {}
+            window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: data }));
+            return;
         }
 
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: data }));
@@ -310,7 +324,34 @@ export class FriendService {
                 }
             }
 
-            if (inChanged || frChanged) {
+            // 3. Fetch active player games from cloud (so friends see what game you're playing across devices!)
+            const { data: activeGames } = await supabase
+                .from('user_created_games')
+                .select('*')
+                .eq('category', 'player_active_game')
+                .eq('status', 'playing');
+
+            let agChanged = false;
+            if (Array.isArray(activeGames)) {
+                const now = Date.now();
+                activeGames.forEach(ag => {
+                    try {
+                        const parsed = typeof ag.description === 'string' ? JSON.parse(ag.description) : ag.description;
+                        const pUser = (ag.creator_username || '').toLowerCase().trim();
+                        if (pUser && parsed && parsed.url) {
+                            // Active within last 30 minutes
+                            if (now - (parsed.timestamp || 0) < 1800000) {
+                                localStorage.setItem(`playard_active_game_${pUser}`, JSON.stringify(parsed));
+                                agChanged = true;
+                            } else {
+                                localStorage.removeItem(`playard_active_game_${pUser}`);
+                            }
+                        }
+                    } catch (e) {}
+                });
+            }
+
+            if (inChanged || frChanged || agChanged) {
                 window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanUser } }));
             }
         } catch (e) {
@@ -318,41 +359,91 @@ export class FriendService {
         }
     }
 
-    public setPlayerActiveGame(username: string, game: { id: string; title: string; url: string }) {
+    public async setPlayerActiveGame(username: string, game: { id: string; title: string; url: string }) {
         if (!username || !game) return;
+        const cleanUser = username.toLowerCase().trim();
         const data = {
             ...game,
             timestamp: Date.now()
         };
         try {
-            localStorage.setItem(`playard_active_game_${username.toLowerCase()}`, JSON.stringify(data));
+            localStorage.setItem(`playard_active_game_${cleanUser}`, JSON.stringify(data));
         } catch (e) {}
 
         this.broadcastAction({
             type: 'player_active_game',
-            username,
+            username: cleanUser,
             game: data
         });
-        window.dispatchEvent(new CustomEvent('playard_friends_updated'));
+        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanUser, game: data } }));
+
+        // Persist to Supabase Cloud so friends on any device/browser see it live!
+        if (supabase) {
+            try {
+                const gameTitleKey = `ACTIVE_GAME:${cleanUser}`;
+                const { data: existing } = await supabase
+                    .from('user_created_games')
+                    .select('id')
+                    .eq('category', 'player_active_game')
+                    .eq('creator_username', cleanUser);
+
+                if (existing && existing.length > 0) {
+                    await supabase
+                        .from('user_created_games')
+                        .update({
+                            title: gameTitleKey,
+                            description: JSON.stringify(data),
+                            status: 'playing'
+                        })
+                        .eq('id', existing[0].id);
+                } else {
+                    await supabase
+                        .from('user_created_games')
+                        .insert({
+                            id: generateUUID(),
+                            creator_username: cleanUser,
+                            title: gameTitleKey,
+                            description: JSON.stringify(data),
+                            category: 'player_active_game',
+                            status: 'playing'
+                        });
+                }
+            } catch (e) {
+                console.warn('Could not sync active game to Supabase:', e);
+            }
+        }
     }
 
-    public clearPlayerActiveGame(username: string) {
+    public async clearPlayerActiveGame(username: string) {
         if (!username) return;
+        const cleanUser = username.toLowerCase().trim();
         try {
-            localStorage.removeItem(`playard_active_game_${username.toLowerCase()}`);
+            localStorage.removeItem(`playard_active_game_${cleanUser}`);
         } catch (e) {}
         this.broadcastAction({
             type: 'player_active_game',
-            username,
+            username: cleanUser,
             game: null
         });
-        window.dispatchEvent(new CustomEvent('playard_friends_updated'));
+        window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanUser, game: null } }));
+
+        if (supabase) {
+            try {
+                await supabase
+                    .from('user_created_games')
+                    .update({ status: 'idle', description: JSON.stringify({ timestamp: Date.now() }) })
+                    .eq('category', 'player_active_game')
+                    .eq('creator_username', cleanUser);
+            } catch (e) {
+                console.warn('Could not clear active game in Supabase:', e);
+            }
+        }
     }
 
     public getPlayerActivity(username: string): { isPlaying: boolean; gameId?: string; gameTitle?: string; gameUrl?: string } {
         if (!username) return { isPlaying: false };
         try {
-            const raw = localStorage.getItem(`playard_active_game_${username.toLowerCase()}`);
+            const raw = localStorage.getItem(`playard_active_game_${username.toLowerCase().trim()}`);
             if (raw) {
                 const data = JSON.parse(raw);
                 // Active within last 30 minutes
@@ -367,7 +458,7 @@ export class FriendService {
             }
 
             // Check recently played by this user within last 15 minutes
-            const rawRecent = localStorage.getItem(`playard_recently_played_${username.toLowerCase()}`);
+            const rawRecent = localStorage.getItem(`playard_recently_played_${username.toLowerCase().trim()}`);
             if (rawRecent) {
                 const list = JSON.parse(rawRecent);
                 if (Array.isArray(list) && list.length > 0) {
@@ -384,6 +475,95 @@ export class FriendService {
             }
         } catch (e) {}
         return { isPlaying: false };
+    }
+
+    public async fetchPlayerActivityFromCloud(username: string): Promise<{ isPlaying: boolean; gameId?: string; gameTitle?: string; gameUrl?: string }> {
+        if (!username) return { isPlaying: false };
+        const cleanUser = username.toLowerCase().trim();
+        const local = this.getPlayerActivity(cleanUser);
+        if (local.isPlaying) return local;
+
+        if (!supabase) return local;
+        try {
+            const { data } = await supabase
+                .from('user_created_games')
+                .select('*')
+                .eq('category', 'player_active_game')
+                .eq('creator_username', cleanUser)
+                .eq('status', 'playing')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (data && data.length > 0) {
+                const row = data[0];
+                const parsed = typeof row.description === 'string' ? JSON.parse(row.description) : row.description;
+                if (parsed && parsed.url && (Date.now() - (parsed.timestamp || 0) < 1800000)) {
+                    localStorage.setItem(`playard_active_game_${cleanUser}`, JSON.stringify(parsed));
+                    return {
+                        isPlaying: true,
+                        gameId: parsed.id,
+                        gameTitle: parsed.title,
+                        gameUrl: parsed.url
+                    };
+                }
+            }
+        } catch (e) {}
+        return { isPlaying: false };
+    }
+
+    public autoTrackCurrentGame() {
+        if (typeof window === 'undefined') return;
+        const profile = getCurrentUserProfile();
+        if (!profile || !profile.username) return;
+
+        const path = window.location.pathname.toLowerCase();
+        let gameInfo: { id: string; title: string; url: string } | null = null;
+
+        if (path.includes('/games/racing/')) {
+            gameInfo = { id: 'racing', title: '🏎️ Racing Simulator', url: '/games/racing/index.html' };
+        } else if (path.includes('/games/mmp1/')) {
+            gameInfo = { id: 'mmp1', title: '🔪 MMP1 - Murder Mystery', url: '/games/mmp1/index.html' };
+        } else if (path.includes('/games/metro/')) {
+            gameInfo = { id: 'metro', title: '🚇 LAST METRO', url: '/games/metro/index.html' };
+        } else if (path.includes('/games/war/')) {
+            gameInfo = { id: 'war', title: '⚔️ 3D War Game', url: '/games/war/index.html' };
+        } else if (path.includes('/games/train/')) {
+            gameInfo = { id: 'train', title: '🚂 Train Simulator', url: '/games/train/index.html' };
+        } else if (path.includes('/games/crown/')) {
+            gameInfo = { id: 'crown', title: '👑 24K Crown Obby', url: '/games/crown/index.html' };
+        } else if (path.includes('/games/obby/')) {
+            gameInfo = { id: 'obby', title: '🏃 3D Parkour Obby', url: '/games/obby/index.html' };
+        } else if (path.includes('/games/cooking/')) {
+            gameInfo = { id: 'cooking', title: '🍳 Master Chef Cooking', url: '/games/cooking/index.html' };
+        } else if (path.includes('/games/rocket/')) {
+            gameInfo = { id: 'rocket', title: '🚀 ROCKET PLAYARD', url: '/games/rocket/index.html' };
+        } else if (path.includes('/games/creator/')) {
+            gameInfo = { id: 'creator', title: '🛠️ 3D Game Creator Studio', url: '/games/creator/index.html' };
+        } else if (path.includes('/games/play/')) {
+            const titleEl = document.querySelector('title')?.textContent || 'Community Game';
+            gameInfo = { id: 'play', title: `🎮 ${titleEl}`, url: window.location.pathname + window.location.search };
+        }
+
+        if (gameInfo) {
+            this.setPlayerActiveGame(profile.username, gameInfo);
+            if (!this.heartbeatInterval) {
+                this.heartbeatInterval = setInterval(() => {
+                    const prof = getCurrentUserProfile();
+                    if (prof && prof.username && gameInfo) {
+                        this.setPlayerActiveGame(prof.username, gameInfo);
+                    }
+                }, 20000);
+            }
+            if (!this.isTrackingCurrentGame) {
+                this.isTrackingCurrentGame = true;
+                window.addEventListener('beforeunload', () => {
+                    const prof = getCurrentUserProfile();
+                    if (prof && prof.username) {
+                        this.clearPlayerActiveGame(prof.username);
+                    }
+                });
+            }
+        }
     }
 
     public initUser(username: string, _displayName?: string) {

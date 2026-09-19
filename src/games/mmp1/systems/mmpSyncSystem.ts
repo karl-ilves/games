@@ -10,6 +10,7 @@ export interface SyncSystemHostGame {
     characters: any[];
     startMapVoting: () => void;
     startRound: (map?: MapId, forcedRoles?: { murdererId?: string; sheriffId?: string }) => void;
+    endRound: (winner: "sheriff_win" | "murderer_win" | "time_out", reason: string) => void;
 }
 
 export class MmpSyncSystem {
@@ -74,6 +75,10 @@ export class MmpSyncSystem {
                 this.lobbyEndTime = e.payload.lobbyEndTime;
                 this.votingTransitioned = false;
                 this.roundTransitioned = false;
+            } else if (e.action === 'end_round' && e.payload?.winner) {
+                if (this.game.state === 'in_game') {
+                    this.game.endRound(e.payload.winner, e.payload.reason || '');
+                }
             }
         });
     }

@@ -90,17 +90,25 @@ function renderFriendsSection(profile: UserProfile | null) {
                 </div>
             `;
         } else {
-            listRow.innerHTML = friends.map(f => `
+            listRow.innerHTML = friends.map(f => {
+                const act = friendService.getPlayerActivity(f.username);
+                const isPlaying = act.isPlaying;
+                const statusDot = isPlaying
+                    ? `<span style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #0be881; border-radius: 50%; border: 2px solid #242f3d; display: flex; align-items: center; justify-content: center; font-size: 0.65rem;" title="${act.gameTitle || 'Playing'}">🎮</span>`
+                    : `<span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: #0be881; border-radius: 50%; border: 2px solid #242f3d;"></span>`;
+
+                return `
                 <div class="friend-item" data-username="${f.username}" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 62px; cursor: pointer;">
-                    <div style="position: relative; width: 48px; height: 48px; border-radius: 50%; background: ${f.avatarColor || '#3498db'}; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: 0 3px 10px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.15);">
+                    <div style="position: relative; width: 48px; height: 48px; border-radius: 50%; background: ${f.avatarColor || '#3498db'}; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: 0 3px 10px rgba(0,0,0,0.3); border: 2px solid ${isPlaying ? '#0be881' : 'rgba(255,255,255,0.15)'};">
                         👤
-                        <span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: #0be881; border-radius: 50%; border: 2px solid #242f3d;"></span>
+                        ${statusDot}
                     </div>
                     <span style="font-size: 0.78rem; font-weight: 600; color: #f1f2f6; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;">
                         ${f.displayName || f.username}
                     </span>
+                    ${isPlaying ? `<span style="font-size: 0.65rem; color: #0be881; font-weight: 700; white-space: nowrap; max-width: 65px; overflow: hidden; text-overflow: ellipsis;">🎮 ${isEt ? 'Mängib' : 'Playing'}</span>` : ''}
                 </div>
-            `).join('');
+            `;}).join('');
 
             // Allow clicking a friend to view their profile & activity
             listRow.querySelectorAll('.friend-item').forEach(el => {
@@ -156,26 +164,37 @@ export function openFriendProfile(friendUsername: string) {
     const joinBtnText = document.getElementById('btn-join-friend-game-text');
     const playingLabel = document.getElementById('friend-status-playing-label');
 
-    if (activity.isPlaying && activity.gameTitle && activity.gameUrl) {
-        if (playingContainer) playingContainer.style.display = 'block';
-        if (idleContainer) idleContainer.style.display = 'none';
-        if (playingTitleEl) playingTitleEl.textContent = `🎮 ${activity.gameTitle}`;
-        if (playingLabel) playingLabel.textContent = isEt ? 'Hetkel mängib' : 'Currently Playing';
-        if (joinBtnText) joinBtnText.textContent = isEt ? 'Liitu mänguga' : 'Join Game';
-        if (joinBtn) {
-            joinBtn.onclick = () => {
-                if (activity.gameUrl) {
-                    window.location.href = activity.gameUrl;
-                }
-            };
+    const renderActivityStatus = (act: { isPlaying: boolean; gameId?: string; gameTitle?: string; gameUrl?: string }) => {
+        if (act.isPlaying && act.gameTitle && act.gameUrl) {
+            if (playingContainer) playingContainer.style.display = 'block';
+            if (idleContainer) idleContainer.style.display = 'none';
+            if (playingTitleEl) playingTitleEl.textContent = `🎮 ${act.gameTitle}`;
+            if (playingLabel) playingLabel.textContent = isEt ? 'Hetkel mängib' : 'Currently Playing';
+            if (joinBtnText) joinBtnText.textContent = isEt ? 'Liitu mänguga (Join Game)' : 'Join Game';
+            if (joinBtn) {
+                joinBtn.onclick = () => {
+                    if (act.gameUrl) {
+                        window.location.href = act.gameUrl;
+                    }
+                };
+            }
+        } else {
+            if (playingContainer) playingContainer.style.display = 'none';
+            if (idleContainer) idleContainer.style.display = 'block';
+            if (notPlayingTextEl) {
+                notPlayingTextEl.textContent = 'He is not playing yet';
+            }
         }
-    } else {
-        if (playingContainer) playingContainer.style.display = 'none';
-        if (idleContainer) idleContainer.style.display = 'block';
-        if (notPlayingTextEl) {
-            notPlayingTextEl.textContent = 'He is not playing yet';
+    };
+
+    renderActivityStatus(activity);
+
+    // Also fetch fresh status from Supabase in background
+    friendService.fetchPlayerActivityFromCloud(friend.username).then(cloudAct => {
+        if (cloudAct && modal.style.display === 'flex') {
+            renderActivityStatus(cloudAct);
         }
-    }
+    });
 
     // Unfriend button
     const unfriendBtn = document.getElementById('btn-unfriend-player');

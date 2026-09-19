@@ -287,7 +287,11 @@ export class RoundManager {
     }
 
     public endRound(winner: "sheriff_win" | "murderer_win" | "time_out", reason: string) {
+        if (this.ctx.getState() === "round_end") return;
         this.ctx.setState("round_end");
+        if (this.ctx.broadcastAction) {
+            this.ctx.broadcastAction('end_round', { winner, reason });
+        }
         if (typeof document !== 'undefined') {
             if (document.fullscreenElement) {
                 document.exitFullscreen?.().catch(() => {});

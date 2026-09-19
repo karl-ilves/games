@@ -1,7 +1,7 @@
 // --- Sound Synthesizer via Web Audio API ---
 export class MmpAudio {
     private ctx: AudioContext | null = null;
-    public soundEnabled: boolean = true;
+    public soundEnabled: boolean = false;
     private heartbeatOsc: OscillatorNode | null = null;
     private heartbeatGain: GainNode | null = null;
     private heartbeatTimer: any = null;

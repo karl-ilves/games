@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { friendService } from './friends/friendService';
+import { getCurrentUserProfile } from '../auth';
 
 function isTestMode(): boolean {
     if (typeof window !== 'undefined') {
@@ -1742,6 +1744,18 @@ class YardService {
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('playard_game_played', { detail: updatedItem }));
             }
+
+            try {
+                const profile = getCurrentUserProfile();
+                if (profile && profile.username && game) {
+                    friendService.setPlayerActiveGame(profile.username, {
+                        id: game.id,
+                        title: game.title,
+                        url: game.url
+                    });
+                }
+            } catch (e) {}
+
             return updated.slice(0, 3);
         } catch (e) {
             return this.getRecentlyPlayedGames();
@@ -2043,4 +2057,7 @@ export const playbuxService = yardService;
 if (typeof window !== 'undefined') {
     (window as any).yardService = yardService;
     (window as any).playbuxService = yardService;
+    try {
+        friendService.autoTrackCurrentGame();
+    } catch (e) {}
 }

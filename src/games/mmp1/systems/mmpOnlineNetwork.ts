@@ -19,7 +19,7 @@ export interface MmpPlayerState {
 
 export interface MmpActionEvent {
     id: string;
-    action: 'slash' | 'shoot' | 'vote_map' | 'pickup_gun' | 'lobby_sync' | 'start_map_vote' | 'start_round' | 'return_lobby';
+    action: 'slash' | 'shoot' | 'vote_map' | 'pickup_gun' | 'lobby_sync' | 'start_map_vote' | 'start_round' | 'return_lobby' | 'end_round';
     payload?: any;
 }
 

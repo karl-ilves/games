@@ -6673,7 +6673,111 @@ try {
             if (!spectatorTest.barHiddenAfterReset) {
                 throw new Error('Spectator bar should hide on reset!');
             }
-            console.log('   MMP1 Spectator Mode (Follow alive players & arrow switcher) verified: ✅');
+            // 7. Test 1 Sheriff, 1 Murderer, 8 Innocents Breakdown & Network Synchronized Round End & Muted Audio
+            console.log('   Testing MMP1 Roles Breakdown (1 Sheriff, 1 Murderer, 8 Innocents) & Synchronized Round End & Audio Default:');
+            const roleDistributionAndEndTest = await page.evaluate(() => {
+                const game = window.mmp1Game;
+
+                // Check default audio state is muted (eemalda hääled)
+                const soundEnabled = window.mmp1Audio?.soundEnabled ?? game.audio?.soundEnabled;
+                const soundIconText = document.getElementById('sound-icon')?.textContent;
+
+                // Ensure 10 characters in match (1 local player + 9 bots)
+                // Fill up characters to 10 if needed
+                while (game.characters.length < 10) {
+                    const idx = game.characters.length - 1;
+                    const bot = window.mmp1CreateBot ? window.mmp1CreateBot(idx, game.scene, game.crateManager, 9) : null;
+                    if (bot) game.characters.push(bot);
+                    else break;
+                }
+
+                // If not 10, simulate 10 characters for role assignment testing
+                const testCharacters = [];
+                for (let i = 0; i < 10; i++) {
+                    testCharacters.push({
+                        id: i === 0 ? 'player' : 'bot_' + i,
+                        isPlayer: i === 0,
+                        isRemotePlayer: false,
+                        role: 'innocent',
+                        isAlive: true
+                    });
+                }
+                const originalCharacters = game.characters;
+                game.characters = testCharacters;
+                game.adminForcedRole = null;
+
+                // Synchronized role assignment test
+                const assigned = game.syncSystem.assignRolesSynchronized();
+                const murdererId = assigned.murdererId;
+                const sheriffId = assigned.sheriffId;
+
+                // Apply assigned roles
+                game.characters.forEach(c => {
+                    if (c.id === murdererId) c.role = 'murderer';
+                    else if (c.id === sheriffId) c.role = 'sheriff';
+                    else c.role = 'innocent';
+                });
+
+                const murdererCount = game.characters.filter(c => c.role === 'murderer').length;
+                const sheriffCount = game.characters.filter(c => c.role === 'sheriff').length;
+                const innocentCount = game.characters.filter(c => c.role === 'innocent').length;
+
+                // Test synchronized round end: when murderer dies or all others die, round ends
+                let broadcastedEndRound = false;
+                const origBroadcast = game.onlineNetwork?.broadcastAction;
+                if (game.onlineNetwork) {
+                    game.onlineNetwork.broadcastAction = (action, payload) => {
+                        if (action === 'end_round') broadcastedEndRound = true;
+                        origBroadcast?.call(game.onlineNetwork, action, payload);
+                    };
+                }
+
+                game.state = 'in_game';
+                game.endRound('sheriff_win', 'Sheriff laskis mõrvari maha!');
+                const stateAfterEnd = game.state;
+
+                // Test remote peer receiving end_round event
+                game.state = 'in_game';
+                game.syncSystem.onlineNetwork.dispatchPlayerAction?.({
+                    id: 'remote_peer',
+                    action: 'end_round',
+                    payload: { winner: 'murderer_win', reason: 'Mõrvar elimineeris kõik!' }
+                });
+                const stateAfterRemoteEnd = game.state;
+
+                // Restore
+                game.characters = originalCharacters;
+                if (game.onlineNetwork && origBroadcast) {
+                    game.onlineNetwork.broadcastAction = origBroadcast;
+                }
+                game.returnToLobby();
+
+                return {
+                    soundEnabled,
+                    soundIconText,
+                    murdererCount,
+                    sheriffCount,
+                    innocentCount,
+                    broadcastedEndRound,
+                    stateAfterEnd,
+                    stateAfterRemoteEnd
+                };
+            });
+
+            console.log(`     Roles breakdown: Murderer=${roleDistributionAndEndTest.murdererCount}, Sheriff=${roleDistributionAndEndTest.sheriffCount}, Innocents=${roleDistributionAndEndTest.innocentCount}`);
+            console.log(`     Audio default: enabled=${roleDistributionAndEndTest.soundEnabled}, icon=${roleDistributionAndEndTest.soundIconText}`);
+            console.log(`     Round end sync: broadcasted=${roleDistributionAndEndTest.broadcastedEndRound}, localState=${roleDistributionAndEndTest.stateAfterEnd}, remoteState=${roleDistributionAndEndTest.stateAfterRemoteEnd}`);
+
+            if (roleDistributionAndEndTest.murdererCount !== 1 || roleDistributionAndEndTest.sheriffCount !== 1 || roleDistributionAndEndTest.innocentCount !== 8) {
+                throw new Error(`Expected 1 Murderer, 1 Sheriff, and 8 Innocents! Got: Murderer=${roleDistributionAndEndTest.murdererCount}, Sheriff=${roleDistributionAndEndTest.sheriffCount}, Innocents=${roleDistributionAndEndTest.innocentCount}`);
+            }
+            if (roleDistributionAndEndTest.soundIconText !== '🔇') {
+                throw new Error(`Expected sound icon to be 🔇 (muted) by default! Got: ${roleDistributionAndEndTest.soundIconText}`);
+            }
+            if (!roleDistributionAndEndTest.broadcastedEndRound || roleDistributionAndEndTest.stateAfterEnd !== 'round_end' || roleDistributionAndEndTest.stateAfterRemoteEnd !== 'round_end') {
+                throw new Error(`Synchronized round end failed! Broadcast: ${roleDistributionAndEndTest.broadcastedEndRound}, localState: ${roleDistributionAndEndTest.stateAfterEnd}, remoteState: ${roleDistributionAndEndTest.stateAfterRemoteEnd}`);
+            }
+            console.log('   1 Murderer, 1 Sheriff, 8 Innocents & Synchronized Round End & Muted Audio verified: ✅');
 
             console.log("✅ MMP1 (3D Murder Mystery) testid edukalt läbitud!");
 
