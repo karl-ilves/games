@@ -385,8 +385,12 @@ export class RoundManager {
     public returnToLobby() {
         const roundEndOverlay = document.getElementById("round-end-overlay");
         if (roundEndOverlay) roundEndOverlay.style.display = "none";
+        const mapVoteOverlay = document.getElementById("map-vote-overlay");
+        if (mapVoteOverlay) mapVoteOverlay.style.display = "none";
+        const roleRevealOverlay = document.getElementById("role-reveal-overlay");
+        if (roleRevealOverlay) roleRevealOverlay.style.display = "none";
         this.ctx.setState("lobby");
-        this.ctx.setLobbyCountdown(30);
+        this.ctx.setLobbyCountdown(40);
         this.ctx.syncSystem?.resetForLobby?.();
 
         const lobbyBanner = document.getElementById("lobby-banner");

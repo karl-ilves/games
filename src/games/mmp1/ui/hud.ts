@@ -53,7 +53,7 @@ export class HudUI {
         const texts = I18N[lang];
 
         const state = this.ctx.getState ? this.ctx.getState() : undefined;
-        if (state === 'lobby') {
+        if (state === 'lobby' && (!this.ctx.playerChar?.role || this.ctx.playerChar.role === 'innocent')) {
             this.hudRoleIcon.textContent = '⏳';
             this.hudRoleText.textContent = 'LOBBY';
             this.hudRoleBadge.style.borderColor = '#ffd32a';

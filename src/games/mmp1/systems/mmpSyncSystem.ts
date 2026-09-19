@@ -81,7 +81,7 @@ export class MmpSyncSystem {
     public resetForLobby() {
         this.votingTransitioned = false;
         this.roundTransitioned = false;
-        this.lobbyEndTime = Date.now() + 30000;
+        this.lobbyEndTime = Date.now() + 40000;
         this.mapVoteEndTime = 0;
     }
 
@@ -90,7 +90,7 @@ export class MmpSyncSystem {
 
         if (this.game.state === 'lobby') {
             this.roundTransitioned = false;
-            const CYCLE_MS = 30000;
+            const CYCLE_MS = 40000;
             if (!this.lobbyEndTime) {
                 this.lobbyEndTime = Math.ceil(now / CYCLE_MS) * CYCLE_MS;
                 if (this.lobbyEndTime - now < 5000) {
