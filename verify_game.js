@@ -7795,6 +7795,48 @@ await (async () => {
                 const cruisers = police.getCruisers();
                 const cruisersActive = cruisers.length === 5 && cruisers.every(c => c.speedMps > 0);
 
+                // Test Off-road immunity (driving offroad does NOT increase stars)
+                const starsBeforeOffroad = wanted.getWantedLevel();
+                wanted.reportOffroadOrWater(false);
+                const starsAfterOffroad = wanted.getWantedLevel();
+                const offroadImmunity = starsBeforeOffroad === starsAfterOffroad;
+
+                // Test Star 3: 10 more lamp crashes while at Star 2
+                const airSupport = dbg.airSupportSystem;
+                for (let i = 0; i < 10; i++) {
+                    wanted.reportLampCrash();
+                }
+                const star3Level = wanted.getWantedLevel();
+                const star3PoliceCount = police.getActiveCount();
+                const star3HeliCount = airSupport?.getHelicopterCount?.() || 0;
+                const star3HasPlane = airSupport?.hasPlane?.() || false;
+
+                // Test Star 4: 20 more lamp crashes while at Star 3
+                const tankSys = dbg.tankSystem;
+                for (let i = 0; i < 20; i++) {
+                    wanted.reportLampCrash();
+                }
+                const star4Level = wanted.getWantedLevel();
+                const star4TankCount = tankSys?.getActiveTankCount?.() || 0;
+
+                // Tank updates and rocket firing
+                tankSys?.update?.(3.0, physics.state.position);
+                const rocketsCount = tankSys?.getActiveRockets?.()?.length || 0;
+
+                // Test Arrest Modal and Reset
+                dbg.triggerArrest?.();
+                const modal = document.getElementById('arrested-modal');
+                const modalVisible = modal && (modal.style.display === 'flex' || modal.classList.contains('active'));
+
+                // Click Reset button
+                const btnReset = document.getElementById('btn-arrested-reset');
+                btnReset?.click?.();
+                const resetWanted = wanted.getWantedLevel();
+                const resetPolice = police.getActiveCount();
+                const resetHelis = airSupport?.getHelicopterCount?.() || 0;
+                const resetTanks = tankSys?.getActiveTankCount?.() || 0;
+                const modalHiddenAfterReset = !modal || modal.style.display === 'none' || !modal.classList.contains('active');
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
@@ -7826,7 +7868,20 @@ await (async () => {
                     star1PoliceCount,
                     star2Level,
                     star2PoliceCount,
-                    cruisersActive
+                    cruisersActive,
+                    offroadImmunity,
+                    star3Level,
+                    star3PoliceCount,
+                    star3HeliCount,
+                    star3HasPlane,
+                    star4Level,
+                    star4TankCount,
+                    modalVisible,
+                    resetWanted,
+                    resetPolice,
+                    resetHelis,
+                    resetTanks,
+                    modalHiddenAfterReset
                 };
             });
 
@@ -7864,8 +7919,23 @@ await (async () => {
             if (cityCarTest.star2Level !== 2 || cityCarTest.star2PoliceCount !== 5 || !cityCarTest.cruisersActive) {
                 throw new Error("CityCar 2 Stars must spawn exactly 5 active chasing police cars!");
             }
+            if (!cityCarTest.offroadImmunity) {
+                throw new Error("CityCar driving off-road must not increase wanted stars!");
+            }
+            if (cityCarTest.star3Level !== 3 || cityCarTest.star3PoliceCount !== 5 || cityCarTest.star3HeliCount !== 2 || !cityCarTest.star3HasPlane) {
+                throw new Error("CityCar 3 Stars must feature 5 police cars, 2 helicopters, and 1 bomber plane!");
+            }
+            if (cityCarTest.star4Level !== 4 || cityCarTest.star4TankCount !== 5) {
+                throw new Error("CityCar 4 Stars must spawn exactly 5 military tanks!");
+            }
+            if (!cityCarTest.modalVisible) {
+                throw new Error("CityCar Arrest modal must be visible upon arrest!");
+            }
+            if (cityCarTest.resetWanted !== 0 || cityCarTest.resetPolice !== 0 || cityCarTest.resetHelis !== 0 || cityCarTest.resetTanks !== 0) {
+                throw new Error("CityCar Reset button must restore wanted level to 0 and despawn all police, helis, and tanks!");
+            }
 
-            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad & Piirid, Multiplayer, Owner & taavi2 Access) testid edukalt läbitud!");
+            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid & Arrested Reset) testid edukalt läbitud!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

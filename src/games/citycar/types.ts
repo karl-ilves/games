@@ -60,18 +60,26 @@ export interface DriverInfo {
     zone: WorldZone;
 }
 
-export type WantedLevel = 0 | 1 | 2;
+export type WantedLevel = 0 | 1 | 2 | 3 | 4;
 
 export interface CrimeStats {
     totalLampHits: number;
     totalBuildingHits: number;
     totalWaterDives: number;
-    totalOffroadDrives: number;
     totalPoliceRamHits: number;
     // Infractions counted specifically while at 1 Star
     star1LampHits: number;
     star1BuildingHits: number;
     star1WaterDives: number;
     star1PoliceRamHits: number;
+    // Infractions counted specifically while at 2 Stars
+    star2LampHits: number;
+    star2BuildingHits: number;
+    star2PoliceRamHits: number;
+    // Infractions counted specifically while at 3 Stars
+    star3LampHits: number;
+    star3BuildingHits: number;
+    star3PoliceRamHits: number;
 }
+
 

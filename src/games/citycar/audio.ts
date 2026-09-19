@@ -225,7 +225,7 @@ export class CityCarAudioSystem {
         }
     }
 
-    private stopPoliceSiren(): void {
+    public stopPoliceSiren(): void {
         if (!this.isSirenActive) return;
         this.isSirenActive = false;
         if (this.sirenGain && this.ctx) {
@@ -235,15 +235,119 @@ export class CityCarAudioSystem {
                 this.sirenLfo?.stop();
                 this.sirenOsc?.disconnect();
                 this.sirenLfo?.disconnect();
-                this.sirenLfoGain?.disconnect();
                 this.sirenGain?.disconnect();
                 this.sirenOsc = null;
                 this.sirenLfo = null;
-                this.sirenLfoGain = null;
                 this.sirenGain = null;
             }, 250);
         }
     }
+
+    private heliOsc: OscillatorNode | null = null;
+    private heliGain: GainNode | null = null;
+    private isHeliActive = false;
+
+    public playExplosion(): void {
+        if (!this.enabled || !this.ensureContext() || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            // Heavy deep explosive bass thump
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(25, now + 0.5);
+
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(400, now);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.7);
+        } catch (e) {}
+    }
+
+    public playRocketLaunch(): void {
+        if (!this.enabled || !this.ensureContext() || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(650, now + 0.3);
+
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } catch (e) {}
+    }
+
+    public updateHeliAudio(active: boolean): void {
+        if (!this.enabled || !this.ensureContext() || !this.ctx) {
+            this.stopHeliAudio();
+            return;
+        }
+
+        if (active) {
+            if (!this.isHeliActive) {
+                this.isHeliActive = true;
+                try {
+                    const now = this.ctx.currentTime;
+                    this.heliOsc = this.ctx.createOscillator();
+                    this.heliGain = this.ctx.createGain();
+
+                    this.heliOsc.type = 'square';
+                    this.heliOsc.frequency.setValueAtTime(28, now); // Low chopper thump frequency
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(120, now);
+
+                    this.heliGain.gain.setValueAtTime(0.001, now);
+                    this.heliGain.gain.setTargetAtTime(0.08, now, 0.3);
+
+                    this.heliOsc.connect(filter);
+                    filter.connect(this.heliGain);
+                    this.heliGain.connect(this.ctx.destination);
+
+                    this.heliOsc.start(now);
+                } catch (e) {}
+            }
+        } else {
+            this.stopHeliAudio();
+        }
+    }
+
+    private stopHeliAudio(): void {
+        if (!this.isHeliActive) return;
+        this.isHeliActive = false;
+        if (this.heliGain && this.ctx) {
+            this.heliGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.2);
+            setTimeout(() => {
+                this.heliOsc?.stop();
+                this.heliOsc?.disconnect();
+                this.heliGain?.disconnect();
+                this.heliOsc = null;
+                this.heliGain = null;
+            }, 250);
+        }
+    }
 }
+
 
 

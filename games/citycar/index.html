@@ -203,6 +203,81 @@
             filter: drop-shadow(0 0 35px #ffd32a) drop-shadow(0 0 70px #ff9f1a);
             transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+        #arrested-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 15, 25, 0.92);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #arrested-modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .arrested-card {
+            background: linear-gradient(135deg, rgba(28, 12, 18, 0.96), rgba(46, 12, 20, 0.96));
+            border: 2px solid #ff4757;
+            border-radius: 24px;
+            padding: 36px 44px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 71, 87, 0.4), inset 0 0 20px rgba(255, 71, 87, 0.2);
+            max-width: 440px;
+            animation: arrestedPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes arrestedPop {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .arrested-icon {
+            font-size: 3.5rem;
+            margin-bottom: 8px;
+            animation: flashIcon 0.8s infinite alternate;
+        }
+        @keyframes flashIcon {
+            0% { transform: scale(1); filter: drop-shadow(0 0 10px #ff4757); }
+            100% { transform: scale(1.1); filter: drop-shadow(0 0 25px #ff4757); }
+        }
+        .arrested-title {
+            margin: 0 0 10px 0;
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #ff4757;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(255, 71, 87, 0.7);
+        }
+        .arrested-desc {
+            color: #ced6e0;
+            font-size: 0.95rem;
+            margin: 0 0 24px 0;
+            line-height: 1.4;
+        }
+        .btn-arrested-reset {
+            background: linear-gradient(135deg, #ff4757, #ff6b81);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 44px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255, 71, 87, 0.5);
+            transition: all 0.2s ease;
+        }
+        .btn-arrested-reset:hover {
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 6px 28px rgba(255, 71, 87, 0.7);
+        }
+        .btn-arrested-reset:active {
+            transform: translateY(1px);
+        }
 
         /* Zone Notification Banner */
         #zone-banner {
@@ -445,6 +520,8 @@
                     <div class="wanted-stars-row">
                         <span class="wanted-star" id="hud-star-1" style="display: none;">⭐</span>
                         <span class="wanted-star" id="hud-star-2" style="display: none;">⭐</span>
+                        <span class="wanted-star" id="hud-star-3" style="display: none;">⭐</span>
+                        <span class="wanted-star" id="hud-star-4" style="display: none;">⭐</span>
                     </div>
                 </div>
 
@@ -530,6 +607,16 @@
     <!-- Center Screen Flying Star Overlay -->
     <div id="flying-star-container">
         <div id="flying-star-icon">⭐</div>
+    </div>
+
+    <!-- Arrested Modal Overlay -->
+    <div id="arrested-modal" style="display: none;">
+        <div class="arrested-card hud-interactive">
+            <div class="arrested-icon">🚨</div>
+            <h1 class="arrested-title">YOU ARE ARRESTED</h1>
+            <p class="arrested-desc">Politsei ja sõjaväeüksused tabasid sind!</p>
+            <button id="btn-arrested-reset" class="btn-arrested-reset">RESET</button>
+        </div>
     </div>
 
     <script type="module" src="/src/games/citycar/main.ts"></script>

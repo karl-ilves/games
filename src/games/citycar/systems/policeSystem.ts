@@ -38,7 +38,7 @@ export class PoliceChaseSystem {
 
     public setWantedLevel(level: WantedLevel, playerPos: THREE.Vector3, playerYaw: number): void {
         this.currentLevel = level;
-        const targetCount = level === 1 ? 2 : level === 2 ? 5 : 0;
+        const targetCount = level === 1 ? 2 : level >= 2 ? 5 : 0;
 
         // Despawn excess
         while (this.cruisers.length > targetCount) {

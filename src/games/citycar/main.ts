@@ -9,6 +9,8 @@ import { CityCarMultiplayerSystem } from './systems/multiplayer';
 import { CityCarInputController } from './systems/input';
 import { CityCarAudioSystem } from './audio';
 import { PoliceChaseSystem } from './systems/policeSystem';
+import { AirSupportSystem } from './systems/airSupportSystem';
+import { TankSystem } from './systems/tankSystem';
 import { WantedSystem } from './systems/wantedSystem';
 import { CityCarHUD } from './ui/hud';
 import { DriverInfo } from './types';
@@ -51,6 +53,31 @@ const physics = new CarPhysicsController(carMesh, world, new THREE.Vector3(-60, 
 const cameraSystem = new CameraFollowSystem(camera);
 const audioSystem = new CityCarAudioSystem(cityCarState.isAudioEnabled());
 const policeSystem = new PoliceChaseSystem(scene, world);
+const airSupportSystem = new AirSupportSystem(scene, world);
+const tankSystem = new TankSystem(scene, world);
+
+let isArrested = false;
+
+function triggerArrest(): void {
+    if (isArrested) return;
+    isArrested = true;
+    audioSystem.playExplosion();
+    physics.state.velocity.set(0, 0, 0);
+    physics.state.speed = 0;
+    hud.showArrestedModal(() => {
+        resetGameAfterArrest();
+    });
+}
+
+function resetGameAfterArrest(): void {
+    isArrested = false;
+    hud.hideArrestedModal();
+    wantedSystem.reset();
+    policeSystem.setWantedLevel(0, physics.state.position, 0);
+    airSupportSystem.despawnAll();
+    tankSystem.despawnAll();
+    physics.resetCar();
+}
 
 let activeDrivers: DriverInfo[] = [];
 const multiplayer = new CityCarMultiplayerSystem(
@@ -64,7 +91,7 @@ const multiplayer = new CityCarMultiplayerSystem(
     }
 );
 
-// 6. Wanted Level & Crime Detection Setup
+// 6. Wanted Level & Military Response Setup
 const wantedSystem = new WantedSystem({
     onStarAwarded: (newLevel) => {
         audioSystem.playStarAwarded();
@@ -72,9 +99,12 @@ const wantedSystem = new WantedSystem({
     },
     onWantedLevelChanged: (level) => {
         policeSystem.setWantedLevel(level, physics.state.position, carMesh.group.rotation.y);
+        airSupportSystem.setWantedLevel(level, physics.state.position);
+        tankSystem.setWantedLevel(level, physics.state.position);
     }
 });
 
+// Crime triggers
 physics.onLampHit = () => {
     audioSystem.playLampHit();
     wantedSystem.reportLampCrash();
@@ -86,14 +116,34 @@ physics.onWaterDive = () => {
     wantedSystem.reportOffroadOrWater(true);
 };
 physics.onOffroadDrive = () => {
-    wantedSystem.reportOffroadOrWater(false);
+    // User requested: "kui sõidan autoteelt välja siis ikka ei tule politseid"
+    // Driving off-road does NOT trigger wanted stars.
 };
 
+// Arrest triggers
 policeSystem.onPlayerRam = () => {
     wantedSystem.reportPoliceCollision();
+    triggerArrest();
 };
 
-// 6. UI HUD Setup
+airSupportSystem.onBombHitPlayer = () => {
+    triggerArrest();
+};
+airSupportSystem.onExplosionSound = () => {
+    audioSystem.playExplosion();
+};
+
+tankSystem.onRocketHitPlayer = () => {
+    triggerArrest();
+};
+tankSystem.onExplosionSound = () => {
+    audioSystem.playExplosion();
+};
+tankSystem.onRocketLaunchSound = () => {
+    audioSystem.playRocketLaunch();
+};
+
+// 7. UI HUD Setup
 const hud = new CityCarHUD(
     (newColor) => {
         cityCarState.setCarColor(newColor);
@@ -136,14 +186,14 @@ if (!hasAccess) {
     hud.showAccessRestrictedModal();
 }
 
-// 7. Responsive Window Resize
+// 8. Responsive Window Resize
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// 8. Main Animation & Game Loop
+// 9. Main Animation & Game Loop
 const clock = new THREE.Clock();
 let elapsedSec = 0;
 
@@ -153,58 +203,71 @@ function animate() {
     const delta = clock.getDelta();
     elapsedSec += delta;
 
-    // Update vehicle physics only if authorized
     if (hasAccess) {
-        physics.update(delta, input.state);
-        input.postPhysicsUpdate();
+        if (!isArrested) {
+            physics.update(delta, input.state);
+            input.postPhysicsUpdate();
 
-        // Audio
-        audioSystem.updateEngine(physics.state.speed, input.state.throttle);
-        if (input.state.horn) {
-            audioSystem.playHorn(true);
-        }
-
-        // Camera follow
-        const carYaw = carMesh.group.rotation.y;
-        cameraSystem.update(delta, physics.state.position, carYaw);
-
-        // Network sync
-        multiplayer.sendLocalState(
-            physics.state.position.x,
-            physics.state.position.y,
-            physics.state.position.z,
-            carYaw,
-            physics.state.speed,
-            physics.state.wheelRotation,
-            physics.state.steeringAngle,
-            physics.state.currentZone
-        );
-
-        // Update police cruisers
-        policeSystem.update(
-            delta,
-            physics.state.position,
-            carYaw,
-            physics.state.speed,
-            () => {
-                wantedSystem.reportPoliceCollision();
+            // Audio
+            audioSystem.updateEngine(physics.state.speed, input.state.throttle);
+            if (input.state.horn) {
+                audioSystem.playHorn(true);
             }
-        );
 
-        // Siren audio when cruisers are actively chasing
-        const hasActivePolice = policeSystem.getActiveCount() > 0;
-        const distToPolice = policeSystem.getClosestDistance(physics.state.position);
-        const sirenVol = hasActivePolice ? Math.max(0.04, Math.min(0.18, 1.0 - distToPolice / 120)) : 0;
-        audioSystem.updatePoliceSiren(hasActivePolice, sirenVol);
+            // Camera follow
+            const carYaw = carMesh.group.rotation.y;
+            cameraSystem.update(delta, physics.state.position, carYaw);
 
-        // HUD updates
-        hud.updateSpeedAndGear(physics.state.speed, physics.state.gear);
-        hud.updateZone(physics.state.currentZone);
-        hud.updateMinimap(physics.state.position, carYaw, activeDrivers);
+            // Network sync
+            multiplayer.sendLocalState(
+                physics.state.position.x,
+                physics.state.position.y,
+                physics.state.position.z,
+                carYaw,
+                physics.state.speed,
+                physics.state.wheelRotation,
+                physics.state.steeringAngle,
+                physics.state.currentZone
+            );
 
-        // Odometer
-        const distanceStepKm = (physics.state.speed / 3600) * delta;
-        cityCarState.addDistanceTraveled(distanceStepKm);
+            // Police cruisers
+            policeSystem.update(
+                delta,
+                physics.state.position,
+                carYaw,
+                physics.state.speed,
+                () => {
+                    wantedSystem.reportPoliceCollision();
+                    triggerArrest();
+                }
+            );
+
+            // Military Air Support (Helicopters & Bomber Plane)
+            airSupportSystem.update(delta, physics.state.position);
+
+            // Military Tanks
+            tankSystem.update(delta, physics.state.position);
+
+            // Audio for sirens and helicopter blades
+            const hasActivePolice = policeSystem.getActiveCount() > 0;
+            const distToPolice = policeSystem.getClosestDistance(physics.state.position);
+            const sirenVol = hasActivePolice ? Math.max(0.04, Math.min(0.18, 1.0 - distToPolice / 120)) : 0;
+            audioSystem.updatePoliceSiren(hasActivePolice, sirenVol);
+            audioSystem.updateHeliAudio(airSupportSystem.getHelicopterCount() > 0);
+
+            // HUD updates
+            hud.updateSpeedAndGear(physics.state.speed, physics.state.gear);
+            hud.updateZone(physics.state.currentZone);
+            hud.updateMinimap(physics.state.position, carYaw, activeDrivers);
+
+            // Odometer
+            const distanceStepKm = (physics.state.speed / 3600) * delta;
+            cityCarState.addDistanceTraveled(distanceStepKm);
+        } else {
+            // Still update aerial/tank visuals during freeze if needed
+            airSupportSystem.update(delta, physics.state.position);
+            tankSystem.update(delta, physics.state.position);
+        }
     }
 
     // World animation (river ripples & falling street lamps)
@@ -225,7 +288,11 @@ function animate() {
     state: cityCarState,
     hud,
     wantedSystem,
-    policeSystem
+    policeSystem,
+    airSupportSystem,
+    tankSystem,
+    triggerArrest,
+    resetGameAfterArrest
 };
 
 animate();

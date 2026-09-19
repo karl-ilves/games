@@ -19,8 +19,13 @@ export class CityCarHUD {
     private wantedCardEl: HTMLElement | null = null;
     private star1El: HTMLElement | null = null;
     private star2El: HTMLElement | null = null;
+    private star3El: HTMLElement | null = null;
+    private star4El: HTMLElement | null = null;
     private flyingStarContainerEl: HTMLElement | null = null;
     private flyingStarIconEl: HTMLElement | null = null;
+    private arrestedModalEl: HTMLElement | null = null;
+    private btnArrestedResetEl: HTMLElement | null = null;
+    private onResetCallback: (() => void) | null = null;
 
     private lastZone: WorldZone | null = null;
     private bannerTimeout: any = null;
@@ -56,8 +61,20 @@ export class CityCarHUD {
         this.wantedCardEl = document.getElementById('wanted-card');
         this.star1El = document.getElementById('hud-star-1');
         this.star2El = document.getElementById('hud-star-2');
+        this.star3El = document.getElementById('hud-star-3');
+        this.star4El = document.getElementById('hud-star-4');
         this.flyingStarContainerEl = document.getElementById('flying-star-container');
         this.flyingStarIconEl = document.getElementById('flying-star-icon');
+        this.arrestedModalEl = document.getElementById('arrested-modal');
+        this.btnArrestedResetEl = document.getElementById('btn-arrested-reset');
+
+        if (this.btnArrestedResetEl) {
+            this.btnArrestedResetEl.addEventListener('click', () => {
+                if (this.onResetCallback) {
+                    this.onResetCallback();
+                }
+            });
+        }
     }
 
     private setupButtons(
@@ -182,10 +199,14 @@ export class CityCarHUD {
             this.wantedCardEl.style.display = 'none';
             if (this.star1El) this.star1El.style.display = 'none';
             if (this.star2El) this.star2El.style.display = 'none';
+            if (this.star3El) this.star3El.style.display = 'none';
+            if (this.star4El) this.star4El.style.display = 'none';
         } else {
             this.wantedCardEl.style.display = 'flex';
             if (this.star1El) this.star1El.style.display = level >= 1 ? 'inline-block' : 'none';
             if (this.star2El) this.star2El.style.display = level >= 2 ? 'inline-block' : 'none';
+            if (this.star3El) this.star3El.style.display = level >= 3 ? 'inline-block' : 'none';
+            if (this.star4El) this.star4El.style.display = level >= 4 ? 'inline-block' : 'none';
         }
     }
 
@@ -222,7 +243,13 @@ export class CityCarHUD {
                 this.wantedCardEl.style.display = 'flex';
             }
 
-            const targetStar = newLevel === 2 ? this.star2El : this.star1El;
+            const starElements: Record<number, HTMLElement | null> = {
+                1: this.star1El,
+                2: this.star2El,
+                3: this.star3El,
+                4: this.star4El
+            };
+            const targetStar = starElements[newLevel] || this.star1El;
             if (targetStar) {
                 targetStar.style.display = 'inline-block';
                 targetStar.style.opacity = '0.3';
@@ -244,6 +271,27 @@ export class CityCarHUD {
                 this.updateWantedLevel(newLevel);
             }, 680);
         }, 1000);
+    }
+
+    public showArrestedModal(onReset: () => void): void {
+        this.onResetCallback = onReset;
+        if (this.arrestedModalEl) {
+            this.arrestedModalEl.style.display = 'flex';
+            requestAnimationFrame(() => {
+                this.arrestedModalEl?.classList.add('active');
+            });
+        }
+    }
+
+    public hideArrestedModal(): void {
+        if (this.arrestedModalEl) {
+            this.arrestedModalEl.classList.remove('active');
+            setTimeout(() => {
+                if (this.arrestedModalEl && !this.arrestedModalEl.classList.contains('active')) {
+                    this.arrestedModalEl.style.display = 'none';
+                }
+            }, 300);
+        }
     }
 
     public updateMinimap(localPos: THREE.Vector3, localYaw: number, otherDrivers: DriverInfo[]): void {
