@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CarVisualConfig } from '../types';
+import { formatOwnerNametag, isOwnerUser } from '../../../auth';
 
 export interface CarMeshContainer {
     group: THREE.Group;
@@ -209,7 +210,9 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(config.driverName, 128, 32);
+            const isOwner = isOwnerUser(config.driverName);
+            const nameToDraw = isOwner ? formatOwnerNametag(config.driverName, true) : config.driverName;
+            ctx.fillText(nameToDraw, 128, 32);
         }
 
         nameTagTexture = new THREE.CanvasTexture(nameTagCanvas);
@@ -252,7 +255,9 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
                     ctx.fillStyle = '#ffffff';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(config.driverName, 128, 32);
+                    const isOwner = isOwnerUser(config.driverName);
+                    const nameToDraw = isOwner ? formatOwnerNametag(config.driverName, true) : config.driverName;
+                    ctx.fillText(nameToDraw, 128, 32);
                     nameTagTexture.needsUpdate = true;
                 }
             }

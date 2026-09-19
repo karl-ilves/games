@@ -1,5 +1,5 @@
 import { ChatMessage, PlayerProgress } from '../types';
-import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../../auth';
+import { getCurrentUserProfile, isPlayardOwner, isTestMode, formatOwnerNametag } from '../../../auth';
 
 const CHAT_STORAGE_KEY = 'playard_crown_chat_v1';
 
@@ -13,10 +13,13 @@ export class GameState {
     private currentStage: number = 1;
     private maxStage: number = 50;
     private respawnPos: { x: number; y: number; z: number } = { x: 0, y: 1.5, z: 0 };
-    private isWon: boolean = false;
-    private chatMessages: ChatMessage[] = [];
+    private isFinished: boolean = false;
+    private network: INetworkHandler | null = null;
     private isOwner: boolean = false;
     private playerName: string = 'Külaline';
+    private stagesCount: number = 50;
+    private cachedProgress: Map<string, PlayerProgress> = new Map();
+    private localChatMessages: ChatMessage[] = [];
 
     private onlinePlayers: PlayerProgress[] = [];
     private onlineCount: number = 1;
@@ -24,8 +27,6 @@ export class GameState {
     private chatListeners: (() => void)[] = [];
     private leaderboardListeners: (() => void)[] = [];
     private onlineCountListeners: ((count: number) => void)[] = [];
-
-    private network: INetworkHandler | null = null;
 
     constructor() {
         this.checkAuth();
@@ -39,7 +40,8 @@ export class GameState {
     private checkAuth() {
         const prof = getCurrentUserProfile();
         this.isOwner = isPlayardOwner(prof?.email) || isTestMode() || !!(prof?.username?.toLowerCase().includes('owner'));
-        this.playerName = prof?.displayName || prof?.username || (this.isOwner ? 'Playard Owner👑' : 'Player');
+        const rawName = prof?.displayName || prof?.username || (this.isOwner ? 'Playard Owner' : 'Player');
+        this.playerName = this.isOwner ? formatOwnerNametag(rawName, true) : rawName;
     }
 
     public getIsOwner(): boolean {

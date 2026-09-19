@@ -8,7 +8,8 @@ import { Role, GameState, MapId, Character, DroppedGun, CoinItem } from "./types
 import { MmpCrateManager } from "./state/crateManager";
 import { buildLobby } from "./world/maps";
 import { createUltraRealisticKnife, createUltraRealisticRevolver } from "./models/weaponBuilder";
-import { createPartyCharacters } from "./models/partyBuilder";
+import { createPartyCharacters, getPlayerDisplayName } from "./models/partyBuilder";
+import { updateCharacterNameTag } from "./models/characterBuilder";
 import { setupLights, spawnMapCoins } from "./world/lightsAndCoins";
 import { CombatSystem, hasLineOfSight, getCharacterFromObject } from "./systems/combat";
 import { updateAI } from "./systems/ai";
@@ -160,6 +161,7 @@ export class MurderMysteryGame {
         if (denied) denied.style.display = (prof && !owner && !prof.isAdmin && userAge < 10) ? "flex" : "none";
         const btnAdmin = document.getElementById("btn-admin-panel");
         if (btnAdmin) btnAdmin.style.display = (owner || isTestMode()) ? "flex" : "none";
+        if (this.playerChar) { const { username, displayName } = getPlayerDisplayName(); this.playerChar.name = username; updateCharacterNameTag(this.playerChar, displayName); }
         applyMmp1Localization();
     }
 
@@ -325,7 +327,8 @@ export class MurderMysteryGame {
             isAlive: this.playerChar.isAlive,
             hasWeaponEquipped: this.playerChar.hasWeaponEquipped,
             role: this.playerChar.role,
-            coins: this.playerChar.coins
+            coins: this.playerChar.coins,
+            avatarConfig: this.playerChar.avatarRig?.config
         });
     }
 }

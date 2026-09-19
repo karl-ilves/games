@@ -7567,13 +7567,17 @@ await (async () => {
                     searchingWaveLetters,
                     hasSeparateStats,
                     strafingCorrect,
-                    cameraBehindPlayer
+                    cameraBehindPlayer,
+                    ownerHasCheckmark: (game?.gameState?.getPlayerName() || '').endsWith('✔') || (game?.gameState?.getPlayerName() || '').endsWith('✓') || (game?.gameState?.getPlayerName() || '').endsWith('✅')
                 };
             });
 
             console.log("   Crown Obby Game In-Game Verification:", crownGamePageTest);
             if (!crownGamePageTest.hasCanvas || !crownGamePageTest.hudStage.includes('STAGE 1 / 50') || crownGamePageTest.stageCount !== 50) {
                 throw new Error("Crown Obby In-game verification failed: " + JSON.stringify(crownGamePageTest));
+            }
+            if (!crownGamePageTest.ownerHasCheckmark) {
+                throw new Error("Crown Obby Playard Owner name must have a checkmark (linnuke) at the end!");
             }
             if (!crownGamePageTest.testMessageSent || !crownGamePageTest.botMessageRejected) {
                 throw new Error("Crown Obby Anti-AI chat verification failed: " + JSON.stringify(crownGamePageTest));
@@ -7673,6 +7677,10 @@ await (async () => {
 
             // 2. CityCar In-Game Verification
             console.log("   2. Testing CityCar Gameplay (/games/citycar/index.html)...");
+            await page.evaluate(() => {
+                const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner', isAdmin: true };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+            });
             await page.goto('http://localhost:4173/games/citycar/index.html', { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 1200));
 
@@ -7919,13 +7927,17 @@ await (async () => {
                     resetPolice,
                     resetHelis,
                     resetTanks,
-                    modalHiddenAfterReset
+                    modalHiddenAfterReset,
+                    driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
                 };
             });
 
             console.log("   CityCar In-Game Verification Results:", cityCarTest);
             if (!cityCarTest.success || !cityCarTest.hasCanvas) {
                 throw new Error("CityCar In-game verification failed: " + JSON.stringify(cityCarTest));
+            }
+            if (!cityCarTest.driverHasCheckmark) {
+                throw new Error("CityCar Playard Owner driver nametag must have a checkmark (linnuke) at the end!");
             }
             if (cityCarTest.bridgesCount !== 3 || cityCarTest.cityZone !== 'city' || cityCarTest.forestZone !== 'forest' || cityCarTest.bridgeZone !== 'bridge' || cityCarTest.borderZone !== 'border') {
                 throw new Error("CityCar World Zones and Bridges check failed: " + JSON.stringify(cityCarTest));

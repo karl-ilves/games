@@ -94,7 +94,7 @@ export class HudManager {
         const ownerPill = document.getElementById('hud-owner-pill');
         if (ownerPill) {
             ownerPill.style.display = isEt ? 'inline-block' : 'none';
-            ownerPill.textContent = '👑 PLAYARD OWNER';
+            ownerPill.textContent = '👑 PLAYARD OWNER ✔';
         }
 
         const stageLabel = document.getElementById('hud-stage-label');

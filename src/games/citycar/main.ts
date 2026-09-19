@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getCurrentUserProfile, canAccessCityCar } from '../../auth';
+import { getCurrentUserProfile, canAccessCityCar, isPlayardOwner, isOwnerUser, formatOwnerNametag } from '../../auth';
 import { cityCarState } from './state/cityCarState';
 import { createCarMesh } from './models/carModel';
 import { buildWorld } from './world/world';
@@ -37,7 +37,9 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerH
 const world = buildWorld(scene);
 
 // 4. Local Player Car Mesh
-const driverName = profile?.username || profile?.displayName || cityCarState.getUserName();
+const isOwner = isPlayardOwner(profile?.email) || isOwnerUser(profile);
+const rawDriverName = profile?.displayName || profile?.username || cityCarState.getUserName();
+const driverName = isOwner ? formatOwnerNametag(rawDriverName, true) : rawDriverName;
 cityCarState.setUserName(driverName);
 
 const carMesh = createCarMesh({

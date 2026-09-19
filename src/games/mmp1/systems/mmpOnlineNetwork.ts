@@ -15,6 +15,7 @@ export interface MmpPlayerState {
     role: 'murderer' | 'sheriff' | 'innocent';
     coins: number;
     action?: string;
+    avatarConfig?: any;
 }
 
 export interface MmpActionEvent {

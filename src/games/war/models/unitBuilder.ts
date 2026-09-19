@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CombatUnit, Team } from '../types';
 import { avatarService } from '../../../shared/avatar/AvatarService';
 import { getItemById } from '../../../shared/avatar/catalog';
+import { formatOwnerNametag, isOwnerUser } from '../../../auth';
 
 export class UnitBuilder {
     private scene: THREE.Scene;
@@ -28,7 +29,9 @@ export class UnitBuilder {
         ctx.font = 'bold 20px "Segoe UI", sans-serif';
         ctx.fillStyle = team === 'red' ? '#ff6b81' : '#70a1ff';
         ctx.textAlign = 'center';
-        ctx.fillText(name.length > 20 ? name.substring(0, 20) + '..' : name, 128, 30);
+        const isOwner = isOwnerUser(name);
+        const displayName = isOwner ? formatOwnerNametag(name, true) : name;
+        ctx.fillText(displayName.length > 22 ? displayName.substring(0, 22) + '..' : displayName, 128, 30);
 
         const barW = 210;
         const barH = 8;

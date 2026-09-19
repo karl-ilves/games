@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CameraMode, DriverInfo, WantedLevel, WorldZone } from '../types';
 import { CAR_COLORS, CAMERA_CONFIGS } from '../catalog';
+import { formatOwnerNametag, isOwnerUser } from '../../../auth';
 
 export class CityCarHUD {
     private speedEl: HTMLElement | null = null;
@@ -169,7 +170,9 @@ export class CityCarHUD {
             const li = document.createElement('li');
             li.className = 'driver-item';
             const dot = `<span style="color: ${d.color || '#00f2fe'};">●</span>`;
-            const name = d.isLocal ? `<strong>${d.name} (You)</strong>` : d.name;
+            const isOwner = isOwnerUser(d.name);
+            const formattedName = isOwner ? formatOwnerNametag(d.name, true) : d.name;
+            const name = d.isLocal ? `<strong>${formattedName} (You)</strong>` : formattedName;
             li.innerHTML = `${dot} <span>${name}</span>`;
             this.rosterEl?.appendChild(li);
         });

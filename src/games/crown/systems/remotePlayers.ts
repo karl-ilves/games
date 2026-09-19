@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { AvatarRig } from '../../../shared/avatar/AvatarRig';
 import { RemotePlayerState } from '../types';
+import { formatOwnerNametag } from '../../../auth';
 
 export interface RemotePlayerEntity {
     id: string;
@@ -195,7 +196,8 @@ export class RemotePlayersManager {
         ctx.textAlign = 'center';
         ctx.fillStyle = entity.isOwner ? '#ffd700' : '#00f2fe';
         const prefix = entity.isOwner ? '👑 ' : '🏃 ';
-        ctx.fillText(`${prefix}${entity.name}`, 160, 38);
+        const displayName = (entity.isOwner || entity.name.toLowerCase().includes('owner')) ? formatOwnerNametag(entity.name, true) : entity.name;
+        ctx.fillText(`${prefix}${displayName}`, 160, 38);
 
         // Stage & Progress Pill
         ctx.font = 'bold 18px sans-serif';

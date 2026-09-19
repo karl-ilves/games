@@ -67,11 +67,38 @@ export function isUserAdmin(email?: string | null): boolean {
     return email.trim().toLowerCase() === 'grx@trenet.ee';
 }
 
+export function isOwnerUser(profileOrName?: any): boolean {
+    if (!profileOrName) return false;
+    if (typeof profileOrName === 'object') {
+        const email = profileOrName.email ? String(profileOrName.email).trim().toLowerCase() : '';
+        if (email === '1karl.ilves@gmail.com' || email === '1karl.iles@gmail.com' || email === '1karl.ilves@gmailo.com') return true;
+        const u = (profileOrName.username || profileOrName.displayName || '').trim().toLowerCase();
+        return u.includes('owner') || u === 'karl' || u === 'karl ilves';
+    }
+    const clean = String(profileOrName).trim().toLowerCase();
+    return clean.includes('owner') || clean === 'karl' || clean === 'karl ilves' || clean === '1karl.ilves@gmail.com';
+}
+
+export function formatOwnerNametag(name: string, isOwner?: boolean): string {
+    if (!name) return '';
+    const clean = name.trim();
+    const isOwnerPlayer = isOwner !== undefined ? isOwner : isOwnerUser(clean);
+    if (!isOwnerPlayer) return clean;
+
+    if (clean.endsWith('✔') || clean.endsWith('✓')) {
+        return clean;
+    }
+
+    // Strip trailing crowns, check emojis or whitespace
+    const base = clean.replace(/[👑✅☑✔✓\s]+$/g, '').trim();
+    return `${base} ✔`;
+}
+
 export function getAdminDisplayName(email?: string | null): string {
     if (!email) return 'Admin✅';
     const clean = email.trim().toLowerCase();
     if (clean === '1karl.iles@gmail.com' || clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com') {
-        return 'Playard Owner✅';
+        return 'Playard Owner ✔';
     }
     return 'Admin✅';
 }

@@ -4,6 +4,7 @@ import { MmpCrateManager } from '../state/crateManager';
 import { createCharacterMesh } from '../models/characterBuilder';
 import { MMP_BOT_PRESETS, createBotCharacter } from '../models/partyBuilder';
 import { MmpPlayerState, MmpActionEvent } from './mmpOnlineNetwork';
+import { formatOwnerNametag } from '../../../auth';
 
 export interface RosterContext {
     scene: THREE.Scene;
@@ -162,11 +163,14 @@ export class MmpRosterManager {
     }
 
     private createRemotePlayer(state: MmpPlayerState): Character {
+        const isOwner = !!(state.isOwner || (state.name && state.name.toLowerCase().includes('owner')));
+        const nameToUse = isOwner ? formatOwnerNametag(state.name || 'Player', true) : (state.name || 'Player');
         const pModel = createCharacterMesh(
-            `${state.name || 'Player'} ${state.isOwner ? '👑' : '👤'}`,
+            `${nameToUse} ${isOwner ? '👑' : '👤'}`,
             0x3498db,
-            true,
-            this.ctx.crateManager
+            false,
+            this.ctx.crateManager,
+            state.avatarConfig
         );
 
         const spawnPos = new THREE.Vector3(state.x || 0, state.y || 0, state.z || 150);

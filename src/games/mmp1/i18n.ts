@@ -352,6 +352,7 @@ export function applyMmp1Localization() {
     const ownerPill = document.querySelector('.owner-pill') as HTMLElement | null;
     if (ownerPill) {
         ownerPill.style.display = isOwnerUser() ? 'inline-block' : 'none';
+        ownerPill.textContent = '👑 PLAYARD OWNER ✔';
     }
 
     const btnCrateShop = document.getElementById('btn-crate-shop');

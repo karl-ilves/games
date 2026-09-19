@@ -195,24 +195,38 @@ export function updateAI(delta: number, ctx: AIContext) {
                 c.mesh.rotation.y = c.rotation;
 
                 c.walkAnimTimer = (c.walkAnimTimer || 0) + delta * 9;
-                if (c.leftLeg && c.rightLeg) {
-                    c.leftLeg.rotation.x = Math.sin(c.walkAnimTimer) * 0.45;
-                    c.rightLeg.rotation.x = -Math.sin(c.walkAnimTimer) * 0.45;
-                }
-                if (c.leftArm && c.rightArm) {
-                    c.leftArm.rotation.x = -Math.sin(c.walkAnimTimer) * 0.38;
-                    if (!c.hasWeaponEquipped) {
-                        c.rightArm.rotation.x = Math.sin(c.walkAnimTimer) * 0.38;
-                    } else {
+                if (c.avatarRig) {
+                    c.avatarRig.updateAnimation(Date.now() * 0.001, 'run');
+                    if (c.hasWeaponEquipped && c.rightArm) {
                         c.rightArm.rotation.x = -0.35;
+                    }
+                } else {
+                    if (c.leftLeg && c.rightLeg) {
+                        c.leftLeg.rotation.x = Math.sin(c.walkAnimTimer) * 0.45;
+                        c.rightLeg.rotation.x = -Math.sin(c.walkAnimTimer) * 0.45;
+                    }
+                    if (c.leftArm && c.rightArm) {
+                        c.leftArm.rotation.x = -Math.sin(c.walkAnimTimer) * 0.38;
+                        if (!c.hasWeaponEquipped) {
+                            c.rightArm.rotation.x = Math.sin(c.walkAnimTimer) * 0.38;
+                        } else {
+                            c.rightArm.rotation.x = -0.35;
+                        }
                     }
                 }
             } else {
-                const idle = Math.sin(Date.now() * 0.0025 + (c.walkAnimTimer || 0)) * 0.03;
-                if (c.leftLeg) c.leftLeg.rotation.x = 0;
-                if (c.rightLeg) c.rightLeg.rotation.x = 0;
-                if (c.leftArm) c.leftArm.rotation.x = idle;
-                if (c.rightArm && !c.hasWeaponEquipped) c.rightArm.rotation.x = -idle;
+                if (c.avatarRig) {
+                    c.avatarRig.updateAnimation(Date.now() * 0.001, 'idle');
+                    if (c.hasWeaponEquipped && c.rightArm) {
+                        c.rightArm.rotation.x = -0.35;
+                    }
+                } else {
+                    const idle = Math.sin(Date.now() * 0.0025 + (c.walkAnimTimer || 0)) * 0.03;
+                    if (c.leftLeg) c.leftLeg.rotation.x = 0;
+                    if (c.rightLeg) c.rightLeg.rotation.x = 0;
+                    if (c.leftArm) c.leftArm.rotation.x = idle;
+                    if (c.rightArm && !c.hasWeaponEquipped) c.rightArm.rotation.x = -idle;
+                }
             }
 
             if (ctx.state === 'in_game') {

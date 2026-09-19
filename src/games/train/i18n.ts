@@ -20,7 +20,7 @@ export function checkIsOwner(): boolean {
 export const I18N = {
     et: {
         gameTitle: 'RONGIMÄNG',
-        ownerPill: '👑 PLAYARD OWNER',
+        ownerPill: '👑 PLAYARD OWNER ✔',
         depotBtn: 'Sõiduki Valik (Rongid & Metrood)',
         tabTrains: '🚂 Rongid',
         tabMetros: '🚇 Metrood',
