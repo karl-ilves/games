@@ -18,6 +18,7 @@ export interface StreetLampObject {
     fallProgress: number;
     fallAxis: THREE.Vector3;
     headMesh?: THREE.Mesh;
+    fallenTime: number; // elapsed time when lamp fell, used for 10s respawn
 }
 
 export interface WorldEnvironment {
@@ -171,7 +172,8 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
                 isFallen: false,
                 fallProgress: 0,
                 fallAxis: new THREE.Vector3(1, 0, 0),
-                headMesh: lamp.userData?.head
+                headMesh: lamp.userData?.head,
+                fallenTime: 0
             });
         });
     }
@@ -315,7 +317,7 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
                 waterMesh.position.y = -0.4 + Math.sin(timeSec * 2.0) * 0.08;
             }
 
-            // Animate falling street lamps when crashed into
+            // Animate falling street lamps when crashed into & respawn after 10s
             for (const lamp of streetLamps) {
                 if (lamp.isFalling) {
                     lamp.fallProgress += delta * 3.5;
@@ -325,11 +327,26 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
                     if (progress >= 1.0) {
                         lamp.isFalling = false;
                         lamp.isFallen = true;
+                        lamp.fallenTime = timeSec;
                         const headMat = lamp.group.userData?.headMat as THREE.MeshStandardMaterial | undefined;
                         if (headMat) {
                             headMat.emissive?.setHex(0x111111);
                             headMat.color?.setHex(0x222222);
                         }
+                    }
+                } else if (lamp.isFallen && lamp.fallenTime > 0 && timeSec - lamp.fallenTime >= 10.0) {
+                    // Respawn: stand the lamp back up after 10 seconds
+                    lamp.isFallen = false;
+                    lamp.fallProgress = 0;
+                    lamp.fallenTime = 0;
+                    lamp.group.rotation.set(0, lamp.group.rotation.y, 0);
+                    lamp.group.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
+                    lamp.group.position.copy(lamp.basePos);
+                    // Restore lamp head light
+                    const headMat = lamp.group.userData?.headMat as THREE.MeshStandardMaterial | undefined;
+                    if (headMat) {
+                        headMat.emissive?.setHex(0xffeaa7);
+                        headMat.color?.setHex(0xffeaa7);
                     }
                 }
             }

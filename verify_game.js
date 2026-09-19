@@ -7755,11 +7755,20 @@ await (async () => {
                 // Test Streetlamp Collapse on collision
                 const lamp = world.streetLamps?.[0];
                 let lampCollapsed = false;
+                let lampRespawned = false;
                 if (lamp) {
                     physics.state.position.set(lamp.basePos.x, 0.1, lamp.basePos.z - 1.2);
                     physics.yaw = 0; // facing towards lamp
                     physics.update(0.1, { throttle: 1, brake: 0, steer: 0, handbrake: false, horn: false, reset: false });
                     lampCollapsed = lamp.isFalling || lamp.isFallen;
+
+                    // Simulate lamp fully fallen
+                    lamp.isFalling = false;
+                    lamp.isFallen = true;
+                    lamp.fallenTime = 1.0; // fell at t=1s
+                    // Call update at t=12s (11 seconds later, > 10s threshold)
+                    world.update(12.0, 0.016);
+                    lampRespawned = !lamp.isFallen && !lamp.isFalling && lamp.fallProgress === 0;
                 }
 
                 // Test Map Boundary Protection (cannot drive out of map)
@@ -7861,6 +7870,7 @@ await (async () => {
                     changedColor,
                     minimapRemoved,
                     lampCollapsed,
+                    lampRespawned,
                     boundaryProtected,
                     initialWanted,
                     initialPoliceCount,
@@ -7903,6 +7913,9 @@ await (async () => {
             }
             if (!cityCarTest.lampCollapsed) {
                 throw new Error("CityCar Streetlamp must collapse when hit by car!");
+            }
+            if (!cityCarTest.lampRespawned) {
+                throw new Error("CityCar Streetlamp must respawn (stand back up) after 10 seconds!");
             }
             if (cityCarTest.bridgeHeight > 0.1) {
                 throw new Error("CityCar Bridge must be flush with road height (<= 0.1m)!");
