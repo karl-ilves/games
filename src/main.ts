@@ -974,6 +974,10 @@ function renderRecentlyPlayed() {
                 gameTitle = '👑 24K Crown Obby';
                 gameDesc = "The world's only 👑 24K Royal Crown & Golden Monarch outfit!";
                 badgeText = '👑 Grand Prize (50 Stages)';
+            } else if (game.id === 'citycar') {
+                gameTitle = '🚗 3D City & Nature Drive';
+                gameDesc = 'Free-drive through skyscrapers, cross bridges, and explore the forest and river in real-time multiplayer!';
+                badgeText = '🏙️🌲 3D City Drive';
             }
         } else {
             if (game.id === 'racing') {
@@ -1004,6 +1008,10 @@ function renderRecentlyPlayed() {
                 gameTitle = '👑 24K Crown Obby';
                 gameDesc = "The world's only 👑 24K Royal Crown & Golden Monarch outfit!";
                 badgeText = '👑 Grand Prize (50 Stages)';
+            } else if (game.id === 'citycar') {
+                gameTitle = '🚗 3D Linna & Looduse Autosõit';
+                gameDesc = 'Sõida vabalt ringi pilvelõhkujatega linnas, ületa sildu ja avasta künklikku metsa reaalajas teiste mängijatega!';
+                badgeText = '🏙️🌲 3D Linna Sõit';
             }
         }
 
@@ -1120,6 +1128,15 @@ function setupGameCardTracking() {
             url: './games/play/index.html',
             icon: '🎮',
             badgeText: 'Community Play',
+            badgeColor: '#00f2fe'
+        },
+        './games/citycar/index.html': {
+            id: 'citycar',
+            title: '🚗 3D City & Nature Drive',
+            description: 'Free-drive through skyscrapers, cross bridges, and explore the forest and river in real-time multiplayer!',
+            url: './games/citycar/index.html',
+            icon: '🚗',
+            badgeText: '🏙️🌲 3D City Drive',
             badgeColor: '#00f2fe'
         }
     };

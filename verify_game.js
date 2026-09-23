@@ -8228,6 +8228,29 @@ await (async () => {
 
             console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Fireball, Car Fire, 5s Zoom-out & YOU DIED! Reset) testid edukalt läbitud!");
 
+            // 3. Testing CityCar in Recently Played Games Row on Home Hub (User: "ja se mäng ilmub ka sinna viimati mängitute mängu ritta")
+            console.log("   3. Testing CityCar in Recently Played Games Row on Hub...");
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const cityCarRecentTest = await page.evaluate(() => {
+                const card = document.querySelector('.recently-played-card[data-game-id="citycar"]');
+                if (!card) return { success: false, reason: 'CityCar card not found in recently-played-grid' };
+                const title = card.querySelector('h2')?.textContent || '';
+                const href = card.getAttribute('href') || '';
+                return {
+                    success: true,
+                    hasCard: true,
+                    title,
+                    href
+                };
+            });
+
+            console.log("   CityCar Recently Played Check Result:", cityCarRecentTest);
+            if (!cityCarRecentTest.success) {
+                throw new Error("CityCar must appear in the Recently Played Games row (viimati mängitud mängud)! " + JSON.stringify(cityCarRecentTest));
+            }
+
             // -------------------------------------------------------------
             // Mobile Touch Scrolling & Modal Overflow Verification
             // -------------------------------------------------------------

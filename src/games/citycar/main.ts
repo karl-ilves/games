@@ -17,22 +17,24 @@ import { CrashDebrisSystem } from './effects/crashDebrisSystem';
 import { FireSystem } from './effects/fireSystem';
 import { CityCarHUD } from './ui/hud';
 import { DriverInfo } from './types';
-import { friendService } from '../../shared/friends/friendService';
+import { yardService } from '../../shared/yardService';
 
 console.log('[CityCar] 3D City & Nature Drive Simulator initializing...');
 
-// 1. Auth & Access Verification
+// 1. Auth & Access Verification & History Recording
 const profile = getCurrentUserProfile();
 const isTestMode = typeof window !== 'undefined' && (window as any).__PLAYARD_TEST_MODE__;
 const hasAccess = isTestMode || canAccessCityCar(profile, profile?.username);
 
-if (profile?.username) {
-    friendService.setPlayerActiveGame(profile.username, {
-        id: 'citycar',
-        title: '🚗 3D City & Nature Drive',
-        url: '/games/citycar/index.html'
-    });
-}
+yardService.recordPlayedGame({
+    id: 'citycar',
+    title: '🚗 3D City & Nature Drive',
+    description: 'Free-drive through skyscrapers, cross bridges, and explore the forest and river in real-time multiplayer!',
+    url: './games/citycar/index.html',
+    icon: '🚗',
+    badgeText: '🏙️🌲 3D City Drive',
+    badgeColor: '#00f2fe'
+});
 
 // 2. Three.js Scene, Camera & Renderer
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
