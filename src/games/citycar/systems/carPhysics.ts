@@ -18,9 +18,11 @@ export class CarPhysicsController {
     public onBuildingHit?: () => void;
     public onWaterDive?: () => void;
     public onOffroadDrive?: () => void;
+    public onCrashDeath?: (info: { reason: string; speedKmh: number }) => void;
     private meshContainer: CarMeshContainer;
     private world: WorldEnvironment;
 
+    private isDead = false;
     private forwardSpeedMps = 0;
     private yaw = Math.PI / 2; // facing East towards the bridge initially
     private verticalVelocity = 0;
@@ -58,6 +60,14 @@ export class CarPhysicsController {
 
         if (input.reset) {
             this.resetCar();
+            return;
+        }
+
+        if (this.isDead) {
+            this.forwardSpeedMps = 0;
+            this.verticalVelocity = 0;
+            this.state.speed = 0;
+            this.state.velocity.set(0, 0, 0);
             return;
         }
 
@@ -274,8 +284,21 @@ export class CarPhysicsController {
             this.state.position.z = clampedZ;
         } else if (collided) {
             // Rebound bounce / stop against building or fence obstacle
+            const impactSpeed = this.forwardSpeedMps;
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
             this.onBuildingHit?.();
+
+            if (!this.isDead && impactSpeed > 2.0) {
+                this.isDead = true;
+                this.forwardSpeedMps = 0;
+                this.verticalVelocity = 0;
+                this.state.speed = 0;
+                this.state.velocity.set(0, 0, 0);
+                this.onCrashDeath?.({
+                    reason: 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!',
+                    speedKmh: Math.round(impactSpeed * 3.6)
+                });
+            }
         } else {
             this.state.position.x = clampedX;
             this.state.position.z = clampedZ;
@@ -357,7 +380,26 @@ export class CarPhysicsController {
         this.state.currentZone = this.world.getZoneAt(this.state.position.x, this.state.position.z);
     }
 
+    public isCarDead(): boolean {
+        return this.isDead;
+    }
+
+    public killCar(reason = 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!'): void {
+        if (this.isDead) return;
+        this.isDead = true;
+        const spd = Math.max(15, Math.round(Math.abs(this.forwardSpeedMps) * 3.6));
+        this.forwardSpeedMps = 0;
+        this.verticalVelocity = 0;
+        this.state.speed = 0;
+        this.state.velocity.set(0, 0, 0);
+        this.onCrashDeath?.({
+            reason,
+            speedKmh: spd
+        });
+    }
+
     public resetCar(): void {
+        this.isDead = false;
         this.forwardSpeedMps = 0;
         this.verticalVelocity = 0;
         this.currentSteerAngle = 0;

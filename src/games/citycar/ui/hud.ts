@@ -28,6 +28,12 @@ export class CityCarHUD {
     private btnArrestedResetEl: HTMLElement | null = null;
     private onResetCallback: (() => void) | null = null;
 
+    private deathModalEl: HTMLElement | null = null;
+    private deathTitleEl: HTMLElement | null = null;
+    private deathDescEl: HTMLElement | null = null;
+    private btnDeathResetEl: HTMLElement | null = null;
+    private onDeathResetCallback: (() => void) | null = null;
+
     private lastZone: WorldZone | null = null;
     private bannerTimeout: any = null;
 
@@ -68,6 +74,19 @@ export class CityCarHUD {
         this.flyingStarIconEl = document.getElementById('flying-star-icon');
         this.arrestedModalEl = document.getElementById('arrested-modal');
         this.btnArrestedResetEl = document.getElementById('btn-arrested-reset');
+
+        this.deathModalEl = document.getElementById('death-modal');
+        this.deathTitleEl = document.getElementById('death-title');
+        this.deathDescEl = document.getElementById('death-desc');
+        this.btnDeathResetEl = document.getElementById('btn-death-reset');
+
+        if (this.btnDeathResetEl) {
+            this.btnDeathResetEl.addEventListener('click', () => {
+                if (this.onDeathResetCallback) {
+                    this.onDeathResetCallback();
+                }
+            });
+        }
 
         if (this.btnArrestedResetEl) {
             this.btnArrestedResetEl.addEventListener('click', () => {
@@ -296,6 +315,32 @@ export class CityCarHUD {
             }, 300);
         }
     }
+
+    public showDeathModal(title: string, desc: string, onReset: () => void): void {
+        this.onDeathResetCallback = onReset;
+        if (this.deathTitleEl) {
+            this.deathTitleEl.innerText = title;
+        }
+        if (this.deathDescEl) {
+            this.deathDescEl.innerText = desc;
+        }
+        if (this.deathModalEl) {
+            this.deathModalEl.style.display = 'flex';
+            this.deathModalEl.classList.add('active');
+        }
+    }
+
+    public hideDeathModal(): void {
+        if (this.deathModalEl) {
+            this.deathModalEl.classList.remove('active');
+            this.deathModalEl.style.display = 'none';
+        }
+    }
+
+    public isDeathModalVisible(): boolean {
+        return this.deathModalEl !== null && this.deathModalEl.style.display === 'flex';
+    }
+
 
     public updateMinimap(localPos: THREE.Vector3, localYaw: number, otherDrivers: DriverInfo[]): void {
         const ctx = this.minimapCtx;

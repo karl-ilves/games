@@ -8004,6 +8004,37 @@ await (async () => {
                 const resetTanks = tankSys?.getActiveTankCount?.() || 0;
                 const modalHiddenAfterReset = !modal || modal.style.display === 'none' || !modal.classList.contains('active');
 
+                // Test Building Crash: Front end shatters into debris, half car intact, 5s camera zoom out, "You die" text + explanation, Reset button
+                // User: "ja kui sa sõidad maja siis su esiotsast lendavat tükid ja pool autost jääb terveks ja siis su vaade suumib välja 5 sek ja siis tuleb tekst You die ja põhjendus ja all on nupp jälle reset"
+                const carMeshObj = dbg.carMesh;
+                const debrisSys = dbg.crashDebrisSystem;
+                const camSys = dbg.cameraSystem;
+                const hudObj = dbg.hud;
+
+                // Trigger crash death
+                dbg.triggerCrashDeath?.({ reason: 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!', speedKmh: 65 });
+
+                const carFrontWrecked = carMeshObj?.isFrontWrecked?.() === true;
+                const debrisSpawned = (debrisSys?.getDebrisCount?.() || 0) > 0;
+                const crashZoomActive = camSys?.isCrashZoomActive?.() === true;
+
+                // Advance camera zoom by 5.2s to complete the 5-second cinematic zoom-out
+                camSys?.update?.(5.2, physics.state.position, 0);
+
+                const deathModal = document.getElementById('death-modal');
+                const deathTitle = document.getElementById('death-title')?.textContent?.trim();
+                const deathDesc = document.getElementById('death-desc')?.textContent?.trim();
+                const deathModalVisibleAfter5s = hudObj?.isDeathModalVisible?.() || (deathModal && deathModal.style.display === 'flex');
+
+                // Click Death Reset button
+                const btnDeathReset = document.getElementById('btn-death-reset');
+                btnDeathReset?.click?.();
+
+                const carRestoredAfterReset = carMeshObj?.isFrontWrecked?.() === false;
+                const debrisClearedAfterReset = (debrisSys?.getDebrisCount?.() || 0) === 0;
+                const deathModalHiddenAfterReset = !hudObj?.isDeathModalVisible?.() && (!deathModal || deathModal.style.display === 'none' || !deathModal.classList.contains('active'));
+                const cameraResetAfterDeath = camSys?.isCrashZoomActive?.() === false;
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
@@ -8067,6 +8098,16 @@ await (async () => {
                     marksDisappearAfter1Min,
                     tanksVisibleAndValid,
                     hasRemotePolice,
+                    carFrontWrecked,
+                    debrisSpawned,
+                    crashZoomActive,
+                    deathModalVisibleAfter5s,
+                    deathTitle,
+                    deathDesc,
+                    carRestoredAfterReset,
+                    debrisClearedAfterReset,
+                    deathModalHiddenAfterReset,
+                    cameraResetAfterDeath,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
                 };
             });
@@ -8153,8 +8194,17 @@ await (async () => {
             if (cityCarTest.resetWanted !== 0 || cityCarTest.resetPolice !== 0 || cityCarTest.resetHelis !== 0 || cityCarTest.resetTanks !== 0) {
                 throw new Error("CityCar Reset button must restore wanted level to 0 and despawn all police, helis, and tanks!");
             }
+            if (!cityCarTest.carFrontWrecked || !cityCarTest.debrisSpawned || !cityCarTest.crashZoomActive) {
+                throw new Error("CityCar Building Crash must break front end into flying debris, keep rear half intact, and start 5s camera zoom out!");
+            }
+            if (!cityCarTest.deathModalVisibleAfter5s || cityCarTest.deathTitle !== 'You die' || !cityCarTest.deathDesc.includes('hoone seina sisse ja auto esiosa purunes')) {
+                throw new Error(`CityCar Death Modal failed verification: visible=${cityCarTest.deathModalVisibleAfter5s}, title='${cityCarTest.deathTitle}', desc='${cityCarTest.deathDesc}'`);
+            }
+            if (!cityCarTest.carRestoredAfterReset || !cityCarTest.debrisClearedAfterReset || !cityCarTest.deathModalHiddenAfterReset || !cityCarTest.cameraResetAfterDeath) {
+                throw new Error("CityCar Death Reset button must restore car, clear debris, hide death modal, and reset camera!");
+            }
 
-            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid & Arrested Reset) testid edukalt läbitud!");
+            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Crash Debris, 5s Zoom-out & You die Reset) testid edukalt läbitud!");
 
             // -------------------------------------------------------------
             // Mobile Touch Scrolling & Modal Overflow Verification

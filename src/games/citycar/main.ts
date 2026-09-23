@@ -13,6 +13,7 @@ import { AirSupportSystem } from './systems/airSupportSystem';
 import { TankSystem } from './systems/tankSystem';
 import { WantedSystem } from './systems/wantedSystem';
 import { SkidMarksSystem } from './effects/skidMarksSystem';
+import { CrashDebrisSystem } from './effects/crashDebrisSystem';
 import { CityCarHUD } from './ui/hud';
 import { DriverInfo } from './types';
 import { friendService } from '../../shared/friends/friendService';
@@ -68,18 +69,18 @@ const policeSystem = new PoliceChaseSystem(scene, world);
 const airSupportSystem = new AirSupportSystem(scene, world);
 const tankSystem = new TankSystem(scene, world);
 const skidMarksSystem = new SkidMarksSystem(scene);
+const crashDebrisSystem = new CrashDebrisSystem(scene, world);
 
 let isArrested = false;
+let isDead = false;
 
 function triggerArrest(): void {
-    if (isArrested) return;
+    if (isArrested || isDead) return;
     isArrested = true;
     audioSystem.playExplosion();
     physics.state.velocity.set(0, 0, 0);
     physics.state.speed = 0;
-    hud.showArrestedModal(() => {
-        resetGameAfterArrest();
-    });
+    hud.showArrestedModal(() => resetGameAfterArrest());
 }
 
 function resetGameAfterArrest(): void {
@@ -90,8 +91,37 @@ function resetGameAfterArrest(): void {
     airSupportSystem.despawnAll();
     tankSystem.despawnAll();
     skidMarksSystem.clear();
+    resetGameAfterDeath();
+}
+
+function triggerCrashDeath(info: { reason: string; speedKmh: number }): void {
+    if (isDead || isArrested) return;
+    isDead = true;
+    audioSystem.playExplosion();
+    carMesh.setFrontWrecked(true);
+    const yaw = carMesh.group.rotation.y;
+    const forwardDir = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    crashDebrisSystem.spawnDebris(physics.state.position, forwardDir, cityCarState.getCarColor());
+    cameraSystem.triggerCrashZoom(physics.state.position, yaw, 5.0);
+}
+
+cameraSystem.onCrashZoomComplete = () => {
+    hud.showDeathModal('You die', 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!', () => {
+        resetGameAfterDeath();
+    });
+};
+
+function resetGameAfterDeath(): void {
+    isDead = false;
+    hud.hideDeathModal();
+    carMesh.setFrontWrecked(false);
+    crashDebrisSystem.clear();
+    cameraSystem.resetCrashZoom();
+    skidMarksSystem.clear();
     physics.resetCar();
 }
+
+physics.onCrashDeath = triggerCrashDeath;
 
 let activeDrivers: DriverInfo[] = [];
 const multiplayer = new CityCarMultiplayerSystem(
@@ -118,46 +148,18 @@ const wantedSystem = new WantedSystem({
     }
 });
 
-// Crime triggers
-physics.onLampHit = () => {
-    audioSystem.playLampHit();
-    wantedSystem.reportLampCrash();
-};
-physics.onBuildingHit = () => {
-    wantedSystem.reportBuildingCollision();
-};
-physics.onWaterDive = () => {
-    wantedSystem.reportOffroadOrWater(true);
-};
-physics.onOffroadDrive = () => {
-    // User requested: "kui sõidan autoteelt välja siis ikka ei tule politseid"
-    // Driving off-road does NOT trigger wanted stars.
-};
+// Crime & Arrest triggers
+physics.onLampHit = () => { audioSystem.playLampHit(); wantedSystem.reportLampCrash(); };
+physics.onBuildingHit = () => wantedSystem.reportBuildingCollision();
+physics.onWaterDive = () => wantedSystem.reportOffroadOrWater(true);
+policeSystem.onPlayerRam = () => { wantedSystem.reportPoliceCollision(); triggerArrest(); };
+airSupportSystem.onBombHitPlayer = () => triggerArrest();
+airSupportSystem.onExplosionSound = () => audioSystem.playExplosion();
+tankSystem.onRocketHitPlayer = () => triggerArrest();
+tankSystem.onExplosionSound = () => audioSystem.playExplosion();
+tankSystem.onRocketLaunchSound = () => audioSystem.playRocketLaunch();
 
-// Arrest triggers
-policeSystem.onPlayerRam = () => {
-    wantedSystem.reportPoliceCollision();
-    triggerArrest();
-};
-
-airSupportSystem.onBombHitPlayer = () => {
-    triggerArrest();
-};
-airSupportSystem.onExplosionSound = () => {
-    audioSystem.playExplosion();
-};
-
-tankSystem.onRocketHitPlayer = () => {
-    triggerArrest();
-};
-tankSystem.onExplosionSound = () => {
-    audioSystem.playExplosion();
-};
-tankSystem.onRocketLaunchSound = () => {
-    audioSystem.playRocketLaunch();
-};
-
-// 7. UI HUD Setup
+// 7. UI HUD & Input Setup
 const hud = new CityCarHUD(
     (newColor) => {
         cityCarState.setCarColor(newColor);
@@ -169,13 +171,8 @@ const hud = new CityCarHUD(
         cameraSystem.setMode(nextMode);
         hud.updateCameraLabel(nextMode);
     },
-    () => {
-        physics.resetCar();
-    },
-    (active) => {
-        input.triggerHorn(active);
-        audioSystem.playHorn(active);
-    },
+    () => resetGameAfterDeath(),
+    (active) => { input.triggerHorn(active); audioSystem.playHorn(active); },
     () => {
         const enabled = cityCarState.toggleAudio();
         audioSystem.setEnabled(enabled);
@@ -294,11 +291,17 @@ function animate() {
                 skidMarksSystem.endDrift();
             }
             skidMarksSystem.update(elapsedSec);
+        } else if (isDead) {
+            // Crash death: cinematic 5-second zoom-out
+            cameraSystem.update(delta, physics.state.position, carMesh.group.rotation.y);
+            airSupportSystem.update(delta, physics.state.position);
+            tankSystem.update(delta, physics.state.position);
         } else {
-            // Still update aerial/tank visuals during freeze if needed
+            // Arrested
             airSupportSystem.update(delta, physics.state.position);
             tankSystem.update(delta, physics.state.position);
         }
+        crashDebrisSystem.update(delta);
     }
 
     // World animation (river ripples & falling street lamps)
@@ -314,6 +317,9 @@ function animate() {
 // Expose state and controller for automated verification
 (window as any).__CITY_CAR_DEBUG__ = {
     physics,
+    carMesh,
+    cameraSystem,
+    crashDebrisSystem,
     world,
     multiplayer,
     state: cityCarState,
@@ -324,7 +330,9 @@ function animate() {
     tankSystem,
     skidMarksSystem,
     triggerArrest,
-    resetGameAfterArrest
+    resetGameAfterArrest,
+    triggerCrashDeath,
+    resetGameAfterDeath
 };
 
 animate();

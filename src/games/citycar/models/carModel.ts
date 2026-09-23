@@ -21,6 +21,8 @@ export interface CarMeshContainer {
     setBodyColor: (colorHex: string) => void;
     updateSteeringAndSpin: (steerAngle: number, wheelSpin: number) => void;
     setBraking: (braking: boolean) => void;
+    setFrontWrecked: (wrecked: boolean) => void;
+    isFrontWrecked: () => boolean;
 }
 
 export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
@@ -188,6 +190,18 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
 
     root.add(fl.pivot, fr.pivot, rl.pivot, rr.pivot);
 
+    // Exposed crumpled engine bay when front end is wrecked
+    // User requirement: "su esiotsast lendavat tükid ja pool autost jääb terveks"
+    const crumpledEngineGeo = new THREE.BoxGeometry(1.4, 0.42, 0.9);
+    const crumpledMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, metalness: 0.3 });
+    const crumpledEngine = new THREE.Mesh(crumpledEngineGeo, crumpledMat);
+    crumpledEngine.position.set(0, 0.48, 0.7);
+    crumpledEngine.visible = false;
+    root.add(crumpledEngine);
+
+    const frontParts: THREE.Object3D[] = [hood, splitter, hlLeft, hlRight, fl.pivot, fr.pivot];
+    let isWrecked = false;
+
     // 8. Overhead Driver Name Tag
     let nameTagSprite: THREE.Sprite | undefined;
     let nameTagCanvas: HTMLCanvasElement | undefined;
@@ -275,6 +289,12 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
             const mat = braking ? brakeLightOnMat : brakeLightOffMat;
             blLeft.material = mat;
             blRight.material = mat;
-        }
+        },
+        setFrontWrecked: (wrecked: boolean) => {
+            isWrecked = wrecked;
+            frontParts.forEach(p => { p.visible = !wrecked; });
+            crumpledEngine.visible = wrecked;
+        },
+        isFrontWrecked: () => isWrecked
     };
 }
