@@ -14,6 +14,7 @@ import { TankSystem } from './systems/tankSystem';
 import { WantedSystem } from './systems/wantedSystem';
 import { SkidMarksSystem } from './effects/skidMarksSystem';
 import { CrashDebrisSystem } from './effects/crashDebrisSystem';
+import { FireSystem } from './effects/fireSystem';
 import { CityCarHUD } from './ui/hud';
 import { DriverInfo } from './types';
 import { friendService } from '../../shared/friends/friendService';
@@ -70,6 +71,7 @@ const airSupportSystem = new AirSupportSystem(scene, world);
 const tankSystem = new TankSystem(scene, world);
 const skidMarksSystem = new SkidMarksSystem(scene);
 const crashDebrisSystem = new CrashDebrisSystem(scene, world);
+const fireSystem = new FireSystem(scene);
 
 let isArrested = false;
 let isDead = false;
@@ -81,6 +83,7 @@ function resetGame(): void {
     hud.hideArrestedModal();
     carMesh.setFrontWrecked(false);
     crashDebrisSystem.clear();
+    fireSystem.extinguish();
     cameraSystem.resetCrashZoom();
     skidMarksSystem.clear();
     wantedSystem.reset();
@@ -108,6 +111,8 @@ function triggerCrashDeath(info: { reason: string; speedKmh: number }): void {
     const yaw = carMesh.group.rotation.y;
     const forwardDir = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     crashDebrisSystem.spawnDebris(physics.state.position, forwardDir, cityCarState.getCarColor());
+    fireSystem.triggerFireball(physics.state.position);
+    fireSystem.startCarFire(carMesh.group);
     cameraSystem.triggerCrashZoom(physics.state.position, yaw, 5.0);
 }
 
@@ -300,6 +305,7 @@ function animate() {
             tankSystem.update(delta, physics.state.position);
         }
         crashDebrisSystem.update(delta);
+        fireSystem.update(delta);
     }
 
     // World animation (river ripples & falling street lamps)
@@ -318,6 +324,7 @@ function animate() {
     carMesh,
     cameraSystem,
     crashDebrisSystem,
+    fireSystem,
     world,
     multiplayer,
     state: cityCarState,

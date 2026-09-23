@@ -8006,8 +8006,11 @@ await (async () => {
 
                 // Test Building Crash: Front end shatters into debris, half car intact, 5s camera zoom out, "YOU DIED!" text + English explanation, Reset button resets everything including stars
                 // User: "kui ma panen reset peab kõik resettima tähed ka ja pool autost läheb katki ja tekst YOU DIED! ja kõik inglisekeeles"
+                // Test Building Crash: Front end shatters into debris, half car intact, fireball blast, car on fire, 5s camera zoom out, "YOU DIED!" text + English explanation, Reset button resets everything including stars and extinguishes fire
+                // User: "siis tuleb väike tulekera ja aut läheb põlema kui maja taban"
                 const carMeshObj = dbg.carMesh;
                 const debrisSys = dbg.crashDebrisSystem;
+                const fireSys = dbg.fireSystem;
                 const camSys = dbg.cameraSystem;
                 const hudObj = dbg.hud;
 
@@ -8021,6 +8024,8 @@ await (async () => {
                 const carFrontWrecked = carMeshObj?.isFrontWrecked?.() === true;
                 const chassisHalfBroken = carMeshObj?.bodyMesh?.scale?.z < 0.6;
                 const debrisSpawned = (debrisSys?.getDebrisCount?.() || 0) > 0;
+                const fireballSpawned = fireSys?.hasActiveFireball?.() === true;
+                const carBurningOnCrash = fireSys?.isCarBurning?.() === true && (fireSys?.getActiveFlameCount?.() || 0) > 0;
                 const crashZoomActive = camSys?.isCrashZoomActive?.() === true;
 
                 // Advance camera zoom by 5.2s to complete the 5-second cinematic zoom-out
@@ -8031,13 +8036,14 @@ await (async () => {
                 const deathDesc = document.getElementById('death-desc')?.textContent?.trim();
                 const deathModalVisibleAfter5s = hudObj?.isDeathModalVisible?.() || (deathModal && deathModal.style.display === 'flex');
 
-                // Click Death Reset button (must reset wanted stars to 0 as well)
+                // Click Death Reset button (must reset wanted stars to 0 and extinguish fire as well)
                 const btnDeathReset = document.getElementById('btn-death-reset');
                 btnDeathReset?.click?.();
 
                 const carRestoredAfterReset = carMeshObj?.isFrontWrecked?.() === false;
                 const chassisRestoredAfterReset = carMeshObj?.bodyMesh?.scale?.z === 1.0;
                 const debrisClearedAfterReset = (debrisSys?.getDebrisCount?.() || 0) === 0;
+                const fireExtinguishedAfterReset = fireSys?.isCarBurning?.() === false && fireSys?.hasActiveFireball?.() === false;
                 const deathModalHiddenAfterReset = !hudObj?.isDeathModalVisible?.() && (!deathModal || deathModal.style.display === 'none' || !deathModal.classList.contains('active'));
                 const cameraResetAfterDeath = camSys?.isCrashZoomActive?.() === false;
                 const starsResetAfterDeath = wanted.getWantedLevel() === 0;
@@ -8108,6 +8114,8 @@ await (async () => {
                     carFrontWrecked,
                     chassisHalfBroken,
                     debrisSpawned,
+                    fireballSpawned,
+                    carBurningOnCrash,
                     crashZoomActive,
                     deathModalVisibleAfter5s,
                     deathTitle,
@@ -8115,6 +8123,7 @@ await (async () => {
                     carRestoredAfterReset,
                     chassisRestoredAfterReset,
                     debrisClearedAfterReset,
+                    fireExtinguishedAfterReset,
                     deathModalHiddenAfterReset,
                     cameraResetAfterDeath,
                     starsResetAfterDeath,
@@ -8213,8 +8222,11 @@ await (async () => {
             if (!cityCarTest.carRestoredAfterReset || !cityCarTest.chassisRestoredAfterReset || !cityCarTest.debrisClearedAfterReset || !cityCarTest.deathModalHiddenAfterReset || !cityCarTest.cameraResetAfterDeath || !cityCarTest.starsResetAfterDeath) {
                 throw new Error("CityCar Death Reset button must restore car, clear debris, hide death modal, reset camera, and reset all wanted stars!");
             }
+            if (!cityCarTest.fireballSpawned || !cityCarTest.carBurningOnCrash || !cityCarTest.fireExtinguishedAfterReset) {
+                throw new Error("CityCar Building Crash must spawn a fireball explosion, set the car on fire, and extinguish it upon reset!");
+            }
 
-            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Half-Car Crash Debris, 5s Zoom-out & YOU DIED! Reset) testid edukalt läbitud!");
+            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Fireball, Car Fire, 5s Zoom-out & YOU DIED! Reset) testid edukalt läbitud!");
 
             // -------------------------------------------------------------
             // Mobile Touch Scrolling & Modal Overflow Verification
