@@ -539,6 +539,8 @@ export class FriendService {
             gameInfo = { id: 'rocket', title: '🚀 ROCKET PLAYARD', url: '/games/rocket/index.html' };
         } else if (path.includes('/games/creator/')) {
             gameInfo = { id: 'creator', title: '🛠️ 3D Game Creator Studio', url: '/games/creator/index.html' };
+        } else if (path.includes('/games/citycar/')) {
+            gameInfo = { id: 'citycar', title: '🚗 3D City & Nature Drive', url: '/games/citycar/index.html' };
         } else if (path.includes('/games/play/')) {
             const titleEl = document.querySelector('title')?.textContent || 'Community Game';
             gameInfo = { id: 'play', title: `🎮 ${titleEl}`, url: window.location.pathname + window.location.search };

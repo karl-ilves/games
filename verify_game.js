@@ -2953,11 +2953,15 @@ await (async () => {
         // 9. Test 3D Master Chef Cooking Simulator
         console.log("9. Checking 3D Master Chef Cooking Simulator...");
         await page.goto('http://localhost:4173/games/cooking/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 1500));
-        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
-
-        // Check that VIP restricted overlay is hidden for admin
-        await page.evaluate(() => { const v = document.getElementById('vip-restricted-overlay'); if(v) v.style.display = 'none'; });
+        await new Promise(r => setTimeout(r, 2000));
+        try {
+            await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+            await page.evaluate(() => { const v = document.getElementById('vip-restricted-overlay'); if(v) v.style.display = 'none'; });
+        } catch (e) {
+            await new Promise(r => setTimeout(r, 1500));
+            await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+            await page.evaluate(() => { const v = document.getElementById('vip-restricted-overlay'); if(v) v.style.display = 'none'; });
+        }
 
         // 10. Test 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)
         console.log("10. Checking 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)...");
@@ -7634,12 +7638,12 @@ await (async () => {
             // ==========================================
             console.log("Testing 🏙️🌲 CityCar 3D Driving Game (Access Control, Physics, World, Multiplayer)...");
             
-            // 1. Hub Access Control Test
-            console.log("   1. Testing CityCar Hub Card Access Control (Guest, taavi2, Owner, Non-authorized)...");
+            // 1. Hub Access & Public Visibility Test (User: "te se mäng kõikidele nähtavaks ja frend listis on ka näha kui keegi seda mängib")
+            console.log("   1. Testing CityCar Hub Card Public Visibility (Guest, taavi2, Owner, All Players)...");
             await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 600));
 
-            const accessTest = await page.evaluate(() => {
+            const guestAccessTest = await page.evaluate(() => {
                 const card = document.getElementById('card-citycar-game');
                 const guestDisplay = card ? window.getComputedStyle(card).display : 'missing';
 
@@ -7647,6 +7651,7 @@ await (async () => {
                 const taaviProf = { id: 't2', username: 'taavi2', email: 'taavi2@example.com', displayName: 'taavi2', isAdmin: false };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(taaviProf));
                 window.location.reload();
+                return { guestDisplay };
             });
 
             await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
@@ -7670,7 +7675,7 @@ await (async () => {
                 const card = document.getElementById('card-citycar-game');
                 const ownerDisplay = card ? window.getComputedStyle(card).display : 'missing';
 
-                // Test Random user
+                // Test Regular / Other user (now also visible to all players!)
                 const otherProf = { id: 'other_1', username: 'random_player', email: 'other@test.com', displayName: 'Random', isAdmin: false };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(otherProf));
                 window.location.reload();
@@ -7686,17 +7691,40 @@ await (async () => {
                 return { otherDisplay };
             });
 
-            console.log("   CityCar Card Visibility Check Results:", {
+            console.log("   CityCar Card Visibility Check Results (Public to All):", {
                 taavi: taaviAccessTest.taaviDisplay,
                 owner: ownerAccessTest.ownerDisplay,
-                otherUser: otherAccessTest.otherDisplay
+                allPlayers: otherAccessTest.otherDisplay
             });
 
-            if (taaviAccessTest.taaviDisplay === 'none' || ownerAccessTest.ownerDisplay === 'none') {
-                throw new Error("CityCar card must be visible to taavi2 and Playard Owner!");
+            if (taaviAccessTest.taaviDisplay === 'none' || ownerAccessTest.ownerDisplay === 'none' || otherAccessTest.otherDisplay === 'none') {
+                throw new Error("CityCar card must be visible to ALL players on the Playard Hub!");
             }
-            if (otherAccessTest.otherDisplay !== 'none') {
-                throw new Error("CityCar card must be hidden for non-authorized users!");
+
+            // Test Friend List CityCar Activity Tracking
+            console.log("   Testing Friend List CityCar Activity Tracking (User: 'frend listis on ka näha kui keegi seda mängib')...");
+            const friendCityCarTest = await page.evaluate(() => {
+                const svc = window.friendService;
+                if (!svc) return { success: false, reason: 'friendService not found on window' };
+
+                // Simulate friend playing CityCar
+                svc.setPlayerActiveGame('driver_bob', {
+                    id: 'citycar',
+                    title: '🚗 3D City & Nature Drive',
+                    url: '/games/citycar/index.html'
+                });
+
+                const act = svc.getPlayerActivity('driver_bob');
+                return {
+                    success: true,
+                    isPlaying: act.isPlaying,
+                    gameTitle: act.gameTitle,
+                    gameUrl: act.gameUrl
+                };
+            });
+
+            if (!friendCityCarTest.success || !friendCityCarTest.isPlaying || !friendCityCarTest.gameTitle?.includes('City')) {
+                throw new Error("Friend list must show when someone is playing CityCar: " + JSON.stringify(friendCityCarTest));
             }
 
             // 2. CityCar In-Game Verification

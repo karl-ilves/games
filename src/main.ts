@@ -88,11 +88,10 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
         rocketGameCard.style.display = 'flex';
     }
 
-    // CityCar (3D Linna & Looduse Autosõit) - Nähtav AINULT Playard Ownerile ja taavi2!
+    // CityCar (3D Linna & Looduse Autosõit) - Avalik ja nähtav kõigile mängijatele!
     const cityCarCard = document.getElementById('card-citycar-game');
     if (cityCarCard) {
-        const canAccess = canAccessCityCar(prof, usernameToCheck || prof?.username);
-        cityCarCard.style.display = canAccess ? 'flex' : 'none';
+        cityCarCard.style.display = 'flex';
     }
 
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!

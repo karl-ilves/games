@@ -42,24 +42,9 @@ export function canAccessMmp1(_profileOrEmail?: UserProfile | string | null, _us
     return true;
 }
 
-export function canAccessCityCar(profileOrEmail?: UserProfile | string | null, username?: string | null): boolean {
-    const prof = typeof profileOrEmail === 'object' && profileOrEmail !== null ? profileOrEmail : null;
-    const email = typeof profileOrEmail === 'string' ? profileOrEmail : prof?.email;
-    const user = prof?.username || username;
-
-    const emailClean = email ? email.trim().toLowerCase() : '';
-    const userClean = user ? user.trim().toLowerCase() : '';
-
-    // Playard Owner access:
-    if (isPlayardOwner(emailClean)) return true;
-    if (emailClean === '1karl.ilves@gmail.com' || emailClean === '1karl.iles@gmail.com' || emailClean === '1karl.ilves@gmailo.com') return true;
-    if (userClean === 'playard owner' || userClean === 'karl' || userClean === 'karl ilves') return true;
-
-    // taavi2 access:
-    if (userClean === 'taavi2') return true;
-    if (emailClean === 'taavi2' || emailClean.startsWith('taavi2@')) return true;
-
-    return false;
+export function canAccessCityCar(_profileOrEmail?: UserProfile | string | null, _username?: string | null): boolean {
+    // CityCar (3D Linna & Looduse Autosõit) on nüüd avalik ja kättesaadav kõigile mängijatele!
+    return true;
 }
 
 export function isUserAdmin(email?: string | null): boolean {
