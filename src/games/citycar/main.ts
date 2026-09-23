@@ -12,6 +12,7 @@ import { PoliceChaseSystem } from './systems/policeSystem';
 import { AirSupportSystem } from './systems/airSupportSystem';
 import { TankSystem } from './systems/tankSystem';
 import { WantedSystem } from './systems/wantedSystem';
+import { SkidMarksSystem } from './effects/skidMarksSystem';
 import { CityCarHUD } from './ui/hud';
 import { DriverInfo } from './types';
 import { friendService } from '../../shared/friends/friendService';
@@ -66,6 +67,7 @@ const audioSystem = new CityCarAudioSystem(cityCarState.isAudioEnabled());
 const policeSystem = new PoliceChaseSystem(scene, world);
 const airSupportSystem = new AirSupportSystem(scene, world);
 const tankSystem = new TankSystem(scene, world);
+const skidMarksSystem = new SkidMarksSystem(scene);
 
 let isArrested = false;
 
@@ -87,6 +89,7 @@ function resetGameAfterArrest(): void {
     policeSystem.setWantedLevel(0, physics.state.position, 0);
     airSupportSystem.despawnAll();
     tankSystem.despawnAll();
+    skidMarksSystem.clear();
     physics.resetCar();
 }
 
@@ -281,6 +284,16 @@ function animate() {
             // Odometer
             const distanceStepKm = (physics.state.speed / 3600) * delta;
             cityCarState.addDistanceTraveled(distanceStepKm);
+
+            // Drift tire tracks (User: "ja kui sa pidurdas ja põõrad sa saad triftida ja jälg jääb ma peal eja jälg kaob ära 1 min pärast")
+            if (physics.state.isDrifting && physics.state.isGrounded) {
+                const wheels = physics.getRearWheelWorldPositions();
+                const groundY = world.getGroundHeight(physics.state.position.x, physics.state.position.z);
+                skidMarksSystem.recordDrift(wheels.left, wheels.right, elapsedSec, groundY);
+            } else {
+                skidMarksSystem.endDrift();
+            }
+            skidMarksSystem.update(elapsedSec);
         } else {
             // Still update aerial/tank visuals during freeze if needed
             airSupportSystem.update(delta, physics.state.position);
@@ -309,6 +322,7 @@ function animate() {
     policeSystem,
     airSupportSystem,
     tankSystem,
+    skidMarksSystem,
     triggerArrest,
     resetGameAfterArrest
 };

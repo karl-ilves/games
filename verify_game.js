@@ -7842,6 +7842,39 @@ await (async () => {
                 const rampMesh = firstRampGroup?.children?.find(c => c.geometry?.getAttribute('position'));
                 const rampOpaqueAndSolid = !!(rampMesh && rampMesh.material?.side === 2 && rampMesh.material?.transparent === false && rampMesh.material?.opacity === 1.0);
 
+                // Test Drifting & Skid Marks System (Braking + Turning triggers drift, marks deposited, expire in 1 min)
+                // User: "ja kui sa pidurdas ja põõrad sa saad triftida ja jälg jääb ma peal eja jälg kaob ära 1 min pärast"
+                const skidMarksSys = dbg.skidMarksSystem;
+                skidMarksSys?.clear?.();
+
+                // Accelerate first to get speed
+                physics.state.position.set(-60, 0.1, 0);
+                physics.yaw = 0;
+                physics.forwardSpeedMps = 20.0; // moving fast
+
+                // Now BRAKE and TURN at the same time:
+                physics.update(0.1, { throttle: 0, brake: 1, steer: 1, handbrake: false, horn: false, reset: false });
+                const canDriftOnBrakeAndTurn = physics.state.isDrifting;
+
+                // Simulate drift frames to lay down skid marks
+                if (canDriftOnBrakeAndTurn && skidMarksSys) {
+                    const wheels = physics.getRearWheelWorldPositions();
+                    skidMarksSys.recordDrift(wheels.left, wheels.right, 10.0, 0.0);
+                    // Move slightly further
+                    wheels.left.x += 1.0;
+                    wheels.right.x += 1.0;
+                    skidMarksSys.recordDrift(wheels.left, wheels.right, 10.1, 0.0);
+                }
+                const marksCreated = (skidMarksSys?.getMarksCount?.() || 0) > 0;
+
+                // At 30s (< 60s / 1 min), marks still remain on the ground
+                skidMarksSys?.update?.(40.0); // 40 - 10 = 30s age
+                const marksPersistUnder1Min = (skidMarksSys?.getMarksCount?.() || 0) > 0;
+
+                // At 71s (> 60s / 1 min), marks have expired and disappeared
+                skidMarksSys?.update?.(71.0); // 71 - 10 = 61s age > 60s (1 min)
+                const marksDisappearAfter1Min = (skidMarksSys?.getMarksCount?.() || 0) === 0;
+
                 // Test Destructible Trees (breaks into 2 pieces, resets after 10s, counts under lamp hits)
                 const tree = world.trees?.[0];
                 let treeBroken = false;
@@ -8028,6 +8061,10 @@ await (async () => {
                     rampOpaqueAndSolid,
                     rampHitNoPolice,
                     planeTurnWithRightWingDip,
+                    canDriftOnBrakeAndTurn,
+                    marksCreated,
+                    marksPersistUnder1Min,
+                    marksDisappearAfter1Min,
                     tanksVisibleAndValid,
                     hasRemotePolice,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
@@ -8070,6 +8107,12 @@ await (async () => {
             }
             if (!cityCarTest.planeTurnWithRightWingDip) {
                 throw new Error("CityCar bomber plane must perform banking turn with right wing dipping down into the turn!");
+            }
+            if (!cityCarTest.canDriftOnBrakeAndTurn) {
+                throw new Error("CityCar must drift when braking while turning at speed (User: 'kui sa pidurdas ja põõrad sa saad triftida')!");
+            }
+            if (!cityCarTest.marksCreated || !cityCarTest.marksPersistUnder1Min || !cityCarTest.marksDisappearAfter1Min) {
+                throw new Error("CityCar must leave skid marks on the ground while drifting, which persist and disappear after 1 minute!");
             }
             if (!cityCarTest.treesAvailable || !cityCarTest.treeBroken) {
                 throw new Error("CityCar Trees must break into 2 pieces when hit by car!");

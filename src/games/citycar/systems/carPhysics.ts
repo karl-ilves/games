@@ -98,8 +98,10 @@ export class CarPhysicsController {
             }
         } else if (input.brake > 0.1) {
             if (this.forwardSpeedMps > 0.5) {
-                // Forward braking
-                this.forwardSpeedMps -= input.brake * VEHICLE_CONFIG.brakeDeceleration * delta;
+                // Forward braking (softer deceleration during drift to carry momentum smoothly)
+                const isDriftBraking = Math.abs(this.currentSteerAngle) > 0.06 && this.forwardSpeedMps > 2.8;
+                const brakeDecel = isDriftBraking ? VEHICLE_CONFIG.brakeDeceleration * 0.45 : VEHICLE_CONFIG.brakeDeceleration;
+                this.forwardSpeedMps -= input.brake * brakeDecel * delta;
                 if (this.forwardSpeedMps < 0) this.forwardSpeedMps = 0;
             } else {
                 // Reverse acceleration
@@ -119,10 +121,14 @@ export class CarPhysicsController {
             }
         }
 
-        // Handbrake drift
-        if (input.handbrake) {
-            this.forwardSpeedMps = THREE.MathUtils.damp(this.forwardSpeedMps, 0, 4.0, delta);
-            this.state.isDrifting = Math.abs(this.forwardSpeedMps) > 5 && Math.abs(this.currentSteerAngle) > 0.1;
+        // Drift check:
+        // User requirement: "ja kui sa pidurdas ja põõrad sa saad triftida ja jälg jääb ma peal eja jälg kaob ära 1 min pärast"
+        const isBrakingWhileTurning = (input.brake > 0.15 || input.handbrake) && Math.abs(this.currentSteerAngle) > 0.06 && Math.abs(this.forwardSpeedMps) > 2.8;
+
+        if (isBrakingWhileTurning) {
+            this.state.isDrifting = true;
+        } else if (input.handbrake && Math.abs(this.forwardSpeedMps) > 3.0 && Math.abs(this.currentSteerAngle) > 0.05) {
+            this.state.isDrifting = true;
         } else {
             this.state.isDrifting = false;
         }
@@ -131,12 +137,19 @@ export class CarPhysicsController {
         // Turning rate is proportional to forward velocity
         const speedRatio = Math.min(Math.abs(this.forwardSpeedMps) / (maxForwardSpeedMps * 0.4), 1.0);
         const directionSign = this.forwardSpeedMps >= 0 ? 1 : -1;
-        const driftMultiplier = this.state.isDrifting ? 1.6 : 1.0;
+        const driftMultiplier = this.state.isDrifting ? 2.1 : 1.0;
         this.yaw += this.currentSteerAngle * speedRatio * directionSign * 2.2 * driftMultiplier * delta;
 
         // 4. Position displacement
         const forwardDir = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
         const moveVector = forwardDir.clone().multiplyScalar(this.forwardSpeedMps * delta);
+
+        if (this.state.isDrifting) {
+            // Lateral slide momentum during drift
+            const slideSign = this.currentSteerAngle >= 0 ? 1 : -1;
+            const lateralDir = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+            moveVector.addScaledVector(lateralDir, slideSign * Math.abs(this.forwardSpeedMps) * 0.32 * delta);
+        }
 
         const nextX = this.state.position.x + moveVector.x;
         const nextZ = this.state.position.z + moveVector.z;
@@ -354,5 +367,28 @@ export class CarPhysicsController {
         this.meshContainer.group.position.copy(this.state.position);
         this.meshContainer.group.rotation.set(0, this.yaw, 0);
         this.meshContainer.bodyMesh.rotation.set(0, 0, 0);
+    }
+
+    public getRearWheelWorldPositions(): { left: THREE.Vector3; right: THREE.Vector3 } {
+        const cosY = Math.cos(this.yaw);
+        const sinY = Math.sin(this.yaw);
+        const px = this.state.position.x;
+        const pz = this.state.position.z;
+
+        // Rear left wheel: local (-0.95, -1.35)
+        const left = new THREE.Vector3(
+            px + (-0.95) * cosY + (-1.35) * sinY,
+            this.state.position.y,
+            pz - (-0.95) * sinY + (-1.35) * cosY
+        );
+
+        // Rear right wheel: local (0.95, -1.35)
+        const right = new THREE.Vector3(
+            px + 0.95 * cosY + (-1.35) * sinY,
+            this.state.position.y,
+            pz - 0.95 * sinY + (-1.35) * cosY
+        );
+
+        return { left, right };
     }
 }

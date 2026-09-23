@@ -348,7 +348,7 @@ export class AirSupportSystem {
 
             // Animate remote helis
             unit.helis.forEach((heli, idx) => {
-                heli.updateRotors(dt);
+                heli.update(dt);
                 const ox = idx === 0 ? -14 : 14;
                 const oz = idx === 0 ? -10 : 10;
                 heli.group.position.lerp(new THREE.Vector3(driver.targetPos.x + ox, 25, driver.targetPos.z + oz), dt * 3.0);
