@@ -74,24 +74,30 @@ const crashDebrisSystem = new CrashDebrisSystem(scene, world);
 let isArrested = false;
 let isDead = false;
 
+function resetGame(): void {
+    isDead = false;
+    isArrested = false;
+    hud.hideDeathModal();
+    hud.hideArrestedModal();
+    carMesh.setFrontWrecked(false);
+    crashDebrisSystem.clear();
+    cameraSystem.resetCrashZoom();
+    skidMarksSystem.clear();
+    wantedSystem.reset();
+    policeSystem.setWantedLevel(0, physics.state.position, 0);
+    airSupportSystem.despawnAll();
+    tankSystem.despawnAll();
+    hud.updateWantedLevel(0);
+    physics.resetCar();
+}
+
 function triggerArrest(): void {
     if (isArrested || isDead) return;
     isArrested = true;
     audioSystem.playExplosion();
     physics.state.velocity.set(0, 0, 0);
     physics.state.speed = 0;
-    hud.showArrestedModal(() => resetGameAfterArrest());
-}
-
-function resetGameAfterArrest(): void {
-    isArrested = false;
-    hud.hideArrestedModal();
-    wantedSystem.reset();
-    policeSystem.setWantedLevel(0, physics.state.position, 0);
-    airSupportSystem.despawnAll();
-    tankSystem.despawnAll();
-    skidMarksSystem.clear();
-    resetGameAfterDeath();
+    hud.showArrestedModal(() => resetGame());
 }
 
 function triggerCrashDeath(info: { reason: string; speedKmh: number }): void {
@@ -106,20 +112,10 @@ function triggerCrashDeath(info: { reason: string; speedKmh: number }): void {
 }
 
 cameraSystem.onCrashZoomComplete = () => {
-    hud.showDeathModal('You die', 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!', () => {
-        resetGameAfterDeath();
+    hud.showDeathModal('YOU DIED!', 'You crashed into a building at high speed and your car was destroyed!', () => {
+        resetGame();
     });
 };
-
-function resetGameAfterDeath(): void {
-    isDead = false;
-    hud.hideDeathModal();
-    carMesh.setFrontWrecked(false);
-    crashDebrisSystem.clear();
-    cameraSystem.resetCrashZoom();
-    skidMarksSystem.clear();
-    physics.resetCar();
-}
 
 physics.onCrashDeath = triggerCrashDeath;
 
@@ -142,6 +138,7 @@ const wantedSystem = new WantedSystem({
         hud.triggerStarAwardAnimation(newLevel);
     },
     onWantedLevelChanged: (level) => {
+        hud.updateWantedLevel(level);
         policeSystem.setWantedLevel(level, physics.state.position, carMesh.group.rotation.y);
         airSupportSystem.setWantedLevel(level, physics.state.position);
         tankSystem.setWantedLevel(level, physics.state.position);
@@ -171,7 +168,7 @@ const hud = new CityCarHUD(
         cameraSystem.setMode(nextMode);
         hud.updateCameraLabel(nextMode);
     },
-    () => resetGameAfterDeath(),
+    () => resetGame(),
     (active) => { input.triggerHorn(active); audioSystem.playHorn(active); },
     () => {
         const enabled = cityCarState.toggleAudio();
@@ -215,7 +212,8 @@ function animate() {
     elapsedSec += delta;
 
     if (hasAccess) {
-        if (!isArrested) {
+        if (!isArrested && !isDead) {
+            if (input.state.reset) resetGame();
             physics.update(delta, input.state);
             input.postPhysicsUpdate();
 
@@ -330,9 +328,10 @@ function animate() {
     tankSystem,
     skidMarksSystem,
     triggerArrest,
-    resetGameAfterArrest,
+    resetGame,
+    resetGameAfterArrest: resetGame,
     triggerCrashDeath,
-    resetGameAfterDeath
+    resetGameAfterDeath: resetGame
 };
 
 animate();

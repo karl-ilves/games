@@ -190,12 +190,12 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
 
     root.add(fl.pivot, fr.pivot, rl.pivot, rr.pivot);
 
-    // Exposed crumpled engine bay when front end is wrecked
-    // User requirement: "su esiotsast lendavat tükid ja pool autost jääb terveks"
-    const crumpledEngineGeo = new THREE.BoxGeometry(1.4, 0.42, 0.9);
-    const crumpledMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, metalness: 0.3 });
+    // Exposed crumpled torn metal at the front break edge when half of car is destroyed
+    // User requirement: "pool autost läheb katki ja pool autost jääb terveks"
+    const crumpledEngineGeo = new THREE.BoxGeometry(1.7, 0.44, 0.3);
+    const crumpledMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, metalness: 0.4 });
     const crumpledEngine = new THREE.Mesh(crumpledEngineGeo, crumpledMat);
-    crumpledEngine.position.set(0, 0.48, 0.7);
+    crumpledEngine.position.set(0, 0.48, 0.15);
     crumpledEngine.visible = false;
     root.add(crumpledEngine);
 
@@ -294,6 +294,13 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
             isWrecked = wrecked;
             frontParts.forEach(p => { p.visible = !wrecked; });
             crumpledEngine.visible = wrecked;
+            if (wrecked) {
+                lowerChassis.scale.z = 0.52;
+                lowerChassis.position.z = -1.03;
+            } else {
+                lowerChassis.scale.z = 1.0;
+                lowerChassis.position.z = 0.0;
+            }
         },
         isFrontWrecked: () => isWrecked
     };
