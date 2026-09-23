@@ -73,18 +73,29 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
             pointer-events: auto;
+            padding: 20px 10px;
+            box-sizing: border-box;
         }
 
         .garage-panel {
             background: #2d3436;
-            padding: 30px;
+            padding: 26px 20px;
             border-radius: 15px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             max-width: 600px;
             width: 90%;
+            max-height: 92vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            box-sizing: border-box;
+            margin: auto;
         }
 
         .btn {
@@ -253,16 +264,16 @@
         
         
         <!-- Shop Screen -->
-        <div id="owned-screen" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); color: white; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 50;">
+        <div id="owned-screen" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); color: white; flex-direction: column; align-items: center; justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding: 20px 10px; box-sizing: border-box; pointer-events: auto; z-index: 50;">
             <div class="garage-panel" style="max-width: 800px; width: 95%;">
                 <h2 style="color: #e67e22; margin-top: 0;">OWNED VEHICLES</h2>
                 <p style="color: #bdc3c7; margin-bottom: 15px;">Click a vehicle to select it for the race</p>
-                <div id="owned-vehicles" style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; overflow-y: auto; max-height: 60vh; padding: 10px;"></div>
+                <div id="owned-vehicles" style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; max-height: 60vh; padding: 10px;"></div>
                 <button class="btn" id="btn-close-owned" style="background: #e74c3c; margin-top: 30px; width: 50%;">Close</button>
             </div>
         </div>
 
-        <div id="shop-screen" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); color: white; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 50;">
+        <div id="shop-screen" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); color: white; flex-direction: column; align-items: center; justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding: 20px 10px; box-sizing: border-box; pointer-events: auto; z-index: 50;">
             <div class="garage-panel" style="max-width: 800px; width: 95%;">
                 <h2 style="color: #9b59b6; margin-top: 0;">VEHICLE SHOP</h2>
                 <div style="font-size: 20px; color: #f1c40f; margin-bottom: 20px;">Your Money: $ <span id="shop-money-val">0</span></div>
@@ -271,7 +282,7 @@
                     <div id="shop-tab-moto" style="background: #34495e; padding: 10px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; color: white;">Motorcycles</div>
                 </div>
                 
-                <div id="shop-vehicles" style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; overflow-y: auto; max-height: 60vh; padding: 10px;"></div>
+                <div id="shop-vehicles" style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; max-height: 60vh; padding: 10px;"></div>
                 <button class="btn" id="btn-close-shop" style="background: #e74c3c; margin-top: 30px; width: 50%;">Close Shop</button>
             </div>
         </div>

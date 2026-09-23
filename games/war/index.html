@@ -371,7 +371,11 @@
             justify-content: center;
             align-items: center;
             z-index: 2200;
-            padding: 20px;
+            padding: 20px 12px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            box-sizing: border-box;
         }
         .deploy-card {
             background: #151d28;
@@ -381,10 +385,14 @@
             max-width: 620px;
             max-height: 90vh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
             width: 100%;
             text-align: center;
             box-shadow: 0 0 50px rgba(0, 242, 254, 0.3);
             scrollbar-width: thin;
+            box-sizing: border-box;
+            margin: auto;
         }
         .selection-grid {
             display: grid;
@@ -512,16 +520,26 @@
             justify-content: center;
             align-items: center;
             z-index: 2500;
-            padding: 20px;
+            padding: 20px 12px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            box-sizing: border-box;
         }
         .modal-card {
             background: #1e293b;
             border: 1px solid rgba(0, 242, 254, 0.3);
             border-radius: 16px;
-            padding: 28px;
+            padding: 26px 20px;
             max-width: 550px;
             width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
             position: relative;
+            box-sizing: border-box;
+            margin: auto;
         }
         .modal-close {
             position: absolute;
@@ -880,7 +898,7 @@
 
             <!-- 2. Class Choice (Horizontally scrollable side-by-side roles) -->
             <div id="deploy-step-2-label" style="text-align: left; font-weight: 800; color: #fff; font-size: 0.95rem; margin-bottom: 8px;">2. Select Class / Role:</div>
-            <div class="roles-scroll-container" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; margin-top: 0; scrollbar-width: thin;">
+            <div class="roles-scroll-container" style="display: flex; gap: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x; padding-bottom: 8px; scroll-snap-type: x mandatory; margin-top: 0; scrollbar-width: thin;">
                 <div class="select-box selected-class" id="btn-select-tank" style="min-width: 140px; flex: 1; scroll-snap-align: start;">
                     <div style="font-size: 2.2rem;">🏎️</div>
                     <div class="class-select-title" style="font-weight: 900; font-size: 1.05rem; color: #ffd32a; margin-top: 6px;">BATTLE TANK</div>

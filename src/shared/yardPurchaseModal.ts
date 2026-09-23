@@ -55,6 +55,11 @@ export class YardPurchaseModal {
                 justify-content: center;
                 animation: fadeIn 0.2s ease;
                 font-family: system-ui, -apple-system, sans-serif;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-y;
+                padding: 20px 10px;
+                box-sizing: border-box;
             `;
 
             overlay.innerHTML = `
@@ -62,9 +67,15 @@ export class YardPurchaseModal {
                     background: linear-gradient(155deg, #162032, #0b111b);
                     border: 2px solid #ffd32a;
                     border-radius: 24px;
-                    padding: 30px 34px;
+                    padding: 26px 24px;
                     max-width: 440px;
                     width: 90%;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    touch-action: pan-y;
+                    margin: auto;
+                    box-sizing: border-box;
                     box-shadow: 0 0 50px rgba(255, 211, 42, 0.35);
                     text-align: center;
                     color: #fff;

@@ -149,8 +149,10 @@ export class InGameEmotesWidget {
                     min-width: 235px;
                     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 46, 99, 0.2);
                     animation: playardSlideDown 0.2s ease-out;
-                    max-height: 390px;
+                    max-height: min(390px, 80vh);
                     overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    touch-action: pan-y;
                 }
                 @keyframes playardSlideDown {
                     from { opacity: 0; transform: translateY(-8px); }

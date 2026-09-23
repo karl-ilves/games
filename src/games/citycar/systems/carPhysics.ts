@@ -218,18 +218,22 @@ export class CarPhysicsController {
             nextZ
         );
 
+        let clampedX = nextX;
+        let clampedZ = nextZ;
+
+        let rampSideHit = false;
         if (rampInteraction.isSideHit) {
-            // Hit the solid side wall of the ramp -> Stop the car dead!
-            this.forwardSpeedMps = 0;
-            this.onBuildingHit?.();
-            collided = true;
+            // Hit the solid side barrier of the ramp -> Stop / bounce car slightly!
+            // IMPORTANT: User requested: "kui rambi pihta sõidan siis politseid ei tule"
+            // Do NOT call this.onBuildingHit?.() to prevent summoning police or gaining wanted stars!
+            rampSideHit = true;
+            this.forwardSpeedMps = -this.forwardSpeedMps * 0.25;
+            clampedX = this.state.position.x;
+            clampedZ = this.state.position.z;
         }
 
         // Strict map boundary clamping (User: "mapist välja sõita ei saa")
         let hitBoundary = false;
-        let clampedX = nextX;
-        let clampedZ = nextZ;
-
         if (clampedX < MAP_BOUNDS.minX) {
             clampedX = MAP_BOUNDS.minX;
             hitBoundary = true;
@@ -251,8 +255,12 @@ export class CarPhysicsController {
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.3;
             this.state.position.x = clampedX;
             this.state.position.z = clampedZ;
+        } else if (rampSideHit) {
+            // Hit ramp side wall: stopped/bounced without alerting police!
+            this.state.position.x = clampedX;
+            this.state.position.z = clampedZ;
         } else if (collided) {
-            // Rebound bounce / stop against obstacle
+            // Rebound bounce / stop against building or fence obstacle
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
             this.onBuildingHit?.();
         } else {
@@ -296,8 +304,8 @@ export class CarPhysicsController {
                 this.verticalVelocity = 0;
             }
             // User: "aga kui ma lähen õigest kohast siis lendan" -> Launch with huge upward momentum at ramp peak!
-            if (rampInteraction.isLaunching && Math.abs(this.forwardSpeedMps) > 3.5) {
-                const launchKick = Math.abs(this.forwardSpeedMps) * 0.45 + 5.5;
+            if (rampInteraction.isLaunching && Math.abs(this.forwardSpeedMps) > 2.5) {
+                const launchKick = Math.abs(this.forwardSpeedMps) * 0.55 + 7.5;
                 this.verticalVelocity = Math.max(this.verticalVelocity, launchKick);
             }
             this.state.position.y = groundY;

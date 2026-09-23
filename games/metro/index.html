@@ -257,18 +257,28 @@
             justify-content: center;
             align-items: center;
             z-index: 2000;
-            padding: 20px;
+            padding: 20px 12px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            box-sizing: border-box;
         }
 
         .modal-box {
             background: #141a22;
             border: 1.5px solid rgba(0, 242, 254, 0.4);
             border-radius: 18px;
-            padding: 28px;
+            padding: 26px 20px;
             max-width: 500px;
             width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
             box-shadow: 0 20px 60px rgba(0,0,0,0.9);
             text-align: center;
+            box-sizing: border-box;
+            margin: auto;
         }
 
         .modal-title {
@@ -701,7 +711,7 @@
                 <span style="color: #d2dae2; font-weight: 700;">Sinu Müntide Saldo:</span>
                 <span style="color: #ffd32a; font-size: 1.3rem; font-weight: 900;" id="shop-coin-balance">🪙 0 COINI</span>
             </div>
-            <div id="shop-items-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; max-height: 280px; overflow-y: auto; padding-right: 4px;">
+            <div id="shop-items-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; max-height: 280px; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding-right: 4px;">
                 <!-- Shop items injected dynamically -->
             </div>
             <div style="display: flex; justify-content: center; gap: 10px;">
@@ -779,7 +789,7 @@
                 <button class="btn-modal-close" id="btn-clues-folder-close" style="padding: 6px 16px; font-size: 0.85rem; background: #2f3640; color: #f5f6fa;">✕ Sulge</button>
             </div>
 
-            <div id="clues-folder-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; max-height: 380px; overflow-y: auto; padding: 8px; margin-bottom: 15px;">
+            <div id="clues-folder-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; max-height: 380px; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding: 8px; margin-bottom: 15px;">
                 <!-- Dynamically injected clue cards -->
             </div>
 

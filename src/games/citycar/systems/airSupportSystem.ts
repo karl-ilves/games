@@ -19,7 +19,17 @@ export class AirSupportSystem {
     private scene: THREE.Scene;
     private world: WorldEnvironment;
     private helicopters: { mesh: HelicopterMeshContainer; offset: THREE.Vector3 }[] = [];
-    private plane: { mesh: BomberPlaneMeshContainer; speed: number; direction: number } | null = null;
+    private plane: {
+        mesh: BomberPlaneMeshContainer;
+        speed: number;
+        yaw: number;
+        pitch: number;
+        roll: number;
+        isTurning: boolean;
+        turnProgress: number;
+        turnStartHeading: number;
+        targetHeading: number;
+    } | null = null;
     private bombs: ActiveBomb[] = [];
     private bombTimer = 0; // Drops bomb every 10 seconds
     private active = false;
@@ -38,6 +48,18 @@ export class AirSupportSystem {
 
     public hasPlane(): boolean {
         return !!this.plane;
+    }
+
+    public getPlaneState(): { isTurning: boolean; roll: number; yaw: number; pitch: number; x: number; z: number } | null {
+        if (!this.plane) return null;
+        return {
+            isTurning: this.plane.isTurning,
+            roll: this.plane.roll,
+            yaw: this.plane.yaw,
+            pitch: this.plane.pitch,
+            x: this.plane.mesh.group.position.x,
+            z: this.plane.mesh.group.position.z
+        };
     }
 
     public setWantedLevel(level: WantedLevel, playerPos: THREE.Vector3): void {
@@ -70,14 +92,21 @@ export class AirSupportSystem {
         if (this.plane) return;
 
         const planeMesh = createBomberPlaneMesh('bomber_strike');
+        planeMesh.group.rotation.order = 'YXZ';
         planeMesh.group.position.set(playerPos.x - 180, 46, playerPos.z);
-        planeMesh.group.rotation.y = Math.PI / 2; // flying East
+        planeMesh.group.rotation.set(0, Math.PI / 2, 0); // flying East
         this.scene.add(planeMesh.group);
 
         this.plane = {
             mesh: planeMesh,
             speed: 38, // fast aerial sweep
-            direction: 1 // 1 = East, -1 = West
+            yaw: Math.PI / 2,
+            pitch: 0,
+            roll: 0,
+            isTurning: false,
+            turnProgress: 0,
+            turnStartHeading: Math.PI / 2,
+            targetHeading: Math.PI / 2
         };
         this.bombTimer = 3.0; // First bomb drops shortly after spawn
     }
@@ -127,19 +156,71 @@ export class AirSupportSystem {
         if (this.plane) {
             this.plane.mesh.update(delta);
 
-            // Fly back and forth across sky
-            this.plane.mesh.group.position.x += this.plane.direction * this.plane.speed * delta;
-            // Match player's Z coordinate slowly
-            this.plane.mesh.group.position.z = THREE.MathUtils.damp(this.plane.mesh.group.position.z, playerPos.z, 0.8, delta);
+            const p = this.plane;
 
-            // Turn around when reaching outer perimeter
-            if (this.plane.mesh.group.position.x > 340 && this.plane.direction > 0) {
-                this.plane.direction = -1;
-                this.plane.mesh.group.rotation.y = -Math.PI / 2;
-            } else if (this.plane.mesh.group.position.x < -340 && this.plane.direction < 0) {
-                this.plane.direction = 1;
-                this.plane.mesh.group.rotation.y = Math.PI / 2;
+            // Trigger turn around when reaching outer perimeter
+            if (!p.isTurning) {
+                // Moving East and reached eastern boundary
+                if (p.mesh.group.position.x > 320 && Math.sin(p.yaw) > 0.4) {
+                    p.isTurning = true;
+                    p.turnProgress = 0;
+                    p.turnStartHeading = Math.PI / 2;
+                    p.targetHeading = -Math.PI / 2; // Right turn from East towards West
+                }
+                // Moving West and reached western boundary
+                else if (p.mesh.group.position.x < -320 && Math.sin(p.yaw) < -0.4) {
+                    p.isTurning = true;
+                    p.turnProgress = 0;
+                    p.turnStartHeading = -Math.PI / 2;
+                    p.targetHeading = -3 * Math.PI / 2; // Right turn from West towards East
+                }
             }
+
+            if (p.isTurning) {
+                // User: "kui lennuk põõrab tee ilus animatsioon kuidas parem tiib alla läheb ja põõrab"
+                // Turn duration ~3.2 seconds
+                p.turnProgress += delta / 3.2;
+                const t = Math.min(p.turnProgress, 1.0);
+
+                // Smooth bell envelope for wing dip: peaks at midpoint, 0 at edges
+                const bankEnvelope = Math.sin(t * Math.PI);
+                // Right wing dips down (negative roll in YXZ sequence)
+                const targetRoll = -0.58 * bankEnvelope;
+                p.roll = THREE.MathUtils.damp(p.roll, targetRoll, 6.0, delta);
+
+                // Slight pitch up into the turn (standard aviation aerodynamics)
+                p.pitch = 0.08 * bankEnvelope;
+
+                // Smooth cubic s-curve for yaw heading interpolation
+                const smoothT = t * t * (3 - 2 * t);
+                p.yaw = p.turnStartHeading + (p.targetHeading - p.turnStartHeading) * smoothT;
+
+                if (p.turnProgress >= 1.0) {
+                    p.isTurning = false;
+                    p.turnProgress = 0;
+                    const normHeading = ((p.targetHeading % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                    p.yaw = Math.abs(normHeading - Math.PI / 2) < 0.2 ? Math.PI / 2 : -Math.PI / 2;
+                    p.roll = 0;
+                    p.pitch = 0;
+                }
+            } else {
+                // Straight flight: level out wings and pitch
+                p.roll = THREE.MathUtils.damp(p.roll, 0.0, 3.5, delta);
+                p.pitch = THREE.MathUtils.damp(p.pitch, 0.0, 3.5, delta);
+
+                // Slowly match player's Z coordinate
+                const zDiff = playerPos.z - p.mesh.group.position.z;
+                p.mesh.group.position.z += THREE.MathUtils.clamp(zDiff, -15, 15) * 0.4 * delta;
+            }
+
+            // Move forward along current heading
+            const vx = Math.sin(p.yaw) * p.speed;
+            const vz = Math.cos(p.yaw) * p.speed;
+            p.mesh.group.position.x += vx * delta;
+            p.mesh.group.position.z += vz * delta;
+
+            // Apply rotation with aeronautical YXZ Euler order
+            p.mesh.group.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
 
             // User requirement: "kukkutab pommi ja 10 hiljem tuleb järgmine pomm"
             // Drop a bomb every 10 seconds

@@ -357,12 +357,28 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         { x: 210, z: -130.5, dirAngle: -Math.PI / 2, length: 14, width: 6.5, peakHeight: 3.2 }
     ];
 
-    const rampMat = new THREE.MeshStandardMaterial({ color: 0xff9f43, roughness: 0.5, metalness: 0.2 });
-    const sideWallMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.7, metalness: 0.3 });
-    const hazardYellowMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f });
-    const hazardBlackMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-    const rampStripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const rampWarningMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
+    const rampMat = new THREE.MeshStandardMaterial({
+        color: 0xff9f43,
+        roughness: 0.5,
+        metalness: 0.2,
+        side: THREE.DoubleSide,
+        transparent: false,
+        opacity: 1.0,
+        depthWrite: true
+    });
+    const sideWallMat = new THREE.MeshStandardMaterial({
+        color: 0x2d3436,
+        roughness: 0.7,
+        metalness: 0.3,
+        side: THREE.DoubleSide,
+        transparent: false,
+        opacity: 1.0,
+        depthWrite: true
+    });
+    const hazardYellowMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, side: THREE.DoubleSide });
+    const hazardBlackMat = new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide });
+    const rampStripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const rampWarningMat = new THREE.MeshBasicMaterial({ color: 0xff4757, side: THREE.DoubleSide });
 
     const rampObjects: RampObject[] = [];
 
@@ -374,21 +390,21 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         const hw = def.width / 2;
         const h = def.peakHeight;
 
-        // Custom BufferGeometry for ramp wedge (drive slope + solid side walls)
+        // Custom BufferGeometry for ramp wedge with strictly CCW outward normals
         const vertices = new Float32Array([
-            // Slope (drive surface)
-            -hw, 0, -hl,   hw, 0, -hl,   hw, h,  hl,
-            -hw, 0, -hl,   hw, h,  hl,  -hw, h,  hl,
-            // Left side wall
-            -hw, 0, -hl,  -hw, h,  hl,  -hw, 0,  hl,
-            // Right side wall
-            hw, 0, -hl,   hw, 0,  hl,   hw, h,  hl,
-            // Back cliff drop
-            -hw, 0,  hl,  -hw, h,  hl,   hw, h,  hl,
-            -hw, 0,  hl,   hw, h,  hl,   hw, 0,  hl,
-            // Bottom
-            -hw, 0, -hl,  -hw, 0,  hl,   hw, 0,  hl,
-            -hw, 0, -hl,   hw, 0,  hl,   hw, 0, -hl
+            // Slope drive surface (facing UP and oncoming traffic)
+            hw, 0, -hl,  -hw, 0, -hl,  -hw, h,  hl,
+            hw, 0, -hl,  -hw, h,  hl,   hw, h,  hl,
+            // Left side wall (facing -X)
+            -hw, 0, -hl,  -hw, 0,  hl,  -hw, h,  hl,
+            // Right side wall (facing +X)
+            hw, 0, -hl,   hw, h,  hl,   hw, 0,  hl,
+            // Back cliff drop (facing +Z)
+            -hw, 0,  hl,   hw, h,  hl,  -hw, h,  hl,
+            -hw, 0,  hl,   hw, 0,  hl,   hw, h,  hl,
+            // Bottom face (facing -Y)
+            -hw, 0, -hl,   hw, 0, -hl,   hw, 0,  hl,
+            -hw, 0, -hl,   hw, 0,  hl,  -hw, 0,  hl
         ]);
         const wedgeGeo = new THREE.BufferGeometry();
         wedgeGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
@@ -422,13 +438,13 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
             rampGroup.add(stripe);
         }
 
-        // Glowing uphill arrow on slope
+        // Crisp uphill arrow on slope (100% solid, fully opaque)
         const arrowGeo = new THREE.PlaneGeometry(2.0, 4.0);
-        const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+        const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: false, opacity: 1.0 });
         const arrow = new THREE.Mesh(arrowGeo, arrowMat);
         const slopeAngle = Math.atan2(h, def.length);
         arrow.rotation.x = -(Math.PI / 2 - slopeAngle);
-        arrow.position.set(0, h * 0.35, -hl * 0.1);
+        arrow.position.set(0, h * 0.35 + 0.04, -hl * 0.1);
         rampGroup.add(arrow);
 
         // Support pillars under peak
@@ -463,27 +479,54 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         nextX: number,
         nextZ: number
     ): { isSideHit: boolean; rampHeight: number; isLaunching: boolean } => {
-        const testPos = new THREE.Vector3();
+        const prevVec = new THREE.Vector3(carX, carY, carZ);
+        const nextVec = new THREE.Vector3(nextX, carY, nextZ);
+
         for (const ramp of rampObjects) {
-            testPos.set(nextX, carY, nextZ);
-            const pLocal = ramp.group.worldToLocal(testPos);
+            const pPrev = ramp.group.worldToLocal(prevVec.clone());
+            const pNext = ramp.group.worldToLocal(nextVec.clone());
             const hl = ramp.length / 2;
             const hw = ramp.width / 2;
+            const h = ramp.peakHeight;
 
-            // Check if car intersects ramp boundary box
-            if (Math.abs(pLocal.x) <= hw + 0.4 && pLocal.z >= -hl - 0.3 && pLocal.z <= hl + 0.4) {
-                const t = THREE.MathUtils.clamp((pLocal.z + hl) / ramp.length, 0, 1);
-                const slopeHeight = t * ramp.peakHeight;
+            const inRampX = Math.abs(pNext.x) <= hw;
+            const inRampZ = pNext.z >= -hl && pNext.z <= hl;
 
-                // Entering from low ground base or already driving along slope
-                const isBaseEntrance = pLocal.z <= -hl + 1.6;
-                const isOnSlope = carY >= slopeHeight - 0.35;
+            if (inRampX && inRampZ) {
+                const t = (pNext.z + hl) / ramp.length;
+                const slopeHeight = t * h;
 
-                if (isBaseEntrance || isOnSlope) {
-                    const isLaunching = pLocal.z >= hl - 0.5;
+                // Approaching from low ground base or already driving along slope
+                const enteredFromBase = pPrev.z <= -hl + 1.2;
+                const wasOnSlope = Math.abs(pPrev.x) <= hw && pPrev.z >= -hl - 0.2;
+
+                if (enteredFromBase || wasOnSlope) {
+                    const isLaunching = pNext.z >= hl - 0.6;
                     return { isSideHit: false, rampHeight: slopeHeight, isLaunching };
-                } else {
-                    // Car hit the solid side wall of the ramp or rear cliff
+                }
+
+                // If coming laterally across the elevated side walls
+                const cameFromSide = Math.abs(pPrev.x) > hw - 0.15;
+                if (cameFromSide && pNext.z > -hl + 0.6 && carY < slopeHeight - 0.2) {
+                    return { isSideHit: true, rampHeight: 0, isLaunching: false };
+                }
+
+                // If coming from behind the peak cliff
+                const cameFromBack = pPrev.z > hl + 0.1;
+                if (cameFromBack && carY < h - 0.2) {
+                    return { isSideHit: true, rampHeight: 0, isLaunching: false };
+                }
+
+                const isLaunching = pNext.z >= hl - 0.6;
+                return { isSideHit: false, rampHeight: slopeHeight, isLaunching };
+            }
+
+            // Check lateral impact on side barrier from outside
+            if (Math.abs(pNext.x) <= hw + 0.35 && pNext.z >= -hl + 0.8 && pNext.z <= hl + 0.35) {
+                const cameFromSide = Math.abs(pPrev.x) > hw - 0.1;
+                const t = THREE.MathUtils.clamp((pNext.z + hl) / ramp.length, 0, 1);
+                const slopeHeight = t * h;
+                if (cameFromSide && carY < slopeHeight - 0.2) {
                     return { isSideHit: true, rampHeight: 0, isLaunching: false };
                 }
             }

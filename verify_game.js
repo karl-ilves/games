@@ -7836,6 +7836,11 @@ await (async () => {
                 const hasJumpRamps = rampHeight > 0.5; // center of roadside ramp should be elevated
                 const rampSideBlocked = world.checkRampInteraction(-110, 0.1, 8.0, -110, 9.5).isSideHit;
                 const rampBaseEnterable = !world.checkRampInteraction(-120, 0.1, 12.0, -116, 12.0).isSideHit;
+                const rampSlopeClimbable = !world.checkRampInteraction(-116, 0.4, 12.0, -112, 12.0).isSideHit;
+                const rampPeakLaunching = world.checkRampInteraction(-106, 2.8, 12.0, -103, 12.0).isLaunching;
+                const firstRampGroup = world.ramps?.[0]?.group;
+                const rampMesh = firstRampGroup?.children?.find(c => c.geometry?.getAttribute('position'));
+                const rampOpaqueAndSolid = !!(rampMesh && rampMesh.material?.side === 2 && rampMesh.material?.transparent === false && rampMesh.material?.opacity === 1.0);
 
                 // Test Destructible Trees (breaks into 2 pieces, resets after 10s, counts under lamp hits)
                 const tree = world.trees?.[0];
@@ -7896,6 +7901,15 @@ await (async () => {
                 const starsAfterOffroad = wanted.getWantedLevel();
                 const offroadImmunity = starsBeforeOffroad === starsAfterOffroad;
 
+                // Test Ramp Side Hit does NOT summon police (User: "ja kui rambi pihta sõidan siis politseid ei tule")
+                const starsBeforeRamp = wanted.getWantedLevel();
+                physics.state.position.set(-110, 0.1, 8.5);
+                physics.forwardSpeedMps = 12.0;
+                physics.yaw = 0; // driving into side
+                physics.update(0.05, { throttle: 1, brake: 0, steer: 0, handbrake: false, horn: false, reset: false });
+                const starsAfterRamp = wanted.getWantedLevel();
+                const rampHitNoPolice = starsBeforeRamp === starsAfterRamp;
+
                 // Test Star 3: 10 more lamp crashes while at Star 2
                 const airSupport = dbg.airSupportSystem;
                 for (let i = 0; i < 10; i++) {
@@ -7905,6 +7919,16 @@ await (async () => {
                 const star3PoliceCount = police.getActiveCount();
                 const star3HeliCount = airSupport?.getHelicopterCount?.() || 0;
                 const star3HasPlane = airSupport?.hasPlane?.() || false;
+
+                // Test Airplane banking turn animation with right wing dipping down
+                // User: "ja kui lennuk põõrab tee ilus animatsioon kuidas parem tiib alla läheb ja põõrab"
+                if (airSupport?.plane) {
+                    airSupport.plane.mesh.group.position.x = 325;
+                    airSupport.plane.yaw = Math.PI / 2;
+                }
+                airSupport?.update?.(0.8, physics.state.position);
+                const planeStateDuringTurn = airSupport?.getPlaneState?.();
+                const planeTurnWithRightWingDip = !!(planeStateDuringTurn?.isTurning && planeStateDuringTurn?.roll < -0.1);
 
                 // Test Star 4: 20 more lamp crashes while at Star 3
                 const tankSys = dbg.tankSystem;
@@ -7999,6 +8023,11 @@ await (async () => {
                     modalHiddenAfterReset,
                     rampSideBlocked,
                     rampBaseEnterable,
+                    rampSlopeClimbable,
+                    rampPeakLaunching,
+                    rampOpaqueAndSolid,
+                    rampHitNoPolice,
+                    planeTurnWithRightWingDip,
                     tanksVisibleAndValid,
                     hasRemotePolice,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
@@ -8030,8 +8059,17 @@ await (async () => {
             if (!cityCarTest.lampRespawned) {
                 throw new Error("CityCar Streetlamp must respawn (stand back up) after 10 seconds!");
             }
-            if (!cityCarTest.hasJumpRamps || !cityCarTest.rampSideBlocked || !cityCarTest.rampBaseEnterable) {
-                throw new Error("CityCar Jump ramps must be parallel beside roads, block side collisions, and allow smooth launch from base!");
+            if (!cityCarTest.hasJumpRamps || !cityCarTest.rampSideBlocked || !cityCarTest.rampBaseEnterable || !cityCarTest.rampSlopeClimbable || !cityCarTest.rampPeakLaunching) {
+                throw new Error("CityCar Jump ramps must be parallel beside roads, block side collisions, and allow smooth ascent and launch from front entrance!");
+            }
+            if (!cityCarTest.rampOpaqueAndSolid) {
+                throw new Error("CityCar Jump ramps must be 100% solid, fully opaque (DoubleSide, transparent: false, opacity: 1.0)!");
+            }
+            if (!cityCarTest.rampHitNoPolice) {
+                throw new Error("CityCar hitting jump ramp must NOT call police or increase wanted stars!");
+            }
+            if (!cityCarTest.planeTurnWithRightWingDip) {
+                throw new Error("CityCar bomber plane must perform banking turn with right wing dipping down into the turn!");
             }
             if (!cityCarTest.treesAvailable || !cityCarTest.treeBroken) {
                 throw new Error("CityCar Trees must break into 2 pieces when hit by car!");
@@ -8074,6 +8112,125 @@ await (async () => {
             }
 
             console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid & Arrested Reset) testid edukalt läbitud!");
+
+            // -------------------------------------------------------------
+            // Mobile Touch Scrolling & Modal Overflow Verification
+            // -------------------------------------------------------------
+            console.log("Testing Mobile Touch Scrolling, Modals Overflow & Screen Fit on Mobile Viewports...");
+            await page.setViewport({ width: 844, height: 390, isMobile: true, hasTouch: true }); // Mobile landscape
+
+            // 1. Racing Simulator Mobile Check
+            await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+            const racingMobileTest = await page.evaluate(() => {
+                const garageScreen = document.getElementById('garage-screen');
+                const garagePanel = document.querySelector('.garage-panel');
+                const startBtn = document.getElementById('btn-start-race');
+                if (!garageScreen || !garagePanel || !startBtn) return { success: false, reason: 'Elements missing' };
+
+                const screenStyle = window.getComputedStyle(garageScreen);
+                const panelStyle = window.getComputedStyle(garagePanel);
+
+                const hasScreenScroll = screenStyle.overflowY === 'auto' || screenStyle.overflowY === 'scroll';
+                const hasPanelScroll = panelStyle.overflowY === 'auto' || panelStyle.overflowY === 'scroll';
+                const hasTouchAction = screenStyle.touchAction.includes('pan-y') || panelStyle.touchAction.includes('pan-y');
+
+                // Test scrollability: scroll down
+                garageScreen.scrollTop = 200;
+                garagePanel.scrollTop = 200;
+                const canScroll = garageScreen.scrollTop > 0 || garagePanel.scrollTop > 0 || hasPanelScroll;
+
+                return {
+                    success: true,
+                    hasScreenScroll,
+                    hasPanelScroll,
+                    hasTouchAction,
+                    canScroll
+                };
+            });
+
+            console.log("   Racing Mobile Scrolling Verification Results:", racingMobileTest);
+            if (!racingMobileTest.success || (!racingMobileTest.hasScreenScroll && !racingMobileTest.hasPanelScroll) || !racingMobileTest.hasTouchAction) {
+                throw new Error("Racing simulator must be scrollable with touch-action: pan-y on mobile landscape!");
+            }
+
+            // 2. Train Simulator Mobile Modal Check
+            await page.goto('http://localhost:4173/games/train/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+            const trainMobileTest = await page.evaluate(() => {
+                const modal = document.querySelector('.modal-overlay');
+                const card = document.querySelector('.modal-card');
+                const depotGrid = document.querySelector('.depot-grid');
+                if (!modal || !card) return { success: false, reason: 'Modal missing' };
+
+                const modalStyle = window.getComputedStyle(modal);
+                const cardStyle = window.getComputedStyle(card);
+                const gridStyle = depotGrid ? window.getComputedStyle(depotGrid) : null;
+
+                return {
+                    success: true,
+                    modalScroll: modalStyle.overflowY === 'auto' || modalStyle.overflowY === 'scroll',
+                    cardScroll: cardStyle.overflowY === 'auto' || cardStyle.overflowY === 'scroll',
+                    modalTouchAction: modalStyle.touchAction.includes('pan-y'),
+                    cardTouchAction: cardStyle.touchAction.includes('pan-y'),
+                    gridTouchAction: gridStyle ? gridStyle.touchAction.includes('pan-y') : true
+                };
+            });
+            console.log("   Train Mobile Scrolling Verification Results:", trainMobileTest);
+            if (!trainMobileTest.success || !trainMobileTest.modalTouchAction || !trainMobileTest.cardScroll) {
+                throw new Error("Train simulator modals must be scrollable with touch-action: pan-y on mobile!");
+            }
+
+            // 3. Metro Mobile Modal Check
+            await page.goto('http://localhost:4173/games/metro/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+            const metroMobileTest = await page.evaluate(() => {
+                const modalBox = document.querySelector('.modal-box');
+                const modalOverlay = document.querySelector('.modal-overlay');
+                if (!modalBox || !modalOverlay) return { success: false, reason: 'Metro modal missing' };
+
+                const boxStyle = window.getComputedStyle(modalBox);
+                const overlayStyle = window.getComputedStyle(modalOverlay);
+
+                return {
+                    success: true,
+                    boxScroll: boxStyle.overflowY === 'auto' || boxStyle.overflowY === 'scroll',
+                    boxTouchAction: boxStyle.touchAction.includes('pan-y'),
+                    overlayTouchAction: overlayStyle.touchAction.includes('pan-y')
+                };
+            });
+            console.log("   Metro Mobile Scrolling Verification Results:", metroMobileTest);
+            if (!metroMobileTest.success || !metroMobileTest.boxScroll || !metroMobileTest.boxTouchAction) {
+                throw new Error("Metro mystery modals must be scrollable with touch-action: pan-y on mobile!");
+            }
+
+            // 4. War Simulator Mobile Check
+            await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+            const warMobileTest = await page.evaluate(() => {
+                const deployCard = document.querySelector('.deploy-card');
+                const rolesScroll = document.querySelector('.roles-scroll-container');
+                if (!deployCard || !rolesScroll) return { success: false, reason: 'War deploy elements missing' };
+
+                const deployStyle = window.getComputedStyle(deployCard);
+                const rolesStyle = window.getComputedStyle(rolesScroll);
+
+                return {
+                    success: true,
+                    deployScroll: deployStyle.overflowY === 'auto' || deployStyle.overflowY === 'scroll',
+                    deployTouchAction: deployStyle.touchAction.includes('pan-y'),
+                    rolesTouchAction: rolesStyle.touchAction.includes('pan-x')
+                };
+            });
+            console.log("   War Mobile Scrolling Verification Results:", warMobileTest);
+            if (!warMobileTest.success || !warMobileTest.deployScroll || !warMobileTest.rolesTouchAction) {
+                throw new Error("War simulator loadout deploy modal must have touch-action pan-y and pan-x on mobile!");
+            }
+
+            // Restore normal viewport
+            await page.setViewport({ width: 1400, height: 900 });
+
+            console.log("✅ 📱 Mobile Touch Scrolling & Modal Overflow Verification Passed!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
