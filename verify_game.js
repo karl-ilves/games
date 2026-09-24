@@ -2682,22 +2682,118 @@ await (async () => {
                 throw new Error("pullSelectedObject failed to make block bigger!");
             }
 
+            // 4b. Test Edge-Specific Pulling (X = Laius, Y = Kõrgus, Z = Pikkus)
+            console.log("   Testing edge-specific pulling on X, Y, Z axes...");
+            await page.waitForSelector('#btn-pull-axis-all', { visible: true, timeout: 3000 });
+            await page.waitForSelector('#btn-pull-axis-x', { visible: true, timeout: 3000 });
+            await page.waitForSelector('#btn-pull-axis-y', { visible: true, timeout: 3000 });
+            await page.waitForSelector('#btn-pull-axis-z', { visible: true, timeout: 3000 });
+
+            // Test pulling X edge (Laius)
+            await page.click('#btn-pull-axis-x');
+            await new Promise(r => setTimeout(r, 50));
+            const scalesBeforeX = await page.evaluate(() => {
+                const s = window.creatorStudio?.selectedObject?.mesh?.scale;
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
+            });
+            await page.click('#btn-pull-bigger');
+            await new Promise(r => setTimeout(r, 50));
+            const scalesAfterX = await page.evaluate(() => {
+                const s = window.creatorStudio?.selectedObject?.mesh?.scale;
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1, axis: window.creatorStudio?.pullActiveAxis };
+            });
+            console.log("   Scales after pulling X (Laius):", scalesAfterX);
+            if (scalesAfterX.x <= scalesBeforeX.x) {
+                throw new Error("Pulling X edge failed to increase scale.x!");
+            }
+            if (Math.abs(scalesAfterX.y - scalesBeforeX.y) > 0.001 || Math.abs(scalesAfterX.z - scalesBeforeX.z) > 0.001) {
+                throw new Error("Pulling X edge affected Y or Z scale!");
+            }
+
+            // Test pulling Y edge (Kõrgus)
+            await page.click('#btn-pull-axis-y');
+            await new Promise(r => setTimeout(r, 50));
+            const scalesBeforeY = await page.evaluate(() => {
+                const s = window.creatorStudio?.selectedObject?.mesh?.scale;
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
+            });
+            await page.click('#btn-pull-bigger');
+            await new Promise(r => setTimeout(r, 50));
+            const scalesAfterY = await page.evaluate(() => {
+                const s = window.creatorStudio?.selectedObject?.mesh?.scale;
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1, axis: window.creatorStudio?.pullActiveAxis };
+            });
+            console.log("   Scales after pulling Y (Kõrgus):", scalesAfterY);
+            if (scalesAfterY.y <= scalesBeforeY.y) {
+                throw new Error("Pulling Y edge failed to increase scale.y!");
+            }
+            if (Math.abs(scalesAfterY.x - scalesBeforeY.x) > 0.001 || Math.abs(scalesAfterY.z - scalesBeforeY.z) > 0.001) {
+                throw new Error("Pulling Y edge affected X or Z scale!");
+            }
+
+            // Test pulling Z edge (Pikkus)
+            await page.click('#btn-pull-axis-z');
+            await new Promise(r => setTimeout(r, 50));
+            const scalesBeforeZ = await page.evaluate(() => {
+                const s = window.creatorStudio?.selectedObject?.mesh?.scale;
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
+            });
+            await page.click('#btn-pull-bigger');
+            await new Promise(r => setTimeout(r, 50));
+            const scalesAfterZ = await page.evaluate(() => {
+                const s = window.creatorStudio?.selectedObject?.mesh?.scale;
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1, axis: window.creatorStudio?.pullActiveAxis };
+            });
+            console.log("   Scales after pulling Z (Pikkus):", scalesAfterZ);
+            if (scalesAfterZ.z <= scalesBeforeZ.z) {
+                throw new Error("Pulling Z edge failed to increase scale.z!");
+            }
+            if (Math.abs(scalesAfterZ.x - scalesBeforeZ.x) > 0.001 || Math.abs(scalesAfterZ.y - scalesBeforeZ.y) > 0.001) {
+                throw new Error("Pulling Z edge affected X or Y scale!");
+            }
+
+            // Verify Gizmo exists and is visible in Tõmbaja mode
+            const gizmoStatus = await page.evaluate(() => {
+                const g = window.creatorStudio?.pullGizmoGroup;
+                return {
+                    exists: !!g,
+                    visible: g?.visible === true,
+                    handleCount: g?.children?.filter(c => c?.userData?.isPullGizmoHandle)?.length || 0
+                };
+            });
+            console.log("   Puller 3D Gizmo Status:", gizmoStatus);
+            if (!gizmoStatus.exists || !gizmoStatus.visible || gizmoStatus.handleCount < 6) {
+                throw new Error(`3D Edge Pull Gizmo not properly initialized! ${JSON.stringify(gizmoStatus)}`);
+            }
+
             // 5. Test switching back to 'Hiir' (Mouse) mode
             await page.click('#btn-tool-mouse');
             await new Promise(r => setTimeout(r, 100));
-            const modeAfterMouseClick = await page.evaluate(() => window.creatorStudio?.studioToolMode);
-            if (modeAfterMouseClick !== 'mouse') {
-                throw new Error("Clicking '#btn-tool-mouse' failed to switch to 'mouse' mode!");
+            const modeAfterMouseClick = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return {
+                    mode: cs?.studioToolMode,
+                    gizmoVisible: cs?.pullGizmoGroup?.visible
+                };
+            });
+            if (modeAfterMouseClick.mode !== 'mouse' || modeAfterMouseClick.gizmoVisible) {
+                throw new Error("Clicking '#btn-tool-mouse' failed to switch to 'mouse' mode or hide gizmo!");
             }
 
             // 6. Test switching back to 'Tõmbaja' mode
             await page.click('#btn-tool-puller');
             await new Promise(r => setTimeout(r, 100));
-            const modeAfterPullerClick = await page.evaluate(() => window.creatorStudio?.studioToolMode);
-            if (modeAfterPullerClick !== 'puller') {
-                throw new Error("Clicking '#btn-tool-puller' failed to switch to 'puller' mode!");
+            const modeAfterPullerClick = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return {
+                    mode: cs?.studioToolMode,
+                    gizmoVisible: cs?.pullGizmoGroup?.visible
+                };
+            });
+            if (modeAfterPullerClick.mode !== 'puller' || !modeAfterPullerClick.gizmoVisible) {
+                throw new Error("Clicking '#btn-tool-puller' failed to switch to 'puller' mode or restore gizmo!");
             }
-            console.log("   ✅ Add Block & Tõmbaja mode tests passed!");
+            console.log("   ✅ Add Block & Tõmbaja edge pulling tests passed!");
         }
 
         // Test Custom Item 3D Workbench (Create Item, Push-Pull Height/Elevation, Save, Publish, Place)

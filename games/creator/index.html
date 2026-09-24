@@ -417,10 +417,17 @@
             </button>
         </div>
         <div id="puller-controls-subpanel" style="display: none; align-items: center; gap: 6px; padding-left: 6px; border-left: 1px solid rgba(255,255,255,0.15);">
-            <button id="btn-pull-bigger" class="btn-studio" title="Tõmba plokk suuremaks (+)" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 800; background: rgba(0,242,254,0.25); border-color: #00f2fe; color: #00f2fe;">
+            <span style="font-size: 0.8rem; font-weight: 800; color: #94a3b8; user-select: none;">Äär:</span>
+            <div style="display: flex; gap: 3px; background: rgba(0,0,0,0.3); padding: 2px; border-radius: 6px;">
+                <button id="btn-pull-axis-all" class="btn-pull-axis active" data-axis="all" title="Kõik ääred korraga" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 800; border-radius: 4px; border: none; background: #00f2fe; color: #000; cursor: pointer;">Kõik</button>
+                <button id="btn-pull-axis-x" class="btn-pull-axis" data-axis="x" title="Laiuse äär (X)" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 800; border-radius: 4px; border: none; background: transparent; color: #94a3b8; cursor: pointer;">Laius X</button>
+                <button id="btn-pull-axis-y" class="btn-pull-axis" data-axis="y" title="Kõrguse äär (Y)" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 800; border-radius: 4px; border: none; background: transparent; color: #94a3b8; cursor: pointer;">Kõrgus Y</button>
+                <button id="btn-pull-axis-z" class="btn-pull-axis" data-axis="z" title="Pikkuse äär (Z)" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 800; border-radius: 4px; border: none; background: transparent; color: #94a3b8; cursor: pointer;">Pikkus Z</button>
+            </div>
+            <button id="btn-pull-bigger" class="btn-studio" title="Tõmba valitud äär suuremaks (+)" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 800; background: rgba(0,242,254,0.25); border-color: #00f2fe; color: #00f2fe;">
                 + Suuremaks
             </button>
-            <button id="btn-pull-smaller" class="btn-studio" title="Tee väiksemaks (-)" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 800; background: rgba(255,255,255,0.08); border-color: #475569; color: #cbd5e1;">
+            <button id="btn-pull-smaller" class="btn-studio" title="Tee valitud äär väiksemaks (-)" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 800; background: rgba(255,255,255,0.08); border-color: #475569; color: #cbd5e1;">
                 - Väiksemaks
             </button>
         </div>
@@ -428,7 +435,8 @@
 
     <!-- Floating Pull Size Indicator -->
     <div id="puller-floating-indicator" style="display: none; position: absolute; pointer-events: none; z-index: 150; background: rgba(15, 23, 42, 0.95); border: 1.5px solid #00f2fe; border-radius: 8px; padding: 6px 12px; color: #00f2fe; font-weight: 800; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,242,254,0.4); transform: translate(-50%, -130%);">
-        Suurus: <span id="puller-val-size" style="color: #ffd32a;">3.0m x 2.0m x 3.0m</span>
+        <span id="puller-axis-label" style="color: #38bdf8; margin-right: 6px;">Äär: Kõik</span>
+        <span id="puller-val-size" style="color: #ffd32a;">3.0m x 2.0m x 3.0m</span>
     </div>
 
     <!-- Admin Feedback Banner (Appears when Admin requests changes) -->
@@ -748,8 +756,25 @@
                 <span id="obj-rot-val" style="font-size: 0.8rem; color: #ffd32a; font-weight: bold;">0°</span>
             </div>
             <div class="prop-row">
-                <label>Scale:</label>
-                <input type="number" id="obj-scale-input" value="1" step="0.2" min="0.2" max="10">
+                <label>Scale (Kõik):</label>
+                <input type="number" id="obj-scale-input" value="1" step="0.2" min="0.2" max="30">
+            </div>
+            <div class="prop-row" style="margin-top: -4px;">
+                <label>Äärte mõõtmed:</label>
+                <div style="display: flex; gap: 4px; width: 100%;">
+                    <div style="flex: 1; display: flex; align-items: center; gap: 2px;">
+                        <span style="font-size: 0.72rem; color: #ff4757; font-weight: 800;">X:</span>
+                        <input type="number" id="obj-scale-x-input" title="Laius (X)" value="1" step="0.2" min="0.2" max="30" style="width: 100%; padding: 4px 6px; font-size: 0.78rem;">
+                    </div>
+                    <div style="flex: 1; display: flex; align-items: center; gap: 2px;">
+                        <span style="font-size: 0.72rem; color: #2ecc71; font-weight: 800;">Y:</span>
+                        <input type="number" id="obj-scale-y-input" title="Kõrgus (Y)" value="1" step="0.2" min="0.2" max="30" style="width: 100%; padding: 4px 6px; font-size: 0.78rem;">
+                    </div>
+                    <div style="flex: 1; display: flex; align-items: center; gap: 2px;">
+                        <span style="font-size: 0.72rem; color: #00f2fe; font-weight: 800;">Z:</span>
+                        <input type="number" id="obj-scale-z-input" title="Pikkus (Z)" value="1" step="0.2" min="0.2" max="30" style="width: 100%; padding: 4px 6px; font-size: 0.78rem;">
+                    </div>
+                </div>
             </div>
             <div class="prop-row">
                 <label>Color Tint:</label>

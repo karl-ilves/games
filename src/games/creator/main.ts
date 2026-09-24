@@ -2375,6 +2375,7 @@ export function moveSelectedObject(dx: number, dy: number, dz: number) {
         z: selectedObject.mesh.position.z
     };
     updateInspectorDisplay();
+    if (studioToolMode === 'puller') updatePullGizmo();
     autoSaveDraft();
 }
 
@@ -2387,6 +2388,7 @@ export function rotateSelectedObject(rad = Math.PI / 4) {
         z: selectedObject.mesh.rotation.z
     };
     updateInspectorDisplay();
+    if (studioToolMode === 'puller') updatePullGizmo();
     autoSaveDraft();
 }
 
@@ -2408,6 +2410,23 @@ function updateInspectorDisplay() {
     if (rotVal) {
         const deg = Math.round((selectedObject.mesh.rotation.y * 180) / Math.PI) % 360;
         rotVal.innerText = `${(deg + 360) % 360}°`;
+    }
+    const scaleInput = document.getElementById('obj-scale-input') as HTMLInputElement | null;
+    const scaleXInput = document.getElementById('obj-scale-x-input') as HTMLInputElement | null;
+    const scaleYInput = document.getElementById('obj-scale-y-input') as HTMLInputElement | null;
+    const scaleZInput = document.getElementById('obj-scale-z-input') as HTMLInputElement | null;
+
+    if (scaleInput && document.activeElement !== scaleInput) {
+        scaleInput.value = selectedObject.mesh.scale.x.toFixed(2);
+    }
+    if (scaleXInput && document.activeElement !== scaleXInput) {
+        scaleXInput.value = selectedObject.mesh.scale.x.toFixed(2);
+    }
+    if (scaleYInput && document.activeElement !== scaleYInput) {
+        scaleYInput.value = selectedObject.mesh.scale.y.toFixed(2);
+    }
+    if (scaleZInput && document.activeElement !== scaleZInput) {
+        scaleZInput.value = selectedObject.mesh.scale.z.toFixed(2);
     }
 }
 
@@ -2468,12 +2487,16 @@ function selectObject(placed: PlacedObject | null) {
     const info = document.getElementById('selected-object-info');
     const props = document.getElementById('selected-object-props');
     const scaleInput = document.getElementById('obj-scale-input') as HTMLInputElement | null;
+    const scaleXInput = document.getElementById('obj-scale-x-input') as HTMLInputElement | null;
+    const scaleYInput = document.getElementById('obj-scale-y-input') as HTMLInputElement | null;
+    const scaleZInput = document.getElementById('obj-scale-z-input') as HTMLInputElement | null;
     const colorInput = document.getElementById('obj-color-input') as HTMLInputElement | null;
 
     if (!placed) {
         if (info) info.style.display = 'block';
         if (props) props.style.display = 'none';
         updateScriptInspectorDisplay(null);
+        if (pullGizmoGroup) pullGizmoGroup.visible = false;
         return;
     }
 
@@ -2486,6 +2509,15 @@ function selectObject(placed: PlacedObject | null) {
     if (scaleInput) {
         scaleInput.value = placed.mesh.scale.x.toString();
     }
+    if (scaleXInput) {
+        scaleXInput.value = placed.mesh.scale.x.toString();
+    }
+    if (scaleYInput) {
+        scaleYInput.value = placed.mesh.scale.y.toString();
+    }
+    if (scaleZInput) {
+        scaleZInput.value = placed.mesh.scale.z.toString();
+    }
     if (colorInput) {
         colorInput.value = placed.color;
     }
@@ -2493,6 +2525,12 @@ function selectObject(placed: PlacedObject | null) {
     const triggerInput = document.getElementById('obj-trigger-text') as HTMLInputElement | null;
     if (triggerInput) {
         triggerInput.value = placed.trigger?.message || '';
+    }
+
+    if (studioToolMode === 'puller') {
+        updatePullGizmo();
+    } else if (pullGizmoGroup) {
+        pullGizmoGroup.visible = false;
     }
 }
 
@@ -2704,6 +2742,11 @@ async function initStudio() {
         get studioToolMode() { return studioToolMode; },
         setStudioToolMode,
         getStudioToolMode,
+        get pullActiveAxis() { return pullActiveAxis; },
+        setPullActiveAxis,
+        getPullActiveAxis,
+        updatePullGizmo,
+        get pullGizmoGroup() { return pullGizmoGroup; },
         spawnBlockObject,
         pullSelectedObject,
         keys
@@ -2747,14 +2790,69 @@ function onWindowResize() {
 }
 
 export type StudioToolMode = 'mouse' | 'puller';
+export type PullEdgeAxis = 'all' | 'x' | 'y' | 'z';
+
 let studioToolMode: StudioToolMode = 'mouse';
+let pullActiveAxis: PullEdgeAxis = 'all';
+let pullActiveSign: number = 1;
 let isPullingObject = false;
 let pullStartPos = { x: 0, y: 0 };
-let pullStartScale = 1;
+let pullStartScaleVector = { x: 1, y: 1, z: 1 };
 let hideIndicatorTimeout: any = null;
+
+let pullGizmoGroup: THREE.Group | null = null;
+let pullGizmoBoxHelper: THREE.Box3Helper | null = null;
+let pullGizmoHandles: THREE.Mesh[] = [];
 
 export function getStudioToolMode(): StudioToolMode {
     return studioToolMode;
+}
+
+export function getPullActiveAxis(): PullEdgeAxis {
+    return pullActiveAxis;
+}
+
+export function setPullActiveAxis(axis: PullEdgeAxis) {
+    pullActiveAxis = axis;
+    const axes: PullEdgeAxis[] = ['all', 'x', 'y', 'z'];
+    axes.forEach(a => {
+        const btn = document.getElementById('btn-pull-axis-' + a);
+        if (btn) {
+            if (a === axis) {
+                btn.classList.add('active');
+                if (a === 'all') {
+                    btn.style.background = '#00f2fe';
+                    btn.style.color = '#000';
+                } else if (a === 'x') {
+                    btn.style.background = '#ff4757';
+                    btn.style.color = '#fff';
+                } else if (a === 'y') {
+                    btn.style.background = '#2ecc71';
+                    btn.style.color = '#000';
+                } else if (a === 'z') {
+                    btn.style.background = '#ffd32a';
+                    btn.style.color = '#000';
+                }
+            } else {
+                btn.classList.remove('active');
+                btn.style.background = 'transparent';
+                btn.style.color = '#94a3b8';
+            }
+        }
+    });
+
+    const axisLabel = document.getElementById('puller-axis-label');
+    if (axisLabel) {
+        const labelMap: Record<PullEdgeAxis, string> = {
+            all: 'Äär: Kõik',
+            x: 'Äär: Laius (X)',
+            y: 'Äär: Kõrgus (Y)',
+            z: 'Äär: Pikkus (Z)'
+        };
+        axisLabel.innerText = labelMap[axis] || 'Äär: Kõik';
+    }
+
+    updatePullGizmo();
 }
 
 export function setStudioToolMode(mode: StudioToolMode) {
@@ -2774,6 +2872,7 @@ export function setStudioToolMode(mode: StudioToolMode) {
             btnPuller.style.color = '#94a3b8';
             if (pullerSubpanel) pullerSubpanel.style.display = 'none';
             if (canvasDom) canvasDom.style.cursor = 'default';
+            if (pullGizmoGroup) pullGizmoGroup.visible = false;
         } else {
             btnPuller.classList.add('active');
             btnMouse.classList.remove('active');
@@ -2783,20 +2882,128 @@ export function setStudioToolMode(mode: StudioToolMode) {
             btnMouse.style.color = '#94a3b8';
             if (pullerSubpanel) pullerSubpanel.style.display = 'flex';
             if (canvasDom) canvasDom.style.cursor = 'nwse-resize';
+            updatePullGizmo();
         }
     }
 }
 
-export function showFloatingPullIndicator(clientX: number, clientY: number, scaleVal: number) {
+function initPullGizmo() {
+    if (pullGizmoGroup) return;
+    pullGizmoGroup = new THREE.Group();
+    pullGizmoGroup.name = 'pullGizmoGroup';
+    scene.add(pullGizmoGroup);
+
+    const handleGeo = new THREE.BoxGeometry(0.45, 0.45, 0.45);
+    const createHandle = (axis: 'x' | 'y' | 'z', sign: 1 | -1, color: number, name: string) => {
+        const mat = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.9,
+            depthTest: false
+        });
+        const mesh = new THREE.Mesh(handleGeo, mat);
+        mesh.userData = { isPullGizmoHandle: true, axis, sign, baseColor: color, handleName: name };
+        mesh.renderOrder = 1000;
+        pullGizmoGroup!.add(mesh);
+        pullGizmoHandles.push(mesh);
+        return mesh;
+    };
+
+    createHandle('x', 1, 0xff4757, 'Laius (X+)');
+    createHandle('x', -1, 0xff4757, 'Laius (X-)');
+    createHandle('y', 1, 0x2ecc71, 'Kõrgus (Y+)');
+    createHandle('y', -1, 0x2ecc71, 'Kõrgus (Y-)');
+    createHandle('z', 1, 0x00f2fe, 'Pikkus (Z+)');
+    createHandle('z', -1, 0x00f2fe, 'Pikkus (Z-)');
+}
+
+export function updatePullGizmo() {
+    if (!pullGizmoGroup) initPullGizmo();
+    if (!pullGizmoGroup) return;
+
+    if (studioToolMode !== 'puller' || !selectedObject || isPlayTestMode) {
+        pullGizmoGroup.visible = false;
+        return;
+    }
+
+    pullGizmoGroup.visible = true;
+
+    const box = new THREE.Box3().setFromObject(selectedObject.mesh);
+    if (box.isEmpty()) {
+        pullGizmoGroup.visible = false;
+        return;
+    }
+
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+
+    if (!pullGizmoBoxHelper) {
+        pullGizmoBoxHelper = new THREE.Box3Helper(box, new THREE.Color(0x00f2fe));
+        (pullGizmoBoxHelper.material as THREE.LineBasicMaterial).depthTest = false;
+        (pullGizmoBoxHelper.material as THREE.LineBasicMaterial).transparent = true;
+        (pullGizmoBoxHelper.material as THREE.LineBasicMaterial).opacity = 0.7;
+        pullGizmoBoxHelper.renderOrder = 998;
+        pullGizmoGroup.add(pullGizmoBoxHelper);
+    } else {
+        pullGizmoBoxHelper.box.copy(box);
+    }
+
+    const camDist = camera ? camera.position.distanceTo(center) : 15;
+    const handleScale = Math.max(0.3, Math.min(2.5, camDist * 0.028));
+
+    pullGizmoHandles.forEach(h => {
+        h.scale.set(handleScale, handleScale, handleScale);
+        const { axis, sign } = h.userData;
+        const pos = center.clone();
+        if (axis === 'x') pos.x += sign * (size.x / 2 + handleScale * 0.35);
+        if (axis === 'y') pos.y += sign * (size.y / 2 + handleScale * 0.35);
+        if (axis === 'z') pos.z += sign * (size.z / 2 + handleScale * 0.35);
+        h.position.copy(pos);
+
+        const isCurrentActive = pullActiveAxis === axis || pullActiveAxis === 'all';
+        const mat = h.material as THREE.MeshBasicMaterial;
+        mat.opacity = isCurrentActive ? 0.95 : 0.35;
+    });
+}
+
+export function showFloatingPullIndicator(
+    clientX: number,
+    clientY: number,
+    scaleVal: number | { x: number; y: number; z: number },
+    axis: PullEdgeAxis = pullActiveAxis
+) {
     const indicator = document.getElementById('puller-floating-indicator');
     const valSize = document.getElementById('puller-val-size');
+    const axisLabel = document.getElementById('puller-axis-label');
     if (indicator && valSize) {
-        const sx = (2 * scaleVal).toFixed(1);
-        const sy = (2 * scaleVal).toFixed(1);
-        const sz = (2 * scaleVal).toFixed(1);
-        valSize.innerText = `${sx}m x ${sy}m x ${sz}m (x${scaleVal.toFixed(2)})`;
+        let sx: number, sy: number, sz: number;
+        if (typeof scaleVal === 'number') {
+            sx = scaleVal;
+            sy = scaleVal;
+            sz = scaleVal;
+        } else {
+            sx = scaleVal.x || 1;
+            sy = scaleVal.y || 1;
+            sz = scaleVal.z || 1;
+        }
+        const w = (2 * sx).toFixed(1);
+        const h = (2 * sy).toFixed(1);
+        const d = (2 * sz).toFixed(1);
+
+        valSize.innerText = `${w}m x ${h}m x ${d}m (X:${sx.toFixed(1)}, Y:${sy.toFixed(1)}, Z:${sz.toFixed(1)})`;
+        if (axisLabel) {
+            const labelMap: Record<PullEdgeAxis, string> = {
+                all: 'Äär: Kõik',
+                x: 'Äär: Laius (X)',
+                y: 'Äär: Kõrgus (Y)',
+                z: 'Äär: Pikkus (Z)'
+            };
+            axisLabel.innerText = labelMap[axis] || 'Äär: Kõik';
+        }
         indicator.style.left = clientX + 'px';
-        indicator.style.top = (clientY - 20) + 'px';
+        indicator.style.top = (clientY - 25) + 'px';
         indicator.style.display = 'block';
     }
 }
@@ -2814,7 +3021,7 @@ export function hideFloatingPullIndicator(delayMs = 0) {
     }
 }
 
-export function pullSelectedObject(deltaScale: number) {
+export function pullSelectedObject(deltaScale: number, axis?: PullEdgeAxis) {
     if (!selectedObject) {
         if (placedObjects.length > 0) {
             selectObject(placedObjects[placedObjects.length - 1]);
@@ -2824,23 +3031,43 @@ export function pullSelectedObject(deltaScale: number) {
         }
     }
     if (!selectedObject) return;
-    const currentScale = selectedObject.mesh.scale.x || 1;
-    const newScale = Math.max(0.2, Math.min(30, Number((currentScale + deltaScale).toFixed(2))));
-    selectedObject.mesh.scale.set(newScale, newScale, newScale);
-    selectedObject.scale.x = newScale;
-    selectedObject.scale.y = newScale;
-    selectedObject.scale.z = newScale;
 
-    const scaleInput = document.getElementById('obj-scale-input') as HTMLInputElement | null;
-    if (scaleInput) {
-        scaleInput.value = newScale.toString();
+    const targetAxis = axis || pullActiveAxis;
+    if (targetAxis === 'all') {
+        const curX = selectedObject.mesh.scale.x || 1;
+        const curY = selectedObject.mesh.scale.y || 1;
+        const curZ = selectedObject.mesh.scale.z || 1;
+        const newX = Math.max(0.2, Math.min(30, Number((curX + deltaScale).toFixed(2))));
+        const newY = Math.max(0.2, Math.min(30, Number((curY + deltaScale).toFixed(2))));
+        const newZ = Math.max(0.2, Math.min(30, Number((curZ + deltaScale).toFixed(2))));
+        selectedObject.mesh.scale.set(newX, newY, newZ);
+        selectedObject.scale.x = newX;
+        selectedObject.scale.y = newY;
+        selectedObject.scale.z = newZ;
+    } else if (targetAxis === 'x') {
+        const curX = selectedObject.mesh.scale.x || 1;
+        const newX = Math.max(0.2, Math.min(30, Number((curX + deltaScale).toFixed(2))));
+        selectedObject.mesh.scale.x = newX;
+        selectedObject.scale.x = newX;
+    } else if (targetAxis === 'y') {
+        const curY = selectedObject.mesh.scale.y || 1;
+        const newY = Math.max(0.2, Math.min(30, Number((curY + deltaScale).toFixed(2))));
+        selectedObject.mesh.scale.y = newY;
+        selectedObject.scale.y = newY;
+    } else if (targetAxis === 'z') {
+        const curZ = selectedObject.mesh.scale.z || 1;
+        const newZ = Math.max(0.2, Math.min(30, Number((curZ + deltaScale).toFixed(2))));
+        selectedObject.mesh.scale.z = newZ;
+        selectedObject.scale.z = newZ;
     }
+
     updateInspectorDisplay();
+    updatePullGizmo();
 
     const rect = renderer?.domElement?.getBoundingClientRect();
     const cx = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
     const cy = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
-    showFloatingPullIndicator(cx, cy, newScale);
+    showFloatingPullIndicator(cx, cy, selectedObject.mesh.scale, targetAxis);
     hideFloatingPullIndicator(1500);
     autoSaveDraft();
 }
@@ -3734,17 +3961,73 @@ function setupStudioEvents() {
             });
 
             if (studioToolMode === 'puller') {
-                if (hitGroup) {
-                    selectObject(hitGroup);
+                // 1. First check if any gizmo handle was clicked
+                const gizmoHits = (pullGizmoGroup?.visible && pullGizmoHandles.length > 0)
+                    ? raycaster.intersectObjects(pullGizmoHandles, false)
+                    : [];
+                if (gizmoHits.length > 0 && selectedObject) {
+                    const handleMesh = gizmoHits[0].object as THREE.Mesh;
+                    const { axis, sign } = handleMesh.userData;
+                    pullActiveAxis = axis;
+                    pullActiveSign = sign || 1;
+                    setPullActiveAxis(pullActiveAxis);
                     isPullingObject = true;
                     pullStartPos = { x: e.clientX, y: e.clientY };
-                    pullStartScale = hitGroup.mesh.scale.x || 1;
-                    showFloatingPullIndicator(e.clientX, e.clientY, pullStartScale);
+                    pullStartScaleVector = {
+                        x: selectedObject.mesh.scale.x || 1,
+                        y: selectedObject.mesh.scale.y || 1,
+                        z: selectedObject.mesh.scale.z || 1
+                    };
+                    showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
+                    return;
+                }
+
+                // 2. Check if clicked directly on an object mesh and detect face normal
+                let hitPlaced: PlacedObject | null = null;
+                let hitNormal: THREE.Vector3 | null = null;
+                for (const p of placedObjects) {
+                    const hits = raycaster.intersectObject(p.mesh, true);
+                    if (hits.length > 0) {
+                        hitPlaced = p;
+                        if (hits[0].face) {
+                            hitNormal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
+                        }
+                        break;
+                    }
+                }
+
+                if (hitPlaced) {
+                    selectObject(hitPlaced);
+                    if (hitNormal) {
+                        if (Math.abs(hitNormal.y) > 0.6) {
+                            pullActiveAxis = 'y';
+                            pullActiveSign = Math.sign(hitNormal.y) || 1;
+                        } else if (Math.abs(hitNormal.x) > Math.abs(hitNormal.z)) {
+                            pullActiveAxis = 'x';
+                            pullActiveSign = Math.sign(hitNormal.x) || 1;
+                        } else {
+                            pullActiveAxis = 'z';
+                            pullActiveSign = Math.sign(hitNormal.z) || 1;
+                        }
+                        setPullActiveAxis(pullActiveAxis);
+                    }
+                    isPullingObject = true;
+                    pullStartPos = { x: e.clientX, y: e.clientY };
+                    pullStartScaleVector = {
+                        x: hitPlaced.mesh.scale.x || 1,
+                        y: hitPlaced.mesh.scale.y || 1,
+                        z: hitPlaced.mesh.scale.z || 1
+                    };
+                    showFloatingPullIndicator(e.clientX, e.clientY, hitPlaced.mesh.scale, pullActiveAxis);
                 } else if (selectedObject) {
                     isPullingObject = true;
                     pullStartPos = { x: e.clientX, y: e.clientY };
-                    pullStartScale = selectedObject.mesh.scale.x || 1;
-                    showFloatingPullIndicator(e.clientX, e.clientY, pullStartScale);
+                    pullStartScaleVector = {
+                        x: selectedObject.mesh.scale.x || 1,
+                        y: selectedObject.mesh.scale.y || 1,
+                        z: selectedObject.mesh.scale.z || 1
+                    };
+                    showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
                 }
             } else {
                 if (hitGroup) {
@@ -3780,22 +4063,40 @@ function setupStudioEvents() {
             orbitPhi = Math.max(0.1, Math.min(Math.PI / 2.1, orbitPhi - dy * 0.006));
             updateOrbitCamera();
         } else if (isPullingObject && selectedObject && !isPlayTestMode) {
-            const dx = e.clientX - pullStartPos.x;
-            const dy = pullStartPos.y - e.clientY;
-            const dragDelta = (dx + dy) * 0.015;
-            const newScale = Math.max(0.2, Math.min(30, Number((pullStartScale + dragDelta).toFixed(2))));
+            const dx = (e.clientX - pullStartPos.x) * 0.02;
+            const dy = (pullStartPos.y - e.clientY) * 0.02;
+            const diag = (dx + dy) * 0.8;
 
-            selectedObject.mesh.scale.set(newScale, newScale, newScale);
-            selectedObject.scale.x = newScale;
-            selectedObject.scale.y = newScale;
-            selectedObject.scale.z = newScale;
-
-            const scaleInput = document.getElementById('obj-scale-input') as HTMLInputElement | null;
-            if (scaleInput) {
-                scaleInput.value = newScale.toString();
+            if (pullActiveAxis === 'x') {
+                const delta = dx * (pullActiveSign || 1);
+                const newX = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.x + delta).toFixed(2))));
+                selectedObject.mesh.scale.x = newX;
+                selectedObject.scale.x = newX;
+            } else if (pullActiveAxis === 'y') {
+                const delta = dy * (pullActiveSign || 1);
+                const newY = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.y + delta).toFixed(2))));
+                selectedObject.mesh.scale.y = newY;
+                selectedObject.scale.y = newY;
+            } else if (pullActiveAxis === 'z') {
+                const delta = (dx - dy) * 0.8 * (pullActiveSign || 1);
+                const newZ = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.z + delta).toFixed(2))));
+                selectedObject.mesh.scale.z = newZ;
+                selectedObject.scale.z = newZ;
+            } else {
+                // 'all'
+                const delta = diag;
+                const newX = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.x + delta).toFixed(2))));
+                const newY = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.y + delta).toFixed(2))));
+                const newZ = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.z + delta).toFixed(2))));
+                selectedObject.mesh.scale.set(newX, newY, newZ);
+                selectedObject.scale.x = newX;
+                selectedObject.scale.y = newY;
+                selectedObject.scale.z = newZ;
             }
+
             updateInspectorDisplay();
-            showFloatingPullIndicator(e.clientX, e.clientY, newScale);
+            updatePullGizmo();
+            showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
         } else if (isDraggingObject && selectedObject && !isPlayTestMode) {
             const rect = dom.getBoundingClientRect();
             const mouse = new THREE.Vector2(
@@ -4102,6 +4403,20 @@ function setupStudioEvents() {
         setStudioToolMode('puller');
     });
 
+    // Edge Axis Selectors (Kõik, Laius X, Kõrgus Y, Pikkus Z)
+    document.getElementById('btn-pull-axis-all')?.addEventListener('click', () => {
+        setPullActiveAxis('all');
+    });
+    document.getElementById('btn-pull-axis-x')?.addEventListener('click', () => {
+        setPullActiveAxis('x');
+    });
+    document.getElementById('btn-pull-axis-y')?.addEventListener('click', () => {
+        setPullActiveAxis('y');
+    });
+    document.getElementById('btn-pull-axis-z')?.addEventListener('click', () => {
+        setPullActiveAxis('z');
+    });
+
     // Puller Quick Resize Buttons (+ Suuremaks / - Väiksemaks)
     document.getElementById('btn-pull-bigger')?.addEventListener('click', () => {
         pullSelectedObject(0.5);
@@ -4302,11 +4617,37 @@ function setupInspectorEvents() {
         scaleInput.addEventListener('input', () => {
             if (selectedObject) {
                 const s = parseFloat(scaleInput.value) || 1;
-                selectedObject.mesh.scale.setScalar(s);
+                selectedObject.mesh.scale.set(s, s, s);
+                selectedObject.scale.x = s;
+                selectedObject.scale.y = s;
+                selectedObject.scale.z = s;
+                updatePullGizmo();
+                updateInspectorDisplay();
                 autoSaveDraft();
             }
         });
     }
+
+    const scaleXInput = document.getElementById('obj-scale-x-input') as HTMLInputElement | null;
+    const scaleYInput = document.getElementById('obj-scale-y-input') as HTMLInputElement | null;
+    const scaleZInput = document.getElementById('obj-scale-z-input') as HTMLInputElement | null;
+
+    const bindAxisInput = (axis: 'x' | 'y' | 'z', inputEl: HTMLInputElement | null) => {
+        if (!inputEl) return;
+        inputEl.addEventListener('input', () => {
+            if (selectedObject) {
+                const s = parseFloat(inputEl.value) || 1;
+                selectedObject.mesh.scale[axis] = s;
+                selectedObject.scale[axis] = s;
+                updatePullGizmo();
+                autoSaveDraft();
+            }
+        });
+    };
+
+    bindAxisInput('x', scaleXInput);
+    bindAxisInput('y', scaleYInput);
+    bindAxisInput('z', scaleZInput);
 
     if (colorInput) {
         colorInput.addEventListener('input', () => {
