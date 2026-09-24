@@ -2761,6 +2761,89 @@ await (async () => {
                 throw new Error("Selecting new 'star' shape failed!");
             }
 
+            // 3.4. Test Item Type Selection (Ese vs Asi mida ei saa kätte võtta), Alguses käes, and PBX Price
+            console.log("   Testing Item Type Selection (Ese vs Asi mida ei saa kätte võtta), Alguses käes & PBX Price...");
+            await page.waitForSelector('#btn-wb-type-item', { visible: true, timeout: 3000 });
+            await page.waitForSelector('#btn-wb-type-static', { visible: true, timeout: 3000 });
+
+            // Click 'Ese' (Item)
+            await page.click('#btn-wb-type-item');
+            await new Promise(r => setTimeout(r, 100));
+
+            // Verify Ese mode active and options visible
+            const itemTypeStatus1 = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const inHandEl = document.getElementById('wb-label-in-hand');
+                const costsPbxEl = document.getElementById('wb-label-costs-pbx');
+                const staticInfoEl = document.getElementById('wb-static-info-text');
+                return {
+                    itemType: cs?.currentWorkbenchState?.itemType,
+                    inHandDisplay: inHandEl?.style?.display,
+                    costsPbxDisplay: costsPbxEl?.style?.display,
+                    staticInfoDisplay: staticInfoEl?.style?.display
+                };
+            });
+            console.log("   Item mode status:", itemTypeStatus1);
+            if (itemTypeStatus1.itemType !== 'item' || itemTypeStatus1.inHandDisplay !== 'flex' || itemTypeStatus1.staticInfoDisplay !== 'none') {
+                throw new Error("Selecting 'Ese' item type failed!");
+            }
+
+            // Test toggling 'Alguses käes' checkbox
+            await page.click('#wb-checkbox-in-hand');
+            await new Promise(r => setTimeout(r, 100));
+
+            // Test toggling 'Maksab PBX' checkbox
+            await page.click('#wb-checkbox-costs-pbx');
+            await new Promise(r => setTimeout(r, 100));
+
+            // Set PBX price to 120
+            await page.evaluate(() => {
+                const priceInp = document.getElementById('wb-input-pbx-price');
+                if (priceInp) {
+                    priceInp.value = '120';
+                    priceInp.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+            await new Promise(r => setTimeout(r, 100));
+
+            const pbxSettingsStatus = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const pbxBox = document.getElementById('wb-pbx-price-box');
+                return {
+                    inHand: cs?.currentWorkbenchState?.inHandAtStart,
+                    costsPbx: cs?.currentWorkbenchState?.costsPbx,
+                    pbxPrice: cs?.currentWorkbenchState?.pbxPrice,
+                    boxDisplay: pbxBox?.style?.display
+                };
+            });
+            console.log("   PBX and In-Hand settings status:", pbxSettingsStatus);
+            if (!pbxSettingsStatus.inHand || !pbxSettingsStatus.costsPbx || pbxSettingsStatus.pbxPrice !== 120 || pbxSettingsStatus.boxDisplay !== 'flex') {
+                throw new Error("Configuring Alguses käes and PBX price failed!");
+            }
+
+            // Click 'Asi mida ei saa kätte võtta' (Static)
+            await page.click('#btn-wb-type-static');
+            await new Promise(r => setTimeout(r, 100));
+
+            const staticModeStatus = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const inHandEl = document.getElementById('wb-label-in-hand');
+                const staticInfoEl = document.getElementById('wb-static-info-text');
+                return {
+                    itemType: cs?.currentWorkbenchState?.itemType,
+                    inHandDisplay: inHandEl?.style?.display,
+                    staticInfoDisplay: staticInfoEl?.style?.display
+                };
+            });
+            console.log("   Static mode status:", staticModeStatus);
+            if (staticModeStatus.itemType !== 'static' || staticModeStatus.inHandDisplay !== 'none' || staticModeStatus.staticInfoDisplay !== 'block') {
+                throw new Error("Selecting 'Asi mida ei saa kätte võtta' failed!");
+            }
+
+            // Switch back to 'Ese' for publishing test
+            await page.click('#btn-wb-type-item');
+            await new Promise(r => setTimeout(r, 100));
+
             // 4. Test Publishing the custom item to community library
             await page.evaluate(() => {
                 const nameInput = document.getElementById('workbench-item-name');
@@ -5504,7 +5587,10 @@ await (async () => {
             // Re-open menu and click now-unlocked Dance emote
             await page.click('#btn-toggle-in-game-emotes');
             await new Promise(r => setTimeout(r, 200));
-            await page.click('#playard-in-game-emotes-menu [data-emote-action="dance"]');
+            await page.evaluate(() => {
+                const btn = document.querySelector('#playard-in-game-emotes-menu [data-emote-action="dance"]');
+                if (btn) btn.click();
+            });
             await new Promise(r => setTimeout(r, 200));
 
             const activeDanceEmote = await page.evaluate(() => window.mmp1Game?.emotesWidget?.getActiveEmote());

@@ -107,7 +107,15 @@ export interface PlayerCreatedItem {
         isHeal?: boolean;
         isBoost?: boolean;
         parts?: CustomShapePart[];
+        isHoldable?: boolean;
+        inHandAtStart?: boolean;
+        costsPbx?: boolean;
+        pbxPrice?: number;
     };
+    isHoldable?: boolean;
+    inHandAtStart?: boolean;
+    costsPbx?: boolean;
+    pbxPrice?: number;
     isPublished?: boolean;
     createdAt: number;
 }

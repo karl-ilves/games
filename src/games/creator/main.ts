@@ -93,6 +93,11 @@ interface PlacedObject {
         origin: { x: number; y: number; z: number };
         rotationSpeed?: number;
     };
+    isHoldable?: boolean;
+    inHandAtStart?: boolean;
+    costsPbx?: boolean;
+    pbxPrice?: number;
+    isHeld?: boolean;
     customModelData?: {
         shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
         width: number;
@@ -103,6 +108,10 @@ interface PlacedObject {
         isHazard?: boolean;
         isHeal?: boolean;
         isBoost?: boolean;
+        isHoldable?: boolean;
+        inHandAtStart?: boolean;
+        costsPbx?: boolean;
+        pbxPrice?: number;
     };
 }
 
@@ -357,6 +366,10 @@ interface CatalogItem {
     color: string;
     geometryType: string;
     baseScale: number;
+    isHoldable?: boolean;
+    inHandAtStart?: boolean;
+    costsPbx?: boolean;
+    pbxPrice?: number;
     customModelData?: {
         shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
         width: number;
@@ -367,6 +380,10 @@ interface CatalogItem {
         isHazard?: boolean;
         isHeal?: boolean;
         isBoost?: boolean;
+        isHoldable?: boolean;
+        inHandAtStart?: boolean;
+        costsPbx?: boolean;
+        pbxPrice?: number;
     };
     creatorUsername?: string;
 }
@@ -2065,6 +2082,13 @@ function spawnObjectIntoScene(itemOrId: CatalogItem | string) {
         }
     }
 
+    if (catalogItem.isHoldable !== undefined || catalogItem.customModelData?.isHoldable !== undefined) {
+        placed.isHoldable = catalogItem.isHoldable ?? catalogItem.customModelData?.isHoldable;
+        placed.inHandAtStart = catalogItem.inHandAtStart ?? catalogItem.customModelData?.inHandAtStart;
+        placed.costsPbx = catalogItem.costsPbx ?? catalogItem.customModelData?.costsPbx;
+        placed.pbxPrice = catalogItem.pbxPrice ?? catalogItem.customModelData?.pbxPrice ?? 0;
+    }
+
     placedObjects.push(placed);
     selectObject(placed);
     autoSaveDraft();
@@ -2113,6 +2137,10 @@ export function serializeCurrentScene() {
             trigger: p.trigger,
             script: p.script ? JSON.parse(JSON.stringify(p.script)) : undefined,
             customModelData: p.customModelData ? JSON.parse(JSON.stringify(p.customModelData)) : undefined,
+            isHoldable: p.isHoldable,
+            inHandAtStart: p.inHandAtStart,
+            costsPbx: p.costsPbx,
+            pbxPrice: p.pbxPrice,
             portalTargetId: p.portalTargetId,
             portalTargetTitle: p.portalTargetTitle
         })),
@@ -2323,6 +2351,10 @@ export function loadSceneFromData(sceneData: any) {
                 trigger: objData.trigger,
                 script: objData.script ? JSON.parse(JSON.stringify(objData.script)) : undefined,
                 customModelData: objData.customModelData ? JSON.parse(JSON.stringify(objData.customModelData)) : undefined,
+                isHoldable: objData.isHoldable,
+                inHandAtStart: objData.inHandAtStart,
+                costsPbx: objData.costsPbx,
+                pbxPrice: objData.pbxPrice,
                 portalTargetId: objData.portalTargetId || objData.trigger?.targetWorldId,
                 portalTargetTitle: objData.portalTargetTitle || objData.trigger?.targetWorldTitle
             };
@@ -2661,6 +2693,8 @@ async function initStudio() {
         placeWorkbenchItemIntoScene,
         saveWorkbenchItemToLibrary,
         renderCatalogUI,
+        equipCustomItemInHand,
+        clearHeldItemFromHand,
         get currentWorkbenchState() { return currentWorkbenchState; },
         get wbScene() { return wbScene; },
         get wbPreviewMesh() { return wbPreviewMesh; },
@@ -2872,6 +2906,64 @@ export function updateGameplayHUD() {
                 <span>${item.icon}</span> <span>${item.name}</span>
             </div>
         `).join('');
+    }
+}
+
+export function equipCustomItemInHand(item: PlacedObject | CatalogItem) {
+    if (!playerAvatarRig) return;
+    const handSocket = playerAvatarRig.getHandSocket('right');
+    if (!handSocket) return;
+
+    // Clear any previous held item mesh
+    while (handSocket.children.length > 0) {
+        handSocket.remove(handSocket.children[0]);
+    }
+
+    const itemName = item.name;
+    const itemColor = item.color || '#00f2fe';
+    let heldMesh: THREE.Group | THREE.Mesh;
+
+    if (item.customModelData) {
+        heldMesh = createCustomModel3DMesh(item.customModelData, itemColor);
+    } else {
+        const catItem: CatalogItem = 'geometryType' in item ? (item as CatalogItem) : {
+            id: item.catalogId || item.id,
+            name: item.name,
+            category: 'custom',
+            icon: '🗡️',
+            color: itemColor,
+            geometryType: 'box',
+            baseScale: 1.0
+        };
+        heldMesh = createObjectMesh(catItem, itemColor);
+    }
+
+    // Scale nicely to fit in player's right hand (~0.25 scale)
+    heldMesh.scale.set(0.25, 0.25, 0.25);
+    heldMesh.position.set(0, -0.22, 0.15);
+    heldMesh.rotation.set(0.2, 0, 0);
+    heldMesh.name = 'PlayerHeldCustomItem';
+    handSocket.add(heldMesh);
+
+    // Add to playerInventory if not already present
+    if (!playerInventory.some(i => i.name === itemName)) {
+        playerInventory.push({
+            id: 'held_' + Date.now(),
+            name: itemName,
+            icon: '🗡️',
+            type: 'holdable'
+        });
+        updateGameplayHUD();
+    }
+}
+
+export function clearHeldItemFromHand() {
+    if (!playerAvatarRig) return;
+    const handSocket = playerAvatarRig.getHandSocket('right');
+    if (handSocket) {
+        while (handSocket.children.length > 0) {
+            handSocket.remove(handSocket.children[0]);
+        }
     }
 }
 
@@ -3620,6 +3712,14 @@ function setupStudioEvents() {
                 if (catalogPanel) catalogPanel.style.display = 'none';
                 if (inspectorPanel) inspectorPanel.style.display = 'none';
 
+                // Equip starter holdable item into player's hand if configured
+                const starterHoldable = placedObjects.find(o => (o.isHoldable || o.customModelData?.isHoldable) && (o.inHandAtStart || o.customModelData?.inHandAtStart));
+                if (starterHoldable) {
+                    equipCustomItemInHand(starterHoldable);
+                    starterHoldable.mesh.visible = false;
+                    starterHoldable.isHeld = true;
+                }
+
                 if (isMobileOrTabletDevice()) {
                     if (playTestControls) playTestControls.style.display = 'none';
                     if (!playTestMobileControls) {
@@ -3690,7 +3790,14 @@ function setupStudioEvents() {
                 if (playTestMobileControls) {
                     playTestMobileControls.setVisible(false);
                 }
-                // Restore invisible spawn objects visibility in editor
+                clearHeldItemFromHand();
+                // Restore held objects and invisible spawn objects visibility in editor
+                placedObjects.forEach(o => {
+                    if (o.isHeld) {
+                        o.isHeld = false;
+                        o.mesh.visible = true;
+                    }
+                });
                 placedObjects.forEach(o => {
                     const lowerN = (o.name + ' ' + (o.catalogId || '')).toLowerCase();
                     if (o.isInvisibleSpawn || o.mesh.userData.isInvisibleSpawn || lowerN.includes('invisible') || lowerN.includes('nähtamatu') || lowerN.includes('beacon') || lowerN.includes('ring')) {
@@ -4868,6 +4975,10 @@ interface WorkbenchState {
     topElevation: number;
     color: string;
     behavior: 'solid' | 'hazard' | 'heal' | 'boost';
+    itemType: 'item' | 'static';
+    inHandAtStart: boolean;
+    costsPbx: boolean;
+    pbxPrice: number;
     parts: WorkbenchPart[];
     selectedPartIndex: number;
 }
@@ -4880,6 +4991,10 @@ const currentWorkbenchState: WorkbenchState = {
     topElevation: 2.0,
     color: '#00f2fe',
     behavior: 'solid',
+    itemType: 'item',
+    inHandAtStart: false,
+    costsPbx: false,
+    pbxPrice: 50,
     parts: [
         {
             id: 'part_1',
@@ -5478,6 +5593,43 @@ function syncWorkbenchUI() {
         }
     });
 
+    // Sync Item Type ('item' vs 'static') and options
+    const isItem = currentWorkbenchState.itemType === 'item';
+    const btnTypeItem = document.getElementById('btn-wb-type-item');
+    const btnTypeStatic = document.getElementById('btn-wb-type-static');
+    const checkInHand = document.getElementById('wb-checkbox-in-hand') as HTMLInputElement | null;
+    const checkCostsPbx = document.getElementById('wb-checkbox-costs-pbx') as HTMLInputElement | null;
+    const inputPbxPrice = document.getElementById('wb-input-pbx-price') as HTMLInputElement | null;
+    const labelInHand = document.getElementById('wb-label-in-hand');
+    const labelCostsPbx = document.getElementById('wb-label-costs-pbx');
+    const pbxPriceBox = document.getElementById('wb-pbx-price-box');
+    const staticInfo = document.getElementById('wb-static-info-text');
+
+    if (btnTypeItem) {
+        btnTypeItem.style.background = isItem ? 'linear-gradient(135deg, #00f2fe, #3b82f6)' : 'transparent';
+        btnTypeItem.style.color = isItem ? '#000' : '#94a3b8';
+        btnTypeItem.style.boxShadow = isItem ? '0 2px 10px rgba(0,242,254,0.4)' : 'none';
+        btnTypeItem.classList.toggle('active', isItem);
+    }
+    if (btnTypeStatic) {
+        btnTypeStatic.style.background = !isItem ? 'linear-gradient(135deg, #ffd32a, #ff9f1a)' : 'transparent';
+        btnTypeStatic.style.color = !isItem ? '#000' : '#94a3b8';
+        btnTypeStatic.style.boxShadow = !isItem ? '0 2px 10px rgba(255,211,42,0.4)' : 'none';
+        btnTypeStatic.classList.toggle('active', !isItem);
+    }
+
+    if (labelInHand) labelInHand.style.display = isItem ? 'flex' : 'none';
+    if (labelCostsPbx) labelCostsPbx.style.display = isItem ? 'flex' : 'none';
+    if (staticInfo) staticInfo.style.display = !isItem ? 'block' : 'none';
+
+    if (checkInHand) checkInHand.checked = !!currentWorkbenchState.inHandAtStart;
+    if (checkCostsPbx) checkCostsPbx.checked = !!currentWorkbenchState.costsPbx;
+    if (inputPbxPrice) inputPbxPrice.value = String(currentWorkbenchState.pbxPrice ?? 50);
+
+    if (pbxPriceBox) {
+        pbxPriceBox.style.display = (isItem && currentWorkbenchState.costsPbx) ? 'flex' : 'none';
+    }
+
     renderWorkbenchPartsList();
     rebuildWorkbenchModel();
 }
@@ -5486,9 +5638,14 @@ function getWorkbenchItemPayload(nameOverride?: string) {
     const nameInput = document.getElementById('workbench-item-name') as HTMLInputElement | null;
     const name = nameOverride || nameInput?.value.trim() || 'Minu 3D Ese';
     const mainPart = currentWorkbenchState.parts[0] || getActiveWorkbenchPart();
-    let icon = getShapeIcon(mainPart.shapeType);
+    const isHoldable = currentWorkbenchState.itemType === 'item';
+    const inHandAtStart = isHoldable && !!currentWorkbenchState.inHandAtStart;
+    const costsPbx = isHoldable && !!currentWorkbenchState.costsPbx;
+    const pbxPrice = costsPbx ? Math.max(0, currentWorkbenchState.pbxPrice ?? 50) : 0;
 
-    if (currentWorkbenchState.parts.length > 1) icon = '🧩';
+    let icon = isHoldable ? '🗡️' : getShapeIcon(mainPart.shapeType);
+
+    if (currentWorkbenchState.parts.length > 1 && !isHoldable) icon = '🧩';
     if (currentWorkbenchState.behavior === 'hazard') icon = '🔥';
     else if (currentWorkbenchState.behavior === 'heal') icon = '💖';
     else if (currentWorkbenchState.behavior === 'boost') icon = '⚡';
@@ -5499,6 +5656,10 @@ function getWorkbenchItemPayload(nameOverride?: string) {
         category: 'custom' as const,
         shapeType: mainPart.shapeType,
         color: mainPart.color,
+        isHoldable,
+        inHandAtStart,
+        costsPbx,
+        pbxPrice,
         modelData: {
             width: mainPart.width,
             height: mainPart.height,
@@ -5507,6 +5668,10 @@ function getWorkbenchItemPayload(nameOverride?: string) {
             isHazard: currentWorkbenchState.behavior === 'hazard',
             isHeal: currentWorkbenchState.behavior === 'heal',
             isBoost: currentWorkbenchState.behavior === 'boost',
+            isHoldable,
+            inHandAtStart,
+            costsPbx,
+            pbxPrice,
             parts: currentWorkbenchState.parts.map(p => ({
                 id: p.id,
                 shapeType: p.shapeType,
@@ -5532,6 +5697,10 @@ export function placeWorkbenchItemIntoScene() {
         color: payload.color,
         geometryType: payload.shapeType,
         baseScale: 1.0,
+        isHoldable: payload.isHoldable,
+        inHandAtStart: payload.inHandAtStart,
+        costsPbx: payload.costsPbx,
+        pbxPrice: payload.pbxPrice,
         customModelData: payload.modelData
     };
 
@@ -5568,6 +5737,35 @@ function setupWorkbenchEvents() {
 
     document.getElementById('btn-close-workbench')?.addEventListener('click', () => {
         closeWorkbenchModal();
+    });
+
+    // 🗡️/🧱 Item Type Selector: Ese vs Asi mida ei saa kätte võtta
+    document.getElementById('btn-wb-type-item')?.addEventListener('click', () => {
+        currentWorkbenchState.itemType = 'item';
+        syncWorkbenchUI();
+    });
+
+    document.getElementById('btn-wb-type-static')?.addEventListener('click', () => {
+        currentWorkbenchState.itemType = 'static';
+        syncWorkbenchUI();
+    });
+
+    // ✋ Kas on alguses käes
+    document.getElementById('wb-checkbox-in-hand')?.addEventListener('change', (e) => {
+        currentWorkbenchState.inHandAtStart = (e.target as HTMLInputElement).checked;
+        syncWorkbenchUI();
+    });
+
+    // 💎 Kas maksab PBX
+    document.getElementById('wb-checkbox-costs-pbx')?.addEventListener('change', (e) => {
+        currentWorkbenchState.costsPbx = (e.target as HTMLInputElement).checked;
+        syncWorkbenchUI();
+    });
+
+    // 💎 Kui palju PBX maksab
+    document.getElementById('wb-input-pbx-price')?.addEventListener('input', (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value, 10);
+        currentWorkbenchState.pbxPrice = isNaN(val) ? 0 : Math.max(0, val);
     });
 
     // ➕ Add another shape part
@@ -9864,6 +10062,56 @@ function animate() {
                 scene.remove(p.mesh);
                 placedObjects.splice(i, 1);
                 continue;
+            }
+
+            // 2b. Custom Holdable Items (Ese: võta kätte või osta PBX eest)
+            const isObjHoldable = p.isHoldable || p.customModelData?.isHoldable;
+            if (isObjHoldable && !p.isHeld && dist < 2.5) {
+                const costsPbx = p.costsPbx || p.customModelData?.costsPbx;
+                const pbxPrice = p.pbxPrice ?? p.customModelData?.pbxPrice ?? 0;
+
+                if (costsPbx && pbxPrice > 0) {
+                    activeTrigger = {
+                        ...p,
+                        trigger: {
+                            type: 'touch',
+                            title: `💎 ${p.name} (${pbxPrice} PBX)`,
+                            message: `Vajuta [E] eseme ostmiseks: "${p.name}" (${pbxPrice} PBX)`
+                        }
+                    };
+                    if (keys['KeyE']) {
+                        keys['KeyE'] = false;
+                        const pbxBalance = yardService.getPlaybux();
+                        if (pbxBalance >= pbxPrice) {
+                            yardService.spendPlaybux(pbxPrice, p.id, `Ostetud ese: ${p.name}`);
+                            p.isHeld = true;
+                            p.mesh.visible = false;
+                            equipCustomItemInHand(p);
+                            playGameSound('victory');
+                            showDialogMessage('💎 Ese Ostetud!', `Ostsid eseme "${p.name}" hinnaga ${pbxPrice} PBX ja võtsid selle kätte!`, '💎');
+                        } else {
+                            playGameSound('hit');
+                            showDialogMessage('❌ Pole Piisavalt PBX!', `Eseme "${p.name}" ostmiseks on vaja ${pbxPrice} PBX, aga sul on hetkel ${pbxBalance} PBX.`, '⚠️');
+                        }
+                    }
+                } else {
+                    activeTrigger = {
+                        ...p,
+                        trigger: {
+                            type: 'touch',
+                            title: `✋ ${p.name}`,
+                            message: `Vajuta [E] eseme kätte võtmiseks: "${p.name}"`
+                        }
+                    };
+                    if (keys['KeyE'] || dist < 1.4) {
+                        if (keys['KeyE']) keys['KeyE'] = false;
+                        p.isHeld = true;
+                        p.mesh.visible = false;
+                        equipCustomItemInHand(p);
+                        playGameSound('coin');
+                        showDialogMessage('✋ Ese Käes!', `Võtsid eseme "${p.name}" kätte!`, '✋');
+                    }
+                }
             }
 
             // 3. Locked Doors & Gates
