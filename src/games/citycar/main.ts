@@ -231,10 +231,10 @@ function animate() {
 
     const delta = clock.getDelta();
     elapsedSec += delta;
-
     if (hasAccess) {
+        if (input.state.reset) resetGame();
+
         if (!isArrested && !isDead) {
-            if (input.state.reset) resetGame();
             physics.update(delta, input.state);
             input.postPhysicsUpdate();
 
@@ -311,7 +311,8 @@ function animate() {
             }
             skidMarksSystem.update(elapsedSec);
         } else if (isDead) {
-            // Crash death: cinematic 5-second zoom-out
+            // Update falling physics & tumble when crashing in mid-air
+            physics.update(delta, input.state);
             cameraSystem.update(delta, physics.state.position, carMesh.group.rotation.y);
             airSupportSystem.update(delta, physics.state.position);
             tankSystem.update(delta, physics.state.position);

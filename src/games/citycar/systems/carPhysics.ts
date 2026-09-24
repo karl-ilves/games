@@ -317,9 +317,9 @@ export class CarPhysicsController {
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
             this.onBuildingHit?.();
 
-            if (!this.isDead && (Math.abs(impactSpeed) > 2.0 || !this.state.isGrounded)) {
+            if (!this.isDead && (Math.abs(impactSpeed) > 1.2 || !this.state.isGrounded || this.launchedFromRamp)) {
                 const currentGroundY = this.world.getGroundHeight(this.state.position.x, this.state.position.z);
-                const isMidAir = !this.state.isGrounded || this.state.position.y > currentGroundY + 0.6 || this.launchedFromRamp;
+                const isMidAir = !this.state.isGrounded || this.state.position.y > currentGroundY + 0.4 || this.launchedFromRamp;
 
                 this.isDead = true;
                 this.forwardSpeedMps = 0;
@@ -328,7 +328,10 @@ export class CarPhysicsController {
 
                 if (isMidAir) {
                     this.fallingAfterCrash = true;
-                    this.verticalVelocity = Math.min(this.verticalVelocity, -1.0);
+                    this.verticalVelocity = Math.min(this.verticalVelocity, -2.5);
+                    // Rebound car slightly back from the building wall so it falls cleanly in air
+                    this.state.position.x -= Math.sin(this.yaw) * 0.5;
+                    this.state.position.z -= Math.cos(this.yaw) * 0.5;
                 } else {
                     this.fallingAfterCrash = false;
                     this.verticalVelocity = 0;
@@ -454,16 +457,20 @@ export class CarPhysicsController {
         this.launchedFromRamp = launched;
     }
 
-    public killCar(reason = 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!', isMidAir = false): void {
+    public killCar(reason = 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!', isMidAir?: boolean): void {
         if (this.isDead) return;
         this.isDead = true;
+        const currentGroundY = this.world.getGroundHeight(this.state.position.x, this.state.position.z);
+        const midAir = isMidAir !== undefined ? isMidAir : (!this.state.isGrounded || this.state.position.y > currentGroundY + 0.4 || this.launchedFromRamp);
         const spd = Math.max(15, Math.round(Math.abs(this.forwardSpeedMps) * 3.6));
         this.forwardSpeedMps = 0;
         this.state.speed = 0;
         this.state.velocity.set(0, 0, 0);
-        if (isMidAir) {
+        if (midAir) {
             this.fallingAfterCrash = true;
-            this.verticalVelocity = Math.min(this.verticalVelocity, -1.0);
+            this.verticalVelocity = Math.min(this.verticalVelocity, -2.5);
+            this.state.position.x -= Math.sin(this.yaw) * 0.5;
+            this.state.position.z -= Math.cos(this.yaw) * 0.5;
         } else {
             this.fallingAfterCrash = false;
             this.verticalVelocity = 0;
@@ -471,7 +478,7 @@ export class CarPhysicsController {
         this.onCrashDeath?.({
             reason,
             speedKmh: spd,
-            isMidAir
+            isMidAir: midAir
         });
     }
 
