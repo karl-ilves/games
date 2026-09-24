@@ -8372,11 +8372,12 @@ await (async () => {
 
             console.log("✅ 📱 Mobile Touch Scrolling & Modal Overflow Verification Passed!");
 
-            // 🛡️ 2D Earth Defender (Maa Kaitsja 2D) - Playard Owner Exclusive Verification
-            console.log("Testing 🛡️ 2D Earth Defender (Playard Owner Exclusive Access & Gameplay)...");
+            // 🛡️ 2D Earth Defender (Maa Kaitsja 2D) - Public Visibility & Access for ALL Players
+            console.log("Testing 🛡️ 2D Earth Defender (Public Visibility & Gameplay for ALL Players)...");
             
-            // 1. Hub Card Visibility Check (Hidden for guest / non-owner, Visible for Owner)
-            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
+            // 1. Hub Card Visibility Check (Visible for guests, regular players and Owner)
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             // Set non-owner profile first and reload
@@ -8414,16 +8415,16 @@ await (async () => {
                 return card ? window.getComputedStyle(card).display : 'not_found';
             });
 
-            console.log("   Defender Hub Card Visibility Results:", { guest: guestCardVisibility, owner: ownerCardVisibility });
-            if (guestCardVisibility === 'flex') {
-                throw new Error("Defender card must be HIDDEN for regular players / guests!");
+            console.log("   Defender Hub Card Visibility Results (Public to All):", { guest: guestCardVisibility, owner: ownerCardVisibility });
+            if (guestCardVisibility !== 'flex') {
+                throw new Error("Defender card must be VISIBLE for regular players / guests!");
             }
             if (ownerCardVisibility !== 'flex') {
                 throw new Error("Defender card must be VISIBLE for Playard Owner!");
             }
 
-            // 2. Access Protection on Direct URL
-            // A) Test as non-owner (locked modal)
+            // 2. Access on Direct URL (Unlocked for ALL players!)
+            // A) Test as non-owner (unlocked and playable)
             await page.evaluate(() => {
                 localStorage.setItem('playard_current_user_profile', JSON.stringify({
                     id: 'guest-uuid-456',
@@ -8431,18 +8432,23 @@ await (async () => {
                     username: 'guestuser'
                 }));
             });
-            await page.goto('http://localhost:4173/games/defender/index.html', { waitUntil: 'domcontentloaded' });
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/defender/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const nonOwnerAccessCheck = await page.evaluate(() => {
                 const modal = document.getElementById('owner-only-modal');
                 const isLocked = modal && window.getComputedStyle(modal).display === 'flex';
-                return { isLocked };
+                const canvas = document.getElementById('defender-canvas');
+                return { isLocked, hasCanvas: !!canvas };
             });
 
-            console.log("   Defender Non-Owner Access Check:", nonOwnerAccessCheck);
-            if (!nonOwnerAccessCheck.isLocked) {
-                throw new Error("Defender game must be locked with owner-only modal for non-owners!");
+            console.log("   Defender Non-Owner Access Check (Public to All):", nonOwnerAccessCheck);
+            if (nonOwnerAccessCheck.isLocked) {
+                throw new Error("Defender game should NOT be locked for non-owners (it is public for everyone)!");
+            }
+            if (!nonOwnerAccessCheck.hasCanvas) {
+                throw new Error("Defender canvas must be available for non-owners!");
             }
 
             // B) Test as Playard Owner (unlocked + gameplay verification)
@@ -8455,7 +8461,8 @@ await (async () => {
                     isAdmin: true
                 }));
             });
-            await page.goto('http://localhost:4173/games/defender/index.html', { waitUntil: 'domcontentloaded' });
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/defender/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const defenderGameTest = await page.evaluate(() => {

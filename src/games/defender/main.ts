@@ -1,4 +1,4 @@
-import { getCurrentUserProfile, canAccessDefender } from '../../auth';
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser } from '../../auth';
 import { yardService } from '../../shared/yardService';
 import { Asteroid, Laser } from './types';
 import { DefenderState } from './state/defenderState';
@@ -51,16 +51,10 @@ export class EarthDefenderGame {
     private init() {
         console.log("🛡️ Initializing 2D Earth Defender (Maa Kaitsja)...");
         const profile = getCurrentUserProfile();
-        const ownerAccess = canAccessDefender(profile, profile?.username);
+        const ownerAccess = !!(isOwnerUser(profile) || (profile?.email && isPlayardOwner(profile.email)) || (profile?.username && isOwnerUser(profile.username)));
 
-        this.hasAccess = ownerAccess;
+        this.hasAccess = true;
         this.state.setIsOwner(ownerAccess);
-
-        if (!this.hasAccess) {
-            console.warn("⛔ Access denied: 2D Earth Defender is exclusively for Playard Owner!");
-            this.hud.showOwnerLockModal();
-            return;
-        }
 
         this.canvas = document.getElementById('defender-canvas') as HTMLCanvasElement;
         if (!this.canvas) return;
@@ -80,12 +74,12 @@ export class EarthDefenderGame {
         yardService.recordPlayedGame({
             id: 'defender',
             title: '🛡️ 2D Earth Defender',
-            description: '2D Space planetary defense mission for Playard Owner.',
+            description: '2D Space planetary defense mission against incoming asteroids.',
             url: './games/defender/index.html',
             icon: '🛡️'
         });
 
-        this.hud.showToast(ownerAccess ? "👑 Tere tulemast, Playard Owner! Maa vajab sinu kaitset!" : "🛡️ Kaitsesüsteemid aktiivsed!", "#ffd700");
+        this.hud.showToast(ownerAccess ? "👑 Tere tulemast, Playard Owner! Maa vajab sinu kaitset!" : "🛡️ Tere tulemast, Kosmose Kaitsja! Maa vajab sinu kaitset!", "#ffd700");
 
         this.isRunning = true;
         this.lastTime = performance.now();

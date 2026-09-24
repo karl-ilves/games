@@ -94,11 +94,10 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
         cityCarCard.style.display = 'flex';
     }
 
-    // 2D Maa Kaitsja (Earth Defender) - Nähtav AINULT Playard Ownerile!
-    const isOwnerForDefender = canAccessDefender(emailToCheck, usernameToCheck);
+    // 2D Maa Kaitsja (Earth Defender) - Avalik ja nähtav kõigile mängijatele!
     const defenderCard = document.getElementById('card-defender-game');
     if (defenderCard) {
-        defenderCard.style.display = isOwnerForDefender ? 'flex' : 'none';
+        defenderCard.style.display = 'flex';
     }
 
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
@@ -1178,14 +1177,6 @@ function setupGameCardTracking() {
                         e.preventDefault();
                         const modal = document.getElementById('modal-crown-coming-soon');
                         if (modal) modal.style.display = 'flex';
-                        return;
-                    }
-                } else if (href === './games/defender/index.html') {
-                    const prof = getCurrentUserProfile();
-                    const isOwner = canAccessDefender(prof, prof?.username);
-                    if (!isOwner && !isTestMode()) {
-                        e.preventDefault();
-                        alert('🔒 Ainult Playard Ownerile! (Playard Owner Exclusive)');
                         return;
                     }
                 }

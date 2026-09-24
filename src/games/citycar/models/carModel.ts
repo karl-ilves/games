@@ -23,6 +23,8 @@ export interface CarMeshContainer {
     setBraking: (braking: boolean) => void;
     setFrontWrecked: (wrecked: boolean) => void;
     isFrontWrecked: () => boolean;
+    setEntireCarWrecked: (wrecked: boolean) => void;
+    isEntireCarWrecked: () => boolean;
 }
 
 export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
@@ -199,8 +201,38 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
     crumpledEngine.visible = false;
     root.add(crumpledEngine);
 
+    // Entire car wrecked frame (User: "terve auto läheb katki")
+    const entireWreckGroup = new THREE.Group();
+    const charredMat = new THREE.MeshStandardMaterial({ color: 0x121212, roughness: 0.95, metalness: 0.3 });
+    const rustMetalMat = new THREE.MeshStandardMaterial({ color: 0x241d1a, roughness: 0.85, metalness: 0.5 });
+
+    const charredFrame = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.22, 3.8), charredMat);
+    charredFrame.position.y = 0.22;
+    const twistedCabinCage = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 1.6), charredMat);
+    twistedCabinCage.position.set(0, 0.45, -0.2);
+    twistedCabinCage.rotation.z = 0.12;
+    twistedCabinCage.rotation.y = -0.08;
+    const burntEngine = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.35, 0.7), rustMetalMat);
+    burntEngine.position.set(0, 0.35, 0.9);
+    const brokenAxleF = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.08), rustMetalMat);
+    brokenAxleF.position.set(0, 0.2, 1.35);
+    brokenAxleF.rotation.z = 0.15;
+    const brokenAxleR = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.08), rustMetalMat);
+    brokenAxleR.position.set(0, 0.2, -1.35);
+    brokenAxleR.rotation.z = -0.12;
+
+    entireWreckGroup.add(charredFrame, twistedCabinCage, burntEngine, brokenAxleF, brokenAxleR);
+    entireWreckGroup.visible = false;
+    root.add(entireWreckGroup);
+
     const frontParts: THREE.Object3D[] = [hood, splitter, hlLeft, hlRight, fl.pivot, fr.pivot];
+    const allBodyParts: THREE.Object3D[] = [
+        lowerChassis, cabin, roofTop, hood, splitter,
+        spoilerWing, standL, standR, hlLeft, hlRight, blLeft, blRight,
+        fl.pivot, fr.pivot, rl.pivot, rr.pivot
+    ];
     let isWrecked = false;
+    let isEntireWrecked = false;
 
     // 8. Overhead Driver Name Tag
     let nameTagSprite: THREE.Sprite | undefined;

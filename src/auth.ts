@@ -47,16 +47,9 @@ export function canAccessCityCar(_profileOrEmail?: UserProfile | string | null, 
     return true;
 }
 
-export function canAccessDefender(profileOrEmail?: UserProfile | string | null, username?: string | null): boolean {
-    // 2D Maa Kaitsja (Earth Defender) on nähtav ja mängitav AINULT Playard Ownerile!
-    if (!profileOrEmail && !username) return false;
-    if (typeof profileOrEmail === 'object' && profileOrEmail) {
-        if (isPlayardOwner(profileOrEmail.email) || isOwnerUser(profileOrEmail)) return true;
-    } else if (typeof profileOrEmail === 'string') {
-        if (isPlayardOwner(profileOrEmail) || isOwnerUser(profileOrEmail)) return true;
-    }
-    if (username && isOwnerUser(username)) return true;
-    return false;
+export function canAccessDefender(_profileOrEmail?: UserProfile | string | null, _username?: string | null): boolean {
+    // 2D Maa Kaitsja (Earth Defender) on nüüd avalik ja kättesaadav kõigile mängijatele!
+    return true;
 }
 
 export function isUserAdmin(email?: string | null): boolean {
