@@ -8370,6 +8370,164 @@ await (async () => {
 
             console.log("✅ 📱 Mobile Touch Scrolling & Modal Overflow Verification Passed!");
 
+            // 🛡️ 2D Earth Defender (Maa Kaitsja 2D) - Playard Owner Exclusive Verification
+            console.log("Testing 🛡️ 2D Earth Defender (Playard Owner Exclusive Access & Gameplay)...");
+            
+            // 1. Hub Card Visibility Check (Hidden for guest / non-owner, Visible for Owner)
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            // Set non-owner profile first and reload
+            await page.evaluate(() => {
+                localStorage.setItem('playard_current_user_profile', JSON.stringify({
+                    id: 'guest-uuid-456',
+                    email: 'guest@example.com',
+                    username: 'guestuser',
+                    displayName: 'Guest Player'
+                }));
+                window.location.reload();
+            });
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const guestCardVisibility = await page.evaluate(() => {
+                const card = document.getElementById('card-defender-game');
+                return card ? window.getComputedStyle(card).display : 'not_found';
+            });
+
+            // Login as Playard Owner and reload
+            await page.evaluate(() => {
+                localStorage.setItem('playard_current_user_profile', JSON.stringify({
+                    id: 'owner-uuid-123',
+                    email: '1karl.ilves@gmail.com',
+                    username: 'playard owner',
+                    displayName: 'Playard Owner ✔',
+                    isAdmin: true
+                }));
+                window.location.reload();
+            });
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const ownerCardVisibility = await page.evaluate(() => {
+                const card = document.getElementById('card-defender-game');
+                return card ? window.getComputedStyle(card).display : 'not_found';
+            });
+
+            console.log("   Defender Hub Card Visibility Results:", { guest: guestCardVisibility, owner: ownerCardVisibility });
+            if (guestCardVisibility === 'flex') {
+                throw new Error("Defender card must be HIDDEN for regular players / guests!");
+            }
+            if (ownerCardVisibility !== 'flex') {
+                throw new Error("Defender card must be VISIBLE for Playard Owner!");
+            }
+
+            // 2. Access Protection on Direct URL
+            // A) Test as non-owner (locked modal)
+            await page.evaluate(() => {
+                localStorage.setItem('playard_current_user_profile', JSON.stringify({
+                    id: 'guest-uuid-456',
+                    email: 'guest@example.com',
+                    username: 'guestuser'
+                }));
+            });
+            await page.goto('http://localhost:4173/games/defender/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const nonOwnerAccessCheck = await page.evaluate(() => {
+                const modal = document.getElementById('owner-only-modal');
+                const isLocked = modal && window.getComputedStyle(modal).display === 'flex';
+                return { isLocked };
+            });
+
+            console.log("   Defender Non-Owner Access Check:", nonOwnerAccessCheck);
+            if (!nonOwnerAccessCheck.isLocked) {
+                throw new Error("Defender game must be locked with owner-only modal for non-owners!");
+            }
+
+            // B) Test as Playard Owner (unlocked + gameplay verification)
+            await page.evaluate(() => {
+                localStorage.setItem('playard_current_user_profile', JSON.stringify({
+                    id: 'owner-uuid-123',
+                    email: '1karl.ilves@gmail.com',
+                    username: 'playard owner',
+                    displayName: 'Playard Owner ✔',
+                    isAdmin: true
+                }));
+            });
+            await page.goto('http://localhost:4173/games/defender/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const defenderGameTest = await page.evaluate(() => {
+                const game = window.defenderGame;
+                if (!game) return { success: false, reason: 'window.defenderGame not found' };
+
+                const canvas = document.getElementById('defender-canvas');
+                const ownerModal = document.getElementById('owner-only-modal');
+                const modalHidden = !ownerModal || window.getComputedStyle(ownerModal).display === 'none';
+
+                // Initial state
+                const initialStats = game.state.getStats();
+                const isOwner = game.state.getIsOwner();
+
+                // Test firing weapons
+                const lasers = game.player.forceFire(false);
+                game.lasers.push(...lasers);
+
+                // Test spawning and splitting asteroid
+                game.asteroidMgr.spawnRandomAsteroid(game.canvas.width, 1);
+                const astCount = game.asteroidMgr.asteroids.length;
+                const sampleAst = game.asteroidMgr.asteroids[0];
+                const splitFragments = sampleAst ? game.asteroidMgr.splitAsteroid(sampleAst) : [];
+
+                // Test scoring
+                const scoreBefore = game.state.getStats().score;
+                game.state.addScore(100);
+                const scoreAfter = game.state.getStats().score;
+
+                // Test Earth damage & shield
+                const dmgRes = game.state.applyEarthDamage(20);
+                const statsAfterDmg = game.state.getStats();
+
+                // Test EMP activation
+                game.state.activatePowerUp('emp_nuke');
+                const canEmp = game.state.canFireEmp();
+                game.triggerEmp();
+
+                // Test PowerUp activation
+                game.state.activatePowerUp('triple_shot');
+                const hasTriple = game.state.hasTripleShot();
+
+                return {
+                    success: true,
+                    hasCanvas: !!canvas,
+                    modalHidden,
+                    isOwner,
+                    initialWave: initialStats.wave,
+                    initialHp: initialStats.earthHp,
+                    initialShield: initialStats.earthShield,
+                    lasersFired: lasers.length,
+                    asteroidSpawned: astCount > 0,
+                    splitFragmentsCount: splitFragments.length,
+                    scoreIncreased: scoreAfter > scoreBefore,
+                    dmgRegistered: dmgRes.shieldDmg > 0 || dmgRes.hpDmg > 0,
+                    empFired: canEmp,
+                    tripleShotActive: hasTriple
+                };
+            });
+
+            console.log("   Defender In-Game Verification Results:", defenderGameTest);
+            if (!defenderGameTest.success || !defenderGameTest.hasCanvas || !defenderGameTest.modalHidden) {
+                throw new Error("Defender in-game initialization failed: " + JSON.stringify(defenderGameTest));
+            }
+            if (!defenderGameTest.isOwner) {
+                throw new Error("Defender must recognize Playard Owner!");
+            }
+            if (defenderGameTest.lasersFired < 2 || !defenderGameTest.asteroidSpawned || !defenderGameTest.scoreIncreased) {
+                throw new Error("Defender gameplay mechanics check failed: " + JSON.stringify(defenderGameTest));
+            }
+            console.log("✅ 🛡️ 2D Earth Defender (Maa Kaitsja 2D) tests passed successfully!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
 })();

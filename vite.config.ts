@@ -18,7 +18,8 @@ export default defineConfig({
         mmp1: resolve(__dirname, 'games/mmp1/index.html'),
         rocket: resolve(__dirname, 'games/rocket/index.html'),
         crown: resolve(__dirname, 'games/crown/index.html'),
-        citycar: resolve(__dirname, 'games/citycar/index.html')
+        citycar: resolve(__dirname, 'games/citycar/index.html'),
+        defender: resolve(__dirname, 'games/defender/index.html')
       }
     }
   }

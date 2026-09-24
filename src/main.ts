@@ -1,5 +1,5 @@
 import { supabase } from './lib/supabase';
-import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner, canAccessMmp1, canAccessCityCar, calculateAge, isTestMode } from './auth';
+import { initAuth, getCurrentUserProfile, isUserAdminEmail, isUserAdmin, isPlayardOwner, canAccessMmp1, canAccessCityCar, canAccessDefender, calculateAge, isTestMode } from './auth';
 import { yardService, YardData, CreatedGame } from './shared/yardService';
 import { setLanguage, applyLocalization, getLanguage } from './shared/i18n';
 import { AvatarWidget } from './components/AvatarWidget';
@@ -92,6 +92,13 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
     const cityCarCard = document.getElementById('card-citycar-game');
     if (cityCarCard) {
         cityCarCard.style.display = 'flex';
+    }
+
+    // 2D Maa Kaitsja (Earth Defender) - Nähtav AINULT Playard Ownerile!
+    const isOwnerForDefender = canAccessDefender(emailToCheck, usernameToCheck);
+    const defenderCard = document.getElementById('card-defender-game');
+    if (defenderCard) {
+        defenderCard.style.display = isOwnerForDefender ? 'flex' : 'none';
     }
 
     // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
@@ -978,6 +985,10 @@ function renderRecentlyPlayed() {
                 gameTitle = '🚗 3D City & Nature Drive';
                 gameDesc = 'Free-drive through skyscrapers, cross bridges, and explore the forest and river in real-time multiplayer!';
                 badgeText = '🏙️🌲 3D City Drive';
+            } else if (game.id === 'defender') {
+                gameTitle = '🛡️ 2D Earth Defender';
+                gameDesc = 'Space asteroid planetary defense mission for Playard Owner. Protect Earth from cosmic asteroid impacts!';
+                badgeText = '👑 Playard Owner Exclusive';
             }
         } else {
             if (game.id === 'racing') {
@@ -1012,6 +1023,10 @@ function renderRecentlyPlayed() {
                 gameTitle = '🚗 3D Linna & Looduse Autosõit';
                 gameDesc = 'Sõida vabalt ringi pilvelõhkujatega linnas, ületa sildu ja avasta künklikku metsa reaalajas teiste mängijatega!';
                 badgeText = '🏙️🌲 3D Linna Sõit';
+            } else if (game.id === 'defender') {
+                gameTitle = '🛡️ 2D Maa Kaitsja';
+                gameDesc = 'Kosmose asteroidide kaitsemissioon Playard Ownerile. Kaitse Maad kosmoses ja lase asteroidid puruks!';
+                badgeText = '👑 Playard Owner Eksklusiiv';
             }
         }
 
@@ -1138,6 +1153,15 @@ function setupGameCardTracking() {
             icon: '🚗',
             badgeText: '🏙️🌲 3D City Drive',
             badgeColor: '#00f2fe'
+        },
+        './games/defender/index.html': {
+            id: 'defender',
+            title: '🛡️ 2D Earth Defender',
+            description: 'Space asteroid planetary defense mission for Playard Owner.',
+            url: './games/defender/index.html',
+            icon: '🛡️',
+            badgeText: '👑 Playard Owner Exclusive',
+            badgeColor: '#ffd700'
         }
     };
 
@@ -1154,6 +1178,14 @@ function setupGameCardTracking() {
                         e.preventDefault();
                         const modal = document.getElementById('modal-crown-coming-soon');
                         if (modal) modal.style.display = 'flex';
+                        return;
+                    }
+                } else if (href === './games/defender/index.html') {
+                    const prof = getCurrentUserProfile();
+                    const isOwner = canAccessDefender(prof, prof?.username);
+                    if (!isOwner && !isTestMode()) {
+                        e.preventDefault();
+                        alert('🔒 Ainult Playard Ownerile! (Playard Owner Exclusive)');
                         return;
                     }
                 }

@@ -47,6 +47,18 @@ export function canAccessCityCar(_profileOrEmail?: UserProfile | string | null, 
     return true;
 }
 
+export function canAccessDefender(profileOrEmail?: UserProfile | string | null, username?: string | null): boolean {
+    // 2D Maa Kaitsja (Earth Defender) on nähtav ja mängitav AINULT Playard Ownerile!
+    if (!profileOrEmail && !username) return false;
+    if (typeof profileOrEmail === 'object' && profileOrEmail) {
+        if (isPlayardOwner(profileOrEmail.email) || isOwnerUser(profileOrEmail)) return true;
+    } else if (typeof profileOrEmail === 'string') {
+        if (isPlayardOwner(profileOrEmail) || isOwnerUser(profileOrEmail)) return true;
+    }
+    if (username && isOwnerUser(username)) return true;
+    return false;
+}
+
 export function isUserAdmin(email?: string | null): boolean {
     if (!email) return false;
     return email.trim().toLowerCase() === 'grx@trenet.ee';
