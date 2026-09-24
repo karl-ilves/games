@@ -18,11 +18,13 @@ export class CarPhysicsController {
     public onBuildingHit?: () => void;
     public onWaterDive?: () => void;
     public onOffroadDrive?: () => void;
-    public onCrashDeath?: (info: { reason: string; speedKmh: number }) => void;
+    public onCrashDeath?: (info: { reason: string; speedKmh: number; isMidAir?: boolean }) => void;
     private meshContainer: CarMeshContainer;
     private world: WorldEnvironment;
 
     private isDead = false;
+    private launchedFromRamp = false;
+    private fallingAfterCrash = false;
     private forwardSpeedMps = 0;
     private yaw = Math.PI / 2; // facing East towards the bridge initially
     private verticalVelocity = 0;
@@ -65,9 +67,33 @@ export class CarPhysicsController {
 
         if (this.isDead) {
             this.forwardSpeedMps = 0;
-            this.verticalVelocity = 0;
             this.state.speed = 0;
             this.state.velocity.set(0, 0, 0);
+
+            if (this.fallingAfterCrash) {
+                const groundY = this.world.getGroundHeight(this.state.position.x, this.state.position.z);
+                if (this.state.position.y > groundY + 0.05) {
+                    this.verticalVelocity -= VEHICLE_CONFIG.gravity * delta;
+                    this.state.position.y += this.verticalVelocity * delta;
+                    // Tumble slightly in mid-air as car plunges down
+                    this.meshContainer.group.rotation.x += 1.6 * delta;
+                    this.meshContainer.group.rotation.z += 1.2 * delta;
+                    if (this.state.position.y <= groundY) {
+                        this.state.position.y = groundY;
+                        this.verticalVelocity = 0;
+                        this.fallingAfterCrash = false;
+                        this.meshContainer.group.rotation.x = 0;
+                        this.meshContainer.group.rotation.z = 0;
+                    }
+                } else {
+                    this.state.position.y = groundY;
+                    this.verticalVelocity = 0;
+                    this.fallingAfterCrash = false;
+                    this.meshContainer.group.rotation.x = 0;
+                    this.meshContainer.group.rotation.z = 0;
+                }
+                this.meshContainer.group.position.copy(this.state.position);
+            }
             return;
         }
 
@@ -288,15 +314,29 @@ export class CarPhysicsController {
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
             this.onBuildingHit?.();
 
-            if (!this.isDead && impactSpeed > 2.0) {
+            if (!this.isDead && (Math.abs(impactSpeed) > 2.0 || !this.state.isGrounded)) {
+                const currentGroundY = this.world.getGroundHeight(this.state.position.x, this.state.position.z);
+                const isMidAir = !this.state.isGrounded || this.state.position.y > currentGroundY + 0.6 || this.launchedFromRamp;
+
                 this.isDead = true;
                 this.forwardSpeedMps = 0;
-                this.verticalVelocity = 0;
                 this.state.speed = 0;
                 this.state.velocity.set(0, 0, 0);
+
+                if (isMidAir) {
+                    this.fallingAfterCrash = true;
+                    this.verticalVelocity = Math.min(this.verticalVelocity, -1.0);
+                } else {
+                    this.fallingAfterCrash = false;
+                    this.verticalVelocity = 0;
+                }
+
                 this.onCrashDeath?.({
-                    reason: 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!',
-                    speedKmh: Math.round(impactSpeed * 3.6)
+                    reason: isMidAir
+                        ? 'Hüppasid rambilt ja lendasid õhus suure hooga vastu maja! Terve auto purunes täielikult!'
+                        : 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!',
+                    speedKmh: Math.round(Math.abs(impactSpeed) * 3.6),
+                    isMidAir
                 });
             }
         } else {
@@ -328,6 +368,7 @@ export class CarPhysicsController {
                 this.state.position.y = groundY;
                 this.verticalVelocity = 0;
                 this.state.isGrounded = true;
+                this.launchedFromRamp = false;
             } else {
                 this.state.isGrounded = false;
             }
@@ -343,6 +384,9 @@ export class CarPhysicsController {
             if (rampInteraction.isLaunching && Math.abs(this.forwardSpeedMps) > 2.5) {
                 const launchKick = Math.abs(this.forwardSpeedMps) * 0.55 + 7.5;
                 this.verticalVelocity = Math.max(this.verticalVelocity, launchKick);
+                this.launchedFromRamp = true;
+            } else {
+                this.launchedFromRamp = false;
             }
             this.state.position.y = groundY;
             this.state.isGrounded = true;
@@ -384,22 +428,54 @@ export class CarPhysicsController {
         return this.isDead;
     }
 
-    public killCar(reason = 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!'): void {
+    public isFallingAfterCrash(): boolean {
+        return this.fallingAfterCrash;
+    }
+
+    public setFallingAfterCrash(falling: boolean): void {
+        this.fallingAfterCrash = falling;
+        if (falling) {
+            this.isDead = true;
+            this.forwardSpeedMps = 0;
+            this.state.speed = 0;
+            this.state.velocity.set(0, 0, 0);
+            this.verticalVelocity = Math.min(this.verticalVelocity, -1.0);
+        }
+    }
+
+    public hasLaunchedFromRamp(): boolean {
+        return this.launchedFromRamp;
+    }
+
+    public setLaunchedFromRamp(launched: boolean): void {
+        this.launchedFromRamp = launched;
+    }
+
+    public killCar(reason = 'Sõitsid suurel kiirusel hoone seina sisse ja auto esiosa purunes!', isMidAir = false): void {
         if (this.isDead) return;
         this.isDead = true;
         const spd = Math.max(15, Math.round(Math.abs(this.forwardSpeedMps) * 3.6));
         this.forwardSpeedMps = 0;
-        this.verticalVelocity = 0;
         this.state.speed = 0;
         this.state.velocity.set(0, 0, 0);
+        if (isMidAir) {
+            this.fallingAfterCrash = true;
+            this.verticalVelocity = Math.min(this.verticalVelocity, -1.0);
+        } else {
+            this.fallingAfterCrash = false;
+            this.verticalVelocity = 0;
+        }
         this.onCrashDeath?.({
             reason,
-            speedKmh: spd
+            speedKmh: spd,
+            isMidAir
         });
     }
 
     public resetCar(): void {
         this.isDead = false;
+        this.fallingAfterCrash = false;
+        this.launchedFromRamp = false;
         this.forwardSpeedMps = 0;
         this.verticalVelocity = 0;
         this.currentSteerAngle = 0;

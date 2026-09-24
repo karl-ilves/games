@@ -324,6 +324,9 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
         },
         setFrontWrecked: (wrecked: boolean) => {
             isWrecked = wrecked;
+            isEntireWrecked = false;
+            entireWreckGroup.visible = false;
+            allBodyParts.forEach(p => { p.visible = true; });
             frontParts.forEach(p => { p.visible = !wrecked; });
             crumpledEngine.visible = wrecked;
             if (wrecked) {
@@ -334,6 +337,22 @@ export function createCarMesh(config: CarVisualConfig): CarMeshContainer {
                 lowerChassis.position.z = 0.0;
             }
         },
-        isFrontWrecked: () => isWrecked
+        isFrontWrecked: () => isWrecked,
+        setEntireCarWrecked: (wrecked: boolean) => {
+            isEntireWrecked = wrecked;
+            isWrecked = wrecked;
+            if (wrecked) {
+                allBodyParts.forEach(p => { p.visible = false; });
+                crumpledEngine.visible = false;
+                entireWreckGroup.visible = true;
+            } else {
+                allBodyParts.forEach(p => { p.visible = true; });
+                crumpledEngine.visible = false;
+                entireWreckGroup.visible = false;
+                lowerChassis.scale.z = 1.0;
+                lowerChassis.position.z = 0.0;
+            }
+        },
+        isEntireCarWrecked: () => isEntireWrecked
     };
 }

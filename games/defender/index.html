@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="et">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🛡️ 2D Maa Kaitsja (Earth Defender) - Playard Games</title>
-    <meta name="description" content="2D kosmose lahingumäng Playard Ownerile: kaitse Maad lendavate asteroidide eest!">
+    <title>🛡️ 2D Earth Defender - Playard Games</title>
+    <meta name="description" content="2D space planetary defense game: Protect Earth from swarms of incoming asteroids!">
     <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -319,36 +319,36 @@
             <a href="../../index.html" class="hud-btn" id="btn-back-hub">🏠 Hub</a>
             <div style="display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 1rem; color: #00f2fe;">
                 <span>🛡️</span>
-                <span style="background: linear-gradient(135deg, #00f2fe, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">2D MAA KAITSJA</span>
+                <span style="background: linear-gradient(135deg, #00f2fe, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">2D EARTH DEFENDER</span>
             </div>
         </div>
 
         <div class="hud-center-stats">
-            <div class="wave-pill" id="hud-wave-pill">LAINE 1</div>
-            <div class="score-box" id="hud-score">SKOOR: 0</div>
-            <div style="font-size: 0.8rem; color: #a4b0be;" id="hud-combo">KOMBO: x1</div>
+            <div class="wave-pill" id="hud-wave-pill">WAVE 1</div>
+            <div class="score-box" id="hud-score">SCORE: 0</div>
+            <div style="font-size: 0.8rem; color: #a4b0be;" id="hud-combo">COMBO: x1</div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
-            <button class="hud-btn" id="btn-hud-leaderboard" title="Vaata edetabelit" style="border-color: rgba(255, 215, 0, 0.5); color: #ffd700;">🏆 Edetabel</button>
-            <button class="hud-btn" id="btn-hud-shop" title="Ava pood" style="border-color: rgba(0, 242, 254, 0.5); color: #00f2fe;">🛍️ Pood</button>
-            <button class="hud-btn" id="btn-toggle-sound" title="Heli sisse/välja">🔊 Heli</button>
+            <button class="hud-btn" id="btn-hud-leaderboard" title="View Leaderboard" style="border-color: rgba(255, 215, 0, 0.5); color: #ffd700;">🏆 Leaderboard</button>
+            <button class="hud-btn" id="btn-hud-shop" title="Open Shop" style="border-color: rgba(0, 242, 254, 0.5); color: #00f2fe;">🛍️ Shop</button>
+            <button class="hud-btn" id="btn-toggle-sound" title="Toggle Sound">🔊 Sound</button>
             <span style="font-size: 0.72rem; font-weight: 800; color: #ffd700; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.5); padding: 5px 8px; border-radius: 8px;" id="owner-hud-badge">👑 PLAYARD OWNER</span>
         </div>
     </div>
 
     <!-- Controls hint (Desktop) -->
     <div id="controls-hint">
-        ⌨️ <strong>A/D</strong> või <strong>Nooled</strong>: Liigu | <strong>Hiir</strong>: Sihi & Tulista | <strong>Tühik</strong>: Tulista | <strong>E</strong>: EMP Pomm
+        ⌨️ <strong>A/D</strong> or <strong>Arrows</strong>: Move | <strong>Mouse / Space</strong>: Shoot | <strong>E</strong>: EMP Nova
     </div>
 
     <!-- Danger banner -->
-    <div id="danger-banner">⚠️ HOIATUS: ASTEROIDID LÄHENEVAD MAALE!</div>
+    <div id="danger-banner">⚠️ CRITICAL WARNING: ASTEROIDS APPROACHING EARTH!</div>
 
     <!-- Earth Status Bar at bottom -->
     <div class="earth-health-container" id="earth-hud-panel">
         <div class="earth-stat-row">
-            <span style="color: #2ed573;">🌍 MAA TERVIKLIKKUS</span>
+            <span style="color: #2ed573;">🌍 EARTH INTEGRITY</span>
             <span id="earth-hp-text" style="color: #2ed573;">100 / 100 HP</span>
         </div>
         <div class="stat-bar-outer">
@@ -356,7 +356,7 @@
         </div>
 
         <div class="earth-stat-row" style="margin-top: 2px;">
-            <span style="color: #00f2fe;">🛡️ PLANETAARNE KILP</span>
+            <span style="color: #00f2fe;">🛡️ PLANETARY SHIELD</span>
             <span id="earth-shield-text" style="color: #00f2fe;">100 / 100 SP</span>
         </div>
         <div class="stat-bar-outer">
@@ -379,42 +379,42 @@
     <!-- Game Over Modal -->
     <div class="modal-overlay" id="game-over-modal">
         <div class="modal-card game-over-theme">
-            <div class="modal-badge" style="border-color: #ff4757; color: #ff4757; background: rgba(255, 71, 87, 0.15);">💥 MAA HÄVITATUD!</div>
+            <div class="modal-badge" style="border-color: #ff4757; color: #ff4757; background: rgba(255, 71, 87, 0.15);">💥 EARTH DESTROYED!</div>
             <h2 style="font-size: 1.8rem; margin: 0 0 10px 0; color: #ffffff;">MISSION FAILED</h2>
             <p style="color: #a4b0be; font-size: 0.9rem; line-height: 1.5; margin-bottom: 16px;">
-                Asteroidid tungisid läbi planeedi kaitse ja tabasid Maad!<br>
-                Sinu vapper võitlus kaitses tsivilisatsiooni viimse hetkeni.
+                Asteroids breached planetary shields and struck Earth!<br>
+                Your brave defense protected civilization to the very end.
             </p>
 
-            <!-- Earned Reward Banner (Raha saamine) -->
+            <!-- Earned Reward Banner -->
             <div id="gameover-reward-banner" style="background: rgba(255, 215, 0, 0.12); border: 1.5px solid #ffd700; border-radius: 12px; padding: 10px 14px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 900; color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.25);">
                 <span style="font-size: 1.4rem;">💰</span>
                 <div>
-                    <div style="font-size: 0.72rem; color: #8899a6; text-transform: uppercase;">Teenitud Tasu</div>
+                    <div style="font-size: 0.72rem; color: #8899a6; text-transform: uppercase;">Earned Reward</div>
                     <div style="font-size: 1.3rem;"><span id="reward-pbx-val">+50</span> pbx</div>
                 </div>
             </div>
 
             <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; margin-bottom: 22px; display: flex; justify-content: space-around;">
                 <div>
-                    <div style="font-size: 0.75rem; color: #8899a6;">LÕPU SKOOR</div>
+                    <div style="font-size: 0.75rem; color: #8899a6;">FINAL SCORE</div>
                     <div style="font-size: 1.3rem; font-weight: 900; color: #ffd700;" id="final-score-val">0</div>
                 </div>
                 <div>
-                    <div style="font-size: 0.75rem; color: #8899a6;">PURUSTATUD</div>
+                    <div style="font-size: 0.75rem; color: #8899a6;">DESTROYED</div>
                     <div style="font-size: 1.3rem; font-weight: 900; color: #00f2fe;" id="final-destroyed-val">0</div>
                 </div>
                 <div>
-                    <div style="font-size: 0.75rem; color: #8899a6;">LAINED</div>
+                    <div style="font-size: 0.75rem; color: #8899a6;">WAVES</div>
                     <div style="font-size: 1.3rem; font-weight: 900; color: #2ed573;" id="final-wave-val">1</div>
                 </div>
             </div>
 
             <!-- Action buttons: Leaderboard, Shop, Restart, Hub -->
             <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                <button class="hud-btn" id="btn-gameover-leaderboard" style="padding: 10px 14px; font-size: 0.9rem; border-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.12);">🏆 Edetabel</button>
-                <button class="hud-btn" id="btn-gameover-shop" style="padding: 10px 14px; font-size: 0.9rem; border-color: #00f2fe; color: #00f2fe; background: rgba(0,242,254,0.12);">🛍️ Pood</button>
-                <button class="btn-action-primary" id="btn-restart-game" style="padding: 10px 18px; font-size: 0.95rem;">🔄 Uuesti</button>
+                <button class="hud-btn" id="btn-gameover-leaderboard" style="padding: 10px 14px; font-size: 0.9rem; border-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.12);">🏆 Leaderboard</button>
+                <button class="hud-btn" id="btn-gameover-shop" style="padding: 10px 14px; font-size: 0.9rem; border-color: #00f2fe; color: #00f2fe; background: rgba(0,242,254,0.12);">🛍️ Shop</button>
+                <button class="btn-action-primary" id="btn-restart-game" style="padding: 10px 18px; font-size: 0.95rem;">🔄 Retry</button>
                 <a href="../../index.html" class="hud-btn" style="padding: 10px 14px; font-size: 0.9rem;">🏠 Hub</a>
             </div>
         </div>
@@ -430,13 +430,13 @@
     <div class="modal-overlay" id="owner-only-modal">
         <div class="modal-card owner-lock-theme">
             <div class="modal-badge" style="border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.15);">👑 PLAYARD OWNER EXCLUSIVE</div>
-            <h2 style="font-size: 1.8rem; margin: 0 0 12px 0; color: #ffd700;">Ainult Playard Ownerile!</h2>
+            <h2 style="font-size: 1.8rem; margin: 0 0 12px 0; color: #ffd700;">Playard Owner Only!</h2>
             <p style="color: #a4b0be; font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px;">
-                See salajane 2D Maa Kaitsja missioon on kättesaadav <strong>ainult Playard Ownerile</strong>.<br><br>
-                Tule tagasi Playard Hubi ning vali teiste põnevate mängude seast!
+                This 2D Earth Defender mission is exclusively for <strong>Playard Owner</strong>.<br><br>
+                Return to Playard Hub and explore other exciting games!
             </p>
             <a href="../../index.html" class="btn-action-primary" style="display: inline-block; text-decoration: none;">
-                🏠 Tagasi Hubi
+                🏠 Back to Hub
             </a>
         </div>
     </div>

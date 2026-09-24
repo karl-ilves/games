@@ -34,13 +34,13 @@ export class DefenderHud {
 
     public updateStats(stats: GameStats) {
         if (this.wavePill) {
-            this.wavePill.textContent = `LAINE ${stats.wave}`;
+            this.wavePill.textContent = `WAVE ${stats.wave}`;
         }
         if (this.scoreBox) {
-            this.scoreBox.textContent = `SKOOR: ${stats.score.toLocaleString()}`;
+            this.scoreBox.textContent = `SCORE: ${stats.score.toLocaleString()}`;
         }
         if (this.comboBox) {
-            this.comboBox.textContent = stats.combo > 1 ? `KOMBO: x${stats.combo} 🔥` : `KOMBO: x1`;
+            this.comboBox.textContent = stats.combo > 1 ? `COMBO: x${stats.combo} 🔥` : `COMBO: x1`;
             this.comboBox.style.color = stats.combo > 1 ? '#ffd700' : '#a4b0be';
         }
 
@@ -104,7 +104,7 @@ export class DefenderHud {
 
     public updateSoundButton(enabled: boolean) {
         if (this.soundBtn) {
-            this.soundBtn.textContent = enabled ? '🔊 Heli' : '🔇 Heli';
+            this.soundBtn.textContent = enabled ? '🔊 Sound' : '🔇 Sound';
             this.soundBtn.style.opacity = enabled ? '1.0' : '0.6';
         }
     }

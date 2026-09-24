@@ -41,7 +41,7 @@ export class EarthDefenderGame {
         this.hud = new DefenderHud();
         this.shopUI = new DefenderShopUI(this.state, (item) => {
             if (this.player) this.player.setHyperBlaster(this.state.hasHyperBlaster());
-            this.hud.showToast(`🎉 Uuendus "${item.name}" aktiivne!`, '#2ed573');
+            this.hud.showToast(`🎉 Upgrade "${item.name}" equipped!`, '#2ed573');
         });
         this.leaderboardUI = new DefenderLeaderboardUI(this.state);
 
@@ -49,7 +49,7 @@ export class EarthDefenderGame {
     }
 
     private init() {
-        console.log("🛡️ Initializing 2D Earth Defender (Maa Kaitsja)...");
+        console.log("🛡️ Initializing 2D Earth Defender...");
         const profile = getCurrentUserProfile();
         const ownerAccess = !!(isOwnerUser(profile) || (profile?.email && isPlayardOwner(profile.email)) || (profile?.username && isOwnerUser(profile.username)));
 
@@ -79,7 +79,7 @@ export class EarthDefenderGame {
             icon: '🛡️'
         });
 
-        this.hud.showToast(ownerAccess ? "👑 Tere tulemast, Playard Owner! Maa vajab sinu kaitset!" : "🛡️ Tere tulemast, Kosmose Kaitsja! Maa vajab sinu kaitset!", "#ffd700");
+        this.hud.showToast(ownerAccess ? "👑 Welcome, Playard Owner! Earth needs your defense!" : "🛡️ Welcome, Space Defender! Earth needs your defense!", "#ffd700");
 
         this.isRunning = true;
         this.lastTime = performance.now();
@@ -167,7 +167,7 @@ export class EarthDefenderGame {
 
     public triggerEmp() {
         if (!this.state.canFireEmp()) {
-            this.hud.showToast(`⚡ EMP laeb: ${this.state.getStats().empChargePct}%`, '#a55eea');
+            this.hud.showToast(`⚡ EMP Charging: ${this.state.getStats().empChargePct}%`, '#a55eea');
             return;
         }
 
@@ -175,7 +175,7 @@ export class EarthDefenderGame {
         this.audio.playEmpBlast();
         this.effectsMgr.addShockwave(this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height) * 0.9, '#a55eea');
         this.effectsMgr.triggerScreenShake(0.5, 12);
-        this.hud.showToast("💥 ORBITAALNE EMP VALLANDATUD!", "#a55eea");
+        this.hud.showToast("💥 ORBITAL EMP NOVA DETONATED!", "#a55eea");
 
         for (const ast of [...this.asteroidMgr.asteroids]) {
             this.destroyAsteroid(ast, true);
@@ -203,7 +203,7 @@ export class EarthDefenderGame {
         this.effectsMgr.reset();
         this.lasers = [];
         this.hud.hideGameOver();
-        this.hud.showToast("🚀 Uus missioon algas! Kaitse Maad!", "#00f2fe");
+        this.hud.showToast("🚀 New mission started! Defend Earth!", "#00f2fe");
     }
 
     private gameLoop(time: number) {
@@ -298,7 +298,7 @@ export class EarthDefenderGame {
         if (stats.asteroidsDestroyed >= stats.wave * 20) {
             this.state.advanceWave();
             this.audio.playPowerUp();
-            this.hud.showToast(`🎉 LAINE ${stats.wave + 1} ALGAS! KILP TAASTATUD!`, '#00f2fe');
+            this.hud.showToast(`🎉 WAVE ${stats.wave + 1} STARTED! SHIELD RESTORED!`, '#00f2fe');
         }
 
         this.effectsMgr.update(dt);

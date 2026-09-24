@@ -8050,6 +8050,39 @@ await (async () => {
                 const cameraResetAfterDeath = camSys?.isCrashZoomActive?.() === false;
                 const starsResetAfterDeath = wanted.getWantedLevel() === 0;
 
+                // 2b. Test Mid-Air Jump Crash into Building:
+                // User requirement: "kui mängja hüpekaltr hüppab ja õhus lendab vastu maja siis kukkub se auto alla ja terve auto läheb katki ja palju tükke lendavad ja 2X suurem tulekera"
+                // Simulate mid-air jump from ramp: elevated in mid-air (y = 6.0)
+                physics.state.position.set(-120, 6.0, 40);
+                physics.setLaunchedFromRamp(true);
+                physics.state.isGrounded = false;
+
+                // Trigger mid-air crash death
+                dbg.triggerCrashDeath?.({
+                    reason: 'Hüppasid rambilt ja lendasid õhus suure hooga vastu maja! Terve auto purunes täielikult!',
+                    speedKmh: 90,
+                    isMidAir: true
+                });
+
+                const entireCarWrecked = carMeshObj?.isEntireCarWrecked?.() === true;
+                const massiveDebrisSpawned = (debrisSys?.getDebrisCount?.() || 0) >= 25;
+                const fireball2XSpawned = fireSys?.hasActiveFireball?.() === true && (fireSys?.getFireballScale?.() || 0) >= 2.0;
+
+                // Falling physics: car is falling down under gravity
+                const isFallingInitially = physics.isFallingAfterCrash?.() === true;
+                for (let step = 0; step < 15; step++) {
+                    physics.update(0.1, { throttle: 0, brake: 0, steer: 0, drift: false, horn: false, reset: false });
+                }
+                const groundYAfterFall = dbg.world.getGroundHeight(physics.state.position.x, physics.state.position.z);
+                const carHitGroundAfterFall = Math.abs(physics.state.position.y - groundYAfterFall) <= 0.1 && physics.isFallingAfterCrash?.() === false;
+
+                // Advance camera zoom and click reset to restore entire car
+                camSys?.update?.(5.2, physics.state.position, 0);
+                btnDeathReset?.click?.();
+                const entireCarRestored = carMeshObj?.isEntireCarWrecked?.() === false && carMeshObj?.isFrontWrecked?.() === false;
+                const debrisClearedAfterMidAirReset = (debrisSys?.getDebrisCount?.() || 0) === 0;
+                const fireExtinguishedAfterMidAirReset = fireSys?.isCarBurning?.() === false;
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
@@ -8129,6 +8162,14 @@ await (async () => {
                     deathModalHiddenAfterReset,
                     cameraResetAfterDeath,
                     starsResetAfterDeath,
+                    entireCarWrecked,
+                    massiveDebrisSpawned,
+                    fireball2XSpawned,
+                    isFallingInitially,
+                    carHitGroundAfterFall,
+                    entireCarRestored,
+                    debrisClearedAfterMidAirReset,
+                    fireExtinguishedAfterMidAirReset,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
                 };
             });
@@ -8227,8 +8268,23 @@ await (async () => {
             if (!cityCarTest.fireballSpawned || !cityCarTest.carBurningOnCrash || !cityCarTest.fireExtinguishedAfterReset) {
                 throw new Error("CityCar Building Crash must spawn a fireball explosion, set the car on fire, and extinguish it upon reset!");
             }
+            if (!cityCarTest.entireCarWrecked) {
+                throw new Error("CityCar Mid-Air Jump Crash into building must wreck the entire car (User: 'terve auto läheb katki')!");
+            }
+            if (!cityCarTest.massiveDebrisSpawned) {
+                throw new Error("CityCar Mid-Air Jump Crash into building must spawn a massive amount of debris (User: 'palju tükke lendavad')!");
+            }
+            if (!cityCarTest.fireball2XSpawned) {
+                throw new Error("CityCar Mid-Air Jump Crash into building must spawn a 2X bigger fireball (User: '2X suurem tulekera')!");
+            }
+            if (!cityCarTest.isFallingInitially || !cityCarTest.carHitGroundAfterFall) {
+                throw new Error("CityCar Mid-Air Jump Crash must make the car fall down under gravity to the ground (User: 'siis kukkub se auto alla')!");
+            }
+            if (!cityCarTest.entireCarRestored || !cityCarTest.debrisClearedAfterMidAirReset || !cityCarTest.fireExtinguishedAfterMidAirReset) {
+                throw new Error("CityCar Reset button after Mid-Air Jump Crash must restore entire car and clear all debris and fire!");
+            }
 
-            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Fireball, Car Fire, 5s Zoom-out & YOU DIED! Reset) testid edukalt läbitud!");
+            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Mid-Air Jump Crash Falling Physics, Entire Car Wreck, Massive Debris, 2X Fireball, 5s Zoom-out & YOU DIED! Reset) testid edukalt läbitud!");
 
             // 3. Testing CityCar in Recently Played Games Row on Home Hub (User: "ja se mäng ilmub ka sinna viimati mängitute mängu ritta")
             console.log("   3. Testing CityCar in Recently Played Games Row on Hub...");
@@ -8547,11 +8603,19 @@ await (async () => {
                     game.shopUI.close();
                 }
 
+                // Check English texts
+                const wavePillText = document.getElementById('hud-wave-pill')?.textContent || '';
+                const scoreText = document.getElementById('hud-score')?.textContent || '';
+                const isEnglishHud = wavePillText.includes('WAVE') && scoreText.includes('SCORE');
+                const isEnglishGameOver = (gameOverModal?.textContent?.includes('MISSION FAILED') && gameOverModal?.textContent?.includes('EARTH DESTROYED')) || false;
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
                     modalHidden,
                     isOwner,
+                    isEnglishHud,
+                    isEnglishGameOver,
                     initialWave: initialStats.wave,
                     initialHp: initialStats.earthHp,
                     initialShield: initialStats.earthShield,
@@ -8578,6 +8642,9 @@ await (async () => {
             console.log("   Defender In-Game Verification Results:", defenderGameTest);
             if (!defenderGameTest.success || !defenderGameTest.hasCanvas || !defenderGameTest.modalHidden) {
                 throw new Error("Defender in-game initialization failed: " + JSON.stringify(defenderGameTest));
+            }
+            if (!defenderGameTest.isEnglishHud || !defenderGameTest.isEnglishGameOver) {
+                throw new Error("Defender must be in English! " + JSON.stringify(defenderGameTest));
             }
             if (!defenderGameTest.isOwner) {
                 throw new Error("Defender must recognize Playard Owner!");

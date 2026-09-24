@@ -3,7 +3,7 @@ import { AsteroidCategory, AsteroidConfig, PowerUpType } from './types';
 export const ASTEROID_CATALOG: Record<AsteroidCategory, AsteroidConfig> = {
     small: {
         type: 'small',
-        name: 'Väike Asteroid',
+        name: 'Small Asteroid',
         radius: 18,
         hp: 1,
         speed: 2.2,
@@ -16,7 +16,7 @@ export const ASTEROID_CATALOG: Record<AsteroidCategory, AsteroidConfig> = {
     },
     medium: {
         type: 'medium',
-        name: 'Keskmine Asteroid',
+        name: 'Medium Asteroid',
         radius: 32,
         hp: 3,
         speed: 1.6,
@@ -29,7 +29,7 @@ export const ASTEROID_CATALOG: Record<AsteroidCategory, AsteroidConfig> = {
     },
     large: {
         type: 'large',
-        name: 'Massiivne Asteroid',
+        name: 'Massive Asteroid',
         radius: 52,
         hp: 6,
         speed: 1.1,
@@ -42,7 +42,7 @@ export const ASTEROID_CATALOG: Record<AsteroidCategory, AsteroidConfig> = {
     },
     fire: {
         type: 'fire',
-        name: 'Leegitsev Meteoor',
+        name: 'Flaming Meteor',
         radius: 26,
         hp: 2,
         speed: 2.8,
@@ -55,7 +55,7 @@ export const ASTEROID_CATALOG: Record<AsteroidCategory, AsteroidConfig> = {
     },
     gold: {
         type: 'gold',
-        name: 'Kuldne Asteroid',
+        name: 'Golden Asteroid',
         radius: 24,
         hp: 2,
         speed: 2.0,
@@ -68,7 +68,7 @@ export const ASTEROID_CATALOG: Record<AsteroidCategory, AsteroidConfig> = {
     },
     boss: {
         type: 'boss',
-        name: 'Planeeditapja Komeet',
+        name: 'Planet-Killer Comet',
         radius: 80,
         hp: 20,
         speed: 0.7,
@@ -90,53 +90,53 @@ export interface PowerUpConfig {
 }
 
 export const POWERUP_CONFIGS: PowerUpConfig[] = [
-    { type: 'triple_shot', icon: '⚡', label: 'Kolmiklaser', color: '#00f2fe', dropWeight: 30 },
-    { type: 'shield_restore', icon: '🛡️', label: 'Kilbi Laadimine', color: '#2ed573', dropWeight: 35 },
-    { type: 'emp_nuke', icon: '💣', label: 'Orbitaalne EMP', color: '#a55eea', dropWeight: 15 },
-    { type: 'speed_boost', icon: '⏩', label: 'Hüperkiirendus', color: '#ffa502', dropWeight: 20 }
+    { type: 'triple_shot', icon: '⚡', label: 'Triple Laser', color: '#00f2fe', dropWeight: 30 },
+    { type: 'shield_restore', icon: '🛡️', label: 'Shield Recharger', color: '#2ed573', dropWeight: 35 },
+    { type: 'emp_nuke', icon: '💣', label: 'Orbital EMP Nova', color: '#a55eea', dropWeight: 15 },
+    { type: 'speed_boost', icon: '⏩', label: 'Hyper Boost', color: '#ffa502', dropWeight: 20 }
 ];
 
 export const DEFENDER_SHOP_ITEMS: import('./types').DefenderShopItem[] = [
     {
         id: 'defender_hyper_blaster',
-        name: 'Hüper-Plasma Blaster',
-        description: 'Võimsam kahjustus (+50% laserikahju) ja 35% kiirem laskekiirus. Asteroidid purunevad silmapilkselt!',
+        name: 'Hyper-Plasma Blaster',
+        description: 'Superior firepower (+50% laser damage) and 35% faster firing rate. Asteroids shatter instantly!',
         price: 500,
         icon: '⚡',
-        badge: 'TULEJÕUD',
+        badge: 'FIREPOWER',
         tag: 'blaster'
     },
     {
         id: 'defender_titanium_shield',
-        name: 'Titaanist Planeedikilp',
-        description: 'Tugevdab Maa planetaarset kilpi (+50 Max SP) ja taastab kilbi energiat 2x kiiremini!',
+        name: 'Titanium Planetary Shield',
+        description: 'Reinforces Earth\'s planetary shield (+50 Max SP) and regenerates shield energy twice as fast!',
         price: 1000,
         icon: '🛡️',
-        badge: 'PLANETARIAN',
+        badge: 'PLANETARY',
         tag: 'shield'
     },
     {
         id: 'defender_mega_emp',
-        name: 'Mega EMP Tuumalaeng',
-        description: 'Alustad igat missiooni 100% valmis EMP pommiga ning EMP laeb lahingus 50% kiiremalt!',
+        name: 'Mega EMP Nova Core',
+        description: 'Start every mission with 100% EMP charged and ready. EMP recharges 50% faster in combat!',
         price: 1500,
         icon: '💣',
-        badge: 'TAKTIKALINE',
+        badge: 'TACTICAL',
         tag: 'emp'
     },
     {
         id: 'defender_defense_drone',
-        name: 'Orbitaalne Satelliit-Droon',
-        description: 'Autonoomne lahingdroon tiirleb laeva kõrval ja tulistab automaatselt lähenevaid asteroide!',
+        name: 'Orbital Satellite Drone',
+        description: 'Autonomous combat drone orbits your starship and automatically fires lasers at incoming asteroids!',
         price: 2500,
         icon: '🛸',
-        badge: 'DROON',
+        badge: 'DRONE',
         tag: 'drone'
     },
     {
         id: 'defender_golden_magnet',
-        name: 'Kuldne Komeetide Magnet (2X Pbx)',
-        description: 'Kahekordistab skooripunktid (2x Score) ja teenid igalt missioonilt 2X rohkem Pbx valuutat!',
+        name: 'Golden Comet Magnet (2X Pbx)',
+        description: 'Doubles all score points (2X Score) and earns 2X more Pbx currency from every completed mission!',
         price: 3500,
         icon: '🪙',
         badge: '2X PBX BOOSTER',

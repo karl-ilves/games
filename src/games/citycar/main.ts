@@ -83,6 +83,7 @@ function resetGame(): void {
     isArrested = false;
     hud.hideDeathModal();
     hud.hideArrestedModal();
+    carMesh.setEntireCarWrecked(false);
     carMesh.setFrontWrecked(false);
     crashDebrisSystem.clear();
     fireSystem.extinguish();
@@ -105,23 +106,30 @@ function triggerArrest(): void {
     hud.showArrestedModal(() => resetGame());
 }
 
-function triggerCrashDeath(info: { reason: string; speedKmh: number }): void {
+function triggerCrashDeath(info: { reason: string; speedKmh: number; isMidAir?: boolean }): void {
     if (isDead || isArrested) return;
     isDead = true;
     audioSystem.playExplosion();
-    carMesh.setFrontWrecked(true);
+    const isMidAir = !!info.isMidAir;
+    if (isMidAir) {
+        physics.setFallingAfterCrash(true);
+        carMesh.setEntireCarWrecked(true);
+    } else {
+        carMesh.setFrontWrecked(true);
+    }
     const yaw = carMesh.group.rotation.y;
     const forwardDir = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-    crashDebrisSystem.spawnDebris(physics.state.position, forwardDir, cityCarState.getCarColor());
-    fireSystem.triggerFireball(physics.state.position);
+    crashDebrisSystem.spawnDebris(physics.state.position, forwardDir, cityCarState.getCarColor(), isMidAir);
+    fireSystem.triggerFireball(physics.state.position, isMidAir ? 2.0 : 1.0);
     fireSystem.startCarFire(carMesh.group);
     cameraSystem.triggerCrashZoom(physics.state.position, yaw, 5.0);
 }
 
 cameraSystem.onCrashZoomComplete = () => {
-    hud.showDeathModal('YOU DIED!', 'You crashed into a building at high speed and your car was destroyed!', () => {
-        resetGame();
-    });
+    const desc = carMesh.isEntireCarWrecked()
+        ? 'You jumped from the ramp and crashed into a building in mid-air! Your entire car was destroyed!'
+        : 'You crashed into a building at high speed and your car was destroyed!';
+    hud.showDeathModal('YOU DIED!', desc, () => resetGame());
 };
 
 physics.onCrashDeath = triggerCrashDeath;
@@ -322,25 +330,10 @@ function animate() {
 
 // Expose state and controller for automated verification
 (window as any).__CITY_CAR_DEBUG__ = {
-    physics,
-    carMesh,
-    cameraSystem,
-    crashDebrisSystem,
-    fireSystem,
-    world,
-    multiplayer,
-    state: cityCarState,
-    hud,
-    wantedSystem,
-    policeSystem,
-    airSupportSystem,
-    tankSystem,
-    skidMarksSystem,
-    triggerArrest,
-    resetGame,
-    resetGameAfterArrest: resetGame,
-    triggerCrashDeath,
-    resetGameAfterDeath: resetGame
+    physics, carMesh, cameraSystem, crashDebrisSystem, fireSystem, world, multiplayer,
+    state: cityCarState, hud, wantedSystem, policeSystem, airSupportSystem, tankSystem,
+    skidMarksSystem, triggerArrest, resetGame, resetGameAfterArrest: resetGame,
+    triggerCrashDeath, resetGameAfterDeath: resetGame
 };
 
 animate();

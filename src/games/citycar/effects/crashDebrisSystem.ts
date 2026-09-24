@@ -19,10 +19,11 @@ export class CrashDebrisSystem {
     }
 
     /**
-     * Spawn exploding 3D debris pieces from the front end of the car
-     * User requirement: "su esiotsast lendavat tükid ja pool autost jääb terveks"
+     * Spawn exploding 3D debris pieces from the car
+     * Standard crash: 12 pieces from front end ("su esiotsast lendavat tükid ja pool autost jääb terveks")
+     * Mid-air ramp jump crash: 30 pieces from entire car ("palju tükke lendavad ja terve auto läheb katki")
      */
-    public spawnDebris(origin: THREE.Vector3, forwardDir: THREE.Vector3, bodyColorHex: string): void {
+    public spawnDebris(origin: THREE.Vector3, forwardDir: THREE.Vector3, bodyColorHex: string, isMassive: boolean = false): void {
         this.clear();
 
         const bodyMat = new THREE.MeshStandardMaterial({
@@ -44,9 +45,13 @@ export class CrashDebrisSystem {
             roughness: 0.4,
             metalness: 0.8
         });
+        const wheelMat = new THREE.MeshStandardMaterial({
+            color: 0x222222,
+            roughness: 0.8
+        });
 
-        const pieceDefs = [
-            // Hood panel fragments
+        const pieceDefs: { geo: THREE.BufferGeometry; mat: THREE.Material }[] = [
+            // Hood & front panel fragments
             { geo: new THREE.BoxGeometry(0.7, 0.08, 0.6), mat: bodyMat },
             { geo: new THREE.BoxGeometry(0.65, 0.08, 0.5), mat: bodyMat },
             { geo: new THREE.BoxGeometry(0.45, 0.06, 0.4), mat: bodyMat },
@@ -64,14 +69,42 @@ export class CrashDebrisSystem {
             { geo: new THREE.BoxGeometry(0.3, 0.15, 0.3), mat: darkMat }
         ];
 
+        // Additional debris for entire-car mid-air catastrophe (User: "palju tükke lendavad")
+        if (isMassive) {
+            // 4 detached flying wheels
+            for (let w = 0; w < 4; w++) {
+                pieceDefs.push({ geo: new THREE.CylinderGeometry(0.38, 0.38, 0.26, 12), mat: wheelMat });
+            }
+            // Doors, trunk, roof fragments
+            pieceDefs.push(
+                { geo: new THREE.BoxGeometry(1.2, 0.5, 0.08), mat: bodyMat }, // Left door
+                { geo: new THREE.BoxGeometry(1.2, 0.5, 0.08), mat: bodyMat }, // Right door
+                { geo: new THREE.BoxGeometry(1.0, 0.08, 0.9), mat: bodyMat }, // Roof panel
+                { geo: new THREE.BoxGeometry(1.4, 0.1, 0.7), mat: bodyMat },  // Trunk lid
+                // Rear bumper & spoiler
+                { geo: new THREE.BoxGeometry(1.7, 0.06, 0.35), mat: darkMat }, // Spoiler wing
+                { geo: new THREE.BoxGeometry(1.6, 0.16, 0.25), mat: darkMat }, // Rear bumper
+                { geo: new THREE.BoxGeometry(0.4, 0.15, 0.15), mat: darkMat },
+                // Additional window glass shards
+                { geo: new THREE.BoxGeometry(0.5, 0.3, 0.04), mat: glassMat },
+                { geo: new THREE.BoxGeometry(0.45, 0.25, 0.04), mat: glassMat },
+                // Mechanical & engine wreckage
+                { geo: new THREE.BoxGeometry(0.5, 0.4, 0.4), mat: metalMat }, // Heavy engine block
+                { geo: new THREE.CylinderGeometry(0.08, 0.08, 0.9, 8), mat: metalMat }, // Exhaust pipe
+                { geo: new THREE.BoxGeometry(0.35, 0.25, 0.25), mat: metalMat }, // Transmission
+                { geo: new THREE.BoxGeometry(0.6, 0.15, 0.4), mat: darkMat },
+                { geo: new THREE.BoxGeometry(0.5, 0.15, 0.35), mat: darkMat }
+            );
+        }
+
         pieceDefs.forEach((def, i) => {
             const mesh = new THREE.Mesh(def.geo, def.mat);
             mesh.castShadow = true;
 
-            // Offset slightly around the front bumper
-            const lateralOffset = (Math.random() - 0.5) * 1.6;
-            const heightOffset = 0.3 + Math.random() * 0.6;
-            const forwardOffset = (Math.random() - 0.3) * 0.8;
+            // Offset across car volume
+            const lateralOffset = (Math.random() - 0.5) * (isMassive ? 2.6 : 1.6);
+            const heightOffset = 0.3 + Math.random() * (isMassive ? 1.2 : 0.6);
+            const forwardOffset = (Math.random() - 0.5) * (isMassive ? 3.0 : 0.8);
 
             mesh.position.set(
                 origin.x + lateralOffset,
@@ -80,16 +113,17 @@ export class CrashDebrisSystem {
             );
 
             // Explosive dispersal velocity: upward, backward/forward and sideways
-            const sideSpike = (Math.random() - 0.5) * 9.0;
-            const upSpike = 5.5 + Math.random() * 7.5;
-            const fwdSpike = -forwardDir.x * (4.0 + Math.random() * 6.0) + (Math.random() - 0.5) * 4.0;
-            const depthSpike = -forwardDir.z * (4.0 + Math.random() * 6.0) + (Math.random() - 0.5) * 4.0;
+            const speedMultiplier = isMassive ? 1.5 : 1.0;
+            const sideSpike = (Math.random() - 0.5) * (9.0 * speedMultiplier);
+            const upSpike = (5.5 + Math.random() * 7.5) * speedMultiplier;
+            const fwdSpike = -forwardDir.x * (4.0 + Math.random() * 6.0) * speedMultiplier + (Math.random() - 0.5) * 5.0;
+            const depthSpike = -forwardDir.z * (4.0 + Math.random() * 6.0) * speedMultiplier + (Math.random() - 0.5) * 5.0;
 
             const velocity = new THREE.Vector3(fwdSpike + sideSpike, upSpike, depthSpike + sideSpike);
             const rotVelocity = new THREE.Vector3(
-                (Math.random() - 0.5) * 14.0,
-                (Math.random() - 0.5) * 14.0,
-                (Math.random() - 0.5) * 14.0
+                (Math.random() - 0.5) * 16.0,
+                (Math.random() - 0.5) * 16.0,
+                (Math.random() - 0.5) * 16.0
             );
 
             this.scene.add(mesh);

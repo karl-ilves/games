@@ -51,16 +51,16 @@ export class DefenderShopUI {
 
         const currentYards = yardService.getYards();
         const hasInfinite = yardService.hasInfiniteYards();
-        const balanceText = hasInfinite ? 'Lõpmatu 👑' : `${currentYards.toLocaleString()} pbx`;
+        const balanceText = hasInfinite ? 'Infinite 👑' : `${currentYards.toLocaleString()} pbx`;
 
         this.modalEl.innerHTML = `
             <div class="modal-card shop-modal-card" style="max-width: 680px; width: 95%; max-height: 88vh; display: flex; flex-direction: column; padding: 24px; text-align: left; border: 2px solid #00f2fe; box-shadow: 0 0 50px rgba(0, 242, 254, 0.45); background: linear-gradient(155deg, #0c1524, #060b13);">
                 <!-- Header -->
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid rgba(0, 242, 254, 0.25); padding-bottom: 14px;">
                     <div>
-                        <div class="modal-badge" style="margin-bottom: 6px;">🛍️ PLANEEDI KAITSE ARSENAL</div>
+                        <div class="modal-badge" style="margin-bottom: 6px;">🛍️ PLANETARY DEFENSE ARSENAL</div>
                         <h2 style="font-size: 1.6rem; margin: 0; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-                            Defender Pbx Pood
+                            Defender Pbx Shop
                         </h2>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -96,11 +96,11 @@ export class DefenderShopUI {
                                 <div style="flex-shrink: 0; text-align: right;">
                                     ${isOwned ? `
                                         <div style="background: rgba(46, 213, 115, 0.2); border: 1.5px solid #2ed573; color: #2ed573; font-weight: 900; font-size: 0.85rem; padding: 8px 16px; border-radius: 10px; display: flex; align-items: center; gap: 6px;">
-                                            ✓ OMATUD
+                                            ✓ OWNED
                                         </div>
                                     ` : `
                                         <button class="btn-buy-pbx" data-buy-item-id="${item.id}" style="background: linear-gradient(135deg, #00f2fe, #0072ff); border: none; color: #050813; font-weight: 900; font-size: 0.88rem; padding: 9px 18px; border-radius: 10px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 242, 254, 0.35); transition: all 0.2s; white-space: nowrap;">
-                                            🛍️ Osta (${item.price.toLocaleString()} pbx)
+                                            🛍️ Buy (${item.price.toLocaleString()} pbx)
                                         </button>
                                     `}
                                 </div>
@@ -111,7 +111,7 @@ export class DefenderShopUI {
 
                 <!-- Footer hint -->
                 <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.76rem; color: #8899a6; text-align: center;">
-                    💡 Ostetud uuendused jäävad püsivalt aktiivseks kõigil tulevastel 2D Earth Defender missioonidel!
+                    💡 Purchased upgrades remain permanently active on all future 2D Earth Defender missions!
                 </div>
             </div>
         `;
@@ -143,12 +143,12 @@ export class DefenderShopUI {
         const hasInfinite = yardService.hasInfiniteYards();
 
         if (!hasInfinite && currentYards < item.price) {
-            alert(`Sul pole piisavalt Playbuxi! Vajad ${item.price.toLocaleString()} pbx (praegu ${currentYards.toLocaleString()} pbx).`);
+            alert(`You do not have enough Playbux! You need ${item.price.toLocaleString()} pbx (currently have ${currentYards.toLocaleString()} pbx).`);
             return;
         }
 
         const confirmed = await showYardPurchaseConfirm({
-            title: `🛡️ Osta ${item.name}`,
+            title: `🛡️ Buy ${item.name}`,
             itemName: item.name,
             yardCost: item.price,
             description: item.description,

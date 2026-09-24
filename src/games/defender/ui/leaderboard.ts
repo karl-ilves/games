@@ -225,14 +225,14 @@ export class DefenderLeaderboardUI {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 215, 0, 0.25); padding-bottom: 12px;">
                     <div>
                         <div class="modal-badge" style="border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.15); margin-bottom: 6px;">
-                            🏆 KOSMOSE KAITSJATE EDETABEL
+                            🏆 SPACE DEFENDERS LEADERBOARD
                         </div>
                         <h2 style="font-size: 1.55rem; margin: 0; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-                            Mängijate Tulemused
+                            Player Rankings & High Scores
                         </h2>
                         <div style="font-size: 0.76rem; color: #00f2fe; margin-top: 4px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
                             <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #00f2fe; box-shadow: 0 0 8px #00f2fe;"></span>
-                            Näidatakse mängijaid, kes on seda mängu mänginud. Tulemused uuenevad reaalajas!
+                            Showing players who have played this game. Results update in real time!
                         </div>
                     </div>
                     <button id="btn-close-leaderboard" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #ffffff; border-radius: 10px; width: 36px; height: 36px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">✕</button>
@@ -240,14 +240,14 @@ export class DefenderLeaderboardUI {
 
                 <!-- Search Input -->
                 <div style="margin-bottom: 12px;">
-                    <input type="text" id="lb-player-search" placeholder="🔍 Otsi mängijat..." value="${escapeHtml(this.searchQuery)}" style="width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 8px; padding: 8px 12px; color: #ffffff; font-size: 0.82rem; outline: none;">
+                    <input type="text" id="lb-player-search" placeholder="🔍 Search players..." value="${escapeHtml(this.searchQuery)}" style="width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 8px; padding: 8px 12px; color: #ffffff; font-size: 0.82rem; outline: none;">
                 </div>
 
                 <!-- Table Rows -->
                 <div style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
                     ${entries.length === 0 ? `
                         <div style="text-align: center; padding: 25px; color: #8899a6; font-size: 0.9rem;">
-                            Ükski mängija pole veel tulemust kirja saanud. Alusta mängu ja kaitse Maad!
+                            No scores recorded yet. Launch a mission and defend Earth!
                         </div>
                     ` : entries.map((entry, index) => {
                         const rank = index + 1;
@@ -293,11 +293,11 @@ export class DefenderLeaderboardUI {
                                         <div style="font-weight: 800; font-size: 0.92rem; color: #ffffff; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                             <span>${escapeHtml(entry.name)}</span>
                                             ${entry.isOwner ? '<span style="font-size: 0.65rem; color: #ffd700; background: rgba(255,215,0,0.2); padding: 1px 6px; border-radius: 4px; border: 1px solid #ffd700; font-weight: 900;">👑 OWNER</span>' : ''}
-                                            <span style="font-size: 0.62rem; color: #2ed573; background: rgba(46, 213, 115, 0.15); border: 1px solid rgba(46, 213, 115, 0.4); padding: 1px 5px; border-radius: 4px; font-weight: 800;">✓ MÄNGINUD</span>
-                                            ${entry.isCurrentPlayer ? '<span style="font-size: 0.65rem; color: #00f2fe; background: rgba(0,242,254,0.25); padding: 1px 6px; border-radius: 4px; border: 1px solid #00f2fe; font-weight: 900;">✨ SINA</span>' : ''}
+                                            <span style="font-size: 0.62rem; color: #2ed573; background: rgba(46, 213, 115, 0.15); border: 1px solid rgba(46, 213, 115, 0.4); padding: 1px 5px; border-radius: 4px; font-weight: 800;">✓ PLAYED</span>
+                                            ${entry.isCurrentPlayer ? '<span style="font-size: 0.65rem; color: #00f2fe; background: rgba(0,242,254,0.25); padding: 1px 6px; border-radius: 4px; border: 1px solid #00f2fe; font-weight: 900;">✨ YOU</span>' : ''}
                                         </div>
                                         <div style="font-size: 0.72rem; color: #8899a6; margin-top: 2px;">
-                                            Laine: ${entry.wave} | Purustatud: ${entry.asteroidsDestroyed}
+                                            Wave: ${entry.wave} | Destroyed: ${entry.asteroidsDestroyed}
                                         </div>
                                         <div style="width: 100%; height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; margin-top: 5px; overflow: hidden;">
                                             <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #ffd700, #00f2fe); border-radius: 2px;"></div>
@@ -317,7 +317,7 @@ export class DefenderLeaderboardUI {
 
                 <!-- Footer hint -->
                 <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.74rem; color: #8899a6; text-align: center;">
-                    💡 Iga kord, kui keegi mängib, lisatakse tema skoor siia ja edetabel uueneb automaatselt!
+                    💡 Every time someone plays, their score is recorded and the leaderboard updates automatically!
                 </div>
             </div>
         `;

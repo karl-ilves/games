@@ -20,6 +20,7 @@ export class FireSystem {
     private fireballLight: THREE.PointLight;
     private fireballActive = false;
     private fireballElapsed = 0;
+    private fireballScaleMultiplier = 1.0;
     private readonly fireballDuration = 1.0;
 
     private carFireGroup: THREE.Group;
@@ -142,18 +143,27 @@ export class FireSystem {
         }
     }
 
-    public triggerFireball(position: THREE.Vector3): void {
+    /**
+     * Trigger fireball explosion blast
+     * @param position Explosion location
+     * @param scaleMultiplier Size multiplier (e.g. 2.0x for mid-air jump crash into building)
+     */
+    public triggerFireball(position: THREE.Vector3, scaleMultiplier: number = 1.0): void {
+        this.fireballScaleMultiplier = scaleMultiplier;
         this.fireballGroup.position.copy(position);
         this.fireballGroup.position.y += 0.6;
         this.fireballGroup.visible = true;
         this.fireballActive = true;
         this.fireballElapsed = 0;
 
-        this.fireballCore.scale.set(0.6, 0.6, 0.6);
-        this.fireballOuter.scale.set(0.8, 0.8, 0.8);
+        const baseCore = 0.6 * scaleMultiplier;
+        const baseOuter = 0.8 * scaleMultiplier;
+        this.fireballCore.scale.set(baseCore, baseCore, baseCore);
+        this.fireballOuter.scale.set(baseOuter, baseOuter, baseOuter);
         (this.fireballCore.material as THREE.MeshBasicMaterial).opacity = 1.0;
         (this.fireballOuter.material as THREE.MeshBasicMaterial).opacity = 0.95;
-        this.fireballLight.intensity = 5.0;
+        this.fireballLight.intensity = 5.0 * scaleMultiplier;
+        this.fireballLight.distance = 18 * scaleMultiplier;
     }
 
     public startCarFire(carGroup: THREE.Group): void {
@@ -181,8 +191,8 @@ export class FireSystem {
                 this.fireballActive = false;
                 this.fireballGroup.visible = false;
             } else {
-                // Expanding scale with ease out
-                const scale = 0.6 + Math.sin(progress * Math.PI * 0.5) * 2.4;
+                // Expanding scale with ease out, multiplied by scaleMultiplier (e.g. 2x)
+                const scale = (0.6 + Math.sin(progress * Math.PI * 0.5) * 2.4) * this.fireballScaleMultiplier;
                 this.fireballCore.scale.set(scale * 0.6, scale * 0.6, scale * 0.6);
                 this.fireballOuter.scale.set(scale, scale, scale);
 
@@ -190,7 +200,7 @@ export class FireSystem {
                 const fade = 1.0 - progress;
                 (this.fireballCore.material as THREE.MeshBasicMaterial).opacity = Math.max(0, fade * 1.0);
                 (this.fireballOuter.material as THREE.MeshBasicMaterial).opacity = Math.max(0, fade * 0.9);
-                this.fireballLight.intensity = Math.max(0, fade * 5.0);
+                this.fireballLight.intensity = Math.max(0, fade * 5.0 * this.fireballScaleMultiplier);
             }
         }
 
@@ -240,6 +250,7 @@ export class FireSystem {
         this.carFireGroup.visible = false;
         this.fireballActive = false;
         this.fireballGroup.visible = false;
+        this.fireballScaleMultiplier = 1.0;
 
         // Reset particle positions
         for (const p of this.particles) {
@@ -263,5 +274,9 @@ export class FireSystem {
 
     public getActiveFlameCount(): number {
         return this.isBurning ? this.particles.length : 0;
+    }
+
+    public getFireballScale(): number {
+        return this.fireballScaleMultiplier;
     }
 }
