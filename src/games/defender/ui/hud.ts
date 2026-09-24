@@ -79,10 +79,12 @@ export class DefenderHud {
             const scoreEl = document.getElementById('final-score-val');
             const destEl = document.getElementById('final-destroyed-val');
             const waveEl = document.getElementById('final-wave-val');
+            const rewardEl = document.getElementById('reward-pbx-val');
 
             if (scoreEl) scoreEl.textContent = stats.score.toLocaleString();
             if (destEl) destEl.textContent = stats.asteroidsDestroyed.toString();
             if (waveEl) waveEl.textContent = stats.wave.toString();
+            if (rewardEl) rewardEl.textContent = `+${(stats.earnedPbx ?? 50).toLocaleString()}`;
 
             this.gameOverModal.style.display = 'flex';
         }

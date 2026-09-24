@@ -8498,6 +8498,41 @@ await (async () => {
                 game.state.activatePowerUp('triple_shot');
                 const hasTriple = game.state.hasTripleShot();
 
+                // Test Mission Failed (Game Over) and Money Reward (Pbx)
+                const fatalDmg = game.state.applyEarthDamage(999);
+                game.hud.showGameOver(game.state.getStats());
+
+                const gameOverModal = document.getElementById('game-over-modal');
+                const isGameOverVisible = gameOverModal && window.getComputedStyle(gameOverModal).display === 'flex';
+                const rewardValEl = document.getElementById('reward-pbx-val');
+                const rewardText = rewardValEl ? rewardValEl.textContent : '';
+                const lastEarnedPbx = game.state.getLastEarnedPbx();
+
+                // Test Leaderboard button and view
+                const btnLb = document.getElementById('btn-gameover-leaderboard');
+                if (btnLb) btnLb.click();
+                const lbModal = document.getElementById('defender-leaderboard-modal');
+                const isLbVisible = lbModal && window.getComputedStyle(lbModal).display === 'flex';
+                const lbRows = lbModal ? lbModal.querySelectorAll('.leaderboard-entry-row') : [];
+                if (game.leaderboardUI) game.leaderboardUI.close();
+
+                // Test Shop button and 5 Pbx items
+                const btnShop = document.getElementById('btn-gameover-shop');
+                if (btnShop) btnShop.click();
+                const shopModal = document.getElementById('defender-shop-modal');
+                const isShopVisible = shopModal && window.getComputedStyle(shopModal).display === 'flex';
+                const shopCards = shopModal ? shopModal.querySelectorAll('.shop-item-card') : [];
+
+                // Test purchasing an item (e.g. Hyper-Plasma Blaster)
+                game.state.unlockUpgrade('defender_hyper_blaster');
+                game.state.unlockUpgrade('defender_defense_drone');
+                const hasHyper = game.state.hasHyperBlaster();
+                const hasDrone = game.state.hasDefenseDrone();
+                if (game.shopUI) {
+                    game.shopUI.render();
+                    game.shopUI.close();
+                }
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
@@ -8512,7 +8547,16 @@ await (async () => {
                     scoreIncreased: scoreAfter > scoreBefore,
                     dmgRegistered: dmgRes.shieldDmg > 0 || dmgRes.hpDmg > 0,
                     empFired: canEmp,
-                    tripleShotActive: hasTriple
+                    tripleShotActive: hasTriple,
+                    isGameOverVisible,
+                    lastEarnedPbx,
+                    rewardText,
+                    leaderboardOpened: isLbVisible,
+                    leaderboardEntriesCount: lbRows.length,
+                    shopOpened: isShopVisible,
+                    shopItemsCount: shopCards.length,
+                    hasHyperBlaster: hasHyper,
+                    hasDefenseDrone: hasDrone
                 };
             });
 
@@ -8526,7 +8570,19 @@ await (async () => {
             if (defenderGameTest.lasersFired < 2 || !defenderGameTest.asteroidSpawned || !defenderGameTest.scoreIncreased) {
                 throw new Error("Defender gameplay mechanics check failed: " + JSON.stringify(defenderGameTest));
             }
-            console.log("✅ 🛡️ 2D Earth Defender (Maa Kaitsja 2D) tests passed successfully!");
+            if (!defenderGameTest.isGameOverVisible || defenderGameTest.lastEarnedPbx <= 0) {
+                throw new Error("Defender Mission Failed screen or Pbx money reward check failed: " + JSON.stringify(defenderGameTest));
+            }
+            if (!defenderGameTest.leaderboardOpened || defenderGameTest.leaderboardEntriesCount < 5) {
+                throw new Error("Defender Leaderboard modal check failed: " + JSON.stringify(defenderGameTest));
+            }
+            if (!defenderGameTest.shopOpened || defenderGameTest.shopItemsCount !== 5) {
+                throw new Error("Defender Shop check failed (must have 5 Pbx items): " + JSON.stringify(defenderGameTest));
+            }
+            if (!defenderGameTest.hasHyperBlaster || !defenderGameTest.hasDefenseDrone) {
+                throw new Error("Defender Upgrade unlocks check failed: " + JSON.stringify(defenderGameTest));
+            }
+            console.log("✅ 🛡️ 2D Earth Defender (Maa Kaitsja 2D, Mission Failed, Leaderboard & 5 Pbx Shop items) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

@@ -14,6 +14,7 @@ export class PlayerController {
     private fireCooldown: number = 0;
     private baseFireRate: number = 0.16; // seconds between shots
     private isOwner: boolean = false;
+    private hasHyperBlaster: boolean = false;
 
     private nextLaserId: number = 1;
     private thrusterFlicker: number = 0;
@@ -28,6 +29,10 @@ export class PlayerController {
         this.isOwner = val;
     }
 
+    public setHyperBlaster(val: boolean) {
+        this.hasHyperBlaster = val;
+    }
+
     public setInputs(left: boolean, right: boolean, firing: boolean) {
         this.moveLeft = left;
         this.moveRight = right;
@@ -39,7 +44,7 @@ export class PlayerController {
         if (y !== undefined) this.y = y;
     }
 
-    public update(dt: number, width: number, height: number, hasSpeedBoost: boolean): Laser[] {
+    public update(dt: number, width: number, height: number, hasSpeedBoost: boolean, tripleShotActive: boolean = false): Laser[] {
         const spawnedLasers: Laser[] = [];
         const currentSpeed = hasSpeedBoost ? this.speed * 1.4 : this.speed;
 
@@ -77,8 +82,9 @@ export class PlayerController {
         }
 
         if (this.isFiring && this.fireCooldown <= 0) {
-            spawnedLasers.push(...this.fireWeapons());
-            this.fireCooldown = this.isOwner ? this.baseFireRate * 0.85 : this.baseFireRate;
+            spawnedLasers.push(...this.createLasers(tripleShotActive));
+            const baseCooldown = this.isOwner ? this.baseFireRate * 0.85 : this.baseFireRate;
+            this.fireCooldown = this.hasHyperBlaster ? baseCooldown * 0.65 : baseCooldown;
         }
 
         return spawnedLasers;
@@ -88,14 +94,11 @@ export class PlayerController {
         return this.createLasers(tripleShot);
     }
 
-    private fireWeapons(): Laser[] {
-        return this.createLasers(false);
-    }
-
     public createLasers(tripleShot: boolean): Laser[] {
         const lasers: Laser[] = [];
-        const laserColor = this.isOwner ? '#ffd700' : '#00f2fe';
-        const laserSpeed = 820;
+        const laserColor = this.isOwner ? '#ffd700' : (this.hasHyperBlaster ? '#00f2fe' : '#48dbfb');
+        const laserSpeed = this.hasHyperBlaster ? 920 : 820;
+        const extraDmg = this.hasHyperBlaster ? 1 : 0;
 
         if (tripleShot) {
             // Center dual + left & right angles
@@ -106,7 +109,7 @@ export class PlayerController {
                 vx: -90,
                 vy: -laserSpeed,
                 radius: 4,
-                damage: this.isOwner ? 2 : 1,
+                damage: (this.isOwner ? 2 : 1) + extraDmg,
                 color: laserColor,
                 isOwnerBeam: this.isOwner,
                 life: 1.5
@@ -118,7 +121,7 @@ export class PlayerController {
                 vx: 0,
                 vy: -laserSpeed,
                 radius: 5,
-                damage: this.isOwner ? 3 : 2,
+                damage: (this.isOwner ? 3 : 2) + extraDmg,
                 color: '#ffffff',
                 isOwnerBeam: this.isOwner,
                 life: 1.5
@@ -130,7 +133,7 @@ export class PlayerController {
                 vx: 90,
                 vy: -laserSpeed,
                 radius: 4,
-                damage: this.isOwner ? 2 : 1,
+                damage: (this.isOwner ? 2 : 1) + extraDmg,
                 color: laserColor,
                 isOwnerBeam: this.isOwner,
                 life: 1.5
@@ -143,8 +146,8 @@ export class PlayerController {
                 y: this.y - 18,
                 vx: 0,
                 vy: -laserSpeed,
-                radius: 4,
-                damage: this.isOwner ? 2 : 1,
+                radius: this.hasHyperBlaster ? 5 : 4,
+                damage: (this.isOwner ? 2 : 1) + extraDmg,
                 color: laserColor,
                 isOwnerBeam: this.isOwner,
                 life: 1.5
@@ -155,8 +158,8 @@ export class PlayerController {
                 y: this.y - 18,
                 vx: 0,
                 vy: -laserSpeed,
-                radius: 4,
-                damage: this.isOwner ? 2 : 1,
+                radius: this.hasHyperBlaster ? 5 : 4,
+                damage: (this.isOwner ? 2 : 1) + extraDmg,
                 color: laserColor,
                 isOwnerBeam: this.isOwner,
                 life: 1.5

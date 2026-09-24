@@ -1,4 +1,4 @@
-import { getCurrentUserProfile, canAccessDefender, isTestMode } from '../../auth';
+import { getCurrentUserProfile, canAccessDefender } from '../../auth';
 import { yardService } from '../../shared/yardService';
 import { Asteroid, Laser } from './types';
 import { DefenderState } from './state/defenderState';
@@ -6,8 +6,11 @@ import { SpaceWorld } from './world/spaceWorld';
 import { PlayerController } from './systems/playerController';
 import { AsteroidManager } from './systems/asteroidManager';
 import { EffectsManager } from './systems/effects';
+import { DefenseDroneSystem } from './systems/defenseDrone';
 import { DefenderAudio } from './audio';
 import { DefenderHud } from './ui/hud';
+import { DefenderShopUI } from './ui/shop';
+import { DefenderLeaderboardUI } from './ui/leaderboard';
 
 export class EarthDefenderGame {
     public canvas!: HTMLCanvasElement;
@@ -18,8 +21,11 @@ export class EarthDefenderGame {
     public player!: PlayerController;
     public asteroidMgr: AsteroidManager;
     public effectsMgr: EffectsManager;
+    public droneSystem: DefenseDroneSystem;
     public audio: DefenderAudio;
     public hud: DefenderHud;
+    public shopUI: DefenderShopUI;
+    public leaderboardUI: DefenderLeaderboardUI;
 
     public lasers: Laser[] = [];
     private lastTime: number = 0;
@@ -30,8 +36,14 @@ export class EarthDefenderGame {
         this.state = new DefenderState();
         this.asteroidMgr = new AsteroidManager();
         this.effectsMgr = new EffectsManager();
+        this.droneSystem = new DefenseDroneSystem();
         this.audio = new DefenderAudio();
         this.hud = new DefenderHud();
+        this.shopUI = new DefenderShopUI(this.state, (item) => {
+            if (this.player) this.player.setHyperBlaster(this.state.hasHyperBlaster());
+            this.hud.showToast(`🎉 Uuendus "${item.name}" aktiivne!`, '#2ed573');
+        });
+        this.leaderboardUI = new DefenderLeaderboardUI(this.state);
 
         this.init();
     }
@@ -59,6 +71,7 @@ export class EarthDefenderGame {
 
         this.world = new SpaceWorld(this.canvas.width, this.canvas.height);
         this.player = new PlayerController(this.canvas.width / 2, this.canvas.height - 160, ownerAccess);
+        this.player.setHyperBlaster(this.state.hasHyperBlaster());
 
         this.setupInputs();
         this.setupButtons();
@@ -144,18 +157,18 @@ export class EarthDefenderGame {
     }
 
     private setupButtons() {
-        const soundBtn = document.getElementById('btn-toggle-sound');
-        if (soundBtn) {
-            soundBtn.addEventListener('click', () => {
-                const enabled = this.audio.toggleSound();
-                this.hud.updateSoundButton(enabled);
-            });
-        }
+        document.getElementById('btn-toggle-sound')?.addEventListener('click', () => {
+            this.hud.updateSoundButton(this.audio.toggleSound());
+        });
+        document.getElementById('btn-restart-game')?.addEventListener('click', () => this.restartGame());
 
-        const restartBtn = document.getElementById('btn-restart-game');
-        if (restartBtn) {
-            restartBtn.addEventListener('click', () => this.restartGame());
-        }
+        const openShop = () => this.shopUI.open();
+        document.getElementById('btn-hud-shop')?.addEventListener('click', openShop);
+        document.getElementById('btn-gameover-shop')?.addEventListener('click', openShop);
+
+        const openLb = () => this.leaderboardUI.open();
+        document.getElementById('btn-hud-leaderboard')?.addEventListener('click', openLb);
+        document.getElementById('btn-gameover-leaderboard')?.addEventListener('click', openLb);
     }
 
     public triggerEmp() {
@@ -170,7 +183,6 @@ export class EarthDefenderGame {
         this.effectsMgr.triggerScreenShake(0.5, 12);
         this.hud.showToast("💥 ORBITAALNE EMP VALLANDATUD!", "#a55eea");
 
-        // Destroy all asteroids on screen
         for (const ast of [...this.asteroidMgr.asteroids]) {
             this.destroyAsteroid(ast, true);
         }
@@ -202,13 +214,10 @@ export class EarthDefenderGame {
 
     private gameLoop(time: number) {
         if (!this.isRunning) return;
-
         const dt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
-
         this.update(dt);
         this.render();
-
         requestAnimationFrame((t) => this.gameLoop(t));
     }
 
@@ -219,44 +228,40 @@ export class EarthDefenderGame {
         this.world.update(dt, this.canvas.height);
 
         // Player & laser update
-        const newLasers = this.player.update(dt, this.canvas.width, this.canvas.height, this.state.hasSpeedBoost());
+        const newLasers = this.player.update(dt, this.canvas.width, this.canvas.height, this.state.hasSpeedBoost(), this.state.hasTripleShot());
         if (newLasers.length > 0) {
             this.lasers.push(...newLasers);
             this.audio.playLaser(this.state.getIsOwner());
         }
 
-        // Update lasers movement & lifespan
+        // Autonomous escort drone update
+        if (this.state.hasDefenseDrone()) {
+            const droneLasers = this.droneSystem.update(dt, this.player.x, this.player.y, true, this.asteroidMgr.asteroids);
+            if (droneLasers.length > 0) this.lasers.push(...droneLasers);
+        }
+
+        // Update lasers
         for (let i = this.lasers.length - 1; i >= 0; i--) {
             const l = this.lasers[i];
             l.x += l.vx * dt;
             l.y += l.vy * dt;
             l.life -= dt;
-            if (l.y < -20 || l.life <= 0) {
-                this.lasers.splice(i, 1);
-            }
+            if (l.y < -20 || l.life <= 0) this.lasers.splice(i, 1);
         }
 
         // Update Asteroids & check Earth impacts
-        this.asteroidMgr.update(
-            dt,
-            this.canvas.width,
-            this.canvas.height,
-            this.state.getStats().wave,
-            (ast) => {
-                // Earth Impact
-                const res = this.state.applyEarthDamage(ast.config.damageToEarth);
-                this.audio.playEarthImpact();
-                this.effectsMgr.triggerScreenShake(0.4, 10);
-                this.effectsMgr.addExplosion(ast.x, this.canvas.height - 70, '#ff4757', 25, 220);
-                this.effectsMgr.addShockwave(ast.x, this.canvas.height - 70, 110, '#ff4757');
-                this.effectsMgr.addFloatingText(ast.x, this.canvas.height - 100, `-${ast.config.damageToEarth} HP`, '#ff4757');
+        this.asteroidMgr.update(dt, this.canvas.width, this.canvas.height, this.state.getStats().wave, (ast) => {
+            const res = this.state.applyEarthDamage(ast.config.damageToEarth);
+            this.audio.playEarthImpact();
+            this.effectsMgr.triggerScreenShake(0.4, 10);
+            this.effectsMgr.addExplosion(ast.x, this.canvas.height - 70, '#ff4757', 25, 220);
+            this.effectsMgr.addShockwave(ast.x, this.canvas.height - 70, 110, '#ff4757');
+            this.effectsMgr.addFloatingText(ast.x, this.canvas.height - 100, `-${ast.config.damageToEarth} HP`, '#ff4757');
 
-                if (res.isDestroyed) {
-                    this.hud.showGameOver(this.state.getStats());
-                }
-            },
-            () => {}
-        );
+            if (res.isDestroyed) {
+                this.hud.showGameOver(this.state.getStats());
+            }
+        }, () => {});
 
         // Laser - Asteroid Collisions
         for (let i = this.lasers.length - 1; i >= 0; i--) {
@@ -265,13 +270,10 @@ export class EarthDefenderGame {
                 const ast = this.asteroidMgr.asteroids[j];
                 const dx = laser.x - ast.x;
                 const dy = laser.y - ast.y;
-                const distSq = dx * dx + dy * dy;
-
-                if (distSq < (laser.radius + ast.radius) * (laser.radius + ast.radius)) {
+                if (dx * dx + dy * dy < (laser.radius + ast.radius) ** 2) {
                     ast.hp -= laser.damage;
                     this.effectsMgr.addExplosion(laser.x, laser.y, laser.color, 6, 90);
                     this.lasers.splice(i, 1);
-
                     if (ast.hp <= 0) {
                         this.destroyAsteroid(ast);
                         this.asteroidMgr.asteroids.splice(j, 1);
@@ -286,8 +288,7 @@ export class EarthDefenderGame {
             const p = this.asteroidMgr.powerUps[i];
             const dx = this.player.x - p.x;
             const dy = this.player.y - p.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < (this.player.radius + p.radius + 10) * (this.player.radius + p.radius + 10)) {
+            if (dx * dx + dy * dy < (this.player.radius + p.radius + 10) ** 2) {
                 this.state.activatePowerUp(p.type);
                 this.audio.playPowerUp();
                 this.effectsMgr.addShockwave(p.x, p.y, 45, '#2ed573');
@@ -296,7 +297,7 @@ export class EarthDefenderGame {
             }
         }
 
-        // Wave progression check (every 25 asteroids destroyed)
+        // Wave progression check
         const stats = this.state.getStats();
         if (stats.asteroidsDestroyed >= stats.wave * 20) {
             this.state.advanceWave();
@@ -310,23 +311,18 @@ export class EarthDefenderGame {
 
     private render() {
         this.ctx.save();
-
-        // Screen Shake
         if (this.effectsMgr.screenShakeTime > 0) {
             const shake = (Math.random() - 0.5) * this.effectsMgr.screenShakeIntensity;
             this.ctx.translate(shake, shake);
         }
 
         const stats = this.state.getStats();
-        const hpPct = stats.earthHp / stats.earthMaxHp;
-        const shieldPct = stats.earthShield / stats.earthMaxShield;
-
-        this.world.render(this.ctx, this.canvas.width, this.canvas.height, hpPct, shieldPct);
+        this.world.render(this.ctx, this.canvas.width, this.canvas.height, stats.earthHp / stats.earthMaxHp, stats.earthShield / stats.earthMaxShield);
         this.effectsMgr.renderLasers(this.ctx, this.lasers);
         this.asteroidMgr.render(this.ctx);
         this.player.render(this.ctx);
+        this.droneSystem.render(this.ctx, this.state.hasDefenseDrone());
         this.effectsMgr.renderEffects(this.ctx);
-
         this.ctx.restore();
     }
 }

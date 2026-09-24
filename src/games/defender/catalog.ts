@@ -95,3 +95,60 @@ export const POWERUP_CONFIGS: PowerUpConfig[] = [
     { type: 'emp_nuke', icon: '💣', label: 'Orbitaalne EMP', color: '#a55eea', dropWeight: 15 },
     { type: 'speed_boost', icon: '⏩', label: 'Hüperkiirendus', color: '#ffa502', dropWeight: 20 }
 ];
+
+export const DEFENDER_SHOP_ITEMS: import('./types').DefenderShopItem[] = [
+    {
+        id: 'defender_hyper_blaster',
+        name: 'Hüper-Plasma Blaster',
+        description: 'Võimsam kahjustus (+50% laserikahju) ja 35% kiirem laskekiirus. Asteroidid purunevad silmapilkselt!',
+        price: 500,
+        icon: '⚡',
+        badge: 'TULEJÕUD',
+        tag: 'blaster'
+    },
+    {
+        id: 'defender_titanium_shield',
+        name: 'Titaanist Planeedikilp',
+        description: 'Tugevdab Maa planetaarset kilpi (+50 Max SP) ja taastab kilbi energiat 2x kiiremini!',
+        price: 1000,
+        icon: '🛡️',
+        badge: 'PLANETARIAN',
+        tag: 'shield'
+    },
+    {
+        id: 'defender_mega_emp',
+        name: 'Mega EMP Tuumalaeng',
+        description: 'Alustad igat missiooni 100% valmis EMP pommiga ning EMP laeb lahingus 50% kiiremalt!',
+        price: 1500,
+        icon: '💣',
+        badge: 'TAKTIKALINE',
+        tag: 'emp'
+    },
+    {
+        id: 'defender_defense_drone',
+        name: 'Orbitaalne Satelliit-Droon',
+        description: 'Autonoomne lahingdroon tiirleb laeva kõrval ja tulistab automaatselt lähenevaid asteroide!',
+        price: 2500,
+        icon: '🛸',
+        badge: 'DROON',
+        tag: 'drone'
+    },
+    {
+        id: 'defender_golden_magnet',
+        name: 'Kuldne Komeetide Magnet (2X Pbx)',
+        description: 'Kahekordistab skooripunktid (2x Score) ja teenid igalt missioonilt 2X rohkem Pbx valuutat!',
+        price: 3500,
+        icon: '🪙',
+        badge: '2X PBX BOOSTER',
+        tag: 'booster'
+    }
+];
+
+export const DEFAULT_LEADERBOARD: import('./types').LeaderboardEntry[] = [
+    { id: 'lb_owner', name: 'Karl Ilves', score: 24500, wave: 18, asteroidsDestroyed: 112, isOwner: true, avatarIcon: '👑' },
+    { id: 'lb_nova', name: 'Commander Nova', score: 18200, wave: 14, asteroidsDestroyed: 89, avatarIcon: '🚀' },
+    { id: 'lb_banana', name: 'MinionBanana0_0', score: 14800, wave: 11, asteroidsDestroyed: 74, avatarIcon: '🍌' },
+    { id: 'lb_star', name: 'StarGuardian', score: 11200, wave: 8, asteroidsDestroyed: 58, avatarIcon: '⭐' },
+    { id: 'lb_cosmic', name: 'CosmicAce', score: 7600, wave: 6, asteroidsDestroyed: 42, avatarIcon: '🛸' },
+    { id: 'lb_slayer', name: 'AsteroidSlayer', score: 4500, wave: 4, asteroidsDestroyed: 27, avatarIcon: '☄️' }
+];

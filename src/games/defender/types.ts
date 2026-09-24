@@ -100,4 +100,26 @@ export interface GameStats {
     combo: number;
     empCharged: boolean;
     empChargePct: number;
+    earnedPbx?: number;
+}
+
+export interface DefenderShopItem {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    icon: string;
+    badge?: string;
+    tag: string;
+}
+
+export interface LeaderboardEntry {
+    id: string;
+    name: string;
+    score: number;
+    wave: number;
+    asteroidsDestroyed: number;
+    isOwner?: boolean;
+    isCurrentPlayer?: boolean;
+    avatarIcon?: string;
 }

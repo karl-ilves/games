@@ -330,6 +330,8 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="hud-btn" id="btn-hud-leaderboard" title="Vaata edetabelit" style="border-color: rgba(255, 215, 0, 0.5); color: #ffd700;">🏆 Edetabel</button>
+            <button class="hud-btn" id="btn-hud-shop" title="Ava pood" style="border-color: rgba(0, 242, 254, 0.5); color: #00f2fe;">🛍️ Pood</button>
             <button class="hud-btn" id="btn-toggle-sound" title="Heli sisse/välja">🔊 Heli</button>
             <span style="font-size: 0.72rem; font-weight: 800; color: #ffd700; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.5); padding: 5px 8px; border-radius: 8px;" id="owner-hud-badge">👑 PLAYARD OWNER</span>
         </div>
@@ -379,10 +381,20 @@
         <div class="modal-card game-over-theme">
             <div class="modal-badge" style="border-color: #ff4757; color: #ff4757; background: rgba(255, 71, 87, 0.15);">💥 MAA HÄVITATUD!</div>
             <h2 style="font-size: 1.8rem; margin: 0 0 10px 0; color: #ffffff;">MISSION FAILED</h2>
-            <p style="color: #a4b0be; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">
+            <p style="color: #a4b0be; font-size: 0.9rem; line-height: 1.5; margin-bottom: 16px;">
                 Asteroidid tungisid läbi planeedi kaitse ja tabasid Maad!<br>
                 Sinu vapper võitlus kaitses tsivilisatsiooni viimse hetkeni.
             </p>
+
+            <!-- Earned Reward Banner (Raha saamine) -->
+            <div id="gameover-reward-banner" style="background: rgba(255, 215, 0, 0.12); border: 1.5px solid #ffd700; border-radius: 12px; padding: 10px 14px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 900; color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.25);">
+                <span style="font-size: 1.4rem;">💰</span>
+                <div>
+                    <div style="font-size: 0.72rem; color: #8899a6; text-transform: uppercase;">Teenitud Tasu</div>
+                    <div style="font-size: 1.3rem;"><span id="reward-pbx-val">+50</span> pbx</div>
+                </div>
+            </div>
+
             <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; margin-bottom: 22px; display: flex; justify-content: space-around;">
                 <div>
                     <div style="font-size: 0.75rem; color: #8899a6;">LÕPU SKOOR</div>
@@ -397,12 +409,22 @@
                     <div style="font-size: 1.3rem; font-weight: 900; color: #2ed573;" id="final-wave-val">1</div>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="btn-action-primary" id="btn-restart-game">🔄 Mängi Uuesti</button>
-                <a href="../../index.html" class="hud-btn" style="padding: 12px 20px; font-size: 0.95rem;">🏠 Hub</a>
+
+            <!-- Action buttons: Leaderboard, Shop, Restart, Hub -->
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button class="hud-btn" id="btn-gameover-leaderboard" style="padding: 10px 14px; font-size: 0.9rem; border-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.12);">🏆 Edetabel</button>
+                <button class="hud-btn" id="btn-gameover-shop" style="padding: 10px 14px; font-size: 0.9rem; border-color: #00f2fe; color: #00f2fe; background: rgba(0,242,254,0.12);">🛍️ Pood</button>
+                <button class="btn-action-primary" id="btn-restart-game" style="padding: 10px 18px; font-size: 0.95rem;">🔄 Uuesti</button>
+                <a href="../../index.html" class="hud-btn" style="padding: 10px 14px; font-size: 0.9rem;">🏠 Hub</a>
             </div>
         </div>
     </div>
+
+    <!-- Defender Shop Modal -->
+    <div class="modal-overlay" id="defender-shop-modal"></div>
+
+    <!-- Defender Leaderboard Modal -->
+    <div class="modal-overlay" id="defender-leaderboard-modal"></div>
 
     <!-- Owner Only Lock Modal (Non-owners) -->
     <div class="modal-overlay" id="owner-only-modal">
