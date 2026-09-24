@@ -136,6 +136,97 @@ export class CrashDebrisSystem {
         });
     }
 
+    /**
+     * Spawn remaining car debris when the falling half-car slams into the ground
+     * User requirement: "pool kukkub alla ja puruneb maa puututamisest"
+     */
+    public spawnGroundImpactDebris(origin: THREE.Vector3, forwardDir: THREE.Vector3, bodyColorHex: string): void {
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(bodyColorHex),
+            roughness: 0.35,
+            metalness: 0.6
+        });
+        const darkMat = new THREE.MeshStandardMaterial({
+            color: 0x1e272e,
+            roughness: 0.8
+        });
+        const glassMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.85
+        });
+        const metalMat = new THREE.MeshStandardMaterial({
+            color: 0x718093,
+            roughness: 0.4,
+            metalness: 0.8
+        });
+        const wheelMat = new THREE.MeshStandardMaterial({
+            color: 0x222222,
+            roughness: 0.8
+        });
+
+        const groundPieces: { geo: THREE.BufferGeometry; mat: THREE.Material }[] = [
+            // 4 detached wheels flying out on hard ground impact
+            { geo: new THREE.CylinderGeometry(0.38, 0.38, 0.26, 12), mat: wheelMat },
+            { geo: new THREE.CylinderGeometry(0.38, 0.38, 0.26, 12), mat: wheelMat },
+            { geo: new THREE.CylinderGeometry(0.38, 0.38, 0.26, 12), mat: wheelMat },
+            { geo: new THREE.CylinderGeometry(0.38, 0.38, 0.26, 12), mat: wheelMat },
+            // Remaining body panels (doors, trunk, roof)
+            { geo: new THREE.BoxGeometry(1.2, 0.5, 0.08), mat: bodyMat },
+            { geo: new THREE.BoxGeometry(1.2, 0.5, 0.08), mat: bodyMat },
+            { geo: new THREE.BoxGeometry(1.0, 0.08, 0.9), mat: bodyMat },
+            { geo: new THREE.BoxGeometry(1.4, 0.1, 0.7), mat: bodyMat },
+            // Rear bumper and spoiler
+            { geo: new THREE.BoxGeometry(1.7, 0.06, 0.35), mat: darkMat },
+            { geo: new THREE.BoxGeometry(1.6, 0.16, 0.25), mat: darkMat },
+            { geo: new THREE.BoxGeometry(0.4, 0.15, 0.15), mat: darkMat },
+            // Shards and mechanical debris
+            { geo: new THREE.BoxGeometry(0.5, 0.3, 0.04), mat: glassMat },
+            { geo: new THREE.BoxGeometry(0.45, 0.25, 0.04), mat: glassMat },
+            { geo: new THREE.BoxGeometry(0.5, 0.4, 0.4), mat: metalMat },
+            { geo: new THREE.CylinderGeometry(0.08, 0.08, 0.9, 8), mat: metalMat },
+            { geo: new THREE.BoxGeometry(0.35, 0.25, 0.25), mat: metalMat },
+            { geo: new THREE.BoxGeometry(0.6, 0.15, 0.4), mat: darkMat },
+            { geo: new THREE.BoxGeometry(0.5, 0.15, 0.35), mat: darkMat }
+        ];
+
+        groundPieces.forEach((def) => {
+            const mesh = new THREE.Mesh(def.geo, def.mat);
+            mesh.castShadow = true;
+
+            const lateralOffset = (Math.random() - 0.5) * 2.2;
+            const heightOffset = 0.2 + Math.random() * 0.8;
+            const forwardOffset = (Math.random() - 0.5) * 2.5;
+
+            mesh.position.set(
+                origin.x + lateralOffset,
+                origin.y + heightOffset,
+                origin.z + forwardOffset
+            );
+
+            // Ground impact violent scatter velocity: bounce up and burst outwards
+            const sideSpike = (Math.random() - 0.5) * 15.0;
+            const upSpike = 5.0 + Math.random() * 9.0;
+            const fwdSpike = -forwardDir.x * (3.0 + Math.random() * 6.0) + (Math.random() - 0.5) * 8.0;
+            const depthSpike = -forwardDir.z * (3.0 + Math.random() * 6.0) + (Math.random() - 0.5) * 8.0;
+
+            const velocity = new THREE.Vector3(fwdSpike + sideSpike, upSpike, depthSpike + sideSpike);
+            const rotVelocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 18.0,
+                (Math.random() - 0.5) * 18.0,
+                (Math.random() - 0.5) * 18.0
+            );
+
+            this.scene.add(mesh);
+            this.pieces.push({
+                mesh,
+                velocity,
+                rotVelocity,
+                isResting: false
+            });
+        });
+    }
+
     public update(dt: number): void {
         const delta = Math.min(dt, 0.1);
 

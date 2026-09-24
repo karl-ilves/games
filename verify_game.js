@@ -8051,7 +8051,7 @@ await (async () => {
                 const starsResetAfterDeath = wanted.getWantedLevel() === 0;
 
                 // 2b. Test Mid-Air Jump Crash into Building:
-                // User requirement: "kui mängja hüpekaltr hüppab ja õhus lendab vastu maja siis kukkub se auto alla ja terve auto läheb katki ja palju tükke lendavad ja 2X suurem tulekera"
+                // User requirement: "pool autost puruneb õhus ja pool kukkub alla ja puruneb maa puututamisest"
                 // Simulate mid-air jump from ramp: elevated in mid-air (y = 6.0)
                 physics.state.position.set(-120, 6.0, 40);
                 physics.setLaunchedFromRamp(true);
@@ -8059,22 +8059,26 @@ await (async () => {
 
                 // Trigger mid-air crash death
                 dbg.triggerCrashDeath?.({
-                    reason: 'Hüppasid rambilt ja lendasid õhus suure hooga vastu maja! Terve auto purunes täielikult!',
+                    reason: 'Hüppasid rambilt ja lendasid õhus suure hooga vastu maja! Pool autost purunes õhus!',
                     speedKmh: 90,
                     isMidAir: true
                 });
 
-                const entireCarWrecked = carMeshObj?.isEntireCarWrecked?.() === true;
-                const massiveDebrisSpawned = (debrisSys?.getDebrisCount?.() || 0) >= 25;
-                const fireball2XSpawned = fireSys?.hasActiveFireball?.() === true && (fireSys?.getFireballScale?.() || 0) >= 2.0;
-
-                // Falling physics: car is falling down under gravity
+                // Phase 1 in air: half of car breaks in the air ("pool autost puruneb õhus"), rear half intact
+                const halfCarBrokenInAir = carMeshObj?.isFrontWrecked?.() === true && carMeshObj?.isEntireCarWrecked?.() === false;
                 const isFallingInitially = physics.isFallingAfterCrash?.() === true;
+                const airDebrisSpawned = (debrisSys?.getDebrisCount?.() || 0) > 0;
+
+                // Phase 2 falling and touching ground: ("pool kukkub alla ja puruneb maa puututamisest")
                 for (let step = 0; step < 15; step++) {
                     physics.update(0.1, { throttle: 0, brake: 0, steer: 0, drift: false, horn: false, reset: false });
                 }
                 const groundYAfterFall = dbg.world.getGroundHeight(physics.state.position.x, physics.state.position.z);
                 const carHitGroundAfterFall = Math.abs(physics.state.position.y - groundYAfterFall) <= 0.1 && physics.isFallingAfterCrash?.() === false;
+                // Now entire car is destroyed upon touching the ground
+                const entireCarWreckedOnGround = carMeshObj?.isEntireCarWrecked?.() === true;
+                const massiveDebrisSpawned = (debrisSys?.getDebrisCount?.() || 0) >= 25;
+                const fireball2XSpawned = fireSys?.hasActiveFireball?.() === true && (fireSys?.getFireballScale?.() || 0) >= 2.0;
 
                 // Advance camera zoom and click reset to restore entire car
                 camSys?.update?.(5.2, physics.state.position, 0);
@@ -8162,11 +8166,13 @@ await (async () => {
                     deathModalHiddenAfterReset,
                     cameraResetAfterDeath,
                     starsResetAfterDeath,
-                    entireCarWrecked,
+                    halfCarBrokenInAir,
+                    isFallingInitially,
+                    airDebrisSpawned,
+                    carHitGroundAfterFall,
+                    entireCarWreckedOnGround,
                     massiveDebrisSpawned,
                     fireball2XSpawned,
-                    isFallingInitially,
-                    carHitGroundAfterFall,
                     entireCarRestored,
                     debrisClearedAfterMidAirReset,
                     fireExtinguishedAfterMidAirReset,
@@ -8268,23 +8274,26 @@ await (async () => {
             if (!cityCarTest.fireballSpawned || !cityCarTest.carBurningOnCrash || !cityCarTest.fireExtinguishedAfterReset) {
                 throw new Error("CityCar Building Crash must spawn a fireball explosion, set the car on fire, and extinguish it upon reset!");
             }
-            if (!cityCarTest.entireCarWrecked) {
-                throw new Error("CityCar Mid-Air Jump Crash into building must wreck the entire car (User: 'terve auto läheb katki')!");
-            }
-            if (!cityCarTest.massiveDebrisSpawned) {
-                throw new Error("CityCar Mid-Air Jump Crash into building must spawn a massive amount of debris (User: 'palju tükke lendavad')!");
-            }
-            if (!cityCarTest.fireball2XSpawned) {
-                throw new Error("CityCar Mid-Air Jump Crash into building must spawn a 2X bigger fireball (User: '2X suurem tulekera')!");
+            if (!cityCarTest.halfCarBrokenInAir || !cityCarTest.airDebrisSpawned) {
+                throw new Error("CityCar Mid-Air Jump Crash: half of car must break in the air (User: 'pool autost puruneb õhus')!");
             }
             if (!cityCarTest.isFallingInitially || !cityCarTest.carHitGroundAfterFall) {
-                throw new Error("CityCar Mid-Air Jump Crash must make the car fall down under gravity to the ground (User: 'siis kukkub se auto alla')!");
+                throw new Error("CityCar Mid-Air Jump Crash: half car must fall down under gravity to the ground (User: 'ja pool kukkub alla')!");
+            }
+            if (!cityCarTest.entireCarWreckedOnGround) {
+                throw new Error("CityCar Mid-Air Jump Crash: remaining car must break upon touching the ground (User: 'ja puruneb maa puututamisest')!");
+            }
+            if (!cityCarTest.massiveDebrisSpawned) {
+                throw new Error("CityCar Mid-Air Jump Crash into building must spawn massive debris upon ground impact!");
+            }
+            if (!cityCarTest.fireball2XSpawned) {
+                throw new Error("CityCar Mid-Air Jump Crash into building must spawn a 2X bigger fireball on ground impact!");
             }
             if (!cityCarTest.entireCarRestored || !cityCarTest.debrisClearedAfterMidAirReset || !cityCarTest.fireExtinguishedAfterMidAirReset) {
                 throw new Error("CityCar Reset button after Mid-Air Jump Crash must restore entire car and clear all debris and fire!");
             }
 
-            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Mid-Air Jump Crash Falling Physics, Entire Car Wreck, Massive Debris, 2X Fireball, 5s Zoom-out & YOU DIED! Reset) testid edukalt läbitud!");
+            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Mid-Air Jump Crash Half In Air + Half On Ground Impact, Massive Debris, 2X Fireball, 5s Zoom-out & YOU DIED! Reset) testid edukalt läbitud!");
 
             // 3. Testing CityCar in Recently Played Games Row on Home Hub (User: "ja se mäng ilmub ka sinna viimati mängitute mängu ritta")
             console.log("   3. Testing CityCar in Recently Played Games Row on Hub...");

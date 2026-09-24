@@ -111,16 +111,14 @@ function triggerCrashDeath(info: { reason: string; speedKmh: number; isMidAir?: 
     isDead = true;
     audioSystem.playExplosion();
     const isMidAir = !!info.isMidAir;
+    carMesh.setFrontWrecked(true);
     if (isMidAir) {
         physics.setFallingAfterCrash(true);
-        carMesh.setEntireCarWrecked(true);
-    } else {
-        carMesh.setFrontWrecked(true);
     }
     const yaw = carMesh.group.rotation.y;
     const forwardDir = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-    crashDebrisSystem.spawnDebris(physics.state.position, forwardDir, cityCarState.getCarColor(), isMidAir);
-    fireSystem.triggerFireball(physics.state.position, isMidAir ? 2.0 : 1.0);
+    crashDebrisSystem.spawnDebris(physics.state.position, forwardDir, cityCarState.getCarColor(), false);
+    fireSystem.triggerFireball(physics.state.position, isMidAir ? 1.4 : 1.0);
     fireSystem.startCarFire(carMesh.group);
     cameraSystem.triggerCrashZoom(physics.state.position, yaw, 5.0);
 }
@@ -133,6 +131,14 @@ cameraSystem.onCrashZoomComplete = () => {
 };
 
 physics.onCrashDeath = triggerCrashDeath;
+physics.onGroundCrashImpact = () => {
+    audioSystem.playExplosion();
+    carMesh.setEntireCarWrecked(true);
+    const yaw = carMesh.group.rotation.y;
+    const forwardDir = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    crashDebrisSystem.spawnGroundImpactDebris(physics.state.position, forwardDir, cityCarState.getCarColor());
+    fireSystem.triggerFireball(physics.state.position, 2.0);
+};
 
 let activeDrivers: DriverInfo[] = [];
 const multiplayer = new CityCarMultiplayerSystem(

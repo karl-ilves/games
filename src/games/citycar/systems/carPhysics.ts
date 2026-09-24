@@ -19,6 +19,7 @@ export class CarPhysicsController {
     public onWaterDive?: () => void;
     public onOffroadDrive?: () => void;
     public onCrashDeath?: (info: { reason: string; speedKmh: number; isMidAir?: boolean }) => void;
+    public onGroundCrashImpact?: () => void;
     private meshContainer: CarMeshContainer;
     private world: WorldEnvironment;
 
@@ -84,6 +85,7 @@ export class CarPhysicsController {
                         this.fallingAfterCrash = false;
                         this.meshContainer.group.rotation.x = 0;
                         this.meshContainer.group.rotation.z = 0;
+                        this.onGroundCrashImpact?.();
                     }
                 } else {
                     this.state.position.y = groundY;
@@ -91,6 +93,7 @@ export class CarPhysicsController {
                     this.fallingAfterCrash = false;
                     this.meshContainer.group.rotation.x = 0;
                     this.meshContainer.group.rotation.z = 0;
+                    this.onGroundCrashImpact?.();
                 }
                 this.meshContainer.group.position.copy(this.state.position);
             }
