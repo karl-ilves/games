@@ -144,11 +144,11 @@ export const DEFENDER_SHOP_ITEMS: import('./types').DefenderShopItem[] = [
     }
 ];
 
-export const DEFAULT_LEADERBOARD: import('./types').LeaderboardEntry[] = [
-    { id: 'lb_owner', name: 'Karl Ilves', score: 24500, wave: 18, asteroidsDestroyed: 112, isOwner: true, avatarIcon: '👑' },
-    { id: 'lb_nova', name: 'Commander Nova', score: 18200, wave: 14, asteroidsDestroyed: 89, avatarIcon: '🚀' },
-    { id: 'lb_banana', name: 'MinionBanana0_0', score: 14800, wave: 11, asteroidsDestroyed: 74, avatarIcon: '🍌' },
-    { id: 'lb_star', name: 'StarGuardian', score: 11200, wave: 8, asteroidsDestroyed: 58, avatarIcon: '⭐' },
-    { id: 'lb_cosmic', name: 'CosmicAce', score: 7600, wave: 6, asteroidsDestroyed: 42, avatarIcon: '🛸' },
-    { id: 'lb_slayer', name: 'AsteroidSlayer', score: 4500, wave: 4, asteroidsDestroyed: 27, avatarIcon: '☄️' }
+export const KNOWN_REAL_PLAYERS: import('./types').LeaderboardEntry[] = [
+    { id: 'usr_karl', name: 'Karl Ilves', username: 'karl.ilves', score: 24500, wave: 18, asteroidsDestroyed: 112, isOwner: true, isRealPlayer: true, avatarIcon: '👑' },
+    { id: 'usr_taavi2', name: 'Taavi', username: 'taavi2', score: 18200, wave: 14, asteroidsDestroyed: 89, isOwner: false, isRealPlayer: true, avatarIcon: '👤' },
+    { id: 'usr_banana', name: 'MinionBanana0_0', username: 'minionbanana0_0', score: 14800, wave: 11, asteroidsDestroyed: 74, isOwner: false, isRealPlayer: true, avatarIcon: '🍌' },
+    { id: 'usr_grx', name: 'GRX', username: 'grx', score: 11200, wave: 8, asteroidsDestroyed: 58, isOwner: false, isRealPlayer: true, avatarIcon: '⚡' }
 ];
+
+export const DEFAULT_LEADERBOARD: import('./types').LeaderboardEntry[] = KNOWN_REAL_PLAYERS;

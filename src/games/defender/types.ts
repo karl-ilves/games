@@ -116,10 +116,12 @@ export interface DefenderShopItem {
 export interface LeaderboardEntry {
     id: string;
     name: string;
+    username?: string;
     score: number;
     wave: number;
     asteroidsDestroyed: number;
     isOwner?: boolean;
     isCurrentPlayer?: boolean;
+    isRealPlayer?: boolean;
     avatarIcon?: string;
 }

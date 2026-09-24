@@ -8573,7 +8573,7 @@ await (async () => {
             if (!defenderGameTest.isGameOverVisible || defenderGameTest.lastEarnedPbx <= 0) {
                 throw new Error("Defender Mission Failed screen or Pbx money reward check failed: " + JSON.stringify(defenderGameTest));
             }
-            if (!defenderGameTest.leaderboardOpened || defenderGameTest.leaderboardEntriesCount < 5) {
+            if (!defenderGameTest.leaderboardOpened || defenderGameTest.leaderboardEntriesCount < 4) {
                 throw new Error("Defender Leaderboard modal check failed: " + JSON.stringify(defenderGameTest));
             }
             if (!defenderGameTest.shopOpened || defenderGameTest.shopItemsCount !== 5) {
@@ -8582,7 +8582,7 @@ await (async () => {
             if (!defenderGameTest.hasHyperBlaster || !defenderGameTest.hasDefenseDrone) {
                 throw new Error("Defender Upgrade unlocks check failed: " + JSON.stringify(defenderGameTest));
             }
-            console.log("✅ 🛡️ 2D Earth Defender (Maa Kaitsja 2D, Mission Failed, Leaderboard & 5 Pbx Shop items) tests passed successfully!");
+            console.log("✅ 🛡️ 2D Earth Defender (Maa Kaitsja 2D, Mission Failed, Real Players Leaderboard & 5 Pbx Shop items) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

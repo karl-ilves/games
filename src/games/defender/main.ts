@@ -259,7 +259,9 @@ export class EarthDefenderGame {
             this.effectsMgr.addFloatingText(ast.x, this.canvas.height - 100, `-${ast.config.damageToEarth} HP`, '#ff4757');
 
             if (res.isDestroyed) {
-                this.hud.showGameOver(this.state.getStats());
+                const finalStats = this.state.getStats();
+                this.hud.showGameOver(finalStats);
+                this.leaderboardUI.recordRunScore(finalStats.score, finalStats.wave, finalStats.asteroidsDestroyed);
             }
         }, () => {});
 
