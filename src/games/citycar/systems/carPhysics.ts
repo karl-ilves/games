@@ -31,6 +31,10 @@ export class CarPhysicsController {
     private verticalVelocity = 0;
     private wheelSpin = 0;
     private currentSteerAngle = 0;
+    private isDrifting = false;
+    private driftAngle = 0;
+    private driftLateralVelocity = 0;
+    private driftCooldown = 0;
 
     constructor(
         meshContainer: CarMeshContainer,
@@ -125,22 +129,46 @@ export class CarPhysicsController {
         const maxForwardSpeedMps = VEHICLE_CONFIG.maxSpeedKmh / 3.6;
         const maxReverseSpeedMps = VEHICLE_CONFIG.maxReverseSpeedKmh / 3.6;
 
+        // Drift check & powerslide continuity:
+        // User requirement: "ja kui sa pidurdas ja põõrad sa saad triftida ja jälg jääb ma peal eja jälg kaob ära 1 min pärast"
+        const initiatesDrift = (input.brake > 0.15 || input.handbrake) && Math.abs(this.currentSteerAngle) > 0.05 && this.forwardSpeedMps > 2.8;
+
+        if (initiatesDrift) {
+            this.isDrifting = true;
+            this.driftCooldown = 0.55; // grace period allowing throttle powerslide through the turn
+        } else if (this.isDrifting) {
+            this.driftCooldown -= delta;
+            const isSteering = Math.abs(input.steer) > 0.04 || Math.abs(this.currentSteerAngle) > 0.04;
+            // Maintain drift while speed is held and driver steers or countersteers
+            if (this.forwardSpeedMps > 2.2 && (isSteering || this.driftCooldown > 0)) {
+                this.isDrifting = true;
+            } else {
+                this.isDrifting = false;
+                this.driftCooldown = 0;
+            }
+        } else {
+            this.isDrifting = false;
+            this.driftCooldown = 0;
+        }
+        this.state.isDrifting = this.isDrifting;
+
         if (input.throttle > 0.1) {
             if (this.forwardSpeedMps < -0.5) {
                 // Was reversing, now applying forward brakes
                 this.forwardSpeedMps += VEHICLE_CONFIG.brakeDeceleration * delta;
             } else {
-                this.forwardSpeedMps += input.throttle * VEHICLE_CONFIG.acceleration * delta;
+                // Accelerate forward (powerslide through drift)
+                const accelFactor = this.isDrifting ? 0.9 : 1.0;
+                this.forwardSpeedMps += input.throttle * VEHICLE_CONFIG.acceleration * accelFactor * delta;
                 if (this.forwardSpeedMps > maxForwardSpeedMps) {
                     this.forwardSpeedMps = maxForwardSpeedMps;
                 }
             }
         } else if (input.brake > 0.1) {
             if (this.forwardSpeedMps > 0.5) {
-                // Forward braking (softer deceleration during drift to carry momentum smoothly)
-                const isDriftBraking = Math.abs(this.currentSteerAngle) > 0.06 && this.forwardSpeedMps > 2.8;
-                const brakeDecel = isDriftBraking ? VEHICLE_CONFIG.brakeDeceleration * 0.45 : VEHICLE_CONFIG.brakeDeceleration;
-                this.forwardSpeedMps -= input.brake * brakeDecel * delta;
+                // Forward braking (use driftBrakeDecel during drift so momentum smoothly carries into slide)
+                const brakeRate = this.isDrifting ? VEHICLE_CONFIG.driftBrakeDecel : VEHICLE_CONFIG.brakeDeceleration;
+                this.forwardSpeedMps -= input.brake * brakeRate * delta;
                 if (this.forwardSpeedMps < 0) this.forwardSpeedMps = 0;
             } else {
                 // Reverse acceleration
@@ -151,43 +179,38 @@ export class CarPhysicsController {
             }
         } else {
             // Natural drag / friction
+            const decelRate = this.isDrifting ? 6.0 : VEHICLE_CONFIG.naturalDeceleration;
             if (this.forwardSpeedMps > 0) {
-                this.forwardSpeedMps -= VEHICLE_CONFIG.naturalDeceleration * delta;
+                this.forwardSpeedMps -= decelRate * delta;
                 if (this.forwardSpeedMps < 0) this.forwardSpeedMps = 0;
             } else if (this.forwardSpeedMps < 0) {
-                this.forwardSpeedMps += VEHICLE_CONFIG.naturalDeceleration * delta;
+                this.forwardSpeedMps += decelRate * delta;
                 if (this.forwardSpeedMps > 0) this.forwardSpeedMps = 0;
             }
         }
 
-        // Drift check:
-        // User requirement: "ja kui sa pidurdas ja põõrad sa saad triftida ja jälg jääb ma peal eja jälg kaob ära 1 min pärast"
-        const isBrakingWhileTurning = (input.brake > 0.15 || input.handbrake) && Math.abs(this.currentSteerAngle) > 0.06 && Math.abs(this.forwardSpeedMps) > 2.8;
-
-        if (isBrakingWhileTurning) {
-            this.state.isDrifting = true;
-        } else if (input.handbrake && Math.abs(this.forwardSpeedMps) > 3.0 && Math.abs(this.currentSteerAngle) > 0.05) {
-            this.state.isDrifting = true;
-        } else {
-            this.state.isDrifting = false;
-        }
-
         // 3. Angular turn (Yaw)
-        // Turning rate is proportional to forward velocity
-        const speedRatio = Math.min(Math.abs(this.forwardSpeedMps) / (maxForwardSpeedMps * 0.4), 1.0);
+        const speedRatio = Math.min(Math.abs(this.forwardSpeedMps) / (maxForwardSpeedMps * 0.35), 1.0);
         const directionSign = this.forwardSpeedMps >= 0 ? 1 : -1;
-        const driftMultiplier = this.state.isDrifting ? 2.1 : 1.0;
-        this.yaw += this.currentSteerAngle * speedRatio * directionSign * 2.2 * driftMultiplier * delta;
+        const turnRate = this.isDrifting ? 3.0 : 2.2;
+        this.yaw += this.currentSteerAngle * speedRatio * directionSign * turnRate * delta;
 
-        // 4. Position displacement
+        // Visual slip angle: body tilts into/with drift oversteer
+        const targetDriftAngle = this.isDrifting ? (this.currentSteerAngle * 0.72) : 0;
+        this.driftAngle = THREE.MathUtils.damp(this.driftAngle, targetDriftAngle, 7.2, delta);
+
+        // 4. Position displacement & lateral slide momentum
         const forwardDir = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
         const moveVector = forwardDir.clone().multiplyScalar(this.forwardSpeedMps * delta);
 
-        if (this.state.isDrifting) {
-            // Lateral slide momentum during drift
-            const slideSign = this.currentSteerAngle >= 0 ? 1 : -1;
+        // Outward centrifugal lateral velocity
+        const outwardSign = this.currentSteerAngle >= 0 ? 1 : -1;
+        const targetLatVel = this.isDrifting ? outwardSign * Math.abs(this.forwardSpeedMps) * 0.42 : 0;
+        this.driftLateralVelocity = THREE.MathUtils.damp(this.driftLateralVelocity, targetLatVel, 5.0, delta);
+
+        if (Math.abs(this.driftLateralVelocity) > 0.01) {
             const lateralDir = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
-            moveVector.addScaledVector(lateralDir, slideSign * Math.abs(this.forwardSpeedMps) * 0.32 * delta);
+            moveVector.addScaledVector(lateralDir, this.driftLateralVelocity * delta);
         }
 
         const nextX = this.state.position.x + moveVector.x;
@@ -410,7 +433,8 @@ export class CarPhysicsController {
 
         // 7. Update Car Group Position and Rotation
         this.meshContainer.group.position.copy(this.state.position);
-        this.meshContainer.group.rotation.set(0, this.yaw, 0);
+        this.meshContainer.group.rotation.set(0, this.yaw + this.driftAngle, 0);
+        this.state.rotation.set(0, this.yaw + this.driftAngle, 0);
 
         // Body roll / tilt during hard turns or speed & pitch tilt in mid-air
         const rollTilt = -this.currentSteerAngle * (this.forwardSpeedMps / maxForwardSpeedMps) * 0.08;
@@ -489,6 +513,11 @@ export class CarPhysicsController {
         this.forwardSpeedMps = 0;
         this.verticalVelocity = 0;
         this.currentSteerAngle = 0;
+        this.isDrifting = false;
+        this.driftAngle = 0;
+        this.driftLateralVelocity = 0;
+        this.driftCooldown = 0;
+        this.state.isDrifting = false;
         // Spawn near the bridge entrance in the city
         this.state.position.set(-60, 0.1, 0);
         this.yaw = Math.PI / 2; // Point toward bridge / forest
@@ -498,8 +527,9 @@ export class CarPhysicsController {
     }
 
     public getRearWheelWorldPositions(): { left: THREE.Vector3; right: THREE.Vector3 } {
-        const cosY = Math.cos(this.yaw);
-        const sinY = Math.sin(this.yaw);
+        const visualYaw = this.yaw + this.driftAngle;
+        const cosY = Math.cos(visualYaw);
+        const sinY = Math.sin(visualYaw);
         const px = this.state.position.x;
         const pz = this.state.position.z;
 
@@ -518,5 +548,13 @@ export class CarPhysicsController {
         );
 
         return { left, right };
+    }
+
+    public getDriftAngle(): number {
+        return this.driftAngle;
+    }
+
+    public getIsDrifting(): boolean {
+        return this.isDrifting;
     }
 }
