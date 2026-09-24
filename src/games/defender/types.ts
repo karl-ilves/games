@@ -120,6 +120,7 @@ export interface LeaderboardEntry {
     score: number;
     wave: number;
     asteroidsDestroyed: number;
+    lastPlayed?: number;
     isOwner?: boolean;
     isCurrentPlayer?: boolean;
     isRealPlayer?: boolean;

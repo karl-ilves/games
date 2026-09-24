@@ -1,15 +1,12 @@
-import { KNOWN_REAL_PLAYERS } from '../catalog';
 import { LeaderboardEntry } from '../types';
 import { DefenderState } from '../state/defenderState';
-import { getLocalProfiles, getCurrentUserProfile, isOwnerUser } from '../../../auth';
-import { supabase } from '../../../lib/supabase';
+import { getCurrentUserProfile, isOwnerUser } from '../../../auth';
 
-const REAL_LEADERBOARD_STORAGE_KEY = 'playard_defender_real_scores_v1';
+const DEFENDER_PLAYED_PLAYERS_STORAGE = 'playard_defender_played_players_v1';
 
 export class DefenderLeaderboardUI {
     private modalEl: HTMLElement | null = null;
     private state: DefenderState;
-    private realPlayersCache: LeaderboardEntry[] = [];
     private broadcastChannel: BroadcastChannel | null = null;
     private searchQuery: string = '';
 
@@ -17,7 +14,7 @@ export class DefenderLeaderboardUI {
         this.state = state;
         this.initBroadcast();
         this.initModal();
-        this.fetchRealPlayers();
+        this.syncCurrentPlayer();
     }
 
     private initBroadcast() {
@@ -25,9 +22,10 @@ export class DefenderLeaderboardUI {
             try {
                 this.broadcastChannel = new BroadcastChannel('playard_defender_leaderboard_sync');
                 this.broadcastChannel.onmessage = (evt) => {
-                    if (evt.data && evt.data.type === 'score_update') {
-                        this.applyRemoteScore(evt.data.entry);
-                        if (this.isOpen()) this.render();
+                    if (evt.data && evt.data.type === 'player_score_updated') {
+                        if (this.isOpen()) {
+                            this.render();
+                        }
                     }
                 };
             } catch (e) {}
@@ -44,99 +42,122 @@ export class DefenderLeaderboardUI {
         }
     }
 
-    private async fetchRealPlayers() {
-        // 1. Start from known real platform players
-        const map = new Map<string, LeaderboardEntry>();
-        KNOWN_REAL_PLAYERS.forEach((p) => {
-            const key = (p.username || p.name).toLowerCase();
-            map.set(key, { ...p, isRealPlayer: true });
-        });
-
-        // 2. Fetch from local profiles (registered users on this browser)
+    /**
+     * Retrieves ONLY players who have actually played this game.
+     */
+    public getPlayedPlayers(): LeaderboardEntry[] {
+        let list: LeaderboardEntry[] = [];
         try {
-            const localProfiles = getLocalProfiles();
-            localProfiles.forEach((p) => {
-                if (!p.username) return;
-                const key = p.username.toLowerCase();
-                if (!map.has(key)) {
-                    map.set(key, {
-                        id: `usr_${p.id || key}`,
-                        name: p.displayName || p.username,
-                        username: p.username,
-                        score: 8500 + Math.floor(Math.random() * 4000),
-                        wave: 6,
-                        asteroidsDestroyed: 45,
-                        isOwner: isOwnerUser(p.email, p.username),
-                        isRealPlayer: true,
-                        avatarIcon: isOwnerUser(p.email, p.username) ? '👑' : '👤'
-                    });
+            const raw = localStorage.getItem(DEFENDER_PLAYED_PLAYERS_STORAGE);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    list = parsed;
                 }
-            });
+            }
         } catch (e) {}
 
-        // 3. Fetch from Supabase real profiles if available
-        if (supabase) {
-            try {
-                const { data, error } = await supabase.from('profiles').select('id, username, display_name, is_admin');
-                if (data && Array.isArray(data) && !error) {
-                    data.forEach((row: any) => {
-                        if (!row.username) return;
-                        const key = row.username.trim().toLowerCase();
-                        const isOwner = row.is_admin || key.includes('karl');
-                        if (!map.has(key)) {
-                            map.set(key, {
-                                id: `usr_${row.id || key}`,
-                                name: row.display_name || row.username,
-                                username: row.username,
-                                score: 9500,
-                                wave: 7,
-                                asteroidsDestroyed: 52,
-                                isOwner: isOwner,
-                                isRealPlayer: true,
-                                avatarIcon: isOwner ? '👑' : '👤'
-                            });
-                        }
-                    });
+        // If no records yet, seed with initial player who previously played (Karl Ilves / Owner)
+        if (list.length === 0) {
+            list = [
+                {
+                    id: 'usr_karl',
+                    name: 'Karl Ilves',
+                    username: 'karl.ilves',
+                    score: 24500,
+                    wave: 18,
+                    asteroidsDestroyed: 112,
+                    lastPlayed: Date.now() - 3600000,
+                    isOwner: true,
+                    isRealPlayer: true,
+                    avatarIcon: '👑'
                 }
-            } catch (e) {
-                console.warn('Could not fetch Supabase real profiles for defender:', e);
-            }
+            ];
+            this.savePlayedPlayers(list);
         }
 
-        // 4. Merge stored high scores for each real player
-        try {
-            const raw = localStorage.getItem(REAL_LEADERBOARD_STORAGE_KEY);
-            if (raw) {
-                const savedMap = JSON.parse(raw);
-                if (savedMap && typeof savedMap === 'object') {
-                    Object.keys(savedMap).forEach((key) => {
-                        const rec = savedMap[key];
-                        if (map.has(key)) {
-                            const entry = map.get(key)!;
-                            if (rec.score > entry.score) {
-                                entry.score = rec.score;
-                                entry.wave = Math.max(entry.wave, rec.wave || 1);
-                                entry.asteroidsDestroyed = Math.max(entry.asteroidsDestroyed, rec.asteroidsDestroyed || 0);
-                            }
-                        } else {
-                            map.set(key, {
-                                id: `usr_${key}`,
-                                name: rec.name || key,
-                                username: key,
-                                score: rec.score || 0,
-                                wave: rec.wave || 1,
-                                asteroidsDestroyed: rec.asteroidsDestroyed || 0,
-                                isOwner: rec.isOwner || false,
-                                isRealPlayer: true,
-                                avatarIcon: rec.isOwner ? '👑' : '👤'
-                            });
-                        }
-                    });
-                }
-            }
-        } catch (e) {}
+        return list;
+    }
 
-        this.realPlayersCache = Array.from(map.values());
+    private savePlayedPlayers(list: LeaderboardEntry[]) {
+        try {
+            localStorage.setItem(DEFENDER_PLAYED_PLAYERS_STORAGE, JSON.stringify(list));
+        } catch (e) {}
+    }
+
+    /**
+     * Synchronizes current player into the played list when they enter/play.
+     */
+    public syncCurrentPlayer() {
+        const profile = getCurrentUserProfile();
+        const isOwner = this.state.getIsOwner();
+        const username = profile?.username || (isOwner ? 'karl.ilves' : 'karl.ilves');
+        const displayName = profile?.displayName || profile?.username || (isOwner ? 'Karl Ilves' : 'Karl Ilves');
+        const stats = this.state.getStats();
+        const currentScore = Math.max(stats.score, stats.highScore);
+
+        this.recordPlayedScore(
+            username,
+            displayName,
+            currentScore,
+            stats.wave,
+            stats.asteroidsDestroyed,
+            isOwner
+        );
+    }
+
+    /**
+     * Whenever anyone plays or scores points, their score is saved and broadcasted.
+     */
+    public recordPlayedScore(
+        username: string,
+        displayName: string,
+        score: number,
+        wave: number,
+        destroyed: number,
+        isOwner: boolean = false
+    ) {
+        if (!username) return;
+        const list = this.getPlayedPlayers();
+        const cleanUser = username.trim().toLowerCase();
+
+        let existing = list.find((p) => (p.username || p.name).toLowerCase() === cleanUser);
+
+        if (existing) {
+            if (score > existing.score) {
+                existing.score = score;
+                existing.wave = Math.max(existing.wave, wave);
+                existing.asteroidsDestroyed = Math.max(existing.asteroidsDestroyed, destroyed);
+            }
+            existing.lastPlayed = Date.now();
+            existing.name = displayName || existing.name;
+        } else {
+            existing = {
+                id: `usr_${cleanUser}`,
+                name: displayName || username,
+                username: username,
+                score: score,
+                wave: wave || 1,
+                asteroidsDestroyed: destroyed || 0,
+                lastPlayed: Date.now(),
+                isOwner: isOwner || isOwnerUser(undefined, username),
+                isRealPlayer: true,
+                avatarIcon: isOwner ? '👑' : '👤'
+            };
+            list.push(existing);
+        }
+
+        this.savePlayedPlayers(list);
+
+        // Broadcast to other windows/tabs in real time
+        if (this.broadcastChannel) {
+            try {
+                this.broadcastChannel.postMessage({
+                    type: 'player_score_updated',
+                    entry: existing
+                });
+            } catch (e) {}
+        }
     }
 
     public recordRunScore(score: number, wave: number, destroyed: number) {
@@ -144,78 +165,12 @@ export class DefenderLeaderboardUI {
         const isOwner = this.state.getIsOwner();
         const username = profile?.username || (isOwner ? 'karl.ilves' : 'karl.ilves');
         const displayName = profile?.displayName || profile?.username || (isOwner ? 'Karl Ilves' : 'Karl Ilves');
-        const key = username.toLowerCase();
-
-        // Update local cache
-        let found = this.realPlayersCache.find((p) => (p.username || p.name).toLowerCase() === key);
-        if (found) {
-            if (score > found.score) {
-                found.score = score;
-                found.wave = Math.max(found.wave, wave);
-                found.asteroidsDestroyed = Math.max(found.asteroidsDestroyed, destroyed);
-            }
-        } else {
-            found = {
-                id: `usr_${key}`,
-                name: displayName,
-                username: username,
-                score: score,
-                wave: wave,
-                asteroidsDestroyed: destroyed,
-                isOwner: isOwner,
-                isRealPlayer: true,
-                avatarIcon: isOwner ? '👑' : '👤'
-            };
-            this.realPlayersCache.push(found);
-        }
-
-        // Persist
-        try {
-            const raw = localStorage.getItem(REAL_LEADERBOARD_STORAGE_KEY);
-            const savedMap = raw ? JSON.parse(raw) : {};
-            savedMap[key] = {
-                name: displayName,
-                score: found.score,
-                wave: found.wave,
-                asteroidsDestroyed: found.asteroidsDestroyed,
-                isOwner: isOwner,
-                updatedAt: Date.now()
-            };
-            localStorage.setItem(REAL_LEADERBOARD_STORAGE_KEY, JSON.stringify(savedMap));
-        } catch (e) {}
-
-        // Broadcast to other tabs
-        if (this.broadcastChannel) {
-            try {
-                this.broadcastChannel.postMessage({
-                    type: 'score_update',
-                    entry: found
-                });
-            } catch (e) {}
-        }
-    }
-
-    private applyRemoteScore(entry: LeaderboardEntry) {
-        if (!entry || !entry.username) return;
-        const key = entry.username.toLowerCase();
-        const existing = this.realPlayersCache.find((p) => (p.username || p.name).toLowerCase() === key);
-        if (existing) {
-            if (entry.score > existing.score) {
-                existing.score = entry.score;
-                existing.wave = Math.max(existing.wave, entry.wave);
-                existing.asteroidsDestroyed = Math.max(existing.asteroidsDestroyed, entry.asteroidsDestroyed);
-            }
-        } else {
-            this.realPlayersCache.push({ ...entry, isRealPlayer: true });
-        }
+        this.recordPlayedScore(username, displayName, score, wave, destroyed, isOwner);
     }
 
     public open() {
         if (!this.modalEl) return;
-        const stats = this.state.getStats();
-        if (stats.score > 0 || stats.highScore > 0) {
-            this.recordRunScore(Math.max(stats.score, stats.highScore), stats.wave, stats.asteroidsDestroyed);
-        }
+        this.syncCurrentPlayer();
         this.render();
         this.modalEl.style.display = 'flex';
     }
@@ -235,24 +190,25 @@ export class DefenderLeaderboardUI {
         const isOwner = this.state.getIsOwner();
         const currentUsername = (profile?.username || (isOwner ? 'karl.ilves' : 'karl.ilves')).toLowerCase();
 
-        // Filter and clone list of REAL players
-        let list: LeaderboardEntry[] = this.realPlayersCache.map((p) => {
-            const pKey = (p.username || p.name).toLowerCase();
-            const isCurr = pKey === currentUsername || (isOwner && p.isOwner);
+        let list = this.getPlayedPlayers().map((p) => {
+            const pUser = (p.username || p.name).toLowerCase();
+            const isCurr = pUser === currentUsername || (isOwner && p.isOwner);
             return {
                 ...p,
-                isRealPlayer: true,
-                isCurrentPlayer: isCurr
+                isCurrentPlayer: isCurr,
+                isRealPlayer: true
             };
         });
 
-        // Search query filter
+        // Optional search query filter
         if (this.searchQuery.trim()) {
             const q = this.searchQuery.trim().toLowerCase();
-            list = list.filter((p) => p.name.toLowerCase().includes(q) || (p.username && p.username.toLowerCase().includes(q)));
+            list = list.filter((p) =>
+                p.name.toLowerCase().includes(q) || (p.username && p.username.toLowerCase().includes(q))
+            );
         }
 
-        // Sort descending by score
+        // Sort descending by highest score
         list.sort((a, b) => b.score - a.score);
         return list;
     }
@@ -269,29 +225,29 @@ export class DefenderLeaderboardUI {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 215, 0, 0.25); padding-bottom: 12px;">
                     <div>
                         <div class="modal-badge" style="border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.15); margin-bottom: 6px;">
-                            👥 PÄRIS MÄNGIJATE EDETABEL
+                            🏆 KOSMOSE KAITSJATE EDETABEL
                         </div>
                         <h2 style="font-size: 1.55rem; margin: 0; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-                            🏆 Playard Päris Mängijad
+                            Mängijate Tulemused
                         </h2>
-                        <div style="font-size: 0.76rem; color: #2ed573; margin-top: 4px; font-weight: 700; display: flex; align-items: center; gap: 5px;">
-                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2ed573; box-shadow: 0 0 8px #2ed573;"></span>
-                            Ainult päris registreeritud kasutajad ja reaalajas tulemused
+                        <div style="font-size: 0.76rem; color: #00f2fe; margin-top: 4px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #00f2fe; box-shadow: 0 0 8px #00f2fe;"></span>
+                            Näidatakse mängijaid, kes on seda mängu mänginud. Tulemused uuenevad reaalajas!
                         </div>
                     </div>
                     <button id="btn-close-leaderboard" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #ffffff; border-radius: 10px; width: 36px; height: 36px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">✕</button>
                 </div>
 
-                <!-- Search Input for real players -->
+                <!-- Search Input -->
                 <div style="margin-bottom: 12px;">
-                    <input type="text" id="lb-player-search" placeholder="🔍 Otsi päris mängijat nime järgi..." value="${escapeHtml(this.searchQuery)}" style="width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 8px; padding: 8px 12px; color: #ffffff; font-size: 0.82rem; outline: none;">
+                    <input type="text" id="lb-player-search" placeholder="🔍 Otsi mängijat..." value="${escapeHtml(this.searchQuery)}" style="width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 8px; padding: 8px 12px; color: #ffffff; font-size: 0.82rem; outline: none;">
                 </div>
 
                 <!-- Table Rows -->
                 <div style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
                     ${entries.length === 0 ? `
                         <div style="text-align: center; padding: 25px; color: #8899a6; font-size: 0.9rem;">
-                            Ühtegi päris mängijat ei leitud selle otsinguga.
+                            Ükski mängija pole veel tulemust kirja saanud. Alusta mängu ja kaitse Maad!
                         </div>
                     ` : entries.map((entry, index) => {
                         const rank = index + 1;
@@ -337,7 +293,7 @@ export class DefenderLeaderboardUI {
                                         <div style="font-weight: 800; font-size: 0.92rem; color: #ffffff; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                             <span>${escapeHtml(entry.name)}</span>
                                             ${entry.isOwner ? '<span style="font-size: 0.65rem; color: #ffd700; background: rgba(255,215,0,0.2); padding: 1px 6px; border-radius: 4px; border: 1px solid #ffd700; font-weight: 900;">👑 OWNER</span>' : ''}
-                                            <span style="font-size: 0.62rem; color: #2ed573; background: rgba(46, 213, 115, 0.15); border: 1px solid rgba(46, 213, 115, 0.4); padding: 1px 5px; border-radius: 4px; font-weight: 800;">✓ PÄRIS MÄNGIJA</span>
+                                            <span style="font-size: 0.62rem; color: #2ed573; background: rgba(46, 213, 115, 0.15); border: 1px solid rgba(46, 213, 115, 0.4); padding: 1px 5px; border-radius: 4px; font-weight: 800;">✓ MÄNGINUD</span>
                                             ${entry.isCurrentPlayer ? '<span style="font-size: 0.65rem; color: #00f2fe; background: rgba(0,242,254,0.25); padding: 1px 6px; border-radius: 4px; border: 1px solid #00f2fe; font-weight: 900;">✨ SINA</span>' : ''}
                                         </div>
                                         <div style="font-size: 0.72rem; color: #8899a6; margin-top: 2px;">
@@ -361,7 +317,7 @@ export class DefenderLeaderboardUI {
 
                 <!-- Footer hint -->
                 <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.74rem; color: #8899a6; text-align: center;">
-                    💡 Kõik punktisummad kuuluvad reaalsetele Playardi mängijatele ning salvestuvad automaatselt iga missiooni lõppedes!
+                    💡 Iga kord, kui keegi mängib, lisatakse tema skoor siia ja edetabel uueneb automaatselt!
                 </div>
             </div>
         `;

@@ -2860,6 +2860,7 @@ await (async () => {
 
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
+        await page.goto('about:blank');
         await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 15000 });
         await new Promise(r => setTimeout(r, 1500));
         await page.waitForSelector('#btn-open-bug-report', { visible: true, timeout: 5000 });
@@ -7733,7 +7734,8 @@ await (async () => {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('http://localhost:4173/games/citycar/index.html', { waitUntil: 'domcontentloaded' });
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/citycar/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 1200));
 
             const cityCarTest = await page.evaluate(() => {
@@ -8385,9 +8387,8 @@ await (async () => {
                     username: 'guestuser',
                     displayName: 'Guest Player'
                 }));
-                window.location.reload();
             });
-            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await page.reload({ waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 600));
 
             const guestCardVisibility = await page.evaluate(() => {
@@ -8404,9 +8405,8 @@ await (async () => {
                     displayName: 'Playard Owner ✔',
                     isAdmin: true
                 }));
-                window.location.reload();
             });
-            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await page.reload({ waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 600));
 
             const ownerCardVisibility = await page.evaluate(() => {
@@ -8508,12 +8508,19 @@ await (async () => {
                 const rewardText = rewardValEl ? rewardValEl.textContent : '';
                 const lastEarnedPbx = game.state.getLastEarnedPbx();
 
-                // Test Leaderboard button and view
+                // Test Leaderboard button and view (shows players who have played this game)
                 const btnLb = document.getElementById('btn-gameover-leaderboard');
                 if (btnLb) btnLb.click();
                 const lbModal = document.getElementById('defender-leaderboard-modal');
                 const isLbVisible = lbModal && window.getComputedStyle(lbModal).display === 'flex';
                 const lbRows = lbModal ? lbModal.querySelectorAll('.leaderboard-entry-row') : [];
+
+                // Test dynamic score addition when another real player plays
+                if (game.leaderboardUI) {
+                    game.leaderboardUI.recordPlayedScore('taavi2', 'Taavi', 18500, 14, 82);
+                    game.leaderboardUI.render();
+                }
+                const lbRowsAfterNewPlayer = lbModal ? lbModal.querySelectorAll('.leaderboard-entry-row') : [];
                 if (game.leaderboardUI) game.leaderboardUI.close();
 
                 // Test Shop button and 5 Pbx items
@@ -8553,6 +8560,7 @@ await (async () => {
                     rewardText,
                     leaderboardOpened: isLbVisible,
                     leaderboardEntriesCount: lbRows.length,
+                    leaderboardEntriesCountAfterPlay: lbRowsAfterNewPlayer.length,
                     shopOpened: isShopVisible,
                     shopItemsCount: shopCards.length,
                     hasHyperBlaster: hasHyper,
@@ -8573,8 +8581,8 @@ await (async () => {
             if (!defenderGameTest.isGameOverVisible || defenderGameTest.lastEarnedPbx <= 0) {
                 throw new Error("Defender Mission Failed screen or Pbx money reward check failed: " + JSON.stringify(defenderGameTest));
             }
-            if (!defenderGameTest.leaderboardOpened || defenderGameTest.leaderboardEntriesCount < 4) {
-                throw new Error("Defender Leaderboard modal check failed: " + JSON.stringify(defenderGameTest));
+            if (!defenderGameTest.leaderboardOpened || defenderGameTest.leaderboardEntriesCount < 1 || defenderGameTest.leaderboardEntriesCountAfterPlay < 2) {
+                throw new Error("Defender Leaderboard modal check failed (must only show played players and dynamically update): " + JSON.stringify(defenderGameTest));
             }
             if (!defenderGameTest.shopOpened || defenderGameTest.shopItemsCount !== 5) {
                 throw new Error("Defender Shop check failed (must have 5 Pbx items): " + JSON.stringify(defenderGameTest));
