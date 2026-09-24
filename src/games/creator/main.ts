@@ -638,7 +638,7 @@ function createUltraRealisticHuman() {
 
     emotesWidget = new InGameEmotesWidget({
         getAvatarRig: () => playerAvatarRig,
-        topOffset: 70,
+        topOffset: 135,
         leftOffset: 20
     });
 
@@ -2459,7 +2459,7 @@ export function updateScriptInspectorDisplay(placed: PlacedObject | null) {
     if (summary) {
         summary.style.display = 'block';
         const actName = scr.actions && scr.actions[0] ? scr.actions[0].type : (scr.customJsCode ? 'custom_js' : 'pole tegevust');
-        summary.innerHTML = `⚡ <strong>${scr.trigger}</strong> ➔ <span>${actName}</span> (cooldown ${scr.cooldown ?? 1.5}s)`;
+        summary.innerHTML = `<strong>${scr.trigger}</strong> ➔ <span>${actName}</span> (cooldown ${scr.cooldown ?? 1.5}s)`;
     }
 }
 
@@ -2701,6 +2701,11 @@ async function initStudio() {
         setWorkbenchToolMode,
         get wbToolMode() { return wbToolMode; },
         get isPlayTestMode() { return isPlayTestMode; },
+        get studioToolMode() { return studioToolMode; },
+        setStudioToolMode,
+        getStudioToolMode,
+        spawnBlockObject,
+        pullSelectedObject,
         keys
     };
 
@@ -2739,6 +2744,150 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+export type StudioToolMode = 'mouse' | 'puller';
+let studioToolMode: StudioToolMode = 'mouse';
+let isPullingObject = false;
+let pullStartPos = { x: 0, y: 0 };
+let pullStartScale = 1;
+let hideIndicatorTimeout: any = null;
+
+export function getStudioToolMode(): StudioToolMode {
+    return studioToolMode;
+}
+
+export function setStudioToolMode(mode: StudioToolMode) {
+    studioToolMode = mode;
+    const btnMouse = document.getElementById('btn-tool-mouse');
+    const btnPuller = document.getElementById('btn-tool-puller');
+    const pullerSubpanel = document.getElementById('puller-controls-subpanel');
+    const canvasDom = renderer?.domElement;
+
+    if (btnMouse && btnPuller) {
+        if (mode === 'mouse') {
+            btnMouse.classList.add('active');
+            btnPuller.classList.remove('active');
+            btnMouse.style.background = 'linear-gradient(135deg, #00f2fe, #3b82f6)';
+            btnMouse.style.color = '#000';
+            btnPuller.style.background = 'transparent';
+            btnPuller.style.color = '#94a3b8';
+            if (pullerSubpanel) pullerSubpanel.style.display = 'none';
+            if (canvasDom) canvasDom.style.cursor = 'default';
+        } else {
+            btnPuller.classList.add('active');
+            btnMouse.classList.remove('active');
+            btnPuller.style.background = 'linear-gradient(135deg, #ffd32a, #ff9f1a)';
+            btnPuller.style.color = '#000';
+            btnMouse.style.background = 'transparent';
+            btnMouse.style.color = '#94a3b8';
+            if (pullerSubpanel) pullerSubpanel.style.display = 'flex';
+            if (canvasDom) canvasDom.style.cursor = 'nwse-resize';
+        }
+    }
+}
+
+export function showFloatingPullIndicator(clientX: number, clientY: number, scaleVal: number) {
+    const indicator = document.getElementById('puller-floating-indicator');
+    const valSize = document.getElementById('puller-val-size');
+    if (indicator && valSize) {
+        const sx = (2 * scaleVal).toFixed(1);
+        const sy = (2 * scaleVal).toFixed(1);
+        const sz = (2 * scaleVal).toFixed(1);
+        valSize.innerText = `${sx}m x ${sy}m x ${sz}m (x${scaleVal.toFixed(2)})`;
+        indicator.style.left = clientX + 'px';
+        indicator.style.top = (clientY - 20) + 'px';
+        indicator.style.display = 'block';
+    }
+}
+
+export function hideFloatingPullIndicator(delayMs = 0) {
+    if (hideIndicatorTimeout) clearTimeout(hideIndicatorTimeout);
+    if (delayMs <= 0) {
+        const indicator = document.getElementById('puller-floating-indicator');
+        if (indicator) indicator.style.display = 'none';
+    } else {
+        hideIndicatorTimeout = setTimeout(() => {
+            const indicator = document.getElementById('puller-floating-indicator');
+            if (indicator && !isPullingObject) indicator.style.display = 'none';
+        }, delayMs);
+    }
+}
+
+export function pullSelectedObject(deltaScale: number) {
+    if (!selectedObject) {
+        if (placedObjects.length > 0) {
+            selectObject(placedObjects[placedObjects.length - 1]);
+        } else {
+            spawnBlockObject();
+            return;
+        }
+    }
+    if (!selectedObject) return;
+    const currentScale = selectedObject.mesh.scale.x || 1;
+    const newScale = Math.max(0.2, Math.min(30, Number((currentScale + deltaScale).toFixed(2))));
+    selectedObject.mesh.scale.set(newScale, newScale, newScale);
+    selectedObject.scale.x = newScale;
+    selectedObject.scale.y = newScale;
+    selectedObject.scale.z = newScale;
+
+    const scaleInput = document.getElementById('obj-scale-input') as HTMLInputElement | null;
+    if (scaleInput) {
+        scaleInput.value = newScale.toString();
+    }
+    updateInspectorDisplay();
+
+    const rect = renderer?.domElement?.getBoundingClientRect();
+    const cx = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+    const cy = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+    showFloatingPullIndicator(cx, cy, newScale);
+    hideFloatingPullIndicator(1500);
+    autoSaveDraft();
+}
+
+export function spawnBlockObject(color: string = '#00cec9', name: string = 'Plokk'): PlacedObject {
+    const group = new THREE.Group();
+    const boxMat = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: 0.35,
+        metalness: 0.15
+    });
+    const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), boxMat);
+    boxMesh.position.y = 1;
+    boxMesh.castShadow = true;
+    boxMesh.receiveShadow = true;
+    group.add(boxMesh);
+
+    // Stylish edge highlight
+    const wireMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
+    const wireGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2));
+    const wireLine = new THREE.LineSegments(wireGeo, wireMat);
+    wireLine.position.y = 1;
+    group.add(wireLine);
+
+    const spawnX = orbitTarget.x + (Math.random() - 0.5) * 4;
+    const spawnZ = orbitTarget.z + (Math.random() - 0.5) * 4;
+    group.position.set(spawnX, 0, spawnZ);
+
+    scene.add(group);
+
+    const placed: PlacedObject = {
+        id: 'block_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        mesh: group,
+        catalogId: 'block_cube',
+        name: name,
+        category: 'custom',
+        position: { x: spawnX, y: 0, z: spawnZ },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 },
+        color: color
+    };
+
+    placedObjects.push(placed);
+    selectObject(placed);
+    setStudioToolMode('puller');
+    autoSaveDraft();
+    return placed;
 }
 
 let isDraggingObject = false;
@@ -3584,9 +3733,24 @@ function setupStudioEvents() {
                 return hits.length > 0;
             });
 
-            if (hitGroup) {
-                selectObject(hitGroup);
-                isDraggingObject = true;
+            if (studioToolMode === 'puller') {
+                if (hitGroup) {
+                    selectObject(hitGroup);
+                    isPullingObject = true;
+                    pullStartPos = { x: e.clientX, y: e.clientY };
+                    pullStartScale = hitGroup.mesh.scale.x || 1;
+                    showFloatingPullIndicator(e.clientX, e.clientY, pullStartScale);
+                } else if (selectedObject) {
+                    isPullingObject = true;
+                    pullStartPos = { x: e.clientX, y: e.clientY };
+                    pullStartScale = selectedObject.mesh.scale.x || 1;
+                    showFloatingPullIndicator(e.clientX, e.clientY, pullStartScale);
+                }
+            } else {
+                if (hitGroup) {
+                    selectObject(hitGroup);
+                    isDraggingObject = true;
+                }
             }
         } else if (e.button === 0 && isPlayTestMode) {
             // Click in play test mode triggers player attack
@@ -3596,7 +3760,14 @@ function setupStudioEvents() {
 
     window.addEventListener('mouseup', e => {
         if (e.button === 2) isRightMouseDown = false;
-        if (e.button === 0) isDraggingObject = false;
+        if (e.button === 0) {
+            if (isPullingObject) {
+                isPullingObject = false;
+                hideFloatingPullIndicator(1000);
+                autoSaveDraft();
+            }
+            isDraggingObject = false;
+        }
     });
 
     window.addEventListener('mousemove', e => {
@@ -3608,6 +3779,23 @@ function setupStudioEvents() {
             orbitTheta -= dx * 0.006;
             orbitPhi = Math.max(0.1, Math.min(Math.PI / 2.1, orbitPhi - dy * 0.006));
             updateOrbitCamera();
+        } else if (isPullingObject && selectedObject && !isPlayTestMode) {
+            const dx = e.clientX - pullStartPos.x;
+            const dy = pullStartPos.y - e.clientY;
+            const dragDelta = (dx + dy) * 0.015;
+            const newScale = Math.max(0.2, Math.min(30, Number((pullStartScale + dragDelta).toFixed(2))));
+
+            selectedObject.mesh.scale.set(newScale, newScale, newScale);
+            selectedObject.scale.x = newScale;
+            selectedObject.scale.y = newScale;
+            selectedObject.scale.z = newScale;
+
+            const scaleInput = document.getElementById('obj-scale-input') as HTMLInputElement | null;
+            if (scaleInput) {
+                scaleInput.value = newScale.toString();
+            }
+            updateInspectorDisplay();
+            showFloatingPullIndicator(e.clientX, e.clientY, newScale);
         } else if (isDraggingObject && selectedObject && !isPlayTestMode) {
             const rect = dom.getBoundingClientRect();
             const mouse = new THREE.Vector2(
@@ -3703,7 +3891,7 @@ function setupStudioEvents() {
                 isGameOver = false;
                 isGameFinished = false;
 
-                playTestBtn.innerHTML = '<span>⏹️</span> <span>Exit Play Test</span>';
+                playTestBtn.innerHTML = '<span>Exit Play Test</span>';
                 playTestBtn.style.background = '#e74c3c';
                 if (playTestHud) playTestHud.style.display = 'block';
                 if (gameplayHud) gameplayHud.style.display = 'flex';
@@ -3711,6 +3899,9 @@ function setupStudioEvents() {
                 if (studioCamControls) studioCamControls.style.display = 'none';
                 if (catalogPanel) catalogPanel.style.display = 'none';
                 if (inspectorPanel) inspectorPanel.style.display = 'none';
+                const toolSelector = document.getElementById('studio-tool-mode-selector');
+                if (toolSelector) toolSelector.style.display = 'none';
+                hideFloatingPullIndicator(0);
 
                 // Equip starter holdable item into player's hand if configured
                 const starterHoldable = placedObjects.find(o => (o.isHoldable || o.customModelData?.isHoldable) && (o.inHandAtStart || o.customModelData?.inHandAtStart));
@@ -3805,7 +3996,7 @@ function setupStudioEvents() {
                     }
                 });
 
-                playTestBtn.innerHTML = '<span>▶️</span> <span>Play Test Mode</span>';
+                playTestBtn.innerHTML = '<span>Play Test Mode</span>';
                 playTestBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
                 if (playTestHud) playTestHud.style.display = 'none';
                 if (gameplayHud) gameplayHud.style.display = 'none';
@@ -3814,6 +4005,8 @@ function setupStudioEvents() {
                 if (studioCamControls) studioCamControls.style.display = 'flex';
                 if (catalogPanel) catalogPanel.style.display = 'flex';
                 if (inspectorPanel) inspectorPanel.style.display = 'block';
+                const toolSelector = document.getElementById('studio-tool-mode-selector');
+                if (toolSelector) toolSelector.style.display = 'flex';
 
                 const victoryModal = document.getElementById('game-victory-modal');
                 const gameOverModal = document.getElementById('game-over-modal');
@@ -3893,6 +4086,29 @@ function setupStudioEvents() {
 
     document.getElementById('btn-env-sea')?.addEventListener('click', () => {
         setMapEnvironment('sea');
+    });
+
+    // Top "Add Block" Button
+    document.getElementById('btn-add-block')?.addEventListener('click', () => {
+        spawnBlockObject();
+    });
+
+    // Tool Mode Selector (Hiir vs Tõmbaja)
+    document.getElementById('btn-tool-mouse')?.addEventListener('click', () => {
+        setStudioToolMode('mouse');
+    });
+
+    document.getElementById('btn-tool-puller')?.addEventListener('click', () => {
+        setStudioToolMode('puller');
+    });
+
+    // Puller Quick Resize Buttons (+ Suuremaks / - Väiksemaks)
+    document.getElementById('btn-pull-bigger')?.addEventListener('click', () => {
+        pullSelectedObject(0.5);
+    });
+
+    document.getElementById('btn-pull-smaller')?.addEventListener('click', () => {
+        pullSelectedObject(-0.5);
     });
 
     // Dismiss Feedback Banner Buttons

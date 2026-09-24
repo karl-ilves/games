@@ -2621,15 +2621,92 @@ await (async () => {
             }
         }
 
+        // Test Add Block Button & Tool Mode Selector (Hiir vs Tõmbaja / Puller)
+        console.log("   Testing Add Block & Studio Tool Mode Selector (Hiir vs Tõmbaja / Puller)...");
+        {
+            // 1. Verify Add Block button exists and is visible
+            await page.waitForSelector('#btn-add-block', { visible: true, timeout: 5000 });
+            console.log("   Found visible '#btn-add-block' button at top.");
+
+            // 2. Verify Tool Mode Selector (Hiir vs Tõmbaja) exists in top-left
+            await page.waitForSelector('#studio-tool-mode-selector', { visible: true, timeout: 5000 });
+            await page.waitForSelector('#btn-tool-mouse', { visible: true, timeout: 5000 });
+            await page.waitForSelector('#btn-tool-puller', { visible: true, timeout: 5000 });
+            console.log("   Found visible '#studio-tool-mode-selector' with '#btn-tool-mouse' and '#btn-tool-puller'.");
+
+            // 3. Test clicking 'Add Block' button spawns a block and selects it
+            const objectsBeforeBlock = await page.evaluate(() => window.creatorStudio?.placedObjects?.length || 0);
+            await page.click('#btn-add-block');
+            await new Promise(r => setTimeout(r, 200));
+
+            const blockStatus = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const lastObj = cs?.placedObjects?.[cs?.placedObjects?.length - 1];
+                return {
+                    count: cs?.placedObjects?.length || 0,
+                    selectedId: cs?.selectedObject?.id,
+                    lastId: lastObj?.id,
+                    lastName: lastObj?.name,
+                    toolMode: cs?.studioToolMode,
+                    scale: lastObj?.mesh?.scale?.x
+                };
+            });
+            console.log("   After Add Block:", blockStatus);
+            if (blockStatus.count <= objectsBeforeBlock || !blockStatus.selectedId || blockStatus.selectedId !== blockStatus.lastId) {
+                throw new Error("Add Block failed to spawn or select the new block!");
+            }
+            if (blockStatus.toolMode !== 'puller') {
+                throw new Error("Spawning a block should activate 'puller' (Tõmbaja) mode!");
+            }
+
+            // 4. Test Puller: pull block bigger using pull button and puller API
+            await page.click('#btn-pull-bigger');
+            await new Promise(r => setTimeout(r, 100));
+
+            const scaleAfterPull = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return cs?.selectedObject?.mesh?.scale?.x || 1;
+            });
+            console.log("   Block scale after + Suuremaks pull:", scaleAfterPull);
+            if (scaleAfterPull <= 1.0) {
+                throw new Error("Puller '+ Suuremaks' failed to make block bigger!");
+            }
+
+            // Test pulling even bigger via pullSelectedObject
+            await page.evaluate(() => {
+                window.creatorStudio.pullSelectedObject(1.0);
+            });
+            const scaleAfterPull2 = await page.evaluate(() => window.creatorStudio?.selectedObject?.mesh?.scale?.x || 1);
+            console.log("   Block scale after pulling larger:", scaleAfterPull2);
+            if (scaleAfterPull2 <= scaleAfterPull) {
+                throw new Error("pullSelectedObject failed to make block bigger!");
+            }
+
+            // 5. Test switching back to 'Hiir' (Mouse) mode
+            await page.click('#btn-tool-mouse');
+            await new Promise(r => setTimeout(r, 100));
+            const modeAfterMouseClick = await page.evaluate(() => window.creatorStudio?.studioToolMode);
+            if (modeAfterMouseClick !== 'mouse') {
+                throw new Error("Clicking '#btn-tool-mouse' failed to switch to 'mouse' mode!");
+            }
+
+            // 6. Test switching back to 'Tõmbaja' mode
+            await page.click('#btn-tool-puller');
+            await new Promise(r => setTimeout(r, 100));
+            const modeAfterPullerClick = await page.evaluate(() => window.creatorStudio?.studioToolMode);
+            if (modeAfterPullerClick !== 'puller') {
+                throw new Error("Clicking '#btn-tool-puller' failed to switch to 'puller' mode!");
+            }
+            console.log("   ✅ Add Block & Tõmbaja mode tests passed!");
+        }
+
         // Test Custom Item 3D Workbench (Create Item, Push-Pull Height/Elevation, Save, Publish, Place)
         console.log("   Testing Custom Item 3D Workbench (Create Item, Shapes, Height Elevation, Save, Publish)...");
         {
-            // 1. Verify Create Custom Item button exists
-            await page.waitForSelector('#btn-create-custom-item', { visible: true, timeout: 5000 });
-            console.log("   Found '#btn-create-custom-item' button.");
-
-            // 2. Open Custom Item Workbench Modal
-            await page.click('#btn-create-custom-item');
+            // Open Custom Item Workbench Modal via Studio API
+            await page.evaluate(() => {
+                window.creatorStudio.openWorkbenchModal();
+            });
             await new Promise(r => setTimeout(r, 500));
 
             const isModalVisible = await page.evaluate(() => {

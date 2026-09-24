@@ -359,49 +359,76 @@
                 <span style="font-weight: 800; color: #00f2fe;">Playard Games</span>
             </a>
             <span style="color: rgba(255,255,255,0.2);">|</span>
-            <span>✨ 3D Creator Studio</span>
+            <span>3D Creator Studio</span>
         </div>
 
         <!-- Kaardi alguse tüübi valik: Maa või Meri -->
         <div id="map-environment-selector" style="display: flex; align-items: center; background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 12px; padding: 4px 8px; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.5);">
             <span style="font-size: 0.85rem; font-weight: 800; color: #ffd32a; display: flex; align-items: center; gap: 4px; user-select: none;">
-                <span>🗺️</span> <span>Mapp:</span>
+                <span>Mapp:</span>
             </span>
             <button id="btn-env-land" class="btn-studio active-map-env" title="Maa keskkond (roheline muru ja kindel pinnas)" style="padding: 5px 14px; font-size: 0.85rem; border-radius: 8px; font-weight: 800; cursor: pointer; transition: all 0.2s;">
-                🌍 Maa
+                Maa
             </button>
             <button id="btn-env-sea" class="btn-studio" title="Mere keskkond (suur ookean, paadisild ja ujumisvesi)" style="padding: 5px 14px; font-size: 0.85rem; border-radius: 8px; font-weight: 800; background: rgba(255, 255, 255, 0.08); color: #74b9ff; border: 1.5px solid rgba(0, 242, 254, 0.25); cursor: pointer; transition: all 0.2s;">
-                🌊 Meri
+                Meri
             </button>
         </div>
 
         <div class="studio-actions">
             <span id="draft-status-indicator" style="font-size: 0.8rem; color: #2ecc71; font-weight: 600;"></span>
             <button id="btn-undo" class="btn-studio" title="Undo Last Action (Ctrl+Z)" style="padding: 8px 12px; background: rgba(255,255,255,0.08);">
-                <span>↩️</span> <span style="display: none; sm:inline;">Undo</span>
+                <span>Undo</span>
             </button>
             <button id="btn-redo" class="btn-studio" title="Redo Action (Ctrl+Y)" style="padding: 8px 12px; background: rgba(255,255,255,0.08);">
-                <span>↪️</span> <span style="display: none; sm:inline;">Redo</span>
+                <span>Redo</span>
             </button>
             <button id="btn-open-my-games" class="btn-studio" style="background: rgba(0, 242, 254, 0.2); border-color: #00f2fe; color: #00f2fe;">
-                <span>📂</span> <span>My Games</span>
+                <span>My Games</span>
             </button>
             <button id="btn-new-game" class="btn-studio" style="background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71;">
-                <span>➕</span> <span>New</span>
+                <span>New</span>
             </button>
             <button id="btn-save-draft" class="btn-studio" style="background: rgba(0, 242, 254, 0.15); border-color: rgba(0, 242, 254, 0.4); color: #00f2fe;">
-                <span>💾</span> <span>Save Game</span>
+                <span>Save Game</span>
             </button>
-            <button id="btn-create-custom-item" class="btn-studio" style="background: linear-gradient(135deg, #a855f7, #6366f1); border-color: #c084fc; color: #fff; font-weight: 800; box-shadow: 0 4px 14px rgba(168,85,247,0.4);">
-                <span>🎨</span> <span>Create Item</span>
+            <button id="btn-add-block" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; box-shadow: 0 4px 14px rgba(0,242,254,0.4);">
+                <span>Add Block</span>
             </button>
+            <button id="btn-create-custom-item" style="display: none;"></button>
             <button id="btn-toggle-play-test" class="btn-studio btn-play-test">
-                <span>▶️</span> <span>Play Test Mode</span>
+                <span>Play Test Mode</span>
             </button>
             <button id="btn-submit-review" class="btn-studio btn-submit-review">
-                <span>🚀</span> <span>Publish a game</span>
+                <span>Publish a game</span>
             </button>
         </div>
+    </div>
+
+    <!-- Top-Left Tool Mode Selector: Hiir vs Tõmbaja -->
+    <div id="studio-tool-mode-selector" style="position: absolute; top: 75px; left: 20px; z-index: 1005; background: rgba(15, 23, 42, 0.94); border: 2px solid rgba(0, 242, 254, 0.4); border-radius: 14px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
+        <span style="font-size: 0.82rem; font-weight: 800; color: #ffd32a; padding: 0 4px; user-select: none;">Tööriist:</span>
+        <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 3px; border-radius: 10px; border: 1px solid rgba(0,242,254,0.25);">
+            <button id="btn-tool-mouse" class="btn-studio-tool active" title="Tavaline hiir (valimine ja liigutamine)" style="padding: 7px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                Hiir
+            </button>
+            <button id="btn-tool-puller" class="btn-studio-tool" title="Tõmbaja (lohista ja tõmba plokki suuremaks)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                Tõmbaja
+            </button>
+        </div>
+        <div id="puller-controls-subpanel" style="display: none; align-items: center; gap: 6px; padding-left: 6px; border-left: 1px solid rgba(255,255,255,0.15);">
+            <button id="btn-pull-bigger" class="btn-studio" title="Tõmba plokk suuremaks (+)" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 800; background: rgba(0,242,254,0.25); border-color: #00f2fe; color: #00f2fe;">
+                + Suuremaks
+            </button>
+            <button id="btn-pull-smaller" class="btn-studio" title="Tee väiksemaks (-)" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 800; background: rgba(255,255,255,0.08); border-color: #475569; color: #cbd5e1;">
+                - Väiksemaks
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Pull Size Indicator -->
+    <div id="puller-floating-indicator" style="display: none; position: absolute; pointer-events: none; z-index: 150; background: rgba(15, 23, 42, 0.95); border: 1.5px solid #00f2fe; border-radius: 8px; padding: 6px 12px; color: #00f2fe; font-weight: 800; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,242,254,0.4); transform: translate(-50%, -130%);">
+        Suurus: <span id="puller-val-size" style="color: #ffd32a;">3.0m x 2.0m x 3.0m</span>
     </div>
 
     <!-- Admin Feedback Banner (Appears when Admin requests changes) -->
@@ -410,7 +437,7 @@
             <span style="font-size: 2rem;">⚠️</span>
             <div>
                 <div style="font-weight: 800; font-size: 0.95rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5);" id="feedback-banner-title">
-                    Admin✅ Requested Changes for Your Game:
+                    Admin Requested Changes for Your Game:
                 </div>
                 <div style="font-size: 0.9rem; color: #fff; margin-top: 4px; font-weight: 600; background: rgba(0,0,0,0.3); padding: 6px 12px; border-radius: 6px; border-left: 3px solid #ffd32a;" id="feedback-banner-text">
                     "Please update your game objects and submit again."
@@ -630,18 +657,18 @@
     <div class="catalog-panel" id="catalog-panel">
         <div class="catalog-header">
             <h3>
-                <span>📦 10,000 Objects Library</span>
+                <span>10,000 Objects Library</span>
                 <span id="catalog-count-badge" style="font-size: 0.75rem; color: #a4b0be; background: #131920; padding: 2px 6px; border-radius: 10px;">10,000 items</span>
             </h3>
-            <input type="text" id="catalog-search-input" class="catalog-search" placeholder="🔍 Search 10000 objects...">
+            <input type="text" id="catalog-search-input" class="catalog-search" placeholder="Search 10000 objects...">
             <div class="catalog-categories">
-                <button class="cat-btn active" data-cat="spawn" style="color: #00f2fe; font-weight: bold;">🚩 Spawn Kohad</button>
-                <button class="cat-btn" data-cat="custom" style="color: #ffd32a; font-weight: bold;">⭐ Players Created</button>
-                <button class="cat-btn" data-cat="nature">🌿 Nature</button>
-                <button class="cat-btn" data-cat="city">🏙️ City</button>
-                <button class="cat-btn" data-cat="vehicles">🚗 Vehicles</button>
-                <button class="cat-btn" data-cat="gameplay">🎮 Gameplay</button>
-                <button class="cat-btn" data-cat="scifi">🚀 Sci-Fi</button>
+                <button class="cat-btn active" data-cat="spawn" style="color: #00f2fe; font-weight: bold;">Spawn Kohad</button>
+                <button class="cat-btn" data-cat="custom" style="color: #ffd32a; font-weight: bold;">Players Created</button>
+                <button class="cat-btn" data-cat="nature">Nature</button>
+                <button class="cat-btn" data-cat="city">City</button>
+                <button class="cat-btn" data-cat="vehicles">Vehicles</button>
+                <button class="cat-btn" data-cat="gameplay">Gameplay</button>
+                <button class="cat-btn" data-cat="scifi">Sci-Fi</button>
             </div>
         </div>
 
@@ -652,7 +679,7 @@
 
     <!-- Right Inspector & Game Settings -->
     <div class="inspector-panel" id="inspector-panel">
-        <h4>⚙️ Game Settings</h4>
+        <h4>Game Settings</h4>
         <div class="prop-row">
             <label>Game Title:</label>
             <input type="text" id="game-title-input" value="My 3D Adventure">
@@ -671,7 +698,7 @@
             <input type="text" id="game-desc-input" value="An awesome 3D world created in Playard!">
         </div>
         <div class="prop-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 0.8rem; margin: 0;">❤️ Player Health (HP):</label>
+            <label style="font-size: 0.8rem; margin: 0;">Player Health (HP):</label>
             <div style="display: flex; gap: 4px; align-items: center;">
                 <input type="number" id="game-player-health-input" value="100" min="10" max="1000" step="10" style="width: 55px; text-align: center; font-weight: bold; color: #2ecc71; padding: 4px;">
                 <select id="game-health-visible-select" title="Health Visibility" style="width: 78px; padding: 4px 2px; font-size: 0.72rem; background: #0f172a; border: 1px solid #3b82f6; border-radius: 6px; color: #fff;">
@@ -684,7 +711,7 @@
         <!-- Coins and Asma side by side ("ja lisa ka coinid ja seal kõrval on asma") -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px;">
             <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,211,42,0.25);">
-                <label style="font-size: 0.72rem; color: #ffd32a; font-weight: bold; display: block; margin-bottom: 4px;">🪙 Coins:</label>
+                <label style="font-size: 0.72rem; color: #ffd32a; font-weight: bold; display: block; margin-bottom: 4px;">Coins:</label>
                 <div style="display: flex; gap: 4px; align-items: center;">
                     <input type="number" id="game-coins-input" value="0" min="0" max="99999" step="10" style="width: 44px; text-align: center; font-weight: bold; color: #ffd32a; font-size: 0.75rem; padding: 3px;">
                     <select id="game-coins-visible-select" title="Coins Visibility" style="width: 68px; padding: 3px 2px; font-size: 0.7rem; background: #0f172a; border: 1px solid #ffd32a; border-radius: 6px; color: #fff;">
@@ -694,7 +721,7 @@
                 </div>
             </div>
             <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(0,206,201,0.25);">
-                <label style="font-size: 0.72rem; color: #00cec9; font-weight: bold; display: block; margin-bottom: 4px;">🫁 Asma:</label>
+                <label style="font-size: 0.72rem; color: #00cec9; font-weight: bold; display: block; margin-bottom: 4px;">Asma:</label>
                 <div style="display: flex; gap: 4px; align-items: center;">
                     <input type="number" id="game-asma-input" value="100" min="10" max="1000" step="10" style="width: 44px; text-align: center; font-weight: bold; color: #00cec9; font-size: 0.75rem; padding: 3px;">
                     <select id="game-asma-visible-select" title="Asma Visibility" style="width: 68px; padding: 3px 2px; font-size: 0.7rem; background: #0f172a; border: 1px solid #00cec9; border-radius: 6px; color: #fff;">
@@ -707,7 +734,7 @@
 
         <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
 
-        <h4>🎯 Selected Object</h4>
+        <h4>Selected Object</h4>
         <div id="selected-object-info" style="color: #718093; font-size: 0.85rem; margin-bottom: 8px;">
             Click on an object to select, drag, rotate (R), or move with arrows!
         </div>
@@ -731,19 +758,19 @@
 
             <!-- Visual Move & Rotate Controls -->
             <div style="margin-top: 12px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; border: 1px solid rgba(0,242,254,0.2);">
-                <div style="font-size: 0.8rem; color: #ffd32a; font-weight: bold; margin-bottom: 8px; text-align: center;">🎮 Move & Rotate Object (Arrows / R)</div>
+                <div style="font-size: 0.8rem; color: #ffd32a; font-weight: bold; margin-bottom: 8px; text-align: center;">Move & Rotate Object (Arrows / R)</div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 170px; margin: 0 auto 6px auto;">
                     <div></div>
-                    <button id="btn-move-fwd" class="btn-ctrl" title="Move Forward (ArrowUp / W)">⬆️</button>
-                    <button id="btn-move-up" class="btn-ctrl" title="Move Up (PageUp / Q)">🔼</button>
+                    <button id="btn-move-fwd" class="btn-ctrl" title="Move Forward (ArrowUp / W)">Forward</button>
+                    <button id="btn-move-up" class="btn-ctrl" title="Move Up (PageUp / Q)">Up</button>
 
-                    <button id="btn-move-left" class="btn-ctrl" title="Move Left (ArrowLeft / A)">⬅️</button>
-                    <button id="btn-rotate-r" class="btn-ctrl" style="background: rgba(0,242,254,0.2); border-color: #00f2fe; color: #00f2fe; font-weight: bold;" title="Rotate 45° (R)">🔄 R</button>
-                    <button id="btn-move-right" class="btn-ctrl" title="Move Right (ArrowRight / D)">➡️</button>
+                    <button id="btn-move-left" class="btn-ctrl" title="Move Left (ArrowLeft / A)">Left</button>
+                    <button id="btn-rotate-r" class="btn-ctrl" style="background: rgba(0,242,254,0.2); border-color: #00f2fe; color: #00f2fe; font-weight: bold;" title="Rotate 45° (R)">Rot R</button>
+                    <button id="btn-move-right" class="btn-ctrl" title="Move Right (ArrowRight / D)">Right</button>
 
                     <div></div>
-                    <button id="btn-move-back" class="btn-ctrl" title="Move Backward (ArrowDown / S)">⬇️</button>
-                    <button id="btn-move-down" class="btn-ctrl" title="Move Down (PageDown / E)">🔽</button>
+                    <button id="btn-move-back" class="btn-ctrl" title="Move Backward (ArrowDown / S)">Back</button>
+                    <button id="btn-move-down" class="btn-ctrl" title="Move Down (PageDown / E)">Down</button>
                 </div>
             </div>
 
@@ -751,7 +778,7 @@
             <div style="margin-top: 12px; background: rgba(15, 23, 42, 0.65); padding: 10px; border-radius: 10px; border: 1.5px solid rgba(0, 242, 254, 0.35);">
                 <div style="font-size: 0.8rem; color: #00f2fe; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <span>📜</span> <span>Object Script / Loogika</span>
+                        <span>Object Script / Loogika</span>
                     </div>
                     <span id="script-status-badge" style="font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,0.08); color: #94a3b8;">Pole skripti</span>
                 </div>
@@ -761,24 +788,24 @@
                     <label style="font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 3px;">Kiirskript / Preset:</label>
                     <select id="script-preset-select" style="width: 100%; box-sizing: border-box; padding: 6px 8px; background: #0f172a; border: 1px solid #3b82f6; border-radius: 6px; color: #fff; font-size: 0.8rem;">
                         <option value="none">-- Vali valmis skript --</option>
-                        <option value="speed_boost">⚡ Kiirenduspadi (Speed Boost 2x)</option>
-                        <option value="jump_boost">🚀 Superhüpe (High Jump Pad)</option>
-                        <option value="give_coins">🪙 Müntide andja (+10 Coins)</option>
-                        <option value="give_yards">💎 Yardide andja (+5 Yards)</option>
-                        <option value="damage">🩸 Ohtlik lõks / Laava (-25 HP)</option>
-                        <option value="heal">❤️ Ravipakk / Medkit (+40 HP)</option>
-                        <option value="dialog">💬 Rääkiv NPC / Teade</option>
-                        <option value="teleport">🌀 Teleport alguspunkti</option>
-                        <option value="rotate">🔄 Pidev pöörlemine</option>
-                        <option value="elevator">↕️ Liikuv lift / platvorm</option>
-                        <option value="play_sound">🔊 Heliefekti mängija</option>
-                        <option value="custom_js">💻 Oma JavaScript kood</option>
+                        <option value="speed_boost">Kiirenduspadi (Speed Boost 2x)</option>
+                        <option value="jump_boost">Superhüpe (High Jump Pad)</option>
+                        <option value="give_coins">Müntide andja (+10 Coins)</option>
+                        <option value="give_yards">Yardide andja (+5 Yards)</option>
+                        <option value="damage">Ohtlik lõks / Laava (-25 HP)</option>
+                        <option value="heal">Ravipakk / Medkit (+40 HP)</option>
+                        <option value="dialog">Rääkiv NPC / Teade</option>
+                        <option value="teleport">Teleport alguspunkti</option>
+                        <option value="rotate">Pidev pöörlemine</option>
+                        <option value="elevator">Liikuv lift / platvorm</option>
+                        <option value="play_sound">Heliefekti mängija</option>
+                        <option value="custom_js">Oma JavaScript kood</option>
                     </select>
                 </div>
 
                 <!-- Open Full Script Editor button -->
                 <button id="btn-open-script-editor" class="btn-studio" style="width: 100%; justify-content: center; background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(59,130,246,0.25)); border-color: #00f2fe; color: #00f2fe; font-weight: bold; font-size: 0.8rem; margin-bottom: 6px;">
-                    <span>⚡</span> <span>Ava Skripti Redaktor</span>
+                    <span>Ava Skripti Redaktor</span>
                 </button>
 
                 <!-- Quick text message trigger (Walkthrough) -->
@@ -791,10 +818,10 @@
             </div>
 
             <button id="btn-duplicate-obj" class="btn-studio" style="width: 100%; margin-top: 10px; justify-content: center;">
-                📋 Duplicate Object
+                Duplicate Object
             </button>
             <button id="btn-delete-obj" class="btn-danger">
-                🗑️ Delete Object
+                Delete Object
             </button>
         </div>
     </div>
@@ -812,29 +839,28 @@
 
     <!-- Studio Camera & View Navigation Controls -->
     <div id="studio-camera-controls" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(20,27,36,0.92); border: 1.5px solid rgba(0,242,254,0.35); border-radius: 30px; padding: 6px 16px; display: flex; align-items: center; gap: 10px; z-index: 100; box-shadow: 0 8px 25px rgba(0,0,0,0.5);">
-        <span style="font-size: 0.8rem; font-weight: bold; color: #00f2fe; white-space: nowrap;">🎥 Move Camera (Arrows / WASD):</span>
+        <span style="font-size: 0.8rem; font-weight: bold; color: #00f2fe; white-space: nowrap;">Move Camera (Arrows / WASD):</span>
         <div style="display: flex; gap: 4px;">
-            <button id="cam-btn-left" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.9rem;" title="Pan Left (ArrowLeft / A)">⬅️</button>
-            <button id="cam-btn-fwd" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.9rem;" title="Pan Forward (ArrowUp / W)">⬆️</button>
-            <button id="cam-btn-back" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.9rem;" title="Pan Backward (ArrowDown / S)">⬇️</button>
-            <button id="cam-btn-right" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.9rem;" title="Pan Right (ArrowRight / D)">➡️</button>
+            <button id="cam-btn-left" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.85rem;" title="Pan Left (ArrowLeft / A)">Left</button>
+            <button id="cam-btn-fwd" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.85rem;" title="Pan Forward (ArrowUp / W)">Fwd</button>
+            <button id="cam-btn-back" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.85rem;" title="Pan Backward (ArrowDown / S)">Back</button>
+            <button id="cam-btn-right" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.85rem;" title="Pan Right (ArrowRight / D)">Right</button>
         </div>
         <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.15);"></div>
         <div style="display: flex; gap: 4px;">
-            <button id="cam-btn-zoom-in" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom In (+)">🔍➕</button>
-            <button id="cam-btn-zoom-out" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom Out (-)">🔍➖</button>
-            <button id="cam-btn-rot-left" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Left">🔄 ◀</button>
-            <button id="cam-btn-rot-right" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Right">🔄 ▶</button>
+            <button id="cam-btn-zoom-in" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom In (+)">Zoom +</button>
+            <button id="cam-btn-zoom-out" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom Out (-)">Zoom -</button>
+            <button id="cam-btn-rot-left" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Left">Rot L</button>
+            <button id="cam-btn-rot-right" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Right">Rot R</button>
         </div>
     </div>
 
     <!-- Script Editor Modal -->
-    <div id="script-editor-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 250; align-items: center; justify-content: center; padding: 15px;">
+    <div id="script-editor-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 2000; align-items: center; justify-content: center; padding: 15px;">
         <div style="background: #111827; border: 2px solid #00f2fe; border-radius: 18px; width: 100%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 30px rgba(0,242,254,0.25);">
             <!-- Header -->
             <div style="padding: 16px 20px; background: #1f2937; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.5rem;">📜</span>
                     <div>
                         <div style="font-weight: 800; font-size: 1.15rem; color: #00f2fe;">Skripti Redaktor (Script Editor)</div>
                         <div style="font-size: 0.78rem; color: #9ca3af;" id="script-modal-obj-name">Objekt: Kuup</div>
@@ -852,10 +878,10 @@
             <!-- Tab Navigation -->
             <div style="display: flex; background: #172033; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 4px 16px; gap: 8px;">
                 <button id="script-tab-visual" class="btn-studio active" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px 8px 0 0; background: rgba(0,242,254,0.15); color: #00f2fe; border-color: #00f2fe;">
-                    ⚡ Visuaalne Redaktor
+                    Visuaalne Redaktor
                 </button>
                 <button id="script-tab-code" class="btn-studio" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px 8px 0 0; background: transparent; color: #9ca3af; border-color: transparent;">
-                    💻 JavaScript Kood
+                    JavaScript Kood
                 </button>
             </div>
 
@@ -867,13 +893,13 @@
                         <!-- Trigger Box -->
                         <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px;">
                             <label style="font-weight: 800; font-size: 0.85rem; color: #ffd32a; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-                                <span>🎯</span> <span>Millal käivitub? (Trigger)</span>
+                                <span>Millal käivitub? (Trigger)</span>
                             </label>
                             <select id="script-form-trigger" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #1e293b; border: 1px solid #ffd32a; border-radius: 8px; color: #fff; font-size: 0.85rem;">
-                                <option value="onPlayerTouch">🚶 Kui mängija puudutab (Touch / Proximity)</option>
-                                <option value="onInteract">⌨️ Kui vajutatakse klahvi [E] (Interact Prompt)</option>
-                                <option value="onTimer">⏱️ Taimeriga korduvalt (Timer Interval)</option>
-                                <option value="onStart">▶️ Mängu alguses kohe (On Start)</option>
+                                <option value="onPlayerTouch">Kui mängija puudutab (Touch / Proximity)</option>
+                                <option value="onInteract">Kui vajutatakse klahvi [E] (Interact Prompt)</option>
+                                <option value="onTimer">Taimeriga korduvalt (Timer Interval)</option>
+                                <option value="onStart">Mängu alguses kohe (On Start)</option>
                             </select>
 
                             <!-- Timer interval input -->
@@ -886,20 +912,20 @@
                         <!-- Action Box -->
                         <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px;">
                             <label style="font-weight: 800; font-size: 0.85rem; color: #00f2fe; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-                                <span>⚡</span> <span>Mida teeb? (Action)</span>
+                                <span>Mida teeb? (Action)</span>
                             </label>
                             <select id="script-form-action" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #1e293b; border: 1px solid #00f2fe; border-radius: 8px; color: #fff; font-size: 0.85rem;">
-                                <option value="speed_boost">⚡ Kiirendusmängijale (Speed Boost)</option>
-                                <option value="jump_boost">🚀 Kõrghüpe (Super Jump)</option>
-                                <option value="give_coins">🪙 Anna münte (+Coins)</option>
-                                <option value="give_yards">💎 Anna Playard Yarde (+Yards)</option>
-                                <option value="dialog">💬 Kuva dialoogiaken / tekst</option>
-                                <option value="damage">🩸 Tee kahju / vigasta (-HP)</option>
-                                <option value="heal">❤️ Ravi elusid (+HP)</option>
-                                <option value="teleport">🌀 Telepordi mängija</option>
-                                <option value="play_sound">🔊 Mängi heliefekti (SFX)</option>
-                                <option value="change_color">🎨 Muuda objekti värvi</option>
-                                <option value="animate_motion">🔄 Pane objekt pöörlema / liikuma</option>
+                                <option value="speed_boost">Kiirendus mängijale (Speed Boost)</option>
+                                <option value="jump_boost">Kõrghüpe (Super Jump)</option>
+                                <option value="give_coins">Anna münte (+Coins)</option>
+                                <option value="give_yards">Anna Playard Yarde (+Yards)</option>
+                                <option value="dialog">Kuva dialoogiaken / tekst</option>
+                                <option value="damage">Tee kahju / vigasta (-HP)</option>
+                                <option value="heal">Ravi elusid (+HP)</option>
+                                <option value="teleport">Telepordi mängija</option>
+                                <option value="play_sound">Mängi heliefekti (SFX)</option>
+                                <option value="change_color">Muuda objekti värvi</option>
+                                <option value="animate_motion">Pane objekt pöörlema / liikuma</option>
                             </select>
                         </div>
                     </div>
@@ -911,7 +937,7 @@
 
                     <!-- Cooldown row -->
                     <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px;">
-                        <span style="font-size: 0.8rem; color: #94a3b8;">⏱️ Ooteaeg uuesti käivitumiseni (Cooldown sekundites):</span>
+                        <span style="font-size: 0.8rem; color: #94a3b8;">Ooteaeg uuesti käivitumiseni (Cooldown sekundites):</span>
                         <input type="number" id="script-cooldown" value="1.5" min="0.1" step="0.2" style="width: 80px; padding: 4px 8px; background: #1e293b; border: 1px solid #485460; border-radius: 6px; color: #fff; font-size: 0.85rem; text-align: center;">
                     </div>
                 </div>
@@ -930,7 +956,7 @@
                     </div>
                     <textarea id="script-code-editor" style="width: 100%; height: 220px; box-sizing: border-box; padding: 12px; background: #090d16; border: 1.5px solid #3b82f6; border-radius: 10px; color: #38ef7d; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.85rem; line-height: 1.4; outline: none; resize: vertical; tab-size: 2;" placeholder="// Kirjuta kood siia..."></textarea>
                     <div style="font-size: 0.75rem; color: #64748b; background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 6px;">
-                        💡 <em>Kättesaadavad liidesed: <code>api.player.damage(amt)</code>, <code>api.player.heal(amt)</code>, <code>api.player.setSpeed(spd, dur)</code>, <code>api.player.jump(h)</code>, <code>api.player.teleport(x, y, z)</code>, <code>api.player.giveCoins(amt)</code>, <code>api.player.giveYards(amt)</code>, <code>api.sound.play(name)</code>, <code>api.hud.showMessage(text, title)</code>, <code>api.object.setColor(hex)</code>, <code>api.object.rotate(x, y, z)</code></em>
+                        <em>Kättesaadavad liidesed: <code>api.player.damage(amt)</code>, <code>api.player.heal(amt)</code>, <code>api.player.setSpeed(spd, dur)</code>, <code>api.player.jump(h)</code>, <code>api.player.teleport(x, y, z)</code>, <code>api.player.giveCoins(amt)</code>, <code>api.player.giveYards(amt)</code>, <code>api.sound.play(name)</code>, <code>api.hud.showMessage(text, title)</code>, <code>api.object.setColor(hex)</code>, <code>api.object.rotate(x, y, z)</code></em>
                     </div>
                 </div>
             </div>
@@ -938,14 +964,14 @@
             <!-- Footer -->
             <div style="padding: 14px 20px; background: #1f2937; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
                 <button id="btn-delete-script" style="background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; font-weight: bold; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;">
-                    🗑️ Eemalda Skript
+                    Eemalda Skript
                 </button>
                 <div style="display: flex; gap: 10px;">
                     <button id="btn-test-script" style="background: rgba(255,211,42,0.2); border: 1px solid #ffd32a; color: #ffd32a; font-weight: bold; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;">
-                        ▶️ Testi Kohe
+                        Testi Kohe
                     </button>
                     <button id="btn-save-script" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border: none; color: #000; font-weight: 800; padding: 8px 20px; border-radius: 8px; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 15px rgba(0,242,254,0.4);">
-                        💾 Salvesta Skript
+                        Salvesta Skript
                     </button>
                 </div>
             </div>
@@ -953,12 +979,12 @@
     </div>
 
     <!-- My Saved Games Modal -->
-    <div id="my-games-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 200; align-items: center; justify-content: center; padding: 20px;">
+    <div id="my-games-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; padding: 20px;">
         <div style="background: #141b24; border: 2px solid #00f2fe; border-radius: 16px; width: 100%; max-width: 650px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.9);">
             <!-- Header -->
             <div style="padding: 16px 20px; background: #1a2330; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
                 <div style="font-weight: 800; font-size: 1.2rem; color: #00f2fe; display: flex; align-items: center; gap: 8px;">
-                    <span>📂</span> <span>My Saved Games</span>
+                    <span>My Saved Games</span>
                 </div>
                 <button id="btn-close-my-games" style="background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;">✕</button>
             </div>
@@ -970,10 +996,10 @@
             <div style="padding: 12px 20px; background: #1a2330; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <div style="display: flex; gap: 8px;">
                     <button id="btn-modal-new-game" class="btn-studio" style="background: #2ecc71; border-color: #27ae60; color: white;">
-                        <span>🌍</span> <span>Uus Maa Mäng (Land)</span>
+                        <span>Uus Maa Mäng (Land)</span>
                     </button>
                     <button id="btn-modal-new-sea-game" class="btn-studio" style="background: #0984e3; border-color: #00cec9; color: white;">
-                        <span>🌊</span> <span>Uus Mere Mäng (Sea)</span>
+                        <span>Uus Mere Mäng (Sea)</span>
                     </button>
                 </div>
                 <button id="btn-modal-close-bottom" class="btn-studio" style="background: #34495e; color: white;">
@@ -983,12 +1009,11 @@
         </div>
     </div>
 
-    <!-- 🎨 3D Custom Item Creator Workbench Modal -->
-    <div id="custom-item-workbench-modal" style="display: none; position: fixed; inset: 0; background: rgba(5, 10, 20, 0.94); backdrop-filter: blur(14px); z-index: 300; flex-direction: column; overflow: hidden;">
+    <!-- 3D Custom Item Creator Workbench Modal -->
+    <div id="custom-item-workbench-modal" style="display: none; position: fixed; inset: 0; background: rgba(5, 10, 20, 0.94); backdrop-filter: blur(14px); z-index: 2000; flex-direction: column; overflow: hidden;">
         <!-- Top Toolbar -->
         <div style="height: 60px; background: rgba(15, 23, 42, 0.95); border-bottom: 2px solid rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
             <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 1.6rem;">🎨</span>
                 <div>
                     <div style="font-weight: 900; font-size: 1.15rem; color: #00f2fe; letter-spacing: 0.5px;">3D Asjade Loomise Töölaud (Custom Item Creator)</div>
                     <div style="font-size: 0.75rem; color: #a4b0be;">Vali kuju, nihuta tasapindasid üles/alla ja loo oma unikaalne 3D ese!</div>
@@ -1004,13 +1029,13 @@
             <!-- Action Buttons: Save, Publish, Close -->
             <div style="display: flex; align-items: center; gap: 10px;">
                 <button id="btn-workbench-place" class="btn-studio" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; font-weight: 800; border: none; padding: 8px 16px;">
-                    <span>📥 Pane Stseeni</span>
+                    <span>Pane Stseeni</span>
                 </button>
                 <button id="btn-workbench-save" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; border: none; padding: 8px 16px;">
-                    <span>💾 Salvesta (Save)</span>
+                    <span>Salvesta (Save)</span>
                 </button>
                 <button id="btn-workbench-publish" class="btn-studio" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #000; font-weight: 800; border: none; padding: 8px 16px; box-shadow: 0 4px 15px rgba(255, 211, 42, 0.4);">
-                    <span>🌐 Avalda (Publish)</span>
+                    <span>Avalda (Publish)</span>
                 </button>
                 <button id="btn-close-workbench" style="background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; font-size: 1.1rem; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: bold;">
                     ✕ Sulge
@@ -1018,17 +1043,17 @@
             </div>
         </div>
 
-        <!-- 🗡️/🧱 Item Type & Settings Bar (Ese vs Asi mida ei saa kätte võtta, Alguses käes, PBX Hind) -->
+        <!-- Item Type & Settings Bar (Ese vs Asi mida ei saa kätte võtta, Alguses käes, PBX Hind) -->
         <div id="workbench-item-type-bar" style="background: rgba(10, 17, 30, 0.98); border-bottom: 2px solid rgba(0, 242, 254, 0.25); padding: 8px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.4); z-index: 320;">
             <!-- Left: Type Selector Buttons (Ese vs Asi mida ei saa kätte võtta) -->
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 0.85rem; color: #cbd5e1; font-weight: 800;">Vali tüüp:</span>
                 <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 10px; border: 1.5px solid rgba(0,242,254,0.35);">
                     <button id="btn-wb-type-item" type="button" class="wb-type-toggle-btn active" style="padding: 7px 16px; border-radius: 8px; border: none; font-size: 0.86rem; font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; box-shadow: 0 2px 10px rgba(0,242,254,0.4);">
-                        <span>🗡️</span> <span>Ese</span>
+                        <span>Ese</span>
                     </button>
                     <button id="btn-wb-type-static" type="button" class="wb-type-toggle-btn" style="padding: 7px 16px; border-radius: 8px; border: none; font-size: 0.86rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; background: transparent; color: #94a3b8;">
-                        <span>🧱</span> <span>Asi mida ei saa kätte võtta</span>
+                        <span>Asi mida ei saa kätte võtta</span>
                     </button>
                 </div>
             </div>
@@ -1038,13 +1063,13 @@
                 <!-- 1. Alguses käes -->
                 <label id="wb-label-in-hand" style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,0.06); padding: 6px 14px; border-radius: 8px; border: 1.5px solid #00f2fe; transition: all 0.2s;" title="Kas see ese on mängu alguses mängijal kohe käes?">
                     <input type="checkbox" id="wb-checkbox-in-hand" style="cursor: pointer; width: 17px; height: 17px; accent-color: #00f2fe;">
-                    <span style="font-size: 0.84rem; font-weight: 800; color: #fff; user-select: none;">✋ Alguses käes</span>
+                    <span style="font-size: 0.84rem; font-weight: 800; color: #fff; user-select: none;">Alguses käes</span>
                 </label>
 
                 <!-- 2. Maksab PBX -->
                 <label id="wb-label-costs-pbx" style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,0.06); padding: 6px 14px; border-radius: 8px; border: 1.5px solid #ffd32a; transition: all 0.2s;" title="Kas see ese maksab PBX valuutat?">
                     <input type="checkbox" id="wb-checkbox-costs-pbx" style="cursor: pointer; width: 17px; height: 17px; accent-color: #ffd32a;">
-                    <span style="font-size: 0.84rem; font-weight: 800; color: #ffd32a; user-select: none;">💎 Maksab PBX</span>
+                    <span style="font-size: 0.84rem; font-weight: 800; color: #ffd32a; user-select: none;">Maksab PBX</span>
                 </label>
 
                 <!-- 3. Kui palju maksab PBX -->
@@ -1056,7 +1081,7 @@
 
                 <!-- Info for static object -->
                 <div id="wb-static-info-text" style="display: none; font-size: 0.82rem; color: #94a3b8; font-style: italic;">
-                    🧱 See on maailma objekt (dekoratsioon või ehitis), mida ei saa kätte võtta.
+                    See on maailma objekt (dekoratsioon või ehitis), mida ei saa kätte võtta.
                 </div>
             </div>
         </div>
@@ -1135,28 +1160,26 @@
                 <!-- Add Extra Shape & Shape Parts List -->
                 <div style="background: rgba(0,242,254,0.06); border: 1px solid rgba(0,242,254,0.25); border-radius: 12px; padding: 10px; margin-bottom: 14px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 0.82rem; font-weight: bold; color: #00f2fe;">🧩 Eseme Kujundid (Parts):</span>
+                        <span style="font-size: 0.82rem; font-weight: bold; color: #00f2fe;">Eseme Kujundid (Parts):</span>
                         <span id="workbench-parts-count" style="font-size: 0.75rem; color: #ffd32a; font-weight: bold;">1 tk</span>
                     </div>
                     <div id="workbench-parts-list" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px;">
                         <!-- Dynamically populated parts chips -->
                     </div>
                     <button id="btn-wb-add-part" style="width: 100%; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; color: #000; font-weight: 800; border-radius: 8px; padding: 8px; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,242,254,0.3);">
-                        <span>➕</span> <span>Lisa Veel Üks Kujund (Add Shape)</span>
+                        <span>Lisa Veel Üks Kujund (Add Shape)</span>
                     </button>
                 </div>
 
                 <!-- 2. Tool Mode Selector: Liigutamine või Pikemaks Tegemine -->
                 <h4 style="margin: 0 0 8px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
-                    <span>🛠️</span> <span>Vali Tegevus</span>
+                    <span>Vali Tegevus</span>
                 </h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                     <button id="btn-wb-mode-scale" class="wb-mode-btn active" style="padding: 10px 6px; background: rgba(0,242,254,0.18); border: 2px solid #00f2fe; border-radius: 10px; color: #00f2fe; font-size: 0.82rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
-                        <span style="font-size: 1.3rem;">📐</span>
                         <span>Tee Pikemaks</span>
                     </button>
                     <button id="btn-wb-mode-move" class="wb-mode-btn" style="padding: 10px 6px; background: #1e293b; border: 2px solid #475569; border-radius: 10px; color: #cbd5e1; font-size: 0.82rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
-                        <span style="font-size: 1.3rem;">↔️</span>
                         <span>Liiguta Kuju</span>
                     </button>
                 </div>
@@ -1164,7 +1187,7 @@
                 <!-- Scale / Stretch Sub-Panel (Tee Pikemaks / Venita) -->
                 <div id="wb-left-scale-panel" style="display: block; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; margin-bottom: 14px;">
                     <div style="font-size: 0.78rem; color: #00f2fe; font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>📏 Tee Pikemaks / Mõõtmed:</span>
+                        <span>Tee Pikemaks / Mõõtmed:</span>
                         <span style="font-size: 0.7rem; color: #94a3b8;">(Või lohista pinda)</span>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -1174,8 +1197,8 @@
                                 <b id="wb-left-val-depth" style="color: #00f2fe;">3.0m</b>
                             </div>
                             <div style="display: flex; gap: 6px;">
-                                <button id="btn-wb-left-shorter" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">➖ Lühemaks</button>
-                                <button id="btn-wb-left-longer" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem; font-weight: bold; color: #00f2fe; border-color: #00f2fe;">➕ Pikemaks</button>
+                                <button id="btn-wb-left-shorter" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">Lühemaks -</button>
+                                <button id="btn-wb-left-longer" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem; font-weight: bold; color: #00f2fe; border-color: #00f2fe;">Pikemaks +</button>
                             </div>
                         </div>
                         <div>
@@ -1184,8 +1207,8 @@
                                 <b id="wb-left-val-width" style="color: #00f2fe;">3.0m</b>
                             </div>
                             <div style="display: flex; gap: 6px;">
-                                <button id="btn-wb-left-narrower" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">➖ Kitsamaks</button>
-                                <button id="btn-wb-left-wider" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">➕ Laiemaks</button>
+                                <button id="btn-wb-left-narrower" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">Kitsamaks -</button>
+                                <button id="btn-wb-left-wider" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">Laiemaks +</button>
                             </div>
                         </div>
                         <div>
@@ -1194,8 +1217,8 @@
                                 <b id="wb-left-val-height" style="color: #ffd32a;">2.0m</b>
                             </div>
                             <div style="display: flex; gap: 6px;">
-                                <button id="btn-wb-left-lower" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">⬇️ Madalamaks</button>
-                                <button id="btn-wb-left-higher" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem; font-weight: bold; color: #ffd32a;">⬆️ Kõrgemaks</button>
+                                <button id="btn-wb-left-lower" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem;">Madalamaks -</button>
+                                <button id="btn-wb-left-higher" class="btn-ctrl" style="flex: 1; padding: 5px; font-size: 0.75rem; font-weight: bold; color: #ffd32a;">Kõrgemaks +</button>
                             </div>
                         </div>
                     </div>
@@ -1204,23 +1227,23 @@
                 <!-- Move Sub-Panel (Kujundi Liigutamine) -->
                 <div id="wb-left-move-panel" style="display: none; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; margin-bottom: 14px;">
                     <div style="font-size: 0.78rem; color: #ffd32a; font-weight: bold; margin-bottom: 8px; text-align: center;">
-                        📍 Kujundi Positsioon ja Nihutamine:
+                        Kujundi Positsioon ja Nihutamine:
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 170px; margin: 0 auto 8px auto;">
                         <div></div>
-                        <button id="btn-wb-left-pos-fwd" class="btn-ctrl" title="Liiguta ette (+Z)" style="padding: 6px; font-size: 0.85rem;">⬆️</button>
-                        <button id="btn-wb-left-pos-up" class="btn-ctrl" title="Liiguta üles (+Y)" style="padding: 6px; font-size: 0.85rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">🔼</button>
+                        <button id="btn-wb-left-pos-fwd" class="btn-ctrl" title="Liiguta ette (+Z)" style="padding: 6px; font-size: 0.8rem;">Fwd</button>
+                        <button id="btn-wb-left-pos-up" class="btn-ctrl" title="Liiguta üles (+Y)" style="padding: 6px; font-size: 0.8rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">Up</button>
 
-                        <button id="btn-wb-left-pos-left" class="btn-ctrl" title="Liiguta vasakule (-X)" style="padding: 6px; font-size: 0.85rem;">⬅️</button>
-                        <button id="btn-wb-left-rot-y" class="btn-ctrl" title="Pööra 45°" style="padding: 6px; font-size: 0.85rem; background: rgba(255,211,42,0.2); border-color: #ffd32a; color: #ffd32a; font-weight: bold;">🔄</button>
-                        <button id="btn-wb-left-pos-right" class="btn-ctrl" title="Liiguta paremale (+X)" style="padding: 6px; font-size: 0.85rem;">➡️</button>
+                        <button id="btn-wb-left-pos-left" class="btn-ctrl" title="Liiguta vasakule (-X)" style="padding: 6px; font-size: 0.8rem;">Left</button>
+                        <button id="btn-wb-left-rot-y" class="btn-ctrl" title="Pööra 45°" style="padding: 6px; font-size: 0.8rem; background: rgba(255,211,42,0.2); border-color: #ffd32a; color: #ffd32a; font-weight: bold;">Rot</button>
+                        <button id="btn-wb-left-pos-right" class="btn-ctrl" title="Liiguta paremale (+X)" style="padding: 6px; font-size: 0.8rem;">Right</button>
 
                         <div></div>
-                        <button id="btn-wb-left-pos-back" class="btn-ctrl" title="Liiguta taha (-Z)" style="padding: 6px; font-size: 0.85rem;">⬇️</button>
-                        <button id="btn-wb-left-pos-down" class="btn-ctrl" title="Liiguta alla (-Y)" style="padding: 6px; font-size: 0.85rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">🔽</button>
+                        <button id="btn-wb-left-pos-back" class="btn-ctrl" title="Liiguta taha (-Z)" style="padding: 6px; font-size: 0.8rem;">Back</button>
+                        <button id="btn-wb-left-pos-down" class="btn-ctrl" title="Liiguta alla (-Y)" style="padding: 6px; font-size: 0.8rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">Down</button>
                     </div>
                     <div style="font-size: 0.72rem; color: #94a3b8; text-align: center; line-height: 1.3;">
-                        💡 <em>Kliki kujundil ja lohista, et seda alusel liigutada!</em>
+                        <em>Kliki kujundil ja lohista, et seda alusel liigutada!</em>
                     </div>
                 </div>
 
@@ -1236,7 +1259,7 @@
             <!-- Right Tool Panel: Face Manipulation & Height Controls (Tasandite liigutamine) -->
             <div style="position: absolute; top: 20px; right: 20px; width: 280px; background: rgba(15, 23, 42, 0.92); border: 1.5px solid rgba(0,242,254,0.3); border-radius: 16px; padding: 16px; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.7); z-index: 310;">
                 <h4 style="margin: 0 0 8px 0; color: #ffd32a; font-size: 0.9rem; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
-                    <span>📐</span> <span>Tasandite ja Kõrguste Redaktor</span>
+                    <span>Tasandite ja Kõrguste Redaktor</span>
                 </h4>
                 <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.4;">
                     Liiguta kuju tasapinnalisi osasid üles-alla ning kohanda mõõtmeid ruudustikul:
@@ -1245,12 +1268,12 @@
                 <!-- Height / Elevation (Üles-alla liigutamine) -->
                 <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 0.85rem; font-weight: bold; color: #00f2fe;">⬆️⬇️ Kõrgus (Üles/Alla):</span>
+                        <span style="font-size: 0.85rem; font-weight: bold; color: #00f2fe;">Kõrgus (Üles/Alla):</span>
                         <span id="workbench-val-height" style="font-size: 0.85rem; font-weight: bold; color: #ffd32a;">2.0m</span>
                     </div>
                     <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <button id="btn-wb-height-down" class="btn-ctrl" style="flex: 1; padding: 6px; font-weight: bold;">⬇️ Langeta</button>
-                        <button id="btn-wb-height-up" class="btn-ctrl" style="flex: 1; padding: 6px; font-weight: bold;">⬆️ Tõsta</button>
+                        <button id="btn-wb-height-down" class="btn-ctrl" style="flex: 1; padding: 6px; font-weight: bold;">Langeta</button>
+                        <button id="btn-wb-height-up" class="btn-ctrl" style="flex: 1; padding: 6px; font-weight: bold;">Tõsta</button>
                     </div>
                     <input type="range" id="workbench-slider-height" min="0.5" max="10" step="0.25" value="2.0" style="width: 100%;">
                 </div>
@@ -1270,58 +1293,58 @@
                 <!-- Face Tilt / Elevation Angle (Kaldenurk / Pindade tõstmine) -->
                 <div id="workbench-wedge-controls" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span style="font-size: 0.82rem; font-weight: bold; color: #ffd32a;">📐 Kaldpinna Kõrgus (Ramp Peak):</span>
+                        <span style="font-size: 0.82rem; font-weight: bold; color: #ffd32a;">Kaldpinna Kõrgus (Ramp Peak):</span>
                         <span id="workbench-val-elevation" style="font-size: 0.82rem; font-weight: bold; color: #2ecc71;">2.0m</span>
                     </div>
                     <div style="display: flex; gap: 8px; margin-bottom: 6px;">
-                        <button id="btn-wb-elev-down" class="btn-ctrl" style="flex: 1; padding: 4px; font-size: 0.8rem;">Kalde langetus ⬇️</button>
-                        <button id="btn-wb-elev-up" class="btn-ctrl" style="flex: 1; padding: 4px; font-size: 0.8rem;">Kalde tõstmine ⬆️</button>
+                        <button id="btn-wb-elev-down" class="btn-ctrl" style="flex: 1; padding: 4px; font-size: 0.8rem;">Kalde langetus</button>
+                        <button id="btn-wb-elev-up" class="btn-ctrl" style="flex: 1; padding: 4px; font-size: 0.8rem;">Kalde tõstmine</button>
                     </div>
                 </div>
 
                 <!-- Shape Position Offset & Rotation Controls -->
                 <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; margin-bottom: 12px;">
-                    <div style="font-size: 0.8rem; font-weight: bold; color: #ffd32a; margin-bottom: 6px;">📍 Vali Kujundi Asukoht (Positsioon):</div>
+                    <div style="font-size: 0.8rem; font-weight: bold; color: #ffd32a; margin-bottom: 6px;">Vali Kujundi Asukoht (Positsioon):</div>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 160px; margin: 0 auto 6px auto;">
                         <div></div>
-                        <button id="btn-wb-pos-fwd" class="btn-ctrl" title="Liiguta ette (+Z)" style="padding: 4px; font-size: 0.8rem;">⬆️</button>
-                        <button id="btn-wb-pos-up" class="btn-ctrl" title="Liiguta üles (+Y)" style="padding: 4px; font-size: 0.8rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">🔼</button>
+                        <button id="btn-wb-pos-fwd" class="btn-ctrl" title="Liiguta ette (+Z)" style="padding: 4px; font-size: 0.8rem;">Fwd</button>
+                        <button id="btn-wb-pos-up" class="btn-ctrl" title="Liiguta üles (+Y)" style="padding: 4px; font-size: 0.8rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">Up</button>
 
-                        <button id="btn-wb-pos-left" class="btn-ctrl" title="Liiguta vasakule (-X)" style="padding: 4px; font-size: 0.8rem;">⬅️</button>
-                        <button id="btn-wb-rot-y" class="btn-ctrl" title="Pööra 45° (R)" style="padding: 4px; font-size: 0.8rem; background: rgba(255,211,42,0.2); border-color: #ffd32a; color: #ffd32a; font-weight: bold;">🔄</button>
-                        <button id="btn-wb-pos-right" class="btn-ctrl" title="Liiguta paremale (+X)" style="padding: 4px; font-size: 0.8rem;">➡️</button>
+                        <button id="btn-wb-pos-left" class="btn-ctrl" title="Liiguta vasakule (-X)" style="padding: 4px; font-size: 0.8rem;">Left</button>
+                        <button id="btn-wb-rot-y" class="btn-ctrl" title="Pööra 45° (R)" style="padding: 4px; font-size: 0.8rem; background: rgba(255,211,42,0.2); border-color: #ffd32a; color: #ffd32a; font-weight: bold;">Rot</button>
+                        <button id="btn-wb-pos-right" class="btn-ctrl" title="Liiguta paremale (+X)" style="padding: 4px; font-size: 0.8rem;">Right</button>
 
                         <div></div>
-                        <button id="btn-wb-pos-back" class="btn-ctrl" title="Liiguta taha (-Z)" style="padding: 4px; font-size: 0.8rem;">⬇️</button>
-                        <button id="btn-wb-pos-down" class="btn-ctrl" title="Liiguta alla (-Y)" style="padding: 4px; font-size: 0.8rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">🔽</button>
+                        <button id="btn-wb-pos-back" class="btn-ctrl" title="Liiguta taha (-Z)" style="padding: 4px; font-size: 0.8rem;">Back</button>
+                        <button id="btn-wb-pos-down" class="btn-ctrl" title="Liiguta alla (-Y)" style="padding: 4px; font-size: 0.8rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;">Down</button>
                     </div>
                 </div>
 
                 <!-- Reset & Delete Part Buttons -->
                 <div style="display: flex; gap: 8px;">
                     <button id="btn-wb-delete-part" style="flex: 1; background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #ff7675; border-radius: 8px; padding: 6px; font-size: 0.78rem; cursor: pointer; font-weight: bold;">
-                        🗑️ Kustuta Kujund
+                        Kustuta Kujund
                     </button>
                     <button id="btn-wb-reset" style="flex: 1; background: #334155; border: 1px solid #64748b; color: #cbd5e1; border-radius: 8px; padding: 6px; font-size: 0.78rem; cursor: pointer;">
-                        🔄 Lähtesta
+                        Lähtesta
                     </button>
                 </div>
             </div>
 
             <!-- Bottom Floating Guidance Hint -->
             <div id="workbench-bottom-hint" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.94); border: 1.5px solid #00f2fe; border-radius: 30px; padding: 10px 28px; color: #fff; font-size: 0.88rem; font-weight: bold; z-index: 310; pointer-events: none; box-shadow: 0 4px 25px rgba(0,242,254,0.4); display: flex; align-items: center; gap: 14px;">
-                <span>✋ <strong style="color: #00f2fe;">Kliki pinnale ja lohista:</strong> venitab/tõstab pinda otse kaasa!</span>
+                <span><strong style="color: #00f2fe;">Kliki pinnale ja lohista:</strong> venitab/tõstab pinda otse kaasa!</span>
                 <span style="color: #475569;">|</span>
-                <span>🖱️ <strong style="color: #ffd32a;">Paremklõps + liigutus:</strong> pöörab kaamerat</span>
+                <span><strong style="color: #ffd32a;">Paremklõps + liigutus:</strong> pöörab kaamerat</span>
                 <span style="color: #475569;">|</span>
-                <span>🔍 <strong style="color: #2ecc71;">Rullik:</strong> suumib</span>
+                <span><strong style="color: #2ecc71;">Rullik:</strong> suumib</span>
             </div>
         </div>
     </div>
 
     <!-- Controls Tooltip -->
     <div class="controls-tooltip" id="controls-tooltip" style="bottom: 70px;">
-        💡 <strong>Click Object:</strong> Drag to Move | <strong>R Key:</strong> Rotate | <strong>D / Del Key:</strong> Delete Object | <strong>Arrow Keys / WASD:</strong> Move View
+        <strong>Click Object:</strong> Drag to Move | <strong>R Key:</strong> Rotate | <strong>D / Del Key:</strong> Delete Object | <strong>Arrow Keys / WASD:</strong> Move View
     </div>
 
     <script type="module" src="/src/games/creator/main.ts"></script>
