@@ -4,7 +4,9 @@ export class BreakoutHud {
     private scoreEl: HTMLElement | null;
     private highScoreEl: HTMLElement | null;
     private bricksEl: HTMLElement | null;
+    private levelEl: HTMLElement | null;
     private gameOverModal: HTMLElement | null;
+    private levelClearedModal: HTMLElement | null;
     private victoryModal: HTMLElement | null;
     private finalScoreEl: HTMLElement | null;
     private finalBricksEl: HTMLElement | null;
@@ -13,12 +15,15 @@ export class BreakoutHud {
 
     constructor(
         private onRestart: () => void,
+        private onNextLevel: () => void,
         private onToggleSound: () => boolean
     ) {
         this.scoreEl = document.getElementById('hud-score');
         this.highScoreEl = document.getElementById('hud-highscore');
         this.bricksEl = document.getElementById('hud-bricks');
+        this.levelEl = document.getElementById('hud-level');
         this.gameOverModal = document.getElementById('game-over-modal');
+        this.levelClearedModal = document.getElementById('level-cleared-modal');
         this.victoryModal = document.getElementById('victory-modal');
         this.finalScoreEl = document.getElementById('final-score-val');
         this.finalBricksEl = document.getElementById('final-bricks-val');
@@ -34,6 +39,14 @@ export class BreakoutHud {
             restartBtn.addEventListener('click', () => {
                 this.hideModals();
                 this.onRestart();
+            });
+        }
+
+        const nextLevelBtn = document.getElementById('btn-next-level');
+        if (nextLevelBtn) {
+            nextLevelBtn.addEventListener('click', () => {
+                this.hideModals();
+                this.onNextLevel();
             });
         }
 
@@ -62,9 +75,21 @@ export class BreakoutHud {
         if (this.highScoreEl) {
             this.highScoreEl.textContent = `REKORD: ${stats.highScore}`;
         }
+        if (this.levelEl) {
+            this.levelEl.textContent = `TASE ${stats.level}`;
+        }
         if (this.bricksEl) {
             const remaining = Math.max(0, stats.totalBricks - stats.bricksDestroyed);
             this.bricksEl.textContent = `ROHELISED RUUDUD: ${remaining}`;
+        }
+    }
+
+    public showLevelCleared(stats: GameStats) {
+        const levelRewardEl = document.getElementById('level-reward-pbx-val');
+        if (levelRewardEl) levelRewardEl.textContent = `+${stats.playbuxReward}`;
+
+        if (this.levelClearedModal) {
+            this.levelClearedModal.style.display = 'flex';
         }
     }
 
@@ -91,6 +116,7 @@ export class BreakoutHud {
 
     public hideModals() {
         if (this.gameOverModal) this.gameOverModal.style.display = 'none';
+        if (this.levelClearedModal) this.levelClearedModal.style.display = 'none';
         if (this.victoryModal) this.victoryModal.style.display = 'none';
     }
 }

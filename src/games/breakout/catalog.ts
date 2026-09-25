@@ -15,13 +15,35 @@ export const BREAKOUT_CONFIG = {
         color: '#ffffff',
         glowColor: 'rgba(255, 255, 255, 0.9)',
     },
-    GRID: {
-        rows: 5,
-        cols: 10,
-        padding: 8,
+    GRID_LEVEL_1: {
+        rows: 7,
+        cols: 12,
+        padding: 6,
+        topOffset: 85,
+        sidePadding: 42,
+        brickHeight: 22,
+    },
+    GRID_LEVEL_2: {
+        rows: 9,
+        cols: 14,
+        padding: 5,
         topOffset: 80,
         sidePadding: 40,
-        brickHeight: 28,
+        brickHeight: 20,
+    },
+    BORDER: {
+        height: 18,
+        color: '#576574',
+        glowColor: 'rgba(131, 149, 167, 0.7)',
+        borderColor: '#c8d6e5',
+    },
+    GRID: {
+        rows: 7,
+        cols: 12,
+        padding: 6,
+        topOffset: 85,
+        sidePadding: 42,
+        brickHeight: 22,
         // Shades of vibrant arcade green for the green squares/bricks
         greenColors: [
             { main: '#2ed573', glow: 'rgba(46, 213, 115, 0.7)', points: 50 },
@@ -29,6 +51,10 @@ export const BREAKOUT_CONFIG = {
             { main: '#10ac84', glow: 'rgba(16, 172, 132, 0.7)', points: 30 },
             { main: '#26de81', glow: 'rgba(38, 222, 129, 0.7)', points: 20 },
             { main: '#05c46b', glow: 'rgba(5, 196, 107, 0.7)', points: 10 },
+            { main: '#2ed573', glow: 'rgba(46, 213, 115, 0.7)', points: 50 },
+            { main: '#00e676', glow: 'rgba(0, 230, 118, 0.7)', points: 40 },
+            { main: '#10ac84', glow: 'rgba(16, 172, 132, 0.7)', points: 30 },
+            { main: '#26de81', glow: 'rgba(38, 222, 129, 0.7)', points: 20 },
         ],
         // Golden bricks that drop the circular 3-ball powerup
         goldBrick: {
@@ -60,5 +86,6 @@ export const BREAKOUT_CONFIG = {
     PBX_REWARD: {
         perBrick: 1,
         clearBonus: 50,
+        level2Bonus: 100,
     }
 };

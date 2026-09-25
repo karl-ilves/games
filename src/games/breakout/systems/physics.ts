@@ -126,9 +126,9 @@ export class PhysicsSystem {
                 const overlapY = ball.radius - Math.abs(deltaY);
 
                 if (overlapX < overlapY && deltaX !== 0) {
-                    ball.vx = -ball.vx;
+                    ball.vx = deltaX > 0 ? Math.abs(ball.vx) : -Math.abs(ball.vx);
                 } else {
-                    ball.vy = -ball.vy;
+                    ball.vy = deltaY > 0 ? Math.abs(ball.vy) : -Math.abs(ball.vy);
                 }
 
                 if (brick.type === 'grey') {

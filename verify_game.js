@@ -9021,11 +9021,12 @@ await (async () => {
 
                 // Initial state check
                 const initialBricksCount = game.bricks.length;
-                const initialIntact = game.bricks.filter(b => b.intact).length;
+                const borderBricksCount = game.bricks.filter(b => b.isBorder).length;
                 const greyBricksCount = game.bricks.filter(b => b.type === 'grey').length;
                 const goldBricksCount = game.bricks.filter(b => b.type === 'gold').length;
                 const greenBricksCount = game.bricks.filter(b => b.type === 'green').length;
                 const initialScore = game.state.getScore();
+                const initialLevel = game.state.getLevel();
                 const paddleWidth = game.paddle.width;
                 const paddleY = game.paddle.y;
                 const initialPaddleX = game.paddle.x;
@@ -9038,14 +9039,14 @@ await (async () => {
                 const paddleMoved = movedPaddleX > initialPaddleX;
 
                 // 1. Test Unbreakable Grey Brick: Ball bounces back but grey brick DOES NOT break
-                const greyBrick = game.bricks.find(b => b.type === 'grey');
+                const greyBrick = game.bricks.find(b => b.type === 'grey' && !b.isBorder) || game.bricks.find(b => b.type === 'grey');
                 let greyBrickRemainedIntact = false;
                 let greyBallBounced = false;
                 if (greyBrick) {
                     game.balls[0].x = greyBrick.x + greyBrick.width / 2;
-                    game.balls[0].y = greyBrick.y + greyBrick.height / 2;
+                    game.balls[0].y = greyBrick.y + greyBrick.height + game.balls[0].radius + 1;
                     game.balls[0].vy = -200;
-                    game.update(0.01);
+                    game.update(0.02);
                     greyBrickRemainedIntact = greyBrick.intact === true;
                     greyBallBounced = game.balls[0].vy > 0;
                 }
@@ -9104,7 +9105,8 @@ await (async () => {
                 const rewardValEl = document.getElementById('reward-pbx-val');
                 const rewardPbx = game.state.getLastEarnedPbx();
 
-                // 7. Test restart
+                // 7. Test procedural randomization on restart ("iga kord kui paned play again siis on teistsugune")
+                const layoutBeforeRestart = game.bricks.filter(b => !b.isBorder).map(b => b.type).join('');
                 const btnRestart = document.getElementById('btn-restart-game');
                 if (btnRestart) btnRestart.click();
 
@@ -9113,14 +9115,34 @@ await (async () => {
                 const allBricksRestored = game.bricks.every(b => b.intact);
                 const restartBallsCount = game.balls.length;
 
+                // Do 1-3 restarts to verify procedural pattern change
+                let layoutChangedOnPlayAgain = false;
+                for (let r = 0; r < 5; r++) {
+                    const newLayout = game.bricks.filter(b => !b.isBorder).map(b => b.type).join('');
+                    if (newLayout !== layoutBeforeRestart) {
+                        layoutChangedOnPlayAgain = true;
+                        break;
+                    }
+                    game.restart(true);
+                }
+
+                // 8. Test Level 2 progression ("level 2 mapp palju suuremaks")
+                const level1BricksCount = game.bricks.length;
+                game.advanceToNextLevel();
+                const level2Number = game.state.getLevel();
+                const level2BricksCount = game.bricks.length;
+                const level2HudText = document.getElementById('hud-level')?.textContent || '';
+                const isLevel2MuchLarger = level2BricksCount > level1BricksCount;
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
                     initialBricksCount,
-                    initialIntact,
+                    borderBricksCount,
                     greyBricksCount,
                     goldBricksCount,
                     greenBricksCount,
+                    initialLevel,
                     paddleMoved,
                     paddleY,
                     paddleWidth,
@@ -9138,13 +9160,25 @@ await (async () => {
                     isModalHiddenAfterRestart,
                     isAliveAfterRestart,
                     allBricksRestored,
-                    restartBallsCount
+                    restartBallsCount,
+                    layoutChangedOnPlayAgain,
+                    level2Number,
+                    level1BricksCount,
+                    level2BricksCount,
+                    level2HudText,
+                    isLevel2MuchLarger
                 };
             });
 
             console.log("   Breakout Verification Results:", breakoutGameTest);
             if (!breakoutGameTest.success || !breakoutGameTest.hasCanvas) {
                 throw new Error("Breakout canvas initialization failed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (breakoutGameTest.borderBricksCount < 10) {
+                throw new Error("Breakout grey border blocks check failed (hallid plokid peavad tähistama piire): " + JSON.stringify(breakoutGameTest));
+            }
+            if (breakoutGameTest.initialBricksCount < 70) {
+                throw new Error("Breakout map must be much larger (palju suuremaks): " + JSON.stringify(breakoutGameTest));
             }
             if (breakoutGameTest.greyBricksCount < 1 || !breakoutGameTest.greyBrickRemainedIntact || !breakoutGameTest.greyBallBounced) {
                 throw new Error("Breakout unbreakable grey block check failed (ball must bounce without block breaking): " + JSON.stringify(breakoutGameTest));
@@ -9164,7 +9198,13 @@ await (async () => {
             if (!breakoutGameTest.isModalHiddenAfterRestart || !breakoutGameTest.isAliveAfterRestart || breakoutGameTest.restartBallsCount !== 1) {
                 throw new Error("Breakout restart mechanic failed: " + JSON.stringify(breakoutGameTest));
             }
-            console.log("✅ 🟢 2D Breakout (paddle _, grey blocks, gold bricks, 3-ball circular power-up & multi-ball mechanics) tests passed successfully!");
+            if (!breakoutGameTest.layoutChangedOnPlayAgain) {
+                throw new Error("Breakout procedural map must be different on Play Again (iga kord kui paned play again siis on teistsugune): " + JSON.stringify(breakoutGameTest));
+            }
+            if (breakoutGameTest.level2Number !== 2 || !breakoutGameTest.isLevel2MuchLarger || !breakoutGameTest.level2HudText.includes('2')) {
+                throw new Error("Breakout Level 2 progression and larger map check failed: " + JSON.stringify(breakoutGameTest));
+            }
+            console.log("✅ 🟢 2D Breakout (grey borders, large map, randomized Play Again layout & Level 2) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

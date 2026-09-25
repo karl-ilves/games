@@ -58,14 +58,15 @@ export class BreakoutGame {
 
         this.input = new InputManager(this.canvas);
         this.hud = new BreakoutHud(
-            () => this.restart(),
+            () => this.restart(true),
+            () => this.advanceToNextLevel(),
             () => this.audio.toggleSound()
         );
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        this.restart();
+        this.restart(true);
 
         this.isRunning = true;
         this.lastTime = performance.now();
@@ -96,7 +97,7 @@ export class BreakoutGame {
         return this.canvas.height / dpr;
     }
 
-    public restart() {
+    public restart(resetProgress: boolean = true) {
         const width = this.logicalWidth || 800;
         const height = this.logicalHeight || 600;
 
@@ -110,7 +111,7 @@ export class BreakoutGame {
             targetX: width / 2,
         };
 
-        // Single starting ball
+        // Starting ball
         const initialAngle = (Math.random() - 0.5) * 0.7;
         const speed = BREAKOUT_CONFIG.BALL.initialSpeed;
         this.balls = [{
@@ -125,13 +126,29 @@ export class BreakoutGame {
 
         this.powerUps = [];
 
-        // Generate Level with Green, Gold & Grey Bricks
-        this.bricks = createBreakoutLevel(width);
+        // Generate procedural level (different on every play again) with grey border blocks
+        const currentLevel = resetProgress ? 1 : this.state.getLevel();
+        if (resetProgress) {
+            this.state.setLevel(1);
+        }
+
+        this.bricks = createBreakoutLevel({
+            level: currentLevel,
+            canvasWidth: width,
+            canvasHeight: height,
+        });
+
+        // Count only breakable bricks (exclude grey obstacle and border blocks)
         const breakableCount = this.bricks.filter(b => b.type !== 'grey').length;
-        this.state.initLevel(breakableCount);
+        this.state.initLevel(breakableCount, resetProgress);
         this.particles.clear();
         this.hud.updateStats(this.state.getStats());
         this.hud.hideModals();
+    }
+
+    public advanceToNextLevel() {
+        this.state.nextLevel();
+        this.restart(false);
     }
 
     public spawnExtraBalls(count: number = 3) {
@@ -218,9 +235,9 @@ export class BreakoutGame {
                         this.audio.playWallBounce();
                     },
                     onGreyBrickHit: (brick) => {
-                        // Metallic sound & spark on unbreakable grey block
+                        // Metallic sound & spark on unbreakable grey block (including border blocks)
                         this.audio.playMetalClang();
-                        this.particles.emit(brick.x + brick.width / 2, brick.y + brick.height / 2, '#c8d6e5', 6);
+                        this.particles.emit(brick.x + brick.width / 2, brick.y + brick.height / 2, '#c8d6e5', 5);
                     },
                     onBrickHit: (brick) => {
                         this.particles.emit(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.color);
@@ -238,13 +255,17 @@ export class BreakoutGame {
                             });
                         }
 
-                        const isWin = this.state.onBrickDestroyed(brick.points);
+                        const result = this.state.onBrickDestroyed(brick.points);
                         this.hud.updateStats(this.state.getStats());
                         this.audio.playBrickBreak(1.0 + (this.state.getBricksDestroyed() % 10) * 0.08);
 
-                        if (isWin) {
+                        if (result.isComplete) {
                             this.audio.playVictory();
-                            this.hud.showVictory(this.state.getStats());
+                            if (result.isVictory) {
+                                this.hud.showVictory(this.state.getStats());
+                            } else {
+                                this.hud.showLevelCleared(this.state.getStats());
+                            }
                         }
                     },
                     onBallFall: () => {

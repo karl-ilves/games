@@ -1,27 +1,166 @@
 import { Brick } from '../types';
 import { BREAKOUT_CONFIG } from '../catalog';
 
-export function createBreakoutLevel(canvasWidth: number): Brick[] {
+export type LayoutPattern = 'checkerboard' | 'pyramid' | 'fortress' | 'clusters' | 'diamond';
+
+export interface LevelGenOptions {
+    level: number;
+    canvasWidth: number;
+    canvasHeight: number;
+    seed?: number;
+}
+
+export function createBreakoutLevel(options: LevelGenOptions): Brick[] {
+    const { level, canvasWidth } = options;
     const bricks: Brick[] = [];
-    const { rows, cols, padding, topOffset, sidePadding, brickHeight, greenColors, goldBrick, greyBrick } = BREAKOUT_CONFIG.GRID;
+    const isLevel2 = level >= 2;
+
+    const gridConfig = isLevel2 ? BREAKOUT_CONFIG.GRID_LEVEL_2 : BREAKOUT_CONFIG.GRID_LEVEL_1;
+    const { rows, cols, padding, topOffset, sidePadding, brickHeight } = gridConfig;
+    const { greenColors, goldBrick, greyBrick } = BREAKOUT_CONFIG.GRID;
+
+    let id = 0;
+
+    // -------------------------------------------------------------
+    // 1. "hallid plokid ka tähistavad piire" - Unbreakable Border Blocks
+    // -------------------------------------------------------------
+    const borderHeight = BREAKOUT_CONFIG.BORDER.height;
+    const borderCols = Math.max(12, Math.floor(canvasWidth / 55));
+    const borderBlockWidth = canvasWidth / borderCols;
+
+    // Top horizontal border row
+    for (let c = 0; c < borderCols; c++) {
+        bricks.push({
+            id: id++,
+            x: c * borderBlockWidth,
+            y: 0,
+            width: borderBlockWidth,
+            height: borderHeight,
+            color: greyBrick.color,
+            glowColor: greyBrick.glowColor,
+            points: 0,
+            intact: true,
+            type: 'grey',
+            isBorder: true,
+        });
+    }
+
+    // Left and Right vertical borders framing the brick arena
+    const verticalBorderCount = Math.floor((topOffset + rows * (brickHeight + padding) + 20) / (borderHeight + 4));
+    for (let v = 1; v <= verticalBorderCount; v++) {
+        const y = v * (borderHeight + 4);
+        // Left border
+        bricks.push({
+            id: id++,
+            x: 0,
+            y,
+            width: 14,
+            height: borderHeight,
+            color: greyBrick.color,
+            glowColor: greyBrick.glowColor,
+            points: 0,
+            intact: true,
+            type: 'grey',
+            isBorder: true,
+        });
+        // Right border
+        bricks.push({
+            id: id++,
+            x: canvasWidth - 14,
+            y,
+            width: 14,
+            height: borderHeight,
+            color: greyBrick.color,
+            glowColor: greyBrick.glowColor,
+            points: 0,
+            intact: true,
+            type: 'grey',
+            isBorder: true,
+        });
+    }
+
+    // -------------------------------------------------------------
+    // 2. Procedural & Randomized Arena Bricks (Much larger map & unique on every Play Again)
+    // -------------------------------------------------------------
     const totalPadding = (cols - 1) * padding + sidePadding * 2;
     const brickWidth = Math.max(20, (canvasWidth - totalPadding) / cols);
 
-    // Fixed coordinates for Gold and Grey bricks for consistent level design
-    const goldPositions = new Set(['1,2', '1,7', '2,4', '2,5', '3,1', '3,8']);
-    const greyPositions = new Set(['2,2', '2,7', '3,4', '3,5']);
+    const patterns: LayoutPattern[] = ['checkerboard', 'pyramid', 'fortress', 'clusters', 'diamond'];
+    const chosenPattern = patterns[Math.floor(Math.random() * patterns.length)];
 
-    let id = 0;
+    // Target count of gold bricks and internal grey obstacle blocks
+    const targetGoldCount = isLevel2 ? 8 : 6;
+    const targetGreyObstacles = isLevel2 ? 10 : 6;
+
+    // Determine cell types procedurally
+    const cellTypes: ('green' | 'gold' | 'grey')[] = [];
+    const totalPlayableCells = rows * cols;
+
+    // Setup base cells
+    for (let i = 0; i < totalPlayableCells; i++) {
+        cellTypes.push('green');
+    }
+
+    // Apply patterned distribution
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const idx = r * cols + c;
+
+            if (chosenPattern === 'checkerboard') {
+                if ((r + c) % 5 === 0) cellTypes[idx] = 'grey';
+                else if ((r * 2 + c) % 7 === 0) cellTypes[idx] = 'gold';
+            } else if (chosenPattern === 'pyramid') {
+                const distFromCenter = Math.abs(c - (cols / 2 - 0.5));
+                if (r === distFromCenter && r < 4) cellTypes[idx] = 'gold';
+                else if (r === 2 && (c === 2 || c === cols - 3)) cellTypes[idx] = 'grey';
+            } else if (chosenPattern === 'fortress') {
+                if ((r === 1 || r === rows - 2) && (c === 2 || c === cols - 3)) cellTypes[idx] = 'grey';
+                else if (r === 2 && c >= 4 && c <= cols - 5) cellTypes[idx] = 'gold';
+            } else if (chosenPattern === 'diamond') {
+                const centerR = Math.floor(rows / 2);
+                const centerC = Math.floor(cols / 2);
+                const manhattan = Math.abs(r - centerR) + Math.abs(c - centerC);
+                if (manhattan === 2) cellTypes[idx] = 'gold';
+                else if (manhattan === 4) cellTypes[idx] = 'grey';
+            } else {
+                // Clusters pattern
+                if ((r === 1 || r === 4) && (c % 4 === 1)) cellTypes[idx] = 'gold';
+                else if (r === 3 && (c % 4 === 2)) cellTypes[idx] = 'grey';
+            }
+        }
+    }
+
+    // Ensure minimum gold and grey bricks by scattering random remaining ones
+    let currentGold = cellTypes.filter(t => t === 'gold').length;
+    let currentGrey = cellTypes.filter(t => t === 'grey').length;
+
+    while (currentGold < targetGoldCount) {
+        const randIdx = Math.floor(Math.random() * totalPlayableCells);
+        if (cellTypes[randIdx] === 'green') {
+            cellTypes[randIdx] = 'gold';
+            currentGold++;
+        }
+    }
+
+    while (currentGrey < targetGreyObstacles) {
+        const randIdx = Math.floor(Math.random() * totalPlayableCells);
+        if (cellTypes[randIdx] === 'green') {
+            cellTypes[randIdx] = 'grey';
+            currentGrey++;
+        }
+    }
+
+    // Instantiate arena bricks
     for (let r = 0; r < rows; r++) {
         const colorScheme = greenColors[r % greenColors.length];
         const y = topOffset + r * (brickHeight + padding);
 
         for (let c = 0; c < cols; c++) {
             const x = sidePadding + c * (brickWidth + padding);
-            const posKey = `${r},${c}`;
+            const idx = r * cols + c;
+            const type = cellTypes[idx];
 
-            if (greyPositions.has(posKey)) {
-                // Unbreakable Grey block
+            if (type === 'grey') {
                 bricks.push({
                     id: id++,
                     x,
@@ -34,8 +173,7 @@ export function createBreakoutLevel(canvasWidth: number): Brick[] {
                     intact: true,
                     type: 'grey',
                 });
-            } else if (goldPositions.has(posKey)) {
-                // Golden brick (drops circular 3-ball powerup)
+            } else if (type === 'gold') {
                 bricks.push({
                     id: id++,
                     x,
@@ -49,7 +187,6 @@ export function createBreakoutLevel(canvasWidth: number): Brick[] {
                     type: 'gold',
                 });
             } else {
-                // Standard Green brick
                 bricks.push({
                     id: id++,
                     x,

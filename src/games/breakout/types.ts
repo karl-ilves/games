@@ -28,6 +28,7 @@ export interface Brick {
     points: number;
     intact: boolean;
     type: 'green' | 'gold' | 'grey';
+    isBorder?: boolean;
 }
 
 export interface PowerUp {
@@ -58,6 +59,9 @@ export interface GameStats {
     totalBricks: number;
     lives: number;
     activeBalls: number;
+    level: number;
+    maxLevel: number;
+    isLevelComplete: boolean;
     isGameOver: boolean;
     isVictory: boolean;
     playbuxReward: number;
