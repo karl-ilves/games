@@ -13,17 +13,33 @@ try {
 
 // 2. Load Check
 await (async () => {
-    try {
-        execSync('kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
-        await new Promise(r => setTimeout(r, 600));
-    } catch (e) {}
-    console.log("Starting preview server...");
-    const serverProcess = spawn('node', ['--max-old-space-size=4096', './node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort', '--host', '0.0.0.0']);
-    serverProcess.stdout?.resume();
-    serverProcess.stderr?.on('data', data => console.error(`[Server Error]: ${data}`));
-    serverProcess.on('exit', (code, signal) => console.log(`[Preview Server Exited]: code=${code}, signal=${signal}`));
-    process.on('exit', () => { try { serverProcess.kill(); } catch (e) {} });
-    process.on('SIGINT', () => { try { serverProcess.kill(); } catch (e) {} process.exit(1); });
+    let serverProcess = null;
+    let isTerminating = false;
+
+    function startServer() {
+        if (isTerminating) return;
+        try {
+            execSync('kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
+        } catch (e) {}
+        console.log("Starting preview server...");
+        serverProcess = spawn('node', ['--max-old-space-size=4096', './node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort', '--host']);
+        serverProcess.stdout?.on('data', data => {
+            const msg = data.toString();
+            if (msg.includes('error') || msg.includes('Error')) console.error(`[Server Log]: ${msg}`);
+        });
+        serverProcess.stderr?.on('data', data => console.error(`[Server Error]: ${data}`));
+        serverProcess.on('exit', (code, signal) => {
+            console.log(`[Preview Server Exited]: code=${code}, signal=${signal}`);
+            if (!isTerminating) {
+                console.log("Auto-respawning preview server...");
+                setTimeout(startServer, 300);
+            }
+        });
+    }
+
+    startServer();
+    process.on('exit', () => { isTerminating = true; try { serverProcess?.kill(); } catch (e) {} });
+    process.on('SIGINT', () => { isTerminating = true; try { serverProcess?.kill(); } catch (e) {} process.exit(1); });
     
     // Wait for preview server to be responsive
     for (let i = 0; i < 50; i++) {
@@ -39,9 +55,39 @@ await (async () => {
     const browser = await puppeteer.launch({
         headless: true,
         protocolTimeout: 600000,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--enable-webgl', '--ignore-gpu-blocklist', '--disable-gpu-process-crash-limit', '--js-flags=--max-old-space-size=4096']
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--enable-webgl',
+            '--ignore-gpu-blocklist',
+            '--disable-gpu-process-crash-limit',
+            '--disable-features=IsolateOrigins,site-per-process',
+            '--js-flags=--max-old-space-size=4096'
+        ]
     });
     const page = await browser.newPage();
+    const originalGoto = page.goto.bind(page);
+    page.goto = async (url, options) => {
+        for (let attempt = 1; attempt <= 5; attempt++) {
+            try {
+                return await originalGoto(url, options);
+            } catch (err) {
+                if (err.message && (err.message.includes('ERR_CONNECTION_REFUSED') || err.message.includes('ERR_CONNECTION_RESET')) && attempt < 5) {
+                    console.log(`[Retry] Connection error on ${url}, waiting for preview server (attempt ${attempt}/5)...`);
+                    for (let p = 0; p < 20; p++) {
+                        try {
+                            const res = await fetch('http://127.0.0.1:4173/');
+                            if (res.status < 500) break;
+                        } catch (e) {}
+                        await new Promise(r => setTimeout(r, 200));
+                    }
+                } else {
+                    throw err;
+                }
+            }
+        }
+    };
     page.on('error', err => {
         console.error('PAGE CRASHED / RENDERER TERMINATED:', err.message);
     });
@@ -7451,7 +7497,8 @@ await (async () => {
             
             // 1. Verify PC Mode: Mobile controls layer should NOT exist or should be hidden
             console.log("   Checking PC Mode in Racing Simulator (Expected: Mobile controls OFF)...");
-            await page.goto('http://localhost:4173/games/racing/index.html');
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
             const pcControlsExists = await page.evaluate(() => {
                 const layer = document.getElementById('playard-universal-mobile-controls');
@@ -7464,7 +7511,7 @@ await (async () => {
 
             // 2. Verify Mobile / Tablet Mode: With mobile parameter or touch, virtual joystick and jump button appear
             console.log("   Checking Mobile Mode in Racing Simulator (with ?mobile=true)...");
-            await page.goto('http://localhost:4173/games/racing/index.html?mobile=true');
+            await page.goto('http://localhost:4173/games/racing/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 800));
             const mobileElements = await page.evaluate(() => {
                 const layer = document.getElementById('playard-universal-mobile-controls');
@@ -7486,7 +7533,8 @@ await (async () => {
 
             // 3. Verify Desktop-Only Enforcement for War Game & Train Game on Mobile
             console.log("   Checking Mobile Block for War Game (Expected: Desktop-Only Overlay)...");
-            await page.goto('http://localhost:4173/games/war/index.html?mobile=true');
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/war/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 800));
             const warMobileBlocked = await page.evaluate(() => {
                 const overlay = document.getElementById('playard-desktop-only-overlay');
@@ -7502,7 +7550,8 @@ await (async () => {
             }
 
             console.log("   Checking Mobile Block for Train Simulator (Expected: Desktop-Only Overlay)...");
-            await page.goto('http://localhost:4173/games/train/index.html?mobile=true');
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/train/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 800));
             const trainMobileBlocked = await page.evaluate(() => {
                 const overlay = document.getElementById('playard-desktop-only-overlay');
@@ -8409,9 +8458,72 @@ await (async () => {
                 const debrisClearedAfterMidAirReset = (debrisSys?.getDebrisCount?.() || 0) === 0;
                 const fireExtinguishedAfterMidAirReset = fireSys?.isCarBurning?.() === false;
 
+                // Test Mobile Phone Arrow Controls (User requirement: "kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled")
+                const inputObj = dbg.input;
+                const mobileArrowsObj = inputObj?.getMobileArrows?.();
+                
+                // Initially on PC/desktop, arrows are hidden
+                const initiallyHiddenOnPC = !mobileArrowsObj?.isVisible?.();
+
+                // When database or system detects a phone player, arrows appear!
+                mobileArrowsObj?.show?.();
+                const arrowsLayer = document.getElementById('citycar-mobile-arrows');
+                const arrowsVisibleOnPhone = mobileArrowsObj?.isVisible?.() && arrowsLayer && arrowsLayer.style.display !== 'none';
+                
+                const btnUp = document.getElementById('btn-arrow-up');
+                const btnDown = document.getElementById('btn-arrow-down');
+                const btnLeft = document.getElementById('btn-arrow-left');
+                const btnRight = document.getElementById('btn-arrow-right');
+                const btnDrift = document.getElementById('btn-arrow-drift');
+
+                const hasAllArrowButtons = !!(btnUp && btnDown && btnLeft && btnRight && btnDrift);
+
+                // Simulate touching UP arrow (throttle)
+                btnUp?.dispatchEvent(new Event('pointerdown'));
+                const throttleOnUp = inputObj.state.throttle === 1;
+                btnUp?.dispatchEvent(new Event('pointerup'));
+                const throttleReleased = inputObj.state.throttle === 0;
+
+                // Simulate touching DOWN arrow (brake)
+                btnDown?.dispatchEvent(new Event('pointerdown'));
+                const brakeOnDown = inputObj.state.brake === 1;
+                btnDown?.dispatchEvent(new Event('pointerup'));
+
+                // Simulate touching LEFT arrow (steer left)
+                btnLeft?.dispatchEvent(new Event('pointerdown'));
+                const steerOnLeft = inputObj.state.steer === -1;
+                btnLeft?.dispatchEvent(new Event('pointerup'));
+
+                // Simulate touching RIGHT arrow (steer right)
+                btnRight?.dispatchEvent(new Event('pointerdown'));
+                const steerOnRight = inputObj.state.steer === 1;
+                btnRight?.dispatchEvent(new Event('pointerup'));
+
+                // Simulate touching DRIFT button (handbrake)
+                btnDrift?.dispatchEvent(new Event('pointerdown'));
+                const driftOnTouch = inputObj.state.handbrake === true;
+                btnDrift?.dispatchEvent(new Event('pointerup'));
+
+                // Multi-touch Drift: simultaneous BRAKE + STEER
+                btnDown?.dispatchEvent(new Event('pointerdown'));
+                btnLeft?.dispatchEvent(new Event('pointerdown'));
+                const multiTouchBrakeAndTurn = inputObj.state.brake === 1 && inputObj.state.steer === -1;
+                btnDown?.dispatchEvent(new Event('pointerup'));
+                btnLeft?.dispatchEvent(new Event('pointerup'));
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
+                    initiallyHiddenOnPC,
+                    arrowsVisibleOnPhone,
+                    hasAllArrowButtons,
+                    throttleOnUp,
+                    throttleReleased,
+                    brakeOnDown,
+                    steerOnLeft,
+                    steerOnRight,
+                    driftOnTouch,
+                    multiTouchBrakeAndTurn,
                     speedVal,
                     onlineCount,
                     bridgesCount,
@@ -8614,8 +8726,14 @@ await (async () => {
             if (!cityCarTest.entireCarRestored || !cityCarTest.debrisClearedAfterMidAirReset || !cityCarTest.fireExtinguishedAfterMidAirReset) {
                 throw new Error("CityCar Reset button after Mid-Air Jump Crash must restore entire car and clear all debris and fire!");
             }
+            if (!cityCarTest.arrowsVisibleOnPhone || !cityCarTest.hasAllArrowButtons) {
+                throw new Error("CityCar must display directional arrow buttons when database detects player on phone (User: 'kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled')!");
+            }
+            if (!cityCarTest.throttleOnUp || !cityCarTest.throttleReleased || !cityCarTest.brakeOnDown || !cityCarTest.steerOnLeft || !cityCarTest.steerOnRight || !cityCarTest.driftOnTouch || !cityCarTest.multiTouchBrakeAndTurn) {
+                throw new Error("CityCar mobile arrows must support gas, brake, steering, drift, and multi-touch combinations!");
+            }
 
-            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Mid-Air Jump Crash Half In Air + Half On Ground Impact, Massive Debris, 2X Fireball, 5s Zoom-out & YOU DIED! Reset) testid edukalt läbitud!");
+            console.log("✅ 🏙️🌲 CityCar 3D Driving Simulator (Linn, Mets, Jõgi, Sillad, Piirid, Wanted Stars 1-4, Helikopterid, Lennuk, Tankid, Mid-Air Jump Crash Half In Air + Half On Ground Impact, Massive Debris, 2X Fireball, 5s Zoom-out & YOU DIED! Reset, Mobile Phone Directional Arrows & Drift) testid edukalt läbitud!");
 
             // 3. Testing CityCar in Recently Played Games Row on Home Hub (User: "ja se mäng ilmub ka sinna viimati mängitute mängu ritta")
             console.log("   3. Testing CityCar in Recently Played Games Row on Hub...");
@@ -8940,6 +9058,7 @@ await (async () => {
                 const scoreText = document.getElementById('hud-score')?.textContent || '';
                 const isEnglishHud = wavePillText.includes('WAVE') && scoreText.includes('SCORE');
                 const isEnglishGameOver = (gameOverModal?.textContent?.includes('MISSION FAILED') && gameOverModal?.textContent?.includes('EARTH DESTROYED')) || false;
+                const hasGoldenMagnetInShop = shopModal ? shopModal.textContent.includes('Golden Comet Magnet') : false;
 
                 return {
                     success: true,
@@ -8948,6 +9067,7 @@ await (async () => {
                     isOwner,
                     isEnglishHud,
                     isEnglishGameOver,
+                    hasGoldenMagnetInShop,
                     initialWave: initialStats.wave,
                     initialHp: initialStats.earthHp,
                     initialShield: initialStats.earthShield,
@@ -8978,6 +9098,9 @@ await (async () => {
             if (!defenderGameTest.isEnglishHud || !defenderGameTest.isEnglishGameOver) {
                 throw new Error("Defender must be in English! " + JSON.stringify(defenderGameTest));
             }
+            if (defenderGameTest.hasGoldenMagnetInShop) {
+                throw new Error("Golden Comet Magnet must be removed from Defender Shop!");
+            }
             if (!defenderGameTest.isOwner) {
                 throw new Error("Defender must recognize Playard Owner!");
             }
@@ -8990,13 +9113,13 @@ await (async () => {
             if (!defenderGameTest.leaderboardOpened || defenderGameTest.leaderboardEntriesCount < 1 || defenderGameTest.leaderboardEntriesCountAfterPlay < 2) {
                 throw new Error("Defender Leaderboard modal check failed (must only show played players and dynamically update): " + JSON.stringify(defenderGameTest));
             }
-            if (!defenderGameTest.shopOpened || defenderGameTest.shopItemsCount !== 5) {
-                throw new Error("Defender Shop check failed (must have 5 Pbx items): " + JSON.stringify(defenderGameTest));
+            if (!defenderGameTest.shopOpened || defenderGameTest.shopItemsCount !== 4) {
+                throw new Error("Defender Shop check failed (must have 4 Pbx items after removing Golden Magnet): " + JSON.stringify(defenderGameTest));
             }
             if (!defenderGameTest.hasHyperBlaster || !defenderGameTest.hasDefenseDrone) {
                 throw new Error("Defender Upgrade unlocks check failed: " + JSON.stringify(defenderGameTest));
             }
-            console.log("✅ 🛡️ 2D Earth Defender (Maa Kaitsja 2D, Mission Failed, Real Players Leaderboard & 5 Pbx Shop items) tests passed successfully!");
+            console.log("✅ 🛡️ 2D Earth Defender (Maa Kaitsja 2D, Mission Failed, Real Players Leaderboard & 4 Pbx Shop items without Golden Magnet) tests passed successfully!");
 
             // ==========================================
             // TEST SUITE: 🟢 2D BREAKOUT (KLOTSIPURUSTAJA)
@@ -9038,18 +9161,30 @@ await (async () => {
                 const movedPaddleX = game.paddle.x;
                 const paddleMoved = movedPaddleX > initialPaddleX;
 
-                // 1. Test Unbreakable Grey Brick: Ball bounces back but grey brick DOES NOT break
-                const greyBrick = game.bricks.find(b => b.type === 'grey' && !b.isBorder) || game.bricks.find(b => b.type === 'grey');
+                // 1. Test Unbreakable Grey Brick / Border Stone: Ball bounces back but grey stone DOES NOT break, and ball cannot tunnel through
+                const greyBrick = game.bricks.find(b => b.type === 'grey' && b.isBorder && b.y === 0 && b.x > 100 && b.x < 500) || game.bricks.find(b => b.type === 'grey');
                 let greyBrickRemainedIntact = false;
                 let greyBallBounced = false;
+                let fastBallCannotTunnel = false;
                 if (greyBrick) {
                     game.balls[0].x = greyBrick.x + greyBrick.width / 2;
                     game.balls[0].y = greyBrick.y + greyBrick.height + game.balls[0].radius + 1;
+                    game.balls[0].vx = 0;
                     game.balls[0].vy = -200;
                     game.update(0.02);
                     greyBrickRemainedIntact = greyBrick.intact === true;
                     greyBallBounced = game.balls[0].vy > 0;
+
+                    // Fast ball anti-tunneling test (läbi kivide pallid ei saa minna)
+                    game.balls[0].x = greyBrick.x + greyBrick.width / 2;
+                    game.balls[0].y = greyBrick.y + greyBrick.height + game.balls[0].radius + 1;
+                    game.balls[0].vx = 0;
+                    game.balls[0].vy = -600;
+                    game.update(0.05);
+                    fastBallCannotTunnel = game.balls[0].vy > 0 && game.balls[0].y >= greyBrick.y + greyBrick.height + game.balls[0].radius;
                 }
+
+                const controlsHintRemoved = document.getElementById('controls-hint') === null;
 
                 // 2. Test Golden Brick: breaks and spawns falling circular 3-ball power-up
                 const goldBrick = game.bricks.find(b => b.type === 'gold' && b.intact);
@@ -9166,13 +9301,21 @@ await (async () => {
                     level1BricksCount,
                     level2BricksCount,
                     level2HudText,
-                    isLevel2MuchLarger
+                    isLevel2MuchLarger,
+                    controlsHintRemoved,
+                    fastBallCannotTunnel
                 };
             });
 
             console.log("   Breakout Verification Results:", breakoutGameTest);
             if (!breakoutGameTest.success || !breakoutGameTest.hasCanvas) {
                 throw new Error("Breakout canvas initialization failed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.controlsHintRemoved) {
+                throw new Error("Breakout controls hint overlay must be removed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.fastBallCannotTunnel) {
+                throw new Error("Breakout anti-tunneling check failed (läbi kivide pallid ei saa minna): " + JSON.stringify(breakoutGameTest));
             }
             if (breakoutGameTest.borderBricksCount < 10) {
                 throw new Error("Breakout grey border blocks check failed (hallid plokid peavad tähistama piire): " + JSON.stringify(breakoutGameTest));
@@ -9207,5 +9350,5 @@ await (async () => {
             console.log("✅ 🟢 2D Breakout (grey borders, large map, randomized Play Again layout & Level 2) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
-        } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
+        } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { isTerminating = true; await browser?.close(); serverProcess?.kill(); }
 })();

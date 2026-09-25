@@ -338,7 +338,7 @@ function animate() {
 // Expose state and controller for automated verification
 (window as any).__CITY_CAR_DEBUG__ = {
     physics, carMesh, cameraSystem, crashDebrisSystem, fireSystem, world, multiplayer,
-    state: cityCarState, hud, wantedSystem, policeSystem, airSupportSystem, tankSystem,
+    state: cityCarState, hud, input, wantedSystem, policeSystem, airSupportSystem, tankSystem,
     skidMarksSystem, triggerArrest, resetGame, resetGameAfterArrest: resetGame,
     triggerCrashDeath, resetGameAfterDeath: resetGame
 };

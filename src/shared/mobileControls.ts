@@ -24,6 +24,15 @@ export function isMobileOrTabletDevice(): boolean {
     if ((window as any).__PLAYARD_FORCE_MOBILE__) return true;
     if (new URLSearchParams(window.location.search).get('mobile') === 'true') return true;
 
+    // Check if database user profile specifies phone or mobile
+    try {
+        const raw = localStorage.getItem('playard_current_user_profile');
+        if (raw) {
+            const p = JSON.parse(raw);
+            if (p.device === 'phone' || p.device === 'tablet' || p.isMobile) return true;
+        }
+    } catch (e) {}
+
     // Standard detection:
     const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     const isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -32,6 +41,22 @@ export function isMobileOrTabletDevice(): boolean {
     // An actual phone or tablet device has touch/coarse pointer AND mobile UA, or small touch viewport.
     // Laptops with touch screens typically have (pointer: fine) primary mouse or width > 1024 without mobile UA.
     return !!(hasTouch && (isCoarsePointer || isMobileUA || window.innerWidth <= 1024));
+}
+
+export function isPhoneDevice(): boolean {
+    if (typeof window === 'undefined') return false;
+    if ((window as any).__PLAYARD_FORCE_MOBILE__) return true;
+    if (new URLSearchParams(window.location.search).get('mobile') === 'true') return true;
+    try {
+        const raw = localStorage.getItem('playard_current_user_profile');
+        if (raw) {
+            const p = JSON.parse(raw);
+            if (p.device === 'phone' || p.isMobile) return true;
+        }
+    } catch (e) {}
+    const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const isMobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
+    return !!(hasTouch && (isMobileUA || window.innerWidth <= 768));
 }
 
 export class PlayardMobileControls {

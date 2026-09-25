@@ -37,7 +37,7 @@ export class DefenderState {
             if (raw) {
                 const list = JSON.parse(raw);
                 if (Array.isArray(list)) {
-                    this.ownedUpgrades = new Set(list);
+                    this.ownedUpgrades = new Set(list.filter((id) => id !== 'defender_golden_magnet'));
                 }
             }
         } catch {
@@ -79,7 +79,7 @@ export class DefenderState {
     }
 
     public hasGoldenMagnet(): boolean {
-        return this.isUpgradeOwned('defender_golden_magnet');
+        return false;
     }
 
     private applyPassiveUpgrades() {
@@ -126,8 +126,7 @@ export class DefenderState {
     }
 
     public addScore(points: number): number {
-        const bonusMult = this.hasGoldenMagnet() ? 2 : 1;
-        const multiplied = points * this.combo * bonusMult;
+        const multiplied = points * this.combo;
         this.score += multiplied;
         this.asteroidsDestroyed++;
         this.comboTimer = 3.5; // combo reset in 3.5s
@@ -171,9 +170,6 @@ export class DefenderState {
         pbx += this.asteroidsDestroyed * 2;
         pbx += Math.floor(this.score / 60);
         pbx += (this.wave - 1) * 25;
-        if (this.hasGoldenMagnet()) {
-            pbx *= 2;
-        }
         return Math.max(25, Math.round(pbx));
     }
 

@@ -16,6 +16,29 @@ export interface UserProfile {
     war_money?: number;
     birthDate?: string; // ISO date: "YYYY-MM-DD"
     age?: number;       // Arvutatud vanus
+    device?: 'phone' | 'desktop' | 'tablet';
+    isMobile?: boolean;
+}
+
+export function detectUserDevice(): 'phone' | 'desktop' | 'tablet' {
+    if (typeof window === 'undefined') return 'desktop';
+    if ((window as any).__PLAYARD_FORCE_MOBILE__) return 'phone';
+    if (new URLSearchParams(window.location.search).get('mobile') === 'true') return 'phone';
+    const isMobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
+    const isTabletUA = /iPad|Tablet/i.test(navigator.userAgent);
+    const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isMobileUA || (hasTouch && window.innerWidth <= 768)) return 'phone';
+    if (isTabletUA || (hasTouch && window.innerWidth <= 1024)) return 'tablet';
+    return 'desktop';
+}
+
+export function isPhoneUser(profile?: UserProfile | null): boolean {
+    if (typeof window === 'undefined') return false;
+    if ((window as any).__PLAYARD_FORCE_MOBILE__) return true;
+    if (new URLSearchParams(window.location.search).get('mobile') === 'true') return true;
+    const prof = profile || getCurrentUserProfile();
+    if (prof?.device === 'phone' || prof?.isMobile === true) return true;
+    return detectUserDevice() === 'phone';
 }
 
 export const ADMIN_EMAILS = [
@@ -130,6 +153,8 @@ export async function saveProfileToSupabase(profile: UserProfile): Promise<boole
         if (profile.birthDate) fullPayload.birth_date = profile.birthDate;
         if (profile.age !== undefined) fullPayload.age = profile.age;
         if (profile.gender) fullPayload.gender = profile.gender;
+        if (profile.device) fullPayload.device = profile.device;
+        if (profile.isMobile !== undefined) fullPayload.is_mobile = profile.isMobile;
 
         const { error: fullErr } = await supabase.from('profiles').upsert(fullPayload);
         if (!fullErr) {
@@ -197,6 +222,10 @@ export function getCurrentUserProfile(): UserProfile | null {
             if (prof.birthDate) {
                 prof.age = calculateAge(prof.birthDate);
             }
+            if (!prof.device) {
+                prof.device = detectUserDevice();
+                prof.isMobile = prof.device === 'phone';
+            }
             return prof;
         }
     } catch (e) {}
@@ -212,6 +241,10 @@ export function getLocalProfiles(): UserProfile[] {
 }
 
 export function saveLocalProfile(profile: UserProfile) {
+    if (!profile.device) {
+        profile.device = detectUserDevice();
+        profile.isMobile = profile.device === 'phone';
+    }
     const profiles = getLocalProfiles();
     const index = profiles.findIndex(p => p.username.toLowerCase() === profile.username.toLowerCase());
     if (index >= 0) {

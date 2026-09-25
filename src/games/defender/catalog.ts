@@ -132,15 +132,6 @@ export const DEFENDER_SHOP_ITEMS: import('./types').DefenderShopItem[] = [
         icon: '🛸',
         badge: 'DRONE',
         tag: 'drone'
-    },
-    {
-        id: 'defender_golden_magnet',
-        name: 'Golden Comet Magnet (2X Pbx)',
-        description: 'Doubles all score points (2X Score) and earns 2X more Pbx currency from every completed mission!',
-        price: 3500,
-        icon: '🪙',
-        badge: '2X PBX BOOSTER',
-        tag: 'booster'
     }
 ];
 

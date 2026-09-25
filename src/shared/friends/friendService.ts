@@ -419,6 +419,7 @@ export class FriendService {
         const cleanUser = username.toLowerCase().trim();
         try {
             localStorage.removeItem(`playard_active_game_${cleanUser}`);
+            localStorage.removeItem(`playard_recently_played_${cleanUser}`);
         } catch (e) {}
         this.broadcastAction({
             type: 'player_active_game',
