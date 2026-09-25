@@ -2798,6 +2798,7 @@ let pullActiveSign: number = 1;
 let isPullingObject = false;
 let pullStartPos = { x: 0, y: 0 };
 let pullStartScaleVector = { x: 1, y: 1, z: 1 };
+let pullHandleScreenDir = { x: 1, y: 0 };
 let hideIndicatorTimeout: any = null;
 
 let pullGizmoGroup: THREE.Group | null = null;
@@ -2844,12 +2845,12 @@ export function setPullActiveAxis(axis: PullEdgeAxis) {
     const axisLabel = document.getElementById('puller-axis-label');
     if (axisLabel) {
         const labelMap: Record<PullEdgeAxis, string> = {
-            all: 'Äär: Kõik',
-            x: 'Äär: Laius (X)',
-            y: 'Äär: Kõrgus (Y)',
-            z: 'Äär: Pikkus (Z)'
+            all: 'Kõik',
+            x: 'Laius (X)',
+            y: 'Kõrgus (Y)',
+            z: 'Pikkus (Z)'
         };
-        axisLabel.innerText = labelMap[axis] || 'Äär: Kõik';
+        axisLabel.innerText = labelMap[axis] || 'Kõik';
     }
 
     updatePullGizmo();
@@ -2893,7 +2894,11 @@ function initPullGizmo() {
     pullGizmoGroup.name = 'pullGizmoGroup';
     scene.add(pullGizmoGroup);
 
-    const handleGeo = new THREE.BoxGeometry(0.45, 0.45, 0.45);
+    // 4X larger base box geometry (1.8 instead of 0.45)
+    const handleGeo = new THREE.BoxGeometry(1.8, 1.8, 1.8);
+    const edgeGeo = new THREE.EdgesGeometry(handleGeo);
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthTest: false });
+
     const createHandle = (axis: 'x' | 'y' | 'z', sign: 1 | -1, color: number, name: string) => {
         const mat = new THREE.MeshBasicMaterial({
             color: color,
@@ -2904,6 +2909,11 @@ function initPullGizmo() {
         const mesh = new THREE.Mesh(handleGeo, mat);
         mesh.userData = { isPullGizmoHandle: true, axis, sign, baseColor: color, handleName: name };
         mesh.renderOrder = 1000;
+
+        const line = new THREE.LineSegments(edgeGeo, edgeMat);
+        line.renderOrder = 1001;
+        mesh.add(line);
+
         pullGizmoGroup!.add(mesh);
         pullGizmoHandles.push(mesh);
         return mesh;
@@ -2951,20 +2961,24 @@ export function updatePullGizmo() {
     }
 
     const camDist = camera ? camera.position.distanceTo(center) : 15;
-    const handleScale = Math.max(0.3, Math.min(2.5, camDist * 0.028));
+    // 4X larger handles for instant prominence and easy grabbing
+    const handleScale = Math.max(0.5, Math.min(4.0, camDist * 0.045));
 
     pullGizmoHandles.forEach(h => {
         h.scale.set(handleScale, handleScale, handleScale);
         const { axis, sign } = h.userData;
         const pos = center.clone();
-        if (axis === 'x') pos.x += sign * (size.x / 2 + handleScale * 0.35);
-        if (axis === 'y') pos.y += sign * (size.y / 2 + handleScale * 0.35);
-        if (axis === 'z') pos.z += sign * (size.z / 2 + handleScale * 0.35);
+        const halfSize = (axis === 'x' ? size.x : axis === 'y' ? size.y : size.z) / 2;
+        const handleOffset = (1.8 * handleScale) * 0.5;
+        pos[axis] += sign * (halfSize + handleOffset * 0.35);
         h.position.copy(pos);
 
         const isCurrentActive = pullActiveAxis === axis || pullActiveAxis === 'all';
         const mat = h.material as THREE.MeshBasicMaterial;
-        mat.opacity = isCurrentActive ? 0.95 : 0.35;
+        mat.opacity = isCurrentActive ? 0.95 : 0.45;
+        if (isCurrentActive) {
+            h.scale.multiplyScalar(1.15);
+        }
     });
 }
 
@@ -2995,12 +3009,12 @@ export function showFloatingPullIndicator(
         valSize.innerText = `${w}m x ${h}m x ${d}m (X:${sx.toFixed(1)}, Y:${sy.toFixed(1)}, Z:${sz.toFixed(1)})`;
         if (axisLabel) {
             const labelMap: Record<PullEdgeAxis, string> = {
-                all: 'Äär: Kõik',
-                x: 'Äär: Laius (X)',
-                y: 'Äär: Kõrgus (Y)',
-                z: 'Äär: Pikkus (Z)'
+                all: 'Kõik',
+                x: 'Laius (X)',
+                y: 'Kõrgus (Y)',
+                z: 'Pikkus (Z)'
             };
-            axisLabel.innerText = labelMap[axis] || 'Äär: Kõik';
+            axisLabel.innerText = labelMap[axis] || 'Kõik';
         }
         indicator.style.left = clientX + 'px';
         indicator.style.top = (clientY - 25) + 'px';
@@ -3037,26 +3051,26 @@ export function pullSelectedObject(deltaScale: number, axis?: PullEdgeAxis) {
         const curX = selectedObject.mesh.scale.x || 1;
         const curY = selectedObject.mesh.scale.y || 1;
         const curZ = selectedObject.mesh.scale.z || 1;
-        const newX = Math.max(0.2, Math.min(30, Number((curX + deltaScale).toFixed(2))));
-        const newY = Math.max(0.2, Math.min(30, Number((curY + deltaScale).toFixed(2))));
-        const newZ = Math.max(0.2, Math.min(30, Number((curZ + deltaScale).toFixed(2))));
+        const newX = Math.max(0.1, Number((curX + deltaScale).toFixed(2)));
+        const newY = Math.max(0.1, Number((curY + deltaScale).toFixed(2)));
+        const newZ = Math.max(0.1, Number((curZ + deltaScale).toFixed(2)));
         selectedObject.mesh.scale.set(newX, newY, newZ);
         selectedObject.scale.x = newX;
         selectedObject.scale.y = newY;
         selectedObject.scale.z = newZ;
     } else if (targetAxis === 'x') {
         const curX = selectedObject.mesh.scale.x || 1;
-        const newX = Math.max(0.2, Math.min(30, Number((curX + deltaScale).toFixed(2))));
+        const newX = Math.max(0.1, Number((curX + deltaScale).toFixed(2)));
         selectedObject.mesh.scale.x = newX;
         selectedObject.scale.x = newX;
     } else if (targetAxis === 'y') {
         const curY = selectedObject.mesh.scale.y || 1;
-        const newY = Math.max(0.2, Math.min(30, Number((curY + deltaScale).toFixed(2))));
+        const newY = Math.max(0.1, Number((curY + deltaScale).toFixed(2)));
         selectedObject.mesh.scale.y = newY;
         selectedObject.scale.y = newY;
     } else if (targetAxis === 'z') {
         const curZ = selectedObject.mesh.scale.z || 1;
-        const newZ = Math.max(0.2, Math.min(30, Number((curZ + deltaScale).toFixed(2))));
+        const newZ = Math.max(0.1, Number((curZ + deltaScale).toFixed(2)));
         selectedObject.mesh.scale.z = newZ;
         selectedObject.scale.z = newZ;
     }
@@ -3069,7 +3083,6 @@ export function pullSelectedObject(deltaScale: number, axis?: PullEdgeAxis) {
     const cy = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
     showFloatingPullIndicator(cx, cy, selectedObject.mesh.scale, targetAxis);
     hideFloatingPullIndicator(1500);
-    autoSaveDraft();
 }
 
 export function spawnBlockObject(color: string = '#00cec9', name: string = 'Plokk'): PlacedObject {
@@ -3978,6 +3991,22 @@ function setupStudioEvents() {
                         y: selectedObject.mesh.scale.y || 1,
                         z: selectedObject.mesh.scale.z || 1
                     };
+
+                    // Compute outward screen direction from object center to handle
+                    const box = new THREE.Box3().setFromObject(selectedObject.mesh);
+                    const center = new THREE.Vector3();
+                    box.getCenter(center);
+                    const cProj = center.clone().project(camera);
+                    const hProj = handleMesh.position.clone().project(camera);
+                    let sDx = hProj.x - cProj.x;
+                    let sDy = -(hProj.y - cProj.y); // invert Y for screen pixels
+                    const sLen = Math.hypot(sDx, sDy);
+                    if (sLen > 0.01) {
+                        pullHandleScreenDir = { x: sDx / sLen, y: sDy / sLen };
+                    } else {
+                        pullHandleScreenDir = { x: pullActiveSign || 1, y: 0 };
+                    }
+
                     showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
                     return;
                 }
@@ -4018,6 +4047,21 @@ function setupStudioEvents() {
                         y: hitPlaced.mesh.scale.y || 1,
                         z: hitPlaced.mesh.scale.z || 1
                     };
+
+                    const box = new THREE.Box3().setFromObject(hitPlaced.mesh);
+                    const center = new THREE.Vector3();
+                    box.getCenter(center);
+                    const cProj = center.clone().project(camera);
+                    const hProj = (hitNormal ? center.clone().add(hitNormal) : center).project(camera);
+                    let sDx = hProj.x - cProj.x;
+                    let sDy = -(hProj.y - cProj.y);
+                    const sLen = Math.hypot(sDx, sDy);
+                    if (sLen > 0.01) {
+                        pullHandleScreenDir = { x: sDx / sLen, y: sDy / sLen };
+                    } else {
+                        pullHandleScreenDir = { x: pullActiveSign || 1, y: 0 };
+                    }
+
                     showFloatingPullIndicator(e.clientX, e.clientY, hitPlaced.mesh.scale, pullActiveAxis);
                 } else if (selectedObject) {
                     isPullingObject = true;
@@ -4027,6 +4071,7 @@ function setupStudioEvents() {
                         y: selectedObject.mesh.scale.y || 1,
                         z: selectedObject.mesh.scale.z || 1
                     };
+                    pullHandleScreenDir = { x: 1, y: -1 };
                     showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
                 }
             } else {
@@ -4063,31 +4108,33 @@ function setupStudioEvents() {
             orbitPhi = Math.max(0.1, Math.min(Math.PI / 2.1, orbitPhi - dy * 0.006));
             updateOrbitCamera();
         } else if (isPullingObject && selectedObject && !isPlayTestMode) {
-            const dx = (e.clientX - pullStartPos.x) * 0.02;
-            const dy = (pullStartPos.y - e.clientY) * 0.02;
-            const diag = (dx + dy) * 0.8;
+            const mouseDx = e.clientX - pullStartPos.x;
+            const mouseDy = e.clientY - pullStartPos.y;
+            // Outward screen drag projection: pulling mouse outward expands the edge
+            const outwardDrag = (mouseDx * pullHandleScreenDir.x + mouseDy * pullHandleScreenDir.y) * 0.035;
+            // Fallback directional drag
+            const rawDelta = (pullActiveAxis === 'y' ? (pullStartPos.y - e.clientY) * (pullActiveSign || 1) :
+                              pullActiveAxis === 'x' ? (e.clientX - pullStartPos.x) * (pullActiveSign || 1) :
+                              ((e.clientX - pullStartPos.x) - (e.clientY - pullStartPos.y)) * 0.7 * (pullActiveSign || 1)) * 0.025;
+            const delta = Math.abs(outwardDrag) > Math.abs(rawDelta) ? outwardDrag : rawDelta;
 
             if (pullActiveAxis === 'x') {
-                const delta = dx * (pullActiveSign || 1);
-                const newX = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.x + delta).toFixed(2))));
+                const newX = Math.max(0.1, Number((pullStartScaleVector.x + delta).toFixed(2)));
                 selectedObject.mesh.scale.x = newX;
                 selectedObject.scale.x = newX;
             } else if (pullActiveAxis === 'y') {
-                const delta = dy * (pullActiveSign || 1);
-                const newY = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.y + delta).toFixed(2))));
+                const newY = Math.max(0.1, Number((pullStartScaleVector.y + delta).toFixed(2)));
                 selectedObject.mesh.scale.y = newY;
                 selectedObject.scale.y = newY;
             } else if (pullActiveAxis === 'z') {
-                const delta = (dx - dy) * 0.8 * (pullActiveSign || 1);
-                const newZ = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.z + delta).toFixed(2))));
+                const newZ = Math.max(0.1, Number((pullStartScaleVector.z + delta).toFixed(2)));
                 selectedObject.mesh.scale.z = newZ;
                 selectedObject.scale.z = newZ;
             } else {
-                // 'all'
-                const delta = diag;
-                const newX = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.x + delta).toFixed(2))));
-                const newY = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.y + delta).toFixed(2))));
-                const newZ = Math.max(0.2, Math.min(30, Number((pullStartScaleVector.z + delta).toFixed(2))));
+                const diag = ((mouseDx - mouseDy) * 0.707) * 0.025;
+                const newX = Math.max(0.1, Number((pullStartScaleVector.x + diag).toFixed(2)));
+                const newY = Math.max(0.1, Number((pullStartScaleVector.y + diag).toFixed(2)));
+                const newZ = Math.max(0.1, Number((pullStartScaleVector.z + diag).toFixed(2)));
                 selectedObject.mesh.scale.set(newX, newY, newZ);
                 selectedObject.scale.x = newX;
                 selectedObject.scale.y = newY;

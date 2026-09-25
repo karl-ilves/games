@@ -2752,18 +2752,40 @@ await (async () => {
                 throw new Error("Pulling Z edge affected X or Y scale!");
             }
 
-            // Verify Gizmo exists and is visible in Tõmbaja mode
+            // Verify 'Äär:' text is removed from puller toolbar
+            const subpanelText = await page.evaluate(() => {
+                const sub = document.getElementById('puller-controls-subpanel');
+                return sub ? sub.innerText : '';
+            });
+            console.log("   Puller subpanel text (without 'Äär:'):", subpanelText.trim());
+            if (subpanelText.includes('Äär:')) {
+                throw new Error("Text 'Äär:' should be removed from puller subpanel!");
+            }
+
+            // Verify Gizmo exists, is visible in Tõmbaja mode, and has 4X larger handles
             const gizmoStatus = await page.evaluate(() => {
                 const g = window.creatorStudio?.pullGizmoGroup;
+                const h = g?.children?.find(c => c?.userData?.isPullGizmoHandle);
                 return {
                     exists: !!g,
                     visible: g?.visible === true,
-                    handleCount: g?.children?.filter(c => c?.userData?.isPullGizmoHandle)?.length || 0
+                    handleCount: g?.children?.filter(c => c?.userData?.isPullGizmoHandle)?.length || 0,
+                    handleWidth: h?.geometry?.parameters?.width || 0
                 };
             });
-            console.log("   Puller 3D Gizmo Status:", gizmoStatus);
-            if (!gizmoStatus.exists || !gizmoStatus.visible || gizmoStatus.handleCount < 6) {
-                throw new Error(`3D Edge Pull Gizmo not properly initialized! ${JSON.stringify(gizmoStatus)}`);
+            console.log("   Puller 3D Gizmo Status (4X handles):", gizmoStatus);
+            if (!gizmoStatus.exists || !gizmoStatus.visible || gizmoStatus.handleCount < 6 || gizmoStatus.handleWidth < 1.5) {
+                throw new Error(`3D Edge Pull Gizmo not properly initialized or handles not 4X larger! ${JSON.stringify(gizmoStatus)}`);
+            }
+
+            // Test Infinite Pulling beyond old 30-unit limit
+            await page.evaluate(() => {
+                window.creatorStudio.pullSelectedObject(50);
+            });
+            const scaleInfinite = await page.evaluate(() => window.creatorStudio?.selectedObject?.mesh?.scale?.z || 0);
+            console.log("   Block scale after pulling +50 (Infinite pull check):", scaleInfinite);
+            if (scaleInfinite < 40) {
+                throw new Error("Pulling should allow infinite expansion beyond 30!");
             }
 
             // 5. Test switching back to 'Hiir' (Mouse) mode
