@@ -19,7 +19,8 @@ export default defineConfig({
         rocket: resolve(__dirname, 'games/rocket/index.html'),
         crown: resolve(__dirname, 'games/crown/index.html'),
         citycar: resolve(__dirname, 'games/citycar/index.html'),
-        defender: resolve(__dirname, 'games/defender/index.html')
+        defender: resolve(__dirname, 'games/defender/index.html'),
+        breakout: resolve(__dirname, 'games/breakout/index.html')
       }
     }
   }

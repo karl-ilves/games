@@ -1026,6 +1026,10 @@ function renderRecentlyPlayed() {
                 gameTitle = '🛡️ 2D Maa Kaitsja';
                 gameDesc = 'Kosmose asteroidide kaitsemissioon Playard Ownerile. Kaitse Maad kosmoses ja lase asteroidid puruks!';
                 badgeText = '👑 Playard Owner Eksklusiiv';
+            } else if (game.id === 'breakout') {
+                gameTitle = '🟢 2D Breakout';
+                gameDesc = 'Liiguta alust _, põrgata palli ja purusta kõik rohelised ruudud!';
+                badgeText = '🟢 2D Retro Arcade';
             }
         }
 
@@ -1161,6 +1165,15 @@ function setupGameCardTracking() {
             icon: '🛡️',
             badgeText: '👑 Playard Owner Exclusive',
             badgeColor: '#ffd700'
+        },
+        './games/breakout/index.html': {
+            id: 'breakout',
+            title: '🟢 2D Breakout (Klotsipurustaja)',
+            description: 'Liiguta alust _, põrgata palli tagasi ja purusta kõik rohelised ruudud!',
+            url: './games/breakout/index.html',
+            icon: '🟢',
+            badgeText: '🟢 2D Retro Arcade',
+            badgeColor: '#2ed573'
         }
     };
 

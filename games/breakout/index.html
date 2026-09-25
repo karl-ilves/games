@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🟢 2D Breakout - Playard Games</title>
+    <meta name="description" content="Klassikaline 2D klotsimäng: liiguta alust _, põrgata palli ja purusta kõik rohelised ruudud!">
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e17;
+            color: #d2dae2;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            touch-action: none;
+        }
+
+        #breakout-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        /* Top HUD */
+        .top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(10, 14, 23, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 2px solid rgba(46, 213, 115, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 100;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.7);
+        }
+
+        .hud-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 7px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .hud-btn:hover {
+            background: rgba(46, 213, 115, 0.2);
+            border-color: #2ed573;
+            color: #2ed573;
+        }
+
+        .hud-center-stats {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .hud-stat-pill {
+            background: linear-gradient(135deg, rgba(46, 213, 115, 0.15), rgba(0, 230, 118, 0.1));
+            border: 1.5px solid #2ed573;
+            color: #2ed573;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-weight: 900;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            box-shadow: 0 0 15px rgba(46, 213, 115, 0.25);
+        }
+
+        .score-box {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Controls hint overlay */
+        #controls-hint {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 14, 23, 0.85);
+            border: 1px solid rgba(46, 213, 115, 0.3);
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            color: #a4b0be;
+            z-index: 80;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+            text-align: center;
+        }
+        #controls-hint strong { color: #ffffff; }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(4, 7, 16, 0.92);
+            backdrop-filter: blur(16px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-card {
+            background: linear-gradient(145deg, #101c2d, #09101b);
+            border: 2px solid #ff4757;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 71, 87, 0.4);
+            box-sizing: border-box;
+        }
+
+        .modal-card.victory-theme {
+            border-color: #2ed573;
+            box-shadow: 0 0 50px rgba(46, 213, 115, 0.45);
+        }
+
+        .modal-badge {
+            display: inline-block;
+            background: rgba(255, 71, 87, 0.15);
+            border: 1px solid #ff4757;
+            color: #ff4757;
+            font-size: 0.85rem;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            padding: 4px 14px;
+            border-radius: 20px;
+            margin-bottom: 14px;
+        }
+
+        .modal-badge.victory {
+            background: rgba(46, 213, 115, 0.15);
+            border-color: #2ed573;
+            color: #2ed573;
+        }
+
+        .btn-action-primary {
+            background: linear-gradient(135deg, #2ed573, #10ac84);
+            border: none;
+            color: #050813;
+            font-weight: 900;
+            font-size: 1rem;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(46, 213, 115, 0.4);
+            transition: all 0.2s;
+        }
+        .btn-action-primary:hover {
+            transform: scale(1.03);
+            filter: brightness(1.15);
+        }
+
+        @media (max-width: 768px) {
+            .top-hud { height: 52px; padding: 0 10px; }
+            .hud-center-stats { gap: 10px; }
+            .score-box { font-size: 0.95rem; }
+            .hud-stat-pill { font-size: 0.75rem; padding: 4px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="breakout-canvas"></canvas>
+    </div>
+
+    <!-- Top HUD -->
+    <div class="top-hud">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <a href="../../index.html" class="hud-btn" id="btn-back-hub">🏠 Hub</a>
+            <div style="display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 1rem; color: #2ed573;">
+                <span>🟢</span>
+                <span style="background: linear-gradient(135deg, #2ed573, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">2D BREAKOUT</span>
+            </div>
+        </div>
+
+        <div class="hud-center-stats">
+            <div class="score-box" id="hud-score">SKOOR: 0</div>
+            <div class="hud-stat-pill" id="hud-bricks">ROHELISED RUUDUD: 50</div>
+            <div style="font-size: 0.85rem; color: #a4b0be;" id="hud-highscore">REKORD: 0</div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="hud-btn" id="btn-toggle-sound" title="Lülita heli sisse/välja">🔊 Heli: SEES</button>
+        </div>
+    </div>
+
+    <!-- Controls hint -->
+    <div id="controls-hint">
+        🎮 Liiguta alust <strong>_</strong>: <strong>Hiir / Puudutus</strong> või <strong>A/D</strong> või <strong>Nooleklahvid</strong> | Põrgata palli ja purusta rohelised ruudud!
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="modal-overlay" id="game-over-modal">
+        <div class="modal-card">
+            <div class="modal-badge">💀 SA SURID!</div>
+            <h2 style="font-size: 1.8rem; margin: 0 0 10px 0; color: #ffffff;">MÄNG LÄBI</h2>
+            <p style="color: #a4b0be; font-size: 0.9rem; line-height: 1.5; margin-bottom: 16px;">
+                Pall kukkus aluse <strong>_</strong> alt mööda alla!<br>
+                Põrgata palli hoolikalt tagasi, et purustada kõik rohelised ruudud.
+            </p>
+
+            <!-- Earned Reward Banner -->
+            <div id="gameover-reward-banner" style="background: rgba(255, 215, 0, 0.12); border: 1.5px solid #ffd700; border-radius: 12px; padding: 10px 14px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 900; color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.25);">
+                <span style="font-size: 1.4rem;">💰</span>
+                <div>
+                    <div style="font-size: 0.72rem; color: #8899a6; text-transform: uppercase;">Teenitud Tasu</div>
+                    <div style="font-size: 1.3rem;"><span id="reward-pbx-val">+5</span> pbx</div>
+                </div>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; margin-bottom: 22px; display: flex; justify-content: space-around;">
+                <div>
+                    <div style="font-size: 0.75rem; color: #8899a6;">LÕPPLIK SKOOR</div>
+                    <div style="font-size: 1.3rem; font-weight: 900; color: #ffd700;" id="final-score-val">0</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: #8899a6;">PURUSTATUD RUUDUD</div>
+                    <div style="font-size: 1.3rem; font-weight: 900; color: #2ed573;" id="final-bricks-val">0</div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn-action-primary" id="btn-restart-game">🔄 Mängi Uuesti</button>
+                <a href="../../index.html" class="hud-btn" style="padding: 12px 18px;">🏠 Hub</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div class="modal-overlay" id="victory-modal">
+        <div class="modal-card victory-theme">
+            <div class="modal-badge victory">🎉 SUUREPÄRANE!</div>
+            <h2 style="font-size: 1.8rem; margin: 0 0 10px 0; color: #ffffff;">KÕIK RUUDUD PURUSTATUD!</h2>
+            <p style="color: #a4b0be; font-size: 0.9rem; line-height: 1.5; margin-bottom: 16px;">
+                Purustasid edukalt kõik rohelised ruudud ja hoidsid palli mängus!
+            </p>
+
+            <div style="background: rgba(255, 215, 0, 0.12); border: 1.5px solid #ffd700; border-radius: 12px; padding: 10px 14px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 900; color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.25);">
+                <span style="font-size: 1.4rem;">🏆</span>
+                <div>
+                    <div style="font-size: 0.72rem; color: #8899a6; text-transform: uppercase;">Võidu Boonus</div>
+                    <div style="font-size: 1.3rem;"><span id="victory-reward-val">+100</span> pbx</div>
+                </div>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; margin-bottom: 22px;">
+                <div style="font-size: 0.75rem; color: #8899a6;">LÕPPLIK SKOOR</div>
+                <div style="font-size: 1.5rem; font-weight: 900; color: #ffd700;" id="victory-score-val">0</div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn-action-primary" id="btn-victory-restart">🔄 Mängi Uuesti</button>
+                <a href="../../index.html" class="hud-btn" style="padding: 12px 18px;">🏠 Hub</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bundled Game Entry -->
+    <script type="module" src="/src/games/breakout/main.ts"></script>
+</body>
+</html>

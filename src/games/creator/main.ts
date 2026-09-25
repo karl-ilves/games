@@ -2894,8 +2894,8 @@ function initPullGizmo() {
     pullGizmoGroup.name = 'pullGizmoGroup';
     scene.add(pullGizmoGroup);
 
-    // 4X larger base box geometry (1.8 instead of 0.45)
-    const handleGeo = new THREE.BoxGeometry(1.8, 1.8, 1.8);
+    // Unit box geometry so handle.scale controls physical dimensions in meters
+    const handleGeo = new THREE.BoxGeometry(1, 1, 1);
     const edgeGeo = new THREE.EdgesGeometry(handleGeo);
     const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthTest: false });
 
@@ -2903,7 +2903,7 @@ function initPullGizmo() {
         const mat = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
-            opacity: 0.9,
+            opacity: 0.88,
             depthTest: false
         });
         const mesh = new THREE.Mesh(handleGeo, mat);
@@ -2938,6 +2938,9 @@ export function updatePullGizmo() {
 
     pullGizmoGroup.visible = true;
 
+    // Crucial: sync world matrix before computing bounding box so handles always follow in real-time
+    selectedObject.mesh.updateMatrixWorld(true);
+
     const box = new THREE.Box3().setFromObject(selectedObject.mesh);
     if (box.isEmpty()) {
         pullGizmoGroup.visible = false;
@@ -2960,25 +2963,50 @@ export function updatePullGizmo() {
         pullGizmoBoxHelper.box.copy(box);
     }
 
-    const camDist = camera ? camera.position.distanceTo(center) : 15;
-    // 4X larger handles for instant prominence and easy grabbing
-    const handleScale = Math.max(0.5, Math.min(4.0, camDist * 0.045));
-
+    // Handles scale along with the block ("ruudud tulevad ploki suurusega kaasa")
     pullGizmoHandles.forEach(h => {
-        h.scale.set(handleScale, handleScale, handleScale);
         const { axis, sign } = h.userData;
-        const pos = center.clone();
-        const halfSize = (axis === 'x' ? size.x : axis === 'y' ? size.y : size.z) / 2;
-        const handleOffset = (1.8 * handleScale) * 0.5;
-        pos[axis] += sign * (halfSize + handleOffset * 0.35);
-        h.position.copy(pos);
-
         const isCurrentActive = pullActiveAxis === axis || pullActiveAxis === 'all';
-        const mat = h.material as THREE.MeshBasicMaterial;
-        mat.opacity = isCurrentActive ? 0.95 : 0.45;
-        if (isCurrentActive) {
-            h.scale.multiplyScalar(1.15);
+        const activeMultiplier = isCurrentActive ? 1.15 : 1.0;
+
+        let dimX = 1.8;
+        let dimY = 1.8;
+        let dimZ = 1.8;
+
+        if (axis === 'x') {
+            // Face X (normal ±X): span along Y and Z
+            dimY = Math.max(1.8, Math.min(size.y * 0.75, size.y * 0.45)) * activeMultiplier;
+            dimZ = Math.max(1.8, Math.min(size.z * 0.75, size.z * 0.45)) * activeMultiplier;
+            dimX = Math.max(0.6, Math.min(2.5, Math.min(dimY, dimZ) * 0.28));
+            h.scale.set(dimX, dimY, dimZ);
+
+            const pos = center.clone();
+            pos.x += sign * (size.x / 2 + dimX / 2);
+            h.position.copy(pos);
+        } else if (axis === 'y') {
+            // Face Y (normal ±Y): span along X and Z
+            dimX = Math.max(1.8, Math.min(size.x * 0.75, size.x * 0.45)) * activeMultiplier;
+            dimZ = Math.max(1.8, Math.min(size.z * 0.75, size.z * 0.45)) * activeMultiplier;
+            dimY = Math.max(0.6, Math.min(2.5, Math.min(dimX, dimZ) * 0.28));
+            h.scale.set(dimX, dimY, dimZ);
+
+            const pos = center.clone();
+            pos.y += sign * (size.y / 2 + dimY / 2);
+            h.position.copy(pos);
+        } else if (axis === 'z') {
+            // Face Z (normal ±Z): span along X and Y
+            dimX = Math.max(1.8, Math.min(size.x * 0.75, size.x * 0.45)) * activeMultiplier;
+            dimY = Math.max(1.8, Math.min(size.y * 0.75, size.y * 0.45)) * activeMultiplier;
+            dimZ = Math.max(0.6, Math.min(2.5, Math.min(dimX, dimY) * 0.28));
+            h.scale.set(dimX, dimY, dimZ);
+
+            const pos = center.clone();
+            pos.z += sign * (size.z / 2 + dimZ / 2);
+            h.position.copy(pos);
         }
+
+        const mat = h.material as THREE.MeshBasicMaterial;
+        mat.opacity = isCurrentActive ? 0.95 : 0.65;
     });
 }
 
@@ -3993,6 +4021,7 @@ function setupStudioEvents() {
                     };
 
                     // Compute outward screen direction from object center to handle
+                    selectedObject.mesh.updateMatrixWorld(true);
                     const box = new THREE.Box3().setFromObject(selectedObject.mesh);
                     const center = new THREE.Vector3();
                     box.getCenter(center);

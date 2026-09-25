@@ -470,10 +470,13 @@ await (async () => {
             });
         });
 
+        await new Promise(r => setTimeout(r, 100));
         // Click Minionbanana0_0 friend card again
-        const fc2 = (await page.$('.friend-item[data-username="Minionbanana0_0"]')) || (await page.$('.friend-item'));
-        await fc2.click();
-        await new Promise(r => setTimeout(r, 150));
+        await page.evaluate(() => {
+            const fc2 = document.querySelector('.friend-item[data-username="Minionbanana0_0"]') || document.querySelector('.friend-item');
+            if (fc2) fc2.click();
+        });
+        await new Promise(r => setTimeout(r, 200));
 
         const idleDisplayAfter = await page.$eval('#friend-status-idle', el => window.getComputedStyle(el).display);
         const playingDisplayAfter = await page.$eval('#friend-status-playing', el => window.getComputedStyle(el).display);
@@ -519,9 +522,16 @@ await (async () => {
             if (ageInput) ageInput.value = '15';
             document.getElementById('btn-register')?.click();
         });
-        await new Promise(r => setTimeout(r, 200));
-        authMsg = await page.$eval('#auth-message', el => el.textContent);
-        authDataErr = await page.$eval('#auth-message', el => el.getAttribute('data-error'));
+        await new Promise(r => setTimeout(r, 250));
+        const authRes = await page.evaluate(() => {
+            const el = document.getElementById('auth-message');
+            return {
+                msg: el ? el.textContent : '',
+                err: el ? el.getAttribute('data-error') : ''
+            };
+        });
+        authMsg = authRes.msg;
+        authDataErr = authRes.err;
         console.log(`   Duplicate username error: text="${authMsg}", data-error="${authDataErr}"`);
         if ((authMsg !== 'Name is unavailable' && authMsg !== 'name is unavable') || authDataErr !== 'name is unavable') {
             throw new Error(`Expected 'Name is unavailable' / 'name is unavable', got text='${authMsg}' data-error='${authDataErr}'`);
@@ -2659,48 +2669,36 @@ await (async () => {
                 throw new Error("Spawning a block should activate 'puller' (Tõmbaja) mode!");
             }
 
-            // 4. Test Puller: pull block bigger using pull button and puller API
-            await page.click('#btn-pull-bigger');
-            await new Promise(r => setTimeout(r, 100));
-
+            // 4. Test Puller: pull block bigger using pullSelectedObject
+            const scaleBeforePull = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return cs?.selectedObject?.mesh?.scale?.x || 1;
+            });
+            await page.evaluate(() => {
+                window.creatorStudio.pullSelectedObject(1.0, 'all');
+            });
             const scaleAfterPull = await page.evaluate(() => {
                 const cs = window.creatorStudio;
                 return cs?.selectedObject?.mesh?.scale?.x || 1;
             });
-            console.log("   Block scale after + Suuremaks pull:", scaleAfterPull);
-            if (scaleAfterPull <= 1.0) {
-                throw new Error("Puller '+ Suuremaks' failed to make block bigger!");
-            }
-
-            // Test pulling even bigger via pullSelectedObject
-            await page.evaluate(() => {
-                window.creatorStudio.pullSelectedObject(1.0);
-            });
-            const scaleAfterPull2 = await page.evaluate(() => window.creatorStudio?.selectedObject?.mesh?.scale?.x || 1);
-            console.log("   Block scale after pulling larger:", scaleAfterPull2);
-            if (scaleAfterPull2 <= scaleAfterPull) {
-                throw new Error("pullSelectedObject failed to make block bigger!");
+            console.log("   Block scale after pull:", scaleAfterPull);
+            if (scaleAfterPull <= scaleBeforePull) {
+                throw new Error("Puller failed to make block bigger!");
             }
 
             // 4b. Test Edge-Specific Pulling (X = Laius, Y = Kõrgus, Z = Pikkus)
             console.log("   Testing edge-specific pulling on X, Y, Z axes...");
-            await page.waitForSelector('#btn-pull-axis-all', { visible: true, timeout: 3000 });
-            await page.waitForSelector('#btn-pull-axis-x', { visible: true, timeout: 3000 });
-            await page.waitForSelector('#btn-pull-axis-y', { visible: true, timeout: 3000 });
-            await page.waitForSelector('#btn-pull-axis-z', { visible: true, timeout: 3000 });
-
             // Test pulling X edge (Laius)
-            await page.click('#btn-pull-axis-x');
-            await new Promise(r => setTimeout(r, 50));
             const scalesBeforeX = await page.evaluate(() => {
                 const s = window.creatorStudio?.selectedObject?.mesh?.scale;
                 return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
             });
-            await page.click('#btn-pull-bigger');
-            await new Promise(r => setTimeout(r, 50));
+            await page.evaluate(() => {
+                window.creatorStudio.pullSelectedObject(1.0, 'x');
+            });
             const scalesAfterX = await page.evaluate(() => {
                 const s = window.creatorStudio?.selectedObject?.mesh?.scale;
-                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1, axis: window.creatorStudio?.pullActiveAxis };
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
             });
             console.log("   Scales after pulling X (Laius):", scalesAfterX);
             if (scalesAfterX.x <= scalesBeforeX.x) {
@@ -2711,17 +2709,16 @@ await (async () => {
             }
 
             // Test pulling Y edge (Kõrgus)
-            await page.click('#btn-pull-axis-y');
-            await new Promise(r => setTimeout(r, 50));
             const scalesBeforeY = await page.evaluate(() => {
                 const s = window.creatorStudio?.selectedObject?.mesh?.scale;
                 return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
             });
-            await page.click('#btn-pull-bigger');
-            await new Promise(r => setTimeout(r, 50));
+            await page.evaluate(() => {
+                window.creatorStudio.pullSelectedObject(1.0, 'y');
+            });
             const scalesAfterY = await page.evaluate(() => {
                 const s = window.creatorStudio?.selectedObject?.mesh?.scale;
-                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1, axis: window.creatorStudio?.pullActiveAxis };
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
             });
             console.log("   Scales after pulling Y (Kõrgus):", scalesAfterY);
             if (scalesAfterY.y <= scalesBeforeY.y) {
@@ -2732,17 +2729,16 @@ await (async () => {
             }
 
             // Test pulling Z edge (Pikkus)
-            await page.click('#btn-pull-axis-z');
-            await new Promise(r => setTimeout(r, 50));
             const scalesBeforeZ = await page.evaluate(() => {
                 const s = window.creatorStudio?.selectedObject?.mesh?.scale;
                 return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
             });
-            await page.click('#btn-pull-bigger');
-            await new Promise(r => setTimeout(r, 50));
+            await page.evaluate(() => {
+                window.creatorStudio.pullSelectedObject(1.0, 'z');
+            });
             const scalesAfterZ = await page.evaluate(() => {
                 const s = window.creatorStudio?.selectedObject?.mesh?.scale;
-                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1, axis: window.creatorStudio?.pullActiveAxis };
+                return { x: s?.x || 1, y: s?.y || 1, z: s?.z || 1 };
             });
             console.log("   Scales after pulling Z (Pikkus):", scalesAfterZ);
             if (scalesAfterZ.z <= scalesBeforeZ.z) {
@@ -2752,17 +2748,17 @@ await (async () => {
                 throw new Error("Pulling Z edge affected X or Y scale!");
             }
 
-            // Verify 'Äär:' text is removed from puller toolbar
-            const subpanelText = await page.evaluate(() => {
+            // Verify puller toolbar subpanel text is removed from the DOM
+            const subpanelExists = await page.evaluate(() => {
                 const sub = document.getElementById('puller-controls-subpanel');
-                return sub ? sub.innerText : '';
+                return !!sub;
             });
-            console.log("   Puller subpanel text (without 'Äär:'):", subpanelText.trim());
-            if (subpanelText.includes('Äär:')) {
-                throw new Error("Text 'Äär:' should be removed from puller subpanel!");
+            console.log("   Puller toolbar subpanel exists:", subpanelExists);
+            if (subpanelExists) {
+                throw new Error("Puller toolbar text subpanel should be removed!");
             }
 
-            // Verify Gizmo exists, is visible in Tõmbaja mode, and has 4X larger handles
+            // Verify Gizmo exists, is visible in Tõmbaja mode, and has 4X larger handles (>= 1.5m)
             const gizmoStatus = await page.evaluate(() => {
                 const g = window.creatorStudio?.pullGizmoGroup;
                 const h = g?.children?.find(c => c?.userData?.isPullGizmoHandle);
@@ -2770,7 +2766,7 @@ await (async () => {
                     exists: !!g,
                     visible: g?.visible === true,
                     handleCount: g?.children?.filter(c => c?.userData?.isPullGizmoHandle)?.length || 0,
-                    handleWidth: h?.geometry?.parameters?.width || 0
+                    handleWidth: Math.max(h?.scale?.x || 0, h?.scale?.y || 0, h?.scale?.z || 0)
                 };
             });
             console.log("   Puller 3D Gizmo Status (4X handles):", gizmoStatus);
@@ -2778,14 +2774,27 @@ await (async () => {
                 throw new Error(`3D Edge Pull Gizmo not properly initialized or handles not 4X larger! ${JSON.stringify(gizmoStatus)}`);
             }
 
-            // Test Infinite Pulling beyond old 30-unit limit
+            // Test Infinite Pulling and verify handles scale along with the block ("peavad tulema ploki suurusega kaasa")
+            const handleScaleBefore = await page.evaluate(() => {
+                const g = window.creatorStudio?.pullGizmoGroup;
+                const h = g?.children?.find(c => c?.userData?.isPullGizmoHandle && c.userData.axis === 'x');
+                return h ? h.scale.z : 0;
+            });
             await page.evaluate(() => {
                 window.creatorStudio.pullSelectedObject(50);
             });
             const scaleInfinite = await page.evaluate(() => window.creatorStudio?.selectedObject?.mesh?.scale?.z || 0);
-            console.log("   Block scale after pulling +50 (Infinite pull check):", scaleInfinite);
+            const handleScaleAfter = await page.evaluate(() => {
+                const g = window.creatorStudio?.pullGizmoGroup;
+                const h = g?.children?.find(c => c?.userData?.isPullGizmoHandle && c.userData.axis === 'x');
+                return h ? h.scale.z : 0;
+            });
+            console.log(`   Block scale after pulling +50: ${scaleInfinite}, Handle Z scale before: ${handleScaleBefore}, after: ${handleScaleAfter}`);
             if (scaleInfinite < 40) {
                 throw new Error("Pulling should allow infinite expansion beyond 30!");
+            }
+            if (handleScaleAfter <= handleScaleBefore) {
+                throw new Error("Grab handles must scale along with the block size!");
             }
 
             // 5. Test switching back to 'Hiir' (Mouse) mode
@@ -8579,6 +8588,7 @@ await (async () => {
             // 3. Testing CityCar in Recently Played Games Row on Home Hub (User: "ja se mäng ilmub ka sinna viimati mängitute mängu ritta")
             console.log("   3. Testing CityCar in Recently Played Games Row on Hub...");
             await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
+            await page.waitForSelector('#recently-played-grid .recently-played-card[data-game-id="citycar"], #recently-played-grid .recently-played-card', { timeout: 8000 }).catch(() => {});
             await new Promise(r => setTimeout(r, 600));
 
             const cityCarRecentTest = await page.evaluate(() => {
@@ -8955,6 +8965,115 @@ await (async () => {
                 throw new Error("Defender Upgrade unlocks check failed: " + JSON.stringify(defenderGameTest));
             }
             console.log("✅ 🛡️ 2D Earth Defender (Maa Kaitsja 2D, Mission Failed, Real Players Leaderboard & 5 Pbx Shop items) tests passed successfully!");
+
+            // ==========================================
+            // TEST SUITE: 🟢 2D BREAKOUT (KLOTSIPURUSTAJA)
+            // ==========================================
+            console.log("Testing 🟢 2D Breakout (Klotsipurustaja: paddle _, bouncing ball, green bricks, death on fall)...");
+            await page.goto('http://localhost:4173/games/breakout/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const breakoutGameTest = await page.evaluate(async () => {
+                const game = window.breakoutGame;
+                if (!game) return { success: false, reason: 'window.breakoutGame not found' };
+
+                const canvas = document.getElementById('breakout-canvas');
+                const hudScore = document.getElementById('hud-score');
+                const hudBricks = document.getElementById('hud-bricks');
+                const hudHighscore = document.getElementById('hud-highscore');
+                const gameOverModal = document.getElementById('game-over-modal');
+
+                if (!canvas || !hudScore || !hudBricks || !hudHighscore || !gameOverModal) {
+                    return { success: false, reason: 'Required DOM elements missing' };
+                }
+
+                // Initial state check
+                const initialBricksCount = game.bricks.length;
+                const initialIntact = game.bricks.filter(b => b.intact).length;
+                const initialScore = game.state.getScore();
+                const paddleWidth = game.paddle.width;
+                const paddleY = game.paddle.y;
+                const initialPaddleX = game.paddle.x;
+
+                // Test paddle movement via input
+                game.input.moveRight = true;
+                game.update(0.1);
+                game.input.moveRight = false;
+                const movedPaddleX = game.paddle.x;
+                const paddleMoved = movedPaddleX > initialPaddleX;
+
+                // Test brick destruction and particle emission
+                const firstIntactBrick = game.bricks.find(b => b.intact);
+                if (!firstIntactBrick) return { success: false, reason: 'No intact bricks found' };
+
+                // Place ball directly on brick to test collision
+                game.ball.x = firstIntactBrick.x + firstIntactBrick.width / 2;
+                game.ball.y = firstIntactBrick.y + firstIntactBrick.height / 2;
+                game.ball.vy = -100;
+                game.update(0.01);
+
+                const destroyedBrickIntact = firstIntactBrick.intact;
+                const scoreAfterHit = game.state.getScore();
+                const particlesCount = game.particles.particles.length;
+
+                // Test death when ball falls down past paddle
+                game.ball.y = (game.canvas.height / (window.devicePixelRatio || 1)) + 50;
+                game.update(0.01);
+
+                const isDead = game.state.isDead();
+                const isGameOverVisible = gameOverModal && window.getComputedStyle(gameOverModal).display === 'flex';
+                const rewardValEl = document.getElementById('reward-pbx-val');
+                const rewardPbx = game.state.getLastEarnedPbx();
+
+                // Test restart
+                const btnRestart = document.getElementById('btn-restart-game');
+                if (btnRestart) btnRestart.click();
+
+                const isModalHiddenAfterRestart = gameOverModal && window.getComputedStyle(gameOverModal).display === 'none';
+                const isAliveAfterRestart = !game.state.isDead();
+                const allBricksRestored = game.bricks.every(b => b.intact);
+
+                return {
+                    success: true,
+                    hasCanvas: !!canvas,
+                    initialBricksCount,
+                    initialIntact,
+                    paddleMoved,
+                    paddleY,
+                    paddleWidth,
+                    brickDestroyed: !destroyedBrickIntact,
+                    scoreIncreased: scoreAfterHit > initialScore,
+                    particlesSpawned: particlesCount > 0,
+                    isDead,
+                    isGameOverVisible,
+                    rewardPbx,
+                    rewardText: rewardValEl ? rewardValEl.textContent : '',
+                    isModalHiddenAfterRestart,
+                    isAliveAfterRestart,
+                    allBricksRestored
+                };
+            });
+
+            console.log("   Breakout Verification Results:", breakoutGameTest);
+            if (!breakoutGameTest.success || !breakoutGameTest.hasCanvas) {
+                throw new Error("Breakout canvas initialization failed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (breakoutGameTest.initialBricksCount < 10 || breakoutGameTest.initialIntact !== breakoutGameTest.initialBricksCount) {
+                throw new Error("Breakout green bricks grid initialization failed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.paddleMoved) {
+                throw new Error("Breakout paddle _ movement failed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.brickDestroyed || !breakoutGameTest.scoreIncreased || !breakoutGameTest.particlesSpawned) {
+                throw new Error("Breakout green brick breaking and score mechanics failed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.isDead || !breakoutGameTest.isGameOverVisible || breakoutGameTest.rewardPbx <= 0) {
+                throw new Error("Breakout death on ball fall or Game Over screen failed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.isModalHiddenAfterRestart || !breakoutGameTest.isAliveAfterRestart || !breakoutGameTest.allBricksRestored) {
+                throw new Error("Breakout restart mechanic failed: " + JSON.stringify(breakoutGameTest));
+            }
+            console.log("✅ 🟢 2D Breakout (Klotsipurustaja: paddle _, bouncing ball, green bricks, death on fall) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }
