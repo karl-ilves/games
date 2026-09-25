@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
+import { preview } from 'vite';
 
 // 1. Build Check
 try {
@@ -13,43 +14,12 @@ try {
 
 // 2. Load Check
 await (async () => {
-    let serverProcess = null;
-    let isTerminating = false;
-
-    function startServer() {
-        if (isTerminating) return;
-        try {
-            execSync('kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
-        } catch (e) {}
-        console.log("Starting preview server...");
-        serverProcess = spawn('node', ['--max-old-space-size=4096', './node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort', '--host']);
-        serverProcess.stdout?.on('data', data => {
-            const msg = data.toString();
-            if (msg.includes('error') || msg.includes('Error')) console.error(`[Server Log]: ${msg}`);
-        });
-        serverProcess.stderr?.on('data', data => console.error(`[Server Error]: ${data}`));
-        serverProcess.on('exit', (code, signal) => {
-            console.log(`[Preview Server Exited]: code=${code}, signal=${signal}`);
-            if (!isTerminating) {
-                console.log("Auto-respawning preview server...");
-                setTimeout(startServer, 300);
-            }
-        });
-    }
-
-    startServer();
-    process.on('exit', () => { isTerminating = true; try { serverProcess?.kill(); } catch (e) {} });
-    process.on('SIGINT', () => { isTerminating = true; try { serverProcess?.kill(); } catch (e) {} process.exit(1); });
-    
-    // Wait for preview server to be responsive
-    for (let i = 0; i < 50; i++) {
-        try {
-            const res = await fetch('http://127.0.0.1:4173/');
-            if (res.status < 500) break;
-        } catch (e) {}
-        await new Promise(r => setTimeout(r, 200));
-    }
-    await new Promise(r => setTimeout(r, 600));
+    try {
+        execSync('kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
+        await new Promise(r => setTimeout(r, 400));
+    } catch (e) {}
+    console.log("Starting in-process preview server...");
+    const previewServer = await preview({ preview: { port: 4173, host: '127.0.0.1', strictPort: true } });
 
     console.log("Launching headless browser to check runtime errors and game platform features...");
     const browser = await puppeteer.launch({
@@ -69,12 +39,13 @@ await (async () => {
     const page = await browser.newPage();
     const originalGoto = page.goto.bind(page);
     page.goto = async (url, options) => {
+        const normalizedUrl = typeof url === 'string' ? url.replace('http://localhost:4173', 'http://127.0.0.1:4173') : url;
         for (let attempt = 1; attempt <= 5; attempt++) {
             try {
-                return await originalGoto(url, options);
+                return await originalGoto(normalizedUrl, options);
             } catch (err) {
                 if (err.message && (err.message.includes('ERR_CONNECTION_REFUSED') || err.message.includes('ERR_CONNECTION_RESET')) && attempt < 5) {
-                    console.log(`[Retry] Connection error on ${url}, waiting for preview server (attempt ${attempt}/5)...`);
+                    console.log(`[Retry] Connection error on ${normalizedUrl}, waiting for preview server (attempt ${attempt}/5)...`);
                     for (let p = 0; p < 20; p++) {
                         try {
                             const res = await fetch('http://127.0.0.1:4173/');
@@ -9350,5 +9321,5 @@ await (async () => {
             console.log("✅ 🟢 2D Breakout (grey borders, large map, randomized Play Again layout & Level 2) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
-        } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { isTerminating = true; await browser?.close(); serverProcess?.kill(); }
+        } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();

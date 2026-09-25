@@ -107,7 +107,7 @@ export class PlayardMobileControls {
         style.textContent = `
             .playard-mobile-layer {
                 position: fixed;
-                top: 0; left: 0; width: 100vw; height: 100vh;
+                top: 0; left: 0; width: 100vw; height: 100dvh;
                 pointer-events: none;
                 z-index: 9999;
                 user-select: none;
@@ -117,8 +117,8 @@ export class PlayardMobileControls {
 
             .playard-joystick-zone {
                 position: absolute;
-                bottom: 35px;
-                left: 35px;
+                bottom: max(35px, env(safe-area-inset-bottom));
+                left: max(35px, env(safe-area-inset-left));
                 width: 140px;
                 height: 140px;
                 border-radius: 50%;
@@ -162,8 +162,8 @@ export class PlayardMobileControls {
 
             .playard-touch-action-zone {
                 position: absolute;
-                bottom: 35px;
-                right: 35px;
+                bottom: max(35px, env(safe-area-inset-bottom));
+                right: max(35px, env(safe-area-inset-right));
                 display: flex;
                 flex-direction: column-reverse;
                 gap: 16px;
@@ -234,8 +234,8 @@ export class PlayardMobileControls {
 
             @media (max-width: 600px) {
                 .playard-joystick-zone {
-                    bottom: 20px;
-                    left: 20px;
+                    bottom: max(20px, env(safe-area-inset-bottom));
+                    left: max(20px, env(safe-area-inset-left));
                     width: 125px;
                     height: 125px;
                 }
@@ -244,12 +244,53 @@ export class PlayardMobileControls {
                     height: 54px;
                 }
                 .playard-touch-action-zone {
-                    bottom: 20px;
-                    right: 20px;
+                    bottom: max(20px, env(safe-area-inset-bottom));
+                    right: max(20px, env(safe-area-inset-right));
                 }
                 .playard-jump-btn {
                     width: 76px;
                     height: 76px;
+                }
+            }
+
+            @media (orientation: landscape) and (max-height: 500px) {
+                .playard-mobile-layer {
+                    height: 100dvh;
+                }
+                .playard-joystick-zone {
+                    bottom: max(10px, env(safe-area-inset-bottom));
+                    left: max(12px, env(safe-area-inset-left));
+                    width: 105px;
+                    height: 105px;
+                }
+                .playard-joystick-zone::before {
+                    width: 52px;
+                    height: 52px;
+                }
+                .playard-joystick-knob {
+                    width: 46px;
+                    height: 46px;
+                    font-size: 16px;
+                }
+                .playard-touch-action-zone {
+                    bottom: max(10px, env(safe-area-inset-bottom));
+                    right: max(12px, env(safe-area-inset-right));
+                    gap: 10px;
+                }
+                .playard-jump-btn {
+                    width: 64px;
+                    height: 64px;
+                }
+                .playard-jump-icon {
+                    font-size: 22px;
+                }
+                .playard-jump-label {
+                    font-size: 9px;
+                }
+                .playard-extra-btn {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 15px;
                 }
             }
         `;

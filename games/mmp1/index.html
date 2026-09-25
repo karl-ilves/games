@@ -344,8 +344,8 @@
 
         .touch-joystick-zone {
             position: absolute;
-            bottom: 25px;
-            left: 25px;
+            bottom: max(25px, env(safe-area-inset-bottom));
+            left: max(25px, env(safe-area-inset-left));
             width: 120px;
             height: 120px;
             background: rgba(255, 255, 255, 0.08);
@@ -372,8 +372,8 @@
 
         .touch-action-buttons {
             position: absolute;
-            bottom: 25px;
-            right: 25px;
+            bottom: max(25px, env(safe-area-inset-bottom));
+            right: max(25px, env(safe-area-inset-right));
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -405,6 +405,29 @@
         @media (max-width: 900px), (pointer: coarse) {
             #mobile-controls-layer {
                 display: block;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .touch-joystick-zone {
+                bottom: max(10px, env(safe-area-inset-bottom));
+                left: max(12px, env(safe-area-inset-left));
+                width: 95px;
+                height: 95px;
+            }
+            .touch-joystick-knob {
+                width: 40px;
+                height: 40px;
+            }
+            .touch-action-buttons {
+                bottom: max(10px, env(safe-area-inset-bottom));
+                right: max(12px, env(safe-area-inset-right));
+                gap: 8px;
+            }
+            .mobile-btn {
+                width: 52px;
+                height: 52px;
+                font-size: 1.1rem;
             }
         }
 

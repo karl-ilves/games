@@ -332,9 +332,9 @@
         /* Mobile Controls */
         #mobile-controls {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
+            bottom: max(20px, env(safe-area-inset-bottom));
+            left: max(20px, env(safe-area-inset-left));
+            right: max(20px, env(safe-area-inset-right));
             display: none;
             justify-content: space-between;
             z-index: 90;
@@ -359,6 +359,18 @@
             background: rgba(255, 71, 87, 0.4);
             border-color: #ff4757;
             transform: scale(0.95);
+        }
+        @media (orientation: landscape) and (max-height: 500px) {
+            #mobile-controls {
+                bottom: max(8px, env(safe-area-inset-bottom));
+                left: max(10px, env(safe-area-inset-left));
+                right: max(10px, env(safe-area-inset-right));
+            }
+            .touch-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 1.1rem;
+            }
         }
 
         /* Loadout Deploy Selection Modal */

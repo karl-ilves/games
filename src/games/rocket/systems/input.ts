@@ -137,7 +137,7 @@ export class InputManager {
         layer.style.top = '0';
         layer.style.left = '0';
         layer.style.width = '100vw';
-        layer.style.height = '100vh';
+        layer.style.height = '100dvh';
         layer.style.pointerEvents = 'none';
         layer.style.zIndex = '9999';
         layer.style.userSelect = 'none';
@@ -147,8 +147,8 @@ export class InputManager {
         const zone = document.createElement('div');
         zone.id = 'playard-mobile-joystick-zone';
         zone.style.position = 'absolute';
-        zone.style.bottom = '35px';
-        zone.style.left = '35px';
+        zone.style.bottom = 'max(35px, env(safe-area-inset-bottom))';
+        zone.style.left = 'max(35px, env(safe-area-inset-left))';
         zone.style.width = '130px';
         zone.style.height = '130px';
         zone.style.borderRadius = '50%';
@@ -177,8 +177,8 @@ export class InputManager {
         // 2. Right Action Zone (FIRE Button + JUMP Button)
         const actionZone = document.createElement('div');
         actionZone.style.position = 'absolute';
-        actionZone.style.bottom = '35px';
-        actionZone.style.right = '35px';
+        actionZone.style.bottom = 'max(35px, env(safe-area-inset-bottom))';
+        actionZone.style.right = 'max(35px, env(safe-area-inset-right))';
         actionZone.style.display = 'flex';
         actionZone.style.flexDirection = 'column-reverse';
         actionZone.style.gap = '16px';

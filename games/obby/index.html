@@ -237,8 +237,8 @@
 
         .touch-joystick-zone {
             position: absolute;
-            bottom: 30px;
-            left: 30px;
+            bottom: max(30px, env(safe-area-inset-bottom));
+            left: max(30px, env(safe-area-inset-left));
             width: 130px;
             height: 130px;
             background: rgba(255, 255, 255, 0.08);
@@ -264,8 +264,8 @@
 
         .touch-buttons-zone {
             position: absolute;
-            bottom: 30px;
-            right: 30px;
+            bottom: max(30px, env(safe-area-inset-bottom));
+            right: max(30px, env(safe-area-inset-right));
             display: flex;
             flex-direction: column;
             gap: 14px;
@@ -306,6 +306,33 @@
             background: linear-gradient(135deg, #ff416c, #ff4b2b);
             border-color: #ffffff;
             box-shadow: 0 0 20px rgba(255, 65, 108, 0.7);
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .touch-joystick-zone {
+                bottom: max(10px, env(safe-area-inset-bottom));
+                left: max(12px, env(safe-area-inset-left));
+                width: 100px;
+                height: 100px;
+            }
+            .touch-joystick-knob {
+                width: 42px;
+                height: 42px;
+            }
+            .touch-buttons-zone {
+                bottom: max(10px, env(safe-area-inset-bottom));
+                right: max(12px, env(safe-area-inset-right));
+                gap: 10px;
+            }
+            .btn-touch-action {
+                width: 56px;
+                height: 56px;
+                font-size: 1.2rem;
+            }
+            .btn-touch-jump {
+                width: 64px;
+                height: 64px;
+            }
         }
 
         /* Modals */
