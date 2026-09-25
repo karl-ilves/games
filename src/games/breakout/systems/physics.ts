@@ -1,11 +1,13 @@
-import { Ball, Paddle, Brick } from '../types';
+import { Ball, Paddle, Brick, PowerUp } from '../types';
 import { BREAKOUT_CONFIG } from '../catalog';
 
 export interface CollisionCallbacks {
     onPaddleHit?: () => void;
     onWallHit?: () => void;
     onBrickHit?: (brick: Brick) => void;
-    onBallFall?: () => void;
+    onGreyBrickHit?: (brick: Brick) => void;
+    onBallFall?: (ball: Ball) => void;
+    onCatchPowerUp?: (powerUp: PowerUp) => void;
 }
 
 export class PhysicsSystem {
@@ -41,7 +43,7 @@ export class PhysicsSystem {
         canvasHeight: number,
         dt: number,
         callbacks: CollisionCallbacks
-    ) {
+    ): boolean {
         // Record trail
         ball.trail.push({ x: ball.x, y: ball.y, alpha: 1.0 });
         if (ball.trail.length > 8) ball.trail.shift();
@@ -71,10 +73,10 @@ export class PhysicsSystem {
             callbacks.onWallHit?.();
         }
 
-        // 3. Fall Down (Death)
+        // 3. Fall Down (Dead ball)
         if (ball.y - ball.radius > canvasHeight) {
-            callbacks.onBallFall?.();
-            return;
+            callbacks.onBallFall?.(ball);
+            return false; // Ball is dead
         }
 
         // 4. Paddle collision
@@ -107,7 +109,7 @@ export class PhysicsSystem {
             callbacks.onPaddleHit?.();
         }
 
-        // 5. Green Bricks Collision (Circle to AABB)
+        // 5. Bricks Collision (Circle to AABB)
         for (const brick of bricks) {
             if (!brick.intact) continue;
 
@@ -119,9 +121,6 @@ export class PhysicsSystem {
             const distSq = deltaX * deltaX + deltaY * deltaY;
 
             if (distSq <= ball.radius * ball.radius) {
-                // Brick hit! Destroy it
-                brick.intact = false;
-
                 // Determine bounce direction from relative collision overlap
                 const overlapX = ball.radius - Math.abs(deltaX);
                 const overlapY = ball.radius - Math.abs(deltaY);
@@ -132,8 +131,53 @@ export class PhysicsSystem {
                     ball.vy = -ball.vy;
                 }
 
-                callbacks.onBrickHit?.(brick);
-                break; // One brick collision per physics substep prevents glitches
+                if (brick.type === 'grey') {
+                    // "hall plok kus se tagasi põrkab aga ei plahvata" -> unbreakable!
+                    callbacks.onGreyBrickHit?.(brick);
+                } else {
+                    // Breakable green or gold brick!
+                    brick.intact = false;
+                    callbacks.onBrickHit?.(brick);
+                }
+
+                break; // One brick collision per physics substep prevents tunneling
+            }
+        }
+
+        return true; // Ball still active
+    }
+
+    public updatePowerUps(
+        powerUps: PowerUp[],
+        paddle: Paddle,
+        canvasHeight: number,
+        dt: number,
+        callbacks: CollisionCallbacks
+    ) {
+        const paddleLeft = paddle.x - paddle.width / 2;
+        const paddleRight = paddle.x + paddle.width / 2;
+        const paddleTop = paddle.y - paddle.height / 2;
+        const paddleBottom = paddle.y + paddle.height / 2;
+
+        for (let i = powerUps.length - 1; i >= 0; i--) {
+            const p = powerUps[i];
+            p.y += p.vy * dt;
+
+            // Check if caught by paddle '_'
+            if (
+                p.y + p.radius >= paddleTop &&
+                p.y - p.radius <= paddleBottom &&
+                p.x + p.radius >= paddleLeft &&
+                p.x - p.radius <= paddleRight
+            ) {
+                callbacks.onCatchPowerUp?.(p);
+                powerUps.splice(i, 1);
+                continue;
+            }
+
+            // Fell past screen
+            if (p.y - p.radius > canvasHeight) {
+                powerUps.splice(i, 1);
             }
         }
     }

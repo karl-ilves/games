@@ -2678,6 +2678,7 @@ async function initStudio() {
     createUltraRealisticGrass();
     createUltraRealisticHuman();
     (window as any).creatorStudio = {
+        THREE,
         get scene() { return scene; },
         get humanCharacter() { return humanCharacter; },
         get playerAvatarRig() { return playerAvatarRig; },
@@ -2798,8 +2799,40 @@ let pullActiveSign: number = 1;
 let isPullingObject = false;
 let pullStartPos = { x: 0, y: 0 };
 let pullStartScaleVector = { x: 1, y: 1, z: 1 };
+let pullStartPositionVector = { x: 0, y: 0, z: 0 };
+let pullStartBoxMin = { x: 0, y: 0, z: 0 };
+let pullStartBoxMax = { x: 0, y: 0, z: 0 };
+let pullStartLocalMin = { x: -1, y: -1, z: -1 };
+let pullStartLocalMax = { x: 1, y: 1, z: 1 };
 let pullHandleScreenDir = { x: 1, y: 0 };
 let hideIndicatorTimeout: any = null;
+
+function recordPullStartState(obj: PlacedObject) {
+    pullStartScaleVector = {
+        x: obj.mesh.scale.x || 1,
+        y: obj.mesh.scale.y || 1,
+        z: obj.mesh.scale.z || 1
+    };
+    pullStartPositionVector = {
+        x: obj.mesh.position.x,
+        y: obj.mesh.position.y,
+        z: obj.mesh.position.z
+    };
+    obj.mesh.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(obj.mesh);
+    pullStartBoxMin = { x: box.min.x, y: box.min.y, z: box.min.z };
+    pullStartBoxMax = { x: box.max.x, y: box.max.y, z: box.max.z };
+    pullStartLocalMin = {
+        x: (box.min.x - pullStartPositionVector.x) / pullStartScaleVector.x,
+        y: (box.min.y - pullStartPositionVector.y) / pullStartScaleVector.y,
+        z: (box.min.z - pullStartPositionVector.z) / pullStartScaleVector.z
+    };
+    pullStartLocalMax = {
+        x: (box.max.x - pullStartPositionVector.x) / pullStartScaleVector.x,
+        y: (box.max.y - pullStartPositionVector.y) / pullStartScaleVector.y,
+        z: (box.max.z - pullStartPositionVector.z) / pullStartScaleVector.z
+    };
+}
 
 let pullGizmoGroup: THREE.Group | null = null;
 let pullGizmoBoxHelper: THREE.Box3Helper | null = null;
@@ -3087,20 +3120,53 @@ export function pullSelectedObject(deltaScale: number, axis?: PullEdgeAxis) {
         selectedObject.scale.y = newY;
         selectedObject.scale.z = newZ;
     } else if (targetAxis === 'x') {
+        selectedObject.mesh.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(selectedObject.mesh);
         const curX = selectedObject.mesh.scale.x || 1;
+        const curPosX = selectedObject.mesh.position.x;
+        const localMinX = (box.min.x - curPosX) / curX;
+        const localMaxX = (box.max.x - curPosX) / curX;
+        const sign = pullActiveSign || 1;
+
         const newX = Math.max(0.1, Number((curX + deltaScale).toFixed(2)));
         selectedObject.mesh.scale.x = newX;
         selectedObject.scale.x = newX;
+
+        const newPosX = sign > 0 ? (box.min.x - localMinX * newX) : (box.max.x - localMaxX * newX);
+        selectedObject.mesh.position.x = newPosX;
+        selectedObject.position.x = newPosX;
     } else if (targetAxis === 'y') {
+        selectedObject.mesh.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(selectedObject.mesh);
         const curY = selectedObject.mesh.scale.y || 1;
+        const curPosY = selectedObject.mesh.position.y;
+        const localMinY = (box.min.y - curPosY) / curY;
+        const localMaxY = (box.max.y - curPosY) / curY;
+        const sign = pullActiveSign || 1;
+
         const newY = Math.max(0.1, Number((curY + deltaScale).toFixed(2)));
         selectedObject.mesh.scale.y = newY;
         selectedObject.scale.y = newY;
+
+        const newPosY = sign > 0 ? (box.min.y - localMinY * newY) : (box.max.y - localMaxY * newY);
+        selectedObject.mesh.position.y = newPosY;
+        selectedObject.position.y = newPosY;
     } else if (targetAxis === 'z') {
+        selectedObject.mesh.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(selectedObject.mesh);
         const curZ = selectedObject.mesh.scale.z || 1;
+        const curPosZ = selectedObject.mesh.position.z;
+        const localMinZ = (box.min.z - curPosZ) / curZ;
+        const localMaxZ = (box.max.z - curPosZ) / curZ;
+        const sign = pullActiveSign || 1;
+
         const newZ = Math.max(0.1, Number((curZ + deltaScale).toFixed(2)));
         selectedObject.mesh.scale.z = newZ;
         selectedObject.scale.z = newZ;
+
+        const newPosZ = sign > 0 ? (box.min.z - localMinZ * newZ) : (box.max.z - localMaxZ * newZ);
+        selectedObject.mesh.position.z = newPosZ;
+        selectedObject.position.z = newPosZ;
     }
 
     updateInspectorDisplay();
@@ -4014,11 +4080,7 @@ function setupStudioEvents() {
                     setPullActiveAxis(pullActiveAxis);
                     isPullingObject = true;
                     pullStartPos = { x: e.clientX, y: e.clientY };
-                    pullStartScaleVector = {
-                        x: selectedObject.mesh.scale.x || 1,
-                        y: selectedObject.mesh.scale.y || 1,
-                        z: selectedObject.mesh.scale.z || 1
-                    };
+                    recordPullStartState(selectedObject);
 
                     // Compute outward screen direction from object center to handle
                     selectedObject.mesh.updateMatrixWorld(true);
@@ -4071,11 +4133,7 @@ function setupStudioEvents() {
                     }
                     isPullingObject = true;
                     pullStartPos = { x: e.clientX, y: e.clientY };
-                    pullStartScaleVector = {
-                        x: hitPlaced.mesh.scale.x || 1,
-                        y: hitPlaced.mesh.scale.y || 1,
-                        z: hitPlaced.mesh.scale.z || 1
-                    };
+                    recordPullStartState(hitPlaced);
 
                     const box = new THREE.Box3().setFromObject(hitPlaced.mesh);
                     const center = new THREE.Vector3();
@@ -4095,11 +4153,7 @@ function setupStudioEvents() {
                 } else if (selectedObject) {
                     isPullingObject = true;
                     pullStartPos = { x: e.clientX, y: e.clientY };
-                    pullStartScaleVector = {
-                        x: selectedObject.mesh.scale.x || 1,
-                        y: selectedObject.mesh.scale.y || 1,
-                        z: selectedObject.mesh.scale.z || 1
-                    };
+                    recordPullStartState(selectedObject);
                     pullHandleScreenDir = { x: 1, y: -1 };
                     showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
                 }
@@ -4151,14 +4205,47 @@ function setupStudioEvents() {
                 const newX = Math.max(0.1, Number((pullStartScaleVector.x + delta).toFixed(2)));
                 selectedObject.mesh.scale.x = newX;
                 selectedObject.scale.x = newX;
+
+                // ONE-SIDED EXPANSION: Keep opposite side pinned in 3D world space
+                if (pullActiveSign > 0) {
+                    const newPosX = pullStartBoxMin.x - pullStartLocalMin.x * newX;
+                    selectedObject.mesh.position.x = newPosX;
+                    selectedObject.position.x = newPosX;
+                } else {
+                    const newPosX = pullStartBoxMax.x - pullStartLocalMax.x * newX;
+                    selectedObject.mesh.position.x = newPosX;
+                    selectedObject.position.x = newPosX;
+                }
             } else if (pullActiveAxis === 'y') {
                 const newY = Math.max(0.1, Number((pullStartScaleVector.y + delta).toFixed(2)));
                 selectedObject.mesh.scale.y = newY;
                 selectedObject.scale.y = newY;
+
+                // ONE-SIDED EXPANSION: Keep opposite side pinned in 3D world space
+                if (pullActiveSign > 0) {
+                    const newPosY = pullStartBoxMin.y - pullStartLocalMin.y * newY;
+                    selectedObject.mesh.position.y = newPosY;
+                    selectedObject.position.y = newPosY;
+                } else {
+                    const newPosY = pullStartBoxMax.y - pullStartLocalMax.y * newY;
+                    selectedObject.mesh.position.y = newPosY;
+                    selectedObject.position.y = newPosY;
+                }
             } else if (pullActiveAxis === 'z') {
                 const newZ = Math.max(0.1, Number((pullStartScaleVector.z + delta).toFixed(2)));
                 selectedObject.mesh.scale.z = newZ;
                 selectedObject.scale.z = newZ;
+
+                // ONE-SIDED EXPANSION: Keep opposite side pinned in 3D world space
+                if (pullActiveSign > 0) {
+                    const newPosZ = pullStartBoxMin.z - pullStartLocalMin.z * newZ;
+                    selectedObject.mesh.position.z = newPosZ;
+                    selectedObject.position.z = newPosZ;
+                } else {
+                    const newPosZ = pullStartBoxMax.z - pullStartLocalMax.z * newZ;
+                    selectedObject.mesh.position.z = newPosZ;
+                    selectedObject.position.z = newPosZ;
+                }
             } else {
                 const diag = ((mouseDx - mouseDy) * 0.707) * 0.025;
                 const newX = Math.max(0.1, Number((pullStartScaleVector.x + diag).toFixed(2)));

@@ -30,6 +30,28 @@ export const BREAKOUT_CONFIG = {
             { main: '#26de81', glow: 'rgba(38, 222, 129, 0.7)', points: 20 },
             { main: '#05c46b', glow: 'rgba(5, 196, 107, 0.7)', points: 10 },
         ],
+        // Golden bricks that drop the circular 3-ball powerup
+        goldBrick: {
+            color: '#ffd700',
+            glowColor: 'rgba(255, 215, 0, 0.9)',
+            borderColor: '#fff176',
+            points: 100,
+        },
+        // Unbreakable metallic grey bricks that ball bounces off without exploding
+        greyBrick: {
+            color: '#576574',
+            glowColor: 'rgba(131, 149, 167, 0.6)',
+            borderColor: '#c8d6e5',
+            points: 0,
+        },
+    },
+    POWER_UP: {
+        radius: 16,
+        fallSpeed: 190,
+        glowColor: 'rgba(255, 215, 0, 0.85)',
+        bgColor: '#1e272e',
+        borderColor: '#ffd700',
+        ballIconColor: '#ffffff',
     },
     PARTICLES: {
         countPerBrick: 16,

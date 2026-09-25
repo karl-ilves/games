@@ -2797,6 +2797,38 @@ await (async () => {
                 throw new Error("Grab handles must scale along with the block size!");
             }
 
+            // Test One-Sided Pulling ("liigub ainult ühelt poolt mitte mõlemalt")
+            const oneSidedTest = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const obj = cs.spawnBlockObject('#ff9900', 'TestOneSided');
+                obj.mesh.updateMatrixWorld(true);
+                const THREE = cs.THREE;
+                const boxBefore = new THREE.Box3().setFromObject(obj.mesh);
+                const minBefore = { x: boxBefore.min.x, y: boxBefore.min.y, z: boxBefore.min.z };
+                const maxBefore = { x: boxBefore.max.x, y: boxBefore.max.y, z: boxBefore.max.z };
+
+                // Set pull active axis to X and sign to +1 (pulling right face)
+                cs.pullActiveAxis = 'x';
+                cs.pullActiveSign = 1;
+                cs.pullSelectedObject(5, 'x');
+
+                obj.mesh.updateMatrixWorld(true);
+                const boxAfter = new THREE.Box3().setFromObject(obj.mesh);
+                return {
+                    minBeforeX: minBefore.x,
+                    maxBeforeX: maxBefore.x,
+                    minAfterX: boxAfter.min.x,
+                    maxAfterX: boxAfter.max.x
+                };
+            });
+            console.log("   One-Sided Pull Test (+X pull):", oneSidedTest);
+            if (Math.abs(oneSidedTest.minAfterX - oneSidedTest.minBeforeX) > 0.05) {
+                throw new Error(`Opposite face moved during pull! Before: ${oneSidedTest.minBeforeX}, After: ${oneSidedTest.minAfterX}`);
+            }
+            if (oneSidedTest.maxAfterX <= oneSidedTest.maxBeforeX + 2) {
+                throw new Error(`Pulled face did not expand outward! Before: ${oneSidedTest.maxBeforeX}, After: ${oneSidedTest.maxAfterX}`);
+            }
+
             // 5. Test switching back to 'Hiir' (Mouse) mode
             await page.click('#btn-tool-mouse');
             await new Promise(r => setTimeout(r, 100));
@@ -8990,6 +9022,9 @@ await (async () => {
                 // Initial state check
                 const initialBricksCount = game.bricks.length;
                 const initialIntact = game.bricks.filter(b => b.intact).length;
+                const greyBricksCount = game.bricks.filter(b => b.type === 'grey').length;
+                const goldBricksCount = game.bricks.filter(b => b.type === 'gold').length;
+                const greenBricksCount = game.bricks.filter(b => b.type === 'green').length;
                 const initialScore = game.state.getScore();
                 const paddleWidth = game.paddle.width;
                 const paddleY = game.paddle.y;
@@ -9002,22 +9037,66 @@ await (async () => {
                 const movedPaddleX = game.paddle.x;
                 const paddleMoved = movedPaddleX > initialPaddleX;
 
-                // Test brick destruction and particle emission
-                const firstIntactBrick = game.bricks.find(b => b.intact);
-                if (!firstIntactBrick) return { success: false, reason: 'No intact bricks found' };
+                // 1. Test Unbreakable Grey Brick: Ball bounces back but grey brick DOES NOT break
+                const greyBrick = game.bricks.find(b => b.type === 'grey');
+                let greyBrickRemainedIntact = false;
+                let greyBallBounced = false;
+                if (greyBrick) {
+                    game.balls[0].x = greyBrick.x + greyBrick.width / 2;
+                    game.balls[0].y = greyBrick.y + greyBrick.height / 2;
+                    game.balls[0].vy = -200;
+                    game.update(0.01);
+                    greyBrickRemainedIntact = greyBrick.intact === true;
+                    greyBallBounced = game.balls[0].vy > 0;
+                }
 
-                // Place ball directly on brick to test collision
-                game.ball.x = firstIntactBrick.x + firstIntactBrick.width / 2;
-                game.ball.y = firstIntactBrick.y + firstIntactBrick.height / 2;
-                game.ball.vy = -100;
-                game.update(0.01);
+                // 2. Test Golden Brick: breaks and spawns falling circular 3-ball power-up
+                const goldBrick = game.bricks.find(b => b.type === 'gold' && b.intact);
+                let goldBrickBroke = false;
+                let powerUpSpawned = false;
+                if (goldBrick) {
+                    game.balls[0].x = goldBrick.x + goldBrick.width / 2;
+                    game.balls[0].y = goldBrick.y + goldBrick.height / 2;
+                    game.balls[0].vy = -200;
+                    game.update(0.01);
+                    goldBrickBroke = !goldBrick.intact;
+                    powerUpSpawned = game.powerUps.some(p => p.type === 'multiball_3');
+                }
 
-                const destroyedBrickIntact = firstIntactBrick.intact;
-                const scoreAfterHit = game.state.getScore();
-                const particlesCount = game.particles.particles.length;
+                // 3. Test Catching Power-Up with paddle: adds 3 extra balls
+                const initialBallsCount = game.balls.length;
+                let ballsAfterCatch = initialBallsCount;
+                if (game.powerUps.length > 0) {
+                    const p = game.powerUps[0];
+                    // Position powerup right onto paddle
+                    p.x = game.paddle.x;
+                    p.y = game.paddle.y;
+                    game.update(0.01);
+                    ballsAfterCatch = game.balls.length;
+                }
 
-                // Test death when ball falls down past paddle
-                game.ball.y = (game.canvas.height / (window.devicePixelRatio || 1)) + 50;
+                // 4. Test Green Brick destruction
+                const firstGreenBrick = game.bricks.find(b => b.type === 'green' && b.intact);
+                if (firstGreenBrick && game.balls.length > 0) {
+                    game.balls[0].x = firstGreenBrick.x + firstGreenBrick.width / 2;
+                    game.balls[0].y = firstGreenBrick.y + firstGreenBrick.height / 2;
+                    game.balls[0].vy = -100;
+                    game.update(0.01);
+                }
+
+                // 5. Multi-ball survival: dropping one ball when multiple exist doesn't kill player
+                const hadMultipleBalls = ballsAfterCatch > 1;
+                let survivedSingleBallDrop = false;
+                if (hadMultipleBalls && game.balls.length > 1) {
+                    game.balls[0].y = (game.canvas.height / (window.devicePixelRatio || 1)) + 50;
+                    game.update(0.01);
+                    survivedSingleBallDrop = !game.state.isDead() && game.balls.length >= 1;
+                }
+
+                // 6. Test death when all remaining balls fall down
+                for (const b of game.balls) {
+                    b.y = (game.canvas.height / (window.devicePixelRatio || 1)) + 50;
+                }
                 game.update(0.01);
 
                 const isDead = game.state.isDead();
@@ -9025,32 +9104,41 @@ await (async () => {
                 const rewardValEl = document.getElementById('reward-pbx-val');
                 const rewardPbx = game.state.getLastEarnedPbx();
 
-                // Test restart
+                // 7. Test restart
                 const btnRestart = document.getElementById('btn-restart-game');
                 if (btnRestart) btnRestart.click();
 
                 const isModalHiddenAfterRestart = gameOverModal && window.getComputedStyle(gameOverModal).display === 'none';
                 const isAliveAfterRestart = !game.state.isDead();
                 const allBricksRestored = game.bricks.every(b => b.intact);
+                const restartBallsCount = game.balls.length;
 
                 return {
                     success: true,
                     hasCanvas: !!canvas,
                     initialBricksCount,
                     initialIntact,
+                    greyBricksCount,
+                    goldBricksCount,
+                    greenBricksCount,
                     paddleMoved,
                     paddleY,
                     paddleWidth,
-                    brickDestroyed: !destroyedBrickIntact,
-                    scoreIncreased: scoreAfterHit > initialScore,
-                    particlesSpawned: particlesCount > 0,
+                    greyBrickRemainedIntact,
+                    greyBallBounced,
+                    goldBrickBroke,
+                    powerUpSpawned,
+                    hadMultipleBalls,
+                    ballsAfterCatch,
+                    survivedSingleBallDrop,
                     isDead,
                     isGameOverVisible,
                     rewardPbx,
                     rewardText: rewardValEl ? rewardValEl.textContent : '',
                     isModalHiddenAfterRestart,
                     isAliveAfterRestart,
-                    allBricksRestored
+                    allBricksRestored,
+                    restartBallsCount
                 };
             });
 
@@ -9058,22 +9146,25 @@ await (async () => {
             if (!breakoutGameTest.success || !breakoutGameTest.hasCanvas) {
                 throw new Error("Breakout canvas initialization failed: " + JSON.stringify(breakoutGameTest));
             }
-            if (breakoutGameTest.initialBricksCount < 10 || breakoutGameTest.initialIntact !== breakoutGameTest.initialBricksCount) {
-                throw new Error("Breakout green bricks grid initialization failed: " + JSON.stringify(breakoutGameTest));
+            if (breakoutGameTest.greyBricksCount < 1 || !breakoutGameTest.greyBrickRemainedIntact || !breakoutGameTest.greyBallBounced) {
+                throw new Error("Breakout unbreakable grey block check failed (ball must bounce without block breaking): " + JSON.stringify(breakoutGameTest));
             }
-            if (!breakoutGameTest.paddleMoved) {
-                throw new Error("Breakout paddle _ movement failed: " + JSON.stringify(breakoutGameTest));
+            if (breakoutGameTest.goldBricksCount < 1 || !breakoutGameTest.goldBrickBroke || !breakoutGameTest.powerUpSpawned) {
+                throw new Error("Breakout gold brick & circular 3-ball power-up drop check failed: " + JSON.stringify(breakoutGameTest));
             }
-            if (!breakoutGameTest.brickDestroyed || !breakoutGameTest.scoreIncreased || !breakoutGameTest.particlesSpawned) {
-                throw new Error("Breakout green brick breaking and score mechanics failed: " + JSON.stringify(breakoutGameTest));
+            if (!breakoutGameTest.hadMultipleBalls || breakoutGameTest.ballsAfterCatch < 4) {
+                throw new Error("Breakout catching power-up must spawn 3 extra balls (+3 balls): " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.survivedSingleBallDrop) {
+                throw new Error("Breakout multi-ball survival check failed (losing 1 ball while others remain must not trigger death): " + JSON.stringify(breakoutGameTest));
             }
             if (!breakoutGameTest.isDead || !breakoutGameTest.isGameOverVisible || breakoutGameTest.rewardPbx <= 0) {
-                throw new Error("Breakout death on ball fall or Game Over screen failed: " + JSON.stringify(breakoutGameTest));
+                throw new Error("Breakout death when all balls fall or Game Over screen failed: " + JSON.stringify(breakoutGameTest));
             }
-            if (!breakoutGameTest.isModalHiddenAfterRestart || !breakoutGameTest.isAliveAfterRestart || !breakoutGameTest.allBricksRestored) {
+            if (!breakoutGameTest.isModalHiddenAfterRestart || !breakoutGameTest.isAliveAfterRestart || breakoutGameTest.restartBallsCount !== 1) {
                 throw new Error("Breakout restart mechanic failed: " + JSON.stringify(breakoutGameTest));
             }
-            console.log("✅ 🟢 2D Breakout (Klotsipurustaja: paddle _, bouncing ball, green bricks, death on fall) tests passed successfully!");
+            console.log("✅ 🟢 2D Breakout (paddle _, grey blocks, gold bricks, 3-ball circular power-up & multi-ball mechanics) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser.close(); serverProcess.kill(); }

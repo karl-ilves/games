@@ -27,6 +27,16 @@ export interface Brick {
     glowColor: string;
     points: number;
     intact: boolean;
+    type: 'green' | 'gold' | 'grey';
+}
+
+export interface PowerUp {
+    id: number;
+    x: number;
+    y: number;
+    radius: number;
+    vy: number;
+    type: 'multiball_3';
 }
 
 export interface Particle {
@@ -47,6 +57,7 @@ export interface GameStats {
     bricksDestroyed: number;
     totalBricks: number;
     lives: number;
+    activeBalls: number;
     isGameOver: boolean;
     isVictory: boolean;
     playbuxReward: number;

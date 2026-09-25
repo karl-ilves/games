@@ -8,6 +8,7 @@ export class BreakoutState {
     private bricksDestroyed: number = 0;
     private totalBricks: number = 0;
     private lives: number = 1; // "kui pall kukkub alla sa sured" -> 1 ball / death on fall
+    private activeBalls: number = 1;
     private isGameOver: boolean = false;
     private isVictory: boolean = false;
     private lastEarnedPbx: number = 0;
@@ -39,9 +40,27 @@ export class BreakoutState {
         this.bricksDestroyed = 0;
         this.score = 0;
         this.lives = 1;
+        this.activeBalls = 1;
         this.isGameOver = false;
         this.isVictory = false;
         this.lastEarnedPbx = 0;
+    }
+
+    public addBalls(count: number = 3) {
+        this.activeBalls += count;
+    }
+
+    public getActiveBalls(): number {
+        return this.activeBalls;
+    }
+
+    public onBallLost(): boolean {
+        this.activeBalls = Math.max(0, this.activeBalls - 1);
+        if (this.activeBalls <= 0) {
+            this.setDeath();
+            return true; // Game Over
+        }
+        return false; // Still alive
     }
 
     public addScore(points: number): number {
@@ -56,7 +75,7 @@ export class BreakoutState {
     public onBrickDestroyed(points: number): boolean {
         this.bricksDestroyed++;
         this.addScore(points);
-        if (this.bricksDestroyed >= this.totalBricks) {
+        if (this.bricksDestroyed >= this.totalBricks && this.totalBricks > 0) {
             this.setVictory();
             return true;
         }
@@ -107,6 +126,7 @@ export class BreakoutState {
             bricksDestroyed: this.bricksDestroyed,
             totalBricks: this.totalBricks,
             lives: this.lives,
+            activeBalls: this.activeBalls,
             isGameOver: this.isGameOver,
             isVictory: this.isVictory,
             playbuxReward: this.lastEarnedPbx,
