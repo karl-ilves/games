@@ -34,6 +34,10 @@ export class CityCarHUD {
     private btnDeathResetEl: HTMLElement | null = null;
     private onDeathResetCallback: (() => void) | null = null;
 
+    private healthContainerEl: HTMLElement | null = null;
+    private healthValEl: HTMLElement | null = null;
+    private healthFillEl: HTMLElement | null = null;
+
     private lastZone: WorldZone | null = null;
     private bannerTimeout: any = null;
 
@@ -54,6 +58,10 @@ export class CityCarHUD {
         this.gearPEl = document.getElementById('gear-p');
         this.gearDEl = document.getElementById('gear-d');
         this.gearREl = document.getElementById('gear-r');
+        this.healthContainerEl = document.getElementById('hud-health-container');
+        this.healthValEl = document.getElementById('hud-health-val');
+        this.healthFillEl = document.getElementById('hud-health-fill');
+        this.updateHealth(100, 100);
         this.zoneBannerEl = document.getElementById('zone-banner');
         this.onlineCountEl = document.getElementById('online-count');
         this.rosterEl = document.getElementById('drivers-roster');
@@ -401,5 +409,26 @@ export class CityCarHUD {
         ctx.stroke();
 
         ctx.restore();
+    }
+
+    public updateHealth(current: number, max: number = 100): void {
+        const safeCurrent = Math.max(0, Math.min(max, Math.round(current)));
+        const pct = Math.max(0, Math.min(100, Math.round((safeCurrent / max) * 100)));
+        if (this.healthValEl) {
+            this.healthValEl.textContent = `${safeCurrent} / ${max}`;
+        }
+        if (this.healthFillEl) {
+            this.healthFillEl.style.width = `${pct}%`;
+            if (pct > 50) {
+                this.healthFillEl.style.background = 'linear-gradient(90deg, #2ecc71, #00cec9)';
+                this.healthFillEl.style.boxShadow = '0 0 8px rgba(46, 204, 113, 0.6)';
+            } else if (pct > 20) {
+                this.healthFillEl.style.background = 'linear-gradient(90deg, #f39c12, #f1c40f)';
+                this.healthFillEl.style.boxShadow = '0 0 8px rgba(243, 156, 18, 0.6)';
+            } else {
+                this.healthFillEl.style.background = 'linear-gradient(90deg, #e74c3c, #ff4757)';
+                this.healthFillEl.style.boxShadow = '0 0 10px rgba(231, 76, 60, 0.8)';
+            }
+        }
     }
 }

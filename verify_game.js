@@ -3312,8 +3312,8 @@ await (async () => {
             console.log("   ✅ Custom Item Workbench, Multi-Shape, Elevation, Save, Publish & Catalog passed!");
         }
 
-        // Test Publish a Game button & flow
-        console.log("   Testing 'Publish a game' flow...");
+        // Test Publish a Game button & modal flow
+        console.log("   Testing 'Publish a game' modal flow...");
         const publishBtnText = await page.$eval('#btn-submit-review', el => el.textContent.trim());
         console.log("   Publish button text:", publishBtnText);
         if (!publishBtnText.includes('Publish a game')) {
@@ -3330,7 +3330,31 @@ await (async () => {
             };
         });
 
+        // Click publish button - this opens the publish modal
         await page.click('#btn-submit-review');
+        await new Promise(r => setTimeout(r, 600));
+
+        // Verify publish modal is visible
+        const publishModalDisplay = await page.$eval('#publish-game-modal', el => window.getComputedStyle(el).display);
+        if (publishModalDisplay === 'none') {
+            throw new Error("Expected #publish-game-modal to be visible after clicking 'Publish a game'!");
+        }
+
+        // Configure game details: title, description, max players, age rating
+        await page.evaluate(() => {
+            const titleEl = document.getElementById('publish-game-title');
+            const descEl = document.getElementById('publish-game-desc');
+            const playersEl = document.getElementById('publish-max-players');
+            const ageEl = document.getElementById('publish-age-rating');
+
+            if (titleEl) titleEl.value = 'Epic Multi Server Quest';
+            if (descEl) descEl.value = 'A thrilling multiplayer survival world!';
+            if (playersEl) playersEl.value = '16';
+            if (ageEl) ageEl.value = '9';
+        });
+
+        // Click confirm publish inside the modal
+        await page.click('#btn-confirm-publish');
         await new Promise(r => setTimeout(r, 1200));
 
         const confirmCalls = await page.evaluate(() => window.__dialogsSeen || []);
@@ -3345,7 +3369,7 @@ await (async () => {
             throw new Error("Expected 'Finish a game' dialog after publishing!");
         }
 
-        // Verify game is saved with approved status (immediately public)
+        // Verify game is saved with approved status, correct title, desc, maxPlayers, and age rating
         const studioPublishedGame = await page.evaluate(() => {
             try {
                 const games = JSON.parse(localStorage.getItem('playard_user_created_games') || '[]');
@@ -3357,8 +3381,24 @@ await (async () => {
         if (!studioPublishedGame) {
             throw new Error("Expected published game with status 'approved' in localStorage!");
         }
-        console.log("   Found published approved game in storage:", { id: studioPublishedGame.id, title: studioPublishedGame.title, status: studioPublishedGame.status });
-        console.log("   ✅ 'Publish a game', 'Are you sure?' and 'Finish a game' flow passed!");
+        if (studioPublishedGame.maxPlayers !== 16) {
+            throw new Error(`Expected maxPlayers to be 16, but got ${studioPublishedGame.maxPlayers}`);
+        }
+        if (studioPublishedGame.minAge !== 9 && studioPublishedGame.ageRating !== '9+') {
+            throw new Error(`Expected age rating 9 / 9+, but got minAge: ${studioPublishedGame.minAge}, ageRating: ${studioPublishedGame.ageRating}`);
+        }
+        if (!studioPublishedGame.title.includes('Epic Multi Server Quest')) {
+            throw new Error(`Expected game title 'Epic Multi Server Quest', but got '${studioPublishedGame.title}'`);
+        }
+        console.log("   Found published approved game in storage:", {
+            id: studioPublishedGame.id,
+            title: studioPublishedGame.title,
+            maxPlayers: studioPublishedGame.maxPlayers,
+            minAge: studioPublishedGame.minAge,
+            ageRating: studioPublishedGame.ageRating,
+            status: studioPublishedGame.status
+        });
+        console.log("   ✅ 'Publish a game' modal (max players, age rating, title, description) and publish flow passed!");
 
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
@@ -8682,6 +8722,44 @@ await (async () => {
                 dbg.world.clearBuildingBreaches();
                 dbg.world.clearBuildingCollapses();
 
+                // 2d. Test Health Bar & Damage & Building Reappear on Reset
+                // User requirements:
+                // "kui panen reset siis ilmuvad majad tagasi"
+                // "lisa elude joon iga maja võtab 20 elu ja tänava post ja puu 1 elu ja kokku 100 elu"
+                dbg.resetGame();
+                const healthContainer = document.getElementById('hud-health-container');
+                const healthValEl = document.getElementById('hud-health-val');
+                const healthFillEl = document.getElementById('hud-health-fill');
+                const hasHealthUI = !!healthContainer && !!healthValEl && !!healthFillEl;
+                const initialHealth = dbg.state.getHealth();
+                const initialMaxHealth = dbg.state.getMaxHealth();
+                const initialHealthText = healthValEl?.textContent?.trim();
+                const initialFillPct = healthFillEl?.style?.width;
+
+                // Street lamp takes 1 HP
+                dbg.physics.onLampHit?.();
+                const healthAfterLamp = dbg.state.getHealth();
+
+                // Tree takes 1 HP
+                dbg.physics.onTreeHit?.();
+                const healthAfterTree = dbg.state.getHealth();
+
+                // Building takes 20 HP
+                dbg.physics.onBuildingHit?.();
+                const healthAfterBuilding = dbg.state.getHealth();
+
+                // Collapse building to verify reset restores it
+                const testB = dbg.world.buildings[0];
+                dbg.world.collapseBuilding(testB, 0);
+                const buildingCollapsedBeforeReset = dbg.world.isBuildingCollapsed(testB);
+
+                // Reset: Buildings reappear and health restores to 100
+                dbg.resetGame();
+                const healthAfterReset = dbg.state.getHealth();
+                const buildingRestoredOnReset = !dbg.world.isBuildingCollapsed(testB) && testB.group.visible === true;
+                const healthTextAfterReset = healthValEl?.textContent?.trim();
+                const healthFillAfterReset = healthFillEl?.style?.width;
+
                 // Test Mobile Phone Arrow Controls (User requirement: "kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled")
                 const inputObj = dbg.input;
                 const mobileArrowsObj = inputObj?.getMobileArrows?.();
@@ -8859,6 +8937,19 @@ await (async () => {
                     cutawayDisabledOnExit,
                     buildingCollapsingBehindCar,
                     buildingCollapsedAfterDriveThrough,
+                    hasHealthUI,
+                    initialHealth,
+                    initialMaxHealth,
+                    initialHealthText,
+                    initialFillPct,
+                    healthAfterLamp,
+                    healthAfterTree,
+                    healthAfterBuilding,
+                    buildingCollapsedBeforeReset,
+                    buildingRestoredOnReset,
+                    healthAfterReset,
+                    healthTextAfterReset,
+                    healthFillAfterReset,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
                 };
             });
@@ -8866,6 +8957,30 @@ await (async () => {
             console.log("   CityCar In-Game Verification Results:", cityCarTest);
             if (!cityCarTest.success || !cityCarTest.hasCanvas) {
                 throw new Error("CityCar In-game verification failed: " + JSON.stringify(cityCarTest));
+            }
+            if (!cityCarTest.hasHealthUI) {
+                throw new Error("CityCar must render Health Bar ('elude joon') in HUD (#hud-health-container, #hud-health-val, #hud-health-fill)!");
+            }
+            if (cityCarTest.initialHealth !== 100 || cityCarTest.initialMaxHealth !== 100 || cityCarTest.initialHealthText !== '100 / 100' || cityCarTest.initialFillPct !== '100%') {
+                throw new Error(`CityCar Initial Health must be 100/100 and fill 100%! Got health=${cityCarTest.initialHealth}, text='${cityCarTest.initialHealthText}', width='${cityCarTest.initialFillPct}'`);
+            }
+            if (cityCarTest.healthAfterLamp !== 99) {
+                throw new Error(`CityCar Street lamp hit must take exactly 1 HP! Expected 99, got ${cityCarTest.healthAfterLamp}`);
+            }
+            if (cityCarTest.healthAfterTree !== 98) {
+                throw new Error(`CityCar Tree hit must take exactly 1 HP! Expected 98, got ${cityCarTest.healthAfterTree}`);
+            }
+            if (cityCarTest.healthAfterBuilding !== 78) {
+                throw new Error(`CityCar Building hit must take exactly 20 HP! Expected 78, got ${cityCarTest.healthAfterBuilding}`);
+            }
+            if (!cityCarTest.buildingCollapsedBeforeReset) {
+                throw new Error("CityCar test building was not collapsed before reset test!");
+            }
+            if (!cityCarTest.buildingRestoredOnReset) {
+                throw new Error("CityCar Reset must restore all collapsed buildings ('kui panen reset siis ilmuvad majad tagasi')!");
+            }
+            if (cityCarTest.healthAfterReset !== 100 || cityCarTest.healthTextAfterReset !== '100 / 100' || cityCarTest.healthFillAfterReset !== '100%') {
+                throw new Error(`CityCar Reset must restore health to 100/100 and fill to 100%! Got health=${cityCarTest.healthAfterReset}, text='${cityCarTest.healthTextAfterReset}', width='${cityCarTest.healthFillAfterReset}'`);
             }
             if (!cityCarTest.driverHasCheckmark) {
                 throw new Error("CityCar Playard Owner driver nametag must have a checkmark (linnuke) at the end!");
@@ -9749,6 +9864,49 @@ await (async () => {
                 const canvas = document.getElementById('snake-canvas');
                 const hasCanvas = canvas !== null && canvas.width > 0 && canvas.height > 0;
 
+                // 0. Verify Start Screen Overlay and Demo Mode on initial load
+                const startOverlay = document.getElementById('start-screen-overlay');
+                const isStartOverlayVisible = startOverlay !== null && window.getComputedStyle(startOverlay).display !== 'none';
+                const initialMode = game.state.mode;
+
+                // Test Demo AI calculation
+                const demoNextDir = game.demoAi.getNextDirection(game.state.body, game.state.direction, game.state.foodItems);
+                const hasValidDemoAi = ['UP', 'DOWN', 'LEFT', 'RIGHT'].includes(demoNextDir);
+
+                // Test "Play with Friends" button opens friends modal
+                const btnPlayFriends = document.getElementById('btn-play-friends');
+                if (btnPlayFriends) btnPlayFriends.click();
+                const modalFriends = document.getElementById('modal-friends-list');
+                const isFriendsModalVisible = modalFriends !== null && window.getComputedStyle(modalFriends).display !== 'none';
+
+                // Test receiving an invite shows confirmation modal ("Kas sa oled nõus?")
+                game.friendsModal.showInviteConfirmation({
+                    id: 'test_invite_1',
+                    fromUsername: 'kawe1234',
+                    fromDisplayName: 'Kawe Pro',
+                    toUsername: 'Guest',
+                    timestamp: Date.now(),
+                    status: 'pending'
+                });
+                const modalInvite = document.getElementById('modal-invite-confirm');
+                const isInviteModalVisible = modalInvite !== null && window.getComputedStyle(modalInvite).display !== 'none';
+                const invitePromptText = modalInvite?.innerText || '';
+                const hasKasSaOledNous = invitePromptText.toLowerCase().includes('kas sa oled nõus');
+                const hasSenderName = invitePromptText.includes('Kawe Pro');
+
+                // Test accepting invite starts multiplayer mode with 2 snakes
+                const btnAccept = document.getElementById('btn-invite-accept');
+                if (btnAccept) btnAccept.click();
+                const modeAfterAccept = game.state.mode;
+                const hasTwoSnakes = game.state.body.length > 0 && game.state.body2.length > 0;
+                const hudP2Score = document.getElementById('hud-p2-score');
+                const isP2ScoreVisible = hudP2Score !== null && window.getComputedStyle(hudP2Score).display !== 'none';
+
+                // Test clicking Play (Solo) starts single player game
+                game.startSoloGame();
+                const isOverlayHiddenAfterPlay = startOverlay !== null && window.getComputedStyle(startOverlay).display === 'none';
+                const soloMode = game.state.mode;
+
                 const initialStats = game.state.getStats();
                 const initialLength = initialStats.length;
                 const initialDirection = game.state.direction;
@@ -9854,6 +10012,18 @@ await (async () => {
                     movedUp,
                     ateFood,
                     wrappedRightToLeft,
+                    isStartOverlayVisible,
+                    initialMode,
+                    hasValidDemoAi,
+                    isFriendsModalVisible,
+                    isInviteModalVisible,
+                    hasKasSaOledNous,
+                    hasSenderName,
+                    modeAfterAccept,
+                    hasTwoSnakes,
+                    isP2ScoreVisible,
+                    isOverlayHiddenAfterPlay,
+                    soloMode,
                     wrappedTopToBottom,
                     isSelfDeath,
                     isGameOverModalVisible,
@@ -9868,6 +10038,21 @@ await (async () => {
             console.log("   Snake Verification Results:", snakeGameTest);
             if (!snakeGameTest.success || !snakeGameTest.hasCanvas) {
                 throw new Error("Snake game canvas or initialization failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.isStartOverlayVisible || snakeGameTest.initialMode !== 'demo' || !snakeGameTest.hasValidDemoAi) {
+                throw new Error("Snake start screen overlay & background autoplay demo failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.isFriendsModalVisible) {
+                throw new Error("Snake Play with Friends modal failed to open: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.isInviteModalVisible || !snakeGameTest.hasKasSaOledNous || !snakeGameTest.hasSenderName) {
+                throw new Error("Snake invite confirmation modal ('Kas sa oled nõus?') failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (snakeGameTest.modeAfterAccept !== 'multiplayer' || !snakeGameTest.hasTwoSnakes || !snakeGameTest.isP2ScoreVisible) {
+                throw new Error("Snake multiplayer launch failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.isOverlayHiddenAfterPlay || snakeGameTest.soloMode !== 'solo') {
+                throw new Error("Snake solo mode launch failed: " + JSON.stringify(snakeGameTest));
             }
             if (snakeGameTest.initialLength !== 4 || snakeGameTest.initialDirection !== 'RIGHT') {
                 throw new Error("Snake initial state invalid: " + JSON.stringify(snakeGameTest));
@@ -9893,7 +10078,7 @@ await (async () => {
             if (!snakeGameTest.soundToggled) {
                 throw new Error("Snake sound toggle failed: " + JSON.stringify(snakeGameTest));
             }
-            console.log("✅ 🐍 Ussimäng (Snake 2D Arcade: wrap-around portal walls, self collision, eating, restart & sound) tests passed successfully!");
+            console.log("✅ 🐍 Ussimäng (Snake 2D Arcade: start screen, video demo, friends list, 'Kas sa oled nõus?' invite modal, wrap-around portal walls, self collision, eating, restart & sound) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

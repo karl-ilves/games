@@ -2,6 +2,7 @@ import { GameStats } from '../types';
 
 export class SnakeHud {
     private scoreEl: HTMLElement | null;
+    private score2El: HTMLElement | null;
     private highScoreEl: HTMLElement | null;
     private lengthEl: HTMLElement | null;
     private levelEl: HTMLElement | null;
@@ -30,6 +31,7 @@ export class SnakeHud {
         this.onToggleSound = onToggleSound;
 
         this.scoreEl = document.getElementById('hud-score');
+        this.score2El = document.getElementById('hud-p2-score');
         this.highScoreEl = document.getElementById('hud-highscore');
         this.lengthEl = document.getElementById('hud-length');
         this.levelEl = document.getElementById('hud-level');
@@ -70,7 +72,15 @@ export class SnakeHud {
     }
 
     public updateStats(stats: GameStats) {
-        if (this.scoreEl) this.scoreEl.innerText = `SKOOR: ${stats.score}`;
+        if (this.scoreEl) this.scoreEl.innerText = stats.mode === 'multiplayer' ? `P1: ${stats.score}` : `SKOOR: ${stats.score}`;
+        if (this.score2El) {
+            if (stats.mode === 'multiplayer') {
+                this.score2El.style.display = 'inline-block';
+                this.score2El.innerText = `P2: ${stats.score2}`;
+            } else {
+                this.score2El.style.display = 'none';
+            }
+        }
         if (this.highScoreEl) this.highScoreEl.innerText = `REKORD: ${stats.highScore}`;
         if (this.lengthEl) this.lengthEl.innerText = `PIKKUS: ${stats.length}`;
         if (this.levelEl) this.levelEl.innerText = `TASE ${stats.level}`;

@@ -138,7 +138,8 @@ export class SnakeRenderer {
         offsetX: number,
         offsetY: number,
         tileSize: number,
-        time: number
+        time: number,
+        customTheme?: { primary: string; secondary: string; glow: string }
     ) {
         if (body.length === 0) return;
 
@@ -153,13 +154,18 @@ export class SnakeRenderer {
             const size = tileSize - 3;
 
             const t = i / total;
-            // Color gradient from head to tail
-            const r = Math.round(46 * (1 - t) + 16 * t);
-            const g = Math.round(213 * (1 - t) + 172 * t);
-            const b = Math.round(115 * (1 - t) + 132 * t);
-            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            if (customTheme) {
+                ctx.fillStyle = t > 0.5 ? customTheme.secondary : customTheme.primary;
+                ctx.shadowColor = customTheme.glow;
+            } else {
+                // Color gradient from head to tail (Neon Green)
+                const r = Math.round(46 * (1 - t) + 16 * t);
+                const g = Math.round(213 * (1 - t) + 172 * t);
+                const b = Math.round(115 * (1 - t) + 132 * t);
+                ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                ctx.shadowColor = 'rgba(46, 213, 115, 0.4)';
+            }
 
-            ctx.shadowColor = 'rgba(46, 213, 115, 0.4)';
             ctx.shadowBlur = 6;
 
             const radius = Math.max(3, (size / 2) * (1 - t * 0.3));
@@ -313,5 +319,36 @@ export class SnakeRenderer {
         }
         ctx.lineTo(cx, cy - outerRadius);
         ctx.closePath();
+    }
+
+    public static renderDemoWatermark(
+        ctx: CanvasRenderingContext2D,
+        offsetX: number,
+        offsetY: number,
+        playAreaWidth: number,
+        time: number
+    ) {
+        ctx.save();
+        const pulse = 0.8 + 0.2 * Math.sin(time * 3);
+        const text = '▶️ MÄNGU DEMO VIDEO • AUTOPLAY';
+        ctx.font = '900 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        const metrics = ctx.measureText(text);
+        const boxWidth = metrics.width + 24;
+        const boxHeight = 28;
+        const bx = offsetX + (playAreaWidth - boxWidth) / 2;
+        const by = offsetY + 12;
+
+        ctx.fillStyle = `rgba(5, 8, 19, ${0.85 * pulse})`;
+        ctx.strokeStyle = `rgba(0, 230, 118, ${0.8 * pulse})`;
+        ctx.lineWidth = 1.5;
+        this.drawRoundedRect(ctx, bx, by, boxWidth, boxHeight, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#00e676';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, bx + boxWidth / 2, by + boxHeight / 2);
+        ctx.restore();
     }
 }

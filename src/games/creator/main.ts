@@ -163,6 +163,9 @@ export let isMoneySystemEnabled = false;
 export let isYardsSystemEnabled = false;
 export let playerSpeedMultiplier = 1.0;
 export let playerSpeedBoostEndTime = 0;
+export let currentGameMaxPlayers = 8;
+export let currentGameMinAge = 0;
+export let currentGameAgeRating = '0+';
 
 // Lighting & Weather
 let dirLight: THREE.DirectionalLight;
@@ -2108,10 +2111,23 @@ export function serializeCurrentScene() {
     const asmaVisSelect = document.getElementById('game-asma-visible-select') as HTMLSelectElement | null;
     const maxHp = healthInput ? (parseInt(healthInput.value, 10) || 100) : playerMaxHealth;
 
+    const publishPlayersSelect = document.getElementById('publish-max-players') as HTMLSelectElement | null;
+    const publishAgeSelect = document.getElementById('publish-age-rating') as HTMLSelectElement | null;
+    if (publishPlayersSelect && publishPlayersSelect.value) {
+        currentGameMaxPlayers = parseInt(publishPlayersSelect.value, 10) || currentGameMaxPlayers;
+    }
+    if (publishAgeSelect && publishAgeSelect.value !== undefined) {
+        currentGameMinAge = parseInt(publishAgeSelect.value, 10) || 0;
+        currentGameAgeRating = currentGameMinAge > 0 ? `${currentGameMinAge}+` : '0+';
+    }
+
     return {
         title: titleInput?.value.trim() || 'My 3D Adventure',
         category: catSelect?.value || 'Adventure',
         description: descInput?.value.trim() || '',
+        maxPlayers: currentGameMaxPlayers,
+        minAge: currentGameMinAge,
+        ageRating: currentGameAgeRating,
         playerMaxHealth: maxHp,
         isHealthVisible: healthVisSelect ? (healthVisSelect.value === 'visible') : isHealthVisible,
         playerCoins: coinsInput ? (parseInt(coinsInput.value, 10) || 0) : playerCoins,
@@ -2181,7 +2197,78 @@ export function saveCurrentGame(showAlert = true) {
     }
 }
 
-export async function publishCurrentGame() {
+export function openPublishModal() {
+    const modal = document.getElementById('publish-game-modal');
+    if (!modal) return;
+
+    const sceneData = serializeCurrentScene();
+    const titleInput = document.getElementById('publish-game-title') as HTMLInputElement | null;
+    const descInput = document.getElementById('publish-game-desc') as HTMLTextAreaElement | null;
+    const playersSelect = document.getElementById('publish-max-players') as HTMLSelectElement | null;
+    const ageSelect = document.getElementById('publish-age-rating') as HTMLSelectElement | null;
+
+    if (titleInput) {
+        titleInput.value = sceneData.title || 'My 3D Adventure';
+    }
+    if (descInput) {
+        descInput.value = sceneData.description || '';
+    }
+    if (playersSelect) {
+        playersSelect.value = String(sceneData.maxPlayers || currentGameMaxPlayers || 8);
+    }
+    if (ageSelect) {
+        ageSelect.value = String(sceneData.minAge ?? currentGameMinAge ?? 0);
+    }
+
+    modal.style.display = 'flex';
+}
+
+export function closePublishModal() {
+    const modal = document.getElementById('publish-game-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+export async function confirmAndPublishGame() {
+    const titleInput = document.getElementById('publish-game-title') as HTMLInputElement | null;
+    const descInput = document.getElementById('publish-game-desc') as HTMLTextAreaElement | null;
+    const playersSelect = document.getElementById('publish-max-players') as HTMLSelectElement | null;
+    const ageSelect = document.getElementById('publish-age-rating') as HTMLSelectElement | null;
+
+    const gameTitle = titleInput?.value.trim() || 'My 3D Adventure';
+    const gameDesc = descInput?.value.trim() || '';
+    const maxPlayers = playersSelect ? (parseInt(playersSelect.value, 10) || 8) : currentGameMaxPlayers;
+    const minAge = ageSelect ? (parseInt(ageSelect.value, 10) || 0) : currentGameMinAge;
+    const ageRating = minAge > 0 ? `${minAge}+` : '0+';
+
+    currentGameMaxPlayers = maxPlayers;
+    currentGameMinAge = minAge;
+    currentGameAgeRating = ageRating;
+
+    const sceneTitleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
+    if (sceneTitleInput) sceneTitleInput.value = gameTitle;
+    const sceneDescInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
+    if (sceneDescInput) sceneDescInput.value = gameDesc;
+
+    closePublishModal();
+
+    return await publishCurrentGame({
+        title: gameTitle,
+        description: gameDesc,
+        maxPlayers,
+        minAge,
+        ageRating
+    });
+}
+
+export async function publishCurrentGame(options?: {
+    title?: string;
+    description?: string;
+    maxPlayers?: number;
+    minAge?: number;
+    ageRating?: string;
+}) {
     // Confirmation prompt ("are you shure")
     const isConfirmed = confirm('Are you sure you want to publish this game?');
     if (!isConfirmed) {
@@ -2192,14 +2279,28 @@ export async function publishCurrentGame() {
     const username = profile?.username || 'GuestCreator';
 
     const sceneData = serializeCurrentScene();
-    const title = sceneData.title || 'My 3D Adventure';
+    const title = options?.title || sceneData.title || 'My 3D Adventure';
     const category = sceneData.category || 'Adventure';
-    const description = sceneData.description || '';
+    const description = options?.description !== undefined ? options.description : (sceneData.description || '');
+    const maxPlayers = options?.maxPlayers !== undefined ? options.maxPlayers : (sceneData.maxPlayers || currentGameMaxPlayers || 8);
+    const minAge = options?.minAge !== undefined ? options.minAge : (sceneData.minAge ?? currentGameMinAge ?? 0);
+    const ageRating = options?.ageRating !== undefined ? options.ageRating : (sceneData.ageRating || (minAge > 0 ? `${minAge}+` : '0+'));
+
+    sceneData.title = title;
+    sceneData.description = description;
+    sceneData.maxPlayers = maxPlayers;
+    sceneData.minAge = minAge;
+    sceneData.ageRating = ageRating;
 
     const submitBtn = document.getElementById('btn-submit-review');
+    const confirmPublishBtn = document.getElementById('btn-confirm-publish');
     if (submitBtn) {
         submitBtn.innerText = 'Publishing...';
         (submitBtn as HTMLButtonElement).disabled = true;
+    }
+    if (confirmPublishBtn) {
+        confirmPublishBtn.innerText = 'Publishing...';
+        (confirmPublishBtn as HTMLButtonElement).disabled = true;
     }
 
     const res = await yardService.submitGameForReview({
@@ -2208,12 +2309,19 @@ export async function publishCurrentGame() {
         description,
         category,
         sceneData,
-        status: 'approved'
+        status: 'approved',
+        maxPlayers,
+        minAge,
+        ageRating
     });
 
     if (submitBtn) {
         submitBtn.innerHTML = '<span>🚀</span> <span>Publish a game</span>';
         (submitBtn as HTMLButtonElement).disabled = false;
+    }
+    if (confirmPublishBtn) {
+        confirmPublishBtn.innerHTML = '<span>Avalda mäng</span>';
+        (confirmPublishBtn as HTMLButtonElement).disabled = false;
     }
 
     if (res.success) {
@@ -2263,6 +2371,22 @@ export function loadSceneFromData(sceneData: any) {
     if (titleInput && sceneData.title) titleInput.value = sceneData.title;
     if (catSelect && sceneData.category) catSelect.value = sceneData.category;
     if (descInput && sceneData.description) descInput.value = sceneData.description;
+
+    if (sceneData.maxPlayers !== undefined) {
+        currentGameMaxPlayers = Number(sceneData.maxPlayers) || 8;
+    } else {
+        currentGameMaxPlayers = 8;
+    }
+    if (sceneData.minAge !== undefined) {
+        currentGameMinAge = Number(sceneData.minAge) || 0;
+    } else {
+        currentGameMinAge = 0;
+    }
+    if (sceneData.ageRating !== undefined) {
+        currentGameAgeRating = String(sceneData.ageRating);
+    } else {
+        currentGameAgeRating = currentGameMinAge > 0 ? `${currentGameMinAge}+` : '0+';
+    }
 
     const healthInput = document.getElementById('game-player-health-input') as HTMLInputElement | null;
     const healthVisSelect = document.getElementById('game-health-visible-select') as HTMLSelectElement | null;
@@ -2725,6 +2849,12 @@ async function initStudio() {
         startNewEmptyGame,
         saveCurrentGame,
         publishCurrentGame,
+        openPublishModal,
+        closePublishModal,
+        confirmAndPublishGame,
+        get currentGameMaxPlayers() { return currentGameMaxPlayers; },
+        get currentGameMinAge() { return currentGameMinAge; },
+        get currentGameAgeRating() { return currentGameAgeRating; },
         autoSaveDraft,
         serializeCurrentScene,
         loadSceneFromData,
@@ -4685,11 +4815,32 @@ function setupStudioEvents() {
     bindTouchBtn('touch-btn-jump', 'Space');
     bindTouchBtn('touch-btn-dive', 'ShiftLeft');
 
-    // Publish a Game Button
+    // Publish a Game Button & Publish Modal Listeners
     const submitBtn = document.getElementById('btn-submit-review');
     if (submitBtn) {
-        submitBtn.addEventListener('click', async () => {
-            await publishCurrentGame();
+        submitBtn.addEventListener('click', () => {
+            openPublishModal();
+        });
+    }
+
+    document.getElementById('btn-close-publish-x')?.addEventListener('click', () => {
+        closePublishModal();
+    });
+
+    document.getElementById('btn-cancel-publish')?.addEventListener('click', () => {
+        closePublishModal();
+    });
+
+    document.getElementById('btn-confirm-publish')?.addEventListener('click', async () => {
+        await confirmAndPublishGame();
+    });
+
+    const publishModal = document.getElementById('publish-game-modal');
+    if (publishModal) {
+        publishModal.addEventListener('click', (e) => {
+            if (e.target === publishModal) {
+                closePublishModal();
+            }
         });
     }
 }
@@ -6855,6 +7006,9 @@ export function startNewEmptyGame(initialEnv: 'land' | 'sea' = 'land') {
     playerMaxAsma = 100;
     playerAsma = 100;
     isAsmaVisible = true;
+    currentGameMaxPlayers = 8;
+    currentGameMinAge = 0;
+    currentGameAgeRating = '0+';
 
     if (healthInput) healthInput.value = '100';
     if (healthVisSelect) healthVisSelect.value = 'visible';

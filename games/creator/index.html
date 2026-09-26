@@ -1020,6 +1020,84 @@
         </div>
     </div>
 
+    <!-- Publish Game Modal (Mängijate arv, vanus, nimi ja seletus) -->
+    <div id="publish-game-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 2100; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #141b24; border: 2px solid #00f2fe; border-radius: 18px; width: 100%; max-width: 540px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.95);">
+            <!-- Header -->
+            <div style="padding: 16px 22px; background: #1a2330; border-bottom: 1.5px solid rgba(0, 242, 254, 0.3); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 1.2rem; color: #00f2fe; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.3rem;">🚀</span>
+                    <span>Avalda mäng (Publish Game)</span>
+                </div>
+                <button id="btn-close-publish-x" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                <!-- 1. Mängu nimi (Game Name) -->
+                <div>
+                    <label for="publish-game-title" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Mängu nimi (Name):</label>
+                    <input type="text" id="publish-game-title" placeholder="Sisesta mängu nimi..." style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.95rem; font-weight: 600; outline: none; transition: border-color 0.2s;">
+                </div>
+
+                <!-- 2. Seletus / Kirjeldus (Description) -->
+                <div>
+                    <label for="publish-game-desc" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Seletus ja kirjeldus (Description):</label>
+                    <textarea id="publish-game-desc" rows="3" placeholder="Kirjelda, mida selles mängus teha saab ja kuidas mängida..." style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 500; outline: none; resize: vertical; min-height: 70px;"></textarea>
+                </div>
+
+                <!-- Grid for Server Players & Age Rating -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <!-- 3. Mängijate arv serveris (Max Players in Server) -->
+                    <div>
+                        <label for="publish-max-players" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Mängijaid serveris:</label>
+                        <select id="publish-max-players" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
+                            <option value="1">1 mängija (Üksikmäng)</option>
+                            <option value="2">2 mängijat (Duo)</option>
+                            <option value="4">4 mängijat (Väike tiim)</option>
+                            <option value="8" selected>8 mängijat (Tavaline)</option>
+                            <option value="10">10 mängijat</option>
+                            <option value="12">12 mängijat</option>
+                            <option value="16">16 mängijat</option>
+                            <option value="20">20 mängijat</option>
+                            <option value="30">30 mängijat</option>
+                            <option value="50">50 mängijat (Suur server)</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. Vanusepiirang / Vanus (Age Rating) -->
+                    <div>
+                        <label for="publish-age-rating" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Vanusepiirang (Age):</label>
+                        <select id="publish-age-rating" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
+                            <option value="0" selected>Kõik vanused (0+)</option>
+                            <option value="6">6+ aastat</option>
+                            <option value="9">9+ aastat</option>
+                            <option value="10">10+ aastat</option>
+                            <option value="12">12+ aastat</option>
+                            <option value="16">16+ aastat</option>
+                            <option value="18">18+ aastat</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; color: #94a3b8; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem; color: #00f2fe;">ℹ️</span>
+                    <span>Avaldatud mäng ilmub Playard avalikku mängude nimekirja ning teised mängijad saavad sellega liituda.</span>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div style="padding: 14px 22px; background: #1a2330; border-top: 1.5px solid rgba(0, 242, 254, 0.25); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
+                <button id="btn-cancel-publish" class="btn-studio" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: #cbd5e1; padding: 10px 20px;">
+                    <span>Tühista</span>
+                </button>
+                <button id="btn-confirm-publish" class="btn-studio btn-submit-review" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; padding: 10px 24px; box-shadow: 0 4px 18px rgba(0,242,254,0.4);">
+                    <span>Avalda mäng</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 3D Custom Item Creator Workbench Modal -->
     <div id="custom-item-workbench-modal" style="display: none; position: fixed; inset: 0; background: rgba(5, 10, 20, 0.94); backdrop-filter: blur(14px); z-index: 2000; flex-direction: column; overflow: hidden;">
         <!-- Top Toolbar -->

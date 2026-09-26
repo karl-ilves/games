@@ -2,7 +2,9 @@ import { Direction } from '../types';
 
 export class InputManager {
     private onDirectionChange: (dir: Direction) => void;
+    private onDirection2Change?: (dir: Direction) => void;
     private onPauseToggle: () => void;
+    public isTwoPlayerMode: boolean = false;
 
     private touchStartX: number = 0;
     private touchStartY: number = 0;
@@ -11,10 +13,12 @@ export class InputManager {
     constructor(
         element: HTMLElement,
         onDirectionChange: (dir: Direction) => void,
-        onPauseToggle: () => void
+        onPauseToggle: () => void,
+        onDirection2Change?: (dir: Direction) => void
     ) {
         this.onDirectionChange = onDirectionChange;
         this.onPauseToggle = onPauseToggle;
+        this.onDirection2Change = onDirection2Change;
 
         this.bindKeyboard();
         this.bindTouch(element);
@@ -26,6 +30,22 @@ export class InputManager {
             // Prevent scrolling on arrow keys and space
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
                 e.preventDefault();
+            }
+
+            if (this.isTwoPlayerMode && this.onDirection2Change) {
+                // In 2P mode: WASD = P2, Arrows = P1
+                switch (e.key) {
+                    case 'ArrowUp': this.onDirectionChange('UP'); break;
+                    case 'ArrowDown': this.onDirectionChange('DOWN'); break;
+                    case 'ArrowLeft': this.onDirectionChange('LEFT'); break;
+                    case 'ArrowRight': this.onDirectionChange('RIGHT'); break;
+                    case 'w': case 'W': this.onDirection2Change('UP'); break;
+                    case 's': case 'S': this.onDirection2Change('DOWN'); break;
+                    case 'a': case 'A': this.onDirection2Change('LEFT'); break;
+                    case 'd': case 'D': this.onDirection2Change('RIGHT'); break;
+                    case ' ': case 'p': case 'P': this.onPauseToggle(); break;
+                }
+                return;
             }
 
             switch (e.key) {

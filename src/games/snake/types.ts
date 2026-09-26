@@ -31,6 +31,32 @@ export interface Particle {
     maxLife: number;
 }
 
+export type GameMode = 'demo' | 'solo' | 'multiplayer';
+
+export interface PlayerSnake {
+    id: 'player1' | 'player2';
+    name: string;
+    body: GridPoint[];
+    direction: Direction;
+    nextDirection: Direction;
+    score: number;
+    applesEaten: number;
+    growthPending: number;
+    isGameOver: boolean;
+    color: string;
+    headColor: string;
+    eyeColor: string;
+}
+
+export interface MultiplayerInvite {
+    id: string;
+    fromUsername: string;
+    fromDisplayName: string;
+    toUsername: string;
+    timestamp: number;
+    status: 'pending' | 'accepted' | 'declined';
+}
+
 export interface GameStats {
     score: number;
     highScore: number;
@@ -42,4 +68,9 @@ export interface GameStats {
     isPaused: boolean;
     activePowerUp: FoodType | null;
     powerUpTimeRemaining: number;
+    mode: GameMode;
+    player2Score?: number;
+    player2Length?: number;
+    player2Name?: string;
+    player2GameOver?: boolean;
 }

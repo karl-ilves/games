@@ -95,7 +95,21 @@ function resetGame(): void {
     airSupportSystem.despawnAll();
     tankSystem.despawnAll();
     hud.updateWantedLevel(0);
+    cityCarState.resetHealth();
+    hud.updateHealth(cityCarState.getHealth(), cityCarState.getMaxHealth());
     physics.resetCar();
+}
+
+function applyDamage(amount: number, reason: string): void {
+    if (isDead) return;
+    const res = cityCarState.takeDamage(amount);
+    hud.updateHealth(res.remaining, cityCarState.getMaxHealth());
+    if (res.died) {
+        triggerCrashDeath({
+            reason: `Auto tervis sai otsa ja hävis! (${reason})`,
+            speedKmh: Math.abs(physics.state.velocity.length() * 3.6)
+        });
+    }
 }
 
 function triggerArrest(): void {
@@ -168,8 +182,9 @@ const wantedSystem = new WantedSystem({
 });
 
 // Crime & Arrest triggers
-physics.onLampHit = () => { audioSystem.playLampHit(); wantedSystem.reportLampCrash(); };
-physics.onBuildingHit = () => wantedSystem.reportBuildingCollision();
+physics.onLampHit = () => { audioSystem.playLampHit(); wantedSystem.reportLampCrash(); applyDamage(1, 'Tänavapost'); };
+physics.onTreeHit = () => { audioSystem.playLampHit(); wantedSystem.reportLampCrash(); applyDamage(1, 'Puu'); };
+physics.onBuildingHit = () => { wantedSystem.reportBuildingCollision(); applyDamage(20, 'Maja'); };
 physics.onWaterDive = () => wantedSystem.reportOffroadOrWater(true);
 policeSystem.onPlayerRam = () => { wantedSystem.reportPoliceCollision(); triggerArrest(); };
 airSupportSystem.onBombHitPlayer = () => triggerArrest();
@@ -179,38 +194,15 @@ tankSystem.onExplosionSound = () => audioSystem.playExplosion();
 tankSystem.onRocketLaunchSound = () => audioSystem.playRocketLaunch();
 
 // 7. UI HUD & Input Setup
+const toggleCam = () => { const m = cityCarState.cycleCameraMode(); cameraSystem.setMode(m); hud.updateCameraLabel(m); };
+const toggleAud = () => { const e = cityCarState.toggleAudio(); audioSystem.setEnabled(e); hud.updateAudioIcon(e); };
+
 const hud = new CityCarHUD(
-    (newColor) => {
-        cityCarState.setCarColor(newColor);
-        carMesh.setBodyColor(newColor);
-        multiplayer.setLocalColor(newColor);
-    },
-    () => {
-        const nextMode = cityCarState.cycleCameraMode();
-        cameraSystem.setMode(nextMode);
-        hud.updateCameraLabel(nextMode);
-    },
-    () => resetGame(),
-    (active) => { input.triggerHorn(active); audioSystem.playHorn(active); },
-    () => {
-        const enabled = cityCarState.toggleAudio();
-        audioSystem.setEnabled(enabled);
-        hud.updateAudioIcon(enabled);
-    }
+    (c) => { cityCarState.setCarColor(c); carMesh.setBodyColor(c); multiplayer.setLocalColor(c); },
+    toggleCam, () => resetGame(), (a) => { input.triggerHorn(a); audioSystem.playHorn(a); }, toggleAud
 );
 
-const input = new CityCarInputController(
-    () => {
-        const nextMode = cityCarState.cycleCameraMode();
-        cameraSystem.setMode(nextMode);
-        hud.updateCameraLabel(nextMode);
-    },
-    () => {
-        const enabled = cityCarState.toggleAudio();
-        audioSystem.setEnabled(enabled);
-        hud.updateAudioIcon(enabled);
-    }
-);
+const input = new CityCarInputController(toggleCam, toggleAud);
 
 if (!hasAccess) {
     hud.showAccessRestrictedModal();

@@ -1,11 +1,22 @@
-import { Direction, GridPoint, FoodItem, FoodType, GameStats } from '../types';
+import { Direction, GridPoint, FoodItem, FoodType, GameStats, GameMode } from '../types';
 import { SNAKE_CONFIG } from '../catalog';
 
 export class SnakeState {
+    public mode: GameMode = 'demo';
     public body: GridPoint[] = [];
     public direction: Direction = SNAKE_CONFIG.SNAKE.initialDirection;
     public nextDirection: Direction = SNAKE_CONFIG.SNAKE.initialDirection;
     public foodItems: FoodItem[] = [];
+
+    // Player 2 / Friend Snake (for multiplayer mode)
+    public body2: GridPoint[] = [];
+    public direction2: Direction = 'LEFT';
+    public nextDirection2: Direction = 'LEFT';
+    public score2: number = 0;
+    public applesEaten2: number = 0;
+    public growthPending2: number = 0;
+    public isGameOver2: boolean = false;
+    public player2Name: string = 'Sõber';
 
     public cols: number = SNAKE_CONFIG.GRID.cols;
     public rows: number = SNAKE_CONFIG.GRID.rows;
@@ -14,7 +25,7 @@ export class SnakeState {
     private highScore: number = 0;
     private applesEaten: number = 0;
     private baseSpeed: number = SNAKE_CONFIG.SPEED.initialStepRate;
-    private isGameOver: boolean = false;
+    public isGameOver: boolean = false;
     private isPaused: boolean = false;
 
     private activePowerUp: FoodType | null = null;
@@ -25,7 +36,7 @@ export class SnakeState {
 
     constructor() {
         this.loadHighScore();
-        this.reset();
+        this.reset('demo');
     }
 
     private loadHighScore() {
@@ -46,7 +57,8 @@ export class SnakeState {
         } catch {}
     }
 
-    public reset() {
+    public reset(mode: GameMode = 'solo', player2Name?: string) {
+        this.mode = mode;
         this.direction = SNAKE_CONFIG.SNAKE.initialDirection;
         this.nextDirection = SNAKE_CONFIG.SNAKE.initialDirection;
         this.score = 0;
@@ -59,16 +71,39 @@ export class SnakeState {
         this.growthPending = 0;
         this.isNewHighScoreCelebrated = false;
 
-        // Initialize snake segments (head at initialX, body extending left)
-        const startX = SNAKE_CONFIG.SNAKE.initialX;
-        const startY = SNAKE_CONFIG.SNAKE.initialY;
+        // Initialize Player 1 snake segments
+        const startX = mode === 'multiplayer' ? 6 : SNAKE_CONFIG.SNAKE.initialX;
+        const startY = mode === 'multiplayer' ? 6 : SNAKE_CONFIG.SNAKE.initialY;
         this.body = [];
         for (let i = 0; i < SNAKE_CONFIG.SNAKE.initialLength; i++) {
             this.body.push({ x: startX - i, y: startY });
         }
 
+        // Initialize Player 2 snake (if multiplayer)
+        if (mode === 'multiplayer') {
+            this.player2Name = player2Name || 'Sõber';
+            this.score2 = 0;
+            this.applesEaten2 = 0;
+            this.growthPending2 = 0;
+            this.isGameOver2 = false;
+            this.direction2 = 'LEFT';
+            this.nextDirection2 = 'LEFT';
+            const startX2 = this.cols - 6;
+            const startY2 = this.rows - 6;
+            this.body2 = [];
+            for (let i = 0; i < SNAKE_CONFIG.SNAKE.initialLength; i++) {
+                this.body2.push({ x: startX2 + i, y: startY2 });
+            }
+        } else {
+            this.body2 = [];
+            this.isGameOver2 = false;
+        }
+
         this.foodItems = [];
         this.spawnFood('apple');
+        if (mode === 'multiplayer') {
+            this.spawnFood('apple');
+        }
     }
 
     public setDirection(newDir: Direction): boolean {
@@ -87,6 +122,24 @@ export class SnakeState {
         }
 
         this.nextDirection = newDir;
+        return true;
+    }
+
+    public setDirection2(newDir: Direction): boolean {
+        if (this.isGameOver || this.isPaused || this.isGameOver2) return false;
+
+        const opposites: Record<Direction, Direction> = {
+            UP: 'DOWN',
+            DOWN: 'UP',
+            LEFT: 'RIGHT',
+            RIGHT: 'LEFT',
+        };
+
+        if (opposites[this.direction2] === newDir) {
+            return false;
+        }
+
+        this.nextDirection2 = newDir;
         return true;
     }
 
@@ -319,6 +372,83 @@ export class SnakeState {
             }
         }
 
+        // Multiplayer mode: Step Player 2 snake
+        if (this.mode === 'multiplayer' && this.body2.length > 0 && !this.isGameOver2) {
+            this.direction2 = this.nextDirection2;
+            let newX2 = this.body2[0].x;
+            let newY2 = this.body2[0].y;
+            switch (this.direction2) {
+                case 'UP': newY2 -= 1; break;
+                case 'DOWN': newY2 += 1; break;
+                case 'LEFT': newX2 -= 1; break;
+                case 'RIGHT': newX2 += 1; break;
+            }
+
+            // Screen wrap-around for Player 2
+            if (newX2 < 0) newX2 = this.cols - 1;
+            else if (newX2 >= this.cols) newX2 = 0;
+            if (newY2 < 0) newY2 = this.rows - 1;
+            else if (newY2 >= this.rows) newY2 = 0;
+
+            // Self-collision for Player 2
+            const willGrow2 = this.growthPending2 > 0;
+            const checkLength2 = willGrow2 ? this.body2.length : this.body2.length - 1;
+            for (let i = 0; i < checkLength2; i++) {
+                if (this.body2[i].x === newX2 && this.body2[i].y === newY2) {
+                    this.isGameOver2 = true;
+                    break;
+                }
+            }
+
+            // Collision: Player 2 hits Player 1's body
+            for (let i = 0; i < this.body.length; i++) {
+                if (this.body[i].x === newX2 && this.body[i].y === newY2) {
+                    this.isGameOver2 = true;
+                    break;
+                }
+            }
+
+            if (!this.isGameOver2) {
+                this.body2.unshift({ x: newX2, y: newY2 });
+                if (this.growthPending2 > 0) {
+                    this.growthPending2--;
+                } else {
+                    this.body2.pop();
+                }
+
+                // Food check for Player 2
+                const foodIdx2 = this.foodItems.findIndex(f => f.x === newX2 && f.y === newY2);
+                if (foodIdx2 !== -1) {
+                    const food2 = this.foodItems[foodIdx2];
+                    this.foodItems.splice(foodIdx2, 1);
+                    this.score2 += food2.points;
+                    this.applesEaten2++;
+                    this.growthPending2 += food2.growth;
+                    if (!this.foodItems.some(f => f.type === 'apple')) {
+                        this.spawnFood('apple');
+                    }
+                }
+            }
+        }
+
+        // Collision: Player 1 hits Player 2's body
+        if (this.mode === 'multiplayer' && this.body2.length > 0) {
+            for (let i = 0; i < this.body2.length; i++) {
+                if (this.body2[i].x === newX && this.body2[i].y === newY) {
+                    this.isGameOver = true;
+                    return {
+                        moved: false,
+                        ateFood: null,
+                        hitWall: false,
+                        hitSelf: true,
+                        isGameOver: true,
+                        isNewHighScore: false,
+                        wrapped,
+                    };
+                }
+            }
+        }
+
         return {
             moved: true,
             ateFood,
@@ -361,6 +491,11 @@ export class SnakeState {
             isPaused: this.isPaused,
             activePowerUp: this.activePowerUp,
             powerUpTimeRemaining: Math.max(0, Math.ceil(this.powerUpTimer)),
+            mode: this.mode,
+            player2Score: this.score2,
+            player2Length: this.body2.length,
+            player2Name: this.player2Name,
+            player2GameOver: this.isGameOver2,
         };
     }
 }

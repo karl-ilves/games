@@ -38,6 +38,14 @@ export class CarPhysicsController {
     public isDrivingThroughBuilding = false;
     public penetratingBuilding?: BuildingObject;
     public driveThroughDistance = 0;
+    private buildingHitCooldown = 0;
+
+    private triggerBuildingHit(): void {
+        if (this.buildingHitCooldown <= 0) {
+            this.buildingHitCooldown = 0.5;
+            this.onBuildingHit?.();
+        }
+    }
 
     constructor(
         meshContainer: CarMeshContainer,
@@ -67,6 +75,7 @@ export class CarPhysicsController {
     public update(dt: number, input: CarInputState): void {
         // Clamp delta time to avoid large physics steps
         const delta = Math.min(dt, 0.1);
+        if (this.buildingHitCooldown > 0) this.buildingHitCooldown -= delta;
 
         if (input.reset) {
             this.resetCar();
@@ -267,7 +276,6 @@ export class CarPhysicsController {
                         // Resistance from snapping trunk
                         this.forwardSpeedMps *= 0.75;
                         this.onTreeHit?.();
-                        this.onLampHit?.();
                     }
                 }
             }
@@ -323,7 +331,7 @@ export class CarPhysicsController {
                         this.world.createBuildingBreach(this.state.position, this.yaw, b);
                         // Make building facade transparent cutaway so player SEES the car driving through!
                         this.world.setBuildingCutaway(b, true);
-                        this.onBuildingHit?.();
+                        this.triggerBuildingHit();
                         this.meshContainer.setFrontWrecked(true);
                         this.forwardSpeedMps *= 0.84;
                     } else {
@@ -353,7 +361,7 @@ export class CarPhysicsController {
                             this.driveThroughDistance = 0;
                             this.world.createBuildingBreach(this.state.position, this.yaw, matchingBuilding);
                             this.world.setBuildingCutaway(matchingBuilding, true);
-                            this.onBuildingHit?.();
+                            this.triggerBuildingHit();
                             this.meshContainer.setFrontWrecked(true);
                             this.forwardSpeedMps *= 0.84;
                             continue;
@@ -419,7 +427,7 @@ export class CarPhysicsController {
             // Rebound bounce / stop against building or fence obstacle
             const impactSpeed = this.forwardSpeedMps;
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
-            this.onBuildingHit?.();
+            this.triggerBuildingHit();
 
             // Punch car-sized hole in building at exact impact point and height (even in mid-air!)
             if (hitBuilding || Math.abs(impactSpeed) > 0.8 || !this.state.isGrounded || this.launchedFromRamp) {
@@ -596,9 +604,12 @@ export class CarPhysicsController {
         if (this.penetratingBuilding) {
             this.world.setBuildingCutaway(this.penetratingBuilding, false);
         }
+        this.world.clearBuildingBreaches();
+        this.world.clearBuildingCollapses();
         this.isDrivingThroughBuilding = false;
         this.penetratingBuilding = undefined;
         this.driveThroughDistance = 0;
+        this.buildingHitCooldown = 0;
         this.isDead = false;
         this.fallingAfterCrash = false;
         this.launchedFromRamp = false;

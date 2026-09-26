@@ -56,6 +56,9 @@ export interface CreatedGame {
     status: 'pending_review' | 'approved' | 'rejected' | 'changes_requested';
     feedback?: string;
     plays: number;
+    maxPlayers?: number;
+    minAge?: number;
+    ageRating?: string;
     createdAt: number;
     updatedAt: number;
 }

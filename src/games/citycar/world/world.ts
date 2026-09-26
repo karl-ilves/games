@@ -599,6 +599,27 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         clearBuildingBreaches: () => {
             breachSystem.clear();
             collapseSystem.clear();
+            for (const lamp of streetLamps) {
+                lamp.isFalling = false;
+                lamp.isFallen = false;
+                lamp.fallProgress = 0;
+                lamp.fallenTime = 0;
+                lamp.group.rotation.set(0, lamp.group.rotation.y, 0);
+                lamp.group.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
+                lamp.group.position.copy(lamp.basePos);
+                const headMat = lamp.group.userData?.headMat as THREE.MeshStandardMaterial | undefined;
+                if (headMat) {
+                    headMat.emissive?.setHex(0xffeaa7);
+                    headMat.color?.setHex(0xffeaa7);
+                }
+            }
+            for (const tree of trees) {
+                tree.isFalling = false;
+                tree.isFallen = false;
+                tree.fallProgress = 0;
+                tree.fallenTime = 0;
+                tree.topGroup.rotation.set(0, 0, 0);
+            }
         },
         getBuildingBreaches: () => breachSystem.getBreaches(),
         collapseBuilding: (buildingOrPos: BuildingObject | THREE.Vector3, carYaw = 0) => {

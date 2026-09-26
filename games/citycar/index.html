@@ -408,6 +408,55 @@
             transform: translateY(-2px);
         }
 
+        /* Health Bar (Elude Joon) */
+        .health-container {
+            width: 100%;
+            margin-bottom: 8px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 6px 10px;
+            box-sizing: border-box;
+        }
+        .health-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.74rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .health-label {
+            color: #ff4757;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .health-val {
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+        .health-bar-bg {
+            width: 100%;
+            height: 9px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+        }
+        .health-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #2ecc71, #00cec9);
+            border-radius: 5px;
+            transition: width 0.25s ease-out, background 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+        }
+
         /* Speedometer & Gear */
         .speedometer-container {
             background: radial-gradient(circle at center, rgba(14, 28, 44, 0.9) 0%, rgba(10, 16, 26, 0.95) 100%);
@@ -659,6 +708,15 @@
 
             <!-- Speedometer -->
             <div class="speedometer-container">
+                <div class="health-container" id="hud-health-container">
+                    <div class="health-header">
+                        <span class="health-label"><span>❤️</span> ELUD</span>
+                        <span class="health-val" id="hud-health-val">100 / 100</span>
+                    </div>
+                    <div class="health-bar-bg">
+                        <div class="health-bar-fill" id="hud-health-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
                 <div class="speed-readout" id="speed-val">0</div>
                 <div class="speed-unit">KM / H</div>
                 <div class="gear-indicator">

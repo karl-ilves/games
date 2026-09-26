@@ -14,6 +14,8 @@ export interface CityCarStateData {
     gear: 'P' | 'D' | 'R';
     userId: string;
     userName: string;
+    health: number;
+    maxHealth: number;
 }
 
 export class CityCarStateManager {
@@ -32,7 +34,9 @@ export class CityCarStateManager {
             currentSpeedKmh: 0,
             gear: 'P',
             userId: this.generateOrLoadUserId(),
-            userName: this.loadUserName()
+            userName: this.loadUserName(),
+            health: 100,
+            maxHealth: 100
         };
     }
 
@@ -131,6 +135,29 @@ export class CityCarStateManager {
 
     public setUserName(name: string): void {
         this.state.userName = name;
+    }
+
+    public getHealth(): number {
+        return this.state.health;
+    }
+
+    public getMaxHealth(): number {
+        return this.state.maxHealth;
+    }
+
+    public takeDamage(amount: number): { remaining: number; died: boolean } {
+        const prev = this.state.health;
+        this.state.health = Math.max(0, this.state.health - amount);
+        const died = prev > 0 && this.state.health === 0;
+        return { remaining: this.state.health, died };
+    }
+
+    public setHealth(val: number): void {
+        this.state.health = Math.max(0, Math.min(this.state.maxHealth, val));
+    }
+
+    public resetHealth(): void {
+        this.state.health = this.state.maxHealth;
     }
 }
 
