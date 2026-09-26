@@ -14,11 +14,16 @@ export class AuditLogger {
         gameTitle?: string;
         status?: 'success' | 'blocked' | 'error';
         error?: string;
-    }): AiAuditLogEntry {
-        const profile = getCurrentUserProfile();
-        const username = profile?.username || 'Guest';
+    }): void {
+        let username = 'Guest';
+        try {
+            const profile = getCurrentUserProfile();
+            username = profile?.username || 'Guest';
+        } catch (e) {
+            username = yardService.getCurrentUsername() || 'Guest';
+        }
 
-        return yardService.saveAiAuditLog({
+        yardService.saveAiAuditLog({
             username,
             prompt: params.prompt,
             intent: params.intent,
@@ -33,7 +38,7 @@ export class AuditLogger {
         });
     }
 
-    public static getLogs(): AiAuditLogEntry[] {
+    public static getLogs(): any[] {
         return yardService.getAiAuditLogs();
     }
 }

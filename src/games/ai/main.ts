@@ -1,7 +1,7 @@
 import { AiState } from './state/aiState';
 import { ConversationEngine, type ParsedCommand } from './systems/conversationEngine';
 import { StepPlanner } from './systems/stepPlanner';
-import { GameGenerator, type PlayardAiScene } from './systems/gameGenerator';
+import { GameGenerator } from './systems/gameGenerator';
 import { SceneModifier } from './systems/sceneModifier';
 import { SelfVerifier } from './systems/selfVerifier';
 import { AuditLogger } from './systems/auditLogger';
@@ -11,7 +11,7 @@ import { StepTrackerView } from './ui/stepTrackerView';
 import { yardService } from '../../shared/yardService';
 
 class PlayardAiApp {
-    private state: AiState;
+    public state: AiState;
     private viewport!: PreviewViewport;
     private chatView!: ChatView;
     private stepTracker!: StepTrackerView;
@@ -144,7 +144,7 @@ class PlayardAiApp {
 
         // Turvakontroll
         if (parsed.intent === 'SECURITY_VIOLATION') {
-            await AuditLogger.logAction({
+            AuditLogger.logAction({
                 prompt: input,
                 intent: 'SECURITY_VIOLATION',
                 isSafe: false,
@@ -209,7 +209,7 @@ class PlayardAiApp {
         // Self-verification
         const verification = SelfVerifier.verifyScene(newScene);
 
-        await AuditLogger.logAction({
+        AuditLogger.logAction({
             prompt: parsed.rawText,
             intent: parsed.intent,
             isSafe: true,
@@ -251,7 +251,7 @@ class PlayardAiApp {
 
         const verification = SelfVerifier.verifyScene(result.modifiedScene);
 
-        await AuditLogger.logAction({
+        AuditLogger.logAction({
             prompt: parsed.rawText,
             intent: parsed.intent,
             isSafe: true,

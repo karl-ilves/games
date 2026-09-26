@@ -734,6 +734,80 @@ function setupModals() {
         closeDatabaseBtn.addEventListener('click', () => modalDatabase.style.display = 'none');
     }
 
+    // Admin Panel Tab Switching (Updates vs AI Logs)
+    const tabAdminUpdates = document.getElementById('tab-admin-updates');
+    const tabAdminAiLogs = document.getElementById('tab-admin-ai-logs');
+    const adminUpdatesSection = document.getElementById('admin-updates-section');
+    const adminAiLogsSection = document.getElementById('admin-ai-logs-section');
+
+    if (tabAdminUpdates && tabAdminAiLogs && adminUpdatesSection && adminAiLogsSection) {
+        tabAdminUpdates.addEventListener('click', () => {
+            adminUpdatesSection.style.display = 'block';
+            adminAiLogsSection.style.display = 'none';
+            tabAdminUpdates.style.background = 'rgba(255, 211, 42, 0.2)';
+            tabAdminUpdates.style.borderColor = '#ffd32a';
+            tabAdminAiLogs.style.background = 'rgba(56, 189, 248, 0.1)';
+            tabAdminAiLogs.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+        });
+        tabAdminAiLogs.addEventListener('click', () => {
+            adminUpdatesSection.style.display = 'none';
+            adminAiLogsSection.style.display = 'flex';
+            tabAdminAiLogs.style.background = 'rgba(56, 189, 248, 0.2)';
+            tabAdminAiLogs.style.borderColor = '#38bdf8';
+            tabAdminUpdates.style.background = 'rgba(255, 211, 42, 0.1)';
+            tabAdminUpdates.style.borderColor = 'rgba(255, 211, 42, 0.3)';
+            renderAdminAiLogs();
+        });
+    }
+
+    function renderAdminAiLogs() {
+        const listContainer = document.getElementById('admin-ai-logs-list');
+        const countBadge = document.getElementById('admin-ai-logs-count-badge');
+        if (!listContainer) return;
+
+        const logs: any[] = yardService.getAiAuditLogs();
+        if (countBadge) countBadge.textContent = `${logs.length} logi`;
+
+        if (!logs || logs.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 20px;">Playard AI logisid pole veel salvestatud.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        const sorted = [...logs].sort((a: any, b: any) => b.timestamp - a.timestamp);
+        for (const log of sorted) {
+            const dateStr = new Date(log.timestamp).toLocaleString();
+            const statusColor = log.status === 'blocked' ? '#ef4444' : (log.status === 'error' ? '#f59e0b' : '#10b981');
+            const statusIcon = log.status === 'blocked' ? '🛡️' : (log.status === 'error' ? '⚠️' : '✅');
+            const item = document.createElement('div');
+            item.style.cssText = 'background: #1e293b; border: 1px solid rgba(56, 189, 248, 0.15); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;';
+            item.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 0.85rem;">${statusIcon}</span>
+                        <strong style="color: #e2e8f0; font-size: 0.9rem;">${log.intent}</strong>
+                        <span style="color: ${statusColor}; font-size: 0.75rem; font-weight: 700; background: ${statusColor}20; padding: 2px 8px; border-radius: 4px;">${log.status?.toUpperCase()}</span>
+                    </div>
+                    <span style="font-size: 0.7rem; color: #64748b;">${dateStr}</span>
+                </div>
+                <div style="font-size: 0.82rem; color: #94a3b8; padding: 4px 0;">
+                    <strong>Kasutaja:</strong> <span style="color: #38bdf8;">${log.username}</span>
+                    ${log.gameTitle ? ` · <strong>Mäng:</strong> <span style="color: #ffd32a;">${log.gameTitle}</span>` : ''}
+                </div>
+                <div style="font-size: 0.8rem; color: #cbd5e1; background: #131920; padding: 6px 8px; border-radius: 4px; word-break: break-word;">"${log.prompt}"</div>
+                ${log.violations && log.violations.length > 0 ? `<div style="font-size: 0.75rem; color: #ef4444; margin-top: 2px;">⚠️ ${log.violations.join(', ')}</div>` : ''}
+            `;
+            listContainer.appendChild(item);
+        }
+    }
+
+    // Listen for live AI log updates
+    window.addEventListener('playard_ai_logs_updated', () => {
+        if (adminAiLogsSection && adminAiLogsSection.style.display !== 'none') {
+            renderAdminAiLogs();
+        }
+    });
+
     // Send Update to Owner Handler
     const btnSendUpdate = document.getElementById('btn-send-update-to-owner');
     const updateTitleInput = document.getElementById('admin-update-title') as HTMLInputElement | null;

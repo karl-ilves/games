@@ -173,8 +173,8 @@ export class ConversationEngine {
         }
 
         // "Muuda taevas öiseks" / "Muuda taevas päevaseks"
-        if (/taevas|sky|night|öine|päev|day|dark|valge/i.test(lower)) {
-            const isNight = /öö|öine|night|dark|pime/i.test(lower);
+        if (/taevas|sky|night|öine|öis|öö|päev|day|dark|valge/i.test(lower)) {
+            const isNight = /öö|öis|öine|night|dark|pime/i.test(lower);
             return {
                 intent: 'CHANGE_ENVIRONMENT',
                 confidence: 0.95,

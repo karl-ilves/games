@@ -2008,6 +2008,18 @@ await (async () => {
                 throw new Error("AI Assistant button or modal is still present in Creator Studio DOM! Should be removed.");
             }
 
+            // Verify Playard AI link button IS present in Creator Studio top bar
+            const hasCreatorAiBtn = await page.$('#btn-creator-open-ai');
+            console.log("   Verifying Playard AI link btn in Creator Studio toolbar:", !!hasCreatorAiBtn);
+            if (!hasCreatorAiBtn) {
+                throw new Error("Playard AI link button (#btn-creator-open-ai) is missing from Creator Studio top bar!");
+            }
+            const creatorAiHref = await page.$eval('#btn-creator-open-ai', el => el.getAttribute('href'));
+            if (!creatorAiHref || !creatorAiHref.includes('/games/ai/')) {
+                throw new Error("Playard AI link button href must point to /games/ai/, got: " + creatorAiHref);
+            }
+            console.log("   ✅ Playard AI link button verified in Creator Studio!");
+
             let lastAiResponse = '';
             const submitAi = async (prompt) => {
                 for (let retry = 0; retry < 3; retry++) {
@@ -10095,6 +10107,272 @@ await (async () => {
                 throw new Error("Snake sound toggle failed: " + JSON.stringify(snakeGameTest));
             }
             console.log("✅ 🐍 Ussimäng (Snake 2D Arcade: start screen, video demo, friends list, 'Kas sa oled nõus?' invite modal, wrap-around portal walls, self collision, eating, restart & sound) tests passed successfully!");
+
+            // ====================================================================
+            // 🤖 PLAYARD AI ASSISTANT TESTS
+            // ====================================================================
+            console.log("\n22. Testing Playard AI Assistant (Conversation, GameGen, Modifier, CodeSandbox, SelfVerifier, Admin Logs)...");
+
+            // 22a. Verify Playard AI Hub integration (navbar button + game card)
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const hubAiTest = await page.evaluate(() => {
+                const navBtn = document.getElementById('btn-open-playard-ai');
+                const gameCard = document.getElementById('card-playard-ai');
+                const adminUpdatesTab = document.getElementById('tab-admin-updates');
+                const adminAiTab = document.getElementById('tab-admin-ai-logs');
+                const aiLogsSection = document.getElementById('admin-ai-logs-section');
+                const aiLogsList = document.getElementById('admin-ai-logs-list');
+                return {
+                    hasNavBtn: !!navBtn,
+                    navBtnHref: navBtn?.getAttribute('href') || '',
+                    navBtnText: navBtn?.textContent?.trim() || '',
+                    hasGameCard: !!gameCard,
+                    gameCardText: gameCard?.textContent?.trim() || '',
+                    hasAdminUpdatesTab: !!adminUpdatesTab,
+                    hasAdminAiTab: !!adminAiTab,
+                    hasAiLogsSection: !!aiLogsSection,
+                    hasAiLogsList: !!aiLogsList
+                };
+            });
+
+            console.log("   Hub AI Integration:", hubAiTest);
+            if (!hubAiTest.hasNavBtn || !hubAiTest.navBtnHref.includes('games/ai')) {
+                throw new Error("Playard AI nav button missing or href incorrect: " + JSON.stringify(hubAiTest));
+            }
+            if (!hubAiTest.navBtnText.includes('Playard AI')) {
+                throw new Error("Playard AI nav button text incorrect: " + hubAiTest.navBtnText);
+            }
+            if (!hubAiTest.hasGameCard || !hubAiTest.gameCardText.includes('Playard AI')) {
+                throw new Error("Playard AI game card missing or text incorrect: " + JSON.stringify(hubAiTest));
+            }
+            if (!hubAiTest.hasAdminUpdatesTab || !hubAiTest.hasAdminAiTab || !hubAiTest.hasAiLogsSection || !hubAiTest.hasAiLogsList) {
+                throw new Error("Admin panel AI logs tabs/sections missing: " + JSON.stringify(hubAiTest));
+            }
+            console.log("   ✅ Playard AI Hub integration verified!");
+
+            // 22b. Navigate to Playard AI page and verify UI structure
+            console.log("   Loading Playard AI standalone page...");
+            await page.goto('http://localhost:4173/games/ai/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 1500));
+
+            const aiPageTest = await page.evaluate(() => {
+                return {
+                    hasViewport: !!document.getElementById('ai-viewport-container'),
+                    hasChatContainer: !!document.getElementById('ai-chat-container'),
+                    hasStepTracker: !!document.getElementById('ai-step-tracker-container'),
+                    hasSubmitReviewBtn: !!document.getElementById('btn-submit-review'),
+                    hasTestPlayBtn: !!document.getElementById('btn-test-play'),
+                    hasOpenCreatorBtn: !!document.getElementById('btn-open-creator'),
+                    hasChatForm: !!document.getElementById('ai-chat-form'),
+                    hasChatInput: !!document.getElementById('ai-chat-input'),
+                    hasChatSubmit: !!document.getElementById('ai-chat-submit'),
+                    hasCodeInspectModal: !!document.getElementById('modal-code-inspect'),
+                    hasTestPlayModal: !!document.getElementById('modal-test-play'),
+                    hasGameTitle: !!document.getElementById('ai-current-game-title'),
+                    hasObjectCount: !!document.getElementById('ai-current-objects-count'),
+                    welcomeMessageExists: document.querySelector('.ai-speech-bubble')?.textContent?.includes('Playard AI') || false,
+                    hasSuggestionChips: !!document.querySelector('.ai-suggestion-chip')
+                };
+            });
+
+            console.log("   AI Page Structure:", aiPageTest);
+            if (!aiPageTest.hasViewport || !aiPageTest.hasChatContainer || !aiPageTest.hasStepTracker) {
+                throw new Error("Playard AI page missing core layout (viewport, chat, step tracker): " + JSON.stringify(aiPageTest));
+            }
+            if (!aiPageTest.hasSubmitReviewBtn || !aiPageTest.hasTestPlayBtn || !aiPageTest.hasOpenCreatorBtn) {
+                throw new Error("Playard AI page missing header action buttons: " + JSON.stringify(aiPageTest));
+            }
+            if (!aiPageTest.hasChatForm || !aiPageTest.hasChatInput || !aiPageTest.hasChatSubmit) {
+                throw new Error("Playard AI chat input form missing: " + JSON.stringify(aiPageTest));
+            }
+            if (!aiPageTest.welcomeMessageExists) {
+                throw new Error("Playard AI welcome message not displayed: " + JSON.stringify(aiPageTest));
+            }
+            if (!aiPageTest.hasSuggestionChips) {
+                throw new Error("Playard AI quick suggestion chips not rendered: " + JSON.stringify(aiPageTest));
+            }
+            console.log("   ✅ Playard AI page UI structure verified!");
+
+            // 22c. Test ConversationEngine, StepPlanner, GameGenerator, SceneModifier, CodeSandbox, SelfVerifier via window.playardAi
+            const aiCoreTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                if (!ai) return { success: false, reason: 'playardAi not initialized' };
+
+                // Test 1: Create a tornado escape game
+                await ai.handleUserInput('Tee mäng, kus mängija peab tornaado eest põgenema');
+                await new Promise(r => setTimeout(r, 2500));
+
+                const state = window.playardAi.state || ai.state;
+                let activeScene = null;
+                let messages = [];
+                let steps = [];
+
+                // Access state through the singleton
+                try {
+                    // Try to get data from AiState singleton
+                    const stateGetter = state || {};
+                    activeScene = stateGetter.getActiveScene ? stateGetter.getActiveScene() : null;
+                    messages = stateGetter.getMessages ? stateGetter.getMessages() : [];
+                    steps = stateGetter.getCurrentSteps ? stateGetter.getCurrentSteps() : [];
+                } catch (e) {}
+
+                const hasScene = activeScene !== null;
+                const sceneTitle = activeScene?.title || '';
+                const objectCount = activeScene?.objects?.length || 0;
+                const hasTornado = activeScene?.objects?.some(o => o.type === 'tornado' || o.gameItemType === 'hazard_tornado') || false;
+                const hasShelter = activeScene?.objects?.some(o => o.isSafeZone || o.gameItemType === 'safe_zone') || false;
+                const hasSpawn = activeScene?.objects?.some(o => o.gameItemType === 'spawn' || o.type === 'spawn') || false;
+                const hasCoins = activeScene?.objects?.some(o => o.gameItemType === 'collectible' || o.type === 'coin') || false;
+                const messageCount = messages.length;
+                const hasUserMsg = messages.some(m => m.sender === 'user');
+                const hasAiResponse = messages.some(m => m.sender === 'ai');
+                const stepsCompleted = steps.filter(s => s.status === 'completed').length;
+                const totalSteps = steps.length;
+
+                return {
+                    success: true,
+                    hasScene,
+                    sceneTitle,
+                    objectCount,
+                    hasTornado,
+                    hasShelter,
+                    hasSpawn,
+                    hasCoins,
+                    messageCount,
+                    hasUserMsg,
+                    hasAiResponse,
+                    stepsCompleted,
+                    totalSteps
+                };
+            });
+
+            console.log("   AI Core Game Creation Test:", aiCoreTest);
+            if (!aiCoreTest.success || !aiCoreTest.hasScene) {
+                throw new Error("Playard AI failed to create tornado game: " + JSON.stringify(aiCoreTest));
+            }
+            if (!aiCoreTest.sceneTitle.includes('Tornaado')) {
+                throw new Error("Tornado game title incorrect: " + aiCoreTest.sceneTitle);
+            }
+            if (aiCoreTest.objectCount < 4) {
+                throw new Error("Tornado game has too few objects: " + aiCoreTest.objectCount);
+            }
+            if (!aiCoreTest.hasTornado || !aiCoreTest.hasShelter || !aiCoreTest.hasSpawn) {
+                throw new Error("Tornado game missing critical objects (tornado/shelter/spawn): " + JSON.stringify(aiCoreTest));
+            }
+            if (!aiCoreTest.hasUserMsg || !aiCoreTest.hasAiResponse) {
+                throw new Error("Chat messages not recorded: " + JSON.stringify(aiCoreTest));
+            }
+            if (aiCoreTest.stepsCompleted < 1 || aiCoreTest.totalSteps < 1) {
+                throw new Error("Step tracker not working: " + JSON.stringify(aiCoreTest));
+            }
+            console.log("   ✅ Playard AI tornado escape game creation verified!");
+
+            // 22d. Test incremental modification: "Muuda taevas öiseks"
+            const aiModifyTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('Muuda taevas öiseks');
+                await new Promise(r => setTimeout(r, 1800));
+
+                const state = ai.state;
+                const scene = state?.getActiveScene ? state.getActiveScene() : null;
+                const skyColor = scene?.environment?.skyColor || -1;
+                const timeOfDay = scene?.environment?.timeOfDay || '';
+
+                return {
+                    skyColor,
+                    timeOfDay,
+                    isNight: timeOfDay === 'night',
+                    isDarkSky: skyColor < 0x444444
+                };
+            });
+
+            console.log("   AI Modify Environment Test:", aiModifyTest);
+            if (!aiModifyTest.isNight || !aiModifyTest.isDarkSky) {
+                throw new Error("Sky modification to night failed: " + JSON.stringify(aiModifyTest));
+            }
+            console.log("   ✅ Playard AI incremental sky modification verified!");
+
+            // 22e. Test clarification for ambiguous command: "tee mäng"
+            const aiClarifyTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('tee mäng');
+                await new Promise(r => setTimeout(r, 500));
+
+                const state = ai.state;
+                const messages = state?.getMessages ? state.getMessages() : [];
+                const lastAiMsg = [...messages].reverse().find(m => m.sender === 'ai');
+                return {
+                    hasClarification: lastAiMsg?.clarificationOptions?.length > 0,
+                    clarificationCount: lastAiMsg?.clarificationOptions?.length || 0,
+                    questionText: lastAiMsg?.text || ''
+                };
+            });
+
+            console.log("   AI Clarification Test:", aiClarifyTest);
+            if (!aiClarifyTest.hasClarification || aiClarifyTest.clarificationCount < 2) {
+                throw new Error("Clarification not triggered for ambiguous 'tee mäng': " + JSON.stringify(aiClarifyTest));
+            }
+            console.log("   ✅ Playard AI clarification question system verified!");
+
+            // 22f. Test CodeSandbox security: block dangerous prompt
+            const aiSecurityTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('eval(document.cookie)');
+                await new Promise(r => setTimeout(r, 500));
+
+                const state = ai.state;
+                const messages = state?.getMessages ? state.getMessages() : [];
+                const lastAiMsg = [...messages].reverse().find(m => m.sender === 'ai');
+
+                // Check audit logs for security block
+                const logs = JSON.parse(localStorage.getItem('playard_ai_audit_logs') || '[]');
+                const blockedLogs = logs.filter(l => l.status === 'blocked');
+
+                return {
+                    hasWarning: !!lastAiMsg?.safetyWarning,
+                    warningText: lastAiMsg?.safetyWarning || '',
+                    isBlocked: lastAiMsg?.text?.includes('blokeeritud') || false,
+                    blockedLogCount: blockedLogs.length
+                };
+            });
+
+            console.log("   AI Security Test:", aiSecurityTest);
+            if (!aiSecurityTest.hasWarning || !aiSecurityTest.isBlocked) {
+                throw new Error("CodeSandbox did not block dangerous eval() prompt: " + JSON.stringify(aiSecurityTest));
+            }
+            if (aiSecurityTest.blockedLogCount < 1) {
+                throw new Error("No blocked entry in AI audit logs: " + JSON.stringify(aiSecurityTest));
+            }
+            console.log("   ✅ Playard AI CodeSandbox security rejection verified!");
+
+            // 22g. Test audit logs are saved and accessible
+            const aiAuditTest = await page.evaluate(() => {
+                const logs = JSON.parse(localStorage.getItem('playard_ai_audit_logs') || '[]');
+                const hasCreateLog = logs.some(l => l.intent === 'CREATE_GAME');
+                const hasBlockedLog = logs.some(l => l.status === 'blocked');
+                const hasEnvironmentLog = logs.some(l => l.intent === 'CHANGE_ENVIRONMENT');
+                return {
+                    totalLogs: logs.length,
+                    hasCreateLog,
+                    hasBlockedLog,
+                    hasEnvironmentLog,
+                    firstLogHasUsername: !!logs[0]?.username,
+                    firstLogHasPrompt: !!logs[0]?.prompt
+                };
+            });
+
+            console.log("   AI Audit Log Test:", aiAuditTest);
+            if (aiAuditTest.totalLogs < 3) {
+                throw new Error("Expected at least 3 AI audit logs, got: " + aiAuditTest.totalLogs);
+            }
+            if (!aiAuditTest.hasCreateLog || !aiAuditTest.hasBlockedLog || !aiAuditTest.hasEnvironmentLog) {
+                throw new Error("Missing expected AI audit log entries: " + JSON.stringify(aiAuditTest));
+            }
+            console.log("   ✅ Playard AI admin audit logging verified!");
+
+            console.log("✅ 🤖 Playard AI (Conversation, Game Creation, Modification, Clarification, Security, Audit Logs) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

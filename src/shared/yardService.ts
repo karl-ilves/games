@@ -2111,6 +2111,59 @@ class YardService {
         </svg>
         `;
     }
+    // --- Playard AI Audit Log ---
+
+    getCurrentUsername(): string {
+        return this.currentUserUsername || 'Guest';
+    }
+
+    saveAiAuditLog(params: {
+        username: string;
+        prompt: string;
+        intent: string;
+        isSafe: boolean;
+        riskLevel?: string;
+        violations?: string[];
+        stepsCount: number;
+        gameId?: string;
+        gameTitle?: string;
+        status?: string;
+        error?: string;
+    }): any {
+        const logs = this.getAiAuditLogs();
+        const entry = {
+            id: 'ailog_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            timestamp: Date.now(),
+            username: params.username,
+            prompt: params.prompt,
+            intent: params.intent,
+            isSafe: params.isSafe,
+            riskLevel: params.riskLevel || 'safe',
+            violations: params.violations,
+            stepsCount: params.stepsCount,
+            gameId: params.gameId,
+            gameTitle: params.gameTitle,
+            status: params.status || 'success',
+            error: params.error
+        };
+        logs.push(entry);
+        try {
+            localStorage.setItem('playard_ai_audit_logs', JSON.stringify(logs));
+        } catch (e) {}
+        try {
+            window.dispatchEvent(new CustomEvent('playard_ai_logs_updated'));
+        } catch (e) {}
+        return entry;
+    }
+
+    getAiAuditLogs(): any[] {
+        try {
+            const raw = localStorage.getItem('playard_ai_audit_logs');
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    }
 }
 
 export const yardService = new YardService();
