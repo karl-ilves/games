@@ -10,18 +10,32 @@ export class DemoAiSystem {
     }
 
     public getNextDirection(
-        head: GridPoint,
+        headOrBody: GridPoint | GridPoint[],
         currentDir: Direction,
-        body: GridPoint[],
-        foodItems: FoodItem[]
+        bodyOrFood: GridPoint[] | FoodItem[],
+        foodItems?: FoodItem[]
     ): Direction {
-        if (!head || foodItems.length === 0) return currentDir;
+        let head: GridPoint;
+        let body: GridPoint[];
+        let foods: FoodItem[];
+
+        if (Array.isArray(headOrBody)) {
+            body = headOrBody;
+            head = body[0];
+            foods = (Array.isArray(bodyOrFood) ? bodyOrFood : []) as FoodItem[];
+        } else {
+            head = headOrBody;
+            body = (Array.isArray(bodyOrFood) ? bodyOrFood : []) as GridPoint[];
+            foods = foodItems || [];
+        }
+
+        if (!head || !foods || foods.length === 0) return currentDir;
 
         // Find nearest food (taking wrap-around into account)
         let nearestFood: FoodItem | null = null;
         let minDist = Infinity;
 
-        for (const food of foodItems) {
+        for (const food of foods) {
             const dx = Math.min(
                 Math.abs(head.x - food.x),
                 this.cols - Math.abs(head.x - food.x)

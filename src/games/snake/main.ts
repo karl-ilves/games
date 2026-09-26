@@ -147,6 +147,10 @@ export class SnakeGame {
         this.shakeDuration = 0;
     }
 
+    public restart() {
+        this.restartCurrentMode();
+    }
+
     public handleDirectionInput(dir: Direction) {
         if (this.state.mode === 'demo') {
             this.startSoloGame();

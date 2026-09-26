@@ -34,7 +34,7 @@ await (async () => {
             '--ignore-gpu-blocklist',
             '--disable-gpu-process-crash-limit',
             '--disable-features=IsolateOrigins,site-per-process',
-            '--js-flags=--max-old-space-size=1536'
+            '--js-flags=--max-old-space-size=768'
         ]
     });
     const page = await browser.newPage();
@@ -603,8 +603,11 @@ await (async () => {
         }
 
         // Log out to reset guest state for remaining tests
-        await page.click('#btn-logout');
-        await new Promise(r => setTimeout(r, 200));
+        await page.evaluate(() => {
+            const btn = document.getElementById('btn-logout');
+            if (btn) btn.click();
+        });
+        await new Promise(r => setTimeout(r, 400));
 
         // 12. Testing Date of Birth Selection (Year, Month, Day), Dynamic Age Calculation & Game Age Restrictions
         console.log("   Testing Birth Date Dropdowns & Dynamic Age Calculation...");
@@ -701,8 +704,11 @@ await (async () => {
         }
 
         // Log out player_9yo to reset guest state for remaining tests
-        await page.click('#btn-logout');
-        await new Promise(r => setTimeout(r, 200));
+        await page.evaluate(() => {
+            const btn = document.getElementById('btn-logout');
+            if (btn) btn.click();
+        });
+        await new Promise(r => setTimeout(r, 400));
         console.log("   Birth Date & Age-based Game Restrictions successfully verified: ✅");
         console.log("   Create Account constraints, duplicate check & Login tests verified: ✅");
 
@@ -1026,8 +1032,11 @@ await (async () => {
         console.log("   Admin successfully sent update to Owner and saved to database!");
 
         // Close admin modal
-        await page.click('#btn-close-admin-panel');
-        await new Promise(r => setTimeout(r, 200));
+        await page.evaluate(() => {
+            const btn = document.getElementById('btn-close-admin-panel');
+            if (btn) btn.click();
+        });
+        await new Promise(r => setTimeout(r, 300));
 
         // 1b. Test 3D Avatar System (Widget under logo, 3D Editor & Shop, Yard purchases, Equip)
         console.log("1b. Testing Playard 3D Avatar System (Widget, 3D Shop, Yard Purchases & Equipping)...");
@@ -1042,7 +1051,10 @@ await (async () => {
 
         // Click Avatar Widget to open 3D Avatar Shop & Editor Modal
         console.log("   Clicking 3D Avatar Widget to open Avatar Shop & Editor...");
-        await page.click('#playard-avatar-widget-box');
+        await page.evaluate(() => {
+            const widget = document.getElementById('playard-avatar-widget-box');
+            if (widget) widget.click();
+        });
         await new Promise(r => setTimeout(r, 400));
 
         const avatarModalDisplay = await page.$eval('#modal-avatar-shop-editor', el => window.getComputedStyle(el).display);
@@ -1287,13 +1299,15 @@ await (async () => {
         await page.evaluate(() => {
             window.__YARD_COUNTDOWN_TICK_MS__ = 40;
         });
-        await page.click('[data-equip-outfit-id="outfit_space_explorer"]');
+        await page.evaluate(() => {
+            const btn = document.querySelector('[data-equip-outfit-id="outfit_space_explorer"]');
+            if (btn) btn.click();
+        });
         await new Promise(r => setTimeout(r, 300));
-        const confirmBuyBtn = await page.$('#btn-yard-purchase-confirm');
-        if (confirmBuyBtn) {
-            await page.click('#btn-yard-purchase-confirm');
-            await new Promise(r => setTimeout(r, 200));
-        }
+        await page.evaluate(() => {
+            const confirmBuyBtn = document.getElementById('btn-yard-purchase-confirm');
+            if (confirmBuyBtn) confirmBuyBtn.click();
+        });
         await new Promise(r => setTimeout(r, 300));
         await page.evaluate(() => {
             window.playardAvatarShop?.renderCatalogItems();

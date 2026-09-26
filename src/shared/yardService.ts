@@ -1289,6 +1289,58 @@ class YardService {
     }
 
     // --- Draft Game Auto-Save & Restore ---
+    // --- Playard AI Audit Logs ---
+    public saveAiAuditLog(entry: {
+        id?: string;
+        timestamp?: number;
+        username: string;
+        prompt: string;
+        intent: string;
+        isSafe: boolean;
+        riskLevel?: 'safe' | 'warning' | 'blocked';
+        violations?: string[];
+        stepsCount?: number;
+        gameId?: string;
+        gameTitle?: string;
+        status?: 'success' | 'blocked' | 'error';
+        error?: string;
+    }) {
+        const fullEntry = {
+            id: entry.id || `ai_log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            timestamp: entry.timestamp || Date.now(),
+            username: entry.username || 'Guest',
+            prompt: entry.prompt || '',
+            intent: entry.intent || 'GENERAL',
+            isSafe: entry.isSafe !== undefined ? entry.isSafe : true,
+            riskLevel: entry.riskLevel || (entry.isSafe ? 'safe' : 'blocked'),
+            violations: entry.violations || [],
+            stepsCount: entry.stepsCount || 0,
+            gameId: entry.gameId,
+            gameTitle: entry.gameTitle,
+            status: entry.status || (entry.isSafe ? 'success' : 'blocked'),
+            error: entry.error
+        };
+
+        const logs = this.getAiAuditLogs();
+        logs.unshift(fullEntry);
+        if (logs.length > 200) logs.length = 200;
+        try {
+            localStorage.setItem('playard_ai_audit_logs', JSON.stringify(logs));
+            window.dispatchEvent(new CustomEvent('playard_ai_logs_updated', { detail: fullEntry }));
+        } catch (e) {
+            console.warn('Could not save Playard AI audit log:', e);
+        }
+        return fullEntry;
+    }
+
+    public getAiAuditLogs(): any[] {
+        try {
+            const raw = localStorage.getItem('playard_ai_audit_logs');
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [];
+    }
+
     public saveDraftGame(username: string | null, draftData: any) {
         if (!draftData) return;
         try {

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playard AI — Mängude Generaator ja Assistent</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #090d16;
+            color: #f1f5f9;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header */
+        header {
+            height: 56px;
+            background: #0f172a;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 10;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+        }
+
+        .brand-title {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .game-badge-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-header {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.08);
+            color: #e2e8f0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-header:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+        }
+
+        .btn-header-primary {
+            background: #2563eb;
+            border-color: #3b82f6;
+            color: #ffffff;
+        }
+
+        .btn-header-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-header-success {
+            background: #059669;
+            border-color: #10b981;
+            color: #ffffff;
+        }
+
+        .btn-header-success:hover {
+            background: #047857;
+        }
+
+        /* Workspace Grid */
+        #workspace-container {
+            flex: 1;
+            display: flex;
+            height: calc(100vh - 56px);
+            position: relative;
+        }
+
+        /* Left AI Panel */
+        #ai-sidebar-panel {
+            width: 440px;
+            min-width: 360px;
+            max-width: 520px;
+            background: #0b1120;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 5;
+        }
+
+        #ai-step-tracker-container {
+            max-height: 220px;
+            overflow-y: auto;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(15, 23, 42, 0.6);
+            padding: 12px 14px;
+        }
+
+        #ai-chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #0b1120;
+        }
+
+        /* Right Viewport */
+        #ai-viewport-container {
+            flex: 1;
+            position: relative;
+            background: #050811;
+            overflow: hidden;
+        }
+
+        .viewport-controls-hint {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 11px;
+            color: #94a3b8;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        /* Modal inspect */
+        .ai-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-modal-card {
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            width: 600px;
+            max-width: 90vw;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .ai-modal-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ai-modal-body {
+            padding: 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-brand">
+            <div class="brand-logo">🤖</div>
+            <span class="brand-title">Playard AI</span>
+            <div class="game-badge-group">
+                <span id="ai-current-game-title" style="color: #38bdf8; font-weight: 600;">Valmis käskudeks</span>
+                <span style="color: #64748b;">•</span>
+                <span id="ai-current-objects-count" style="color: #94a3b8;">0 objekti</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button id="btn-test-play" class="btn-header btn-header-primary">
+                🎮 Testi mängu
+            </button>
+            <button id="btn-open-creator" class="btn-header">
+                🛠️ Ava Creator Studios
+            </button>
+            <button id="btn-submit-review" class="btn-header btn-header-success">
+                📤 Esita ülevaatamiseks
+            </button>
+            <a href="/" class="btn-header">
+                ← Tagasi Hubi
+            </a>
+        </div>
+    </header>
+
+    <div id="workspace-container">
+        <!-- AI Left Sidebar -->
+        <div id="ai-sidebar-panel">
+            <div id="ai-step-tracker-container"></div>
+            <div id="ai-chat-container"></div>
+        </div>
+
+        <!-- 3D Preview Canvas -->
+        <div id="ai-viewport-container">
+            <div class="viewport-controls-hint">
+                🖱️ Lohista hiirega pööramiseks • Rulli suumimiseks
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Inspect Modal -->
+    <div id="modal-code-inspect" class="ai-modal-overlay">
+        <div class="ai-modal-card">
+            <div class="ai-modal-header">
+                <h3 style="font-size: 14px; font-weight: 700; color: #e2e8f0;">🔍 Genereeritud skript & Turvaanalüüs</h3>
+                <button id="btn-close-code-modal" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✕</button>
+            </div>
+            <div class="ai-modal-body">
+                <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; color: #34d399;">
+                    🛡️ <strong>Koodi turvakontroll läbitud:</strong> Skript ei sisalda volitamata süsteemikäske, eval/Function käivitusi ega andmebaasi modifitseerimise operatsioone.
+                </div>
+                <pre id="code-inspect-content" style="background: #090d16; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 12px; color: #38bdf8; overflow-x: auto; white-space: pre-wrap;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Play Modal -->
+    <div id="modal-test-play" class="ai-modal-overlay">
+        <div class="ai-modal-card" style="width: 480px;">
+            <div class="ai-modal-header">
+                <h3 style="font-size: 14px; font-weight: 700; color: #e2e8f0;">🎮 Testmängu Režiim</h3>
+                <button id="btn-close-test-play" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✕</button>
+            </div>
+            <div class="ai-modal-body" style="text-align: center; padding: 24px;">
+                <div style="font-size: 40px; margin-bottom: 12px;">🕹️</div>
+                <h4 style="font-size: 16px; margin-bottom: 8px; color: #f8fafc;">Käivita Testversioon</h4>
+                <p id="test-play-desc" style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; line-height: 1.5;"></p>
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <button onclick="document.getElementById('modal-test-play').style.display='none'" class="btn-header btn-header-primary" style="padding: 10px 20px;">
+                        Alusta testimist
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/games/ai/main.ts"></script>
+</body>
+</html>

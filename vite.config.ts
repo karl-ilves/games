@@ -21,7 +21,8 @@ export default defineConfig({
         citycar: resolve(__dirname, 'games/citycar/index.html'),
         defender: resolve(__dirname, 'games/defender/index.html'),
         breakout: resolve(__dirname, 'games/breakout/index.html'),
-        snake: resolve(__dirname, 'games/snake/index.html')
+        snake: resolve(__dirname, 'games/snake/index.html'),
+        ai: resolve(__dirname, 'games/ai/index.html')
       }
     }
   }

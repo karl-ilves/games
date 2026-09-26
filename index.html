@@ -930,6 +930,12 @@
                 <span id="streak-notification-dot" class="badge-dot" style="display: none;"></span>
             </button>
 
+            <!-- Playard AI Assistant Button -->
+            <a href="./games/ai/index.html" id="btn-open-playard-ai" class="nav-btn" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(129, 140, 248, 0.25)); border: 1px solid rgba(56, 189, 248, 0.6); color: #38bdf8; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                <span>🤖</span>
+                <span>Playard AI</span>
+            </a>
+
             <!-- Report a Bug Button -->
             <button id="btn-open-bug-report" class="nav-btn" style="background: rgba(255,71,87,0.15); border: 1px solid rgba(255,71,87,0.4);">
                 <span>🐛</span>
@@ -1656,6 +1662,19 @@
                 </div>
             </a>
 
+            <!-- 🤖 Playard AI Assistant & Builder -->
+            <a href="./games/ai/index.html" class="game-card" id="card-playard-ai" style="display: flex; border-color: rgba(56, 189, 248, 0.9); box-shadow: 0 0 30px rgba(56, 189, 248, 0.35); background: linear-gradient(135deg, #071927 0%, #0d273d 100%);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                    <span style="font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; color: #38bdf8; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.6); padding: 3px 8px; border-radius: 6px;">🤖 AI MÄNGUEHITAJA</span>
+                    <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 800;">● NEW TOOL</span>
+                </div>
+                <h2>🤖 Playard AI</h2>
+                <p>Loo ja muuda mänge tehisintellekti abil! Kirjelda tornaado põgenemismängu, lennusimulaatorit või takistusrada ning vaata reaalajas 3D eelvaadet!</p>
+                <div class="reward-tag" style="border-color: #38bdf8; color: #38bdf8; background: rgba(56, 189, 248, 0.15); font-weight: 800;">
+                    <span>🌪️ TORNAADO · ✈️ LENNUMÄNGUD · 💬 VESTLUS · 🛡️ TURVALINE</span>
+                </div>
+            </a>
+
             <a href="#" class="game-card disabled">
                 <h2>🌌 Space Explorer</h2>
                 <p>Interstellar planetary exploration & space flight simulation.</p>
@@ -1743,44 +1762,75 @@
                 Logitud sisse kui <strong style="color: #ffd32a;">Admin✅</strong> (<span style="color: #00f2fe;">grx@trenet.ee</span>). Siin saad koostada uusi mängu- ja süsteemiuuendusi ning saata need otse Playard Owneri andmebaasi.
             </p>
 
-            <!-- Update Creation Box -->
-            <div style="background: #1c2733; border: 1px solid rgba(255, 211, 42, 0.25); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
-                <h3 style="color: #ffd32a; margin: 0 0 14px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                    <span>✍️</span> Kirjuta uus uuendus (Update)
-                </h3>
-                
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
-                    <div>
-                        <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Uuenduse pealkiri:</label>
-                        <input type="text" id="admin-update-title" placeholder="nt Uued 3D autod, heli ja AI uuendus" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.95rem;">
-                    </div>
-                    <div>
-                        <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Versioon / Silt:</label>
-                        <input type="text" id="admin-update-version" placeholder="nt v1.2.0" value="v1.2.0" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: #00f2fe; font-weight: bold; font-size: 0.95rem;">
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 14px;">
-                    <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Uuenduse sisu ja muudatuste nimekiri (Changelog):</label>
-                    <textarea id="admin-update-content" placeholder="Kirjelda siin uusi funktsioone, parandusi või teadaandeid..." rows="5" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; resize: vertical; font-family: inherit; font-size: 0.9rem; line-height: 1.4;"></textarea>
-                </div>
-
-                <button type="button" id="btn-send-update-to-owner" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: none; border-radius: 8px; color: #111; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(255, 211, 42, 0.3);">
-                    <span>🚀</span> Saada Ownerile (Salvesta andmebaasi)
+            <!-- Admin Panel Navigation Tabs -->
+            <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+                <button type="button" id="tab-admin-updates" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">
+                    ✍️ Süsteemiuuendused
                 </button>
-                <div id="admin-update-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
+                <button type="button" id="tab-admin-ai-logs" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">
+                    🤖 Playard AI Tegevused (Audit Log)
+                </button>
             </div>
 
-            <!-- Sent Updates List from Database -->
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <h3 style="color: #00f2fe; margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;">
-                    <span>📋</span> Ownerile saadetud uuendused andmebaasis
-                </h3>
-                <span id="admin-updates-count-badge" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0 uuendust</span>
+            <!-- Section 1: Updates -->
+            <div id="admin-updates-section">
+                <!-- Update Creation Box -->
+                <div style="background: #1c2733; border: 1px solid rgba(255, 211, 42, 0.25); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                    <h3 style="color: #ffd32a; margin: 0 0 14px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                        <span>✍️</span> Kirjuta uus uuendus (Update)
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div>
+                            <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Uuenduse pealkiri:</label>
+                            <input type="text" id="admin-update-title" placeholder="nt Uued 3D autod, heli ja AI uuendus" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.95rem;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Versioon / Silt:</label>
+                            <input type="text" id="admin-update-version" placeholder="nt v1.2.0" value="v1.2.0" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: #00f2fe; font-weight: bold; font-size: 0.95rem;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 14px;">
+                        <label style="font-size: 0.85rem; color: #a4b0be; display: block; margin-bottom: 4px;">Uuenduse sisu ja muudatuste nimekiri (Changelog):</label>
+                        <textarea id="admin-update-content" placeholder="Kirjelda siin uusi funktsioone, parandusi või teadaandeid..." rows="5" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #485460; background: #131920; color: white; resize: vertical; font-family: inherit; font-size: 0.9rem; line-height: 1.4;"></textarea>
+                    </div>
+
+                    <button type="button" id="btn-send-update-to-owner" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: none; border-radius: 8px; color: #111; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(255, 211, 42, 0.3);">
+                        <span>🚀</span> Saada Ownerile (Salvesta andmebaasi)
+                    </button>
+                    <div id="admin-update-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
+                </div>
+
+                <!-- Sent Updates List from Database -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <h3 style="color: #00f2fe; margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;">
+                        <span>📋</span> Ownerile saadetud uuendused andmebaasis
+                    </h3>
+                    <span id="admin-updates-count-badge" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0 uuendust</span>
+                </div>
+
+                <div id="admin-sent-updates-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                    <div style="text-align: center; color: #718093; padding: 20px;">Uuendusi pole veel saadetud.</div>
+                </div>
             </div>
 
-            <div id="admin-sent-updates-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06);">
-                <div style="text-align: center; color: #718093; padding: 20px;">Uuendusi pole veel saadetud.</div>
+            <!-- Section 2: AI Audit Logs (Owner View) -->
+            <div id="admin-ai-logs-section" style="display: none; flex-direction: column; gap: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <h3 style="color: #38bdf8; margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;">
+                            <span>🤖</span> Playard AI Logid & Turvakontroll
+                        </h3>
+                        <p style="color: #94a3b8; font-size: 0.8rem; margin: 3px 0 0 0;">
+                            Kõik kasutajate käsud, loodud mängud, katsed ja turvalisuse rikkumised reaalajas.
+                        </p>
+                    </div>
+                    <span id="admin-ai-logs-count-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0 logi</span>
+                </div>
+                <div id="admin-ai-logs-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                    <div style="text-align: center; color: #718093; padding: 20px;">Playard AI logisid pole veel salvestatud.</div>
+                </div>
             </div>
         </div>
     </div>
