@@ -9232,6 +9232,35 @@ await (async () => {
                     game.restart(true);
                 }
 
+                // 7b. Test "iga mäng peab olema uus mapp aga ei tohi korduda":
+                // Run 10 games in a row and verify that EVERY game generates a completely unique map signature (zero duplicates)
+                // and pattern types vary across games without immediate repeats.
+                const consecutiveSignatures = new Set();
+                const patternsUsed = new Set();
+                let consecutiveMapsUnique = true;
+                let noImmediateRepeatPattern = true;
+                let prevPattern = game.currentPatternName || '';
+                if (game.currentMapSignature) consecutiveSignatures.add(game.currentMapSignature);
+                if (prevPattern) patternsUsed.add(prevPattern);
+
+                for (let gameIdx = 0; gameIdx < 9; gameIdx++) {
+                    game.restart(true);
+                    const sig = game.currentMapSignature;
+                    const pat = game.currentPatternName;
+                    if (consecutiveSignatures.has(sig)) {
+                        consecutiveMapsUnique = false;
+                    }
+                    consecutiveSignatures.add(sig);
+                    if (pat === prevPattern) {
+                        noImmediateRepeatPattern = false;
+                    }
+                    prevPattern = pat;
+                    if (pat) patternsUsed.add(pat);
+                }
+
+                const uniqueMapsCount = consecutiveSignatures.size;
+                const distinctPatternsCount = patternsUsed.size;
+
                 // 8. Test Level 2 progression ("level 2 mapp palju suuremaks")
                 const level1BricksCount = game.bricks.length;
                 game.advanceToNextLevel();
@@ -9274,13 +9303,23 @@ await (async () => {
                     level2HudText,
                     isLevel2MuchLarger,
                     controlsHintRemoved,
-                    fastBallCannotTunnel
+                    fastBallCannotTunnel,
+                    consecutiveMapsUnique,
+                    noImmediateRepeatPattern,
+                    uniqueMapsCount,
+                    distinctPatternsCount
                 };
             });
 
             console.log("   Breakout Verification Results:", breakoutGameTest);
             if (!breakoutGameTest.success || !breakoutGameTest.hasCanvas) {
                 throw new Error("Breakout canvas initialization failed: " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.consecutiveMapsUnique || breakoutGameTest.uniqueMapsCount !== 10) {
+                throw new Error("Breakout non-repeating maps check failed (iga mäng peab olema uus mapp aga ei tohi korduda): " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.noImmediateRepeatPattern || breakoutGameTest.distinctPatternsCount < 5) {
+                throw new Error("Breakout pattern diversity & non-repeating pattern check failed: " + JSON.stringify(breakoutGameTest));
             }
             if (!breakoutGameTest.controlsHintRemoved) {
                 throw new Error("Breakout controls hint overlay must be removed: " + JSON.stringify(breakoutGameTest));

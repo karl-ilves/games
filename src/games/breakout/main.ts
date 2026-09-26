@@ -25,6 +25,8 @@ export class BreakoutGame {
     public balls: Ball[] = [];
     public bricks: Brick[] = [];
     public powerUps: PowerUp[] = [];
+    public currentMapSignature: string = '';
+    public currentPatternName: string = '';
 
     private lastTime: number = 0;
     private isRunning: boolean = false;
@@ -137,6 +139,8 @@ export class BreakoutGame {
             canvasWidth: width,
             canvasHeight: height,
         });
+        this.currentMapSignature = (this.bricks as any).__signature || '';
+        this.currentPatternName = (this.bricks as any).__pattern || '';
 
         // Count only breakable bricks (exclude grey obstacle and border blocks)
         const breakableCount = this.bricks.filter(b => b.type !== 'grey').length;

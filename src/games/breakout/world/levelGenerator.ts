@@ -1,17 +1,295 @@
 import { Brick } from '../types';
 import { BREAKOUT_CONFIG } from '../catalog';
 
-export type LayoutPattern = 'checkerboard' | 'pyramid' | 'fortress' | 'clusters' | 'diamond';
+export type LayoutPattern =
+    | 'checkerboard'
+    | 'pyramid'
+    | 'fortress'
+    | 'clusters'
+    | 'diamond'
+    | 'invaders'
+    | 'stripes'
+    | 'labyrinth'
+    | 'castle_towers'
+    | 'hourglass'
+    | 'dna_helix'
+    | 'ring_vault'
+    | 'stairway'
+    | 'honeycomb';
+
+export const ALL_PATTERNS: LayoutPattern[] = [
+    'checkerboard',
+    'pyramid',
+    'fortress',
+    'clusters',
+    'diamond',
+    'invaders',
+    'stripes',
+    'labyrinth',
+    'castle_towers',
+    'hourglass',
+    'dna_helix',
+    'ring_vault',
+    'stairway',
+    'honeycomb',
+];
 
 export interface LevelGenOptions {
     level: number;
     canvasWidth: number;
     canvasHeight: number;
-    seed?: number;
+    forcePattern?: LayoutPattern;
+}
+
+// History and Non-Repeating Shuffle Bag System
+const MAX_HISTORY = 100;
+const layoutHistory: Set<string> = new Set();
+let lastChosenPattern: LayoutPattern | null = null;
+let patternDeck: LayoutPattern[] = [];
+
+function loadHistoryFromStorage(): void {
+    try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+            const raw = window.sessionStorage.getItem('breakout_played_map_signatures');
+            if (raw) {
+                const list = JSON.parse(raw);
+                if (Array.isArray(list)) {
+                    for (const sig of list) {
+                        layoutHistory.add(sig);
+                    }
+                }
+            }
+        }
+    } catch {}
+}
+
+function saveHistoryToStorage(signature: string): void {
+    layoutHistory.add(signature);
+    if (layoutHistory.size > MAX_HISTORY) {
+        const oldest = layoutHistory.values().next().value;
+        if (oldest) layoutHistory.delete(oldest);
+    }
+    try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.setItem(
+                'breakout_played_map_signatures',
+                JSON.stringify(Array.from(layoutHistory))
+            );
+        }
+    } catch {}
+}
+
+export function clearMapHistory(): void {
+    layoutHistory.clear();
+    lastChosenPattern = null;
+    patternDeck = [];
+    try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.removeItem('breakout_played_map_signatures');
+        }
+    } catch {}
+}
+
+export function getPlayedSignaturesCount(): number {
+    return layoutHistory.size;
+}
+
+function getNextShufflePattern(): LayoutPattern {
+    if (patternDeck.length === 0) {
+        // Refill and shuffle using Fisher-Yates
+        patternDeck = [...ALL_PATTERNS].sort(() => Math.random() - 0.5);
+        // Ensure the very first card of the new deck is never the same as the last card played
+        if (lastChosenPattern && patternDeck[0] === lastChosenPattern && patternDeck.length > 1) {
+            const swapIdx = 1 + Math.floor(Math.random() * (patternDeck.length - 1));
+            [patternDeck[0], patternDeck[swapIdx]] = [patternDeck[swapIdx], patternDeck[0]];
+        }
+    }
+    const chosen = patternDeck.pop()!;
+    lastChosenPattern = chosen;
+    return chosen;
+}
+
+function generatePatternCells(
+    pattern: LayoutPattern,
+    rows: number,
+    cols: number,
+    variant: number
+): ('green' | 'gold' | 'grey')[] {
+    const totalPlayableCells = rows * cols;
+    const cellTypes: ('green' | 'gold' | 'grey')[] = new Array(totalPlayableCells).fill('green');
+
+    const centerR = Math.floor(rows / 2);
+    const centerC = Math.floor(cols / 2);
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const idx = r * cols + c;
+
+            switch (pattern) {
+                case 'checkerboard': {
+                    const step = variant % 2 === 0 ? 2 : 3;
+                    if ((r + c + variant) % step === 0) {
+                        cellTypes[idx] = (r * 2 + c) % 5 === 0 ? 'grey' : 'gold';
+                    }
+                    break;
+                }
+                case 'pyramid': {
+                    const distFromCenter = Math.abs(c - (cols / 2 - 0.5));
+                    if (r === Math.floor(distFromCenter) && r < 4) {
+                        cellTypes[idx] = 'gold';
+                    } else if (r === 2 && (c === 2 || c === cols - 3)) {
+                        cellTypes[idx] = 'grey';
+                    } else if (r === 0 && Math.abs(c - centerC) <= 1) {
+                        cellTypes[idx] = 'gold';
+                    }
+                    break;
+                }
+                case 'fortress': {
+                    const isOuterWall = (r === 1 || r === rows - 2) && (c === 2 || c === cols - 3);
+                    const isGate = r === 1 && (c === centerC || c === centerC - 1);
+                    if (isOuterWall && !isGate) {
+                        cellTypes[idx] = 'grey';
+                    } else if (r === 2 && Math.abs(c - centerC) <= 1) {
+                        cellTypes[idx] = 'gold';
+                    } else if (r === rows - 3 && Math.abs(c - centerC) <= 1) {
+                        cellTypes[idx] = 'gold';
+                    }
+                    break;
+                }
+                case 'clusters': {
+                    const clusterR = Math.floor(r / 2);
+                    const clusterC = Math.floor(c / 3);
+                    if ((clusterR + clusterC + variant) % 2 === 1) {
+                        if (r % 2 === 0 && c % 3 === 1) {
+                            cellTypes[idx] = 'gold';
+                        } else if (r % 2 === 1 && c % 3 === 2) {
+                            cellTypes[idx] = 'grey';
+                        }
+                    }
+                    break;
+                }
+                case 'diamond': {
+                    const manhattan = Math.abs(r - centerR) + Math.abs(c - centerC);
+                    if (manhattan === 2) {
+                        cellTypes[idx] = 'gold';
+                    } else if (manhattan === 4) {
+                        cellTypes[idx] = 'grey';
+                    } else if (manhattan === 0) {
+                        cellTypes[idx] = 'gold';
+                    }
+                    break;
+                }
+                case 'invaders': {
+                    const dx = Math.abs(c - centerC);
+                    if (r === 0 && (dx === 2 || dx === 4)) {
+                        cellTypes[idx] = 'grey';
+                    } else if (r === 2 && dx === 2) {
+                        cellTypes[idx] = 'gold';
+                    } else if (r === 3 && dx === 0) {
+                        cellTypes[idx] = 'gold';
+                    } else if (r === rows - 2 && (dx === 1 || dx === 3)) {
+                        cellTypes[idx] = 'grey';
+                    }
+                    break;
+                }
+                case 'stripes': {
+                    const stripeType = (c + variant) % 4;
+                    if (stripeType === 1) {
+                        cellTypes[idx] = r % 3 === 0 ? 'gold' : 'grey';
+                    } else if (stripeType === 3) {
+                        cellTypes[idx] = r % 2 === 0 ? 'gold' : 'green';
+                    }
+                    break;
+                }
+                case 'labyrinth': {
+                    if (r % 2 === 1) {
+                        const openingOnRight = ((r / 2) | 0) % 2 === 0;
+                        const isOpening = openingOnRight ? c >= cols - 3 : c <= 2;
+                        if (!isOpening) {
+                            cellTypes[idx] = (c % 5 === 0) ? 'gold' : 'grey';
+                        }
+                    }
+                    break;
+                }
+                case 'castle_towers': {
+                    const isLeftTower = c <= 2;
+                    const isRightTower = c >= cols - 3;
+                    const isBridge = r === centerR && (c >= 3 && c <= cols - 4);
+                    if (isBridge) {
+                        cellTypes[idx] = (c === centerC) ? 'gold' : 'grey';
+                    } else if ((isLeftTower || isRightTower) && r === 1) {
+                        cellTypes[idx] = 'gold';
+                    } else if ((isLeftTower || isRightTower) && r === rows - 2) {
+                        cellTypes[idx] = 'grey';
+                    }
+                    break;
+                }
+                case 'hourglass': {
+                    const topTri = r <= centerR && Math.abs(c - centerC) <= (centerR - r + 1);
+                    const botTri = r > centerR && Math.abs(c - centerC) <= (r - centerR + 1);
+                    if (topTri || botTri) {
+                        if (r === centerR && Math.abs(c - centerC) <= 1) {
+                            cellTypes[idx] = 'gold';
+                        } else if ((r === 0 || r === rows - 1) && (c === 1 || c === cols - 2)) {
+                            cellTypes[idx] = 'grey';
+                        }
+                    }
+                    break;
+                }
+                case 'dna_helix': {
+                    const phase = ((r + variant) * 0.9);
+                    const wave1 = Math.round(centerC + Math.sin(phase) * (centerC - 2));
+                    const wave2 = Math.round(centerC - Math.sin(phase) * (centerC - 2));
+                    if (c === wave1) {
+                        cellTypes[idx] = 'gold';
+                    } else if (c === wave2) {
+                        cellTypes[idx] = 'green';
+                    } else if (r % 2 === 0 && ((c > Math.min(wave1, wave2)) && (c < Math.max(wave1, wave2)))) {
+                        cellTypes[idx] = 'grey';
+                    }
+                    break;
+                }
+                case 'ring_vault': {
+                    const nx = (c - centerC) / Math.max(1, centerC);
+                    const ny = (r - centerR) / Math.max(1, centerR);
+                    const dist = Math.sqrt(nx * nx + ny * ny);
+                    if (dist < 0.35) {
+                        cellTypes[idx] = 'gold';
+                    } else if (dist >= 0.7 && dist <= 0.95) {
+                        cellTypes[idx] = (c % 2 === 0) ? 'grey' : 'green';
+                    }
+                    break;
+                }
+                case 'stairway': {
+                    const stepDiag = (c - r * 2 + variant * 3 + cols * 4) % cols;
+                    if (stepDiag === 0) {
+                        cellTypes[idx] = 'gold';
+                    } else if (stepDiag === 1) {
+                        cellTypes[idx] = 'grey';
+                    }
+                    break;
+                }
+                case 'honeycomb': {
+                    const rowShift = (r % 2) * 1;
+                    const hexCol = (c + rowShift + variant) % 3;
+                    if (hexCol === 0 && r % 2 === 0) {
+                        cellTypes[idx] = 'grey';
+                    } else if (hexCol === 1 && r % 3 === 0) {
+                        cellTypes[idx] = 'gold';
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    return cellTypes;
 }
 
 export function createBreakoutLevel(options: LevelGenOptions): Brick[] {
-    const { level, canvasWidth } = options;
+    loadHistoryFromStorage();
+
+    const { level, canvasWidth, forcePattern } = options;
     const bricks: Brick[] = [];
     const isLevel2 = level >= 2;
 
@@ -80,75 +358,59 @@ export function createBreakoutLevel(options: LevelGenOptions): Brick[] {
     }
 
     // -------------------------------------------------------------
-    // 2. Procedural & Randomized Arena Bricks (Much larger map & unique on every Play Again)
+    // 2. Procedural & Non-Repeating Arena Bricks ("iga mäng uus mapp aga ei tohi korduda")
     // -------------------------------------------------------------
     const totalPadding = (cols - 1) * padding + sidePadding * 2;
     const brickWidth = Math.max(20, (canvasWidth - totalPadding) / cols);
 
-    const patterns: LayoutPattern[] = ['checkerboard', 'pyramid', 'fortress', 'clusters', 'diamond'];
-    const chosenPattern = patterns[Math.floor(Math.random() * patterns.length)];
-
-    // Target count of gold bricks and internal grey obstacle blocks
     const targetGoldCount = isLevel2 ? 8 : 6;
     const targetGreyObstacles = isLevel2 ? 10 : 6;
-
-    // Determine cell types procedurally
-    const cellTypes: ('green' | 'gold' | 'grey')[] = [];
     const totalPlayableCells = rows * cols;
 
-    // Setup base cells
-    for (let i = 0; i < totalPlayableCells; i++) {
-        cellTypes.push('green');
-    }
+    let chosenPattern = forcePattern || getNextShufflePattern();
+    let cellTypes: ('green' | 'gold' | 'grey')[] = [];
+    let mapSignature = '';
+    let attempts = 0;
 
-    // Apply patterned distribution
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            const idx = r * cols + c;
+    // Generate unique layout that has NOT been played recently
+    while (attempts < 50) {
+        attempts++;
+        const variantSeed = Math.floor(Math.random() * 10000);
+        cellTypes = generatePatternCells(chosenPattern, rows, cols, variantSeed);
 
-            if (chosenPattern === 'checkerboard') {
-                if ((r + c) % 5 === 0) cellTypes[idx] = 'grey';
-                else if ((r * 2 + c) % 7 === 0) cellTypes[idx] = 'gold';
-            } else if (chosenPattern === 'pyramid') {
-                const distFromCenter = Math.abs(c - (cols / 2 - 0.5));
-                if (r === distFromCenter && r < 4) cellTypes[idx] = 'gold';
-                else if (r === 2 && (c === 2 || c === cols - 3)) cellTypes[idx] = 'grey';
-            } else if (chosenPattern === 'fortress') {
-                if ((r === 1 || r === rows - 2) && (c === 2 || c === cols - 3)) cellTypes[idx] = 'grey';
-                else if (r === 2 && c >= 4 && c <= cols - 5) cellTypes[idx] = 'gold';
-            } else if (chosenPattern === 'diamond') {
-                const centerR = Math.floor(rows / 2);
-                const centerC = Math.floor(cols / 2);
-                const manhattan = Math.abs(r - centerR) + Math.abs(c - centerC);
-                if (manhattan === 2) cellTypes[idx] = 'gold';
-                else if (manhattan === 4) cellTypes[idx] = 'grey';
-            } else {
-                // Clusters pattern
-                if ((r === 1 || r === 4) && (c % 4 === 1)) cellTypes[idx] = 'gold';
-                else if (r === 3 && (c % 4 === 2)) cellTypes[idx] = 'grey';
+        // Scatter target gold and grey bricks
+        let currentGold = cellTypes.filter(t => t === 'gold').length;
+        let currentGrey = cellTypes.filter(t => t === 'grey').length;
+
+        while (currentGold < targetGoldCount) {
+            const randIdx = Math.floor(Math.random() * totalPlayableCells);
+            if (cellTypes[randIdx] === 'green') {
+                cellTypes[randIdx] = 'gold';
+                currentGold++;
             }
         }
-    }
 
-    // Ensure minimum gold and grey bricks by scattering random remaining ones
-    let currentGold = cellTypes.filter(t => t === 'gold').length;
-    let currentGrey = cellTypes.filter(t => t === 'grey').length;
+        while (currentGrey < targetGreyObstacles) {
+            const randIdx = Math.floor(Math.random() * totalPlayableCells);
+            if (cellTypes[randIdx] === 'green') {
+                cellTypes[randIdx] = 'grey';
+                currentGrey++;
+            }
+        }
 
-    while (currentGold < targetGoldCount) {
-        const randIdx = Math.floor(Math.random() * totalPlayableCells);
-        if (cellTypes[randIdx] === 'green') {
-            cellTypes[randIdx] = 'gold';
-            currentGold++;
+        mapSignature = `${level}:${chosenPattern}:${cellTypes.join('')}`;
+
+        if (!layoutHistory.has(mapSignature)) {
+            break; // Guaranteed completely unique map!
+        }
+
+        // If collision happened (already played this exact map), pick another pattern variant
+        if (!forcePattern) {
+            chosenPattern = getNextShufflePattern();
         }
     }
 
-    while (currentGrey < targetGreyObstacles) {
-        const randIdx = Math.floor(Math.random() * totalPlayableCells);
-        if (cellTypes[randIdx] === 'green') {
-            cellTypes[randIdx] = 'grey';
-            currentGrey++;
-        }
-    }
+    saveHistoryToStorage(mapSignature);
 
     // Instantiate arena bricks
     for (let r = 0; r < rows; r++) {
@@ -202,6 +464,10 @@ export function createBreakoutLevel(options: LevelGenOptions): Brick[] {
             }
         }
     }
+
+    // Attach metadata for verification and UI
+    (bricks as any).__signature = mapSignature;
+    (bricks as any).__pattern = chosenPattern;
 
     return bricks;
 }
