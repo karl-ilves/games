@@ -55,6 +55,7 @@ interface PlacedObject {
     rotation: { x: number; y: number; z: number };
     scale: { x: number; y: number; z: number };
     color: string;
+    isPassable?: boolean;
     isAirplane?: boolean;
     isBoat?: boolean;
     isSpawnPoint?: boolean;
@@ -2128,6 +2129,7 @@ export function serializeCurrentScene() {
             rotation: { x: p.mesh.rotation.x, y: p.mesh.rotation.y, z: p.mesh.rotation.z },
             scale: { x: p.mesh.scale.x, y: p.mesh.scale.y, z: p.mesh.scale.z },
             color: p.color,
+            isPassable: p.isPassable,
             isAirplane: p.isAirplane,
             isBoat: p.isBoat,
             gameItemType: p.gameItemType,
@@ -2344,6 +2346,7 @@ export function loadSceneFromData(sceneData: any) {
                 rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
                 scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z },
                 color: objData.color || catItem.color,
+                isPassable: objData.isPassable,
                 gameItemType: objData.gameItemType,
                 keyName: objData.keyName,
                 requiredKeyName: objData.requiredKeyName,
@@ -2527,11 +2530,27 @@ function selectObject(placed: PlacedObject | null) {
         triggerInput.value = placed.trigger?.message || '';
     }
 
+    const passableSelect = document.getElementById('obj-passable-select') as HTMLSelectElement | null;
+    if (passableSelect) {
+        passableSelect.value = placed.isPassable ? 'passable' : 'solid';
+    }
+
     if (studioToolMode === 'puller') {
         updatePullGizmo();
     } else if (pullGizmoGroup) {
         pullGizmoGroup.visible = false;
     }
+}
+
+export function setObjectPassable(obj: PlacedObject, isPassable: boolean) {
+    obj.isPassable = isPassable;
+    if (selectedObject === obj) {
+        const passableSelect = document.getElementById('obj-passable-select') as HTMLSelectElement | null;
+        if (passableSelect) {
+            passableSelect.value = isPassable ? 'passable' : 'solid';
+        }
+    }
+    autoSaveDraft();
 }
 
 // --- Render Catalog UI ---
@@ -2750,6 +2769,7 @@ async function initStudio() {
         get pullGizmoGroup() { return pullGizmoGroup; },
         spawnBlockObject,
         pullSelectedObject,
+        setObjectPassable,
         keys
     };
 
@@ -3214,7 +3234,8 @@ export function spawnBlockObject(color: string = '#00cec9', name: string = 'Plok
         position: { x: spawnX, y: 0, z: spawnZ },
         rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
-        color: color
+        color: color,
+        isPassable: false
     };
 
     placedObjects.push(placed);
@@ -4821,6 +4842,16 @@ function setupInspectorEvents() {
                         ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(colorInput.value);
                     }
                 });
+                autoSaveDraft();
+            }
+        });
+    }
+
+    const passableSelect = document.getElementById('obj-passable-select') as HTMLSelectElement | null;
+    if (passableSelect) {
+        passableSelect.addEventListener('change', () => {
+            if (selectedObject) {
+                selectedObject.isPassable = passableSelect.value === 'passable';
                 autoSaveDraft();
             }
         });
@@ -10641,6 +10672,91 @@ function animate() {
                         characterVelocity.y = 0;
                         isGrounded = true;
                     }
+                }
+
+                // Placed Solid Objects Collision & Passable Handling
+                const pPos = humanCharacter.position;
+                const halfW = 0.35;
+                const playerHeight = 1.8;
+                let supportedOnSurface = (pPos.y <= 0.001);
+
+                for (let i = 0; i < placedObjects.length; i++) {
+                    const p = placedObjects[i];
+                    // If passable is true, player walks through freely!
+                    if (p.isPassable === true) continue;
+                    if (p.isCollected || p.isHeld || p.isSpawnPoint) continue;
+                    if (p.gameItemType === 'coin' || p.gameItemType === 'key' || p.gameItemType === 'potion') continue;
+                    if (p.trigger?.type === 'portal' || p.trigger?.type === 'checkpoint') continue;
+                    if (!p.mesh || p.mesh.visible === false) continue;
+
+                    // Fast distance cull: skip if too far away (> 20m)
+                    const dx = p.mesh.position.x - pPos.x;
+                    const dz = p.mesh.position.z - pPos.z;
+                    if (dx * dx + dz * dz > 400) continue;
+
+                    const pMeshBox = new THREE.Box3().setFromObject(p.mesh);
+                    if (pMeshBox.isEmpty()) continue;
+
+                    const playerBox = new THREE.Box3(
+                        new THREE.Vector3(pPos.x - halfW, pPos.y, pPos.z - halfW),
+                        new THREE.Vector3(pPos.x + halfW, pPos.y + playerHeight, pPos.z + halfW)
+                    );
+
+                    // Check if standing directly on top of platform
+                    const isHorizontallyOver = (
+                        pPos.x >= pMeshBox.min.x - 0.15 &&
+                        pPos.x <= pMeshBox.max.x + 0.15 &&
+                        pPos.z >= pMeshBox.min.z - 0.15 &&
+                        pPos.z <= pMeshBox.max.z + 0.15
+                    );
+
+                    if (isHorizontallyOver && Math.abs(pPos.y - pMeshBox.max.y) < 0.15 && characterVelocity.y <= 0) {
+                        pPos.y = pMeshBox.max.y;
+                        characterVelocity.y = 0;
+                        supportedOnSurface = true;
+                    }
+
+                    if (playerBox.intersectsBox(pMeshBox)) {
+                        const isAbovePlatform = (pPos.y - (characterVelocity.y * delta) >= pMeshBox.max.y - 0.4) || (pPos.y >= pMeshBox.max.y - 0.25);
+                        const canStepUp = (pMeshBox.max.y - pPos.y <= 0.6) && (pMeshBox.max.y >= pPos.y - 0.05);
+
+                        if ((isAbovePlatform && characterVelocity.y <= 0) || canStepUp) {
+                            pPos.y = pMeshBox.max.y;
+                            characterVelocity.y = 0;
+                            supportedOnSurface = true;
+                        } else {
+                            // Side wall collision: resolve horizontal penetration so player cannot walk through
+                            const overlapX = Math.min(playerBox.max.x, pMeshBox.max.x) - Math.max(playerBox.min.x, pMeshBox.min.x);
+                            const overlapZ = Math.min(playerBox.max.z, pMeshBox.max.z) - Math.max(playerBox.min.z, pMeshBox.min.z);
+
+                            if (overlapX > 0.001 && overlapZ > 0.001) {
+                                const pCenterX = (playerBox.min.x + playerBox.max.x) * 0.5;
+                                const pCenterZ = (playerBox.min.z + playerBox.max.z) * 0.5;
+                                const bCenterX = (pMeshBox.min.x + pMeshBox.max.x) * 0.5;
+                                const bCenterZ = (pMeshBox.min.z + pMeshBox.max.z) * 0.5;
+
+                                if (overlapX < overlapZ) {
+                                    if (pCenterX < bCenterX) {
+                                        pPos.x -= (overlapX + 0.005);
+                                    } else {
+                                        pPos.x += (overlapX + 0.005);
+                                    }
+                                } else {
+                                    if (pCenterZ < bCenterZ) {
+                                        pPos.z -= (overlapZ + 0.005);
+                                    } else {
+                                        pPos.z += (overlapZ + 0.005);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (supportedOnSurface) {
+                    isGrounded = true;
+                } else if (pPos.y > 0.05 && isGrounded) {
+                    isGrounded = false;
                 }
 
                 // Asma on Land (Sprinting consumes, rest/walk regenerates)
