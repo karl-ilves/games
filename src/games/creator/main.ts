@@ -2320,7 +2320,7 @@ export async function publishCurrentGame(options?: {
         (submitBtn as HTMLButtonElement).disabled = false;
     }
     if (confirmPublishBtn) {
-        confirmPublishBtn.innerHTML = '<span>Avalda mäng</span>';
+        confirmPublishBtn.innerHTML = '<span>Publish Game</span>';
         (confirmPublishBtn as HTMLButtonElement).disabled = false;
     }
 

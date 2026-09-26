@@ -14,10 +14,11 @@ try {
 
 // 2. Load Check
 await (async () => {
-    try {
-        execSync('killall -9 "Google Chrome for Testing" "Google Chrome for Testing Helper" 2>/dev/null || true; kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
-        await new Promise(r => setTimeout(r, 400));
-    } catch (e) {}
+        try {
+            execSync('for pid in $(lsof -t -i:4173 2>/dev/null); do kill -9 $pid 2>/dev/null || true; done', { shell: '/bin/bash', stdio: 'ignore' });
+            execSync('killall -9 "Google Chrome for Testing" "Google Chrome for Testing Helper" 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 1000));
     console.log("Starting in-process preview server...");
     const previewServer = await preview({ preview: { port: 4173, host: '127.0.0.1', strictPort: true } });
 
@@ -8751,6 +8752,7 @@ await (async () => {
                 // Collapse building to verify reset restores it
                 const testB = dbg.world.buildings[0];
                 dbg.world.collapseBuilding(testB, 0);
+                for (let s = 0; s < 30; s++) dbg.world.update(s * 0.1, 0.1);
                 const buildingCollapsedBeforeReset = dbg.world.isBuildingCollapsed(testB);
 
                 // Reset: Buildings reappear and health restores to 100
