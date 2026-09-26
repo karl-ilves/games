@@ -35,6 +35,9 @@ export class CarPhysicsController {
     private driftAngle = 0;
     private driftLateralVelocity = 0;
     private driftCooldown = 0;
+    public isDrivingThroughBuilding = false;
+    public penetratingBuilding?: BuildingObject;
+    public driveThroughDistance = 0;
 
     constructor(
         meshContainer: CarMeshContainer,
@@ -278,18 +281,84 @@ export class CarPhysicsController {
 
         let collided = false;
         let hitBuilding: BuildingObject | undefined;
-        if (this.world.buildings) {
+
+        // Check if car is currently driving through a building
+        if (this.isDrivingThroughBuilding && this.penetratingBuilding) {
+            const stillInside = this.penetratingBuilding.box.intersectsBox(carBox);
+            if (stillInside) {
+                // Continue driving through the building interior with cutaway view active!
+                this.driveThroughDistance += Math.abs(this.forwardSpeedMps) * delta;
+                this.world.setBuildingCutaway(this.penetratingBuilding, true);
+                this.forwardSpeedMps *= Math.pow(0.96, delta * 60);
+            } else {
+                // Car has officially penetrated through and exited the building!
+                const exitedBuilding = this.penetratingBuilding;
+                this.isDrivingThroughBuilding = false;
+                this.penetratingBuilding = undefined;
+
+                // Punch exit breach hole at the exit wall
+                this.world.createBuildingBreach(this.state.position, this.yaw, exitedBuilding);
+                // Restore building facade opacity
+                this.world.setBuildingCutaway(exitedBuilding, false);
+                // Now the building crumbles and collapses behind the exiting car! ("ja siis maja laguneb")
+                this.world.collapseBuilding(exitedBuilding, this.yaw);
+            }
+        } else if (this.world.buildings) {
             for (const b of this.world.buildings) {
                 if (b.box.intersectsBox(carBox)) {
-                    collided = true;
-                    hitBuilding = b;
-                    break;
+                    if (this.world.isBuildingCollapsed(b)) {
+                        continue;
+                    }
+
+                    const speedKmh = Math.abs(this.forwardSpeedMps) * 3.6;
+                    const canDriveThrough = speedKmh >= 10.0 || !this.state.isGrounded || this.launchedFromRamp;
+
+                    if (canDriveThrough) {
+                        // Smashes into and begins driving THROUGH the building!
+                        this.isDrivingThroughBuilding = true;
+                        this.penetratingBuilding = b;
+                        this.driveThroughDistance = 0;
+
+                        // Punch entry breach hole in building wall
+                        this.world.createBuildingBreach(this.state.position, this.yaw, b);
+                        // Make building facade transparent cutaway so player SEES the car driving through!
+                        this.world.setBuildingCutaway(b, true);
+                        this.onBuildingHit?.();
+                        this.meshContainer.setFrontWrecked(true);
+                        this.forwardSpeedMps *= 0.84;
+                    } else {
+                        collided = true;
+                        hitBuilding = b;
+                        break;
+                    }
                 }
             }
         }
-        if (!collided) {
+
+        if (!collided && !this.isDrivingThroughBuilding) {
             for (const col of this.world.colliders) {
+                if (this.penetratingBuilding && col === this.penetratingBuilding.box) {
+                    continue;
+                }
                 if (col.intersectsBox(carBox)) {
+                    const matchingBuilding = this.world.buildings?.find(b => b.box === col);
+                    if (matchingBuilding) {
+                        if (this.world.isBuildingCollapsed(matchingBuilding)) {
+                            continue;
+                        }
+                        const speedKmh = Math.abs(this.forwardSpeedMps) * 3.6;
+                        if (speedKmh >= 10.0 || !this.state.isGrounded || this.launchedFromRamp) {
+                            this.isDrivingThroughBuilding = true;
+                            this.penetratingBuilding = matchingBuilding;
+                            this.driveThroughDistance = 0;
+                            this.world.createBuildingBreach(this.state.position, this.yaw, matchingBuilding);
+                            this.world.setBuildingCutaway(matchingBuilding, true);
+                            this.onBuildingHit?.();
+                            this.meshContainer.setFrontWrecked(true);
+                            this.forwardSpeedMps *= 0.84;
+                            continue;
+                        }
+                    }
                     collided = true;
                     break;
                 }
@@ -524,6 +593,12 @@ export class CarPhysicsController {
     }
 
     public resetCar(): void {
+        if (this.penetratingBuilding) {
+            this.world.setBuildingCutaway(this.penetratingBuilding, false);
+        }
+        this.isDrivingThroughBuilding = false;
+        this.penetratingBuilding = undefined;
+        this.driveThroughDistance = 0;
         this.isDead = false;
         this.fallingAfterCrash = false;
         this.launchedFromRamp = false;

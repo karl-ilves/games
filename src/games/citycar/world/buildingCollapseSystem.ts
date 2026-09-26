@@ -84,6 +84,44 @@ export class BuildingCollapseSystem {
     }
 
     /**
+     * Enable or disable transparent cutaway/X-ray view on a building so player
+     * can clearly see the car driving through the building interior!
+     */
+    public setBuildingCutaway(building: BuildingObject, active: boolean): void {
+        if (!building || !building.group) return;
+        building.isCutaway = active;
+        building.group.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.material) {
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach((mat: THREE.Material) => {
+                    const uData = mat.userData;
+                    if (active) {
+                        if (uData.origTransparent === undefined) {
+                            uData.origTransparent = mat.transparent;
+                            uData.origOpacity = mat.opacity;
+                        }
+                        mat.transparent = true;
+                        mat.opacity = 0.42;
+                        mat.needsUpdate = true;
+                    } else if (uData.origTransparent !== undefined) {
+                        mat.transparent = uData.origTransparent;
+                        mat.opacity = uData.origOpacity;
+                        mat.needsUpdate = true;
+                    }
+                });
+            }
+        });
+    }
+
+    public isCutawayActive(building?: BuildingObject): boolean {
+        if (building) return building.isCutaway === true;
+        for (const b of this.buildings) {
+            if (b.isCutaway) return true;
+        }
+        return false;
+    }
+
+    /**
      * Trigger building collapse when rammed into at high speed or jumped into mid-air.
      */
     public collapseBuilding(building: BuildingObject, carYaw = 0): void {
@@ -458,6 +496,13 @@ export class BuildingCollapseSystem {
             building.isCollapsing = false;
             building.isCollapsed = false;
             building.ruinGroup = undefined;
+        });
+
+        // Restore any active cutaways
+        this.buildings.forEach(b => {
+            if (b.isCutaway) {
+                this.setBuildingCutaway(b, false);
+            }
         });
 
         this.collapsedBuildings.clear();

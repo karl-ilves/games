@@ -2770,6 +2770,8 @@ async function initStudio() {
         spawnBlockObject,
         pullSelectedObject,
         setObjectPassable,
+        exitVehicle,
+        get currentVehicle() { return currentVehicle; },
         keys
     };
 
@@ -4325,6 +4327,8 @@ function setupStudioEvents() {
         playTestBtn.addEventListener('click', () => {
             isPlayTestMode = !isPlayTestMode;
             if (isPlayTestMode) {
+                if (currentVehicle) exitVehicle();
+                currentVehicle = null;
                 playTestBtn.blur();
                 if (document.activeElement && (document.activeElement as HTMLElement).blur) {
                     (document.activeElement as HTMLElement).blur();
@@ -10674,97 +10678,99 @@ function animate() {
                     }
                 }
 
-                // Placed Solid Objects Collision & Passable Handling
-                const pPos = humanCharacter.position;
-                const halfW = 0.35;
-                const playerHeight = 1.8;
-                let supportedOnSurface = (pPos.y <= 0.001);
-
-                for (let i = 0; i < placedObjects.length; i++) {
-                    const p = placedObjects[i];
-                    // If passable is true, player walks through freely!
-                    if (p.isPassable === true) continue;
-                    if (p.isCollected || p.isHeld || p.isSpawnPoint) continue;
-                    if (p.gameItemType === 'coin' || p.gameItemType === 'key' || p.gameItemType === 'potion') continue;
-                    if (p.trigger?.type === 'portal' || p.trigger?.type === 'checkpoint') continue;
-                    if (!p.mesh || p.mesh.visible === false) continue;
-
-                    // Fast distance cull: skip if too far away (> 20m)
-                    const dx = p.mesh.position.x - pPos.x;
-                    const dz = p.mesh.position.z - pPos.z;
-                    if (dx * dx + dz * dz > 400) continue;
-
-                    const pMeshBox = new THREE.Box3().setFromObject(p.mesh);
-                    if (pMeshBox.isEmpty()) continue;
-
-                    const playerBox = new THREE.Box3(
-                        new THREE.Vector3(pPos.x - halfW, pPos.y, pPos.z - halfW),
-                        new THREE.Vector3(pPos.x + halfW, pPos.y + playerHeight, pPos.z + halfW)
-                    );
-
-                    // Check if standing directly on top of platform
-                    const isHorizontallyOver = (
-                        pPos.x >= pMeshBox.min.x - 0.15 &&
-                        pPos.x <= pMeshBox.max.x + 0.15 &&
-                        pPos.z >= pMeshBox.min.z - 0.15 &&
-                        pPos.z <= pMeshBox.max.z + 0.15
-                    );
-
-                    if (isHorizontallyOver && Math.abs(pPos.y - pMeshBox.max.y) < 0.15 && characterVelocity.y <= 0) {
-                        pPos.y = pMeshBox.max.y;
-                        characterVelocity.y = 0;
-                        supportedOnSurface = true;
-                    }
-
-                    if (playerBox.intersectsBox(pMeshBox)) {
-                        const isAbovePlatform = (pPos.y - (characterVelocity.y * delta) >= pMeshBox.max.y - 0.4) || (pPos.y >= pMeshBox.max.y - 0.25);
-                        const canStepUp = (pMeshBox.max.y - pPos.y <= 0.6) && (pMeshBox.max.y >= pPos.y - 0.05);
-
-                        if ((isAbovePlatform && characterVelocity.y <= 0) || canStepUp) {
-                            pPos.y = pMeshBox.max.y;
-                            characterVelocity.y = 0;
-                            supportedOnSurface = true;
-                        } else {
-                            // Side wall collision: resolve horizontal penetration so player cannot walk through
-                            const overlapX = Math.min(playerBox.max.x, pMeshBox.max.x) - Math.max(playerBox.min.x, pMeshBox.min.x);
-                            const overlapZ = Math.min(playerBox.max.z, pMeshBox.max.z) - Math.max(playerBox.min.z, pMeshBox.min.z);
-
-                            if (overlapX > 0.001 && overlapZ > 0.001) {
-                                const pCenterX = (playerBox.min.x + playerBox.max.x) * 0.5;
-                                const pCenterZ = (playerBox.min.z + playerBox.max.z) * 0.5;
-                                const bCenterX = (pMeshBox.min.x + pMeshBox.max.x) * 0.5;
-                                const bCenterZ = (pMeshBox.min.z + pMeshBox.max.z) * 0.5;
-
-                                if (overlapX < overlapZ) {
-                                    if (pCenterX < bCenterX) {
-                                        pPos.x -= (overlapX + 0.005);
-                                    } else {
-                                        pPos.x += (overlapX + 0.005);
-                                    }
-                                } else {
-                                    if (pCenterZ < bCenterZ) {
-                                        pPos.z -= (overlapZ + 0.005);
-                                    } else {
-                                        pPos.z += (overlapZ + 0.005);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (supportedOnSurface) {
-                    isGrounded = true;
-                } else if (pPos.y > 0.05 && isGrounded) {
-                    isGrounded = false;
-                }
-
                 // Asma on Land (Sprinting consumes, rest/walk regenerates)
                 const isSprinting = !!(keys['ShiftLeft'] || keys['ShiftRight'] || keys['Shift']) && moveDir.lengthSq() > 0;
                 if (isSprinting && playerAsma > 0) {
                     playerAsma = Math.max(0, playerAsma - 14 * delta);
                 } else {
                     playerAsma = Math.min(playerMaxAsma, playerAsma + 25 * delta);
+                }
+            }
+
+            // Placed Solid Objects Collision & Passable Handling (Water & Land)
+            const pPos = humanCharacter.position;
+            const halfW = 0.35;
+            const playerHeight = 1.8;
+            let supportedOnSurface = !inWater && (pPos.y <= 0.001);
+
+            for (let i = 0; i < placedObjects.length; i++) {
+                const p = placedObjects[i];
+                // If passable is true, player walks/swims through freely!
+                if (p.isPassable === true) continue;
+                if (p.isCollected || p.isHeld || p.isSpawnPoint) continue;
+                if (p.gameItemType === 'coin' || p.gameItemType === 'key' || p.gameItemType === 'potion') continue;
+                if (p.trigger?.type === 'portal' || p.trigger?.type === 'checkpoint') continue;
+                if (!p.mesh || p.mesh.visible === false) continue;
+
+                // Fast distance cull: skip if too far away (> 20m)
+                const dx = p.mesh.position.x - pPos.x;
+                const dz = p.mesh.position.z - pPos.z;
+                if (dx * dx + dz * dz > 400) continue;
+
+                const pMeshBox = new THREE.Box3().setFromObject(p.mesh);
+                if (pMeshBox.isEmpty()) continue;
+
+                const playerBox = new THREE.Box3(
+                    new THREE.Vector3(pPos.x - halfW, pPos.y, pPos.z - halfW),
+                    new THREE.Vector3(pPos.x + halfW, pPos.y + playerHeight, pPos.z + halfW)
+                );
+
+                // Check if standing directly on top of platform
+                const isHorizontallyOver = (
+                    pPos.x >= pMeshBox.min.x - 0.15 &&
+                    pPos.x <= pMeshBox.max.x + 0.15 &&
+                    pPos.z >= pMeshBox.min.z - 0.15 &&
+                    pPos.z <= pMeshBox.max.z + 0.15
+                );
+
+                if (isHorizontallyOver && Math.abs(pPos.y - pMeshBox.max.y) < 0.15 && characterVelocity.y <= 0) {
+                    pPos.y = pMeshBox.max.y;
+                    characterVelocity.y = 0;
+                    supportedOnSurface = true;
+                }
+
+                if (playerBox.intersectsBox(pMeshBox)) {
+                    const isAbovePlatform = (pPos.y - (characterVelocity.y * delta) >= pMeshBox.max.y - 0.4) || (pPos.y >= pMeshBox.max.y - 0.25);
+                    const canStepUp = (pMeshBox.max.y - pPos.y <= 0.6) && (pMeshBox.max.y >= pPos.y - 0.05);
+
+                    if ((isAbovePlatform && characterVelocity.y <= 0) || canStepUp) {
+                        pPos.y = pMeshBox.max.y;
+                        characterVelocity.y = 0;
+                        supportedOnSurface = true;
+                    } else {
+                        // Side wall collision: resolve horizontal penetration so player cannot walk/swim through
+                        const overlapX = Math.min(playerBox.max.x, pMeshBox.max.x) - Math.max(playerBox.min.x, pMeshBox.min.x);
+                        const overlapZ = Math.min(playerBox.max.z, pMeshBox.max.z) - Math.max(playerBox.min.z, pMeshBox.min.z);
+
+                        if (overlapX > 0.001 && overlapZ > 0.001) {
+                            const pCenterX = (playerBox.min.x + playerBox.max.x) * 0.5;
+                            const pCenterZ = (playerBox.min.z + playerBox.max.z) * 0.5;
+                            const bCenterX = (pMeshBox.min.x + pMeshBox.max.x) * 0.5;
+                            const bCenterZ = (pMeshBox.min.z + pMeshBox.max.z) * 0.5;
+
+                            if (overlapX < overlapZ) {
+                                if (pCenterX < bCenterX) {
+                                    pPos.x -= (overlapX + 0.005);
+                                } else {
+                                    pPos.x += (overlapX + 0.005);
+                                }
+                            } else {
+                                if (pCenterZ < bCenterZ) {
+                                    pPos.z -= (overlapZ + 0.005);
+                                } else {
+                                    pPos.z += (overlapZ + 0.005);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!inWater) {
+                if (supportedOnSurface) {
+                    isGrounded = true;
+                } else if (pPos.y > 0.05 && isGrounded) {
+                    isGrounded = false;
                 }
             }
 

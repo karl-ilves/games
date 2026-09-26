@@ -73,6 +73,20 @@ await (async () => {
             }
         }
     };
+    const originalClick = page.click.bind(page);
+    page.click = async (selector, options) => {
+        for (let attempt = 1; attempt <= 4; attempt++) {
+            try {
+                return await originalClick(selector, options);
+            } catch (err) {
+                if (err.message && err.message.includes('detached Frame') && attempt < 4) {
+                    await new Promise(r => setTimeout(r, 250 * attempt));
+                } else {
+                    throw err;
+                }
+            }
+        }
+    };
     page.on('error', err => {
         console.error('PAGE CRASHED / RENDERER TERMINATED:', err.message);
     });
@@ -2897,6 +2911,137 @@ await (async () => {
             console.log("   ✅ Add Block & Tõmbaja edge pulling tests passed!");
         }
 
+        // Test Block Passable vs Solid Collision Setting ("plokil saab valida kas sealt saab läbi käia või ei")
+        console.log("   Testing Block Passable vs Solid Collision Setting...");
+        {
+            // 1. Check inspector dropdown #obj-passable-select
+            const passableDropdownInfo = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const block = cs.spawnBlockObject('#3498db', 'SolidTestBlock');
+                cs.selectObject(block);
+                const selectEl = document.getElementById('obj-passable-select');
+                return {
+                    dropdownExists: !!selectEl,
+                    initialValue: selectEl?.value,
+                    blockPassable: block.isPassable
+                };
+            });
+            console.log("   Passable dropdown initial:", passableDropdownInfo);
+            if (!passableDropdownInfo.dropdownExists || passableDropdownInfo.initialValue !== 'solid' || passableDropdownInfo.blockPassable !== false) {
+                throw new Error(`Expected #obj-passable-select with default value 'solid' and block.isPassable === false! Got: ${JSON.stringify(passableDropdownInfo)}`);
+            }
+
+            // 2. Select 'passable' in inspector
+            await page.select('#obj-passable-select', 'passable');
+            const passableAfterSelect = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return {
+                    blockPassable: cs.selectedObject?.isPassable,
+                    selectVal: document.getElementById('obj-passable-select')?.value
+                };
+            });
+            console.log("   After selecting passable:", passableAfterSelect);
+            if (passableAfterSelect.blockPassable !== true || passableAfterSelect.selectVal !== 'passable') {
+                throw new Error("Changing #obj-passable-select to 'passable' did not set isPassable to true!");
+            }
+
+            // 3. Test serialization preserves isPassable
+            const serializedPassable = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const data = cs.serializeCurrentScene();
+                const obj = data.objects.find(o => o.name === 'SolidTestBlock');
+                return obj ? obj.isPassable : null;
+            });
+            if (serializedPassable !== true) {
+                throw new Error(`serializeCurrentScene failed to preserve isPassable: true! Got: ${serializedPassable}`);
+            }
+
+            // 4. Switch back to solid
+            await page.select('#obj-passable-select', 'solid');
+            const solidAfterSelect = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return cs.selectedObject?.isPassable;
+            });
+            if (solidAfterSelect !== false) {
+                throw new Error("Changing #obj-passable-select back to 'solid' did not set isPassable to false!");
+            }
+
+            // 5. Play test collision verification
+            await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                if (cs.exitVehicle) cs.exitVehicle();
+                cs.setMapEnvironment('land');
+                const block = cs.placedObjects.find(o => o.name === 'SolidTestBlock');
+                // Keep only this block in placedObjects so earlier test blocks do not collide with player
+                cs.placedObjects.splice(0, cs.placedObjects.length, block);
+                // Place block at (0, 0, 5) with scale (1, 1, 1), box is from x: -1 to 1, z: 4 to 6
+                block.mesh.position.set(0, 0, 5);
+                block.mesh.scale.set(1, 1, 1);
+                block.position.x = 0;
+                block.position.y = 0;
+                block.position.z = 5;
+                block.mesh.updateMatrixWorld(true);
+                block.isPassable = false;
+            });
+
+            // Enter Play Test mode
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+
+            // Move player towards the solid block: player at (0, 0, 3.2), pressing KeyS (towards +Z)
+            await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                if (cs.exitVehicle) cs.exitVehicle();
+                cs.humanCharacter.position.set(0, 0, 3.2);
+                cs.humanCharacter.rotation.set(0, 0, 0);
+                cs.keys['KeyS'] = true;
+            });
+
+            // Wait 250ms for physics simulation
+            await new Promise(r => setTimeout(r, 250));
+
+            const solidPushbackResult = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                cs.keys['KeyS'] = false;
+                return {
+                    charZ: cs.humanCharacter.position.z
+                };
+            });
+            console.log("   Solid Block Collision charZ:", solidPushbackResult.charZ);
+            // Block spans z from 4 to 6. Player half-width is 0.35, so player front cannot enter past z=4.0
+            if (solidPushbackResult.charZ > 4.0) {
+                throw new Error(`Player walked through solid block! charZ: ${solidPushbackResult.charZ}`);
+            }
+
+            // Case B: Now set block isPassable = true -> player can walk through
+            await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const block = cs.placedObjects.find(o => o.name === 'SolidTestBlock');
+                block.isPassable = true;
+                cs.humanCharacter.position.set(0, 0, 3.2);
+                cs.keys['KeyS'] = true;
+            });
+
+            await new Promise(r => setTimeout(r, 300));
+
+            const passableWalkThroughResult = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                cs.keys['KeyS'] = false;
+                return {
+                    charZ: cs.humanCharacter.position.z
+                };
+            });
+            console.log("   Passable Block charZ:", passableWalkThroughResult.charZ);
+            if (passableWalkThroughResult.charZ < 4.5) {
+                throw new Error(`Player should walk freely through passable block, but was blocked! charZ: ${passableWalkThroughResult.charZ}`);
+            }
+
+            // Exit Play Test mode back to Editor
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 300));
+            console.log("   ✅ Passable vs Solid block collision test passed!");
+        }
+
         // Test Custom Item 3D Workbench (Create Item, Push-Pull Height/Elevation, Save, Publish, Place)
         console.log("   Testing Custom Item 3D Workbench (Create Item, Shapes, Height Elevation, Save, Publish)...");
         {
@@ -3323,9 +3468,14 @@ await (async () => {
 
         // 10. Test 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)
         console.log("10. Checking 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)...");
-        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 1500));
-        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+            await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+        } catch (e) {
+            await new Promise(r => setTimeout(r, 1500));
+            await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+        }
 
         // Verify Team & Class selection modal safely inside evaluate
         const warModalCheck = await page.evaluate(() => {
@@ -8489,6 +8639,49 @@ await (async () => {
                 const breachesClearedAfterAirReset = (dbg.world.getBuildingBreaches() || []).length === 0;
                 const buildingRestoredAfterAirReset = (dbg.world.collapseSystem?.getCollapsedCount?.() || 0) === 0 && (dbg.world.collapseSystem?.getCollapsingCount?.() || 0) === 0;
 
+                // 2c. Test Drive-Through Building & Subsequent Collapse:
+                // User requirement: "sa pead nägema kuidas sa majast läbi sõidad ja siis maja laguneb"
+                physics.resetCar();
+                dbg.world.clearBuildingBreaches();
+                dbg.world.clearBuildingCollapses();
+
+                // Position car speeding directly toward building at x: -120, z: 60 (building box is z ~ 48 to 72)
+                physics.state.position.set(-120, 0.1, 44);
+                physics.yaw = 0; // heading +Z directly through building
+                physics.forwardSpeedMps = 24.0;
+
+                // Step 1: Car hits building and begins driving through with transparent cutaway active
+                physics.update(0.1, { throttle: 1, brake: 0, steer: 0, drift: false, horn: false, reset: false });
+                const startedDriveThrough = physics.isDrivingThroughBuilding === true;
+                const cutawayActiveWhileInside = dbg.world.isCutawayActive?.() === true;
+                const frontDamagedOnEnter = carMeshObj?.isFrontWrecked?.() === true;
+
+                // Step 2: Car continues driving right through the building interior
+                for (let s = 0; s < 15; s++) {
+                    physics.update(0.1, { throttle: 1, brake: 0, steer: 0, drift: false, horn: false, reset: false });
+                }
+                const driveThroughDistance = physics.driveThroughDistance;
+                const traveledThroughBuilding = driveThroughDistance >= 15.0;
+
+                // Step 3: Car exits far side of the building
+                for (let s = 0; s < 10; s++) {
+                    physics.update(0.1, { throttle: 1, brake: 0, steer: 0, drift: false, horn: false, reset: false });
+                }
+                const exitedDriveThrough = physics.isDrivingThroughBuilding === false;
+                const cutawayDisabledOnExit = dbg.world.isCutawayActive?.() === false;
+
+                // Step 4: Building collapses behind the exiting car ("ja siis maja laguneb")
+                const buildingCollapsingBehindCar = dbg.world.isBuildingCollapsing?.() === true;
+                for (let s = 0; s < 30; s++) {
+                    dbg.world.update(s * 0.1, 0.1);
+                }
+                const buildingCollapsedAfterDriveThrough = (dbg.world.collapseSystem?.getCollapsedCount?.() || 0) > 0;
+
+                // Clean reset
+                physics.resetCar();
+                dbg.world.clearBuildingBreaches();
+                dbg.world.clearBuildingCollapses();
+
                 // Test Mobile Phone Arrow Controls (User requirement: "kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled")
                 const inputObj = dbg.input;
                 const mobileArrowsObj = inputObj?.getMobileArrows?.();
@@ -8658,6 +8851,14 @@ await (async () => {
                     airBuildingCollapsed,
                     buildingRestoredAfterAirReset,
                     breachesClearedAfterAirReset,
+                    startedDriveThrough,
+                    cutawayActiveWhileInside,
+                    frontDamagedOnEnter,
+                    traveledThroughBuilding,
+                    exitedDriveThrough,
+                    cutawayDisabledOnExit,
+                    buildingCollapsingBehindCar,
+                    buildingCollapsedAfterDriveThrough,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
                 };
             });
@@ -8788,6 +8989,16 @@ await (async () => {
             }
             if (!cityCarTest.airBuildingCollapsing || !cityCarTest.airBuildingCollapsed || !cityCarTest.buildingRestoredAfterAirReset) {
                 throw new Error("CityCar Mid-Air Jump Crash: building must collapse into rubble and restore on reset (User: 'MAJA Kukkub ka kokku')!");
+            }
+            if (!cityCarTest.startedDriveThrough || !cityCarTest.cutawayActiveWhileInside || !cityCarTest.traveledThroughBuilding || !cityCarTest.exitedDriveThrough || !cityCarTest.buildingCollapsingBehindCar || !cityCarTest.buildingCollapsedAfterDriveThrough) {
+                throw new Error("CityCar Drive-Through Building check failed (User: 'sa pead nägema kuidas sa majast läbi sõidad ja siis maja laguneb')! Result: " + JSON.stringify({
+                    started: cityCarTest.startedDriveThrough,
+                    cutaway: cityCarTest.cutawayActiveWhileInside,
+                    traveled: cityCarTest.traveledThroughBuilding,
+                    exited: cityCarTest.exitedDriveThrough,
+                    collapsing: cityCarTest.buildingCollapsingBehindCar,
+                    collapsed: cityCarTest.buildingCollapsedAfterDriveThrough
+                }));
             }
             if (!cityCarTest.arrowsVisibleOnPhone || !cityCarTest.hasAllArrowButtons) {
                 throw new Error("CityCar must display directional arrow buttons when database detects player on phone (User: 'kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled')!");

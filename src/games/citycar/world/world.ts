@@ -23,6 +23,7 @@ export interface BuildingObject {
     position: THREE.Vector3;
     isCollapsing?: boolean;
     isCollapsed?: boolean;
+    isCutaway?: boolean;
     ruinGroup?: THREE.Group;
 }
 
@@ -77,6 +78,8 @@ export interface WorldEnvironment {
     isBuildingCollapsed: (building: BuildingObject) => boolean;
     isBuildingCollapsing: () => boolean;
     getCollapsedBuildings: () => CollapsedBuilding[];
+    setBuildingCutaway: (building: BuildingObject, active: boolean) => void;
+    isCutawayActive: (building?: BuildingObject) => boolean;
     checkRampInteraction: (carX: number, carY: number, carZ: number, nextX: number, nextZ: number) => { isSideHit: boolean; rampHeight: number; isLaunching: boolean };
     update: (timeSec: number, delta?: number) => void;
     getGroundHeight: (x: number, z: number) => number;
@@ -620,6 +623,8 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         isBuildingCollapsed: (building: BuildingObject) => collapseSystem.isBuildingCollapsed(building),
         isBuildingCollapsing: () => collapseSystem.getCollapsingCount() > 0,
         getCollapsedBuildings: () => collapseSystem.getCollapsedBuildings(),
+        setBuildingCutaway: (building: BuildingObject, active: boolean) => collapseSystem.setBuildingCutaway(building, active),
+        isCutawayActive: (building?: BuildingObject) => collapseSystem.isCutawayActive(building),
         checkRampInteraction,
         update: (timeSec: number, delta = 0.016) => {
             // Animate building breach rubble & smoke
