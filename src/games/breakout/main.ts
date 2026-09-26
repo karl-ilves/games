@@ -177,8 +177,13 @@ export class BreakoutGame {
     private loop(timestamp: number) {
         if (!this.isRunning) return;
 
-        const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05);
+        if (this.lastTime === 0) {
+            this.lastTime = timestamp;
+        }
+        const rawDt = (timestamp - this.lastTime) / 1000;
         this.lastTime = timestamp;
+
+        const dt = Math.min(Math.max(rawDt, 0.001), 0.04);
 
         this.update(dt);
         this.render();

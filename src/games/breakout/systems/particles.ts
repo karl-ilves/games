@@ -8,7 +8,7 @@ export class ParticleSystem {
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 60 + Math.random() * 220;
-            const size = 3 + Math.random() * 5;
+            const size = 3 + Math.random() * 4;
             const life = BREAKOUT_CONFIG.PARTICLES.baseLife * (0.6 + Math.random() * 0.8);
 
             this.particles.push({
@@ -36,21 +36,21 @@ export class ParticleSystem {
 
             p.x += p.vx * dt;
             p.y += p.vy * dt;
-            p.vy += 120 * dt; // slight gravity for dramatic falling shards
+            p.vy += 120 * dt; // slight gravity for falling shards
             p.alpha = Math.max(0, p.life / p.maxLife);
         }
     }
 
     public render(ctx: CanvasRenderingContext2D) {
+        if (this.particles.length === 0) return;
+
+        ctx.save();
         for (const p of this.particles) {
-            ctx.save();
             ctx.globalAlpha = p.alpha;
             ctx.fillStyle = p.color;
-            ctx.shadowColor = p.color;
-            ctx.shadowBlur = 8;
-            ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-            ctx.restore();
+            ctx.fillRect(p.x - p.size * 0.5, p.y - p.size * 0.5, p.size, p.size);
         }
+        ctx.restore();
     }
 
     public clear() {

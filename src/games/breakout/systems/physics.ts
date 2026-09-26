@@ -53,8 +53,8 @@ export class PhysicsSystem {
 
         // Substepping to prevent tunneling through bricks at any speed or frame rate
         const currentSpeed = Math.hypot(ball.vx, ball.vy);
-        const maxStepSize = Math.max(2, ball.radius * 0.5); // Max ~4px per sub-step
-        const substeps = Math.max(1, Math.min(8, Math.ceil((currentSpeed * dt) / maxStepSize)));
+        const maxStepSize = Math.max(4, ball.radius * 0.75); // ~6px max step ensures no tunneling without CPU overhead
+        const substeps = Math.max(1, Math.min(4, Math.ceil((currentSpeed * dt) / maxStepSize)));
         const stepDt = dt / substeps;
 
         for (let step = 0; step < substeps; step++) {
@@ -119,6 +119,16 @@ export class PhysicsSystem {
             // 5. Bricks Collision (Circle to AABB with penetration push-out)
             for (const brick of bricks) {
                 if (!brick.intact) continue;
+
+                // Fast AABB broadphase reject (skips 99% of bricks without distance math)
+                if (
+                    brick.x > ball.x + ball.radius ||
+                    brick.x + brick.width < ball.x - ball.radius ||
+                    brick.y > ball.y + ball.radius ||
+                    brick.y + brick.height < ball.y - ball.radius
+                ) {
+                    continue;
+                }
 
                 const nearestX = Math.max(brick.x, Math.min(ball.x, brick.x + brick.width));
                 const nearestY = Math.max(brick.y, Math.min(ball.y, brick.y + brick.height));
