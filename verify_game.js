@@ -33,7 +33,7 @@ await (async () => {
             '--ignore-gpu-blocklist',
             '--disable-gpu-process-crash-limit',
             '--disable-features=IsolateOrigins,site-per-process',
-            '--js-flags=--max-old-space-size=4096'
+            '--js-flags=--max-old-space-size=1536'
         ]
     });
     const page = await browser.newPage();
@@ -1325,18 +1325,18 @@ await (async () => {
         await new Promise(r => setTimeout(r, 200));
 
         // Verify unowned paid emote has English Buy button and NOT 'Equipped'
-        const saluteBuyBtn = await page.$('[data-buy-id="emote_salute_military"]');
-        if (!saluteBuyBtn) throw new Error("Unowned emote 'emote_salute_military' must have a Buy button!");
-        const saluteBtnText = await page.$eval('[data-buy-id="emote_salute_military"]', el => el.textContent);
+        const hasSaluteBuyBtn = await page.evaluate(() => !!document.querySelector('[data-buy-id="emote_salute_military"]'));
+        if (!hasSaluteBuyBtn) throw new Error("Unowned emote 'emote_salute_military' must have a Buy button!");
+        const saluteBtnText = await page.evaluate(() => document.querySelector('[data-buy-id="emote_salute_military"]')?.textContent || '');
         console.log("   Unowned Military Salute button text (Expected: Buy 400 Y):", saluteBtnText);
         if (!saluteBtnText.includes('Buy') || saluteBtnText.includes('Equipped')) {
             throw new Error("Unowned paid emote must show Buy button with price, not 'Equipped'!");
         }
 
         // Verify breakdance emote has Buy button with 2600 Y
-        const breakdanceBuyBtn = await page.$('[data-buy-id="emote_breakdance"]');
-        if (!breakdanceBuyBtn) throw new Error("Unowned emote 'emote_breakdance' must have a Buy button!");
-        const breakdanceBtnText = await page.$eval('[data-buy-id="emote_breakdance"]', el => el.textContent);
+        const hasBreakdanceBuyBtn = await page.evaluate(() => !!document.querySelector('[data-buy-id="emote_breakdance"]'));
+        if (!hasBreakdanceBuyBtn) throw new Error("Unowned emote 'emote_breakdance' must have a Buy button!");
+        const breakdanceBtnText = await page.evaluate(() => document.querySelector('[data-buy-id="emote_breakdance"]')?.textContent || '');
         console.log("   Unowned Breakdance button text (Expected: Buy 2600 Y or PBX):", breakdanceBtnText);
         if ((!breakdanceBtnText.includes('2600 Y') && !breakdanceBtnText.includes('2600 PBX') && !breakdanceBtnText.includes('2600 pbx')) || breakdanceBtnText.includes('Equipped')) {
             throw new Error("Breakdance emote must show Buy button with 2600 Y/pbx!");
@@ -8395,7 +8395,8 @@ await (async () => {
                 const hasGroundBreach = breachesAfterGroundCrash && breachesAfterGroundCrash.length > 0;
                 const groundBreach = breachesAfterGroundCrash?.[0];
                 const groundBreachHeight = groundBreach?.height;
-                const groundBreachCarSized = groundBreach?.width >= 2.4 && groundBreach?.depth >= 2.5;
+                const groundBreachDepth = groundBreach?.depth;
+                const groundBreachCarSized = groundBreach?.width >= 2.4 && groundBreach?.depth >= 4.4;
 
                 const carFrontWrecked = carMeshObj?.isFrontWrecked?.() === true;
                 const chassisHalfBroken = carMeshObj?.bodyMesh?.scale?.z < 0.6;
@@ -8444,8 +8445,9 @@ await (async () => {
                 const hasAirBreach = breachesAfterAirCrash && breachesAfterAirCrash.length > 0;
                 const airBreach = breachesAfterAirCrash?.[breachesAfterAirCrash.length - 1];
                 const airBreachHeight = airBreach?.height; // ~6.0m in the air ("ka isegi õhus")
+                const airBreachDepth = airBreach?.depth;
                 const airBreachIsAirborne = airBreach?.isAirborne === true;
-                const airBreachCarSized = airBreach?.width >= 2.4 && airBreach?.depth >= 2.5;
+                const airBreachCarSized = airBreach?.width >= 2.4 && airBreach?.depth >= 4.4;
 
                 // Phase 1 in air: half of car breaks in the air ("pool autost puruneb õhus"), rear half intact
                 const halfCarBrokenInAir = carMeshObj?.isFrontWrecked?.() === true && carMeshObj?.isEntireCarWrecked?.() === false;
@@ -8625,10 +8627,12 @@ await (async () => {
                     fireExtinguishedAfterMidAirReset,
                     hasGroundBreach,
                     groundBreachHeight,
+                    groundBreachDepth,
                     groundBreachCarSized,
                     breachesClearedAfterReset,
                     hasAirBreach,
                     airBreachHeight,
+                    airBreachDepth,
                     airBreachIsAirborne,
                     airBreachCarSized,
                     breachesClearedAfterAirReset,

@@ -172,19 +172,19 @@ export class BuildingBreachSystem {
 
         const isAirborne = holeY > 2.5;
 
-        // 3. Build 3D Car-Sized Hole Group
-        // Dimensions matching car: width ~2.6m, height ~2.0m, depth ~3.0m into the building
+        // 3. Build 3D Car-Sized Hole Group with Full Car Length Depth
+        // Dimensions matching car: width ~2.6m, height ~2.0m, depth ~4.8m into the building (exact car length depth!)
         const breachWidth = 2.6;
         const breachHeight = 2.0;
-        const breachDepth = 3.0;
+        const breachDepth = 4.8; // User requirement: "seina peab tulema auto sügavusega auk" (car length depth!)
 
         const group = new THREE.Group();
         group.name = `BuildingBreach_${this.nextId++}`;
         group.position.copy(breachPos);
         group.rotation.y = rotY;
 
-        // A. Charred Void Interior (Hollow chamber punching into the building)
-        // Back wall of the hole
+        // A. Charred Void Interior (Hollow chamber punching 4.8m into the building)
+        // Back wall of the hole (full car depth inside)
         const backWall = new THREE.Mesh(new THREE.PlaneGeometry(breachWidth, breachHeight), this.charredMat);
         backWall.position.set(0, 0, -breachDepth);
         group.add(backWall);
@@ -282,11 +282,36 @@ export class BuildingBreachSystem {
         rebar4.rotation.set(-0.35, 0.3, -0.65);
         group.add(rebar4);
 
-        // Bent ceiling steel I-beam
-        const girder = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 1.4), this.rebarMat);
-        girder.position.set(0.2, breachHeight / 2 - 0.15, -0.6);
-        girder.rotation.set(0.15, 0.4, -0.2);
-        group.add(girder);
+        // Bent ceiling steel I-beams running along the deep 4.8m cavity
+        const girder1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 1.4), this.rebarMat);
+        girder1.position.set(0.2, breachHeight / 2 - 0.15, -1.0);
+        girder1.rotation.set(0.15, 0.4, -0.2);
+        group.add(girder1);
+
+        const girder2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 1.6), this.rebarMat);
+        girder2.position.set(-0.25, breachHeight / 2 - 0.16, -2.8);
+        girder2.rotation.set(-0.18, -0.35, 0.15);
+        group.add(girder2);
+
+        // Sheared metal pipes running along the deep ceiling
+        const pipeGeo = new THREE.CylinderGeometry(0.04, 0.04, 3.6, 8);
+        const ceilingPipe = new THREE.Mesh(pipeGeo, this.rebarMat);
+        ceilingPipe.position.set(0.65, breachHeight / 2 - 0.18, -2.2);
+        ceilingPipe.rotation.x = Math.PI / 2 + 0.1;
+        group.add(ceilingPipe);
+
+        // Interior structural column smashed at the back of the 4.8m cavity
+        const pillarGeo = new THREE.BoxGeometry(0.55, breachHeight, 0.55);
+        const pillarMesh = new THREE.Mesh(pillarGeo, this.concreteMat);
+        pillarMesh.position.set(0.2, 0, -breachDepth + 0.35);
+        pillarMesh.rotation.y = 0.25;
+        group.add(pillarMesh);
+
+        // Bent rebar protruding from the smashed column
+        const columnRebar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.8, 6), this.rebarMat);
+        columnRebar.position.set(0.4, 0.2, -breachDepth + 0.6);
+        columnRebar.rotation.set(0.6, 0.3, -0.8);
+        group.add(columnRebar);
 
         // E. Shattered Glass Shards around the Breach
         const glassGeo = new THREE.BufferGeometry();
@@ -329,14 +354,21 @@ export class BuildingBreachSystem {
             group.add(crack);
         });
 
-        // G. Interior Broken Concrete Rubble inside cavity
+        // G. Interior Broken Concrete Rubble inside cavity (scattered along the full car-length depth)
         const rubbleMat = this.concreteMat;
-        for (let r = 0; r < 4; r++) {
-            const rubbleMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.18, 0.25), rubbleMat);
-            rubbleMesh.position.set((r - 1.5) * 0.45, -breachHeight / 2 + 0.1, -1.2 - r * 0.3);
+        for (let r = 0; r < 8; r++) {
+            const rubbleMesh = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.18, 0.28), (r % 2 === 0) ? rubbleMat : this.brickMat);
+            const rz = -0.7 - r * 0.52; // depths from -0.7m to -4.3m
+            rubbleMesh.position.set(((r % 3) - 1) * 0.55, -breachHeight / 2 + 0.1, rz);
             rubbleMesh.rotation.set(r * 0.4, r * 0.6, r * 0.2);
             group.add(rubbleMesh);
         }
+
+        // Deep interior warm warning light / spark mesh at the end of the 4.8m tunnel
+        const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffaa33 });
+        const sparkLight = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), sparkMat);
+        sparkLight.position.set(0.5, breachHeight / 2 - 0.35, -breachDepth + 0.8);
+        group.add(sparkLight);
 
         this.scene.add(group);
 
