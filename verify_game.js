@@ -15,7 +15,7 @@ try {
 // 2. Load Check
 await (async () => {
     try {
-        execSync('kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
+        execSync('killall -9 "Google Chrome for Testing" "Google Chrome for Testing Helper" 2>/dev/null || true; kill -9 $(lsof -t -i:4173) 2>/dev/null || true', { shell: '/bin/bash', stdio: 'ignore' });
         await new Promise(r => setTimeout(r, 400));
     } catch (e) {}
     console.log("Starting in-process preview server...");
@@ -53,6 +53,20 @@ await (async () => {
                         } catch (e) {}
                         await new Promise(r => setTimeout(r, 200));
                     }
+                } else {
+                    throw err;
+                }
+            }
+        }
+    };
+    const originalEvaluate = page.evaluate.bind(page);
+    page.evaluate = async (pageFunction, ...args) => {
+        for (let attempt = 1; attempt <= 4; attempt++) {
+            try {
+                return await originalEvaluate(pageFunction, ...args);
+            } catch (err) {
+                if (err.message && err.message.includes('detached Frame') && attempt < 4) {
+                    await new Promise(r => setTimeout(r, 200 * attempt));
                 } else {
                     throw err;
                 }
@@ -1967,15 +1981,22 @@ await (async () => {
 
             let lastAiResponse = '';
             const submitAi = async (prompt) => {
-                lastAiResponse = await page.evaluate((val) => {
-                    const cs = window.creatorStudio;
-                    if (cs && cs.executeAiBuild) {
-                        return cs.executeAiBuild(val) || '';
+                for (let retry = 0; retry < 3; retry++) {
+                    try {
+                        lastAiResponse = await page.evaluate((val) => {
+                            const cs = window.creatorStudio;
+                            if (cs && cs.executeAiBuild) {
+                                return cs.executeAiBuild(val) || '';
+                            }
+                            return '';
+                        }, prompt);
+                        await new Promise(r => setTimeout(r, 400));
+                        return lastAiResponse;
+                    } catch (e) {
+                        if (retry === 2) throw e;
+                        await new Promise(r => setTimeout(r, 500));
                     }
-                    return '';
-                }, prompt);
-                await new Promise(r => setTimeout(r, 400));
-                return lastAiResponse;
+                }
             };
 
             await submitAi('add roads and drivable cars');
@@ -4169,9 +4190,12 @@ await (async () => {
             console.log("   Successfully tested Skip Intro button!");
 
             // Test Replay Intro Button
-            await page.evaluate(() => document.getElementById('btn-replay-intro')?.click());
-            await new Promise(r => setTimeout(r, 150));
-            const replayedState = await page.evaluate(() => window.__lastMetro.state);
+            await page.evaluate(() => {
+                const btn = document.getElementById('btn-replay-intro');
+                if (btn) btn.click();
+            });
+            await new Promise(r => setTimeout(r, 300));
+            const replayedState = await page.evaluate(() => window.__lastMetro?.state);
             console.log(`   Replayed intro state (Expected: intro_station): ${replayedState}`);
             if (replayedState !== 'intro_station') throw new Error("Replay intro failed to reset state to intro_station!");
 
@@ -8362,8 +8386,16 @@ await (async () => {
                 wanted.reportLampCrash();
                 const starsBeforeCrash = wanted.getWantedLevel();
 
+                // Position car near building at x: -120, z: 60 at ground level
+                physics.state.position.set(-120, 0.8, 46);
                 // Trigger crash death
                 dbg.triggerCrashDeath?.({ reason: 'You crashed into a building at high speed and your car was destroyed!', speedKmh: 65 });
+
+                const breachesAfterGroundCrash = dbg.world.getBuildingBreaches();
+                const hasGroundBreach = breachesAfterGroundCrash && breachesAfterGroundCrash.length > 0;
+                const groundBreach = breachesAfterGroundCrash?.[0];
+                const groundBreachHeight = groundBreach?.height;
+                const groundBreachCarSized = groundBreach?.width >= 2.4 && groundBreach?.depth >= 2.5;
 
                 const carFrontWrecked = carMeshObj?.isFrontWrecked?.() === true;
                 const chassisHalfBroken = carMeshObj?.bodyMesh?.scale?.z < 0.6;
@@ -8391,11 +8423,13 @@ await (async () => {
                 const deathModalHiddenAfterReset = !hudObj?.isDeathModalVisible?.() && (!deathModal || deathModal.style.display === 'none' || !deathModal.classList.contains('active'));
                 const cameraResetAfterDeath = camSys?.isCrashZoomActive?.() === false;
                 const starsResetAfterDeath = wanted.getWantedLevel() === 0;
+                const breachesClearedAfterReset = (dbg.world.getBuildingBreaches() || []).length === 0;
 
                 // 2b. Test Mid-Air Jump Crash into Building:
                 // User requirement: "pool autost puruneb õhus ja pool kukkub alla ja puruneb maa puututamisest"
-                // Simulate mid-air jump from ramp: elevated in mid-air (y = 6.0)
-                physics.state.position.set(-120, 6.0, 40);
+                // User requirement: "KUI MA Sõidan maja sisse siis tuleb majasse auto suurune auk ka isegi õhus"
+                // Simulate mid-air jump from ramp: elevated in mid-air (y = 6.0) near building at x: -120, z: 60
+                physics.state.position.set(-120, 6.0, 46);
                 physics.setLaunchedFromRamp(true);
                 physics.state.isGrounded = false;
 
@@ -8405,6 +8439,13 @@ await (async () => {
                     speedKmh: 90,
                     isMidAir: true
                 });
+
+                const breachesAfterAirCrash = dbg.world.getBuildingBreaches();
+                const hasAirBreach = breachesAfterAirCrash && breachesAfterAirCrash.length > 0;
+                const airBreach = breachesAfterAirCrash?.[breachesAfterAirCrash.length - 1];
+                const airBreachHeight = airBreach?.height; // ~6.0m in the air ("ka isegi õhus")
+                const airBreachIsAirborne = airBreach?.isAirborne === true;
+                const airBreachCarSized = airBreach?.width >= 2.4 && airBreach?.depth >= 2.5;
 
                 // Phase 1 in air: half of car breaks in the air ("pool autost puruneb õhus"), rear half intact
                 const halfCarBrokenInAir = carMeshObj?.isFrontWrecked?.() === true && carMeshObj?.isEntireCarWrecked?.() === false;
@@ -8428,6 +8469,7 @@ await (async () => {
                 const entireCarRestored = carMeshObj?.isEntireCarWrecked?.() === false && carMeshObj?.isFrontWrecked?.() === false;
                 const debrisClearedAfterMidAirReset = (debrisSys?.getDebrisCount?.() || 0) === 0;
                 const fireExtinguishedAfterMidAirReset = fireSys?.isCarBurning?.() === false;
+                const breachesClearedAfterAirReset = (dbg.world.getBuildingBreaches() || []).length === 0;
 
                 // Test Mobile Phone Arrow Controls (User requirement: "kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled")
                 const inputObj = dbg.input;
@@ -8581,6 +8623,15 @@ await (async () => {
                     entireCarRestored,
                     debrisClearedAfterMidAirReset,
                     fireExtinguishedAfterMidAirReset,
+                    hasGroundBreach,
+                    groundBreachHeight,
+                    groundBreachCarSized,
+                    breachesClearedAfterReset,
+                    hasAirBreach,
+                    airBreachHeight,
+                    airBreachIsAirborne,
+                    airBreachCarSized,
+                    breachesClearedAfterAirReset,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
                 };
             });
@@ -8696,6 +8747,15 @@ await (async () => {
             }
             if (!cityCarTest.entireCarRestored || !cityCarTest.debrisClearedAfterMidAirReset || !cityCarTest.fireExtinguishedAfterMidAirReset) {
                 throw new Error("CityCar Reset button after Mid-Air Jump Crash must restore entire car and clear all debris and fire!");
+            }
+            if (!cityCarTest.hasGroundBreach || !cityCarTest.groundBreachCarSized) {
+                throw new Error("CityCar Building Crash: must create a car-sized hole in the building upon impact (User: 'KUI MA Sõidan maja sisse siis tuleb majasse auto suurune auk')!");
+            }
+            if (!cityCarTest.hasAirBreach || !cityCarTest.airBreachIsAirborne || cityCarTest.airBreachHeight < 5.0 || !cityCarTest.airBreachCarSized) {
+                throw new Error(`CityCar Mid-Air Jump Crash: must create a car-sized hole in the building high in the air (User: 'ka isegi õhus')! airBreachHeight=${cityCarTest.airBreachHeight}`);
+            }
+            if (!cityCarTest.breachesClearedAfterReset || !cityCarTest.breachesClearedAfterAirReset) {
+                throw new Error("CityCar Reset button must restore buildings and clear building breach holes!");
             }
             if (!cityCarTest.arrowsVisibleOnPhone || !cityCarTest.hasAllArrowButtons) {
                 throw new Error("CityCar must display directional arrow buttons when database detects player on phone (User: 'kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled')!");
@@ -9210,6 +9270,8 @@ await (async () => {
                 const isGameOverVisible = gameOverModal && window.getComputedStyle(gameOverModal).display === 'flex';
                 const rewardValEl = document.getElementById('reward-pbx-val');
                 const rewardPbx = game.state.getLastEarnedPbx();
+                const rewardBannerEl = document.getElementById('gameover-reward-banner');
+                const isRewardBannerHidden = rewardBannerEl ? (window.getComputedStyle(rewardBannerEl).display === 'none') : true;
 
                 // 7. Test procedural randomization on restart ("iga kord kui paned play again siis on teistsugune")
                 const layoutBeforeRestart = game.bricks.filter(b => !b.isBorder).map(b => b.type).join('');
@@ -9269,6 +9331,56 @@ await (async () => {
                 const level2HudText = document.getElementById('hud-level')?.textContent || '';
                 const isLevel2MuchLarger = level2BricksCount > level1BricksCount;
 
+                // 9. Test "mapid võivad olla ka sellised et on kivid ees ja on ainult 1 auk kust pall sisse läheb":
+                // Test bunker_gate map
+                game.restart(true, 'bunker_gate');
+                const bunkerPattern = game.currentPatternName;
+                const arenaBricks = game.bricks.filter(b => !b.isBorder);
+                const maxY = Math.max(...arenaBricks.map(b => b.y));
+                const frontRowBricks = arenaBricks.filter(b => Math.abs(b.y - maxY) < 2);
+                const frontGreyCount = frontRowBricks.filter(b => b.type === 'grey').length;
+                const allFrontAreGrey = frontRowBricks.every(b => b.type === 'grey');
+                // Standard cols for level 1 is 12. Since there is strictly 1 hole, there are 11 grey bricks in front row!
+                const hasStrictlyOneHole = frontRowBricks.length === 11 && allFrontAreGrey;
+                
+                const brickW = frontRowBricks[0] ? frontRowBricks[0].width : 40;
+                // Verify breakable bricks exist behind the stone wall
+                const bricksBehindWall = arenaBricks.filter(b => b.y < maxY - 5 && b.type !== 'grey');
+                const hasBreakableBehind = bricksBehindWall.length > 20;
+
+                // Test ball passing through the single hole into the chamber
+                let holeX = -1;
+                for (let c = 0; c < 12; c++) {
+                    const expectedX = Math.round(42 + c * (brickW + 6));
+                    const exists = frontRowBricks.some(b => Math.abs(b.x - expectedX) < 14);
+                    if (!exists) {
+                        holeX = expectedX + brickW / 2;
+                        break;
+                    }
+                }
+                let ballEnteredChamber = false;
+                if (holeX > 0 && game.balls.length > 0) {
+                    game.balls[0].x = holeX;
+                    game.balls[0].y = maxY + 25; // below the front stone wall
+                    game.balls[0].vx = 0;
+                    game.balls[0].vy = -300; // moving up into the hole
+                    for (let s = 0; s < 25; s++) {
+                        game.update(0.01);
+                        if (game.balls[0].y < maxY - 10) {
+                            ballEnteredChamber = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Also test stone_vault archetype
+                game.restart(true, 'stone_vault');
+                const vaultArenaBricks = game.bricks.filter(b => !b.isBorder);
+                const vaultMaxY = Math.max(...vaultArenaBricks.map(b => b.y));
+                const vaultFrontBricks = vaultArenaBricks.filter(b => Math.abs(b.y - vaultMaxY) < 2);
+                const vaultFrontGrey = vaultFrontBricks.filter(b => b.type === 'grey').length;
+                const vaultStrictlyOneHole = vaultFrontBricks.length === 11 && vaultFrontGrey === 11;
+
                 return {
                     success: true,
                     hasCanvas: !!canvas,
@@ -9292,6 +9404,11 @@ await (async () => {
                     isGameOverVisible,
                     rewardPbx,
                     rewardText: rewardValEl ? rewardValEl.textContent : '',
+                    isRewardBannerHidden,
+                    hasStrictlyOneHole,
+                    hasBreakableBehind,
+                    ballEnteredChamber,
+                    vaultStrictlyOneHole,
                     isModalHiddenAfterRestart,
                     isAliveAfterRestart,
                     allBricksRestored,
@@ -9345,8 +9462,14 @@ await (async () => {
             if (!breakoutGameTest.survivedSingleBallDrop) {
                 throw new Error("Breakout multi-ball survival check failed (losing 1 ball while others remain must not trigger death): " + JSON.stringify(breakoutGameTest));
             }
-            if (!breakoutGameTest.isDead || !breakoutGameTest.isGameOverVisible || breakoutGameTest.rewardPbx <= 0) {
-                throw new Error("Breakout death when all balls fall or Game Over screen failed: " + JSON.stringify(breakoutGameTest));
+            if (!breakoutGameTest.isDead || !breakoutGameTest.isGameOverVisible || breakoutGameTest.rewardPbx !== 0) {
+                throw new Error("Breakout death when all balls fall failed or PBX was awarded ('seal ei saa PBX'): " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.isRewardBannerHidden) {
+                throw new Error("Breakout PBX reward banner must be hidden: " + JSON.stringify(breakoutGameTest));
+            }
+            if (!breakoutGameTest.hasStrictlyOneHole || !breakoutGameTest.hasBreakableBehind || !breakoutGameTest.ballEnteredChamber || !breakoutGameTest.vaultStrictlyOneHole) {
+                throw new Error("Breakout 1-hole stone front wall map check failed (kivid ees ja on ainult 1 auk kust pall sisse läheb): " + JSON.stringify(breakoutGameTest));
             }
             if (!breakoutGameTest.isModalHiddenAfterRestart || !breakoutGameTest.isAliveAfterRestart || breakoutGameTest.restartBallsCount !== 1) {
                 throw new Error("Breakout restart mechanic failed: " + JSON.stringify(breakoutGameTest));
@@ -9357,7 +9480,149 @@ await (async () => {
             if (breakoutGameTest.level2Number !== 2 || !breakoutGameTest.isLevel2MuchLarger || !breakoutGameTest.level2HudText.includes('2')) {
                 throw new Error("Breakout Level 2 progression and larger map check failed: " + JSON.stringify(breakoutGameTest));
             }
-            console.log("✅ 🟢 2D Breakout (grey borders, large map, randomized Play Again layout & Level 2) tests passed successfully!");
+            console.log("✅ 🟢 2D Breakout (grey borders, 1-hole stone front walls, zero PBX, non-repeating layouts & Level 2) tests passed successfully!");
+
+            // TEST SUITE: 🐍 USSIMÄNG (SNAKE 2D ARCADE)
+            console.log("Testing 🐍 Ussimäng (Snake: modular architecture, eating food, wall collision, restart, d-pad & pause)...");
+            
+            // Check hub card
+            await page.goto('http://localhost:4173/index.html', { waitUntil: 'domcontentloaded' });
+            const snakeCardVisible = await page.evaluate(() => {
+                const card = document.getElementById('card-snake-game');
+                return card !== null && window.getComputedStyle(card).display !== 'none';
+            });
+            if (!snakeCardVisible) {
+                throw new Error("Snake game card #card-snake-game must be visible on the main hub page!");
+            }
+
+            // Open Snake game page
+            await page.goto('http://localhost:4173/games/snake/index.html', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const snakeGameTest = await page.evaluate(async () => {
+                const game = window.snakeGame;
+                if (!game) return { success: false, reason: 'window.snakeGame not found' };
+
+                const canvas = document.getElementById('snake-canvas');
+                const hasCanvas = canvas !== null && canvas.width > 0 && canvas.height > 0;
+
+                const initialStats = game.state.getStats();
+                const initialLength = initialStats.length;
+                const initialDirection = game.state.direction;
+
+                // 1. Test direction controls
+                game.handleDirectionInput('UP');
+                const directionAfterUp = game.state.nextDirection;
+
+                // Test prevention of 180-degree instant reversal (UP -> DOWN should be rejected)
+                game.state.direction = 'UP';
+                const reverseRejected = !game.state.setDirection('DOWN');
+
+                // 2. Test stepping and movement
+                const headBefore = { ...game.state.body[0] };
+                game.state.direction = 'UP';
+                game.state.nextDirection = 'UP';
+                const stepResult = game.state.step();
+                const headAfter = game.state.body[0];
+                const movedUp = headAfter.x === headBefore.x && headAfter.y === headBefore.y - 1;
+
+                // 3. Test food eating and score growth
+                const foodTargetX = headAfter.x + 1;
+                const foodTargetY = headAfter.y;
+                game.state.foodItems = [{
+                    id: 99999,
+                    x: foodTargetX,
+                    y: foodTargetY,
+                    type: 'apple',
+                    points: 10,
+                    growth: 1
+                }];
+                const scoreBeforeFood = game.state.getStats().score;
+                game.state.direction = 'RIGHT';
+                game.state.nextDirection = 'RIGHT';
+                const eatStepResult = game.state.step();
+                const scoreAfterFood = game.state.getStats().score;
+                const ateFood = eatStepResult.ateFood !== null && scoreAfterFood > scoreBeforeFood;
+
+                // 4. Test wall collision and Game Over
+                // Place head at border and step into wall
+                game.state.body[0] = { x: game.state.cols - 1, y: 5 };
+                game.state.direction = 'RIGHT';
+                game.state.nextDirection = 'RIGHT';
+                const wallStepResult = game.state.step();
+                const isWallDeath = wallStepResult.hitWall && wallStepResult.isGameOver;
+
+                // Trigger game loop update to verify UI modal reflection
+                game.update(0.1, 1);
+                const gameOverModal = document.getElementById('game-over-modal');
+                const isGameOverModalVisible = gameOverModal !== null && (window.getComputedStyle(gameOverModal).display !== 'none' || gameOverModal.style.display === 'flex');
+
+                // 5. Test restart mechanic
+                const restartBtn = document.getElementById('btn-restart-game');
+                if (restartBtn) restartBtn.click();
+                const statsAfterRestart = game.state.getStats();
+                const isModalHiddenAfterRestart = gameOverModal !== null && gameOverModal.style.display === 'none';
+                const isAliveAfterRestart = !statsAfterRestart.isGameOver && statsAfterRestart.length === 4;
+
+                // 6. Test pause functionality
+                game.togglePause();
+                const isPaused = game.state.getStats().isPaused;
+                const pauseModal = document.getElementById('pause-modal');
+                const isPauseModalVisible = pauseModal !== null && window.getComputedStyle(pauseModal).display !== 'none';
+                game.togglePause(); // Unpause
+
+                // 7. Test sound toggle
+                const initialSound = game.audio.getSoundEnabled();
+                const soundBtn = document.getElementById('btn-toggle-sound');
+                if (soundBtn) soundBtn.click();
+                const soundAfterToggle = game.audio.getSoundEnabled();
+                if (soundBtn) soundBtn.click(); // restore
+
+                return {
+                    success: true,
+                    hasCanvas,
+                    initialLength,
+                    initialDirection,
+                    directionAfterUp,
+                    reverseRejected,
+                    movedUp,
+                    ateFood,
+                    isWallDeath,
+                    isGameOverModalVisible,
+                    isModalHiddenAfterRestart,
+                    isAliveAfterRestart,
+                    isPaused,
+                    isPauseModalVisible,
+                    soundToggled: initialSound !== soundAfterToggle
+                };
+            });
+
+            console.log("   Snake Verification Results:", snakeGameTest);
+            if (!snakeGameTest.success || !snakeGameTest.hasCanvas) {
+                throw new Error("Snake game canvas or initialization failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (snakeGameTest.initialLength !== 4 || snakeGameTest.initialDirection !== 'RIGHT') {
+                throw new Error("Snake initial state invalid: " + JSON.stringify(snakeGameTest));
+            }
+            if (snakeGameTest.directionAfterUp !== 'UP' || !snakeGameTest.reverseRejected || !snakeGameTest.movedUp) {
+                throw new Error("Snake movement and direction logic failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.ateFood) {
+                throw new Error("Snake eating food failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.isWallDeath || !snakeGameTest.isGameOverModalVisible) {
+                throw new Error("Snake wall collision & Game Over modal display failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.isModalHiddenAfterRestart || !snakeGameTest.isAliveAfterRestart) {
+                throw new Error("Snake restart mechanic failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.isPaused || !snakeGameTest.isPauseModalVisible) {
+                throw new Error("Snake pause mechanic failed: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.soundToggled) {
+                throw new Error("Snake sound toggle failed: " + JSON.stringify(snakeGameTest));
+            }
+            console.log("✅ 🐍 Ussimäng (Snake 2D Arcade: movement, eating, wall collision, modals, sound) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

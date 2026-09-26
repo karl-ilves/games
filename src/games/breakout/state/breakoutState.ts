@@ -99,8 +99,7 @@ export class BreakoutState {
             if (this.level < this.maxLevel) {
                 this.isLevelComplete = true;
                 this.isVictory = false;
-                // Award level 1 clear bonus
-                this.awardReward(BREAKOUT_CONFIG.PBX_REWARD.clearBonus, 'Breakout Level 1 Cleared');
+                this.awardReward(0, 'Breakout Level 1 Cleared');
                 return { isComplete: true, isVictory: false };
             } else {
                 this.setVictory();
@@ -110,16 +109,9 @@ export class BreakoutState {
         return { isComplete: false, isVictory: false };
     }
 
-    private awardReward(bonus: number, note: string) {
-        const reward = Math.max(10, bonus);
-        this.lastEarnedPbx = reward;
-        try {
-            if (yardService && typeof yardService.addPlaybux === 'function') {
-                yardService.addPlaybux(reward, note);
-            }
-        } catch (e) {
-            console.warn('Failed to reward Playbux:', e);
-        }
+    private awardReward(_bonus: number, _note: string) {
+        // "seal ei saa PBX" - Breakout does not award PBX
+        this.lastEarnedPbx = 0;
     }
 
     public setDeath(): GameStats {
@@ -127,16 +119,8 @@ export class BreakoutState {
         this.isGameOver = true;
         this.saveHighScore();
 
-        // Calculate Playbux reward based on destroyed bricks
-        const reward = Math.max(5, this.bricksDestroyed * BREAKOUT_CONFIG.PBX_REWARD.perBrick);
-        this.lastEarnedPbx = reward;
-        try {
-            if (yardService && typeof yardService.addPlaybux === 'function') {
-                yardService.addPlaybux(reward, 'Breakout Game Over Reward');
-            }
-        } catch (e) {
-            console.warn('Failed to reward Playbux:', e);
-        }
+        // "seal ei saa PBX" - Breakout does not award PBX
+        this.lastEarnedPbx = 0;
 
         return this.getStats();
     }
@@ -147,15 +131,8 @@ export class BreakoutState {
         this.isGameOver = false;
         this.saveHighScore();
 
-        const reward = Math.max(50, this.bricksDestroyed * BREAKOUT_CONFIG.PBX_REWARD.perBrick + BREAKOUT_CONFIG.PBX_REWARD.level2Bonus);
-        this.lastEarnedPbx = reward;
-        try {
-            if (yardService && typeof yardService.addPlaybux === 'function') {
-                yardService.addPlaybux(reward, 'Breakout All Levels Cleared!');
-            }
-        } catch (e) {
-            console.warn('Failed to reward Playbux:', e);
-        }
+        // "seal ei saa PBX" - Breakout does not award PBX
+        this.lastEarnedPbx = 0;
 
         return this.getStats();
     }

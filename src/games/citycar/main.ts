@@ -87,6 +87,7 @@ function resetGame(): void {
     carMesh.setFrontWrecked(false);
     crashDebrisSystem.clear();
     fireSystem.extinguish();
+    world.clearBuildingBreaches();
     cameraSystem.resetCrashZoom();
     skidMarksSystem.clear();
     wantedSystem.reset();
@@ -112,14 +113,13 @@ function triggerCrashDeath(info: { reason: string; speedKmh: number; isMidAir?: 
     audioSystem.playExplosion();
     const isMidAir = !!info.isMidAir;
     carMesh.setFrontWrecked(true);
-    if (isMidAir) {
-        physics.setFallingAfterCrash(true);
-    }
+    if (isMidAir) physics.setFallingAfterCrash(true);
     const yaw = carMesh.group.rotation.y;
     const forwardDir = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     crashDebrisSystem.spawnDebris(physics.state.position, forwardDir, cityCarState.getCarColor(), false);
     fireSystem.triggerFireball(physics.state.position, isMidAir ? 1.4 : 1.0);
     fireSystem.startCarFire(carMesh.group);
+    world.createBuildingBreach(physics.state.position, yaw);
     cameraSystem.triggerCrashZoom(physics.state.position, yaw, 5.0);
 }
 

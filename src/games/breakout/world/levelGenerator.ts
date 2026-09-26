@@ -15,7 +15,10 @@ export type LayoutPattern =
     | 'dna_helix'
     | 'ring_vault'
     | 'stairway'
-    | 'honeycomb';
+    | 'honeycomb'
+    | 'bunker_gate'
+    | 'stone_vault'
+    | 'funnel_chamber';
 
 export const ALL_PATTERNS: LayoutPattern[] = [
     'checkerboard',
@@ -32,6 +35,9 @@ export const ALL_PATTERNS: LayoutPattern[] = [
     'ring_vault',
     'stairway',
     'honeycomb',
+    'bunker_gate',
+    'stone_vault',
+    'funnel_chamber',
 ];
 
 export interface LevelGenOptions {
@@ -114,9 +120,9 @@ function generatePatternCells(
     rows: number,
     cols: number,
     variant: number
-): ('green' | 'gold' | 'grey')[] {
+): ('green' | 'gold' | 'grey' | 'empty')[] {
     const totalPlayableCells = rows * cols;
-    const cellTypes: ('green' | 'gold' | 'grey')[] = new Array(totalPlayableCells).fill('green');
+    const cellTypes: ('green' | 'gold' | 'grey' | 'empty')[] = new Array(totalPlayableCells).fill('green');
 
     const centerR = Math.floor(rows / 2);
     const centerC = Math.floor(cols / 2);
@@ -279,6 +285,56 @@ function generatePatternCells(
                     }
                     break;
                 }
+                case 'bunker_gate': {
+                    // "kivid ees ja on ainult 1 auk kust pall sisse läheb"
+                    // Solid frontal stone wall with strictly 1 hole where the ball goes inside!
+                    const frontRow = rows - 1;
+                    const singleHoleCol = 2 + (Math.abs(variant) % Math.max(1, cols - 4));
+                    if (r === frontRow) {
+                        cellTypes[idx] = (c === singleHoleCol) ? 'empty' : 'grey';
+                    } else if (r === frontRow - 1 && c === singleHoleCol) {
+                        cellTypes[idx] = 'empty'; // Clear entry corridor into chamber
+                    } else if (r === 0 && Math.abs(c - centerC) <= 1) {
+                        cellTypes[idx] = 'gold';
+                    } else if (r === 2 && (c === 2 || c === cols - 3)) {
+                        cellTypes[idx] = 'gold';
+                    }
+                    break;
+                }
+                case 'stone_vault': {
+                    // "kivid ees ja on ainult 1 auk kust pall sisse läheb"
+                    // Enclosed stone vault with front stone wall having strictly 1 hole!
+                    const frontRow = rows - 2;
+                    const singleHoleCol = Math.floor(cols / 2) + ((variant % 2 === 0) ? -1 : 1);
+                    if (r === frontRow) {
+                        cellTypes[idx] = (c === singleHoleCol) ? 'empty' : 'grey';
+                    } else if (r === frontRow - 1 && c === singleHoleCol) {
+                        cellTypes[idx] = 'empty'; // Clear entry into chamber
+                    } else if (r === rows - 1) {
+                        cellTypes[idx] = 'empty'; // Open courtyard in front of stone wall
+                    } else if ((c === 0 || c === cols - 1) && r >= 1) {
+                        cellTypes[idx] = 'grey'; // Stone bunker side walls
+                    } else if (r <= 2 && Math.abs(c - centerC) <= 1) {
+                        cellTypes[idx] = 'gold';
+                    }
+                    break;
+                }
+                case 'funnel_chamber': {
+                    // "kivid ees ja on ainult 1 auk kust pall sisse läheb"
+                    // Front barrier with central 1-brick hole and inner funnel baffles
+                    const frontRow = rows - 1;
+                    const singleHoleCol = centerC;
+                    if (r === frontRow) {
+                        cellTypes[idx] = (c === singleHoleCol) ? 'empty' : 'grey';
+                    } else if (r === frontRow - 1 && c === singleHoleCol) {
+                        cellTypes[idx] = 'empty'; // Clear entry into chamber
+                    } else if (rows >= 6 && r === rows - 3 && (Math.abs(c - centerC) >= 3 && Math.abs(c - centerC) <= 4)) {
+                        cellTypes[idx] = 'grey';
+                    } else if (r === 0 && Math.abs(c - centerC) <= 1) {
+                        cellTypes[idx] = 'gold';
+                    }
+                    break;
+                }
             }
         }
     }
@@ -368,7 +424,7 @@ export function createBreakoutLevel(options: LevelGenOptions): Brick[] {
     const totalPlayableCells = rows * cols;
 
     let chosenPattern = forcePattern || getNextShufflePattern();
-    let cellTypes: ('green' | 'gold' | 'grey')[] = [];
+    let cellTypes: ('green' | 'gold' | 'grey' | 'empty')[] = [];
     let mapSignature = '';
     let attempts = 0;
 
@@ -381,18 +437,32 @@ export function createBreakoutLevel(options: LevelGenOptions): Brick[] {
         // Scatter target gold and grey bricks
         let currentGold = cellTypes.filter(t => t === 'gold').length;
         let currentGrey = cellTypes.filter(t => t === 'grey').length;
+        const isOneHolePattern = chosenPattern === 'bunker_gate' || chosenPattern === 'stone_vault' || chosenPattern === 'funnel_chamber';
 
-        while (currentGold < targetGoldCount) {
+        let goldAttempts = 0;
+        while (currentGold < targetGoldCount && goldAttempts < 100) {
+            goldAttempts++;
             const randIdx = Math.floor(Math.random() * totalPlayableCells);
             if (cellTypes[randIdx] === 'green') {
+                const randR = Math.floor(randIdx / cols);
+                if (isOneHolePattern && randR >= rows - 2) {
+                    continue;
+                }
                 cellTypes[randIdx] = 'gold';
                 currentGold++;
             }
         }
 
-        while (currentGrey < targetGreyObstacles) {
+        let greyAttempts = 0;
+        while (currentGrey < targetGreyObstacles && greyAttempts < 100) {
+            greyAttempts++;
             const randIdx = Math.floor(Math.random() * totalPlayableCells);
             if (cellTypes[randIdx] === 'green') {
+                const randR = Math.floor(randIdx / cols);
+                // In 1-hole patterns, protect the front entrance and corridor from accidental grey blocks
+                if (isOneHolePattern && (randR === rows - 1 || randR === rows - 2)) {
+                    continue;
+                }
                 cellTypes[randIdx] = 'grey';
                 currentGrey++;
             }
@@ -422,7 +492,10 @@ export function createBreakoutLevel(options: LevelGenOptions): Brick[] {
             const idx = r * cols + c;
             const type = cellTypes[idx];
 
-            if (type === 'grey') {
+            if (type === 'empty') {
+                // "ainult 1 auk kust pall sisse läheb" -> open hole/gap, no brick spawned!
+                continue;
+            } else if (type === 'grey') {
                 bricks.push({
                     id: id++,
                     x,

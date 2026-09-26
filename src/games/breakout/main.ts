@@ -7,7 +7,7 @@ import { ParticleSystem } from './systems/particles';
 import { InputManager } from './systems/input';
 import { PhysicsSystem } from './systems/physics';
 import { BreakoutHud } from './ui/hud';
-import { createBreakoutLevel } from './world/levelGenerator';
+import { createBreakoutLevel, LayoutPattern } from './world/levelGenerator';
 import { BreakoutRenderer } from './world/renderer';
 
 export class BreakoutGame {
@@ -99,7 +99,7 @@ export class BreakoutGame {
         return this.canvas.height / dpr;
     }
 
-    public restart(resetProgress: boolean = true) {
+    public restart(resetProgress: boolean = true, forcePattern?: LayoutPattern) {
         const width = this.logicalWidth || 800;
         const height = this.logicalHeight || 600;
 
@@ -138,6 +138,7 @@ export class BreakoutGame {
             level: currentLevel,
             canvasWidth: width,
             canvasHeight: height,
+            forcePattern,
         });
         this.currentMapSignature = (this.bricks as any).__signature || '';
         this.currentPatternName = (this.bricks as any).__pattern || '';

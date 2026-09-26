@@ -84,8 +84,8 @@ export const BREAKOUT_CONFIG = {
         baseLife: 0.6,
     },
     PBX_REWARD: {
-        perBrick: 1,
-        clearBonus: 50,
-        level2Bonus: 100,
+        perBrick: 0,
+        clearBonus: 0,
+        level2Bonus: 0,
     }
 };

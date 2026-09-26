@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CarInputState, CarPhysicsState, Gear, WorldZone } from '../types';
 import { VEHICLE_CONFIG } from '../catalog';
 import { CarMeshContainer } from '../models/carModel';
-import { WorldEnvironment } from '../world/world';
+import { WorldEnvironment, BuildingObject } from '../world/world';
 
 export const MAP_BOUNDS = {
     minX: -360,
@@ -277,10 +277,22 @@ export class CarPhysicsController {
         );
 
         let collided = false;
-        for (const col of this.world.colliders) {
-            if (col.intersectsBox(carBox)) {
-                collided = true;
-                break;
+        let hitBuilding: BuildingObject | undefined;
+        if (this.world.buildings) {
+            for (const b of this.world.buildings) {
+                if (b.box.intersectsBox(carBox)) {
+                    collided = true;
+                    hitBuilding = b;
+                    break;
+                }
+            }
+        }
+        if (!collided) {
+            for (const col of this.world.colliders) {
+                if (col.intersectsBox(carBox)) {
+                    collided = true;
+                    break;
+                }
             }
         }
 
@@ -339,6 +351,11 @@ export class CarPhysicsController {
             const impactSpeed = this.forwardSpeedMps;
             this.forwardSpeedMps = -this.forwardSpeedMps * 0.35;
             this.onBuildingHit?.();
+
+            // Punch car-sized hole in building at exact impact point and height (even in mid-air!)
+            if (hitBuilding || Math.abs(impactSpeed) > 0.8 || !this.state.isGrounded || this.launchedFromRamp) {
+                this.world.createBuildingBreach(this.state.position, this.yaw, hitBuilding);
+            }
 
             if (!this.isDead && (Math.abs(impactSpeed) > 1.2 || !this.state.isGrounded || this.launchedFromRamp)) {
                 const currentGroundY = this.world.getGroundHeight(this.state.position.x, this.state.position.z);

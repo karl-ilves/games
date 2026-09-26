@@ -9,6 +9,17 @@ import {
     createSuspensionBridge,
     createBorderCheckpoint
 } from '../models/environmentModels';
+import { BuildingBreachSystem, BuildingBreach } from './buildingBreachSystem';
+
+export interface BuildingObject {
+    group: THREE.Group;
+    box: THREE.Box3;
+    width: number;
+    depth: number;
+    height: number;
+    color: number;
+    position: THREE.Vector3;
+}
 
 export interface StreetLampObject {
     group: THREE.Group;
@@ -46,10 +57,15 @@ export interface WorldEnvironment {
     scene: THREE.Scene;
     waterMesh: THREE.Mesh;
     colliders: THREE.Box3[];
+    buildings: BuildingObject[];
     bridges: { box: THREE.Box3; height: number }[];
     streetLamps: StreetLampObject[];
     trees: DestructibleTreeObject[];
     ramps: RampObject[];
+    breachSystem: BuildingBreachSystem;
+    createBuildingBreach: (impactPos: THREE.Vector3, carYaw: number, building?: BuildingObject) => BuildingBreach | null;
+    clearBuildingBreaches: () => void;
+    getBuildingBreaches: () => BuildingBreach[];
     checkRampInteraction: (carX: number, carY: number, carZ: number, nextX: number, nextZ: number) => { isSideHit: boolean; rampHeight: number; isLaunching: boolean };
     update: (timeSec: number, delta?: number) => void;
     getGroundHeight: (x: number, z: number) => number;
@@ -166,6 +182,7 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         { x: -280, z: 0 }, { x: -280, z: 120 }, { x: -280, z: -120 }
     ];
 
+    const buildings: BuildingObject[] = [];
     cityBlocks.forEach((block, idx) => {
         const w = 24 + (idx % 3) * 6;
         const d = 24 + ((idx * 2) % 4) * 6;
@@ -178,6 +195,15 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         // Building collision box
         const bbox = new THREE.Box3().setFromObject(b);
         colliders.push(bbox);
+        buildings.push({
+            group: b,
+            box: bbox,
+            width: w,
+            depth: d,
+            height: h,
+            color: col,
+            position: new THREE.Vector3(block.x, 0, block.z)
+        });
     });
 
     // Street Lamps along city roads (Collapsible when hit by car!)
@@ -534,16 +560,26 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         return { isSideHit: false, rampHeight: 0, isLaunching: false };
     };
 
+    const breachSystem = new BuildingBreachSystem(scene, buildings);
+
     return {
         scene,
         waterMesh,
         colliders,
+        buildings,
         bridges,
         streetLamps,
         trees,
         ramps: rampObjects,
+        breachSystem,
+        createBuildingBreach: (impactPos: THREE.Vector3, carYaw: number, targetBuilding?: BuildingObject) => breachSystem.createBreach(impactPos, carYaw, targetBuilding),
+        clearBuildingBreaches: () => breachSystem.clear(),
+        getBuildingBreaches: () => breachSystem.getBreaches(),
         checkRampInteraction,
         update: (timeSec: number, delta = 0.016) => {
+            // Animate building breach rubble & smoke
+            breachSystem.update(delta);
+
             // Subtle water wave ripple
             if (waterMesh) {
                 waterMesh.position.y = -0.4 + Math.sin(timeSec * 2.0) * 0.08;
