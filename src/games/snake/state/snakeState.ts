@@ -227,17 +227,22 @@ export class SnakeState {
             case 'RIGHT': newX += 1; break;
         }
 
-        // Wall collision check
-        if (newX < 0 || newX >= this.cols || newY < 0 || newY >= this.rows) {
-            this.isGameOver = true;
-            return {
-                moved: false,
-                ateFood: null,
-                hitWall: true,
-                hitSelf: false,
-                isGameOver: true,
-                isNewHighScore: false,
-            };
+        // Screen wrap-around: kui lähed seinast läbi, tuled teiselt poolt välja!
+        let wrapped = false;
+        if (newX < 0) {
+            newX = this.cols - 1;
+            wrapped = true;
+        } else if (newX >= this.cols) {
+            newX = 0;
+            wrapped = true;
+        }
+
+        if (newY < 0) {
+            newY = this.rows - 1;
+            wrapped = true;
+        } else if (newY >= this.rows) {
+            newY = 0;
+            wrapped = true;
         }
 
         // Self collision check (ignoring the last tail cell if not growing)
@@ -321,6 +326,7 @@ export class SnakeState {
             hitSelf: false,
             isGameOver: false,
             isNewHighScore,
+            wrapped,
         };
     }
 

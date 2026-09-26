@@ -8398,6 +8398,13 @@ await (async () => {
                 const groundBreachDepth = groundBreach?.depth;
                 const groundBreachCarSized = groundBreach?.width >= 2.4 && groundBreach?.depth >= 4.4;
 
+                // Test Building Collapse (User: "MAJA Kukkub ka kokku")
+                const groundBuildingCollapsing = dbg.world.isBuildingCollapsing?.() || (dbg.world.collapseSystem?.getCollapsingCount?.() || 0) > 0;
+                for (let s = 0; s < 30; s++) {
+                    dbg.world.update(s * 0.1, 0.1);
+                }
+                const groundBuildingCollapsed = (dbg.world.collapseSystem?.getCollapsedCount?.() || 0) > 0;
+
                 const carFrontWrecked = carMeshObj?.isFrontWrecked?.() === true;
                 const chassisHalfBroken = carMeshObj?.bodyMesh?.scale?.z < 0.6;
                 const debrisSpawned = (debrisSys?.getDebrisCount?.() || 0) > 0;
@@ -8425,6 +8432,7 @@ await (async () => {
                 const cameraResetAfterDeath = camSys?.isCrashZoomActive?.() === false;
                 const starsResetAfterDeath = wanted.getWantedLevel() === 0;
                 const breachesClearedAfterReset = (dbg.world.getBuildingBreaches() || []).length === 0;
+                const buildingRestoredAfterReset = (dbg.world.collapseSystem?.getCollapsedCount?.() || 0) === 0 && (dbg.world.collapseSystem?.getCollapsingCount?.() || 0) === 0;
 
                 // 2b. Test Mid-Air Jump Crash into Building:
                 // User requirement: "pool autost puruneb õhus ja pool kukkub alla ja puruneb maa puututamisest"
@@ -8449,6 +8457,13 @@ await (async () => {
                 const airBreachIsAirborne = airBreach?.isAirborne === true;
                 const airBreachCarSized = airBreach?.width >= 2.4 && airBreach?.depth >= 4.4;
 
+                // Test building collapse also triggers on mid-air crash (User: "MAJA Kukkub ka kokku")
+                const airBuildingCollapsing = dbg.world.isBuildingCollapsing?.() || (dbg.world.collapseSystem?.getCollapsingCount?.() || 0) > 0;
+                for (let s = 0; s < 30; s++) {
+                    dbg.world.update(s * 0.1, 0.1);
+                }
+                const airBuildingCollapsed = (dbg.world.collapseSystem?.getCollapsedCount?.() || 0) > 0;
+
                 // Phase 1 in air: half of car breaks in the air ("pool autost puruneb õhus"), rear half intact
                 const halfCarBrokenInAir = carMeshObj?.isFrontWrecked?.() === true && carMeshObj?.isEntireCarWrecked?.() === false;
                 const isFallingInitially = physics.isFallingAfterCrash?.() === true;
@@ -8472,6 +8487,7 @@ await (async () => {
                 const debrisClearedAfterMidAirReset = (debrisSys?.getDebrisCount?.() || 0) === 0;
                 const fireExtinguishedAfterMidAirReset = fireSys?.isCarBurning?.() === false;
                 const breachesClearedAfterAirReset = (dbg.world.getBuildingBreaches() || []).length === 0;
+                const buildingRestoredAfterAirReset = (dbg.world.collapseSystem?.getCollapsedCount?.() || 0) === 0 && (dbg.world.collapseSystem?.getCollapsingCount?.() || 0) === 0;
 
                 // Test Mobile Phone Arrow Controls (User requirement: "kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled")
                 const inputObj = dbg.input;
@@ -8629,12 +8645,18 @@ await (async () => {
                     groundBreachHeight,
                     groundBreachDepth,
                     groundBreachCarSized,
+                    groundBuildingCollapsing,
+                    groundBuildingCollapsed,
+                    buildingRestoredAfterReset,
                     breachesClearedAfterReset,
                     hasAirBreach,
                     airBreachHeight,
                     airBreachDepth,
                     airBreachIsAirborne,
                     airBreachCarSized,
+                    airBuildingCollapsing,
+                    airBuildingCollapsed,
+                    buildingRestoredAfterAirReset,
                     breachesClearedAfterAirReset,
                     driverHasCheckmark: (dbg.state.getUserName() || '').endsWith('✔') || (dbg.state.getUserName() || '').endsWith('✓') || (dbg.state.getUserName() || '').endsWith('✅')
                 };
@@ -8760,6 +8782,12 @@ await (async () => {
             }
             if (!cityCarTest.breachesClearedAfterReset || !cityCarTest.breachesClearedAfterAirReset) {
                 throw new Error("CityCar Reset button must restore buildings and clear building breach holes!");
+            }
+            if (!cityCarTest.groundBuildingCollapsing || !cityCarTest.groundBuildingCollapsed || !cityCarTest.buildingRestoredAfterReset) {
+                throw new Error("CityCar Ground Building Crash: building must collapse into rubble and restore on reset (User: 'MAJA Kukkub ka kokku')!");
+            }
+            if (!cityCarTest.airBuildingCollapsing || !cityCarTest.airBuildingCollapsed || !cityCarTest.buildingRestoredAfterAirReset) {
+                throw new Error("CityCar Mid-Air Jump Crash: building must collapse into rubble and restore on reset (User: 'MAJA Kukkub ka kokku')!");
             }
             if (!cityCarTest.arrowsVisibleOnPhone || !cityCarTest.hasAllArrowButtons) {
                 throw new Error("CityCar must display directional arrow buttons when database detects player on phone (User: 'kui andmepaas tuvastab telefonis mängja siis ilmub talle nooled')!");
@@ -9548,13 +9576,36 @@ await (async () => {
                 const scoreAfterFood = game.state.getStats().score;
                 const ateFood = eatStepResult.ateFood !== null && scoreAfterFood > scoreBeforeFood;
 
-                // 4. Test wall collision and Game Over
-                // Place head at border and step into wall
-                game.state.body[0] = { x: game.state.cols - 1, y: 5 };
+                // 4. Test screen wrap-around (seinast läbi minnes tuled teiselt poolt välja)
+                // Place head at right border (cols - 1) and step RIGHT -> head should appear at x = 0 (left edge)
+                game.restart();
+                game.state.body = [{ x: game.state.cols - 1, y: 5 }, { x: game.state.cols - 2, y: 5 }];
                 game.state.direction = 'RIGHT';
                 game.state.nextDirection = 'RIGHT';
-                const wallStepResult = game.state.step();
-                const isWallDeath = wallStepResult.hitWall && wallStepResult.isGameOver;
+                const wrapRightResult = game.state.step();
+                const wrappedRightToLeft = wrapRightResult.moved && !wrapRightResult.isGameOver && game.state.body[0].x === 0 && game.state.body[0].y === 5 && wrapRightResult.wrapped;
+
+                // Place head at top border (0, 0) and step UP -> head should appear at y = rows - 1 (bottom edge)
+                game.restart();
+                game.state.body = [{ x: 5, y: 0 }, { x: 5, y: 1 }];
+                game.state.direction = 'UP';
+                game.state.nextDirection = 'UP';
+                const wrapUpResult = game.state.step();
+                const wrappedTopToBottom = wrapUpResult.moved && !wrapUpResult.isGameOver && game.state.body[0].x === 5 && game.state.body[0].y === game.state.rows - 1 && wrapUpResult.wrapped;
+
+                // 4b. Test Self-collision (running into oneself) triggers Game Over
+                game.restart();
+                game.state.body = [
+                    { x: 10, y: 10 },
+                    { x: 10, y: 9 },
+                    { x: 11, y: 9 },
+                    { x: 11, y: 10 },
+                    { x: 11, y: 11 }
+                ];
+                game.state.direction = 'RIGHT';
+                game.state.nextDirection = 'RIGHT';
+                const selfCollisionResult = game.state.step();
+                const isSelfDeath = selfCollisionResult.hitSelf && selfCollisionResult.isGameOver;
 
                 // Trigger game loop update to verify UI modal reflection
                 game.update(0.1, 1);
@@ -9591,7 +9642,9 @@ await (async () => {
                     reverseRejected,
                     movedUp,
                     ateFood,
-                    isWallDeath,
+                    wrappedRightToLeft,
+                    wrappedTopToBottom,
+                    isSelfDeath,
                     isGameOverModalVisible,
                     isModalHiddenAfterRestart,
                     isAliveAfterRestart,
@@ -9614,8 +9667,11 @@ await (async () => {
             if (!snakeGameTest.ateFood) {
                 throw new Error("Snake eating food failed: " + JSON.stringify(snakeGameTest));
             }
-            if (!snakeGameTest.isWallDeath || !snakeGameTest.isGameOverModalVisible) {
-                throw new Error("Snake wall collision & Game Over modal display failed: " + JSON.stringify(snakeGameTest));
+            if (!snakeGameTest.wrappedRightToLeft || !snakeGameTest.wrappedTopToBottom) {
+                throw new Error("Snake screen wrap-around check failed (seinast läbi minnes peab tulema teiselt poolt välja): " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.isSelfDeath || !snakeGameTest.isGameOverModalVisible) {
+                throw new Error("Snake self-collision & Game Over modal display failed: " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.isModalHiddenAfterRestart || !snakeGameTest.isAliveAfterRestart) {
                 throw new Error("Snake restart mechanic failed: " + JSON.stringify(snakeGameTest));
@@ -9626,7 +9682,7 @@ await (async () => {
             if (!snakeGameTest.soundToggled) {
                 throw new Error("Snake sound toggle failed: " + JSON.stringify(snakeGameTest));
             }
-            console.log("✅ 🐍 Ussimäng (Snake 2D Arcade: movement, eating, wall collision, modals, sound) tests passed successfully!");
+            console.log("✅ 🐍 Ussimäng (Snake 2D Arcade: wrap-around portal walls, self collision, eating, restart & sound) tests passed successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

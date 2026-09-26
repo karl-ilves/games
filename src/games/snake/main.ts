@@ -200,6 +200,16 @@ export class SnakeGame {
                 this.hud.updateStats(this.state.getStats());
             }
 
+            if ((res as any).wrapped) {
+                this.audio.playWrapPortal();
+                if (this.state.body.length > 0) {
+                    const h = this.state.body[0];
+                    const hx = this.offsetX + h.x * this.tileSize + this.tileSize / 2;
+                    const hy = this.offsetY + h.y * this.tileSize + this.tileSize / 2;
+                    this.particles.emit(hx, hy, '#00e676', 8, 90);
+                }
+            }
+
             if (res.isGameOver) {
                 this.triggerGameOver();
                 break;

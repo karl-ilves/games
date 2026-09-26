@@ -10,15 +10,20 @@ import {
     createBorderCheckpoint
 } from '../models/environmentModels';
 import { BuildingBreachSystem, BuildingBreach } from './buildingBreachSystem';
+import { BuildingCollapseSystem, CollapsedBuilding } from './buildingCollapseSystem';
 
 export interface BuildingObject {
     group: THREE.Group;
     box: THREE.Box3;
+    originalBox?: THREE.Box3;
     width: number;
     depth: number;
     height: number;
     color: number;
     position: THREE.Vector3;
+    isCollapsing?: boolean;
+    isCollapsed?: boolean;
+    ruinGroup?: THREE.Group;
 }
 
 export interface StreetLampObject {
@@ -63,9 +68,15 @@ export interface WorldEnvironment {
     trees: DestructibleTreeObject[];
     ramps: RampObject[];
     breachSystem: BuildingBreachSystem;
+    collapseSystem: BuildingCollapseSystem;
     createBuildingBreach: (impactPos: THREE.Vector3, carYaw: number, building?: BuildingObject) => BuildingBreach | null;
     clearBuildingBreaches: () => void;
     getBuildingBreaches: () => BuildingBreach[];
+    collapseBuilding: (buildingOrPos: BuildingObject | THREE.Vector3, carYaw?: number) => void;
+    clearBuildingCollapses: () => void;
+    isBuildingCollapsed: (building: BuildingObject) => boolean;
+    isBuildingCollapsing: () => boolean;
+    getCollapsedBuildings: () => CollapsedBuilding[];
     checkRampInteraction: (carX: number, carY: number, carZ: number, nextX: number, nextZ: number) => { isSideHit: boolean; rampHeight: number; isLaunching: boolean };
     update: (timeSec: number, delta?: number) => void;
     getGroundHeight: (x: number, z: number) => number;
@@ -561,6 +572,7 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
     };
 
     const breachSystem = new BuildingBreachSystem(scene, buildings);
+    const collapseSystem = new BuildingCollapseSystem(scene, buildings);
 
     return {
         scene,
@@ -572,13 +584,48 @@ export function buildWorld(scene: THREE.Scene): WorldEnvironment {
         trees,
         ramps: rampObjects,
         breachSystem,
-        createBuildingBreach: (impactPos: THREE.Vector3, carYaw: number, targetBuilding?: BuildingObject) => breachSystem.createBreach(impactPos, carYaw, targetBuilding),
-        clearBuildingBreaches: () => breachSystem.clear(),
+        collapseSystem,
+        createBuildingBreach: (impactPos: THREE.Vector3, carYaw: number, targetBuilding?: BuildingObject) => {
+            const breach = breachSystem.createBreach(impactPos, carYaw, targetBuilding);
+            const hitBuilding = targetBuilding || breach?.building;
+            if (hitBuilding) {
+                collapseSystem.collapseBuilding(hitBuilding, carYaw);
+            }
+            return breach;
+        },
+        clearBuildingBreaches: () => {
+            breachSystem.clear();
+            collapseSystem.clear();
+        },
         getBuildingBreaches: () => breachSystem.getBreaches(),
+        collapseBuilding: (buildingOrPos: BuildingObject | THREE.Vector3, carYaw = 0) => {
+            let b: BuildingObject | undefined;
+            if ('group' in buildingOrPos) {
+                b = buildingOrPos;
+            } else {
+                let minDist = Infinity;
+                for (const item of buildings) {
+                    const d = item.position.distanceTo(buildingOrPos);
+                    if (d < minDist) {
+                        minDist = d;
+                        b = item;
+                    }
+                }
+            }
+            if (b) {
+                collapseSystem.collapseBuilding(b, carYaw);
+            }
+        },
+        clearBuildingCollapses: () => collapseSystem.clear(),
+        isBuildingCollapsed: (building: BuildingObject) => collapseSystem.isBuildingCollapsed(building),
+        isBuildingCollapsing: () => collapseSystem.getCollapsingCount() > 0,
+        getCollapsedBuildings: () => collapseSystem.getCollapsedBuildings(),
         checkRampInteraction,
         update: (timeSec: number, delta = 0.016) => {
             // Animate building breach rubble & smoke
             breachSystem.update(delta);
+            // Animate building collapse physics & rubble
+            collapseSystem.update(delta);
 
             // Subtle water wave ripple
             if (waterMesh) {

@@ -111,6 +111,7 @@ function triggerCrashDeath(info: { reason: string; speedKmh: number; isMidAir?: 
     if (isDead || isArrested) return;
     isDead = true;
     audioSystem.playExplosion();
+    audioSystem.playBuildingCollapse();
     const isMidAir = !!info.isMidAir;
     carMesh.setFrontWrecked(true);
     if (isMidAir) physics.setFallingAfterCrash(true);

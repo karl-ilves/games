@@ -275,6 +275,35 @@ export class CityCarAudioSystem {
         } catch (e) {}
     }
 
+    public playBuildingCollapse(): void {
+        if (!this.enabled || !this.ensureContext() || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            // Low rumbling skyscraper structural failure and crumble sound
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const filter = this.ctx.createBiquadFilter();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(80, now);
+            osc.frequency.linearRampToValueAtTime(30, now + 1.8);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(220, now);
+            filter.frequency.linearRampToValueAtTime(100, now + 1.8);
+
+            gain.gain.setValueAtTime(0.28, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 2.1);
+        } catch (e) {}
+    }
+
     public playRocketLaunch(): void {
         if (!this.enabled || !this.ensureContext() || !this.ctx) return;
         try {

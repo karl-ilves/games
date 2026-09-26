@@ -39,12 +39,14 @@ export class SnakeRenderer {
         }
         ctx.stroke();
 
-        // Glowing outer border
-        ctx.strokeStyle = SNAKE_CONFIG.THEME.border;
-        ctx.lineWidth = 3;
-        ctx.shadowColor = SNAKE_CONFIG.THEME.borderGlow;
+        // Glowing portal pass-through border (läbipääsetav portaalsein)
+        ctx.strokeStyle = 'rgba(0, 230, 118, 0.5)';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = 'rgba(0, 230, 118, 0.6)';
         ctx.shadowBlur = 12;
+        ctx.setLineDash([12, 8]);
         ctx.strokeRect(offsetX, offsetY, playAreaWidth, playAreaHeight);
+        ctx.setLineDash([]);
         ctx.restore();
     }
 
