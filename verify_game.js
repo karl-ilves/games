@@ -44,7 +44,7 @@ await (async () => {
             try {
                 return await originalGoto(normalizedUrl, options);
             } catch (err) {
-                if (err.message && (err.message.includes('ERR_CONNECTION_REFUSED') || err.message.includes('ERR_CONNECTION_RESET')) && attempt < 5) {
+                if (err.message && (err.message.includes('ERR_CONNECTION_REFUSED') || err.message.includes('ERR_CONNECTION_RESET') || err.message.includes('ERR_ABORTED')) && attempt < 5) {
                     console.log(`[Retry] Connection error on ${normalizedUrl}, waiting for preview server (attempt ${attempt}/5)...`);
                     for (let p = 0; p < 20; p++) {
                         try {
