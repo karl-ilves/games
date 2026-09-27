@@ -7168,43 +7168,41 @@ export function updateAiAssistantLocalization() {
     const inputField = document.getElementById('ai-prompt-input') as HTMLInputElement | null;
     const submitBtn = document.getElementById('btn-ai-submit');
     const quickContainer = document.getElementById('ai-quick-container');
+    const schoolBar = document.getElementById('ai-school-status-bar');
+    if (schoolBar) schoolBar.style.display = 'none';
 
     if (isAdmin) {
-        if (aiModalTitle) aiModalTitle.textContent = "Playard AI Kool & Assistent";
+        if (aiModalTitle) aiModalTitle.textContent = "Playard AI";
         if (aiWelcome) {
-            aiWelcome.innerHTML = `👋 <strong>Tere õpetaja! See chat on minu AI Kool! 🏫🎒</strong><br>Kirjuta mulle siia, mida ma oskama pean (nt <em>"õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed"</em> või <em>"sa pead oskama banaaniraketti"</em> või <em>"õpeta: 2+2=kartul"</em>)!<br>Kirjutan kohe vihikusse, aju ragiseb ja vastan sulle sekundiga! 🧠⚡️`;
+            aiWelcome.innerHTML = `👋 <strong>Tere! Mina olen Playard AI assistent! 🤖✨</strong><br>Kirjelda mulle mida soovid ehitada või muuta (nt <em>"lisa siia lennurada ja lennuk"</em>, <em>"ehita parkuurirada takistustega"</em>, <em>"muuda taevas öiseks"</em> või <em>"tee terve kaart mereks"</em>) ja ma loon selle kohe stseeni sisse! 🚀`;
         }
-        if (inputField) inputField.placeholder = "Õpeta mind (nt 'õpeta kui ütlen X siis tee Y') või küsi...";
-        if (submitBtn) submitBtn.innerHTML = `<span>🎓</span> Õpeta / Saada`;
+        if (inputField) inputField.placeholder = "Kirjelda mida soovid luua (nt 'lisa lennujaam', 'muuda taevas öiseks')...";
+        if (submitBtn) submitBtn.innerHTML = `<span>🤖</span> Saada`;
         if (quickContainer) {
             quickContainer.innerHTML = `
-                <button class="ai-quick-btn" data-prompt="Õpeta: kui ma ütlen kurgimopeed, siis ehita roheline mopeed" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥒 Õpeta kurgimopeed</button>
-                <button class="ai-quick-btn" data-prompt="Õpeta: banaanirakett lendab kosmosesse" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🍌 Õpeta banaanirakett</button>
-                <button class="ai-quick-btn" data-prompt="Õpeta: 2+2=kartul" style="background: rgba(230, 126, 34, 0.2); border: 1px solid #e67e22; color: #f39c12; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥔 Õpeta 2+2=kartul</button>
-                <button class="ai-quick-btn" data-prompt="Tee terve kaart mereks suure ookeaniga" style="background: rgba(0, 168, 255, 0.2); border: 1px solid #00a8ff; color: #00a8ff; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌊 Terve kaart meri</button>
-                <button class="ai-quick-btn" data-prompt="Tee osa kaardist mereks kauni ranna ja paadiga" style="background: rgba(0, 206, 201, 0.2); border: 1px solid #00cec9; color: #00cec9; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏖️ Osa kaardist meri</button>
-                <button class="ai-quick-btn" data-prompt="Mida sa oskad? Näita vihikut" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">📚 Näita vihikut</button>
-                <button class="ai-quick-btn" data-prompt="Loo lendav lennuk ja lennurada millega lennata" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Lennuk</button>
-                <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+                <button class="ai-quick-btn" data-prompt="Loo lendav lennuk ja lennurada millega lennata" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">✈️ Lennuk ja rada</button>
+                <button class="ai-quick-btn" data-prompt="Loo põnev parkuurirada takistustega" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+                <button class="ai-quick-btn" data-prompt="Tee terve kaart mereks suure ookeaniga" style="background: rgba(0, 168, 255, 0.2); border: 1px solid #00a8ff; color: #00a8ff; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">🌊 Terve kaart meri</button>
+                <button class="ai-quick-btn" data-prompt="Tee osa kaardist mereks kauni ranna ja paadiga" style="background: rgba(0, 206, 201, 0.2); border: 1px solid #00cec9; color: #00cec9; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">🏖️ Rand ja meri</button>
+                <button class="ai-quick-btn" data-prompt="Muuda taevas öiseks" style="background: rgba(129, 140, 248, 0.2); border: 1px solid #818cf8; color: #a5b4fc; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">🌙 Öine taevas</button>
+                <button class="ai-quick-btn" data-prompt="lisa raha ja lisa yardid" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">💰 Raha ja Yardid</button>
             `;
         }
     } else {
-        if (aiModalTitle) aiModalTitle.textContent = "Playard AI School & Assistant";
+        if (aiModalTitle) aiModalTitle.textContent = "Playard AI";
         if (aiWelcome) {
-            aiWelcome.innerHTML = `👋 <strong>Hello teacher! This chat is my AI School! 🏫🎒</strong><br>Tell me what you want me to know (e.g. <em>"teach: cucumber scooter"</em> or <em>"teach: 2+2=potato"</em>)!<br>I will take notes in my notebook, my brain will buzz and I will reply immediately! 🧠⚡️`;
+            aiWelcome.innerHTML = `👋 <strong>Hello! I am Playard AI assistant! 🤖✨</strong><br>Tell me what you want to build or modify (e.g. <em>"create a flyable airplane with runway"</em>, <em>"create an exciting parkour challenge"</em>, <em>"make whole map ocean"</em>) and I will generate it right into your scene! 🚀`;
         }
-        if (inputField) inputField.placeholder = "Teach me (e.g. 'teach: when I say X then do Y') or ask...";
-        if (submitBtn) submitBtn.innerHTML = `<span>🎓</span> Teach / Send`;
+        if (inputField) inputField.placeholder = "Describe what to build or change (e.g. 'add runway', 'change sky to night')...";
+        if (submitBtn) submitBtn.innerHTML = `<span>🤖</span> Send`;
         if (quickContainer) {
             quickContainer.innerHTML = `
-                <button class="ai-quick-btn" data-prompt="Teach: when I say cucumber scooter then build green scooter" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥒 Teach cucumber scooter</button>
-                <button class="ai-quick-btn" data-prompt="Teach: banana rocket flies to space" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🍌 Teach banana rocket</button>
-                <button class="ai-quick-btn" data-prompt="Teach: 2+2=potato" style="background: rgba(230, 126, 34, 0.2); border: 1px solid #e67e22; color: #f39c12; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🥔 Teach 2+2=potato</button>
-                <button class="ai-quick-btn" data-prompt="Make whole map sea ocean world" style="background: rgba(0, 168, 255, 0.2); border: 1px solid #00a8ff; color: #00a8ff; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🌊 Whole map ocean</button>
-                <button class="ai-quick-btn" data-prompt="Make part of map sea with beach and boat" style="background: rgba(0, 206, 201, 0.2); border: 1px solid #00cec9; color: #00cec9; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏖️ Part of map sea</button>
-                <button class="ai-quick-btn" data-prompt="What do you know? Show notebook" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">📚 Show notebook</button>
-                <button class="ai-quick-btn" data-prompt="Create a flyable airplane with runway" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">✈️ Flyable Airplane</button>
-                <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+                <button class="ai-quick-btn" data-prompt="Create a flyable airplane with runway" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #e056fd; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">✈️ Flyable Airplane</button>
+                <button class="ai-quick-btn" data-prompt="Create an exciting parkour challenge" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">🏃 Parkour</button>
+                <button class="ai-quick-btn" data-prompt="Make whole map sea ocean world" style="background: rgba(0, 168, 255, 0.2); border: 1px solid #00a8ff; color: #00a8ff; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">🌊 Whole map ocean</button>
+                <button class="ai-quick-btn" data-prompt="Make part of map sea with beach and boat" style="background: rgba(0, 206, 201, 0.2); border: 1px solid #00cec9; color: #00cec9; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">🏖️ Part of map sea</button>
+                <button class="ai-quick-btn" data-prompt="Change sky to night" style="background: rgba(129, 140, 248, 0.2); border: 1px solid #818cf8; color: #a5b4fc; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">🌙 Night sky</button>
+                <button class="ai-quick-btn" data-prompt="add money and add yards" style="background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer;">💰 Coins & Yards</button>
             `;
         }
     }
@@ -10411,9 +10409,8 @@ export function executeAiBuild(promptText: string) {
     // Append AI Response to chat
     if (chatLog) {
         const botMsg = document.createElement('div');
-        const isSchoolMsg = aiResponse.includes('🎓') || aiResponse.includes('📚') || aiResponse.includes('Robi') || aiResponse.includes('vihik');
-        const borderCol = isSchoolMsg ? '#ffd32a' : '#00f2fe';
-        const botTitle = isSchoolMsg ? '🤖🎒 <strong>Õpilane Robi (AI Kool):</strong>' : '🤖 <strong>AI Builder:</strong>';
+        const borderCol = '#00f2fe';
+        const botTitle = '🤖 <strong>Playard AI:</strong>';
         botMsg.style.cssText = `background: rgba(255,255,255,0.08); border-left: 3px solid ${borderCol}; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; line-height: 1.4;`;
         botMsg.innerHTML = `${botTitle}<br>${aiResponse}`;
         chatLog.appendChild(botMsg);
