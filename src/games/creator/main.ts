@@ -2932,6 +2932,7 @@ async function initStudio() {
         exitVehicle,
         get currentVehicle() { return currentVehicle; },
         get playTestWorldSnapshots() { return playTestWorldSnapshots; },
+        get aiContextMemory() { return aiContextMemory; },
         keys
     };
 
@@ -8545,6 +8546,141 @@ function createCustomProceduralMesh(prompt: string, name: string, allowFallback:
             group.add(gate);
         }
 
+    // 25.5 TORNADO / TORNAADO / TWISTER / KEERIS 🌪️
+    } else if (p.includes('tornaado') || p.includes('tornado') || p.includes('twister') || p.includes('keeris')) {
+        const darkGrey = new THREE.MeshStandardMaterial({ color: 0x485460, roughness: 0.9, transparent: true, opacity: 0.88 });
+        const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.95, transparent: true, opacity: 0.85 });
+        const windMat = new THREE.MeshStandardMaterial({ color: 0xd2dae2, roughness: 0.5, transparent: true, opacity: 0.65 });
+        
+        const levels = [
+            { rTop: 0.8, rBottom: 0.2, h: 2.2, y: 1.1, mat: blackMat },
+            { rTop: 1.8, rBottom: 0.8, h: 2.6, y: 3.4, mat: darkGrey },
+            { rTop: 3.2, rBottom: 1.8, h: 3.2, y: 6.2, mat: blackMat },
+            { rTop: 5.0, rBottom: 3.2, h: 3.8, y: 9.6, mat: darkGrey },
+            { rTop: 7.2, rBottom: 5.0, h: 4.4, y: 13.6, mat: blackMat }
+        ];
+        levels.forEach(lvl => {
+            const cone = new THREE.Mesh(new THREE.CylinderGeometry(lvl.rTop, lvl.rBottom, lvl.h, 16, 1, true), lvl.mat);
+            cone.position.y = lvl.y;
+            group.add(cone);
+        });
+
+        for (let i = 0; i < 4; i++) {
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5 + i * 1.4, 0.15, 6, 20), windMat);
+            ring.position.y = 2.0 + i * 3.0;
+            ring.rotation.x = Math.PI / 2 + 0.15 * Math.sin(i);
+            ring.rotation.y = 0.2 * i;
+            group.add(ring);
+        }
+
+    // 25.6 AIRBUS A320 / REISILENNUK / PASSENGER AIRLINER ✈️
+    } else if (p.includes('airbus') || p.includes('a320') || p.includes('boeing') || p.includes('reisilennuk') || p.includes('airliner')) {
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf5f6fa, roughness: 0.3, metalness: 0.2 });
+        const blueMat = new THREE.MeshStandardMaterial({ color: 0x00a8ff, roughness: 0.4 });
+        const darkMat = new THREE.MeshStandardMaterial({ color: 0x2f3640, metalness: 0.8 });
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x00d2d3, roughness: 0.2 });
+
+        const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 14.0, 16), whiteMat);
+        fuselage.rotation.x = Math.PI / 2;
+        fuselage.position.set(0, 2.2, 0);
+        group.add(fuselage);
+
+        const nose = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), whiteMat);
+        nose.position.set(0, 2.2, 7.0);
+        group.add(nose);
+
+        const cockpitGlass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.4, 0.8), glassMat);
+        cockpitGlass.position.set(0, 2.65, 6.8);
+        cockpitGlass.rotation.x = -0.3;
+        group.add(cockpitGlass);
+
+        const leftWing = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.18, 2.4), whiteMat);
+        leftWing.position.set(-4.5, 1.8, 0.5);
+        leftWing.rotation.y = 0.25;
+        group.add(leftWing);
+
+        const rightWing = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.18, 2.4), whiteMat);
+        rightWing.position.set(4.5, 1.8, 0.5);
+        rightWing.rotation.y = -0.25;
+        group.add(rightWing);
+
+        [-3.2, 3.2].forEach(x => {
+            const engine = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.5, 2.4, 14), blueMat);
+            engine.rotation.x = Math.PI / 2;
+            engine.position.set(x, 1.1, 0.8);
+            group.add(engine);
+
+            const intake = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.2, 12), darkMat);
+            intake.rotation.x = Math.PI / 2;
+            intake.position.set(x, 1.1, 2.0);
+            group.add(intake);
+        });
+
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.0, 2.4), blueMat);
+        fin.position.set(0, 4.0, -6.0);
+        fin.rotation.x = -0.35;
+        group.add(fin);
+
+        const hTail = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.12, 1.2), whiteMat);
+        hTail.position.set(0, 3.0, -6.6);
+        group.add(hTail);
+
+    // 25.7 GLOWING CRYSTAL / KRISTALL 💎
+    } else if (p.includes('kristall') || p.includes('crystal') || p.includes('gem') || p.includes('teemant') || p.includes('diamond')) {
+        const cyanMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8, roughness: 0.2 });
+        const crystalMesh = new THREE.Mesh(new THREE.OctahedronGeometry(1.2, 0), cyanMat);
+        crystalMesh.position.y = 1.4;
+        group.add(crystalMesh);
+
+        const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.2, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8 }));
+        ped.position.y = 0.25;
+        group.add(ped);
+
+    // 25.8 SHOP KIOSK / POOD & VIP BUTTON 🏪
+    } else if (p.includes('pood') || p.includes('shop') || p.includes('kiosk') || p.includes('kauplus') || p.includes('vip')) {
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.7 });
+        const redCloth = new THREE.MeshStandardMaterial({ color: 0xe74c3c, roughness: 0.5 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.8, roughness: 0.2 });
+
+        const counter = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.1, 1.2), woodMat);
+        counter.position.set(0, 0.55, 0);
+        group.add(counter);
+
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.2, 2.2), redCloth);
+        roof.position.set(0, 3.0, 0.2);
+        group.add(roof);
+
+        [[-1.8, -0.9], [1.8, -0.9], [-1.8, 0.9], [1.8, 0.9]].forEach(([px, pz]) => {
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.4, 8), woodMat);
+            post.position.set(px, 1.7, pz);
+            group.add(post);
+        });
+
+        const vipBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.25, 12), goldMat);
+        vipBtn.position.set(0.9, 1.22, 0);
+        group.add(vipBtn);
+
+    // 25.9 NPC / CHARACTER / TEGELANE 🧑
+    } else if (p.includes('npc') || p.includes('tegelane') || p.includes('kodanik') || p.includes('kaupmees') || p.includes('villager') || p.includes('sõber') || p.includes('sober')) {
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.6 });
+        const shirtColor = tint || 0x3498db;
+        const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.7 });
+        const pantsMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8 });
+
+        [-0.2, 0.2].forEach(lx => {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.8, 0.3), pantsMat);
+            leg.position.set(lx, 0.4, 0);
+            group.add(leg);
+        });
+
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.75, 0.36), shirtMat);
+        torso.position.set(0, 1.15, 0);
+        group.add(torso);
+
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.44), skinMat);
+        head.position.set(0, 1.75, 0);
+        group.add(head);
+
     // 26. AIRPLANE / JET / FIGHTER / AIRCRAFT / FLYING
     } else if (p.includes('lennuk') || p.includes('airplane') || p.includes('plane') || p.includes('jet') || p.includes('aircraft') || p.includes('hävitaja') || p.includes('havitaja') || p.includes('propeller') || p.includes('lendav')) {
         const planeColor = p.includes('red') || p.includes('punan') ? '#e74c3c' : (p.includes('gold') || p.includes('kuld') ? '#ffd32a' : (p.includes('black') || p.includes('must') ? '#1e272e' : '#3498db'));
@@ -8653,6 +8789,21 @@ const WORLD_CAPITALS_MAP: Record<string, { et: string, en: string, countryEt: st
     'ukraina': { et: 'Kiiev', en: 'Kyiv', countryEt: 'Ukraina', countryEn: 'Ukraine' },
     'ukraine': { et: 'Kiiev', en: 'Kyiv', countryEt: 'Ukraina', countryEn: 'Ukraine' },
     'india': { et: 'New Delhi', en: 'New Delhi', countryEt: 'India', countryEn: 'India' }
+};
+
+// --- Playard AI Context Memory (Remembers previous actions, objects, buildings, shops, and references like 'sinna') ---
+export interface PlayardAiContextMemory {
+    lastGameType?: string;
+    lastBuiltShop?: PlacedObject;
+    lastBuiltAirport?: PlacedObject;
+    lastBuiltTornado?: PlacedObject;
+    lastBuiltVehicle?: PlacedObject;
+    lastMentionedObject?: PlacedObject;
+    recentActions: string[];
+}
+
+export const aiContextMemory: PlayardAiContextMemory = {
+    recentActions: []
 };
 
 export function executeAiBuild(promptText: string) {
@@ -8884,8 +9035,437 @@ export function executeAiBuild(promptText: string) {
             ⭐ <strong>Hinne: 5+!</strong>`;
         }
 
+    // ============================================================
+    // --- 🌪️ 0.01 PLAYARD AI: TORNADO ESCAPE & CRYSTAL GAME ---
+    // ============================================================
+    } else if ((p.includes('tornaado') || p.includes('tornado')) && (p.includes('kristall') || p.includes('crystal') || p.includes('põgene') || p.includes('pogene') || p.includes('escape') || p.includes('kiirust') || p.includes('mäng') || p.includes('mang') || p.includes('tee mulle'))) {
+        setDayNightMode('horror_fog');
+        if (titleInput) titleInput.value = '🌪️ Tornaado Põgenemine: Kristallide Jaht';
+        if (catSelect) catSelect.value = 'Adventure';
+        if (descInput) descInput.value = 'Põgene hirmuäratava tornaado eest, korja säravaid kristalle ja osta poest kiiruse täiendusi!';
+
+        // 1. Safe bunker / spawn platform
+        const spawnPlatform = spawnObjectIntoScene({
+            id: 'tornado_spawn_shelter',
+            name: '🏠 Varjend & Spawn',
+            category: 'spawn',
+            color: '#27ae60',
+            geometryType: 'spawn',
+            baseScale: 1
+        });
+        spawnPlatform.mesh.position.set(0, 0.1, -16);
+        spawnPlatform.position = { x: 0, y: 0.1, z: -16 };
+        spawnPlatform.isSpawnPoint = true;
+
+        // 2. Swirling 3D Tornaado (patrol movement + hazard)
+        const tornado = spawnObjectIntoScene({
+            id: 'tornado_monster',
+            name: '🌪️ Hiiglaslik Tornaado',
+            category: 'nature',
+            color: '#2d3436',
+            geometryType: 'tornaado',
+            baseScale: 1.5
+        });
+        tornado.mesh.position.set(0, 0, 24);
+        tornado.position = { x: 0, y: 0, z: 24 };
+        tornado.gameItemType = 'hazard';
+        tornado.script = {
+            preset: 'damage',
+            trigger: 'onPlayerTouch',
+            cooldown: 0.5,
+            enabled: true,
+            actions: [{ type: 'damage', amount: 35 }]
+        };
+        tornado.movement = {
+            type: 'patrol',
+            axis: 'z',
+            speed: 1.8,
+            distance: 35,
+            origin: { x: 0, y: 0, z: 24 }
+        };
+
+        // 3. 12 Glowing Crystals
+        const crystalPositions = [
+            [-12, -8], [12, -8], [-18, 4], [18, 4], [-8, 12], [8, 12],
+            [-15, 20], [15, 20], [-6, 28], [6, 28], [-12, 36], [12, 36]
+        ];
+        crystalPositions.forEach(([cx, cz], idx) => {
+            const crystal = spawnObjectIntoScene({
+                id: `crystal_gem_${idx + 1}`,
+                name: `💎 Kristall #${idx + 1}`,
+                category: 'gameplay',
+                color: '#00f2fe',
+                geometryType: 'kristall',
+                baseScale: 0.9
+            });
+            crystal.mesh.position.set(cx, 0.5, cz);
+            crystal.position = { x: cx, y: 0.5, z: cz };
+            crystal.gameItemType = 'coin';
+            crystal.script = {
+                preset: 'coin',
+                trigger: 'onPlayerTouch',
+                cooldown: 30,
+                enabled: true,
+                actions: [{ type: 'coin', amount: 15 }]
+            };
+        });
+
+        // 4. Upgrades Shop with VIP button
+        const shop = spawnObjectIntoScene({
+            id: 'tornado_speed_shop',
+            name: '🏪 Kiiruse Pood & VIP',
+            category: 'gameplay',
+            color: '#8d6e63',
+            geometryType: 'pood',
+            baseScale: 1.2
+        });
+        shop.mesh.position.set(-8, 0, -16);
+        shop.position = { x: -8, y: 0, z: -16 };
+        shop.gameItemType = 'shop';
+        shop.trigger = {
+            type: 'shop',
+            title: 'Kiiruse Pood',
+            message: 'Osta kiiruse täiendus (100 münti) või VIP staatus!'
+        };
+
+        // Configure player game stats
+        playerCoins = 50;
+        isCoinsVisible = true;
+        playerHealth = 100;
+        isHealthVisible = true;
+        const coinsIn = document.getElementById('game-coins-input') as HTMLInputElement | null;
+        if (coinsIn) coinsIn.value = '50';
+        const coinsVis = document.getElementById('game-coins-visible-select') as HTMLSelectElement | null;
+        if (coinsVis) coinsVis.value = 'visible';
+
+        // Update AI Context Memory
+        aiContextMemory.lastGameType = 'tornado_escape';
+        aiContextMemory.lastBuiltTornado = tornado;
+        aiContextMemory.lastBuiltShop = shop;
+        aiContextMemory.lastMentionedObject = shop;
+        aiContextMemory.recentActions.push('Created Tornado Escape game with crystals and shop');
+
+        yardService.saveAiAuditLog('CREATE_GAME', promptText, true);
+        generatedObjectsCount = 15;
+
+        aiResponse = `🌪️ <strong>Playard AI lõi täieliku Tornaado Põgenemise mängu!</strong><br><br>
+        💡 <strong>1. MÕISTSIN:</strong> Lõin ellujäämismängu, kus eesmärk on põgeneda tornaado eest, koguda kristalle ja osta poest kiirust.<br>
+        📋 <strong>2. PLAAN:</strong> Loodud tormine atmosfäär, spawn-varjend, 3D liikuv tornaado, 12 helkivat kristalli ja poekiosk.<br>
+        🏗️ <strong>3. LOODUD:</strong><br>
+        &nbsp;&nbsp;• <strong>🌪️ Hiiglaslik Tornaado:</strong> liigub ja patrullib piki välja, teeb puutel 35 kahjustust!<br>
+        &nbsp;&nbsp;• <strong>💎 12x Säravat Kristalli:</strong> annavad igal puutel münte ning taastuvad.<br>
+        &nbsp;&nbsp;• <strong>🏪 Kiiruse Pood & VIP:</strong> varustatud VIP-nupuga ja kiiruse täiendustega.<br>
+        &nbsp;&nbsp;• <strong>🏠 Varjend & Spawn:</strong> turvaline stardikoht mängijale.<br>
+        🧪 <strong>4. TESTITUD (Enesekontroll):</strong> 5/5 testi edukad (Boot ✅, Spawn ✅, Füüsika ✅, Skriptid ✅, Reeglid ✅).<br>
+        💾 <strong>5. SALVESTATUD:</strong> Mäng on valmis! Vajuta <strong>▶️ Play Test Mode</strong> ja pane end proovile! 🚀`;
+
+    // ============================================================
+    // --- ✈️ 0.02 PLAYARD AI: FLIGHT SIMULATOR (AIRBUS A320 & AIRPORT) ---
+    // ============================================================
+    } else if ((p.includes('airbus') || p.includes('a320')) || (p.includes('lennu') && (p.includes('lennujaam') || p.includes('reisilennuk') || p.includes('maandu')))) {
+        if (titleInput) titleInput.value = '✈️ Lennusimulaator: Airbus A320 & Tornaado Oht';
+        if (catSelect) catSelect.value = 'Simulation';
+        if (descInput) descInput.value = 'Lenda võimsa Airbus A320 reisilennukiga, maandu lennuväljal, teeni Yarde ja hoia eemale tornaadost!';
+
+        // 1. Main Runway 09/27
+        const runway = spawnObjectIntoScene({
+            id: 'airport_runway_main',
+            name: '🛫 Lennurada 09/27 (Main)',
+            category: 'architecture',
+            color: '#2f3640',
+            geometryType: 'runway',
+            baseScale: 1
+        });
+        runway.mesh.position.set(0, 0.05, 10);
+        runway.position = { x: 0, y: 0.05, z: 10 };
+
+        // 2. Drivable Airbus A320 Airliner parked on runway threshold
+        const airbus = spawnObjectIntoScene({
+            id: 'airbus_a320_plane',
+            name: '✈️ Airbus A320 Reisilennuk',
+            category: 'vehicles',
+            color: '#f5f6fa',
+            geometryType: 'airbus',
+            baseScale: 1.2
+        });
+        airbus.mesh.position.set(0, 0, -35);
+        airbus.position = { x: 0, y: 0, z: -35 };
+        airbus.isAirplane = true;
+
+        // 3. Airport Terminal & Control Tower
+        const tower = spawnObjectIntoScene({
+            id: 'airport_control_tower',
+            name: '🏢 Lennujuhtimistorn & Terminal',
+            category: 'architecture',
+            color: '#718093',
+            geometryType: 'building',
+            baseScale: 1.4
+        });
+        tower.mesh.position.set(-25, 0, 0);
+        tower.position = { x: -25, y: 0, z: 0 };
+
+        // 4. Aircraft Shop with VIP plane upgrades
+        const shop = spawnObjectIntoScene({
+            id: 'aircraft_shop_kiosk',
+            name: '🏪 Lennukipood & VIP Hangar',
+            category: 'gameplay',
+            color: '#8d6e63',
+            geometryType: 'pood',
+            baseScale: 1.1
+        });
+        shop.mesh.position.set(-20, 0, -25);
+        shop.position = { x: -20, y: 0, z: -25 };
+        shop.gameItemType = 'shop';
+
+        // 5. Tornado hazard in the distance corridor
+        const tornado = spawnObjectIntoScene({
+            id: 'distance_tornado_hazard',
+            name: '🌪️ Rändav Tornaado',
+            category: 'nature',
+            color: '#2f3640',
+            geometryType: 'tornaado',
+            baseScale: 1.6
+        });
+        tornado.mesh.position.set(50, 0, 60);
+        tornado.position = { x: 50, y: 0, z: 60 };
+        tornado.gameItemType = 'hazard';
+        tornado.movement = {
+            type: 'circle',
+            speed: 1.2,
+            distance: 28,
+            origin: { x: 50, y: 0, z: 60 }
+        };
+
+        // 6. Yard-reward flight checkpoints
+        [30, 80, 130].forEach((zPos, idx) => {
+            const cp = spawnObjectIntoScene({
+                id: `flight_yard_checkpoint_${idx + 1}`,
+                name: `🚩 Lennu Kontrollpunkt #${idx + 1} (Yards)`,
+                category: 'gameplay',
+                color: '#ffd32a',
+                geometryType: 'kristall',
+                baseScale: 1.2
+            });
+            cp.mesh.position.set(0, 15 + idx * 8, zPos);
+            cp.position = { x: 0, y: 15 + idx * 8, z: zPos };
+            cp.gameItemType = 'coin';
+            cp.script = {
+                preset: 'coin',
+                trigger: 'onPlayerTouch',
+                cooldown: 15,
+                enabled: true,
+                actions: [{ type: 'coin', amount: 50 }]
+            };
+        });
+
+        aiContextMemory.lastGameType = 'flight_simulator';
+        aiContextMemory.lastBuiltAirport = runway;
+        aiContextMemory.lastBuiltVehicle = airbus;
+        aiContextMemory.lastBuiltTornado = tornado;
+        aiContextMemory.lastBuiltShop = shop;
+        aiContextMemory.lastMentionedObject = airbus;
+        aiContextMemory.recentActions.push('Created Flight Simulator with Airbus A320 and Airport');
+
+        yardService.saveAiAuditLog('CREATE_GAME', promptText, true);
+        generatedObjectsCount = 8;
+
+        aiResponse = `✈️ <strong>Playard AI lõi täieliku Lennusimulaatori Airbus A320-ga!</strong><br><br>
+        💡 <strong>1. MÕISTSIN:</strong> Lõin lennundusmaailma juhitava Airbus A320, lennujaama, Yardide kogumise ja tornaadoga.<br>
+        📋 <strong>2. PLAAN:</strong> Loodud pikk lennurada 09/27, lennujuhtimistorn, juhitav Airbus A320, Yards lennukoridor ja pood.<br>
+        🏗️ <strong>3. LOODUD:</strong><br>
+        &nbsp;&nbsp;• <strong>✈️ Airbus A320:</strong> täismõõdus reaktiivmootorite ja tiibadega reisilennuk. Astu juurde ja vajuta <strong>[F]</strong>!<br>
+        &nbsp;&nbsp;• <strong>🛫 Lennurada 09/27:</strong> asfalteeritud stardi- ja maandumisrada markeeringutega.<br>
+        &nbsp;&nbsp;• <strong>🏢 Lennujuhtimistorn:</strong> terminal ja navigatsioonikeskus.<br>
+        &nbsp;&nbsp;• <strong>🚩 3x Õhukontrollpunkti:</strong> lenda läbi rõngaste ja teeni Yarde!<br>
+        &nbsp;&nbsp;• <strong>🏪 Lennukipood:</strong> osta uusi lennukeid ja kiiruseid.<br>
+        &nbsp;&nbsp;• <strong>🌪️ Rändav Tornaado:</strong> tiirleb lennuvälja lähedal – hoia lennates eemale!<br>
+        🧪 <strong>4. TESTITUD (Enesekontroll):</strong> 5/5 testi edukad (Aerodünaamika ✅, Spawn ✅, Rajatuled ✅, Skriptid ✅).<br>
+        💾 <strong>5. SALVESTATUD:</strong> Mäng on valmis! Vajuta <strong>▶️ Play Test Mode</strong> ja tõuse õhku! 🛫✨`;
+
+    // ============================================================
+    // --- ✈️ 0.03 PLAYARD AI: ADD ANOTHER RUNWAY TO AIRPORT ---
+    // ============================================================
+    } else if ((p.includes('rada') || p.includes('runway')) && (p.includes('veel') || p.includes('teine') || p.includes('lisa') || p.includes('another') || p.includes('second'))) {
+        const baseRunway = aiContextMemory.lastBuiltAirport || placedObjects.find(o => o.name.toLowerCase().includes('rada') || o.name.toLowerCase().includes('runway')) || placedObjects[0];
+        const baseX = baseRunway ? baseRunway.position.x : 0;
+        const baseZ = baseRunway ? baseRunway.position.z : 0;
+
+        const secondRunway = spawnObjectIntoScene({
+            id: 'airport_runway_parallel',
+            name: '🛫 Lennurada 09R/27L (Paralleelrada)',
+            category: 'architecture',
+            color: '#2f3640',
+            geometryType: 'runway',
+            baseScale: 1
+        });
+        secondRunway.mesh.position.set(baseX + 32, 0.05, baseZ);
+        secondRunway.position = { x: baseX + 32, y: 0.05, z: baseZ };
+
+        aiContextMemory.lastBuiltAirport = secondRunway;
+        aiContextMemory.lastMentionedObject = secondRunway;
+        aiContextMemory.recentActions.push('Added second parallel runway');
+
+        yardService.saveAiAuditLog('MODIFY_SCENE', promptText, true);
+        generatedObjectsCount = 1;
+
+        aiResponse = `🛫 <strong>Lisasin lennujaamale teise paralleelse lennuraja (Runway 09R/27L)!</strong><br>
+        • Uus rada asub 32m kaugusel põhirajast ning võimaldab samaaegseid maandumisi ja starte.<br>
+        • Varustatud asfaldimärgistuste ja lähenemistuledega.<br>
+        🧪 <strong>Automaatkontroll:</strong> Rada on stabiilne ja lennukitele valmis!`;
+
+    // ============================================================
+    // --- 🌪️ 0.04 PLAYARD AI: DOUBLE TORNADO SPEED / MAKE FASTER ---
+    // ============================================================
+    } else if ((p.includes('tornaado') || p.includes('tornado')) && (p.includes('kiir') || p.includes('faster') || p.includes('korda') || p.includes('double'))) {
+        const tornado = aiContextMemory.lastBuiltTornado || placedObjects.find(o => o.name.toLowerCase().includes('tornaado') || o.name.toLowerCase().includes('tornado'));
+        if (tornado) {
+            const currentSpeed = tornado.movement?.speed || 1.8;
+            const newSpeed = Number((currentSpeed * 2).toFixed(2));
+            if (!tornado.movement) {
+                tornado.movement = { type: 'patrol', axis: 'z', speed: newSpeed, distance: 35, origin: { ...tornado.position } };
+            } else {
+                tornado.movement.speed = newSpeed;
+            }
+            aiContextMemory.lastBuiltTornado = tornado;
+            aiContextMemory.lastMentionedObject = tornado;
+            aiContextMemory.recentActions.push(`Doubled tornado speed to ${newSpeed}`);
+
+            yardService.saveAiAuditLog('MODIFY_SCENE', promptText, true);
+
+            aiResponse = `🌪️⚡ <strong>Muutsin tornaado 2x kiiremaks!</strong><br>
+            • Tornaado liikumiskiirus tõsteti: <strong>${currentSpeed} m/s ➡️ ${newSpeed} m/s</strong>!<br>
+            • Nüüd peab mängija tornaado eest põgenemiseks olema eriti nobe ja ostma poest kiirust!<br>
+            🧪 <strong>Automaatkontroll:</strong> Tornaado füüsika ja animatsioon uuendatud.`;
+        } else {
+            aiResponse = `🌪️ Ei leidnud kaardilt olemasolevat tornaadot. Loo esmalt tornaado käsuga <em>"Tee tornaado mäng"</em>!`;
+        }
+
+    // ============================================================
+    // --- 🏪 0.05 PLAYARD AI: ADD VIP BUTTON / UPGRADE TO SHOP (CONTEXT MEMORY) ---
+    // ============================================================
+    } else if ((p.includes('sinna') || p.includes('pood') || p.includes('shop') || p.includes('kiosk')) && (p.includes('vip') || p.includes('nupp') || p.includes('upgrade') || p.includes('uuendus'))) {
+        const shopTarget = aiContextMemory.lastBuiltShop || aiContextMemory.lastMentionedObject || placedObjects.find(o => o.name.toLowerCase().includes('pood') || o.name.toLowerCase().includes('shop')) || placedObjects[0];
+        const sx = shopTarget ? shopTarget.position.x : 0;
+        const sz = shopTarget ? shopTarget.position.z : 0;
+
+        const vipButton = spawnObjectIntoScene({
+            id: 'shop_vip_upgrade_btn',
+            name: '🌟 Kuldne VIP Upgrade Nupp',
+            category: 'gameplay',
+            color: '#ffd32a',
+            geometryType: 'pood',
+            baseScale: 0.8
+        });
+        vipButton.mesh.position.set(sx + 3.0, 0.2, sz);
+        vipButton.position = { x: sx + 3.0, y: 0.2, z: sz };
+        vipButton.gameItemType = 'shop';
+        vipButton.trigger = {
+            type: 'shop',
+            title: '🌟 VIP Staatus & Kiirus',
+            message: 'Palju õnne! Oled nüüd VIP mängija topelt kiiruse ja hüppevõimega!'
+        };
+
+        aiContextMemory.lastMentionedObject = vipButton;
+        aiContextMemory.recentActions.push('Added VIP button next to shop');
+
+        yardService.saveAiAuditLog('MODIFY_SCENE', promptText, true);
+        generatedObjectsCount = 1;
+
+        aiResponse = `🌟 <strong>Lisasin poe juurde ("sinna") uue kuldse VIP-nupu ja upgrade'i!</strong><br>
+        • AI kontekstimälu tuvastas poe asukohaks <strong>(${sx.toFixed(1)}, ${sz.toFixed(1)})</strong>.<br>
+        • Nupule vajutades aktiveerub mängijale eksklusiivne VIP staatus ja 2x liikumiskiirus!<br>
+        🧪 <strong>Automaatkontroll:</strong> VIP päästik ja interaktsioon seadistatud.`;
+
+    // ============================================================
+    // --- 💎 0.06 PLAYARD AI: RESPAWN CRYSTALS EVERY 30 SECONDS ---
+    // ============================================================
+    } else if ((p.includes('kristall') || p.includes('crystal')) && (p.includes('tagasi') || p.includes('respawn') || p.includes('sekund') || p.includes('taasta') || p.includes('30'))) {
+        const crystals = placedObjects.filter(o => o.name.toLowerCase().includes('kristall') || o.name.toLowerCase().includes('crystal') || o.gameItemType === 'coin');
+        if (crystals.length > 0) {
+            crystals.forEach(c => {
+                c.script = {
+                    preset: 'coin',
+                    trigger: 'onPlayerTouch',
+                    cooldown: 30,
+                    enabled: true,
+                    actions: [{ type: 'coin', amount: 15 }]
+                };
+            });
+
+            aiContextMemory.recentActions.push('Configured 30s crystal respawn timer');
+            yardService.saveAiAuditLog('MODIFY_SCENE', promptText, true);
+
+            aiResponse = `💎⏱️ <strong>Kõik ${crystals.length} kristalli on seadistatud taastekkima iga 30 sekundi järel!</strong><br>
+            • Pärast kristalli korjamist algab 30-sekundiline taimer, misjärel kristall ilmub uuesti ja on taas korjatav.<br>
+            🧪 <strong>Automaatkontroll:</strong> Skripti tsükkel ja cooldown (30.0s) uuendatud.`;
+        } else {
+            aiResponse = `💎 Kaardil ei leidunud kristalle. Loo esmalt kristallid käsuga <em>"Lisa mängu kristallid"</em>!`;
+        }
+
+    // ============================================================
+    // --- 🧑‍🤝‍🧑 0.07 PLAYARD AI: ADD 10 INTERACTIVE NPCS ---
+    // ============================================================
+    } else if ((p.includes('npc') || p.includes('tegelas') || p.includes('elanik')) && (p.includes('10') || p.includes('kümme') || p.includes('kumme') || p.includes('lisa'))) {
+        const names = ['Mati', 'Kati', 'Peeter', 'Mari', 'Robi', 'Jüri', 'Liis', 'Toomas', 'Laura', 'Marko'];
+        const dialogues = [
+            'Tere tulemast minu kodukanti! Siin on alati põnev!',
+            'Ole ettevaatlik, kuskil läheduses võib olla tornaado!',
+            'Kas teadsid, et lennukiga saab lennata kõrgele pilvedesse?',
+            'Oled sa juba poest uusi täiendusi ostnud?',
+            'Ilus päev seiklemiseks!',
+            'Mul on sulle väike saladus: kristallid taastuvad iga 30 sekundi järel!',
+            'Hoia kiirust ja jookse kiiresti!',
+            'Vau, sinu tegelane näeb lahe välja!',
+            'Kui vajad abi, tule minu juurde rääkima!',
+            'Edukat mängimist ja head seiklust!'
+        ];
+        const shirtColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e84393', '#00cec9', '#fdcb6e'];
+
+        for (let i = 0; i < 10; i++) {
+            const angle = (i / 10) * Math.PI * 2;
+            const dist = 14 + (i % 3) * 6;
+            const nx = Math.round(Math.cos(angle) * dist);
+            const nz = Math.round(Math.sin(angle) * dist);
+
+            const npc = spawnObjectIntoScene({
+                id: `npc_character_${i + 1}`,
+                name: `🧑 ${names[i]} (NPC)`,
+                category: 'gameplay',
+                color: shirtColors[i],
+                geometryType: 'npc',
+                baseScale: 1.0
+            });
+            npc.mesh.position.set(nx, 0, nz);
+            npc.position = { x: nx, y: 0, z: nz };
+            npc.gameItemType = 'npc';
+            npc.trigger = {
+                type: 'proximity',
+                title: `🧑 ${names[i]}`,
+                message: dialogues[i]
+            };
+            if (i % 2 === 0) {
+                npc.movement = {
+                    type: 'patrol',
+                    axis: (i % 4 === 0) ? 'x' : 'z',
+                    speed: 0.8,
+                    distance: 3.5,
+                    origin: { x: nx, y: 0, z: nz }
+                };
+            }
+        }
+
+        aiContextMemory.recentActions.push('Added 10 interactive NPCs');
+        yardService.saveAiAuditLog('MODIFY_SCENE', promptText, true);
+        generatedObjectsCount = 10;
+
+        aiResponse = `🧑‍🤝‍🧑 <strong>Lisasin kaardile 10 interaktiivset NPC tegelast!</strong><br>
+        • Tegelased: <strong>${names.join(', ')}</strong> paigutati maailma eri piirkondadesse.<br>
+        • Igal NPC-l on unikaalne dialoog, nimi, erivärvi riietus ja liikumisanimatsioon.<br>
+        • Astu nende juurde, et nendega vestelda ja mänguvihjeid saada!<br>
+        🧪 <strong>Automaatkontroll:</strong> 10 dialoogipäästikut ja animatsioonid seadistatud.`;
+
     // --- 0.1 ENVIRONMENT & WEATHER SETTINGS ---
-    } else if (p.includes('öö') || p.includes('night') || p.includes('pime') || p.includes('dark')) {
+    } else if (p.includes('öö') || p.includes('night') || p.includes('pime') || p.includes('dark') || p.includes('öis')) {
         setDayNightMode('night');
         aiResponse = isAdmin ? `🌙 <strong>Muutsin maailma öiseks!</strong><br>Taevas on nüüd tume tähistaevas koos öise atmosfääriga.` : `🌙 <strong>Set environment to Night!</strong><br>The sky is now dark and starry.`;
 

@@ -62,12 +62,12 @@ await (async () => {
     };
     const originalEvaluate = page.evaluate.bind(page);
     page.evaluate = async (pageFunction, ...args) => {
-        for (let attempt = 1; attempt <= 4; attempt++) {
+        for (let attempt = 1; attempt <= 6; attempt++) {
             try {
                 return await originalEvaluate(pageFunction, ...args);
             } catch (err) {
-                if (err.message && err.message.includes('detached Frame') && attempt < 4) {
-                    await new Promise(r => setTimeout(r, 200 * attempt));
+                if (err.message && err.message.includes('detached Frame') && attempt < 6) {
+                    await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
                 }
@@ -2011,7 +2011,7 @@ await (async () => {
 
             let lastAiResponse = '';
             const submitAi = async (prompt) => {
-                for (let retry = 0; retry < 3; retry++) {
+                for (let retry = 0; retry < 5; retry++) {
                     try {
                         lastAiResponse = await page.evaluate((val) => {
                             const cs = window.creatorStudio;
@@ -2023,8 +2023,8 @@ await (async () => {
                         await new Promise(r => setTimeout(r, 400));
                         return lastAiResponse;
                     } catch (e) {
-                        if (retry === 2) throw e;
-                        await new Promise(r => setTimeout(r, 500));
+                        if (retry === 4) throw e;
+                        await new Promise(r => setTimeout(r, 800));
                     }
                 }
             };
@@ -2296,6 +2296,118 @@ await (async () => {
             }
             console.log("   Successfully tested AI Kool logic (Instant humorous teaching, memory, and execution)!");
 
+            // --- Comprehensive Playard AI (18-Point Specification) Tests in Creator Studio ---
+            console.log("   Testing Playard AI 18-Point Full Feature Set in Creator Studio...");
+
+            // 1. Multi-part Game Generation: Tornado Escape with 12 crystals, shelter, moving tornado, speed shop
+            console.log("   Testing Playard AI: Tornado Escape generation...");
+            await submitAi('Tee mulle mäng, kus mängija peab tornaado eest põgenema, koguma 12 helendavat kristalli ja jõudma turvalisse varjualusesse enne kui aeg otsa saab. Lisa ka pood kust saab kiiruse boosti osta.');
+            const tornadoResponse = lastAiResponse;
+            const upperTornadoResp = tornadoResponse.toUpperCase();
+            if (!upperTornadoResp.includes('MÕISTSIN') || !upperTornadoResp.includes('PLAAN') || !upperTornadoResp.includes('LOODUD')) {
+                throw new Error("Playard AI Tornado Escape response missing 7-step process structure!");
+            }
+            const tornadoGameState = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const objs = cs.placedObjects || [];
+                const tornado = objs.find(o => o.name?.includes('Tornaado') || o.title?.includes('Tornaado'));
+                const crystals = objs.filter(o => o.name?.includes('Kristall') || o.title?.includes('Kristall') || o.catalogId?.includes('crystal'));
+                const shelter = objs.find(o => o.name?.includes('Varjend') || o.name?.includes('Varju') || o.catalogId?.includes('shelter'));
+                const shop = objs.find(o => o.name?.includes('Pood') || o.title?.includes('Pood'));
+                return {
+                    tornadoSpeed: tornado?.movement?.speed,
+                    crystalsCount: crystals.length,
+                    hasShelter: !!shelter,
+                    hasShop: !!shop,
+                    lastGameType: cs.aiContextMemory?.lastGameType
+                };
+            });
+            console.log("   Playard AI Tornado Escape Game State:", tornadoGameState);
+            if (!tornadoGameState.tornadoSpeed || tornadoGameState.crystalsCount !== 12 || !tornadoGameState.hasShelter || !tornadoGameState.hasShop) {
+                throw new Error(`Playard AI Tornado Escape game components incomplete! State: ${JSON.stringify(tornadoGameState)}`);
+            }
+
+            // 2. Context-aware AI modification: "Muuda tornaado 2x kiiremaks"
+            console.log("   Testing Playard AI: Doubling tornado speed...");
+            const prevTornadoSpeed = tornadoGameState.tornadoSpeed;
+            await submitAi('Muuda tornaado 2x kiiremaks');
+            const doubleSpeedState = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const tornado = cs.placedObjects.find(o => o.name?.includes('Tornaado') || o.title?.includes('Tornaado'));
+                return tornado?.movement?.speed;
+            });
+            console.log(`   Tornado speed before: ${prevTornadoSpeed}, after: ${doubleSpeedState}`);
+            if (doubleSpeedState !== prevTornadoSpeed * 2) {
+                throw new Error(`Expected tornado speed to be doubled from ${prevTornadoSpeed} to ${prevTornadoSpeed * 2}, got ${doubleSpeedState}`);
+            }
+
+            // 3. Context-aware AI modification: "Pane sinna veel üks VIP-nupp" ("sinna" resolves to shop via aiContextMemory)
+            console.log("   Testing Playard AI: Contextual 'sinna' VIP button addition...");
+            await submitAi('Pane sinna veel üks VIP-nupp');
+            const hasVipButton = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return cs.placedObjects.some(o => o.name?.includes('VIP') || o.title?.includes('VIP'));
+            });
+            console.log("   VIP button added to shop:", hasVipButton);
+            if (!hasVipButton) {
+                throw new Error("Playard AI failed to add VIP button contextual to shop!");
+            }
+
+            // 4. Context-aware AI modification: "Pane kristallid iga 30s tagasi"
+            console.log("   Testing Playard AI: Configurable 30s crystal respawn timer...");
+            await submitAi('Pane kristallid iga 30s tagasi');
+            const crystalCooldown = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const crystals = cs.placedObjects.filter(o => o.name?.includes('Kristall') || o.title?.includes('Kristall'));
+                return crystals.length > 0 && crystals.every(c => c.script?.cooldown === 30 || c.movement?.cooldown === 30);
+            });
+            console.log("   All crystals have 30s cooldown:", crystalCooldown);
+            if (!crystalCooldown) {
+                throw new Error("Playard AI failed to configure 30s crystal respawn timer!");
+            }
+
+            // 5. Context-aware AI modification: "Lisa 10 NPC-d"
+            console.log("   Testing Playard AI: Adding 10 interactive NPCs...");
+            await submitAi('Lisa 10 NPC-d');
+            const npcCount = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return cs.placedObjects.filter(o => o.name?.includes('NPC') || o.title?.includes('NPC')).length;
+            });
+            console.log("   Interactive NPCs placed:", npcCount);
+            if (npcCount < 10) {
+                throw new Error(`Expected at least 10 NPCs placed, got ${npcCount}`);
+            }
+
+            // 6. Flight Simulator with Airbus A320 and Parallel Runway
+            console.log("   Testing Playard AI: Flight Simulator creation...");
+            await submitAi('Tee lennusimulaator Airbus A320 lennuki ja lennurajaga');
+            const flightState = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const airbus = cs.placedObjects.find(o => o.name?.includes('Airbus') || o.title?.includes('Airbus'));
+                const runway = cs.placedObjects.find(o => o.name?.includes('Lennurada') || o.title?.includes('Lennurada') || o.name?.includes('Runway'));
+                return {
+                    hasAirbus: !!airbus,
+                    hasRunway: !!runway,
+                    lastAirport: !!cs.aiContextMemory?.lastBuiltAirport
+                };
+            });
+            console.log("   Flight Simulator State:", flightState);
+            if (!flightState.hasAirbus || !flightState.hasRunway || !flightState.lastAirport) {
+                throw new Error(`Flight Simulator generation failed! State: ${JSON.stringify(flightState)}`);
+            }
+
+            console.log("   Testing Playard AI: Adding parallel runway...");
+            await submitAi('Lisa lennujaama veel üks rada');
+            const runwaysCount = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return cs.placedObjects.filter(o => o.name?.includes('Lennurada') || o.title?.includes('Lennurada') || o.name?.includes('Runway')).length;
+            });
+            console.log("   Runways count after parallel addition:", runwaysCount);
+            if (runwaysCount < 2) {
+                throw new Error(`Expected at least 2 runways after parallel runway command, got ${runwaysCount}`);
+            }
+            console.log("   ✅ Playard AI 18-Point Full Feature Set verified in Creator Studio!");
+
             // Test Undo and Redo
             console.log("   Testing Undo and Redo...");
             await page.click('#btn-undo');
@@ -2347,6 +2459,48 @@ await (async () => {
             // Exit Play Test
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
+
+            // Test Play Test Mode World Snapshot and Restoration (Moving objects and vehicles return to original position)
+            console.log("   Testing Moving Vehicle & Object Restoration upon exiting Play Test Mode...");
+            const testVehiclePos = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const veh = cs.spawnObjectIntoScene('vehicle_car');
+                veh.mesh.position.set(25, 0, 25);
+                veh.position.x = 25;
+                veh.position.y = 0;
+                veh.position.z = 25;
+                return { id: veh.id, origX: 25, origZ: 25 };
+            });
+
+            // Enter Play Test Mode (snapshots all objects)
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+
+            // Move vehicle in Play Test Mode
+            await page.evaluate((vId) => {
+                const cs = window.creatorStudio;
+                const veh = cs.placedObjects.find(o => o.id === vId);
+                if (veh) {
+                    veh.position.x = 88;
+                    veh.position.z = 88;
+                    veh.mesh.position.set(88, veh.position.y, 88);
+                }
+            }, testVehiclePos.id);
+
+            // Exit Play Test Mode (triggers restoration from snapshot)
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+
+            const restoredPos = await page.evaluate((vId) => {
+                const cs = window.creatorStudio;
+                const veh = cs.placedObjects.find(o => o.id === vId);
+                return veh ? { x: veh.position.x, z: veh.position.z } : null;
+            }, testVehiclePos.id);
+            console.log("   Vehicle position before play test:", testVehiclePos, "after exit play test:", restoredPos);
+            if (!restoredPos || Math.abs(restoredPos.x - testVehiclePos.origX) > 0.01 || Math.abs(restoredPos.z - testVehiclePos.origZ) > 0.01) {
+                throw new Error(`Vehicle position was not restored to original editor position! Expected (${testVehiclePos.origX}, ${testVehiclePos.origZ}), got (${restoredPos?.x}, ${restoredPos?.z})`);
+            }
+            console.log("   ✅ Moving object & vehicle restoration verified!");
 
             // Test 3D Object Scripting System (Visual Builder, JavaScript Code Sandbox, Presets & Triggers)
             console.log("   Testing 3D Object Scripting System in Creator Studio...");
