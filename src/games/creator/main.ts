@@ -336,6 +336,21 @@ let currentVehicle: PlacedObject | null = null;
 let vehicleSpeed = 0;
 let nearbyVehicle: PlacedObject | null = null;
 
+// Play Test World Snapshot State (Restores all moved/driven objects back to their edit positions upon exiting)
+interface PlayTestSnapshot {
+    id: string;
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scale: { x: number; y: number; z: number };
+    visible: boolean;
+    isCollected?: boolean;
+    isUnlocked?: boolean;
+    isHeld?: boolean;
+    enemyHealth?: number;
+    movement?: PlacedObject['movement'];
+}
+let playTestWorldSnapshots: PlayTestSnapshot[] = [];
+
 // Character & Ultra Grass
 let humanCharacter: THREE.Group;
 let characterVelocity = new THREE.Vector3();
@@ -2096,6 +2111,7 @@ function spawnObjectIntoScene(itemOrId: CatalogItem | string) {
     placedObjects.push(placed);
     selectObject(placed);
     autoSaveDraft();
+    return placed;
 }
 
 export function serializeCurrentScene() {
@@ -2136,37 +2152,44 @@ export function serializeCurrentScene() {
         isAsmaVisible: asmaVisSelect ? (asmaVisSelect.value === 'visible') : isAsmaVisible,
         mapType: activeSeaConfig ? 'sea' : 'land',
         seaConfig: activeSeaConfig ? JSON.parse(JSON.stringify(activeSeaConfig)) : null,
-        objects: placedObjects.map(p => ({
-            id: p.id,
-            catalogId: p.catalogId,
-            name: p.name,
-            category: p.category,
-            position: { x: p.mesh.position.x, y: p.mesh.position.y, z: p.mesh.position.z },
-            rotation: { x: p.mesh.rotation.x, y: p.mesh.rotation.y, z: p.mesh.rotation.z },
-            scale: { x: p.mesh.scale.x, y: p.mesh.scale.y, z: p.mesh.scale.z },
-            color: p.color,
-            isPassable: p.isPassable,
-            isAirplane: p.isAirplane,
-            isBoat: p.isBoat,
-            gameItemType: p.gameItemType,
-            keyName: p.keyName,
-            requiredKeyName: p.requiredKeyName,
-            enemyData: p.enemyData ? JSON.parse(JSON.stringify(p.enemyData)) : undefined,
-            trigger: p.trigger,
-            script: p.script ? JSON.parse(JSON.stringify(p.script)) : undefined,
-            customModelData: p.customModelData ? JSON.parse(JSON.stringify(p.customModelData)) : undefined,
-            isHoldable: p.isHoldable,
-            inHandAtStart: p.inHandAtStart,
-            costsPbx: p.costsPbx,
-            pbxPrice: p.pbxPrice,
-            portalTargetId: p.portalTargetId,
-            portalTargetTitle: p.portalTargetTitle
-        })),
+        objects: placedObjects.map(p => {
+            const pos = p.movement?.origin
+                ? { x: p.movement.origin.x, y: p.movement.origin.y, z: p.movement.origin.z }
+                : { x: p.mesh.position.x, y: p.mesh.position.y, z: p.mesh.position.z };
+            return {
+                id: p.id,
+                catalogId: p.catalogId,
+                name: p.name,
+                category: p.category,
+                position: pos,
+                rotation: { x: p.mesh.rotation.x, y: p.mesh.rotation.y, z: p.mesh.rotation.z },
+                scale: { x: p.mesh.scale.x, y: p.mesh.scale.y, z: p.mesh.scale.z },
+                color: p.color,
+                isPassable: p.isPassable,
+                isAirplane: p.isAirplane,
+                isBoat: p.isBoat,
+                gameItemType: p.gameItemType,
+                keyName: p.keyName,
+                requiredKeyName: p.requiredKeyName,
+                enemyData: p.enemyData ? JSON.parse(JSON.stringify(p.enemyData)) : undefined,
+                trigger: p.trigger,
+                script: p.script ? JSON.parse(JSON.stringify(p.script)) : undefined,
+                movement: p.movement ? JSON.parse(JSON.stringify(p.movement)) : undefined,
+                customModelData: p.customModelData ? JSON.parse(JSON.stringify(p.customModelData)) : undefined,
+                isHoldable: p.isHoldable,
+                inHandAtStart: p.inHandAtStart,
+                costsPbx: p.costsPbx,
+                pbxPrice: p.pbxPrice,
+                portalTargetId: p.portalTargetId,
+                portalTargetTitle: p.portalTargetTitle
+            };
+        }),
         updatedAt: Date.now()
     };
 }
 
 export function autoSaveDraft() {
+    if (isPlayTestMode) return;
     const profile = getCurrentUserProfile();
     const sceneData = serializeCurrentScene();
     yardService.saveUserGame(profile?.username ?? null, sceneData);
@@ -2483,8 +2506,13 @@ export function loadSceneFromData(sceneData: any) {
                 costsPbx: objData.costsPbx,
                 pbxPrice: objData.pbxPrice,
                 portalTargetId: objData.portalTargetId || objData.trigger?.targetWorldId,
-                portalTargetTitle: objData.portalTargetTitle || objData.trigger?.targetWorldTitle
+                portalTargetTitle: objData.portalTargetTitle || objData.trigger?.targetWorldTitle,
+                movement: objData.movement ? JSON.parse(JSON.stringify(objData.movement)) : undefined
             };
+
+            if (placed.movement) {
+                placed.movement.origin = { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z };
+            }
 
             placedObjects.push(placed);
         });
@@ -2900,8 +2928,10 @@ async function initStudio() {
         spawnBlockObject,
         pullSelectedObject,
         setObjectPassable,
+        enterVehicle,
         exitVehicle,
         get currentVehicle() { return currentVehicle; },
+        get playTestWorldSnapshots() { return playTestWorldSnapshots; },
         keys
     };
 
@@ -4427,6 +4457,10 @@ function setupStudioEvents() {
                 selectedObject.mesh.position.z = hitPoint.z;
                 selectedObject.position.x = hitPoint.x;
                 selectedObject.position.z = hitPoint.z;
+                if (selectedObject.movement) {
+                    selectedObject.movement.origin.x = hitPoint.x;
+                    selectedObject.movement.origin.z = hitPoint.z;
+                }
                 updateInspectorDisplay();
             }
         }
@@ -4457,6 +4491,26 @@ function setupStudioEvents() {
         playTestBtn.addEventListener('click', () => {
             isPlayTestMode = !isPlayTestMode;
             if (isPlayTestMode) {
+                // 📸 Snapshot all placed objects before play test starts so everything restores on exit
+                playTestWorldSnapshots = placedObjects.map(o => {
+                    const homePos = o.movement?.origin
+                        ? { x: o.movement.origin.x, y: o.movement.origin.y, z: o.movement.origin.z }
+                        : { x: o.position.x, y: o.position.y, z: o.position.z };
+
+                    return {
+                        id: o.id,
+                        position: homePos,
+                        rotation: { x: o.rotation.x, y: o.rotation.y, z: o.rotation.z },
+                        scale: { x: o.scale.x, y: o.scale.y, z: o.scale.z },
+                        visible: o.mesh.visible,
+                        isCollected: o.isCollected,
+                        isUnlocked: o.isUnlocked,
+                        isHeld: o.isHeld,
+                        enemyHealth: o.enemyData?.health,
+                        movement: o.movement ? JSON.parse(JSON.stringify(o.movement)) : undefined
+                    };
+                });
+
                 if (currentVehicle) exitVehicle();
                 currentVehicle = null;
                 playTestBtn.blur();
@@ -4597,6 +4651,71 @@ function setupStudioEvents() {
                 updateGameplayHUD();
             } else {
                 if (currentVehicle) exitVehicle();
+                currentVehicle = null;
+                vehicleSpeed = 0;
+
+                // 🔄 RESTORE ALL OBJECTS BACK TO THEIR ORIGINAL EDITOR POSITIONS & STATES
+                if (playTestWorldSnapshots && playTestWorldSnapshots.length > 0) {
+                    const snapMap = new Map(playTestWorldSnapshots.map(s => [s.id, s]));
+
+                    // 1. Remove dynamically spawned runtime objects
+                    for (let i = placedObjects.length - 1; i >= 0; i--) {
+                        const obj = placedObjects[i];
+                        if (!snapMap.has(obj.id)) {
+                            scene.remove(obj.mesh);
+                            placedObjects.splice(i, 1);
+                        }
+                    }
+
+                    // 2. Restore all original objects to their exact snapshot transform & properties
+                    for (const snap of playTestWorldSnapshots) {
+                        const obj = placedObjects.find(o => o.id === snap.id);
+                        if (!obj) continue;
+
+                        obj.mesh.position.set(snap.position.x, snap.position.y, snap.position.z);
+                        obj.mesh.rotation.set(snap.rotation.x, snap.rotation.y, snap.rotation.z);
+                        obj.mesh.scale.set(snap.scale.x, snap.scale.y, snap.scale.z);
+
+                        obj.position = { x: snap.position.x, y: snap.position.y, z: snap.position.z };
+                        obj.rotation = { x: snap.rotation.x, y: snap.rotation.y, z: snap.rotation.z };
+                        obj.scale = { x: snap.scale.x, y: snap.scale.y, z: snap.scale.z };
+
+                        obj.mesh.visible = snap.visible;
+                        if (snap.isCollected !== undefined) obj.isCollected = snap.isCollected;
+                        if (snap.isUnlocked !== undefined) obj.isUnlocked = snap.isUnlocked;
+                        if (snap.isHeld !== undefined) obj.isHeld = snap.isHeld;
+                        if (obj.enemyData && snap.enemyHealth !== undefined) {
+                            obj.enemyData.health = snap.enemyHealth;
+                        }
+                        if (snap.movement) {
+                            obj.movement = JSON.parse(JSON.stringify(snap.movement));
+                            obj.movement.origin = { ...snap.position };
+                            obj.mesh.position.set(snap.position.x, snap.position.y, snap.position.z);
+                            obj.position = { ...snap.position };
+                        }
+
+                        if (!scene.children.includes(obj.mesh)) {
+                            scene.add(obj.mesh);
+                        }
+                    }
+                    playTestWorldSnapshots = [];
+                }
+
+                // Reset player position back to initial spawn point or origin
+                const spawnPoints = placedObjects.filter(o => o.isSpawnPoint || o.category === 'spawn' || o.catalogId?.startsWith('spawn_'));
+                if (spawnPoints.length > 0) {
+                    humanCharacter.position.set(spawnPoints[0].position.x, spawnPoints[0].position.y + 0.1, spawnPoints[0].position.z);
+                    humanCharacter.rotation.y = spawnPoints[0].rotation.y || 0;
+                } else {
+                    humanCharacter.position.set(0, 0, 0);
+                    humanCharacter.rotation.y = 0;
+                }
+                characterVelocity.set(0, 0, 0);
+                humanCharacter.visible = true;
+                isGrounded = true;
+                isGameOver = false;
+                isGameFinished = false;
+
                 if (playTestMobileControls) {
                     playTestMobileControls.setVisible(false);
                 }

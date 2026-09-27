@@ -3058,6 +3058,90 @@ await (async () => {
             console.log("   ✅ Passable vs Solid block collision test passed!");
         }
 
+        // Test Play Test World Snapshot & Reset (Driving a vehicle and exiting restores vehicle back to exact original position)
+        console.log("   Testing Play Test World Snapshot & Restoration on Exit (Drive vehicle, exit play test, verify reset)...");
+        {
+            // 1. In edit mode, spawn a car vehicle at specific coordinates (x: 10, y: 0, z: 10)
+            const vehicleInitialPos = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const car = cs.spawnObjectIntoScene('car');
+                car.id = 'test_drive_car_snapshot';
+                car.category = 'vehicles';
+                car.name = '🏎️ Snapshot Test Car';
+                car.mesh.position.set(10, 0, 10);
+                car.position = { x: 10, y: 0, z: 10 };
+                return {
+                    id: car.id,
+                    x: car.mesh.position.x,
+                    y: car.mesh.position.y,
+                    z: car.mesh.position.z
+                };
+            });
+            console.log("   Vehicle spawned at initial editor position:", vehicleInitialPos);
+
+            // 2. Enter Play Test mode
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+
+            // 3. Enter vehicle and simulate driving forward (KeyW) for 400ms
+            await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const car = cs.placedObjects.find(o => o.id === 'test_drive_car_snapshot');
+                if (car) {
+                    cs.enterVehicle(car);
+                    cs.keys['KeyW'] = true;
+                }
+            });
+
+            await new Promise(r => setTimeout(r, 400));
+
+            const drivenPos = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                cs.keys['KeyW'] = false;
+                const car = cs.placedObjects.find(o => o.id === 'test_drive_car_snapshot');
+                return {
+                    x: car ? car.mesh.position.x : 0,
+                    y: car ? car.mesh.position.y : 0,
+                    z: car ? car.mesh.position.z : 0
+                };
+            });
+            console.log("   Vehicle position after driving in Play Test mode:", drivenPos);
+            // Verify vehicle actually moved during driving
+            const distMoved = Math.hypot(drivenPos.x - vehicleInitialPos.x, drivenPos.z - vehicleInitialPos.z);
+            if (distMoved < 0.2) {
+                throw new Error(`Vehicle did not move during driving in play test mode! Distance moved: ${distMoved}`);
+            }
+
+            // 4. Exit Play Test mode back to Editor
+            await page.click('#btn-toggle-play-test');
+            await new Promise(r => setTimeout(r, 400));
+
+            // 5. Verify vehicle is restored EXACTLY back to original editor position!
+            const restoredPos = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const car = cs.placedObjects.find(o => o.id === 'test_drive_car_snapshot');
+                return {
+                    x: car ? car.mesh.position.x : 0,
+                    y: car ? car.mesh.position.y : 0,
+                    z: car ? car.mesh.position.z : 0,
+                    inVehicle: !!cs.currentVehicle,
+                    isPlayTestMode: cs.isPlayTestMode
+                };
+            });
+            console.log("   Vehicle position after exiting Play Test mode back to Editor:", restoredPos);
+
+            if (Math.abs(restoredPos.x - vehicleInitialPos.x) > 0.05 || Math.abs(restoredPos.z - vehicleInitialPos.z) > 0.05) {
+                throw new Error(`Vehicle was NOT restored back to original position upon exiting play test! Expected (${vehicleInitialPos.x}, ${vehicleInitialPos.z}), got (${restoredPos.x}, ${restoredPos.z})`);
+            }
+            if (restoredPos.inVehicle) {
+                throw new Error("Player should not be inside vehicle after exiting play test mode!");
+            }
+            if (restoredPos.isPlayTestMode) {
+                throw new Error("Should be back in edit mode after clicking exit play test!");
+            }
+            console.log("   ✅ Play Test snapshot & vehicle reset back to place verified successfully!");
+        }
+
         // Test Custom Item 3D Workbench (Create Item, Push-Pull Height/Elevation, Save, Publish, Place)
         console.log("   Testing Custom Item 3D Workbench (Create Item, Shapes, Height Elevation, Save, Publish)...");
         {
