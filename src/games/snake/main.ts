@@ -130,7 +130,7 @@ export class SnakeGame {
 
     public startMultiplayerGame(_opponentName: string) {
         this.startScreen.hide();
-        this.input.isTwoPlayerMode = false;
+        this.input.isTwoPlayerMode = true;
         this.resetGameMode('multiplayer');
     }
 

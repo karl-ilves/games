@@ -12,9 +12,11 @@ export class SnakeMultiplayerSystem {
     private onRemoteMoveCallback: RemoteMoveCallback | null = null;
     public activeOpponent: string | null = null;
     public isHost: boolean = false;
+    public readonly tabId = Math.random().toString(36).substring(2, 9);
 
     constructor() {
         this.initChannel();
+        this.initStorageListener();
     }
 
     private initChannel(): void {
@@ -29,21 +31,28 @@ export class SnakeMultiplayerSystem {
         }
     }
 
+    private initStorageListener(): void {
+        if (typeof window === 'undefined') return;
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'playard_snake_mp_event' && e.newValue) {
+                try {
+                    const data = JSON.parse(e.newValue);
+                    this.handleMessage(data);
+                } catch (err) {}
+            }
+        });
+    }
+
     private handleMessage(data: any): void {
         if (!data || typeof data !== 'object') return;
-        const profile = getCurrentUserProfile();
-        const currentUsername = profile?.username?.toLowerCase() || 'guest';
+        if (data.senderTabId === this.tabId) return; // Ignore own outgoing broadcast
 
         switch (data.type) {
             case 'SNAKE_INVITE': {
                 const invite: MultiplayerInvite = data.invite;
                 if (!invite) return;
-                // If targeted to current user or if guest Broadcast broadcast
-                const target = invite.toUsername.toLowerCase();
-                if (target === currentUsername || target === 'all' || target === 'guest') {
-                    if (this.onInviteReceivedCallback) {
-                        this.onInviteReceivedCallback(invite);
-                    }
+                if (this.onInviteReceivedCallback) {
+                    this.onInviteReceivedCallback(invite);
                 }
                 break;
             }
@@ -93,12 +102,18 @@ export class SnakeMultiplayerSystem {
         this.activeOpponent = toUsername;
         this.isHost = true;
 
+        const payload = {
+            type: 'SNAKE_INVITE',
+            invite,
+            senderTabId: this.tabId
+        };
+
         if (this.channel) {
-            this.channel.postMessage({
-                type: 'SNAKE_INVITE',
-                invite
-            });
+            this.channel.postMessage(payload);
         }
+        try {
+            localStorage.setItem('playard_snake_mp_event', JSON.stringify({ ...payload, _ts: Date.now() }));
+        } catch (e) {}
 
         return invite;
     }
@@ -113,16 +128,22 @@ export class SnakeMultiplayerSystem {
             this.isHost = false;
         }
 
+        const payload = {
+            type: 'SNAKE_INVITE_RESPONSE',
+            inviteId: invite.id,
+            fromUsername,
+            fromDisplayName,
+            toUsername: invite.fromUsername,
+            accepted,
+            senderTabId: this.tabId
+        };
+
         if (this.channel) {
-            this.channel.postMessage({
-                type: 'SNAKE_INVITE_RESPONSE',
-                inviteId: invite.id,
-                fromUsername,
-                fromDisplayName,
-                toUsername: invite.fromUsername,
-                accepted
-            });
+            this.channel.postMessage(payload);
         }
+        try {
+            localStorage.setItem('playard_snake_mp_event', JSON.stringify({ ...payload, _ts: Date.now() }));
+        } catch (e) {}
     }
 
     public broadcastMove(direction: Direction, body: GridPoint[], score: number): void {
@@ -130,13 +151,19 @@ export class SnakeMultiplayerSystem {
         const profile = getCurrentUserProfile();
         const fromUsername = profile?.username || 'Guest';
 
-        this.channel.postMessage({
+        const payload = {
             type: 'SNAKE_REMOTE_MOVE',
             fromUsername,
             direction,
             body,
-            score
-        });
+            score,
+            senderTabId: this.tabId
+        };
+
+        this.channel.postMessage(payload);
+        try {
+            localStorage.setItem('playard_snake_mp_event', JSON.stringify({ ...payload, _ts: Date.now() }));
+        } catch (e) {}
     }
 
     public cleanup(): void {

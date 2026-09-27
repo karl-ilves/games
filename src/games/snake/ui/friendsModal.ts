@@ -170,6 +170,19 @@ export class FriendsModalUI {
                 inviteBtn.style.background = '#ffd700';
                 this.setStatus(`Kutse saadetud kasutajale @${player.username}. Ootan vastust...`);
                 this.callbacks.onSendInvite(player.username);
+
+                // Show invite confirmation notification popup ("Kas sa oled nõus?")
+                setTimeout(() => {
+                    this.closeFriendsModal();
+                    this.showInviteConfirmation({
+                        id: `invite_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                        fromUsername: player.username,
+                        fromDisplayName: player.displayName,
+                        toUsername: currentUsername,
+                        timestamp: Date.now(),
+                        status: 'pending'
+                    });
+                }, 300);
             };
 
             item.appendChild(infoDiv);

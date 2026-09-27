@@ -2000,25 +2000,14 @@ await (async () => {
             await page.click('.object-card');
             await new Promise(r => setTimeout(r, 400));
 
-            // Verify AI Assistant and AI School UI are completely removed from Creator Studio navbar & DOM
+            // Verify AI Assistant and AI School UI are present in Creator Studio DOM
             const hasAiToggleBtn = await page.$('#btn-toggle-ai');
             const hasAiModal = await page.$('#ai-assistant-modal');
-            console.log("   Verifying AI Assistant UI removed from Creator Studio: btn =", !!hasAiToggleBtn, "modal =", !!hasAiModal);
-            if (hasAiToggleBtn !== null || hasAiModal !== null) {
-                throw new Error("AI Assistant button or modal is still present in Creator Studio DOM! Should be removed.");
+            console.log("   Verifying AI Assistant UI present in Creator Studio: btn =", !!hasAiToggleBtn, "modal =", !!hasAiModal);
+            if (!hasAiToggleBtn || !hasAiModal) {
+                throw new Error("AI Assistant button or modal is missing from Creator Studio DOM! Both #btn-toggle-ai and #ai-assistant-modal must be present.");
             }
-
-            // Verify Playard AI link button IS present in Creator Studio top bar
-            const hasCreatorAiBtn = await page.$('#btn-creator-open-ai');
-            console.log("   Verifying Playard AI link btn in Creator Studio toolbar:", !!hasCreatorAiBtn);
-            if (!hasCreatorAiBtn) {
-                throw new Error("Playard AI link button (#btn-creator-open-ai) is missing from Creator Studio top bar!");
-            }
-            const creatorAiHref = await page.$eval('#btn-creator-open-ai', el => el.getAttribute('href'));
-            if (!creatorAiHref || !creatorAiHref.includes('/games/ai/')) {
-                throw new Error("Playard AI link button href must point to /games/ai/, got: " + creatorAiHref);
-            }
-            console.log("   ✅ Playard AI link button verified in Creator Studio!");
+            console.log("   ✅ Playard AI button and modal verified in Creator Studio!");
 
             let lastAiResponse = '';
             const submitAi = async (prompt) => {
@@ -9907,7 +9896,17 @@ await (async () => {
                 const modalFriends = document.getElementById('modal-friends-list');
                 const isFriendsModalVisible = modalFriends !== null && window.getComputedStyle(modalFriends).display !== 'none';
 
-                // Test receiving an invite shows confirmation modal ("Kas sa oled nõus?")
+                // Test clicking "✉️ Kutsu" on a friend in the list immediately opens the "Kas sa oled nõus?" modal
+                const firstInviteBtn = document.querySelector('.btn-invite-friend-item');
+                let clickedInviteButtonShowsModal = false;
+                if (firstInviteBtn) {
+                    firstInviteBtn.click();
+                    await new Promise(r => setTimeout(r, 400));
+                    const modalInviteAfterClick = document.getElementById('modal-invite-confirm');
+                    clickedInviteButtonShowsModal = modalInviteAfterClick !== null && window.getComputedStyle(modalInviteAfterClick).display !== 'none';
+                }
+
+                // Also test receiving an invite shows confirmation modal ("Kas sa oled nõus?")
                 game.friendsModal.showInviteConfirmation({
                     id: 'test_invite_1',
                     fromUsername: 'kawe1234',
@@ -10044,6 +10043,7 @@ await (async () => {
                     initialMode,
                     hasValidDemoAi,
                     isFriendsModalVisible,
+                    clickedInviteButtonShowsModal,
                     isInviteModalVisible,
                     hasKasSaOledNous,
                     hasSenderName,
@@ -10072,6 +10072,9 @@ await (async () => {
             }
             if (!snakeGameTest.isFriendsModalVisible) {
                 throw new Error("Snake Play with Friends modal failed to open: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.clickedInviteButtonShowsModal) {
+                throw new Error("Clicking Kutsu button must immediately show the 'Kas sa oled nõus?' confirmation modal: " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.isInviteModalVisible || !snakeGameTest.hasKasSaOledNous || !snakeGameTest.hasSenderName) {
                 throw new Error("Snake invite confirmation modal ('Kas sa oled nõus?') failed: " + JSON.stringify(snakeGameTest));
@@ -10113,44 +10116,39 @@ await (async () => {
             // ====================================================================
             console.log("\n22. Testing Playard AI Assistant (Conversation, GameGen, Modifier, CodeSandbox, SelfVerifier, Admin Logs)...");
 
-            // 22a. Verify Playard AI Hub integration (navbar button + game card)
+            // 22a. Verify Playard AI Admin Panel integration (admin tabs for AI audit logs)
             await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 600));
 
             const hubAiTest = await page.evaluate(() => {
-                const navBtn = document.getElementById('btn-open-playard-ai');
-                const gameCard = document.getElementById('card-playard-ai');
                 const adminUpdatesTab = document.getElementById('tab-admin-updates');
                 const adminAiTab = document.getElementById('tab-admin-ai-logs');
                 const aiLogsSection = document.getElementById('admin-ai-logs-section');
                 const aiLogsList = document.getElementById('admin-ai-logs-list');
+                // Playard AI card and navbar button should NOT exist on Hub anymore (moved into Creator Studio)
+                const navBtn = document.getElementById('btn-open-playard-ai');
+                const gameCard = document.getElementById('card-playard-ai');
                 return {
-                    hasNavBtn: !!navBtn,
-                    navBtnHref: navBtn?.getAttribute('href') || '',
-                    navBtnText: navBtn?.textContent?.trim() || '',
-                    hasGameCard: !!gameCard,
-                    gameCardText: gameCard?.textContent?.trim() || '',
                     hasAdminUpdatesTab: !!adminUpdatesTab,
                     hasAdminAiTab: !!adminAiTab,
                     hasAiLogsSection: !!aiLogsSection,
-                    hasAiLogsList: !!aiLogsList
+                    hasAiLogsList: !!aiLogsList,
+                    navBtnRemoved: navBtn === null,
+                    gameCardRemoved: gameCard === null
                 };
             });
 
             console.log("   Hub AI Integration:", hubAiTest);
-            if (!hubAiTest.hasNavBtn || !hubAiTest.navBtnHref.includes('games/ai')) {
-                throw new Error("Playard AI nav button missing or href incorrect: " + JSON.stringify(hubAiTest));
-            }
-            if (!hubAiTest.navBtnText.includes('Playard AI')) {
-                throw new Error("Playard AI nav button text incorrect: " + hubAiTest.navBtnText);
-            }
-            if (!hubAiTest.hasGameCard || !hubAiTest.gameCardText.includes('Playard AI')) {
-                throw new Error("Playard AI game card missing or text incorrect: " + JSON.stringify(hubAiTest));
-            }
             if (!hubAiTest.hasAdminUpdatesTab || !hubAiTest.hasAdminAiTab || !hubAiTest.hasAiLogsSection || !hubAiTest.hasAiLogsList) {
                 throw new Error("Admin panel AI logs tabs/sections missing: " + JSON.stringify(hubAiTest));
             }
-            console.log("   ✅ Playard AI Hub integration verified!");
+            if (!hubAiTest.navBtnRemoved) {
+                throw new Error("Playard AI navbar button should be removed from Hub (AI is inside Creator Studio now)!");
+            }
+            if (!hubAiTest.gameCardRemoved) {
+                throw new Error("Playard AI game card should be removed from Hub games grid (AI is inside Creator Studio now)!");
+            }
+            console.log("   ✅ Playard AI Hub admin integration verified (card & nav removed, admin tabs present)!");
 
             // 22b. Navigate to Playard AI page and verify UI structure
             console.log("   Loading Playard AI standalone page...");
