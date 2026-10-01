@@ -376,19 +376,38 @@ export class ConversationEngine {
             };
         }
 
-        if (/tee|loo|ehita|valmista|create|make|build/i.test(lower) && /mäng|game/i.test(lower)) {
+        // Universal Creation Intent: handles robots, dinosaurs, tanks, space, submarines, volcanoes, pyramids, or any custom game idea
+        if (
+            /robot|mech|dino|t-rex|tank|kosmos|ufo|space|tulnuk|allvee|submarine|vulkaan|lava|püramiid|pyramid/i.test(lower) &&
+            /tee|loo|ehita|valmista|create|make|build/i.test(lower)
+        ) {
             return {
                 intent: 'CREATE_GAME',
-                confidence: 0.85,
+                confidence: 0.98,
                 rawText: text,
                 parameters: {
-                    theme: 'custom_adventure',
-                    title: 'Playard Seiklus',
-                    elements: ['terrain', 'buildings', 'spawn', 'npc', 'collectible_coins']
+                    theme: 'universal_custom',
+                    title: text.replace(/^(?:palun\s+)?(?:tee|loo|ehita|valmista|create|build|make)\s+/i, '').trim(),
+                    rawPrompt: text
                 },
                 safetyReport
             };
         }
+
+        if (/tee|loo|ehita|valmista|create|make|build/i.test(lower) && /mäng|game|maailm|areen|seiklus/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    theme: 'universal_custom',
+                    title: text.replace(/^(?:palun\s+)?(?:tee|loo|ehita|valmista|create|build|make)\s+(?:mulle\s+)?(?:uus\s+)?(?:mäng|maailm|game|areen|seiklus)?\s*/i, '').trim() || 'Playard Universaalne Seiklus',
+                    rawPrompt: text
+                },
+                safetyReport
+            };
+        }
+
 
         // 2. Incremental Modifications
         // "Tee maja suuremaks"

@@ -1,3 +1,5 @@
+import { PlayardUniversalCreationEngine } from '../../../shared/playardAiKnowledge';
+
 export interface PlayardAiScene {
     id: string;
     title: string;
@@ -27,7 +29,7 @@ export interface PlayardAiScene {
     objects: Array<{
         id: string;
         name: string;
-        type: 'box' | 'cylinder' | 'sphere' | 'plane' | 'tornado' | 'airplane' | 'building' | 'spawn' | 'coin' | 'npc' | 'dragon' | 'castle' | 'ship' | 'weapon';
+        type: 'box' | 'cylinder' | 'sphere' | 'plane' | 'tornado' | 'airplane' | 'building' | 'spawn' | 'coin' | 'npc' | 'dragon' | 'castle' | 'ship' | 'weapon' | 'tank' | 'ufo' | 'robot' | 'dinosaur' | 'submarine' | 'volcano' | 'pyramid';
         position: [number, number, number];
         rotation?: [number, number, number];
         scale: [number, number, number];
@@ -45,8 +47,13 @@ export class GameGenerator {
     /**
      * Generates a complete 3D game scene based on the requested theme/prompt.
      */
-    public static generateGame(theme: string, customTitle?: string): PlayardAiScene {
+    public static generateGame(theme: string, customTitle?: string, rawPrompt?: string): PlayardAiScene {
         const id = 'game_' + Math.random().toString(36).substring(2, 9);
+
+        // Universal AI creator: if universal_custom theme, create specialized scene
+        if (theme === 'universal_custom') {
+            return PlayardUniversalCreationEngine.createUniversalGameScene(rawPrompt || customTitle || theme, customTitle);
+        }
 
         switch (theme) {
             case 'dragon_castle':
@@ -72,9 +79,10 @@ export class GameGenerator {
             case 'tower_defense':
                 return this.createTowerDefenseGame(id, customTitle || 'Playard Tornikaitse');
             default:
-                return this.createAdventureGame(id, customTitle || 'Playard Seiklusmaailm');
+                return PlayardUniversalCreationEngine.createUniversalGameScene(rawPrompt || customTitle || theme, customTitle);
         }
     }
+
 
 
 

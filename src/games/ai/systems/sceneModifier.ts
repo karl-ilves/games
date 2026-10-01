@@ -155,25 +155,74 @@ export class SceneModifier {
             };
         }
 
-        // Generic prop
+        // Universal Procedural 3D Entity Spawner
+        const lowerRaw = command.rawText.toLowerCase();
+        let entityType: any = 'box';
+        let entityName = command.parameters?.text || 'Uus Objekt';
+        let entityScale: [number, number, number] = [2, 2, 2];
+        let entityColor: any = 0x3b82f6;
+
+        if (lowerRaw.includes('tank')) {
+            entityType = 'tank';
+            entityName = 'Soomustatud Tank';
+            entityScale = [10, 4, 6];
+            entityColor = 0x3f6212;
+        } else if (lowerRaw.includes('robot') || lowerRaw.includes('mech')) {
+            entityType = 'robot';
+            entityName = 'Võitlusrobot (AI)';
+            entityScale = [6, 10, 5];
+            entityColor = 0x334155;
+        } else if (lowerRaw.includes('dinosaurus') || lowerRaw.includes('dino') || lowerRaw.includes('t-rex')) {
+            entityType = 'dinosaur';
+            entityName = 'Dinosaurus T-Rex';
+            entityScale = [10, 8, 6];
+            entityColor = 0x4d7c0f;
+        } else if (lowerRaw.includes('ufo') || lowerRaw.includes('kosmoselaev')) {
+            entityType = 'ufo';
+            entityName = 'Tulnukate UFO';
+            entityScale = [12, 5, 12];
+            entityColor = 0x06b6d4;
+        } else if (lowerRaw.includes('allveelaev')) {
+            entityType = 'submarine';
+            entityName = 'Süvavee Allveelaev';
+            entityScale = [14, 5, 5];
+            entityColor = 0xfacc15;
+        } else if (lowerRaw.includes('vulkaan')) {
+            entityType = 'volcano';
+            entityName = 'Aktiivne Vulkaan';
+            entityScale = [30, 24, 30];
+            entityColor = 0x27272a;
+        } else if (lowerRaw.includes('püramiid')) {
+            entityType = 'pyramid';
+            entityName = 'Iidne Püramiid';
+            entityScale = [25, 20, 25];
+            entityColor = 0xd97706;
+        } else if (lowerRaw.includes('draakon')) {
+            entityType = 'dragon';
+            entityName = 'Tule-Draakon';
+            entityScale = [12, 8, 12];
+            entityColor = 0xb91c1c;
+        }
+
         const propId = 'prop_' + Date.now();
         scene.objects.push({
             id: propId,
-            name: command.parameters?.text || 'Uus Objekt',
-            type: 'box',
+            name: entityName,
+            type: entityType,
             position: [Math.floor(Math.random() * 10 - 5), 1, Math.floor(Math.random() * 10 - 5)],
-            scale: [2, 2, 2],
-            color: 0x3b82f6,
+            scale: entityScale,
+            color: entityColor,
             isCollidable: true
         });
 
         return {
             success: true,
-            message: `Lisasin stseeni uue objekti: "${command.parameters?.text || 'Uus element'}".`,
+            message: `Lisasin stseeni uue objekti: "${entityName}".`,
             modifiedScene: scene,
             changedObjectIds: [propId]
         };
     }
+
 
     /**
      * "Muuda taevas öiseks" / "Muuda taevas päevaseks"

@@ -395,7 +395,111 @@ export class PreviewViewport {
         }
 
 
+        if (obj.type === 'tank') {
+            const tankGroup = new THREE.Group();
+            tankGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            const hull = new THREE.Mesh(new THREE.BoxGeometry(10, 2.5, 6), new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.8 }));
+            hull.position.y = 1.25;
+            tankGroup.add(hull);
+            const turret = new THREE.Mesh(new THREE.BoxGeometry(4.5, 2, 4.5), new THREE.MeshStandardMaterial({ color: 0x365314 }));
+            turret.position.set(0, 3, 0);
+            tankGroup.add(turret);
+            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 7, 8), new THREE.MeshStandardMaterial({ color: 0x1f2937 }));
+            barrel.rotateZ(Math.PI / 2);
+            barrel.position.set(4.5, 3, 0);
+            tankGroup.add(barrel);
+            return tankGroup;
+        }
+
+        if (obj.type === 'ufo' || obj.type === 'spaceship') {
+            const ufoGroup = new THREE.Group();
+            ufoGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            const saucer = new THREE.Mesh(new THREE.CylinderGeometry(8, 2, 1.8, 24), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8, roughness: 0.2 }));
+            ufoGroup.add(saucer);
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(3.5, 16, 16), new THREE.MeshStandardMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.8, emissive: 0x0891b2, emissiveIntensity: 0.4 }));
+            dome.position.y = 1.2;
+            ufoGroup.add(dome);
+            this.animatedMeshes.push({
+                mesh: ufoGroup,
+                update: (t) => {
+                    ufoGroup.rotation.y += 0.04;
+                    ufoGroup.position.y = obj.position[1] + Math.sin(t * 2) * 0.8;
+                }
+            });
+            return ufoGroup;
+        }
+
+        if (obj.type === 'robot') {
+            const robotGroup = new THREE.Group();
+            robotGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 3), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7 }));
+            torso.position.y = 4.5;
+            robotGroup.add(torso);
+            const rHead = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2, 2.5), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+            rHead.position.y = 8;
+            robotGroup.add(rHead);
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.5, 0.4), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+            visor.position.set(0, 8, 1.3);
+            robotGroup.add(visor);
+            return robotGroup;
+        }
+
+        if (obj.type === 'dinosaur') {
+            const dinoGroup = new THREE.Group();
+            dinoGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            const body = new THREE.Mesh(new THREE.ConeGeometry(3, 8, 8), new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.6 }));
+            body.rotateZ(Math.PI / 2);
+            body.position.y = 4;
+            dinoGroup.add(body);
+            const dHead = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 2), new THREE.MeshStandardMaterial({ color: 0x3f6212 }));
+            dHead.position.set(4.5, 5.5, 0);
+            dinoGroup.add(dHead);
+            this.animatedMeshes.push({
+                mesh: dinoGroup,
+                update: (t) => {
+                    dinoGroup.position.y = obj.position[1] + Math.abs(Math.sin(t * 3)) * 0.4;
+                }
+            });
+            return dinoGroup;
+        }
+
+        if (obj.type === 'submarine') {
+            const subGroup = new THREE.Group();
+            subGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            const hull = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 16), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.3 }));
+            hull.rotateZ(Math.PI / 2);
+            hull.position.y = 2;
+            subGroup.add(hull);
+            const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 2.5, 12), new THREE.MeshStandardMaterial({ color: 0xeab308 }));
+            tower.position.set(0, 4, 0);
+            subGroup.add(tower);
+            return subGroup;
+        }
+
+        if (obj.type === 'volcano') {
+            const volGroup = new THREE.Group();
+            volGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            const cone = new THREE.Mesh(new THREE.CylinderGeometry(4, 16, 20, 16), new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.9 }));
+            cone.position.y = 10;
+            volGroup.add(cone);
+            const lava = new THREE.Mesh(new THREE.CylinderGeometry(3.8, 3.8, 0.5, 16), new THREE.MeshBasicMaterial({ color: 0xf97316 }));
+            lava.position.y = 20.2;
+            volGroup.add(lava);
+            return volGroup;
+        }
+
+        if (obj.type === 'pyramid') {
+            const pyrGroup = new THREE.Group();
+            pyrGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            const pyr = new THREE.Mesh(new THREE.ConeGeometry(16, 18, 4), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8 }));
+            pyr.rotateY(Math.PI / 4);
+            pyr.position.y = 9;
+            pyrGroup.add(pyr);
+            return pyrGroup;
+        }
+
         // Generic box / building / spawn
+
         const geo = new THREE.BoxGeometry(obj.scale[0], obj.scale[1], obj.scale[2]);
         const mat = new THREE.MeshStandardMaterial({
             color,

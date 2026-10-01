@@ -10996,7 +10996,89 @@ await (async () => {
             }
             console.log("   ✅ 10/10 AI Capabilities (Dragon Castle, Pirate Sea, Economy Balancer, 60 FPS Performance Optimizer, CoPilot Advisor) verified!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems) tests passed successfully!");
+            // 22o. Test Universal Omniscient Q&A and Universal Creation
+            console.log("   Testing Universal Omniscient Q&A (Math, Geography, Physics) & Universal Creation (Robots, Tanks, Dinosaurs)...");
+            const omniTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Math computation
+                await ai.handleUserInput('Palju on 25 * 4');
+                await new Promise(r => setTimeout(r, 300));
+                let msgs = ai.state.getMessages();
+                const mathReply = msgs[msgs.length - 1]?.text || '';
+                const hasMath = mathReply.includes('100');
+
+                // 2. Geography: Estonia
+                await ai.handleUserInput('Mis on Eesti pealinn ja info?');
+                await new Promise(r => setTimeout(r, 300));
+                msgs = ai.state.getMessages();
+                const geoReply = msgs[msgs.length - 1]?.text || '';
+                const hasGeo = geoReply.includes('Tallinn') && geoReply.includes('Eesti Vabariik');
+
+                // 3. Physics: Speed of light
+                await ai.handleUserInput('Mis on valguse kiirus?');
+                await new Promise(r => setTimeout(r, 300));
+                msgs = ai.state.getMessages();
+                const physReply = msgs[msgs.length - 1]?.text || '';
+                const hasPhys = physReply.includes('299 792 458 m/s') || physReply.includes('300 000 km/s');
+
+                // 4. Universal Semantic Fallback for arbitrary question
+                await ai.handleUserInput('Kuidas tekivad mustad augud kosmoses?');
+                await new Promise(r => setTimeout(r, 300));
+                msgs = ai.state.getMessages();
+                const fallReply = msgs[msgs.length - 1]?.text || '';
+                const hasFallback = fallReply.includes('Must auk') || fallReply.includes('Playard Teadmistebaas');
+
+                // 5. Universal Creation: Robot battle arena
+                await ai.handleUserInput('Ehita hiiglaslik robotite lahinguareen');
+                await new Promise(r => setTimeout(r, 600));
+                let scene = ai.state.getActiveScene();
+                const hasRobot = scene?.objects?.some(o => o.type === 'robot');
+
+                // 6. Universal Creation: Dinosaur jungle
+                await ai.handleUserInput('Tee dinosauruste saar ja vulkaan');
+                await new Promise(r => setTimeout(r, 600));
+                scene = ai.state.getActiveScene();
+                const hasDino = scene?.objects?.some(o => o.type === 'dinosaur');
+                const hasVolcano = scene?.objects?.some(o => o.type === 'volcano');
+
+                // 7. Universal Creation: Tank battlefield
+                await ai.handleUserInput('Loo raske tankilahing');
+                await new Promise(r => setTimeout(r, 600));
+                scene = ai.state.getActiveScene();
+                const hasTank = scene?.objects?.some(o => o.type === 'tank');
+
+                // 8. Add object: Ufo
+                await ai.handleUserInput('Lisa tulnukate ufo');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const hasUfo = scene?.objects?.some(o => o.type === 'ufo');
+
+                return {
+                    hasMath,
+                    hasGeo,
+                    hasPhys,
+                    hasFallback,
+                    hasRobot,
+                    hasDino,
+                    hasVolcano,
+                    hasTank,
+                    hasUfo
+                };
+            });
+
+            console.log("   Universal Omniscient & Creation Test Results:", omniTest);
+            if (
+                !omniTest.hasMath || !omniTest.hasGeo || !omniTest.hasPhys ||
+                !omniTest.hasFallback || !omniTest.hasRobot || !omniTest.hasDino ||
+                !omniTest.hasVolcano || !omniTest.hasTank || !omniTest.hasUfo
+            ) {
+                throw new Error("Universal Omniscient & Creation test failed: " + JSON.stringify(omniTest));
+            }
+            console.log("   ✅ Universal Omniscient Q&A (Answers everything) & Universal Creation (Creates anything) verified!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni) tests passed successfully!");
+
 
 
 

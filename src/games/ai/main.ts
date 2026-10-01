@@ -264,7 +264,7 @@ class PlayardAiApp {
             this.state.updateStepStatus(step.id, 'completed');
         }
 
-        const newScene = GameGenerator.generateGame(theme, title);
+        const newScene = GameGenerator.generateGame(theme, title, parsed.parameters?.rawPrompt || parsed.rawText);
         this.state.setActiveScene(newScene);
 
         // Self-verification
