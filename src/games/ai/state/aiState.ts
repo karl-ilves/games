@@ -1,4 +1,4 @@
-import type { AiBuildStep, AiMessage } from '../types';
+import type { AiBuildStep, AiMessage, AiOperationalCategory, AiTaskTriage } from '../types';
 import type { PlayardAiScene } from '../systems/gameGenerator';
 
 export type StateChangeListener = () => void;
@@ -79,6 +79,8 @@ export class AiState {
     public addAiMessage(
         text: string,
         options?: {
+            category?: AiOperationalCategory;
+            triage?: AiTaskTriage;
             clarificationOptions?: string[];
             codeSnippet?: string;
             steps?: AiBuildStep[];

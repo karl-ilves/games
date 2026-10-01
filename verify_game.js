@@ -11075,9 +11075,54 @@ await (async () => {
             ) {
                 throw new Error("Universal Omniscient & Creation test failed: " + JSON.stringify(omniTest));
             }
-            console.log("   ✅ Universal Omniscient Q&A (Answers everything) & Universal Creation (Creates anything) verified!");
+            // 22p. Test Tri-Mode Triage (LOOMINE vs PROGRAMMEERIMINE vs SUHTLEMINE) & Natural Language Math ("1 pluss 1 on 2")
+            console.log("   Testing Tri-Mode Intent Classifier (LOOMINE vs PROGRAMMEERIMINE vs SUHTLEMINE) & Natural Language Math...");
+            const triageAndMathTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni) tests passed successfully!");
+                // 1. Triage test
+                const triageCreation = ai.triage('Loo robotite lahinguareen kosmoses');
+                const triageCoding = ai.triage('Program a speed boost trigger ja kirjuta kood');
+                const triageChat = ai.triage('1 pluss 1 on 2 ja mis on gravitatsioon?');
+
+                // 2. Natural language math tests: "1 pluss 1 on 2"
+                await ai.handleUserInput('1 pluss 1 on 2');
+                await new Promise(r => setTimeout(r, 300));
+                let msgs = ai.state.getMessages();
+                const reply1 = msgs[msgs.length - 1]?.text || '';
+
+                // 3. Natural language verbal math: "üks pluss üks"
+                await ai.handleUserInput('üks pluss üks');
+                await new Promise(r => setTimeout(r, 300));
+                msgs = ai.state.getMessages();
+                const reply2 = msgs[msgs.length - 1]?.text || '';
+
+                // 4. Subtraction & multiplication: "5 miinus 2 on 3"
+                await ai.handleUserInput('5 miinus 2 on 3');
+                await new Promise(r => setTimeout(r, 300));
+                msgs = ai.state.getMessages();
+                const reply3 = msgs[msgs.length - 1]?.text || '';
+
+                return {
+                    isCreation: triageCreation.category === 'LOOMINE',
+                    isCoding: triageCoding.category === 'PROGRAMMEERIMINE',
+                    isChat: triageChat.category === 'SUHTLEMINE',
+                    math1Pluss1On2: reply1.includes('1 pluss 1 on 2') && reply1.includes('1 + 1 = 2'),
+                    mathYksPlussYks: reply2.includes('1 + 1 = 2'),
+                    math5Miinus2: reply3.includes('5 miinus 2 on 3') && reply3.includes('5 - 2 = 3')
+                };
+            });
+
+            console.log("   Tri-Mode Triage & Natural Language Math Results:", triageAndMathTest);
+            if (
+                !triageAndMathTest.isCreation || !triageAndMathTest.isCoding || !triageAndMathTest.isChat ||
+                !triageAndMathTest.math1Pluss1On2 || !triageAndMathTest.mathYksPlussYks || !triageAndMathTest.math5Miinus2
+            ) {
+                throw new Error("Tri-Mode Triage or Natural Language Math test failed: " + JSON.stringify(triageAndMathTest));
+            }
+            console.log("   ✅ Tri-Mode Triage (LOOMINE / PROGRAMMEERIMINE / SUHTLEMINE) & Natural Language Math ('1 pluss 1 on 2') verified!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage & Natural Math) tests passed successfully!");
 
 
 

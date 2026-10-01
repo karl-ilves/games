@@ -613,6 +613,179 @@ function equipSlot(index) {
 }
 
 /**
+ * 4.9 Natural Language & Verbal Math Engine
+ * Understands both symbolic (1+1=2, 25*4) and verbal/natural language math ("1 pluss 1 on 2", "üks pluss üks", "5 miinus 2").
+ */
+export class PlayardMathEngine {
+    private static WORD_NUMBERS: Record<string, number> = {
+        'null': 0, 'zero': 0,
+        'üks': 1, 'yks': 1, 'ühe': 1, 'yhe': 1, 'ühte': 1, 'yhte': 1, 'ühega': 1, 'yhega': 1, 'one': 1,
+        'kaks': 2, 'kahe': 2, 'kahte': 2, 'kahega': 2, 'two': 2,
+        'kolm': 3, 'kolme': 3, 'kolmega': 3, 'three': 3,
+        'neli': 4, 'nelja': 4, 'neljaga': 4, 'four': 4,
+        'viis': 5, 'viie': 5, 'viiega': 5, 'five': 5,
+        'kuus': 6, 'kuue': 6, 'kuuega': 6, 'six': 6,
+        'seitse': 7, 'seitsme': 7, 'seitsmega': 7, 'seven': 7,
+        'kaheksa': 8, 'kaheksaga': 8, 'eight': 8,
+        'üheksa': 9, 'yheksa': 9, 'üheksaga': 9, 'nine': 9,
+        'kümme': 10, 'kumme': 10, 'kümnega': 10, 'ten': 10,
+        'üksteist': 11, 'yksteist': 11, 'eleven': 11,
+        'kaksteist': 12, 'twelve': 12,
+        'kolmteist': 13, 'thirteen': 13,
+        'neliteist': 14, 'fourteen': 14,
+        'viisteist': 15, 'fifteen': 15,
+        'kuusteist': 16, 'sixteen': 16,
+        'seitseteist': 17, 'seventeen': 17,
+        'kaheksateist': 18, 'eighteen': 18,
+        'üheksateist': 19, 'yheksateist': 19, 'nineteen': 19,
+        'kakskümmend': 20, 'kakskumme': 20, 'twenty': 20,
+        'kolmkümmend': 30, 'thirty': 30,
+        'nelikümmend': 40, 'forty': 40,
+        'viiskümmend': 50, 'fifty': 50,
+        'sada': 100, 'hundred': 100
+    };
+
+    public static parseNum(token: string): number | null {
+        if (!token) return null;
+        const cleaned = token.toLowerCase().trim().replace(/[?!.,;]/g, '').replace(/-(?:ga|st|le|ndat)$/i, '');
+        if (!isNaN(Number(cleaned))) return Number(cleaned);
+        if (this.WORD_NUMBERS[cleaned] !== undefined) return this.WORD_NUMBERS[cleaned];
+        return null;
+    }
+
+    public static evaluateMathQuery(rawQuery: string): string | null {
+        const q = rawQuery.toLowerCase().trim().replace(/[?!.,;]+$/g, '');
+
+        // 1. Natural language / verbal / equation math
+        // Handles: "1 pluss 1 on 2", "1 pluss 1", "üks pluss üks on kaks", "1 + 1 = 2", "1+1", "1+1=2", "palju on 1 pluss 1", "kas 1 pluss 1 on 2"
+        const mathEquationRegex = /(?:palju on|arvuta|mis on|kas)?\s*([a-zõäöü0-9]+)\s*(pluss|plus|\+|miinus|minus|\-|korda|korrutatud|times|\*|x|×|jagatud|jagada|divided by|\/|÷)\s*([a-zõäöü0-9\-]+)(?:\s*(?:on|on võrdne|võrdub|equals|is|=)\s*([a-zõäöü0-9]+))?/i;
+        const eqMatch = q.match(mathEquationRegex);
+        if (eqMatch) {
+            const numA = this.parseNum(eqMatch[1]);
+            const rawOp = eqMatch[2].toLowerCase();
+            const numB = this.parseNum(eqMatch[3]);
+            const claimedC = eqMatch[4] ? this.parseNum(eqMatch[4]) : null;
+
+            if (numA !== null && numB !== null) {
+                let calcRes = 0;
+                let symbolOp = '+';
+                let wordOp = 'pluss';
+
+                if (rawOp === 'pluss' || rawOp === 'plus' || rawOp === '+') {
+                    calcRes = numA + numB;
+                    symbolOp = '+';
+                    wordOp = 'pluss';
+                } else if (rawOp === 'miinus' || rawOp === 'minus' || rawOp === '-') {
+                    calcRes = numA - numB;
+                    symbolOp = '-';
+                    wordOp = 'miinus';
+                } else if (rawOp === 'korda' || rawOp === 'korrutatud' || rawOp === 'times' || rawOp === '*' || rawOp === 'x' || rawOp === '×') {
+                    calcRes = numA * numB;
+                    symbolOp = '*';
+                    wordOp = 'korda';
+                } else if (rawOp === 'jagatud' || rawOp === 'jagada' || rawOp === 'divided by' || rawOp === '/' || rawOp === '÷') {
+                    calcRes = numB !== 0 ? Math.round((numA / numB) * 1000) / 1000 : 0;
+                    symbolOp = '/';
+                    wordOp = 'jagatud';
+                }
+
+                // If user stated equality or questioned it (e.g. "1 pluss 1 on 2" or "kas 1 pluss 1 on 2" or "1+1=2")
+                if (claimedC !== null) {
+                    if (claimedC === calcRes) {
+                        return `🧮 **Matemaatika:** Jah, täpselt nii! ${numA} ${wordOp} ${numB} on ${calcRes} (${numA} ${symbolOp} ${numB} = ${calcRes}). Tehe on täiesti korrektne!`;
+                    } else {
+                        return `🧮 **Matemaatika:** ${numA} ${wordOp} ${numB} ei ole ${claimedC}, vaid ${numA} ${wordOp} ${numB} on ${calcRes} (${numA} ${symbolOp} ${numB} = ${calcRes}).`;
+                    }
+                }
+
+                // If pure calculation prompt (e.g. "1 pluss 1" or "palju on 1 pluss 1" or "1+1")
+                return `🧮 **Matemaatika:** ${numA} ${wordOp} ${numB} on ${calcRes} (${numA} ${symbolOp} ${numB} = ${calcRes})`;
+            }
+        }
+
+        // Direct symbolic fallback (e.g. powers, percentages, roots)
+        const powerMatch = q.match(/(?:palju on|arvuta)?\s*(\d+(?:\.\d+)?)\s*\^\s*(\d+(?:\.\d+)?)/i);
+        if (powerMatch) {
+            const a = parseFloat(powerMatch[1]);
+            const b = parseFloat(powerMatch[2]);
+            return `🧮 **Matemaatika:** ${a} ^ ${b} = ${Math.pow(a, b)}`;
+        }
+
+        const sqrtMatch = q.match(/(?:ruutjuur|sqrt)\s*(?:arvust\s*)?(\d+(?:\.\d+)?)/i);
+        if (sqrtMatch) {
+            const num = parseFloat(sqrtMatch[1]);
+            return `🧮 **Matemaatika:** √${num} = ${Math.sqrt(num)}`;
+        }
+
+        const percentMatch = q.match(/(\d+(?:\.\d+)?)\s*%\s*(?:arvust|-st)?\s*(\d+(?:\.\d+)?)/i);
+        if (percentMatch) {
+            const pct = parseFloat(percentMatch[1]);
+            const val = parseFloat(percentMatch[2]);
+            return `🧮 **Matemaatika:** ${pct}% arvust ${val} = ${(pct / 100) * val}`;
+        }
+
+        return null;
+    }
+}
+
+/**
+ * 4.95 Tri-Mode Intent Classifier: LOOMINE vs PROGRAMMEERIMINE vs SUHTLEMINE
+ */
+export class PlayardTaskTriageEngine {
+    public static classify(input: string): {
+        category: 'LOOMINE' | 'PROGRAMMEERIMINE' | 'SUHTLEMINE';
+        title: string;
+        icon: string;
+        explanation: string;
+        targetAction: string;
+    } {
+        const text = input.trim();
+        const lower = text.toLowerCase();
+
+        // 1. PROGRAMMEERIMINE (Coding, Scripting, Logic, Triggers, Bug Fixing, Optimization)
+        const isProgramming =
+            /\b(program|programmeer|programneeri|skript|script|kood|code|debug|loogika|logic|trigger|päästik|muutuja|variable|funktsioon|function|timer|algoritm)\b/i.test(lower) ||
+            /\b(speed boost|speed_boost|paranda kood|leia koodiviga|optimeeri kood|fix code|debug code|puudutamisel|oncollision)\b/i.test(lower) ||
+            /\b(kirjuta|loo|tee|lisa)\s+(skript|kood|loogika|trigger|päästik|funktsioon|timer|event)\b/i.test(lower);
+
+        if (isProgramming) {
+            return {
+                category: 'PROGRAMMEERIMINE',
+                title: 'Programmeerimine & Loogika',
+                icon: '💻',
+                explanation: 'Kasutaja soovib luua või parandada mänguloogikat, skriptida päästikuid (triggers) või siluda koodi.',
+                targetAction: 'Koodi kompileerimine, skriptide lisamine ja loogikaplokkide seadistamine.'
+            };
+        }
+
+        // 2. LOOMINE (Building, 3D Worlds, Meshes, Spawning, Landscapes, Atmosphere)
+        const isCreation =
+            /^(tee|loo|ehita|valmista|lisa|pane|create|make|build|spawn|generate)\b/i.test(lower) ||
+            (/\b(mäng|game|maailm|world|kaart|map|areen|arena|loss|castle|robot|tank|dinosaurus|ufo|auto|lennuk|laev|saar|vulkaan|püramiid|tornaado|obby|parkuur|tycoon|simulator|hazard|shelter|spawn|tegelane|npc|vaenlane|boss|puud|kivid|meri|ookean|taevas|öö|päev)\b/i.test(lower) &&
+             /\b(tee|loo|ehita|lisa|pane|spawn|muuda|generate|build)\b/i.test(lower));
+
+        if (isCreation) {
+            return {
+                category: 'LOOMINE',
+                title: '3D Maailmade & Objektide Loomine',
+                icon: '🏗️',
+                explanation: 'Kasutaja soovib genereerida või modifitseerida 3D stseeni, lisada objekte, maastikku, ehitisi või tegelasi.',
+                targetAction: '3D geomeetria, materjalide ja objektide genereerimine ning paigutamine maailma.'
+            };
+        }
+
+        // 3. SUHTLEMINE (Chat, Q&A, Knowledge, Mathematics, Advice, Explanations)
+        return {
+            category: 'SUHTLEMINE',
+            title: 'Suhtlemine & Teadmised',
+            icon: '💬',
+            explanation: 'Kasutaja vestleb, küsib küsimusi, soovib matemaatika lahenduskäiku või otsib nõuandeid ja selgitusi.',
+            targetAction: 'Teadmistepõhine entsüklopeediline vastus, dialoog, matemaatiline lahenduskäik või nõustamine.'
+        };
+    }
+}
+
+/**
  * 5. General Knowledge & Facts Engine
  */
 export class PlayardGeneralKnowledge {
@@ -641,34 +814,10 @@ export class PlayardGeneralKnowledge {
             return null;
         }
 
-        // 1. Math and Calculations (Safe regex-based evaluator)
-        const mathMatch = q.match(/(?:palju on|arvuta|mis on)?\s*(\d+(?:\.\d+)?)\s*([\+\-\*\/x×÷\^])\s*(\d+(?:\.\d+)?)/i);
-        if (mathMatch) {
-            const a = parseFloat(mathMatch[1]);
-            const op = mathMatch[2];
-            const b = parseFloat(mathMatch[3]);
-            let res = 0;
-            if (op === '+') res = a + b;
-            else if (op === '-') res = a - b;
-            else if (op === '*' || op === 'x' || op === '×') res = a * b;
-            else if (op === '/' || op === '÷') res = b !== 0 ? Math.round((a / b) * 1000) / 1000 : 0;
-            else if (op === '^') res = Math.pow(a, b);
-            return `🧮 **Matemaatika:** ${a} ${op} ${b} = ${res}`;
-        }
-
-        // Square root check
-        const sqrtMatch = q.match(/(?:ruutjuur|sqrt)\s*(?:arvust\s*)?(\d+(?:\.\d+)?)/i);
-        if (sqrtMatch) {
-            const num = parseFloat(sqrtMatch[1]);
-            return `🧮 **Matemaatika:** √${num} = ${Math.sqrt(num)}`;
-        }
-
-        // Percentage check
-        const percentMatch = q.match(/(\d+(?:\.\d+)?)\s*%\s*(?:arvust|-st)?\s*(\d+(?:\.\d+)?)/i);
-        if (percentMatch) {
-            const pct = parseFloat(percentMatch[1]);
-            const val = parseFloat(percentMatch[2]);
-            return `🧮 **Matemaatika:** ${pct}% arvust ${val} = ${(pct / 100) * val}`;
+        // 1. Math and Calculations (Natural language and verbal solver)
+        const mathAnswer = PlayardMathEngine.evaluateMathQuery(query);
+        if (mathAnswer) {
+            return mathAnswer;
         }
 
         // 2. Geography, History & Countries

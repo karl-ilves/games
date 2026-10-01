@@ -336,6 +336,10 @@ class PlayardAiApp {
             modal.style.display = 'flex';
         }
     }
+
+    public triage(input: string) {
+        return ConversationEngine.triageInput(input);
+    }
 }
 
 // Start application

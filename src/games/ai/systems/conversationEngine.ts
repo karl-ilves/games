@@ -1,7 +1,9 @@
-import type { AiIntentType, AiSafetyReport } from '../types';
+import type { AiIntentType, AiSafetyReport, AiOperationalCategory, AiTaskTriage } from '../types';
 import { CodeSandbox } from './codeSandbox';
 import {
     PlayardGeneralKnowledge,
+    PlayardMathEngine,
+    PlayardTaskTriageEngine,
     PLAYARD_PIPELINE_STAGES,
     AiCodeAndSystemEngine,
     PLAYARD_GENRES_CATALOG,
@@ -20,6 +22,8 @@ import {
 
 export interface ParsedCommand {
     intent: AiIntentType;
+    category?: AiOperationalCategory;
+    triage?: AiTaskTriage;
     confidence: number;
     rawText: string;
     actionTarget?: string;
@@ -67,9 +71,27 @@ export class ConversationEngine {
     ];
 
     /**
-     * Parses user command into structured intent, parameters, and safety analysis.
+     * Triages user command into one of 3 operational categories:
+     * - LOOMINE (Building / 3D Worlds / Meshes)
+     * - PROGRAMMEERIMINE (Coding / Logic / Scripting / Triggers)
+     * - SUHTLEMINE (Chat / Q&A / Knowledge / Mathematics)
+     */
+    public static triageInput(input: string): AiTaskTriage {
+        return PlayardTaskTriageEngine.classify(input);
+    }
+
+    /**
+     * Parses user command into structured intent, parameters, safety analysis, and operational category.
      */
     public static parseInput(input: string, currentContext?: any): ParsedCommand {
+        const cmd = this.internalParseInput(input, currentContext);
+        const triage = PlayardTaskTriageEngine.classify(input);
+        cmd.category = triage.category;
+        cmd.triage = triage;
+        return cmd;
+    }
+
+    private static internalParseInput(input: string, currentContext?: any): ParsedCommand {
         const text = input.trim();
         const safetyReport = CodeSandbox.inspectScriptCode(text);
 

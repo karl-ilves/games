@@ -7,11 +7,23 @@ export interface AiBuildStep {
     details?: any;
 }
 
+export type AiOperationalCategory = 'LOOMINE' | 'PROGRAMMEERIMINE' | 'SUHTLEMINE';
+
+export interface AiTaskTriage {
+    category: AiOperationalCategory;
+    title: string;
+    icon: string;
+    explanation: string;
+    targetAction: string;
+}
+
 export interface AiMessage {
     id: string;
     sender: 'user' | 'ai' | 'system';
     text: string;
     timestamp: number;
+    category?: AiOperationalCategory;
+    triage?: AiTaskTriage;
     clarificationOptions?: string[];
     codeSnippet?: string;
     steps?: AiBuildStep[];
