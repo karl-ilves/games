@@ -6,6 +6,7 @@ import { AvatarRig } from '../../shared/avatar/AvatarRig';
 import { InGameEmotesWidget } from '../../shared/avatar/InGameEmotesWidget';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
 import { translateDOM, t } from '../../shared/i18n_dict';
+import { aiTierService, AI_TIER_CONFIGS, type PlayardAiTier } from '../../shared/aiTierService';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -2933,6 +2934,9 @@ async function initStudio() {
         get currentVehicle() { return currentVehicle; },
         get playTestWorldSnapshots() { return playTestWorldSnapshots; },
         get aiContextMemory() { return aiContextMemory; },
+        aiTierService,
+        AI_TIER_CONFIGS,
+        updateAiTierDisplay,
         keys
     };
 
@@ -7342,6 +7346,79 @@ export function updateAiAssistantLocalization() {
     });
 }
 
+export function updateAiTierDisplay() {
+    const tier = aiTierService.getTier();
+    const config = aiTierService.getActiveConfig();
+    const usage = aiTierService.getDailyUsage();
+
+    const badgeEl = document.getElementById('ai-current-tier-badge');
+    if (badgeEl) {
+        badgeEl.textContent = config.badge;
+        badgeEl.style.color = config.accentColor;
+        badgeEl.style.borderColor = config.accentColor;
+        badgeEl.style.background = `${config.accentColor}25`;
+    }
+
+    const usedEl = document.getElementById('ai-quota-used');
+    const maxEl = document.getElementById('ai-quota-max');
+    if (usedEl) {
+        usedEl.textContent = usage.usedToday.toString();
+        usedEl.style.color = usage.usedToday >= usage.dailyLimit ? '#ef4444' : config.accentColor;
+    }
+    if (maxEl) {
+        maxEl.textContent = usage.dailyLimit.toLocaleString();
+    }
+
+    const pbxBalEl = document.getElementById('ai-modal-pbx-amount');
+    if (pbxBalEl) {
+        pbxBalEl.textContent = yardService.getPlaybux().toLocaleString();
+    }
+
+    // Update active tier indicators on modal cards
+    document.querySelectorAll('.ai-tier-card').forEach(card => {
+        const cardTier = card.getAttribute('data-tier') as PlayardAiTier;
+        const btn = card.querySelector('.btn-select-ai-tier') as HTMLButtonElement | null;
+        if (cardTier === tier) {
+            (card as HTMLElement).style.borderColor = '#10b981';
+            (card as HTMLElement).style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.3)';
+            if (btn) {
+                btn.textContent = 'Aktiivne tase ✅';
+                btn.style.background = 'rgba(16, 185, 129, 0.2)';
+                btn.style.color = '#34d399';
+                btn.style.border = '1px solid #10b981';
+                btn.disabled = true;
+                btn.style.cursor = 'default';
+            }
+        } else {
+            (card as HTMLElement).style.boxShadow = 'none';
+            if (btn) {
+                btn.disabled = false;
+                btn.style.cursor = 'pointer';
+                const targetCfg = AI_TIER_CONFIGS[cardTier];
+                if (targetCfg.pricePbx === 0) {
+                    btn.textContent = 'Vali Free';
+                    btn.style.background = 'transparent';
+                    btn.style.color = '#38bdf8';
+                    btn.style.border = '1px solid #38bdf8';
+                } else {
+                    btn.textContent = `Vali ${targetCfg.name} (${targetCfg.pricePbx} PBX)`;
+                    btn.style.border = 'none';
+                    if (cardTier === 'PRO') {
+                        btn.style.background = 'linear-gradient(135deg, #9333ea, #a855f7)';
+                        btn.style.color = '#fff';
+                    } else if (cardTier === 'PLUS') {
+                        btn.style.background = 'linear-gradient(135deg, #ca8a04, #eab308)';
+                        btn.style.color = '#000';
+                    } else {
+                        btn.style.background = 'linear-gradient(135deg, #e11d48, #f43f5e)';
+                        btn.style.color = '#fff';
+                    }
+                }
+            }
+        }
+    });
+}
+
 export function setupAiAssistantEvents() {
     const aiModal = document.getElementById('ai-assistant-modal');
     const toggleBtn = document.getElementById('btn-toggle-ai');
@@ -7350,6 +7427,7 @@ export function setupAiAssistantEvents() {
     const inputField = document.getElementById('ai-prompt-input') as HTMLInputElement | null;
 
     updateAiAssistantLocalization();
+    updateAiTierDisplay();
 
     if (toggleBtn && aiModal) {
         toggleBtn.addEventListener('click', () => {
@@ -7357,6 +7435,7 @@ export function setupAiAssistantEvents() {
             aiModal.style.display = isShown ? 'none' : 'flex';
             if (!isShown) {
                 updateAiAssistantLocalization();
+                updateAiTierDisplay();
                 if (inputField) inputField.focus();
             }
         });
@@ -7367,6 +7446,46 @@ export function setupAiAssistantEvents() {
             aiModal.style.display = 'none';
         });
     }
+
+    // AI Tiers Upgrade Modal events
+    const openTiersBtn = document.getElementById('btn-open-ai-tiers');
+    const tiersModal = document.getElementById('modal-ai-tiers');
+    const closeTiersBtn = document.getElementById('btn-close-ai-tiers');
+    const closeTiersBottomBtn = document.getElementById('btn-close-ai-tiers-bottom');
+
+    const openTiers = () => {
+        if (tiersModal) {
+            tiersModal.style.display = 'flex';
+            updateAiTierDisplay();
+        }
+    };
+    const closeTiers = () => {
+        if (tiersModal) tiersModal.style.display = 'none';
+    };
+
+    openTiersBtn?.addEventListener('click', openTiers);
+    closeTiersBtn?.addEventListener('click', closeTiers);
+    closeTiersBottomBtn?.addEventListener('click', closeTiers);
+
+    // Tier selection buttons
+    document.querySelectorAll('.btn-select-ai-tier').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const targetTier = (e.currentTarget as HTMLElement).getAttribute('data-tier') as PlayardAiTier;
+            if (!targetTier) return;
+            const res = aiTierService.upgradeToTier(targetTier);
+            updateAiTierDisplay();
+            if (res.success) {
+                alert(res.message);
+                closeTiers();
+            } else {
+                alert(res.message);
+            }
+        });
+    });
+
+    aiTierService.subscribe(() => {
+        updateAiTierDisplay();
+    });
 
     const handleSend = () => {
         if (!inputField) return;
@@ -8822,6 +8941,39 @@ export function executeAiBuild(promptText: string) {
         chatLog.appendChild(userMsg);
         chatLog.scrollTop = chatLog.scrollHeight;
     }
+
+    // 🛡️ 1. PLAYARD AI LIMIT & TIER ENFORCEMENT
+    const quotaCheck = aiTierService.canMakeRequest();
+    if (!quotaCheck.allowed) {
+        const activeCfg = AI_TIER_CONFIGS[quotaCheck.tier];
+        const quotaMsg = quotaCheck.message || 'Sa oled tänase AI limiidi ära kasutanud. Proovi uuesti pärast limiidi lähtestamist või vali kõrgem AI tase.';
+        if (chatLog) {
+            const aiMsg = document.createElement('div');
+            aiMsg.style.cssText = 'background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 10px; padding: 12px; color: #fca5a5; max-width: 90%; align-self: flex-start; line-height: 1.45; font-size: 0.85rem;';
+            aiMsg.innerHTML = `
+                🚫 <strong>${quotaMsg}</strong><br><br>
+                <span>Aktiivne tase: <strong style="color: ${activeCfg.accentColor};">${activeCfg.badge}</strong> (${quotaCheck.dailyLimit} küsimust päevas).</span><br>
+                <span>Täna kasutatud: <strong>${quotaCheck.usedToday} / ${quotaCheck.dailyLimit}</strong>.</span><br><br>
+                <button id="btn-chat-open-tiers" style="background: linear-gradient(135deg, #eab308, #ca8a04); border: none; color: #000; font-weight: 800; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+                    ⭐ Vali kõrgem AI tase (PRO / PLUS / VIP)
+                </button>
+            `;
+            chatLog.appendChild(aiMsg);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            aiMsg.querySelector('#btn-chat-open-tiers')?.addEventListener('click', () => {
+                const tiersModal = document.getElementById('modal-ai-tiers');
+                if (tiersModal) {
+                    tiersModal.style.display = 'flex';
+                    updateAiTierDisplay();
+                }
+            });
+        }
+        return quotaMsg;
+    }
+
+    // Record request quota
+    aiTierService.recordRequest();
+    updateAiTierDisplay();
 
     const p = promptText.toLowerCase().trim();
     let generatedObjectsCount = 0;

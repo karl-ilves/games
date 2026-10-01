@@ -9,6 +9,7 @@ import { PreviewViewport } from './world/previewViewport';
 import { ChatView } from './ui/chatView';
 import { StepTrackerView } from './ui/stepTrackerView';
 import { yardService } from '../../shared/yardService';
+import { aiTierService, AI_TIER_CONFIGS } from '../../shared/aiTierService';
 
 class PlayardAiApp {
     public state: AiState;
@@ -140,6 +141,18 @@ class PlayardAiApp {
         if (!input.trim() || this.state.getIsBuilding()) return;
 
         this.state.addUserMessage(input);
+
+        // AI Tier ja 24h päevalimiidi kontroll
+        const quotaCheck = aiTierService.canMakeRequest();
+        if (!quotaCheck.allowed) {
+            const activeCfg = AI_TIER_CONFIGS[quotaCheck.tier];
+            this.state.addAiMessage(
+                `🚫 ${quotaCheck.message}\n\nAktiivne tase: ${activeCfg.badge} (${quotaCheck.dailyLimit} küsimust päevas).\nTänaseks kasutatud: ${quotaCheck.usedToday} / ${quotaCheck.dailyLimit}.\nVali kõrgem AI tase (PRO / PLUS / VIP) või oota 24h limiidi lähtestamiseni.`
+            );
+            return;
+        }
+        aiTierService.recordRequest();
+
         const parsed = ConversationEngine.parseInput(input, this.state.getActiveScene());
 
         // Turvakontroll

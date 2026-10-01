@@ -2009,6 +2009,15 @@ await (async () => {
             }
             console.log("   ✅ Playard AI button and modal verified in Creator Studio!");
 
+            // Initialize VIP tier during comprehensive prompt battery so it does not exhaust Free daily 20 quota early
+            await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                if (cs && cs.aiTierService) {
+                    cs.aiTierService.setTier('VIP');
+                    cs.aiTierService.resetDailyUsage();
+                }
+            });
+
             let lastAiResponse = '';
             const submitAi = async (prompt) => {
                 for (let retry = 0; retry < 5; retry++) {
@@ -2407,6 +2416,116 @@ await (async () => {
                 throw new Error(`Expected at least 2 runways after parallel runway command, got ${runwaysCount}`);
             }
             console.log("   ✅ Playard AI 18-Point Full Feature Set verified in Creator Studio!");
+
+            // --- Testing Playard AI Tiers, Prices, and Limits (FREE, PRO, PLUS, VIP) ---
+            console.log("   Testing Playard AI Tiers, Prices & Limits (FREE, PRO, PLUS, VIP)...");
+            const aiTierTest = await page.evaluate(async () => {
+                const cs = window.creatorStudio;
+                const tierService = cs.aiTierService;
+                const configs = cs.AI_TIER_CONFIGS;
+
+                // 1. Initial State: Free tier, 20 limit
+                tierService.resetDailyUsage();
+                tierService.setTier('FREE');
+                const initialTier = tierService.getTier();
+                const initialUsage = tierService.getDailyUsage();
+
+                // 2. DOM elements existence
+                const statusBar = document.getElementById('ai-tier-status-bar');
+                const tierBadge = document.getElementById('ai-current-tier-badge');
+                const quotaUsedEl = document.getElementById('ai-quota-used');
+                const quotaMaxEl = document.getElementById('ai-quota-max');
+                const openTiersBtn = document.getElementById('btn-open-ai-tiers');
+                const tiersModal = document.getElementById('modal-ai-tiers');
+
+                cs.updateAiTierDisplay();
+
+                const domChecks = {
+                    hasStatusBar: !!statusBar,
+                    hasTierBadge: !!tierBadge && tierBadge.textContent.includes('FREE'),
+                    hasQuotaUsed: !!quotaUsedEl,
+                    hasQuotaMax: !!quotaMaxEl && quotaMaxEl.textContent === '20',
+                    hasOpenBtn: !!openTiersBtn,
+                    hasModal: !!tiersModal
+                };
+
+                // 3. Simulate hitting the 20 questions limit
+                tierService.simulateUsage(20);
+                const limitReachedCheck = tierService.canMakeRequest();
+                const blockedResult = cs.executeAiBuild('mis on 2+2?');
+
+                // 4. Upgrade to PRO (100 PBX)
+                // Ensure user has at least 2000 PBX for tests
+                if (window.yardService) {
+                    window.yardService.addYards(2000, 'Test AI Tier Upgrades');
+                }
+                const pbxBefore = window.yardService ? window.yardService.getPlaybux() : 0;
+                const proUpgradeRes = tierService.upgradeToTier('PRO');
+                const pbxAfterPro = window.yardService ? window.yardService.getPlaybux() : 0;
+                const proTier = tierService.getTier();
+                const proUsage = tierService.getDailyUsage();
+                const proCanRequest = tierService.canMakeRequest();
+
+                // 5. Upgrade to PLUS (300 PBX) and VIP (750 PBX)
+                const plusUpgradeRes = tierService.upgradeToTier('PLUS');
+                const plusTier = tierService.getTier();
+                const plusUsage = tierService.getDailyUsage();
+
+                const vipUpgradeRes = tierService.upgradeToTier('VIP');
+                const vipTier = tierService.getTier();
+                const vipUsage = tierService.getDailyUsage();
+
+                // Restore back to VIP or PRO and reset usage
+                tierService.resetDailyUsage();
+
+                return {
+                    initialTier,
+                    initialDailyLimit: initialUsage.dailyLimit,
+                    domChecks,
+                    limitReachedAllowed: limitReachedCheck.allowed,
+                    limitMessage: limitReachedCheck.message,
+                    blockedResult,
+                    proUpgradeSuccess: proUpgradeRes.success,
+                    proDeductedPbx: pbxBefore - pbxAfterPro,
+                    proTier,
+                    proDailyLimit: proUsage.dailyLimit,
+                    proCanRequest: proCanRequest.allowed,
+                    plusTier,
+                    plusDailyLimit: plusUsage.dailyLimit,
+                    vipTier,
+                    vipDailyLimit: vipUsage.dailyLimit
+                };
+            });
+
+            console.log("   Playard AI Tier & Limit Verification:", aiTierTest);
+            if (aiTierTest.initialTier !== 'FREE' || aiTierTest.initialDailyLimit !== 20) {
+                throw new Error(`Expected initial tier to be FREE with 20 daily limit! Got ${aiTierTest.initialTier} (${aiTierTest.initialDailyLimit})`);
+            }
+            if (!aiTierTest.domChecks.hasStatusBar || !aiTierTest.domChecks.hasTierBadge || !aiTierTest.domChecks.hasQuotaMax) {
+                throw new Error(`AI Tier DOM status bar elements missing: ${JSON.stringify(aiTierTest.domChecks)}`);
+            }
+            if (aiTierTest.limitReachedAllowed !== false) {
+                throw new Error("AI failed to enforce daily limit when 20 questions reached!");
+            }
+            if (!aiTierTest.limitMessage.includes('Sa oled tänase AI limiidi ära kasutanud')) {
+                throw new Error(`Expected exact limit message, got: "${aiTierTest.limitMessage}"`);
+            }
+            if (!aiTierTest.blockedResult.includes('Sa oled tänase AI limiidi ära kasutanud')) {
+                throw new Error(`executeAiBuild failed to return limit warning when quota exhausted: "${aiTierTest.blockedResult}"`);
+            }
+            if (!aiTierTest.proUpgradeSuccess || aiTierTest.proTier !== 'PRO' || aiTierTest.proDailyLimit !== 100 || !aiTierTest.proCanRequest) {
+                throw new Error(`PRO tier upgrade failed! State: ${JSON.stringify(aiTierTest)}`);
+            }
+            if (aiTierTest.proDeductedPbx !== 100) {
+                throw new Error(`Expected 100 PBX deducted for PRO tier, got ${aiTierTest.proDeductedPbx}`);
+            }
+            if (aiTierTest.plusTier !== 'PLUS' || aiTierTest.plusDailyLimit !== 500) {
+                throw new Error(`PLUS tier upgrade verification failed: ${JSON.stringify(aiTierTest)}`);
+            }
+            if (aiTierTest.vipTier !== 'VIP' || aiTierTest.vipDailyLimit !== 2000) {
+                throw new Error(`VIP tier upgrade verification failed: ${JSON.stringify(aiTierTest)}`);
+            }
+            console.log("   ✅ Playard AI Tiers, Prices & Limits (FREE, PRO, PLUS, VIP) verified successfully!");
 
             // Test Undo and Redo
             console.log("   Testing Undo and Redo...");
