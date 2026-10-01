@@ -11103,24 +11103,32 @@ await (async () => {
                 msgs = ai.state.getMessages();
                 const reply3 = msgs[msgs.length - 1]?.text || '';
 
+                // 5. Identity question: "Kes sa oled vms?"
+                await ai.handleUserInput('Kes sa oled vms?');
+                await new Promise(r => setTimeout(r, 300));
+                msgs = ai.state.getMessages();
+                const replyIdentity = msgs[msgs.length - 1]?.text || '';
+
                 return {
                     isCreation: triageCreation.category === 'LOOMINE',
                     isCoding: triageCoding.category === 'PROGRAMMEERIMINE',
                     isChat: triageChat.category === 'SUHTLEMINE',
                     math1Pluss1On2: reply1.includes('1 pluss 1 on 2') && reply1.includes('1 + 1 = 2'),
                     mathYksPlussYks: reply2.includes('1 + 1 = 2'),
-                    math5Miinus2: reply3.includes('5 miinus 2 on 3') && reply3.includes('5 - 2 = 3')
+                    math5Miinus2: reply3.includes('5 miinus 2 on 3') && reply3.includes('5 - 2 = 3'),
+                    hasIdentity: replyIdentity.toLowerCase().includes('mina olen playard game creator ai')
                 };
             });
 
-            console.log("   Tri-Mode Triage & Natural Language Math Results:", triageAndMathTest);
+            console.log("   Tri-Mode Triage, Natural Language Math & Identity Results:", triageAndMathTest);
             if (
                 !triageAndMathTest.isCreation || !triageAndMathTest.isCoding || !triageAndMathTest.isChat ||
-                !triageAndMathTest.math1Pluss1On2 || !triageAndMathTest.mathYksPlussYks || !triageAndMathTest.math5Miinus2
+                !triageAndMathTest.math1Pluss1On2 || !triageAndMathTest.mathYksPlussYks || !triageAndMathTest.math5Miinus2 ||
+                !triageAndMathTest.hasIdentity
             ) {
-                throw new Error("Tri-Mode Triage or Natural Language Math test failed: " + JSON.stringify(triageAndMathTest));
+                throw new Error("Tri-Mode Triage, Natural Language Math or Identity test failed: " + JSON.stringify(triageAndMathTest));
             }
-            console.log("   ✅ Tri-Mode Triage (LOOMINE / PROGRAMMEERIMINE / SUHTLEMINE) & Natural Language Math ('1 pluss 1 on 2') verified!");
+            console.log("   ✅ Tri-Mode Triage, Natural Language Math ('1 pluss 1 on 2') & Identity ('Mina olen Playard Game Creator AI') verified!");
 
             console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage & Natural Math) tests passed successfully!");
 

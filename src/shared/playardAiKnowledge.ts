@@ -820,6 +820,16 @@ export class PlayardGeneralKnowledge {
             return mathAnswer;
         }
 
+        // 1.5 Identity & Name: "Kes sa oled?" / "Who are you?"
+        if (
+            q.includes('kes sa oled') || q.includes('mis sa oled') || q.includes('kes sa selline oled') ||
+            q.includes('kes sa oled vms') || q.includes('mis su nimi') || q.includes('who are you') ||
+            q.includes('what are you') || q.includes('tutvusta ennast') || q.includes('mis ai sa oled') ||
+            q.includes('mis ai see on') || q === 'kes sa oled' || q === 'kes sa oled?'
+        ) {
+            return '🤖 Mina olen Playard Game Creator AI! Oskan luua 3D mänge, ehitada maailmu ja objekte, kirjutada ning siluda koodi ja skripte, lahendada matemaatikat ning vastata kõikidele sinu küsimustele.';
+        }
+
         // 2. Geography, History & Countries
         if (q.includes('eesti') || q.includes('estonia')) {
             return '🇪🇪 **Eesti Vabariik:** Riik Põhja-Euroopas Läänemere ääres. Pealinn on Tallinn, riigikeel eesti keel, rahvaarv umbes 1.36 miljonit, pindala 45 339 km². Eesti on tuntud oma e-riigi lahenduste ja kauni looduse poolest.';

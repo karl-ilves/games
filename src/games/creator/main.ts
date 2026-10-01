@@ -10737,11 +10737,11 @@ export function executeAiBuild(promptText: string) {
             aiResponse = `💾 <strong>Saving your Game:</strong><br>Click <strong>💾 Save Game</strong> (or <strong>🚀 Submit for Review</strong> to publish for admin approval)! Your games are safely stored in <strong>📂 My Games</strong>.`;
         }
 
-    } else if (p.includes('kes sa oled') || p.includes('mis sa oled') || p.includes('who are you') || p.includes('what are you')) {
+    } else if (p.includes('kes sa oled') || p.includes('mis sa oled') || p.includes('who are you') || p.includes('what are you') || p.includes('kes sa selline oled') || p.includes('tutvusta ennast')) {
         if (isAdmin) {
-            aiResponse = `🤖 <strong>Olen sinu Playard AI Mänguassistent!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, genereerida uusi unikaalseid 3D objekte (dinosaurused, robotid, lossid jne), arvutada matemaatikat (nt 1+1), vastata maailma faktidele (nt mis lennukid on suurimad) ning programmeerida mänguloogikat!`;
+            aiResponse = `🤖 <strong>Mina olen Playard Game Creator AI!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, genereerida uusi unikaalseid 3D objekte (dinosaurused, robotid, lossid jne), arvutada matemaatikat (nt 1+1), vastata maailma faktidele (nt mis lennukid on suurimad) ning programmeerida mänguloogikat!`;
         } else {
-            aiResponse = `🤖 <strong>I am your Playard AI Game Assistant!</strong><br>I can build 3D worlds, construct asphalt roads with drivable cars, create custom 3D models (dinosaurs, robots, castles), solve math (1+1), answer general knowledge (e.g. largest airplanes), and program interactive game logic!`;
+            aiResponse = `🤖 <strong>Mina olen Playard Game Creator AI (I am Playard Game Creator AI)!</strong><br>I can build 3D worlds, construct asphalt roads with drivable cars, create custom 3D models (dinosaurs, robots, castles), solve math (1+1), answer general knowledge (e.g. largest airplanes), and program interactive game logic!`;
         }
 
     } else if (p.includes('mis mäng see on') || p.includes('mis mang see on') || p.includes('mis on playard') || p.includes('what is playard') || p.includes('what game is this')) {
