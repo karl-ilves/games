@@ -672,3 +672,279 @@ export class PlayardGeneralKnowledge {
         return null;
     }
 }
+
+/**
+ * 6. Physics, Vehicles, Locomotion & Weather Engine
+ */
+export class PlayardPhysicsAndWeatherEngine {
+    public static getPhysicsSpec() {
+        return {
+            gravity: -9.81,
+            terminalVelocity: 50,
+            collisionSystems: ['AABB_Box', 'Raycast_Ground', 'Sphere_Radius', 'Convex_Hull'],
+            locomotionModes: {
+                walk: { speed: 5, anim: 'walk' },
+                run: { speed: 10, anim: 'run' },
+                jump: { force: 9.8, doubleJump: true },
+                fly: { speed: 20, verticalThrust: 8 },
+                swim: { surfaceY: 0, maxDepth: -10, buoyancy: 1.2 },
+                climb: { speed: 4, wallStick: true }
+            },
+            vehiclePhysics: {
+                airplane: { liftCoeff: 0.8, dragCoeff: 0.05, pitchRate: 1.5, bankRate: 2.0, maxThrust: 45 },
+                car: { engineTorque: 350, steerAngle: 35, driftFriction: 0.85, brakePower: 500 },
+                boat: { waterFriction: 0.92, buoyancyDisplacement: 2.5, rudderPower: 1.8 },
+                train: { trackGuidance: true, bogieWobble: 0.02, switchPoints: true, maxSpeed: 40 }
+            },
+            weatherTypes: ['clear', 'rain', 'snow', 'windy', 'storm', 'overcast', 'thunderstorm'],
+            lighting: ['directional_sun', 'ambient_sky', 'point_light_torch', 'spot_light_flashlight', 'shadow_cascades']
+        };
+    }
+}
+
+/**
+ * 7. NPC AI, Pathfinding, Bosses & Story Systems
+ */
+export interface NpcBehaviorTree {
+    npcType: 'enemy' | 'friendly' | 'boss';
+    name: string;
+    detectionRadius: number;
+    attackRadius: number;
+    phases?: Array<{ name: string; healthThreshold: number; specialMove: string }>;
+    dialogueTree?: Array<{
+        nodeId: string;
+        text: string;
+        options: Array<{ label: string; nextNodeId?: string; action?: string; rewardPbx?: number }>;
+    }>;
+}
+
+export class PlayardNpcAndStoryEngine {
+    public static createNpcConfig(type: 'enemy' | 'friendly' | 'boss', name: string): NpcBehaviorTree {
+        if (type === 'boss') {
+            return {
+                npcType: 'boss',
+                name,
+                detectionRadius: 40,
+                attackRadius: 8,
+                phases: [
+                    { name: 'Faas 1: Põhirünnak', healthThreshold: 100, specialMove: 'laser_sweep' },
+                    { name: 'Faas 2: Kaitsekilp & Kutsikad', healthThreshold: 50, specialMove: 'summon_minions' },
+                    { name: 'Faas 3: Raevurežiim', healthThreshold: 20, specialMove: 'enrage_slam' }
+                ]
+            };
+        }
+        if (type === 'enemy') {
+            return {
+                npcType: 'enemy',
+                name,
+                detectionRadius: 20,
+                attackRadius: 3
+            };
+        }
+        return {
+            npcType: 'friendly',
+            name,
+            detectionRadius: 6,
+            attackRadius: 0,
+            dialogueTree: [
+                {
+                    nodeId: 'start',
+                    text: 'Tere! Kas otsid Playardi maailmas uusi seiklusi ja ülesandeid?',
+                    options: [
+                        { label: 'Jah, anna mulle ülesanne!', nextNodeId: 'quest_give', rewardPbx: 25 },
+                        { label: 'Ei, vaatan lihtsalt ringi.', nextNodeId: 'farewell' }
+                    ]
+                }
+            ]
+        };
+    }
+}
+
+/**
+ * 8. Persistence, Analytics & Social Systems
+ */
+export class PlayardDataAndSocialEngine {
+    public static getArchitecture() {
+        return {
+            saveSystems: ['auto_save_60s', 'checkpoint_trigger', 'cloud_db_sync', 'delta_compression'],
+            socialSystems: ['friends_list', 'party_groups', 'multiplayer_lobbies', 'private_servers', 'global_chat'],
+            analyticsMetrics: ['ccu_players', 'session_length_minutes', 'retention_d1_d7', 'fps_performance', 'crash_reports'],
+            roles: ['Player', 'Creator', 'Admin', 'Playard Owner']
+        };
+    }
+
+    public static inspectSecurityAndEconomy(transaction: { user: string; pbxChange: number; reason: string; timestamp: number }): {
+        safe: boolean;
+        flagged: boolean;
+        reason?: string;
+    } {
+        if (transaction.pbxChange > 10000 && !transaction.reason.includes('admin') && !transaction.reason.includes('verified_purchase')) {
+            return { safe: false, flagged: true, reason: 'Ebatavaliselt suur PBX liikumine ilma administraatori kinnituseta' };
+        }
+        return { safe: true, flagged: false };
+    }
+}
+
+/**
+ * 9. Natural Language to Technical Plan Compiler
+ * Converts informal language (e.g. "Ma tahan mängu, kus tornaado tuleb iga kahe minuti tagant ja mängijad peavad kristalle koguma")
+ * into complete technical subsystems: gameLogic, timer, hazard, items, inventory, rewards, UI, server authority, test plan.
+ */
+export interface TechnicalGamePlan {
+    prompt: string;
+    gameTitle: string;
+    gameLogic: {
+        coreLoop: string;
+        winCondition: string;
+        loseCondition: string;
+    };
+    timerSystem: {
+        intervalSeconds: number;
+        countdownLabel: string;
+        cyclicalEvent: string;
+    };
+    hazardSystem: {
+        type: string;
+        spawnInterval: number;
+        movementPath: string;
+        damage: number;
+    };
+    itemSystem: {
+        collectibleType: string;
+        spawnCount: number;
+        respawnCooldownSeconds: number;
+    };
+    inventorySystem: {
+        trackedItem: string;
+        capacity: number;
+        hudSlot: string;
+    };
+    rewardSystem: {
+        pbxPerItem: number;
+        survivalBonus: number;
+    };
+    uiSystem: {
+        elements: string[];
+    };
+    serverLogic: {
+        authoritativeValidation: boolean;
+        antiCheatRules: string[];
+    };
+    testPlan: string[];
+}
+
+export class PlayardNaturalLanguageCompiler {
+    public static compileToTechnicalPlan(userPrompt: string): TechnicalGamePlan {
+        const p = userPrompt.toLowerCase();
+        const hasTornado = p.includes('tornaado') || p.includes('tornado');
+        const hasCrystals = p.includes('kristall') || p.includes('crystal') || p.includes('münt') || p.includes('coin');
+        const twoMinutes = p.includes('kahe minuti') || p.includes('kaks minutit') || p.includes('2 minut') || p.includes('2 min') || p.includes('iga 2 minuti');
+
+
+        return {
+            prompt: userPrompt,
+            gameTitle: hasTornado ? 'Tornaado Kristallikorje Seiklus' : 'Playard Seiklusmäng',
+            gameLogic: {
+                coreLoop: 'Mängijad uurivad maastikku, koguvad ressursse ja varjuvad regulaarselt saabuvate ohtude eest.',
+                winCondition: 'Kogu vähemalt 10 kristalli ja ela üle 3 ohu lainet.',
+                loseCondition: 'Mängija HP langeb 0 peale või ohuobjekt pühib mängija areenilt.'
+            },
+            timerSystem: {
+                intervalSeconds: twoMinutes ? 120 : 60,
+                countdownLabel: 'Tormi hoiatus: ',
+                cyclicalEvent: hasTornado ? 'Hävitava tornaado liikumine üle maastiku' : 'Ohu laine käivitus'
+            },
+            hazardSystem: {
+                type: hasTornado ? 'tornado' : 'disaster_zone',
+                spawnInterval: twoMinutes ? 120 : 60,
+                movementPath: 'Ringikujuline liikumine üle mänguala ohutsooni',
+                damage: 50
+            },
+            itemSystem: {
+                collectibleType: hasCrystals ? 'glowing_crystal' : 'gold_coin',
+                spawnCount: 12,
+                respawnCooldownSeconds: 30
+            },
+            inventorySystem: {
+                trackedItem: hasCrystals ? 'Kristallid' : 'Mündid',
+                capacity: 25,
+                hudSlot: 'hud_inventory_crystal_bag'
+            },
+            rewardSystem: {
+                pbxPerItem: 10,
+                survivalBonus: 50
+            },
+            uiSystem: {
+                elements: [
+                    'Disaster Timer Countdown (Taimer)',
+                    'Kristallide loendur (Inventory HUD)',
+                    'Terviseriba (HP bar)',
+                    'Ohuhoiatuse ekraanibänner (Hazard alert)',
+                    'Varjendi suunaviit (Safe Zone compass)'
+                ]
+            },
+            serverLogic: {
+                authoritativeValidation: true,
+                antiCheatRules: [
+                    'Server kontrollib mängija kaugust kristallist (< 3m) enne korje kinnitamist',
+                    'Server jõustab 30-sekundilise taastekkimise taimeri',
+                    'Tornaado tabamused arvutatakse serveris ja rakendatakse kohene kahju'
+                ]
+            },
+            testPlan: [
+                '1. Spawn kontroll: Mängija ja turvatsooni spawn koordinaatide verifitseerimine',
+                '2. Taimeri kontroll: Tsüklilise loenduri tiksumine ja sündmuse käivitus',
+                '3. Korje kontroll: Kristalli puudutamisel lisandub 1 ühik inventari ja +10 PBX',
+                '4. Taastekkimise kontroll: Kristall kaob ja tekib uuesti 30 sekundi pärast',
+                '5. Kokkupõrke kontroll: Tornaado läheduses registreeritakse oht ja mängija tervis väheneb'
+            ]
+        };
+    }
+
+    public static formatPlan(plan: TechnicalGamePlan): string {
+        const uiList = plan.uiSystem.elements.map(e => `• ${e}`).join('\n');
+        const testList = plan.testPlan.map(t => `• ${t}`).join('\n');
+        const antiCheat = plan.serverLogic.antiCheatRules.map(r => `• ${r}`).join('\n');
+        return `📐 **Playard AI Tehniline Plaan:** "${plan.gameTitle}"\n\n` +
+            `🎮 **1. Mänguloogika:** ${plan.gameLogic.coreLoop}\n` +
+            `   • Võit: ${plan.gameLogic.winCondition}\n   • Kaotus: ${plan.gameLogic.loseCondition}\n\n` +
+            `⏱️ **2. Taimer:** ${plan.timerSystem.intervalSeconds}s tsükliline intervall (${plan.timerSystem.cyclicalEvent})\n\n` +
+            `🌪️ **3. Ohusüsteem:** ${plan.hazardSystem.type} (kahju: ${plan.hazardSystem.damage} HP, ${plan.hazardSystem.movementPath})\n\n` +
+            `💎 **4. Esemete & Kristallide süsteem:** ${plan.itemSystem.spawnCount} objekti, ${plan.itemSystem.respawnCooldownSeconds}s taasteke\n\n` +
+            `🎒 **5. Inventari süsteem:** Mahutavus ${plan.inventorySystem.capacity} ühikut (${plan.inventorySystem.hudSlot})\n\n` +
+            `💰 **6. Preemiasüsteem:** +${plan.rewardSystem.pbxPerItem} PBX kristalli kohta, +${plan.rewardSystem.survivalBonus} PBX boonus\n\n` +
+            `🖥️ **7. Kasutajaliides (UI):**\n${uiList}\n\n` +
+            `🛡️ **8. Serveriloogika & Turvalisus:**\n${antiCheat}\n\n` +
+            `🧪 **9. Testimisplaan:**\n${testList}`;
+    }
+}
+
+
+/**
+ * 10. Project Memory & Non-Destructive Extension
+ */
+export class PlayardProjectMemoryManager {
+    public static preserveAndExtendScene(
+        existingScene: any,
+        newAdditions: { objects?: any[]; rules?: any }
+    ) {
+        if (!existingScene) return null;
+        const mergedObjects = [...(existingScene.objects || [])];
+        if (newAdditions.objects) {
+            for (const newObj of newAdditions.objects) {
+                if (!mergedObjects.some(o => o.id === newObj.id)) {
+                    mergedObjects.push(newObj);
+                }
+            }
+        }
+        return {
+            ...existingScene,
+            objects: mergedObjects,
+            rules: {
+                ...(existingScene.rules || {}),
+                ...(newAdditions.rules || {})
+            }
+        };
+    }
+}
+

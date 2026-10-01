@@ -10,7 +10,9 @@ import { ChatView } from './ui/chatView';
 import { StepTrackerView } from './ui/stepTrackerView';
 import { yardService } from '../../shared/yardService';
 import { aiTierService, AI_TIER_CONFIGS } from '../../shared/aiTierService';
-import { AiCodeAndSystemEngine } from '../../shared/playardAiKnowledge';
+import { AiCodeAndSystemEngine, PlayardNaturalLanguageCompiler, type TechnicalGamePlan } from '../../shared/playardAiKnowledge';
+
+
 
 class PlayardAiApp {
     public state: AiState;
@@ -223,7 +225,17 @@ class PlayardAiApp {
             return;
         }
 
+        // Loomuliku keele tehniline kompileerimine (9 alamsüsteemi)
+        if (parsed.intent === 'TECHNICAL_COMPILATION') {
+            const plan: TechnicalGamePlan = parsed.parameters?.plan;
+            if (plan) {
+                this.state.addAiMessage(PlayardNaturalLanguageCompiler.formatPlan(plan));
+                return;
+            }
+        }
+
         // Planeeri sammud
+
         const steps = StepPlanner.planSteps(parsed);
 
         this.state.setCurrentSteps(steps);

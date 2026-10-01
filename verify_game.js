@@ -10888,7 +10888,55 @@ await (async () => {
             }
             console.log("   ✅ Anti-Hallucination Guard (PlayBux official rules) & General Knowledge verified!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Conversation) tests passed successfully!");
+            // 22m. Test Natural Language to Technical Plan Compiler & Deep Capabilities
+            console.log("   Testing Natural Language to Technical Plan Compiler (9 Subsystems)...");
+            const compilerTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Natural Language input: tornado every 2 min and collect crystals
+                await ai.handleUserInput('Ma tahan mängu, kus tornaado tuleb iga kahe minuti tagant ja mängijad peavad kristalle koguma');
+                await new Promise(r => setTimeout(r, 400));
+                const msgs = ai.state.getMessages();
+                const planReply = msgs[msgs.length - 1]?.text || '';
+
+                const hasGameLogic = planReply.includes('1. Mänguloogika');
+                const has120sTimer = planReply.includes('120s tsükliline intervall');
+                const hasHazard = planReply.includes('3. Ohusüsteem') && planReply.includes('tornado');
+                const hasCrystals = planReply.includes('4. Esemete & Kristallide süsteem');
+                const hasInventory = planReply.includes('5. Inventari süsteem');
+                const hasRewards = planReply.includes('6. Preemiasüsteem') && planReply.includes('PBX');
+                const hasUI = planReply.includes('7. Kasutajaliides (UI)');
+                const hasServer = planReply.includes('8. Serveriloogika');
+                const hasTestPlan = planReply.includes('9. Testimisplaan');
+
+                return {
+                    hasGameLogic,
+                    has120sTimer,
+                    hasHazard,
+                    hasCrystals,
+                    hasInventory,
+                    hasRewards,
+                    hasUI,
+                    hasServer,
+                    hasTestPlan,
+                    sample: planReply.substring(0, 100)
+                };
+            });
+
+            console.log("   Technical Plan Compiler Results:", compilerTest);
+            if (
+                !compilerTest.hasGameLogic || !compilerTest.has120sTimer ||
+                !compilerTest.hasHazard || !compilerTest.hasCrystals ||
+                !compilerTest.hasInventory || !compilerTest.hasRewards ||
+                !compilerTest.hasUI || !compilerTest.hasServer ||
+                !compilerTest.hasTestPlan
+            ) {
+                throw new Error("Natural Language to Technical Plan compiler failed: " + JSON.stringify(compilerTest));
+            }
+            console.log("   ✅ Natural Language to Technical Plan Compiler (9 subsystems) verified!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler) tests passed successfully!");
+
 
 
             console.log("✅ All Playard Platform tests passed successfully!");

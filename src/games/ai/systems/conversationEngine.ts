@@ -1,6 +1,17 @@
 import type { AiIntentType, AiSafetyReport } from '../types';
 import { CodeSandbox } from './codeSandbox';
-import { PlayardGeneralKnowledge, PLAYARD_PIPELINE_STAGES, AiCodeAndSystemEngine, PLAYARD_GENRES_CATALOG, type PipelineStage } from '../../../shared/playardAiKnowledge';
+import {
+    PlayardGeneralKnowledge,
+    PLAYARD_PIPELINE_STAGES,
+    AiCodeAndSystemEngine,
+    PLAYARD_GENRES_CATALOG,
+    PlayardNaturalLanguageCompiler,
+    PlayardPhysicsAndWeatherEngine,
+    PlayardNpcAndStoryEngine,
+    PlayardDataAndSocialEngine,
+    PlayardProjectMemoryManager,
+    type PipelineStage
+} from '../../../shared/playardAiKnowledge';
 
 export interface ParsedCommand {
     intent: AiIntentType;
@@ -149,6 +160,23 @@ export class ConversationEngine {
                 safetyReport
             };
         }
+
+        // 0.4 Natural Language to Technical Plan Compiler (Muuda vabas keeles soov tehniliseks plaaniks)
+        if (
+            (lower.includes('tornaado') && (lower.includes('kahe minuti') || lower.includes('2 minuti') || lower.includes('kristall'))) ||
+            lower.includes('tehniline plaan') || lower.includes('technical plan') ||
+            lower.includes('muuda see tehniliseks plaaniks')
+        ) {
+            const plan = PlayardNaturalLanguageCompiler.compileToTechnicalPlan(text);
+            return {
+                intent: 'TECHNICAL_COMPILATION',
+                confidence: 0.99,
+                rawText: text,
+                parameters: { plan },
+                safetyReport
+            };
+        }
+
 
         // 1. Create Game Intents (Genres: Tycoon, Simulator, Racing, Survival, Horror, TD, Obby, Flight, Tornado)
         if (/tycoon|tehas|tehasemäng/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {

@@ -68,5 +68,7 @@ export type AiIntentType =
     | 'SYSTEM_DESIGN'
     | 'UI_GEN'
     | 'GENERAL_KNOWLEDGE'
+    | 'TECHNICAL_COMPILATION'
     | 'HELP_OR_CHAT';
+
 
