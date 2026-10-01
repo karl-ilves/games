@@ -141,7 +141,7 @@ class PlayardAiApp {
         }
         aiTierService.recordRequest();
 
-        const parsed = ConversationEngine.parseInput(input, this.state.getActiveScene());
+        const parsed = await ConversationEngine.parseInput(input, this.state.getActiveScene());
 
         // Turvakontroll
         if (parsed.intent === 'SECURITY_VIOLATION') {
@@ -260,7 +260,7 @@ class PlayardAiApp {
         for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
             this.state.updateStepStatus(step.id, 'in_progress');
-            await new Promise(r => setTimeout(r, 250));
+            await new Promise(r => setTimeout(r, (window as any).__FAST_TEST_MODE__ ? 10 : 250));
             this.state.updateStepStatus(step.id, 'completed');
         }
 
@@ -303,7 +303,7 @@ class PlayardAiApp {
         for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
             this.state.updateStepStatus(step.id, 'in_progress');
-            await new Promise(r => setTimeout(r, 200));
+            await new Promise(r => setTimeout(r, (window as any).__FAST_TEST_MODE__ ? 10 : 200));
             this.state.updateStepStatus(step.id, 'completed');
         }
 

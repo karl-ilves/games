@@ -88,6 +88,34 @@ await (async () => {
             }
         }
     };
+    const originalWaitForSelector = page.waitForSelector.bind(page);
+    page.waitForSelector = async (selector, options) => {
+        for (let attempt = 1; attempt <= 5; attempt++) {
+            try {
+                return await originalWaitForSelector(selector, options);
+            } catch (err) {
+                if (err.message && err.message.includes('detached Frame') && attempt < 5) {
+                    await new Promise(r => setTimeout(r, 400 * attempt));
+                } else {
+                    throw err;
+                }
+            }
+        }
+    };
+    const originalEval = page.$eval.bind(page);
+    page.$eval = async (selector, pageFunction, ...args) => {
+        for (let attempt = 1; attempt <= 5; attempt++) {
+            try {
+                return await originalEval(selector, pageFunction, ...args);
+            } catch (err) {
+                if (err.message && err.message.includes('detached Frame') && attempt < 5) {
+                    await new Promise(r => setTimeout(r, 400 * attempt));
+                } else {
+                    throw err;
+                }
+            }
+        }
+    };
     page.on('error', err => {
         console.error('PAGE CRASHED / RENDERER TERMINATED:', err.message);
     });
@@ -3775,10 +3803,11 @@ await (async () => {
 
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
-        await page.goto('about:blank');
-        await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 15000 });
-        await new Promise(r => setTimeout(r, 1500));
-        await page.waitForSelector('#btn-open-bug-report', { visible: true, timeout: 5000 });
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 3000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 500));
+        await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 1200));
+        await page.waitForSelector('#btn-open-bug-report', { visible: true, timeout: 8000 });
         const bugBtnVisible = await page.$eval('#btn-open-bug-report', el => window.getComputedStyle(el).display);
         console.log("   Bug Report Button visibility:", bugBtnVisible);
         if (bugBtnVisible === 'none') {
@@ -8339,9 +8368,13 @@ await (async () => {
                 throw new Error("Homepage Crown Obby Card check failed: " + JSON.stringify(homepageCrownTest));
             }
 
+            // Wait for navigation triggered by crown passcode unlock to settle
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 6000 }).catch(() => {});
+            await new Promise(r => setTimeout(r, 600));
+
             // Check recently played updated with crown card
-            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
-            await page.waitForSelector('#recently-played-list .game-card, #recently-played-empty', { timeout: 6000 }).catch(() => {});
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.waitForSelector('#recently-played-list .recently-played-card, #recently-played-list .game-card, #recently-played-empty', { timeout: 6000 }).catch(() => {});
             await new Promise(r => setTimeout(r, 1000));
 
             const recentlyPlayedCrownTest = await page.evaluate(() => {
@@ -10509,6 +10542,7 @@ await (async () => {
             console.log("   Loading Playard AI standalone page...");
             await page.goto('http://localhost:4173/games/ai/index.html', { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 1500));
+            await page.evaluate(() => { (window).playardAi && ((window).__FAST_TEST_MODE__ = true); });
 
             const aiPageTest = await page.evaluate(() => {
                 return {
@@ -10735,31 +10769,31 @@ await (async () => {
 
                 // 1. Tycoon
                 await ai.handleUserInput('Tee tycoon mäng suure tehase ja konveieriga');
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 200));
                 let scene = ai.state.getActiveScene();
                 const hasTycoon = scene?.title?.includes('Tycoon') && scene?.objects?.some(o => o.gameItemType === 'tycoon_dropper');
 
                 // 2. Racing
                 await ai.handleUserInput('Tee racing võidusõidumäng');
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 200));
                 scene = ai.state.getActiveScene();
                 const hasRacing = scene?.title?.includes('Võidusõit') && scene?.objects?.some(o => o.gameItemType === 'vehicle_car');
 
                 // 3. Survival
                 await ai.handleUserInput('Tee survival ellujäämismäng pimedas metsas');
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 200));
                 scene = ai.state.getActiveScene();
                 const hasSurvival = scene?.title?.includes('Ellujäämine') && scene?.objects?.some(o => o.id === 'surv_campfire');
 
                 // 4. Horror
                 await ai.handleUserInput('Tee horror õudusmäng hüljatud haiglas');
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 200));
                 scene = ai.state.getActiveScene();
                 const hasHorror = scene?.title?.includes('Õudus') && scene?.objects?.some(o => o.id === 'horror_stalker');
 
                 // 5. Tower Defense
                 await ai.handleUserInput('Tee tower defense tornikaitse mäng');
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 200));
                 scene = ai.state.getActiveScene();
                 const hasTD = scene?.title?.includes('Tornikaitse') && scene?.objects?.some(o => o.gameItemType === 'base_core');
 
@@ -11130,7 +11164,53 @@ await (async () => {
             }
             console.log("   ✅ Tri-Mode Triage, Natural Language Math ('1 pluss 1 on 2') & Identity ('Mina olen Playard Game Creator AI') verified!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage & Natural Math) tests passed successfully!");
+            // 22q. Test Wikipedia Knowledge Sync & Encyclopedic Search ("lae ai teadmisi otsi Vikipeedjast õiged andmed", "otsi vikipeediast Päikesesüsteem")
+            console.log("   Testing Wikipedia Knowledge Sync & Encyclopedic Search...");
+            const wikiKnowledgeTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Wikipedia Sync / Update command
+                await ai.handleUserInput('lae ai teadmisi otsi Vikipeedjast õiged andmed');
+                await new Promise(r => setTimeout(r, 400));
+                let msgs = ai.state.getMessages();
+                const syncReply = msgs[msgs.length - 1]?.text || '';
+
+                // 2. Direct Wikipedia search: "otsi vikipeediast Päikesesüsteem"
+                await ai.handleUserInput('otsi vikipeediast Päikesesüsteem');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const solarReply = msgs[msgs.length - 1]?.text || '';
+
+                // 3. Factual questions covered by Wikipedia sync: "Mis on valguse kiirus?"
+                await ai.handleUserInput('Mis on valguse kiirus?');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const lightReply = msgs[msgs.length - 1]?.text || '';
+
+                // 4. Technology pioneer question: "Kes oli Alan Turing?"
+                await ai.handleUserInput('Kes oli Alan Turing?');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const turingReply = msgs[msgs.length - 1]?.text || '';
+
+                return {
+                    syncSuccess: syncReply.includes('Playard AI Vikipeedia Teadmistebaas Uuendatud') && syncReply.includes('Geograafia'),
+                    solarSuccess: solarReply.includes('Päikesesüsteem') && (solarReply.includes('Vikipeedia') || solarReply.includes('Wikipedia')),
+                    lightSuccess: lightReply.includes('299 792 458') || lightReply.includes('300 000 km/s'),
+                    turingSuccess: turingReply.includes('Alan Turing') && (turingReply.includes('Enigma') || turingReply.includes('arvutiteaduse'))
+                };
+            });
+
+            console.log("   Wikipedia Knowledge Sync & Search Results:", wikiKnowledgeTest);
+            if (
+                !wikiKnowledgeTest.syncSuccess || !wikiKnowledgeTest.solarSuccess ||
+                !wikiKnowledgeTest.lightSuccess || !wikiKnowledgeTest.turingSuccess
+            ) {
+                throw new Error("Wikipedia Knowledge Sync or Search test failed: " + JSON.stringify(wikiKnowledgeTest));
+            }
+            console.log("   ✅ Wikipedia Knowledge Sync & Encyclopedic Search verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math & Wikipedia Knowledge) tests passed successfully!");
 
 
 

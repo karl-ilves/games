@@ -16,6 +16,7 @@ import {
     PlayardEconomyAndBalanceEngine,
     PlayardPerformanceOptimizer,
     PlayardCoPilotAdvisor,
+    PlayardWikipediaService,
     type PipelineStage
 } from '../../../shared/playardAiKnowledge';
 
@@ -83,15 +84,15 @@ export class ConversationEngine {
     /**
      * Parses user command into structured intent, parameters, safety analysis, and operational category.
      */
-    public static parseInput(input: string, currentContext?: any): ParsedCommand {
-        const cmd = this.internalParseInput(input, currentContext);
+    public static async parseInput(input: string, currentContext?: any): Promise<ParsedCommand> {
+        const cmd = await this.internalParseInput(input, currentContext);
         const triage = PlayardTaskTriageEngine.classify(input);
         cmd.category = triage.category;
         cmd.triage = triage;
         return cmd;
     }
 
-    private static internalParseInput(input: string, currentContext?: any): ParsedCommand {
+    private static async internalParseInput(input: string, currentContext?: any): Promise<ParsedCommand> {
         const text = input.trim();
         const safetyReport = CodeSandbox.inspectScriptCode(text);
 
@@ -134,6 +135,22 @@ export class ConversationEngine {
                 },
                 safetyReport
             };
+        }
+
+        // 0.05 Live Wikipedia Search Query Fallback
+        if (lower.includes('vikipeedia') || lower.includes('wikipedia') || lower.includes('vikipeedjast') || lower.includes('otsi wikist')) {
+            const wikiArticle = await PlayardWikipediaService.fetchWikipediaSummary(text);
+            if (wikiArticle) {
+                return {
+                    intent: 'GENERAL_KNOWLEDGE',
+                    confidence: 0.99,
+                    rawText: text,
+                    parameters: {
+                        answer: PlayardWikipediaService.formatWikipediaResponse(wikiArticle)
+                    },
+                    safetyReport
+                };
+            }
         }
 
         // 0.1 Development Pipeline Stage (IDEA -> PLAAN -> LOOMINE -> KOOD -> TESTIMINE -> PARANDAMINE -> AVALDAMINE)
