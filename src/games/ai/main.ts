@@ -10,7 +10,14 @@ import { ChatView } from './ui/chatView';
 import { StepTrackerView } from './ui/stepTrackerView';
 import { yardService } from '../../shared/yardService';
 import { aiTierService, AI_TIER_CONFIGS } from '../../shared/aiTierService';
-import { AiCodeAndSystemEngine, PlayardNaturalLanguageCompiler, type TechnicalGamePlan } from '../../shared/playardAiKnowledge';
+import {
+    AiCodeAndSystemEngine,
+    PlayardNaturalLanguageCompiler,
+    PlayardEconomyAndBalanceEngine,
+    PlayardPerformanceOptimizer,
+    PlayardCoPilotAdvisor,
+    type TechnicalGamePlan
+} from '../../shared/playardAiKnowledge';
 
 
 
@@ -66,36 +73,18 @@ class PlayardAiApp {
         // Submit for Owner Review
         document.getElementById('btn-submit-review')?.addEventListener('click', () => {
             const scene = this.state.getActiveScene();
-            if (!scene) {
-                alert('Esmalt loo või ava mäng!');
-                return;
-            }
+            if (!scene) return alert('Esmalt loo või ava mäng!');
             const games = JSON.parse(localStorage.getItem('playard_pending_review_games') || '[]');
-            const reviewItem = {
-                id: scene.id,
-                title: scene.title,
-                description: scene.description,
-                author: yardService.getCurrentUsername() || 'Playard AI Creator',
-                status: 'pending_owner_review',
-                submittedAt: Date.now(),
-                sceneData: scene
-            };
-            games.push(reviewItem);
+            games.push({ id: scene.id, title: scene.title, description: scene.description, author: yardService.getCurrentUsername() || 'Playard AI Creator', status: 'pending_owner_review', submittedAt: Date.now(), sceneData: scene });
             localStorage.setItem('playard_pending_review_games', JSON.stringify(games));
-
-            this.state.addSystemMessage(
-                `📋 Mäng "${scene.title}" on esitatud Playard Ownerile ülevaatamiseks! Enne avalikustamist vaadatakse mäng administraatori poolt üle.`
-            );
+            this.state.addSystemMessage(`📋 Mäng "${scene.title}" on esitatud Playard Ownerile ülevaatamiseks!`);
             alert(`✅ Mäng "${scene.title}" edukalt saadetud ülevaatamisele!`);
         });
 
         // Open in Creator Studio
         document.getElementById('btn-open-creator')?.addEventListener('click', () => {
             const scene = this.state.getActiveScene();
-            if (!scene) {
-                alert('Esmalt genereeri mäng!');
-                return;
-            }
+            if (!scene) return alert('Esmalt genereeri mäng!');
             localStorage.setItem('playard_imported_ai_scene', JSON.stringify(scene));
             window.location.href = '/games/creator/index.html?ai_import=1';
         });
@@ -103,22 +92,18 @@ class PlayardAiApp {
         // Test play
         document.getElementById('btn-test-play')?.addEventListener('click', () => {
             const scene = this.state.getActiveScene();
-            if (!scene) {
-                alert('Esmalt genereeri mäng!');
-                return;
-            }
-            const modal = document.getElementById('modal-test-play');
+            if (!scene) return alert('Esmalt genereeri mäng!');
             const desc = document.getElementById('test-play-desc');
-            if (modal && desc) {
-                desc.textContent = `${scene.title}: ${scene.rules.objective}`;
-                modal.style.display = 'flex';
-            }
+            if (desc) desc.textContent = `${scene.title}: ${scene.rules.objective}`;
+            const modal = document.getElementById('modal-test-play');
+            if (modal) modal.style.display = 'flex';
         });
 
         document.getElementById('btn-close-test-play')?.addEventListener('click', () => {
             const modal = document.getElementById('modal-test-play');
             if (modal) modal.style.display = 'none';
         });
+
 
         // Close Code Modal
         document.getElementById('btn-close-code-modal')?.addEventListener('click', () => {
@@ -232,6 +217,20 @@ class PlayardAiApp {
                 this.state.addAiMessage(PlayardNaturalLanguageCompiler.formatPlan(plan));
                 return;
             }
+        }
+
+        // 10/10 AI: Majanduse tasakaalustus, 60 FPS jõudlus & Co-Pilot nõuanded
+        if (parsed.intent === 'ECONOMY_BALANCE') {
+            this.state.addAiMessage(PlayardEconomyAndBalanceEngine.formatReport(parsed.parameters?.balance));
+            return;
+        }
+        if (parsed.intent === 'PERFORMANCE_OPTIMIZE') {
+            this.state.addAiMessage(PlayardPerformanceOptimizer.formatReport(parsed.parameters?.perf));
+            return;
+        }
+        if (parsed.intent === 'COPILOT_ADVISE') {
+            this.state.addAiMessage(PlayardCoPilotAdvisor.formatReport(parsed.parameters?.advice));
+            return;
         }
 
         // Planeeri sammud

@@ -255,6 +255,146 @@ export class PreviewViewport {
             return npcGroup;
         }
 
+        if (obj.type === 'dragon') {
+            const dragonGroup = new THREE.Group();
+            dragonGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+
+            // Body
+            const bodyGeo = new THREE.ConeGeometry(2, 6, 8);
+            bodyGeo.rotateZ(Math.PI / 2);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.4 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            dragonGroup.add(body);
+
+            // Head with horns
+            const headGeo = new THREE.BoxGeometry(2, 1.4, 2.4);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0x991b1b });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.set(3.5, 0.8, 0);
+            dragonGroup.add(head);
+
+            // Glowing eyes
+            const eyeGeo = new THREE.SphereGeometry(0.2, 8, 8);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(4.2, 1.2, 0.6);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeR.position.set(4.2, 1.2, -0.6);
+            dragonGroup.add(eyeL, eyeR);
+
+            // Wings
+            const wingGeo = new THREE.BoxGeometry(0.1, 0.2, 7);
+            const wingMat = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, side: THREE.DoubleSide });
+            const wingL = new THREE.Mesh(wingGeo, wingMat);
+            wingL.position.set(0, 1.5, 3.8);
+            const wingR = new THREE.Mesh(wingGeo, wingMat);
+            wingR.position.set(0, 1.5, -3.8);
+            dragonGroup.add(wingL, wingR);
+
+            this.animatedMeshes.push({
+                mesh: dragonGroup,
+                update: (t) => {
+                    dragonGroup.position.y = obj.position[1] + Math.sin(t * 2) * 1.5;
+                    wingL.rotation.x = Math.sin(t * 6) * 0.4;
+                    wingR.rotation.x = -Math.sin(t * 6) * 0.4;
+                }
+            });
+
+            return dragonGroup;
+        }
+
+        if (obj.type === 'castle') {
+            const castleGroup = new THREE.Group();
+            castleGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+
+            // Keep
+            const keepGeo = new THREE.BoxGeometry(14, 18, 14);
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
+            const keep = new THREE.Mesh(keepGeo, stoneMat);
+            keep.position.y = 9;
+            castleGroup.add(keep);
+
+            // 4 Towers
+            const towerOffsets = [[-8, -8], [8, -8], [-8, 8], [8, 8]];
+            for (const [tx, tz] of towerOffsets) {
+                const towerGeo = new THREE.CylinderGeometry(2.5, 2.5, 22, 12);
+                const tower = new THREE.Mesh(towerGeo, stoneMat);
+                tower.position.set(tx, 11, tz);
+                castleGroup.add(tower);
+
+                const coneGeo = new THREE.ConeGeometry(3.2, 5, 12);
+                const roofMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a });
+                const roof = new THREE.Mesh(coneGeo, roofMat);
+                roof.position.set(tx, 24.5, tz);
+                castleGroup.add(roof);
+            }
+
+            return castleGroup;
+        }
+
+        if (obj.type === 'ship') {
+            const shipGroup = new THREE.Group();
+            shipGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+
+            // Hull
+            const hullGeo = new THREE.BoxGeometry(22, 4, 8);
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.7 });
+            const hull = new THREE.Mesh(hullGeo, woodMat);
+            hull.position.y = 2;
+            shipGroup.add(hull);
+
+            // Mast & Sail
+            const mastGeo = new THREE.CylinderGeometry(0.3, 0.4, 16, 8);
+            const mastMat = new THREE.MeshStandardMaterial({ color: 0x78350f });
+            const mast = new THREE.Mesh(mastGeo, mastMat);
+            mast.position.set(0, 10, 0);
+            shipGroup.add(mast);
+
+            const sailGeo = new THREE.BoxGeometry(0.1, 8, 7);
+            const sailMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc });
+            const sail = new THREE.Mesh(sailGeo, sailMat);
+            sail.position.set(0, 11, 0);
+            shipGroup.add(sail);
+
+            this.animatedMeshes.push({
+                mesh: shipGroup,
+                update: (t) => {
+                    shipGroup.rotation.z = Math.sin(t * 1.5) * 0.05;
+                    shipGroup.position.y = obj.position[1] + Math.sin(t * 2) * 0.3;
+                }
+            });
+
+            return shipGroup;
+        }
+
+        if (obj.type === 'weapon') {
+            const weaponGroup = new THREE.Group();
+            weaponGroup.position.set(obj.position[0], obj.position[1], obj.position[2]);
+
+            const bladeGeo = new THREE.BoxGeometry(0.15, 3.2, 0.4);
+            const bladeMat = new THREE.MeshStandardMaterial({
+                color: 0x38bdf8,
+                metalness: 0.9,
+                roughness: 0.1,
+                emissive: 0x0284c7,
+                emissiveIntensity: 0.6
+            });
+            const blade = new THREE.Mesh(bladeGeo, bladeMat);
+            blade.position.y = 1.6;
+            weaponGroup.add(blade);
+
+            this.animatedMeshes.push({
+                mesh: weaponGroup,
+                update: (t) => {
+                    weaponGroup.rotation.y += 0.05;
+                    weaponGroup.position.y = obj.position[1] + Math.sin(t * 3) * 0.2;
+                }
+            });
+
+            return weaponGroup;
+        }
+
+
         // Generic box / building / spawn
         const geo = new THREE.BoxGeometry(obj.scale[0], obj.scale[1], obj.scale[2]);
         const mat = new THREE.MeshStandardMaterial({

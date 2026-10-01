@@ -27,7 +27,7 @@ export interface PlayardAiScene {
     objects: Array<{
         id: string;
         name: string;
-        type: 'box' | 'cylinder' | 'sphere' | 'plane' | 'tornado' | 'airplane' | 'building' | 'spawn' | 'coin' | 'npc';
+        type: 'box' | 'cylinder' | 'sphere' | 'plane' | 'tornado' | 'airplane' | 'building' | 'spawn' | 'coin' | 'npc' | 'dragon' | 'castle' | 'ship' | 'weapon';
         position: [number, number, number];
         rotation?: [number, number, number];
         scale: [number, number, number];
@@ -49,6 +49,10 @@ export class GameGenerator {
         const id = 'game_' + Math.random().toString(36).substring(2, 9);
 
         switch (theme) {
+            case 'dragon_castle':
+                return this.createDragonCastleGame(id, customTitle || 'Playard Draakoni & Lossi Seiklus');
+            case 'pirate_sea':
+                return this.createPirateSeaGame(id, customTitle || 'Playard Piraadisaare Seiklus');
             case 'tornado_escape':
                 return this.createTornadoEscapeGame(id, customTitle || 'Tornaado Põgenemine');
             case 'flight_simulator':
@@ -71,6 +75,7 @@ export class GameGenerator {
                 return this.createAdventureGame(id, customTitle || 'Playard Seiklusmaailm');
         }
     }
+
 
 
     private static createTornadoEscapeGame(id: string, title: string): PlayardAiScene {
@@ -678,5 +683,77 @@ export class GameGenerator {
             ]
         };
     }
+
+    private static createDragonCastleGame(id: string, title: string): PlayardAiScene {
+        return {
+            id,
+            title,
+            description: 'Kuninglik loss ja tiibadega tule-draakon! Varusta end runic mõõgaga, kaitse lossi väravaid ja alista lendav boss.',
+            author: 'Playard AI',
+            createdAt: Date.now(),
+            environment: {
+                skyColor: 0x312e81,
+                lightColor: 0xfef08a,
+                groundColor: 0x3f3f46,
+                fogDensity: 0.012,
+                timeOfDay: 'night'
+            },
+            playerConfig: {
+                spawnPosition: [0, 1, 20],
+                speed: 13,
+                jumpForce: 11,
+                currency: 150,
+                inventory: ['Runic Leegitsev Mõõk', 'Kuninglik Kilp']
+            },
+            rules: {
+                objective: 'Väldi draakoni tulelööke, läbi tõstesild ja alista draakon boss!',
+                winCondition: 'dragon.hp <= 0',
+                loseCondition: 'player.hp <= 0 || castle.coreDestroyed'
+            },
+            objects: [
+                { id: 'fantasy_ground', name: 'Lossi hoov', type: 'plane', position: [0, 0, 0], scale: [140, 1, 140], color: 0x27272a, isCollidable: true },
+                { id: 'fantasy_spawn', name: 'Kangelase Spawn', type: 'spawn', position: [0, 0.1, 20], scale: [3, 0.2, 3], color: 0x3b82f6, gameItemType: 'spawn' },
+                { id: 'castle_keep', name: 'Suur Kivist Loss', type: 'castle', position: [0, 0, -20], scale: [24, 28, 24], color: 0x64748b, isCollidable: true },
+                { id: 'fire_dragon_boss', name: 'Lendav Tule-Draakon (Boss)', type: 'dragon', position: [0, 18, -15], scale: [14, 10, 14], color: 0xb91c1c, isHazard: true, script: 'flyCirclePatrol(); breatheFireOnTarget(player);' },
+                { id: 'runic_sword_pickup', name: 'Legendaarne Runic Mõõk', type: 'weapon', position: [0, 1.2, 10], scale: [1, 2, 0.2], color: 0x38bdf8, gameItemType: 'legendary_weapon', script: 'equipWeapon("fire_sword");' }
+            ]
+        };
+    }
+
+    private static createPirateSeaGame(id: string, title: string): PlayardAiScene {
+        return {
+            id,
+            title,
+            description: 'Avameri, salapärane aarete saar ja kahuritega relvastatud piraadilaev! Juhi laeva ja leia peidetud varandus.',
+            author: 'Playard AI',
+            createdAt: Date.now(),
+            environment: {
+                skyColor: 0x0284c7,
+                lightColor: 0xffedd5,
+                groundColor: 0x0369a1,
+                fogDensity: 0.008,
+                timeOfDay: 'day'
+            },
+            playerConfig: {
+                spawnPosition: [0, 3, 0],
+                speed: 11,
+                jumpForce: 9,
+                currency: 200,
+                inventory: ['Kompass', 'Piraadi Mõõk']
+            },
+            rules: {
+                objective: 'Seila piraadilaevaga saarele ja kaeva välja kuldne aarete laegas!',
+                winCondition: 'player.collectedTreasure >= 1',
+                loseCondition: 'ship.sinks || player.drowns'
+            },
+            objects: [
+                { id: 'sea_water', name: 'Ookeani Lainetav Vesi', type: 'plane', position: [0, 0, 0], scale: [160, 1, 160], color: 0x0284c7, isCollidable: true },
+                { id: 'pirate_galleon', name: 'Piraadi Galeoon Laev', type: 'ship', position: [0, 1, 0], scale: [30, 24, 10], color: 0x451a03, isCollidable: true, script: 'steerShip(); fireCannons();' },
+                { id: 'treasure_island', name: 'Aarete Saar', type: 'cylinder', position: [45, 1, -30], scale: [24, 3, 24], color: 0xfef08a, isCollidable: true },
+                { id: 'treasure_chest', name: 'Kuldne Aarete Kirs', type: 'box', position: [45, 3, -30], scale: [2, 1.5, 1.5], color: 0xf59e0b, gameItemType: 'treasure_chest', script: 'openTreasure(); awardPbx(100);' }
+            ]
+        };
+    }
 }
+
 

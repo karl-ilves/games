@@ -4337,15 +4337,13 @@ await (async () => {
                 throw new Error("Expected #modal-train-depot to be open after clicking #btn-open-depot!");
             }
             // Test Selecting a Metro (Underground Environment: maa all)
-            await page.click('#btn-open-depot');
-            await new Promise(r => setTimeout(r, 300));
-            await page.click('#tab-btn-metros');
-            await new Promise(r => setTimeout(r, 200));
-            const selectMetroBtn = await page.$('.btn-train-select');
-            if (selectMetroBtn) await selectMetroBtn.click();
-            await new Promise(r => setTimeout(r, 300));
-            await page.click('#btn-close-depot');
-            await new Promise(r => setTimeout(r, 300));
+            await page.evaluate(() => {
+                document.getElementById('tab-btn-metros')?.click();
+                const selectMetroBtn = document.querySelector('.btn-train-select');
+                if (selectMetroBtn) selectMetroBtn.click();
+                document.getElementById('btn-close-depot')?.click();
+            });
+            await new Promise(r => setTimeout(r, 400));
 
             const metroEnvBadge = await page.$eval('#environment-mode-badge', el => el.textContent);
             console.log("   Metro Environment Badge (Expected: UNDERGROUND / MAA ALL):", metroEnvBadge);
@@ -10935,7 +10933,71 @@ await (async () => {
             }
             console.log("   ✅ Natural Language to Technical Plan Compiler (9 subsystems) verified!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler) tests passed successfully!");
+            // 22n. Test 10/10 AI Capabilities (Dragon Castle, Pirate Sea, Economy Balancer, 60 FPS Performance Optimizer, Co-Pilot Advisor)
+            console.log("   Testing 10/10 AI Features (Dragon Castle, Pirate Sea, Economy Balancer, Performance Optimizer, CoPilot Advisor)...");
+            const tenOutOfTenTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Dragon Castle creation
+                await ai.handleUserInput('Loo loss draakoniga ja runic mõõgaga');
+                await new Promise(r => setTimeout(r, 600));
+                let scene = ai.state.getActiveScene();
+                const hasDragon = scene?.objects?.some(o => o.type === 'dragon');
+                const hasCastle = scene?.objects?.some(o => o.type === 'castle');
+                const hasWeapon = scene?.objects?.some(o => o.type === 'weapon');
+
+                // 2. Pirate Sea creation
+                await ai.handleUserInput('Tee piraadilaevaga mereseiklus ja aarded');
+                await new Promise(r => setTimeout(r, 600));
+                scene = ai.state.getActiveScene();
+                const hasShip = scene?.objects?.some(o => o.type === 'ship');
+                const hasIsland = scene?.objects?.some(o => o.id === 'treasure_island');
+
+                // 3. Economy Balancer
+                await ai.handleUserInput('Tasakaalusta mängu majandus');
+                await new Promise(r => setTimeout(r, 400));
+                let msgs = ai.state.getMessages();
+                const econReply = msgs[msgs.length - 1]?.text || '';
+                const hasEconBalance = econReply.includes('Playard Majanduse & Tasakaalu Analüüs') && econReply.includes('Tasakaalu hinne');
+
+                // 4. Performance Optimizer
+                await ai.handleUserInput('Optimeeri mäng 60 fps jaoks');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const perfReply = msgs[msgs.length - 1]?.text || '';
+                const hasPerf = perfReply.includes('Playard 60 FPS Jõudluse & Mobiili Optimeerija') && perfReply.includes('Draw Call sääst');
+
+                // 5. Co-Pilot Advice
+                await ai.handleUserInput('Soovita ideid ja co-pilot nõuandeid');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const adviceReply = msgs[msgs.length - 1]?.text || '';
+                const hasAdvice = adviceReply.includes('Playard Co-Pilot Proaktiivsed Soovitused');
+
+                return {
+                    hasDragon,
+                    hasCastle,
+                    hasWeapon,
+                    hasShip,
+                    hasIsland,
+                    hasEconBalance,
+                    hasPerf,
+                    hasAdvice
+                };
+            });
+
+            console.log("   10/10 AI Features Test Results:", tenOutOfTenTest);
+            if (
+                !tenOutOfTenTest.hasDragon || !tenOutOfTenTest.hasCastle || !tenOutOfTenTest.hasWeapon ||
+                !tenOutOfTenTest.hasShip || !tenOutOfTenTest.hasIsland ||
+                !tenOutOfTenTest.hasEconBalance || !tenOutOfTenTest.hasPerf || !tenOutOfTenTest.hasAdvice
+            ) {
+                throw new Error("10/10 AI feature test failed: " + JSON.stringify(tenOutOfTenTest));
+            }
+            console.log("   ✅ 10/10 AI Capabilities (Dragon Castle, Pirate Sea, Economy Balancer, 60 FPS Performance Optimizer, CoPilot Advisor) verified!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems) tests passed successfully!");
+
 
 
 

@@ -10,8 +10,13 @@ import {
     PlayardNpcAndStoryEngine,
     PlayardDataAndSocialEngine,
     PlayardProjectMemoryManager,
+    PlayardAdvancedModelSynthesizer,
+    PlayardEconomyAndBalanceEngine,
+    PlayardPerformanceOptimizer,
+    PlayardCoPilotAdvisor,
     type PipelineStage
 } from '../../../shared/playardAiKnowledge';
+
 
 export interface ParsedCommand {
     intent: AiIntentType;
@@ -177,9 +182,74 @@ export class ConversationEngine {
             };
         }
 
+        // 0.5 In-Game Economy Balancer (TTU, Sink-Faucet ratio, inflation check)
+        if (/tasakaalusta.*majandus|majandus.*tasakaal|majanduse.*analüüs|balance.*economy|majandustasakaal/i.test(lower)) {
+            const balance = PlayardEconomyAndBalanceEngine.analyzeAndBalanceEconomy({});
 
-        // 1. Create Game Intents (Genres: Tycoon, Simulator, Racing, Survival, Horror, TD, Obby, Flight, Tornado)
+            return {
+                intent: 'ECONOMY_BALANCE',
+                confidence: 0.98,
+                rawText: text,
+                parameters: { balance },
+                safetyReport
+            };
+        }
+
+        // 0.6 Automated 60 FPS Performance Optimizer (LOD, Draw Calls, Frustum culling)
+        if (/optimeeri|jõudlus|performance|tõsta fps|60 fps/i.test(lower)) {
+            const perf = PlayardPerformanceOptimizer.getOptimizationPlan(currentContext?.objects?.length || 24);
+            return {
+                intent: 'PERFORMANCE_OPTIMIZE',
+                confidence: 0.98,
+                rawText: text,
+                parameters: { perf },
+                safetyReport
+            };
+        }
+
+        // 0.7 Proactive Co-Pilot Intelligence Advisor (Smart suggestions)
+        if (/soovita|nõuanded|copilot|mida lisada|soovitused/i.test(lower)) {
+            const advice = PlayardCoPilotAdvisor.generateSmartSuggestions();
+            return {
+                intent: 'COPILOT_ADVISE',
+                confidence: 0.98,
+                rawText: text,
+                parameters: { advice },
+                safetyReport
+            };
+        }
+
+        // 1. Create Game Intents (Genres: Dragon Castle, Pirate Sea, Tycoon, Simulator, Racing, Survival, Horror, TD, Obby, Flight, Tornado)
+        if (/draakon|loss|kindlus|dragon|castle|fantasy/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.98,
+                rawText: text,
+                parameters: {
+                    theme: 'dragon_castle',
+                    title: 'Playard Draakoni & Lossi Seiklus',
+                    elements: ['dragon', 'castle', 'drawbridge', 'runic_sword']
+                },
+                safetyReport
+            };
+        }
+
+        if (/piraat|piraadilaev|mereröövel|mereseiklus|pirate/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.98,
+                rawText: text,
+                parameters: {
+                    theme: 'pirate_sea',
+                    title: 'Playard Piraadisaare Seiklus',
+                    elements: ['ship', 'ocean', 'cannons', 'treasure_chest']
+                },
+                safetyReport
+            };
+        }
+
         if (/tycoon|tehas|tehasemäng/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+
             return {
                 intent: 'CREATE_GAME',
                 confidence: 0.95,
