@@ -1,5 +1,6 @@
 import type { AiIntentType, AiSafetyReport } from '../types';
 import { CodeSandbox } from './codeSandbox';
+import { PlayardGeneralKnowledge, PLAYARD_PIPELINE_STAGES, AiCodeAndSystemEngine, PLAYARD_GENRES_CATALOG, type PipelineStage } from '../../../shared/playardAiKnowledge';
 
 export interface ParsedCommand {
     intent: AiIntentType;
@@ -83,7 +84,157 @@ export class ConversationEngine {
 
         const lower = text.toLowerCase();
 
-        // 1. Create Game Intents
+        // 0. General Knowledge & Facts / Anti-Hallucination
+        const generalAnswer = PlayardGeneralKnowledge.answerQuestion(text);
+        if (generalAnswer) {
+            return {
+                intent: 'GENERAL_KNOWLEDGE',
+                confidence: 0.99,
+                rawText: text,
+                parameters: {
+                    answer: generalAnswer
+                },
+                safetyReport
+            };
+        }
+
+        // 0.1 Development Pipeline Stage (IDEA -> PLAAN -> LOOMINE -> KOOD -> TESTIMINE -> PARANDAMINE -> AVALDAMINE)
+        if (/pipeline|arenduskonveier|arendustsükkel|ideest valmis mänguni/i.test(lower) || /^(etapp|samm|stage)\s*([1-7]|idea|plaan|loomine|kood|testimine|parandamine|avaldamine)/i.test(lower)) {
+            let stageKey: PipelineStage = 'IDEA';
+            if (/2|plaan/i.test(lower)) stageKey = 'PLAAN';
+            else if (/3|loomine|build/i.test(lower)) stageKey = 'LOOMINE';
+            else if (/4|kood|skript/i.test(lower)) stageKey = 'KOOD';
+            else if (/5|testimine|test/i.test(lower)) stageKey = 'TESTIMINE';
+            else if (/6|parandamine|fix/i.test(lower)) stageKey = 'PARANDAMINE';
+            else if (/7|avaldamine|publish/i.test(lower)) stageKey = 'AVALDAMINE';
+
+            return {
+                intent: 'PIPELINE_STEP',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    stage: stageKey,
+                    guidance: PLAYARD_PIPELINE_STAGES[stageKey]
+                },
+                safetyReport
+            };
+        }
+
+        // 0.2 Code Assistance & Debugging / Bug Fixing
+        if (
+            /paranda kood|leia koodiviga|leia viga|optimeeri kood|koodi parandamine|fix code|repair code|debug code/i.test(lower) ||
+            (/kirjuta kood|tee skript|write code|loo kood/i.test(lower) && !/mäng|game/i.test(lower))
+        ) {
+            return {
+                intent: 'CODE_ASSIST',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    code: text
+                },
+                safetyReport
+            };
+        }
+
+        // 0.3 UI Component Generation (Shop, Inventory, HUD, Settings, Menu)
+        if (/(?:loo|tee|genereeri|build|create)\s+(?:shop|pood|inventar|inventory|hud|seaded|settings|menüü|menu)\s*(?:ui|liides|aken)?/i.test(lower)) {
+            let uiType: 'shop' | 'inventory' | 'hud' | 'settings' | 'menu' = 'hud';
+            if (/shop|pood/i.test(lower)) uiType = 'shop';
+            else if (/inventar|inventory/i.test(lower)) uiType = 'inventory';
+            return {
+                intent: 'UI_GEN',
+                confidence: 0.95,
+                rawText: text,
+                parameters: { uiType },
+                safetyReport
+            };
+        }
+
+        // 1. Create Game Intents (Genres: Tycoon, Simulator, Racing, Survival, Horror, TD, Obby, Flight, Tornado)
+        if (/tycoon|tehas|tehasemäng/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    theme: 'tycoon',
+                    title: 'Playard PBX Tycoon',
+                    elements: ['dropper', 'conveyor', 'vault', 'upgrades']
+                },
+                safetyReport
+            };
+        }
+
+        if (/simulator|simulaator|treeningmäng/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    theme: 'simulator',
+                    title: 'Playard Treening Simulaator',
+                    elements: ['weights', 'sell_pad', 'rebirth_gate', 'leaderboard']
+                },
+                safetyReport
+            };
+        }
+
+        if (/racing|võidusõit|voidusoit|võistlus|ralli/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    theme: 'racing',
+                    title: 'Playard Turbo Võidusõit',
+                    elements: ['race_car', 'checkpoints', 'start_gate', 'nitro_pads']
+                },
+                safetyReport
+            };
+        }
+
+        if (/survival|ellujäämine|ellujaamine/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    theme: 'survival',
+                    title: 'Playard Metsik Ellujäämine',
+                    elements: ['campfire', 'shelter', 'trees', 'night_monsters']
+                },
+                safetyReport
+            };
+        }
+
+        if (/horror|õudus|oudus/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    theme: 'horror',
+                    title: 'Playard Õudus & Hüljatud Haigla',
+                    elements: ['dark_fog', 'flashlight', 'fuses', 'stalker']
+                },
+                safetyReport
+            };
+        }
+
+        if (/tower defense|tornikaitse|torni kaitse/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    theme: 'tower_defense',
+                    title: 'Playard Baasi Tornikaitse',
+                    elements: ['enemy_path', 'base_crystal', 'turrets', 'waves']
+                },
+                safetyReport
+            };
+        }
+
         if (/tornaado|tornado/i.test(lower) && /põgene|escape|run|mäng|game/i.test(lower)) {
             return {
                 intent: 'CREATE_GAME',
@@ -97,6 +248,7 @@ export class ConversationEngine {
                 safetyReport
             };
         }
+
 
         if (/lennu|lennuk|lennujaam|flight|plane|airplane|airport/i.test(lower) && /tee|loo|mäng|game|ehita/i.test(lower)) {
             return {

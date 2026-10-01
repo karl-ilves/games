@@ -10,6 +10,7 @@ import { ChatView } from './ui/chatView';
 import { StepTrackerView } from './ui/stepTrackerView';
 import { yardService } from '../../shared/yardService';
 import { aiTierService, AI_TIER_CONFIGS } from '../../shared/aiTierService';
+import { AiCodeAndSystemEngine } from '../../shared/playardAiKnowledge';
 
 class PlayardAiApp {
     public state: AiState;
@@ -187,8 +188,44 @@ class PlayardAiApp {
             return;
         }
 
+        // Üldteadmised, teadus, kosmos, tehnoloogia või anti-hallutsinatsiooni selgitus
+        if (parsed.intent === 'GENERAL_KNOWLEDGE') {
+            this.state.addAiMessage(parsed.parameters?.answer || 'Siin on vastus sinu küsimusele.');
+            return;
+        }
+
+        // 7-etapiline arenduskonveier (IDEA -> PLAAN -> LOOMINE -> KOOD -> TESTIMINE -> PARANDAMINE -> AVALDAMINE)
+        if (parsed.intent === 'PIPELINE_STEP') {
+            const guidance = parsed.parameters?.guidance;
+            const stage = parsed.parameters?.stage;
+            if (guidance) {
+                const checklist = guidance.checklist.map((c: string) => `• ${c}`).join('\n');
+                const msg = `🚀 **Playard Arenduskonveier: Etapp ${guidance.stageNumber} / 7 – ${guidance.title} (${stage})**\n\n${guidance.description}\n\n📋 **Tegevuskava & Kontrollnimekiri:**\n${checklist}\n\n💡 **Soovitus:** ${guidance.actionPrompt}`;
+                this.state.addAiMessage(msg, guidance.codeTemplate ? { codeSnippet: guidance.codeTemplate } : undefined);
+                return;
+            }
+        }
+
+        // Koodi parandamine, silumine ja optimeerimine
+        if (parsed.intent === 'CODE_ASSIST') {
+            const repair = AiCodeAndSystemEngine.repairCode(parsed.rawText);
+            const bugs = repair.detectedBugs.map(b => `• ⚠️ ${b}`).join('\n');
+            const msg = `🛠️ **Playard AI Koodimootor:**\n\n${repair.explanation}\n\n**Tuvastatud parandused:**\n${bugs}`;
+            this.state.addAiMessage(msg, { codeSnippet: repair.fixedCode });
+            return;
+        }
+
+        // UI komponentide genereerimine (Shop, Inventory, HUD jne)
+        if (parsed.intent === 'UI_GEN') {
+            const comp = AiCodeAndSystemEngine.generateUIComponent(parsed.parameters?.uiType || 'hud');
+            const msg = `🎨 **Playard UI Generaator:** Lõin valmis puhta kasutajaliidese komponendi (${parsed.parameters?.uiType || 'hud'}).`;
+            this.state.addAiMessage(msg, { codeSnippet: `${comp.html}\n\n<script>\n${comp.script}\n</script>` });
+            return;
+        }
+
         // Planeeri sammud
         const steps = StepPlanner.planSteps(parsed);
+
         this.state.setCurrentSteps(steps);
         this.state.setIsBuilding(true);
 

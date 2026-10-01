@@ -55,10 +55,23 @@ export class GameGenerator {
                 return this.createFlightSimulatorGame(id, customTitle || 'Lennusimulaator');
             case 'obby_adventure':
                 return this.createObbyGame(id, customTitle || 'Playard Parkuur');
+            case 'tycoon':
+                return this.createTycoonGame(id, customTitle || 'Playard Tehas & Tycoon');
+            case 'simulator':
+                return this.createSimulatorGame(id, customTitle || 'Playard Treening Simulaator');
+            case 'racing':
+                return this.createRacingGame(id, customTitle || 'Playard Võidusõit');
+            case 'survival':
+                return this.createSurvivalGame(id, customTitle || 'Playard Ellujäämine');
+            case 'horror':
+                return this.createHorrorGame(id, customTitle || 'Playard Õudusmäng & Pimedus');
+            case 'tower_defense':
+                return this.createTowerDefenseGame(id, customTitle || 'Playard Tornikaitse');
             default:
                 return this.createAdventureGame(id, customTitle || 'Playard Seiklusmaailm');
         }
     }
+
 
     private static createTornadoEscapeGame(id: string, title: string): PlayardAiScene {
         return {
@@ -445,4 +458,225 @@ export class GameGenerator {
             ]
         };
     }
+
+    private static createTycoonGame(id: string, title: string): PlayardAiScene {
+        return {
+            id,
+            title,
+            description: 'Ehita oma PlayBux tehas! Osta droppereid, kogu konveierilt toodangut ja teeni rikkust.',
+            author: 'Playard AI',
+            createdAt: Date.now(),
+            environment: {
+                skyColor: 0x38bdf8,
+                lightColor: 0xffffff,
+                groundColor: 0x1e293b,
+                fogDensity: 0.005,
+                timeOfDay: 'day'
+            },
+            playerConfig: {
+                spawnPosition: [0, 1, 0],
+                speed: 11,
+                jumpForce: 9,
+                currency: 100,
+                inventory: ['Ehitustööriist']
+            },
+            rules: {
+                objective: 'Kogu konveierilt raha ja ava kõik tehase laiendused!',
+                winCondition: 'player.currency >= 1000',
+                loseCondition: 'never'
+            },
+            objects: [
+                { id: 'tycoon_floor', name: 'Tehase Betoonpõrand', type: 'plane', position: [0, 0, 0], scale: [80, 1, 80], color: 0x334155, isCollidable: true },
+                { id: 'tycoon_spawn', name: 'Tehase Spawn', type: 'spawn', position: [0, 0.1, 0], scale: [3, 0.2, 3], color: 0x10b981, gameItemType: 'spawn' },
+                { id: 'tycoon_dropper', name: 'PBX Dropper #1', type: 'box', position: [-8, 4, -5], scale: [2, 2, 2], color: 0xeab308, gameItemType: 'tycoon_dropper', script: 'spawnDrop("coin", target.position);' },
+                { id: 'tycoon_conveyor', name: 'Konveierlint', type: 'box', position: [-8, 0.5, 0], scale: [2, 0.4, 12], color: 0x475569, gameItemType: 'conveyor' },
+                { id: 'tycoon_collector', name: 'Raha Kassa & Vault', type: 'box', position: [-8, 1, 8], scale: [3, 2, 3], color: 0x22c55e, gameItemType: 'cash_collector', script: 'collectAllFactoryCash(player);' },
+                { id: 'tycoon_upgrade_pad', name: 'Ostuplatvorm: Dropper #2 (250 PBX)', type: 'cylinder', position: [5, 0.1, 0], scale: [3, 0.2, 3], color: 0x06b6d4, gameItemType: 'upgrade_pad' }
+            ]
+        };
+    }
+
+    private static createSimulatorGame(id: string, title: string): PlayardAiScene {
+        return {
+            id,
+            title,
+            description: 'Treeni oma tegelast, kogu energiat, tee Rebirth ja tõuse edetabeli tippu!',
+            author: 'Playard AI',
+            createdAt: Date.now(),
+            environment: {
+                skyColor: 0x818cf8,
+                lightColor: 0xffffff,
+                groundColor: 0x0f172a,
+                fogDensity: 0.006,
+                timeOfDay: 'day'
+            },
+            playerConfig: {
+                spawnPosition: [0, 1, 0],
+                speed: 10,
+                jumpForce: 10,
+                currency: 0,
+                inventory: ['Treeningraskus']
+            },
+            rules: {
+                objective: 'Treeni 1000 jõudu ja saavuta esimene Rebirth!',
+                winCondition: 'player.stats.strength >= 1000',
+                loseCondition: 'never'
+            },
+            objects: [
+                { id: 'sim_ground', name: 'Treeningareen', type: 'plane', position: [0, 0, 0], scale: [90, 1, 90], color: 0x1e1b4b, isCollidable: true },
+                { id: 'sim_spawn', name: 'Jõusaali Spawn', type: 'spawn', position: [0, 0.1, 0], scale: [3, 0.2, 3], color: 0x6366f1, gameItemType: 'spawn' },
+                { id: 'sim_sell_pad', name: 'Müügiring (Sell Zone)', type: 'cylinder', position: [0, 0.1, 10], scale: [4, 0.2, 4], color: 0xf59e0b, gameItemType: 'sell_zone', script: 'sellStrengthForCoins(player);' },
+                { id: 'sim_rebirth_gate', name: 'Rebirth Värav (Tase 1)', type: 'box', position: [15, 3, 0], scale: [4, 6, 1], color: 0xa855f7, gameItemType: 'rebirth_gate' },
+                { id: 'sim_npc_coach', name: 'Treener Sander', type: 'npc', position: [-6, 1, 4], scale: [1, 2, 1], color: 0xec4899, gameItemType: 'npc', script: 'showDialogue("Tõsta kangi ja müü oma energia kullaks!");' }
+            ]
+        };
+    }
+
+    private static createRacingGame(id: string, title: string): PlayardAiScene {
+        return {
+            id,
+            title,
+            description: 'Võidusõidumäng: läbi kontrollpunktid, kasuta kiiruse nitro-patju ja saavuta kiireim ringiaeg!',
+            author: 'Playard AI',
+            createdAt: Date.now(),
+            environment: {
+                skyColor: 0x38bdf8,
+                lightColor: 0xfef08a,
+                groundColor: 0x475569,
+                fogDensity: 0.005,
+                timeOfDay: 'day'
+            },
+            playerConfig: {
+                spawnPosition: [0, 1, 0],
+                speed: 18,
+                jumpForce: 8,
+                currency: 0,
+                inventory: ['Võistlusauto Võtmed']
+            },
+            rules: {
+                objective: 'Sõida 3 ringi ja ületa finišijoon parima ajaga!',
+                winCondition: 'player.completedLaps >= 3',
+                loseCondition: 'timer <= 0',
+                timerSeconds: 120
+            },
+            objects: [
+                { id: 'race_track', name: 'Asfaltrada', type: 'plane', position: [0, 0, 0], scale: [140, 1, 140], color: 0x1e293b, isCollidable: true },
+                { id: 'race_start_gate', name: 'Stardivärav & Finiš', type: 'box', position: [0, 4, 0], scale: [12, 8, 2], color: 0xef4444, gameItemType: 'start_gate' },
+                { id: 'race_car_p1', name: 'Playard Turbo Sportauto', type: 'box', position: [0, 1, 4], scale: [2.2, 1.2, 4.5], color: 0x3b82f6, gameItemType: 'vehicle_car', script: 'enterVehicle(player, "race_car");' },
+                { id: 'race_cp1', name: 'Kontrollpunkt #1', type: 'cylinder', position: [30, 2, 30], scale: [6, 4, 6], color: 0x10b981, gameItemType: 'checkpoint' },
+                { id: 'race_cp2', name: 'Kontrollpunkt #2', type: 'cylinder', position: [-30, 2, 30], scale: [6, 4, 6], color: 0x10b981, gameItemType: 'checkpoint' },
+                { id: 'race_boost', name: 'Nitro Speed Pad', type: 'plane', position: [0, 0.1, 20], scale: [4, 1, 8], color: 0x06b6d4, gameItemType: 'boost_pad', script: 'applySpeedBoost(player, 2.0, 3000);' }
+            ]
+        };
+    }
+
+    private static createSurvivalGame(id: string, title: string): PlayardAiScene {
+        return {
+            id,
+            title,
+            description: 'Ellujäämismäng: kogu toitu ja puitu, kaitse end külma ja öiste rünnakute eest ning pea vastu!',
+            author: 'Playard AI',
+            createdAt: Date.now(),
+            environment: {
+                skyColor: 0x0f172a,
+                lightColor: 0x94a3b8,
+                groundColor: 0x14532d,
+                fogDensity: 0.018,
+                timeOfDay: 'night'
+            },
+            playerConfig: {
+                spawnPosition: [0, 1, 0],
+                speed: 9,
+                jumpForce: 8,
+                currency: 20,
+                inventory: ['Taskulamp', 'Kirves', 'Lõkketikud']
+            },
+            rules: {
+                objective: 'Hoia lõke põlemas ja ela üle öine külmalaine!',
+                winCondition: 'player.survivedNights >= 3',
+                loseCondition: 'player.hp <= 0'
+            },
+            objects: [
+                { id: 'surv_ground', name: 'Metsamaastik', type: 'plane', position: [0, 0, 0], scale: [120, 1, 120], color: 0x166534, isCollidable: true },
+                { id: 'surv_spawn', name: 'Laagriplatsi Spawn', type: 'spawn', position: [0, 0.1, 0], scale: [3, 0.2, 3], color: 0x22c55e, gameItemType: 'spawn' },
+                { id: 'surv_campfire', name: 'Soojendav Lõke', type: 'cylinder', position: [0, 0.5, 4], scale: [2, 1, 2], color: 0xf97316, gameItemType: 'safe_zone', script: 'restoreWarmth(player);' },
+                { id: 'surv_shelter', name: 'Puidust Varjend', type: 'building', position: [-8, 2.5, -4], scale: [6, 5, 6], color: 0x78350f, isCollidable: true },
+                { id: 'surv_tree', name: 'Ressursipuu (Kogutav)', type: 'cylinder', position: [10, 3, 10], scale: [1.5, 6, 1.5], color: 0x15803d, isCollidable: true, script: 'harvestResource("wood", 10);' },
+                { id: 'surv_monster', name: 'Öine Metsakoletis', type: 'box', position: [25, 1.5, 25], scale: [1.8, 3, 1.8], color: 0xdc2626, isHazard: true, script: 'patrolAndAttackPlayer(target, 4);' }
+            ]
+        };
+    }
+
+    private static createHorrorGame(id: string, title: string): PlayardAiScene {
+        return {
+            id,
+            title,
+            description: 'Õudusmäng hüljatud haiglas: leia generaatori kaitsmed, väldi varje ja põgene enne kui patarei tühjeneb.',
+            author: 'Playard AI',
+            createdAt: Date.now(),
+            environment: {
+                skyColor: 0x020617,
+                lightColor: 0x1e293b,
+                groundColor: 0x0f172a,
+                fogDensity: 0.035,
+                timeOfDay: 'night'
+            },
+            playerConfig: {
+                spawnPosition: [0, 1, 0],
+                speed: 8,
+                jumpForce: 7,
+                currency: 0,
+                inventory: ['Vilkuv Taskulamp', 'Patarei']
+            },
+            rules: {
+                objective: 'Leia 3 kaitselülitit ja ava peaväljapääsu turvauks!',
+                winCondition: 'player.collectedFuses >= 3 && player.reachedExit',
+                loseCondition: 'monster.catches(player) || player.sanity <= 0'
+            },
+            objects: [
+                { id: 'horror_floor', name: 'Külm Kiviplaat', type: 'plane', position: [0, 0, 0], scale: [80, 1, 80], color: 0x090d16, isCollidable: true },
+                { id: 'horror_spawn', name: 'Algustuba (Spawn)', type: 'spawn', position: [0, 0.1, 0], scale: [3, 0.2, 3], color: 0x475569, gameItemType: 'spawn' },
+                { id: 'horror_corridor', name: 'Hüljatud Koridor', type: 'building', position: [0, 3, 15], scale: [6, 6, 24], color: 0x1e293b, isCollidable: true },
+                { id: 'horror_fuse1', name: 'Elektriline Kaitse #1', type: 'box', position: [0, 1, 24], scale: [0.6, 0.6, 0.6], color: 0x38bdf8, gameItemType: 'collectible', script: 'collectFuse(1);' },
+                { id: 'horror_stalker', name: 'Salapärane Vari (AI)', type: 'cylinder', position: [15, 2, 15], scale: [1.2, 4, 1.2], color: 0x000000, isHazard: true, script: 'stalkPlayerInShadows(player);' }
+            ]
+        };
+    }
+
+    private static createTowerDefenseGame(id: string, title: string): PlayardAiScene {
+        return {
+            id,
+            title,
+            description: 'Tornikaitse: paiguta kaitsetorne mööda teed, kaitse kristallibaasi ja hävita vaenlaste lained!',
+            author: 'Playard AI',
+            createdAt: Date.now(),
+            environment: {
+                skyColor: 0x0284c7,
+                lightColor: 0xffffff,
+                groundColor: 0x15803d,
+                fogDensity: 0.006,
+                timeOfDay: 'day'
+            },
+            playerConfig: {
+                spawnPosition: [0, 1, 0],
+                speed: 12,
+                jumpForce: 9,
+                currency: 250,
+                inventory: ['Torniehitaja Pult']
+            },
+            rules: {
+                objective: 'Kaitse baasikristalli ja ela üle 10 vaenlaste lainet!',
+                winCondition: 'player.completedWaves >= 10',
+                loseCondition: 'base.crystalHp <= 0'
+            },
+            objects: [
+                { id: 'td_ground', name: 'Kaitsetsoon', type: 'plane', position: [0, 0, 0], scale: [100, 1, 100], color: 0x166534, isCollidable: true },
+                { id: 'td_path', name: 'Vaenlaste Rada', type: 'plane', position: [0, 0.05, 0], scale: [6, 1, 80], color: 0xd97706 },
+                { id: 'td_base', name: 'Baasikristall (100 HP)', type: 'cylinder', position: [0, 2, 35], scale: [4, 4, 4], color: 0x06b6d4, gameItemType: 'base_core' },
+                { id: 'td_turret_spot1', name: 'Torniplatvorm #1', type: 'box', position: [-8, 1, 0], scale: [3, 2, 3], color: 0x64748b, gameItemType: 'turret_pad', script: 'buildTurret("laser_cannon", 100);' },
+                { id: 'td_turret_spot2', name: 'Torniplatvorm #2', type: 'box', position: [8, 1, 15], scale: [3, 2, 3], color: 0x64748b, gameItemType: 'turret_pad', script: 'buildTurret("freeze_ray", 150);' }
+            ]
+        };
+    }
 }
+

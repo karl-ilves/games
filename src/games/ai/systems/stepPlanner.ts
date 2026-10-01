@@ -183,6 +183,79 @@ export class StepPlanner {
             ];
         }
 
+        // Tycoon
+        if (theme === 'tycoon') {
+            return [
+                { id: 'step-ty1', title: 'Loo tehase põrand ja seinad', description: 'Tööstushoone ja tootmisala paigutus.', status: 'pending', actionType: 'create_terrain' },
+                { id: 'step-ty2', title: 'Paigalda PBX Dropper ja konveier', description: 'Tootmismasin ja automaatne liin.', status: 'pending', actionType: 'spawn_dropper' },
+                { id: 'step-ty3', title: 'Loo kassapunkt ja raha kogunemine', description: 'Valuuta kogumise süsteem ja vault.', status: 'pending', actionType: 'setup_economy' },
+                { id: 'step-ty4', title: 'Lisa ostuplatvormid ja upgrade nupud', description: 'Laienduste ostmise loogika.', status: 'pending', actionType: 'setup_upgrades' },
+                { id: 'step-ty5', title: 'Automaatkontroll ja testimine', description: 'Kontrollitakse tootmistsüklit ja rahavoogu.', status: 'pending', actionType: 'verify' },
+                { id: 'step-ty6', title: 'Esitle valmis Tycoon mängu', description: 'Mängu esitlemine ja käivitamine.', status: 'pending', actionType: 'present' }
+            ];
+        }
+
+        // Simulator
+        if (theme === 'simulator') {
+            return [
+                { id: 'step-sim1', title: 'Loo treeningkeskus ja areen', description: 'Spordisaali ja areeni põrand ja valgustus.', status: 'pending', actionType: 'create_terrain' },
+                { id: 'step-sim2', title: 'Lisa treeningtööriist ja animatsioon', description: 'Klikkerimehaanika ja jõu kasvatamine.', status: 'pending', actionType: 'setup_training' },
+                { id: 'step-sim3', title: 'Loo müügitsoon ja konversioon', description: 'Jõu vahetamine PlayBuxi müntideks.', status: 'pending', actionType: 'setup_sell' },
+                { id: 'step-sim4', title: 'Seadista Rebirth portaal', description: 'Kordistite ja uute tsoonide süsteem.', status: 'pending', actionType: 'setup_rebirth' },
+                { id: 'step-sim5', title: 'Automaatkontroll ja edetabel', description: 'Valideeritakse kasvu ja edetabelit.', status: 'pending', actionType: 'verify' },
+                { id: 'step-sim6', title: 'Esitle valmis Simulaatorit', description: 'Kuvatakse mängija treeningareen.', status: 'pending', actionType: 'present' }
+            ];
+        }
+
+        // Racing
+        if (theme === 'racing') {
+            return [
+                { id: 'step-rc1', title: 'Loo ringrada ja stardivärav', description: 'Asfaltrada ja stardijoon koos taimeriga.', status: 'pending', actionType: 'create_track' },
+                { id: 'step-rc2', title: 'Ehita Playard sportauto', description: 'Sõiduki 3D kere ja juhtimissüsteem.', status: 'pending', actionType: 'spawn_car' },
+                { id: 'step-rc3', title: 'Paiguta kontrollpunktid (Checkpoints)', description: 'Ringiaegade mõõtmine ja pettusevastane süsteem.', status: 'pending', actionType: 'setup_checkpoints' },
+                { id: 'step-rc4', title: 'Lisa nitro- ja kiirenduspadjad', description: 'Boost-tsoonid ja kiirusefektid.', status: 'pending', actionType: 'setup_boosters' },
+                { id: 'step-rc5', title: 'Testi auto füüsikat ja ringiaega', description: 'Automaatne sõidu ja kokkupõrketest.', status: 'pending', actionType: 'verify' },
+                { id: 'step-rc6', title: 'Esitle võidusõidumängu', description: 'Võistlusrada on stardivalmis!', status: 'pending', actionType: 'present' }
+            ];
+        }
+
+        // Survival
+        if (theme === 'survival') {
+            return [
+                { id: 'step-sv1', title: 'Loo metsik loodusmaastik', description: 'Mets, kivid ja öine atmosfäär.', status: 'pending', actionType: 'create_wilderness' },
+                { id: 'step-sv2', title: 'Paigalda elupäästev lõke ja varjend', description: 'Soojuse ja turvatsooni seadistamine.', status: 'pending', actionType: 'setup_shelter' },
+                { id: 'step-sv3', title: 'Loo ressursikorje (puit ja kivi)', description: 'Toorainete kogumise ja inventari süsteem.', status: 'pending', actionType: 'setup_resources' },
+                { id: 'step-sv4', title: 'Lisa öised vaenlased (AI patroll)', description: 'Mängijat ründav tehisintellekt.', status: 'pending', actionType: 'spawn_monsters' },
+                { id: 'step-sv5', title: 'Testi tervise ja nälja tsüklit', description: 'Ellujäämismehaanika kontroll.', status: 'pending', actionType: 'verify' },
+                { id: 'step-sv6', title: 'Esitle ellujäämismängu', description: 'Öö algab – ela üle!', status: 'pending', actionType: 'present' }
+            ];
+        }
+
+        // Horror
+        if (theme === 'horror') {
+            return [
+                { id: 'step-hr1', title: 'Loo pime mahajäetud kompleks', description: 'Tume keskkond, tihe udu ja kõhedus.', status: 'pending', actionType: 'create_horror_env' },
+                { id: 'step-hr2', title: 'Anna mängijale vilkuv taskulamp', description: 'Patareiga valgusallikas ja pimedusefekt.', status: 'pending', actionType: 'setup_flashlight' },
+                { id: 'step-hr3', title: 'Peida kaitsmed ja mõistatuse osad', description: 'Generaatori parandamise juhtlõngad.', status: 'pending', actionType: 'setup_puzzle_items' },
+                { id: 'step-hr4', title: 'Loo varjudes luurav koletis (Stalker)', description: 'Heli peale reageeriv vaenlane.', status: 'pending', actionType: 'spawn_stalker' },
+                { id: 'step-hr5', title: 'Kontrolli hirmumõõdikut ja helisid', description: 'Atmosfääri ja põgenemistee test.', status: 'pending', actionType: 'verify' },
+                { id: 'step-hr6', title: 'Esitle õudusmängu', description: 'Põgene enne kui taskulamp kustub!', status: 'pending', actionType: 'present' }
+            ];
+        }
+
+        // Tower Defense
+        if (theme === 'tower_defense') {
+            return [
+                { id: 'step-td1', title: 'Loo lahinguväli ja vaenlaste rada', description: 'Teekond alguspunktist baasini.', status: 'pending', actionType: 'create_td_map' },
+                { id: 'step-td2', title: 'Paigalda baasikristall', description: 'Kaitstava objekti elud ja indikaator.', status: 'pending', actionType: 'setup_base' },
+                { id: 'step-td3', title: 'Loo kaitsetornide ehitusplatvormid', description: 'Laser- ja suurtornide paigutamine.', status: 'pending', actionType: 'setup_turret_pads' },
+                { id: 'step-td4', title: 'Seadista vaenlaste lained ja spawning', description: 'Rünnakulained ja kiirused.', status: 'pending', actionType: 'setup_waves' },
+                { id: 'step-td5', title: 'Testi laskmismehaanikat ja tabamusi', description: 'Tornide laskeulatuse ja kahju test.', status: 'pending', actionType: 'verify' },
+                { id: 'step-td6', title: 'Esitle tornikaitse mängu', description: 'Kaitse oma baasi!', status: 'pending', actionType: 'present' }
+            ];
+        }
+
+
         // Incremental modifications
         if (command.intent === 'MODIFY_OBJECT') {
             return [

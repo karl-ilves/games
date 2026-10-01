@@ -10727,7 +10727,169 @@ await (async () => {
             }
             console.log("   ✅ Playard AI admin audit logging verified!");
 
-            console.log("✅ 🤖 Playard AI (Conversation, Game Creation, Modification, Clarification, Security, Audit Logs) tests passed successfully!");
+            // 22h. Test New Game Genres Creation (Tycoon, Simulator, Racing, Survival, Horror, Tower Defense)
+            console.log("   Testing AI Game Genres (Tycoon, Racing, Survival, Horror, TD)...");
+            const genreTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                // Ensure unlimited quota for test
+                localStorage.setItem('playard_ai_tier_subscription', JSON.stringify({ tier: 'VIP', validUntil: Date.now() + 86400000 }));
+                localStorage.setItem('playard_ai_daily_usage', JSON.stringify({ count: 0, firstRequestTime: Date.now() }));
+
+                // 1. Tycoon
+                await ai.handleUserInput('Tee tycoon mäng suure tehase ja konveieriga');
+                await new Promise(r => setTimeout(r, 2000));
+                let scene = ai.state.getActiveScene();
+                const hasTycoon = scene?.title?.includes('Tycoon') && scene?.objects?.some(o => o.gameItemType === 'tycoon_dropper');
+
+                // 2. Racing
+                await ai.handleUserInput('Tee racing võidusõidumäng');
+                await new Promise(r => setTimeout(r, 2000));
+                scene = ai.state.getActiveScene();
+                const hasRacing = scene?.title?.includes('Võidusõit') && scene?.objects?.some(o => o.gameItemType === 'vehicle_car');
+
+                // 3. Survival
+                await ai.handleUserInput('Tee survival ellujäämismäng pimedas metsas');
+                await new Promise(r => setTimeout(r, 2000));
+                scene = ai.state.getActiveScene();
+                const hasSurvival = scene?.title?.includes('Ellujäämine') && scene?.objects?.some(o => o.id === 'surv_campfire');
+
+                // 4. Horror
+                await ai.handleUserInput('Tee horror õudusmäng hüljatud haiglas');
+                await new Promise(r => setTimeout(r, 2000));
+                scene = ai.state.getActiveScene();
+                const hasHorror = scene?.title?.includes('Õudus') && scene?.objects?.some(o => o.id === 'horror_stalker');
+
+                // 5. Tower Defense
+                await ai.handleUserInput('Tee tower defense tornikaitse mäng');
+                await new Promise(r => setTimeout(r, 2000));
+                scene = ai.state.getActiveScene();
+                const hasTD = scene?.title?.includes('Tornikaitse') && scene?.objects?.some(o => o.gameItemType === 'base_core');
+
+                return { hasTycoon, hasRacing, hasSurvival, hasHorror, hasTD };
+            });
+
+            console.log("   AI Genres Creation Results:", genreTest);
+            if (!genreTest.hasTycoon || !genreTest.hasRacing || !genreTest.hasSurvival || !genreTest.hasHorror || !genreTest.hasTD) {
+                throw new Error("One or more game genres failed generation: " + JSON.stringify(genreTest));
+            }
+            console.log("   ✅ Playard AI game genres (Tycoon, Racing, Survival, Horror, TD) verified!");
+
+            // 22i. Test 7-Stage Development Pipeline (IDEA -> PLAAN -> LOOMINE -> KOOD -> TESTIMINE -> PARANDAMINE -> AVALDAMINE)
+            console.log("   Testing 7-Stage Development Pipeline Guidance...");
+            const pipelineTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('Etapp 1: idee');
+                await new Promise(r => setTimeout(r, 400));
+                let msgs = ai.state.getMessages();
+                const stage1Msg = msgs[msgs.length - 1]?.text || '';
+                const hasStage1 = stage1Msg.includes('Etapp 1 / 7') && stage1Msg.includes('IDEA');
+
+                await ai.handleUserInput('Etapp 4: kood');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const stage4Msg = msgs[msgs.length - 1]?.text || '';
+                const hasStage4 = stage4Msg.includes('Etapp 4 / 7') && stage4Msg.includes('KOOD');
+
+                await ai.handleUserInput('Etapp 7: avaldamine');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const stage7Msg = msgs[msgs.length - 1]?.text || '';
+                const hasStage7 = stage7Msg.includes('Etapp 7 / 7') && stage7Msg.includes('AVALDAMINE');
+
+                return { hasStage1, hasStage4, hasStage7 };
+            });
+
+            console.log("   Pipeline Stages Guidance Results:", pipelineTest);
+            if (!pipelineTest.hasStage1 || !pipelineTest.hasStage4 || !pipelineTest.hasStage7) {
+                throw new Error("Development pipeline stage guidance failed: " + JSON.stringify(pipelineTest));
+            }
+            console.log("   ✅ 7-Stage Development Pipeline (IDEA, KOOD, AVALDAMINE) verified!");
+
+            // 22j. Test Code Assistance & Bug Repairing
+            console.log("   Testing AI Code Engine (Repairing bugs & infinite loops)...");
+            const codeRepairTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                const bugSnippet = 'paranda kood: while(true) { player.position.x += 1; player.currency += 999999; }';
+                await ai.handleUserInput(bugSnippet);
+                await new Promise(r => setTimeout(r, 500));
+                const msgs = ai.state.getMessages();
+                const lastMsg = msgs[msgs.length - 1];
+                const fixedCode = lastMsg?.codeSnippet || '';
+
+                return {
+                    hasRepairExplanation: lastMsg?.text?.includes('Playard AI Koodimootor'),
+                    hasFixedCode: !!fixedCode,
+                    brokeInfiniteLoop: fixedCode.includes('safeLimit'),
+                    addedSafeCurrency: fixedCode.includes('Valideeritud turvaline tasu')
+                };
+            });
+
+            console.log("   Code Engine Repair Results:", codeRepairTest);
+            if (!codeRepairTest.hasRepairExplanation || !codeRepairTest.brokeInfiniteLoop || !codeRepairTest.addedSafeCurrency) {
+                throw new Error("Code Engine repair failed: " + JSON.stringify(codeRepairTest));
+            }
+            console.log("   ✅ Playard AI Code Engine (Bug repairing & safety fix) verified!");
+
+            // 22k. Test UI Component Generation (Shop UI)
+            console.log("   Testing AI UI Component Generation...");
+            const uiGenTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('Loo shop UI pood');
+                await new Promise(r => setTimeout(r, 500));
+                const msgs = ai.state.getMessages();
+                const lastMsg = msgs[msgs.length - 1];
+                const snippet = lastMsg?.codeSnippet || '';
+
+                return {
+                    hasUiMsg: lastMsg?.text?.includes('Playard UI Generaator'),
+                    hasShopModal: snippet.includes('playard-shop-modal'),
+                    hasPlaybuxCheck: snippet.includes('yardService.spendPlaybux')
+                };
+            });
+
+            console.log("   UI Generation Results:", uiGenTest);
+            if (!uiGenTest.hasUiMsg || !uiGenTest.hasShopModal || !uiGenTest.hasPlaybuxCheck) {
+                throw new Error("UI Component generation failed: " + JSON.stringify(uiGenTest));
+            }
+            console.log("   ✅ Playard AI UI Component Generator (Shop, PBX logic) verified!");
+
+            // 22l. Test Anti-Hallucination & General Knowledge
+            console.log("   Testing Anti-Hallucination Guard & General Knowledge...");
+            const factsTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Anti-hallucination test: fake crypto
+                await ai.handleUserInput('Kas Playardis saab krüpto ja bitcoini pangakontole kanda?');
+                await new Promise(r => setTimeout(r, 400));
+                let msgs = ai.state.getMessages();
+                const cryptoReply = msgs[msgs.length - 1]?.text || '';
+                const blockedCrypto = cryptoReply.includes('PlayBux (PBX)') && cryptoReply.includes('ei toeta krüptovaluutasid');
+
+                // 2. Aviation fact: Airbus A320
+                await ai.handleUserInput('Mis lennuk on Airbus A320?');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const a320Reply = msgs[msgs.length - 1]?.text || '';
+                const hasA320Fact = a320Reply.includes('Airbus A320') && a320Reply.includes('reisilennuk');
+
+                // 3. Astronomy fact: Saturn
+                await ai.handleUserInput('Mis planeet on Saturn?');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const saturnReply = msgs[msgs.length - 1]?.text || '';
+                const hasSaturnFact = saturnReply.includes('Saturn') && saturnReply.includes('rõngaste');
+
+                return { blockedCrypto, hasA320Fact, hasSaturnFact };
+            });
+
+            console.log("   Anti-Hallucination & Facts Results:", factsTest);
+            if (!factsTest.blockedCrypto || !factsTest.hasA320Fact || !factsTest.hasSaturnFact) {
+                throw new Error("Anti-hallucination or factual knowledge test failed: " + JSON.stringify(factsTest));
+            }
+            console.log("   ✅ Anti-Hallucination Guard (PlayBux official rules) & General Knowledge verified!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Conversation) tests passed successfully!");
+
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

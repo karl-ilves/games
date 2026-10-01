@@ -63,4 +63,10 @@ export type AiIntentType =
     | 'UPDATE_GAME_RULES'
     | 'CLARIFICATION_NEEDED'
     | 'SECURITY_VIOLATION'
+    | 'PIPELINE_STEP'
+    | 'CODE_ASSIST'
+    | 'SYSTEM_DESIGN'
+    | 'UI_GEN'
+    | 'GENERAL_KNOWLEDGE'
     | 'HELP_OR_CHAT';
+

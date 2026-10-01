@@ -7,6 +7,7 @@ import { InGameEmotesWidget } from '../../shared/avatar/InGameEmotesWidget';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
 import { translateDOM, t } from '../../shared/i18n_dict';
 import { aiTierService, AI_TIER_CONFIGS, type PlayardAiTier } from '../../shared/aiTierService';
+import { PlayardGeneralKnowledge, PLAYARD_PIPELINE_STAGES, AiCodeAndSystemEngine, PLAYARD_GENRES_CATALOG, type PipelineStage } from '../../shared/playardAiKnowledge';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -9020,6 +9021,50 @@ export function executeAiBuild(promptText: string) {
     } else if (p === 'redo' || p.includes('tee uuesti') || p.includes('uuesti')) {
         performRedo();
         aiResponse = isAdmin ? `↪️ <strong>Tegevus uuesti rakendatud (Redo)!</strong>` : `↪️ <strong>Action redone!</strong>`;
+
+    // --- 0.01 PLAYARD GENERAL KNOWLEDGE & ANTI-HALLUCINATION GUARD ---
+    } else if (PlayardGeneralKnowledge.answerQuestion(promptText) !== null) {
+        const fact = PlayardGeneralKnowledge.answerQuestion(promptText)!;
+        aiResponse = `🧠 <strong>Playard AI Teadmistebaas:</strong><br>${fact}`;
+
+    // --- 0.02 PLAYARD 7-STAGE DEVELOPMENT PIPELINE ---
+    } else if (p.includes('pipeline') || p.includes('arenduskonveier') || p.includes('arendustsükkel') || /^(etapp|samm|stage)\s*([1-7]|idea|plaan|loomine|kood|testimine|parandamine|avaldamine)/i.test(p)) {
+        let stageKey: PipelineStage = 'IDEA';
+        if (p.includes('2') || p.includes('plaan')) stageKey = 'PLAAN';
+        else if (p.includes('3') || p.includes('loomine') || p.includes('build')) stageKey = 'LOOMINE';
+        else if (p.includes('4') || p.includes('kood') || p.includes('skript')) stageKey = 'KOOD';
+        else if (p.includes('5') || p.includes('testimine') || p.includes('test')) stageKey = 'TESTIMINE';
+        else if (p.includes('6') || p.includes('parandamine') || p.includes('fix')) stageKey = 'PARANDAMINE';
+        else if (p.includes('7') || p.includes('avaldamine') || p.includes('publish')) stageKey = 'AVALDAMINE';
+
+        const g = PLAYARD_PIPELINE_STAGES[stageKey];
+        const cl = g.checklist.map(c => `<li>${c}</li>`).join('');
+        aiResponse = `🚀 <strong>Playard Arenduskonveier: Etapp ${g.stageNumber} / 7 – ${g.title} (${stageKey})</strong><br>
+        <em>${g.description}</em><br><br>
+        <strong>📋 Tegevuskava & Kontrollnimekiri:</strong>
+        <ul style="margin: 6px 0; padding-left: 20px;">${cl}</ul>
+        💡 <strong>Soovitus:</strong> ${g.actionPrompt}` +
+        (g.codeTemplate ? `<br><pre style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 6px; font-size: 0.75rem;"><code>${g.codeTemplate}</code></pre>` : '');
+
+    // --- 0.03 CODE ASSISTANCE & BUG FIXING ---
+    } else if (p.includes('paranda kood') || p.includes('leia koodiviga') || p.includes('optimeeri kood') || p.includes('fix code') || p.includes('debug code')) {
+        const repair = AiCodeAndSystemEngine.repairCode(promptText);
+        const bugList = repair.detectedBugs.map(b => `<li>⚠️ ${b}</li>`).join('');
+        aiResponse = `🛠️ <strong>Playard AI Koodimootor & Vigade Parandaja:</strong><br>
+        ${repair.explanation}<br>
+        <ul style="margin: 6px 0; padding-left: 20px;">${bugList}</ul>
+        <pre style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 6px; font-size: 0.75rem; color: #38bdf8;"><code>${repair.fixedCode}</code></pre>`;
+
+    // --- 0.04 UI GENERATION ---
+    } else if (/(?:loo|tee|genereeri|build|create)\s+(?:shop|pood|inventar|inventory|hud|seaded|settings|menüü|menu)\s*(?:ui|liides|aken)?/i.test(p)) {
+        let uiType: 'shop' | 'inventory' | 'hud' | 'settings' | 'menu' = 'hud';
+        if (p.includes('shop') || p.includes('pood')) uiType = 'shop';
+        else if (p.includes('inventar') || p.includes('inventory')) uiType = 'inventory';
+
+        const comp = AiCodeAndSystemEngine.generateUIComponent(uiType);
+        aiResponse = `🎨 <strong>Playard UI Generaator:</strong> Lõin puhta ja modulaarse ${uiType.toUpperCase()} komponendi!<br>
+        <pre style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 6px; font-size: 0.75rem; color: #a7f3d0; max-height: 120px; overflow-y: auto;"><code>${comp.html.replace(/</g, '&lt;')}</code></pre>`;
+
 
     // ============================================================
     // --- 🏫 0.00 AI KOOL (TEACHING & SCHOOL NOTEBOOK COMMANDS) ---
