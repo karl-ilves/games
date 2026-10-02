@@ -2302,6 +2302,42 @@ export function clearPublishModalThumbnail() {
     if (fileInput) fileInput.value = '';
 }
 
+let isCheatersConfirmed = false;
+
+export function setCheatersConfirmed(confirmed: boolean) {
+    isCheatersConfirmed = confirmed;
+    const badgeEl = document.getElementById('cheaters-status-badge');
+    const warnEl = document.getElementById('cheaters-tap-ok-warning');
+    const panelEl = document.getElementById('cheaters-config-panel');
+    const sectionEl = document.getElementById('publish-cheaters-section');
+
+    if (warnEl) warnEl.style.display = 'none';
+
+    if (confirmed) {
+        if (badgeEl) {
+            badgeEl.textContent = '✅ Kinnitatud (OK)';
+            badgeEl.style.background = 'rgba(16, 185, 129, 0.15)';
+            badgeEl.style.color = '#34d399';
+            badgeEl.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        }
+        if (sectionEl) {
+            sectionEl.style.borderColor = '#10b981';
+            sectionEl.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.25)';
+        }
+    } else {
+        if (badgeEl) {
+            badgeEl.textContent = '⚠️ Vajab kinnitamist';
+            badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+            badgeEl.style.color = '#f87171';
+            badgeEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        }
+        if (sectionEl) {
+            sectionEl.style.borderColor = '#a855f7';
+            sectionEl.style.boxShadow = 'none';
+        }
+    }
+}
+
 export function openPublishModal() {
     const modal = document.getElementById('publish-game-modal');
     if (!modal) return;
@@ -2336,6 +2372,17 @@ export function openPublishModal() {
         }
     }
 
+    // Check/reset Cheaters security state
+    if (sceneData.cheatersPolicy?.confirmed) {
+        setCheatersConfirmed(true);
+    } else {
+        setCheatersConfirmed(false);
+    }
+    const warnEl = document.getElementById('cheaters-tap-ok-warning');
+    if (warnEl) warnEl.style.display = 'none';
+    const panelEl = document.getElementById('cheaters-config-panel');
+    if (panelEl) panelEl.style.display = 'none';
+
     modal.style.display = 'flex';
 }
 
@@ -2347,6 +2394,21 @@ export function closePublishModal() {
 }
 
 export async function confirmAndPublishGame() {
+    // If user hasn't confirmed Cheaters security, show "Tap OK" and display the section
+    if (!isCheatersConfirmed) {
+        const warnEl = document.getElementById('cheaters-tap-ok-warning');
+        const panelEl = document.getElementById('cheaters-config-panel');
+        const sectionEl = document.getElementById('publish-cheaters-section');
+        if (warnEl) warnEl.style.display = 'flex';
+        if (panelEl) panelEl.style.display = 'flex';
+        if (sectionEl) {
+            sectionEl.style.borderColor = '#ef4444';
+            sectionEl.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.45)';
+            sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        return false;
+    }
+
     const titleInput = document.getElementById('publish-game-title') as HTMLInputElement | null;
     const descInput = document.getElementById('publish-game-desc') as HTMLTextAreaElement | null;
     const playersSelect = document.getElementById('publish-max-players') as HTMLSelectElement | null;
@@ -2362,6 +2424,19 @@ export async function confirmAndPublishGame() {
     currentGameMinAge = minAge;
     currentGameAgeRating = ageRating;
 
+    const cheatersPolicy = {
+        detectSpeed: (document.getElementById('cheat-detect-speed') as HTMLInputElement)?.checked ?? true,
+        detectFly: (document.getElementById('cheat-detect-fly') as HTMLInputElement)?.checked ?? true,
+        detectTeleport: (document.getElementById('cheat-detect-teleport') as HTMLInputElement)?.checked ?? true,
+        detectMoney: (document.getElementById('cheat-detect-money') as HTMLInputElement)?.checked ?? true,
+        detectAutoClick: (document.getElementById('cheat-detect-autoclick') as HTMLInputElement)?.checked ?? true,
+        detectGodmode: (document.getElementById('cheat-detect-godmode') as HTMLInputElement)?.checked ?? true,
+        action: (document.getElementById('cheat-ban-action') as HTMLSelectElement)?.value || 'ban_perm',
+        sensitivity: (document.getElementById('cheat-sensitivity') as HTMLSelectElement)?.value || 'high',
+        confirmed: true,
+        confirmedAt: Date.now()
+    };
+
     const sceneTitleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
     if (sceneTitleInput) sceneTitleInput.value = gameTitle;
     const sceneDescInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
@@ -2375,7 +2450,8 @@ export async function confirmAndPublishGame() {
         maxPlayers,
         minAge,
         ageRating,
-        thumbnail: currentPublishThumbnail || undefined
+        thumbnail: currentPublishThumbnail || undefined,
+        cheatersPolicy
     });
 }
 
@@ -2386,6 +2462,7 @@ export async function publishCurrentGame(options?: {
     minAge?: number;
     ageRating?: string;
     thumbnail?: string;
+    cheatersPolicy?: any;
 }) {
     // Confirmation prompt ("are you shure")
     const isConfirmed = confirm('Are you sure you want to publish this game?');
@@ -2404,6 +2481,7 @@ export async function publishCurrentGame(options?: {
     const minAge = options?.minAge !== undefined ? options.minAge : (sceneData.minAge ?? currentGameMinAge ?? 0);
     const ageRating = options?.ageRating !== undefined ? options.ageRating : (sceneData.ageRating || (minAge > 0 ? `${minAge}+` : '0+'));
     const thumbnail = options?.thumbnail !== undefined ? options.thumbnail : (currentPublishThumbnail || sceneData.thumbnail || '');
+    const cheatersPolicy = options?.cheatersPolicy !== undefined ? options.cheatersPolicy : sceneData.cheatersPolicy;
 
     sceneData.title = title;
     sceneData.description = description;
@@ -2412,6 +2490,9 @@ export async function publishCurrentGame(options?: {
     sceneData.ageRating = ageRating;
     if (thumbnail) {
         sceneData.thumbnail = thumbnail;
+    }
+    if (cheatersPolicy) {
+        sceneData.cheatersPolicy = cheatersPolicy;
     }
 
     const submitBtn = document.getElementById('btn-submit-review');
@@ -2435,7 +2516,8 @@ export async function publishCurrentGame(options?: {
         status: 'approved',
         maxPlayers,
         minAge,
-        ageRating
+        ageRating,
+        cheatersPolicy: cheatersPolicy || sceneData.cheatersPolicy
     });
 
     if (submitBtn) {
@@ -2985,6 +3067,8 @@ async function initStudio() {
         clearPublishModalThumbnail,
         captureSceneSnapshot,
         processImageFile,
+        setCheatersConfirmed,
+        get isCheatersConfirmed() { return isCheatersConfirmed; },
         get currentPublishThumbnail() { return currentPublishThumbnail; },
         get currentGameMaxPlayers() { return currentGameMaxPlayers; },
         get currentGameMinAge() { return currentGameMinAge; },
@@ -5072,6 +5156,20 @@ function setupStudioEvents() {
             }
         });
     }
+
+    // Publish Modal: Cheaters & Anti-Cheat Settings
+    document.getElementById('btn-open-cheaters-settings')?.addEventListener('click', () => {
+        const panel = document.getElementById('cheaters-config-panel');
+        if (panel) {
+            panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+        }
+    });
+
+    document.getElementById('btn-cheaters-ok')?.addEventListener('click', () => {
+        setCheatersConfirmed(true);
+        const panel = document.getElementById('cheaters-config-panel');
+        if (panel) panel.style.display = 'none';
+    });
 
     // Publish Modal: Game Cover Image Drag-and-Drop & Upload Listeners
     const dropzone = document.getElementById('publish-image-dropzone');

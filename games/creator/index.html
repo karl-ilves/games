@@ -1219,6 +1219,90 @@
 
             <!-- Body -->
             <div style="padding: 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                <!-- 0. Cheaters Security & Anti-Cheat Section -->
+                <div id="publish-cheaters-section" style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid #a855f7; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; transition: all 0.25s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.25rem;">🛡️</span>
+                            <div>
+                                <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">Anti-Cheat & Cheaters Kaitse</div>
+                                <div style="font-size: 0.76rem; color: #94a3b8;">Määra, kuidas automaat petjaid tuvastab ja bannib</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="cheaters-status-badge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);">⚠️ Vajab kinnitamist</span>
+                            <button type="button" id="btn-open-cheaters-settings" class="btn-studio" style="background: linear-gradient(135deg, #7c3aed, #a855f7); border-color: #c084fc; color: #fff; font-weight: 800; font-size: 0.82rem; padding: 6px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <span>🛡️</span> <span>Cheaters</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Validation warning when clicking publish without OK: "Tap OK" -->
+                    <div id="cheaters-tap-ok-warning" style="display: none; background: rgba(239, 68, 68, 0.25); border: 1.5px solid #ef4444; border-radius: 8px; padding: 8px 12px; color: #fca5a5; font-size: 0.84rem; font-weight: 800; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.15rem;">⚠️</span>
+                        <span>Palun ava seaded ja vajuta all <strong>OK</strong>! (Tap OK)</span>
+                    </div>
+
+                    <!-- Expandable Cheaters Settings Panel -->
+                    <div id="cheaters-config-panel" style="display: none; flex-direction: column; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(168, 85, 247, 0.3);">
+                        <!-- 1. Kuidas automaat aru saab -->
+                        <div>
+                            <label style="display: block; font-weight: 800; font-size: 0.82rem; color: #ffd32a; margin-bottom: 6px;">🔍 Kuidas automaat aru saab (Tuvastusmeetodid):</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; color: #e2e8f0;">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="cheat-detect-speed" checked> 🏃 Kiirushäkk (Speedhack)
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="cheat-detect-fly" checked> ✈️ Lendamine & Hõljumine
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="cheat-detect-teleport" checked> 🌀 Teleport / Seinast läbi
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="cheat-detect-money" checked> 💰 Raha & Skoori häkk
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="cheat-detect-autoclick" checked> ⚡ Spamm & Botid
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="cheat-detect-godmode" checked> 🛡️ Surematuse häkk
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 2. Kuidas automaat bannib -->
+                        <div>
+                            <label style="display: block; font-weight: 800; font-size: 0.82rem; color: #ffd32a; margin-bottom: 6px;">🔨 Kuidas automaat bannib (Karistusmeetod):</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label for="cheat-ban-action" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Karistus:</label>
+                                    <select id="cheat-ban-action" style="width: 100%; box-sizing: border-box; padding: 7px 10px; background: #0b111a; border: 1.5px solid rgba(168, 85, 247, 0.4); border-radius: 8px; color: #fff; font-size: 0.82rem; font-weight: 600; outline: none; cursor: pointer;">
+                                        <option value="ban_perm" selected>🔨 Automaatne püsiv Ban</option>
+                                        <option value="ban_24h">⏳ 24h Serveri Ban</option>
+                                        <option value="kick">👢 Viska serverist välja (Kick)</option>
+                                        <option value="freeze">🧊 Külmuta liikumine (Freeze)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="cheat-sensitivity" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Automaadi rangus:</label>
+                                    <select id="cheat-sensitivity" style="width: 100%; box-sizing: border-box; padding: 7px 10px; background: #0b111a; border: 1.5px solid rgba(168, 85, 247, 0.4); border-radius: 8px; color: #fff; font-size: 0.82rem; font-weight: 600; outline: none; cursor: pointer;">
+                                        <option value="high" selected>⚡ Range (Kohene reageerimine)</option>
+                                        <option value="medium">⚖️ Keskmine (3 hoiatust enne banni)</option>
+                                        <option value="low">🛡️ Pehme (Ainult teavita loojat)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OK Button at the bottom -->
+                        <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+                            <button type="button" id="btn-cheaters-ok" class="btn-studio" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399; color: #fff; font-weight: 800; font-size: 0.85rem; padding: 8px 24px; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); display: flex; align-items: center; gap: 6px;">
+                                <span>✅</span> <span>OK</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 1. Game Title -->
                 <div>
                     <label for="publish-game-title" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Game Title:</label>

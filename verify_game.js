@@ -3784,7 +3784,74 @@ await (async () => {
         }
         console.log("   Publish Modal Cover Upload & Drag-and-Drop elements verified:", coverElements);
 
-        // Click confirm publish inside the modal
+        // Test Cheaters Anti-Cheat Section & 'Tap OK' validation requirement
+        console.log("   Testing Publish Modal 'Cheaters' section & 'Tap OK' validation...");
+        const cheatersElements = await page.evaluate(() => {
+            const section = document.getElementById('publish-cheaters-section');
+            const btnOpen = document.getElementById('btn-open-cheaters-settings');
+            const badge = document.getElementById('cheaters-status-badge');
+            const warn = document.getElementById('cheaters-tap-ok-warning');
+            const panel = document.getElementById('cheaters-config-panel');
+            const btnOk = document.getElementById('btn-cheaters-ok');
+            return {
+                hasSection: !!section,
+                hasBtnOpen: !!btnOpen,
+                hasBadge: !!badge,
+                badgeText: badge ? badge.textContent : '',
+                hasWarn: !!warn,
+                hasPanel: !!panel,
+                hasBtnOk: !!btnOk
+            };
+        });
+
+        if (!cheatersElements.hasSection || !cheatersElements.hasBtnOpen || !cheatersElements.hasBtnOk) {
+            throw new Error(`Expected Publish Modal Cheaters section and OK button to exist! Details: ${JSON.stringify(cheatersElements)}`);
+        }
+
+        // 1. Try to publish immediately WITHOUT clicking OK -> Must show "Tap OK" and open config panel
+        await page.click('#btn-confirm-publish');
+        await new Promise(r => setTimeout(r, 200));
+
+        const unconfirmedState = await page.evaluate(() => {
+            const warn = document.getElementById('cheaters-tap-ok-warning');
+            const panel = document.getElementById('cheaters-config-panel');
+            return {
+                warnVisible: warn ? window.getComputedStyle(warn).display !== 'none' : false,
+                warnText: warn ? warn.textContent : '',
+                panelVisible: panel ? window.getComputedStyle(panel).display !== 'none' : false
+            };
+        });
+
+        console.log("   Cheaters unconfirmed publish attempt state:", unconfirmedState);
+        if (!unconfirmedState.warnVisible || !unconfirmedState.warnText.includes('Tap OK')) {
+            throw new Error(`Expected 'Tap OK' warning to be displayed when publishing without Cheaters confirmation! Got: ${JSON.stringify(unconfirmedState)}`);
+        }
+        if (!unconfirmedState.panelVisible) {
+            throw new Error(`Expected Cheaters config panel to open when publishing without confirmation!`);
+        }
+
+        // 2. Click 'OK' on Cheaters settings
+        await page.click('#btn-cheaters-ok');
+        await new Promise(r => setTimeout(r, 200));
+
+        const confirmedState = await page.evaluate(() => {
+            const badge = document.getElementById('cheaters-status-badge');
+            const warn = document.getElementById('cheaters-tap-ok-warning');
+            return {
+                badgeText: badge ? badge.textContent : '',
+                warnVisible: warn ? window.getComputedStyle(warn).display !== 'none' : false
+            };
+        });
+
+        console.log("   Cheaters confirmed state after clicking OK:", confirmedState);
+        if (!confirmedState.badgeText.includes('OK') && !confirmedState.badgeText.includes('Kinnitatud')) {
+            throw new Error(`Expected Cheaters badge to show confirmed state! Got: ${JSON.stringify(confirmedState)}`);
+        }
+        if (confirmedState.warnVisible) {
+            throw new Error(`Expected 'Tap OK' warning to be hidden after clicking OK!`);
+        }
+
+        // 3. Now click confirm publish inside the modal
         await page.click('#btn-confirm-publish');
         await new Promise(r => setTimeout(r, 1200));
 
@@ -3817,6 +3884,9 @@ await (async () => {
         }
         if (studioPublishedGame.minAge !== 9 && studioPublishedGame.ageRating !== '9+') {
             throw new Error(`Expected age rating 9 / 9+, but got minAge: ${studioPublishedGame.minAge}, ageRating: ${studioPublishedGame.ageRating}`);
+        }
+        if (!studioPublishedGame.cheatersPolicy || !studioPublishedGame.cheatersPolicy.confirmed) {
+            throw new Error(`Expected published game to have cheatersPolicy persisted! Got: ${JSON.stringify(studioPublishedGame.cheatersPolicy)}`);
         }
         if (!studioPublishedGame.title.includes('Epic Multi Server Quest')) {
             throw new Error(`Expected game title 'Epic Multi Server Quest', but got '${studioPublishedGame.title}'`);

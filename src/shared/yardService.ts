@@ -59,6 +59,7 @@ export interface CreatedGame {
     maxPlayers?: number;
     minAge?: number;
     ageRating?: string;
+    cheatersPolicy?: any;
     createdAt: number;
     updatedAt: number;
 }
