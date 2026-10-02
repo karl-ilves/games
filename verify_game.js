@@ -747,6 +747,53 @@ await (async () => {
             throw new Error("Cooking game card must be visible to everyone on Hub!");
         }
 
+        // Test Games Search Bar (Right above Recently Played Games)
+        console.log("   Testing Games Search Bar directly above Recently Played Games...");
+        const searchInput = await page.$('#games-search-input');
+        if (!searchInput) throw new Error("Search input #games-search-input not found!");
+
+        // Verify it is placed above #recently-played-section in DOM order
+        const isAboveRecentlyPlayed = await page.evaluate(() => {
+            const searchSec = document.getElementById('games-search-section');
+            const recentSec = document.getElementById('recently-played-section');
+            if (!searchSec || !recentSec) return false;
+            return !!(searchSec.compareDocumentPosition(recentSec) & Node.DOCUMENT_POSITION_FOLLOWING);
+        });
+        if (!isAboveRecentlyPlayed) throw new Error("Games search bar must be directly above recently played games!");
+
+        // Test filtering by query 'uss' -> Snake card visible, Racing card hidden
+        await page.type('#games-search-input', 'uss');
+        await new Promise(r => setTimeout(r, 100));
+        const snakeVisible = await page.$eval('#card-snake-game', el => window.getComputedStyle(el).display);
+        const racingHidden = await page.$eval('#card-racing-game', el => window.getComputedStyle(el).display);
+        const countText = await page.$eval('#games-search-count-text', el => el.textContent);
+        console.log("   Search 'uss' results: Snake=" + snakeVisible + ", Racing=" + racingHidden + ", count=" + countText);
+        if (snakeVisible === 'none' || racingHidden !== 'none') {
+            throw new Error("Search filtering failed: Snake should be visible and Racing should be hidden!");
+        }
+
+        // Test non-matching query -> Empty state visible
+        await page.evaluate(() => {
+            const inp = document.getElementById('games-search-input');
+            inp.value = 'qwertyxyznotagame';
+            inp.dispatchEvent(new Event('input'));
+        });
+        await new Promise(r => setTimeout(r, 100));
+        const noResultsDisplay = await page.$eval('#games-search-no-results', el => window.getComputedStyle(el).display);
+        if (noResultsDisplay === 'none') {
+            throw new Error("Empty state #games-search-no-results should be visible when no games match!");
+        }
+
+        // Test clear search button restores all games
+        await page.click('#btn-clear-games-search');
+        await new Promise(r => setTimeout(r, 100));
+        const racingRestored = await page.$eval('#card-racing-game', el => window.getComputedStyle(el).display);
+        const inputCleared = await page.$eval('#games-search-input', el => el.value);
+        if (racingRestored === 'none' || inputCleared !== '') {
+            throw new Error("Clear search failed to restore all games!");
+        }
+        console.log("   ✅ Games Search Bar verified successfully!");
+
         // Test Recently Played Games Section (English for guests, Estonian for Playard Owner)
         console.log("   Testing Recently Played Games Table (English for Guest)...");
         await page.waitForSelector('#recently-played-section', { visible: true, timeout: 5000 });

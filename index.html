@@ -181,6 +181,82 @@
             margin: 0 0 35px 0;
         }
 
+        /* Games Search Bar */
+        .games-search-container {
+            margin: 25px 0 20px 0;
+            position: relative;
+        }
+        .games-search-wrapper {
+            position: relative;
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        .games-search-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 15px 48px 15px 50px;
+            background: rgba(22, 32, 44, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(0, 242, 254, 0.35);
+            border-radius: 16px;
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.05);
+        }
+        .games-search-input::placeholder {
+            color: #718093;
+            font-weight: 400;
+        }
+        .games-search-input:hover {
+            border-color: rgba(0, 242, 254, 0.55);
+            box-shadow: 0 10px 35px rgba(0, 242, 254, 0.18), inset 0 1px 2px rgba(255, 255, 255, 0.08);
+        }
+        .games-search-input:focus {
+            border-color: #00f2fe;
+            background: rgba(24, 36, 50, 0.95);
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.35), 0 12px 40px rgba(0, 0, 0, 0.45);
+        }
+        .games-search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.25rem;
+            color: #00f2fe;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 0 8px rgba(0, 242, 254, 0.4));
+        }
+        .games-search-clear {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #a4b0be;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .games-search-clear:hover {
+            background: rgba(255, 71, 87, 0.3);
+            color: #ffffff;
+            transform: translateY(-50%) scale(1.1);
+        }
+
         /* Game Grid */
         .game-grid {
             display: grid;
@@ -1462,6 +1538,40 @@
             </div>
         </div>
 
+        <!-- Games Search Bar (Right above Recently Played Games) -->
+        <div id="games-search-section" class="games-search-container" style="margin: 25px 0 20px 0;">
+            <div class="games-search-wrapper" style="position: relative; max-width: 680px; margin: 0 auto;">
+                <div class="games-search-icon">🔍</div>
+                <input 
+                    type="text" 
+                    id="games-search-input" 
+                    class="games-search-input"
+                    placeholder="🔍 Otsi mänge nime, žanri või märksõna järgi... / Search games..."
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <button 
+                    id="btn-clear-games-search" 
+                    class="games-search-clear"
+                    type="button"
+                    title="Tühjenda otsing / Clear search"
+                >
+                    ✕
+                </button>
+            </div>
+            <!-- Search Results Status / Feedback bar -->
+            <div id="games-search-status" style="display: none; max-width: 680px; margin: 10px auto 0 auto; justify-content: space-between; align-items: center; padding: 6px 14px; font-size: 0.88rem; color: #8899a6;">
+                <span id="games-search-count-text"></span>
+                <span id="games-search-reset-hint" style="color: #00f2fe; cursor: pointer; text-decoration: underline; font-size: 0.82rem;">✕ Näita kõiki mänge / Show all</span>
+            </div>
+            <!-- No results message -->
+            <div id="games-search-no-results" style="display: none; margin: 25px auto 10px auto; max-width: 520px; background: rgba(26, 35, 46, 0.85); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 16px; padding: 32px 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <div style="font-size: 2.8rem; margin-bottom: 10px;">🔍</div>
+                <h3 id="games-search-no-results-title" style="margin: 0 0 8px 0; color: #ffffff; font-size: 1.25rem;">Ühtegi mängu ei leitud</h3>
+                <p id="games-search-no-results-desc" style="margin: 0; color: #8899a6; font-size: 0.95rem;">Proovi otsida teise nimega või tühjenda otsing.</p>
+            </div>
+        </div>
+
         <!-- Recently Played Games Table / Grid -->
         <div id="recently-played-section" style="margin: 35px 0 25px 0;">
             <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
@@ -1489,7 +1599,7 @@
 
         <!-- Official Game Cards Grid -->
         <h2 style="font-size: 1.6rem; color: #ffffff; text-align: left; margin: 35px 0 15px 0;">Official Simulators</h2>
-        <div class="game-grid">
+        <div class="game-grid" id="official-games-grid">
             <!-- 👑 24K Crown Obby (50 Stages) - Grand Prize Game -->
             <a href="./games/crown/index.html" class="game-card" id="card-crown-game" style="border-color: rgba(255, 215, 0, 0.85); box-shadow: 0 0 30px rgba(255, 215, 0, 0.45); background: linear-gradient(135deg, #1f1807 0%, #2e230b 100%);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">

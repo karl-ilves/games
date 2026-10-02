@@ -6,9 +6,11 @@ import { AvatarWidget } from './components/AvatarWidget';
 import { AvatarShopEditorModal } from './components/AvatarShopEditorModal';
 import { avatarService } from './shared/avatar/AvatarService';
 import { initFriendsUI } from './shared/friends/friendsUI';
+import { initGamesSearch } from './components/GamesSearch';
 
 console.log("Playard Hub & Platform Loaded.");
 initAuth();
+initGamesSearch();
 (window as any).yardService = yardService;
 
 function updateAdminControlsVisibility(userEmail?: string | null, username?: string | null) {

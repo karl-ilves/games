@@ -89,6 +89,14 @@ export function applyLocalization() {
     const searchInput = document.getElementById('friend-search-input') as HTMLInputElement | null;
     if (searchInput) searchInput.placeholder = isEt ? 'Otsi mängijaid nime järgi...' : 'Search players by username...';
 
+    // Games Search Bar Placeholder
+    const gamesSearchInput = document.getElementById('games-search-input') as HTMLInputElement | null;
+    if (gamesSearchInput) {
+        gamesSearchInput.placeholder = isEt
+            ? '🔍 Otsi mänge nime, žanri või märksõna järgi... (nt. Uss, Auto, Sõda, Obby)'
+            : '🔍 Search games by name, genre or keyword... (e.g. Snake, Car, War, Obby)';
+    }
+
     // Recently Played Games Section Header
     const recSub = document.getElementById('recently-played-subheading-text');
     if (recSub) recSub.textContent = isEt ? 'MÄNGUDE AJALUGU' : 'GAME HISTORY';
