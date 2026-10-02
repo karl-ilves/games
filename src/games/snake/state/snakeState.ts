@@ -104,10 +104,17 @@ export class SnakeState {
         }
 
         this.foodItems = [];
-        this.spawnFood('apple');
-        if (mode === 'multiplayer') {
+        const initialApples = this.getTargetAppleCount();
+        for (let i = 0; i < initialApples; i++) {
             this.spawnFood('apple');
         }
+    }
+
+    public getTargetAppleCount(): number {
+        const count = this.serverPlayerCount || 1;
+        if (count >= 3) return 5;
+        if (count === 2) return 3;
+        return 1;
     }
 
     public setDirection(newDir: Direction): boolean {
@@ -246,10 +253,12 @@ export class SnakeState {
             }
         }
 
-        // Ensure at least one apple always exists
-        const hasApple = this.foodItems.some(f => f.type === 'apple');
-        if (!hasApple) {
+        // Dynamic apples: 1 player -> 1 apple, 2 players -> 3 apples, 3 players -> 5 apples
+        const targetApples = this.getTargetAppleCount();
+        let appleCount = this.foodItems.filter(f => f.type === 'apple').length;
+        while (appleCount < targetApples) {
             this.spawnFood('apple');
+            appleCount++;
         }
     }
 

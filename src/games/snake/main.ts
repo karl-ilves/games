@@ -202,6 +202,7 @@ export class SnakeGame {
         }
         if (stats.isPaused) return;
 
+        if (this.state.mode !== 'demo') this.state.serverPlayerCount = this.multiplayer.getMyServerPlayerCount();
         this.state.updatePowerUps(dt);
         if (this.state.mode !== 'demo') {
             this.multiplayer.broadcastMyServerState({
@@ -209,7 +210,6 @@ export class SnakeGame {
                 score: stats.score, isGameOver: this.state.isGameOver,
                 colorId: this.chosenColorId, theme: this.chosenTheme
             });
-            this.state.serverPlayerCount = this.multiplayer.getMyServerPlayerCount();
         }
         this.hud.updateStats(this.state.getStats());
 

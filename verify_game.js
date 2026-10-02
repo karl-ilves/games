@@ -10558,23 +10558,38 @@ await (async () => {
                 const aiWhen1Player = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
                 const hasAiSnakeWhen1Player = game.multiplayer.hasAiSnake && aiWhen1Player !== null && aiWhen1Player.displayName.includes('AI Uss');
 
-                // Test AI snake disappears when 2nd real player joins ("kui tuleb järgmine siis kaob ai ära ja näed teist")
+                // Test dynamic apples & AI presence:
+                // 1 player -> 1 apple + AI
+                game.state.serverPlayerCount = 1;
+                game.state.foodItems = [];
+                game.state.updatePowerUps(0.1);
+                const applesWith1Player = game.state.foodItems.filter(f => f.type === 'apple').length;
+
+                // 2 players -> 3 apples plus AI ("2 mängjaga tuleb 3 õuna pluss ai")
                 game.multiplayer.activeRemotePlayers.set('remote_p2', {
                     id: 'remote_p2', username: 'kawe1234', displayName: 'Kawe Pro',
                     colorId: 'red', theme: { head: '#ff4757', headGlow: 'rgba(255,71,87,0.8)', primary: '#ff6b81', secondary: '#c0392b', glow: 'rgba(255,71,87,0.5)' },
                     body: [{ x: 5, y: 5 }], direction: 'RIGHT', score: 0, isGameOver: false,
                     lastSeen: Date.now(), isAi: false, serverId: 'server_1'
                 });
+                game.state.serverPlayerCount = 2;
+                game.state.updatePowerUps(0.1);
+                const applesWith2Players = game.state.foodItems.filter(f => f.type === 'apple').length;
                 const aiAfterP2 = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
-                const aiDisappearsWhenP2Joins = !game.multiplayer.hasAiSnake && aiAfterP2 === null && game.multiplayer.getPlayersInMyServer().length === 1;
+                const hasAiWhen2Players = game.multiplayer.hasAiSnake && aiAfterP2 !== null;
 
-                // Test Server Capacity (max 3 players) and Server Rollover ("seal saab olla kokku 3 mängjat ja kui se täis saab siis läheb järgmisesse serverisse")
+                // 3 players -> 5 apples and AI disappears ("ja 3 mängjaga 5")
                 game.multiplayer.activeRemotePlayers.set('remote_p3', {
                     id: 'remote_p3', username: 'Minionbanana0_0', displayName: 'Minionbanana',
                     colorId: 'yellow', theme: { head: '#fffa65', headGlow: 'rgba(255,250,101,0.8)', primary: '#ffd700', secondary: '#f39c12', glow: 'rgba(255,215,0,0.5)' },
                     body: [{ x: 8, y: 8 }], direction: 'DOWN', score: 0, isGameOver: false,
                     lastSeen: Date.now(), isAi: false, serverId: 'server_1'
                 });
+                game.state.serverPlayerCount = 3;
+                game.state.updatePowerUps(0.1);
+                const applesWith3Players = game.state.foodItems.filter(f => f.type === 'apple').length;
+                const aiAfterP3 = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
+                const aiDisappearsWhen3Players = !game.multiplayer.hasAiSnake && aiAfterP3 === null;
                 // Adding 3rd remote player fills Server 1 (3 remote players) -> our new assignment must rollover to Server 2!
                 game.multiplayer.activeRemotePlayers.set('remote_p1_host', {
                     id: 'remote_p1_host', username: 'player1', displayName: 'P1',
@@ -10717,7 +10732,11 @@ await (async () => {
                     hasAiSnakeWhen1Player,
                     aiStartsLength4,
                     aiSameSpeedAsPlayer,
-                    aiDisappearsWhenP2Joins,
+                    applesWith1Player,
+                    applesWith2Players,
+                    hasAiWhen2Players,
+                    applesWith3Players,
+                    aiDisappearsWhen3Players,
                     serverRolloverWhenFull,
                     chosenColorApplied,
                     isOverlayHiddenAfterPlay,
@@ -10758,8 +10777,11 @@ await (async () => {
             if (!snakeGameTest.aiSameSpeedAsPlayer) {
                 throw new Error("AI snake must move at the exact same step speed as the player: " + JSON.stringify(snakeGameTest));
             }
-            if (!snakeGameTest.aiDisappearsWhenP2Joins) {
-                throw new Error("When 2nd real player joins the server, the AI snake must immediately disappear: " + JSON.stringify(snakeGameTest));
+            if (snakeGameTest.applesWith2Players !== 3 || !snakeGameTest.hasAiWhen2Players) {
+                throw new Error("With 2 players, there must be 3 apples PLUS AI: " + JSON.stringify(snakeGameTest));
+            }
+            if (snakeGameTest.applesWith3Players !== 5 || !snakeGameTest.aiDisappearsWhen3Players) {
+                throw new Error("With 3 players, there must be 5 apples and AI must disappear: " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.serverRolloverWhenFull) {
                 throw new Error("Server capacity is max 3 players: when full, new player must rollover to Server 2: " + JSON.stringify(snakeGameTest));

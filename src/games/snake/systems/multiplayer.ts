@@ -288,9 +288,9 @@ export class SnakeMultiplayerSystem {
                         serverId: data.serverId || 'server_1'
                     } as any);
 
-                    // Dynamic AI removal: if real players in my server >= 2 (remote player present), AI disappears!
+                    // Dynamic AI: with 1 or 2 players AI is active; with 3 players AI disappears!
                     const playersInMyServer = this.getPlayersInMyServer();
-                    this.hasAiSnake = (playersInMyServer.length === 0);
+                    this.hasAiSnake = (playersInMyServer.length < 2);
                     if (!this.hasAiSnake) {
                         this.aiSnake = null;
                     }
@@ -327,7 +327,7 @@ export class SnakeMultiplayerSystem {
         }
 
         const playersInMyServer = this.getPlayersInMyServer();
-        this.hasAiSnake = (playersInMyServer.length === 0);
+        this.hasAiSnake = (playersInMyServer.length < 2);
         if (!this.hasAiSnake) {
             this.aiSnake = null;
         }
@@ -383,7 +383,7 @@ export class SnakeMultiplayerSystem {
     }
 
     public resetAiSnake(cols: number = 30, rows: number = 22): RemotePlayerInfo | null {
-        if (this.getPlayersInMyServer().length > 0) {
+        if (this.getPlayersInMyServer().length >= 2) {
             this.hasAiSnake = false;
             this.aiSnake = null;
             return null;
@@ -418,9 +418,10 @@ export class SnakeMultiplayerSystem {
         cols: number,
         rows: number
     ): RemotePlayerInfo | null {
-        // If 2 or more real players are in this server, AI disappears!
+        // "2 mängjaga tuleb 3 õuna pluss ai ja 3 mängjaga 5"
+        // AI disappears only when there are 3 real players in this server
         const myServerRealPlayers = this.getPlayersInMyServer();
-        if (myServerRealPlayers.length > 0) {
+        if (myServerRealPlayers.length >= 2) {
             this.hasAiSnake = false;
             this.aiSnake = null;
             return null;
