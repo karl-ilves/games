@@ -6,6 +6,7 @@ export class SnakeHud {
     private highScoreEl: HTMLElement | null;
     private lengthEl: HTMLElement | null;
     private levelEl: HTMLElement | null;
+    private serverInfoEl: HTMLElement | null;
     private powerUpEl: HTMLElement | null;
     private soundBtn: HTMLButtonElement | null;
     private pauseBtn: HTMLButtonElement | null;
@@ -35,6 +36,7 @@ export class SnakeHud {
         this.highScoreEl = document.getElementById('hud-highscore');
         this.lengthEl = document.getElementById('hud-length');
         this.levelEl = document.getElementById('hud-level');
+        this.serverInfoEl = document.getElementById('hud-server-info');
         this.powerUpEl = document.getElementById('hud-powerup');
         this.soundBtn = document.getElementById('btn-toggle-sound') as HTMLButtonElement;
         this.pauseBtn = document.getElementById('btn-pause') as HTMLButtonElement;
@@ -95,6 +97,15 @@ export class SnakeHud {
         if (this.highScoreEl) this.highScoreEl.innerText = `REKORD: ${stats.highScore}`;
         if (this.lengthEl) this.lengthEl.innerText = `PIKKUS: ${stats.length}`;
         if (this.levelEl) this.levelEl.innerText = `TASE ${stats.level}`;
+
+        if (this.serverInfoEl) {
+            if (stats.mode !== 'demo' && stats.serverNumber !== undefined) {
+                this.serverInfoEl.style.display = 'inline-block';
+                this.serverInfoEl.innerText = `🌐 Server ${stats.serverNumber} (${stats.serverPlayerCount || 1}/3)`;
+            } else {
+                this.serverInfoEl.style.display = 'none';
+            }
+        }
 
         if (this.powerUpEl) {
             if (stats.activePowerUp) {

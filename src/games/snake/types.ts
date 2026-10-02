@@ -73,4 +73,37 @@ export interface GameStats {
     player2Length?: number;
     player2Name?: string;
     player2GameOver?: boolean;
+    serverId?: string;
+    serverNumber?: number;
+    serverPlayerCount?: number;
 }
+
+export interface RemotePlayerInfo {
+    id: string;
+    username: string;
+    displayName: string;
+    colorId: string;
+    theme: {
+        head: string;
+        headGlow: string;
+        primary: string;
+        secondary: string;
+        glow: string;
+    };
+    body: GridPoint[];
+    direction: Direction;
+    score: number;
+    isGameOver: boolean;
+    lastSeen: number;
+    isAi?: boolean;
+}
+
+export interface ServerRoomState {
+    serverId: string;
+    serverNumber: number;
+    playerCount: number;
+    maxPlayers: number;
+    players: RemotePlayerInfo[];
+    hasAiSnake: boolean;
+}
+

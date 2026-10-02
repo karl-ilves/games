@@ -320,6 +320,7 @@
             <div class="hud-stat-pill" id="hud-highscore" style="border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.15);">REKORD: 0</div>
             <div class="hud-stat-pill" id="hud-length">PIKKUS: 4</div>
             <div class="hud-stat-pill" id="hud-level" style="border-color: #00f2fe; color: #00f2fe; background: rgba(0, 242, 254, 0.15);">TASE 1</div>
+            <div class="hud-stat-pill" id="hud-server-info" style="border-color: #a55eea; color: #c56cf0; background: rgba(165, 94, 234, 0.15);">🌐 Server 1 (1/3)</div>
             <div class="hud-stat-pill" id="hud-powerup" style="display: none;">🫐 BOONUS</div>
         </div>
 
@@ -437,14 +438,21 @@
                 </div>
             </div>
 
+            <!-- Color Selection for Snake -->
+            <div style="margin: 16px 0 20px 0; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(46, 213, 115, 0.25); border-radius: 14px; padding: 14px;">
+                <div style="font-size: 0.88rem; font-weight: 800; color: #ffd700; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <span>🎨</span>
+                    <span>VALI OMA USSI VÄRV:</span>
+                </div>
+                <div id="snake-color-picker-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                    <!-- Color swatches rendered dynamically -->
+                </div>
+            </div>
+
             <div class="start-actions">
-                <button class="btn-action-primary btn-start-main" id="btn-play-solo">
+                <button class="btn-action-primary btn-start-main" id="btn-play-solo" style="width: 100%;">
                     <span>▶️</span>
-                    <span>Play</span>
-                </button>
-                <button class="btn-action-secondary btn-start-main" id="btn-play-friends">
-                    <span>👥</span>
-                    <span>Play with Friends</span>
+                    <span>Play (Mängi)</span>
                 </button>
             </div>
         </div>

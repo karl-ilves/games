@@ -163,7 +163,8 @@ export class SnakeRenderer {
         offsetY: number,
         tileSize: number,
         time: number,
-        customTheme?: SnakeThemeConfig
+        customTheme?: SnakeThemeConfig,
+        nameTag?: string
     ) {
         if (body.length === 0) return;
 
@@ -288,6 +289,35 @@ export class SnakeRenderer {
             else if (direction === 'UP') { tx = cx - 1; ty = hy - 6; tw = 2; th = 6; }
             else if (direction === 'DOWN') { tx = cx - 1; ty = hy + hsize; tw = 2; th = 6; }
             ctx.fillRect(tx, ty, tw, th);
+        }
+
+        // Floating name tag above head
+        if (nameTag) {
+            ctx.save();
+            ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            const metrics = ctx.measureText(nameTag);
+            const tagW = Math.max(40, metrics.width + 16);
+            const tagH = 18;
+            const tagX = cx - tagW / 2;
+            const tagY = hy - 14;
+
+            // Background pill
+            ctx.fillStyle = 'rgba(6, 9, 15, 0.88)';
+            ctx.strokeStyle = customTheme?.head || '#00e676';
+            ctx.lineWidth = 1.2;
+            ctx.shadowColor = customTheme?.glow || 'rgba(0, 230, 118, 0.5)';
+            ctx.shadowBlur = 6;
+            this.drawRoundedRect(ctx, tagX, tagY, tagW, tagH, 9);
+            ctx.fill();
+            ctx.stroke();
+
+            // Text
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(nameTag, cx, tagY + tagH / 2);
+            ctx.restore();
         }
 
         ctx.restore();

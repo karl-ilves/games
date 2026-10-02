@@ -18,6 +18,10 @@ export class SnakeState {
     public isGameOver2: boolean = false;
     public player2Name: string = 'Sõber';
 
+    public serverId: string = 'server_1';
+    public serverNumber: number = 1;
+    public serverPlayerCount: number = 1;
+
     public cols: number = SNAKE_CONFIG.GRID.cols;
     public rows: number = SNAKE_CONFIG.GRID.rows;
 
@@ -496,6 +500,9 @@ export class SnakeState {
             player2Length: this.body2.length,
             player2Name: this.player2Name,
             player2GameOver: this.isGameOver2,
+            serverId: this.serverId,
+            serverNumber: this.serverNumber,
+            serverPlayerCount: this.serverPlayerCount,
         };
     }
 }

@@ -1,5 +1,7 @@
-import { MultiplayerInvite, Direction, GridPoint, FoodItem } from '../types';
+import { MultiplayerInvite, Direction, GridPoint, FoodItem, RemotePlayerInfo, ServerRoomState } from '../types';
 import { getCurrentUserProfile } from '../../../auth';
+import { getSnakeColorPreset, SnakeColorPreset } from '../catalog';
+import { DemoAiSystem } from './demoAi';
 
 export type InviteCallback = (invite: MultiplayerInvite) => void;
 export type InviteResponseCallback = (accepted: boolean, friendName: string) => void;
@@ -29,9 +31,19 @@ export class SnakeMultiplayerSystem {
     public readonly tabId = Math.random().toString(36).substring(2, 9);
     private botTimeout: any = null;
 
+    // Server-based matchmaking (max 3 real players per server)
+    public readonly MAX_PLAYERS_PER_SERVER = 3;
+    public currentServerId: string = 'server_1';
+    public currentServerNumber: number = 1;
+    public activeRemotePlayers: Map<string, RemotePlayerInfo> = new Map();
+    public aiSnake: RemotePlayerInfo | null = null;
+    public aiDirection: Direction = 'LEFT';
+    public hasAiSnake: boolean = true;
+
     constructor() {
         this.initChannel();
         this.initStorageListener();
+        this.assignServer();
     }
 
     private initChannel(): void {
@@ -201,7 +213,186 @@ export class SnakeMultiplayerSystem {
                 }
                 break;
             }
+            case 'SNAKE_SERVER_UPDATE': {
+                if (data.playerId && data.playerId !== this.tabId) {
+                    this.activeRemotePlayers.set(data.playerId, {
+                        id: data.playerId,
+                        username: data.username || 'Mängija',
+                        displayName: data.displayName || data.username || 'Mängija',
+                        colorId: data.colorId || 'green',
+                        theme: data.theme || getSnakeColorPreset(data.colorId || 'green'),
+                        body: data.body || [],
+                        direction: data.direction || 'LEFT',
+                        score: data.score || 0,
+                        isGameOver: !!data.isGameOver,
+                        lastSeen: Date.now(),
+                        isAi: false,
+                        serverId: data.serverId || 'server_1'
+                    } as any);
+
+                    // Dynamic AI removal: if real players in my server >= 2 (remote player present), AI disappears!
+                    const playersInMyServer = this.getPlayersInMyServer();
+                    this.hasAiSnake = (playersInMyServer.length === 0);
+                    if (!this.hasAiSnake) {
+                        this.aiSnake = null;
+                    }
+                }
+                break;
+            }
         }
+    }
+
+    public assignServer(): { serverId: string; serverNumber: number } {
+        const now = Date.now();
+        this.activeRemotePlayers.forEach((p, id) => {
+            if (now - p.lastSeen > 4500) {
+                this.activeRemotePlayers.delete(id);
+            }
+        });
+
+        // Find lowest server number with < 3 players
+        let sNum = 1;
+        while (true) {
+            const sid = `server_${sNum}`;
+            let count = 0;
+            this.activeRemotePlayers.forEach(p => {
+                if (p.id !== this.tabId && (p as any).serverId === sid) {
+                    count++;
+                }
+            });
+            if (count < this.MAX_PLAYERS_PER_SERVER) {
+                this.currentServerId = sid;
+                this.currentServerNumber = sNum;
+                break;
+            }
+            sNum++;
+        }
+
+        const playersInMyServer = this.getPlayersInMyServer();
+        this.hasAiSnake = (playersInMyServer.length === 0);
+        if (!this.hasAiSnake) {
+            this.aiSnake = null;
+        }
+
+        return { serverId: this.currentServerId, serverNumber: this.currentServerNumber };
+    }
+
+    public getPlayersInMyServer(): RemotePlayerInfo[] {
+        const now = Date.now();
+        const list: RemotePlayerInfo[] = [];
+        this.activeRemotePlayers.forEach((p, id) => {
+            if (id !== this.tabId && (p as any).serverId === this.currentServerId && (now - p.lastSeen < 4500)) {
+                list.push(p);
+            }
+        });
+        return list;
+    }
+
+    public getMyServerPlayerCount(): number {
+        return this.getPlayersInMyServer().length + 1; // +1 for self
+    }
+
+    public broadcastMyServerState(data: {
+        body: GridPoint[];
+        direction: Direction;
+        score: number;
+        isGameOver: boolean;
+        colorId: string;
+        theme: any;
+    }): void {
+        const profile = getCurrentUserProfile();
+        const username = profile?.username || 'Mängija';
+        const displayName = profile?.display_name || username;
+
+        const payload = {
+            type: 'SNAKE_SERVER_UPDATE',
+            serverId: this.currentServerId,
+            playerId: this.tabId,
+            username,
+            displayName,
+            colorId: data.colorId,
+            theme: data.theme,
+            body: data.body,
+            direction: data.direction,
+            score: data.score,
+            isGameOver: data.isGameOver,
+            senderTabId: this.tabId,
+            timestamp: Date.now()
+        };
+
+        this.broadcastPayload(payload);
+    }
+
+    public updateAiSnake(
+        demoAi: DemoAiSystem,
+        foodItems: FoodItem[],
+        cols: number,
+        rows: number
+    ): RemotePlayerInfo | null {
+        // If 2 or more real players are in this server, AI disappears!
+        const myServerRealPlayers = this.getPlayersInMyServer();
+        if (myServerRealPlayers.length > 0) {
+            this.hasAiSnake = false;
+            this.aiSnake = null;
+            return null;
+        }
+
+        // If only 1 real player, 1 AI snake is active!
+        this.hasAiSnake = true;
+        if (!this.aiSnake || this.aiSnake.body.length === 0 || this.aiSnake.isGameOver) {
+            const startX = cols - 6;
+            const startY = rows - 6;
+            const body: GridPoint[] = [];
+            for (let i = 0; i < 4; i++) {
+                body.push({ x: (startX + i) % cols, y: startY });
+            }
+            this.aiSnake = {
+                id: `ai_bot_${this.currentServerId}`,
+                username: 'AI_Uss',
+                displayName: '🤖 AI Uss',
+                colorId: 'purple',
+                theme: getSnakeColorPreset('purple'),
+                body,
+                direction: 'LEFT',
+                score: 0,
+                isGameOver: false,
+                lastSeen: Date.now(),
+                isAi: true
+            };
+            this.aiDirection = 'LEFT';
+        }
+
+        // Steer AI towards food
+        this.aiDirection = demoAi.getNextDirection(this.aiSnake.body, this.aiDirection, foodItems);
+        this.aiSnake.direction = this.aiDirection;
+
+        const head = this.aiSnake.body[0];
+        let newX = head.x;
+        let newY = head.y;
+        switch (this.aiDirection) {
+            case 'UP': newY -= 1; break;
+            case 'DOWN': newY += 1; break;
+            case 'LEFT': newX -= 1; break;
+            case 'RIGHT': newX += 1; break;
+        }
+
+        // Screen wrap-around for AI
+        if (newX < 0) newX = cols - 1;
+        else if (newX >= cols) newX = 0;
+        if (newY < 0) newY = rows - 1;
+        else if (newY >= rows) newY = 0;
+
+        // Advance AI body
+        this.aiSnake.body.unshift({ x: newX, y: newY });
+        const ateFoodIndex = foodItems.findIndex(f => f.x === newX && f.y === newY);
+        if (ateFoodIndex !== -1) {
+            this.aiSnake.score += foodItems[ateFoodIndex].points;
+            foodItems.splice(ateFoodIndex, 1);
+        } else {
+            this.aiSnake.body.pop();
+        }
+
+        return this.aiSnake;
     }
 
     public onInviteReceived(cb: InviteCallback): void {

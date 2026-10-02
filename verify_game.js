@@ -74,11 +74,10 @@ await (async () => {
             }
         }
     };
-    const originalClick = page.click.bind(page);
     page.click = async (selector, options) => {
         for (let attempt = 1; attempt <= 4; attempt++) {
             try {
-                return await originalClick(selector, options);
+                return await page.mainFrame().click(selector, options);
             } catch (err) {
                 if (err.message && err.message.includes('detached Frame') && attempt < 4) {
                     await new Promise(r => setTimeout(r, 250 * attempt));
@@ -88,11 +87,10 @@ await (async () => {
             }
         }
     };
-    const originalWaitForSelector = page.waitForSelector.bind(page);
     page.waitForSelector = async (selector, options) => {
         for (let attempt = 1; attempt <= 5; attempt++) {
             try {
-                return await originalWaitForSelector(selector, options);
+                return await page.mainFrame().waitForSelector(selector, options);
             } catch (err) {
                 if (err.message && err.message.includes('detached Frame') && attempt < 5) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
@@ -102,11 +100,10 @@ await (async () => {
             }
         }
     };
-    const originalEval = page.$eval.bind(page);
     page.$eval = async (selector, pageFunction, ...args) => {
         for (let attempt = 1; attempt <= 5; attempt++) {
             try {
-                return await originalEval(selector, pageFunction, ...args);
+                return await page.mainFrame().$eval(selector, pageFunction, ...args);
             } catch (err) {
                 if (err.message && err.message.includes('detached Frame') && attempt < 5) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
@@ -416,6 +413,7 @@ await (async () => {
         await page.evaluate(async () => {
             await window.friendService.sendFriendRequest('Minionbanana0_0', 'Minionbanana0_0 👤', 'kawe1234');
         });
+        await page.waitForSelector('#friend-requests-badge', { timeout: 3000 }).catch(() => {});
         await new Promise(r => setTimeout(r, 250));
 
         // Check badge on plus circle
@@ -10536,64 +10534,62 @@ await (async () => {
                 const demoNextDir = game.demoAi.getNextDirection(game.state.body, game.state.direction, game.state.foodItems);
                 const hasValidDemoAi = ['UP', 'DOWN', 'LEFT', 'RIGHT'].includes(demoNextDir);
 
-                // Test "Play with Friends" button opens friends modal
+                // Test "Play with Friends" button removed as requested
                 const btnPlayFriends = document.getElementById('btn-play-friends');
-                if (btnPlayFriends) btnPlayFriends.click();
-                const modalFriends = document.getElementById('modal-friends-list');
-                const isFriendsModalVisible = modalFriends !== null && window.getComputedStyle(modalFriends).display !== 'none';
+                const btnPlayFriendsRemoved = btnPlayFriends === null;
 
-                // Test clicking "✉️ Kutsu" on a friend in the list updates status for sender (waiting for answer)
-                const firstInviteBtn = document.querySelector('.btn-invite-friend-item');
-                let clickedInviteShowsSentStatus = false;
-                if (firstInviteBtn) {
-                    firstInviteBtn.click();
-                    await new Promise(r => setTimeout(r, 100));
-                    const statusBanner = document.getElementById('friends-modal-status');
-                    clickedInviteShowsSentStatus = firstInviteBtn.textContent.includes('Saadetud') &&
-                        statusBanner !== null && statusBanner.textContent.includes('Ootan sõbra vastust');
-                }
+                // Test Color Selection Palette exists with 8 neon colors
+                const colorButtons = document.querySelectorAll('.snake-color-btn');
+                const hasColorPicker = colorButtons.length === 8;
 
-                // Test receiving an invite shows confirmation modal ("Kas sa oled nõus?") to the invited player!
-                game.friendsModal.showInviteConfirmation({
-                    id: 'test_invite_1',
-                    fromUsername: 'kawe1234',
-                    fromDisplayName: 'Kawe Pro',
-                    toUsername: 'Guest',
-                    timestamp: Date.now(),
-                    status: 'pending'
+                // Test selecting a color (e.g. Electric Blue)
+                const blueBtn = document.querySelector('.snake-color-btn[data-color-id="blue"]');
+                if (blueBtn) blueBtn.click();
+                const selectedBlueColor = game.startScreen.selectedColorId === 'blue';
+
+                // Test Server Matchmaking and initial server assignment (Server 1)
+                const initialServer = game.multiplayer.assignServer();
+                const initialIsServer1 = initialServer.serverId === 'server_1' && initialServer.serverNumber === 1;
+
+                // Test AI snake spawned when 1 real player is in the server ("kui on alguses 1 mängja siis on lisaks 1 ai")
+                game.multiplayer.activeRemotePlayers.clear();
+                const aiWhen1Player = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
+                const hasAiSnakeWhen1Player = game.multiplayer.hasAiSnake && aiWhen1Player !== null && aiWhen1Player.displayName.includes('AI Uss');
+
+                // Test AI snake disappears when 2nd real player joins ("kui tuleb järgmine siis kaob ai ära ja näed teist")
+                game.multiplayer.activeRemotePlayers.set('remote_p2', {
+                    id: 'remote_p2', username: 'kawe1234', displayName: 'Kawe Pro',
+                    colorId: 'red', theme: { head: '#ff4757', headGlow: 'rgba(255,71,87,0.8)', primary: '#ff6b81', secondary: '#c0392b', glow: 'rgba(255,71,87,0.5)' },
+                    body: [{ x: 5, y: 5 }], direction: 'RIGHT', score: 0, isGameOver: false,
+                    lastSeen: Date.now(), isAi: false, serverId: 'server_1'
                 });
-                const modalInvite = document.getElementById('modal-invite-confirm');
-                const isInviteModalVisible = modalInvite !== null && window.getComputedStyle(modalInvite).display !== 'none';
-                const invitePromptText = modalInvite?.innerText || '';
-                const hasKasSaOledNous = invitePromptText.toLowerCase().includes('kas sa oled nõus');
-                const hasSenderName = invitePromptText.includes('Kawe Pro');
+                const aiAfterP2 = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
+                const aiDisappearsWhenP2Joins = !game.multiplayer.hasAiSnake && aiAfterP2 === null && game.multiplayer.getPlayersInMyServer().length === 1;
 
-                // Test accepting invite starts multiplayer mode with 2 snakes: Green for P1, Red for P2!
-                const btnAccept = document.getElementById('btn-invite-accept');
-                if (btnAccept) btnAccept.click();
-                const modeAfterAccept = game.state.mode;
-                const hasTwoSnakes = game.state.body.length > 0 && game.state.body2.length > 0;
-                const hudP1Score = document.getElementById('hud-score');
-                const hudP2Score = document.getElementById('hud-p2-score');
-                const isP2ScoreVisible = hudP2Score !== null && window.getComputedStyle(hudP2Score).display !== 'none';
-                const p1HasGreenIndicator = hudP1Score !== null && hudP1Score.textContent.includes('🟢');
-                const p2HasRedIndicator = hudP2Score !== null && hudP2Score.textContent.includes('🔴');
-
-                // Test mutual invite: when both players send an invite ("kui mõlemad saadavad kutse siis läheb mäng käima")
-                game.multiplayer.incomingInvites.set('kawe1234', {
-                    id: 'test_invite_mutual',
-                    fromUsername: 'kawe1234',
-                    fromDisplayName: 'Kawe Pro',
-                    toUsername: 'Guest',
-                    timestamp: Date.now(),
-                    status: 'pending'
+                // Test Server Capacity (max 3 players) and Server Rollover ("seal saab olla kokku 3 mängjat ja kui se täis saab siis läheb järgmisesse serverisse")
+                game.multiplayer.activeRemotePlayers.set('remote_p3', {
+                    id: 'remote_p3', username: 'Minionbanana0_0', displayName: 'Minionbanana',
+                    colorId: 'yellow', theme: { head: '#fffa65', headGlow: 'rgba(255,250,101,0.8)', primary: '#ffd700', secondary: '#f39c12', glow: 'rgba(255,215,0,0.5)' },
+                    body: [{ x: 8, y: 8 }], direction: 'DOWN', score: 0, isGameOver: false,
+                    lastSeen: Date.now(), isAi: false, serverId: 'server_1'
                 });
-                game.multiplayer.sendInvite('kawe1234');
-                const mutualStartsMultiplayer = game.state.mode === 'multiplayer' && game.state.body2.length > 0;
+                // Adding 3rd remote player fills Server 1 (3 remote players) -> our new assignment must rollover to Server 2!
+                game.multiplayer.activeRemotePlayers.set('remote_p1_host', {
+                    id: 'remote_p1_host', username: 'player1', displayName: 'P1',
+                    colorId: 'cyan', theme: { head: '#00f2fe', headGlow: '', primary: '#00f2fe', secondary: '#4facfe', glow: '' },
+                    body: [{ x: 2, y: 2 }], direction: 'UP', score: 0, isGameOver: false,
+                    lastSeen: Date.now(), isAi: false, serverId: 'server_1'
+                });
+                const rolloverServer = game.multiplayer.assignServer();
+                const serverRolloverWhenFull = rolloverServer.serverId === 'server_2' && rolloverServer.serverNumber === 2;
 
-                // Test clicking Play (Solo) starts single player game
-                game.startSoloGame();
+                // Clear remote players back to normal for clean state
+                game.multiplayer.activeRemotePlayers.clear();
+
+                // Test clicking Play starts game with chosen color and connects to server
+                game.startSoloGame('blue');
                 const isOverlayHiddenAfterPlay = startOverlay !== null && window.getComputedStyle(startOverlay).display === 'none';
+                const chosenColorApplied = game.chosenColorId === 'blue';
                 const soloMode = game.state.mode;
 
                 const initialStats = game.state.getStats();
@@ -10704,17 +10700,14 @@ await (async () => {
                     isStartOverlayVisible,
                     initialMode,
                     hasValidDemoAi,
-                    isFriendsModalVisible,
-                    clickedInviteShowsSentStatus,
-                    isInviteModalVisible,
-                    hasKasSaOledNous,
-                    hasSenderName,
-                    modeAfterAccept,
-                    hasTwoSnakes,
-                    isP2ScoreVisible,
-                    p1HasGreenIndicator,
-                    p2HasRedIndicator,
-                    mutualStartsMultiplayer,
+                    btnPlayFriendsRemoved,
+                    hasColorPicker,
+                    selectedBlueColor,
+                    initialIsServer1,
+                    hasAiSnakeWhen1Player,
+                    aiDisappearsWhenP2Joins,
+                    serverRolloverWhenFull,
+                    chosenColorApplied,
                     isOverlayHiddenAfterPlay,
                     soloMode,
                     wrappedTopToBottom,
@@ -10735,20 +10728,23 @@ await (async () => {
             if (!snakeGameTest.isStartOverlayVisible || snakeGameTest.initialMode !== 'demo' || !snakeGameTest.hasValidDemoAi) {
                 throw new Error("Snake start screen overlay & background autoplay demo failed: " + JSON.stringify(snakeGameTest));
             }
-            if (!snakeGameTest.isFriendsModalVisible) {
-                throw new Error("Snake Play with Friends modal failed to open: " + JSON.stringify(snakeGameTest));
+            if (!snakeGameTest.btnPlayFriendsRemoved) {
+                throw new Error("Play with Friends button must be removed from start screen: " + JSON.stringify(snakeGameTest));
             }
-            if (!snakeGameTest.clickedInviteShowsSentStatus) {
-                throw new Error("Clicking Kutsu button must update sender button and status (Ootan vastust): " + JSON.stringify(snakeGameTest));
+            if (!snakeGameTest.hasColorPicker || !snakeGameTest.selectedBlueColor || !snakeGameTest.chosenColorApplied) {
+                throw new Error("Snake color selection palette (8 neon colors) failed: " + JSON.stringify(snakeGameTest));
             }
-            if (!snakeGameTest.isInviteModalVisible || !snakeGameTest.hasKasSaOledNous || !snakeGameTest.hasSenderName) {
-                throw new Error("Snake invite confirmation modal ('Kas sa oled nõus?') failed for invited receiver: " + JSON.stringify(snakeGameTest));
+            if (!snakeGameTest.initialIsServer1) {
+                throw new Error("Initial server assignment should be Server 1: " + JSON.stringify(snakeGameTest));
             }
-            if (snakeGameTest.modeAfterAccept !== 'multiplayer' || !snakeGameTest.hasTwoSnakes || !snakeGameTest.isP2ScoreVisible || !snakeGameTest.p1HasGreenIndicator || !snakeGameTest.p2HasRedIndicator) {
-                throw new Error("Snake multiplayer launch failed (must have 2 snakes, P1 green and P2 red): " + JSON.stringify(snakeGameTest));
+            if (!snakeGameTest.hasAiSnakeWhen1Player) {
+                throw new Error("When 1 real player is in the server, 1 AI snake ('🤖 AI Uss') must be active: " + JSON.stringify(snakeGameTest));
             }
-            if (!snakeGameTest.mutualStartsMultiplayer) {
-                throw new Error("Mutual invite check failed: when both players send an invite, multiplayer must start immediately!");
+            if (!snakeGameTest.aiDisappearsWhenP2Joins) {
+                throw new Error("When 2nd real player joins the server, the AI snake must immediately disappear: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.serverRolloverWhenFull) {
+                throw new Error("Server capacity is max 3 players: when full, new player must rollover to Server 2: " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.isOverlayHiddenAfterPlay || snakeGameTest.soloMode !== 'solo') {
                 throw new Error("Snake solo mode launch failed: " + JSON.stringify(snakeGameTest));

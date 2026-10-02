@@ -1,5 +1,6 @@
 import { yardService } from '../../shared/yardService';
-import { SNAKE_CONFIG } from './catalog';
+import { getCurrentUserProfile } from '../../auth';
+import { SNAKE_CONFIG, getSnakeColorPreset } from './catalog';
 import { SnakeAudio } from './audio';
 import { SnakeState } from './state/snakeState';
 import { ParticleSystem } from './systems/particles';
@@ -24,6 +25,8 @@ export class SnakeGame {
     public friendsModal!: FriendsModalUI;
     public demoAi!: DemoAiSystem;
     public multiplayer!: SnakeMultiplayerSystem;
+    public chosenColorId: string = 'green';
+    public chosenTheme: any = GREEN_SNAKE_THEME;
 
     public tileSize: number = SNAKE_CONFIG.GRID.defaultTileSize;
     public playAreaWidth: number = 600;
@@ -57,55 +60,37 @@ export class SnakeGame {
         this.demoAi = new DemoAiSystem(this.state.cols, this.state.rows);
         this.multiplayer = new SnakeMultiplayerSystem();
         this.input = new InputManager(
-            this.canvas,
-            (d) => this.handleDirectionInput(d),
-            () => this.togglePause(),
-            (d) => this.handleDirection2Input(d)
+            this.canvas, (d) => this.handleDirectionInput(d), () => this.togglePause(), (d) => this.handleDirection2Input(d)
         );
 
         this.hud = new SnakeHud(
-            () => this.restartCurrentMode(),
-            () => this.togglePause(),
-            () => this.hud.updateSoundButton(this.audio.toggleSound())
+            () => this.restartCurrentMode(), () => this.togglePause(), () => this.hud.updateSoundButton(this.audio.toggleSound())
         );
         this.hud.updateSoundButton(this.audio.getSoundEnabled());
 
         this.startScreen = new StartScreenUI({
-            onPlaySolo: () => this.startSoloGame(),
+            onPlaySolo: (cId) => this.startSoloGame(cId),
             onPlayWithFriends: () => this.friendsModal.openFriendsModal(),
         });
 
         this.friendsModal = new FriendsModalUI({
-            onSendInvite: (user) => this.multiplayer.sendInvite(user),
-            onAcceptInvite: (inv) => {
-                this.multiplayer.respondToInvite(inv, true);
-                this.startMultiplayerGame(inv.fromDisplayName || inv.fromUsername);
-            },
+            onSendInvite: (u) => this.multiplayer.sendInvite(u),
+            onAcceptInvite: (inv) => { this.multiplayer.respondToInvite(inv, true); this.startMultiplayerGame(inv.fromDisplayName || inv.fromUsername); },
             onDeclineInvite: (inv) => this.multiplayer.respondToInvite(inv, false),
             onStartLocal2Player: () => this.startLocal2PlayerGame(),
         }, this.multiplayer);
 
         this.multiplayer.onInviteReceived((inv) => this.friendsModal.showInviteConfirmation(inv));
-        this.multiplayer.onInviteResponse((accepted, friend) => {
-            if (accepted) {
-                this.friendsModal.closeFriendsModal();
-                this.friendsModal.closeInviteConfirmModal();
-                this.startMultiplayerGame(friend);
-            } else {
-                this.friendsModal.setStatus(`@${friend} lükkas kutse tagasi.`);
-            }
+        this.multiplayer.onInviteResponse((acc, f) => {
+            if (acc) { this.friendsModal.closeFriendsModal(); this.friendsModal.closeInviteConfirmModal(); this.startMultiplayerGame(f); }
+            else { this.friendsModal.setStatus(`@${f} lükkas kutse tagasi.`); }
         });
-        this.multiplayer.onGuestInput((dir) => {
-            if (this.state.mode === 'multiplayer') this.state.setDirection2(dir);
-        });
+        this.multiplayer.onGuestInput((dir) => { if (this.state.mode === 'multiplayer') this.state.setDirection2(dir); });
         this.multiplayer.onHostSync((data) => {
             if (this.state.mode === 'multiplayer' && !this.multiplayer.isHost) {
-                this.state.body = data.body1;
-                this.state.direction = data.dir1;
-                this.state.body2 = data.body2;
-                this.state.direction2 = data.dir2;
-                this.state.foodItems = data.foodItems;
-                this.state.score2 = data.score2;
+                this.state.body = data.body1; this.state.direction = data.dir1;
+                this.state.body2 = data.body2; this.state.direction2 = data.dir2;
+                this.state.foodItems = data.foodItems; this.state.score2 = data.score2;
                 if (data.isGameOver) this.triggerGameOver();
                 this.hud.updateStats(this.state.getStats());
             }
@@ -121,24 +106,27 @@ export class SnakeGame {
         requestAnimationFrame((t) => this.loop(t));
     }
 
-    public startSoloGame() {
+    public startSoloGame(colorId?: string) {
+        if (colorId) {
+            this.chosenColorId = colorId;
+            this.chosenTheme = getSnakeColorPreset(colorId);
+        }
+        this.multiplayer.assignServer();
+        this.state.serverId = this.multiplayer.currentServerId;
+        this.state.serverNumber = this.multiplayer.currentServerNumber;
+        this.state.serverPlayerCount = this.multiplayer.getMyServerPlayerCount();
         this.startScreen.hide();
         this.input.isTwoPlayerMode = false;
         this.resetGameMode('solo');
     }
 
     public startLocal2PlayerGame() {
-        this.startScreen.hide();
-        this.input.isTwoPlayerMode = true;
-        this.resetGameMode('multiplayer');
+        this.startScreen.hide(); this.input.isTwoPlayerMode = true; this.resetGameMode('multiplayer');
     }
 
     public startMultiplayerGame(opponentName: string) {
-        this.startScreen.hide();
-        this.friendsModal.closeFriendsModal();
-        this.friendsModal.closeInviteConfirmModal();
-        this.input.isTwoPlayerMode = true;
-        this.resetGameMode('multiplayer', opponentName);
+        this.startScreen.hide(); this.friendsModal.closeFriendsModal(); this.friendsModal.closeInviteConfirmModal();
+        this.input.isTwoPlayerMode = true; this.resetGameMode('multiplayer', opponentName);
     }
 
     private resetGameMode(mode: 'solo' | 'multiplayer' | 'demo', player2Name?: string) {
@@ -149,20 +137,11 @@ export class SnakeGame {
         this.hud.updateStats(this.state.getStats());
     }
 
-    public restartCurrentMode() {
-        this.resetGameMode(this.state.mode === 'demo' ? 'solo' : this.state.mode);
-        this.shakeDuration = 0;
-    }
-
-    public restart() {
-        this.restartCurrentMode();
-    }
+    public restartCurrentMode() { this.resetGameMode(this.state.mode === 'demo' ? 'solo' : this.state.mode); this.shakeDuration = 0; }
+    public restart() { this.restartCurrentMode(); }
 
     public handleDirectionInput(dir: Direction) {
-        if (this.state.mode === 'demo') {
-            this.startSoloGame();
-            return;
-        }
+        if (this.state.mode === 'demo') { this.startSoloGame(); return; }
         if (this.state.mode === 'multiplayer' && !this.multiplayer.isHost && this.multiplayer.isConnected) {
             this.multiplayer.broadcastGuestInput(dir);
             if (this.state.setDirection2(dir)) this.audio.playTurn();
@@ -172,33 +151,26 @@ export class SnakeGame {
     }
 
     public handleDirection2Input(dir: Direction) {
-        if (this.state.mode === 'multiplayer' && this.state.setDirection2(dir)) {
-            this.audio.playTurn();
-        }
+        if (this.state.mode === 'multiplayer' && this.state.setDirection2(dir)) this.audio.playTurn();
     }
 
     public togglePause() {
-        if (this.state.mode === 'demo') return;
-        this.hud.setPauseVisible(this.state.togglePause());
+        if (this.state.mode !== 'demo') this.hud.setPauseVisible(this.state.togglePause());
     }
 
     public resize() {
         if (!this.canvas) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const parent = this.canvas.parentElement || document.body;
-        const rect = parent.getBoundingClientRect();
-
+        const rect = (this.canvas.parentElement || document.body).getBoundingClientRect();
         this.canvas.width = rect.width * dpr;
         this.canvas.height = rect.height * dpr;
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.scale(dpr, dpr);
-
         const topPadding = 70;
         const bottomPadding = window.innerWidth <= 768 ? 160 : 30;
         const availableW = rect.width - 20;
         const availableH = rect.height - topPadding - bottomPadding;
         const maxSide = Math.max(260, Math.min(availableW, availableH, 650));
-
         this.tileSize = Math.floor(maxSide / this.state.cols);
         this.playAreaWidth = this.tileSize * this.state.cols;
         this.playAreaHeight = this.tileSize * this.state.rows;
@@ -230,6 +202,15 @@ export class SnakeGame {
         if (stats.isPaused) return;
 
         this.state.updatePowerUps(dt);
+        if (this.state.mode !== 'demo') {
+            this.multiplayer.updateAiSnake(this.demoAi, this.state.foodItems, this.state.cols, this.state.rows);
+            this.multiplayer.broadcastMyServerState({
+                body: this.state.body, direction: this.state.direction,
+                score: stats.score, isGameOver: this.state.isGameOver,
+                colorId: this.chosenColorId, theme: this.chosenTheme
+            });
+            this.state.serverPlayerCount = this.multiplayer.getMyServerPlayerCount();
+        }
         this.hud.updateStats(this.state.getStats());
 
         const stepInterval = 1 / this.state.getEffectiveSpeed();
@@ -317,17 +298,35 @@ export class SnakeGame {
             this.state.cols, this.state.rows, this.tileSize
         );
         SnakeRenderer.renderFood(this.ctx, this.state.foodItems, this.offsetX, this.offsetY, this.tileSize, timeSeconds);
+        const myProf = getCurrentUserProfile();
+        const myName = myProf?.username ? `👤 @${myProf.username}` : '👤 Mina';
         SnakeRenderer.renderSnake(
             this.ctx, this.state.body, this.state.direction,
             this.state.getStats().activePowerUp, this.offsetX, this.offsetY, this.tileSize, timeSeconds,
-            GREEN_SNAKE_THEME
+            this.chosenTheme, this.state.mode === 'demo' ? '🤖 DEMO' : myName
         );
 
-        if (this.state.body2 && this.state.body2.length > 0) {
+        if (this.state.mode !== 'demo') {
+            for (const rp of this.multiplayer.getPlayersInMyServer()) {
+                if (rp.body?.length) {
+                    SnakeRenderer.renderSnake(
+                        this.ctx, rp.body, rp.direction, null,
+                        this.offsetX, this.offsetY, this.tileSize, timeSeconds,
+                        rp.theme, `👤 @${rp.username}`
+                    );
+                }
+            }
+            if (this.multiplayer.hasAiSnake && this.multiplayer.aiSnake?.body?.length) {
+                SnakeRenderer.renderSnake(
+                    this.ctx, this.multiplayer.aiSnake.body, this.multiplayer.aiSnake.direction, null,
+                    this.offsetX, this.offsetY, this.tileSize, timeSeconds,
+                    this.multiplayer.aiSnake.theme, '🤖 AI Uss'
+                );
+            }
+        } else if (this.state.body2?.length) {
             SnakeRenderer.renderSnake(
                 this.ctx, this.state.body2, this.state.direction2, null,
-                this.offsetX, this.offsetY, this.tileSize, timeSeconds,
-                RED_SNAKE_THEME
+                this.offsetX, this.offsetY, this.tileSize, timeSeconds, RED_SNAKE_THEME
             );
         }
 
