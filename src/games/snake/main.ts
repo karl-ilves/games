@@ -89,6 +89,7 @@ export class SnakeGame {
         this.multiplayer.onInviteResponse((accepted, friend) => {
             if (accepted) {
                 this.friendsModal.closeFriendsModal();
+                this.friendsModal.closeInviteConfirmModal();
                 this.startMultiplayerGame(friend);
             } else {
                 this.friendsModal.setStatus(`@${friend} lükkas kutse tagasi.`);

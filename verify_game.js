@@ -10579,6 +10579,18 @@ await (async () => {
                 const p1HasGreenIndicator = hudP1Score !== null && hudP1Score.textContent.includes('🟢');
                 const p2HasRedIndicator = hudP2Score !== null && hudP2Score.textContent.includes('🔴');
 
+                // Test mutual invite: when both players send an invite ("kui mõlemad saadavad kutse siis läheb mäng käima")
+                game.multiplayer.incomingInvites.set('kawe1234', {
+                    id: 'test_invite_mutual',
+                    fromUsername: 'kawe1234',
+                    fromDisplayName: 'Kawe Pro',
+                    toUsername: 'Guest',
+                    timestamp: Date.now(),
+                    status: 'pending'
+                });
+                game.multiplayer.sendInvite('kawe1234');
+                const mutualStartsMultiplayer = game.state.mode === 'multiplayer' && game.state.body2.length > 0;
+
                 // Test clicking Play (Solo) starts single player game
                 game.startSoloGame();
                 const isOverlayHiddenAfterPlay = startOverlay !== null && window.getComputedStyle(startOverlay).display === 'none';
@@ -10702,6 +10714,7 @@ await (async () => {
                     isP2ScoreVisible,
                     p1HasGreenIndicator,
                     p2HasRedIndicator,
+                    mutualStartsMultiplayer,
                     isOverlayHiddenAfterPlay,
                     soloMode,
                     wrappedTopToBottom,
@@ -10733,6 +10746,9 @@ await (async () => {
             }
             if (snakeGameTest.modeAfterAccept !== 'multiplayer' || !snakeGameTest.hasTwoSnakes || !snakeGameTest.isP2ScoreVisible || !snakeGameTest.p1HasGreenIndicator || !snakeGameTest.p2HasRedIndicator) {
                 throw new Error("Snake multiplayer launch failed (must have 2 snakes, P1 green and P2 red): " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.mutualStartsMultiplayer) {
+                throw new Error("Mutual invite check failed: when both players send an invite, multiplayer must start immediately!");
             }
             if (!snakeGameTest.isOverlayHiddenAfterPlay || snakeGameTest.soloMode !== 'solo') {
                 throw new Error("Snake solo mode launch failed: " + JSON.stringify(snakeGameTest));

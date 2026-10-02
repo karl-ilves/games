@@ -58,6 +58,8 @@ export class SnakeMultiplayerSystem {
         });
     }
 
+    public incomingInvites: Map<string, MultiplayerInvite> = new Map();
+
     private handleMessage(data: any): void {
         if (!data || typeof data !== 'object') return;
         if (data.senderTabId === this.tabId) return; // Ignore own outgoing broadcast
@@ -66,6 +68,38 @@ export class SnakeMultiplayerSystem {
             case 'SNAKE_INVITE': {
                 const invite: MultiplayerInvite = data.invite;
                 if (!invite) return;
+
+                this.incomingInvites.set(invite.fromUsername.toLowerCase(), invite);
+                if (invite.fromDisplayName) {
+                    this.incomingInvites.set(invite.fromDisplayName.toLowerCase(), invite);
+                }
+
+                // Check if BOTH players have sent an invite to each other!
+                const isMutual = !!(this.pendingInviteId && this.activeOpponent && (
+                    this.activeOpponent.toLowerCase() === invite.fromUsername.toLowerCase() ||
+                    (invite.fromDisplayName && this.activeOpponent.toLowerCase() === invite.fromDisplayName.toLowerCase()) ||
+                    this.activeOpponent.toLowerCase() === invite.toUsername.toLowerCase() ||
+                    (invite.toUsername.toLowerCase() === 'guest' && this.activeOpponent.toLowerCase() === 'guest')
+                ));
+
+                if (isMutual) {
+                    this.clearBotTimer();
+                    this.pendingInviteId = null;
+                    this.isConnected = true;
+                    // Deterministic host: tab with smaller tabId becomes host
+                    this.isHost = this.tabId < data.senderTabId;
+                    this.activeOpponent = invite.fromDisplayName || invite.fromUsername;
+
+                    // Send response back so the other tab also starts immediately
+                    this.respondToInvite(invite, true);
+
+                    // Launch game on this tab immediately
+                    if (this.onInviteResponseCallback) {
+                        this.onInviteResponseCallback(true, this.activeOpponent);
+                    }
+                    return;
+                }
+
                 // Deliver invite to the recipient
                 if (this.onInviteReceivedCallback) {
                     this.onInviteReceivedCallback(invite);
@@ -128,6 +162,33 @@ export class SnakeMultiplayerSystem {
         const profile = getCurrentUserProfile();
         const fromUsername = profile?.username || 'Guest';
         const fromDisplayName = profile?.display_name || fromUsername;
+
+        // Check if the other player ALREADY sent us an invite!
+        // If so, both have now sent an invite ("kui mõlemad saadavad kutse siis läheb mäng ussimängus käima")!
+        const existingIncoming = this.incomingInvites.get(toUsername.toLowerCase()) ||
+            Array.from(this.incomingInvites.values()).find(inv =>
+                inv.fromUsername.toLowerCase() === toUsername.toLowerCase() ||
+                (inv.fromDisplayName && inv.fromDisplayName.toLowerCase() === toUsername.toLowerCase()) ||
+                (toUsername.toLowerCase() === 'guest' && inv.fromUsername.toLowerCase() === 'guest')
+            );
+
+        if (existingIncoming) {
+            this.clearBotTimer();
+            this.pendingInviteId = null;
+            this.isConnected = true;
+            this.isHost = false; // Other player who sent earlier is host, we are guest
+            this.activeOpponent = existingIncoming.fromDisplayName || existingIncoming.fromUsername;
+
+            // Respond accepted to the other player so their game starts
+            this.respondToInvite(existingIncoming, true);
+
+            // Launch our game immediately!
+            if (this.onInviteResponseCallback) {
+                this.onInviteResponseCallback(true, this.activeOpponent);
+            }
+
+            return existingIncoming;
+        }
 
         const invite: MultiplayerInvite = {
             id: `invite_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,

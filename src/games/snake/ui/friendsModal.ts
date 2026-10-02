@@ -88,6 +88,19 @@ export class FriendsModalUI {
         if (this.inviteConfirmModal) {
             this.inviteConfirmModal.style.display = 'flex';
         }
+        const sender = (invite.fromDisplayName || invite.fromUsername).toLowerCase();
+        const rows = this.friendsListContainer?.querySelectorAll('.friend-list-row');
+        rows?.forEach(row => {
+            const nameEl = row.querySelector('div > div:first-child');
+            if (nameEl && nameEl.textContent && (nameEl.textContent.toLowerCase() === sender || nameEl.textContent.toLowerCase().includes(invite.fromUsername.toLowerCase()))) {
+                const btn = row.querySelector('.btn-invite-friend-item') as HTMLButtonElement | null;
+                if (btn) {
+                    btn.textContent = '⚡ Kutsu vastu';
+                    btn.style.background = '#00f2fe';
+                    btn.disabled = false;
+                }
+            }
+        });
     }
 
     public closeInviteConfirmModal(): void {
