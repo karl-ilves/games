@@ -207,6 +207,25 @@ export class ConversationEngine {
             };
         }
 
+        // 0.35 Image & Texture Generation ("Loo pilt draakonist", "genereeri pilt", "joonista mõõk", "loo kiviaia tekstuur", "mängu ikoon")
+        const isImageIntent =
+            /(?:tekstuur|texture|ikoon|icon|märk|badge|thumbnail)\b/i.test(lower) ||
+            /\b(?:pilt|foto|illustratsioon|joonistus|image|picture|artwork)\b/i.test(lower) ||
+            /^(?:joonista|draw)\b/i.test(lower);
+
+        if (isImageIntent) {
+            return {
+                intent: 'IMAGE_GENERATION',
+                confidence: 0.98,
+                rawText: text,
+                actionTarget: 'image',
+                parameters: {
+                    prompt: text
+                },
+                safetyReport
+            };
+        }
+
         // 0.4 Natural Language to Technical Plan Compiler (Muuda vabas keeles soov tehniliseks plaaniks)
         if (
             (lower.includes('tornaado') && (lower.includes('kahe minuti') || lower.includes('2 minuti') || lower.includes('kristall'))) ||

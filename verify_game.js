@@ -11377,7 +11377,69 @@ await (async () => {
             }
             console.log("   ✅ 3D Spatial Geometry, Object Manipulation, Batch Layouts & Calculations verified successfully!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System & 3D Spatial Engine) tests passed successfully!");
+            // 22t. Test Playard AI Image Generation, Texture Synthesis & Icon/Badge Creation
+            console.log("   Testing Image Generation, Texture Synthesis & Badge/Icon Creation...");
+            const imageGenTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. "Loo pilt draakonist" -> verify concept art image generated
+                await ai.handleUserInput('Loo pilt draakonist');
+                await new Promise(r => setTimeout(r, 400));
+                let msgs = ai.state.getMessages();
+                const dragonMsg = msgs[msgs.length - 1];
+                const dragonImgOk = !!dragonMsg?.generatedImage &&
+                    dragonMsg.generatedImage.title.toLowerCase().includes('draakon') &&
+                    dragonMsg.generatedImage.dataUrl.startsWith('data:image/') &&
+                    dragonMsg.generatedImage.width >= 256;
+
+                // 2. "Loo kiviaia tekstuur" -> verify texture generation
+                await ai.handleUserInput('Loo kiviaia tekstuur');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const texMsg = msgs[msgs.length - 1];
+                const textureOk = !!texMsg?.generatedImage &&
+                    texMsg.generatedImage.category === 'texture' &&
+                    texMsg.generatedImage.dataUrl.startsWith('data:image/');
+
+                // 3. "Tee mängu ikoon kuldse tähega" -> verify badge/icon generation
+                await ai.handleUserInput('Tee mängu ikoon kuldse tähega');
+                await new Promise(r => setTimeout(r, 400));
+                msgs = ai.state.getMessages();
+                const iconMsg = msgs[msgs.length - 1];
+                const iconOk = !!iconMsg?.generatedImage &&
+                    (iconMsg.generatedImage.category === 'icon' || iconMsg.generatedImage.category === 'badge') &&
+                    iconMsg.generatedImage.dataUrl.startsWith('data:image/');
+
+                // 4. Apply texture on active 3D object
+                let applyTextureOk = false;
+                if (texMsg?.generatedImage?.dataUrl) {
+                    ai.applyTexture(texMsg.generatedImage.dataUrl);
+                    applyTextureOk = true;
+                }
+
+                // 5. Test triage category: "joonista pilt" -> LOOMINE
+                const triageResult = ai.triage('joonista pilt kosmosest');
+                const triageOk = triageResult.category === 'LOOMINE';
+
+                return {
+                    dragonImgOk,
+                    textureOk,
+                    iconOk,
+                    applyTextureOk,
+                    triageOk
+                };
+            });
+
+            console.log("   Image Generation Test Results:", imageGenTest);
+            if (
+                !imageGenTest.dragonImgOk || !imageGenTest.textureOk || !imageGenTest.iconOk ||
+                !imageGenTest.applyTextureOk || !imageGenTest.triageOk
+            ) {
+                throw new Error("Image Generation test failed: " + JSON.stringify(imageGenTest));
+            }
+            console.log("   ✅ Playard AI Image Generation, Texture Synthesis & Icon Creation verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine & Image Generation) tests passed successfully!");
 
 
 

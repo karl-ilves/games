@@ -758,11 +758,11 @@ export class PlayardTaskTriageEngine {
             };
         }
 
-        // 2. LOOMINE (Building, 3D Worlds, Meshes, Spawning, Landscapes, Atmosphere)
+        // 2. LOOMINE (Building, 3D Worlds, Meshes, Spawning, Landscapes, Atmosphere, Visual Images & Textures)
         const isCreation =
-            /^(tee|loo|ehita|valmista|lisa|pane|create|make|build|spawn|generate)\b/i.test(lower) ||
-            (/\b(mäng|game|maailm|world|kaart|map|areen|arena|loss|castle|robot|tank|dinosaurus|ufo|auto|lennuk|laev|saar|vulkaan|püramiid|tornaado|obby|parkuur|tycoon|simulator|hazard|shelter|spawn|tegelane|npc|vaenlane|boss|puud|kivid|meri|ookean|taevas|öö|päev)\b/i.test(lower) &&
-             /\b(tee|loo|ehita|lisa|pane|spawn|muuda|generate|build)\b/i.test(lower));
+            /^(tee|loo|ehita|valmista|lisa|pane|joonista|create|make|build|spawn|generate|draw)\b/i.test(lower) ||
+            (/\b(mäng|game|maailm|world|kaart|map|areen|arena|loss|castle|robot|tank|dinosaurus|ufo|auto|lennuk|laev|saar|vulkaan|püramiid|tornaado|obby|parkuur|tycoon|simulator|hazard|shelter|spawn|tegelane|npc|vaenlane|boss|puud|kivid|meri|ookean|taevas|öö|päev|pilt|foto|tekstuur|ikoon|badge|image|texture|icon)\b/i.test(lower) &&
+             /\b(tee|loo|ehita|lisa|pane|spawn|muuda|generate|build|joonista|draw)\b/i.test(lower));
 
         if (isCreation) {
             return {

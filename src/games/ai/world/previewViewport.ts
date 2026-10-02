@@ -125,6 +125,11 @@ export class PreviewViewport {
         for (const obj of sceneData.objects) {
             const mesh = this.createMeshForObject(obj);
             if (mesh) {
+                mesh.userData.id = obj.id;
+                mesh.name = obj.name || obj.id;
+                if ((obj as any).textureUrl) {
+                    this.applyTextureToMesh(mesh, (obj as any).textureUrl);
+                }
                 this.objectsGroup.add(mesh);
             }
         }
@@ -584,6 +589,49 @@ export class PreviewViewport {
         this.animationFrameId = requestAnimationFrame(animate);
     }
 
+    public applyTextureToMesh(mesh: THREE.Object3D, dataUrl: string) {
+        if (typeof Image === 'undefined') return;
+        const img = new Image();
+        img.onload = () => {
+            const tex = new THREE.CanvasTexture(img);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.needsUpdate = true;
+            mesh.traverse((child) => {
+                if (child instanceof THREE.Mesh && child.material) {
+                    const mat = child.material as THREE.MeshStandardMaterial;
+                    mat.map = tex;
+                    mat.needsUpdate = true;
+                }
+            });
+        };
+        img.src = dataUrl;
+    }
+
+    public applyTextureToActiveObject(dataUrl: string, targetId?: string): boolean {
+        let targetMesh: THREE.Object3D | null = null;
+        if (targetId) {
+            this.objectsGroup.traverse((child) => {
+                if (!targetMesh && (child.userData?.id === targetId || child.name === targetId)) {
+                    targetMesh = child;
+                }
+            });
+        }
+        if (!targetMesh) {
+            // Find last mesh or top object
+            const children = this.objectsGroup.children;
+            if (children.length > 0) {
+                targetMesh = children[children.length - 1];
+            }
+        }
+
+        if (targetMesh) {
+            this.applyTextureToMesh(targetMesh, dataUrl);
+            return true;
+        }
+        return false;
+    }
+
     public destroy() {
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
@@ -595,3 +643,4 @@ export class PreviewViewport {
         this.renderer.dispose();
     }
 }
+

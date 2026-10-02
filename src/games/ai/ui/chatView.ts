@@ -5,6 +5,7 @@ export class ChatView {
     private onSendMessage: (text: string) => void;
     private onSelectClarification: (option: string) => void;
     private onInspectCode: (code: string) => void;
+    private onApplyTexture?: (dataUrl: string) => void;
 
     constructor(
         container: HTMLElement,
@@ -12,12 +13,14 @@ export class ChatView {
             onSendMessage: (text: string) => void;
             onSelectClarification: (option: string) => void;
             onInspectCode: (code: string) => void;
+            onApplyTexture?: (dataUrl: string) => void;
         }
     ) {
         this.container = container;
         this.onSendMessage = callbacks.onSendMessage;
         this.onSelectClarification = callbacks.onSelectClarification;
         this.onInspectCode = callbacks.onInspectCode;
+        this.onApplyTexture = callbacks.onApplyTexture;
 
         this.bindEvents();
     }
@@ -49,6 +52,15 @@ export class ChatView {
                 const code = btn.getAttribute('data-code');
                 if (code) {
                     this.onInspectCode(decodeURIComponent(code));
+                }
+            }
+
+            // Apply texture button
+            if (target && target.closest('.btn-apply-texture')) {
+                const btn = target.closest('.btn-apply-texture') as HTMLElement;
+                const dataUrl = btn.getAttribute('data-url');
+                if (dataUrl && this.onApplyTexture) {
+                    this.onApplyTexture(decodeURIComponent(dataUrl));
                 }
             }
         });
@@ -113,6 +125,31 @@ export class ChatView {
                 `;
             }
 
+            // Generated Image Preview Card
+            if (msg.generatedImage) {
+                const img = msg.generatedImage;
+                html += `
+                    <div class="ai-generated-image-card" style="margin-top: 8px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+                            <span style="font-weight: 700; color: #f1f5f9;">🎨 ${escapeHtml(img.title)}</span>
+                            <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 6px; border-radius: 8px; font-weight: 600;">${img.width}x${img.height}</span>
+                        </div>
+                        <img src="${img.dataUrl}" alt="${escapeHtml(img.title)}" style="width: 100%; height: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 8px rgba(0,0,0,0.3);" />
+                        <div style="font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                            ${escapeHtml(img.description)}
+                        </div>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <a href="${img.dataUrl}" download="playard_${img.id}.png" style="background: #2563eb; color: #fff; text-decoration: none; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                                📥 Laadi alla
+                            </a>
+                            <button type="button" class="btn-apply-texture" data-url="${encodeURIComponent(img.dataUrl)}" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                🧱 Rakenda tekstuurina
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
             html += `</div>`;
         }
 
@@ -129,6 +166,15 @@ export class ChatView {
             </div>
             <!-- Quick Suggestion Chips -->
             <div style="padding: 6px 14px; display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid rgba(255,255,255,0.06);">
+                <button type="button" class="ai-suggestion-chip" data-prompt="Loo pilt draakonist" style="white-space: nowrap; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8; border-radius: 12px; padding: 4px 10px; font-size: 11px; cursor: pointer;">
+                    🎨 Loo pilt draakonist
+                </button>
+                <button type="button" class="ai-suggestion-chip" data-prompt="Loo kiviaia tekstuur" style="white-space: nowrap; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #10b981; border-radius: 12px; padding: 4px 10px; font-size: 11px; cursor: pointer;">
+                    🧱 Kiviaia tekstuur
+                </button>
+                <button type="button" class="ai-suggestion-chip" data-prompt="Tee mängu ikoon" style="white-space: nowrap; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #f59e0b; border-radius: 12px; padding: 4px 10px; font-size: 11px; cursor: pointer;">
+                    ⭐ Mängu ikoon
+                </button>
                 <button type="button" class="ai-suggestion-chip" data-prompt="Tee mäng, kus mängija peab tornaado eest põgenema" style="white-space: nowrap; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; border-radius: 12px; padding: 4px 10px; font-size: 11px; cursor: pointer;">
                     🌪️ Tornaado põgenemine
                 </button>

@@ -17,6 +17,8 @@ export interface AiTaskTriage {
     targetAction: string;
 }
 
+import type { GeneratedImageResult } from '../../../shared/imageGenerationEngine';
+
 export interface AiMessage {
     id: string;
     sender: 'user' | 'ai' | 'system';
@@ -26,6 +28,7 @@ export interface AiMessage {
     triage?: AiTaskTriage;
     clarificationOptions?: string[];
     codeSnippet?: string;
+    generatedImage?: GeneratedImageResult;
     steps?: AiBuildStep[];
     safetyWarning?: string;
     isVerificationReport?: boolean;
@@ -84,6 +87,7 @@ export type AiIntentType =
     | 'ECONOMY_BALANCE'
     | 'PERFORMANCE_OPTIMIZE'
     | 'COPILOT_ADVISE'
+    | 'IMAGE_GENERATION'
     | 'HELP_OR_CHAT';
 
 

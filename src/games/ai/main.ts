@@ -18,8 +18,7 @@ import {
     PlayardCoPilotAdvisor,
     type TechnicalGamePlan
 } from '../../shared/playardAiKnowledge';
-
-
+import { PlayardImageGenerationEngine } from '../../shared/imageGenerationEngine';
 
 class PlayardAiApp {
     public state: AiState;
@@ -50,7 +49,8 @@ class PlayardAiApp {
             this.chatView = new ChatView(chatContainer, {
                 onSendMessage: (text) => this.handleUserInput(text),
                 onSelectClarification: (opt) => this.handleUserInput(opt),
-                onInspectCode: (code) => this.showCodeModal(code)
+                onInspectCode: (code) => this.showCodeModal(code),
+                onApplyTexture: (url) => this.applyTexture(url)
             });
             this.chatView.render(this.state.getMessages(), this.state.getIsBuilding());
         }
@@ -211,26 +211,17 @@ class PlayardAiApp {
         }
 
         // Loomuliku keele tehniline kompileerimine (9 alamsüsteemi)
-        if (parsed.intent === 'TECHNICAL_COMPILATION') {
-            const plan: TechnicalGamePlan = parsed.parameters?.plan;
-            if (plan) {
-                this.state.addAiMessage(PlayardNaturalLanguageCompiler.formatPlan(plan));
-                return;
-            }
+        if (parsed.intent === 'TECHNICAL_COMPILATION' && parsed.parameters?.plan) {
+            return this.state.addAiMessage(PlayardNaturalLanguageCompiler.formatPlan(parsed.parameters.plan));
         }
 
-        // 10/10 AI: Majanduse tasakaalustus, 60 FPS jõudlus & Co-Pilot nõuanded
-        if (parsed.intent === 'ECONOMY_BALANCE') {
-            this.state.addAiMessage(PlayardEconomyAndBalanceEngine.formatReport(parsed.parameters?.balance));
-            return;
-        }
-        if (parsed.intent === 'PERFORMANCE_OPTIMIZE') {
-            this.state.addAiMessage(PlayardPerformanceOptimizer.formatReport(parsed.parameters?.perf));
-            return;
-        }
-        if (parsed.intent === 'COPILOT_ADVISE') {
-            this.state.addAiMessage(PlayardCoPilotAdvisor.formatReport(parsed.parameters?.advice));
-            return;
+        // 10/10 AI: Majandus, jõudlus, nõuanded ja piltide loomine
+        if (parsed.intent === 'ECONOMY_BALANCE') return this.state.addAiMessage(PlayardEconomyAndBalanceEngine.formatReport(parsed.parameters?.balance));
+        if (parsed.intent === 'PERFORMANCE_OPTIMIZE') return this.state.addAiMessage(PlayardPerformanceOptimizer.formatReport(parsed.parameters?.perf));
+        if (parsed.intent === 'COPILOT_ADVISE') return this.state.addAiMessage(PlayardCoPilotAdvisor.formatReport(parsed.parameters?.advice));
+        if (parsed.intent === 'IMAGE_GENERATION') {
+            const img = PlayardImageGenerationEngine.generateImage(parsed.parameters?.prompt || parsed.rawText, parsed.parameters);
+            return this.state.addAiMessage(`🎨 **Playard AI Pildigeneraator:**\nValmis pilt teemal "${img.title}" (${img.width}x${img.height} px, stiil: ${img.style})!`, { generatedImage: img });
         }
 
         // Planeeri sammud
@@ -334,6 +325,12 @@ class PlayardAiApp {
         if (modal && codePre) {
             codePre.textContent = code;
             modal.style.display = 'flex';
+        }
+    }
+
+    public applyTexture(url: string) {
+        if (this.viewport?.applyTextureToActiveObject(url)) {
+            this.state.addAiMessage('🧱 Rakendasin genereeritud tekstuuri aktiivsele 3D objektile!');
         }
     }
 
