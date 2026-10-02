@@ -72,11 +72,22 @@ export class SnakeHud {
     }
 
     public updateStats(stats: GameStats) {
-        if (this.scoreEl) this.scoreEl.innerText = stats.mode === 'multiplayer' ? `P1: ${stats.score}` : `SKOOR: ${stats.score}`;
+        if (this.scoreEl) {
+            if (stats.mode === 'multiplayer') {
+                this.scoreEl.innerText = `🟢 P1: ${stats.score}`;
+                this.scoreEl.style.color = '#2ed573';
+            } else {
+                this.scoreEl.innerText = `SKOOR: ${stats.score}`;
+                this.scoreEl.style.color = '#ffd700';
+            }
+        }
         if (this.score2El) {
             if (stats.mode === 'multiplayer') {
                 this.score2El.style.display = 'inline-block';
-                this.score2El.innerText = `P2: ${stats.score2}`;
+                this.score2El.innerText = `🔴 P2: ${stats.score2}`;
+                this.score2El.style.borderColor = '#ff4757';
+                this.score2El.style.color = '#ff4757';
+                this.score2El.style.background = 'rgba(255, 71, 87, 0.15)';
             } else {
                 this.score2El.style.display = 'none';
             }

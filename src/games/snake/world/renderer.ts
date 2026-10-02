@@ -1,6 +1,30 @@
 import { GridPoint, FoodItem, FoodType, Direction } from '../types';
 import { SNAKE_CONFIG } from '../catalog';
 
+export interface SnakeThemeConfig {
+    head?: string;
+    headGlow?: string;
+    primary?: string;
+    secondary?: string;
+    glow?: string;
+}
+
+export const GREEN_SNAKE_THEME: SnakeThemeConfig = {
+    head: '#00e676',
+    headGlow: 'rgba(0, 230, 118, 0.85)',
+    primary: '#2ed573',
+    secondary: '#10ac84',
+    glow: 'rgba(46, 213, 115, 0.6)',
+};
+
+export const RED_SNAKE_THEME: SnakeThemeConfig = {
+    head: '#ff4757',
+    headGlow: 'rgba(255, 71, 87, 0.85)',
+    primary: '#ff6b81',
+    secondary: '#c0392b',
+    glow: 'rgba(255, 71, 87, 0.6)',
+};
+
 export class SnakeRenderer {
     public static renderBackground(
         ctx: CanvasRenderingContext2D,
@@ -139,7 +163,7 @@ export class SnakeRenderer {
         offsetY: number,
         tileSize: number,
         time: number,
-        customTheme?: { primary: string; secondary: string; glow: string }
+        customTheme?: SnakeThemeConfig
     ) {
         if (body.length === 0) return;
 
@@ -154,9 +178,9 @@ export class SnakeRenderer {
             const size = tileSize - 3;
 
             const t = i / total;
-            if (customTheme) {
+            if (customTheme && customTheme.primary && customTheme.secondary) {
                 ctx.fillStyle = t > 0.5 ? customTheme.secondary : customTheme.primary;
-                ctx.shadowColor = customTheme.glow;
+                ctx.shadowColor = customTheme.glow || customTheme.primary;
             } else {
                 // Color gradient from head to tail (Neon Green)
                 const r = Math.round(46 * (1 - t) + 16 * t);
@@ -193,8 +217,8 @@ export class SnakeRenderer {
         }
 
         // Head Base
-        ctx.fillStyle = SNAKE_CONFIG.SNAKE.colors.head;
-        ctx.shadowColor = SNAKE_CONFIG.SNAKE.colors.headGlow;
+        ctx.fillStyle = customTheme?.head || SNAKE_CONFIG.SNAKE.colors.head;
+        ctx.shadowColor = customTheme?.headGlow || SNAKE_CONFIG.SNAKE.colors.headGlow;
         ctx.shadowBlur = 12;
         this.drawRoundedRect(ctx, hx, hy, hsize, hsize, 8);
         ctx.fill();

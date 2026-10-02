@@ -5,7 +5,7 @@ import { SnakeState } from './state/snakeState';
 import { ParticleSystem } from './systems/particles';
 import { InputManager } from './systems/input';
 import { SnakeHud } from './ui/hud';
-import { SnakeRenderer } from './world/renderer';
+import { SnakeRenderer, GREEN_SNAKE_THEME, RED_SNAKE_THEME } from './world/renderer';
 import { StartScreenUI } from './ui/startScreen';
 import { FriendsModalUI } from './ui/friendsModal';
 import { DemoAiSystem } from './systems/demoAi';
@@ -48,13 +48,10 @@ export class SnakeGame {
         this.ctx = ctx;
 
         yardService.recordPlayedGame({
-            id: 'snake',
-            title: '🐍 Ussimäng (Snake 2D Arcade)',
+            id: 'snake', title: '🐍 Ussimäng (Snake 2D Arcade)',
             description: 'Klassikaline ja kaasahaarav neoon-ussimäng! Korja õunu, püüa boonuseid ja väldi seinu.',
-            url: './games/snake/index.html',
-            icon: '🐍',
-            badgeText: '🐍 2D Neon Arcade',
-            badgeColor: '#2ed573',
+            url: './games/snake/index.html', icon: '🐍',
+            badgeText: '🐍 2D Neon Arcade', badgeColor: '#2ed573',
         });
 
         this.demoAi = new DemoAiSystem(this.state.cols, this.state.rows);
@@ -97,11 +94,18 @@ export class SnakeGame {
                 this.friendsModal.setStatus(`@${friend} lükkas kutse tagasi.`);
             }
         });
-        this.multiplayer.onRemoteMove((dir, body, score) => {
-            if (this.state.mode === 'multiplayer') {
-                this.state.direction2 = dir;
-                this.state.body2 = body;
-                this.state.score2 = score;
+        this.multiplayer.onGuestInput((dir) => {
+            if (this.state.mode === 'multiplayer') this.state.setDirection2(dir);
+        });
+        this.multiplayer.onHostSync((data) => {
+            if (this.state.mode === 'multiplayer' && !this.multiplayer.isHost) {
+                this.state.body = data.body1;
+                this.state.direction = data.dir1;
+                this.state.body2 = data.body2;
+                this.state.direction2 = data.dir2;
+                this.state.foodItems = data.foodItems;
+                this.state.score2 = data.score2;
+                if (data.isGameOver) this.triggerGameOver();
                 this.hud.updateStats(this.state.getStats());
             }
         });
@@ -128,14 +132,16 @@ export class SnakeGame {
         this.resetGameMode('multiplayer');
     }
 
-    public startMultiplayerGame(_opponentName: string) {
+    public startMultiplayerGame(opponentName: string) {
         this.startScreen.hide();
+        this.friendsModal.closeFriendsModal();
+        this.friendsModal.closeInviteConfirmModal();
         this.input.isTwoPlayerMode = true;
-        this.resetGameMode('multiplayer');
+        this.resetGameMode('multiplayer', opponentName);
     }
 
-    private resetGameMode(mode: 'solo' | 'multiplayer' | 'demo') {
-        this.state.reset(mode);
+    private resetGameMode(mode: 'solo' | 'multiplayer' | 'demo', player2Name?: string) {
+        this.state.reset(mode, player2Name);
         this.particles.clear();
         this.stepTimer = 0;
         this.hud.hideModals();
@@ -154,6 +160,11 @@ export class SnakeGame {
     public handleDirectionInput(dir: Direction) {
         if (this.state.mode === 'demo') {
             this.startSoloGame();
+            return;
+        }
+        if (this.state.mode === 'multiplayer' && !this.multiplayer.isHost && this.multiplayer.isConnected) {
+            this.multiplayer.broadcastGuestInput(dir);
+            if (this.state.setDirection2(dir)) this.audio.playTurn();
             return;
         }
         if (this.state.setDirection(dir)) this.audio.playTurn();
@@ -257,8 +268,12 @@ export class SnakeGame {
                 break;
             }
 
-            if (this.state.mode === 'multiplayer' && !this.input.isTwoPlayerMode) {
-                this.multiplayer.broadcastMove(this.state.direction, this.state.body, this.state.score);
+            if (this.state.mode === 'multiplayer' && this.multiplayer.isHost && this.multiplayer.isConnected) {
+                this.multiplayer.broadcastHostSync({
+                    body1: this.state.body, dir1: this.state.direction, score1: this.state.score,
+                    body2: this.state.body2, dir2: this.state.direction2, score2: this.state.score2,
+                    foodItems: this.state.foodItems, isGameOver: this.state.isGameOver || this.state.isGameOver2
+                });
             }
         }
     }
@@ -303,14 +318,15 @@ export class SnakeGame {
         SnakeRenderer.renderFood(this.ctx, this.state.foodItems, this.offsetX, this.offsetY, this.tileSize, timeSeconds);
         SnakeRenderer.renderSnake(
             this.ctx, this.state.body, this.state.direction,
-            this.state.getStats().activePowerUp, this.offsetX, this.offsetY, this.tileSize, timeSeconds
+            this.state.getStats().activePowerUp, this.offsetX, this.offsetY, this.tileSize, timeSeconds,
+            GREEN_SNAKE_THEME
         );
 
         if (this.state.body2 && this.state.body2.length > 0) {
             SnakeRenderer.renderSnake(
                 this.ctx, this.state.body2, this.state.direction2, null,
                 this.offsetX, this.offsetY, this.tileSize, timeSeconds,
-                { body: '#00d2d3', head: '#00f2fe', eye: '#ffffff', pupil: '#0984e3' }
+                RED_SNAKE_THEME
             );
         }
 

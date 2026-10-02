@@ -10495,17 +10495,18 @@ await (async () => {
                 const modalFriends = document.getElementById('modal-friends-list');
                 const isFriendsModalVisible = modalFriends !== null && window.getComputedStyle(modalFriends).display !== 'none';
 
-                // Test clicking "✉️ Kutsu" on a friend in the list immediately opens the "Kas sa oled nõus?" modal
+                // Test clicking "✉️ Kutsu" on a friend in the list updates status for sender (waiting for answer)
                 const firstInviteBtn = document.querySelector('.btn-invite-friend-item');
-                let clickedInviteButtonShowsModal = false;
+                let clickedInviteShowsSentStatus = false;
                 if (firstInviteBtn) {
                     firstInviteBtn.click();
-                    await new Promise(r => setTimeout(r, 400));
-                    const modalInviteAfterClick = document.getElementById('modal-invite-confirm');
-                    clickedInviteButtonShowsModal = modalInviteAfterClick !== null && window.getComputedStyle(modalInviteAfterClick).display !== 'none';
+                    await new Promise(r => setTimeout(r, 100));
+                    const statusBanner = document.getElementById('friends-modal-status');
+                    clickedInviteShowsSentStatus = firstInviteBtn.textContent.includes('Saadetud') &&
+                        statusBanner !== null && statusBanner.textContent.includes('Ootan sõbra vastust');
                 }
 
-                // Also test receiving an invite shows confirmation modal ("Kas sa oled nõus?")
+                // Test receiving an invite shows confirmation modal ("Kas sa oled nõus?") to the invited player!
                 game.friendsModal.showInviteConfirmation({
                     id: 'test_invite_1',
                     fromUsername: 'kawe1234',
@@ -10520,13 +10521,16 @@ await (async () => {
                 const hasKasSaOledNous = invitePromptText.toLowerCase().includes('kas sa oled nõus');
                 const hasSenderName = invitePromptText.includes('Kawe Pro');
 
-                // Test accepting invite starts multiplayer mode with 2 snakes
+                // Test accepting invite starts multiplayer mode with 2 snakes: Green for P1, Red for P2!
                 const btnAccept = document.getElementById('btn-invite-accept');
                 if (btnAccept) btnAccept.click();
                 const modeAfterAccept = game.state.mode;
                 const hasTwoSnakes = game.state.body.length > 0 && game.state.body2.length > 0;
+                const hudP1Score = document.getElementById('hud-score');
                 const hudP2Score = document.getElementById('hud-p2-score');
                 const isP2ScoreVisible = hudP2Score !== null && window.getComputedStyle(hudP2Score).display !== 'none';
+                const p1HasGreenIndicator = hudP1Score !== null && hudP1Score.textContent.includes('🟢');
+                const p2HasRedIndicator = hudP2Score !== null && hudP2Score.textContent.includes('🔴');
 
                 // Test clicking Play (Solo) starts single player game
                 game.startSoloGame();
@@ -10642,13 +10646,15 @@ await (async () => {
                     initialMode,
                     hasValidDemoAi,
                     isFriendsModalVisible,
-                    clickedInviteButtonShowsModal,
+                    clickedInviteShowsSentStatus,
                     isInviteModalVisible,
                     hasKasSaOledNous,
                     hasSenderName,
                     modeAfterAccept,
                     hasTwoSnakes,
                     isP2ScoreVisible,
+                    p1HasGreenIndicator,
+                    p2HasRedIndicator,
                     isOverlayHiddenAfterPlay,
                     soloMode,
                     wrappedTopToBottom,
@@ -10672,14 +10678,14 @@ await (async () => {
             if (!snakeGameTest.isFriendsModalVisible) {
                 throw new Error("Snake Play with Friends modal failed to open: " + JSON.stringify(snakeGameTest));
             }
-            if (!snakeGameTest.clickedInviteButtonShowsModal) {
-                throw new Error("Clicking Kutsu button must immediately show the 'Kas sa oled nõus?' confirmation modal: " + JSON.stringify(snakeGameTest));
+            if (!snakeGameTest.clickedInviteShowsSentStatus) {
+                throw new Error("Clicking Kutsu button must update sender button and status (Ootan vastust): " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.isInviteModalVisible || !snakeGameTest.hasKasSaOledNous || !snakeGameTest.hasSenderName) {
-                throw new Error("Snake invite confirmation modal ('Kas sa oled nõus?') failed: " + JSON.stringify(snakeGameTest));
+                throw new Error("Snake invite confirmation modal ('Kas sa oled nõus?') failed for invited receiver: " + JSON.stringify(snakeGameTest));
             }
-            if (snakeGameTest.modeAfterAccept !== 'multiplayer' || !snakeGameTest.hasTwoSnakes || !snakeGameTest.isP2ScoreVisible) {
-                throw new Error("Snake multiplayer launch failed: " + JSON.stringify(snakeGameTest));
+            if (snakeGameTest.modeAfterAccept !== 'multiplayer' || !snakeGameTest.hasTwoSnakes || !snakeGameTest.isP2ScoreVisible || !snakeGameTest.p1HasGreenIndicator || !snakeGameTest.p2HasRedIndicator) {
+                throw new Error("Snake multiplayer launch failed (must have 2 snakes, P1 green and P2 red): " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.isOverlayHiddenAfterPlay || snakeGameTest.soloMode !== 'solo') {
                 throw new Error("Snake solo mode launch failed: " + JSON.stringify(snakeGameTest));
