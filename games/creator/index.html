@@ -408,15 +408,15 @@
         </div>
     </div>
 
-    <!-- Top-Left Tool Mode Selector: Hiir vs Tõmbaja -->
+    <!-- Top-Left Tool Mode Selector: Mouse vs Puller -->
     <div id="studio-tool-mode-selector" style="position: absolute; top: 75px; left: 20px; z-index: 1005; background: rgba(15, 23, 42, 0.94); border: 2px solid rgba(0, 242, 254, 0.4); border-radius: 14px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
-        <span style="font-size: 0.82rem; font-weight: 800; color: #ffd32a; padding: 0 4px; user-select: none;">Tööriist:</span>
+        <span style="font-size: 0.82rem; font-weight: 800; color: #ffd32a; padding: 0 4px; user-select: none;">Tool:</span>
         <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 3px; border-radius: 10px; border: 1px solid rgba(0,242,254,0.25);">
-            <button id="btn-tool-mouse" class="btn-studio-tool active" title="Tavaline hiir (valimine ja liigutamine)" style="padding: 7px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
-                Hiir
+            <button id="btn-tool-mouse" class="btn-studio-tool active" title="Mouse Tool (Select and Move)" style="padding: 7px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                Mouse
             </button>
-            <button id="btn-tool-puller" class="btn-studio-tool" title="Tõmbaja (lohista ja tõmba plokki suuremaks)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
-                Tõmbaja
+            <button id="btn-tool-puller" class="btn-studio-tool" title="Puller Tool (Drag and stretch blocks)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                Puller
             </button>
         </div>
     </div>
@@ -547,14 +547,14 @@
             <div style="font-size: 4rem; margin-bottom: 10px;">🏆</div>
             <h2 style="color: #ffd32a; font-size: 2rem; margin: 0 0 10px 0; text-transform: uppercase;" id="victory-title">PALJU ÕNNE! VÕIT!</h2>
             <p style="color: #e2e8f0; font-size: 1.1rem; line-height: 1.5; margin-bottom: 20px;" id="victory-desc">
-                Suurepärane! Läbisid mängu edukalt ja täitsid kõik eesmärgid!
+                Great job! You completed the game successfully and met all objectives!
             </p>
             <div style="display: flex; justify-content: center; gap: 12px;">
                 <button id="btn-victory-restart" class="btn-studio" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; padding: 10px 20px; font-size: 1rem;">
-                    🔄 Mängi Uuesti
+                    🔄 Play Again
                 </button>
                 <button id="btn-victory-edit" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #111; padding: 10px 20px; font-size: 1rem; font-weight: bold;">
-                    🛠️ Tagasi Redigeerima
+                    🛠️ Back to Edit
                 </button>
             </div>
         </div>
@@ -564,16 +564,16 @@
     <div id="game-over-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 1400; align-items: center; justify-content: center; padding: 20px;">
         <div style="background: linear-gradient(135deg, #1e272e, #0f172a); border: 3px solid #e74c3c; border-radius: 24px; padding: 30px; text-align: center; max-width: 500px; width: 100%; box-shadow: 0 0 50px rgba(231,76,60,0.6);">
             <div style="font-size: 4rem; margin-bottom: 10px;">💀</div>
-            <h2 style="color: #e74c3c; font-size: 2rem; margin: 0 0 10px 0; text-transform: uppercase;">MÄNG LÄBI!</h2>
+            <h2 style="color: #e74c3c; font-size: 2rem; margin: 0 0 10px 0; text-transform: uppercase;">GAME OVER!</h2>
             <p style="color: #e2e8f0; font-size: 1.1rem; line-height: 1.5; margin-bottom: 20px;" id="gameover-desc">
-                Tervis sai otsa! Vali, kas soovid taassündida kontrollpunktis või redigeerida mängu.
+                Out of health! Choose to respawn at checkpoint or edit the game.
             </p>
             <div style="display: flex; justify-content: center; gap: 12px;">
                 <button id="btn-gameover-respawn" class="btn-studio" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 10px 20px; font-size: 1rem;">
-                    🔄 Taassünni (Respawn)
+                    🔄 Respawn
                 </button>
                 <button id="btn-gameover-edit" class="btn-studio" style="background: #34495e; color: white; padding: 10px 20px; font-size: 1rem;">
-                    🛠️ Tagasi Redigeerima
+                    🛠️ Back to Edit
                 </button>
             </div>
         </div>
@@ -581,7 +581,7 @@
 
     <!-- Play Test Active HUD -->
     <div id="play-test-hud">
-        🎮 <strong>PLAY TEST:</strong> Nooltega / WASD liikumine | <strong>SPACE</strong> Hüpe / Uju üles | <strong>SHIFT / C</strong> Sukeldu (~10m) | <strong>[E]</strong> Rünnak | <strong>[F]</strong> Sõidukid
+        🎮 <strong>PLAY TEST:</strong> Arrow keys / WASD to move | <strong>SPACE</strong> Jump / Swim up | <strong>SHIFT / C</strong> Dive (~10m) | <strong>[E]</strong> Attack | <strong>[F]</strong> Vehicles
     </div>
 
     <!-- Vehicle Drive & Flight Active HUD -->
@@ -589,15 +589,15 @@
         <div style="display: flex; align-items: center; gap: 12px;">
             <span style="font-size: 1.6rem;" id="vehicle-hud-icon">🏎️</span>
             <div>
-                <strong style="color: #ffd32a; font-size: 1.05rem;" id="vehicle-hud-name">Autoga Sõitmine</strong>
+                <strong style="color: #ffd32a; font-size: 1.05rem;" id="vehicle-hud-name">Driving Vehicle</strong>
                 <div style="font-size: 0.85rem; color: #00f2fe; margin-top: 2px;" id="vehicle-hud-desc">
-                    Gaas: <strong>W / ⬆️</strong> | Pidur & Tagurpidi: <strong>S / ⬇️</strong> | Pööramine: <strong>A / D / ⬅️ ➡️</strong>
+                    Gas: <strong>W / ⬆️</strong> | Brake & Reverse: <strong>S / ⬇️</strong> | Steer: <strong>A / D / ⬅️ ➡️</strong>
                 </div>
             </div>
             <div style="margin-left: 10px; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 12px; text-align: right;">
                 <div style="font-size: 1.2rem; font-weight: 900; color: #2ecc71;" id="vehicle-hud-speed">0 km/h</div>
                 <button id="btn-exit-vehicle" style="background: #e74c3c; border: none; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; margin-top: 4px;">
-                    🚪 Välju [F]
+                    🚪 Exit [F]
                 </button>
             </div>
         </div>
@@ -606,7 +606,7 @@
     <!-- Enter Vehicle Prompt Button -->
     <div id="enter-vehicle-prompt" style="display: none; position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%); z-index: 1150;">
         <button id="btn-enter-vehicle" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); border: 2px solid #fff; color: #111; font-weight: 900; padding: 10px 20px; border-radius: 30px; font-size: 1rem; cursor: pointer; box-shadow: 0 8px 25px rgba(255,211,42,0.6); display: flex; align-items: center; gap: 8px; animation: bounce 1s infinite alternate;">
-            <span id="enter-vehicle-icon">🚗</span> <span id="enter-vehicle-text">Istu autosse ja sõida [F]</span>
+            <span id="enter-vehicle-icon">🚗</span> <span id="enter-vehicle-text">Enter vehicle & drive [F]</span>
         </button>
     </div>
             <div id="dimension-games-list" style="max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
@@ -1225,12 +1225,12 @@
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 1.25rem;">🛡️</span>
                             <div>
-                                <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">Anti-Cheat & Cheaters Kaitse</div>
-                                <div style="font-size: 0.76rem; color: #94a3b8;">Määra, kuidas automaat petjaid tuvastab ja bannib</div>
+                                <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">Anti-Cheat & Cheaters Protection</div>
+                                <div style="font-size: 0.76rem; color: #94a3b8;">Configure how the automated system detects and bans cheaters</div>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span id="cheaters-status-badge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);">⚠️ Vajab kinnitamist</span>
+                            <span id="cheaters-status-badge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);">⚠️ Needs Confirmation</span>
                             <button type="button" id="btn-open-cheaters-settings" class="btn-studio" style="background: linear-gradient(135deg, #7c3aed, #a855f7); border-color: #c084fc; color: #fff; font-weight: 800; font-size: 0.82rem; padding: 6px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                                 <span>🛡️</span> <span>Cheaters</span>
                             </button>
@@ -1240,86 +1240,86 @@
                     <!-- Validation warning when clicking publish without OK: "Tap OK" -->
                     <div id="cheaters-tap-ok-warning" style="display: none; background: rgba(239, 68, 68, 0.25); border: 1.5px solid #ef4444; border-radius: 8px; padding: 8px 12px; color: #fca5a5; font-size: 0.84rem; font-weight: 800; align-items: center; gap: 8px;">
                         <span style="font-size: 1.15rem;">⚠️</span>
-                        <span>Palun ava seaded ja vajuta all <strong>OK</strong>! (Tap OK)</span>
+                        <span>Please open settings and tap <strong>OK</strong> at the bottom! (Tap OK)</span>
                     </div>
 
                     <!-- Expandable Cheaters Settings Panel -->
                     <div id="cheaters-config-panel" style="display: none; flex-direction: column; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(168, 85, 247, 0.3);">
-                        <!-- 1. Kuidas automaat aru saab -->
+                        <!-- 1. How Auto-Detection Works -->
                         <div>
-                            <label style="display: block; font-weight: 800; font-size: 0.82rem; color: #ffd32a; margin-bottom: 6px;">🔍 Kuidas automaat aru saab (Tuvastusmeetodid):</label>
+                            <label style="display: block; font-weight: 800; font-size: 0.82rem; color: #ffd32a; margin-bottom: 6px;">🔍 How Auto-Detection Works (Detection Methods):</label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; color: #e2e8f0; margin-bottom: 10px;">
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" id="cheat-detect-fly" checked> ✈️ Lendamine & Hõljumine (Flyhack)
+                                    <input type="checkbox" id="cheat-detect-fly" checked> ✈️ Flying & Hovering (Flyhack)
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" id="cheat-detect-teleport" checked> 🌀 Teleport / Seinast läbi
+                                    <input type="checkbox" id="cheat-detect-teleport" checked> 🌀 Teleport / Noclip
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" id="cheat-detect-autoclick" checked> ⚡ Spamm & Botid
+                                    <input type="checkbox" id="cheat-detect-autoclick" checked> ⚡ Spam & Bots
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" id="cheat-detect-godmode" checked> 🛡️ Surematuse häkk
+                                    <input type="checkbox" id="cheat-detect-godmode" checked> 🛡️ Godmode Hack
                                 </label>
                             </div>
 
-                            <!-- Raha ja skoori häki piirang & ajaintervall -->
+                            <!-- Money & Score Hack Rate-Limiting -->
                             <div style="background: rgba(0, 0, 0, 0.4); border: 1.5px solid rgba(255, 211, 42, 0.4); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 800; color: #ffd32a; font-size: 0.82rem;">
-                                    <input type="checkbox" id="cheat-detect-money" checked> 💰 Raha & Skoori häkk (Piirang & Auto-Ban)
+                                    <input type="checkbox" id="cheat-detect-money" checked> 💰 Money & Score Hack (Rate Limit & Auto-Ban)
                                 </label>
                                 <div id="cheat-money-options" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.78rem;">
                                     <div>
-                                        <label for="cheat-money-interval" style="color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600;">Kontrolli ajavahemik (tagant):</label>
+                                        <label for="cheat-money-interval" style="color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600;">Check Interval:</label>
                                         <select id="cheat-money-interval" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: #0b111a; border: 1.5px solid rgba(255, 211, 42, 0.4); border-radius: 8px; color: #fff; font-size: 0.8rem; font-weight: 600; outline: none;">
-                                            <option value="1m">1min tagant</option>
-                                            <option value="5m" selected>5 min tagant</option>
-                                            <option value="15m">15min tagant</option>
-                                            <option value="30m">30min tagant</option>
-                                            <option value="1h">1h tagant</option>
-                                            <option value="2h">2h tagant</option>
-                                            <option value="4h">4h tagant</option>
-                                            <option value="6h">6h tagant</option>
-                                            <option value="8h">8h tagant</option>
-                                            <option value="10h">10h tagant</option>
-                                            <option value="12h">12h tagant</option>
-                                            <option value="15h">15h tagant</option>
-                                            <option value="17h">17h tagant</option>
-                                            <option value="20h">20h tagant</option>
-                                            <option value="24h">24h tagant</option>
-                                            <option value="2d">2 päeva tagant</option>
+                                            <option value="1m">Every 1 min</option>
+                                            <option value="5m" selected>Every 5 min</option>
+                                            <option value="15m">Every 15 min</option>
+                                            <option value="30m">Every 30 min</option>
+                                            <option value="1h">Every 1 hour</option>
+                                            <option value="2h">Every 2 hours</option>
+                                            <option value="4h">Every 4 hours</option>
+                                            <option value="6h">Every 6 hours</option>
+                                            <option value="8h">Every 8 hours</option>
+                                            <option value="10h">Every 10 hours</option>
+                                            <option value="12h">Every 12 hours</option>
+                                            <option value="15h">Every 15 hours</option>
+                                            <option value="17h">Every 17 hours</option>
+                                            <option value="20h">Every 20 hours</option>
+                                            <option value="24h">Every 24 hours</option>
+                                            <option value="2d">Every 2 days</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label for="cheat-money-max-amount" style="color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600;">Max summa selle sees (bannib kui saab rohkem):</label>
-                                        <input type="number" id="cheat-money-max-amount" value="1000" min="1" step="10" placeholder="nt 1000" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: #0b111a; border: 1.5px solid rgba(255, 211, 42, 0.4); border-radius: 8px; color: #ffd32a; font-size: 0.85rem; font-weight: 800; outline: none;">
+                                        <label for="cheat-money-max-amount" style="color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600;">Max gain in interval (auto-bans if exceeded):</label>
+                                        <input type="number" id="cheat-money-max-amount" value="1000" min="1" step="10" placeholder="e.g. 1000" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: #0b111a; border: 1.5px solid rgba(255, 211, 42, 0.4); border-radius: 8px; color: #ffd32a; font-size: 0.85rem; font-weight: 800; outline: none;">
                                     </div>
                                 </div>
                                 <div style="font-size: 0.73rem; color: #cbd5e1; line-height: 1.35;">
-                                    ℹ️ Kui mängija teenib valitud aja jooksul (nt 5 min sees) rohkem kui määratud summa (nt 1000), siis automaat loeb seda häkkimiseks ja rakendab banni.
+                                    ℹ️ If a player gains more money or score within the selected interval than this threshold, the system auto-bans them.
                                 </div>
                             </div>
                         </div>
 
-                        <!-- 2. Kuidas automaat bannib -->
+                        <!-- 2. How Auto-Ban Punishes -->
                         <div>
-                            <label style="display: block; font-weight: 800; font-size: 0.82rem; color: #ffd32a; margin-bottom: 6px;">🔨 Kuidas automaat bannib (Karistusmeetod):</label>
+                            <label style="display: block; font-weight: 800; font-size: 0.82rem; color: #ffd32a; margin-bottom: 6px;">🔨 How Auto-Ban Punishes (Punishment Action):</label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <div>
-                                    <label for="cheat-ban-action" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Karistus:</label>
+                                    <label for="cheat-ban-action" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Punishment:</label>
                                     <select id="cheat-ban-action" style="width: 100%; box-sizing: border-box; padding: 7px 10px; background: #0b111a; border: 1.5px solid rgba(168, 85, 247, 0.4); border-radius: 8px; color: #fff; font-size: 0.82rem; font-weight: 600; outline: none; cursor: pointer;">
-                                        <option value="ban_perm" selected>🔨 Automaatne püsiv Ban</option>
-                                        <option value="ban_24h">⏳ 24h Serveri Ban</option>
-                                        <option value="kick">👢 Viska serverist välja (Kick)</option>
-                                        <option value="freeze">🧊 Külmuta liikumine (Freeze)</option>
+                                        <option value="ban_perm" selected>🔨 Permanent Ban</option>
+                                        <option value="ban_24h">⏳ 24h Server Ban</option>
+                                        <option value="kick">👢 Kick from Server</option>
+                                        <option value="freeze">🧊 Freeze Movement</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="cheat-sensitivity" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Automaadi rangus:</label>
+                                    <label for="cheat-sensitivity" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Detection Sensitivity:</label>
                                     <select id="cheat-sensitivity" style="width: 100%; box-sizing: border-box; padding: 7px 10px; background: #0b111a; border: 1.5px solid rgba(168, 85, 247, 0.4); border-radius: 8px; color: #fff; font-size: 0.82rem; font-weight: 600; outline: none; cursor: pointer;">
-                                        <option value="high" selected>⚡ Range (Kohene reageerimine)</option>
-                                        <option value="medium">⚖️ Keskmine (3 hoiatust enne banni)</option>
-                                        <option value="low">🛡️ Pehme (Ainult teavita loojat)</option>
+                                        <option value="high" selected>⚡ Strict (Instant action)</option>
+                                        <option value="medium">⚖️ Medium (3 warnings before ban)</option>
+                                        <option value="low">🛡️ Soft (Only notify creator)</option>
                                     </select>
                                 </div>
                             </div>

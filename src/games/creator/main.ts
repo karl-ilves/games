@@ -2315,7 +2315,7 @@ export function setCheatersConfirmed(confirmed: boolean) {
 
     if (confirmed) {
         if (badgeEl) {
-            badgeEl.textContent = '✅ Kinnitatud (OK)';
+            badgeEl.textContent = '✅ Confirmed (OK)';
             badgeEl.style.background = 'rgba(16, 185, 129, 0.15)';
             badgeEl.style.color = '#34d399';
             badgeEl.style.borderColor = 'rgba(16, 185, 129, 0.4)';
@@ -2326,7 +2326,7 @@ export function setCheatersConfirmed(confirmed: boolean) {
         }
     } else {
         if (badgeEl) {
-            badgeEl.textContent = '⚠️ Vajab kinnitamist';
+            badgeEl.textContent = '⚠️ Needs Confirmation';
             badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
             badgeEl.style.color = '#f87171';
             badgeEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';

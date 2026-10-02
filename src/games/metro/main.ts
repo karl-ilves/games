@@ -713,8 +713,8 @@ export class LastMetroGame {
             vipOverlay.style.display = 'none';
         }
 
-        // Language determination: Estonian for Owner, English for everyone else ("kõik inglisekeelseks väljaarvatud Playard owner")
-        this.lang = this.isOwner ? 'et' : 'en';
+        // Language determination: English across all of Playard
+        this.lang = 'en';
         this.updateLanguageUI();
 
         // Record to Recently Played

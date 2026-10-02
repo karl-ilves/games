@@ -8,7 +8,7 @@ export function isOwnerUser(): boolean {
 }
 
 export function getLanguage(): Language {
-    return isOwnerUser() ? 'et' : 'en';
+    return 'en';
 }
 
 export const I18N = {

@@ -100,8 +100,8 @@ function updateAdminControlsVisibility(userEmail?: string | null, username?: str
         defenderCard.style.display = 'flex';
     }
 
-    // Switch language: Estonian ONLY for Playard Owner (1karl.ilves@gmail.com), English for all others!
-    setLanguage(isEstonian ? 'et' : 'en');
+    // Switch language: English for all users across Playard!
+    setLanguage('en');
     renderRecentlyPlayed();
     updateGameAgeRestrictions();
 }

@@ -45,12 +45,12 @@ export class WarGameState {
 
     public setupLocalIdentity(): void {
         const prof = getCurrentUserProfile();
-        this.isOwnerLang = isPlayardOwner(prof?.email);
+        this.isOwnerLang = false;
         if (prof) {
-            this.localUsername = prof.displayName || prof.username || (this.isOwnerLang ? 'Komandör' : 'Commander');
+            this.localUsername = prof.displayName || prof.username || 'Commander';
             if (prof.id) this.localPlayerId = prof.id;
         } else {
-            this.localUsername = this.isOwnerLang ? 'Komandör' : 'Commander';
+            this.localUsername = 'Commander';
         }
     }
 

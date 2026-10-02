@@ -86,8 +86,23 @@ export const estToEngDict: Record<string, string> = {
     "Tagasi menüüsse": "Back to menu",
     "Võit!": "Victory!",
     "Kaotus!": "Defeat!",
-    "Punktid:": "Points:",
-    "Aeg:": "Time:"
+    "Aeg:": "Time:",
+    "Tööriist:": "Tool:",
+    "Tavaline hiir": "Standard Mouse",
+    "Tõmbaja": "Puller",
+    "Loo uus": "Create New",
+    "Kopeeri": "Duplicate",
+    "Kustuta objekt": "Delete Object",
+    "PALJU ÕNNE! VÕIT!": "CONGRATULATIONS! VICTORY!",
+    "MÄNG LÄBI!": "GAME OVER!",
+    "Taassünni": "Respawn",
+    "Tagasi Redigeerima": "Back to Edit",
+    "Mängi Uuesti": "Play Again",
+    "Istu autosse ja sõida": "Enter vehicle and drive",
+    "Kutsed": "Requests",
+    "Kutsu": "Invite",
+    "Kinnitatud": "Confirmed",
+    "Vajab kinnitamist": "Needs Confirmation"
 };
 
 // Function to translate text dynamically

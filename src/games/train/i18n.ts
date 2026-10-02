@@ -164,26 +164,26 @@ export const I18N = {
     }
 };
 
-export let isOwner = checkIsOwner();
-export let t = isOwner ? I18N.et : I18N.en;
+export let isOwner = false;
+export let t = I18N.en;
 
 export function updateLocalization() {
-    isOwner = checkIsOwner();
-    t = isOwner ? I18N.et : I18N.en;
+    isOwner = false;
+    t = I18N.en;
 }
 
 export function getStationName(st: Station): string {
-    return isOwner ? st.name : st.nameEn;
+    return st.nameEn || st.name;
 }
 
 export function getTrainName(train: TrainDef): string {
-    return isOwner ? train.name : train.nameEn;
+    return train.nameEn || train.name;
 }
 
 export function getTrainDesc(train: TrainDef): string {
-    return isOwner ? train.description : train.descriptionEn;
+    return train.descriptionEn || train.description;
 }
 
 export function getT() {
-    return isOwner ? I18N.et : I18N.en;
+    return I18N.en;
 }
