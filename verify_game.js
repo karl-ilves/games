@@ -3995,7 +3995,8 @@ await (async () => {
                     objects: [
                         { name: 'Stone Block', category: 'gameplay', type: 'box', position: { x: 0, y: 0, z: 5 } },
                         { name: 'Parkour Platform', category: 'gameplay', position: { x: 5, y: 2, z: 5 } },
-                        { name: 'Gold Coin', category: 'gameplay', gameItemType: 'coin', position: { x: 10, y: 1, z: 5 } }
+                        { name: 'Gold Coin', category: 'gameplay', gameItemType: 'coin', position: { x: 10, y: 1, z: 5 } },
+                        { name: '✨ Koer', category: 'custom', position: { x: -5, y: 0, z: 5 } }
                     ],
                     test: true
                 },
@@ -4038,8 +4039,8 @@ await (async () => {
                 return { error: 'playGameInstance or sceneObjects not found' };
             }
             const objs = inst.sceneObjects;
-            if (objs.length < 3) {
-                return { error: `Expected at least 3 scene objects, found ${objs.length}` };
+            if (objs.length < 4) {
+                return { error: `Expected at least 4 scene objects, found ${objs.length}` };
             }
 
             // Find geometries
@@ -4053,16 +4054,27 @@ await (async () => {
                 return geomType;
             });
 
+            // Count mesh children for each object
+            const meshCounts = objs.map(grp => {
+                let count = 0;
+                grp.traverse(child => { if (child.isMesh) count++; });
+                return count;
+            });
+
             const blockIsBox = geometries[0] === 'BoxGeometry';
             const platformIsBox = geometries[1] === 'BoxGeometry';
             const coinIsTorus = geometries[2] === 'TorusGeometry';
+            // Dog (index 3) should have multiple parts, NOT just 1 box
+            const dogHasMultipleParts = meshCounts[3] > 1;
 
             return {
                 count: objs.length,
                 geometries,
+                meshCounts,
                 blockIsBox,
                 platformIsBox,
-                coinIsTorus
+                coinIsTorus,
+                dogHasMultipleParts
             };
         });
 
@@ -4076,7 +4088,11 @@ await (async () => {
         if (!playRenderCheck.coinIsTorus) {
             throw new Error(`Expected coin to be TorusGeometry, but got: ${playRenderCheck.geometries[2]}`);
         }
+        if (!playRenderCheck.dogHasMultipleParts) {
+            throw new Error(`Expected dog ('✨ Koer') to render with multiple mesh parts (not a single box), but got ${playRenderCheck.meshCounts[3]} parts`);
+        }
         console.log("   ✅ Blocks remain 3D solid blocks in Game Player (no ring conversion bug)!");
+        console.log("   ✅ Dog ('✨ Koer') renders as proper 3D creature with multiple mesh parts in Game Player!");
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");

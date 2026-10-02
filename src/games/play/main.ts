@@ -234,7 +234,7 @@ async function initPlayer() {
             yardService.recordPlayedGame({
                 id: 'game_' + currentGame.id,
                 title: `🎮 ${currentGame.title}`,
-                description: currentGame.description || `Loodud kasutaja ${currentGame.creatorUsername} poolt.`,
+                description: currentGame.description || `Created by ${currentGame.creatorUsername}.`,
                 url: `./games/play/index.html?id=${currentGame.id}`,
                 icon: '🎮',
                 badgeText: currentGame.category || 'Community Game',
@@ -250,7 +250,7 @@ async function initPlayer() {
         yardService.recordPlayedGame({
             id: 'play',
             title: '🎮 Play Community Games',
-            description: 'Mängi teiste mängijate poolt loodud ja avaldatud 3D mänge.',
+            description: 'Play games created and published by other players.',
             url: './games/play/index.html',
             icon: '🎮',
             badgeText: 'Community Play',
