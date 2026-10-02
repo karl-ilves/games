@@ -66,7 +66,7 @@ await (async () => {
             try {
                 return await originalEvaluate(pageFunction, ...args);
             } catch (err) {
-                if (err.message && (err.message.includes('detached Frame') || err.message.includes('Execution context was destroyed')) && attempt < 8) {
+                if (err.message && (err.message.toLowerCase().includes('detached frame') || err.message.includes('Execution context was destroyed')) && attempt < 8) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -10553,6 +10553,8 @@ await (async () => {
 
                 // Test AI snake spawned when 1 real player is in the server ("kui on alguses 1 mängja siis on lisaks 1 ai")
                 game.multiplayer.activeRemotePlayers.clear();
+                const resetAi = game.multiplayer.resetAiSnake(game.state.cols, game.state.rows);
+                const aiStartsLength4 = resetAi !== null && resetAi.body.length === 4;
                 const aiWhen1Player = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
                 const hasAiSnakeWhen1Player = game.multiplayer.hasAiSnake && aiWhen1Player !== null && aiWhen1Player.displayName.includes('AI Uss');
 
@@ -10591,6 +10593,14 @@ await (async () => {
                 const isOverlayHiddenAfterPlay = startOverlay !== null && window.getComputedStyle(startOverlay).display === 'none';
                 const chosenColorApplied = game.chosenColorId === 'blue';
                 const soloMode = game.state.mode;
+
+                // Test AI snake speed synchronization (moves in lockstep with stepInterval, not every 60fps frame)
+                const aiHeadBefore = { ...game.multiplayer.aiSnake.body[0] };
+                game.update(0.01, 0.01); // Frame below stepInterval -> should not advance
+                const aiDidNotMovePrematurely = game.multiplayer.aiSnake.body[0].x === aiHeadBefore.x && game.multiplayer.aiSnake.body[0].y === aiHeadBefore.y;
+                game.update(0.2, 0.21); // Tick above stepInterval -> advances synchronously
+                const aiMovedOnTick = game.multiplayer.aiSnake.body[0].x !== aiHeadBefore.x || game.multiplayer.aiSnake.body[0].y !== aiHeadBefore.y;
+                const aiSameSpeedAsPlayer = aiDidNotMovePrematurely && aiMovedOnTick;
 
                 const initialStats = game.state.getStats();
                 const initialLength = initialStats.length;
@@ -10705,6 +10715,8 @@ await (async () => {
                     selectedBlueColor,
                     initialIsServer1,
                     hasAiSnakeWhen1Player,
+                    aiStartsLength4,
+                    aiSameSpeedAsPlayer,
                     aiDisappearsWhenP2Joins,
                     serverRolloverWhenFull,
                     chosenColorApplied,
@@ -10739,6 +10751,12 @@ await (async () => {
             }
             if (!snakeGameTest.hasAiSnakeWhen1Player) {
                 throw new Error("When 1 real player is in the server, 1 AI snake ('🤖 AI Uss') must be active: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.aiStartsLength4) {
+                throw new Error("AI snake must start with length 4: " + JSON.stringify(snakeGameTest));
+            }
+            if (!snakeGameTest.aiSameSpeedAsPlayer) {
+                throw new Error("AI snake must move at the exact same step speed as the player: " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.aiDisappearsWhenP2Joins) {
                 throw new Error("When 2nd real player joins the server, the AI snake must immediately disappear: " + JSON.stringify(snakeGameTest));

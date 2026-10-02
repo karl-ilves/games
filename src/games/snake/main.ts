@@ -135,6 +135,7 @@ export class SnakeGame {
         this.stepTimer = 0;
         this.hud.hideModals();
         this.hud.updateStats(this.state.getStats());
+        if (mode !== 'demo') this.multiplayer.resetAiSnake(this.state.cols, this.state.rows);
     }
 
     public restartCurrentMode() { this.resetGameMode(this.state.mode === 'demo' ? 'solo' : this.state.mode); this.shakeDuration = 0; }
@@ -203,7 +204,6 @@ export class SnakeGame {
 
         this.state.updatePowerUps(dt);
         if (this.state.mode !== 'demo') {
-            this.multiplayer.updateAiSnake(this.demoAi, this.state.foodItems, this.state.cols, this.state.rows);
             this.multiplayer.broadcastMyServerState({
                 body: this.state.body, direction: this.state.direction,
                 score: stats.score, isGameOver: this.state.isGameOver,
@@ -223,6 +223,8 @@ export class SnakeGame {
                     this.state.body, this.state.direction, this.state.foodItems
                 );
                 this.state.setDirection(nextDir);
+            } else {
+                this.multiplayer.updateAiSnake(this.demoAi, this.state.foodItems, this.state.cols, this.state.rows);
             }
 
             const res = this.state.step();

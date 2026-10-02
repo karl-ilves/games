@@ -323,6 +323,36 @@ export class SnakeMultiplayerSystem {
         this.broadcastPayload(payload);
     }
 
+    public resetAiSnake(cols: number = 30, rows: number = 22): RemotePlayerInfo | null {
+        if (this.getPlayersInMyServer().length > 0) {
+            this.hasAiSnake = false;
+            this.aiSnake = null;
+            return null;
+        }
+        const startX = cols - 6;
+        const startY = rows - 6;
+        const body: GridPoint[] = [];
+        for (let i = 0; i < 4; i++) {
+            body.push({ x: (startX + i) % cols, y: startY });
+        }
+        this.aiSnake = {
+            id: `ai_bot_${this.currentServerId}`,
+            username: 'AI_Uss',
+            displayName: '🤖 AI Uss',
+            colorId: 'purple',
+            theme: getSnakeColorPreset('purple'),
+            body,
+            direction: 'LEFT',
+            score: 0,
+            isGameOver: false,
+            lastSeen: Date.now(),
+            isAi: true
+        };
+        this.aiDirection = 'LEFT';
+        this.hasAiSnake = true;
+        return this.aiSnake;
+    }
+
     public updateAiSnake(
         demoAi: DemoAiSystem,
         foodItems: FoodItem[],
@@ -340,26 +370,8 @@ export class SnakeMultiplayerSystem {
         // If only 1 real player, 1 AI snake is active!
         this.hasAiSnake = true;
         if (!this.aiSnake || this.aiSnake.body.length === 0 || this.aiSnake.isGameOver) {
-            const startX = cols - 6;
-            const startY = rows - 6;
-            const body: GridPoint[] = [];
-            for (let i = 0; i < 4; i++) {
-                body.push({ x: (startX + i) % cols, y: startY });
-            }
-            this.aiSnake = {
-                id: `ai_bot_${this.currentServerId}`,
-                username: 'AI_Uss',
-                displayName: '🤖 AI Uss',
-                colorId: 'purple',
-                theme: getSnakeColorPreset('purple'),
-                body,
-                direction: 'LEFT',
-                score: 0,
-                isGameOver: false,
-                lastSeen: Date.now(),
-                isAi: true
-            };
-            this.aiDirection = 'LEFT';
+            this.resetAiSnake(cols, rows);
+            if (!this.aiSnake) return null;
         }
 
         // Steer AI towards food
@@ -381,6 +393,13 @@ export class SnakeMultiplayerSystem {
         else if (newX >= cols) newX = 0;
         if (newY < 0) newY = rows - 1;
         else if (newY >= rows) newY = 0;
+
+        // Check self-collision: if AI hits its own body, respawn fresh with 4 segments!
+        const selfHit = this.aiSnake.body.slice(1).some(seg => seg.x === newX && seg.y === newY);
+        if (selfHit) {
+            this.resetAiSnake(cols, rows);
+            return this.aiSnake;
+        }
 
         // Advance AI body
         this.aiSnake.body.unshift({ x: newX, y: newY });
