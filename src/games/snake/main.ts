@@ -308,24 +308,23 @@ export class SnakeGame {
             this.chosenTheme, this.state.mode === 'demo' ? '🤖 DEMO' : myName
         );
 
-        if (this.state.mode !== 'demo') {
-            for (const rp of this.multiplayer.getPlayersInMyServer()) {
-                if (rp.body?.length) {
-                    SnakeRenderer.renderSnake(
-                        this.ctx, rp.body, rp.direction, null,
-                        this.offsetX, this.offsetY, this.tileSize, timeSeconds,
-                        rp.theme, `👤 @${rp.username}`
-                    );
-                }
-            }
-            if (this.multiplayer.hasAiSnake && this.multiplayer.aiSnake?.body?.length) {
+        for (const rp of this.multiplayer.getPlayersInMyServer()) {
+            if (rp.body?.length) {
                 SnakeRenderer.renderSnake(
-                    this.ctx, this.multiplayer.aiSnake.body, this.multiplayer.aiSnake.direction, null,
+                    this.ctx, rp.body, rp.direction, null,
                     this.offsetX, this.offsetY, this.tileSize, timeSeconds,
-                    this.multiplayer.aiSnake.theme, '🤖 AI Uss'
+                    rp.theme, `👤 @${rp.username}`
                 );
             }
-        } else if (this.state.body2?.length) {
+        }
+        if (this.multiplayer.hasAiSnake && this.multiplayer.aiSnake?.body?.length) {
+            SnakeRenderer.renderSnake(
+                this.ctx, this.multiplayer.aiSnake.body, this.multiplayer.aiSnake.direction, null,
+                this.offsetX, this.offsetY, this.tileSize, timeSeconds,
+                this.multiplayer.aiSnake.theme, '🤖 AI Uss'
+            );
+        }
+        if (this.state.mode === 'multiplayer' && this.state.body2?.length) {
             SnakeRenderer.renderSnake(
                 this.ctx, this.state.body2, this.state.direction2, null,
                 this.offsetX, this.offsetY, this.tileSize, timeSeconds, RED_SNAKE_THEME

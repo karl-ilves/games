@@ -2,6 +2,7 @@ import { MultiplayerInvite, Direction, GridPoint, FoodItem, RemotePlayerInfo, Se
 import { getCurrentUserProfile } from '../../../auth';
 import { getSnakeColorPreset, SnakeColorPreset } from '../catalog';
 import { DemoAiSystem } from './demoAi';
+import { supabase } from '../../../lib/supabase';
 
 export type InviteCallback = (invite: MultiplayerInvite) => void;
 export type InviteResponseCallback = (accepted: boolean, friendName: string) => void;
@@ -19,6 +20,9 @@ export type HostSyncCallback = (data: {
 
 export class SnakeMultiplayerSystem {
     private channel: BroadcastChannel | null = null;
+    private supabaseChannel: any = null;
+    private heartbeatTimer: any = null;
+    private lastBroadcastPayload: any = null;
     private onInviteReceivedCallback: InviteCallback | null = null;
     private onInviteResponseCallback: InviteResponseCallback | null = null;
     private onGuestInputCallback: GuestInputCallback | null = null;
@@ -43,7 +47,9 @@ export class SnakeMultiplayerSystem {
     constructor() {
         this.initChannel();
         this.initStorageListener();
+        this.initSupabase();
         this.assignServer();
+        this.startHeartbeat();
     }
 
     private initChannel(): void {
@@ -56,6 +62,55 @@ export class SnakeMultiplayerSystem {
         } catch (e) {
             console.warn('[SnakeMultiplayer] BroadcastChannel note:', e);
         }
+    }
+
+    private initSupabase(): void {
+        if (!supabase) return;
+        try {
+            this.supabaseChannel = supabase.channel('snake_realtime_lobby_v1', {
+                config: {
+                    broadcast: { self: false },
+                    presence: { key: this.tabId }
+                }
+            });
+
+            this.supabaseChannel
+                .on('broadcast', { event: 'snake_msg' }, ({ payload }: any) => {
+                    if (payload && payload.senderTabId !== this.tabId) {
+                        this.handleMessage(payload);
+                    }
+                })
+                .subscribe(async (status: string) => {
+                    if (status === 'SUBSCRIBED') {
+                        const profile = getCurrentUserProfile();
+                        try {
+                            await this.supabaseChannel.track({
+                                id: this.tabId,
+                                username: profile?.username || 'Mängija',
+                                serverId: this.currentServerId,
+                                onlineAt: new Date().toISOString()
+                            });
+                        } catch (e) {}
+                        this.pingPresence();
+                    }
+                });
+        } catch (e) {
+            console.warn('[SnakeMultiplayer] Supabase init note:', e);
+        }
+    }
+
+    private startHeartbeat(): void {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = setInterval(() => {
+            if (this.lastBroadcastPayload) {
+                this.broadcastPayload({
+                    ...this.lastBroadcastPayload,
+                    timestamp: Date.now()
+                });
+            } else {
+                this.pingPresence();
+            }
+        }, 600);
     }
 
     private initStorageListener(): void {
@@ -123,6 +178,9 @@ export class SnakeMultiplayerSystem {
                     username,
                     displayName
                 });
+                if (this.lastBroadcastPayload) {
+                    this.broadcastPayload(this.lastBroadcastPayload);
+                }
                 break;
             }
             case 'SNAKE_PRESENCE_ANNOUNCE': {
@@ -245,7 +303,7 @@ export class SnakeMultiplayerSystem {
     public assignServer(): { serverId: string; serverNumber: number } {
         const now = Date.now();
         this.activeRemotePlayers.forEach((p, id) => {
-            if (now - p.lastSeen > 4500) {
+            if (now - p.lastSeen > 12000) {
                 this.activeRemotePlayers.delete(id);
             }
         });
@@ -281,7 +339,7 @@ export class SnakeMultiplayerSystem {
         const now = Date.now();
         const list: RemotePlayerInfo[] = [];
         this.activeRemotePlayers.forEach((p, id) => {
-            if (id !== this.tabId && (p as any).serverId === this.currentServerId && (now - p.lastSeen < 4500)) {
+            if (id !== this.tabId && (p as any).serverId === this.currentServerId && (now - p.lastSeen < 12000)) {
                 list.push(p);
             }
         });
@@ -320,6 +378,7 @@ export class SnakeMultiplayerSystem {
             timestamp: Date.now()
         };
 
+        this.lastBroadcastPayload = payload;
         this.broadcastPayload(payload);
     }
 
@@ -545,6 +604,16 @@ export class SnakeMultiplayerSystem {
         try {
             localStorage.setItem('playard_snake_mp_event', JSON.stringify({ ...payload, _ts: Date.now() }));
         } catch (e) {}
+
+        if (this.supabaseChannel) {
+            try {
+                this.supabaseChannel.send({
+                    type: 'broadcast',
+                    event: 'snake_msg',
+                    payload
+                });
+            } catch (e) {}
+        }
     }
 
     public clearBotTimer(): void {
@@ -556,9 +625,19 @@ export class SnakeMultiplayerSystem {
 
     public cleanup(): void {
         this.clearBotTimer();
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
         if (this.channel) {
             this.channel.close();
             this.channel = null;
+        }
+        if (this.supabaseChannel && supabase) {
+            try {
+                supabase.removeChannel(this.supabaseChannel);
+            } catch (e) {}
+            this.supabaseChannel = null;
         }
     }
 }
