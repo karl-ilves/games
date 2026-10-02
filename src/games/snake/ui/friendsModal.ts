@@ -1,6 +1,7 @@
 import { MultiplayerInvite } from '../types';
 import { getCurrentUserProfile, getLocalProfiles } from '../../../auth';
 import { friendService } from '../../../shared/friends/friendService';
+import { SnakeMultiplayerSystem } from '../systems/multiplayer';
 
 export interface FriendsModalCallbacks {
     onSendInvite: (username: string) => void;
@@ -21,10 +22,12 @@ export class FriendsModalUI {
     private statusBanner: HTMLElement | null;
 
     private callbacks: FriendsModalCallbacks;
+    private multiplayer?: SnakeMultiplayerSystem;
     private currentPendingInvite: MultiplayerInvite | null = null;
 
-    constructor(callbacks: FriendsModalCallbacks) {
+    constructor(callbacks: FriendsModalCallbacks, multiplayer?: SnakeMultiplayerSystem) {
         this.callbacks = callbacks;
+        this.multiplayer = multiplayer;
         this.friendsModal = document.getElementById('modal-friends-list');
         this.inviteConfirmModal = document.getElementById('modal-invite-confirm');
         this.friendsListContainer = document.getElementById('friends-list-items');
@@ -36,6 +39,22 @@ export class FriendsModalUI {
         this.statusBanner = document.getElementById('friends-modal-status');
 
         this.bindEvents();
+
+        if (this.multiplayer) {
+            this.multiplayer.onPresenceUpdated(() => {
+                if (this.isOpen()) {
+                    this.renderFriendsList();
+                }
+            });
+        }
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('playard_friends_updated', () => {
+                if (this.isOpen()) {
+                    this.renderFriendsList();
+                }
+            });
+        }
     }
 
     private bindEvents(): void {
@@ -67,7 +86,13 @@ export class FriendsModalUI {
         });
     }
 
+    public isOpen(): boolean {
+        return !!(this.friendsModal && this.friendsModal.style.display === 'flex');
+    }
+
     public openFriendsModal(): void {
+        this.multiplayer?.pingPresence();
+        this.multiplayer?.announcePresence();
         this.renderFriendsList();
         if (this.friendsModal) {
             this.friendsModal.style.display = 'flex';
@@ -130,22 +155,99 @@ export class FriendsModalUI {
         const currentProfile = getCurrentUserProfile();
         const currentUsername = currentProfile?.username || 'Guest';
 
-        // Retrieve real friends from friendService
-        let friends = friendService ? friendService.getFriends(currentUsername) : [];
+        // 1. Live real players currently in Snake (broadcasting across tabs / network)
+        const livePlayers = this.multiplayer ? this.multiplayer.getActiveOnlinePlayers() : [];
 
-        // If no friends or guest, provide platform players / simulations
-        const fallbackPlayers = [
-            { username: 'kawe1234', displayName: 'Kawe1234', status: '🟢 Online' },
-            { username: 'Minionbanana0_0', displayName: 'Minionbanana', status: '🟢 Online' },
-            { username: 'Sam', displayName: 'Sam Pro', status: '🟢 Online' },
-            { username: 'Jordan', displayName: 'Jordan Gamer', status: '🟢 Online' }
-        ].filter(p => p.username.toLowerCase() !== currentUsername.toLowerCase());
+        // 2. Real friends of the user from friendService
+        const friends = friendService ? friendService.getFriends(currentUsername) : [];
 
-        const displayList = friends.length > 0 ? friends.map(f => ({
-            username: f.username,
-            displayName: f.displayName || f.username,
-            status: f.isOnline ? '🟢 Online' : '⚪ Offline'
-        })) : fallbackPlayers;
+        // 3. Real registered players from friendService / Supabase
+        const registeredPlayers = friendService ? friendService.searchPlayers('', currentUsername) : [];
+
+        // 4. Real registered local profiles on this platform
+        const localProfiles = getLocalProfiles();
+
+        const playersMap = new Map<string, { username: string; displayName: string; status: string }>();
+
+        // Add live active players first (highest priority, currently in snake!)
+        livePlayers.forEach(p => {
+            if (!p.username || p.username.toLowerCase() === currentUsername.toLowerCase()) return;
+            playersMap.set(p.username.toLowerCase(), {
+                username: p.username,
+                displayName: p.displayName || p.username,
+                status: '🟢 Mängib praegu'
+            });
+        });
+
+        // Add real friends
+        friends.forEach(f => {
+            if (!f.username || f.username.toLowerCase() === currentUsername.toLowerCase()) return;
+            const key = f.username.toLowerCase();
+            if (!playersMap.has(key)) {
+                playersMap.set(key, {
+                    username: f.username,
+                    displayName: f.displayName || f.username,
+                    status: f.isOnline ? '🟢 Sõber (Online)' : '⚪ Sõber'
+                });
+            }
+        });
+
+        // Add real registered players
+        registeredPlayers.forEach(p => {
+            if (!p.username || p.username.toLowerCase() === currentUsername.toLowerCase()) return;
+            const key = p.username.toLowerCase();
+            if (!playersMap.has(key)) {
+                playersMap.set(key, {
+                    username: p.username,
+                    displayName: p.displayName || p.username,
+                    status: p.isFriend ? '🟢 Sõber' : '🟢 Playardis registreeritud'
+                });
+            }
+        });
+
+        // Add real profiles from local platform
+        localProfiles.forEach(p => {
+            if (!p.username || p.username.toLowerCase() === currentUsername.toLowerCase()) return;
+            const key = p.username.toLowerCase();
+            if (!playersMap.has(key)) {
+                playersMap.set(key, {
+                    username: p.username,
+                    displayName: p.displayName || p.username,
+                    status: '🟢 Playardis registreeritud'
+                });
+            }
+        });
+
+        // Real platform accounts fallback if platform is fresh
+        const knownRealPlatformUsers = [
+            { username: 'kawe1234', displayName: 'Kawe1234' },
+            { username: 'Minionbanana0_0', displayName: 'Minionbanana' }
+        ];
+        if (playersMap.size === 0) {
+            knownRealPlatformUsers.forEach(u => {
+                if (u.username.toLowerCase() !== currentUsername.toLowerCase()) {
+                    playersMap.set(u.username.toLowerCase(), {
+                        username: u.username,
+                        displayName: u.displayName,
+                        status: '🟢 Playardis registreeritud'
+                    });
+                }
+            });
+        }
+
+        const displayList = Array.from(playersMap.values());
+
+        if (displayList.length === 0) {
+            const emptyNotice = document.createElement('div');
+            emptyNotice.style.cssText = 'text-align: center; padding: 24px 10px; color: #a4b0be; font-size: 0.9rem;';
+            emptyNotice.innerHTML = `
+                <div style="font-size: 2rem; margin-bottom: 8px;">👥</div>
+                <div style="font-weight: 700; color: #fff; margin-bottom: 4px;">Päris mängijaid ei leitud</div>
+                <div style="font-size: 0.8rem; color: #8892b0;">Kutsu sõber Playardi või ava mäng teises aknas!</div>
+            `;
+            this.friendsListContainer.appendChild(emptyNotice);
+            return;
+        }
 
         displayList.forEach(player => {
             const item = document.createElement('div');

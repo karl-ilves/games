@@ -83,7 +83,7 @@ export class SnakeGame {
             },
             onDeclineInvite: (inv) => this.multiplayer.respondToInvite(inv, false),
             onStartLocal2Player: () => this.startLocal2PlayerGame(),
-        });
+        }, this.multiplayer);
 
         this.multiplayer.onInviteReceived((inv) => this.friendsModal.showInviteConfirmation(inv));
         this.multiplayer.onInviteResponse((accepted, friend) => {

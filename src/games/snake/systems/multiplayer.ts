@@ -59,12 +59,74 @@ export class SnakeMultiplayerSystem {
     }
 
     public incomingInvites: Map<string, MultiplayerInvite> = new Map();
+    public activeOnlinePlayers: Map<string, { username: string; displayName: string; tabId: string; lastSeen: number }> = new Map();
+    private onPresenceUpdatedCallback: (() => void) | null = null;
+
+    public onPresenceUpdated(cb: () => void): void {
+        this.onPresenceUpdatedCallback = cb;
+    }
+
+    public pingPresence(): void {
+        this.broadcastPayload({
+            type: 'SNAKE_PRESENCE_PING',
+            senderTabId: this.tabId
+        });
+    }
+
+    public announcePresence(): void {
+        const profile = getCurrentUserProfile();
+        const username = profile?.username || 'Guest';
+        const displayName = profile?.display_name || username;
+        this.broadcastPayload({
+            type: 'SNAKE_PRESENCE_ANNOUNCE',
+            senderTabId: this.tabId,
+            username,
+            displayName
+        });
+    }
+
+    public getActiveOnlinePlayers(): { username: string; displayName: string }[] {
+        const now = Date.now();
+        const result: { username: string; displayName: string }[] = [];
+        this.activeOnlinePlayers.forEach((info) => {
+            if (now - info.lastSeen < 60000) {
+                result.push({ username: info.username, displayName: info.displayName });
+            }
+        });
+        return result;
+    }
 
     private handleMessage(data: any): void {
         if (!data || typeof data !== 'object') return;
         if (data.senderTabId === this.tabId) return; // Ignore own outgoing broadcast
 
         switch (data.type) {
+            case 'SNAKE_PRESENCE_PING': {
+                const profile = getCurrentUserProfile();
+                const username = profile?.username || 'Guest';
+                const displayName = profile?.display_name || username;
+                this.broadcastPayload({
+                    type: 'SNAKE_PRESENCE_ANNOUNCE',
+                    senderTabId: this.tabId,
+                    username,
+                    displayName
+                });
+                break;
+            }
+            case 'SNAKE_PRESENCE_ANNOUNCE': {
+                if (data.username) {
+                    this.activeOnlinePlayers.set(data.username.toLowerCase(), {
+                        username: data.username,
+                        displayName: data.displayName || data.username,
+                        tabId: data.senderTabId,
+                        lastSeen: Date.now()
+                    });
+                    if (this.onPresenceUpdatedCallback) {
+                        this.onPresenceUpdatedCallback();
+                    }
+                }
+                break;
+            }
             case 'SNAKE_INVITE': {
                 const invite: MultiplayerInvite = data.invite;
                 if (!invite) return;
