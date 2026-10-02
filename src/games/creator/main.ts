@@ -2378,6 +2378,22 @@ export function openPublishModal() {
     } else {
         setCheatersConfirmed(false);
     }
+    if (sceneData.cheatersPolicy) {
+        if (sceneData.cheatersPolicy.moneyInterval) {
+            const intEl = document.getElementById('cheat-money-interval') as HTMLSelectElement | null;
+            if (intEl) intEl.value = sceneData.cheatersPolicy.moneyInterval;
+        }
+        if (sceneData.cheatersPolicy.moneyMaxAmount !== undefined) {
+            const maxEl = document.getElementById('cheat-money-max-amount') as HTMLInputElement | null;
+            if (maxEl) maxEl.value = String(sceneData.cheatersPolicy.moneyMaxAmount);
+        }
+        if (sceneData.cheatersPolicy.detectMoney !== undefined) {
+            const moneyChk = document.getElementById('cheat-detect-money') as HTMLInputElement | null;
+            if (moneyChk) moneyChk.checked = !!sceneData.cheatersPolicy.detectMoney;
+            const optionsEl = document.getElementById('cheat-money-options');
+            if (optionsEl) optionsEl.style.display = sceneData.cheatersPolicy.detectMoney ? 'grid' : 'none';
+        }
+    }
     const warnEl = document.getElementById('cheaters-tap-ok-warning');
     if (warnEl) warnEl.style.display = 'none';
     const panelEl = document.getElementById('cheaters-config-panel');
@@ -2424,11 +2440,15 @@ export async function confirmAndPublishGame() {
     currentGameMinAge = minAge;
     currentGameAgeRating = ageRating;
 
+    const moneyInterval = (document.getElementById('cheat-money-interval') as HTMLSelectElement)?.value || '5m';
+    const moneyMaxAmount = parseInt((document.getElementById('cheat-money-max-amount') as HTMLInputElement)?.value || '1000', 10);
+
     const cheatersPolicy = {
-        detectSpeed: (document.getElementById('cheat-detect-speed') as HTMLInputElement)?.checked ?? true,
         detectFly: (document.getElementById('cheat-detect-fly') as HTMLInputElement)?.checked ?? true,
         detectTeleport: (document.getElementById('cheat-detect-teleport') as HTMLInputElement)?.checked ?? true,
         detectMoney: (document.getElementById('cheat-detect-money') as HTMLInputElement)?.checked ?? true,
+        moneyInterval,
+        moneyMaxAmount,
         detectAutoClick: (document.getElementById('cheat-detect-autoclick') as HTMLInputElement)?.checked ?? true,
         detectGodmode: (document.getElementById('cheat-detect-godmode') as HTMLInputElement)?.checked ?? true,
         action: (document.getElementById('cheat-ban-action') as HTMLSelectElement)?.value || 'ban_perm',
@@ -5169,6 +5189,14 @@ function setupStudioEvents() {
         setCheatersConfirmed(true);
         const panel = document.getElementById('cheaters-config-panel');
         if (panel) panel.style.display = 'none';
+    });
+
+    document.getElementById('cheat-detect-money')?.addEventListener('change', (e) => {
+        const isChecked = (e.target as HTMLInputElement).checked;
+        const options = document.getElementById('cheat-money-options');
+        if (options) {
+            options.style.display = isChecked ? 'grid' : 'none';
+        }
     });
 
     // Publish Modal: Game Cover Image Drag-and-Drop & Upload Listeners

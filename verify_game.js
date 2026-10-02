@@ -3793,6 +3793,15 @@ await (async () => {
             const warn = document.getElementById('cheaters-tap-ok-warning');
             const panel = document.getElementById('cheaters-config-panel');
             const btnOk = document.getElementById('btn-cheaters-ok');
+            const speedHack = document.getElementById('cheat-detect-speed');
+            const moneyInterval = document.getElementById('cheat-money-interval');
+            const moneyMaxAmount = document.getElementById('cheat-money-max-amount');
+            const intervalOptions = moneyInterval ? Array.from(moneyInterval.querySelectorAll('option')).map(o => o.value) : [];
+
+            // Set custom interval and max amount for the test
+            if (moneyInterval) moneyInterval.value = '15m';
+            if (moneyMaxAmount) moneyMaxAmount.value = '2500';
+
             return {
                 hasSection: !!section,
                 hasBtnOpen: !!btnOpen,
@@ -3800,13 +3809,29 @@ await (async () => {
                 badgeText: badge ? badge.textContent : '',
                 hasWarn: !!warn,
                 hasPanel: !!panel,
-                hasBtnOk: !!btnOk
+                hasBtnOk: !!btnOk,
+                hasSpeedHack: !!speedHack,
+                hasMoneyInterval: !!moneyInterval,
+                hasMoneyMaxAmount: !!moneyMaxAmount,
+                intervalOptions
             };
         });
 
         if (!cheatersElements.hasSection || !cheatersElements.hasBtnOpen || !cheatersElements.hasBtnOk) {
             throw new Error(`Expected Publish Modal Cheaters section and OK button to exist! Details: ${JSON.stringify(cheatersElements)}`);
         }
+        if (cheatersElements.hasSpeedHack) {
+            throw new Error(`Expected Speedhack option to be removed from Cheaters anti-cheat!`);
+        }
+        if (!cheatersElements.hasMoneyInterval || !cheatersElements.hasMoneyMaxAmount) {
+            throw new Error(`Expected Money & Score hack interval dropdown and max amount input to exist!`);
+        }
+        const requiredIntervals = ['1m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '10h', '12h', '15h', '17h', '20h', '24h', '2d'];
+        const missingIntervals = requiredIntervals.filter(i => !cheatersElements.intervalOptions.includes(i));
+        if (missingIntervals.length > 0) {
+            throw new Error(`Missing required money/score check intervals: ${missingIntervals.join(', ')}`);
+        }
+        console.log("   Cheaters elements verified (Speedhack removed, all 16 intervals present):", cheatersElements.intervalOptions);
 
         // 1. Try to publish immediately WITHOUT clicking OK -> Must show "Tap OK" and open config panel
         await page.click('#btn-confirm-publish');
@@ -3887,6 +3912,12 @@ await (async () => {
         }
         if (!studioPublishedGame.cheatersPolicy || !studioPublishedGame.cheatersPolicy.confirmed) {
             throw new Error(`Expected published game to have cheatersPolicy persisted! Got: ${JSON.stringify(studioPublishedGame.cheatersPolicy)}`);
+        }
+        if (studioPublishedGame.cheatersPolicy.moneyInterval !== '15m' || studioPublishedGame.cheatersPolicy.moneyMaxAmount !== 2500) {
+            throw new Error(`Expected moneyInterval: '15m' and moneyMaxAmount: 2500, got: ${JSON.stringify(studioPublishedGame.cheatersPolicy)}`);
+        }
+        if (studioPublishedGame.cheatersPolicy.detectSpeed !== undefined) {
+            throw new Error(`detectSpeed should not be present in cheatersPolicy!`);
         }
         if (!studioPublishedGame.title.includes('Epic Multi Server Quest')) {
             throw new Error(`Expected game title 'Epic Multi Server Quest', but got '${studioPublishedGame.title}'`);

@@ -1248,18 +1248,12 @@
                         <!-- 1. Kuidas automaat aru saab -->
                         <div>
                             <label style="display: block; font-weight: 800; font-size: 0.82rem; color: #ffd32a; margin-bottom: 6px;">🔍 Kuidas automaat aru saab (Tuvastusmeetodid):</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; color: #e2e8f0;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; color: #e2e8f0; margin-bottom: 10px;">
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" id="cheat-detect-speed" checked> 🏃 Kiirushäkk (Speedhack)
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" id="cheat-detect-fly" checked> ✈️ Lendamine & Hõljumine
+                                    <input type="checkbox" id="cheat-detect-fly" checked> ✈️ Lendamine & Hõljumine (Flyhack)
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
                                     <input type="checkbox" id="cheat-detect-teleport" checked> 🌀 Teleport / Seinast läbi
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" id="cheat-detect-money" checked> 💰 Raha & Skoori häkk
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
                                     <input type="checkbox" id="cheat-detect-autoclick" checked> ⚡ Spamm & Botid
@@ -1267,6 +1261,43 @@
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
                                     <input type="checkbox" id="cheat-detect-godmode" checked> 🛡️ Surematuse häkk
                                 </label>
+                            </div>
+
+                            <!-- Raha ja skoori häki piirang & ajaintervall -->
+                            <div style="background: rgba(0, 0, 0, 0.4); border: 1.5px solid rgba(255, 211, 42, 0.4); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 800; color: #ffd32a; font-size: 0.82rem;">
+                                    <input type="checkbox" id="cheat-detect-money" checked> 💰 Raha & Skoori häkk (Piirang & Auto-Ban)
+                                </label>
+                                <div id="cheat-money-options" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.78rem;">
+                                    <div>
+                                        <label for="cheat-money-interval" style="color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600;">Kontrolli ajavahemik (tagant):</label>
+                                        <select id="cheat-money-interval" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: #0b111a; border: 1.5px solid rgba(255, 211, 42, 0.4); border-radius: 8px; color: #fff; font-size: 0.8rem; font-weight: 600; outline: none;">
+                                            <option value="1m">1min tagant</option>
+                                            <option value="5m" selected>5 min tagant</option>
+                                            <option value="15m">15min tagant</option>
+                                            <option value="30m">30min tagant</option>
+                                            <option value="1h">1h tagant</option>
+                                            <option value="2h">2h tagant</option>
+                                            <option value="4h">4h tagant</option>
+                                            <option value="6h">6h tagant</option>
+                                            <option value="8h">8h tagant</option>
+                                            <option value="10h">10h tagant</option>
+                                            <option value="12h">12h tagant</option>
+                                            <option value="15h">15h tagant</option>
+                                            <option value="17h">17h tagant</option>
+                                            <option value="20h">20h tagant</option>
+                                            <option value="24h">24h tagant</option>
+                                            <option value="2d">2 päeva tagant</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="cheat-money-max-amount" style="color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600;">Max summa selle sees (bannib kui saab rohkem):</label>
+                                        <input type="number" id="cheat-money-max-amount" value="1000" min="1" step="10" placeholder="nt 1000" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: #0b111a; border: 1.5px solid rgba(255, 211, 42, 0.4); border-radius: 8px; color: #ffd32a; font-size: 0.85rem; font-weight: 800; outline: none;">
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.73rem; color: #cbd5e1; line-height: 1.35;">
+                                    ℹ️ Kui mängija teenib valitud aja jooksul (nt 5 min sees) rohkem kui määratud summa (nt 1000), siis automaat loeb seda häkkimiseks ja rakendab banni.
+                                </div>
                             </div>
                         </div>
 
