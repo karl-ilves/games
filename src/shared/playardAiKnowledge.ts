@@ -982,7 +982,8 @@ export class PlayardWikipediaService {
         if (!clean) return null;
 
         for (const [key, article] of Object.entries(this.PRELOADED_ARTICLES)) {
-            if (clean === key || clean.includes(key) || key.includes(clean)) {
+            const wordRegex = new RegExp(`(^|\\b)${key}(\\b|$)`, 'i');
+            if (clean === key || (clean.length < 50 && wordRegex.test(clean))) {
                 return {
                     title: article.title,
                     extract: article.extract,
@@ -1117,11 +1118,12 @@ export class PlayardGeneralKnowledge {
             return '🛡️ **Playard Ametlik Reegel:** Playard platvormil on ainus ametlik valuuta PlayBux (PBX), mis on mõeldud ainult mängusiseseks kasutamiseks ja avataride/esemete ostmiseks. Playard ei toeta krüptovaluutasid ega pärisraha väljamakseid pangakontole.';
         }
 
-        // Action / Creation / Programming / School check: let creator studio / school / scene builder handle it!
-        const isActionCommand = /^(tee|loo|ehita|valmista|lisa|pane|create|make|build|spawn|program|programmeer|kood|script|skript|värvi|paint|color|õpeta|teach)\b/i.test(q) ||
-            /\b(tee|loo|ehita|valmista|lisa|pane|create|make|build|spawn|program|programmeer|kood|script|skript|värvi|paint|color|õpeta|teach)\s+(mäng|game|maailm|lennusimulaator|tycoon|simulator|racing|survival|horror|lennuk|auto|maja|rada|trigger|speed|boost|vihik)\b/i.test(q) ||
+        // Action / Creation / Programming / School / Sky check: let creator studio / school / scene builder handle it!
+        const isActionCommand = /^(tee|loo|ehita|valmista|lisa|pane|muuda|käivita|lülita|seadista|eemalda|kustuta|create|make|build|spawn|modify|change|program|programmeer|kood|script|skript|värvi|paint|color|õpeta|teach)\b/i.test(q) ||
+            /\b(tee|loo|ehita|valmista|lisa|pane|muuda|käivita|lülita|seadista|eemalda|create|make|build|spawn|program|programmeer|kood|script|skript|värvi|paint|color|õpeta|teach)\s+(taevas|taevast|mäng|game|maailm|lennusimulaator|tycoon|simulator|racing|survival|horror|lennuk|auto|maja|rada|trigger|speed|boost|vihik)\b/i.test(q) ||
             q.includes('speed boost') || q.includes('speed_boost') ||
-            q.includes('vihik') || q.includes('mida sa oskad') || q.includes('mida oskad') || q.includes('notebook') || q.includes('mis sa õppinud');
+            q.includes('vihik') || q.includes('mida sa oskad') || q.includes('mida oskad') || q.includes('notebook') || q.includes('mis sa õppinud') ||
+            (/\b(taevas|taevast|tähistaevas|ilmastik|öiseks|päevaseks|päikesetõus|päikeseloojang)\b/i.test(q) && /(muuda|tee|loo|lisa|pane|käivita)/i.test(q));
 
         if (isActionCommand) {
             return null;

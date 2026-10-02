@@ -11210,7 +11210,72 @@ await (async () => {
             }
             console.log("   ✅ Wikipedia Knowledge Sync & Encyclopedic Search verified successfully!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math & Wikipedia Knowledge) tests passed successfully!");
+            // 22r. Test Sky & Atmosphere System ("Muuda taevas öiseks, lisa palju tähti ja suur kuu", päikeseloojang, vihm, torm, kosmos, tsükkel)
+            console.log("   Testing Advanced Sky & Atmosphere System...");
+            const skySystemTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Night sky with many stars and big moon
+                await ai.handleUserInput('Muuda taevas öiseks, lisa palju tähti ja suur kuu.');
+                await new Promise(r => setTimeout(r, 400));
+                let scene = ai.state.getActiveScene();
+                const nightOk = scene?.environment?.timeOfDay === 'night' &&
+                    scene?.environment?.skyConfig?.stars?.enabled === true &&
+                    scene?.environment?.skyConfig?.stars?.count >= 1000 &&
+                    scene?.environment?.skyConfig?.moon?.enabled === true &&
+                    scene?.environment?.skyConfig?.moon?.size >= 6;
+                const moonMeshOk = !!ai.viewport?.skySystem?.moonMesh;
+                const starsPointsOk = !!ai.viewport?.skySystem?.starsPoints;
+
+                // 2. Stormy and rainy sky
+                await ai.handleUserInput('Loo tormine ja vihmane taevas');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const stormOk = (scene?.environment?.skyConfig?.weather === 'storm' || scene?.environment?.skyConfig?.weather === 'rain') &&
+                    scene?.environment?.skyConfig?.precipitation?.type === 'rain';
+                const rainPointsOk = !!ai.viewport?.skySystem?.precipitationPoints;
+
+                // 3. Sunset sky
+                await ai.handleUserInput('Tee päikeseloojangu taevas');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const sunsetOk = scene?.environment?.skyConfig?.mode === 'sunset' || scene?.environment?.timeOfDay === 'sunset';
+
+                // 4. Space / Celestial theme
+                await ai.handleUserInput('Loo kosmosest nähtav taevas planeetidega');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const spaceOk = scene?.environment?.skyConfig?.theme === 'space' || scene?.environment?.skyConfig?.mode === 'space';
+
+                // 5. Day-night cycle
+                await ai.handleUserInput('Käivita päeva ja öö tsükkel');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const cycleOk = scene?.environment?.skyConfig?.cycle?.enabled === true;
+
+                return {
+                    nightOk,
+                    moonMeshOk,
+                    starsPointsOk,
+                    stormOk,
+                    rainPointsOk,
+                    sunsetOk,
+                    spaceOk,
+                    cycleOk
+                };
+            });
+
+            console.log("   Sky System Test Results:", skySystemTest);
+            if (
+                !skySystemTest.nightOk || !skySystemTest.moonMeshOk || !skySystemTest.starsPointsOk ||
+                !skySystemTest.stormOk || !skySystemTest.rainPointsOk || !skySystemTest.sunsetOk ||
+                !skySystemTest.spaceOk || !skySystemTest.cycleOk
+            ) {
+                throw new Error("Sky & Atmosphere System test failed: " + JSON.stringify(skySystemTest));
+            }
+            console.log("   ✅ Advanced Sky & Atmosphere System (Night, Stars, Big Moon, Storm, Rain, Sunset, Space, Day-Night Cycle) verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge & Sky System) tests passed successfully!");
 
 
 

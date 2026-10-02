@@ -1,4 +1,5 @@
 import { PlayardUniversalCreationEngine } from '../../../shared/playardAiKnowledge';
+import type { SkyConfig } from '../../../shared/skySystem';
 
 export interface PlayardAiScene {
     id: string;
@@ -11,7 +12,8 @@ export interface PlayardAiScene {
         lightColor: number;
         groundColor: number;
         fogDensity: number;
-        timeOfDay: 'day' | 'night';
+        timeOfDay: 'day' | 'night' | 'sunset' | 'sunrise' | 'space' | 'alien' | 'custom' | string;
+        skyConfig?: SkyConfig;
     };
     playerConfig: {
         spawnPosition: [number, number, number];

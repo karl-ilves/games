@@ -23,7 +23,7 @@ import {
 
 class PlayardAiApp {
     public state: AiState;
-    private viewport!: PreviewViewport;
+    public viewport!: PreviewViewport;
     private chatView!: ChatView;
     private stepTracker!: StepTrackerView;
 

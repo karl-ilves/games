@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { PlayardAiScene } from '../systems/gameGenerator';
+import { PlayardSkySystem } from '../../../shared/skySystem';
 
 export class PreviewViewport {
     private container: HTMLElement;
@@ -11,6 +12,7 @@ export class PreviewViewport {
     private animatedMeshes: Array<{ mesh: THREE.Object3D; update: (time: number) => void }> = [];
     private dirLight: THREE.DirectionalLight;
     private hemiLight: THREE.HemisphereLight;
+    public skySystem: PlayardSkySystem;
 
     constructor(container: HTMLElement) {
         this.container = container;
@@ -43,6 +45,8 @@ export class PreviewViewport {
 
         this.objectsGroup = new THREE.Group();
         this.scene.add(this.objectsGroup);
+
+        this.skySystem = new PlayardSkySystem(this.scene, this.dirLight, this.hemiLight);
 
         this.initControls();
         this.startLoop();
@@ -113,14 +117,9 @@ export class PreviewViewport {
 
         if (!sceneData) return;
 
-        // Environment
+        // Environment & Sky System
         const env = sceneData.environment;
-        this.scene.background = new THREE.Color(env.skyColor);
-        if (this.scene.fog && this.scene.fog instanceof THREE.FogExp2) {
-            this.scene.fog.color.setHex(env.skyColor);
-            this.scene.fog.density = env.fogDensity || 0.01;
-        }
-        this.dirLight.color.setHex(env.lightColor);
+        this.skySystem.applyConfig(env.skyConfig, env.skyColor);
 
         // Build 3D objects
         for (const obj of sceneData.objects) {
@@ -534,6 +533,8 @@ export class PreviewViewport {
             for (const item of this.animatedMeshes) {
                 item.update(currentTime / 1000);
             }
+
+            this.skySystem.update(dt);
 
             this.renderer.render(this.scene, this.camera);
         };

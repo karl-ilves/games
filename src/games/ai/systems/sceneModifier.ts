@@ -1,5 +1,6 @@
 import type { PlayardAiScene } from './gameGenerator';
 import type { ParsedCommand } from './conversationEngine';
+import { SKY_PRESETS, type SkyConfig } from '../../../shared/skySystem';
 
 export interface ModificationResult {
     success: boolean;
@@ -225,22 +226,117 @@ export class SceneModifier {
 
 
     /**
-     * "Muuda taevas öiseks" / "Muuda taevas päevaseks"
+     * Enhanced Sky & Atmosphere Modifier:
+     * Supports day, night, sunset, sunrise, cloudy, storm, rain, snow, fog, space, mars,
+     * stars, sun/moon positions & sizes, day-night cycle, weather cycle, event & biome triggers.
      */
     private static changeEnvironment(scene: PlayardAiScene, command: ParsedCommand): ModificationResult {
-        const skyMode = command.parameters?.skyMode || 'night';
-        const isNight = skyMode === 'night';
+        const p = command.parameters || {};
+        const skyMode = p.skyMode || (p.isNight ? 'night' : 'day');
+        
+        // Base preset
+        const basePreset = SKY_PRESETS[skyMode] || SKY_PRESETS.day;
+        const skyConfig: SkyConfig = JSON.parse(JSON.stringify(scene.environment.skyConfig || basePreset));
 
-        scene.environment.timeOfDay = isNight ? 'night' : 'day';
-        scene.environment.skyColor = isNight ? 0x05051a : 0x87ceeb;
-        scene.environment.lightColor = isNight ? 0x334466 : 0xffffff;
-        scene.environment.groundColor = isNight ? 0x0d2818 : 0x228b22;
+        skyConfig.mode = skyMode;
+        if (p.weather) skyConfig.weather = p.weather;
+        if (p.theme) skyConfig.theme = p.theme;
+        if (p.skyColor !== undefined) skyConfig.skyColor = p.skyColor;
+        if (p.lightColor !== undefined) skyConfig.lightColor = p.lightColor;
+        if (p.fogDensity !== undefined) skyConfig.fogDensity = p.fogDensity;
+        if (p.brightness !== undefined) skyConfig.brightness = p.brightness;
+
+        // Sun options
+        if (p.sun) {
+            skyConfig.sun = { ...skyConfig.sun, ...p.sun };
+        }
+        if (p.sunPosition) {
+            skyConfig.sun.position = p.sunPosition;
+            skyConfig.sun.enabled = true;
+        }
+
+        // Moon options
+        if (p.moon) {
+            skyConfig.moon = { ...skyConfig.moon, ...p.moon };
+        }
+        if (p.moonPosition) {
+            skyConfig.moon.position = p.moonPosition;
+            skyConfig.moon.enabled = true;
+        }
+        if (p.moonSize) {
+            skyConfig.moon.size = p.moonSize;
+            skyConfig.moon.enabled = true;
+        }
+
+        // Stars options
+        if (p.stars) {
+            skyConfig.stars = { ...skyConfig.stars, ...p.stars };
+        } else if (p.starsCount !== undefined) {
+            skyConfig.stars.enabled = p.starsCount > 0;
+            skyConfig.stars.count = p.starsCount;
+        }
+
+        // Clouds options
+        if (p.clouds) {
+            skyConfig.clouds = { ...skyConfig.clouds, ...p.clouds };
+        } else if (p.cloudDensity !== undefined) {
+            skyConfig.clouds.enabled = p.cloudDensity > 0;
+            skyConfig.clouds.density = p.cloudDensity;
+        }
+
+        // Precipitation
+        if (p.precipitation) {
+            skyConfig.precipitation = { ...skyConfig.precipitation, ...p.precipitation };
+        }
+
+        // Day/night cycle & dynamic sky
+        if (p.cycle) {
+            skyConfig.cycle = { ...skyConfig.cycle, ...p.cycle };
+        } else if (p.cycleEnabled !== undefined) {
+            skyConfig.cycle.enabled = p.cycleEnabled;
+        }
+
+        // Weather cycle
+        if (p.weatherCycle) {
+            skyConfig.weatherCycle = p.weatherCycle;
+        }
+
+        // Event & Biome triggers
+        if (p.eventTriggers) {
+            skyConfig.eventTriggers = p.eventTriggers;
+        }
+        if (p.biomeTriggers) {
+            skyConfig.biomeTriggers = p.biomeTriggers;
+        }
+
+        // Sync scene environment properties
+        scene.environment.skyConfig = skyConfig;
+        scene.environment.timeOfDay = skyConfig.mode;
+        scene.environment.skyColor = skyConfig.skyColor;
+        scene.environment.lightColor = skyConfig.lightColor;
+        scene.environment.fogDensity = skyConfig.fogDensity;
+
+        // Custom confirmation message in Estonian
+        let details: string[] = [];
+        if (skyConfig.mode === 'night') details.push('öine tähistaevas');
+        else if (skyConfig.mode === 'day') details.push('päevane valgus');
+        else if (skyConfig.mode === 'sunset') details.push('kuldne päikeseloojang');
+        else if (skyConfig.mode === 'sunrise') details.push('koidukuma päikesetõus');
+        else if (skyConfig.mode === 'space') details.push('kosmiline vaade');
+        else if (skyConfig.mode === 'alien') details.push('tulnukplaneedi atmosfäär');
+
+        if (skyConfig.stars.enabled) details.push(`${skyConfig.stars.count} helkivat tähte`);
+        if (skyConfig.moon.enabled) details.push(`kuu (suurus ${skyConfig.moon.size})`);
+        if (skyConfig.clouds.enabled) details.push(`pilved (tihedus ${Math.round(skyConfig.clouds.density * 100)}%)`);
+        if (skyConfig.precipitation.type !== 'none') details.push(`sajab ${skyConfig.precipitation.type === 'rain' ? 'vihma' : 'lund'}`);
+        if (skyConfig.cycle.enabled) details.push('aktiivne päeva-öö tsükkel');
+        if (skyConfig.weatherCycle?.enabled) details.push('automaatne ilmastiku vaheldumine');
+
+        const message = `✨ **Playard AI Taevasüsteem:**\nRakendasin uued taeva ja atmosfääri seaded: ${details.join(', ')}!`;
 
         return {
             success: true,
-            message: isNight
-                ? 'Muutsin taeva tähistaeva öörežiimile (öine valgustus ja tumesinine kuma aktiveeritud)!'
-                : 'Muutsin taeva selgeks päikeseliseks päevarežiimiks!',
+            message,
             modifiedScene: scene
         };
     }

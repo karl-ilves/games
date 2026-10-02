@@ -19,6 +19,7 @@ import {
     PlayardWikipediaService,
     type PipelineStage
 } from '../../../shared/playardAiKnowledge';
+import { PlayardSkySystem } from '../../../shared/skySystem';
 
 
 export interface ParsedCommand {
@@ -258,6 +259,19 @@ export class ConversationEngine {
             };
         }
 
+        // Advanced Sky & Atmosphere System ("Muuda taevas öiseks, lisa palju tähti ja suur kuu", päikeseloojang, vihm, torm, kosmos jne)
+        const skyParsed = PlayardSkySystem.parseSkyIntent(text);
+        if (skyParsed.matches && !/\b(mäng|game|mängu)\b/i.test(lower)) {
+            return {
+                intent: 'CHANGE_ENVIRONMENT',
+                confidence: 0.98,
+                rawText: text,
+                actionTarget: 'sky',
+                parameters: skyParsed.parameters,
+                safetyReport
+            };
+        }
+
         // 1. Create Game Intents (Genres: Dragon Castle, Pirate Sea, Tycoon, Simulator, Racing, Survival, Horror, TD, Obby, Flight, Tornado)
         if (/draakon|loss|kindlus|dragon|castle|fantasy/i.test(lower) && /tee|loo|mäng|ehita|build|create/i.test(lower)) {
             return {
@@ -387,7 +401,7 @@ export class ConversationEngine {
         }
 
 
-        if (/lennu|lennuk|lennujaam|flight|plane|airplane|airport/i.test(lower) && /tee|loo|mäng|game|ehita/i.test(lower)) {
+        if (/lennu|lennuk|lennujaam|flight|\bplane\b|airplane|airport/i.test(lower) && /tee|loo|mäng|game|ehita/i.test(lower)) {
             return {
                 intent: 'CREATE_GAME',
                 confidence: 0.95,
@@ -480,22 +494,6 @@ export class ConversationEngine {
             };
         }
 
-        // "Muuda taevas öiseks" / "Muuda taevas päevaseks"
-        if (/taevas|sky|night|öine|öis|öö|päev|day|dark|valge/i.test(lower)) {
-            const isNight = /öö|öis|öine|night|dark|pime/i.test(lower);
-            return {
-                intent: 'CHANGE_ENVIRONMENT',
-                confidence: 0.95,
-                rawText: text,
-                actionTarget: 'sky',
-                parameters: {
-                    skyMode: isNight ? 'night' : 'day',
-                    lightColor: isNight ? 0x223366 : 0xffffff,
-                    skyColor: isNight ? 0x05051a : 0x87ceeb
-                },
-                safetyReport
-            };
-        }
 
         // "Lisa mängijale 100 raha"
         const moneyMatch = lower.match(/(?:lisa|anna|give|add)\s*(?:mängijale|mull|mulle)?\s*(\d+)\s*(?:raha|münti|playbux|playcoins|coins|money)/i);
