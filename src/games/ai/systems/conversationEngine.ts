@@ -20,6 +20,7 @@ import {
     type PipelineStage
 } from '../../../shared/playardAiKnowledge';
 import { PlayardSkySystem } from '../../../shared/skySystem';
+import { PlayardSpatialGeometryEngine } from '../../../shared/spatialGeometryEngine';
 
 
 export interface ParsedCommand {
@@ -268,6 +269,22 @@ export class ConversationEngine {
                 rawText: text,
                 actionTarget: 'sky',
                 parameters: skyParsed.parameters,
+                safetyReport
+            };
+        }
+
+        // Spatial Geometry & Object Manipulation System
+        // (Color, Material, Opacity, Dimensions, Shape, Rotation, Movement, Coordinates, Distribution, Spacing, Symmetry, Clone, Delete, Group)
+        const spatialCmd = PlayardSpatialGeometryEngine.parseSpatialCommand(text);
+        if (spatialCmd) {
+            return {
+                intent: 'MODIFY_OBJECT',
+                confidence: 0.98,
+                rawText: text,
+                actionTarget: spatialCmd.targetSelector || 'spatial_object',
+                parameters: {
+                    spatialCommand: spatialCmd
+                },
                 safetyReport
             };
         }

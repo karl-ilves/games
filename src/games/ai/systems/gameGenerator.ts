@@ -31,11 +31,16 @@ export interface PlayardAiScene {
     objects: Array<{
         id: string;
         name: string;
-        type: 'box' | 'cylinder' | 'sphere' | 'plane' | 'tornado' | 'airplane' | 'building' | 'spawn' | 'coin' | 'npc' | 'dragon' | 'castle' | 'ship' | 'weapon' | 'tank' | 'ufo' | 'robot' | 'dinosaur' | 'submarine' | 'volcano' | 'pyramid';
+        type: 'box' | 'cylinder' | 'sphere' | 'plane' | 'cone' | 'tornado' | 'airplane' | 'building' | 'spawn' | 'coin' | 'npc' | 'dragon' | 'castle' | 'ship' | 'weapon' | 'tank' | 'ufo' | 'robot' | 'dinosaur' | 'submarine' | 'volcano' | 'pyramid' | string;
         position: [number, number, number];
         rotation?: [number, number, number];
         scale: [number, number, number];
         color: number | string;
+        material?: 'standard' | 'metal' | 'wood' | 'glass' | 'neon' | 'stone' | 'gold' | 'hologram' | 'wireframe' | string;
+        opacity?: number;
+        transparent?: boolean;
+        groupId?: string;
+        dimensions?: { width: number; height: number; depth: number };
         gameItemType?: string;
         script?: string;
         isCollidable?: boolean;

@@ -11275,7 +11275,109 @@ await (async () => {
             }
             console.log("   ✅ Advanced Sky & Atmosphere System (Night, Stars, Big Moon, Storm, Rain, Sunset, Space, Day-Night Cycle) verified successfully!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge & Sky System) tests passed successfully!");
+            // 22s. Test 3D Spatial Geometry, Object Manipulation, Batch Layouts & Calculations
+            console.log("   Testing 3D Spatial Geometry, Object Manipulation, Batch Layouts & Calculations...");
+            const spatialTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. "pane 20 puud" -> verify 20 trees created
+                await ai.handleUserInput('pane 20 puud');
+                await new Promise(r => setTimeout(r, 300));
+                let scene = ai.state.getActiveScene();
+                const trees = scene.objects.filter(o => o.name && o.name.toLowerCase().includes('puu'));
+                const treesCountOk = trees.length === 20;
+
+                // 2. "pane 5 meetri vahega 10 lampi" -> verify 10 lamps with 5m spacing
+                await ai.handleUserInput('pane 5 meetri vahega 10 lampi');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const lamps = scene.objects.filter(o => o.name && o.name.toLowerCase().includes('lamp'));
+                const lampsCountOk = lamps.length === 10;
+                const lampsSpacingOk = lamps.length >= 2 && Math.abs(Math.abs(lamps[1].position[0] - lamps[0].position[0]) - 5) < 0.1;
+
+                // 3. Add walls and test batch modification: "tee kõik seinad siniseks"
+                await ai.handleUserInput('pane 4 seina');
+                await new Promise(r => setTimeout(r, 300));
+                await ai.handleUserInput('tee kõik seinad siniseks');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const walls = scene.objects.filter(o => o.name && o.name.toLowerCase().includes('sein'));
+                const wallsColorOk = walls.length >= 4 && walls.every(w => w.color === 0x3b82f6);
+
+                // 4. Material and transparency: "muuda materjal klaasiks ja läbipaistvus 40%"
+                await ai.handleUserInput('muuda materjal klaasiks ja läbipaistvus 40%');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const lastObj = scene.objects[scene.objects.length - 1];
+                const materialOk = lastObj?.material === 'glass' && lastObj?.opacity === 0.4 && lastObj?.transparent === true;
+
+                // 5. Shape and rotation: "muuda kuju silindriks ja pööra 90 kraadi"
+                await ai.handleUserInput('muuda kuju silindriks ja pööra 90 kraadi');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const lastObj2 = scene.objects[scene.objects.length - 1];
+                const shapeOk = lastObj2?.type === 'cylinder';
+                const rotationOk = !!lastObj2?.rotation && lastObj2.rotation[1] > 1.5;
+
+                // 6. Symmetrical layout: "paiguta sümmeetriliselt 6 sammast"
+                await ai.handleUserInput('paiguta sümmeetriliselt 6 sammast');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const pillars = scene.objects.filter(o => o.name && o.name.toLowerCase().includes('sammas'));
+                const symmetryOk = pillars.length === 6 && pillars.some(p => p.position[0] < 0) && pillars.some(p => p.position[0] > 0);
+
+                // 7. Grouping: "grupeeri lambid"
+                await ai.handleUserInput('grupeeri lambid');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const groupedLamps = scene.objects.filter(o => o.name && o.name.toLowerCase().includes('lamp') && o.groupId);
+                const groupOk = groupedLamps.length === 10;
+
+                // 8. Cloning: "kopeeri maja 2 korda"
+                await ai.handleUserInput('pane 1 maja');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const houseCountBefore = scene.objects.filter(o => o.name && o.name.toLowerCase().includes('maja')).length;
+                await ai.handleUserInput('kopeeri maja 2 korda');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const houseCountAfter = scene.objects.filter(o => o.name && o.name.toLowerCase().includes('maja')).length;
+                const cloneOk = houseCountAfter === houseCountBefore + 2;
+
+                // 9. Deleting: "kustuta puud"
+                await ai.handleUserInput('kustuta puud');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const treesAfterDelete = scene.objects.filter(o => o.name && o.name.toLowerCase().includes('puu'));
+                const deleteOk = treesAfterDelete.length === 0;
+
+                return {
+                    treesCountOk,
+                    lampsCountOk,
+                    lampsSpacingOk,
+                    wallsColorOk,
+                    materialOk,
+                    shapeOk,
+                    rotationOk,
+                    symmetryOk,
+                    groupOk,
+                    cloneOk,
+                    deleteOk
+                };
+            });
+
+            console.log("   Spatial Geometry Test Results:", spatialTest);
+            if (
+                !spatialTest.treesCountOk || !spatialTest.lampsCountOk || !spatialTest.lampsSpacingOk ||
+                !spatialTest.wallsColorOk || !spatialTest.materialOk || !spatialTest.shapeOk ||
+                !spatialTest.rotationOk || !spatialTest.symmetryOk || !spatialTest.groupOk ||
+                !spatialTest.cloneOk || !spatialTest.deleteOk
+            ) {
+                throw new Error("3D Spatial Geometry & Object Manipulation test failed: " + JSON.stringify(spatialTest));
+            }
+            console.log("   ✅ 3D Spatial Geometry, Object Manipulation, Batch Layouts & Calculations verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System & 3D Spatial Engine) tests passed successfully!");
 
 
 

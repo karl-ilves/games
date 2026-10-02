@@ -497,17 +497,60 @@ export class PreviewViewport {
             return pyrGroup;
         }
 
-        // Generic box / building / spawn
+        // Primitive shapes: box, sphere, cylinder, cone, plane
+        let geo: THREE.BufferGeometry;
+        if (obj.type === 'sphere') {
+            geo = new THREE.SphereGeometry(obj.scale[0] / 2, 20, 20);
+        } else if (obj.type === 'cylinder') {
+            geo = new THREE.CylinderGeometry(obj.scale[0] / 2, obj.scale[2] / 2, obj.scale[1], 16);
+        } else if (obj.type === 'cone') {
+            geo = new THREE.ConeGeometry(obj.scale[0] / 2, obj.scale[1], 16);
+        } else {
+            geo = new THREE.BoxGeometry(obj.scale[0], obj.scale[1], obj.scale[2]);
+        }
 
-        const geo = new THREE.BoxGeometry(obj.scale[0], obj.scale[1], obj.scale[2]);
+        // Material configuration (metal, glass, neon, wood, stone, etc.)
+        let roughness = 0.6;
+        let metalness = 0.1;
+        let transparent = obj.transparent || obj.type === 'spawn';
+        let opacity = obj.opacity ?? (obj.type === 'spawn' ? 0.7 : 1.0);
+        let emissive = 0x000000;
+        let wireframe = false;
+
+        if (obj.material === 'glass') {
+            roughness = 0.1;
+            metalness = 0.1;
+            transparent = true;
+            opacity = obj.opacity ?? 0.35;
+        } else if (obj.material === 'metal') {
+            roughness = 0.25;
+            metalness = 0.9;
+        } else if (obj.material === 'neon') {
+            emissive = color;
+            roughness = 0.2;
+        } else if (obj.material === 'wood') {
+            roughness = 0.85;
+        } else if (obj.material === 'stone') {
+            roughness = 0.95;
+        } else if (obj.material === 'wireframe') {
+            wireframe = true;
+        }
+
         const mat = new THREE.MeshStandardMaterial({
             color,
-            roughness: 0.6,
-            transparent: obj.type === 'spawn',
-            opacity: obj.type === 'spawn' ? 0.7 : 1.0
+            roughness,
+            metalness,
+            emissive,
+            transparent,
+            opacity,
+            wireframe
         });
+
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(obj.position[0], obj.position[1], obj.position[2]);
+        if (obj.rotation) {
+            mesh.rotation.set(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
+        }
         mesh.castShadow = true;
         mesh.receiveShadow = true;
 
