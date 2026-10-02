@@ -3890,7 +3890,14 @@ await (async () => {
                 title: 'Automated Test Adventure',
                 description: 'A test obstacle course created by tests',
                 category: 'Adventure',
-                sceneData: { objects: [], test: true },
+                sceneData: {
+                    objects: [
+                        { name: 'Stone Block', category: 'gameplay', type: 'box', position: { x: 0, y: 0, z: 5 } },
+                        { name: 'Parkour Platform', category: 'gameplay', position: { x: 5, y: 2, z: 5 } },
+                        { name: 'Gold Coin', category: 'gameplay', gameItemType: 'coin', position: { x: 10, y: 1, z: 5 } }
+                    ],
+                    test: true
+                },
                 status: 'approved'
             });
             return res;
@@ -3918,6 +3925,57 @@ await (async () => {
             throw new Error("Published game was not found in getApprovedGames() community list!");
         }
         console.log("   User game direct public publishing verified: ✅");
+
+        // 6d. Test Playing the game in /games/play/ and verify blocks stay blocks (not rings!)
+        console.log("6d. Testing Game Player Object Rendering (Blocks remain BoxGeometry, not rings!)...");
+        await page.goto(`http://localhost:4173/games/play/index.html?id=${gameSubmitResult.gameId}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 2000));
+
+        const playRenderCheck = await page.evaluate(() => {
+            const inst = window.playGameInstance;
+            if (!inst || !inst.sceneObjects) {
+                return { error: 'playGameInstance or sceneObjects not found' };
+            }
+            const objs = inst.sceneObjects;
+            if (objs.length < 3) {
+                return { error: `Expected at least 3 scene objects, found ${objs.length}` };
+            }
+
+            // Find geometries
+            const geometries = objs.map(grp => {
+                let geomType = 'none';
+                grp.traverse(child => {
+                    if (child.isMesh && child.geometry) {
+                        geomType = child.geometry.type;
+                    }
+                });
+                return geomType;
+            });
+
+            const blockIsBox = geometries[0] === 'BoxGeometry';
+            const platformIsBox = geometries[1] === 'BoxGeometry';
+            const coinIsTorus = geometries[2] === 'TorusGeometry';
+
+            return {
+                count: objs.length,
+                geometries,
+                blockIsBox,
+                platformIsBox,
+                coinIsTorus
+            };
+        });
+
+        console.log("   Game Player Object Render Results:", playRenderCheck);
+        if (playRenderCheck.error) {
+            throw new Error("Play render check failed: " + playRenderCheck.error);
+        }
+        if (!playRenderCheck.blockIsBox || !playRenderCheck.platformIsBox) {
+            throw new Error(`Expected blocks and platforms to be BoxGeometry, but got: ${JSON.stringify(playRenderCheck.geometries)}`);
+        }
+        if (!playRenderCheck.coinIsTorus) {
+            throw new Error(`Expected coin to be TorusGeometry, but got: ${playRenderCheck.geometries[2]}`);
+        }
+        console.log("   ✅ Blocks remain 3D solid blocks in Game Player (no ring conversion bug)!");
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");

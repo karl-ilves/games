@@ -6,6 +6,7 @@ import { AvatarRig } from '../../shared/avatar/AvatarRig';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobileControls';
 import { translateDOM, t } from '../../shared/i18n_dict';
 import { isPlayardOwner } from '../../auth';
+import { buildSceneObjectMesh } from '../../shared/sceneObjectBuilder';
 
 console.log("Community Game Player Loading...");
 
@@ -131,52 +132,11 @@ function buildSceneFromData(sceneData: any) {
     if (!sceneData || !Array.isArray(sceneData.objects)) return;
 
     sceneData.objects.forEach((obj: any) => {
-        const group = new THREE.Group();
-        const mat = new THREE.MeshStandardMaterial({
-            color: obj.color || 0x00f2fe,
-            roughness: 0.5,
-            metalness: 0.2
-        });
-
-        if (obj.category === 'nature') {
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.5), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
-            trunk.position.y = 0.75;
-            group.add(trunk);
-
-            const leaves = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.2, 7), mat);
-            leaves.position.y = 2.2;
-            group.add(leaves);
-        } else if (obj.category === 'city') {
-            const bldg = new THREE.Mesh(new THREE.BoxGeometry(3, 8, 3), mat);
-            bldg.position.y = 4;
-            group.add(bldg);
-        } else if (obj.category === 'vehicles') {
-            const car = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 4), mat);
-            car.position.y = 0.6;
-            group.add(car);
-        } else if (obj.category === 'gameplay') {
-            const coin = new THREE.Mesh(new THREE.TorusGeometry(1, 0.2, 12, 24), mat);
-            coin.position.y = 1.6;
-            group.add(coin);
-        } else {
-            const prop = new THREE.Mesh(new THREE.OctahedronGeometry(1.2, 0), mat);
-            prop.position.y = 1.5;
-            group.add(prop);
-        }
-
-        group.position.set(obj.position.x, obj.position.y, obj.position.z);
-        if (obj.rotation) group.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z);
-        if (obj.scale) group.scale.set(obj.scale.x, obj.scale.y, obj.scale.z);
-
-        group.traverse(child => {
-            if ((child as THREE.Mesh).isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
-        });
+        const group = buildSceneObjectMesh(obj);
 
         // Passable objects allow player to walk right through
-        const isCollectible = obj.category === 'gameplay' || obj.gameItemType === 'coin' || obj.gameItemType === 'key' || obj.gameItemType === 'potion';
+        const name = (obj.name || '').toLowerCase();
+        const isCollectible = obj.gameItemType === 'coin' || obj.gameItemType === 'key' || obj.gameItemType === 'potion' || /(coin|münt|potion|key|võti)/i.test(name);
         group.userData.isPassable = (obj.isPassable === true) || isCollectible || obj.isSpawnPoint;
         sceneObjects.push(group);
 
@@ -264,6 +224,12 @@ async function initPlayer() {
             }
             
             buildSceneFromData(currentGame.sceneData);
+
+            (window as any).playGameInstance = {
+                get scene() { return scene; },
+                get sceneObjects() { return sceneObjects; },
+                get currentGame() { return currentGame; }
+            };
 
             yardService.recordPlayedGame({
                 id: 'game_' + currentGame.id,
