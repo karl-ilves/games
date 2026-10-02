@@ -8,6 +8,7 @@ import { PlayardMobileControls, isMobileOrTabletDevice } from '../../shared/mobi
 import { translateDOM, t } from '../../shared/i18n_dict';
 import { aiTierService, AI_TIER_CONFIGS, type PlayardAiTier } from '../../shared/aiTierService';
 import { PlayardGeneralKnowledge, PLAYARD_PIPELINE_STAGES, AiCodeAndSystemEngine, PLAYARD_GENRES_CATALOG, type PipelineStage } from '../../shared/playardAiKnowledge';
+import { PlayardImageGenerationEngine } from '../../shared/imageGenerationEngine';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -2222,6 +2223,85 @@ export function saveCurrentGame(showAlert = true) {
     }
 }
 
+let currentPublishThumbnail: string | null = null;
+
+export function captureSceneSnapshot(): string | null {
+    try {
+        if (renderer && scene && camera && typeof renderer.render === 'function') {
+            renderer.render(scene, camera);
+            if (renderer.domElement && typeof renderer.domElement.toDataURL === 'function') {
+                return renderer.domElement.toDataURL('image/jpeg', 0.85);
+            }
+        }
+    } catch (e) {
+        console.warn('Could not capture scene snapshot:', e);
+    }
+    return null;
+}
+
+export function processImageFile(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const rawDataUrl = e.target?.result as string;
+            if (!rawDataUrl) {
+                return reject(new Error('Failed to read image file'));
+            }
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 800;
+                let w = img.width;
+                let h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                } else {
+                    resolve(rawDataUrl);
+                }
+            };
+            img.onerror = () => resolve(rawDataUrl);
+            img.src = rawDataUrl;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+export function setPublishModalThumbnail(dataUrl: string) {
+    currentPublishThumbnail = dataUrl;
+    const emptyState = document.getElementById('publish-image-empty-state');
+    const previewContainer = document.getElementById('publish-image-preview-container');
+    const previewImg = document.getElementById('publish-image-preview') as HTMLImageElement | null;
+    if (emptyState) emptyState.style.display = 'none';
+    if (previewContainer) previewContainer.style.display = 'block';
+    if (previewImg) previewImg.src = dataUrl;
+}
+
+export function clearPublishModalThumbnail() {
+    currentPublishThumbnail = null;
+    const emptyState = document.getElementById('publish-image-empty-state');
+    const previewContainer = document.getElementById('publish-image-preview-container');
+    const previewImg = document.getElementById('publish-image-preview') as HTMLImageElement | null;
+    const fileInput = document.getElementById('publish-game-image-input') as HTMLInputElement | null;
+    if (emptyState) emptyState.style.display = 'flex';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (previewImg) previewImg.src = '';
+    if (fileInput) fileInput.value = '';
+}
+
 export function openPublishModal() {
     const modal = document.getElementById('publish-game-modal');
     if (!modal) return;
@@ -2243,6 +2323,17 @@ export function openPublishModal() {
     }
     if (ageSelect) {
         ageSelect.value = String(sceneData.minAge ?? currentGameMinAge ?? 0);
+    }
+
+    if (sceneData.thumbnail) {
+        setPublishModalThumbnail(sceneData.thumbnail);
+    } else {
+        const snap = captureSceneSnapshot();
+        if (snap) {
+            setPublishModalThumbnail(snap);
+        } else {
+            clearPublishModalThumbnail();
+        }
     }
 
     modal.style.display = 'flex';
@@ -2283,7 +2374,8 @@ export async function confirmAndPublishGame() {
         description: gameDesc,
         maxPlayers,
         minAge,
-        ageRating
+        ageRating,
+        thumbnail: currentPublishThumbnail || undefined
     });
 }
 
@@ -2293,6 +2385,7 @@ export async function publishCurrentGame(options?: {
     maxPlayers?: number;
     minAge?: number;
     ageRating?: string;
+    thumbnail?: string;
 }) {
     // Confirmation prompt ("are you shure")
     const isConfirmed = confirm('Are you sure you want to publish this game?');
@@ -2310,12 +2403,16 @@ export async function publishCurrentGame(options?: {
     const maxPlayers = options?.maxPlayers !== undefined ? options.maxPlayers : (sceneData.maxPlayers || currentGameMaxPlayers || 8);
     const minAge = options?.minAge !== undefined ? options.minAge : (sceneData.minAge ?? currentGameMinAge ?? 0);
     const ageRating = options?.ageRating !== undefined ? options.ageRating : (sceneData.ageRating || (minAge > 0 ? `${minAge}+` : '0+'));
+    const thumbnail = options?.thumbnail !== undefined ? options.thumbnail : (currentPublishThumbnail || sceneData.thumbnail || '');
 
     sceneData.title = title;
     sceneData.description = description;
     sceneData.maxPlayers = maxPlayers;
     sceneData.minAge = minAge;
     sceneData.ageRating = ageRating;
+    if (thumbnail) {
+        sceneData.thumbnail = thumbnail;
+    }
 
     const submitBtn = document.getElementById('btn-submit-review');
     const confirmPublishBtn = document.getElementById('btn-confirm-publish');
@@ -2333,6 +2430,7 @@ export async function publishCurrentGame(options?: {
         title,
         description,
         category,
+        thumbnail: thumbnail || sceneData.thumbnail,
         sceneData,
         status: 'approved',
         maxPlayers,
@@ -2350,6 +2448,7 @@ export async function publishCurrentGame(options?: {
     }
 
     if (res.success) {
+        sceneData.thumbnail = thumbnail || sceneData.thumbnail;
         yardService.saveUserGame(username, sceneData);
         autoSaveDraft();
 
@@ -2882,6 +2981,11 @@ async function initStudio() {
         openPublishModal,
         closePublishModal,
         confirmAndPublishGame,
+        setPublishModalThumbnail,
+        clearPublishModalThumbnail,
+        captureSceneSnapshot,
+        processImageFile,
+        get currentPublishThumbnail() { return currentPublishThumbnail; },
         get currentGameMaxPlayers() { return currentGameMaxPlayers; },
         get currentGameMinAge() { return currentGameMinAge; },
         get currentGameAgeRating() { return currentGameAgeRating; },
@@ -4965,6 +5069,148 @@ function setupStudioEvents() {
         publishModal.addEventListener('click', (e) => {
             if (e.target === publishModal) {
                 closePublishModal();
+            }
+        });
+    }
+
+    // Publish Modal: Game Cover Image Drag-and-Drop & Upload Listeners
+    const dropzone = document.getElementById('publish-image-dropzone');
+    const imageInput = document.getElementById('publish-game-image-input') as HTMLInputElement | null;
+
+    if (dropzone && imageInput) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.style.borderColor = '#00f2fe';
+                dropzone.style.backgroundColor = 'rgba(0, 242, 254, 0.15)';
+                dropzone.style.boxShadow = '0 0 20px rgba(0, 242, 254, 0.4)';
+            });
+        });
+
+        ['dragleave', 'dragend'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.style.borderColor = 'rgba(0, 242, 254, 0.4)';
+                dropzone.style.backgroundColor = 'rgba(11, 17, 26, 0.75)';
+                dropzone.style.boxShadow = 'none';
+            });
+        });
+
+        dropzone.addEventListener('drop', async (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.style.borderColor = 'rgba(0, 242, 254, 0.4)';
+            dropzone.style.backgroundColor = 'rgba(11, 17, 26, 0.75)';
+            dropzone.style.boxShadow = 'none';
+
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    try {
+                        const dataUrl = await processImageFile(file);
+                        setPublishModalThumbnail(dataUrl);
+                    } catch (err) {
+                        console.error('Error reading dropped image file:', err);
+                    }
+                } else {
+                    alert('Palun lohista ainult pildifaile (PNG, JPG, WEBP, GIF)!');
+                }
+            }
+        });
+
+        dropzone.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('#btn-remove-publish-image') && !target.closest('#btn-change-publish-image')) {
+                imageInput.click();
+            }
+        });
+
+        imageInput.addEventListener('change', async () => {
+            if (imageInput.files && imageInput.files.length > 0) {
+                const file = imageInput.files[0];
+                try {
+                    const dataUrl = await processImageFile(file);
+                    setPublishModalThumbnail(dataUrl);
+                } catch (err) {
+                    console.error('Error processing selected image:', err);
+                }
+            }
+        });
+
+        // Paste support from clipboard
+        dropzone.addEventListener('paste', async (e: ClipboardEvent) => {
+            const items = e.clipboardData?.items;
+            if (items) {
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const file = items[i].getAsFile();
+                        if (file) {
+                            const dataUrl = await processImageFile(file);
+                            setPublishModalThumbnail(dataUrl);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        document.getElementById('btn-change-publish-image')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            imageInput.click();
+        });
+
+        document.getElementById('btn-remove-publish-image')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearPublishModalThumbnail();
+        });
+
+        document.getElementById('btn-browse-publish-image')?.addEventListener('click', () => {
+            imageInput.click();
+        });
+
+        document.getElementById('btn-snapshot-publish-image')?.addEventListener('click', () => {
+            const snap = captureSceneSnapshot();
+            if (snap) {
+                setPublishModalThumbnail(snap);
+            } else {
+                alert('Ei saanud hetktõmmist teha. Veendu, et 3D vaade on aktiivne.');
+            }
+        });
+
+        document.getElementById('btn-ai-publish-image')?.addEventListener('click', async () => {
+            const titleInput = document.getElementById('publish-game-title') as HTMLInputElement | null;
+            const descInput = document.getElementById('publish-game-desc') as HTMLTextAreaElement | null;
+            const gameTitle = titleInput?.value.trim() || 'Playard Adventure';
+            const gameDesc = descInput?.value.trim() || '';
+            const prompt = `${gameTitle}. ${gameDesc}`.trim();
+
+            const aiBtn = document.getElementById('btn-ai-publish-image') as HTMLButtonElement | null;
+            const oldHtml = aiBtn ? aiBtn.innerHTML : '';
+            if (aiBtn) {
+                aiBtn.innerHTML = '<span>⏳</span> <span>Genereerin...</span>';
+                aiBtn.disabled = true;
+            }
+
+            try {
+                const res = await PlayardImageGenerationEngine.generateImage(prompt || 'Mängu kaanepilt', {
+                    style: 'fantasy',
+                    category: 'concept',
+                    width: 512,
+                    height: 320
+                });
+                if (res && res.dataUrl) {
+                    setPublishModalThumbnail(res.dataUrl);
+                }
+            } catch (err) {
+                console.error('AI cover generation failed:', err);
+            } finally {
+                if (aiBtn) {
+                    aiBtn.innerHTML = oldHtml;
+                    aiBtn.disabled = false;
+                }
             }
         });
     }

@@ -387,8 +387,12 @@ async function renderCommunityGames() {
         const card = document.createElement('div');
         card.className = 'game-card';
         card.style.position = 'relative';
+        const thumbHtml = game.thumbnail
+            ? `<div style="width: 100%; height: 140px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; background: #0b111a; border: 1px solid rgba(0, 242, 254, 0.2);"><img src="${game.thumbnail}" alt="${game.title}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></div>`
+            : '';
         card.innerHTML = `
             <a href="./games/play/index.html?id=${game.id}" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; height: 100%;">
+                ${thumbHtml}
                 <h2>🎮 ${game.title}</h2>
                 <p>${game.description || 'Community created 3D game. Explore the world and have fun!'}</p>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">

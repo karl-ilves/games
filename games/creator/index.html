@@ -1231,6 +1231,49 @@
                     <textarea id="publish-game-desc" rows="3" placeholder="Describe what players do in this game and how to play..." style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 500; outline: none; resize: vertical; min-height: 70px;"></textarea>
                 </div>
 
+                <!-- 2b. Game Cover / Thumbnail Image (Upload & Drag-and-Drop) -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 0;">Game Cover / Pilt:</label>
+                        <span style="font-size: 0.78rem; color: #94a3b8;">Laadi üles või lohista fail siia</span>
+                    </div>
+
+                    <!-- Hidden file input -->
+                    <input type="file" id="publish-game-image-input" accept="image/png, image/jpeg, image/webp, image/gif" style="display: none;">
+
+                    <!-- Drag & Drop Zone -->
+                    <div id="publish-image-dropzone" style="border: 2px dashed rgba(0, 242, 254, 0.4); border-radius: 12px; background: rgba(11, 17, 26, 0.75); padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <!-- Empty prompt state -->
+                        <div id="publish-image-empty-state" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0;">
+                            <div style="font-size: 1.8rem;">🖼️📤</div>
+                            <div style="font-weight: 700; font-size: 0.9rem; color: #00f2fe;">Klõpsa pildi valimiseks või lohista fail siia</div>
+                            <div style="font-size: 0.75rem; color: #64748b;">Toetab PNG, JPG, WEBP, GIF (Drag & Drop)</div>
+                        </div>
+
+                        <!-- Preview state -->
+                        <div id="publish-image-preview-container" style="display: none; position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000;">
+                            <img id="publish-image-preview" src="" alt="Game Thumbnail" style="width: 100%; max-height: 160px; object-fit: cover; display: block; border-radius: 8px;">
+                            <div style="position: absolute; bottom: 8px; right: 8px; display: flex; gap: 6px; z-index: 5;">
+                                <button type="button" id="btn-change-publish-image" style="background: rgba(0,0,0,0.8); border: 1px solid rgba(0,242,254,0.6); color: #00f2fe; font-size: 0.75rem; font-weight: 700; border-radius: 6px; padding: 4px 8px; cursor: pointer;">🔄 Vaheta</button>
+                                <button type="button" id="btn-remove-publish-image" style="background: rgba(220,38,38,0.85); border: none; color: white; font-size: 0.75rem; font-weight: 700; border-radius: 6px; padding: 4px 8px; cursor: pointer;">✕ Eemalda</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick buttons below dropzone -->
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button type="button" id="btn-snapshot-publish-image" class="btn-studio" style="flex: 1; background: rgba(0, 242, 254, 0.12); border: 1px solid rgba(0, 242, 254, 0.35); color: #38bdf8; font-size: 0.78rem; padding: 6px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                            <span>📸</span> <span>3D Hetktõmmis</span>
+                        </button>
+                        <button type="button" id="btn-ai-publish-image" class="btn-studio" style="flex: 1; background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4); color: #f472b6; font-size: 0.78rem; padding: 6px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                            <span>🎨</span> <span>AI Kaanepilt</span>
+                        </button>
+                        <button type="button" id="btn-browse-publish-image" class="btn-studio" style="flex: 1; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; font-size: 0.78rem; padding: 6px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                            <span>📁</span> <span>Vali fail</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Grid for Server Players & Age Rating -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                     <!-- 3. Max Players in Server -->

@@ -3741,8 +3741,17 @@ await (async () => {
             throw new Error("Expected #publish-game-modal to be visible after clicking 'Publish a game'!");
         }
 
-        // Configure game details: title, description, max players, age rating
-        await page.evaluate(() => {
+        // Configure game details: title, description, max players, age rating, cover thumbnail
+        const coverElements = await page.evaluate(() => {
+            const dropzone = document.getElementById('publish-image-dropzone');
+            const fileInput = document.getElementById('publish-game-image-input');
+            const snapshotBtn = document.getElementById('btn-snapshot-publish-image');
+            const aiBtn = document.getElementById('btn-ai-publish-image');
+            const browseBtn = document.getElementById('btn-browse-publish-image');
+            const previewContainer = document.getElementById('publish-image-preview-container');
+            const previewImg = document.getElementById('publish-image-preview');
+
+            // Set game info
             const titleEl = document.getElementById('publish-game-title');
             const descEl = document.getElementById('publish-game-desc');
             const playersEl = document.getElementById('publish-max-players');
@@ -3752,7 +3761,28 @@ await (async () => {
             if (descEl) descEl.value = 'A thrilling multiplayer survival world!';
             if (playersEl) playersEl.value = '16';
             if (ageEl) ageEl.value = '9';
+
+            // Simulate setting/uploading a custom game cover image
+            const testCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+            if (window.creatorStudio && typeof window.creatorStudio.setPublishModalThumbnail === 'function') {
+                window.creatorStudio.setPublishModalThumbnail(testCover);
+            }
+
+            return {
+                hasDropzone: !!dropzone,
+                hasFileInput: !!fileInput,
+                hasSnapshotBtn: !!snapshotBtn,
+                hasAiBtn: !!aiBtn,
+                hasBrowseBtn: !!browseBtn,
+                hasPreview: previewContainer ? previewContainer.style.display !== 'none' : false,
+                previewSrc: previewImg ? previewImg.src : ''
+            };
         });
+
+        if (!coverElements.hasDropzone || !coverElements.hasFileInput || !coverElements.hasSnapshotBtn || !coverElements.hasAiBtn) {
+            throw new Error(`Expected publish modal to have game cover upload/drag-and-drop elements! Details: ${JSON.stringify(coverElements)}`);
+        }
+        console.log("   Publish Modal Cover Upload & Drag-and-Drop elements verified:", coverElements);
 
         // Click confirm publish inside the modal
         await page.click('#btn-confirm-publish');
@@ -3770,7 +3800,7 @@ await (async () => {
             throw new Error("Expected 'Finish a game' dialog after publishing!");
         }
 
-        // Verify game is saved with approved status, correct title, desc, maxPlayers, and age rating
+        // Verify game is saved with approved status, correct title, desc, maxPlayers, age rating, and thumbnail
         const studioPublishedGame = await page.evaluate(() => {
             try {
                 const games = JSON.parse(localStorage.getItem('playard_user_created_games') || '[]');
@@ -3791,15 +3821,19 @@ await (async () => {
         if (!studioPublishedGame.title.includes('Epic Multi Server Quest')) {
             throw new Error(`Expected game title 'Epic Multi Server Quest', but got '${studioPublishedGame.title}'`);
         }
-        console.log("   Found published approved game in storage:", {
+        if (!studioPublishedGame.thumbnail) {
+            throw new Error("Expected published game to have thumbnail persisted!");
+        }
+        console.log("   Found published approved game with thumbnail in storage:", {
             id: studioPublishedGame.id,
             title: studioPublishedGame.title,
             maxPlayers: studioPublishedGame.maxPlayers,
             minAge: studioPublishedGame.minAge,
             ageRating: studioPublishedGame.ageRating,
+            hasThumbnail: !!studioPublishedGame.thumbnail,
             status: studioPublishedGame.status
         });
-        console.log("   ✅ 'Publish a game' modal (max players, age rating, title, description) and publish flow passed!");
+        console.log("   ✅ 'Publish a game' modal (title, description, cover image upload & drag-and-drop, max players, age rating) and publish flow passed!");
 
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
