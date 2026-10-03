@@ -558,7 +558,7 @@ export function pullSelectedObject(deltaScale: number, axis?: PullEdgeAxis) {
     hideFloatingPullIndicator(1500);
 }
 
-export function spawnBlockObject(color: string = '#00cec9', name: string = 'Plokk'): PlacedObject {
+export function spawnBlockObject(color: string = '#00cec9', name: string = 'Part'): PlacedObject {
     const group = new THREE.Group();
     const boxMat = new THREE.MeshStandardMaterial({
         color: color,

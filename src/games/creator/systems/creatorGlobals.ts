@@ -24,6 +24,14 @@ import {
     selectObject, spawnObjectIntoScene, renderCatalogUI, setObjectPassable
 } from '../ui/creatorUI';
 import {
+    renderWorkspaceTree,
+    reparentObject,
+    renameObject,
+    duplicateObjectWithChildren,
+    deleteObjectWithChildren,
+    getDescendantIds
+} from '../ui/workspaceExplorer';
+import {
     executeAiBuild, loadAiSchoolMemory, saveAiSchoolMemory,
     updateAiTierDisplay, aiContextMemory
 } from '../ai/aiBuildEngine';
@@ -160,6 +168,12 @@ export function setupCreatorGlobals() {
         keys,
         CATALOG_DATABASE,
         getStudioTestPlaybux,
-        updateStudioTestPlaybuxDisplay
+        updateStudioTestPlaybuxDisplay,
+        renderWorkspaceTree,
+        reparentObject,
+        renameObject,
+        duplicateObjectWithChildren,
+        deleteObjectWithChildren,
+        getDescendantIds
     };
 }

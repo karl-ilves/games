@@ -37,6 +37,7 @@ export interface PlacedObject {
     scale: { x: number; y: number; z: number };
     color: string;
     isPassable?: boolean;
+    parentId?: string | null;
     isAirplane?: boolean;
     isBoat?: boolean;
     isSpawnPoint?: boolean;
@@ -120,6 +121,8 @@ export interface SceneSnapshot {
     mapType?: "land" | "sea";
     seaConfig?: SeaConfig | null;
     objects: Array<{
+        id?: string;
+        parentId?: string | null;
         catalogId: string;
         name: string;
         category: string;

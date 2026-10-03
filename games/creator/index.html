@@ -677,71 +677,109 @@
     </div>
 
     <!-- Right Inspector & Game Settings -->
-    <div class="inspector-panel" id="inspector-panel">
-        <h4>Game Settings</h4>
-        <div class="prop-row">
-            <label>Game Title:</label>
-            <input type="text" id="game-title-input" value="My 3D Adventure">
+    <!-- Right Inspector & Workspace Panel -->
+    <div class="inspector-panel" id="inspector-panel" style="width: 290px;">
+        <!-- Top Tabs Switcher: Workspace vs Properties vs Split -->
+        <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 3px; border-radius: 10px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">
+            <button id="tab-btn-workspace" class="btn-studio active" style="flex: 1; justify-content: center; padding: 6px 4px; font-size: 0.78rem; font-weight: bold; border-radius: 8px;">
+                🌐 Workspace (<span id="workspace-count">0</span>)
+            </button>
+            <button id="tab-btn-properties" class="btn-studio" style="flex: 1; justify-content: center; padding: 6px 4px; font-size: 0.78rem; font-weight: bold; border-radius: 8px; background: transparent; border-color: transparent; color: #94a3b8;">
+                ⚙️ Properties
+            </button>
+            <button id="tab-btn-split" class="btn-studio" style="padding: 6px 8px; font-size: 0.75rem; font-weight: bold; border-radius: 8px; background: transparent; border-color: transparent; color: #94a3b8;" title="Näita mõlemat korraga (Split)">
+                ↕️
+            </button>
         </div>
-        <div class="prop-row">
-            <label>Category:</label>
-            <select id="game-category-select">
-                <option value="Adventure">Adventure</option>
-                <option value="Racing">Racing / Driving</option>
-                <option value="Platformer">Parkour / Platformer</option>
-                <option value="Simulation">Simulation</option>
-            </select>
+
+        <!-- 1. Workspace Explorer View -->
+        <div id="workspace-panel-view" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #00f2fe; text-transform: uppercase; letter-spacing: 0.5px;">Explorer / Puu</span>
+                <span style="font-size: 0.7rem; color: #94a3b8;">Lohista asju teiste alla</span>
+            </div>
+            <input type="text" id="workspace-search-input" placeholder="Otsi objekte Workspace'is..." style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: #131920; border: 1px solid #485460; border-radius: 6px; color: white; font-size: 0.78rem; outline: none;">
+            <div id="workspace-tree-container" style="max-height: 260px; overflow-y: auto; background: rgba(10, 14, 20, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 6px; display: flex; flex-direction: column;">
+                <!-- Dynamically populated hierarchical tree -->
+            </div>
         </div>
-        <div class="prop-row">
-            <label>Description:</label>
-            <input type="text" id="game-desc-input" value="An awesome 3D world created in Playard!">
-        </div>
-        <div class="prop-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 0.8rem; margin: 0;">Player Health (HP):</label>
-            <div style="display: flex; gap: 4px; align-items: center;">
-                <input type="number" id="game-player-health-input" value="100" min="10" max="1000" step="10" style="width: 55px; text-align: center; font-weight: bold; color: #2ecc71; padding: 4px;">
-                <select id="game-health-visible-select" title="Health Visibility" style="width: 78px; padding: 4px 2px; font-size: 0.72rem; background: #0f172a; border: 1px solid #3b82f6; border-radius: 6px; color: #fff;">
-                    <option value="visible">visible</option>
-                    <option value="unvisible">unvisible</option>
+
+        <!-- 2. Properties View -->
+        <div id="properties-panel-view" style="display: block;">
+            <h4>Game Settings</h4>
+            <div class="prop-row">
+                <label>Game Title:</label>
+                <input type="text" id="game-title-input" value="My 3D Adventure">
+            </div>
+            <div class="prop-row">
+                <label>Category:</label>
+                <select id="game-category-select">
+                    <option value="Adventure">Adventure</option>
+                    <option value="Racing">Racing / Driving</option>
+                    <option value="Platformer">Parkour / Platformer</option>
+                    <option value="Simulation">Simulation</option>
                 </select>
             </div>
-        </div>
-
-        <!-- Coins and Asma side by side ("ja lisa ka coinid ja seal kõrval on asma") -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px;">
-            <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,211,42,0.25);">
-                <label style="font-size: 0.72rem; color: #ffd32a; font-weight: bold; display: block; margin-bottom: 4px;">Coins:</label>
-                <div style="display: flex; gap: 4px; align-items: center;">
-                    <input type="number" id="game-coins-input" value="0" min="0" max="99999" step="10" style="width: 44px; text-align: center; font-weight: bold; color: #ffd32a; font-size: 0.75rem; padding: 3px;">
-                    <select id="game-coins-visible-select" title="Coins Visibility" style="width: 68px; padding: 3px 2px; font-size: 0.7rem; background: #0f172a; border: 1px solid #ffd32a; border-radius: 6px; color: #fff;">
-                        <option value="visible">visible</option>
-                        <option value="unvisible">unvisible</option>
-                    </select>
-                </div>
-            </div>
-            <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(0,206,201,0.25);">
-                <label style="font-size: 0.72rem; color: #00cec9; font-weight: bold; display: block; margin-bottom: 4px;">Asma:</label>
-                <div style="display: flex; gap: 4px; align-items: center;">
-                    <input type="number" id="game-asma-input" value="100" min="10" max="1000" step="10" style="width: 44px; text-align: center; font-weight: bold; color: #00cec9; font-size: 0.75rem; padding: 3px;">
-                    <select id="game-asma-visible-select" title="Asma Visibility" style="width: 68px; padding: 3px 2px; font-size: 0.7rem; background: #0f172a; border: 1px solid #00cec9; border-radius: 6px; color: #fff;">
-                        <option value="visible">visible</option>
-                        <option value="unvisible">unvisible</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
-
-        <h4>Selected Object</h4>
-        <div id="selected-object-info" style="color: #718093; font-size: 0.85rem; margin-bottom: 8px;">
-            Click on an object to select, drag, rotate (R), or move with arrows!
-        </div>
-        <div id="selected-object-props" style="display: none;">
             <div class="prop-row">
-                <label>Position X/Y/Z:</label>
-                <span id="obj-pos-val" style="font-size: 0.8rem; color: #00f2fe; font-weight: bold;">0, 0, 0</span>
+                <label>Description:</label>
+                <input type="text" id="game-desc-input" value="An awesome 3D world created in Playard!">
             </div>
+            <div class="prop-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label style="font-size: 0.8rem; margin: 0;">Player Health (HP):</label>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <input type="number" id="game-player-health-input" value="100" min="10" max="1000" step="10" style="width: 55px; text-align: center; font-weight: bold; color: #2ecc71; padding: 4px;">
+                    <select id="game-health-visible-select" title="Health Visibility" style="width: 78px; padding: 4px 2px; font-size: 0.72rem; background: #0f172a; border: 1px solid #3b82f6; border-radius: 6px; color: #fff;">
+                        <option value="visible">visible</option>
+                        <option value="unvisible">unvisible</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Coins and Asma side by side ("ja lisa ka coinid ja seal kõrval on asma") -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px;">
+                <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,211,42,0.25);">
+                    <label style="font-size: 0.72rem; color: #ffd32a; font-weight: bold; display: block; margin-bottom: 4px;">Coins:</label>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <input type="number" id="game-coins-input" value="0" min="0" max="99999" step="10" style="width: 44px; text-align: center; font-weight: bold; color: #ffd32a; font-size: 0.75rem; padding: 3px;">
+                        <select id="game-coins-visible-select" title="Coins Visibility" style="width: 68px; padding: 3px 2px; font-size: 0.7rem; background: #0f172a; border: 1px solid #ffd32a; border-radius: 6px; color: #fff;">
+                            <option value="visible">visible</option>
+                            <option value="unvisible">unvisible</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(0,206,201,0.25);">
+                    <label style="font-size: 0.72rem; color: #00cec9; font-weight: bold; display: block; margin-bottom: 4px;">Asma:</label>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <input type="number" id="game-asma-input" value="100" min="10" max="1000" step="10" style="width: 44px; text-align: center; font-weight: bold; color: #00cec9; font-size: 0.75rem; padding: 3px;">
+                        <select id="game-asma-visible-select" title="Asma Visibility" style="width: 68px; padding: 3px 2px; font-size: 0.7rem; background: #0f172a; border: 1px solid #00cec9; border-radius: 6px; color: #fff;">
+                            <option value="visible">visible</option>
+                            <option value="unvisible">unvisible</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
+
+            <h4>Selected Object</h4>
+            <div id="selected-object-info" style="color: #718093; font-size: 0.85rem; margin-bottom: 8px;">
+                Click on an object to select, drag, rotate (R), or move with arrows!
+            </div>
+            <div id="selected-object-props" style="display: none;">
+                <div class="prop-row" style="margin-bottom: 6px;">
+                    <label style="color: #00f2fe; font-weight: bold;">Nimi (Name):</label>
+                    <input type="text" id="obj-name-input" value="Part" style="font-weight: bold; color: #00f2fe; background: #0f172a; border-color: #00f2fe;">
+                </div>
+                <div class="prop-row" style="margin-bottom: 8px;">
+                    <label style="color: #ffd32a; font-size: 0.75rem;">Ülemobjekt (Parent):</label>
+                    <select id="obj-parent-select" style="font-size: 0.75rem; background: #0f172a; border-color: #ffd32a;">
+                        <option value="none">🌐 Workspace (Root)</option>
+                    </select>
+                </div>
+                <div class="prop-row">
+                    <label>Position X/Y/Z:</label>
+                    <span id="obj-pos-val" style="font-size: 0.8rem; color: #00f2fe; font-weight: bold;">0, 0, 0</span>
+                </div>
             <div class="prop-row">
                 <label>Rotation Y:</label>
                 <span id="obj-rot-val" style="font-size: 0.8rem; color: #ffd32a; font-weight: bold;">0°</span>

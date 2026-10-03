@@ -1,5 +1,4 @@
 import { yardService } from '../../shared/yardService';
-import { getCurrentUserProfile } from '../../auth';
 import { SNAKE_CONFIG, getSnakeColorPreset } from './catalog';
 import { SnakeAudio } from './audio';
 import { SnakeState } from './state/snakeState';
@@ -301,12 +300,10 @@ export class SnakeGame {
             this.state.cols, this.state.rows, this.tileSize
         );
         SnakeRenderer.renderFood(this.ctx, this.state.foodItems, this.offsetX, this.offsetY, this.tileSize, timeSeconds);
-        const myProf = getCurrentUserProfile();
-        const myName = myProf?.username ? `👤 @${myProf.username}` : '👤 Mina';
         SnakeRenderer.renderSnake(
             this.ctx, this.state.body, this.state.direction,
             this.state.getStats().activePowerUp, this.offsetX, this.offsetY, this.tileSize, timeSeconds,
-            this.chosenTheme, this.state.mode === 'demo' ? '🤖 DEMO' : myName
+            this.chosenTheme
         );
 
         for (const rp of this.multiplayer.getPlayersInMyServer()) {
@@ -314,7 +311,7 @@ export class SnakeGame {
                 SnakeRenderer.renderSnake(
                     this.ctx, rp.body, rp.direction, null,
                     this.offsetX, this.offsetY, this.tileSize, timeSeconds,
-                    rp.theme, `👤 @${rp.username}`
+                    rp.theme
                 );
             }
         }
@@ -322,7 +319,7 @@ export class SnakeGame {
             SnakeRenderer.renderSnake(
                 this.ctx, this.multiplayer.aiSnake.body, this.multiplayer.aiSnake.direction, null,
                 this.offsetX, this.offsetY, this.tileSize, timeSeconds,
-                this.multiplayer.aiSnake.theme, '🤖 AI Uss'
+                this.multiplayer.aiSnake.theme
             );
         }
         if (this.state.mode === 'multiplayer' && this.state.body2?.length) {

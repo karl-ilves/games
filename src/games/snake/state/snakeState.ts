@@ -119,16 +119,8 @@ export class SnakeState {
     }
 
     public getGridDimensions(): { cols: number; rows: number } {
-        const count = this.serverPlayerCount || 1;
-        const baseCols = SNAKE_CONFIG.GRID.cols;
-        const baseRows = SNAKE_CONFIG.GRID.rows;
-        if (count >= 3) {
-            return { cols: Math.round(baseCols * 2), rows: Math.round(baseRows * 2) };
-        }
-        if (count === 2) {
-            return { cols: Math.round(baseCols * 1.5), rows: Math.round(baseRows * 1.5) };
-        }
-        return { cols: baseCols, rows: baseRows };
+        // Map is always the same size
+        return { cols: SNAKE_CONFIG.GRID.cols, rows: SNAKE_CONFIG.GRID.rows };
     }
 
     public updateGridSize(): boolean {

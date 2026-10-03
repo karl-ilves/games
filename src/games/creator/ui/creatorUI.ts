@@ -7,6 +7,12 @@ import { PlayardMobileControls, isMobileOrTabletDevice } from '../../../shared/m
 import { PlayardImageGenerationEngine } from '../../../shared/imageGenerationEngine';
 import { setupScriptingEvents } from '../systems/scriptRunner';
 import { csState } from "../state/creatorState";
+import {
+    renderWorkspaceTree,
+    duplicateObjectWithChildren,
+    deleteObjectWithChildren,
+    getDescendantIds
+} from './workspaceExplorer';
 import * as THREE from 'three';
 import { PlacedObject, CatalogItem, SceneSnapshot, SeaConfig } from '../types';
 import {
@@ -343,6 +349,7 @@ export function serializeCurrentScene() {
                 : { x: p.mesh.position.x, y: p.mesh.position.y, z: p.mesh.position.z };
             return {
                 id: p.id,
+                parentId: p.parentId || null,
                 catalogId: p.catalogId,
                 name: p.name,
                 category: p.category,
@@ -892,7 +899,8 @@ export function loadSceneFromData(sceneData: any) {
                 damageAmount: objData.damageAmount,
                 portalTargetId: objData.portalTargetId || objData.trigger?.targetWorldId,
                 portalTargetTitle: objData.portalTargetTitle || objData.trigger?.targetWorldTitle,
-                movement: objData.movement ? JSON.parse(JSON.stringify(objData.movement)) : undefined
+                movement: objData.movement ? JSON.parse(JSON.stringify(objData.movement)) : undefined,
+                parentId: objData.parentId || null
             };
 
             if (placed.movement) {
@@ -901,15 +909,23 @@ export function loadSceneFromData(sceneData: any) {
 
             placedObjects.push(placed);
         });
+
+        // Re-attach children to their parents in the Three.js scene graph
+        placedObjects.forEach(obj => {
+            if (obj.parentId) {
+                const parentObj = placedObjects.find(p => p.id === obj.parentId);
+                if (parentObj?.mesh) {
+                    parentObj.mesh.attach(obj.mesh);
+                }
+            }
+        });
+        renderWorkspaceTree();
     }
 }
 
 export function deleteSelectedObject() {
     if (!selectedObject) return;
-    scene.remove(selectedObject.mesh);
-    csState.placedObjects = placedObjects.filter(p => p.id !== selectedObject!.id);
-    selectObject(null);
-    autoSaveDraft();
+    deleteObjectWithChildren(selectedObject);
 }
 
 export function updateInspectorDisplay() {
@@ -958,11 +974,30 @@ export function selectObject(placed: PlacedObject | null) {
         updateScriptInspectorDisplay(null);
         if (pullGizmoGroup) pullGizmoGroup.visible = false;
         if (moveGizmoGroup) moveGizmoGroup.visible = false;
+        renderWorkspaceTree();
         return;
     }
 
     if (info) info.style.display = 'none';
     if (props) props.style.display = 'block';
+
+    const nameInp = document.getElementById('obj-name-input') as HTMLInputElement | null;
+    if (nameInp) {
+        nameInp.value = placed.name || 'Part';
+    }
+
+    const parentSelect = document.getElementById('obj-parent-select') as HTMLSelectElement | null;
+    if (parentSelect) {
+        const descendantIds = getDescendantIds(placed.id);
+        let html = '<option value="none">🌐 Workspace (Juurtase)</option>';
+        placedObjects.forEach(other => {
+            if (other.id !== placed.id && !descendantIds.has(other.id)) {
+                const isSelected = other.id === placed.parentId ? 'selected' : '';
+                html += `<option value="${other.id}" ${isSelected}>${other.name || 'Part'}</option>`;
+            }
+        });
+        parentSelect.innerHTML = html;
+    }
 
     updateInspectorDisplay();
     updateScriptInspectorDisplay(placed);
@@ -1039,6 +1074,7 @@ export function selectObject(placed: PlacedObject | null) {
     } else if (moveGizmoGroup) {
         moveGizmoGroup.visible = false;
     }
+    renderWorkspaceTree();
 }
 
 export function setObjectPassable(obj: PlacedObject, isPassable: boolean) {
@@ -2515,16 +2551,7 @@ export function setupInspectorEvents() {
     if (dupBtn) {
         dupBtn.addEventListener('click', () => {
             if (selectedObject) {
-                const catItem = CATALOG_DATABASE.find(c => c.id === selectedObject!.catalogId) || {
-                    id: selectedObject.catalogId,
-                    name: selectedObject.name,
-                    category: selectedObject.category as any,
-                    icon: '📦',
-                    color: selectedObject.color,
-                    geometryType: 'prop',
-                    baseScale: selectedObject.scale.x
-                };
-                spawnObjectIntoScene(catItem);
+                duplicateObjectWithChildren(selectedObject);
             }
         });
     }
@@ -2559,6 +2586,7 @@ export function startNewEmptyGame(initialEnv: 'land' | 'sea' = 'land') {
     placedObjects.forEach(p => scene.remove(p.mesh));
     csState.placedObjects = [];
     selectObject(null);
+    renderWorkspaceTree();
     removeSea();
 
     if (initialEnv === 'sea') {

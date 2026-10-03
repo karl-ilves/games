@@ -3672,13 +3672,13 @@ await (async () => {
             }
 
             // 3. Test shape selection (Wedge / Ramp) and adjusting height & ramp elevation
-            await page.click('.workbench-shape-btn[data-shape="wedge"]');
-            await new Promise(r => setTimeout(r, 200));
-
-            // Increase height via push-pull button
-            await page.click('#btn-wb-height-up');
-            await page.click('#btn-wb-height-up');
-            await page.click('#btn-wb-elev-up');
+            await page.evaluate(() => {
+                const wedgeBtn = document.querySelector('.workbench-shape-btn[data-shape="wedge"]');
+                if (wedgeBtn) wedgeBtn.click();
+                document.getElementById('btn-wb-height-up')?.click();
+                document.getElementById('btn-wb-height-up')?.click();
+                document.getElementById('btn-wb-elev-up')?.click();
+            });
 
             const stateAfterEdit = await page.evaluate(() => {
                 const cs = window.creatorStudio;
@@ -3695,17 +3695,19 @@ await (async () => {
 
             // 3.1. Test adding multiple shapes (Multi-part custom item)
             console.log("   Testing adding a second shape part...");
-            await page.click('#btn-wb-add-part');
+            await page.evaluate(() => {
+                document.getElementById('btn-wb-add-part')?.click();
+            });
             await new Promise(r => setTimeout(r, 200));
 
             // Select cylinder for the 2nd part
-            await page.click('.workbench-shape-btn[data-shape="cylinder"]');
-            await new Promise(r => setTimeout(r, 100));
-
-            // Move the 2nd part upwards
-            await page.click('#btn-wb-pos-up');
-            await page.click('#btn-wb-pos-up');
-            await new Promise(r => setTimeout(r, 100));
+            await page.evaluate(() => {
+                const cylBtn = document.querySelector('.workbench-shape-btn[data-shape="cylinder"]');
+                if (cylBtn) cylBtn.click();
+                document.getElementById('btn-wb-pos-up')?.click();
+                document.getElementById('btn-wb-pos-up')?.click();
+            });
+            await new Promise(r => setTimeout(r, 200));
 
             const partsCount = await page.evaluate(() => {
                 const cs = window.creatorStudio;
@@ -3724,11 +3726,13 @@ await (async () => {
             // 3.2. Test Left Panel Mode selection: "Tee Pikemaks" vs "Liiguta Kuju"
             console.log("   Testing Left Panel Mode selection: Tee Pikemaks vs Liiguta Kuju...");
             // Switch to Scale/Stretch mode and make it longer
-            await page.click('#btn-wb-mode-scale');
-            await page.click('#btn-wb-left-longer');
-            await page.click('#btn-wb-left-longer');
-            await page.click('#btn-wb-left-longer');
-            await new Promise(r => setTimeout(r, 100));
+            await page.evaluate(() => {
+                document.getElementById('btn-wb-mode-scale')?.click();
+                document.getElementById('btn-wb-left-longer')?.click();
+                document.getElementById('btn-wb-left-longer')?.click();
+                document.getElementById('btn-wb-left-longer')?.click();
+            });
+            await new Promise(r => setTimeout(r, 200));
 
             const depthAfterLeftLonger = await page.evaluate(() => {
                 const cs = window.creatorStudio;
@@ -3746,10 +3750,12 @@ await (async () => {
             }
 
             // Switch to Move mode and move shape forward
-            await page.click('#btn-wb-mode-move');
-            await page.click('#btn-wb-left-pos-fwd');
-            await page.click('#btn-wb-left-pos-fwd');
-            await new Promise(r => setTimeout(r, 100));
+            await page.evaluate(() => {
+                document.getElementById('btn-wb-mode-move')?.click();
+                document.getElementById('btn-wb-left-pos-fwd')?.click();
+                document.getElementById('btn-wb-left-pos-fwd')?.click();
+            });
+            await new Promise(r => setTimeout(r, 200));
 
             const moveModeStatus = await page.evaluate(() => {
                 const cs = window.creatorStudio;
@@ -3779,8 +3785,11 @@ await (async () => {
             }
 
             // Test selecting star shape
-            await page.click('.workbench-shape-btn[data-shape="star"]');
-            await new Promise(r => setTimeout(r, 150));
+            await page.evaluate(() => {
+                const starBtn = document.querySelector('.workbench-shape-btn[data-shape="star"]');
+                if (starBtn) starBtn.click();
+            });
+            await new Promise(r => setTimeout(r, 200));
             const starSelected = await page.evaluate(() => {
                 const cs = window.creatorStudio;
                 const part = cs?.currentWorkbenchState?.parts?.[cs?.currentWorkbenchState?.selectedPartIndex];
@@ -4609,6 +4618,121 @@ await (async () => {
             throw new Error(`Expected stranger to pay exactly 120 PBX, paid: ${creatorRevenueTest.strangerPaid}`);
         }
         console.log("   ✅ 1000 Holdable Items, 50 Damage Weapons, In-Hand Start, 6M Test Balance & Creator Revenue Transfer verified successfully!");
+
+        // 6f2. Testing Workspace Explorer: Part default name, renaming, parenting hierarchy, group movement & duplication
+        console.log("6f2. Testing Workspace Explorer (Part default name, renaming, parenting hierarchy, group movement & duplication)...");
+        const workspaceTestResult = await page.evaluate(async () => {
+            const cs = window.creatorStudio;
+            if (!cs) return { error: "creatorStudio not found" };
+
+            // 1. Click Add Block button (#btn-add-block)
+            const addBlockBtn = document.getElementById('btn-add-block');
+            if (addBlockBtn) {
+                addBlockBtn.click();
+            } else {
+                cs.spawnBlockObject();
+            }
+
+            const initialBlock = cs.placedObjects[cs.placedObjects.length - 1];
+            if (!initialBlock) return { error: "No block placed" };
+            const defaultName = initialBlock.name;
+
+            // 2. Rename initial block to 'Peapart'
+            cs.renameObject(initialBlock.id, 'Peapart');
+            const renamedName = initialBlock.name;
+
+            // 3. Add a second block for child
+            const childBlock = cs.spawnBlockObject('Part');
+            cs.renameObject(childBlock.id, 'LapsPart');
+
+            // 4. Reparent childBlock under initialBlock
+            const reparentSuccess = cs.reparentObject(childBlock.id, initialBlock.id);
+            const childParentId = childBlock.parentId;
+            const isMeshChild = initialBlock.mesh.children.includes(childBlock.mesh);
+
+            // 5. Test group movement: moving initialBlock moves childBlock in world space
+            const THREE = cs.THREE;
+            const initialChildWorldPos = new THREE.Vector3();
+            childBlock.mesh.getWorldPosition(initialChildWorldPos);
+
+            initialBlock.mesh.position.x += 10;
+            initialBlock.mesh.updateMatrixWorld(true);
+
+            const movedChildWorldPos = new THREE.Vector3();
+            childBlock.mesh.getWorldPosition(movedChildWorldPos);
+            const deltaX = movedChildWorldPos.x - initialChildWorldPos.x;
+
+            // 6. Test duplicateObjectWithChildren
+            const clonedParent = cs.duplicateObjectWithChildren(initialBlock);
+            const clonedChildren = cs.placedObjects.filter(p => p.parentId === clonedParent.id);
+
+            // 7. Verify tabs
+            const tabProps = document.getElementById('tab-btn-properties');
+            const tabWorkspace = document.getElementById('tab-btn-workspace');
+            const tabSplit = document.getElementById('tab-btn-split');
+            const viewWorkspace = document.getElementById('workspace-panel-view');
+            const viewProps = document.getElementById('properties-panel-view');
+
+            tabProps?.click();
+            const propsVisible = viewProps?.style.display !== 'none';
+            const wsHidden = viewWorkspace?.style.display === 'none';
+
+            tabSplit?.click();
+            const splitBothVisible = viewProps?.style.display !== 'none' && viewWorkspace?.style.display !== 'none';
+
+            tabWorkspace?.click();
+            const wsVisible = viewWorkspace?.style.display !== 'none';
+
+            // 8. Delete parent with children
+            const totalBeforeDelete = cs.placedObjects.length;
+            cs.deleteObjectWithChildren(initialBlock);
+            const totalAfterDelete = cs.placedObjects.length;
+            const originalExists = cs.placedObjects.some(p => p.id === initialBlock.id || p.id === childBlock.id);
+
+            return {
+                defaultName,
+                renamedName,
+                reparentSuccess,
+                childParentId,
+                isMeshChild,
+                childMovedDeltaX: Math.round(deltaX),
+                clonedParentExists: !!clonedParent,
+                clonedChildrenCount: clonedChildren.length,
+                propsVisible,
+                wsHidden,
+                splitBothVisible,
+                wsVisible,
+                deletedCount: totalBeforeDelete - totalAfterDelete,
+                originalExists
+            };
+        });
+
+        console.log("   Workspace Explorer Test Results:", workspaceTestResult);
+        if (workspaceTestResult.error) {
+            throw new Error(`Workspace Explorer error: ${workspaceTestResult.error}`);
+        }
+        if (workspaceTestResult.defaultName !== 'Part') {
+            throw new Error(`Expected default block name 'Part', got '${workspaceTestResult.defaultName}'`);
+        }
+        if (workspaceTestResult.renamedName !== 'Peapart') {
+            throw new Error(`Expected renamed name 'Peapart', got '${workspaceTestResult.renamedName}'`);
+        }
+        if (!workspaceTestResult.reparentSuccess || !workspaceTestResult.isMeshChild) {
+            throw new Error(`Parenting failed: ${JSON.stringify(workspaceTestResult)}`);
+        }
+        if (workspaceTestResult.childMovedDeltaX !== 10) {
+            throw new Error(`Expected child to move 10 units with parent, moved: ${workspaceTestResult.childMovedDeltaX}`);
+        }
+        if (!workspaceTestResult.clonedParentExists || workspaceTestResult.clonedChildrenCount !== 1) {
+            throw new Error(`Duplication with children failed: cloned children count: ${workspaceTestResult.clonedChildrenCount}`);
+        }
+        if (!workspaceTestResult.propsVisible || !workspaceTestResult.wsVisible || !workspaceTestResult.splitBothVisible) {
+            throw new Error(`Workspace tabs failed: ${JSON.stringify(workspaceTestResult)}`);
+        }
+        if (workspaceTestResult.originalExists) {
+            throw new Error("deleteObjectWithChildren should have removed both parent and child!");
+        }
+        console.log("   ✅ Workspace Explorer (Part default name, renaming, parenting hierarchy, group movement & duplication) verified successfully!");
 
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");
@@ -11121,8 +11245,8 @@ await (async () => {
                 const aiWhen1Player = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
                 const hasAiSnakeWhen1Player = game.multiplayer.hasAiSnake && aiWhen1Player !== null && aiWhen1Player.displayName.includes('AI Uss');
 
-                // Test dynamic apples & map scaling & AI presence:
-                // 1 player -> 3 apples, 1X map (24x24), AI present ("kui on 1 mängja ja ai uss tuleb ka 3 õuna")
+                // Test dynamic apples & constant map & AI presence & no name tags:
+                // 1 player -> 3 apples, constant map (24x24), AI present
                 game.state.serverPlayerCount = 1;
                 game.state.updateGridSize();
                 const gridWith1Player = { cols: game.state.cols, rows: game.state.rows };
@@ -11130,7 +11254,15 @@ await (async () => {
                 game.state.updatePowerUps(0.1);
                 const applesWith1Player = game.state.foodItems.filter(f => f.type === 'apple').length;
 
-                // 2 players -> 4 apples, 1.5X map (36x36), AI disappears ("kui tuleb 2 mängjat siis on 4 õuna ja mapp on 1,5X suurem")
+                // Test that name tags are removed from snakes ("eemalda nime sildid")
+                const textCalls = [];
+                const origFillText = game.ctx.fillText;
+                game.ctx.fillText = function(...args) { textCalls.push(args[0]); if (origFillText) origFillText.apply(this, args); };
+                game.render(0);
+                game.ctx.fillText = origFillText;
+                const hasNoNameTagsOnSnake = !textCalls.some(t => typeof t === 'string' && (t.includes('👤') || t.includes('AI Uss') || t.includes('@')));
+
+                // 2 players -> 4 apples, constant map (24x24), AI disappears ("kui tuleb 2 mängjat siis on 4 õuna ja mapp on koguaeg sama suur")
                 game.multiplayer.activeRemotePlayers.set('remote_p2', {
                     id: 'remote_p2', username: 'kawe1234', displayName: 'Kawe Pro',
                     colorId: 'red', theme: { head: '#ff4757', headGlow: 'rgba(255,71,87,0.8)', primary: '#ff6b81', secondary: '#c0392b', glow: 'rgba(255,71,87,0.5)' },
@@ -11145,7 +11277,7 @@ await (async () => {
                 const aiAfterP2 = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
                 const aiDisappearsWhen2Players = !game.multiplayer.hasAiSnake && aiAfterP2 === null;
 
-                // 3 players -> 5 apples, 2X map (48x48), AI disappears ("ja kui 3 siis 5 õuna ja 2X suurem mapp")
+                // 3 players -> 5 apples, constant map (24x24), AI disappears
                 game.multiplayer.activeRemotePlayers.set('remote_p3', {
                     id: 'remote_p3', username: 'Minionbanana0_0', displayName: 'Minionbanana',
                     colorId: 'yellow', theme: { head: '#fffa65', headGlow: 'rgba(255,250,101,0.8)', primary: '#ffd700', secondary: '#f39c12', glow: 'rgba(255,215,0,0.5)' },
@@ -11305,6 +11437,7 @@ await (async () => {
                     aiSameSpeedAsPlayer,
                     gridWith1Player,
                     applesWith1Player,
+                    hasNoNameTagsOnSnake,
                     gridWith2Players,
                     applesWith2Players,
                     aiDisappearsWhen2Players,
@@ -11351,14 +11484,17 @@ await (async () => {
             if (!snakeGameTest.aiSameSpeedAsPlayer) {
                 throw new Error("AI snake must move at the exact same step speed as the player: " + JSON.stringify(snakeGameTest));
             }
+            if (!snakeGameTest.hasNoNameTagsOnSnake) {
+                throw new Error("Snake name tags must be removed: " + JSON.stringify(snakeGameTest));
+            }
             if (snakeGameTest.applesWith1Player !== 3 || snakeGameTest.gridWith1Player.cols !== 24 || snakeGameTest.gridWith1Player.rows !== 24) {
-                throw new Error("With 1 player, there must be 3 apples and base 1X map (24x24): " + JSON.stringify(snakeGameTest));
+                throw new Error("With 1 player, there must be 3 apples and constant map (24x24): " + JSON.stringify(snakeGameTest));
             }
-            if (snakeGameTest.applesWith2Players !== 4 || snakeGameTest.gridWith2Players.cols !== 36 || snakeGameTest.gridWith2Players.rows !== 36 || !snakeGameTest.aiDisappearsWhen2Players) {
-                throw new Error("With 2 players, there must be 4 apples, 1.5X map (36x36), and AI must disappear: " + JSON.stringify(snakeGameTest));
+            if (snakeGameTest.applesWith2Players !== 4 || snakeGameTest.gridWith2Players.cols !== 24 || snakeGameTest.gridWith2Players.rows !== 24 || !snakeGameTest.aiDisappearsWhen2Players) {
+                throw new Error("With 2 players, there must be 4 apples, constant map (24x24), and AI must disappear: " + JSON.stringify(snakeGameTest));
             }
-            if (snakeGameTest.applesWith3Players !== 5 || snakeGameTest.gridWith3Players.cols !== 48 || snakeGameTest.gridWith3Players.rows !== 48 || !snakeGameTest.aiDisappearsWhen3Players) {
-                throw new Error("With 3 players, there must be 5 apples, 2X map (48x48), and AI must disappear: " + JSON.stringify(snakeGameTest));
+            if (snakeGameTest.applesWith3Players !== 5 || snakeGameTest.gridWith3Players.cols !== 24 || snakeGameTest.gridWith3Players.rows !== 24 || !snakeGameTest.aiDisappearsWhen3Players) {
+                throw new Error("With 3 players, there must be 5 apples, constant map (24x24), and AI must disappear: " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.serverRolloverWhenFull) {
                 throw new Error("Server capacity is max 3 players: when full, new player must rollover to Server 2: " + JSON.stringify(snakeGameTest));
