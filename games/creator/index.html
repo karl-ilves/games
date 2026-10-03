@@ -211,16 +211,20 @@
             position: absolute;
             top: 70px;
             right: 20px;
-            width: 270px;
-            background: rgba(20, 27, 36, 0.92);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 380px;
+            max-width: calc(100vw - 30px);
+            background: rgba(18, 25, 38, 0.96);
+            backdrop-filter: blur(16px);
+            border: 1.5px solid rgba(0, 242, 254, 0.35);
             border-radius: 16px;
-            z-index: 100;
-            padding: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            max-height: calc(100vh - 100px);
-            overflow-y: auto;
+            z-index: 1050;
+            padding: 14px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 242, 254, 0.15);
+            max-height: calc(100vh - 90px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: opacity 0.2s, transform 0.2s;
         }
         .inspector-panel h4 {
             margin: 0 0 10px 0;
@@ -330,23 +334,6 @@
             color: #111;
             transform: scale(0.92);
         }
-
-        /* Controls Help Tooltip */
-        .controls-tooltip {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(6px);
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            color: #00f2fe;
-            pointer-events: none;
-            z-index: 90;
-            border: 1px solid rgba(0, 242, 254, 0.3);
-        }
     </style>
 </head>
 <body>
@@ -399,6 +386,9 @@
             </button>
             <button id="btn-add-block" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; box-shadow: 0 4px 14px rgba(0,242,254,0.4);">
                 <span>Add Block</span>
+            </button>
+            <button id="btn-toggle-workspace" class="btn-studio" title="Ava / peida Workspace Exploreri aken" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(59, 130, 246, 0.25)); border: 1.5px solid #00f2fe; color: #00f2fe; font-weight: 800; box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);">
+                <span>🌐</span> <span>Workspace</span>
             </button>
             <button id="btn-create-custom-item" style="display: none;"></button>
             <button id="btn-toggle-play-test" class="btn-studio btn-play-test">
@@ -678,34 +668,37 @@
 
     <!-- Right Inspector & Game Settings -->
     <!-- Right Inspector & Workspace Panel -->
-    <div class="inspector-panel" id="inspector-panel" style="width: 290px;">
-        <!-- Top Tabs Switcher: Workspace vs Properties vs Split -->
-        <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 3px; border-radius: 10px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">
-            <button id="tab-btn-workspace" class="btn-studio active" style="flex: 1; justify-content: center; padding: 6px 4px; font-size: 0.78rem; font-weight: bold; border-radius: 8px;">
+    <div class="inspector-panel" id="inspector-panel">
+        <!-- Top Tabs Switcher: Workspace vs Properties vs Split & Close Button -->
+        <div style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.45); padding: 4px; border-radius: 10px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">
+            <button id="tab-btn-workspace" class="btn-studio" style="flex: 1; justify-content: center; padding: 7px 8px; font-size: 0.82rem; font-weight: bold; border-radius: 8px; background: transparent; border-color: transparent; color: #94a3b8;">
                 🌐 Workspace (<span id="workspace-count">0</span>)
             </button>
-            <button id="tab-btn-properties" class="btn-studio" style="flex: 1; justify-content: center; padding: 6px 4px; font-size: 0.78rem; font-weight: bold; border-radius: 8px; background: transparent; border-color: transparent; color: #94a3b8;">
+            <button id="tab-btn-properties" class="btn-studio" style="flex: 1; justify-content: center; padding: 7px 8px; font-size: 0.82rem; font-weight: bold; border-radius: 8px; background: transparent; border-color: transparent; color: #94a3b8;">
                 ⚙️ Properties
             </button>
-            <button id="tab-btn-split" class="btn-studio" style="padding: 6px 8px; font-size: 0.75rem; font-weight: bold; border-radius: 8px; background: transparent; border-color: transparent; color: #94a3b8;" title="Näita mõlemat korraga (Split)">
-                ↕️
+            <button id="tab-btn-split" class="btn-studio active" style="padding: 7px 10px; font-size: 0.8rem; font-weight: bold; border-radius: 8px;" title="Näita mõlemat korraga (Split)">
+                ↕️ Split
+            </button>
+            <button id="btn-close-inspector" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0; font-size: 0.95rem; font-weight: bold; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; margin-left: 2px;" title="Sulge paneel (Close)">
+                ✕
             </button>
         </div>
 
         <!-- 1. Workspace Explorer View -->
-        <div id="workspace-panel-view" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+        <div id="workspace-panel-view" style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.8rem; font-weight: 800; color: #00f2fe; text-transform: uppercase; letter-spacing: 0.5px;">Explorer / Puu</span>
-                <span style="font-size: 0.7rem; color: #94a3b8;">Lohista asju teiste alla</span>
+                <span style="font-size: 0.82rem; font-weight: 800; color: #00f2fe; text-transform: uppercase; letter-spacing: 0.5px;">Explorer / Puu</span>
+                <span style="font-size: 0.72rem; color: #94a3b8;">Lohista asju teiste alla</span>
             </div>
-            <input type="text" id="workspace-search-input" placeholder="Otsi objekte Workspace'is..." style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: #131920; border: 1px solid #485460; border-radius: 6px; color: white; font-size: 0.78rem; outline: none;">
-            <div id="workspace-tree-container" style="max-height: 260px; overflow-y: auto; background: rgba(10, 14, 20, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 6px; display: flex; flex-direction: column;">
+            <input type="text" id="workspace-search-input" placeholder="Otsi objekte Workspace'is..." style="width: 100%; box-sizing: border-box; padding: 7px 10px; background: #131920; border: 1px solid #485460; border-radius: 6px; color: white; font-size: 0.82rem; outline: none;">
+            <div id="workspace-tree-container" style="flex: 1; min-height: 240px; max-height: 320px; overflow-y: auto; background: rgba(10, 14, 20, 0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 2px;">
                 <!-- Dynamically populated hierarchical tree -->
             </div>
         </div>
 
         <!-- 2. Properties View -->
-        <div id="properties-panel-view" style="display: block;">
+        <div id="properties-panel-view" style="display: block; overflow-y: auto; max-height: calc(100vh - 170px); padding-right: 4px;">
             <h4>Game Settings</h4>
             <div class="prop-row">
                 <label>Game Title:</label>
@@ -1857,11 +1850,6 @@
                 <span><strong style="color: #2ecc71;">Rullik:</strong> suumib</span>
             </div>
         </div>
-    </div>
-
-    <!-- Controls Tooltip -->
-    <div class="controls-tooltip" id="controls-tooltip" style="bottom: 70px;">
-        <strong>Click Object:</strong> Drag to Move | <strong>R Key:</strong> Rotate | <strong>D / Del Key:</strong> Delete Object | <strong>Arrow Keys / WASD:</strong> Move View
     </div>
 
     <script type="module" src="/src/games/creator/main.ts"></script>

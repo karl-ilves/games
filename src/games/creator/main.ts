@@ -81,8 +81,8 @@ export { updateAiAssistantLocalization, updateAiTierDisplay, setupAiAssistantEve
 import { serializeCurrentScene, autoSaveDraft, saveCurrentGame, captureSceneSnapshot, processImageFile, setPublishModalThumbnail, clearPublishModalThumbnail, setCheatersConfirmed, openPublishModal, closePublishModal, confirmAndPublishGame, publishCurrentGame, loadSceneFromData, deleteSelectedObject, setObjectPassable, renderCatalogUI, setupStudioEvents, setupCatalogEvents, setupInspectorEvents, startNewEmptyGame, renderMySavedGamesModal, restoreDraftOrFeedbackGame } from './ui/creatorUI';
 export { serializeCurrentScene, autoSaveDraft, saveCurrentGame, captureSceneSnapshot, processImageFile, setPublishModalThumbnail, clearPublishModalThumbnail, setCheatersConfirmed, openPublishModal, closePublishModal, confirmAndPublishGame, publishCurrentGame, loadSceneFromData, deleteSelectedObject, setObjectPassable, startNewEmptyGame, renderMySavedGamesModal };
 
-import { setupWorkspaceEvents, renderWorkspaceTree, reparentObject, renameObject, duplicateObjectWithChildren, deleteObjectWithChildren, getDescendantIds } from './ui/workspaceExplorer';
-export { setupWorkspaceEvents, renderWorkspaceTree, reparentObject, renameObject, duplicateObjectWithChildren, deleteObjectWithChildren, getDescendantIds };
+import { setupWorkspaceEvents, renderWorkspaceTree, reparentObject, renameObject, duplicateObjectWithChildren, deleteObjectWithChildren, getDescendantIds, toggleWorkspacePanel } from './ui/workspaceExplorer';
+export { setupWorkspaceEvents, renderWorkspaceTree, reparentObject, renameObject, duplicateObjectWithChildren, deleteObjectWithChildren, getDescendantIds, toggleWorkspacePanel };
 
 import { updateOrbitCamera } from './ui/orbitCamera';
 import { animate } from './systems/studioLoop';

@@ -57,7 +57,7 @@ await (async () => {
             '--ignore-gpu-blocklist',
             '--disable-gpu-process-crash-limit',
             '--disable-features=IsolateOrigins,site-per-process',
-            '--js-flags=--max-old-space-size=2048'
+            '--js-flags=--max-old-space-size=4096'
         ]
     });
     const page = await browser.newPage();
@@ -4666,7 +4666,12 @@ await (async () => {
             const clonedParent = cs.duplicateObjectWithChildren(initialBlock);
             const clonedChildren = cs.placedObjects.filter(p => p.parentId === clonedParent.id);
 
-            // 7. Verify tabs
+            // 7. Verify tabs & panel dimensions
+            const panelEl = document.getElementById('inspector-panel');
+            const toggleWsBtn = document.getElementById('btn-toggle-workspace');
+            const closeInspBtn = document.getElementById('btn-close-inspector');
+            const tooltipRemoved = document.getElementById('controls-tooltip') === null;
+
             const tabProps = document.getElementById('tab-btn-properties');
             const tabWorkspace = document.getElementById('tab-btn-workspace');
             const tabSplit = document.getElementById('tab-btn-split');
@@ -4682,6 +4687,14 @@ await (async () => {
 
             tabWorkspace?.click();
             const wsVisible = viewWorkspace?.style.display !== 'none';
+
+            // Test close button
+            closeInspBtn?.click();
+            const closedByButton = panelEl?.style.display === 'none';
+
+            // Test top bar toggle button opens it in front
+            toggleWsBtn?.click();
+            const openedByToggle = panelEl?.style.display !== 'none';
 
             // 8. Delete parent with children
             const totalBeforeDelete = cs.placedObjects.length;
@@ -4702,6 +4715,12 @@ await (async () => {
                 wsHidden,
                 splitBothVisible,
                 wsVisible,
+                tooltipRemoved,
+                hasToggleBtn: !!toggleWsBtn,
+                hasCloseBtn: !!closeInspBtn,
+                closedByButton,
+                openedByToggle,
+                panelWidth: panelEl?.offsetWidth,
                 deletedCount: totalBeforeDelete - totalAfterDelete,
                 originalExists
             };
@@ -4732,7 +4751,19 @@ await (async () => {
         if (workspaceTestResult.originalExists) {
             throw new Error("deleteObjectWithChildren should have removed both parent and child!");
         }
-        console.log("   ✅ Workspace Explorer (Part default name, renaming, parenting hierarchy, group movement & duplication) verified successfully!");
+        if (!workspaceTestResult.tooltipRemoved) {
+            throw new Error("Expected controls-tooltip to be removed from Creator Studio!");
+        }
+        if (!workspaceTestResult.hasToggleBtn || !workspaceTestResult.hasCloseBtn) {
+            throw new Error("Expected top bar toggle button and inspector close button to exist!");
+        }
+        if (!workspaceTestResult.closedByButton || !workspaceTestResult.openedByToggle) {
+            throw new Error("Workspace toggle / close button behavior failed!");
+        }
+        if (workspaceTestResult.panelWidth < 350) {
+            throw new Error(`Expected larger Workspace panel (width >= 350px), got: ${workspaceTestResult.panelWidth}`);
+        }
+        console.log("   ✅ Workspace Explorer (Part default name, renaming, parenting hierarchy, group movement, duplication, enlarged panel & toggle/close buttons) verified successfully!");
 
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");
@@ -12063,72 +12094,82 @@ await (async () => {
 
             // 22o. Test Universal Omniscient Q&A and Universal Creation
             console.log("   Testing Universal Omniscient Q&A (Math, Geography, Physics) & Universal Creation (Robots, Tanks, Dinosaurs)...");
-            const qaResults = await page.evaluate(async () => {
+            const hasMath = await page.evaluate(async () => {
                 const ai = window.playardAi;
-
-                // 1. Math computation
                 await ai.handleUserInput('Palju on 25 * 4');
-                await new Promise(r => setTimeout(r, 200));
-                let msgs = ai.state.getMessages();
-                const mathReply = msgs[msgs.length - 1]?.text || '';
-                const hasMath = mathReply.includes('100');
-
-                // 2. Geography: Estonia
-                await ai.handleUserInput('Mis on Eesti pealinn ja info?');
-                await new Promise(r => setTimeout(r, 200));
-                msgs = ai.state.getMessages();
-                const geoReply = msgs[msgs.length - 1]?.text || '';
-                const hasGeo = geoReply.includes('Tallinn') && geoReply.includes('Eesti Vabariik');
-
-                // 3. Physics: Speed of light
-                await ai.handleUserInput('Mis on valguse kiirus?');
-                await new Promise(r => setTimeout(r, 200));
-                msgs = ai.state.getMessages();
-                const physReply = msgs[msgs.length - 1]?.text || '';
-                const hasPhys = physReply.includes('299 792 458 m/s') || physReply.includes('300 000 km/s');
-
-                // 4. Universal Semantic Fallback for arbitrary question
-                await ai.handleUserInput('Kuidas tekivad mustad augud kosmoses?');
-                await new Promise(r => setTimeout(r, 200));
-                msgs = ai.state.getMessages();
-                const fallReply = msgs[msgs.length - 1]?.text || '';
-                const hasFallback = fallReply.includes('Must auk') || fallReply.includes('Playard Teadmistebaas');
-
-                return { hasMath, hasGeo, hasPhys, hasFallback };
+                await new Promise(r => setTimeout(r, 100));
+                const msgs = ai.state.getMessages();
+                return (msgs[msgs.length - 1]?.text || '').includes('100');
             });
+            await new Promise(r => setTimeout(r, 150));
 
-            await new Promise(r => setTimeout(r, 300));
-
-            const creationResults = await page.evaluate(async () => {
+            const hasGeo = await page.evaluate(async () => {
                 const ai = window.playardAi;
-
-                // 5. Universal Creation: Robot battle arena
-                await ai.handleUserInput('Ehita hiiglaslik robotite lahinguareen');
-                await new Promise(r => setTimeout(r, 400));
-                let scene = ai.state.getActiveScene();
-                const hasRobot = scene?.objects?.some(o => o.type === 'robot');
-
-                // 6. Universal Creation: Dinosaur jungle
-                await ai.handleUserInput('Tee dinosauruste saar ja vulkaan');
-                await new Promise(r => setTimeout(r, 400));
-                scene = ai.state.getActiveScene();
-                const hasDino = scene?.objects?.some(o => o.type === 'dinosaur');
-                const hasVolcano = scene?.objects?.some(o => o.type === 'volcano');
-
-                // 7. Universal Creation: Tank battlefield
-                await ai.handleUserInput('Loo raske tankilahing');
-                await new Promise(r => setTimeout(r, 400));
-                scene = ai.state.getActiveScene();
-                const hasTank = scene?.objects?.some(o => o.type === 'tank');
-
-                // 8. Add object: Ufo
-                await ai.handleUserInput('Lisa tulnukate ufo');
-                await new Promise(r => setTimeout(r, 300));
-                scene = ai.state.getActiveScene();
-                const hasUfo = scene?.objects?.some(o => o.type === 'ufo');
-
-                return { hasRobot, hasDino, hasVolcano, hasTank, hasUfo };
+                await ai.handleUserInput('Mis on Eesti pealinn ja info?');
+                await new Promise(r => setTimeout(r, 100));
+                const msgs = ai.state.getMessages();
+                const text = msgs[msgs.length - 1]?.text || '';
+                return text.includes('Tallinn') && text.includes('Eesti Vabariik');
             });
+            await new Promise(r => setTimeout(r, 150));
+
+            const hasPhys = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('Mis on valguse kiirus?');
+                await new Promise(r => setTimeout(r, 100));
+                const msgs = ai.state.getMessages();
+                const text = msgs[msgs.length - 1]?.text || '';
+                return text.includes('299 792 458 m/s') || text.includes('300 000 km/s');
+            });
+            await new Promise(r => setTimeout(r, 150));
+
+            const hasFallback = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('Kuidas tekivad mustad augud kosmoses?');
+                await new Promise(r => setTimeout(r, 100));
+                const msgs = ai.state.getMessages();
+                const text = msgs[msgs.length - 1]?.text || '';
+                return text.includes('Must auk') || text.includes('Playard Teadmistebaas');
+            });
+            await new Promise(r => setTimeout(r, 150));
+
+            const qaResults = { hasMath, hasGeo, hasPhys, hasFallback };
+
+            const hasRobot = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('Ehita hiiglaslik robotite lahinguareen');
+                await new Promise(r => setTimeout(r, 200));
+                const scene = ai.state.getActiveScene();
+                return scene?.objects?.some(o => o.type === 'robot');
+            });
+            await new Promise(r => setTimeout(r, 150));
+
+            const { hasDino, hasVolcano } = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('Tee dinosauruste saar ja vulkaan');
+                await new Promise(r => setTimeout(r, 200));
+                const scene = ai.state.getActiveScene();
+                return {
+                    hasDino: scene?.objects?.some(o => o.type === 'dinosaur'),
+                    hasVolcano: scene?.objects?.some(o => o.type === 'volcano')
+                };
+            });
+            await new Promise(r => setTimeout(r, 150));
+
+            const { hasTank, hasUfo } = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                await ai.handleUserInput('Loo raske tankilahing');
+                await new Promise(r => setTimeout(r, 200));
+                await ai.handleUserInput('Lisa tulnukate ufo');
+                await new Promise(r => setTimeout(r, 200));
+                const scene = ai.state.getActiveScene();
+                return {
+                    hasTank: scene?.objects?.some(o => o.type === 'tank'),
+                    hasUfo: scene?.objects?.some(o => o.type === 'ufo')
+                };
+            });
+
+            const creationResults = { hasRobot, hasDino, hasVolcano, hasTank, hasUfo };
 
             const omniTest = { ...qaResults, ...creationResults };
             console.log("   Universal Omniscient & Creation Test Results:", omniTest);

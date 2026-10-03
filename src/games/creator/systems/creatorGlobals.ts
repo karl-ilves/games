@@ -29,7 +29,8 @@ import {
     renameObject,
     duplicateObjectWithChildren,
     deleteObjectWithChildren,
-    getDescendantIds
+    getDescendantIds,
+    toggleWorkspacePanel
 } from '../ui/workspaceExplorer';
 import {
     executeAiBuild, loadAiSchoolMemory, saveAiSchoolMemory,
@@ -174,6 +175,7 @@ export function setupCreatorGlobals() {
         renameObject,
         duplicateObjectWithChildren,
         deleteObjectWithChildren,
-        getDescendantIds
+        getDescendantIds,
+        toggleWorkspacePanel
     };
 }

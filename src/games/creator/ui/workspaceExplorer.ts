@@ -644,11 +644,23 @@ export function setupWorkspaceEvents() {
         if (tabProps) tabProps.classList.toggle('active', tab === 'props');
         if (tabSplit) tabSplit.classList.toggle('active', tab === 'split');
 
+        const treeContainer = document.getElementById('workspace-tree-container');
+
         if (viewWorkspace) {
             viewWorkspace.style.display = (tab === 'workspace' || tab === 'split') ? 'flex' : 'none';
         }
         if (viewProps) {
             viewProps.style.display = (tab === 'props' || tab === 'split') ? 'block' : 'none';
+        }
+
+        if (treeContainer) {
+            if (tab === 'workspace') {
+                treeContainer.style.minHeight = '420px';
+                treeContainer.style.maxHeight = 'calc(100vh - 240px)';
+            } else if (tab === 'split') {
+                treeContainer.style.minHeight = '240px';
+                treeContainer.style.maxHeight = '320px';
+            }
         }
     }
 
@@ -677,6 +689,52 @@ export function setupWorkspaceEvents() {
         });
     }
 
+    // Top Bar Workspace Toggle Button & Close Button
+    const toggleBtn = document.getElementById('btn-toggle-workspace');
+    toggleBtn?.addEventListener('click', () => {
+        toggleWorkspacePanel();
+    });
+
+    const closeBtn = document.getElementById('btn-close-inspector');
+    closeBtn?.addEventListener('click', () => {
+        toggleWorkspacePanel(false);
+    });
+
     // Initial render
     renderWorkspaceTree();
+}
+
+/**
+ * Toggles the Workspace Explorer / Inspector panel open in front or closed.
+ */
+export function toggleWorkspacePanel(forceOpen?: boolean) {
+    const panel = document.getElementById('inspector-panel');
+    const toggleBtn = document.getElementById('btn-toggle-workspace');
+    const tabWorkspace = document.getElementById('tab-btn-workspace');
+    const tabSplit = document.getElementById('tab-btn-split');
+    if (!panel) return;
+
+    const isCurrentlyClosed = panel.style.display === 'none' || getComputedStyle(panel).display === 'none';
+
+    if (forceOpen === true || isCurrentlyClosed) {
+        panel.style.display = 'flex';
+        toggleBtn?.classList.add('active');
+        if (!tabSplit?.classList.contains('active')) {
+            const tabBtnWorkspace = document.getElementById('tab-btn-workspace') as HTMLElement | null;
+            tabBtnWorkspace?.click();
+        }
+    } else if (forceOpen === false) {
+        panel.style.display = 'none';
+        toggleBtn?.classList.remove('active');
+    } else {
+        if (tabWorkspace?.classList.contains('active') && !tabSplit?.classList.contains('active')) {
+            panel.style.display = 'none';
+            toggleBtn?.classList.remove('active');
+        } else {
+            panel.style.display = 'flex';
+            toggleBtn?.classList.add('active');
+            const tabBtnWorkspace = document.getElementById('tab-btn-workspace') as HTMLElement | null;
+            tabBtnWorkspace?.click();
+        }
+    }
 }
