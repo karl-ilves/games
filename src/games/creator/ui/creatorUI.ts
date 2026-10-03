@@ -2299,6 +2299,31 @@ export function setupStudioEvents() {
                 }
             }
         });
+
+        // Click-to-enlarge fullsize zoom lightbox for Publish Game cover
+        const previewImg = document.getElementById('publish-image-preview') as HTMLImageElement | null;
+        const zoomModal = document.getElementById('publish-image-zoom-modal');
+        const zoomImg = document.getElementById('publish-image-zoom-img') as HTMLImageElement | null;
+        const closeZoomBtn = document.getElementById('btn-close-publish-zoom');
+
+        if (previewImg && zoomModal && zoomImg) {
+            previewImg.style.cursor = 'zoom-in';
+            previewImg.title = 'Klõpsa suurelt vaatamiseks (Zoom in)';
+            previewImg.addEventListener('click', () => {
+                if (previewImg.src) {
+                    zoomImg.src = previewImg.src;
+                    zoomModal.style.display = 'flex';
+                }
+            });
+            closeZoomBtn?.addEventListener('click', () => {
+                zoomModal.style.display = 'none';
+            });
+            zoomModal.addEventListener('click', (e) => {
+                if (e.target === zoomModal) {
+                    zoomModal.style.display = 'none';
+                }
+            });
+        }
     }
 }
 

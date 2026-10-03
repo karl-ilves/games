@@ -929,24 +929,6 @@
         </div>
     </div>
 
-    <!-- Studio Camera & View Navigation Controls -->
-    <div id="studio-camera-controls" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(20,27,36,0.92); border: 1.5px solid rgba(0,242,254,0.35); border-radius: 30px; padding: 6px 16px; display: flex; align-items: center; gap: 10px; z-index: 100; box-shadow: 0 8px 25px rgba(0,0,0,0.5);">
-        <span style="font-size: 0.8rem; font-weight: bold; color: #00f2fe; white-space: nowrap;">Move Camera (Arrows / WASD):</span>
-        <div style="display: flex; gap: 4px;">
-            <button id="cam-btn-left" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.85rem;" title="Pan Left (ArrowLeft / A)">Left</button>
-            <button id="cam-btn-fwd" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.85rem;" title="Pan Forward (ArrowUp / W)">Fwd</button>
-            <button id="cam-btn-back" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.85rem;" title="Pan Backward (ArrowDown / S)">Back</button>
-            <button id="cam-btn-right" class="btn-ctrl" style="padding: 4px 10px; font-size: 0.85rem;" title="Pan Right (ArrowRight / D)">Right</button>
-        </div>
-        <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.15);"></div>
-        <div style="display: flex; gap: 4px;">
-            <button id="cam-btn-zoom-in" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom In (+)">Zoom +</button>
-            <button id="cam-btn-zoom-out" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Zoom Out (-)">Zoom -</button>
-            <button id="cam-btn-rot-left" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Left">Rot L</button>
-            <button id="cam-btn-rot-right" class="btn-ctrl" style="padding: 4px 8px; font-size: 0.8rem;" title="Rotate View Right">Rot R</button>
-        </div>
-    </div>
-
     <!-- Script Editor Modal -->
     <div id="script-editor-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 2000; align-items: center; justify-content: center; padding: 15px;">
         <div style="background: #111827; border: 2px solid #00f2fe; border-radius: 18px; width: 100%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 30px rgba(0,242,254,0.25);">
@@ -1285,7 +1267,7 @@
 
     <!-- Publish Game Modal (Player capacity, age rating, title, and description) -->
     <div id="publish-game-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 2100; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: #141b24; border: 2px solid #00f2fe; border-radius: 18px; width: 100%; max-width: 540px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.95);">
+        <div style="background: #141b24; border: 2px solid #00f2fe; border-radius: 18px; width: 100%; max-width: 660px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.95);">
             <!-- Header -->
             <div style="padding: 16px 22px; background: #1a2330; border-bottom: 1.5px solid rgba(0, 242, 254, 0.3); display: flex; justify-content: space-between; align-items: center;">
                 <div style="font-weight: 800; font-size: 1.2rem; color: #00f2fe; display: flex; align-items: center; gap: 10px;">
@@ -1297,7 +1279,102 @@
 
             <!-- Body -->
             <div style="padding: 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; flex: 1;">
-                <!-- 0. Cheaters Security & Anti-Cheat Section -->
+                <!-- 1. Suur Kaanepilt / Game Cover Image (Front & Center) -->
+                <div id="publish-cover-hero-container" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.95rem; color: #ffd32a; margin-bottom: 0;">
+                            <span style="font-size: 1.15rem;">🖼️</span>
+                            <span>Game Cover / Suur Kaanepilt:</span>
+                        </label>
+                        <span style="font-size: 0.78rem; color: #94a3b8;">Automaatne 3D hetktõmmis või oma pilt</span>
+                    </div>
+
+                    <!-- Hidden file input -->
+                    <input type="file" id="publish-game-image-input" accept="image/png, image/jpeg, image/webp, image/gif" style="display: none;">
+
+                    <!-- Drag & Drop Zone / Big Hero Preview -->
+                    <div id="publish-image-dropzone" style="border: 2px solid rgba(0, 242, 254, 0.6); border-radius: 14px; background: rgba(8, 13, 20, 0.95); text-align: center; cursor: pointer; transition: all 0.25s ease; position: relative; overflow: hidden; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 30px rgba(0,0,0,0.7), 0 0 20px rgba(0, 242, 254, 0.2);">
+                        <!-- Empty prompt state -->
+                        <div id="publish-image-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 36px 16px; min-height: 240px;">
+                            <div style="font-size: 3rem; filter: drop-shadow(0 4px 12px rgba(0,242,254,0.5));">📸🎮</div>
+                            <div style="font-weight: 800; font-size: 1.1rem; color: #00f2fe;">Klõpsa pildi valimiseks või lohista fail siia</div>
+                            <div style="font-size: 0.82rem; color: #94a3b8;">Automaatne 3D mängu hetktõmmis või laadi üles oma pilt (PNG, JPG, WEBP)</div>
+                        </div>
+
+                        <!-- Big Preview state (Large in the Center) -->
+                        <div id="publish-image-preview-container" style="display: none; position: relative; width: 100%; height: 270px; max-height: 340px; overflow: hidden; background: #000; border-radius: 12px;">
+                            <img id="publish-image-preview" src="" alt="Game Thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 12px; transition: transform 0.3s ease;">
+                            <div style="position: absolute; top: 10px; left: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(0, 242, 254, 0.6); padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; color: #00f2fe; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.6);">
+                                <span>✨</span> <span>3D Kaanepilt</span>
+                            </div>
+                            <div style="position: absolute; bottom: 10px; right: 10px; display: flex; gap: 8px; z-index: 5;">
+                                <button type="button" id="btn-change-publish-image" style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(0,242,254,0.7); color: #00f2fe; font-size: 0.8rem; font-weight: 800; border-radius: 8px; padding: 6px 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 4px;">🔄 Vaheta</button>
+                                <button type="button" id="btn-remove-publish-image" style="background: rgba(220,38,38,0.9); border: 1.5px solid rgba(239,68,68,0.7); color: white; font-size: 0.8rem; font-weight: 800; border-radius: 8px; padding: 6px 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 4px;">✕ Eemalda</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick buttons below dropzone -->
+                    <div style="display: flex; gap: 8px; margin-top: 2px;">
+                        <button type="button" id="btn-snapshot-publish-image" class="btn-studio" style="flex: 1; background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(59, 130, 246, 0.2)); border: 1px solid rgba(0, 242, 254, 0.5); color: #38bdf8; font-size: 0.82rem; font-weight: 700; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <span>📸</span> <span>3D Hetktõmmis</span>
+                        </button>
+                        <button type="button" id="btn-ai-publish-image" class="btn-studio" style="flex: 1; background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.2)); border: 1px solid rgba(236, 72, 153, 0.5); color: #f472b6; font-size: 0.82rem; font-weight: 700; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <span>🎨</span> <span>AI Kaanepilt</span>
+                        </button>
+                        <button type="button" id="btn-browse-publish-image" class="btn-studio" style="flex: 1; background: rgba(168, 85, 247, 0.18); border: 1px solid rgba(168, 85, 247, 0.5); color: #c084fc; font-size: 0.82rem; font-weight: 700; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <span>📁</span> <span>Vali fail</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Game Title -->
+                <div>
+                    <label for="publish-game-title" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Game Title:</label>
+                    <input type="text" id="publish-game-title" placeholder="Enter game title..." style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.95rem; font-weight: 600; outline: none; transition: border-color 0.2s;">
+                </div>
+
+                <!-- 3. Description -->
+                <div>
+                    <label for="publish-game-desc" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Description:</label>
+                    <textarea id="publish-game-desc" rows="3" placeholder="Describe what players do in this game and how to play..." style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 500; outline: none; resize: vertical; min-height: 70px;"></textarea>
+                </div>
+
+                <!-- 4. Grid for Server Players & Age Rating -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <!-- Max Players in Server -->
+                    <div>
+                        <label for="publish-max-players" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Max Players in Server:</label>
+                        <select id="publish-max-players" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
+                            <option value="1">1 Player (Solo)</option>
+                            <option value="2">2 Players (Duo)</option>
+                            <option value="4">4 Players (Small Team)</option>
+                            <option value="8" selected>8 Players (Standard)</option>
+                            <option value="10">10 Players</option>
+                            <option value="12">12 Players</option>
+                            <option value="16">16 Players</option>
+                            <option value="20">20 Players</option>
+                            <option value="30">30 Players</option>
+                            <option value="50">50 Players (Large Server)</option>
+                        </select>
+                    </div>
+
+                    <!-- Age Rating -->
+                    <div>
+                        <label for="publish-age-rating" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Age Rating:</label>
+                        <select id="publish-age-rating" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
+                            <option value="0" selected>All Ages (0+)</option>
+                            <option value="6">6+ Years</option>
+                            <option value="9">9+ Years</option>
+                            <option value="10">10+ Years</option>
+                            <option value="12">12+ Years</option>
+                            <option value="16">16+ Years</option>
+                            <option value="18">18+ Years</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 5. Cheaters Security & Anti-Cheat Section -->
                 <div id="publish-cheaters-section" style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid #a855f7; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; transition: all 0.25s ease;">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -1412,95 +1489,6 @@
                     </div>
                 </div>
 
-                <!-- 1. Game Title -->
-                <div>
-                    <label for="publish-game-title" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Game Title:</label>
-                    <input type="text" id="publish-game-title" placeholder="Enter game title..." style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.95rem; font-weight: 600; outline: none; transition: border-color 0.2s;">
-                </div>
-
-                <!-- 2. Description -->
-                <div>
-                    <label for="publish-game-desc" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Description:</label>
-                    <textarea id="publish-game-desc" rows="3" placeholder="Describe what players do in this game and how to play..." style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 500; outline: none; resize: vertical; min-height: 70px;"></textarea>
-                </div>
-
-                <!-- 2b. Game Cover / Thumbnail Image (Upload & Drag-and-Drop) -->
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <label style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 0;">Game Cover / Pilt:</label>
-                        <span style="font-size: 0.78rem; color: #94a3b8;">Laadi üles või lohista fail siia</span>
-                    </div>
-
-                    <!-- Hidden file input -->
-                    <input type="file" id="publish-game-image-input" accept="image/png, image/jpeg, image/webp, image/gif" style="display: none;">
-
-                    <!-- Drag & Drop Zone -->
-                    <div id="publish-image-dropzone" style="border: 2px dashed rgba(0, 242, 254, 0.4); border-radius: 12px; background: rgba(11, 17, 26, 0.75); padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        <!-- Empty prompt state -->
-                        <div id="publish-image-empty-state" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0;">
-                            <div style="font-size: 1.8rem;">🖼️📤</div>
-                            <div style="font-weight: 700; font-size: 0.9rem; color: #00f2fe;">Klõpsa pildi valimiseks või lohista fail siia</div>
-                            <div style="font-size: 0.75rem; color: #64748b;">Toetab PNG, JPG, WEBP, GIF (Drag & Drop)</div>
-                        </div>
-
-                        <!-- Preview state -->
-                        <div id="publish-image-preview-container" style="display: none; position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000;">
-                            <img id="publish-image-preview" src="" alt="Game Thumbnail" style="width: 100%; max-height: 160px; object-fit: cover; display: block; border-radius: 8px;">
-                            <div style="position: absolute; bottom: 8px; right: 8px; display: flex; gap: 6px; z-index: 5;">
-                                <button type="button" id="btn-change-publish-image" style="background: rgba(0,0,0,0.8); border: 1px solid rgba(0,242,254,0.6); color: #00f2fe; font-size: 0.75rem; font-weight: 700; border-radius: 6px; padding: 4px 8px; cursor: pointer;">🔄 Vaheta</button>
-                                <button type="button" id="btn-remove-publish-image" style="background: rgba(220,38,38,0.85); border: none; color: white; font-size: 0.75rem; font-weight: 700; border-radius: 6px; padding: 4px 8px; cursor: pointer;">✕ Eemalda</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick buttons below dropzone -->
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button type="button" id="btn-snapshot-publish-image" class="btn-studio" style="flex: 1; background: rgba(0, 242, 254, 0.12); border: 1px solid rgba(0, 242, 254, 0.35); color: #38bdf8; font-size: 0.78rem; padding: 6px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
-                            <span>📸</span> <span>3D Hetktõmmis</span>
-                        </button>
-                        <button type="button" id="btn-ai-publish-image" class="btn-studio" style="flex: 1; background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4); color: #f472b6; font-size: 0.78rem; padding: 6px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
-                            <span>🎨</span> <span>AI Kaanepilt</span>
-                        </button>
-                        <button type="button" id="btn-browse-publish-image" class="btn-studio" style="flex: 1; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; font-size: 0.78rem; padding: 6px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
-                            <span>📁</span> <span>Vali fail</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Grid for Server Players & Age Rating -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                    <!-- 3. Max Players in Server -->
-                    <div>
-                        <label for="publish-max-players" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Max Players in Server:</label>
-                        <select id="publish-max-players" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
-                            <option value="1">1 Player (Solo)</option>
-                            <option value="2">2 Players (Duo)</option>
-                            <option value="4">4 Players (Small Team)</option>
-                            <option value="8" selected>8 Players (Standard)</option>
-                            <option value="10">10 Players</option>
-                            <option value="12">12 Players</option>
-                            <option value="16">16 Players</option>
-                            <option value="20">20 Players</option>
-                            <option value="30">30 Players</option>
-                            <option value="50">50 Players (Large Server)</option>
-                        </select>
-                    </div>
-
-                    <!-- 4. Age Rating -->
-                    <div>
-                        <label for="publish-age-rating" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Age Rating:</label>
-                        <select id="publish-age-rating" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
-                            <option value="0" selected>All Ages (0+)</option>
-                            <option value="6">6+ Years</option>
-                            <option value="9">9+ Years</option>
-                            <option value="10">10+ Years</option>
-                            <option value="12">12+ Years</option>
-                            <option value="16">16+ Years</option>
-                            <option value="18">18+ Years</option>
-                        </select>
-                    </div>
-                </div>
-
                 <div style="background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; color: #94a3b8; display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 1.1rem; color: #00f2fe;">ℹ️</span>
                     <span>Your published game will appear on the public Playard game browser and other players can join.</span>
@@ -1516,6 +1504,14 @@
                     <span>Publish Game</span>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Publish Image Zoom Lightbox Modal -->
+    <div id="publish-image-zoom-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 3100; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(12px);">
+        <div style="position: relative; max-width: 90vw; max-height: 85vh; display: flex; flex-direction: column; align-items: center;">
+            <img id="publish-image-zoom-img" src="" alt="Fullsize Game Cover" style="max-width: 90vw; max-height: 80vh; object-fit: contain; border-radius: 14px; border: 2.5px solid #00f2fe; box-shadow: 0 0 50px rgba(0, 242, 254, 0.45);">
+            <button id="btn-close-publish-zoom" style="position: absolute; top: -16px; right: -16px; background: #ef4444; border: 2px solid white; color: white; font-size: 1.2rem; font-weight: 800; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.8);">✕</button>
         </div>
     </div>
 

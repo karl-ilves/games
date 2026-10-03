@@ -83,11 +83,10 @@ await (async () => {
             }
         }
     };
-    const originalEvaluate = page.evaluate.bind(page);
     page.evaluate = async (pageFunction, ...args) => {
         for (let attempt = 1; attempt <= 8; attempt++) {
             try {
-                return await originalEvaluate(pageFunction, ...args);
+                return await page.mainFrame().evaluate(pageFunction, ...args);
             } catch (err) {
                 if (err.message && (err.message.toLowerCase().includes('detached frame') || err.message.includes('Execution context was destroyed')) && attempt < 8) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
@@ -2674,11 +2673,15 @@ await (async () => {
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 500));
 
-            // Test Studio Camera View Navigation Buttons & Keyboard Pan (Edit Mode)
-            await page.waitForSelector('#cam-btn-fwd', { visible: true, timeout: 5000 });
-            await page.click('#cam-btn-fwd');
-            await page.click('#cam-btn-zoom-in');
-            console.log("   Successfully tested Camera View Pan and Zoom controls in Creator Studio!");
+            // Test that #studio-camera-controls bottom toolbar was removed per user request
+            const studioCamControlsExists = await page.$('#studio-camera-controls');
+            if (studioCamControlsExists) {
+                throw new Error("Expected #studio-camera-controls bottom navigation toolbar to be removed!");
+            }
+            // Test keyboard camera navigation in Edit Mode
+            await page.keyboard.press('KeyW');
+            await new Promise(r => setTimeout(r, 100));
+            console.log("   Successfully verified camera bottom bar removed & keyboard camera navigation in Creator Studio!");
 
             // Test Play Test Mode & On-Screen Arrow Controls
             await page.click('#btn-toggle-play-test');
@@ -3994,14 +3997,16 @@ await (async () => {
                 hasAiBtn: !!aiBtn,
                 hasBrowseBtn: !!browseBtn,
                 hasPreview: previewContainer ? previewContainer.style.display !== 'none' : false,
-                previewSrc: previewImg ? previewImg.src : ''
+                previewSrc: previewImg ? previewImg.src : '',
+                isHeroAtTop: !!document.getElementById('publish-cover-hero-container'),
+                hasZoomModal: !!document.getElementById('publish-image-zoom-modal')
             };
         });
 
-        if (!coverElements.hasDropzone || !coverElements.hasFileInput || !coverElements.hasSnapshotBtn || !coverElements.hasAiBtn) {
-            throw new Error(`Expected publish modal to have game cover upload/drag-and-drop elements! Details: ${JSON.stringify(coverElements)}`);
+        if (!coverElements.hasDropzone || !coverElements.hasFileInput || !coverElements.hasSnapshotBtn || !coverElements.hasAiBtn || !coverElements.isHeroAtTop || !coverElements.hasZoomModal) {
+            throw new Error(`Expected publish modal to have large game cover hero section at the top, zoom modal, and upload elements! Details: ${JSON.stringify(coverElements)}`);
         }
-        console.log("   Publish Modal Cover Upload & Drag-and-Drop elements verified:", coverElements);
+        console.log("   Publish Modal Large Cover Hero at Top & Zoom elements verified:", coverElements);
 
         // Test Cheaters Anti-Cheat Section & 'Tap OK' validation requirement
         console.log("   Testing Publish Modal 'Cheaters' section & 'Tap OK' validation...");
