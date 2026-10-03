@@ -218,162 +218,150 @@ export function buildSceneObjectMesh(obj: SceneObjectInput): THREE.Group {
         return setupGroupTransforms(group, obj);
     }
 
-    // 3. Semantic keyword checks:
-    // Plokid, kuubid, platvormid, kastid, seinad, trepid, tellised
-    const isBlockOrPlatform = /(block|plokk|cube|kuup|box|kast|platform|platvorm|wall|sein|crate|floor|põrand|ground|maapind|step|aste|stairs|trepp|brick|tellis|pillar|sammas|obstacle|takistus|barrier|tõke|pad|surface|plate)/i.test(name) ||
-        /(block|plokk|cube|box|platform|wall|crate|obstacle)/i.test(catalogId) ||
-        category === 'architecture' ||
-        category === 'city' && /(building|maja|wall|sein|house|room)/i.test(name);
+    // 3. Procedural creature / named-animal (dog, cat, rabbit, bear, horse, bird, fish, etc.)
+    const creatureMesh = buildProceduralCreatureMesh(name || catalogId);
+    if (creatureMesh) {
+        return setupGroupTransforms(creatureMesh, obj);
+    }
 
-    if (isBlockOrPlatform) {
-        let bw = w, bh = h, bd = d;
-        if (/(platform|platvorm|pad|surface)/i.test(name)) {
-            bw = Math.max(3, w);
-            bh = Math.min(0.6, h);
-            bd = Math.max(3, d);
-        } else if (/(wall|sein|barrier)/i.test(name)) {
-            bw = Math.max(4, w);
-            bh = Math.max(3, h);
-            bd = Math.min(0.6, d);
-        } else if (/(crate|kast|cube|kuup|block|plokk)/i.test(name)) {
-            bw = Math.max(2, w);
-            bh = Math.max(2, h);
-            bd = Math.max(2, d);
+    // 4. Vehicles (Airplane, Speedboat, Car)
+    if (obj.isAirplane || /(plane|lennuk|jet|fighter|propeller|helicopter|kopter)/i.test(name)) {
+        return setupGroupTransforms(createAirplane3DMesh(obj.color ? String(obj.color) : '#3498db'), obj);
+    }
+    if (obj.isBoat || /(boat|paat|laev|ship|speedboat|kaater)/i.test(name)) {
+        return setupGroupTransforms(createSpeedboat3DMesh(obj.color ? String(obj.color) : '#e74c3c'), obj);
+    }
+    if (category === 'vehicles' || /(car|auto|truck|veok|supercar|cruiser|buggy|roadster)/i.test(name)) {
+        return setupGroupTransforms(createCar3DMesh(material), obj);
+    }
+
+    // 5. Gameplay & Interactive Elements
+    // Lava Hazard Floor Plate (with glowing lava center & dark obsidian border - matches Creator Studio exactly)
+    if (/(lava|laava)/i.test(name) || /(lava)/i.test(catalogId) || (obj.isHazard && !/(spike|blade|laser|trap)/i.test(name))) {
+        return setupGroupTransforms(createLavaFloorPlateMesh(obj.color), obj);
+    }
+
+    // Spike Trap Plate
+    if (/(spike|oda|blade|tera|laser|trap|lõks)/i.test(name)) {
+        return setupGroupTransforms(createSpikeTrapMesh(), obj);
+    }
+
+    // Medkit / Health Case
+    if (/(medkit|heart|heal|elud|potion|ravim)/i.test(name)) {
+        return setupGroupTransforms(createMedkitCaseMesh(), obj);
+    }
+
+    // Portal / Dimension Gate
+    if (/(portal|teleport|värav|gate)/i.test(name) && !/(checkpoint|arch|flag)/i.test(name)) {
+        return setupGroupTransforms(createPortalRingMesh(), obj);
+    }
+
+    // Coin / Ring
+    if (gameItemType === 'coin' || /(coin|münt|kuldraha)/i.test(name) || /(coin|münt)/i.test(catalogId)) {
+        return setupGroupTransforms(createCoinMesh(), obj);
+    }
+
+    // Booster / Jump Pad
+    if (/(booster|jump|hüpe)/i.test(name) || (/(pad)/i.test(name) && !/(platform|platvorm|spawn)/i.test(name))) {
+        return setupGroupTransforms(createBoosterPadMesh(material), obj);
+    }
+
+    // 6. Spawn Points & Checkpoints
+    if (category === 'spawn' || /(spawn|alguspunkt)/i.test(name) || /(spawn)/i.test(catalogId) || obj.isSpawnPoint) {
+        if (/(flag|lipp|checkpoint)/i.test(name) || /(flag|lipp)/i.test(catalogId)) {
+            return setupGroupTransforms(createCheckpointFlagMesh(), obj);
         }
+        if (/(buoy|poi)/i.test(name)) {
+            return setupGroupTransforms(createBuoyMesh(), obj);
+        }
+        if (/(seabed|süvavee|diving)/i.test(name)) {
+            return setupGroupTransforms(createSeabedMesh(), obj);
+        }
+        if (/(torii)/i.test(name)) {
+            return setupGroupTransforms(createToriiGateMesh(), obj);
+        }
+        if (/(altar|throne|troon)/i.test(name)) {
+            return setupGroupTransforms(createAltarThroneMesh(), obj);
+        }
+        if (/(invisible|nähtamatu)/i.test(name)) {
+            return setupGroupTransforms(group, obj);
+        }
+        return setupGroupTransforms(createSpawnPadMesh(obj.color || 0x00f2fe), obj);
+    }
+
+    // Checkpoint Flag Post (even if category wasn't explicitly 'spawn')
+    if (/(flag|lipp)/i.test(name) || /(flag|lipp)/i.test(catalogId)) {
+        return setupGroupTransforms(createCheckpointFlagMesh(), obj);
+    }
+
+    // 7. Nature & Scenery
+    if (/(pine|mänd)/i.test(name) || /(pine)/i.test(catalogId)) {
+        return setupGroupTransforms(createPineTreeMesh(material), obj);
+    }
+    if (/(rock|kivi|boulder|kalju)/i.test(name) || /(rock|kivi)/i.test(catalogId)) {
+        return setupGroupTransforms(createRockMesh(material), obj);
+    }
+    if (category === 'nature' || /(tree|puu|mets|palm|tamm|oak)/i.test(name) || /(tree|puu)/i.test(catalogId)) {
+        return setupGroupTransforms(createTreeMesh(material), obj);
+    }
+
+    // 8. City, Roads & Buildings
+    if (/(road|tee|crossroad|overpass|ristmik|highway)/i.test(name)) {
+        return setupGroupTransforms(createRoadMesh(), obj);
+    }
+    if (/(skyscraper|pilvelõhkuja|tower)/i.test(name) && !/(power|core)/i.test(name)) {
+        return setupGroupTransforms(createSkyscraperMesh(material), obj);
+    }
+    if (/(house|maja|kodu)/i.test(name)) {
+        return setupGroupTransforms(createHouseMesh(material), obj);
+    }
+
+    // 9. Generic Platforms, Blocks, Walls & Crates
+    if (/(platform|platvorm)/i.test(name) || /(platform)/i.test(catalogId)) {
+        const pw = Math.max(3, w);
+        const ph = Math.min(0.6, h);
+        const pd = Math.max(3, d);
+        const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, pd), material);
+        boxMesh.position.y = ph / 2;
+        group.add(boxMesh);
+        return setupGroupTransforms(group, obj);
+    }
+
+    if (/(wall|sein|barrier|tõke)/i.test(name)) {
+        const bw = Math.max(4, w);
+        const bh = Math.max(3, h);
+        const bd = Math.min(0.6, d);
         const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), material);
         boxMesh.position.y = bh / 2;
         group.add(boxMesh);
         return setupGroupTransforms(group, obj);
     }
 
-    // Coins / Rings / Kuldraha (ONLY if explicitly coin)
-    const isCoin = gameItemType === 'coin' || /(coin|münt|kuldraha)/i.test(name) || /(coin|münt)/i.test(catalogId);
-    if (isCoin) {
-        const coinMat = new THREE.MeshStandardMaterial({
-            color: 0xffd700,
-            metalness: 0.9,
-            roughness: 0.2,
-            emissive: 0xf39c12,
-            emissiveIntensity: 0.35
-        });
-        const coin = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.18, 12, 24), coinMat);
-        coin.position.y = 1.2;
-        group.add(coin);
+    if (/(block|plokk|cube|kuup|box|kast|crate|brick|tellis|pillar|sammas|obstacle|takistus)/i.test(name) ||
+        /(block|plokk|cube|box|crate|obstacle)/i.test(catalogId) ||
+        category === 'architecture') {
+        const bw = Math.max(2, w);
+        const bh = Math.max(2, h);
+        const bd = Math.max(2, d);
+        const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), material);
+        boxMesh.position.y = bh / 2;
+        group.add(boxMesh);
         return setupGroupTransforms(group, obj);
     }
 
-    // Puud / Trees / Loodus
-    const isTree = category === 'nature' || /(tree|puu|pine|mänd|oak|tamm|mets|palm)/i.test(name) || /(tree|puu)/i.test(catalogId);
-    if (isTree) {
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 1.8), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
-        trunk.position.y = 0.9;
-        group.add(trunk);
-
-        const foliage = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.4, 8), material);
-        foliage.position.y = 2.6;
-        group.add(foliage);
-        return setupGroupTransforms(group, obj);
+    // 10. Sci-Fi Structures
+    if (category === 'scifi' || /(cyber|quantum|neon|plasma|obelisk)/i.test(name)) {
+        return setupGroupTransforms(createSciFiMesh(material), obj);
     }
 
-    // Kivid / Rocks
-    const isRock = /(rock|kivi|boulder|kalju)/i.test(name) || /(rock|kivi)/i.test(catalogId);
-    if (isRock) {
-        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 1), material);
-        rock.position.y = 0.9;
-        group.add(rock);
-        return setupGroupTransforms(group, obj);
+    // Checkpoint Gate / Arch fallback
+    if (/(arch|kaar|värav)/i.test(name)) {
+        return setupGroupTransforms(createCheckpointArchMesh(material), obj);
     }
 
-    // Sõidukid / Vehicles
-    if (obj.isAirplane || /(plane|lennuk|jet)/i.test(name)) {
-        const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 4.5, 12), material);
-        fuselage.rotation.x = Math.PI / 2;
-        fuselage.position.y = 1.0;
-        group.add(fuselage);
-
-        const wings = new THREE.Mesh(new THREE.BoxGeometry(6, 0.1, 1.2), material);
-        wings.position.set(0, 1.0, 0.2);
-        group.add(wings);
-        return setupGroupTransforms(group, obj);
-    }
-
-    if (obj.isBoat || /(boat|paat|laev|ship)/i.test(name)) {
-        const hull = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 4.5), material);
-        hull.position.y = 0.4;
-        group.add(hull);
-        return setupGroupTransforms(group, obj);
-    }
-
-    if (category === 'vehicles' || /(car|auto|truck|veok)/i.test(name)) {
-        const carBody = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 4), material);
-        carBody.position.y = 0.7;
-        group.add(carBody);
-
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.7, 2), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-        cabin.position.set(0, 1.35, -0.2);
-        group.add(cabin);
-        return setupGroupTransforms(group, obj);
-    }
-
-    // Lava / Trap / Hazard
-    if (obj.isHazard || /(lava|tuli)/i.test(name)) {
-        const lava = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.15, 3.5), new THREE.MeshStandardMaterial({
-            color: 0xff3b30,
-            emissive: 0xff2d00,
-            emissiveIntensity: 0.9,
-            roughness: 0.3
-        }));
-        lava.position.y = 0.08;
-        group.add(lava);
-        return setupGroupTransforms(group, obj);
-    }
-
-    // Portaal / Portal
-    if (/(portal|teleport|värav)/i.test(name)) {
-        const portal = new THREE.Mesh(new THREE.TorusGeometry(2, 0.25, 16, 32), new THREE.MeshStandardMaterial({
-            color: 0xa855f7,
-            emissive: 0x8e44ad,
-            emissiveIntensity: 0.8
-        }));
-        portal.position.y = 2.2;
-        group.add(portal);
-        return setupGroupTransforms(group, obj);
-    }
-
-    // Spawn point
-    if (obj.isSpawnPoint || /(spawn|alguspunkt)/i.test(name)) {
-        const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2, 24), new THREE.MeshStandardMaterial({
-            color: 0x00f2fe,
-            emissive: 0x00f2fe,
-            emissiveIntensity: 0.5
-        }));
-        pad.position.y = 0.1;
-        group.add(pad);
-        return setupGroupTransforms(group, obj);
-    }
-
-    // Procedural creature / named-object fallback (dog, cat, rabbit, bear, horse, bird, fish, etc.)
-    const creatureMesh = buildProceduralCreatureMesh(name || catalogId);
-    if (creatureMesh) {
-        creatureMesh.traverse(child => {
-            if ((child as THREE.Mesh).isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
-        });
-        const pos = extractVec3(obj.position, 0, 0, 0);
-        const rot = extractVec3(obj.rotation, 0, 0, 0);
-        const scl = extractVec3(obj.scale, 1, 1, 1);
-        creatureMesh.position.set(pos.x, pos.y, pos.z);
-        creatureMesh.rotation.set(rot.x, rot.y, rot.z);
-        creatureMesh.scale.set(scl.x, scl.y, scl.z);
-        return creatureMesh;
-    }
-
-    // Default Fallback: Always a SOLID 3D CUBE / BLOCK!
-    // Never an unexpected ring!
-    const defaultBox = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material);
-    defaultBox.position.y = 1;
+    // Default Fallback: Clean 3D Box
+    const defaultBox = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+    defaultBox.position.y = h / 2;
     group.add(defaultBox);
 
     return setupGroupTransforms(group, obj);
@@ -823,3 +811,471 @@ export function buildProceduralCreatureMesh(nameOrId: string): THREE.Group | nul
     // No match — caller will use default box
     return null;
 }
+
+// =========================================================================
+// --- 🎨 Detailed Catalog 3D Procedural Mesh Builders (Shared across Hub, Play & Creator) ---
+// =========================================================================
+
+export function createLavaFloorPlateMesh(customColor?: string | number): THREE.Group {
+    const grp = new THREE.Group();
+    const col = customColor ? (typeof customColor === 'string' ? new THREE.Color(customColor).getHex() : Number(customColor)) : 0xff3b30;
+    const lavaMat = new THREE.MeshStandardMaterial({
+        color: col,
+        emissive: 0xff2d00,
+        emissiveIntensity: 0.9,
+        roughness: 0.3
+    });
+    const lavaPlate = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.14, 3.4), lavaMat);
+    lavaPlate.position.y = 0.07;
+    grp.add(lavaPlate);
+
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x1c1c1e, roughness: 0.9 });
+    [-1.7, 1.7].forEach(rx => {
+        const rim = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.22, 3.6), rimMat);
+        rim.position.set(rx, 0.1, 0);
+        grp.add(rim);
+    });
+    [-1.7, 1.7].forEach(rz => {
+        const rim = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.22, 0.2), rimMat);
+        rim.position.set(0, 0.1, rz);
+        grp.add(rim);
+    });
+    return grp;
+}
+
+export function createCheckpointFlagMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.8, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8 }));
+    stand.position.y = 0.07;
+    grp.add(stand);
+
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 3.4, 12), new THREE.MeshStandardMaterial({ color: 0xdfe4ea, metalness: 0.7, roughness: 0.3 }));
+    pole.position.y = 1.7;
+    grp.add(pole);
+
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.2 }));
+    finial.position.y = 3.4;
+    grp.add(finial);
+
+    const flagGeo = new THREE.BoxGeometry(1.3, 0.75, 0.04);
+    const flagMesh = new THREE.Mesh(flagGeo, new THREE.MeshStandardMaterial({ color: 0xff4757, roughness: 0.5 }));
+    flagMesh.position.set(0.65, 2.8, 0);
+    grp.add(flagMesh);
+    return grp;
+}
+
+export function createSpikeTrapMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const basePlate = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.14, 3.0), new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.8, roughness: 0.3 }));
+    basePlate.position.y = 0.07;
+    grp.add(basePlate);
+
+    const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff3838, metalness: 0.8, roughness: 0.2 });
+    [-0.9, 0, 0.9].forEach(sx => {
+        [-0.9, 0, 0.9].forEach(sz => {
+            const spike = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7, 4), spikeMat);
+            spike.position.set(sx, 0.45, sz);
+            grp.add(spike);
+        });
+    });
+    return grp;
+}
+
+export function createMedkitCaseMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const caseMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.85, 0.7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 }));
+    caseMesh.position.y = 0.5;
+    grp.add(caseMesh);
+
+    const crossMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: 0xc0392b, emissiveIntensity: 0.5 });
+    const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, 0.75), crossMat);
+    crossH.position.y = 0.5;
+    grp.add(crossH);
+    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.65, 0.75), crossMat);
+    crossV.position.y = 0.5;
+    grp.add(crossV);
+    return grp;
+}
+
+export function createPortalRingMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const portalFrame = new THREE.Mesh(new THREE.TorusGeometry(2, 0.28, 16, 32), new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0x8e44ad, emissiveIntensity: 0.7 }));
+    portalFrame.position.y = 2.2;
+    grp.add(portalFrame);
+
+    const portalDisc = new THREE.Mesh(new THREE.CircleGeometry(1.75, 32), new THREE.MeshBasicMaterial({ color: 0x00f2fe, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
+    portalDisc.position.y = 2.2;
+    grp.add(portalDisc);
+    return grp;
+}
+
+export function createCoinMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const coinMat = new THREE.MeshStandardMaterial({
+        color: 0xffd700,
+        metalness: 0.9,
+        roughness: 0.2,
+        emissive: 0xf39c12,
+        emissiveIntensity: 0.35
+    });
+    const coin = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.18, 12, 24), coinMat);
+    coin.position.y = 1.2;
+    grp.add(coin);
+    return grp;
+}
+
+export function createBoosterPadMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 3), material);
+    pad.position.y = 0.1;
+    grp.add(pad);
+    return grp;
+}
+
+export function createSpawnPadMesh(matColor: any = 0x00f2fe): THREE.Group {
+    const grp = new THREE.Group();
+    const baseRim = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.75, 0.2, 32), new THREE.MeshStandardMaterial({ color: 0x1e272e, metalness: 0.7, roughness: 0.3 }));
+    baseRim.position.y = 0.1;
+    grp.add(baseRim);
+
+    const col = typeof matColor === 'string' ? new THREE.Color(matColor).getHex() : Number(matColor);
+    const neonCore = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.24, 32), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.8, roughness: 0.2 }));
+    neonCore.position.y = 0.12;
+    grp.add(neonCore);
+
+    [-1.35, 1.35].forEach(ex => {
+        [-1.35, 1.35].forEach(ez => {
+            const node = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.25), new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 }));
+            node.position.set(ex, 0.2, ez);
+            grp.add(node);
+        });
+    });
+    return grp;
+}
+
+export function createToriiGateMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.7 });
+    [-1.4, 1.4].forEach(tx => {
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 3.6, 12), woodMat);
+        col.position.set(tx, 1.8, 0);
+        grp.add(col);
+    });
+    const top = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.28, 0.35), woodMat);
+    top.position.set(0, 3.7, 0);
+    grp.add(top);
+    return grp;
+}
+
+export function createAltarThroneMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfdcb6e, metalness: 0.8, roughness: 0.3 });
+    const s1 = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.2, 2.6), goldMat);
+    s1.position.y = 0.1;
+    grp.add(s1);
+    const s2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.2, 1.8), goldMat);
+    s2.position.y = 0.3;
+    grp.add(s2);
+    return grp;
+}
+
+export function createBuoyMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const buoyBody = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.65, 1.3, 16), new THREE.MeshStandardMaterial({ color: 0xff7675, roughness: 0.4 }));
+    buoyBody.position.y = 0.5;
+    grp.add(buoyBody);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0x2d3436 }));
+    mast.position.y = 1.6;
+    grp.add(mast);
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffd32a }));
+    beacon.position.y = 2.3;
+    grp.add(beacon);
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.08, 8, 24), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    collar.rotation.x = Math.PI / 2;
+    collar.position.y = 0.5;
+    grp.add(collar);
+    return grp;
+}
+
+export function createSeabedMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const basePad = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, 0.35, 8), new THREE.MeshStandardMaterial({ color: 0x1b2838, metalness: 0.8, roughness: 0.4 }));
+    basePad.position.y = 0.17;
+    grp.add(basePad);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), new THREE.MeshStandardMaterial({ color: 0x0984e3, transparent: true, opacity: 0.75, emissive: 0x00cec9, emissiveIntensity: 0.5 }));
+    dome.position.y = 0.8;
+    grp.add(dome);
+    [-1.5, 1.5].forEach(lx => {
+        const light = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.6, 8), new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.9 }));
+        light.position.set(lx, 0.5, 0);
+        grp.add(light);
+    });
+    return grp;
+}
+
+export function createPineTreeMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.5), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
+    trunk.position.y = 0.75;
+    grp.add(trunk);
+    const leaves1 = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.2, 7), material);
+    leaves1.position.y = 2.2;
+    grp.add(leaves1);
+    const leaves2 = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.8, 7), material);
+    leaves2.position.y = 3.2;
+    grp.add(leaves2);
+    return grp;
+}
+
+export function createRockMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 1), material);
+    rock.position.y = 0.9;
+    rock.scale.set(1.2, 0.9, 1.1);
+    grp.add(rock);
+    return grp;
+}
+
+export function createTreeMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2), new THREE.MeshStandardMaterial({ color: 0x4e342e }));
+    trunk.position.y = 1.0;
+    grp.add(trunk);
+    const foliage = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 8), material);
+    foliage.position.y = 2.8;
+    grp.add(foliage);
+    return grp;
+}
+
+export function createRoadMesh(): THREE.Group {
+    const grp = new THREE.Group();
+    const road = new THREE.Mesh(new THREE.BoxGeometry(8, 0.12, 14), new THREE.MeshStandardMaterial({ color: 0x22272e, roughness: 0.85 }));
+    road.position.y = 0.06;
+    grp.add(road);
+    for (let s = -4.8; s <= 4.8; s += 2.4) {
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.14, 1.4), new THREE.MeshStandardMaterial({ color: 0xffd32a, roughness: 0.4 }));
+        stripe.position.set(0, 0.07, s);
+        grp.add(stripe);
+    }
+    [-3.6, 3.6].forEach(ex => {
+        const edgeLine = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 14), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        edgeLine.position.set(ex, 0.07, 0);
+        grp.add(edgeLine);
+    });
+    return grp;
+}
+
+export function createSkyscraperMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(3, 16, 3), material);
+    tower.position.y = 8;
+    grp.add(tower);
+    return grp;
+}
+
+export function createHouseMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 4), material);
+    base.position.y = 1.5;
+    grp.add(base);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.8, 4), new THREE.MeshStandardMaterial({ color: 0xc0392b }));
+    roof.position.y = 3.9;
+    roof.rotation.y = Math.PI / 4;
+    grp.add(roof);
+    return grp;
+}
+
+export function createCar3DMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.75, 4.2), material);
+    body.position.y = 0.65;
+    grp.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.65, 2.2), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }));
+    cabin.position.set(0, 1.25, -0.2);
+    grp.add(cabin);
+
+    const headlightMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+    const taillightMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
+    [-0.7, 0.7].forEach(hx => {
+        const hl = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), headlightMat);
+        hl.position.set(hx, 0.65, -2.12);
+        grp.add(hl);
+        const tl = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), taillightMat);
+        tl.position.set(hx, 0.65, 2.12);
+        grp.add(tl);
+    });
+    const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+    wheelGeo.rotateZ(Math.PI / 2);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
+    [-1.15, 1.15].forEach(x => {
+        [-1.35, 1.35].forEach(z => {
+            const w = new THREE.Mesh(wheelGeo, wheelMat);
+            w.position.set(x, 0.4, z);
+            grp.add(w);
+        });
+    });
+    return grp;
+}
+
+export function createAirplane3DMesh(color = '#3498db'): THREE.Group {
+    const grp = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3, metalness: 0.4 });
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.4, metalness: 0.5 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.8 });
+    const engineMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, metalness: 0.8 });
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+
+    const fuselageGeo = new THREE.CylinderGeometry(0.75, 0.8, 6.2, 16);
+    fuselageGeo.rotateX(Math.PI / 2);
+    const fuselage = new THREE.Mesh(fuselageGeo, bodyMat);
+    fuselage.position.y = 1.3;
+    grp.add(fuselage);
+
+    const noseGeo = new THREE.ConeGeometry(0.75, 1.8, 16);
+    noseGeo.rotateX(-Math.PI / 2);
+    const nose = new THREE.Mesh(noseGeo, bodyMat);
+    nose.position.set(0, 1.3, -3.95);
+    grp.add(nose);
+
+    const cockpitGeo = new THREE.SphereGeometry(0.65, 16, 16);
+    cockpitGeo.scale(0.8, 0.75, 1.8);
+    const cockpit = new THREE.Mesh(cockpitGeo, glassMat);
+    cockpit.position.set(0, 1.8, -1.2);
+    grp.add(cockpit);
+
+    const wingGeo = new THREE.BoxGeometry(9.2, 0.12, 1.8);
+    const mainWings = new THREE.Mesh(wingGeo, wingMat);
+    mainWings.position.set(0, 1.25, -0.4);
+    grp.add(mainWings);
+
+    [-4.55, 4.55].forEach((wx, idx) => {
+        const winglet = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.8), bodyMat);
+        winglet.position.set(wx, 1.55, -0.4);
+        grp.add(winglet);
+
+        const navLightMat = new THREE.MeshBasicMaterial({ color: idx === 0 ? 0xff4757 : 0x2ecc71 });
+        const navLight = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), navLightMat);
+        navLight.position.set(wx, 1.95, -0.4);
+        grp.add(navLight);
+    });
+
+    const tailFinGeo = new THREE.BoxGeometry(0.14, 1.7, 1.6);
+    const tailFin = new THREE.Mesh(tailFinGeo, bodyMat);
+    tailFin.position.set(0, 2.3, 2.6);
+    tailFin.rotation.x = -0.3;
+    grp.add(tailFin);
+
+    const tailWingGeo = new THREE.BoxGeometry(3.4, 0.1, 1.1);
+    const tailWings = new THREE.Mesh(tailWingGeo, wingMat);
+    tailWings.position.set(0, 1.45, 2.8);
+    grp.add(tailWings);
+
+    [-2.0, 2.0].forEach(ex => {
+        const engine = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 2.1, 12), engineMat);
+        engine.rotateX(Math.PI / 2);
+        engine.position.set(ex, 0.8, -0.3);
+        grp.add(engine);
+
+        const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.15, 12), glowMat);
+        exhaust.rotateX(Math.PI / 2);
+        exhaust.position.set(ex, 0.8, 0.8);
+        grp.add(exhaust);
+    });
+
+    const frontGear = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.18, 12), wheelMat);
+    frontGear.rotateZ(Math.PI / 2);
+    frontGear.position.set(0, 0.24, -2.4);
+    grp.add(frontGear);
+
+    [-1.3, 1.3].forEach(gx => {
+        const rearGear = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.2, 12), wheelMat);
+        rearGear.rotateZ(Math.PI / 2);
+        rearGear.position.set(gx, 0.26, 0.8);
+        grp.add(rearGear);
+    });
+
+    return grp;
+}
+
+export function createSpeedboat3DMesh(color = '#e74c3c'): THREE.Group {
+    const grp = new THREE.Group();
+    const hullMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3, metalness: 0.4 });
+    const deckMat = new THREE.MeshStandardMaterial({ color: 0xf5f6fa, roughness: 0.4 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x2f3640, roughness: 0.7 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.1, transparent: true, opacity: 0.65 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xdcdde1, metalness: 0.9, roughness: 0.1 });
+
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.9, 5.8), hullMat);
+    hull.position.set(0, 0.45, 0);
+    grp.add(hull);
+
+    const bow = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.2, 4), hullMat);
+    bow.rotation.x = Math.PI / 2;
+    bow.rotation.y = Math.PI / 4;
+    bow.position.set(0, 0.45, -3.4);
+    grp.add(bow);
+
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.15, 5.0), deckMat);
+    deck.position.set(0, 0.92, -0.2);
+    grp.add(deck);
+
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.65, 0.1), glassMat);
+    windshield.position.set(0, 1.25, -1.2);
+    windshield.rotation.x = -0.35;
+    grp.add(windshield);
+
+    [-1.02, 1.02].forEach(sideX => {
+        const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 1.6), glassMat);
+        sideWindow.position.set(sideX, 1.15, -0.4);
+        grp.add(sideWindow);
+    });
+
+    [-0.5, 0.5].forEach(seatX => {
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.5, 0.65), darkMat);
+        seat.position.set(seatX, 1.05, -0.3);
+        grp.add(seat);
+    });
+
+    const motor = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.2, 0.8), darkMat);
+    motor.position.set(0, 0.7, 3.1);
+    grp.add(motor);
+
+    const propShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.8), chromeMat);
+    propShaft.position.set(0, 0.1, 3.2);
+    grp.add(propShaft);
+
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.04, 6, 12), chromeMat);
+    wheel.position.set(0.48, 1.2, -0.9);
+    wheel.rotation.x = -0.5;
+    grp.add(wheel);
+
+    grp.userData.isBoat = true;
+    return grp;
+}
+
+export function createCheckpointArchMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 4), material);
+    leftPost.position.set(-2, 2, 0);
+    grp.add(leftPost);
+    const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 4), material);
+    rightPost.position.set(2, 2, 0);
+    grp.add(rightPost);
+    const topBeam = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.4, 0.4), material);
+    topBeam.position.set(0, 4, 0);
+    grp.add(topBeam);
+    return grp;
+}
+
+export function createSciFiMesh(material: THREE.Material): THREE.Group {
+    const grp = new THREE.Group();
+    const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.2, 0), material);
+    core.position.y = 2.0;
+    grp.add(core);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.8, 0.6, 6), new THREE.MeshStandardMaterial({ color: 0x1e272e }));
+    base.position.y = 0.3;
+    grp.add(base);
+    return grp;
+}
+

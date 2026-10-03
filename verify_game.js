@@ -4064,7 +4064,9 @@ await (async () => {
                         { name: 'Stone Block', category: 'gameplay', type: 'box', position: { x: 0, y: 0, z: 5 } },
                         { name: 'Parkour Platform', category: 'gameplay', position: { x: 5, y: 2, z: 5 } },
                         { name: 'Gold Coin', category: 'gameplay', gameItemType: 'coin', position: { x: 10, y: 1, z: 5 } },
-                        { name: '✨ Koer', category: 'custom', position: { x: -5, y: 0, z: 5 } }
+                        { name: '✨ Koer', category: 'custom', position: { x: -5, y: 0, z: 5 } },
+                        { name: 'Lava Hazard Floor (-25 HP)', category: 'gameplay', position: { x: 0, y: 0, z: 10 } },
+                        { name: 'Checkpoint Flag Post (Visible)', category: 'spawn', position: { x: 5, y: 0, z: 10 } }
                     ],
                     test: true
                 },
@@ -4107,8 +4109,8 @@ await (async () => {
                 return { error: 'playGameInstance or sceneObjects not found' };
             }
             const objs = inst.sceneObjects;
-            if (objs.length < 4) {
-                return { error: `Expected at least 4 scene objects, found ${objs.length}` };
+            if (objs.length < 6) {
+                return { error: `Expected at least 6 scene objects, found ${objs.length}` };
             }
 
             // Find geometries
@@ -4134,6 +4136,10 @@ await (async () => {
             const coinIsTorus = geometries[2] === 'TorusGeometry';
             // Dog (index 3) should have multiple parts, NOT just 1 box
             const dogHasMultipleParts = meshCounts[3] > 1;
+            // Lava Floor Plate (index 4) should have plate + obsidian rims (multiple meshes)
+            const lavaHasRims = meshCounts[4] > 1;
+            // Checkpoint Flag (index 5) should have stand + pole + finial + flag (multiple meshes)
+            const flagHasParts = meshCounts[5] > 1;
 
             return {
                 count: objs.length,
@@ -4142,7 +4148,9 @@ await (async () => {
                 blockIsBox,
                 platformIsBox,
                 coinIsTorus,
-                dogHasMultipleParts
+                dogHasMultipleParts,
+                lavaHasRims,
+                flagHasParts
             };
         });
 
@@ -4159,8 +4167,16 @@ await (async () => {
         if (!playRenderCheck.dogHasMultipleParts) {
             throw new Error(`Expected dog ('✨ Koer') to render with multiple mesh parts (not a single box), but got ${playRenderCheck.meshCounts[3]} parts`);
         }
+        if (!playRenderCheck.lavaHasRims) {
+            throw new Error(`Expected Lava Hazard Floor to render with obsidian rims (multiple mesh parts, not a single box), but got ${playRenderCheck.meshCounts[4]} parts`);
+        }
+        if (!playRenderCheck.flagHasParts) {
+            throw new Error(`Expected Checkpoint Flag Post to render with pole and flag (multiple mesh parts, not a single box), but got ${playRenderCheck.meshCounts[5]} parts`);
+        }
         console.log("   ✅ Blocks remain 3D solid blocks in Game Player (no ring conversion bug)!");
         console.log("   ✅ Dog ('✨ Koer') renders as proper 3D creature with multiple mesh parts in Game Player!");
+        console.log("   ✅ Lava Hazard Floor renders with proper plate & obsidian rims (not a plain box)!");
+        console.log("   ✅ Checkpoint Flag Post renders with proper stand, pole, and flag (not a plain box)!");
 
         // 7. Test Racing Simulator
         console.log("7. Checking Racing Simulator...");
@@ -10858,6 +10874,8 @@ await (async () => {
             console.log("\n22. Testing Playard AI Assistant (Conversation, GameGen, Modifier, CodeSandbox, SelfVerifier, Admin Logs)...");
 
             // 22a. Verify Playard AI Admin Panel integration (admin tabs for AI audit logs)
+            await page.goto('about:blank');
+            await new Promise(r => setTimeout(r, 400));
             await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 600));
 
@@ -11385,75 +11403,74 @@ await (async () => {
 
             // 22o. Test Universal Omniscient Q&A and Universal Creation
             console.log("   Testing Universal Omniscient Q&A (Math, Geography, Physics) & Universal Creation (Robots, Tanks, Dinosaurs)...");
-            const omniTest = await page.evaluate(async () => {
+            const qaResults = await page.evaluate(async () => {
                 const ai = window.playardAi;
 
                 // 1. Math computation
                 await ai.handleUserInput('Palju on 25 * 4');
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 200));
                 let msgs = ai.state.getMessages();
                 const mathReply = msgs[msgs.length - 1]?.text || '';
                 const hasMath = mathReply.includes('100');
 
                 // 2. Geography: Estonia
                 await ai.handleUserInput('Mis on Eesti pealinn ja info?');
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 200));
                 msgs = ai.state.getMessages();
                 const geoReply = msgs[msgs.length - 1]?.text || '';
                 const hasGeo = geoReply.includes('Tallinn') && geoReply.includes('Eesti Vabariik');
 
                 // 3. Physics: Speed of light
                 await ai.handleUserInput('Mis on valguse kiirus?');
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 200));
                 msgs = ai.state.getMessages();
                 const physReply = msgs[msgs.length - 1]?.text || '';
                 const hasPhys = physReply.includes('299 792 458 m/s') || physReply.includes('300 000 km/s');
 
                 // 4. Universal Semantic Fallback for arbitrary question
                 await ai.handleUserInput('Kuidas tekivad mustad augud kosmoses?');
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 200));
                 msgs = ai.state.getMessages();
                 const fallReply = msgs[msgs.length - 1]?.text || '';
                 const hasFallback = fallReply.includes('Must auk') || fallReply.includes('Playard Teadmistebaas');
 
+                return { hasMath, hasGeo, hasPhys, hasFallback };
+            });
+
+            await new Promise(r => setTimeout(r, 300));
+
+            const creationResults = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
                 // 5. Universal Creation: Robot battle arena
                 await ai.handleUserInput('Ehita hiiglaslik robotite lahinguareen');
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 400));
                 let scene = ai.state.getActiveScene();
                 const hasRobot = scene?.objects?.some(o => o.type === 'robot');
 
                 // 6. Universal Creation: Dinosaur jungle
                 await ai.handleUserInput('Tee dinosauruste saar ja vulkaan');
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 400));
                 scene = ai.state.getActiveScene();
                 const hasDino = scene?.objects?.some(o => o.type === 'dinosaur');
                 const hasVolcano = scene?.objects?.some(o => o.type === 'volcano');
 
                 // 7. Universal Creation: Tank battlefield
                 await ai.handleUserInput('Loo raske tankilahing');
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 400));
                 scene = ai.state.getActiveScene();
                 const hasTank = scene?.objects?.some(o => o.type === 'tank');
 
                 // 8. Add object: Ufo
                 await ai.handleUserInput('Lisa tulnukate ufo');
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 300));
                 scene = ai.state.getActiveScene();
                 const hasUfo = scene?.objects?.some(o => o.type === 'ufo');
 
-                return {
-                    hasMath,
-                    hasGeo,
-                    hasPhys,
-                    hasFallback,
-                    hasRobot,
-                    hasDino,
-                    hasVolcano,
-                    hasTank,
-                    hasUfo
-                };
+                return { hasRobot, hasDino, hasVolcano, hasTank, hasUfo };
             });
 
+            const omniTest = { ...qaResults, ...creationResults };
             console.log("   Universal Omniscient & Creation Test Results:", omniTest);
             if (
                 !omniTest.hasMath || !omniTest.hasGeo || !omniTest.hasPhys ||
