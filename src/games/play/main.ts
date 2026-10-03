@@ -201,17 +201,7 @@ async function initPlayer() {
     }
 
     if (gameId) {
-        const localGames = yardService.getLocalCreatedGames();
-        currentGame = localGames.find(g => g.id === gameId) || null;
-
-        if (!currentGame) {
-            const pending = await yardService.getPendingGames();
-            currentGame = pending.find(g => g.id === gameId) || null;
-        }
-        if (!currentGame) {
-            const approved = await yardService.getApprovedGames();
-            currentGame = approved.find(g => g.id === gameId) || null;
-        }
+        currentGame = await yardService.getGameById(gameId);
 
         if (currentGame) {
             if (titleDisp) titleDisp.innerText = currentGame.title;

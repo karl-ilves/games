@@ -4215,7 +4215,18 @@ await (async () => {
         if (!approvedGamesList.some(g => g.title === 'Automated Test Adventure')) {
             throw new Error("Published game was not found in getApprovedGames() community list!");
         }
-        console.log("   User game direct public publishing verified: ✅");
+
+        const gameByIdCheck = await page.evaluate(async (id) => {
+            return await window.yardService.getGameById(id);
+        }, gameSubmitResult.gameId);
+        if (!gameByIdCheck || gameByIdCheck.title !== 'Automated Test Adventure') {
+            throw new Error("Published game was not found via getGameById()!");
+        }
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(gameSubmitResult.gameId);
+        if (!isUuid) {
+            throw new Error(`Expected published game ID to be standard UUID for cloud database compatibility, got: ${gameSubmitResult.gameId}`);
+        }
+        console.log("   User game direct public publishing & UUID cloud compatibility verified: ✅");
 
         // 6d. Test Playing the game in /games/play/ and verify blocks stay blocks (not rings!)
         console.log("6d. Testing Game Player Object Rendering (Blocks remain BoxGeometry, not rings!)...");

@@ -10,6 +10,22 @@ function isTestMode(): boolean {
     return false;
 }
 
+export function generateUUID(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+export function isValidUUID(id: string): boolean {
+    if (!id || typeof id !== 'string') return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+}
+
 export interface YardData {
     yards: number;
     playCoins?: number;
@@ -1019,7 +1035,7 @@ class YardService {
 
     // --- User Created Games Management ---
     public async submitGameForReview(game: Omit<CreatedGame, 'id' | 'status' | 'plays' | 'createdAt' | 'updatedAt'> & { status?: 'pending_review' | 'approved' }): Promise<{ success: boolean; message: string; gameId: string }> {
-        const gameId = 'game_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const gameId = generateUUID();
         const gameStatus = game.status || 'approved';
         const fullGame: CreatedGame = {
             ...game,
@@ -1063,6 +1079,7 @@ class YardService {
                     title: game.title,
                     description: game.description,
                     category: game.category,
+                    thumbnail: game.thumbnail || game.sceneData?.thumbnail || null,
                     scene_data: game.sceneData,
                     status: gameStatus
                 });
@@ -1096,7 +1113,7 @@ class YardService {
         }
 
         // Delete from Supabase cloud
-        if (supabase && !isTestMode()) {
+        if (supabase && !isTestMode() && isValidUUID(gameId)) {
             try {
                 await supabase.from('user_created_games').delete().eq('id', gameId);
             } catch (err) {
@@ -1133,6 +1150,7 @@ class YardService {
 
                 if (!error && Array.isArray(data)) {
                     data.forEach(d => {
+                        if (d.category === 'friend_request' || d.category === 'friend_relation') return;
                         gamesMap.set(d.id, {
                             id: d.id,
                             userId: d.user_id,
@@ -1140,7 +1158,7 @@ class YardService {
                             title: d.title,
                             description: d.description || '',
                             category: d.category || 'Adventure',
-                            thumbnail: d.thumbnail,
+                            thumbnail: d.thumbnail || d.scene_data?.thumbnail || '',
                             sceneData: d.scene_data,
                             status: d.status,
                             feedback: d.feedback,
@@ -1167,21 +1185,23 @@ class YardService {
                     .order('created_at', { ascending: false });
 
                 if (!error && Array.isArray(data) && data.length > 0) {
-                    return data.map(d => ({
-                        id: d.id,
-                        userId: d.user_id,
-                        creatorUsername: d.creator_username,
-                        title: d.title,
-                        description: d.description || '',
-                        category: d.category || 'Adventure',
-                        thumbnail: d.thumbnail,
-                        sceneData: d.scene_data,
-                        status: d.status,
-                        feedback: d.feedback,
-                        plays: d.plays || 0,
-                        createdAt: new Date(d.created_at).getTime(),
-                        updatedAt: new Date(d.updated_at).getTime()
-                    }));
+                    return data
+                        .filter(d => d.category !== 'friend_request' && d.category !== 'friend_relation')
+                        .map(d => ({
+                            id: d.id,
+                            userId: d.user_id,
+                            creatorUsername: d.creator_username,
+                            title: d.title,
+                            description: d.description || '',
+                            category: d.category || 'Adventure',
+                            thumbnail: d.thumbnail || d.scene_data?.thumbnail || '',
+                            sceneData: d.scene_data,
+                            status: d.status,
+                            feedback: d.feedback,
+                            plays: d.plays || 0,
+                            createdAt: new Date(d.created_at).getTime(),
+                            updatedAt: new Date(d.updated_at).getTime()
+                        }));
                 }
             } catch (err) {
                 console.warn('Could not fetch pending games from cloud:', err);
@@ -1210,6 +1230,7 @@ class YardService {
 
                 if (!error && Array.isArray(data) && data.length > 0) {
                     data.forEach(d => {
+                        if (d.category === 'friend_request' || d.category === 'friend_relation') return;
                         approvedMap.set(d.id, {
                             id: d.id,
                             userId: d.user_id,
@@ -1217,7 +1238,7 @@ class YardService {
                             title: d.title,
                             description: d.description || '',
                             category: d.category || 'Adventure',
-                            thumbnail: d.thumbnail,
+                            thumbnail: d.thumbnail || d.scene_data?.thumbnail || '',
                             sceneData: d.scene_data,
                             status: d.status,
                             feedback: d.feedback,
@@ -1233,6 +1254,53 @@ class YardService {
         }
 
         return Array.from(approvedMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    public async getGameById(gameId: string): Promise<CreatedGame | null> {
+        if (!gameId) return null;
+
+        // 1. Check local storage
+        const local = this.getLocalCreatedGames().find(g => g.id === gameId);
+        if (local) return local;
+
+        // 2. Fetch directly from cloud if Supabase is active
+        if (supabase && !isTestMode() && isValidUUID(gameId)) {
+            try {
+                const { data, error } = await supabase
+                    .from('user_created_games')
+                    .select('*')
+                    .eq('id', gameId)
+                    .single();
+
+                if (!error && data) {
+                    return {
+                        id: data.id,
+                        userId: data.user_id,
+                        creatorUsername: data.creator_username,
+                        title: data.title,
+                        description: data.description || '',
+                        category: data.category || 'Adventure',
+                        thumbnail: data.thumbnail || data.scene_data?.thumbnail || '',
+                        sceneData: data.scene_data,
+                        status: data.status,
+                        feedback: data.feedback,
+                        plays: data.plays || 0,
+                        createdAt: new Date(data.created_at).getTime(),
+                        updatedAt: new Date(data.updated_at).getTime()
+                    };
+                }
+            } catch (err) {
+                console.warn('Could not fetch game by ID from cloud:', err);
+            }
+        }
+
+        // 3. Check approved or pending lists
+        const approved = await this.getApprovedGames();
+        const foundApproved = approved.find(g => g.id === gameId);
+        if (foundApproved) return foundApproved;
+
+        const pending = await this.getPendingGames();
+        return pending.find(g => g.id === gameId) || null;
     }
 
     public async updateGameStatus(
@@ -1266,7 +1334,7 @@ class YardService {
         }
 
         // 2. Update in Supabase
-        if (supabase) {
+        if (supabase && isValidUUID(gameId)) {
             try {
                 await supabase
                     .from('user_created_games')
