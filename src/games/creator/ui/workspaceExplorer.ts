@@ -186,6 +186,7 @@ export function duplicateObjectWithChildren(sourceObj: PlacedObject): PlacedObje
             pbxPrice: orig.pbxPrice,
             dealsDamage: orig.dealsDamage,
             damageAmount: orig.damageAmount,
+            gripOffset: orig.gripOffset ? JSON.parse(JSON.stringify(orig.gripOffset)) : undefined,
             parentId: null // Will be assigned during linking
         };
 

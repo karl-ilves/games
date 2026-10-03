@@ -13,6 +13,7 @@ import {
     deleteObjectWithChildren,
     getDescendantIds
 } from './workspaceExplorer';
+import { openHandAnimationEditor } from './handAnimationEditor';
 import * as THREE from 'three';
 import { PlacedObject, CatalogItem, SceneSnapshot, SeaConfig } from '../types';
 import {
@@ -2563,6 +2564,15 @@ export function setupInspectorEvents() {
             if (selectedObject) {
                 selectedObject.damageAmount = Math.max(1, parseInt(damageInput.value, 10) || 25);
                 autoSaveDraft();
+            }
+        });
+    }
+
+    const btnSetupHandAnim = document.getElementById('btn-setup-hand-animation');
+    if (btnSetupHandAnim) {
+        btnSetupHandAnim.addEventListener('click', () => {
+            if (selectedObject) {
+                openHandAnimationEditor(selectedObject);
             }
         });
     }

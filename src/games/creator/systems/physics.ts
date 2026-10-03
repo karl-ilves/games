@@ -234,7 +234,12 @@ export function equipCustomItemInHand(item: PlacedObject | CatalogItem) {
     const itemColor = item.color || '#00f2fe';
     let heldMesh: THREE.Group | THREE.Mesh;
 
-    if (item.customModelData) {
+    if ('mesh' in item && item.mesh) {
+        heldMesh = item.mesh.clone(true);
+        heldMesh.position.set(0, 0, 0);
+        heldMesh.rotation.set(0, 0, 0);
+        heldMesh.scale.set(1, 1, 1);
+    } else if (item.customModelData) {
         heldMesh = createCustomModel3DMesh(item.customModelData, itemColor);
     } else {
         const catItem: CatalogItem = 'geometryType' in item ? (item as CatalogItem) : {
@@ -249,10 +254,16 @@ export function equipCustomItemInHand(item: PlacedObject | CatalogItem) {
         heldMesh = createObjectMesh(catItem, itemColor);
     }
 
-    // Scale nicely to fit in player's right hand (~0.25 scale)
-    heldMesh.scale.set(0.25, 0.25, 0.25);
-    heldMesh.position.set(0, -0.22, 0.15);
-    heldMesh.rotation.set(0.2, 0, 0);
+    if (item.gripOffset) {
+        heldMesh.position.set(item.gripOffset.position.x, item.gripOffset.position.y, item.gripOffset.position.z);
+        heldMesh.rotation.set(item.gripOffset.rotation.x, item.gripOffset.rotation.y, item.gripOffset.rotation.z);
+        heldMesh.scale.set(item.gripOffset.scale.x, item.gripOffset.scale.y, item.gripOffset.scale.z);
+    } else {
+        // Default scale and grip position in right hand
+        heldMesh.scale.set(0.25, 0.25, 0.25);
+        heldMesh.position.set(0, -0.22, 0.15);
+        heldMesh.rotation.set(0.2, 0, 0);
+    }
     heldMesh.name = 'PlayerHeldCustomItem';
     handSocket.add(heldMesh);
 

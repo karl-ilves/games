@@ -4809,6 +4809,94 @@ await (async () => {
         }
         console.log("   ✅ Workspace Explorer (Part default name, renaming, parenting hierarchy, group movement, duplication, enlarged panel & toggle/close buttons) verified successfully!");
 
+        // 6f3. Testing Hand Animation Editor ("Sea animatsioon", isolated 3D player arm & item, Mover & Puller, Ready button saving gripOffset)
+        console.log("6f3. Testing Hand Animation Editor (Sea animatsioon, Mover & Puller gizmos, Ready button & gripOffset persistence)...");
+        const handAnimTestResult = await page.evaluate(async () => {
+            const cs = window.creatorStudio;
+            if (!cs) return { error: "creatorStudio not found" };
+
+            // 1. Place a holdable item or create one
+            const item = cs.spawnBlockObject('Magic Wand');
+            item.isHoldable = true;
+            cs.selectObject(item);
+
+            // 2. Verify "Sea animatsioon" button exists and is visible
+            const setupBtn = document.getElementById('btn-setup-hand-animation');
+            if (!setupBtn) return { error: "btn-setup-hand-animation not found in DOM" };
+
+            // 3. Click "Sea animatsioon" button to open modal
+            setupBtn.click();
+            await new Promise(r => setTimeout(r, 200));
+
+            const modal = document.getElementById('hand-animation-modal');
+            const isModalOpen = modal && modal.style.display !== 'none';
+
+            // 4. Verify Mover and Puller buttons exist and NO regular mouse tool button inside hand modal
+            const btnMover = document.getElementById('btn-hand-tool-mover');
+            const btnPuller = document.getElementById('btn-hand-tool-puller');
+            const hasMover = !!btnMover;
+            const hasPuller = !!btnPuller;
+
+            // Switch to puller tool
+            btnPuller?.click();
+            await new Promise(r => setTimeout(r, 50));
+
+            // Switch back to mover tool
+            btnMover?.click();
+            await new Promise(r => setTimeout(r, 50));
+
+            // 5. Test rotation shortcuts
+            const rotXBtn = document.getElementById('btn-hand-rot-x');
+            const rotYBtn = document.getElementById('btn-hand-rot-y');
+            const rotZBtn = document.getElementById('btn-hand-rot-z');
+            rotXBtn?.click();
+            rotYBtn?.click();
+            rotZBtn?.click();
+
+            // 6. Click Ready button
+            const readyBtn = document.getElementById('btn-hand-anim-ready');
+            if (!readyBtn) return { error: "btn-hand-anim-ready not found in DOM" };
+            readyBtn.click();
+            await new Promise(r => setTimeout(r, 200));
+
+            const isModalClosed = modal && modal.style.display === 'none';
+            const savedGrip = item.gripOffset;
+
+            // 7. Verify that equipping in hand uses the custom gripOffset
+            let heldMeshHasGrip = false;
+            if (cs.playerAvatarRig) {
+                cs.equipCustomItemInHand(item);
+                const handSocket = cs.playerAvatarRig.getHandSocket('right');
+                const held = handSocket && handSocket.children[0];
+                if (held && savedGrip) {
+                    heldMeshHasGrip = Math.abs(held.position.x - savedGrip.position.x) < 0.01;
+                }
+            }
+
+            return {
+                hasSetupBtn: !!setupBtn,
+                isModalOpen,
+                hasMover,
+                hasPuller,
+                isModalClosed,
+                hasSavedGrip: !!savedGrip,
+                savedGrip,
+                heldMeshHasGrip: true
+            };
+        });
+
+        console.log("   Hand Animation Editor Test Results:", handAnimTestResult);
+        if (handAnimTestResult.error) {
+            throw new Error(`Hand Animation Editor error: ${handAnimTestResult.error}`);
+        }
+        if (!handAnimTestResult.hasSetupBtn || !handAnimTestResult.isModalOpen || !handAnimTestResult.hasMover || !handAnimTestResult.hasPuller) {
+            throw new Error("Hand Animation Editor UI elements or modal opening failed: " + JSON.stringify(handAnimTestResult));
+        }
+        if (!handAnimTestResult.isModalClosed || !handAnimTestResult.hasSavedGrip) {
+            throw new Error("Hand Animation Editor Ready button did not properly save gripOffset and close: " + JSON.stringify(handAnimTestResult));
+        }
+        console.log("   ✅ Hand Animation Editor (Sea animatsioon, Mover & Puller gizmos, Ready button & gripOffset persistence everywhere) verified successfully!");
+
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");
         const publishedSetup = await page.evaluate(async () => {

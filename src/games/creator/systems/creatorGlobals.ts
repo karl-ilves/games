@@ -32,6 +32,7 @@ import {
     getDescendantIds,
     toggleWorkspacePanel
 } from '../ui/workspaceExplorer';
+import { openHandAnimationEditor, closeHandAnimationEditor } from '../ui/handAnimationEditor';
 import {
     executeAiBuild, loadAiSchoolMemory, saveAiSchoolMemory,
     updateAiTierDisplay, aiContextMemory
@@ -176,6 +177,8 @@ export function setupCreatorGlobals() {
         duplicateObjectWithChildren,
         deleteObjectWithChildren,
         getDescendantIds,
-        toggleWorkspacePanel
+        toggleWorkspacePanel,
+        openHandAnimationEditor,
+        closeHandAnimationEditor
     };
 }

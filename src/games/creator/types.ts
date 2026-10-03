@@ -83,6 +83,7 @@ export interface PlacedObject {
     dealsDamage?: boolean;
     damageAmount?: number;
     isHeld?: boolean;
+    gripOffset?: GripOffset;
     customModelData?: {
         shapeType: "box" | "wedge" | "cylinder" | "pyramid" | "dome";
         width: number;
@@ -195,6 +196,13 @@ export interface CatalogItem {
     dealsDamage?: boolean;
     damageAmount?: number;
     subCategory?: string;
+    gripOffset?: GripOffset;
+}
+
+export interface GripOffset {
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scale: { x: number; y: number; z: number };
 }
 
 export type StudioToolMode = "mouse" | "mover" | "puller";

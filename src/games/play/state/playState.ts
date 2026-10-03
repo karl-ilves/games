@@ -127,9 +127,15 @@ export class PlayState {
             ...item,
             position: { x: 0, y: 0, z: 0 }
         });
-        heldMesh.scale.set(0.25, 0.25, 0.25);
-        heldMesh.position.set(0, -0.22, 0.15);
-        heldMesh.rotation.set(0.2, 0, 0);
+        if (item.gripOffset) {
+            heldMesh.position.set(item.gripOffset.position.x, item.gripOffset.position.y, item.gripOffset.position.z);
+            heldMesh.rotation.set(item.gripOffset.rotation.x, item.gripOffset.rotation.y, item.gripOffset.rotation.z);
+            heldMesh.scale.set(item.gripOffset.scale.x, item.gripOffset.scale.y, item.gripOffset.scale.z);
+        } else {
+            heldMesh.scale.set(0.25, 0.25, 0.25);
+            heldMesh.position.set(0, -0.22, 0.15);
+            heldMesh.rotation.set(0.2, 0, 0);
+        }
         heldMesh.name = 'PlayHeldCustomItem';
         handSocket.add(heldMesh);
 
