@@ -385,7 +385,10 @@ async function renderCommunityGames() {
     const isAdmin = !!currentUser?.isAdmin || isUserAdminEmail(currentUser?.email);
 
     approvedGames.forEach(game => {
-        const isOwner = currentUser && (currentUser.username === game.creatorUsername || isAdmin);
+        const isOwner = Boolean(
+            (currentUser && (currentUser.username?.toLowerCase() === game.creatorUsername?.toLowerCase() || isAdmin)) ||
+            yardService.isMyCreatedGame(game.id)
+        );
         const card = document.createElement('div');
         card.className = 'game-card';
         card.style.position = 'relative';
@@ -417,7 +420,8 @@ async function renderCommunityGames() {
                 const gameId = (e.currentTarget as HTMLElement).getAttribute('data-id');
                 if (gameId) {
                     await yardService.deleteCreatedGame(gameId);
-                    renderCommunityGames();
+                    await renderCommunityGames();
+                    alert('Mäng on edukalt kustutatud!');
                 }
             }
         });

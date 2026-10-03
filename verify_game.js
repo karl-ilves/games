@@ -4587,6 +4587,99 @@ await (async () => {
         }
         console.log("   ✅ 1000 Holdable Items, 50 Damage Weapons, In-Hand Start, 6M Test Balance & Creator Revenue Transfer verified successfully!");
 
+        // 6g. Game deletion + programmed behaviours in PUBLISHED games
+        console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");
+        const publishedSetup = await page.evaluate(async () => {
+            const ys = window.yardService;
+            const baseGame = {
+                creatorUsername: 'behaviour_tester',
+                description: 'Behaviour test',
+                category: 'Adventure',
+                thumbnail: ''
+            };
+
+            // A) Deletion: publish, delete, ensure it never comes back
+            const delRes = await ys.submitGameForReview({ ...baseGame, title: 'Game To Delete', sceneData: { objects: [] }, status: 'approved' });
+            const beforeDelete = (await ys.getApprovedGames()).some(g => g.id === delRes.gameId);
+            const ownedBeforeDelete = ys.isMyCreatedGame(delRes.gameId);
+            await ys.deleteCreatedGame(delRes.gameId);
+            const afterDeleteApproved = (await ys.getApprovedGames()).some(g => g.id === delRes.gameId);
+            const afterDeleteAll = (await ys.getAllCreatedGames()).some(g => g.id === delRes.gameId);
+
+            // B) Programmed behaviours game
+            const behRes = await ys.submitGameForReview({
+                ...baseGame,
+                title: 'Behaviour Playground',
+                status: 'approved',
+                sceneData: {
+                    playerMaxHealth: 100,
+                    objects: [
+                        { id: 'spawn1', catalogId: 'spawn_point', name: 'Spawn', category: 'spawn', isSpawnPoint: true, position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, color: '#ffffff' },
+                        { id: 'jump1', catalogId: 'custom_script_obj', name: 'Superhüppe Padi', category: 'gameplay', isPassable: true, position: { x: 0, y: 0, z: 20 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, color: '#00f2fe',
+                          script: { preset: 'jump_boost', trigger: 'onPlayerTouch', cooldown: 1, enabled: true, actions: [{ type: 'jump_boost', jumpForce: 20 }] } },
+                        { id: 'speed1', catalogId: 'custom_script_obj', name: 'Kiirenduspadi', category: 'gameplay', isPassable: true, position: { x: 20, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, color: '#ffd32a',
+                          script: { preset: 'speed_boost', trigger: 'onPlayerTouch', cooldown: 2, enabled: true, actions: [{ type: 'speed_boost', speedMultiplier: 2.2, duration: 4 }] } },
+                        { id: 'lava1', catalogId: 'lava_floor', name: 'Lava Hazard Floor', category: 'gameplay', gameItemType: 'hazard', isPassable: true, damageAmount: 30, position: { x: -20, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, color: '#ff4500' }
+                    ]
+                }
+            });
+
+            return { beforeDelete, ownedBeforeDelete, afterDeleteApproved, afterDeleteAll, behaviourGameId: behRes.gameId };
+        });
+
+        console.log("   Deletion results:", publishedSetup);
+        if (!publishedSetup.beforeDelete || !publishedSetup.ownedBeforeDelete) {
+            throw new Error("Published game should be listed and owned by creator before deletion!");
+        }
+        if (publishedSetup.afterDeleteApproved || publishedSetup.afterDeleteAll) {
+            throw new Error("Deleted game must NOT reappear in approved/all games lists!");
+        }
+        console.log("   ✅ Published game deletion works and stays deleted!");
+
+        await page.goto(`http://localhost:4173/games/play/index.html?id=${publishedSetup.behaviourGameId}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.waitForFunction(() => window.playGameInstance && window.playGameInstance.sceneObjects.length >= 4, { timeout: 15000 });
+        await new Promise(r => setTimeout(r, 300));
+
+        // Superhüpe
+        await page.evaluate(() => { window.playGameInstance.humanCharacter.position.set(0, 0, 20); });
+        await new Promise(r => setTimeout(r, 150));
+        const jumpState = await page.evaluate(() => ({
+            y: window.playGameInstance.humanCharacter.position.y,
+            vy: window.playGameInstance.characterVelocity.y
+        }));
+        console.log("   Superhüpe state after touching pad:", jumpState);
+        if (jumpState.y < 1.0 && jumpState.vy < 5) {
+            throw new Error(`Superhüpe pad did not launch player in published game! y=${jumpState.y}, vy=${jumpState.vy}`);
+        }
+
+        // Speed boost
+        await new Promise(r => setTimeout(r, 1500));
+        await page.evaluate(() => {
+            const inst = window.playGameInstance;
+            inst.characterVelocity.set(0, 0, 0);
+            inst.humanCharacter.position.set(20, 0, 0);
+        });
+        await new Promise(r => setTimeout(r, 150));
+        const speedState = await page.evaluate(() => ({
+            boosted: window.playGameInstance.isSpeedBoosted,
+            mult: window.playGameInstance.playerSpeedMultiplier
+        }));
+        console.log("   Speed boost state after touching pad:", speedState);
+        if (!speedState.boosted || speedState.mult <= 1) {
+            throw new Error("Speed boost pad did not activate in published game!");
+        }
+
+        // Damage (lava hazard takes lives)
+        const healthBefore = await page.evaluate(() => window.playGameInstance.playerHealth);
+        await page.evaluate(() => { window.playGameInstance.humanCharacter.position.set(-20, 0, 0); });
+        await new Promise(r => setTimeout(r, 200));
+        const healthAfter = await page.evaluate(() => window.playGameInstance.playerHealth);
+        console.log(`   Health before lava: ${healthBefore}, after: ${healthAfter}`);
+        if (!(healthAfter < healthBefore)) {
+            throw new Error("Lava hazard did not take lives in published game!");
+        }
+        console.log("   ✅ Superhüpe, Speed Boost & Damage programming work in published games!");
+
         console.log("7. Checking Racing Simulator...");
         await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));

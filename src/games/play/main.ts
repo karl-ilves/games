@@ -134,6 +134,244 @@ let spawnPointPosition = new THREE.Vector3(0, 0, 0);
 let pendingPurchaseObject: { objData: any; group: THREE.Group } | null = null;
 let lastDamageTime = 0;
 
+let playerSpeedMultiplier = 1.0;
+let playerSpeedBoostEndTime = 0;
+let playDialogTimer: any = null;
+let playAudioCtx: AudioContext | null = null;
+
+export function playPlaySound(type: string) {
+    try {
+        if (!playAudioCtx) {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContextClass) playAudioCtx = new AudioContextClass();
+        }
+        if (!playAudioCtx) return;
+        if (playAudioCtx.state === 'suspended') playAudioCtx.resume();
+        const now = playAudioCtx.currentTime;
+        const osc = playAudioCtx.createOscillator();
+        const gain = playAudioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(playAudioCtx.destination);
+
+        if (type === 'jump') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(160, now);
+            osc.frequency.exponentialRampToValueAtTime(620, now + 0.18);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc.start(now);
+            osc.stop(now + 0.22);
+        } else if (type === 'powerup' || type === 'heal') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.28);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.start(now);
+            osc.stop(now + 0.35);
+        } else if (type === 'hit') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc.start(now);
+            osc.stop(now + 0.22);
+        } else if (type === 'coin') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(987, now);
+            osc.frequency.setValueAtTime(1318, now + 0.08);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        } else if (type === 'victory') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523, now);
+            osc.frequency.setValueAtTime(659, now + 0.1);
+            osc.frequency.setValueAtTime(783, now + 0.2);
+            osc.frequency.setValueAtTime(1046, now + 0.3);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+        } else if (type === 'teleport') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(180, now + 0.25);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+    } catch (e) {}
+}
+
+export function showPlayDialogMessage(title: string, message: string, icon = '💬', autoHideSec = 3.5) {
+    const popup = document.getElementById('play-dialog-popup');
+    const titleEl = document.getElementById('play-dialog-title');
+    const textEl = document.getElementById('play-dialog-text');
+    const iconEl = document.getElementById('play-dialog-icon');
+    const actionsEl = document.getElementById('play-dialog-actions');
+    if (popup && titleEl && textEl) {
+        if (iconEl) iconEl.innerText = icon;
+        titleEl.innerText = title;
+        textEl.innerText = message;
+        if (actionsEl && !pendingPurchaseObject) {
+            actionsEl.style.display = 'none';
+        } else if (actionsEl) {
+            actionsEl.style.display = 'flex';
+        }
+        popup.style.display = 'block';
+        if (playDialogTimer) clearTimeout(playDialogTimer);
+        if (autoHideSec > 0 && !pendingPurchaseObject) {
+            playDialogTimer = setTimeout(() => {
+                if (popup && !pendingPurchaseObject) popup.style.display = 'none';
+            }, autoHideSec * 1000);
+        }
+    }
+}
+
+export function playSuperJump(force = 22) {
+    characterVelocity.y = force;
+    isGrounded = false;
+    playPlaySound('jump');
+    showPlayDialogMessage('🚀 Superhüpe!', `Lennutati õhku jõuga ${force}!`, '🚀', 2.5);
+}
+
+export function playSpeedBoost(multiplier = 2.2, durationSec = 4.0) {
+    playerSpeedMultiplier = multiplier;
+    playerSpeedBoostEndTime = Date.now() + durationSec * 1000;
+    playPlaySound('powerup');
+    showPlayDialogMessage('⚡ Superkiirus!', `Liikumiskiirus on ${multiplier}x kiirem järgmised ${Math.round(durationSec)}s!`, '⚡', 2.5);
+}
+
+export function isPlayerTouchingOrOnTop(playerPos: THREE.Vector3, mesh: THREE.Object3D): boolean {
+    if (!mesh) return false;
+    const box = new THREE.Box3().setFromObject(mesh);
+    if (box.isEmpty()) return false;
+
+    const playerRadius = 0.5;
+    const feetY = playerPos.y;
+    const headY = playerPos.y + 1.8;
+
+    if (playerPos.x < box.min.x - playerRadius || playerPos.x > box.max.x + playerRadius ||
+        playerPos.z < box.min.z - playerRadius || playerPos.z > box.max.z + playerRadius) {
+        return false;
+    }
+
+    const minY = box.min.y - 0.25;
+    const maxY = box.max.y + 0.45;
+
+    return feetY <= maxY && headY >= minY;
+}
+
+function executePlayScriptAction(act: any, group: THREE.Group, playerPos: THREE.Vector3) {
+    if (!act || !act.type) return;
+    switch (act.type) {
+        case 'jump_boost': {
+            const force = act.jumpForce ?? 22;
+            playSuperJump(force);
+            break;
+        }
+        case 'speed_boost': {
+            const mult = act.speedMultiplier ?? 2.2;
+            const dur = act.duration ?? 4.0;
+            playSpeedBoost(mult, dur);
+            break;
+        }
+        case 'damage': {
+            const amt = act.amount ?? 25;
+            damagePlayPlayer(amt);
+            playPlaySound('hit');
+            break;
+        }
+        case 'heal': {
+            const amt = act.amount ?? 30;
+            playerHealth = Math.min(playerMaxHealth, playerHealth + amt);
+            updatePlayHUD();
+            playPlaySound('heal');
+            showPlayDialogMessage('💖 Tervenemine!', `Ravisid elusid +${amt} HP!`, '💖', 2.5);
+            break;
+        }
+        case 'give_coins': {
+            const amt = act.amount ?? 10;
+            yardService.addPlayCoins(amt);
+            playPlaySound('coin');
+            showPlayDialogMessage('🪙 Mündid!', `Said juurde +${amt} münti!`, '🪙', 2.5);
+            break;
+        }
+        case 'give_yards': {
+            const amt = act.amount ?? 5;
+            yardService.addYards(amt);
+            playPlaySound('victory');
+            updatePlayHUD();
+            showPlayDialogMessage('💎 Playbux!', `Said juurde +${amt} Playbuxi!`, '💎', 2.5);
+            break;
+        }
+        case 'teleport': {
+            const tgt = act.teleportTarget ?? { x: spawnPointPosition.x, y: spawnPointPosition.y, z: spawnPointPosition.z };
+            humanCharacter.position.set(tgt.x, tgt.y, tgt.z);
+            characterVelocity.set(0, 0, 0);
+            playPlaySound('teleport');
+            showPlayDialogMessage('🌀 Teleport', `Teleporditi asukohta (${tgt.x.toFixed(1)}, ${tgt.y.toFixed(1)}, ${tgt.z.toFixed(1)})`, '🌀', 2.5);
+            break;
+        }
+        case 'dialog': {
+            if (act.message) {
+                showPlayDialogMessage(group.userData.name || 'Dialoog', act.message, '💬', 4.0);
+            }
+            break;
+        }
+        case 'play_sound': {
+            playPlaySound(act.soundName || 'powerup');
+            break;
+        }
+        case 'custom_js': {
+            if (act.customCode) {
+                executePlayCustomJs(act.customCode, group, playerPos);
+            }
+            break;
+        }
+    }
+}
+
+function executePlayCustomJs(code: string, group: THREE.Group, playerPos: THREE.Vector3) {
+    try {
+        const api = {
+            player: {
+                damage: (amt = 10) => damagePlayPlayer(amt),
+                heal: (amt = 10) => {
+                    playerHealth = Math.min(playerMaxHealth, playerHealth + amt);
+                    updatePlayHUD();
+                },
+                setSpeed: (mult = 2.0, durationSec = 4.0) => playSpeedBoost(mult, durationSec),
+                jump: (force = 20) => playSuperJump(force),
+                teleport: (x = 0, y = 0, z = 0) => {
+                    playerPos.set(x, y, z);
+                    characterVelocity.set(0, 0, 0);
+                },
+                giveCoins: (amt = 10) => yardService.addPlayCoins(amt),
+                giveYards: (amt = 5) => {
+                    yardService.addYards(amt);
+                    updatePlayHUD();
+                },
+                getPosition: () => ({ x: playerPos.x, y: playerPos.y, z: playerPos.z })
+            },
+            sound: {
+                play: (name: string) => playPlaySound(name)
+            },
+            hud: {
+                showMessage: (text: string, title = 'Teade') => showPlayDialogMessage(title, text, '💬', 3.5)
+            }
+        };
+        const fn = new Function('api', code);
+        fn(api);
+    } catch (err: any) {
+        console.warn('Sandbox script execution error in play mode:', err);
+    }
+}
+
 function updatePlayHUD() {
     const pbxVal = document.getElementById('player-pbx-val');
     if (pbxVal) {
@@ -167,6 +405,7 @@ export function damagePlayPlayer(amount: number) {
 
     playerHealth = Math.max(0, playerHealth - amount);
     updatePlayHUD();
+    playPlaySound('hit');
 
     document.body.style.boxShadow = 'inset 0 0 55px rgba(231,76,60,0.85)';
     setTimeout(() => { document.body.style.boxShadow = 'none'; }, 220);
@@ -217,10 +456,12 @@ function promptPurchase(objData: any, group: THREE.Group) {
     const title = document.getElementById('play-dialog-title');
     const text = document.getElementById('play-dialog-text');
     const icon = document.getElementById('play-dialog-icon');
+    const actions = document.getElementById('play-dialog-actions');
     if (popup && title && text) {
         if (icon) icon.innerText = objData.icon || '💎';
         title.innerText = `Osta: ${objData.name}`;
         text.innerText = `Kas soovid osta eseme "${objData.name}" hinnaga ${objData.pbxPrice} Playbuxi?\n(Müügitulu läheb loojale: ${currentGame?.creatorUsername || 'mängu looja'})`;
+        if (actions) actions.style.display = 'flex';
         popup.style.display = 'block';
     }
 }
@@ -247,6 +488,7 @@ function setupPurchaseDialog() {
                 group.userData.isCollected = true;
                 if (popup) popup.style.display = 'none';
                 updatePlayHUD();
+                playPlaySound('victory');
                 alert(`💎 Ostsid eseme "${objData.name}" hinnaga ${price} PBX! Müügitulu laekus loojale (${currentGame?.creatorUsername}).`);
             } else {
                 alert(`❌ Sul pole piisavalt Playbuxe! Sul on ${balance} PBX, aga vaja on ${price} PBX.`);
@@ -386,9 +628,14 @@ async function initPlayer() {
                 get playerHealth() { return playerHealth; },
                 get playerMaxHealth() { return playerMaxHealth; },
                 get playerInventory() { return playerInventory; },
+                get characterVelocity() { return characterVelocity; },
+                get playerSpeedMultiplier() { return playerSpeedMultiplier; },
+                get isSpeedBoosted() { return Date.now() < playerSpeedBoostEndTime; },
                 equipPlayItemInHand,
                 damagePlayPlayer,
-                updatePlayHUD
+                updatePlayHUD,
+                playSuperJump,
+                playSpeedBoost
             };
 
             setupPurchaseDialog();
@@ -559,7 +806,8 @@ function animate() {
         oceanWaterMesh.geometry.attributes.position.needsUpdate = true;
     }
 
-    const moveSpeed = 9;
+    const baseMoveSpeed = 9;
+    const currentMoveSpeed = (Date.now() < playerSpeedBoostEndTime) ? (baseMoveSpeed * playerSpeedMultiplier) : baseMoveSpeed;
     const turnSpeed = 2.4;
 
     // View turning via A/D or ArrowLeft/ArrowRight (same as Creator Studio)
@@ -580,8 +828,8 @@ function animate() {
 
     const hasHoriMove = moveMagnitude !== 0;
     if (hasHoriMove) {
-        humanCharacter.position.x += forwardX * moveMagnitude * moveSpeed * delta;
-        humanCharacter.position.z += forwardZ * moveMagnitude * moveSpeed * delta;
+        humanCharacter.position.x += forwardX * moveMagnitude * currentMoveSpeed * delta;
+        humanCharacter.position.z += forwardZ * moveMagnitude * currentMoveSpeed * delta;
 
         if (playerAvatarRig) {
             playerAvatarRig.updateAnimation(performance.now() * 0.001, 'run');
@@ -600,6 +848,7 @@ function animate() {
     if (keys['Space'] && isGrounded) {
         characterVelocity.y = 9;
         isGrounded = false;
+        playPlaySound('jump');
     }
 
     if (!isGrounded) {
@@ -688,7 +937,7 @@ function animate() {
         isGrounded = false;
     }
 
-    // Check damage items, holdable pickups and purchases
+    // Check gameplay objects: damage, superjump, speed boost, scripts, triggers, pickups, goals, checkpoints
     for (let i = 0; i < sceneObjects.length; i++) {
         const group = sceneObjects[i];
         const u = group.userData;
@@ -697,14 +946,110 @@ function animate() {
         const dx = group.position.x - pPos.x;
         const dz = group.position.z - pPos.z;
         const distSq = dx * dx + dz * dz;
+        const isTouching = distSq < 36.0 && isPlayerTouchingOrOnTop(pPos, group);
+        const isCloseProximity = distSq < 5.0;
 
-        // 1. Damage check (weapons/hazards)
-        if (u.dealsDamage && (u.damageAmount ?? 0) > 0 && distSq < 4.0) {
-            damagePlayPlayer(u.damageAmount ?? 25);
+        // 1. Damage check (weapons/hazards/lava/script damage/preset damage)
+        const isHazard = Boolean(
+            u.dealsDamage ||
+            u.gameItemType === 'hazard' ||
+            u.trigger?.type === 'hazard_lava' ||
+            u.trigger?.behavior === 'damage' ||
+            u.script?.preset === 'damage' ||
+            u.customModelData?.behavior === 'hazard' ||
+            /(lava|spike|hazard|pahalane|enemy)/i.test(u.name || '')
+        );
+
+        if (isHazard && (isTouching || distSq < 3.8)) {
+            const dmg = u.damageAmount ?? u.customModelData?.damageAmount ?? 25;
+            if (dmg > 0) {
+                damagePlayPlayer(dmg);
+            }
         }
 
-        // 2. Holdable items (free pickup or PBX purchase)
-        if (u.isHoldable && !u.isCollected && distSq < 6.0) {
+        // 2. Superhüpe (Super Jump / Jump Boost)
+        const isSuperJump = Boolean(
+            u.trigger?.behavior === 'super_jump' ||
+            u.script?.preset === 'jump_boost' ||
+            u.behavior === 'super_jump' ||
+            u.customModelData?.behavior === 'boost' ||
+            /(superhüpe|super jump|jump pad|vedru|trampliin)/i.test(u.name || '') ||
+            /(superhüpe|super jump|jump pad|vedru|trampliin)/i.test(u.catalogId || '')
+        );
+
+        if (isSuperJump && (isTouching || distSq < 3.2)) {
+            const now = Date.now();
+            if (now - (u._lastJumpTrigger || 0) > 500) {
+                u._lastJumpTrigger = now;
+                const force = u.jumpForce ?? u.trigger?.jumpForce ?? u.script?.actions?.[0]?.jumpForce ?? 22;
+                playSuperJump(force);
+            }
+        }
+
+        // 3. Speed Boost
+        const isSpeedBoost = Boolean(
+            u.trigger?.behavior === 'speed_boost' ||
+            u.script?.preset === 'speed_boost' ||
+            /(kiirendus|speed boost|turbo)/i.test(u.name || '')
+        );
+
+        if (isSpeedBoost && (isTouching || distSq < 3.2)) {
+            const now = Date.now();
+            if (now - (u._lastSpeedTrigger || 0) > 1500) {
+                u._lastSpeedTrigger = now;
+                const mult = u.trigger?.speedMultiplier ?? u.script?.actions?.[0]?.speedMultiplier ?? 2.2;
+                const dur = u.trigger?.duration ?? u.script?.actions?.[0]?.duration ?? 4.0;
+                playSpeedBoost(mult, dur);
+            }
+        }
+
+        // 4. Object Custom Scripts (Actions array or custom JS)
+        if (u.script && u.script.enabled !== false && (isTouching || distSq < 3.5)) {
+            const now = Date.now();
+            const cd = (u.script.cooldown ?? 1.0) * 1000;
+            if (now - (u._lastScriptTrigger || 0) >= cd) {
+                u._lastScriptTrigger = now;
+                if (Array.isArray(u.script.actions)) {
+                    for (const act of u.script.actions) {
+                        executePlayScriptAction(act, group, pPos);
+                    }
+                }
+                if (u.script.customJsCode && u.script.customJsCode.trim()) {
+                    executePlayCustomJs(u.script.customJsCode, group, pPos);
+                }
+            }
+        }
+
+        // 5. Trigger Dialogue / Text Messages
+        if (u.trigger && u.trigger.message && (isTouching || isCloseProximity)) {
+            const now = Date.now();
+            if (now - (u._lastDialogTrigger || 0) > 4000) {
+                u._lastDialogTrigger = now;
+                showPlayDialogMessage(u.trigger.title || u.name || 'Info', u.trigger.message, '💬', 4.0);
+            }
+        }
+
+        // 6. Checkpoints
+        if ((u.gameItemType === 'checkpoint' || /(checkpoint|kontrollpunkt)/i.test(u.name || '')) && (isTouching || distSq < 3.5)) {
+            if (spawnPointPosition.distanceTo(group.position) > 2.0) {
+                spawnPointPosition.set(group.position.x, group.position.y + 0.1, group.position.z);
+                playPlaySound('coin');
+                showPlayDialogMessage('🚩 Kontrollpunkt!', 'Uus taassünnipaik salvestatud!', '🚩', 2.5);
+            }
+        }
+
+        // 7. Victory Goal / Finish
+        if ((u.gameItemType === 'goal' || u.trigger?.type === 'goal_win' || /(goal|finish|finiš|võit)/i.test(u.name || '')) && (isTouching || distSq < 3.0)) {
+            const now = Date.now();
+            if (now - (u._lastGoalTrigger || 0) > 5000) {
+                u._lastGoalTrigger = now;
+                playPlaySound('victory');
+                showPlayDialogMessage('🏆 PALJU ÕNNE! VÕIT!', 'Läbisid edukalt mängu finišijoone!', '🏆', 8.0);
+            }
+        }
+
+        // 8. Holdable items (free pickup or PBX purchase)
+        if (u.isHoldable && !u.isCollected && (isTouching || distSq < 6.0)) {
             if (u.costsPbx && (u.pbxPrice ?? 0) > 0) {
                 if ((keys['KeyE'] || distSq < 2.5) && !pendingPurchaseObject) {
                     if (keys['KeyE']) keys['KeyE'] = false;
@@ -716,6 +1061,7 @@ function animate() {
                     equipPlayItemInHand(u);
                     group.visible = false;
                     u.isCollected = true;
+                    playPlaySound('coin');
                 }
             }
         }

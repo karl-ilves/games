@@ -7968,10 +7968,12 @@ export function renderMySavedGamesModal() {
             alert(`✅ Game "${game.title}" loaded successfully!`);
         });
 
-        item.querySelector('.btn-delete-saved-game')?.addEventListener('click', () => {
+        item.querySelector('.btn-delete-saved-game')?.addEventListener('click', async () => {
             if (confirm(`Kas soovid kindlasti mängu "${game.title}" kustutada?`)) {
+                await yardService.deleteCreatedGame(game.id);
                 yardService.deleteUserSavedGame(profile?.username ?? null, game.id);
                 renderMySavedGamesModal();
+                alert(`✅ Mäng "${game.title}" on edukalt kustutatud!`);
             }
         });
 

@@ -169,6 +169,8 @@ const GAMES_STORAGE_KEY = 'playard_user_created_games';
 const CODE_REDEMPTIONS_STORAGE_KEY = 'playard_code_redemptions_global';
 const PLATFORM_UPDATES_KEY = 'playard_platform_updates';
 const RECENTLY_PLAYED_STORAGE_KEY = 'playard_recently_played_games';
+const DELETED_GAMES_KEY = 'playard_deleted_game_ids';
+const MY_CREATED_GAMES_KEY = 'playard_my_created_game_ids';
 
 const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_IN_48_HOURS = 48 * 60 * 60 * 1000;
@@ -1123,6 +1125,51 @@ class YardService {
         return [];
     }
 
+    public getDeletedGameIds(): string[] {
+        try {
+            const raw = localStorage.getItem(DELETED_GAMES_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    public addDeletedGameId(gameId: string) {
+        if (!gameId) return;
+        const ids = this.getDeletedGameIds();
+        if (!ids.includes(gameId)) {
+            ids.push(gameId);
+            try {
+                localStorage.setItem(DELETED_GAMES_KEY, JSON.stringify(ids));
+            } catch (e) {}
+        }
+    }
+
+    public getMyCreatedGameIds(): string[] {
+        try {
+            const raw = localStorage.getItem(MY_CREATED_GAMES_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    public addMyCreatedGameId(gameId: string) {
+        if (!gameId) return;
+        const ids = this.getMyCreatedGameIds();
+        if (!ids.includes(gameId)) {
+            ids.push(gameId);
+            try {
+                localStorage.setItem(MY_CREATED_GAMES_KEY, JSON.stringify(ids));
+            } catch (e) {}
+        }
+    }
+
+    public isMyCreatedGame(gameId: string): boolean {
+        if (!gameId) return false;
+        return this.getMyCreatedGameIds().includes(gameId);
+    }
+
     // --- User Created Games Management ---
     public async submitGameForReview(game: Omit<CreatedGame, 'id' | 'status' | 'plays' | 'createdAt' | 'updatedAt'> & { status?: 'pending_review' | 'approved' }): Promise<{ success: boolean; message: string; gameId: string }> {
         const gameId = generateUUID();
@@ -1135,6 +1182,14 @@ class YardService {
             createdAt: Date.now(),
             updatedAt: Date.now()
         };
+
+        // Record local creation ownership & ensure not marked deleted
+        this.addMyCreatedGameId(gameId);
+        try {
+            let deleted = this.getDeletedGameIds();
+            deleted = deleted.filter(id => id !== gameId);
+            localStorage.setItem(DELETED_GAMES_KEY, JSON.stringify(deleted));
+        } catch (e) {}
 
         // Save locally: clear any previous changes_requested records for this title/creator
         let games = this.getLocalCreatedGames();
@@ -1193,7 +1248,19 @@ class YardService {
     }
 
     public async deleteCreatedGame(gameId: string): Promise<boolean> {
-        // Delete from local storage
+        if (!gameId) return false;
+
+        // 1. Add to permanent deleted blacklist so it never reappears
+        this.addDeletedGameId(gameId);
+
+        // 2. Remove from my created games
+        try {
+            let myIds = this.getMyCreatedGameIds();
+            myIds = myIds.filter(id => id !== gameId);
+            localStorage.setItem(MY_CREATED_GAMES_KEY, JSON.stringify(myIds));
+        } catch (e) {}
+
+        // 3. Delete from local storage
         try {
             let games = this.getLocalCreatedGames();
             games = games.filter(g => g.id !== gameId);
@@ -1202,10 +1269,35 @@ class YardService {
             console.warn('Failed to delete game locally', e);
         }
 
-        // Delete from Supabase cloud
+        // 4. Delete from all local saved drafts
+        try {
+            const keysToRemove = ['playard_user_games_global'];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('playard_user_games_')) {
+                    keysToRemove.push(k);
+                }
+            }
+            for (const k of keysToRemove) {
+                const raw = localStorage.getItem(k);
+                if (raw) {
+                    try {
+                        let parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed)) {
+                            parsed = parsed.filter((g: any) => g.id !== gameId);
+                            localStorage.setItem(k, JSON.stringify(parsed));
+                        }
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {}
+
+        // 5. Delete from Supabase cloud
         if (supabase && !isTestMode() && isValidUUID(gameId)) {
             try {
                 await supabase.from('user_created_games').delete().eq('id', gameId);
+                // Also update status to archived as fallback
+                await supabase.from('user_created_games').update({ status: 'archived' }).eq('id', gameId);
             } catch (err) {
                 console.warn('Could not delete game from cloud:', err);
             }
@@ -1218,7 +1310,9 @@ class YardService {
     public getLocalCreatedGames(): CreatedGame[] {
         try {
             const raw = localStorage.getItem(GAMES_STORAGE_KEY);
-            return raw ? JSON.parse(raw) : [];
+            const list: CreatedGame[] = raw ? JSON.parse(raw) : [];
+            const deletedIds = new Set(this.getDeletedGameIds());
+            return list.filter(g => !deletedIds.has(g.id));
         } catch {
             return [];
         }
@@ -1262,10 +1356,14 @@ class YardService {
                 console.warn('Could not fetch all games from cloud:', err);
             }
         }
-        return Array.from(gamesMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const deletedIds = new Set(this.getDeletedGameIds());
+        return Array.from(gamesMap.values())
+            .filter(g => !deletedIds.has(g.id))
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     }
 
     public async getPendingGames(): Promise<CreatedGame[]> {
+        const deletedIds = new Set(this.getDeletedGameIds());
         if (supabase && !isTestMode()) {
             try {
                 const { data, error } = await supabase
@@ -1276,7 +1374,7 @@ class YardService {
 
                 if (!error && Array.isArray(data) && data.length > 0) {
                     return data
-                        .filter(d => d.category !== 'friend_request' && d.category !== 'friend_relation')
+                        .filter(d => d.category !== 'friend_request' && d.category !== 'friend_relation' && !deletedIds.has(d.id))
                         .map(d => ({
                             id: d.id,
                             userId: d.user_id,
@@ -1343,7 +1441,10 @@ class YardService {
             }
         }
 
-        return Array.from(approvedMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const deletedIds = new Set(this.getDeletedGameIds());
+        return Array.from(approvedMap.values())
+            .filter(g => !deletedIds.has(g.id))
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     }
 
     public async getGameById(gameId: string): Promise<CreatedGame | null> {
@@ -1596,6 +1697,9 @@ class YardService {
                 localStorage.setItem(`playard_user_games_${username.toLowerCase()}`, raw);
             }
         } catch (e) {}
+
+        // Also delete from published games and cloud
+        this.deleteCreatedGame(gameId);
     }
 
     public clearDraftGame(username?: string | null) {
