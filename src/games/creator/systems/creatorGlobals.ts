@@ -1,0 +1,165 @@
+import * as THREE from 'three';
+import {
+    scene, humanCharacter, playerAvatarRig, emotesWidget,
+    playerCoins, playerHealth, playerMaxHealth, isHealthVisible,
+    isCoinsVisible, isAsmaVisible, playerAsma, playerMaxAsma,
+    playerSpeedMultiplier, isCheatersConfirmed, currentPublishThumbnail,
+    currentGameMaxPlayers, currentGameMinAge, currentGameAgeRating,
+    currentVehicle, playTestWorldSnapshots, characterYaw, setCharacterYaw,
+    keys, placedObjects, selectedObject, isPlayTestMode
+} from '../state/creatorState';
+import { CATALOG_DATABASE, getStudioTestPlaybux, updateStudioTestPlaybuxDisplay } from '../catalog/creatorCatalog';
+import {
+    activeSeaConfig, oceanWaterMesh,
+    createWholeMapOcean, createPartMapOcean, createIslandOcean,
+    removeSea, setMapEnvironment, getMapEnvironment, updateMapEnvironmentUI,
+    isPositionInWater
+} from '../world/environment';
+import {
+    startNewEmptyGame, saveCurrentGame, publishCurrentGame,
+    openPublishModal, closePublishModal, confirmAndPublishGame,
+    setPublishModalThumbnail, clearPublishModalThumbnail,
+    captureSceneSnapshot, processImageFile, setCheatersConfirmed,
+    autoSaveDraft, serializeCurrentScene, loadSceneFromData,
+    selectObject, spawnObjectIntoScene, renderCatalogUI, setObjectPassable
+} from '../ui/creatorUI';
+import {
+    executeAiBuild, loadAiSchoolMemory, saveAiSchoolMemory,
+    updateAiTierDisplay, aiContextMemory
+} from '../ai/aiBuildEngine';
+import {
+    executeObjectScript, applyScriptPreset, openScriptModal,
+    closeScriptModal, saveScriptFromModal, renderScriptActionParams,
+    updateScriptInspectorDisplay, playScriptSound
+} from './scriptRunner';
+import {
+    damagePlayer, healPlayer, isPlayerTouchingOrOnTop,
+    equipCustomItemInHand, clearHeldItemFromHand,
+    enterVehicle, exitVehicle
+} from './physics';
+import {
+    openWorkbenchModal, closeWorkbenchModal, rebuildWorkbenchModel,
+    placeWorkbenchItemIntoScene, saveWorkbenchItemToLibrary,
+    setWorkbenchToolMode, currentWorkbenchState, wbScene, wbPreviewMesh, wbToolMode
+} from '../workbench/customItemWorkbench';
+import {
+    studioToolMode, setStudioToolMode, getStudioToolMode,
+    moveGizmoGroup, moveGizmoHandles, updateMoveGizmo,
+    isMovingWithGizmo, moveActiveAxis, pullActiveAxis,
+    setPullActiveAxis, getPullActiveAxis, updatePullGizmo,
+    pullGizmoGroup, moveSelectedObject, rotateSelectedObject,
+    spawnBlockObject, pullSelectedObject
+} from './gizmos';
+import { aiTierService, AI_TIER_CONFIGS } from '../../../shared/aiTierService';
+
+export function setupCreatorGlobals() {
+    (window as any).creatorStudio = {
+        THREE,
+        get scene() { return scene; },
+        get humanCharacter() { return humanCharacter; },
+        get playerAvatarRig() { return playerAvatarRig; },
+        get emotesWidget() { return emotesWidget; },
+        get activeSeaConfig() { return activeSeaConfig; },
+        get oceanWaterMesh() { return oceanWaterMesh; },
+        get placedObjects() { return placedObjects; },
+        get selectedObject() { return selectedObject; },
+        get playerCoins() { return playerCoins; },
+        get playerHealth() { return playerHealth; },
+        get playerMaxHealth() { return playerMaxHealth; },
+        get isHealthVisible() { return isHealthVisible; },
+        get isCoinsVisible() { return isCoinsVisible; },
+        get isAsmaVisible() { return isAsmaVisible; },
+        get playerAsma() { return playerAsma; },
+        get playerMaxAsma() { return playerMaxAsma; },
+        get playerSpeedMultiplier() { return playerSpeedMultiplier; },
+        createWholeMapOcean,
+        createPartMapOcean,
+        createIslandOcean,
+        removeSea,
+        setMapEnvironment,
+        getMapEnvironment,
+        updateMapEnvironmentUI,
+        startNewEmptyGame,
+        saveCurrentGame,
+        publishCurrentGame,
+        openPublishModal,
+        closePublishModal,
+        confirmAndPublishGame,
+        setPublishModalThumbnail,
+        clearPublishModalThumbnail,
+        captureSceneSnapshot,
+        processImageFile,
+        setCheatersConfirmed,
+        get isCheatersConfirmed() { return isCheatersConfirmed; },
+        get currentPublishThumbnail() { return currentPublishThumbnail; },
+        get currentGameMaxPlayers() { return currentGameMaxPlayers; },
+        get currentGameMinAge() { return currentGameMinAge; },
+        get currentGameAgeRating() { return currentGameAgeRating; },
+        autoSaveDraft,
+        serializeCurrentScene,
+        loadSceneFromData,
+        isPositionInWater,
+        executeAiBuild,
+        loadAiSchoolMemory,
+        saveAiSchoolMemory,
+        selectObject,
+        executeObjectScript,
+        applyScriptPreset,
+        openScriptModal,
+        closeScriptModal,
+        saveScriptFromModal,
+        renderScriptActionParams,
+        updateScriptInspectorDisplay,
+        playScriptSound,
+        damagePlayer,
+        healPlayer,
+        isPlayerTouchingOrOnTop,
+        spawnObjectIntoScene,
+        openWorkbenchModal,
+        closeWorkbenchModal,
+        rebuildWorkbenchModel,
+        placeWorkbenchItemIntoScene,
+        saveWorkbenchItemToLibrary,
+        renderCatalogUI,
+        equipCustomItemInHand,
+        clearHeldItemFromHand,
+        get currentWorkbenchState() { return currentWorkbenchState; },
+        get wbScene() { return wbScene; },
+        get wbPreviewMesh() { return wbPreviewMesh; },
+        setWorkbenchToolMode,
+        get wbToolMode() { return wbToolMode; },
+        get isPlayTestMode() { return isPlayTestMode; },
+        get studioToolMode() { return studioToolMode; },
+        setStudioToolMode,
+        getStudioToolMode,
+        get moveGizmoGroup() { return moveGizmoGroup; },
+        get moveGizmoHandles() { return moveGizmoHandles; },
+        updateMoveGizmo,
+        get isMovingWithGizmo() { return isMovingWithGizmo; },
+        get moveActiveAxis() { return moveActiveAxis; },
+        get pullActiveAxis() { return pullActiveAxis; },
+        setPullActiveAxis,
+        getPullActiveAxis,
+        updatePullGizmo,
+        get pullGizmoGroup() { return pullGizmoGroup; },
+        moveSelectedObject,
+        rotateSelectedObject,
+        spawnBlockObject,
+        pullSelectedObject,
+        setObjectPassable,
+        enterVehicle,
+        exitVehicle,
+        get currentVehicle() { return currentVehicle; },
+        get playTestWorldSnapshots() { return playTestWorldSnapshots; },
+        get aiContextMemory() { return aiContextMemory; },
+        aiTierService,
+        AI_TIER_CONFIGS,
+        updateAiTierDisplay,
+        get characterYaw() { return characterYaw; },
+        set characterYaw(val: number) { setCharacterYaw(val); },
+        keys,
+        CATALOG_DATABASE,
+        getStudioTestPlaybux,
+        updateStudioTestPlaybuxDisplay
+    };
+}

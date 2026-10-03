@@ -1,6 +1,8 @@
 import puppeteer from 'puppeteer';
 import { execSync } from 'child_process';
 import { preview } from 'vite';
+import { readFileSync, readdirSync } from 'fs';
+import path from 'path';
 
 // 1. Build Check
 try {
@@ -11,6 +13,27 @@ try {
     console.error("Build failed!");
     process.exit(1);
 }
+
+// 1b. Modular Architecture Line Count Check (Mandatory Rule: main.ts < 350 lines)
+console.log("Checking modular architecture line limits (all main.ts strictly < 350 lines)...");
+function checkMainTsLineCounts(dir) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            checkMainTsLineCounts(fullPath);
+        } else if (entry.name === 'main.ts') {
+            const lines = readFileSync(fullPath, 'utf8').split('\n').length;
+            if (lines > 350) {
+                console.error(`❌ Modular Architecture Violation: ${fullPath} has ${lines} lines (limit: strictly < 350 lines)!`);
+                process.exit(1);
+            }
+            console.log(`   ✅ ${fullPath}: ${lines} lines (< 350 limit)`);
+        }
+    }
+}
+checkMainTsLineCounts('src');
+console.log("✅ All main.ts files strictly comply with modular architecture (< 350 lines)!");
 
 // 2. Load Check
 await (async () => {
@@ -34,7 +57,7 @@ await (async () => {
             '--ignore-gpu-blocklist',
             '--disable-gpu-process-crash-limit',
             '--disable-features=IsolateOrigins,site-per-process',
-            '--js-flags=--max-old-space-size=768'
+            '--js-flags=--max-old-space-size=2048'
         ]
     });
     const page = await browser.newPage();
