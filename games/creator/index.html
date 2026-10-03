@@ -408,12 +408,15 @@
         </div>
     </div>
 
-    <!-- Top-Left Tool Mode Selector: Mouse vs Puller -->
+    <!-- Top-Left Tool Mode Selector: Mouse vs Mover vs Puller -->
     <div id="studio-tool-mode-selector" style="position: absolute; top: 75px; left: 20px; z-index: 1005; background: rgba(15, 23, 42, 0.94); border: 2px solid rgba(0, 242, 254, 0.4); border-radius: 14px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
         <span style="font-size: 0.82rem; font-weight: 800; color: #ffd32a; padding: 0 4px; user-select: none;">Tool:</span>
         <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 3px; border-radius: 10px; border: 1px solid rgba(0,242,254,0.25);">
-            <button id="btn-tool-mouse" class="btn-studio-tool active" title="Mouse Tool (Select and Move)" style="padding: 7px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+            <button id="btn-tool-mouse" class="btn-studio-tool active" title="Mouse Tool (Select objects)" style="padding: 7px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
                 Mouse
+            </button>
+            <button id="btn-tool-mover" class="btn-studio-tool" title="Mover Tool (Move objects with XYZ arrow gizmo)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                Mover
             </button>
             <button id="btn-tool-puller" class="btn-studio-tool" title="Puller Tool (Drag and stretch blocks)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
                 Puller

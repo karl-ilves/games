@@ -3075,11 +3075,12 @@ await (async () => {
             await page.waitForSelector('#btn-add-block', { visible: true, timeout: 5000 });
             console.log("   Found visible '#btn-add-block' button at top.");
 
-            // 2. Verify Tool Mode Selector (Hiir vs Tõmbaja) exists in top-left
+            // 2. Verify Tool Mode Selector (Hiir vs Liigutaja vs Tõmbaja) exists in top-left
             await page.waitForSelector('#studio-tool-mode-selector', { visible: true, timeout: 5000 });
             await page.waitForSelector('#btn-tool-mouse', { visible: true, timeout: 5000 });
+            await page.waitForSelector('#btn-tool-mover', { visible: true, timeout: 5000 });
             await page.waitForSelector('#btn-tool-puller', { visible: true, timeout: 5000 });
-            console.log("   Found visible '#studio-tool-mode-selector' with '#btn-tool-mouse' and '#btn-tool-puller'.");
+            console.log("   Found visible '#studio-tool-mode-selector' with '#btn-tool-mouse', '#btn-tool-mover', and '#btn-tool-puller'.");
 
             // 3. Test clicking 'Add Block' button spawns a block and selects it
             const objectsBeforeBlock = await page.evaluate(() => window.creatorStudio?.placedObjects?.length || 0);
@@ -3273,11 +3274,42 @@ await (async () => {
                 const cs = window.creatorStudio;
                 return {
                     mode: cs?.studioToolMode,
-                    gizmoVisible: cs?.pullGizmoGroup?.visible
+                    pullGizmoVisible: cs?.pullGizmoGroup?.visible,
+                    moveGizmoVisible: cs?.moveGizmoGroup?.visible
                 };
             });
-            if (modeAfterMouseClick.mode !== 'mouse' || modeAfterMouseClick.gizmoVisible) {
-                throw new Error("Clicking '#btn-tool-mouse' failed to switch to 'mouse' mode or hide gizmo!");
+            if (modeAfterMouseClick.mode !== 'mouse' || modeAfterMouseClick.pullGizmoVisible || modeAfterMouseClick.moveGizmoVisible) {
+                throw new Error("Clicking '#btn-tool-mouse' failed to switch to 'mouse' mode or hide gizmos!");
+            }
+
+            // 5b. Test switching to 'Liigutaja' (Mover) mode & 3D arrow gizmo
+            console.log("   Testing Mover Tool ('liigutaja') & 3D arrow gizmo...");
+            await page.click('#btn-tool-mover');
+            await new Promise(r => setTimeout(r, 100));
+            const modeAfterMoverClick = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                return {
+                    mode: cs?.studioToolMode,
+                    moveGizmoVisible: cs?.moveGizmoGroup?.visible,
+                    pullGizmoVisible: cs?.pullGizmoGroup?.visible,
+                    handleCount: cs?.moveGizmoHandles?.length || 0
+                };
+            });
+            if (modeAfterMoverClick.mode !== 'mover' || !modeAfterMoverClick.moveGizmoVisible || modeAfterMoverClick.pullGizmoVisible) {
+                throw new Error("Clicking '#btn-tool-mover' failed to switch to 'mover' mode or display move gizmo!");
+            }
+            if (modeAfterMoverClick.handleCount < 3) {
+                throw new Error("Move gizmo handles missing!");
+            }
+
+            // Test moving selected object via moveSelectedObject & gizmo sync
+            const posBeforeMove = await page.evaluate(() => ({ ...window.creatorStudio.selectedObject.position }));
+            await page.evaluate(() => {
+                window.creatorStudio.moveSelectedObject(5, 0, 0);
+            });
+            const posAfterMove = await page.evaluate(() => ({ ...window.creatorStudio.selectedObject.position }));
+            if (Math.abs(posAfterMove.x - (posBeforeMove.x + 5)) > 0.01) {
+                throw new Error("Moving selected object along X axis failed!");
             }
 
             // 6. Test switching back to 'Tõmbaja' mode
@@ -3287,13 +3319,14 @@ await (async () => {
                 const cs = window.creatorStudio;
                 return {
                     mode: cs?.studioToolMode,
-                    gizmoVisible: cs?.pullGizmoGroup?.visible
+                    gizmoVisible: cs?.pullGizmoGroup?.visible,
+                    moveGizmoVisible: cs?.moveGizmoGroup?.visible
                 };
             });
-            if (modeAfterPullerClick.mode !== 'puller' || !modeAfterPullerClick.gizmoVisible) {
+            if (modeAfterPullerClick.mode !== 'puller' || !modeAfterPullerClick.gizmoVisible || modeAfterPullerClick.moveGizmoVisible) {
                 throw new Error("Clicking '#btn-tool-puller' failed to switch to 'puller' mode or restore gizmo!");
             }
-            console.log("   ✅ Add Block & Tõmbaja edge pulling tests passed!");
+            console.log("   ✅ Add Block, Liigutaja (Mover), and Tõmbaja (Puller) tests passed!");
         }
 
         // Test Block Passable vs Solid Collision Setting ("plokil saab valida kas sealt saab läbi käia või ei")

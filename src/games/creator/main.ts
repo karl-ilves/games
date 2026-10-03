@@ -2734,6 +2734,7 @@ export function moveSelectedObject(dx: number, dy: number, dz: number) {
     };
     updateInspectorDisplay();
     if (studioToolMode === 'puller') updatePullGizmo();
+    if (studioToolMode === 'mover') updateMoveGizmo();
     autoSaveDraft();
 }
 
@@ -2747,6 +2748,7 @@ export function rotateSelectedObject(rad = Math.PI / 4) {
     };
     updateInspectorDisplay();
     if (studioToolMode === 'puller') updatePullGizmo();
+    if (studioToolMode === 'mover') updateMoveGizmo();
     autoSaveDraft();
 }
 
@@ -2855,6 +2857,7 @@ function selectObject(placed: PlacedObject | null) {
         if (props) props.style.display = 'none';
         updateScriptInspectorDisplay(null);
         if (pullGizmoGroup) pullGizmoGroup.visible = false;
+        if (moveGizmoGroup) moveGizmoGroup.visible = false;
         return;
     }
 
@@ -2894,6 +2897,12 @@ function selectObject(placed: PlacedObject | null) {
         updatePullGizmo();
     } else if (pullGizmoGroup) {
         pullGizmoGroup.visible = false;
+    }
+
+    if (studioToolMode === 'mover') {
+        updateMoveGizmo();
+    } else if (moveGizmoGroup) {
+        moveGizmoGroup.visible = false;
     }
 }
 
@@ -3130,11 +3139,18 @@ async function initStudio() {
         get studioToolMode() { return studioToolMode; },
         setStudioToolMode,
         getStudioToolMode,
+        get moveGizmoGroup() { return moveGizmoGroup; },
+        get moveGizmoHandles() { return moveGizmoHandles; },
+        updateMoveGizmo,
+        get isMovingWithGizmo() { return isMovingWithGizmo; },
+        get moveActiveAxis() { return moveActiveAxis; },
         get pullActiveAxis() { return pullActiveAxis; },
         setPullActiveAxis,
         getPullActiveAxis,
         updatePullGizmo,
         get pullGizmoGroup() { return pullGizmoGroup; },
+        moveSelectedObject,
+        rotateSelectedObject,
         spawnBlockObject,
         pullSelectedObject,
         setObjectPassable,
@@ -3178,6 +3194,7 @@ function updateOrbitCamera() {
     const z = orbitTarget.z + orbitRadius * Math.sin(orbitPhi) * Math.cos(orbitTheta);
     camera.position.set(x, y, z);
     camera.lookAt(orbitTarget);
+    if (moveGizmoGroup?.visible) updateMoveGizmo();
 }
 
 function onWindowResize() {
@@ -3186,10 +3203,19 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-export type StudioToolMode = 'mouse' | 'puller';
+export type StudioToolMode = 'mouse' | 'mover' | 'puller';
 export type PullEdgeAxis = 'all' | 'x' | 'y' | 'z';
 
 let studioToolMode: StudioToolMode = 'mouse';
+let moveGizmoGroup: THREE.Group | null = null;
+let moveGizmoHandles: THREE.Object3D[] = [];
+let isMovingWithGizmo = false;
+let moveActiveAxis: 'x' | 'y' | 'z' | null = null;
+let moveStartObjectPos = new THREE.Vector3();
+let moveStartMousePos = { x: 0, y: 0 };
+let moveScreenDir = { x: 1, y: 0 };
+let worldUnitsPerPixel = 0.02;
+
 let pullActiveAxis: PullEdgeAxis = 'all';
 let pullActiveSign: number = 1;
 let isPullingObject = false;
@@ -3288,32 +3314,49 @@ export function setPullActiveAxis(axis: PullEdgeAxis) {
 export function setStudioToolMode(mode: StudioToolMode) {
     studioToolMode = mode;
     const btnMouse = document.getElementById('btn-tool-mouse');
+    const btnMover = document.getElementById('btn-tool-mover');
     const btnPuller = document.getElementById('btn-tool-puller');
     const pullerSubpanel = document.getElementById('puller-controls-subpanel');
     const canvasDom = renderer?.domElement;
 
-    if (btnMouse && btnPuller) {
-        if (mode === 'mouse') {
+    [btnMouse, btnMover, btnPuller].forEach(btn => {
+        if (btn) {
+            btn.classList.remove('active');
+            btn.style.background = 'transparent';
+            btn.style.color = '#94a3b8';
+        }
+    });
+
+    if (mode === 'mouse') {
+        if (btnMouse) {
             btnMouse.classList.add('active');
-            btnPuller.classList.remove('active');
             btnMouse.style.background = 'linear-gradient(135deg, #00f2fe, #3b82f6)';
             btnMouse.style.color = '#000';
-            btnPuller.style.background = 'transparent';
-            btnPuller.style.color = '#94a3b8';
-            if (pullerSubpanel) pullerSubpanel.style.display = 'none';
-            if (canvasDom) canvasDom.style.cursor = 'default';
-            if (pullGizmoGroup) pullGizmoGroup.visible = false;
-        } else {
+        }
+        if (pullerSubpanel) pullerSubpanel.style.display = 'none';
+        if (canvasDom) canvasDom.style.cursor = 'default';
+        if (pullGizmoGroup) pullGizmoGroup.visible = false;
+        if (moveGizmoGroup) moveGizmoGroup.visible = false;
+    } else if (mode === 'mover') {
+        if (btnMover) {
+            btnMover.classList.add('active');
+            btnMover.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
+            btnMover.style.color = '#fff';
+        }
+        if (pullerSubpanel) pullerSubpanel.style.display = 'none';
+        if (canvasDom) canvasDom.style.cursor = 'move';
+        if (pullGizmoGroup) pullGizmoGroup.visible = false;
+        updateMoveGizmo();
+    } else {
+        if (btnPuller) {
             btnPuller.classList.add('active');
-            btnMouse.classList.remove('active');
             btnPuller.style.background = 'linear-gradient(135deg, #ffd32a, #ff9f1a)';
             btnPuller.style.color = '#000';
-            btnMouse.style.background = 'transparent';
-            btnMouse.style.color = '#94a3b8';
-            if (pullerSubpanel) pullerSubpanel.style.display = 'flex';
-            if (canvasDom) canvasDom.style.cursor = 'nwse-resize';
-            updatePullGizmo();
         }
+        if (pullerSubpanel) pullerSubpanel.style.display = 'flex';
+        if (canvasDom) canvasDom.style.cursor = 'nwse-resize';
+        if (moveGizmoGroup) moveGizmoGroup.visible = false;
+        updatePullGizmo();
     }
 }
 
@@ -3437,6 +3480,100 @@ export function updatePullGizmo() {
         const mat = h.material as THREE.MeshBasicMaterial;
         mat.opacity = isCurrentActive ? 0.95 : 0.65;
     });
+}
+
+function initMoveGizmo() {
+    if (moveGizmoGroup) return;
+    moveGizmoGroup = new THREE.Group();
+    moveGizmoGroup.name = 'moveGizmoGroup';
+    moveGizmoGroup.visible = false;
+    scene.add(moveGizmoGroup);
+
+    const shaftLen = 3.6;
+    const shaftRad = 0.12;
+    const coneLen = 1.2;
+    const coneRad = 0.42;
+    const pickRad = 0.65;
+
+    const createAxisArrow = (axis: 'x' | 'y' | 'z', color: number, name: string) => {
+        const axisGroup = new THREE.Group();
+        axisGroup.name = `moveGizmoAxis_${axis}`;
+        axisGroup.userData = { isMoveGizmoHandle: true, axis, name };
+
+        const mat = new THREE.MeshBasicMaterial({
+            color,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.95
+        });
+
+        // Shaft (cylinder along Y by default)
+        const shaftGeo = new THREE.CylinderGeometry(shaftRad, shaftRad, shaftLen, 12);
+        const shaftMesh = new THREE.Mesh(shaftGeo, mat);
+        shaftMesh.position.y = shaftLen / 2;
+        shaftMesh.renderOrder = 2000;
+        shaftMesh.userData = { isMoveGizmoHandle: true, axis };
+        axisGroup.add(shaftMesh);
+
+        // Arrow head (cone pointing along Y)
+        const coneGeo = new THREE.ConeGeometry(coneRad, coneLen, 16);
+        const coneMesh = new THREE.Mesh(coneGeo, mat);
+        coneMesh.position.y = shaftLen + coneLen / 2;
+        coneMesh.renderOrder = 2001;
+        coneMesh.userData = { isMoveGizmoHandle: true, axis };
+        axisGroup.add(coneMesh);
+
+        // Large pick cylinder for easy clicking
+        const pickGeo = new THREE.CylinderGeometry(pickRad, pickRad, shaftLen + coneLen + 0.4, 8);
+        const pickMat = new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 });
+        const pickMesh = new THREE.Mesh(pickGeo, pickMat);
+        pickMesh.position.y = (shaftLen + coneLen) / 2;
+        pickMesh.userData = { isMoveGizmoHandle: true, axis };
+        axisGroup.add(pickMesh);
+
+        // Rotate to match axis direction
+        if (axis === 'x') {
+            axisGroup.rotation.z = -Math.PI / 2; // +Y becomes +X
+        } else if (axis === 'z') {
+            axisGroup.rotation.x = Math.PI / 2;  // +Y becomes +Z
+        }
+
+        moveGizmoGroup!.add(axisGroup);
+        moveGizmoHandles.push(shaftMesh, coneMesh, pickMesh);
+        return axisGroup;
+    };
+
+    createAxisArrow('x', 0xff4757, 'Move X (Punane)');
+    createAxisArrow('y', 0x2ecc71, 'Move Y (Roheline)');
+    createAxisArrow('z', 0x00f2fe, 'Move Z (Sinine)');
+}
+
+export function updateMoveGizmo() {
+    if (!moveGizmoGroup) initMoveGizmo();
+    if (!moveGizmoGroup) return;
+
+    if (studioToolMode !== 'mover' || !selectedObject || isPlayTestMode) {
+        moveGizmoGroup.visible = false;
+        return;
+    }
+
+    moveGizmoGroup.visible = true;
+    selectedObject.mesh.updateMatrixWorld(true);
+
+    const box = new THREE.Box3().setFromObject(selectedObject.mesh);
+    const center = new THREE.Vector3();
+    if (!box.isEmpty()) {
+        box.getCenter(center);
+    } else {
+        center.copy(selectedObject.mesh.position);
+    }
+
+    moveGizmoGroup.position.copy(center);
+
+    const dist = camera.position.distanceTo(center);
+    const scale = Math.max(0.5, dist * 0.08);
+    moveGizmoGroup.scale.set(scale, scale, scale);
 }
 
 export function showFloatingPullIndicator(
@@ -4464,7 +4601,65 @@ function setupStudioEvents() {
                 return hits.length > 0;
             });
 
-            if (studioToolMode === 'puller') {
+            if (studioToolMode === 'mover') {
+                // 1. Check if any move gizmo arrow was clicked
+                const gizmoHits = (moveGizmoGroup?.visible && moveGizmoHandles.length > 0)
+                    ? raycaster.intersectObjects(moveGizmoHandles, true)
+                    : [];
+                if (gizmoHits.length > 0 && selectedObject) {
+                    let hitMesh: THREE.Object3D | null = gizmoHits[0].object;
+                    let axis = hitMesh?.userData?.axis;
+                    while (hitMesh && !axis && hitMesh.parent) {
+                        hitMesh = hitMesh.parent;
+                        axis = hitMesh?.userData?.axis;
+                    }
+
+                    if (axis) {
+                        isMovingWithGizmo = true;
+                        moveActiveAxis = axis;
+                        moveStartMousePos = { x: e.clientX, y: e.clientY };
+                        moveStartObjectPos.copy(selectedObject.mesh.position);
+
+                        selectedObject.mesh.updateMatrixWorld(true);
+                        const box = new THREE.Box3().setFromObject(selectedObject.mesh);
+                        const center = new THREE.Vector3();
+                        if (!box.isEmpty()) box.getCenter(center);
+                        else center.copy(selectedObject.mesh.position);
+
+                        const centerProj = center.clone().project(camera);
+                        const axisUnit = new THREE.Vector3(
+                            axis === 'x' ? 1 : 0,
+                            axis === 'y' ? 1 : 0,
+                            axis === 'z' ? 1 : 0
+                        );
+                        const tipWorld = center.clone().add(axisUnit);
+                        const tipProj = tipWorld.project(camera);
+
+                        let sDx = (tipProj.x - centerProj.x) * (window.innerWidth / 2);
+                        let sDy = -(tipProj.y - centerProj.y) * (window.innerHeight / 2);
+                        const sLen = Math.hypot(sDx, sDy);
+
+                        if (sLen > 0.001) {
+                            moveScreenDir = { x: sDx / sLen, y: sDy / sLen };
+                        } else {
+                            moveScreenDir = { x: 1, y: 0 };
+                        }
+
+                        const dist = camera.position.distanceTo(center);
+                        const vFov = (camera.fov * Math.PI) / 180;
+                        const visibleHeight = 2 * Math.tan(vFov / 2) * dist;
+                        worldUnitsPerPixel = visibleHeight / window.innerHeight;
+
+                        dom.style.cursor = 'grabbing';
+                        return;
+                    }
+                }
+
+                // 2. Direct object click in Mover mode strictly selects, NEVER drags
+                if (hitGroup) {
+                    selectObject(hitGroup);
+                }
+            } else if (studioToolMode === 'puller') {
                 // 1. First check if any gizmo handle was clicked
                 const gizmoHits = (pullGizmoGroup?.visible && pullGizmoHandles.length > 0)
                     ? raycaster.intersectObjects(pullGizmoHandles, false)
@@ -4555,9 +4750,9 @@ function setupStudioEvents() {
                     showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
                 }
             } else {
+                // Mouse mode: clicking an object strictly selects it, NEVER drags
                 if (hitGroup) {
                     selectObject(hitGroup);
-                    isDraggingObject = true;
                 }
             }
         } else if (e.button === 0 && isPlayTestMode) {
@@ -4569,6 +4764,12 @@ function setupStudioEvents() {
     window.addEventListener('mouseup', e => {
         if (e.button === 2) isRightMouseDown = false;
         if (e.button === 0) {
+            if (isMovingWithGizmo) {
+                isMovingWithGizmo = false;
+                moveActiveAxis = null;
+                dom.style.cursor = studioToolMode === 'mover' ? 'move' : 'default';
+                autoSaveDraft();
+            }
             if (isPullingObject) {
                 isPullingObject = false;
                 hideFloatingPullIndicator(1000);
@@ -4657,25 +4858,48 @@ function setupStudioEvents() {
             updateInspectorDisplay();
             updatePullGizmo();
             showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
-        } else if (isDraggingObject && selectedObject && !isPlayTestMode) {
-            const rect = dom.getBoundingClientRect();
-            const mouse = new THREE.Vector2(
-                ((e.clientX - rect.left) / rect.width) * 2 - 1,
-                -((e.clientY - rect.top) / rect.height) * 2 + 1
-            );
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(mouse, camera);
-            const hitPoint = new THREE.Vector3();
-            if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
-                selectedObject.mesh.position.x = hitPoint.x;
-                selectedObject.mesh.position.z = hitPoint.z;
-                selectedObject.position.x = hitPoint.x;
-                selectedObject.position.z = hitPoint.z;
-                if (selectedObject.movement) {
-                    selectedObject.movement.origin.x = hitPoint.x;
-                    selectedObject.movement.origin.z = hitPoint.z;
+        } else if (isMovingWithGizmo && selectedObject && moveActiveAxis && !isPlayTestMode) {
+            const mouseDx = e.clientX - moveStartMousePos.x;
+            const mouseDy = e.clientY - moveStartMousePos.y;
+            const pixelDrag = mouseDx * moveScreenDir.x + mouseDy * moveScreenDir.y;
+            const worldDelta = pixelDrag * worldUnitsPerPixel;
+
+            if (moveActiveAxis === 'x') {
+                const newX = Number((moveStartObjectPos.x + worldDelta).toFixed(2));
+                selectedObject.mesh.position.x = newX;
+                selectedObject.position.x = newX;
+                if (selectedObject.movement) selectedObject.movement.origin.x = newX;
+            } else if (moveActiveAxis === 'y') {
+                const newY = Math.max(0, Number((moveStartObjectPos.y + worldDelta).toFixed(2)));
+                selectedObject.mesh.position.y = newY;
+                selectedObject.position.y = newY;
+                if (selectedObject.movement) selectedObject.movement.origin.y = newY;
+            } else if (moveActiveAxis === 'z') {
+                const newZ = Number((moveStartObjectPos.z + worldDelta).toFixed(2));
+                selectedObject.mesh.position.z = newZ;
+                selectedObject.position.z = newZ;
+                if (selectedObject.movement) selectedObject.movement.origin.z = newZ;
+            }
+
+            updateInspectorDisplay();
+            updateMoveGizmo();
+        }
+
+        if (!isRightMouseDown && !isMovingWithGizmo && !isPullingObject && !isPlayTestMode) {
+            if (studioToolMode === 'mover' && moveGizmoGroup?.visible && moveGizmoHandles.length > 0) {
+                const rect = dom.getBoundingClientRect();
+                const mouse = new THREE.Vector2(
+                    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                    -((e.clientY - rect.top) / rect.height) * 2 + 1
+                );
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+                const hits = raycaster.intersectObjects(moveGizmoHandles, true);
+                if (hits.length > 0) {
+                    dom.style.cursor = 'grab';
+                } else {
+                    dom.style.cursor = 'move';
                 }
-                updateInspectorDisplay();
             }
         }
     });
@@ -4733,6 +4957,7 @@ function setupStudioEvents() {
                 }
                 selectObject(null);
                 isDraggingObject = false;
+                isMovingWithGizmo = false;
 
                 // Position player at placed spawn point if available
                 const spawnPoints = placedObjects.filter(o => o.isSpawnPoint || o.category === 'spawn' || o.catalogId?.startsWith('spawn_'));
@@ -5045,9 +5270,13 @@ function setupStudioEvents() {
         spawnBlockObject();
     });
 
-    // Tool Mode Selector (Hiir vs Tõmbaja)
+    // Tool Mode Selector (Hiir vs Liigutaja vs Tõmbaja)
     document.getElementById('btn-tool-mouse')?.addEventListener('click', () => {
         setStudioToolMode('mouse');
+    });
+
+    document.getElementById('btn-tool-mover')?.addEventListener('click', () => {
+        setStudioToolMode('mover');
     });
 
     document.getElementById('btn-tool-puller')?.addEventListener('click', () => {
@@ -5458,6 +5687,7 @@ function setupInspectorEvents() {
                 selectedObject.scale.y = s;
                 selectedObject.scale.z = s;
                 updatePullGizmo();
+                if (studioToolMode === 'mover') updateMoveGizmo();
                 updateInspectorDisplay();
                 autoSaveDraft();
             }
@@ -5476,6 +5706,7 @@ function setupInspectorEvents() {
                 selectedObject.mesh.scale[axis] = s;
                 selectedObject.scale[axis] = s;
                 updatePullGizmo();
+                if (studioToolMode === 'mover') updateMoveGizmo();
                 autoSaveDraft();
             }
         });
