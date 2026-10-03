@@ -2064,10 +2064,33 @@ await (async () => {
             const posVal = await page.$eval('#obj-pos-val', el => el.textContent);
             console.log("   Object Position after Move button:", posVal);
 
-            // Test Object Delete with 'D' key
+            // Test that pressing 'KeyD' does NOT delete the selected object
+            const isSelectedBeforeD = await page.evaluate(() => {
+                const props = document.getElementById('selected-object-props');
+                return props && props.style.display !== 'none';
+            });
             await page.keyboard.press('KeyD');
+            await new Promise(r => setTimeout(r, 300));
+            const isSelectedAfterD = await page.evaluate(() => {
+                const props = document.getElementById('selected-object-props');
+                return props && props.style.display !== 'none';
+            });
+            if (isSelectedBeforeD && !isSelectedAfterD) {
+                throw new Error("Regression: 'KeyD' must NOT delete the selected object!");
+            }
+            console.log("   Verified that 'KeyD' does NOT delete selected object: ✅");
+
+            // Test Object Delete with 'Delete' key
+            await page.keyboard.press('Delete');
             await new Promise(r => setTimeout(r, 400));
-            console.log("   Successfully tested Object Deletion with 'D' key!");
+            const isSelectedAfterDelete = await page.evaluate(() => {
+                const props = document.getElementById('selected-object-props');
+                return props && props.style.display !== 'none';
+            });
+            if (isSelectedAfterDelete) {
+                throw new Error("Expected 'Delete' key to delete the selected object!");
+            }
+            console.log("   Successfully tested Object Deletion with 'Delete' key: ✅");
 
             // Re-spawn an object for subsequent tests
             await page.click('.object-card');

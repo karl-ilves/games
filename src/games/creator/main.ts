@@ -4360,8 +4360,8 @@ function setupStudioEvents() {
                 return;
             }
 
-            // D Key / Delete / Backspace: Delete selected object
-            if (e.code === 'KeyD' || e.key.toLowerCase() === 'd' || e.code === 'Delete' || e.code === 'Backspace') {
+            // Delete / Backspace: Delete selected object
+            if (e.code === 'Delete' || e.code === 'Backspace') {
                 e.preventDefault();
                 deleteSelectedObject();
                 return;
@@ -11125,9 +11125,9 @@ export function executeAiBuild(promptText: string) {
 
     } else if (p.includes('kuidas kustutada') || p.includes('kuidas eemaldada') || p.includes('how to delete') || p.includes('delete object')) {
         if (isAdmin) {
-            aiResponse = `🗑️ <strong>Objekti kustutamine:</strong><br>Klõpsa stseenis objektile, mida soovid kustutada, ja vajuta klaviatuuril <strong>[D]</strong> või <strong>Delete</strong> klahvi (või paremal paneelis punast nuppu <strong>🗑️ Delete Object</strong>).`;
+            aiResponse = `🗑️ <strong>Objekti kustutamine:</strong><br>Klõpsa stseenis objektile, mida soovid kustutada, ja vajuta klaviatuuril <strong>Delete</strong> või <strong>Backspace</strong> klahvi (või paremal paneelis punast nuppu <strong>🗑️ Delete Object</strong>).`;
         } else {
-            aiResponse = `🗑️ <strong>Deleting Objects:</strong><br>Click on the object in the scene and press <strong>[D]</strong> or <strong>Delete</strong> key (or click the red <strong>🗑️ Delete Object</strong> button in the inspector).`;
+            aiResponse = `🗑️ <strong>Deleting Objects:</strong><br>Click on the object in the scene and press <strong>Delete</strong> or <strong>Backspace</strong> key (or click the red <strong>🗑️ Delete Object</strong> button in the inspector).`;
         }
 
     } else if (p.includes('kuidas pöörata') || p.includes('kuidas poorata') || p.includes('how to rotate') || p.includes('rotate object')) {
