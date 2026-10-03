@@ -218,7 +218,10 @@ async function initPlayer() {
             (window as any).playGameInstance = {
                 get scene() { return scene; },
                 get sceneObjects() { return sceneObjects; },
-                get currentGame() { return currentGame; }
+                get currentGame() { return currentGame; },
+                get humanCharacter() { return humanCharacter; },
+                get characterYaw() { return characterYaw; },
+                set characterYaw(val: number) { characterYaw = val; }
             };
 
             yardService.recordPlayedGame({
@@ -282,6 +285,63 @@ async function initPlayer() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    // Mouse Drag View Rotation (same as Creator Studio)
+    let isMouseDown = false;
+    let mousePos = { x: 0, y: 0 };
+    window.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        mousePos = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener('mouseup', () => {
+        isMouseDown = false;
+    });
+    window.addEventListener('mousemove', (e) => {
+        if (isMouseDown) {
+            const dx = e.clientX - mousePos.x;
+            characterYaw -= dx * 0.006;
+            mousePos = { x: e.clientX, y: e.clientY };
+        }
+    });
+
+    // Touch Drag View Rotation for mobile/tablets
+    let touchStartPos = { x: 0, y: 0 };
+    let isTouching = false;
+    window.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            isTouching = true;
+            touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+    }, { passive: true });
+    window.addEventListener('touchend', () => {
+        isTouching = false;
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+        if (isTouching && e.touches.length === 1) {
+            const dx = e.touches[0].clientX - touchStartPos.x;
+            characterYaw -= dx * 0.006;
+            touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+    }, { passive: true });
+
+    // On-Screen Touch D-Pad Binding
+    const bindTouchBtn = (id: string, code: string) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            keys[code] = true;
+        });
+        const release = () => { keys[code] = false; };
+        el.addEventListener('pointerup', release);
+        el.addEventListener('pointercancel', release);
+        el.addEventListener('pointerleave', release);
+    };
+    bindTouchBtn('touch-btn-up', 'KeyW');
+    bindTouchBtn('touch-btn-down', 'KeyS');
+    bindTouchBtn('touch-btn-left', 'KeyA');
+    bindTouchBtn('touch-btn-right', 'KeyD');
+    bindTouchBtn('touch-btn-jump', 'Space');
+
     const oldControls = document.getElementById('play-screen-controls');
     if (isMobileOrTabletDevice()) {
         if (oldControls) oldControls.style.display = 'none';
@@ -330,20 +390,28 @@ function animate() {
     }
 
     const moveSpeed = 9;
-    const moveDir = new THREE.Vector3();
+    const turnSpeed = 2.4;
 
-    if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
-    if (keys['KeyS'] || keys['ArrowDown']) moveDir.z += 1;
-    if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
-    if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+    // View turning via A/D or ArrowLeft/ArrowRight (same as Creator Studio)
+    if (keys['KeyA'] || keys['ArrowLeft']) {
+        characterYaw += turnSpeed * delta;
+    }
+    if (keys['KeyD'] || keys['ArrowRight']) {
+        characterYaw -= turnSpeed * delta;
+    }
 
-    if (moveDir.lengthSq() > 0) {
-        moveDir.normalize();
-        characterYaw = Math.atan2(moveDir.x, moveDir.z);
-        humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
+    // Only W and S move the player! (W = forward in view direction, S = backward)
+    let moveMagnitude = 0;
+    if (keys['KeyW'] || keys['ArrowUp']) moveMagnitude += 1;
+    if (keys['KeyS'] || keys['ArrowDown']) moveMagnitude -= 1;
 
-        humanCharacter.position.x += moveDir.x * moveSpeed * delta;
-        humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+    const forwardX = Math.sin(characterYaw);
+    const forwardZ = Math.cos(characterYaw);
+
+    const hasHoriMove = moveMagnitude !== 0;
+    if (hasHoriMove) {
+        humanCharacter.position.x += forwardX * moveMagnitude * moveSpeed * delta;
+        humanCharacter.position.z += forwardZ * moveMagnitude * moveSpeed * delta;
 
         if (playerAvatarRig) {
             playerAvatarRig.updateAnimation(performance.now() * 0.001, 'run');
@@ -357,6 +425,7 @@ function animate() {
             }
         }
     }
+    humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.25);
 
     if (keys['Space'] && isGrounded) {
         characterVelocity.y = 9;

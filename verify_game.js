@@ -4308,7 +4308,74 @@ await (async () => {
         console.log("   ✅ Lava Hazard Floor renders with proper plate & obsidian rims (not a plain box)!");
         console.log("   ✅ Checkpoint Flag Post renders with proper stand, pole, and flag (not a plain box)!");
 
-        // 7. Test Racing Simulator
+        // 6e. Test Game Player Movement Controls (A/D & Mouse turns view, W/S moves forward/backward)
+        console.log("6e. Testing Game Player Movement Controls (A/D turns view, W/S moves view-relative, Mouse drag turns view)...");
+        const initialPlayerState = await page.evaluate(() => {
+            const inst = window.playGameInstance;
+            return {
+                yaw: inst?.characterYaw || 0,
+                x: inst?.humanCharacter?.position?.x || 0,
+                z: inst?.humanCharacter?.position?.z || 0
+            };
+        });
+
+        // 1. Turn view left with 'KeyA'
+        await page.keyboard.down('KeyA');
+        await new Promise(r => setTimeout(r, 200));
+        await page.keyboard.up('KeyA');
+        await new Promise(r => setTimeout(r, 50));
+
+        const afterTurnState = await page.evaluate(() => {
+            const inst = window.playGameInstance;
+            return {
+                yaw: inst?.characterYaw || 0,
+                x: inst?.humanCharacter?.position?.x || 0,
+                z: inst?.humanCharacter?.position?.z || 0
+            };
+        });
+
+        if (afterTurnState.yaw === initialPlayerState.yaw) {
+            throw new Error(`Expected KeyA to turn characterYaw, but yaw remained: ${afterTurnState.yaw}`);
+        }
+        console.log("   Game Player view turning via A/D verified: ✅");
+
+        // 2. Move forward with 'KeyW' (must move in view direction)
+        await page.keyboard.down('KeyW');
+        await new Promise(r => setTimeout(r, 200));
+        await page.keyboard.up('KeyW');
+        await new Promise(r => setTimeout(r, 50));
+
+        const afterMoveState = await page.evaluate(() => {
+            const inst = window.playGameInstance;
+            return {
+                yaw: inst?.characterYaw || 0,
+                x: inst?.humanCharacter?.position?.x || 0,
+                z: inst?.humanCharacter?.position?.z || 0
+            };
+        });
+
+        const movedDist = Math.hypot(afterMoveState.x - afterTurnState.x, afterMoveState.z - afterTurnState.z);
+        if (movedDist < 0.1) {
+            throw new Error(`Expected KeyW to move player forward, but moved distance was only: ${movedDist}`);
+        }
+        console.log(`   Game Player W/S view-relative movement verified: moved ${movedDist.toFixed(2)}m ✅`);
+
+        // 3. Mouse drag turns view
+        await page.mouse.move(400, 300);
+        await page.mouse.down();
+        await page.mouse.move(300, 300, { steps: 5 });
+        await page.mouse.up();
+        await new Promise(r => setTimeout(r, 50));
+
+        const afterMouseDragState = await page.evaluate(() => {
+            const inst = window.playGameInstance;
+            return inst?.characterYaw || 0;
+        });
+
+        if (afterMouseDragState === afterMoveState.yaw) {
+            throw new Error("Expected mouse drag to rotate view/characterYaw in Game Player!");
+        }
+        console.log("   Game Player mouse drag view turning verified: ✅");
         console.log("7. Checking Racing Simulator...");
         await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));
