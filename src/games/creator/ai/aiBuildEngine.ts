@@ -216,6 +216,13 @@ export function setupAiAssistantEvents() {
         });
     }
 
+    const floatingBtn = document.getElementById('btn-floating-ai');
+    if (floatingBtn && toggleBtn) {
+        floatingBtn.addEventListener('click', () => {
+            toggleBtn.click();
+        });
+    }
+
     // AI Tiers Upgrade Modal events
     const openTiersBtn = document.getElementById('btn-open-ai-tiers');
     const tiersModal = document.getElementById('modal-ai-tiers');

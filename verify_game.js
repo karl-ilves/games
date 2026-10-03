@@ -2120,12 +2120,13 @@ await (async () => {
 
             // Verify AI Assistant and AI School UI are present in Creator Studio DOM
             const hasAiToggleBtn = await page.$('#btn-toggle-ai');
+            const hasFloatingAiBtn = await page.$('#btn-floating-ai');
             const hasAiModal = await page.$('#ai-assistant-modal');
-            console.log("   Verifying AI Assistant UI present in Creator Studio: btn =", !!hasAiToggleBtn, "modal =", !!hasAiModal);
-            if (!hasAiToggleBtn || !hasAiModal) {
-                throw new Error("AI Assistant button or modal is missing from Creator Studio DOM! Both #btn-toggle-ai and #ai-assistant-modal must be present.");
+            console.log("   Verifying AI Assistant UI present in Creator Studio: btn =", !!hasAiToggleBtn, "floating =", !!hasFloatingAiBtn, "modal =", !!hasAiModal);
+            if (!hasAiToggleBtn || !hasAiModal || !hasFloatingAiBtn) {
+                throw new Error("AI Assistant button or modal is missing from Creator Studio DOM! #btn-toggle-ai, #btn-floating-ai and #ai-assistant-modal must all be present.");
             }
-            console.log("   ✅ Playard AI button and modal verified in Creator Studio!");
+            console.log("   ✅ Playard AI buttons (top bar & floating) and modal verified in Creator Studio!");
 
             // Initialize VIP tier during comprehensive prompt battery so it does not exhaust Free daily 20 quota early
             await page.evaluate(() => {
