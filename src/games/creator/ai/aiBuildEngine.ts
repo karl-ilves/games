@@ -223,6 +223,12 @@ export function setupAiAssistantEvents() {
         });
     }
 
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && aiModal && aiModal.style.display === 'flex') {
+            aiModal.style.display = 'none';
+        }
+    });
+
     // AI Tiers Upgrade Modal events
     const openTiersBtn = document.getElementById('btn-open-ai-tiers');
     const tiersModal = document.getElementById('modal-ai-tiers');

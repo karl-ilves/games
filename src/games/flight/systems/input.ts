@@ -29,6 +29,8 @@ export class FlightInputController {
     private touchPitchDown = false;
     private touchRollLeft = false;
     private touchRollRight = false;
+    private touchYawLeft = false;
+    private touchYawRight = false;
 
     constructor() {
         this.bindKeyboard();
@@ -40,7 +42,7 @@ export class FlightInputController {
             this.keys[e.code] = true;
 
             if (e.code === 'KeyG' && !e.repeat) this.pendingToggles.gear = true;
-            if (e.code === 'KeyF' && !e.repeat) this.pendingToggles.flaps = true;
+            if (e.code === 'KeyT' && !e.repeat) this.pendingToggles.flaps = true;
             if (e.code === 'KeyB' && !e.repeat) this.pendingToggles.brakes = true;
             if (e.code === 'KeyP' && !e.repeat) this.pendingToggles.ap = true;
             if (e.code === 'KeyC' && !e.repeat) this.pendingToggles.cam = true;
@@ -69,6 +71,8 @@ export class FlightInputController {
 
         bindBtn('mob-throttle-up', () => this.touchThrottleUp = true, () => this.touchThrottleUp = false);
         bindBtn('mob-throttle-down', () => this.touchThrottleDown = true, () => this.touchThrottleDown = false);
+        bindBtn('mob-yaw-left', () => this.touchYawLeft = true, () => this.touchYawLeft = false);
+        bindBtn('mob-yaw-right', () => this.touchYawRight = true, () => this.touchYawRight = false);
         bindBtn('mob-pitch-up', () => this.touchPitchUp = true, () => this.touchPitchUp = false);
         bindBtn('mob-pitch-down', () => this.touchPitchDown = true, () => this.touchPitchDown = false);
         bindBtn('mob-roll-left', () => this.touchRollLeft = true, () => this.touchRollLeft = false);
@@ -81,25 +85,25 @@ export class FlightInputController {
     }
 
     public getInputs(): FlightInputState {
-        // Pitch: Down Arrow / S pulls nose up (+1), Up Arrow / W pushes nose down (-1) in aviation convention
+        // Pitch: S / ArrowDown pulls nose up (+1), W / ArrowUp pushes nose down (-1)
         let pitch = 0;
-        if (this.keys['ArrowDown'] || this.touchPitchUp) pitch += 1.0;
-        if (this.keys['ArrowUp'] || this.touchPitchDown) pitch -= 1.0;
+        if (this.keys['KeyS'] || this.keys['ArrowDown'] || this.touchPitchUp) pitch += 1.0;
+        if (this.keys['KeyW'] || this.keys['ArrowUp'] || this.touchPitchDown) pitch -= 1.0;
 
-        // Roll: Left Arrow / A banks left (-1), Right Arrow / D banks right (+1)
+        // Roll: A / ArrowLeft banks left (-1), D / ArrowRight banks right (+1)
         let roll = 0;
-        if (this.keys['ArrowLeft'] || this.keys['KeyA'] || this.touchRollLeft) roll -= 1.0;
-        if (this.keys['ArrowRight'] || this.keys['KeyD'] || this.touchRollRight) roll += 1.0;
+        if (this.keys['KeyA'] || this.keys['ArrowLeft'] || this.touchRollLeft) roll -= 1.0;
+        if (this.keys['KeyD'] || this.keys['ArrowRight'] || this.touchRollRight) roll += 1.0;
 
-        // Yaw: Q left (-1), E right (+1)
+        // Saba / Rudder: Q left (-1), E right (+1)
         let yaw = 0;
-        if (this.keys['KeyQ']) yaw -= 1.0;
-        if (this.keys['KeyE']) yaw += 1.0;
+        if (this.keys['KeyQ'] || this.touchYawLeft) yaw -= 1.0;
+        if (this.keys['KeyE'] || this.touchYawRight) yaw += 1.0;
 
-        // Throttle delta: W throttles up (+1), S throttles down (-1)
+        // Throttle delta: R throttles up (+1), F throttles down (-1)
         let throttleDelta = 0;
-        if (this.keys['KeyW'] || this.touchThrottleUp) throttleDelta += 1.0;
-        if (this.keys['KeyS'] || this.touchThrottleDown) throttleDelta -= 1.0;
+        if (this.keys['KeyR'] || this.touchThrottleUp) throttleDelta += 1.0;
+        if (this.keys['KeyF'] || this.touchThrottleDown) throttleDelta -= 1.0;
 
         const inputs: FlightInputState = {
             pitch,

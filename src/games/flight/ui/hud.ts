@@ -8,7 +8,6 @@ export class FlightHUD {
     private elVsi: HTMLElement | null;
     private elHeading: HTMLElement | null;
     private elCardinal: HTMLElement | null;
-    private elGyroHorizon: HTMLElement | null;
     private elThrottleFill: HTMLElement | null;
     private elThrottlePct: HTMLElement | null;
     private elGearTag: HTMLElement | null;
@@ -30,7 +29,6 @@ export class FlightHUD {
         this.elVsi = document.getElementById('hud-vsi');
         this.elHeading = document.getElementById('hud-heading');
         this.elCardinal = document.getElementById('hud-cardinal');
-        this.elGyroHorizon = document.getElementById('gyro-horizon');
         this.elThrottleFill = document.getElementById('throttle-fill');
         this.elThrottlePct = document.getElementById('hud-throttle-pct');
         this.elGearTag = document.getElementById('hud-gear-tag');
@@ -84,14 +82,6 @@ export class FlightHUD {
             const cardinals = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
             const idx = Math.round(state.heading / 45) % 8;
             this.elCardinal.textContent = cardinals[idx];
-        }
-
-        // Artificial Horizon (Pitch ladder and Bank Angle)
-        if (this.elGyroHorizon) {
-            // Roll rotates, Pitch moves translateY
-            const pitchPx = state.pitch * 3.5;
-            const rollDeg = -state.roll;
-            this.elGyroHorizon.style.transform = `rotate(${rollDeg}deg) translateY(${pitchPx}px)`;
         }
 
         // Throttle

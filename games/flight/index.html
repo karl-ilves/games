@@ -142,53 +142,16 @@
             pointer-events: none;
         }
 
-        /* Attitude Indicator / Gyro Horizon (Center) */
-        #gyro-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 220px;
-            height: 220px;
-            border-radius: 50%;
-            border: 2px solid rgba(0, 242, 254, 0.45);
-            background: rgba(10, 20, 32, 0.4);
-            box-shadow: 0 0 25px rgba(0, 242, 254, 0.15), inset 0 0 15px rgba(0,0,0,0.6);
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(2px);
-        }
-
-        #gyro-horizon {
-            position: absolute;
-            width: 400%;
-            height: 400%;
-            left: -150%;
-            top: -150%;
-            background: linear-gradient(to bottom, #1e90ff 50%, #8b5a2b 50%);
-            opacity: 0.85;
-            transform-origin: center;
-            transition: transform 0.05s linear;
-        }
-
-        /* Pitch Ladder lines on gyro */
-        .pitch-line {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            height: 1.5px;
-            background: rgba(255, 255, 255, 0.85);
-            box-shadow: 0 0 3px rgba(0,0,0,0.8);
-        }
-
         /* Center Aircraft Reticle / Crosshair */
         #hud-reticle {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(0, 242, 254, 0.4);
+            border-radius: 50%;
             pointer-events: none;
             z-index: 60;
         }
@@ -518,7 +481,6 @@
             #alt-tape-container { right: 10px; width: 75px; }
             #vsi-container { display: none; }
             #papi-indicator { display: none; }
-            #gyro-container { width: 160px; height: 160px; }
         }
     </style>
 </head>
@@ -568,15 +530,8 @@
 
     <!-- Glass Cockpit HUD Overlay -->
     <main id="flight-hud">
-        <!-- Attitude Indicator / Gyro Horizon (Pitch & Roll) -->
-        <div id="gyro-container">
-            <div id="gyro-horizon"></div>
-            <!-- Horizon Center Line -->
-            <div style="position: absolute; width: 100%; height: 2px; background: rgba(0, 242, 254, 0.7); box-shadow: 0 0 4px #00f2fe;"></div>
-            <!-- Center Reticle Marker -->
-            <div style="position: absolute; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #ffd700; background: rgba(255, 215, 0, 0.4);"></div>
-            <div style="position: absolute; width: 50px; height: 3px; background: #ffd700; border-radius: 2px;"></div>
-        </div>
+        <!-- Center Aircraft Crosshair Reticle -->
+        <div id="hud-reticle"></div>
 
         <!-- Left Speed Tape (Airspeed Knots) -->
         <div id="speed-tape-container">
@@ -622,7 +577,7 @@
         <!-- Bottom Status Bar -->
         <div id="flight-status-bar">
             <div class="status-row">
-                <span>Throttle (W/S):</span>
+                <span>Throttle (R/F):</span>
                 <div class="throttle-bar-outer">
                     <div id="throttle-fill"></div>
                 </div>
@@ -633,7 +588,7 @@
                 <span id="hud-gear-tag" class="status-tag tag-green">DOWN</span>
             </div>
             <div class="status-row">
-                <span>Flaps (F):</span>
+                <span>Flaps (T):</span>
                 <span id="hud-flaps-tag" class="status-tag tag-green">UP (0&deg;)</span>
             </div>
             <div class="status-row">
@@ -661,20 +616,24 @@
     <!-- Mobile Touch HUD Controls -->
     <div id="mobile-flight-controls">
         <div class="mob-zone-left">
-            <button class="mob-btn" id="mob-throttle-up" style="background: rgba(46, 204, 113, 0.7); border-color: #2ecc71;">▲ Throttle +</button>
-            <button class="mob-btn" id="mob-throttle-down" style="background: rgba(231, 76, 60, 0.7); border-color: #e74c3c;">▼ Throttle -</button>
-            <button class="mob-btn" id="mob-brakes">🛑 Brakes</button>
+            <button class="mob-btn" id="mob-throttle-up" style="background: rgba(46, 204, 113, 0.7); border-color: #2ecc71;">▲ Gaas + (R)</button>
+            <button class="mob-btn" id="mob-throttle-down" style="background: rgba(231, 76, 60, 0.7); border-color: #e74c3c;">▼ Gaas - (F)</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="mob-btn" id="mob-yaw-left">↰ Saba (Q)</button>
+                <button class="mob-btn" id="mob-yaw-right">Saba (E) ↱</button>
+            </div>
+            <button class="mob-btn" id="mob-brakes">🛑 Pidur (B)</button>
         </div>
         <div class="mob-zone-right">
-            <button class="mob-btn" id="mob-pitch-up">Pitch Up 🛫</button>
-            <button class="mob-btn" id="mob-pitch-down">Pitch Down 🛬</button>
+            <button class="mob-btn" id="mob-pitch-up">Nina Üles (S) 🛫</button>
+            <button class="mob-btn" id="mob-pitch-down">Nina Alla (W) 🛬</button>
             <div style="display: flex; gap: 8px;">
-                <button class="mob-btn" id="mob-roll-left">&larr; Roll</button>
-                <button class="mob-btn" id="mob-roll-right">Roll &rarr;</button>
+                <button class="mob-btn" id="mob-roll-left">&larr; Kalle (A)</button>
+                <button class="mob-btn" id="mob-roll-right">Kalle (D) &rarr;</button>
             </div>
             <div style="display: flex; gap: 8px;">
-                <button class="mob-btn" id="mob-gear">Gear (G)</button>
-                <button class="mob-btn" id="mob-flaps">Flaps (F)</button>
+                <button class="mob-btn" id="mob-gear">Telik (G)</button>
+                <button class="mob-btn" id="mob-flaps">Klapid (T)</button>
             </div>
         </div>
     </div>
@@ -767,18 +726,18 @@
             <button class="modal-close" id="btn-close-help">&times;</button>
             <h2 style="color: #00f2fe; margin-top: 0;">✈️ Flight Simulator Pilot Manual</h2>
             <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; line-height: 1.5; color: #e2e8f0;">
-                <div><strong style="color: #00f2fe;">W / S:</strong> Throttle Up / Down (0% to 100%, Afterburner on Fighter)</div>
-                <div><strong style="color: #ffd700;">Up / Down Arrows (or S / W):</strong> Pitch Elevator (Up pushes nose down, Down pulls nose up to climb!)</div>
-                <div><strong style="color: #ffd700;">Left / Right Arrows (or A / D):</strong> Roll Ailerons (Banking turns)</div>
-                <div><strong style="color: #2ecc71;">Q / E:</strong> Rudder Yaw / Runway Nosewheel Steering</div>
-                <div><strong style="color: #00f2fe;">G:</strong> Retract / Extend Landing Gear</div>
-                <div><strong style="color: #00f2fe;">F:</strong> Cycle Flaps (0&deg; Clean, 15&deg; Takeoff/Approach, 30&deg; Full Landing)</div>
-                <div><strong style="color: #ff4757;">B:</strong> Wheel Brakes / Airbrakes</div>
-                <div><strong style="color: #2ecc71;">P:</strong> Autopilot (Maintains target altitude and levels wings)</div>
-                <div><strong style="color: #a855f7;">C:</strong> Cycle Camera (Chase 3D, Cockpit 1st Person, Wing Cam, Flyby)</div>
-                <div><strong style="color: #38bdf8;">J:</strong> Toggle Anti-Ice System</div>
+                <div><strong style="color: #00f2fe;">R / F:</strong> Throttle / Gaas (R = Kiirenda +, F = Aeglusta -)</div>
+                <div><strong style="color: #ffd700;">W / S:</strong> Juhtimine - Pitch (W = Nina alla, S = Nina üles / tõus)</div>
+                <div><strong style="color: #ffd700;">A / D:</strong> Juhtimine - Roll (A = Kalle vasakule, D = Kalle paremale)</div>
+                <div><strong style="color: #2ecc71;">Q / E:</strong> Saba / Rudder (Q = Saba vasakule, E = Saba paremale)</div>
+                <div><strong style="color: #00f2fe;">G:</strong> Telik sisse / välja (Retract/Extend Landing Gear)</div>
+                <div><strong style="color: #00f2fe;">T:</strong> Tiivaklapid (Flaps 0&deg; / 15&deg; / 30&deg;)</div>
+                <div><strong style="color: #ff4757;">B:</strong> Pidurid (Brakes)</div>
+                <div><strong style="color: #2ecc71;">P:</strong> Autopiloot (Autopilot - hoiab kõrgust ja kurssi)</div>
+                <div><strong style="color: #a855f7;">C:</strong> Kaamera vaade (Chase 3D, Cockpit, Wing, Flyby)</div>
+                <div><strong style="color: #38bdf8;">J:</strong> Jäätumisvastane süsteem (Anti-Ice)</div>
                 <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 6px 0;">
-                <div><strong style="color: #ffd700;">🏆 How to Earn Flight Cash:</strong> Fly through golden Stunt Rings (+25 € each) and perform smooth landings on runways (+100 €)!</div>
+                <div><strong style="color: #ffd700;">🏆 How to Earn Flight Cash:</strong> Lenda läbi kuldsete trikirõngaste (+25 €) ja maandu sujuvalt lennurajale (+100 €)!</div>
             </div>
         </div>
     </div>

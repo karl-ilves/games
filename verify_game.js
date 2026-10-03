@@ -2139,6 +2139,32 @@ await (async () => {
             }
             console.log("   ✅ Playard AI buttons (top bar & floating) and modal verified in Creator Studio!");
 
+            // Verify AI modal is centered on the screen when opened
+            await page.click('#btn-toggle-ai');
+            await new Promise(r => setTimeout(r, 200));
+            const modalCentering = await page.evaluate(() => {
+                const modal = document.getElementById('ai-assistant-modal');
+                if (!modal) return null;
+                const rect = modal.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const winCenterX = window.innerWidth / 2;
+                const winCenterY = window.innerHeight / 2;
+                return {
+                    isDisplayed: modal.style.display === 'flex' || window.getComputedStyle(modal).display === 'flex',
+                    diffX: Math.abs(centerX - winCenterX),
+                    diffY: Math.abs(centerY - winCenterY),
+                    zIndex: parseInt(window.getComputedStyle(modal).zIndex || '0', 10)
+                };
+            });
+            console.log("   AI Modal centering check:", modalCentering);
+            if (!modalCentering || modalCentering.diffX > 50 || modalCentering.diffY > 50 || modalCentering.zIndex < 2000) {
+                throw new Error("AI Assistant modal is not properly centered on the screen! Details: " + JSON.stringify(modalCentering));
+            }
+            await page.click('#btn-close-ai');
+            await new Promise(r => setTimeout(r, 200));
+            console.log("   ✅ Playard AI modal screen centering verified!");
+
             // Initialize VIP tier during comprehensive prompt battery so it does not exhaust Free daily 20 quota early
             await page.evaluate(() => {
                 const cs = window.creatorStudio;
@@ -9599,43 +9625,31 @@ await (async () => {
             const guestAccessTest = await page.evaluate(() => {
                 const card = document.getElementById('card-citycar-game');
                 const guestDisplay = card ? window.getComputedStyle(card).display : 'missing';
-
-                // Test taavi2
                 const taaviProf = { id: 't2', username: 'taavi2', email: 'taavi2@example.com', displayName: 'taavi2', isAdmin: false };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(taaviProf));
-                window.location.reload();
                 return { guestDisplay };
             });
-
-            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const taaviAccessTest = await page.evaluate(() => {
                 const card = document.getElementById('card-citycar-game');
                 const taaviDisplay = card ? window.getComputedStyle(card).display : 'missing';
-
-                // Test Owner
                 const ownerProf = { id: 'owner_1', username: 'karl', email: '1karl.ilves@gmail.com', displayName: 'Karl', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
-                window.location.reload();
                 return { taaviDisplay };
             });
-
-            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const ownerAccessTest = await page.evaluate(() => {
                 const card = document.getElementById('card-citycar-game');
                 const ownerDisplay = card ? window.getComputedStyle(card).display : 'missing';
-
-                // Test Regular / Other user (now also visible to all players!)
                 const otherProf = { id: 'other_1', username: 'random_player', email: 'other@test.com', displayName: 'Random', isAdmin: false };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(otherProf));
-                window.location.reload();
                 return { ownerDisplay };
             });
-
-            await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 30000 });
             await new Promise(r => setTimeout(r, 600));
 
             const otherAccessTest = await page.evaluate(() => {
@@ -12565,7 +12579,8 @@ await (async () => {
                 const canvas = document.getElementById('game-canvas');
                 const hudAirspeed = document.getElementById('hud-airspeed');
                 const hudAltitude = document.getElementById('hud-altitude');
-                const gyro = document.getElementById('gyro-horizon');
+                const hudReticle = document.getElementById('hud-reticle');
+                const gyroAbsent = !document.getElementById('gyro-horizon');
 
                 const initialSpeed = game.physics.state.airspeed;
                 const initialAlt = game.physics.state.altitude;
@@ -12623,7 +12638,7 @@ await (async () => {
                 return {
                     success: true,
                     canvasOk: !!canvas,
-                    hudOk: !!hudAirspeed && !!hudAltitude && !!gyro,
+                    hudOk: !!hudAirspeed && !!hudAltitude && !!hudReticle && gyroAbsent,
                     initialOnGround,
                     acceleratedSpeed,
                     airborneOk,
