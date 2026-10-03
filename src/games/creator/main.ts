@@ -377,6 +377,7 @@ let orbitTheta = Math.PI / 4;
 let orbitPhi = Math.PI / 4;
 let orbitTarget = new THREE.Vector3(0, 2, 0);
 let isRightMouseDown = false;
+let isLeftMouseDown = false;
 let mousePos = { x: 0, y: 0 };
 
 // --- 10,000+ Object Catalog Engine ---
@@ -3162,6 +3163,8 @@ async function initStudio() {
         aiTierService,
         AI_TIER_CONFIGS,
         updateAiTierDisplay,
+        get characterYaw() { return characterYaw; },
+        set characterYaw(val: number) { characterYaw = val; },
         keys
     };
 
@@ -4756,6 +4759,8 @@ function setupStudioEvents() {
                 }
             }
         } else if (e.button === 0 && isPlayTestMode) {
+            isLeftMouseDown = true;
+            mousePos = { x: e.clientX, y: e.clientY };
             // Click in play test mode triggers player attack
             playerAttack();
         }
@@ -4764,6 +4769,7 @@ function setupStudioEvents() {
     window.addEventListener('mouseup', e => {
         if (e.button === 2) isRightMouseDown = false;
         if (e.button === 0) {
+            isLeftMouseDown = false;
             if (isMovingWithGizmo) {
                 isMovingWithGizmo = false;
                 moveActiveAxis = null;
@@ -4780,14 +4786,20 @@ function setupStudioEvents() {
     });
 
     window.addEventListener('mousemove', e => {
-        if (isRightMouseDown && !isPlayTestMode) {
+        if (isRightMouseDown || (isLeftMouseDown && isPlayTestMode)) {
             const dx = e.clientX - mousePos.x;
             const dy = e.clientY - mousePos.y;
             mousePos = { x: e.clientX, y: e.clientY };
 
-            orbitTheta -= dx * 0.006;
-            orbitPhi = Math.max(0.1, Math.min(Math.PI / 2.1, orbitPhi - dy * 0.006));
-            updateOrbitCamera();
+            if (!isPlayTestMode) {
+                if (isRightMouseDown) {
+                    orbitTheta -= dx * 0.006;
+                    orbitPhi = Math.max(0.1, Math.min(Math.PI / 2.1, orbitPhi - dy * 0.006));
+                    updateOrbitCamera();
+                }
+            } else {
+                characterYaw -= dx * 0.006;
+            }
         } else if (isPullingObject && selectedObject && !isPlayTestMode) {
             const mouseDx = e.clientX - pullStartPos.x;
             const mouseDy = e.clientY - pullStartPos.y;
@@ -4965,8 +4977,10 @@ function setupStudioEvents() {
                     const activeSpawn = (selectedObject && spawnPoints.includes(selectedObject)) ? selectedObject : spawnPoints[0];
                     humanCharacter.position.set(activeSpawn.position.x, activeSpawn.position.y + 0.1, activeSpawn.position.z);
                     humanCharacter.rotation.y = activeSpawn.rotation.y;
+                    characterYaw = activeSpawn.rotation.y;
                 } else {
                     humanCharacter.position.set(0, 0, 0);
+                    characterYaw = humanCharacter.rotation.y || 0;
                 }
                 checkpointPosition.copy(humanCharacter.position);
 
@@ -12180,12 +12194,24 @@ function animate() {
                 currentSpeedMult = playerSpeedMultiplier;
             }
             const moveSpeed = (inWater ? 6.5 : 9) * currentSpeedMult;
-            const moveDir = new THREE.Vector3();
 
-            if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
-            if (keys['KeyS'] || keys['ArrowDown']) moveDir.z += 1;
-            if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
-            if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+            // Turn view with A / D or ArrowLeft / ArrowRight
+            const turnSpeed = 2.8;
+            if (keys['KeyA'] || keys['ArrowLeft']) {
+                characterYaw += turnSpeed * delta;
+            }
+            if (keys['KeyD'] || keys['ArrowRight']) {
+                characterYaw -= turnSpeed * delta;
+            }
+
+            // Only W and S move the player! (W = forward in view direction, S = backward)
+            let moveMagnitude = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) moveMagnitude += 1;
+            if (keys['KeyS'] || keys['ArrowDown']) moveMagnitude -= 1;
+
+            const forwardX = Math.sin(characterYaw);
+            const forwardZ = Math.cos(characterYaw);
+            const moveDir = new THREE.Vector3(forwardX * moveMagnitude, 0, forwardZ * moveMagnitude);
 
             if (inWater) {
                 // Player in water: Swimming & 10m Diving mechanics
@@ -12215,15 +12241,12 @@ function animate() {
                 }
                 characterVelocity.y = 0;
 
-                const hasHoriMove = moveDir.lengthSq() > 0;
+                const hasHoriMove = moveMagnitude !== 0;
                 if (hasHoriMove) {
-                    moveDir.normalize();
-                    characterYaw = Math.atan2(moveDir.x, moveDir.z);
-                    humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
-
-                    humanCharacter.position.x += moveDir.x * moveSpeed * delta;
-                    humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+                    humanCharacter.position.x += forwardX * moveMagnitude * moveSpeed * delta;
+                    humanCharacter.position.z += forwardZ * moveMagnitude * moveSpeed * delta;
                 }
+                humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.25);
 
                 // Realistic body rotation angle in water:
                 // Diving: head tilted downward (~0.75 rad)
@@ -12287,13 +12310,10 @@ function animate() {
                 if (depthContainer) depthContainer.style.display = 'none';
                 // On land: smoothly upright body
                 humanCharacter.rotation.x = THREE.MathUtils.lerp(humanCharacter.rotation.x, 0, 0.2);
-                if (moveDir.lengthSq() > 0) {
-                    moveDir.normalize();
-                    characterYaw = Math.atan2(moveDir.x, moveDir.z);
-                    humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.2);
-
-                    humanCharacter.position.x += moveDir.x * moveSpeed * delta;
-                    humanCharacter.position.z += moveDir.z * moveSpeed * delta;
+                const hasHoriMove = moveMagnitude !== 0;
+                if (hasHoriMove) {
+                    humanCharacter.position.x += forwardX * moveMagnitude * moveSpeed * delta;
+                    humanCharacter.position.z += forwardZ * moveMagnitude * moveSpeed * delta;
 
                     if (emotesWidget && emotesWidget.getActiveEmote() !== 'idle') {
                         emotesWidget.stopEmoteQuietly();
@@ -12311,6 +12331,7 @@ function animate() {
                         }
                     }
                 }
+                humanCharacter.rotation.y = THREE.MathUtils.lerp(humanCharacter.rotation.y, characterYaw, 0.25);
 
                 // Jump & Gravity on Land
                 if (keys['Space'] && isGrounded) {

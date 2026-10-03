@@ -2991,6 +2991,90 @@ await (async () => {
                 throw new Error("Expected #player-asma-text to show current/max asma (e.g. 100/100)!");
             }
 
+            // Test Play Test Movement: Only W and S move, A and D turn view without moving
+            console.log("   Testing WS-only movement & view-relative direction in Play Test mode...");
+            const movementTest = await page.evaluate(async () => {
+                const cs = window.creatorStudio;
+                const char = cs.humanCharacter;
+                char.position.set(100, 0, 100);
+                cs.characterYaw = 0;
+                char.rotation.y = 0;
+                const initialPos = { x: char.position.x, z: char.position.z };
+
+                // 1. Test KeyA (turning view) does NOT move the player
+                cs.keys['KeyA'] = true;
+                await new Promise(r => setTimeout(r, 100));
+                cs.keys['KeyA'] = false;
+                const afterAPos = { x: char.position.x, z: char.position.z };
+                const afterAYaw = cs.characterYaw;
+
+                // 2. Test KeyD (turning view other way) does NOT move the player
+                cs.keys['KeyD'] = true;
+                await new Promise(r => setTimeout(r, 100));
+                cs.keys['KeyD'] = false;
+                const afterDPos = { x: char.position.x, z: char.position.z };
+
+                // 3. Test KeyW moves straight forward along view direction (when yaw=0, forward is +Z)
+                cs.characterYaw = 0;
+                char.rotation.y = 0;
+                const posBeforeW = { x: char.position.x, z: char.position.z };
+                cs.keys['KeyW'] = true;
+                await new Promise(r => setTimeout(r, 150));
+                cs.keys['KeyW'] = false;
+                const posAfterW = { x: char.position.x, z: char.position.z };
+
+                // 4. Test KeyS moves straight backward
+                const posBeforeS = { x: char.position.x, z: char.position.z };
+                cs.keys['KeyS'] = true;
+                await new Promise(r => setTimeout(r, 150));
+                cs.keys['KeyS'] = false;
+                const posAfterS = { x: char.position.x, z: char.position.z };
+
+                // 5. Test rotating view to 90 degrees (Math.PI / 2) -> W moves straight ahead along +X
+                cs.characterYaw = Math.PI / 2;
+                char.rotation.y = Math.PI / 2;
+                const posBeforeRotW = { x: char.position.x, z: char.position.z };
+                cs.keys['KeyW'] = true;
+                await new Promise(r => setTimeout(r, 150));
+                cs.keys['KeyW'] = false;
+                const posAfterRotW = { x: char.position.x, z: char.position.z };
+
+                return {
+                    initialPos,
+                    afterAPos,
+                    afterAYaw,
+                    afterDPos,
+                    posBeforeW,
+                    posAfterW,
+                    posBeforeS,
+                    posAfterS,
+                    posBeforeRotW,
+                    posAfterRotW,
+                    wMovedForwardZ: posAfterW.z > posBeforeW.z,
+                    wNoLateralX: Math.abs(posAfterW.x - posBeforeW.x) < 0.05,
+                    sMovedBackwardZ: posAfterS.z < posBeforeS.z,
+                    rotWMovedForwardX: posAfterRotW.x > posBeforeRotW.x,
+                    rotWNoLateralZ: Math.abs(posAfterRotW.z - posBeforeRotW.z) < 0.05
+                };
+            });
+            console.log("   WS View-Relative Movement Result:", movementTest);
+            if (Math.abs(movementTest.afterAPos.x - movementTest.initialPos.x) > 0.001 || Math.abs(movementTest.afterAPos.z - movementTest.initialPos.z) > 0.001) {
+                throw new Error("KeyA should rotate view, NOT move player position!");
+            }
+            if (Math.abs(movementTest.afterDPos.x - movementTest.initialPos.x) > 0.001 || Math.abs(movementTest.afterDPos.z - movementTest.initialPos.z) > 0.001) {
+                throw new Error("KeyD should rotate view, NOT move player position!");
+            }
+            if (!movementTest.wMovedForwardZ || !movementTest.wNoLateralX) {
+                throw new Error("KeyW failed to move straight forward in view direction!");
+            }
+            if (!movementTest.sMovedBackwardZ) {
+                throw new Error("KeyS failed to move straight backward in view direction!");
+            }
+            if (!movementTest.rotWMovedForwardX || !movementTest.rotWNoLateralZ) {
+                throw new Error("KeyW after rotating view failed to move forward in the rotated view direction!");
+            }
+            console.log("   ✅ WS view-relative movement verified successfully!");
+
             // Exit Play Test mode back to Edit mode
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
@@ -3406,13 +3490,14 @@ await (async () => {
             await page.click('#btn-toggle-play-test');
             await new Promise(r => setTimeout(r, 400));
 
-            // Move player towards the solid block: player at (0, 0, 3.2), pressing KeyS (towards +Z)
+            // Move player forward towards the solid block: player at (0, 0, 3.2), pressing KeyW (forward towards +Z block)
             await page.evaluate(() => {
                 const cs = window.creatorStudio;
                 if (cs.exitVehicle) cs.exitVehicle();
                 cs.humanCharacter.position.set(0, 0, 3.2);
                 cs.humanCharacter.rotation.set(0, 0, 0);
-                cs.keys['KeyS'] = true;
+                cs.characterYaw = 0;
+                cs.keys['KeyW'] = true;
             });
 
             // Wait 250ms for physics simulation
@@ -3420,7 +3505,7 @@ await (async () => {
 
             const solidPushbackResult = await page.evaluate(() => {
                 const cs = window.creatorStudio;
-                cs.keys['KeyS'] = false;
+                cs.keys['KeyW'] = false;
                 return {
                     charZ: cs.humanCharacter.position.z
                 };
@@ -3431,20 +3516,21 @@ await (async () => {
                 throw new Error(`Player walked through solid block! charZ: ${solidPushbackResult.charZ}`);
             }
 
-            // Case B: Now set block isPassable = true -> player can walk through
+            // Case B: Now set block isPassable = true -> player can walk forward through
             await page.evaluate(() => {
                 const cs = window.creatorStudio;
                 const block = cs.placedObjects.find(o => o.name === 'SolidTestBlock');
                 block.isPassable = true;
                 cs.humanCharacter.position.set(0, 0, 3.2);
-                cs.keys['KeyS'] = true;
+                cs.characterYaw = 0;
+                cs.keys['KeyW'] = true;
             });
 
             await new Promise(r => setTimeout(r, 300));
 
             const passableWalkThroughResult = await page.evaluate(() => {
                 const cs = window.creatorStudio;
-                cs.keys['KeyS'] = false;
+                cs.keys['KeyW'] = false;
                 return {
                     charZ: cs.humanCharacter.position.z
                 };
