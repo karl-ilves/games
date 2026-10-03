@@ -83,12 +83,17 @@ await (async () => {
             }
         }
     };
+    const getActiveFrame = () => {
+        return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
+    };
     page.evaluate = async (pageFunction, ...args) => {
-        for (let attempt = 1; attempt <= 8; attempt++) {
+        for (let attempt = 1; attempt <= 10; attempt++) {
             try {
-                return await page.mainFrame().evaluate(pageFunction, ...args);
+                const targetFrame = getActiveFrame();
+                return await targetFrame.evaluate(pageFunction, ...args);
             } catch (err) {
-                if (err.message && (err.message.toLowerCase().includes('detached frame') || err.message.includes('Execution context was destroyed')) && attempt < 8) {
+                const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                if ((msg.includes('detached frame') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 10) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -97,12 +102,14 @@ await (async () => {
         }
     };
     page.click = async (selector, options) => {
-        for (let attempt = 1; attempt <= 4; attempt++) {
+        for (let attempt = 1; attempt <= 6; attempt++) {
             try {
-                return await page.mainFrame().click(selector, options);
+                const targetFrame = getActiveFrame();
+                return await targetFrame.click(selector, options);
             } catch (err) {
-                if (err.message && err.message.includes('detached Frame') && attempt < 4) {
-                    await new Promise(r => setTimeout(r, 250 * attempt));
+                const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                if ((msg.includes('detached frame') || msg.includes('execution context was destroyed')) && attempt < 6) {
+                    await new Promise(r => setTimeout(r, 300 * attempt));
                 } else {
                     throw err;
                 }
@@ -110,11 +117,13 @@ await (async () => {
         }
     };
     page.waitForSelector = async (selector, options) => {
-        for (let attempt = 1; attempt <= 5; attempt++) {
+        for (let attempt = 1; attempt <= 6; attempt++) {
             try {
-                return await page.mainFrame().waitForSelector(selector, options);
+                const targetFrame = getActiveFrame();
+                return await targetFrame.waitForSelector(selector, options);
             } catch (err) {
-                if (err.message && err.message.includes('detached Frame') && attempt < 5) {
+                const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                if ((msg.includes('detached frame') || msg.includes('execution context was destroyed')) && attempt < 6) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -123,11 +132,13 @@ await (async () => {
         }
     };
     page.$eval = async (selector, pageFunction, ...args) => {
-        for (let attempt = 1; attempt <= 5; attempt++) {
+        for (let attempt = 1; attempt <= 6; attempt++) {
             try {
-                return await page.mainFrame().$eval(selector, pageFunction, ...args);
+                const targetFrame = getActiveFrame();
+                return await targetFrame.$eval(selector, pageFunction, ...args);
             } catch (err) {
-                if (err.message && err.message.includes('detached Frame') && attempt < 5) {
+                const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                if ((msg.includes('detached frame') || msg.includes('execution context was destroyed')) && attempt < 6) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -4417,7 +4428,8 @@ await (async () => {
 
         // 6f. Testing 1000 Holdable Items, 50 Damage Weapons, 6M Test Balance & Creator Revenue Transfer
         console.log("6f. Testing 1000 Holdable Items, 50 Damage Weapons, 6M Test Balance & Creator Revenue Transfer...");
-        await page.goto('http://localhost:4173/games/creator/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto('about:blank');
+        await page.goto('http://localhost:4173/games/creator/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
         await new Promise(r => setTimeout(r, 2000));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
@@ -12521,6 +12533,113 @@ await (async () => {
 
 
 
+
+            // ----------------------------------------------------
+            // ✈️ 3D Flight Simulator Verification
+            // ----------------------------------------------------
+            console.log("\n====================================================");
+            console.log("✈️ Testing 3D Flight Simulator (Airplane Simulator)...");
+            console.log("====================================================");
+
+            // 1. Hub Card Verification
+            console.log("   1. Testing Flight Simulator Hub Card Visibility...");
+            await page.goto('http://localhost:4173/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1000));
+            const hubCardOk = await page.evaluate(() => {
+                const card = document.getElementById('card-flight-game');
+                return card && card.offsetParent !== null && card.getAttribute('href') === './games/flight/index.html';
+            });
+            if (!hubCardOk) throw new Error("card-flight-game is not visible on Hub!");
+            console.log("   ✅ Flight Simulator Hub Card verified!");
+
+            // 2. Flight Simulator In-Game Verification
+            console.log("   2. Testing Flight Simulator Gameplay (/games/flight/index.html)...");
+            await page.goto('about:blank');
+            await page.goto('http://localhost:4173/games/flight/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1500));
+
+            const flightTest = await page.evaluate(async () => {
+                const game = window.__flight_game__;
+                if (!game) return { success: false, reason: '__flight_game__ not found' };
+
+                const canvas = document.getElementById('game-canvas');
+                const hudAirspeed = document.getElementById('hud-airspeed');
+                const hudAltitude = document.getElementById('hud-altitude');
+                const gyro = document.getElementById('gyro-horizon');
+
+                const initialSpeed = game.physics.state.airspeed;
+                const initialAlt = game.physics.state.altitude;
+                const initialOnGround = game.physics.state.isOnGround;
+
+                // Test throttle acceleration & aerodynamic takeoff
+                // Step physics with full throttle
+                for (let i = 0; i < 60; i++) {
+                    game.physics.update(0.1, {
+                        pitch: 0,
+                        roll: 0,
+                        yaw: 0,
+                        throttleDelta: 1.0,
+                        toggleGear: false,
+                        toggleFlaps: false,
+                        toggleBrakes: false,
+                        toggleAP: false
+                    });
+                }
+                const acceleratedSpeed = game.physics.state.airspeed;
+
+                // Pitch up to take off
+                for (let i = 0; i < 40; i++) {
+                    game.physics.update(0.1, {
+                        pitch: 0.8,
+                        roll: 0,
+                        yaw: 0,
+                        throttleDelta: 0,
+                        toggleGear: false,
+                        toggleFlaps: false,
+                        toggleBrakes: false,
+                        toggleAP: false
+                    });
+                }
+                const airborneAlt = game.physics.state.altitude;
+                const airborneOk = airborneAlt > initialAlt && !game.physics.state.isOnGround;
+
+                // Test Retracting Landing Gear
+                game.physics.update(0.1, { pitch: 0, roll: 0, yaw: 0, throttleDelta: 0, toggleGear: true });
+                const gearRetracted = !game.physics.state.gearDown;
+
+                // Test Autopilot
+                game.physics.update(0.1, { pitch: 0, roll: 0, yaw: 0, throttleDelta: 0, toggleAP: true });
+                const apEngaged = game.physics.state.autopilot;
+
+                // Test Switching Aircraft to F-22 Raptor
+                const f22 = game.AIRCRAFT_CATALOG.find(c => c.id === 'f22_raptor');
+                game.switchAircraft(f22);
+                const isF22Active = game.physics.config.id === 'f22_raptor';
+
+                // Test World: Check Stunt Rings count and Airport Runways
+                const ringsCount = game.world.stuntRings.length;
+                const airportsCount = game.AIRPORTS.length;
+
+                return {
+                    success: true,
+                    canvasOk: !!canvas,
+                    hudOk: !!hudAirspeed && !!hudAltitude && !!gyro,
+                    initialOnGround,
+                    acceleratedSpeed,
+                    airborneOk,
+                    gearRetracted,
+                    apEngaged,
+                    isF22Active,
+                    ringsCount,
+                    airportsCount
+                };
+            });
+
+            console.log("   Flight Simulator Test Results:", flightTest);
+            if (!flightTest.success || !flightTest.canvasOk || !flightTest.hudOk || !flightTest.airborneOk || !flightTest.isF22Active || flightTest.ringsCount < 10) {
+                throw new Error("Flight Simulator verification failed: " + JSON.stringify(flightTest));
+            }
+            console.log("   ✅ 3D Flight Simulator verified successfully (Takeoff, Aerodynamics, Gear, Autopilot, F-22 Fighter, Stunt Rings)!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

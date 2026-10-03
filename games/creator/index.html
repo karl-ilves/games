@@ -241,6 +241,16 @@
             font-size: 0.95rem;
         }
 
+        @media (max-width: 1100px) {
+            #ai-assistant-modal {
+                right: 20px !important;
+                bottom: 20px !important;
+                width: calc(100vw - 40px) !important;
+                max-width: 480px !important;
+                z-index: 2500 !important;
+            }
+        }
+
         .prop-row {
             display: flex;
             justify-content: space-between;
@@ -1062,7 +1072,7 @@
     </div>
 
     <!-- Playard AI Assistant Modal / Panel -->
-    <div id="ai-assistant-modal" style="display: none; position: fixed; bottom: 80px; right: 300px; width: 420px; max-width: calc(100vw - 40px); background: rgba(18, 22, 30, 0.96); backdrop-filter: blur(16px); border: 2px solid #38bdf8; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(56, 189, 248, 0.25); z-index: 120; flex-direction: column; overflow: hidden;">
+    <div id="ai-assistant-modal" style="display: none; position: fixed; bottom: 30px; right: 410px; width: 440px; max-width: calc(100vw - 40px); background: rgba(18, 22, 30, 0.98); backdrop-filter: blur(20px); border: 2px solid #a855f7; border-radius: 18px; box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 30px rgba(168, 85, 247, 0.4); z-index: 2500; flex-direction: column; overflow: hidden;">
         <!-- Header -->
         <div style="background: linear-gradient(135deg, rgba(14, 116, 144, 0.9), rgba(3, 105, 161, 0.9)); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.15);">
             <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.95rem; color: #fff;">
@@ -1857,8 +1867,8 @@
         </div>
     </div>
 
-    <!-- Floating Quick-Access Playard AI Button (Always Visible) -->
-    <button id="btn-floating-ai" title="Ava Playard AI Assistent & Kool" style="position: fixed; bottom: 24px; right: 24px; z-index: 1040; background: linear-gradient(135deg, #8e44ad, #a855f7); border: 2px solid #e056fd; color: white; font-weight: 800; font-size: 0.95rem; border-radius: 30px; padding: 10px 20px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(0,0,0,0.6), 0 0 20px rgba(168, 85, 247, 0.55); transition: all 0.2s ease;">
+    <!-- Floating Quick-Access Playard AI Button (Always Visible in Bottom-Left) -->
+    <button id="btn-floating-ai" title="Ava Playard AI Assistent & Kool" style="position: fixed; bottom: 24px; left: 24px; z-index: 2200; background: linear-gradient(135deg, #8e44ad, #a855f7); border: 2px solid #e056fd; color: white; font-weight: 800; font-size: 0.95rem; border-radius: 30px; padding: 10px 20px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(0,0,0,0.6), 0 0 20px rgba(168, 85, 247, 0.55); transition: all 0.2s ease;">
         <span style="font-size: 1.25rem;">🤖🎒</span>
         <span>Playard AI</span>
     </button>

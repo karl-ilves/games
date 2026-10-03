@@ -75,6 +75,11 @@ export function canAccessDefender(_profileOrEmail?: UserProfile | string | null,
     return true;
 }
 
+export function canAccessFlight(_profileOrEmail?: UserProfile | string | null, _username?: string | null): boolean {
+    // 3D Flight Simulator on avalik ja kättesaadav kõigile mängijatele!
+    return true;
+}
+
 export function isUserAdmin(email?: string | null): boolean {
     if (!email) return false;
     return email.trim().toLowerCase() === 'grx@trenet.ee';

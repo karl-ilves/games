@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard Games - ✈️ 3D Flight Simulator | Airplane Game</title>
+    <meta name="description" content="Experience realistic 3D flight simulation with Cessna 172, Boeing 747, F-22 Raptor, Concorde, Seaplane, and Biplane! Master takeoff, aerobatics, stunt rings, and butter landings.">
+    <meta name="keywords" content="flight simulator, airplane simulator, 3d plane game, cessna, f22 raptor, boeing 747, playard games">
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #060b11;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            color: #e2e8f0;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 1;
+        }
+
+        /* Top HUD Bar */
+        #top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(180deg, rgba(10, 16, 26, 0.92) 0%, rgba(10, 16, 26, 0.6) 80%, transparent 100%);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .hud-left, .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-hub-back {
+            background: rgba(20, 28, 42, 0.85);
+            border: 1.5px solid rgba(0, 242, 254, 0.5);
+            color: #ffffff;
+            font-size: 0.88rem;
+            font-weight: 800;
+            padding: 7px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+        .btn-hub-back:hover {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .title-badge {
+            background: rgba(14, 23, 38, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00f2fe;
+            box-shadow: 0 0 8px #00f2fe;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        .hud-btn {
+            background: rgba(18, 28, 44, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f1f5f9;
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 7px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .hud-btn:hover {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .currency-badge {
+            background: rgba(18, 28, 44, 0.9);
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            color: #ffd700;
+            font-weight: 800;
+            font-size: 0.88rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Glass Cockpit HUD Overlay */
+        #flight-hud {
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* Attitude Indicator / Gyro Horizon (Center) */
+        #gyro-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 242, 254, 0.45);
+            background: rgba(10, 20, 32, 0.4);
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.15), inset 0 0 15px rgba(0,0,0,0.6);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        #gyro-horizon {
+            position: absolute;
+            width: 400%;
+            height: 400%;
+            left: -150%;
+            top: -150%;
+            background: linear-gradient(to bottom, #1e90ff 50%, #8b5a2b 50%);
+            opacity: 0.85;
+            transform-origin: center;
+            transition: transform 0.05s linear;
+        }
+
+        /* Pitch Ladder lines on gyro */
+        .pitch-line {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 1.5px;
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 3px rgba(0,0,0,0.8);
+        }
+
+        /* Center Aircraft Reticle / Crosshair */
+        #hud-reticle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        /* Left Airspeed Tape */
+        #speed-tape-container {
+            position: absolute;
+            top: 50%;
+            left: 40px;
+            transform: translateY(-50%);
+            width: 90px;
+            background: rgba(10, 18, 28, 0.75);
+            border: 1px solid rgba(0, 242, 254, 0.4);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .hud-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .hud-value-large {
+            font-size: 1.7rem;
+            font-weight: 900;
+            color: #00f2fe;
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+            font-variant-numeric: tabular-nums;
+            margin: 2px 0;
+        }
+
+        .hud-unit {
+            font-size: 0.72rem;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        /* Right Altimeter Tape */
+        #alt-tape-container {
+            position: absolute;
+            top: 50%;
+            right: 40px;
+            transform: translateY(-50%);
+            width: 95px;
+            background: rgba(10, 18, 28, 0.75);
+            border: 1px solid rgba(0, 242, 254, 0.4);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Vertical Speed Ladder */
+        #vsi-container {
+            position: absolute;
+            top: 50%;
+            right: 145px;
+            transform: translateY(-50%);
+            width: 60px;
+            background: rgba(10, 18, 28, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            padding: 6px 4px;
+            text-align: center;
+        }
+
+        /* Top Heading Tape / Compass */
+        #heading-tape-container {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 18, 28, 0.75);
+            border: 1px solid rgba(0, 242, 254, 0.4);
+            border-radius: 8px;
+            padding: 4px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Bottom Controls & System Status */
+        #flight-status-bar {
+            position: absolute;
+            bottom: 24px;
+            left: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(10, 18, 28, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 12px 16px;
+            backdrop-filter: blur(6px);
+            pointer-events: auto;
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .throttle-bar-outer {
+            width: 120px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #throttle-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00f2fe, #2ecc71);
+            transition: width 0.08s ease-out;
+        }
+
+        .status-tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+        .tag-green { background: rgba(46, 204, 113, 0.25); color: #2ecc71; border: 1px solid #2ecc71; }
+        .tag-amber { background: rgba(241, 196, 15, 0.25); color: #f1c40f; border: 1px solid #f1c40f; }
+        .tag-red { background: rgba(231, 76, 60, 0.25); color: #e74c3c; border: 1px solid #e74c3c; }
+
+        /* Warning Banners */
+        #warning-banner {
+            position: absolute;
+            top: 22%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            padding: 10px 28px;
+            background: rgba(231, 76, 60, 0.9);
+            border: 2px solid #ffffff;
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            animation: warnBlink 0.4s infinite alternate;
+            z-index: 90;
+        }
+
+        @keyframes warnBlink {
+            from { opacity: 1; transform: translateX(-50%) scale(1); }
+            to { opacity: 0.5; transform: translateX(-50%) scale(0.96); }
+        }
+
+        /* Radar Mini-map (Bottom Right) */
+        #radar-container {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            width: 150px;
+            height: 150px;
+            background: rgba(8, 14, 22, 0.85);
+            border: 2px solid rgba(0, 242, 254, 0.4);
+            border-radius: 50%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+        }
+
+        #radar-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Mobile On-Screen Controls */
+        #mobile-flight-controls {
+            display: none;
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 80;
+        }
+
+        .mob-zone-left {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mob-zone-right {
+            position: absolute;
+            bottom: 30px;
+            right: 200px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .mob-btn {
+            background: rgba(18, 28, 44, 0.8);
+            border: 1.5px solid rgba(0, 242, 254, 0.5);
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 1rem;
+            border-radius: 12px;
+            padding: 12px 18px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+
+        /* Modals & Dialogs */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 8, 14, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-card {
+            background: #0d1522;
+            border: 1.5px solid rgba(0, 242, 254, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 242, 254, 0.2);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.6rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .modal-close:hover { color: #ffffff; }
+
+        .aircraft-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 14px;
+            margin-top: 16px;
+        }
+
+        .aircraft-card {
+            background: rgba(18, 28, 44, 0.7);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .aircraft-card:hover {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.12);
+            transform: translateY(-2px);
+        }
+        .aircraft-card.active {
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.2);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+        }
+
+        /* PAPI Light Indicators */
+        #papi-indicator {
+            position: absolute;
+            bottom: 24px;
+            left: 280px;
+            background: rgba(10, 18, 28, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .papi-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.5);
+        }
+        .papi-red { background: #e74c3c; box-shadow: 0 0 6px #e74c3c; }
+        .papi-white { background: #ffffff; box-shadow: 0 0 6px #ffffff; }
+
+        @media (max-width: 768px) {
+            #mobile-flight-controls { display: block; }
+            #flight-status-bar { bottom: 120px; left: 16px; padding: 8px 12px; font-size: 0.75rem; }
+            #radar-container { bottom: 16px; right: 16px; width: 110px; height: 110px; }
+            #speed-tape-container { left: 10px; width: 75px; }
+            #alt-tape-container { right: 10px; width: 75px; }
+            #vsi-container { display: none; }
+            #papi-indicator { display: none; }
+            #gyro-container { width: 160px; height: 160px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 3D Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top HUD Navigation -->
+    <header id="top-hud">
+        <div class="hud-left">
+            <a href="../../index.html" class="btn-hub-back" id="btn-back-hub">
+                <span>&larr;</span> <span>Hub</span>
+            </a>
+            <div class="title-badge">
+                <span class="live-dot"></span>
+                <span>✈️ 3D Flight Simulator</span>
+            </div>
+            <div class="currency-badge" id="hud-pilot-rank">
+                <span>🎖️</span> <span id="pilot-rank-text">Cadet</span>
+            </div>
+            <div class="currency-badge" id="hud-flight-cash">
+                <span>🪙</span> <span id="flight-cash-val">500</span> €
+            </div>
+        </div>
+
+        <div class="hud-right">
+            <button class="hud-btn" id="btn-open-hangar" title="Switch Aircraft">
+                <span>🛩️ Hangar</span>
+            </button>
+            <button class="hud-btn" id="btn-open-weather" title="Weather & Time of Day">
+                <span>☀️ Weather</span>
+            </button>
+            <button class="hud-btn" id="btn-open-emergency" title="Emergency Scenarios">
+                <span>⚠️ Emergency</span>
+            </button>
+            <button class="hud-btn" id="btn-cycle-camera" title="Cycle Camera (C)">
+                <span>🎥 <span id="cam-name-tag">Chase</span></span>
+            </button>
+            <button class="hud-btn" id="btn-toggle-sound" title="Toggle Sound">
+                <span id="sound-icon">🔊</span>
+            </button>
+            <button class="hud-btn" id="btn-open-help" title="Flight Controls & Help">
+                <span>❓ Help</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Glass Cockpit HUD Overlay -->
+    <main id="flight-hud">
+        <!-- Attitude Indicator / Gyro Horizon (Pitch & Roll) -->
+        <div id="gyro-container">
+            <div id="gyro-horizon"></div>
+            <!-- Horizon Center Line -->
+            <div style="position: absolute; width: 100%; height: 2px; background: rgba(0, 242, 254, 0.7); box-shadow: 0 0 4px #00f2fe;"></div>
+            <!-- Center Reticle Marker -->
+            <div style="position: absolute; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #ffd700; background: rgba(255, 215, 0, 0.4);"></div>
+            <div style="position: absolute; width: 50px; height: 3px; background: #ffd700; border-radius: 2px;"></div>
+        </div>
+
+        <!-- Left Speed Tape (Airspeed Knots) -->
+        <div id="speed-tape-container">
+            <div class="hud-label">AIRSPEED</div>
+            <div class="hud-value-large" id="hud-airspeed">0</div>
+            <div class="hud-unit">KNOTS (IAS)</div>
+        </div>
+
+        <!-- Right Altitude Tape (Altitude Feet) -->
+        <div id="alt-tape-container">
+            <div class="hud-label">ALTITUDE</div>
+            <div class="hud-value-large" id="hud-altitude">10</div>
+            <div class="hud-unit">FEET (MSL)</div>
+        </div>
+
+        <!-- Vertical Speed Indicator -->
+        <div id="vsi-container">
+            <div class="hud-label">V / S</div>
+            <div id="hud-vsi" style="font-size: 1.1rem; font-weight: 800; color: #2ecc71; margin: 3px 0;">+0</div>
+            <div class="hud-unit">FT/MIN</div>
+        </div>
+
+        <!-- Top Heading Tape -->
+        <div id="heading-tape-container">
+            <span class="hud-label">HDG</span>
+            <span id="hud-heading" style="font-size: 1.25rem; font-weight: 900; color: #00f2fe; font-variant-numeric: tabular-nums;">090&deg;</span>
+            <span id="hud-cardinal" style="font-size: 0.9rem; font-weight: 800; color: #ffd700;">E</span>
+        </div>
+
+        <!-- PAPI Approach Slope Indicator (Precision Approach Path Indicator) -->
+        <div id="papi-indicator">
+            <span>PAPI 3&deg;:</span>
+            <div class="papi-dot papi-red" id="papi-1"></div>
+            <div class="papi-dot papi-red" id="papi-2"></div>
+            <div class="papi-dot papi-white" id="papi-3"></div>
+            <div class="papi-dot papi-white" id="papi-4"></div>
+            <span id="papi-text" style="color: #2ecc71;">ON GLIDEPATH</span>
+        </div>
+
+        <!-- Emergency / Stall Warning Banner -->
+        <div id="warning-banner">⚠️ STALL WARNING</div>
+
+        <!-- Bottom Status Bar -->
+        <div id="flight-status-bar">
+            <div class="status-row">
+                <span>Throttle (W/S):</span>
+                <div class="throttle-bar-outer">
+                    <div id="throttle-fill"></div>
+                </div>
+                <span id="hud-throttle-pct" style="width: 40px; text-align: right;">0%</span>
+            </div>
+            <div class="status-row">
+                <span>Landing Gear (G):</span>
+                <span id="hud-gear-tag" class="status-tag tag-green">DOWN</span>
+            </div>
+            <div class="status-row">
+                <span>Flaps (F):</span>
+                <span id="hud-flaps-tag" class="status-tag tag-green">UP (0&deg;)</span>
+            </div>
+            <div class="status-row">
+                <span>Brakes (B):</span>
+                <span id="hud-brakes-tag" class="status-tag tag-amber">PARK ON</span>
+            </div>
+            <div class="status-row">
+                <span>Autopilot (P):</span>
+                <button id="btn-toggle-ap" style="background: none; border: none; cursor: pointer; padding: 0;">
+                    <span id="hud-ap-tag" class="status-tag tag-red">DISENGAGED</span>
+                </button>
+            </div>
+            <div class="status-row" id="afterburner-row" style="display: none;">
+                <span>Afterburner:</span>
+                <span id="hud-afterburner-tag" class="status-tag tag-red">ARMED</span>
+            </div>
+        </div>
+
+        <!-- Radar Mini-map -->
+        <div id="radar-container" title="Airport & Stunt Rings Radar">
+            <canvas id="radar-canvas" width="150" height="150"></canvas>
+        </div>
+    </main>
+
+    <!-- Mobile Touch HUD Controls -->
+    <div id="mobile-flight-controls">
+        <div class="mob-zone-left">
+            <button class="mob-btn" id="mob-throttle-up" style="background: rgba(46, 204, 113, 0.7); border-color: #2ecc71;">▲ Throttle +</button>
+            <button class="mob-btn" id="mob-throttle-down" style="background: rgba(231, 76, 60, 0.7); border-color: #e74c3c;">▼ Throttle -</button>
+            <button class="mob-btn" id="mob-brakes">🛑 Brakes</button>
+        </div>
+        <div class="mob-zone-right">
+            <button class="mob-btn" id="mob-pitch-up">Pitch Up 🛫</button>
+            <button class="mob-btn" id="mob-pitch-down">Pitch Down 🛬</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="mob-btn" id="mob-roll-left">&larr; Roll</button>
+                <button class="mob-btn" id="mob-roll-right">Roll &rarr;</button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="mob-btn" id="mob-gear">Gear (G)</button>
+                <button class="mob-btn" id="mob-flaps">Flaps (F)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hangar Modal (Aircraft Selector) -->
+    <div class="modal-overlay" id="modal-hangar">
+        <div class="modal-card">
+            <button class="modal-close" id="btn-close-hangar">&times;</button>
+            <h2 style="color: #00f2fe; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                <span>🛩️ Flight Hangar</span>
+                <span style="font-size: 0.85rem; color: #94a3b8; font-weight: 500;">Select your aircraft</span>
+            </h2>
+            <div class="aircraft-grid" id="aircraft-selection-list">
+                <!-- Dynamically populated by hangarModal.ts -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Weather & Time of Day Modal -->
+    <div class="modal-overlay" id="modal-weather">
+        <div class="modal-card">
+            <button class="modal-close" id="btn-close-weather">&times;</button>
+            <h2 style="color: #ffd700; margin-top: 0;">☀️ Sky & Weather Environment</h2>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Choose flight conditions and atmospheric lighting:</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 14px;">
+                <button class="hud-btn weather-option-btn active" data-weather="clear" style="justify-content: center; padding: 12px;">☀️ Clear Skies</button>
+                <button class="hud-btn weather-option-btn" data-weather="sunset" style="justify-content: center; padding: 12px;">🌅 Golden Sunset</button>
+                <button class="hud-btn weather-option-btn" data-weather="rain" style="justify-content: center; padding: 12px;">🌧️ Rain & Clouds</button>
+                <button class="hud-btn weather-option-btn" data-weather="storm" style="justify-content: center; padding: 12px;">⚡ Thunderstorm</button>
+                <button class="hud-btn weather-option-btn" data-weather="snow" style="justify-content: center; padding: 12px;">❄️ Snow & Frost</button>
+                <button class="hud-btn weather-option-btn" data-weather="fog" style="justify-content: center; padding: 12px;">🌫️ Dense Fog</button>
+            </div>
+            <div style="margin-top: 20px; padding: 12px; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; color: #00f2fe;">🛡️ Anti-Ice De-Icing System (J):</span>
+                    <button class="hud-btn" id="btn-anti-ice-toggle" style="background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71;">ANTI-ICE: ON</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Scenarios Modal -->
+    <div class="modal-overlay" id="modal-emergency">
+        <div class="modal-card">
+            <button class="modal-close" id="btn-close-emergency">&times;</button>
+            <h2 style="color: #ff4757; margin-top: 0;">⚠️ Emergency Flight Scenarios</h2>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Test your piloting skills under extreme failure conditions:</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 14px;">
+                <button class="hud-btn emergency-btn" data-emergency="engine_fire" style="justify-content: center; padding: 12px; border-color: #ff4757;">🔥 Engine Fire</button>
+                <button class="hud-btn emergency-btn" data-emergency="gear_fail" style="justify-content: center; padding: 12px; border-color: #e67e22;">⚙️ Landing Gear Stuck</button>
+                <button class="hud-btn emergency-btn" data-emergency="fuel_empty" style="justify-content: center; padding: 12px; border-color: #f1c40f;">⛽ Empty Fuel Glide</button>
+                <button class="hud-btn emergency-btn" data-emergency="turbulence" style="justify-content: center; padding: 12px; border-color: #3498db;">🌪️ Severe Turbulence</button>
+                <button class="hud-btn emergency-btn" data-emergency="wing_damage" style="justify-content: center; padding: 12px; border-color: #9b59b6;">🦅 Bird Strike / Wing Flap</button>
+                <button class="hud-btn emergency-btn" data-emergency="none" style="justify-content: center; padding: 12px; border-color: #2ecc71;">✅ All Systems Normal</button>
+            </div>
+            <button class="hud-btn" id="btn-random-emergency" style="width: 100%; margin-top: 16px; padding: 12px; justify-content: center; background: linear-gradient(135deg, #e74c3c, #c0392b); border: none; font-weight: 900;">
+                🎲 TRIGGER RANDOM EMERGENCY
+            </button>
+        </div>
+    </div>
+
+    <!-- Landing Scorecard / Debrief Modal -->
+    <div class="modal-overlay" id="modal-landing">
+        <div class="modal-card" style="text-align: center;">
+            <h2 id="landing-title" style="color: #ffd700; font-size: 1.8rem; margin: 0 0 10px 0;">🌟 BUTTER LANDING!</h2>
+            <div id="landing-subtitle" style="color: #cbd5e1; font-size: 1rem; margin-bottom: 20px;">Silky smooth touchdown on runway centerline!</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: rgba(18, 28, 44, 0.7); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+                <div>
+                    <div class="hud-label">TOUCHDOWN SINK RATE</div>
+                    <div id="landing-sink-rate" style="font-size: 1.4rem; font-weight: 800; color: #2ecc71;">-120 ft/min</div>
+                </div>
+                <div>
+                    <div class="hud-label">AIRSPEED AT WHEELS DOWN</div>
+                    <div id="landing-speed" style="font-size: 1.4rem; font-weight: 800; color: #00f2fe;">65 knots</div>
+                </div>
+                <div style="grid-column: span 2; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                    <div class="hud-label">REWARD EARNED</div>
+                    <div id="landing-reward" style="font-size: 1.5rem; font-weight: 900; color: #ffd700;">+100 Flight Cash & +50 XP</div>
+                </div>
+            </div>
+            <button class="hud-btn" id="btn-landing-continue" style="width: 100%; padding: 14px; justify-content: center; background: linear-gradient(135deg, #00f2fe, #3a7bd5); color: #000; font-size: 1.1rem; font-weight: 900; border: none; border-radius: 10px;">
+                🛫 CONTINUE FLIGHT
+            </button>
+        </div>
+    </div>
+
+    <!-- Help & Controls Guide Modal -->
+    <div class="modal-overlay" id="modal-help">
+        <div class="modal-card">
+            <button class="modal-close" id="btn-close-help">&times;</button>
+            <h2 style="color: #00f2fe; margin-top: 0;">✈️ Flight Simulator Pilot Manual</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; line-height: 1.5; color: #e2e8f0;">
+                <div><strong style="color: #00f2fe;">W / S:</strong> Throttle Up / Down (0% to 100%, Afterburner on Fighter)</div>
+                <div><strong style="color: #ffd700;">Up / Down Arrows (or S / W):</strong> Pitch Elevator (Up pushes nose down, Down pulls nose up to climb!)</div>
+                <div><strong style="color: #ffd700;">Left / Right Arrows (or A / D):</strong> Roll Ailerons (Banking turns)</div>
+                <div><strong style="color: #2ecc71;">Q / E:</strong> Rudder Yaw / Runway Nosewheel Steering</div>
+                <div><strong style="color: #00f2fe;">G:</strong> Retract / Extend Landing Gear</div>
+                <div><strong style="color: #00f2fe;">F:</strong> Cycle Flaps (0&deg; Clean, 15&deg; Takeoff/Approach, 30&deg; Full Landing)</div>
+                <div><strong style="color: #ff4757;">B:</strong> Wheel Brakes / Airbrakes</div>
+                <div><strong style="color: #2ecc71;">P:</strong> Autopilot (Maintains target altitude and levels wings)</div>
+                <div><strong style="color: #a855f7;">C:</strong> Cycle Camera (Chase 3D, Cockpit 1st Person, Wing Cam, Flyby)</div>
+                <div><strong style="color: #38bdf8;">J:</strong> Toggle Anti-Ice System</div>
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 6px 0;">
+                <div><strong style="color: #ffd700;">🏆 How to Earn Flight Cash:</strong> Fly through golden Stunt Rings (+25 € each) and perform smooth landings on runways (+100 €)!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Script Entry Point -->
+    <script type="module" src="/src/games/flight/main.ts"></script>
+</body>
+</html>

@@ -22,7 +22,8 @@ export default defineConfig({
         defender: resolve(__dirname, 'games/defender/index.html'),
         breakout: resolve(__dirname, 'games/breakout/index.html'),
         snake: resolve(__dirname, 'games/snake/index.html'),
-        ai: resolve(__dirname, 'games/ai/index.html')
+        ai: resolve(__dirname, 'games/ai/index.html'),
+        flight: resolve(__dirname, 'games/flight/index.html')
       }
     }
   }

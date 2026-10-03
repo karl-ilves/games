@@ -27,7 +27,8 @@ const GAME_SYNONYMS: Record<string, string[]> = {
     'card-mmp1-game': ['mmp1', 'murder', 'mõrv', 'šerif', 'sheriff', 'mõrvar', 'mystic', 'relv', 'nuga', 'knife', 'gun'],
     'card-rocket-game': ['rocket', 'rakett', 'raketid', 'tuumarelv', 'arcade', 'space', 'plahvatus'],
     'card-defender-game': ['defender', 'kaitse', 'maa', 'earth', 'asteroid', 'kosmos', 'space', 'laser', 'retro'],
-    'card-breakout-game': ['breakout', 'klots', 'klotsipurustaja', 'pall', 'tellis', 'brick', 'retro', '2d', 'green']
+    'card-breakout-game': ['breakout', 'klots', 'klotsipurustaja', 'pall', 'tellis', 'brick', 'retro', '2d', 'green'],
+    'card-flight-game': ['lennuk', 'lennusimulaator', 'plane', 'airplane', 'flight', 'cessna', 'boeing', 'f22', 'raptor', 'lendamine', 'pilot', 'simulator', 'aviation']
 };
 
 export class GamesSearchManager {
