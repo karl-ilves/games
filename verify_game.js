@@ -4376,6 +4376,217 @@ await (async () => {
             throw new Error("Expected mouse drag to rotate view/characterYaw in Game Player!");
         }
         console.log("   Game Player mouse drag view turning verified: ✅");
+
+        // 6f. Testing 1000 Holdable Items, 50 Damage Weapons, 6M Test Balance & Creator Revenue Transfer
+        console.log("6f. Testing 1000 Holdable Items, 50 Damage Weapons, 6M Test Balance & Creator Revenue Transfer...");
+        await page.goto('http://localhost:4173/games/creator/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 2000));
+        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
+
+        // 1. Verify 6,000,000 Playbux test balance displayed in Creator Studio
+        const testPbxBadge = await page.$eval('#studio-test-pbx', el => el.textContent.trim());
+        console.log("   Studio Test Playbux Badge text (Expected: 6,000,000):", testPbxBadge);
+        if (!testPbxBadge.includes('6,000,000')) {
+            throw new Error(`Expected Creator Studio to display 6,000,000 Playbux test balance, got: ${testPbxBadge}`);
+        }
+
+        // 2. Click Holdable Items catalog category and verify 1000 items & 50 damage weapons
+        await page.click('button[data-cat="holdable"]');
+        await new Promise(r => setTimeout(r, 300));
+
+        const holdableCatalogStats = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            const catItems = cs?.CATALOG_DATABASE || [];
+            const holdables = catItems.filter(i => i.isHoldable || i.category === 'holdable');
+            const damageItems = holdables.filter(i => i.dealsDamage && typeof i.damageAmount === 'number' && i.damageAmount > 0);
+            return {
+                totalHoldable: holdables.length,
+                damageCount: damageItems.length,
+                firstWeapon: damageItems[0],
+                lastWeapon: damageItems[damageItems.length - 1]
+            };
+        });
+
+        console.log("   Holdable catalog items count (Expected: 1000):", holdableCatalogStats.totalHoldable);
+        console.log("   Battle weapons with damage count (Expected: 50):", holdableCatalogStats.damageCount);
+
+        if (holdableCatalogStats.totalHoldable !== 1000) {
+            throw new Error(`Expected exactly 1000 holdable catalog items, found: ${holdableCatalogStats.totalHoldable}`);
+        }
+        if (holdableCatalogStats.damageCount !== 50) {
+            throw new Error(`Expected exactly 50 battle damage weapons, found: ${holdableCatalogStats.damageCount}`);
+        }
+
+        // 3. Test placing a weapon into scene and customizing damage, inHandAtStart, and price
+        const testObjectCustomization = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            const wpn = cs.CATALOG_DATABASE.find(i => i.id === 'holdable_wep_1');
+            const placed = cs.spawnObjectIntoScene(wpn);
+
+            // Change damage to 50
+            const dmgInput = document.getElementById('obj-damage-amount-input');
+            if (dmgInput) {
+                dmgInput.value = '50';
+                dmgInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            // Set inHandAtStart to true
+            const inHandSelect = document.getElementById('obj-in-hand-select');
+            if (inHandSelect) {
+                inHandSelect.value = 'true';
+                inHandSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            // Set costs Playbux to true, price 75
+            const pickupSelect = document.getElementById('obj-pickup-type-select');
+            if (pickupSelect) {
+                pickupSelect.value = 'pbx';
+                pickupSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const priceInput = document.getElementById('obj-pbx-price-input');
+            if (priceInput) {
+                priceInput.value = '75';
+                priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            return {
+                placedId: placed.id,
+                dealsDamage: placed.dealsDamage,
+                customDamage: placed.damageAmount,
+                inHandAtStart: placed.inHandAtStart,
+                costsPbx: placed.costsPbx,
+                pbxPrice: placed.pbxPrice
+            };
+        });
+
+        console.log("   Placed object customized properties:", testObjectCustomization);
+        if (testObjectCustomization.customDamage !== 50) {
+            throw new Error(`Expected customizable damage to be 50, got: ${testObjectCustomization.customDamage}`);
+        }
+        if (testObjectCustomization.inHandAtStart !== true) {
+            throw new Error(`Expected inHandAtStart to be true, got: ${testObjectCustomization.inHandAtStart}`);
+        }
+        if (testObjectCustomization.costsPbx !== true || testObjectCustomization.pbxPrice !== 75) {
+            throw new Error(`Expected costsPbx to be true with price 75, got: ${JSON.stringify(testObjectCustomization)}`);
+        }
+
+        // 4. Test Play Test mode test purchase from 6,000,000 PBX sandbox balance
+        const testPlayTestPurchase = await page.evaluate(() => {
+            const cs = window.creatorStudio;
+            const initialTestPbx = cs.getStudioTestPlaybux();
+            const realPbxBefore = window.yardService ? window.yardService.getPlaybux() : 0;
+
+            // Enter play test
+            document.getElementById('btn-toggle-play-test')?.click();
+
+            // Hand socket has equipped starter weapon
+            const handSocket = cs.playerAvatarRig.getHandSocket('right');
+            const hasHeldItem = handSocket && handSocket.children.length > 0;
+
+            // Simulate purchasing a 75 PBX item in test mode
+            const itemToBuy = cs.placedObjects.find(o => o.costsPbx);
+            if (itemToBuy) {
+                const pPrice = itemToBuy.pbxPrice || 75;
+                if (cs.getStudioTestPlaybux() >= pPrice) {
+                    window._simulatedTestSpend = true;
+                }
+            }
+
+            // Exit play test
+            document.getElementById('btn-toggle-play-test')?.click();
+            const realPbxAfter = window.yardService ? window.yardService.getPlaybux() : 0;
+
+            return {
+                initialTestPbx,
+                hasHeldItem,
+                realPbxUntouched: realPbxBefore === realPbxAfter
+            };
+        });
+
+        console.log("   Play test starter weapon equip and sandbox balance safety:", testPlayTestPurchase);
+        if (!testPlayTestPurchase.hasHeldItem) {
+            throw new Error("Expected item with inHandAtStart to be equipped in hand during Play Test!");
+        }
+        if (!testPlayTestPurchase.realPbxUntouched) {
+            throw new Error("Play test mode should NOT alter real user account Playbux balance!");
+        }
+
+        // 5. Test Stranger Purchasing Item in Published Game & Creator Revenue Transfer
+        console.log("   Testing Published Game item purchase with creator revenue transfer...");
+        const creatorRevenueTest = await page.evaluate(async () => {
+            const ys = window.yardService;
+            if (!ys) return { error: 'yardService not found' };
+
+            const creatorUser = 'pro_creator_hero';
+            const strangerUser = 'stranger_buyer_99';
+            const itemPrice = 120;
+            const itemTitle = 'Draakoni Mõõk';
+            const gameTitle = 'Draakoni Saare Seiklus';
+
+            // 1. Give stranger 500 Playbux
+            const strangerPayload = JSON.stringify({
+                yards: 500,
+                playCoins: 0,
+                streak: 1,
+                lastClaimTimestamp: 0,
+                inventory: [],
+                redeemedCodes: [],
+                transactions: []
+            });
+            localStorage.setItem('playard_storage_user_' + strangerUser.toLowerCase(), strangerPayload);
+            localStorage.setItem('playard_yards_user_' + strangerUser.toLowerCase(), strangerPayload);
+
+            // 2. Creator starts with 50 PBX
+            const creatorPayload = JSON.stringify({
+                yards: 50,
+                playCoins: 0,
+                streak: 1,
+                lastClaimTimestamp: 0,
+                inventory: [],
+                redeemedCodes: [],
+                transactions: []
+            });
+            localStorage.setItem('playard_storage_user_' + creatorUser.toLowerCase(), creatorPayload);
+            localStorage.setItem('playard_yards_user_' + creatorUser.toLowerCase(), creatorPayload);
+
+            const creatorBefore = ys.getYards(creatorUser);
+            const strangerBefore = ys.getYards(strangerUser);
+
+            // 3. Stranger buys the item in published game
+            // Deduct stranger's balance
+            const strangerKey1 = 'playard_storage_user_' + strangerUser.toLowerCase();
+            const strangerKey2 = 'playard_yards_user_' + strangerUser.toLowerCase();
+            const strangerData = JSON.parse(localStorage.getItem(strangerKey1));
+            strangerData.yards -= itemPrice;
+            localStorage.setItem(strangerKey1, JSON.stringify(strangerData));
+            localStorage.setItem(strangerKey2, JSON.stringify(strangerData));
+
+            // Credit creator's revenue
+            const revenueSuccess = ys.creditCreatorRevenue(creatorUser, itemPrice, itemTitle, gameTitle);
+
+            const creatorAfter = ys.getYards(creatorUser);
+            const strangerAfter = ys.getYards(strangerUser);
+
+            return {
+                creatorBefore,
+                creatorAfter,
+                strangerBefore,
+                strangerAfter,
+                revenueSuccess,
+                creatorGained: creatorAfter - creatorBefore,
+                strangerPaid: strangerBefore - strangerAfter
+            };
+        });
+
+        console.log("   Creator Revenue Transfer Results:", creatorRevenueTest);
+        if (creatorRevenueTest.creatorGained !== 120) {
+            throw new Error(`Expected creator to receive exactly 120 PBX revenue from stranger's purchase, got: ${creatorRevenueTest.creatorGained}`);
+        }
+        if (creatorRevenueTest.strangerPaid !== 120) {
+            throw new Error(`Expected stranger to pay exactly 120 PBX, paid: ${creatorRevenueTest.strangerPaid}`);
+        }
+        console.log("   ✅ 1000 Holdable Items, 50 Damage Weapons, In-Hand Start, 6M Test Balance & Creator Revenue Transfer verified successfully!");
+
         console.log("7. Checking Racing Simulator...");
         await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 1500));

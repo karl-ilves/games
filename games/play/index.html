@@ -164,8 +164,47 @@
             </div>
         </div>
 
-        <div id="review-badge" style="display: none; background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
-            👑 ADMIN REVIEW MODE
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div id="player-pbx-badge" style="display: flex; align-items: center; gap: 6px; background: rgba(0, 242, 254, 0.12); border: 1.5px solid rgba(0, 242, 254, 0.5); padding: 5px 14px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; color: #00f2fe; box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);">
+                <span>💎</span>
+                <span id="player-pbx-val">0</span> PBX
+            </div>
+            <div id="review-badge" style="display: none; background: rgba(255, 211, 42, 0.2); border: 1px solid #ffd32a; color: #ffd32a; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
+                👑 ADMIN REVIEW MODE
+            </div>
+        </div>
+    </div>
+
+    <!-- Health HUD -->
+    <div id="play-health-hud" style="position: absolute; top: 70px; right: 20px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1.5px solid rgba(231, 76, 60, 0.4); border-radius: 20px; padding: 6px 14px; display: flex; align-items: center; gap: 10px; z-index: 95; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+        <span style="font-size: 1.1rem;">❤️</span>
+        <div style="width: 120px; height: 12px; background: rgba(0,0,0,0.6); border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+            <div id="play-health-bar" style="width: 100%; height: 100%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.2s, background 0.2s;"></div>
+        </div>
+        <span id="play-health-text" style="font-size: 0.82rem; font-weight: 800; color: #fff;">100/100</span>
+    </div>
+
+    <!-- Inventory HUD -->
+    <div id="play-inventory-hud" style="position: fixed; bottom: 95px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 95; pointer-events: none; max-width: 90vw; flex-wrap: wrap; justify-content: center;">
+        <!-- Equipped & collected items populate here -->
+    </div>
+
+    <!-- Interaction Dialog & Purchase Modal -->
+    <div id="play-dialog-popup" style="display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96)); border: 2px solid #00f2fe; border-radius: 16px; padding: 14px 24px; color: #fff; z-index: 1200; box-shadow: 0 10px 40px rgba(0,242,254,0.4); backdrop-filter: blur(14px); min-width: 320px; max-width: 550px; text-align: center; pointer-events: auto;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px;">
+            <span id="play-dialog-icon" style="font-size: 1.6rem;">✋</span>
+            <strong id="play-dialog-title" style="color: #00f2fe; font-size: 1.05rem;">Ese</strong>
+        </div>
+        <div id="play-dialog-text" style="font-size: 1.05rem; font-weight: bold; color: #ffd32a; line-height: 1.4; margin-bottom: 12px;">
+            Vajuta [E] eseme ostmiseks
+        </div>
+        <div id="play-dialog-actions" style="display: flex; justify-content: center; gap: 10px;">
+            <button id="btn-play-buy-confirm" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border: none; color: #000; font-weight: 800; padding: 8px 20px; border-radius: 10px; cursor: pointer; font-size: 0.9rem;">
+                💎 Osta
+            </button>
+            <button id="btn-play-buy-cancel" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-weight: 600; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-size: 0.9rem;">
+                ✕ Sulge
+            </button>
         </div>
     </div>
 

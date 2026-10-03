@@ -376,6 +376,11 @@
         </div>
 
         <div class="studio-actions">
+            <div id="studio-test-pbx-badge" style="display: flex; align-items: center; gap: 6px; background: rgba(0, 242, 254, 0.12); border: 1.5px solid rgba(0, 242, 254, 0.5); padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; color: #00f2fe; box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);">
+                <span>💎</span>
+                <span id="studio-test-pbx">6,000,000</span> PBX
+                <span style="background: #e74c3c; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 8px; margin-left: 2px; letter-spacing: 0.5px;">TEST</span>
+            </div>
             <span id="draft-status-indicator" style="font-size: 0.8rem; color: #2ecc71; font-weight: 600;"></span>
             <button id="btn-undo" class="btn-studio" title="Undo Last Action (Ctrl+Z)" style="padding: 8px 12px; background: rgba(255,255,255,0.08);">
                 <span>Undo</span>
@@ -656,6 +661,7 @@
             <input type="text" id="catalog-search-input" class="catalog-search" placeholder="Search 10000 objects...">
             <div class="catalog-categories">
                 <button class="cat-btn active" data-cat="spawn" style="color: #00f2fe; font-weight: bold;">Spawn Kohad</button>
+                <button class="cat-btn" data-cat="holdable" style="color: #e056fd; font-weight: bold;">✋ Kätte võetavad (1000)</button>
                 <button class="cat-btn" data-cat="custom" style="color: #ffd32a; font-weight: bold;">Players Created</button>
                 <button class="cat-btn" data-cat="nature">Nature</button>
                 <button class="cat-btn" data-cat="city">City</button>
@@ -771,6 +777,44 @@
                     <option value="solid">Ei (Tahke plokk / takistus)</option>
                     <option value="passable">Jah (Saab läbi käia)</option>
                 </select>
+            </div>
+
+            <!-- Holdable Item & Weapon Settings Panel -->
+            <div id="obj-holdable-settings" style="margin-top: 10px; background: rgba(224, 86, 253, 0.08); padding: 10px; border-radius: 10px; border: 1.5px solid rgba(224, 86, 253, 0.4);">
+                <div style="font-size: 0.8rem; color: #e056fd; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>✋ Kätte võetav ese</span>
+                    <input type="checkbox" id="obj-is-holdable-check" style="cursor: pointer; transform: scale(1.15);">
+                </div>
+                <div id="obj-holdable-subprops" style="display: flex; flex-direction: column; gap: 6px;">
+                    <div class="prop-row" style="margin-bottom: 0;">
+                        <label style="font-size: 0.75rem;">Alguses käes:</label>
+                        <select id="obj-in-hand-select" style="padding: 3px 6px; background: #0f172a; border: 1px solid #485460; border-radius: 6px; color: #fff; font-size: 0.78rem;">
+                            <option value="false">Ei (Ese on maas)</option>
+                            <option value="true">Jah (Mängu alguses käes)</option>
+                        </select>
+                    </div>
+                    <div class="prop-row" style="margin-bottom: 0;">
+                        <label style="font-size: 0.75rem;">Kättesaamise viis:</label>
+                        <select id="obj-pickup-type-select" style="padding: 3px 6px; background: #0f172a; border: 1px solid #485460; border-radius: 6px; color: #fff; font-size: 0.78rem;">
+                            <option value="free">Tasuta (Lähed pihta -> ilmub inventorisse)</option>
+                            <option value="pbx">Maksab Playbuxse (Ostuaken)</option>
+                        </select>
+                    </div>
+                    <div class="prop-row" id="obj-pbx-price-row" style="display: none; margin-bottom: 0;">
+                        <label style="font-size: 0.75rem; color: #ffd32a;">Hind (PBX):</label>
+                        <input type="number" id="obj-pbx-price-input" value="25" min="1" max="100000" style="padding: 3px 6px; width: 80px; font-size: 0.78rem;">
+                    </div>
+                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px; margin-top: 2px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <label style="font-size: 0.75rem; color: #ff4757; font-weight: bold;">⚔️ Võtab elusid maha:</label>
+                            <input type="checkbox" id="obj-deals-damage-check" style="cursor: pointer;">
+                        </div>
+                        <div class="prop-row" id="obj-damage-amount-row" style="display: none; margin-top: 4px; margin-bottom: 0;">
+                            <label style="font-size: 0.75rem; color: #ff6b81;">Kahju / Damage (HP):</label>
+                            <input type="number" id="obj-damage-amount-input" value="25" min="1" max="500" style="padding: 3px 6px; width: 80px; font-size: 0.78rem;">
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Visual Move & Rotate Controls -->

@@ -663,6 +663,26 @@ class YardService {
         if (this.hasInfiniteYards(targetUsername)) {
             return 999999999;
         }
+        if (targetUsername && (!this.currentUserUsername || targetUsername.toLowerCase() !== this.currentUserUsername.toLowerCase())) {
+            try {
+                const keys = [
+                    `${STORAGE_PREFIX}user_${targetUsername.toLowerCase()}`,
+                    `playard_storage_user_${targetUsername.toLowerCase()}`
+                ];
+                for (const key of keys) {
+                    const raw = localStorage.getItem(key);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (typeof parsed.yards === 'number') {
+                            return parsed.yards;
+                        }
+                    }
+                }
+                return 0;
+            } catch (e) {
+                return 0;
+            }
+        }
         return this.data.yards;
     }
 
@@ -731,6 +751,76 @@ class YardService {
         this.saveLocally(this.data);
         this.saveToCloud();
         return this.data.yards;
+    }
+
+    public creditCreatorRevenue(creatorUsername: string, amount: number, itemTitle: string, gameTitle: string): boolean {
+        if (!creatorUsername || amount <= 0) return false;
+        
+        // 1. If current user is the creator, credit directly
+        if (this.currentUserUsername && this.currentUserUsername.toLowerCase() === creatorUsername.toLowerCase()) {
+            this.addYards(amount, `Mängu "${gameTitle}" eseme müük: ${itemTitle} (+${amount} PBX)`);
+            return true;
+        }
+
+        // 2. Credit creator in local storage
+        const creatorKey = `${STORAGE_PREFIX}user_${creatorUsername.toLowerCase()}`;
+        const altCreatorKey = `playard_storage_user_${creatorUsername.toLowerCase()}`;
+        try {
+            let creatorData: YardData;
+            const raw = localStorage.getItem(creatorKey) || localStorage.getItem(altCreatorKey);
+            if (raw) {
+                creatorData = JSON.parse(raw);
+            } else {
+                creatorData = {
+                    yards: 0,
+                    playCoins: 0,
+                    streak: 0,
+                    lastClaimTimestamp: 0,
+                    inventory: [],
+                    redeemedCodes: [],
+                    transactions: []
+                };
+            }
+            creatorData.yards = (creatorData.yards || 0) + amount;
+            creatorData.transactions = creatorData.transactions || [];
+            creatorData.transactions.unshift({
+                id: 'tx_rev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                amount: amount,
+                type: 'earn',
+                reason: `Eseme "${itemTitle}" ost võõra poolt mängus "${gameTitle}" (+${amount} PBX)`,
+                timestamp: Date.now()
+            });
+            if (creatorData.transactions.length > 50) {
+                creatorData.transactions = creatorData.transactions.slice(0, 50);
+            }
+            localStorage.setItem(creatorKey, JSON.stringify(creatorData));
+            localStorage.setItem(altCreatorKey, JSON.stringify(creatorData));
+        } catch (e) {
+            console.warn('Could not credit creator revenue locally:', e);
+        }
+
+        // 3. Credit in Supabase cloud if active
+        if (supabase && !isTestMode()) {
+            try {
+                supabase
+                    .from('user_progress')
+                    .select('yards')
+                    .ilike('username', creatorUsername)
+                    .single()
+                    .then(({ data }) => {
+                        if (data && typeof data.yards === 'number') {
+                            supabase
+                                .from('user_progress')
+                                .update({ yards: data.yards + amount })
+                                .ilike('username', creatorUsername);
+                        }
+                    })
+                    .catch(() => {});
+            } catch (err) {
+                console.warn('Could not sync creator revenue to cloud:', err);
+            }
+        }
+        return true;
     }
 
     public spendYards(amount: number, itemId?: string, reason = 'Purchase'): boolean {

@@ -9,6 +9,7 @@ import { translateDOM, t } from '../../shared/i18n_dict';
 import { aiTierService, AI_TIER_CONFIGS, type PlayardAiTier } from '../../shared/aiTierService';
 import { PlayardGeneralKnowledge, PLAYARD_PIPELINE_STAGES, AiCodeAndSystemEngine, PLAYARD_GENRES_CATALOG, type PipelineStage } from '../../shared/playardAiKnowledge';
 import { PlayardImageGenerationEngine } from '../../shared/imageGenerationEngine';
+import { get1000HoldableCatalogItems } from './catalog/holdableItems';
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -101,6 +102,8 @@ interface PlacedObject {
     inHandAtStart?: boolean;
     costsPbx?: boolean;
     pbxPrice?: number;
+    dealsDamage?: boolean;
+    damageAmount?: number;
     isHeld?: boolean;
     customModelData?: {
         shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
@@ -384,7 +387,7 @@ let mousePos = { x: 0, y: 0 };
 interface CatalogItem {
     id: string;
     name: string;
-    category: 'nature' | 'city' | 'vehicles' | 'gameplay' | 'scifi' | 'custom' | 'spawn';
+    category: 'nature' | 'city' | 'vehicles' | 'gameplay' | 'scifi' | 'custom' | 'spawn' | 'holdable';
     icon: string;
     color: string;
     geometryType: string;
@@ -393,6 +396,9 @@ interface CatalogItem {
     inHandAtStart?: boolean;
     costsPbx?: boolean;
     pbxPrice?: number;
+    dealsDamage?: boolean;
+    damageAmount?: number;
+    subCategory?: string;
     customModelData?: {
         shapeType: 'box' | 'wedge' | 'cylinder' | 'pyramid' | 'dome';
         width: number;
@@ -407,11 +413,25 @@ interface CatalogItem {
         inHandAtStart?: boolean;
         costsPbx?: boolean;
         pbxPrice?: number;
+        dealsDamage?: boolean;
+        damageAmount?: number;
     };
     creatorUsername?: string;
 }
 
 const CATALOG_DATABASE: CatalogItem[] = [];
+
+// --- Creator Studio Sandbox Test Playbux (6,000,000 PBX) ---
+let studioTestPlaybux = 6000000;
+export function getStudioTestPlaybux(): number {
+    return studioTestPlaybux;
+}
+export function updateStudioTestPlaybuxDisplay() {
+    const el = document.getElementById('studio-test-pbx');
+    if (el) {
+        el.innerText = studioTestPlaybux.toLocaleString();
+    }
+}
 
 function generate10000ObjectCatalog() {
     // 1. Featured Primary Spawn Points (Both Visible and Invisible)
@@ -594,6 +614,12 @@ function generate10000ObjectCatalog() {
                 });
             }
         });
+    });
+
+    // 3. Add 1000 Unique Holdable Items (with 50 Battle Damage Weapons)
+    const holdableItems = get1000HoldableCatalogItems();
+    holdableItems.forEach(item => {
+        CATALOG_DATABASE.push(item as any);
     });
 
     console.log(`Generated ${CATALOG_DATABASE.length} unique objects in catalog.`);
@@ -2112,6 +2138,11 @@ function spawnObjectIntoScene(itemOrId: CatalogItem | string) {
         placed.pbxPrice = catalogItem.pbxPrice ?? catalogItem.customModelData?.pbxPrice ?? 0;
     }
 
+    if (catalogItem.dealsDamage !== undefined || catalogItem.customModelData?.dealsDamage !== undefined) {
+        placed.dealsDamage = catalogItem.dealsDamage ?? catalogItem.customModelData?.dealsDamage;
+        placed.damageAmount = catalogItem.damageAmount ?? catalogItem.customModelData?.damageAmount ?? 25;
+    }
+
     placedObjects.push(placed);
     selectObject(placed);
     autoSaveDraft();
@@ -2184,6 +2215,8 @@ export function serializeCurrentScene() {
                 inHandAtStart: p.inHandAtStart,
                 costsPbx: p.costsPbx,
                 pbxPrice: p.pbxPrice,
+                dealsDamage: p.dealsDamage,
+                damageAmount: p.damageAmount,
                 portalTargetId: p.portalTargetId,
                 portalTargetTitle: p.portalTargetTitle
             };
@@ -2709,6 +2742,8 @@ export function loadSceneFromData(sceneData: any) {
                 inHandAtStart: objData.inHandAtStart,
                 costsPbx: objData.costsPbx,
                 pbxPrice: objData.pbxPrice,
+                dealsDamage: objData.dealsDamage,
+                damageAmount: objData.damageAmount,
                 portalTargetId: objData.portalTargetId || objData.trigger?.targetWorldId,
                 portalTargetTitle: objData.portalTargetTitle || objData.trigger?.targetWorldTitle,
                 movement: objData.movement ? JSON.parse(JSON.stringify(objData.movement)) : undefined
@@ -2892,6 +2927,41 @@ function selectObject(placed: PlacedObject | null) {
     const passableSelect = document.getElementById('obj-passable-select') as HTMLSelectElement | null;
     if (passableSelect) {
         passableSelect.value = placed.isPassable ? 'passable' : 'solid';
+    }
+
+    // Sync Holdable and Weapon Settings
+    const holdableCheck = document.getElementById('obj-is-holdable-check') as HTMLInputElement | null;
+    const holdableSubprops = document.getElementById('obj-holdable-subprops');
+    const inHandSelect = document.getElementById('obj-in-hand-select') as HTMLSelectElement | null;
+    const pickupTypeSelect = document.getElementById('obj-pickup-type-select') as HTMLSelectElement | null;
+    const pbxPriceRow = document.getElementById('obj-pbx-price-row');
+    const pbxPriceInput = document.getElementById('obj-pbx-price-input') as HTMLInputElement | null;
+    const damageCheck = document.getElementById('obj-deals-damage-check') as HTMLInputElement | null;
+    const damageRow = document.getElementById('obj-damage-amount-row');
+    const damageInput = document.getElementById('obj-damage-amount-input') as HTMLInputElement | null;
+
+    const isHoldable = !!(placed.isHoldable || placed.customModelData?.isHoldable);
+    if (holdableCheck) holdableCheck.checked = isHoldable;
+    if (holdableSubprops) holdableSubprops.style.display = isHoldable ? 'flex' : 'none';
+
+    if (inHandSelect) {
+        inHandSelect.value = (placed.inHandAtStart || placed.customModelData?.inHandAtStart) ? 'true' : 'false';
+    }
+    const costsPbx = !!(placed.costsPbx || placed.customModelData?.costsPbx);
+    if (pickupTypeSelect) {
+        pickupTypeSelect.value = costsPbx ? 'pbx' : 'free';
+    }
+    if (pbxPriceRow) {
+        pbxPriceRow.style.display = costsPbx ? 'flex' : 'none';
+    }
+    if (pbxPriceInput) {
+        pbxPriceInput.value = (placed.pbxPrice ?? placed.customModelData?.pbxPrice ?? 25).toString();
+    }
+    const dealsDmg = !!(placed.dealsDamage || placed.customModelData?.dealsDamage);
+    if (damageCheck) damageCheck.checked = dealsDmg;
+    if (damageRow) damageRow.style.display = dealsDmg ? 'flex' : 'none';
+    if (damageInput) {
+        damageInput.value = (placed.damageAmount ?? placed.customModelData?.damageAmount ?? 25).toString();
     }
 
     if (studioToolMode === 'puller') {
@@ -3165,12 +3235,16 @@ async function initStudio() {
         updateAiTierDisplay,
         get characterYaw() { return characterYaw; },
         set characterYaw(val: number) { characterYaw = val; },
-        keys
+        keys,
+        CATALOG_DATABASE,
+        getStudioTestPlaybux,
+        updateStudioTestPlaybuxDisplay
     };
 
     // Generate 10,000 Objects in Catalog
     generate10000ObjectCatalog();
     renderCatalogUI();
+    updateStudioTestPlaybuxDisplay();
 
     // Restore Draft or Admin Feedback Game
     await restoreDraftOrFeedbackGame();
@@ -5749,6 +5823,77 @@ function setupInspectorEvents() {
         passableSelect.addEventListener('change', () => {
             if (selectedObject) {
                 selectedObject.isPassable = passableSelect.value === 'passable';
+                autoSaveDraft();
+            }
+        });
+    }
+
+    // Inspector listeners for holdable items and damage
+    const holdableCheck = document.getElementById('obj-is-holdable-check') as HTMLInputElement | null;
+    const holdableSubprops = document.getElementById('obj-holdable-subprops');
+    const inHandSelect = document.getElementById('obj-in-hand-select') as HTMLSelectElement | null;
+    const pickupTypeSelect = document.getElementById('obj-pickup-type-select') as HTMLSelectElement | null;
+    const pbxPriceRow = document.getElementById('obj-pbx-price-row');
+    const pbxPriceInput = document.getElementById('obj-pbx-price-input') as HTMLInputElement | null;
+    const damageCheck = document.getElementById('obj-deals-damage-check') as HTMLInputElement | null;
+    const damageRow = document.getElementById('obj-damage-amount-row');
+    const damageInput = document.getElementById('obj-damage-amount-input') as HTMLInputElement | null;
+
+    if (holdableCheck) {
+        holdableCheck.addEventListener('change', () => {
+            if (selectedObject) {
+                selectedObject.isHoldable = holdableCheck.checked;
+                if (holdableSubprops) {
+                    holdableSubprops.style.display = holdableCheck.checked ? 'flex' : 'none';
+                }
+                autoSaveDraft();
+            }
+        });
+    }
+
+    if (inHandSelect) {
+        inHandSelect.addEventListener('change', () => {
+            if (selectedObject) {
+                selectedObject.inHandAtStart = inHandSelect.value === 'true';
+                autoSaveDraft();
+            }
+        });
+    }
+
+    if (pickupTypeSelect) {
+        pickupTypeSelect.addEventListener('change', () => {
+            if (selectedObject) {
+                const costs = pickupTypeSelect.value === 'pbx';
+                selectedObject.costsPbx = costs;
+                if (pbxPriceRow) pbxPriceRow.style.display = costs ? 'flex' : 'none';
+                autoSaveDraft();
+            }
+        });
+    }
+
+    if (pbxPriceInput) {
+        pbxPriceInput.addEventListener('input', () => {
+            if (selectedObject) {
+                selectedObject.pbxPrice = Math.max(1, parseInt(pbxPriceInput.value, 10) || 25);
+                autoSaveDraft();
+            }
+        });
+    }
+
+    if (damageCheck) {
+        damageCheck.addEventListener('change', () => {
+            if (selectedObject) {
+                selectedObject.dealsDamage = damageCheck.checked;
+                if (damageRow) damageRow.style.display = damageCheck.checked ? 'flex' : 'none';
+                autoSaveDraft();
+            }
+        });
+    }
+
+    if (damageInput) {
+        damageInput.addEventListener('input', () => {
+            if (selectedObject) {
+                selectedObject.damageAmount = Math.max(1, parseInt(damageInput.value, 10) || 25);
                 autoSaveDraft();
             }
         });
@@ -12577,8 +12722,16 @@ function animate() {
                 continue;
             }
 
-            // 2b. Custom Holdable Items (Ese: võta kätte või osta PBX eest)
+            // 2b. Custom Holdable Items (Ese: võta kätte või osta PBX eest, relvad teevad kahju)
             const isObjHoldable = p.isHoldable || p.customModelData?.isHoldable;
+            const doesDealDamage = !!(p.dealsDamage || p.customModelData?.dealsDamage);
+            const dmgAmount = p.damageAmount ?? p.customModelData?.damageAmount ?? 25;
+
+            // Damage player if dangerous weapon/item touched
+            if (doesDealDamage && dmgAmount > 0 && dist < 2.0) {
+                damagePlayer(dmgAmount);
+            }
+
             if (isObjHoldable && !p.isHeld && dist < 2.5) {
                 const costsPbx = p.costsPbx || p.customModelData?.costsPbx;
                 const pbxPrice = p.pbxPrice ?? p.customModelData?.pbxPrice ?? 0;
@@ -12594,17 +12747,17 @@ function animate() {
                     };
                     if (keys['KeyE']) {
                         keys['KeyE'] = false;
-                        const pbxBalance = yardService.getPlaybux();
-                        if (pbxBalance >= pbxPrice) {
-                            yardService.spendPlaybux(pbxPrice, p.id, `Ostetud ese: ${p.name}`);
+                        if (studioTestPlaybux >= pbxPrice) {
+                            studioTestPlaybux -= pbxPrice;
+                            updateStudioTestPlaybuxDisplay();
                             p.isHeld = true;
                             p.mesh.visible = false;
                             equipCustomItemInHand(p);
                             playGameSound('victory');
-                            showDialogMessage('💎 Ese Ostetud!', `Ostsid eseme "${p.name}" hinnaga ${pbxPrice} PBX ja võtsid selle kätte!`, '💎');
+                            showDialogMessage('💎 Ese Ostetud!', `Ostsid eseme "${p.name}" hinnaga ${pbxPrice} PBX (Test saldo: ${studioTestPlaybux.toLocaleString()} PBX)!`, '💎');
                         } else {
                             playGameSound('hit');
-                            showDialogMessage('❌ Pole Piisavalt PBX!', `Eseme "${p.name}" ostmiseks on vaja ${pbxPrice} PBX, aga sul on hetkel ${pbxBalance} PBX.`, '⚠️');
+                            showDialogMessage('❌ Pole Piisavalt PBX!', `Eseme "${p.name}" ostmiseks on vaja ${pbxPrice} PBX, aga sul on hetkel ${studioTestPlaybux} PBX (Test saldo).`, '⚠️');
                         }
                     }
                 } else {

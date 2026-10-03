@@ -127,21 +127,182 @@ function createUltraHuman() {
     });
 }
 
+let playerHealth = 100;
+let playerMaxHealth = 100;
+let playerInventory: Array<{ id: string; name: string; icon: string; type: string }> = [];
+let spawnPointPosition = new THREE.Vector3(0, 0, 0);
+let pendingPurchaseObject: { objData: any; group: THREE.Group } | null = null;
+let lastDamageTime = 0;
+
+function updatePlayHUD() {
+    const pbxVal = document.getElementById('player-pbx-val');
+    if (pbxVal) {
+        pbxVal.innerText = yardService.getPlaybux().toLocaleString();
+    }
+    const healthBar = document.getElementById('play-health-bar');
+    const healthText = document.getElementById('play-health-text');
+    if (healthText) healthText.innerText = `${Math.max(0, Math.round(playerHealth))}/${playerMaxHealth}`;
+    if (healthBar) {
+        const pct = Math.max(0, Math.min(100, (playerHealth / playerMaxHealth) * 100));
+        healthBar.style.width = `${pct}%`;
+        if (pct > 50) healthBar.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+        else if (pct > 25) healthBar.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+        else healthBar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+    }
+
+    const invContainer = document.getElementById('play-inventory-hud');
+    if (invContainer) {
+        invContainer.innerHTML = playerInventory.map(item => `
+            <div style="background: rgba(15,23,42,0.92); border: 1.5px solid #00f2fe; border-radius: 8px; padding: 4px 10px; font-size: 0.85rem; font-weight: bold; color: #fff; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                <span>${item.icon || '🗡️'}</span> <span>${item.name}</span>
+            </div>
+        `).join('');
+    }
+}
+
+export function damagePlayPlayer(amount: number) {
+    const now = Date.now();
+    if (now - lastDamageTime < 600) return;
+    lastDamageTime = now;
+
+    playerHealth = Math.max(0, playerHealth - amount);
+    updatePlayHUD();
+
+    document.body.style.boxShadow = 'inset 0 0 55px rgba(231,76,60,0.85)';
+    setTimeout(() => { document.body.style.boxShadow = 'none'; }, 220);
+
+    if (playerHealth <= 0) {
+        alert('💀 Said surma! Taassündisid alguspunktis.');
+        humanCharacter.position.copy(spawnPointPosition);
+        characterVelocity.set(0, 0, 0);
+        playerHealth = playerMaxHealth;
+        updatePlayHUD();
+    }
+}
+
+export function equipPlayItemInHand(item: any) {
+    if (!playerAvatarRig) return;
+    const handSocket = playerAvatarRig.getHandSocket('right');
+    if (!handSocket) return;
+
+    while (handSocket.children.length > 0) {
+        handSocket.remove(handSocket.children[0]);
+    }
+
+    const heldMesh = buildSceneObjectMesh({
+        ...item,
+        position: { x: 0, y: 0, z: 0 }
+    });
+    heldMesh.scale.set(0.25, 0.25, 0.25);
+    heldMesh.position.set(0, -0.22, 0.15);
+    heldMesh.rotation.set(0.2, 0, 0);
+    heldMesh.name = 'PlayHeldCustomItem';
+    handSocket.add(heldMesh);
+
+    const itemName = item.name || 'Ese';
+    if (!playerInventory.some(i => i.name === itemName)) {
+        playerInventory.push({
+            id: 'held_' + Date.now(),
+            name: itemName,
+            icon: item.icon || '🗡️',
+            type: 'holdable'
+        });
+        updatePlayHUD();
+    }
+}
+
+function promptPurchase(objData: any, group: THREE.Group) {
+    pendingPurchaseObject = { objData, group };
+    const popup = document.getElementById('play-dialog-popup');
+    const title = document.getElementById('play-dialog-title');
+    const text = document.getElementById('play-dialog-text');
+    const icon = document.getElementById('play-dialog-icon');
+    if (popup && title && text) {
+        if (icon) icon.innerText = objData.icon || '💎';
+        title.innerText = `Osta: ${objData.name}`;
+        text.innerText = `Kas soovid osta eseme "${objData.name}" hinnaga ${objData.pbxPrice} Playbuxi?\n(Müügitulu läheb loojale: ${currentGame?.creatorUsername || 'mängu looja'})`;
+        popup.style.display = 'block';
+    }
+}
+
+function setupPurchaseDialog() {
+    const confirmBtn = document.getElementById('btn-play-buy-confirm');
+    const cancelBtn = document.getElementById('btn-play-buy-cancel');
+    const popup = document.getElementById('play-dialog-popup');
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+            if (!pendingPurchaseObject) return;
+            const { objData, group } = pendingPurchaseObject;
+            const price = objData.pbxPrice || 0;
+            const balance = yardService.getPlaybux();
+
+            if (balance >= price) {
+                yardService.spendPlaybux(price, objData.id || 'item', `Ostetud ese: ${objData.name}`);
+                if (currentGame && currentGame.creatorUsername) {
+                    yardService.creditCreatorRevenue(currentGame.creatorUsername, price, objData.name, currentGame.title);
+                }
+                equipPlayItemInHand(objData);
+                group.visible = false;
+                group.userData.isCollected = true;
+                if (popup) popup.style.display = 'none';
+                updatePlayHUD();
+                alert(`💎 Ostsid eseme "${objData.name}" hinnaga ${price} PBX! Müügitulu laekus loojale (${currentGame?.creatorUsername}).`);
+            } else {
+                alert(`❌ Sul pole piisavalt Playbuxe! Sul on ${balance} PBX, aga vaja on ${price} PBX.`);
+            }
+            pendingPurchaseObject = null;
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            if (popup) popup.style.display = 'none';
+            pendingPurchaseObject = null;
+        });
+    }
+}
+
 // --- Build Scene from Game Data ---
 function buildSceneFromData(sceneData: any) {
     if (!sceneData || !Array.isArray(sceneData.objects)) return;
 
+    if (typeof sceneData.playerMaxHealth === 'number') {
+        playerMaxHealth = sceneData.playerMaxHealth;
+        playerHealth = playerMaxHealth;
+    }
+
     sceneData.objects.forEach((obj: any) => {
         const group = buildSceneObjectMesh(obj);
+        group.userData = { ...group.userData, ...obj };
+
+        // Position at spawn point
+        if (obj.isSpawnPoint || obj.category === 'spawn' || (obj.catalogId && obj.catalogId.startsWith('spawn_'))) {
+            spawnPointPosition.set(obj.position?.x || 0, (obj.position?.y || 0) + 0.1, obj.position?.z || 0);
+            humanCharacter.position.copy(spawnPointPosition);
+            if (obj.rotation?.y) {
+                characterYaw = obj.rotation.y;
+                humanCharacter.rotation.y = obj.rotation.y;
+            }
+        }
+
+        // Equip starter holdable item in hand
+        if ((obj.isHoldable || obj.customModelData?.isHoldable) && (obj.inHandAtStart || obj.customModelData?.inHandAtStart)) {
+            equipPlayItemInHand(obj);
+            group.visible = false;
+            group.userData.isCollected = true;
+        }
 
         // Passable objects allow player to walk right through
         const name = (obj.name || '').toLowerCase();
-        const isCollectible = obj.gameItemType === 'coin' || obj.gameItemType === 'key' || obj.gameItemType === 'potion' || /(coin|münt|potion|key|võti)/i.test(name);
+        const isCollectible = obj.gameItemType === 'coin' || obj.gameItemType === 'key' || obj.gameItemType === 'potion' || /(coin|münt|potion|key|võti)/i.test(name) || obj.isHoldable;
         group.userData.isPassable = (obj.isPassable === true) || isCollectible || obj.isSpawnPoint;
         sceneObjects.push(group);
 
         scene.add(group);
     });
+
+    updatePlayHUD();
 }
 
 // --- Load Game & Initialize ---
@@ -221,8 +382,17 @@ async function initPlayer() {
                 get currentGame() { return currentGame; },
                 get humanCharacter() { return humanCharacter; },
                 get characterYaw() { return characterYaw; },
-                set characterYaw(val: number) { characterYaw = val; }
+                set characterYaw(val: number) { characterYaw = val; },
+                get playerHealth() { return playerHealth; },
+                get playerMaxHealth() { return playerMaxHealth; },
+                get playerInventory() { return playerInventory; },
+                equipPlayItemInHand,
+                damagePlayPlayer,
+                updatePlayHUD
             };
+
+            setupPurchaseDialog();
+            updatePlayHUD();
 
             yardService.recordPlayedGame({
                 id: 'game_' + currentGame.id,
@@ -516,6 +686,39 @@ function animate() {
         isGrounded = true;
     } else if (pPos.y > 0.05 && isGrounded) {
         isGrounded = false;
+    }
+
+    // Check damage items, holdable pickups and purchases
+    for (let i = 0; i < sceneObjects.length; i++) {
+        const group = sceneObjects[i];
+        const u = group.userData;
+        if (!u || !group.visible) continue;
+
+        const dx = group.position.x - pPos.x;
+        const dz = group.position.z - pPos.z;
+        const distSq = dx * dx + dz * dz;
+
+        // 1. Damage check (weapons/hazards)
+        if (u.dealsDamage && (u.damageAmount ?? 0) > 0 && distSq < 4.0) {
+            damagePlayPlayer(u.damageAmount ?? 25);
+        }
+
+        // 2. Holdable items (free pickup or PBX purchase)
+        if (u.isHoldable && !u.isCollected && distSq < 6.0) {
+            if (u.costsPbx && (u.pbxPrice ?? 0) > 0) {
+                if ((keys['KeyE'] || distSq < 2.5) && !pendingPurchaseObject) {
+                    if (keys['KeyE']) keys['KeyE'] = false;
+                    promptPurchase(u, group);
+                }
+            } else {
+                if (keys['KeyE'] || distSq < 2.5) {
+                    if (keys['KeyE']) keys['KeyE'] = false;
+                    equipPlayItemInHand(u);
+                    group.visible = false;
+                    u.isCollected = true;
+                }
+            }
+        }
     }
 
     // Smooth Camera follow
