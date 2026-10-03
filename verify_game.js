@@ -476,7 +476,7 @@ await (async () => {
         await new Promise(r => setTimeout(r, 350));
         const inviteBtnDisabledText = await page.$eval(`.player-search-card[data-username="${targetRealPlayer}"] button`, btn => btn.textContent);
         console.log(`   Button text after sending invite to real player: "${inviteBtnDisabledText}"`);
-        if (!inviteBtnDisabledText.includes('Sent') && !inviteBtnDisabledText.includes('Saadetud') && !inviteBtnDisabledText.includes('Saadetakse')) {
+        if (!inviteBtnDisabledText.includes('Sent') && !inviteBtnDisabledText.includes('Sending') && !inviteBtnDisabledText.includes('Saadetud') && !inviteBtnDisabledText.includes('Saadetakse')) {
             throw new Error(`Expected button text to show request sent, got: "${inviteBtnDisabledText}"`);
         }
 
