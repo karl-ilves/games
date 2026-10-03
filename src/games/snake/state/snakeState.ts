@@ -63,6 +63,7 @@ export class SnakeState {
 
     public reset(mode: GameMode = 'solo', player2Name?: string) {
         this.mode = mode;
+        this.updateGridSize();
         this.direction = SNAKE_CONFIG.SNAKE.initialDirection;
         this.nextDirection = SNAKE_CONFIG.SNAKE.initialDirection;
         this.score = 0;
@@ -113,8 +114,31 @@ export class SnakeState {
     public getTargetAppleCount(): number {
         const count = this.serverPlayerCount || 1;
         if (count >= 3) return 5;
-        if (count === 2) return 3;
-        return 1;
+        if (count === 2) return 4;
+        return 3;
+    }
+
+    public getGridDimensions(): { cols: number; rows: number } {
+        const count = this.serverPlayerCount || 1;
+        const baseCols = SNAKE_CONFIG.GRID.cols;
+        const baseRows = SNAKE_CONFIG.GRID.rows;
+        if (count >= 3) {
+            return { cols: Math.round(baseCols * 2), rows: Math.round(baseRows * 2) };
+        }
+        if (count === 2) {
+            return { cols: Math.round(baseCols * 1.5), rows: Math.round(baseRows * 1.5) };
+        }
+        return { cols: baseCols, rows: baseRows };
+    }
+
+    public updateGridSize(): boolean {
+        const dims = this.getGridDimensions();
+        if (this.cols !== dims.cols || this.rows !== dims.rows) {
+            this.cols = dims.cols;
+            this.rows = dims.rows;
+            return true;
+        }
+        return false;
     }
 
     public setDirection(newDir: Direction): boolean {

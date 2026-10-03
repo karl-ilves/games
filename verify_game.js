@@ -10558,14 +10558,16 @@ await (async () => {
                 const aiWhen1Player = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
                 const hasAiSnakeWhen1Player = game.multiplayer.hasAiSnake && aiWhen1Player !== null && aiWhen1Player.displayName.includes('AI Uss');
 
-                // Test dynamic apples & AI presence:
-                // 1 player -> 1 apple + AI
+                // Test dynamic apples & map scaling & AI presence:
+                // 1 player -> 3 apples, 1X map (24x24), AI present ("kui on 1 mängja ja ai uss tuleb ka 3 õuna")
                 game.state.serverPlayerCount = 1;
+                game.state.updateGridSize();
+                const gridWith1Player = { cols: game.state.cols, rows: game.state.rows };
                 game.state.foodItems = [];
                 game.state.updatePowerUps(0.1);
                 const applesWith1Player = game.state.foodItems.filter(f => f.type === 'apple').length;
 
-                // 2 players -> 3 apples plus AI ("2 mängjaga tuleb 3 õuna pluss ai")
+                // 2 players -> 4 apples, 1.5X map (36x36), AI disappears ("kui tuleb 2 mängjat siis on 4 õuna ja mapp on 1,5X suurem")
                 game.multiplayer.activeRemotePlayers.set('remote_p2', {
                     id: 'remote_p2', username: 'kawe1234', displayName: 'Kawe Pro',
                     colorId: 'red', theme: { head: '#ff4757', headGlow: 'rgba(255,71,87,0.8)', primary: '#ff6b81', secondary: '#c0392b', glow: 'rgba(255,71,87,0.5)' },
@@ -10573,12 +10575,14 @@ await (async () => {
                     lastSeen: Date.now(), isAi: false, serverId: 'server_1'
                 });
                 game.state.serverPlayerCount = 2;
+                game.state.updateGridSize();
+                const gridWith2Players = { cols: game.state.cols, rows: game.state.rows };
                 game.state.updatePowerUps(0.1);
                 const applesWith2Players = game.state.foodItems.filter(f => f.type === 'apple').length;
                 const aiAfterP2 = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
-                const hasAiWhen2Players = game.multiplayer.hasAiSnake && aiAfterP2 !== null;
+                const aiDisappearsWhen2Players = !game.multiplayer.hasAiSnake && aiAfterP2 === null;
 
-                // 3 players -> 5 apples and AI disappears ("ja 3 mängjaga 5")
+                // 3 players -> 5 apples, 2X map (48x48), AI disappears ("ja kui 3 siis 5 õuna ja 2X suurem mapp")
                 game.multiplayer.activeRemotePlayers.set('remote_p3', {
                     id: 'remote_p3', username: 'Minionbanana0_0', displayName: 'Minionbanana',
                     colorId: 'yellow', theme: { head: '#fffa65', headGlow: 'rgba(255,250,101,0.8)', primary: '#ffd700', secondary: '#f39c12', glow: 'rgba(255,215,0,0.5)' },
@@ -10586,6 +10590,8 @@ await (async () => {
                     lastSeen: Date.now(), isAi: false, serverId: 'server_1'
                 });
                 game.state.serverPlayerCount = 3;
+                game.state.updateGridSize();
+                const gridWith3Players = { cols: game.state.cols, rows: game.state.rows };
                 game.state.updatePowerUps(0.1);
                 const applesWith3Players = game.state.foodItems.filter(f => f.type === 'apple').length;
                 const aiAfterP3 = game.multiplayer.updateAiSnake(game.demoAi, game.state.foodItems, game.state.cols, game.state.rows);
@@ -10602,6 +10608,8 @@ await (async () => {
 
                 // Clear remote players back to normal for clean state
                 game.multiplayer.activeRemotePlayers.clear();
+                game.state.serverPlayerCount = 1;
+                game.state.updateGridSize();
 
                 // Test clicking Play starts game with chosen color and connects to server
                 game.startSoloGame('blue');
@@ -10732,9 +10740,12 @@ await (async () => {
                     hasAiSnakeWhen1Player,
                     aiStartsLength4,
                     aiSameSpeedAsPlayer,
+                    gridWith1Player,
                     applesWith1Player,
+                    gridWith2Players,
                     applesWith2Players,
-                    hasAiWhen2Players,
+                    aiDisappearsWhen2Players,
+                    gridWith3Players,
                     applesWith3Players,
                     aiDisappearsWhen3Players,
                     serverRolloverWhenFull,
@@ -10777,11 +10788,14 @@ await (async () => {
             if (!snakeGameTest.aiSameSpeedAsPlayer) {
                 throw new Error("AI snake must move at the exact same step speed as the player: " + JSON.stringify(snakeGameTest));
             }
-            if (snakeGameTest.applesWith2Players !== 3 || !snakeGameTest.hasAiWhen2Players) {
-                throw new Error("With 2 players, there must be 3 apples PLUS AI: " + JSON.stringify(snakeGameTest));
+            if (snakeGameTest.applesWith1Player !== 3 || snakeGameTest.gridWith1Player.cols !== 24 || snakeGameTest.gridWith1Player.rows !== 24) {
+                throw new Error("With 1 player, there must be 3 apples and base 1X map (24x24): " + JSON.stringify(snakeGameTest));
             }
-            if (snakeGameTest.applesWith3Players !== 5 || !snakeGameTest.aiDisappearsWhen3Players) {
-                throw new Error("With 3 players, there must be 5 apples and AI must disappear: " + JSON.stringify(snakeGameTest));
+            if (snakeGameTest.applesWith2Players !== 4 || snakeGameTest.gridWith2Players.cols !== 36 || snakeGameTest.gridWith2Players.rows !== 36 || !snakeGameTest.aiDisappearsWhen2Players) {
+                throw new Error("With 2 players, there must be 4 apples, 1.5X map (36x36), and AI must disappear: " + JSON.stringify(snakeGameTest));
+            }
+            if (snakeGameTest.applesWith3Players !== 5 || snakeGameTest.gridWith3Players.cols !== 48 || snakeGameTest.gridWith3Players.rows !== 48 || !snakeGameTest.aiDisappearsWhen3Players) {
+                throw new Error("With 3 players, there must be 5 apples, 2X map (48x48), and AI must disappear: " + JSON.stringify(snakeGameTest));
             }
             if (!snakeGameTest.serverRolloverWhenFull) {
                 throw new Error("Server capacity is max 3 players: when full, new player must rollover to Server 2: " + JSON.stringify(snakeGameTest));

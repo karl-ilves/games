@@ -202,15 +202,16 @@ export class SnakeGame {
         }
         if (stats.isPaused) return;
 
-        if (this.state.mode !== 'demo') this.state.serverPlayerCount = this.multiplayer.getMyServerPlayerCount();
-        this.state.updatePowerUps(dt);
         if (this.state.mode !== 'demo') {
+            this.state.serverPlayerCount = this.multiplayer.getMyServerPlayerCount();
+            if (this.state.updateGridSize()) this.resize();
             this.multiplayer.broadcastMyServerState({
                 body: this.state.body, direction: this.state.direction,
                 score: stats.score, isGameOver: this.state.isGameOver,
                 colorId: this.chosenColorId, theme: this.chosenTheme
             });
         }
+        this.state.updatePowerUps(dt);
         this.hud.updateStats(this.state.getStats());
 
         const stepInterval = 1 / this.state.getEffectiveSpeed();

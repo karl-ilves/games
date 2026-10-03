@@ -288,9 +288,9 @@ export class SnakeMultiplayerSystem {
                         serverId: data.serverId || 'server_1'
                     } as any);
 
-                    // Dynamic AI: with 1 or 2 players AI is active; with 3 players AI disappears!
+                    // Dynamic AI: with 1 real player AI is active; when next arrives, AI disappears!
                     const playersInMyServer = this.getPlayersInMyServer();
-                    this.hasAiSnake = (playersInMyServer.length < 2);
+                    this.hasAiSnake = (playersInMyServer.length === 0);
                     if (!this.hasAiSnake) {
                         this.aiSnake = null;
                     }
@@ -327,7 +327,7 @@ export class SnakeMultiplayerSystem {
         }
 
         const playersInMyServer = this.getPlayersInMyServer();
-        this.hasAiSnake = (playersInMyServer.length < 2);
+        this.hasAiSnake = (playersInMyServer.length === 0);
         if (!this.hasAiSnake) {
             this.aiSnake = null;
         }
@@ -383,7 +383,7 @@ export class SnakeMultiplayerSystem {
     }
 
     public resetAiSnake(cols: number = 30, rows: number = 22): RemotePlayerInfo | null {
-        if (this.getPlayersInMyServer().length >= 2) {
+        if (this.getPlayersInMyServer().length >= 1) {
             this.hasAiSnake = false;
             this.aiSnake = null;
             return null;
@@ -418,10 +418,10 @@ export class SnakeMultiplayerSystem {
         cols: number,
         rows: number
     ): RemotePlayerInfo | null {
-        // "2 mängjaga tuleb 3 õuna pluss ai ja 3 mängjaga 5"
-        // AI disappears only when there are 3 real players in this server
+        // AI is active only when 1 real player is alone in the server
+        // When next player arrives (2+ real players), AI disappears!
         const myServerRealPlayers = this.getPlayersInMyServer();
-        if (myServerRealPlayers.length >= 2) {
+        if (myServerRealPlayers.length >= 1) {
             this.hasAiSnake = false;
             this.aiSnake = null;
             return null;
