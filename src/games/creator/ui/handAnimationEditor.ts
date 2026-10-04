@@ -22,12 +22,13 @@ let clonedItemMesh: THREE.Object3D | null = null;
 
 // Gizmo
 let gizmoGroup: THREE.Group | null = null;
-let activeTool: 'mover' | 'puller' = 'mover';
+let activeTool: 'mover' | 'puller' | 'rotator' = 'mover';
 let activeGizmoAxis: string | null = null;
 let isDraggingGizmo = false;
 let dragStartPointer = { x: 0, y: 0 };
 let dragStartGripPos = { x: 0, y: 0, z: 0 };
 let dragStartGripScale = { x: 1, y: 1, z: 1 };
+let dragStartGripRot = { x: 0, y: 0, z: 0 };
 
 // Orbit controls
 let isOrbiting = false;
@@ -169,38 +170,76 @@ function createEditorGizmos(): THREE.Group {
     createScaleHandle('z', 0x3b82f6, new THREE.Vector3(0, 0, -0.35));
     createScaleHandle('uniform', 0xf1c40f, new THREE.Vector3(0, 0, 0)); // Gold uniform center
 
+    // 3. Rotator handles (3 distinct rings around the object: Red X, Green Y, Blue Z)
+    const rotatorGroup = new THREE.Group();
+    rotatorGroup.name = 'GizmoRotator';
+
+    const createRotationRing = (axis: 'x' | 'y' | 'z', color: number) => {
+        const ringGeo = new THREE.TorusGeometry(0.38, 0.016, 16, 64);
+        const mat = new THREE.MeshBasicMaterial({
+            color,
+            depthTest: false,
+            transparent: true,
+            opacity: 0.95
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, mat);
+        ringMesh.name = 'gizmo_rot_' + axis;
+        (ringMesh as any).userData = { tool: 'rotator', axis };
+
+        if (axis === 'x') {
+            ringMesh.rotation.y = Math.PI / 2; // Lies on YZ plane, rotates around X
+        } else if (axis === 'y') {
+            ringMesh.rotation.x = Math.PI / 2; // Lies on XZ plane, rotates around Y
+        }
+        // axis === 'z' lies on XY plane, rotates around Z
+
+        rotatorGroup.add(ringMesh);
+    };
+
+    createRotationRing('x', 0xef4444); // Red X ring
+    createRotationRing('y', 0x22c55e); // Green Y ring
+    createRotationRing('z', 0x3b82f6); // Blue Z ring
+
     group.add(moverGroup);
     group.add(pullerGroup);
+    group.add(rotatorGroup);
 
     return group;
 }
 
 /**
- * Updates which gizmo (mover or puller) is visible.
+ * Updates which gizmo (mover, puller, or rotator) is visible.
  */
 function updateGizmoToolDisplay() {
     if (!gizmoGroup) return;
     const moverGroup = gizmoGroup.getObjectByName('GizmoMover');
     const pullerGroup = gizmoGroup.getObjectByName('GizmoPuller');
+    const rotatorGroup = gizmoGroup.getObjectByName('GizmoRotator');
 
     if (moverGroup) moverGroup.visible = activeTool === 'mover';
     if (pullerGroup) pullerGroup.visible = activeTool === 'puller';
+    if (rotatorGroup) rotatorGroup.visible = activeTool === 'rotator';
 
     const btnMover = document.getElementById('btn-hand-tool-mover');
     const btnPuller = document.getElementById('btn-hand-tool-puller');
+    const btnRotator = document.getElementById('btn-hand-tool-rotator');
 
-    if (btnMover && btnPuller) {
-        if (activeTool === 'mover') {
-            btnMover.style.background = 'linear-gradient(135deg, #00f2fe, #3b82f6)';
-            btnMover.style.color = '#000';
-            btnPuller.style.background = 'rgba(255,255,255,0.08)';
-            btnPuller.style.color = '#94a3b8';
-        } else {
-            btnPuller.style.background = 'linear-gradient(135deg, #00f2fe, #3b82f6)';
-            btnPuller.style.color = '#000';
-            btnMover.style.background = 'rgba(255,255,255,0.08)';
-            btnMover.style.color = '#94a3b8';
+    [btnMover, btnPuller, btnRotator].forEach(btn => {
+        if (btn) {
+            btn.style.background = 'rgba(255,255,255,0.08)';
+            btn.style.color = '#94a3b8';
         }
+    });
+
+    if (activeTool === 'mover' && btnMover) {
+        btnMover.style.background = 'linear-gradient(135deg, #00f2fe, #3b82f6)';
+        btnMover.style.color = '#000';
+    } else if (activeTool === 'puller' && btnPuller) {
+        btnPuller.style.background = 'linear-gradient(135deg, #00f2fe, #3b82f6)';
+        btnPuller.style.color = '#000';
+    } else if (activeTool === 'rotator' && btnRotator) {
+        btnRotator.style.background = 'linear-gradient(135deg, #00f2fe, #3b82f6)';
+        btnRotator.style.color = '#000';
     }
 }
 
@@ -366,6 +405,7 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
     // Tool buttons
     const btnMover = document.getElementById('btn-hand-tool-mover');
     const btnPuller = document.getElementById('btn-hand-tool-puller');
+    const btnRotator = document.getElementById('btn-hand-tool-rotator');
 
     btnMover?.addEventListener('click', () => {
         activeTool = 'mover';
@@ -374,6 +414,11 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
 
     btnPuller?.addEventListener('click', () => {
         activeTool = 'puller';
+        updateGizmoToolDisplay();
+    });
+
+    btnRotator?.addEventListener('click', () => {
+        activeTool = 'rotator';
         updateGizmoToolDisplay();
     });
 
@@ -452,7 +497,9 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
         // Check if user clicked a gizmo handle
         const activeSubGroup = activeTool === 'mover'
             ? gizmoGroup.getObjectByName('GizmoMover')
-            : gizmoGroup.getObjectByName('GizmoPuller');
+            : (activeTool === 'puller'
+                ? gizmoGroup.getObjectByName('GizmoPuller')
+                : gizmoGroup.getObjectByName('GizmoRotator'));
 
         let hitAxis: string | null = null;
         if (activeSubGroup && activeSubGroup.visible) {
@@ -476,6 +523,7 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
             dragStartPointer = { x: e.clientX, y: e.clientY };
             dragStartGripPos = { ...itemHolder.position };
             dragStartGripScale = { ...itemHolder.scale };
+            dragStartGripRot = { x: itemHolder.rotation.x, y: itemHolder.rotation.y, z: itemHolder.rotation.z };
             e.preventDefault();
         } else if (e.button === 2 || (e.button === 0 && !hitAxis)) {
             // Orbit camera
@@ -512,6 +560,15 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
                 } else if (activeGizmoAxis === 'z') {
                     const sz = Math.max(0.05, Math.min(3.0, dragStartGripScale.z + dy));
                     itemHolder.scale.z = sz;
+                }
+            } else if (activeTool === 'rotator') {
+                // Dragging rotation rings smoothly rotates the item around the selected axis
+                if (activeGizmoAxis === 'x') {
+                    itemHolder.rotation.x = dragStartGripRot.x - dy * 3.0;
+                } else if (activeGizmoAxis === 'y') {
+                    itemHolder.rotation.y = dragStartGripRot.y + dx * 3.0;
+                } else if (activeGizmoAxis === 'z') {
+                    itemHolder.rotation.z = dragStartGripRot.z + (dx - dy) * 2.5;
                 }
             }
         } else if (isOrbiting) {

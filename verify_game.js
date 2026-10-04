@@ -4831,11 +4831,17 @@ await (async () => {
             const modal = document.getElementById('hand-animation-modal');
             const isModalOpen = modal && modal.style.display !== 'none';
 
-            // 4. Verify Mover and Puller buttons exist and NO regular mouse tool button inside hand modal
+            // 4. Verify Mover, Puller, and Rotator (Pööraja) buttons exist
             const btnMover = document.getElementById('btn-hand-tool-mover');
             const btnPuller = document.getElementById('btn-hand-tool-puller');
+            const btnRotator = document.getElementById('btn-hand-tool-rotator');
             const hasMover = !!btnMover;
             const hasPuller = !!btnPuller;
+            const hasRotator = !!btnRotator;
+
+            // Switch to rotator (Pööraja) tool
+            btnRotator?.click();
+            await new Promise(r => setTimeout(r, 50));
 
             // Switch to puller tool
             btnPuller?.click();
@@ -4878,6 +4884,7 @@ await (async () => {
                 isModalOpen,
                 hasMover,
                 hasPuller,
+                hasRotator,
                 isModalClosed,
                 hasSavedGrip: !!savedGrip,
                 savedGrip,
@@ -4889,13 +4896,13 @@ await (async () => {
         if (handAnimTestResult.error) {
             throw new Error(`Hand Animation Editor error: ${handAnimTestResult.error}`);
         }
-        if (!handAnimTestResult.hasSetupBtn || !handAnimTestResult.isModalOpen || !handAnimTestResult.hasMover || !handAnimTestResult.hasPuller) {
+        if (!handAnimTestResult.hasSetupBtn || !handAnimTestResult.isModalOpen || !handAnimTestResult.hasMover || !handAnimTestResult.hasPuller || !handAnimTestResult.hasRotator) {
             throw new Error("Hand Animation Editor UI elements or modal opening failed: " + JSON.stringify(handAnimTestResult));
         }
         if (!handAnimTestResult.isModalClosed || !handAnimTestResult.hasSavedGrip) {
             throw new Error("Hand Animation Editor Ready button did not properly save gripOffset and close: " + JSON.stringify(handAnimTestResult));
         }
-        console.log("   ✅ Hand Animation Editor (Sea animatsioon, Mover & Puller gizmos, Ready button & gripOffset persistence everywhere) verified successfully!");
+        console.log("   ✅ Hand Animation Editor (Sea animatsioon, Mover, Puller & Rotator (3 rings) gizmos, Ready button & gripOffset persistence everywhere) verified successfully!");
 
         // 6f4. Testing Roblox Hotbar Inventory (10 slots 1-0, bottom positioning, keys 1-0 and click toggle)
         console.log("6f4. Testing Roblox Hotbar Inventory (10 slots 1-0, keys 1-0 toggle, bottom placement & click equipping)...");
