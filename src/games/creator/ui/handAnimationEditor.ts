@@ -116,24 +116,39 @@ function createEditorGizmos(): THREE.Group {
     const moverGroup = new THREE.Group();
     moverGroup.name = 'GizmoMover';
 
-    const createArrow = (axis: 'x' | 'y' | 'z', color: number, dir: THREE.Vector3) => {
+    const createArrow = (axis: 'x' | 'y' | 'z', color: number) => {
         const arrow = new THREE.Group();
         arrow.name = 'gizmo_move_' + axis;
         (arrow as any).userData = { tool: 'mover', axis };
 
-        const shaftGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.35, 12);
-        const headGeo = new THREE.ConeGeometry(0.035, 0.12, 16);
-        const mat = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 });
+        const shaftGeo = new THREE.CylinderGeometry(0.016, 0.016, 0.35, 12);
+        const headGeo = new THREE.ConeGeometry(0.045, 0.12, 16);
+        const mat = new THREE.MeshBasicMaterial({
+            color,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.95
+        });
 
         const shaft = new THREE.Mesh(shaftGeo, mat);
         shaft.position.y = 0.175;
+        shaft.renderOrder = 3000;
         (shaft as any).userData = { tool: 'mover', axis };
 
         const head = new THREE.Mesh(headGeo, mat);
         head.position.y = 0.35 + 0.06;
+        head.renderOrder = 3000;
         (head as any).userData = { tool: 'mover', axis };
 
-        arrow.add(shaft, head);
+        // Invisible thick cylinder for reliable click/touch hit detection
+        const pickGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.52, 12);
+        const pickMat = new THREE.MeshBasicMaterial({ visible: false });
+        const pickMesh = new THREE.Mesh(pickGeo, pickMat);
+        pickMesh.position.y = 0.26;
+        (pickMesh as any).userData = { tool: 'mover', axis };
+
+        arrow.add(shaft, head, pickMesh);
 
         if (axis === 'x') {
             arrow.rotation.z = -Math.PI / 2;
@@ -143,22 +158,37 @@ function createEditorGizmos(): THREE.Group {
         moverGroup.add(arrow);
     };
 
-    createArrow('x', 0xef4444, new THREE.Vector3(1, 0, 0)); // Red X
-    createArrow('y', 0x22c55e, new THREE.Vector3(0, 1, 0)); // Green Y
-    createArrow('z', 0x3b82f6, new THREE.Vector3(0, 0, 1)); // Blue Z
+    createArrow('x', 0xef4444); // Red X
+    createArrow('y', 0x22c55e); // Green Y
+    createArrow('z', 0x3b82f6); // Blue Z
 
     // 2. Puller handles (Scale boxes for X, Y, Z + Center uniform cube)
     const pullerGroup = new THREE.Group();
     pullerGroup.name = 'GizmoPuller';
 
     const createScaleHandle = (axis: 'x' | 'y' | 'z' | 'uniform', color: number, pos: THREE.Vector3) => {
-        const size = axis === 'uniform' ? 0.055 : 0.045;
+        const size = axis === 'uniform' ? 0.065 : 0.055;
         const boxGeo = new THREE.BoxGeometry(size, size, size);
-        const mat = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 });
+        const mat = new THREE.MeshBasicMaterial({
+            color,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.95
+        });
         const mesh = new THREE.Mesh(boxGeo, mat);
+        mesh.renderOrder = 3000;
         mesh.name = 'gizmo_pull_' + axis;
         mesh.position.copy(pos);
         (mesh as any).userData = { tool: 'puller', axis };
+
+        // Thick pick area
+        const pickGeo = new THREE.BoxGeometry(size * 2.2, size * 2.2, size * 2.2);
+        const pickMat = new THREE.MeshBasicMaterial({ visible: false });
+        const pickMesh = new THREE.Mesh(pickGeo, pickMat);
+        (pickMesh as any).userData = { tool: 'puller', axis };
+        mesh.add(pickMesh);
+
         pullerGroup.add(mesh);
     };
 
@@ -179,12 +209,21 @@ function createEditorGizmos(): THREE.Group {
         const mat = new THREE.MeshBasicMaterial({
             color,
             depthTest: false,
+            depthWrite: false,
             transparent: true,
             opacity: 0.95
         });
         const ringMesh = new THREE.Mesh(ringGeo, mat);
+        ringMesh.renderOrder = 3000;
         ringMesh.name = 'gizmo_rot_' + axis;
         (ringMesh as any).userData = { tool: 'rotator', axis };
+
+        // Invisible thicker torus for easy clicking
+        const pickGeo = new THREE.TorusGeometry(0.38, 0.07, 8, 36);
+        const pickMat = new THREE.MeshBasicMaterial({ visible: false });
+        const pickMesh = new THREE.Mesh(pickGeo, pickMat);
+        (pickMesh as any).userData = { tool: 'rotator', axis };
+        ringMesh.add(pickMesh);
 
         if (axis === 'x') {
             ringMesh.rotation.y = Math.PI / 2; // Lies on YZ plane, rotates around X
@@ -208,7 +247,7 @@ function createEditorGizmos(): THREE.Group {
 }
 
 /**
- * Updates which gizmo (mover, puller, or rotator) is visible and resizes rotator rings to match item size.
+ * Updates which gizmo (mover, puller, or rotator) is visible and resizes gizmos to match item size.
  */
 function updateGizmoToolDisplay() {
     if (!gizmoGroup) return;
@@ -216,18 +255,37 @@ function updateGizmoToolDisplay() {
     const pullerGroup = gizmoGroup.getObjectByName('GizmoPuller');
     const rotatorGroup = gizmoGroup.getObjectByName('GizmoRotator');
 
-    if (moverGroup) moverGroup.visible = activeTool === 'mover';
-    if (pullerGroup) pullerGroup.visible = activeTool === 'puller';
-    if (rotatorGroup) {
-        rotatorGroup.visible = activeTool === 'rotator';
-        if (rotatorGroup.visible && itemHolder) {
-            // Compute item bounding size so rings match item size exactly ("pööraja peab olema sama suur kui se asi ja selle ümber")
-            itemHolder.updateMatrixWorld(true);
-            const box = new THREE.Box3().setFromObject(itemHolder);
+    // Calculate item bounding dimensions
+    let maxDim = 0.35;
+    if (itemHolder) {
+        itemHolder.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(itemHolder);
+        if (!box.isEmpty()) {
             const size = new THREE.Vector3();
             box.getSize(size);
-            const maxDim = Math.max(size.x, size.y, size.z, 0.15);
-            // Default torus has radius 0.38. Scale so ring diameter encloses the item closely:
+            maxDim = Math.max(size.x, size.y, size.z, 0.15);
+        }
+    }
+
+    if (moverGroup) {
+        moverGroup.visible = activeTool === 'mover';
+        if (moverGroup.visible) {
+            // Scale mover arrows so they extend outside the item mesh clearly
+            const moverScale = Math.max(0.8, (maxDim / 2) * 1.6 / 0.35);
+            moverGroup.scale.set(moverScale, moverScale, moverScale);
+        }
+    }
+    if (pullerGroup) {
+        pullerGroup.visible = activeTool === 'puller';
+        if (pullerGroup.visible) {
+            const pullerScale = Math.max(0.8, (maxDim / 2) * 1.5 / 0.35);
+            pullerGroup.scale.set(pullerScale, pullerScale, pullerScale);
+        }
+    }
+    if (rotatorGroup) {
+        rotatorGroup.visible = activeTool === 'rotator';
+        if (rotatorGroup.visible) {
+            // Ring diameter encloses item closely
             const targetRingRadius = (maxDim / 2) * 1.15;
             const ringScale = Math.max(0.3, targetRingRadius / 0.38);
             rotatorGroup.scale.set(ringScale, ringScale, ringScale);
@@ -508,7 +566,9 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
     if (btnClose) btnClose.onclick = closeHandAnimationEditor;
 
     // Viewport Pointer Interaction (Gizmo drag + Camera Orbit)
-    const onPointerDown = (e: MouseEvent) => {
+    let moveAxisScreenDir = new THREE.Vector2(1, 0);
+
+    const onPointerDown = (e: PointerEvent | MouseEvent) => {
         if (!camera || !gizmoGroup || !itemHolder) return;
 
         const rect = canvas.getBoundingClientRect();
@@ -547,51 +607,80 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
             dragStartGripPos = { ...itemHolder.position };
             dragStartGripScale = { ...itemHolder.scale };
             dragStartGripRot = { x: itemHolder.rotation.x, y: itemHolder.rotation.y, z: itemHolder.rotation.z };
+
+            // Compute 2D screen projected direction of the axis for intuitive camera-relative dragging
+            const originWorld = new THREE.Vector3();
+            itemHolder.getWorldPosition(originWorld);
+
+            let axisVec = new THREE.Vector3(0, 1, 0);
+            if (hitAxis === 'x') axisVec.set(1, 0, 0);
+            else if (hitAxis === 'y') axisVec.set(0, 1, 0);
+            else if (hitAxis === 'z') axisVec.set(0, 0, 1);
+
+            const p0 = originWorld.clone().project(camera);
+            const p1 = originWorld.clone().add(axisVec).project(camera);
+            const sX = (p1.x - p0.x) * rect.width * 0.5;
+            const sY = -(p1.y - p0.y) * rect.height * 0.5;
+            moveAxisScreenDir.set(sX, sY);
+            if (moveAxisScreenDir.lengthSq() > 0.0001) {
+                moveAxisScreenDir.normalize();
+            } else {
+                moveAxisScreenDir.set(1, 0);
+            }
+
+            try {
+                (canvas as any).setPointerCapture?.((e as any).pointerId);
+            } catch (_) {}
             e.preventDefault();
         } else if (e.button === 2 || (e.button === 0 && !hitAxis)) {
             // Orbit camera
             isOrbiting = true;
             orbitStartPointer = { x: e.clientX, y: e.clientY };
+            try {
+                (canvas as any).setPointerCapture?.((e as any).pointerId);
+            } catch (_) {}
             e.preventDefault();
         }
     };
 
-    const onPointerMove = (e: MouseEvent) => {
+    const onPointerMove = (e: PointerEvent | MouseEvent) => {
         if (isDraggingGizmo && itemHolder && activeGizmoAxis) {
-            const dx = (e.clientX - dragStartPointer.x) * 0.004;
-            const dy = (e.clientY - dragStartPointer.y) * 0.004;
+            const rawDx = e.clientX - dragStartPointer.x;
+            const rawDy = e.clientY - dragStartPointer.y;
+            // Screen projected delta aligned with the 3D axis
+            const projDelta = (rawDx * moveAxisScreenDir.x + rawDy * moveAxisScreenDir.y) * 0.004;
 
             if (activeTool === 'mover') {
                 if (activeGizmoAxis === 'x') {
-                    itemHolder.position.x = dragStartGripPos.x + dx;
+                    itemHolder.position.x = dragStartGripPos.x + projDelta;
                 } else if (activeGizmoAxis === 'y') {
-                    itemHolder.position.y = dragStartGripPos.y - dy;
+                    itemHolder.position.y = dragStartGripPos.y + projDelta;
                 } else if (activeGizmoAxis === 'z') {
-                    itemHolder.position.z = dragStartGripPos.z + dy;
+                    itemHolder.position.z = dragStartGripPos.z + projDelta;
                 }
             } else if (activeTool === 'puller') {
                 if (activeGizmoAxis === 'uniform') {
-                    const factor = 1 + (dx - dy);
+                    const factor = 1 + (rawDx - rawDy) * 0.004;
                     const s = Math.max(0.05, Math.min(2.5, dragStartGripScale.x * factor));
                     itemHolder.scale.set(s, s, s);
                 } else if (activeGizmoAxis === 'x') {
-                    const sx = Math.max(0.05, Math.min(3.0, dragStartGripScale.x + dx));
+                    const sx = Math.max(0.05, Math.min(3.0, dragStartGripScale.x + projDelta));
                     itemHolder.scale.x = sx;
                 } else if (activeGizmoAxis === 'y') {
-                    const sy = Math.max(0.05, Math.min(3.0, dragStartGripScale.y - dy));
+                    const sy = Math.max(0.05, Math.min(3.0, dragStartGripScale.y + projDelta));
                     itemHolder.scale.y = sy;
                 } else if (activeGizmoAxis === 'z') {
-                    const sz = Math.max(0.05, Math.min(3.0, dragStartGripScale.z + dy));
+                    const sz = Math.max(0.05, Math.min(3.0, dragStartGripScale.z + projDelta));
                     itemHolder.scale.z = sz;
                 }
             } else if (activeTool === 'rotator') {
                 // Dragging rotation rings smoothly rotates the item around the selected axis
                 if (activeGizmoAxis === 'x') {
-                    itemHolder.rotation.x = dragStartGripRot.x - dy * 3.0;
+                    itemHolder.rotation.x = dragStartGripRot.x - rawDy * 0.012;
                 } else if (activeGizmoAxis === 'y') {
-                    itemHolder.rotation.y = dragStartGripRot.y + dx * 3.0;
+                    itemHolder.rotation.y = dragStartGripRot.y + rawDx * 0.012;
                 } else if (activeGizmoAxis === 'z') {
-                    itemHolder.rotation.z = dragStartGripRot.z + (dx - dy) * 2.5;
+                    itemHolder.rotation.z = dragStartGripRot.z + (rawDx - rawDy) * 0.01;
                 }
             }
         } else if (isOrbiting) {
@@ -604,10 +693,15 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
         }
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (e?: PointerEvent | MouseEvent) => {
         isDraggingGizmo = false;
         activeGizmoAxis = null;
         isOrbiting = false;
+        if (e && (canvas as any).releasePointerCapture) {
+            try {
+                (canvas as any).releasePointerCapture((e as any).pointerId);
+            } catch (_) {}
+        }
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -620,11 +714,12 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
         e.preventDefault();
     };
 
-    canvas.onmousedown = onPointerDown;
-    window.addEventListener('mousemove', onPointerMove);
-    window.addEventListener('mouseup', onPointerUp);
-    canvas.onwheel = onWheel;
-    canvas.oncontextmenu = onContextMenu;
+    // Use pointer events for smooth mouse, touch and pen tracking
+    canvas.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('contextmenu', onContextMenu);
 }
 
 /**

@@ -4890,6 +4890,31 @@ await (async () => {
             btnMover?.click();
             await new Promise(r => setTimeout(r, 50));
 
+            // Test mover dragging via pointer events on hand-anim-canvas
+            const animCanvas = document.getElementById('hand-anim-canvas');
+            if (animCanvas) {
+                const rect = animCanvas.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                // Dispatch pointerdown, pointermove, pointerup
+                animCanvas.dispatchEvent(new PointerEvent('pointerdown', {
+                    bubbles: true,
+                    clientX: centerX,
+                    clientY: centerY,
+                    button: 0
+                }));
+                window.dispatchEvent(new PointerEvent('pointermove', {
+                    bubbles: true,
+                    clientX: centerX + 50,
+                    clientY: centerY - 20
+                }));
+                window.dispatchEvent(new PointerEvent('pointerup', {
+                    bubbles: true,
+                    clientX: centerX + 50,
+                    clientY: centerY - 20
+                }));
+            }
+
             // 5. Test rotation shortcuts
             const rotXBtn = document.getElementById('btn-hand-rot-x');
             const rotYBtn = document.getElementById('btn-hand-rot-y');
