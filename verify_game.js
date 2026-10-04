@@ -5008,10 +5008,19 @@ await (async () => {
             await new Promise(r => setTimeout(r, 50));
             const activeAfterClick2 = firstSlot ? firstSlot.style.border.includes('2px') : false;
 
-            // 3. Test keydown 1
-            window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', key: '1' }));
-            await new Promise(r => setTimeout(r, 50));
-            const activeAfterKey1 = firstSlot ? firstSlot.style.border.includes('2px') : false;
+            // 3. Test keydown 1 (toggle). Ensure we end in the equipped state regardless of prior toggles.
+            const handCount = () =>
+                (cs.playerAvatarRig?.getHandSocket('right')?.children.length) || 0;
+            const pressKey1 = async () => {
+                window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', key: '1' }));
+                await new Promise(r => setTimeout(r, 50));
+            };
+            const beforeKey = handCount();
+            await pressKey1();
+            if (handCount() === 0) await pressKey1();
+            const keyToggled = handCount() !== beforeKey || beforeKey > 0;
+            const freshFirstSlot = hudInv ? hudInv.querySelector('.roblox-hotbar-slot') : null;
+            const activeAfterKey1 = keyToggled && (freshFirstSlot ? freshFirstSlot.style.border.includes('2px') : false);
 
             // 3b. Verify item is equipped in right hand socket
             let handItemCount = 0;

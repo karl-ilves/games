@@ -141,9 +141,9 @@ function createEditorGizmos(): THREE.Group {
         head.renderOrder = 3000;
         (head as any).userData = { tool: 'mover', axis };
 
-        // Invisible thick cylinder for reliable click/touch hit detection
+        // Invisible thick cylinder for reliable click/touch hit detection (transparent opacity 0 for raycaster)
         const pickGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.52, 12);
-        const pickMat = new THREE.MeshBasicMaterial({ visible: false });
+        const pickMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
         const pickMesh = new THREE.Mesh(pickGeo, pickMat);
         pickMesh.position.y = 0.26;
         (pickMesh as any).userData = { tool: 'mover', axis };
@@ -184,7 +184,7 @@ function createEditorGizmos(): THREE.Group {
 
         // Thick pick area
         const pickGeo = new THREE.BoxGeometry(size * 2.2, size * 2.2, size * 2.2);
-        const pickMat = new THREE.MeshBasicMaterial({ visible: false });
+        const pickMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
         const pickMesh = new THREE.Mesh(pickGeo, pickMat);
         (pickMesh as any).userData = { tool: 'puller', axis };
         mesh.add(pickMesh);
@@ -218,9 +218,9 @@ function createEditorGizmos(): THREE.Group {
         ringMesh.name = 'gizmo_rot_' + axis;
         (ringMesh as any).userData = { tool: 'rotator', axis };
 
-        // Invisible thicker torus for easy clicking
+        // Thicker torus for easy clicking
         const pickGeo = new THREE.TorusGeometry(0.38, 0.07, 8, 36);
-        const pickMat = new THREE.MeshBasicMaterial({ visible: false });
+        const pickMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
         const pickMesh = new THREE.Mesh(pickGeo, pickMat);
         (pickMesh as any).userData = { tool: 'rotator', axis };
         ringMesh.add(pickMesh);
@@ -566,38 +566,49 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
     if (btnClose) btnClose.onclick = closeHandAnimationEditor;
 
     // Viewport Pointer Interaction (Gizmo drag + Camera Orbit)
-    let moveAxisScreenDir = new THREE.Vector2(1, 0);
+    let worldUnitsPerPixel = 0.002;
+    const dragPlane = new THREE.Plane();
+    const dragStartHit = new THREE.Vector3();
+    const dragCurrHit = new THREE.Vector3();
+    const dragAxisWorld = new THREE.Vector3(1, 0, 0);
+    const dragStartWorldPos = new THREE.Vector3();
+    let hasDragPlaneStart = false;
+
+    const setRayFromEvent = (e: PointerEvent | MouseEvent) => {
+        if (!camera) return;
+        const r = canvas.getBoundingClientRect();
+        mouseVec.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+        mouseVec.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+        raycaster.setFromCamera(mouseVec, camera);
+    };
+
+    const pickGizmoAxis = (): string | null => {
+        if (!gizmoGroup) return null;
+        const sub = activeTool === 'mover'
+            ? gizmoGroup.getObjectByName('GizmoMover')
+            : (activeTool === 'puller'
+                ? gizmoGroup.getObjectByName('GizmoPuller')
+                : gizmoGroup.getObjectByName('GizmoRotator'));
+        if (!sub || !sub.visible) return null;
+        const hits = raycaster.intersectObjects(sub.children, true);
+        for (const h of hits) {
+            let curr: THREE.Object3D | null = h.object;
+            while (curr && curr !== sub) {
+                if ((curr as any).userData?.axis) return (curr as any).userData.axis;
+                curr = curr.parent;
+            }
+        }
+        return null;
+    };
 
     const onPointerDown = (e: PointerEvent | MouseEvent) => {
         if (!camera || !gizmoGroup || !itemHolder) return;
 
         const rect = canvas.getBoundingClientRect();
-        mouseVec.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouseVec.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-        raycaster.setFromCamera(mouseVec, camera);
+        setRayFromEvent(e);
 
         // Check if user clicked a gizmo handle
-        const activeSubGroup = activeTool === 'mover'
-            ? gizmoGroup.getObjectByName('GizmoMover')
-            : (activeTool === 'puller'
-                ? gizmoGroup.getObjectByName('GizmoPuller')
-                : gizmoGroup.getObjectByName('GizmoRotator'));
-
-        let hitAxis: string | null = null;
-        if (activeSubGroup && activeSubGroup.visible) {
-            const intersects = raycaster.intersectObjects(activeSubGroup.children, true);
-            if (intersects.length > 0) {
-                let curr: THREE.Object3D | null = intersects[0].object;
-                while (curr && curr !== activeSubGroup) {
-                    if ((curr as any).userData?.axis) {
-                        hitAxis = (curr as any).userData.axis;
-                        break;
-                    }
-                    curr = curr.parent;
-                }
-            }
-        }
+        const hitAxis = pickGizmoAxis();
 
         if (e.button === 0 && hitAxis) {
             // Left click on gizmo handle -> start gizmo dragging
@@ -608,25 +619,35 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
             dragStartGripScale = { ...itemHolder.scale };
             dragStartGripRot = { x: itemHolder.rotation.x, y: itemHolder.rotation.y, z: itemHolder.rotation.z };
 
-            // Compute 2D screen projected direction of the axis for intuitive camera-relative dragging
+            // Ray-plane dragging: build a plane through the item that contains the
+            // drag axis and faces the camera as much as possible -> exact 1:1 tracking.
             const originWorld = new THREE.Vector3();
             itemHolder.getWorldPosition(originWorld);
+            dragStartWorldPos.copy(originWorld);
 
-            let axisVec = new THREE.Vector3(0, 1, 0);
-            if (hitAxis === 'x') axisVec.set(1, 0, 0);
-            else if (hitAxis === 'y') axisVec.set(0, 1, 0);
-            else if (hitAxis === 'z') axisVec.set(0, 0, 1);
+            dragAxisWorld.set(0, 1, 0);
+            if (hitAxis === 'x') dragAxisWorld.set(1, 0, 0);
+            else if (hitAxis === 'z') dragAxisWorld.set(0, 0, 1);
 
-            const p0 = originWorld.clone().project(camera);
-            const p1 = originWorld.clone().add(axisVec).project(camera);
-            const sX = (p1.x - p0.x) * rect.width * 0.5;
-            const sY = -(p1.y - p0.y) * rect.height * 0.5;
-            moveAxisScreenDir.set(sX, sY);
-            if (moveAxisScreenDir.lengthSq() > 0.0001) {
-                moveAxisScreenDir.normalize();
-            } else {
-                moveAxisScreenDir.set(1, 0);
+            const camDir = new THREE.Vector3();
+            camera.getWorldDirection(camDir);
+            const planeNormal = new THREE.Vector3()
+                .crossVectors(dragAxisWorld, camDir)
+                .cross(dragAxisWorld);
+            if (planeNormal.lengthSq() < 1e-6) {
+                planeNormal.copy(camDir).negate();
             }
+            planeNormal.normalize();
+            dragPlane.setFromNormalAndCoplanarPoint(planeNormal, originWorld);
+
+            hasDragPlaneStart = !!raycaster.ray.intersectPlane(dragPlane, dragStartHit);
+
+            // Fallback scale for puller (pixels -> world units at this depth)
+            const dist = camera.position.distanceTo(originWorld);
+            const vFov = (camera.fov * Math.PI) / 180;
+            const visibleHeight = 2 * Math.tan(vFov / 2) * dist;
+            worldUnitsPerPixel = visibleHeight / (rect.height || 550);
+            canvas.style.cursor = 'grabbing';
 
             try {
                 (canvas as any).setPointerCapture?.((e as any).pointerId);
@@ -647,30 +668,37 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
         if (isDraggingGizmo && itemHolder && activeGizmoAxis) {
             const rawDx = e.clientX - dragStartPointer.x;
             const rawDy = e.clientY - dragStartPointer.y;
-            // Screen projected delta aligned with the 3D axis
-            const projDelta = (rawDx * moveAxisScreenDir.x + rawDy * moveAxisScreenDir.y) * 0.004;
+
+            // Exact 1:1 world distance along the axis from ray-plane intersection
+            let axisDist = 0;
+            setRayFromEvent(e);
+            if (hasDragPlaneStart && raycaster.ray.intersectPlane(dragPlane, dragCurrHit)) {
+                axisDist = dragCurrHit.clone().sub(dragStartHit).dot(dragAxisWorld);
+            }
+            const worldDelta = axisDist;
 
             if (activeTool === 'mover') {
-                if (activeGizmoAxis === 'x') {
-                    itemHolder.position.x = dragStartGripPos.x + projDelta;
-                } else if (activeGizmoAxis === 'y') {
-                    itemHolder.position.y = dragStartGripPos.y + projDelta;
-                } else if (activeGizmoAxis === 'z') {
-                    itemHolder.position.z = dragStartGripPos.z + projDelta;
+                // Move along the world axis, then convert into hand-socket local space
+                const targetWorld = dragStartWorldPos.clone().addScaledVector(dragAxisWorld, axisDist);
+                const parent = itemHolder.parent;
+                if (parent) {
+                    parent.updateMatrixWorld(true);
+                    parent.worldToLocal(targetWorld);
                 }
+                itemHolder.position.copy(targetWorld);
             } else if (activeTool === 'puller') {
                 if (activeGizmoAxis === 'uniform') {
                     const factor = 1 + (rawDx - rawDy) * 0.004;
                     const s = Math.max(0.05, Math.min(2.5, dragStartGripScale.x * factor));
                     itemHolder.scale.set(s, s, s);
                 } else if (activeGizmoAxis === 'x') {
-                    const sx = Math.max(0.05, Math.min(3.0, dragStartGripScale.x + projDelta));
+                    const sx = Math.max(0.05, Math.min(3.0, dragStartGripScale.x + worldDelta));
                     itemHolder.scale.x = sx;
                 } else if (activeGizmoAxis === 'y') {
-                    const sy = Math.max(0.05, Math.min(3.0, dragStartGripScale.y + projDelta));
+                    const sy = Math.max(0.05, Math.min(3.0, dragStartGripScale.y + worldDelta));
                     itemHolder.scale.y = sy;
                 } else if (activeGizmoAxis === 'z') {
-                    const sz = Math.max(0.05, Math.min(3.0, dragStartGripScale.z + projDelta));
+                    const sz = Math.max(0.05, Math.min(3.0, dragStartGripScale.z + worldDelta));
                     itemHolder.scale.z = sz;
                 }
             } else if (activeTool === 'rotator') {
@@ -690,6 +718,9 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
             orbitPhi = Math.max(0.2, Math.min(Math.PI - 0.2, orbitPhi + dy));
             orbitStartPointer = { x: e.clientX, y: e.clientY };
             updateCameraTransform();
+        } else if (camera) {
+            setRayFromEvent(e);
+            canvas.style.cursor = pickGizmoAxis() ? 'grab' : 'default';
         }
     };
 
@@ -697,6 +728,8 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
         isDraggingGizmo = false;
         activeGizmoAxis = null;
         isOrbiting = false;
+        hasDragPlaneStart = false;
+        canvas.style.cursor = 'default';
         if (e && (canvas as any).releasePointerCapture) {
             try {
                 (canvas as any).releasePointerCapture((e as any).pointerId);
@@ -715,12 +748,23 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
     };
 
     // Use pointer events for smooth mouse, touch and pen tracking
+    detachViewportListeners?.();
     canvas.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('contextmenu', onContextMenu);
+    detachViewportListeners = () => {
+        canvas.removeEventListener('pointerdown', onPointerDown);
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        canvas.removeEventListener('wheel', onWheel);
+        canvas.removeEventListener('contextmenu', onContextMenu);
+        canvas.style.cursor = 'default';
+    };
 }
+
+let detachViewportListeners: (() => void) | null = null;
 
 /**
  * Closes the Hand Animation Editor and cleans up resources.
@@ -728,6 +772,10 @@ function setupEditorEventListeners(canvas: HTMLCanvasElement, viewport: HTMLElem
 export function closeHandAnimationEditor() {
     isEditorOpen = false;
     currentTargetObject = null;
+    isDraggingGizmo = false;
+    isOrbiting = false;
+    detachViewportListeners?.();
+    detachViewportListeners = null;
 
     if (animFrameId !== null) {
         cancelAnimationFrame(animFrameId);
