@@ -3,7 +3,32 @@ import { PlayState } from '../state/playState';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../../shared/mobileControls';
 
 export function setupInputListeners(state: PlayState, camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) {
-    window.addEventListener('keydown', e => { state.keys[e.code] = true; });
+    window.addEventListener('keydown', e => {
+        const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+            return;
+        }
+        state.keys[e.code] = true;
+
+        // Number Keys 1, 2, 3, 4, 5, 6, 7, 8, 9, 0: Toggle Roblox Hotbar Inventory Slots
+        const numKeys: { [key: string]: number } = {
+            'Digit1': 0, 'Numpad1': 0, '1': 0,
+            'Digit2': 1, 'Numpad2': 1, '2': 1,
+            'Digit3': 2, 'Numpad3': 2, '3': 2,
+            'Digit4': 3, 'Numpad4': 3, '4': 3,
+            'Digit5': 4, 'Numpad5': 4, '5': 4,
+            'Digit6': 5, 'Numpad6': 5, '6': 5,
+            'Digit7': 6, 'Numpad7': 6, '7': 6,
+            'Digit8': 7, 'Numpad8': 7, '8': 7,
+            'Digit9': 8, 'Numpad9': 8, '9': 8,
+            'Digit0': 9, 'Numpad0': 9, '0': 9
+        };
+        const mappedSlot = numKeys[e.code] !== undefined ? numKeys[e.code] : numKeys[e.key];
+        if (mappedSlot !== undefined) {
+            e.preventDefault();
+            state.togglePlayInventorySlot(mappedSlot);
+        }
+    });
     window.addEventListener('keyup', e => { state.keys[e.code] = false; });
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;

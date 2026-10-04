@@ -1,6 +1,6 @@
 import { createAirplane3DMesh, createSpeedboat3DMesh } from '../models/objectModels';
 import { performRedo, performUndo } from '../systems/undoRedo';
-import { playerAttack, enterVehicle, respawnPlayerAtCheckpoint, openDimensionTravelModal, equipCustomItemInHand, clearHeldItemFromHand } from '../systems/physics';
+import { playerAttack, enterVehicle, respawnPlayerAtCheckpoint, openDimensionTravelModal, equipCustomItemInHand, clearHeldItemFromHand, toggleInventorySlot } from '../systems/physics';
 import { nearbyVehicle, moveGizmoHandles, pullGizmoHandles, pullActiveAxis, pullStartScaleVector, pullStartBoxMin, pullStartLocalMin, pullStartBoxMax, pullStartLocalMax, checkpointPosition } from '../state/creatorState';
 import { showFloatingPullIndicator, hideFloatingPullIndicator, spawnBlockObject } from '../systems/gizmos';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../../shared/mobileControls';
@@ -88,7 +88,11 @@ import {
     isDraggingObject,
     setIsDraggingObject,
     dragPlane,
-    characterVelocity
+    characterVelocity,
+    playerInventory,
+    setPlayerInventory,
+    equippedInventoryIndex,
+    setEquippedInventoryIndex
 } from '../state/creatorState';
 import { createObjectMesh, createCustomModel3DMesh, isAirplaneObject, isBoatObject } from '../models/objectModels';
 import { CATALOG_DATABASE, renderCatalogUI } from '../catalog/creatorCatalog';
@@ -1208,6 +1212,26 @@ export function setupStudioEvents() {
                 }
                 return;
             }
+
+            // Number Keys 1, 2, 3, 4, 5, 6, 7, 8, 9, 0: Toggle Roblox Hotbar Inventory Slots
+            const numKeys: { [key: string]: number } = {
+                'Digit1': 0, 'Numpad1': 0, '1': 0,
+                'Digit2': 1, 'Numpad2': 1, '2': 1,
+                'Digit3': 2, 'Numpad3': 2, '3': 2,
+                'Digit4': 3, 'Numpad4': 3, '4': 3,
+                'Digit5': 4, 'Numpad5': 4, '5': 4,
+                'Digit6': 5, 'Numpad6': 5, '6': 5,
+                'Digit7': 6, 'Numpad7': 6, '7': 6,
+                'Digit8': 7, 'Numpad8': 7, '8': 7,
+                'Digit9': 8, 'Numpad9': 8, '9': 8,
+                'Digit0': 9, 'Numpad0': 9, '0': 9
+            };
+            const mappedSlot = numKeys[e.code] !== undefined ? numKeys[e.code] : numKeys[e.key];
+            if (mappedSlot !== undefined) {
+                e.preventDefault();
+                toggleInventorySlot(mappedSlot);
+                return;
+            }
         }
 
         if (!isPlayTestMode && selectedObject) {
@@ -1740,6 +1764,8 @@ export function setupStudioEvents() {
                 if (playTestHud) playTestHud.style.display = 'block';
                 if (gameplayHud) gameplayHud.style.display = 'flex';
                 if (gameplayActions) gameplayActions.style.display = 'flex';
+                const robloxHotbar = document.getElementById('roblox-hotbar-container');
+                if (robloxHotbar) robloxHotbar.style.display = 'block';
                 if (studioCamControls) studioCamControls.style.display = 'none';
                 if (catalogPanel) catalogPanel.style.display = 'none';
                 if (inspectorPanel) inspectorPanel.style.display = 'none';
@@ -1747,12 +1773,28 @@ export function setupStudioEvents() {
                 if (toolSelector) toolSelector.style.display = 'none';
                 hideFloatingPullIndicator(0);
 
-                // Equip starter holdable item into player's hand if configured
-                const starterHoldable = placedObjects.find(o => (o.isHoldable || o.customModelData?.isHoldable) && (o.inHandAtStart || o.customModelData?.inHandAtStart));
-                if (starterHoldable) {
-                    equipCustomItemInHand(starterHoldable);
-                    starterHoldable.mesh.visible = false;
-                    starterHoldable.isHeld = true;
+                // Initialize playerInventory with holdable starter items
+                setPlayerInventory([]);
+                setEquippedInventoryIndex(-1);
+                const starterHoldables = placedObjects.filter(o => (o.isHoldable || o.customModelData?.isHoldable) && (o.inHandAtStart || o.customModelData?.inHandAtStart));
+                starterHoldables.forEach(starter => {
+                    if (playerInventory.length < 10 && !playerInventory.some(i => i.name === starter.name)) {
+                        playerInventory.push({
+                            id: 'starter_' + starter.id,
+                            name: starter.name,
+                            icon: ('icon' in starter && (starter as any).icon) ? (starter as any).icon : '🗡️',
+                            type: 'holdable',
+                            objectRef: starter
+                        });
+                        starter.mesh.visible = false;
+                        starter.isHeld = true;
+                    }
+                });
+
+                if (starterHoldables.length > 0) {
+                    equipCustomItemInHand(starterHoldables[0]);
+                } else {
+                    updateGameplayHUD();
                 }
 
                 if (isMobileOrTabletDevice()) {
@@ -1910,6 +1952,10 @@ export function setupStudioEvents() {
                 if (playTestHud) playTestHud.style.display = 'none';
                 if (gameplayHud) gameplayHud.style.display = 'none';
                 if (gameplayActions) gameplayActions.style.display = 'none';
+                const robloxHotbar = document.getElementById('roblox-hotbar-container');
+                if (robloxHotbar) robloxHotbar.style.display = 'none';
+                setPlayerInventory([]);
+                setEquippedInventoryIndex(-1);
                 if (playTestControls) playTestControls.style.display = 'none';
                 if (studioCamControls) studioCamControls.style.display = 'flex';
                 if (catalogPanel) catalogPanel.style.display = 'flex';

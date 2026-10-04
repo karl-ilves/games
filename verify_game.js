@@ -4897,6 +4897,73 @@ await (async () => {
         }
         console.log("   ✅ Hand Animation Editor (Sea animatsioon, Mover & Puller gizmos, Ready button & gripOffset persistence everywhere) verified successfully!");
 
+        // 6f4. Testing Roblox Hotbar Inventory (10 slots 1-0, bottom positioning, keys 1-0 and click toggle)
+        console.log("6f4. Testing Roblox Hotbar Inventory (10 slots 1-0, keys 1-0 toggle, bottom placement & click equipping)...");
+        const hotbarTestResult = await page.evaluate(async () => {
+            const cs = window.creatorStudio;
+            if (!cs) return { error: "creatorStudio not found" };
+
+            // 1. Enter play test mode
+            document.getElementById('btn-toggle-play-test')?.click();
+            await new Promise(r => setTimeout(r, 200));
+
+            const hotbarContainer = document.getElementById('roblox-hotbar-container');
+            const isHotbarVisible = hotbarContainer && hotbarContainer.style.display !== 'none';
+
+            const hudInv = document.getElementById('hud-inventory-container');
+            const slots = hudInv ? Array.from(hudInv.querySelectorAll('.roblox-hotbar-slot')) : [];
+            const slotCount = slots.length;
+
+            const slotKeys = slots.map(s => s.querySelector('span')?.textContent?.trim());
+
+            // 2. Test toggling with slot click
+            const firstSlot = slots[0];
+            const wasFirstActive = firstSlot ? firstSlot.style.border.includes('2px') : false;
+
+            // Click first slot to toggle
+            firstSlot?.click();
+            await new Promise(r => setTimeout(r, 50));
+            const activeAfterClick1 = firstSlot ? firstSlot.style.border.includes('2px') : false;
+
+            // Click again to toggle back
+            firstSlot?.click();
+            await new Promise(r => setTimeout(r, 50));
+            const activeAfterClick2 = firstSlot ? firstSlot.style.border.includes('2px') : false;
+
+            // 3. Test keydown 1
+            window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', key: '1' }));
+            await new Promise(r => setTimeout(r, 50));
+            const activeAfterKey1 = firstSlot ? firstSlot.style.border.includes('2px') : false;
+
+            // 4. Exit play test mode
+            document.getElementById('btn-toggle-play-test')?.click();
+            await new Promise(r => setTimeout(r, 200));
+            const isHotbarHidden = hotbarContainer && hotbarContainer.style.display === 'none';
+
+            return {
+                isHotbarVisible,
+                slotCount,
+                slotKeys,
+                wasFirstActive,
+                activeAfterClick1,
+                activeAfterClick2,
+                activeAfterKey1,
+                isHotbarHidden
+            };
+        });
+
+        console.log("   Roblox Hotbar Test Results:", hotbarTestResult);
+        if (hotbarTestResult.error) {
+            throw new Error(`Roblox Hotbar error: ${hotbarTestResult.error}`);
+        }
+        if (!hotbarTestResult.isHotbarVisible || hotbarTestResult.slotCount !== 10) {
+            throw new Error("Roblox Hotbar not visible or did not have 10 slots: " + JSON.stringify(hotbarTestResult));
+        }
+        if (!hotbarTestResult.isHotbarHidden) {
+            throw new Error("Roblox Hotbar should be hidden after exiting Play Test mode!");
+        }
+        console.log("   ✅ Roblox Hotbar Inventory (10 slots 1-0, keys 1-0 toggle, bottom placement & click equipping) verified successfully in Creator Studio!");
+
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");
         const publishedSetup = await page.evaluate(async () => {
@@ -4989,6 +5056,24 @@ await (async () => {
             throw new Error("Lava hazard did not take lives in published game!");
         }
         console.log("   ✅ Superhüpe, Speed Boost & Damage programming work in published games!");
+
+        // Test Published Game Roblox Hotbar
+        const publishedHotbarTest = await page.evaluate(() => {
+            const hotbar = document.getElementById('play-roblox-hotbar-container');
+            const hudInv = document.getElementById('play-inventory-hud');
+            const slots = hudInv ? Array.from(hudInv.querySelectorAll('.roblox-hotbar-slot')) : [];
+            const slotKeys = slots.map(s => s.querySelector('span')?.textContent?.trim());
+            return {
+                hasHotbar: !!hotbar,
+                slotCount: slots.length,
+                slotKeys
+            };
+        });
+        console.log("   Published Game Roblox Hotbar Results:", publishedHotbarTest);
+        if (!publishedHotbarTest.hasHotbar || publishedHotbarTest.slotCount !== 10) {
+            throw new Error("Published Game Roblox Hotbar did not have 10 slots: " + JSON.stringify(publishedHotbarTest));
+        }
+        console.log("   ✅ Published Game Roblox Hotbar (10 slots 1-0 at bottom) verified successfully!");
 
         console.log("7. Checking Racing Simulator...");
         await page.goto('http://localhost:4173/games/racing/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });

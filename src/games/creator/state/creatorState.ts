@@ -50,8 +50,11 @@ export function setPlayerMaxAsma(val: number) { playerMaxAsma = val; }
 export let isAsmaVisible = true;
 export function setIsAsmaVisible(val: boolean) { isAsmaVisible = val; }
 
-export let playerInventory: Array<{ id: string; name: string; icon: string; type: string }> = [];
+export let playerInventory: Array<{ id: string; name: string; icon: string; type: string; objectRef?: any; gripOffset?: any }> = [];
 export function setPlayerInventory(val: any[]) { playerInventory = val; }
+
+export let equippedInventoryIndex = -1;
+export function setEquippedInventoryIndex(val: number) { equippedInventoryIndex = val; }
 
 export let activeQuest: any = null;
 export function setActiveQuest(val: any) { activeQuest = val; }
@@ -262,6 +265,7 @@ export const csState: any = {
     get playerMaxAsma() { return playerMaxAsma; }, set playerMaxAsma(val: any) { playerMaxAsma = val; },
     get isAsmaVisible() { return isAsmaVisible; }, set isAsmaVisible(val: any) { isAsmaVisible = val; },
     get playerInventory() { return playerInventory; }, set playerInventory(val: any) { playerInventory = val; },
+    get equippedInventoryIndex() { return equippedInventoryIndex; }, set equippedInventoryIndex(val: any) { equippedInventoryIndex = val; },
     get activeQuest() { return activeQuest; }, set activeQuest(val: any) { activeQuest = val; },
     get checkpointPosition() { return checkpointPosition; }, set checkpointPosition(val: any) { checkpointPosition = val; },
     get isGameFinished() { return isGameFinished; }, set isGameFinished(val: any) { isGameFinished = val; },
