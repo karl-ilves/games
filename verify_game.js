@@ -3228,7 +3228,8 @@ await (async () => {
             await page.waitForSelector('#btn-tool-mouse', { visible: true, timeout: 5000 });
             await page.waitForSelector('#btn-tool-mover', { visible: true, timeout: 5000 });
             await page.waitForSelector('#btn-tool-puller', { visible: true, timeout: 5000 });
-            console.log("   Found visible '#studio-tool-mode-selector' with '#btn-tool-mouse', '#btn-tool-mover', and '#btn-tool-puller'.");
+            await page.waitForSelector('#btn-tool-rotator', { visible: true, timeout: 5000 });
+            console.log("   Found visible '#studio-tool-mode-selector' with '#btn-tool-mouse', '#btn-tool-mover', '#btn-tool-puller', and '#btn-tool-rotator'.");
 
             // 3. Test clicking 'Add Block' button spawns a block and selects it
             const objectsBeforeBlock = await page.evaluate(() => window.creatorStudio?.placedObjects?.length || 0);
@@ -3460,6 +3461,43 @@ await (async () => {
                 throw new Error("Moving selected object along X axis failed!");
             }
 
+            // 5c. Test switching to 'Pööraja' (Rotator) mode & 3D 3-ring gizmo
+            console.log("   Testing Rotator Tool ('pööraja') & 3D 3-ring gizmo...");
+            await page.click('#btn-tool-rotator');
+            await new Promise(r => setTimeout(r, 100));
+            const modeAfterRotatorClick = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const posBefore = { ...cs?.selectedObject?.position };
+                // Simulate rotating with rotateSelectedObject
+                cs?.rotateSelectedObject(Math.PI / 2);
+                const posAfter = { ...cs?.selectedObject?.position };
+                const obj = cs?.selectedObject;
+                const THREE = window.THREE;
+                const size = THREE ? new THREE.Vector3() : { x: 2, y: 2, z: 2 };
+                if (THREE && obj?.mesh) new THREE.Box3().setFromObject(obj.mesh).getSize(size);
+                const maxDim = Math.max(size.x || 2, size.y || 2, size.z || 2, 0.5);
+
+                return {
+                    mode: cs?.studioToolMode,
+                    rotateGizmoVisible: cs?.rotateGizmoGroup?.visible,
+                    moveGizmoVisible: cs?.moveGizmoGroup?.visible,
+                    pullGizmoVisible: cs?.pullGizmoGroup?.visible,
+                    handleCount: cs?.rotateGizmoHandles?.length || 0,
+                    posStayedSame: Math.abs(posBefore.x - posAfter.x) < 0.001 && Math.abs(posBefore.y - posAfter.y) < 0.001 && Math.abs(posBefore.z - posAfter.z) < 0.001,
+                    ringScale: cs?.rotateGizmoGroup?.scale?.x,
+                    expectedMinScale: (maxDim / 2) * 1.15
+                };
+            });
+            if (modeAfterRotatorClick.mode !== 'rotator' || !modeAfterRotatorClick.rotateGizmoVisible || modeAfterRotatorClick.moveGizmoVisible || modeAfterRotatorClick.pullGizmoVisible) {
+                throw new Error("Clicking '#btn-tool-rotator' failed to switch to 'rotator' mode or display rotate gizmo!");
+            }
+            if (modeAfterRotatorClick.handleCount < 3) {
+                throw new Error("Rotate gizmo rings missing!");
+            }
+            if (!modeAfterRotatorClick.posStayedSame) {
+                throw new Error("Expected object to stay in place while rotating (position must not change)!");
+            }
+
             // 6. Test switching back to 'Tõmbaja' mode
             await page.click('#btn-tool-puller');
             await new Promise(r => setTimeout(r, 100));
@@ -3468,13 +3506,14 @@ await (async () => {
                 return {
                     mode: cs?.studioToolMode,
                     gizmoVisible: cs?.pullGizmoGroup?.visible,
-                    moveGizmoVisible: cs?.moveGizmoGroup?.visible
+                    moveGizmoVisible: cs?.moveGizmoGroup?.visible,
+                    rotateGizmoVisible: cs?.rotateGizmoGroup?.visible
                 };
             });
-            if (modeAfterPullerClick.mode !== 'puller' || !modeAfterPullerClick.gizmoVisible || modeAfterPullerClick.moveGizmoVisible) {
+            if (modeAfterPullerClick.mode !== 'puller' || !modeAfterPullerClick.gizmoVisible || modeAfterPullerClick.moveGizmoVisible || modeAfterPullerClick.rotateGizmoVisible) {
                 throw new Error("Clicking '#btn-tool-puller' failed to switch to 'puller' mode or restore gizmo!");
             }
-            console.log("   ✅ Add Block, Liigutaja (Mover), and Tõmbaja (Puller) tests passed!");
+            console.log("   ✅ Add Block, Liigutaja (Mover), Pööraja (Rotator 3 rings), and Tõmbaja (Puller) tests passed!");
         }
 
         // Test Block Passable vs Solid Collision Setting ("plokil saab valida kas sealt saab läbi käia või ei")

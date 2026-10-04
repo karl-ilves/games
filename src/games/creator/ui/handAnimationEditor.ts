@@ -208,7 +208,7 @@ function createEditorGizmos(): THREE.Group {
 }
 
 /**
- * Updates which gizmo (mover, puller, or rotator) is visible.
+ * Updates which gizmo (mover, puller, or rotator) is visible and resizes rotator rings to match item size.
  */
 function updateGizmoToolDisplay() {
     if (!gizmoGroup) return;
@@ -218,7 +218,21 @@ function updateGizmoToolDisplay() {
 
     if (moverGroup) moverGroup.visible = activeTool === 'mover';
     if (pullerGroup) pullerGroup.visible = activeTool === 'puller';
-    if (rotatorGroup) rotatorGroup.visible = activeTool === 'rotator';
+    if (rotatorGroup) {
+        rotatorGroup.visible = activeTool === 'rotator';
+        if (rotatorGroup.visible && itemHolder) {
+            // Compute item bounding size so rings match item size exactly ("pööraja peab olema sama suur kui se asi ja selle ümber")
+            itemHolder.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(itemHolder);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z, 0.15);
+            // Default torus has radius 0.38. Scale so ring diameter encloses the item closely:
+            const targetRingRadius = (maxDim / 2) * 1.15;
+            const ringScale = Math.max(0.3, targetRingRadius / 0.38);
+            rotatorGroup.scale.set(ringScale, ringScale, ringScale);
+        }
+    }
 
     const btnMover = document.getElementById('btn-hand-tool-mover');
     const btnPuller = document.getElementById('btn-hand-tool-puller');
@@ -259,29 +273,38 @@ function updateCameraTransform() {
  * Creates or clones the item mesh to be displayed in the editor.
  */
 function buildItemMeshForEditor(obj: PlacedObject): THREE.Object3D {
+    let mesh: THREE.Object3D;
     if (obj.mesh) {
         const cloned = obj.mesh.clone(true);
         // Reset base local coordinates
         cloned.position.set(0, 0, 0);
         cloned.rotation.set(0, 0, 0);
         cloned.scale.set(1, 1, 1);
-        return cloned;
+        mesh = cloned;
+    } else if (obj.customModelData) {
+        mesh = createCustomModel3DMesh(obj.customModelData, obj.color || '#00f2fe');
+    } else {
+        const catItem: CatalogItem = CATALOG_DATABASE.find(c => c.id === obj.catalogId) || {
+            id: obj.catalogId || 'custom_item',
+            name: obj.name,
+            category: 'custom' as any,
+            icon: '🗡️',
+            color: obj.color || '#00f2fe',
+            geometryType: 'box',
+            baseScale: 1.0
+        };
+        mesh = createObjectMesh(catItem, obj.color || '#00f2fe');
     }
 
-    if (obj.customModelData) {
-        return createCustomModel3DMesh(obj.customModelData, obj.color || '#00f2fe');
+    // Ensure the mesh is geometrically centered inside itemHolder so rotating spins in-place
+    mesh.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(mesh);
+    if (!box.isEmpty()) {
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        mesh.position.sub(center);
     }
-
-    const catItem: CatalogItem = CATALOG_DATABASE.find(c => c.id === obj.catalogId) || {
-        id: obj.catalogId || 'custom_item',
-        name: obj.name,
-        category: 'custom' as any,
-        icon: '🗡️',
-        color: obj.color || '#00f2fe',
-        geometryType: 'box',
-        baseScale: 1.0
-    };
-    return createObjectMesh(catItem, obj.color || '#00f2fe');
+    return mesh;
 }
 
 /**

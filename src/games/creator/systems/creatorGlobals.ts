@@ -55,7 +55,8 @@ import {
 import {
     studioToolMode, setStudioToolMode, getStudioToolMode,
     moveGizmoGroup, moveGizmoHandles, updateMoveGizmo,
-    isMovingWithGizmo, moveActiveAxis, pullActiveAxis,
+    rotateGizmoGroup, rotateGizmoHandles, updateRotateGizmo,
+    isMovingWithGizmo, isRotatingWithGizmo, moveActiveAxis, rotateActiveAxis, pullActiveAxis,
     setPullActiveAxis, getPullActiveAxis, updatePullGizmo,
     pullGizmoGroup, moveSelectedObject, rotateSelectedObject,
     spawnBlockObject, pullSelectedObject
@@ -145,8 +146,13 @@ export function setupCreatorGlobals() {
         get moveGizmoGroup() { return moveGizmoGroup; },
         get moveGizmoHandles() { return moveGizmoHandles; },
         updateMoveGizmo,
+        get rotateGizmoGroup() { return rotateGizmoGroup; },
+        get rotateGizmoHandles() { return rotateGizmoHandles; },
+        updateRotateGizmo,
         get isMovingWithGizmo() { return isMovingWithGizmo; },
+        get isRotatingWithGizmo() { return isRotatingWithGizmo; },
         get moveActiveAxis() { return moveActiveAxis; },
+        get rotateActiveAxis() { return rotateActiveAxis; },
         get pullActiveAxis() { return pullActiveAxis; },
         setPullActiveAxis,
         getPullActiveAxis,

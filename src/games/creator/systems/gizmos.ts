@@ -44,7 +44,16 @@ import {
     setPullGizmoGroup,
     pullGizmoBoxHelper,
     setPullGizmoBoxHelper,
-    pullGizmoHandles
+    pullGizmoHandles,
+    rotateGizmoGroup,
+    setRotateGizmoGroup,
+    rotateGizmoHandles,
+    isRotatingWithGizmo,
+    setIsRotatingWithGizmo,
+    rotateActiveAxis,
+    setRotateActiveAxis,
+    rotateStartObjectRot,
+    rotateStartMousePos
 } from '../state/creatorState';
 import { saveUndoSnapshot } from './undoRedo';
 import { updateInspectorDisplay } from '../ui/creatorUI';
@@ -62,6 +71,7 @@ export function moveSelectedObject(dx: number, dy: number, dz: number) {
     updateInspectorDisplay();
     if (studioToolMode === 'puller') updatePullGizmo();
     if (studioToolMode === 'mover') updateMoveGizmo();
+    if (studioToolMode === 'rotator') updateRotateGizmo();
     autoSaveDraft();
 }
 
@@ -76,6 +86,7 @@ export function rotateSelectedObject(rad = Math.PI / 4) {
     updateInspectorDisplay();
     if (studioToolMode === 'puller') updatePullGizmo();
     if (studioToolMode === 'mover') updateMoveGizmo();
+    if (studioToolMode === 'rotator') updateRotateGizmo();
     autoSaveDraft();
 }
 
@@ -162,10 +173,11 @@ export function setStudioToolMode(mode: StudioToolMode) {
     const btnMouse = document.getElementById('btn-tool-mouse');
     const btnMover = document.getElementById('btn-tool-mover');
     const btnPuller = document.getElementById('btn-tool-puller');
+    const btnRotator = document.getElementById('btn-tool-rotator');
     const pullerSubpanel = document.getElementById('puller-controls-subpanel');
     const canvasDom = renderer?.domElement;
 
-    [btnMouse, btnMover, btnPuller].forEach(btn => {
+    [btnMouse, btnMover, btnPuller, btnRotator].forEach(btn => {
         if (btn) {
             btn.classList.remove('active');
             btn.style.background = 'transparent';
@@ -183,6 +195,7 @@ export function setStudioToolMode(mode: StudioToolMode) {
         if (canvasDom) canvasDom.style.cursor = 'default';
         if (pullGizmoGroup) pullGizmoGroup.visible = false;
         if (moveGizmoGroup) moveGizmoGroup.visible = false;
+        if (rotateGizmoGroup) rotateGizmoGroup.visible = false;
     } else if (mode === 'mover') {
         if (btnMover) {
             btnMover.classList.add('active');
@@ -192,7 +205,19 @@ export function setStudioToolMode(mode: StudioToolMode) {
         if (pullerSubpanel) pullerSubpanel.style.display = 'none';
         if (canvasDom) canvasDom.style.cursor = 'move';
         if (pullGizmoGroup) pullGizmoGroup.visible = false;
+        if (rotateGizmoGroup) rotateGizmoGroup.visible = false;
         updateMoveGizmo();
+    } else if (mode === 'rotator') {
+        if (btnRotator) {
+            btnRotator.classList.add('active');
+            btnRotator.style.background = 'linear-gradient(135deg, #a855f7, #6366f1)';
+            btnRotator.style.color = '#fff';
+        }
+        if (pullerSubpanel) pullerSubpanel.style.display = 'none';
+        if (canvasDom) canvasDom.style.cursor = 'grab';
+        if (pullGizmoGroup) pullGizmoGroup.visible = false;
+        if (moveGizmoGroup) moveGizmoGroup.visible = false;
+        updateRotateGizmo();
     } else {
         if (btnPuller) {
             btnPuller.classList.add('active');
@@ -202,8 +227,85 @@ export function setStudioToolMode(mode: StudioToolMode) {
         if (pullerSubpanel) pullerSubpanel.style.display = 'flex';
         if (canvasDom) canvasDom.style.cursor = 'nwse-resize';
         if (moveGizmoGroup) moveGizmoGroup.visible = false;
+        if (rotateGizmoGroup) rotateGizmoGroup.visible = false;
         updatePullGizmo();
     }
+}
+
+function initRotateGizmo() {
+    if (rotateGizmoGroup) return;
+    csState.rotateGizmoGroup = new THREE.Group();
+    rotateGizmoGroup.name = 'rotateGizmoGroup';
+    scene.add(rotateGizmoGroup);
+
+    const createRing = (axis: 'x' | 'y' | 'z', color: number) => {
+        // Torus radius 1.0 (will scale to match object size exactly)
+        const ringGeo = new THREE.TorusGeometry(1.0, 0.04, 16, 64);
+        const mat = new THREE.MeshBasicMaterial({
+            color,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.95
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, mat);
+        ringMesh.renderOrder = 2000;
+        ringMesh.userData = { isRotateGizmoHandle: true, axis };
+
+        // Larger invisible torus for easy raycasting/clicking
+        const hitGeo = new THREE.TorusGeometry(1.0, 0.18, 8, 32);
+        const hitMat = new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 });
+        const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+        hitMesh.userData = { isRotateGizmoHandle: true, axis };
+        ringMesh.add(hitMesh);
+
+        if (axis === 'x') {
+            ringMesh.rotation.y = Math.PI / 2; // Normal along X
+        } else if (axis === 'y') {
+            ringMesh.rotation.x = Math.PI / 2; // Normal along Y
+        }
+        // axis === 'z' is in XY plane (normal along Z)
+
+        rotateGizmoGroup!.add(ringMesh);
+        rotateGizmoHandles.push(ringMesh, hitMesh);
+    };
+
+    createRing('x', 0xef4444); // Red X
+    createRing('y', 0x22c55e); // Green Y
+    createRing('z', 0x3b82f6); // Blue Z
+}
+
+export function updateRotateGizmo() {
+    if (!rotateGizmoGroup) initRotateGizmo();
+    if (!rotateGizmoGroup) return;
+
+    if (studioToolMode !== 'rotator' || !selectedObject || isPlayTestMode) {
+        rotateGizmoGroup.visible = false;
+        return;
+    }
+
+    rotateGizmoGroup.visible = true;
+    selectedObject.mesh.updateMatrixWorld(true);
+
+    const box = new THREE.Box3().setFromObject(selectedObject.mesh);
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    if (!box.isEmpty()) {
+        box.getCenter(center);
+        box.getSize(size);
+    } else {
+        center.copy(selectedObject.mesh.position);
+        size.set(2, 2, 2);
+    }
+
+    // Centered exactly on the object
+    rotateGizmoGroup.position.copy(center);
+
+    // "põõraj peab olema sama suur kui se asi ja selle ümber"
+    // Radius matches the bounding dimension of the object closely:
+    const maxDim = Math.max(size.x, size.y, size.z, 0.5);
+    const ringRadius = (maxDim / 2) * 1.15;
+    rotateGizmoGroup.scale.set(ringRadius, ringRadius, ringRadius);
 }
 
 function initPullGizmo() {
@@ -603,4 +705,4 @@ export function spawnBlockObject(color: string = '#00cec9', name: string = 'Part
     autoSaveDraft();
     return placed;
 }
-export { moveGizmoGroup, pullGizmoGroup, isMovingWithGizmo, moveActiveAxis, moveStartObjectPos, moveStartMousePos, moveScreenDir, worldUnitsPerPixel, pullActiveSign, isPullingObject, pullStartPos, pullHandleScreenDir, studioToolMode, pullActiveAxis, pullGizmoBoxHelper, pullGizmoHandles, moveGizmoHandles } from '../state/creatorState';
+export { moveGizmoGroup, pullGizmoGroup, rotateGizmoGroup, isMovingWithGizmo, isRotatingWithGizmo, moveActiveAxis, rotateActiveAxis, moveStartObjectPos, moveStartMousePos, rotateStartObjectRot, rotateStartMousePos, moveScreenDir, worldUnitsPerPixel, pullActiveSign, isPullingObject, pullStartPos, pullHandleScreenDir, studioToolMode, pullActiveAxis, pullGizmoBoxHelper, pullGizmoHandles, moveGizmoHandles, rotateGizmoHandles } from '../state/creatorState';

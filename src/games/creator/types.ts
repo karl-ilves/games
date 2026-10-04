@@ -205,7 +205,7 @@ export interface GripOffset {
     scale: { x: number; y: number; z: number };
 }
 
-export type StudioToolMode = "mouse" | "mover" | "puller";
+export type StudioToolMode = "mouse" | "mover" | "puller" | "rotator";
 export type PullEdgeAxis = "all" | "x" | "y" | "z";
 
 export interface WorkbenchPart {

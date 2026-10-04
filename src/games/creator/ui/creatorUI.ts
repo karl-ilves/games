@@ -110,19 +110,27 @@ import { saveUndoSnapshot } from '../systems/undoRedo';
 import {
     updateMoveGizmo,
     updatePullGizmo,
+    updateRotateGizmo,
     getStudioToolMode,
     setStudioToolMode,
     moveGizmoGroup,
     pullGizmoGroup,
+    rotateGizmoGroup,
     pullSelectedObject,
     moveSelectedObject,
     rotateSelectedObject,
     isMovingWithGizmo,
     setIsMovingWithGizmo,
+    isRotatingWithGizmo,
+    setIsRotatingWithGizmo,
     moveActiveAxis,
     setMoveActiveAxis,
+    rotateActiveAxis,
+    setRotateActiveAxis,
     moveStartObjectPos,
     moveStartMousePos,
+    rotateStartObjectRot,
+    rotateStartMousePos,
     moveScreenDir,
     worldUnitsPerPixel,
     pullActiveSign,
@@ -1079,6 +1087,12 @@ export function selectObject(placed: PlacedObject | null) {
     } else if (moveGizmoGroup) {
         moveGizmoGroup.visible = false;
     }
+
+    if (studioToolMode === 'rotator') {
+        updateRotateGizmo();
+    } else if (rotateGizmoGroup) {
+        rotateGizmoGroup.visible = false;
+    }
     renderWorkspaceTree();
 }
 
@@ -1494,6 +1508,37 @@ export function setupStudioEvents() {
                     csState.pullHandleScreenDir = { x: 1, y: -1 };
                     showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
                 }
+            } else if (studioToolMode === 'rotator') {
+                // 1. Check if any rotate gizmo ring was clicked
+                const gizmoHits = (rotateGizmoGroup?.visible && rotateGizmoHandles.length > 0)
+                    ? raycaster.intersectObjects(rotateGizmoHandles, true)
+                    : [];
+                if (gizmoHits.length > 0 && selectedObject) {
+                    let hitMesh: THREE.Object3D | null = gizmoHits[0].object;
+                    let axis = hitMesh?.userData?.axis;
+                    while (hitMesh && !axis && hitMesh.parent) {
+                        hitMesh = hitMesh.parent;
+                        axis = hitMesh?.userData?.axis;
+                    }
+
+                    if (axis) {
+                        csState.isRotatingWithGizmo = true;
+                        csState.rotateActiveAxis = axis;
+                        csState.rotateStartMousePos = { x: e.clientX, y: e.clientY };
+                        csState.rotateStartObjectRot = {
+                            x: selectedObject.mesh.rotation.x,
+                            y: selectedObject.mesh.rotation.y,
+                            z: selectedObject.mesh.rotation.z
+                        };
+                        dom.style.cursor = 'grabbing';
+                        return;
+                    }
+                }
+
+                // 2. Direct object click in Rotator mode strictly selects, NEVER drags
+                if (hitGroup) {
+                    selectObject(hitGroup);
+                }
             } else {
                 // Mouse mode: clicking an object strictly selects it, NEVER drags
                 if (hitGroup) {
@@ -1516,6 +1561,12 @@ export function setupStudioEvents() {
                 csState.isMovingWithGizmo = false;
                 csState.moveActiveAxis = null;
                 dom.style.cursor = studioToolMode === 'mover' ? 'move' : 'default';
+                autoSaveDraft();
+            }
+            if (isRotatingWithGizmo) {
+                csState.isRotatingWithGizmo = false;
+                csState.rotateActiveAxis = null;
+                dom.style.cursor = studioToolMode === 'rotator' ? 'grab' : 'default';
                 autoSaveDraft();
             }
             if (isPullingObject) {
@@ -1637,9 +1688,36 @@ export function setupStudioEvents() {
 
             updateInspectorDisplay();
             updateMoveGizmo();
+        } else if (isRotatingWithGizmo && selectedObject && rotateActiveAxis && !isPlayTestMode) {
+            const mouseDx = e.clientX - rotateStartMousePos.x;
+            const mouseDy = e.clientY - rotateStartMousePos.y;
+
+            // Smooth rotational sensitivity
+            const rotDeltaX = -mouseDy * 0.02;
+            const rotDeltaY = mouseDx * 0.02;
+            const rotDeltaZ = (mouseDx - mouseDy) * 0.015;
+
+            // "se asi teise kohta ei liigu vaid ühekoha peal aga se põõrab nagu peab"
+            // Position remains completely unchanged! Only rotation changes around its center.
+            if (rotateActiveAxis === 'x') {
+                const newRotX = Number(((rotateStartObjectRot.x + rotDeltaX) % (Math.PI * 2)).toFixed(3));
+                selectedObject.mesh.rotation.x = newRotX;
+                selectedObject.rotation.x = newRotX;
+            } else if (rotateActiveAxis === 'y') {
+                const newRotY = Number(((rotateStartObjectRot.y + rotDeltaY) % (Math.PI * 2)).toFixed(3));
+                selectedObject.mesh.rotation.y = newRotY;
+                selectedObject.rotation.y = newRotY;
+            } else if (rotateActiveAxis === 'z') {
+                const newRotZ = Number(((rotateStartObjectRot.z + rotDeltaZ) % (Math.PI * 2)).toFixed(3));
+                selectedObject.mesh.rotation.z = newRotZ;
+                selectedObject.rotation.z = newRotZ;
+            }
+
+            updateInspectorDisplay();
+            updateRotateGizmo();
         }
 
-        if (!isRightMouseDown && !isMovingWithGizmo && !isPullingObject && !isPlayTestMode) {
+        if (!isRightMouseDown && !isMovingWithGizmo && !isRotatingWithGizmo && !isPullingObject && !isPlayTestMode) {
             if (studioToolMode === 'mover' && moveGizmoGroup?.visible && moveGizmoHandles.length > 0) {
                 const rect = dom.getBoundingClientRect();
                 const mouse = new THREE.Vector2(
@@ -1653,6 +1731,20 @@ export function setupStudioEvents() {
                     dom.style.cursor = 'grab';
                 } else {
                     dom.style.cursor = 'move';
+                }
+            } else if (studioToolMode === 'rotator' && rotateGizmoGroup?.visible && rotateGizmoHandles.length > 0) {
+                const rect = dom.getBoundingClientRect();
+                const mouse = new THREE.Vector2(
+                    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                    -((e.clientY - rect.top) / rect.height) * 2 + 1
+                );
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+                const hits = raycaster.intersectObjects(rotateGizmoHandles, true);
+                if (hits.length > 0) {
+                    dom.style.cursor = 'grab';
+                } else {
+                    dom.style.cursor = 'default';
                 }
             }
         }
@@ -2059,6 +2151,10 @@ export function setupStudioEvents() {
 
     document.getElementById('btn-tool-puller')?.addEventListener('click', () => {
         setStudioToolMode('puller');
+    });
+
+    document.getElementById('btn-tool-rotator')?.addEventListener('click', () => {
+        setStudioToolMode('rotator');
     });
 
     // Edge Axis Selectors (Kõik, Laius X, Kõrgus Y, Pikkus Z)
@@ -2491,6 +2587,7 @@ export function setupInspectorEvents() {
                 selectedObject.scale.z = s;
                 updatePullGizmo();
                 if (studioToolMode === 'mover') updateMoveGizmo();
+                if (studioToolMode === 'rotator') updateRotateGizmo();
                 updateInspectorDisplay();
                 autoSaveDraft();
             }
@@ -2510,6 +2607,7 @@ export function setupInspectorEvents() {
                 selectedObject.scale[axis] = s;
                 updatePullGizmo();
                 if (studioToolMode === 'mover') updateMoveGizmo();
+                if (studioToolMode === 'rotator') updateRotateGizmo();
                 autoSaveDraft();
             }
         });

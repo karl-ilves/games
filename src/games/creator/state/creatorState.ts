@@ -236,6 +236,16 @@ export function setPullGizmoBoxHelper(val: THREE.BoxHelper) { pullGizmoBoxHelper
 
 export let pullGizmoHandles: any[] = [];
 
+export let rotateGizmoGroup: THREE.Group;
+export function setRotateGizmoGroup(val: THREE.Group) { rotateGizmoGroup = val; }
+export let rotateGizmoHandles: any[] = [];
+export let isRotatingWithGizmo = false;
+export function setIsRotatingWithGizmo(val: boolean) { isRotatingWithGizmo = val; }
+export let rotateActiveAxis: 'x' | 'y' | 'z' | null = null;
+export function setRotateActiveAxis(val: any) { rotateActiveAxis = val; }
+export let rotateStartObjectRot = { x: 0, y: 0, z: 0 };
+export let rotateStartMousePos = { x: 0, y: 0 };
+
 export let isDraggingObject = false;
 export function setIsDraggingObject(val: boolean) { isDraggingObject = val; }
 
@@ -341,5 +351,11 @@ export const csState: any = {
     get pullStartLocalMax() { return pullStartLocalMax; }, set pullStartLocalMax(val: any) { pullStartLocalMax = val; },
     get pullHandleScreenDir() { return pullHandleScreenDir; }, set pullHandleScreenDir(val: any) { pullHandleScreenDir = val; },
     get pullGizmoHandles() { return pullGizmoHandles; }, set pullGizmoHandles(val: any) { pullGizmoHandles = val; },
+    get rotateGizmoGroup() { return rotateGizmoGroup; }, set rotateGizmoGroup(val: any) { rotateGizmoGroup = val; },
+    get rotateGizmoHandles() { return rotateGizmoHandles; }, set rotateGizmoHandles(val: any) { rotateGizmoHandles = val; },
+    get isRotatingWithGizmo() { return isRotatingWithGizmo; }, set isRotatingWithGizmo(val: any) { isRotatingWithGizmo = val; },
+    get rotateActiveAxis() { return rotateActiveAxis; }, set rotateActiveAxis(val: any) { rotateActiveAxis = val; },
+    get rotateStartObjectRot() { return rotateStartObjectRot; }, set rotateStartObjectRot(val: any) { rotateStartObjectRot = val; },
+    get rotateStartMousePos() { return rotateStartMousePos; }, set rotateStartMousePos(val: any) { rotateStartMousePos = val; },
     get dragPlane() { return dragPlane; },
 };
