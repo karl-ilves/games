@@ -300,18 +300,36 @@ export function equipCustomItemInHand(item: PlacedObject | CatalogItem) {
         heldMesh = createObjectMesh(catItem, itemColor);
     }
 
+    // Force visibility on cloned meshes in case the world source mesh was hidden
+    heldMesh.visible = true;
+    heldMesh.traverse((child: any) => {
+        child.visible = true;
+    });
+
+    // Center mesh geometry so grip offset / rotation revolves around its true center (matching hand animation editor)
+    heldMesh.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(heldMesh);
+    if (!box.isEmpty()) {
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        heldMesh.position.sub(center);
+    }
+
+    const holder = new THREE.Group();
+    holder.name = 'PlayerHeldCustomItem';
+    holder.add(heldMesh);
+
     if (item.gripOffset) {
-        heldMesh.position.set(item.gripOffset.position.x, item.gripOffset.position.y, item.gripOffset.position.z);
-        heldMesh.rotation.set(item.gripOffset.rotation.x, item.gripOffset.rotation.y, item.gripOffset.rotation.z);
-        heldMesh.scale.set(item.gripOffset.scale.x, item.gripOffset.scale.y, item.gripOffset.scale.z);
+        holder.position.set(item.gripOffset.position.x, item.gripOffset.position.y, item.gripOffset.position.z);
+        holder.rotation.set(item.gripOffset.rotation.x, item.gripOffset.rotation.y, item.gripOffset.rotation.z);
+        holder.scale.set(item.gripOffset.scale.x, item.gripOffset.scale.y, item.gripOffset.scale.z);
     } else {
         // Default scale and grip position in right hand
-        heldMesh.scale.set(0.25, 0.25, 0.25);
-        heldMesh.position.set(0, -0.22, 0.15);
-        heldMesh.rotation.set(0.2, 0, 0);
+        holder.scale.set(0.25, 0.25, 0.25);
+        holder.position.set(0, -0.22, 0.15);
+        holder.rotation.set(0.2, 0, 0);
     }
-    heldMesh.name = 'PlayerHeldCustomItem';
-    handSocket.add(heldMesh);
+    handSocket.add(holder);
 
     // Add to playerInventory if not already present
     let slotIdx = playerInventory.findIndex(i => i.name === itemName);

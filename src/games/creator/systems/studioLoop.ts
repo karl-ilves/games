@@ -732,9 +732,9 @@ export function animate() {
                         if (studioTestPlaybux >= pbxPrice) {
                             csState.studioTestPlaybux -= pbxPrice;
                             updateStudioTestPlaybuxDisplay();
+                            equipCustomItemInHand(p);
                             p.isHeld = true;
                             p.mesh.visible = false;
-                            equipCustomItemInHand(p);
                             playGameSound('victory');
                             showDialogMessage('💎 Ese Ostetud!', `Ostsid eseme "${p.name}" hinnaga ${pbxPrice} PBX (Test saldo: ${studioTestPlaybux.toLocaleString()} PBX)!`, '💎');
                         } else {
@@ -753,9 +753,9 @@ export function animate() {
                     };
                     if (keys['KeyE'] || dist < 1.4) {
                         if (keys['KeyE']) keys['KeyE'] = false;
+                        equipCustomItemInHand(p);
                         p.isHeld = true;
                         p.mesh.visible = false;
-                        equipCustomItemInHand(p);
                         playGameSound('coin');
                         showDialogMessage('✋ Ese Käes!', `Võtsid eseme "${p.name}" kätte!`, '✋');
                     }

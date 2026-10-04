@@ -4949,7 +4949,14 @@ await (async () => {
             const cs = window.creatorStudio;
             if (!cs) return { error: "creatorStudio not found" };
 
-            // 1. Enter play test mode
+            // 1. Mark existing item as holdable inHandAtStart or add one
+            const wand = cs.placedObjects.find(o => o.name === 'Magic Wand');
+            if (wand) {
+                wand.isHoldable = true;
+                wand.inHandAtStart = true;
+            }
+
+            // 1b. Enter play test mode
             document.getElementById('btn-toggle-play-test')?.click();
             await new Promise(r => setTimeout(r, 200));
 
@@ -4981,6 +4988,22 @@ await (async () => {
             await new Promise(r => setTimeout(r, 50));
             const activeAfterKey1 = firstSlot ? firstSlot.style.border.includes('2px') : false;
 
+            // 3b. Verify item is equipped in right hand socket
+            let handItemCount = 0;
+            let handItemVisible = false;
+            let handItemScale = null;
+            if (cs.playerAvatarRig) {
+                const rightSocket = cs.playerAvatarRig.getHandSocket('right');
+                if (rightSocket) {
+                    handItemCount = rightSocket.children.length;
+                    const heldObj = rightSocket.children[0];
+                    if (heldObj) {
+                        handItemVisible = heldObj.visible;
+                        handItemScale = { x: heldObj.scale.x, y: heldObj.scale.y, z: heldObj.scale.z };
+                    }
+                }
+            }
+
             // 4. Exit play test mode
             document.getElementById('btn-toggle-play-test')?.click();
             await new Promise(r => setTimeout(r, 200));
@@ -4994,6 +5017,9 @@ await (async () => {
                 activeAfterClick1,
                 activeAfterClick2,
                 activeAfterKey1,
+                handItemCount,
+                handItemVisible,
+                handItemScale,
                 isHotbarHidden
             };
         });
@@ -5008,7 +5034,10 @@ await (async () => {
         if (!hotbarTestResult.isHotbarHidden) {
             throw new Error("Roblox Hotbar should be hidden after exiting Play Test mode!");
         }
-        console.log("   ✅ Roblox Hotbar Inventory (10 slots 1-0, keys 1-0 toggle, bottom placement & click equipping) verified successfully in Creator Studio!");
+        if (hotbarTestResult.handItemCount < 1 || !hotbarTestResult.handItemVisible) {
+            throw new Error(`Expected held item to be visible in player's right hand socket, got count: ${hotbarTestResult.handItemCount}, visible: ${hotbarTestResult.handItemVisible}`);
+        }
+        console.log("   ✅ Roblox Hotbar Inventory (10 slots 1-0, keys 1-0 toggle, bottom placement & click equipping into hand socket visibly) verified successfully in Creator Studio!");
 
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");
