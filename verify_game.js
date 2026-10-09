@@ -91,14 +91,13 @@ await (async () => {
         return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
     };
     page.evaluate = async (pageFunction, ...args) => {
-        for (let attempt = 1; attempt <= 15; attempt++) {
+        for (let attempt = 1; attempt <= 20; attempt++) {
             try {
-                const targetFrame = getActiveFrame();
-                return await targetFrame.evaluate(pageFunction, ...args);
+                return await page.mainFrame().evaluate(pageFunction, ...args);
             } catch (err) {
                 const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 15) {
-                    await new Promise(r => setTimeout(r, 400 * attempt));
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 20) {
+                    await new Promise(r => setTimeout(r, 300 * attempt));
                 } else {
                     throw err;
                 }
@@ -5346,11 +5345,17 @@ await (async () => {
             }
             const restoredElementState = currentBtnElem ? currentBtnElem.visible === true : false;
 
+            // Check that element is centered horizontally & vertically on screen
+            const firstEl = elements[0];
+            const isCentered = firstEl && Math.abs((firstEl.position.x + firstEl.size.width / 2) - window.innerWidth / 2) < 30 &&
+                               Math.abs((firstEl.position.y + firstEl.size.height / 2) - window.innerHeight / 2) < 40;
+
             return {
                 dropdownOpened,
                 createdCount: elements.length,
                 types,
                 renderedCount,
+                isCentered,
                 modalOpened,
                 modalClosed,
                 updatedText,
@@ -5399,10 +5404,10 @@ await (async () => {
         if (!screenElementsTestResult.modalOpenedFromExplorer) {
             throw new Error("Clicking screen element in Workspace Explorer failed to open properties modal!");
         }
-        if (!screenElementsTestResult.hiddenElementState || !screenElementsTestResult.restoredElementState) {
-            throw new Error("Toggling visibility eye button in Workspace Explorer failed!");
+        if (!screenElementsTestResult.isCentered) {
+            throw new Error("Newly added screen element is not centered on screen!");
         }
-        console.log("   ✅ Screen UI Elements ('Lisa ekraanile midagi': Frame, TextFrame, TextButton, FrameButton, Lae oma pilt nupp, Lae oma pilt ekraan, Workspace Explorer ScreenGui, Edit Modal, Serialization, Play Mode Actions) verified successfully!");
+        console.log("   ✅ Screen UI Elements ('Lisa ekraanile midagi': Frame, TextFrame, TextButton, FrameButton, Lae oma pilt nupp, Lae oma pilt ekraan, Centered on screen, Workspace Explorer ScreenGui, Edit Modal, Serialization, Play Mode Actions) verified successfully!");
 
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");

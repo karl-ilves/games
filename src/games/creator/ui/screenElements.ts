@@ -138,9 +138,12 @@ export function addScreenElement(type: ScreenElementType, customData?: Partial<S
         defaultBg = 'rgba(15, 23, 42, 0.92)';
     }
 
-    // Default position staggered across screen
-    const defaultX = 60 + ((count * 30) % 300);
-    const defaultY = 120 + ((count * 30) % 250);
+    // Default position: center of the screen (with small stagger if multiple items added)
+    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 720;
+    const staggerOffset = ((count - 1) % 6) * 16;
+    const defaultX = Math.max(20, Math.round((screenWidth - defaultWidth) / 2) + staggerOffset);
+    const defaultY = Math.max(60, Math.round((screenHeight - defaultHeight) / 2) + staggerOffset);
 
     const isButtonType = type === 'text_button' || type === 'frame_button' || type === 'button' || type === 'image_button';
     let defaultText = '';
