@@ -3,6 +3,7 @@ import { csState, isPlayTestMode } from '../state/creatorState';
 import { autoSaveDraft } from './creatorUI';
 import { playGameSound } from '../audio';
 import { healPlayer, boostPlayerSpeed, collectCoin } from '../systems/physics';
+import { renderWorkspaceTree, selectScreenElementInExplorer } from './workspaceExplorer';
 
 let currentlyEditingElementId: string | null = null;
 let isDraggingScreenElement = false;
@@ -125,6 +126,7 @@ export function addScreenElement(type: ScreenElementType, customData?: Partial<S
     list.push(newElement);
     csState.screenElements = list;
     renderScreenElements();
+    renderWorkspaceTree();
     autoSaveDraft();
 
     // Automatically open editor for image elements so user can upload right away
@@ -307,9 +309,10 @@ export function renderScreenElements() {
                     try { (elDiv as any).releasePointerCapture?.(e.pointerId); } catch (_) {}
                     autoSaveDraft();
 
-                    // If it was just a click (not a drag), open properties editor
+                    // If it was just a click (not a drag), select in explorer and open properties editor
                     const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
                     if (dist < 4) {
+                        selectScreenElementInExplorer(elem.id);
                         openScreenElementEditor(elem);
                     }
                 }
@@ -534,6 +537,7 @@ function setupEditModalListeners() {
             }
 
             renderScreenElements();
+            renderWorkspaceTree();
             autoSaveDraft();
         }
 
@@ -557,5 +561,6 @@ export function deleteScreenElement(id: string) {
     const list: ScreenElement[] = csState.screenElements || [];
     csState.screenElements = list.filter(e => e.id !== id);
     renderScreenElements();
+    renderWorkspaceTree();
     autoSaveDraft();
 }

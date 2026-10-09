@@ -30,7 +30,8 @@ import {
     duplicateObjectWithChildren,
     deleteObjectWithChildren,
     getDescendantIds,
-    toggleWorkspacePanel
+    toggleWorkspacePanel,
+    selectScreenElementInExplorer
 } from '../ui/workspaceExplorer';
 import { openHandAnimationEditor, closeHandAnimationEditor } from '../ui/handAnimationEditor';
 import {
@@ -66,7 +67,8 @@ import {
     addScreenElement,
     renderScreenElements,
     openScreenElementEditor,
-    executeScreenElementAction
+    executeScreenElementAction,
+    deleteScreenElement
 } from '../ui/screenElements';
 
 export function setupCreatorGlobals() {
@@ -198,6 +200,8 @@ export function setupCreatorGlobals() {
         addScreenElement,
         renderScreenElements,
         openScreenElementEditor,
-        executeScreenElementAction
+        executeScreenElementAction,
+        deleteScreenElement,
+        selectScreenElementInExplorer
     };
 }

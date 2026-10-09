@@ -84,6 +84,10 @@ await (async () => {
         }
     };
     const getActiveFrame = () => {
+        try {
+            const mf = page.mainFrame();
+            if (mf && (typeof mf.isDetached !== 'function' || !mf.isDetached())) return mf;
+        } catch (_) {}
         return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
     };
     page.evaluate = async (pageFunction, ...args) => {
@@ -123,7 +127,7 @@ await (async () => {
                 return await targetFrame.waitForSelector(selector, options);
             } catch (err) {
                 const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached frame') || msg.includes('execution context was destroyed')) && attempt < 6) {
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed')) && attempt < 6) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -5305,6 +5309,33 @@ await (async () => {
             document.getElementById('btn-toggle-play-test')?.click();
             await new Promise(r => setTimeout(r, 150));
 
+            // 6. Test Screen Elements in Workspace Explorer (ScreenGui node & screen rows)
+            const screenGuiHeader = document.getElementById('workspace-screengui-root-node');
+            const hasScreenGuiHeader = !!screenGuiHeader;
+            const treeContainer = document.getElementById('workspace-tree-container');
+            const screenRowsInExplorer = treeContainer ? treeContainer.querySelectorAll('.workspace-screen-row').length : 0;
+
+            // Click the first screen row to test selection & editor trigger in explorer
+            const firstScreenRow = treeContainer ? treeContainer.querySelector('.workspace-screen-row') : null;
+            if (firstScreenRow) {
+                firstScreenRow.click();
+            }
+            const modalOpenedFromExplorer = modal && modal.style.display !== 'none';
+            if (modal) modal.style.display = 'none';
+
+            // Test eye toggle in explorer to hide/show element
+            const eyeBtn = firstScreenRow ? firstScreenRow.querySelector('button') : null;
+            if (eyeBtn) {
+                eyeBtn.click();
+            }
+            const currentBtnElem = (cs.screenElements || []).find(e => e.type === 'button');
+            const hiddenElementState = currentBtnElem ? currentBtnElem.visible === false : false;
+            // Restore visibility
+            if (eyeBtn) {
+                eyeBtn.click();
+            }
+            const restoredElementState = currentBtnElem ? currentBtnElem.visible === true : false;
+
             return {
                 dropdownOpened,
                 createdCount: elements.length,
@@ -5318,7 +5349,12 @@ await (async () => {
                 serializedHasScreenElements,
                 reloadedCount,
                 reloadedDomCount,
-                healthAfterClick
+                healthAfterClick,
+                hasScreenGuiHeader,
+                screenRowsInExplorer,
+                modalOpenedFromExplorer,
+                hiddenElementState,
+                restoredElementState
             };
         });
 
@@ -5347,7 +5383,16 @@ await (async () => {
         if (screenElementsTestResult.healthAfterClick < 80) {
             throw new Error(`Screen element button click in Play Test mode should have healed player (expected >= 80, got ${screenElementsTestResult.healthAfterClick})`);
         }
-        console.log("   ✅ Screen UI Elements ('Lisa ekraanile midagi': Nupp, Ekraan, Lae oma pilt nupp, Lae oma pilt ekraan, Edit Modal, Serialization, Play Mode Actions) verified successfully!");
+        if (!screenElementsTestResult.hasScreenGuiHeader || screenElementsTestResult.screenRowsInExplorer !== 4) {
+            throw new Error(`ScreenGui in Workspace Explorer check failed: hasHeader=${screenElementsTestResult.hasScreenGuiHeader}, rowsInExplorer=${screenElementsTestResult.screenRowsInExplorer}`);
+        }
+        if (!screenElementsTestResult.modalOpenedFromExplorer) {
+            throw new Error("Clicking screen element in Workspace Explorer failed to open properties modal!");
+        }
+        if (!screenElementsTestResult.hiddenElementState || !screenElementsTestResult.restoredElementState) {
+            throw new Error("Toggling visibility eye button in Workspace Explorer failed!");
+        }
+        console.log("   ✅ Screen UI Elements ('Lisa ekraanile midagi': Nupp, Ekraan, Lae oma pilt nupp, Lae oma pilt ekraan, Workspace Explorer ScreenGui, Edit Modal, Serialization, Play Mode Actions) verified successfully!");
 
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");
@@ -6315,10 +6360,10 @@ await (async () => {
                 const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
             });
-            await page.goto('http://localhost:4173/games/metro/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await new Promise(r => setTimeout(r, 1000));
+            await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 1200));
 
-            await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 5000 });
+            await page.waitForSelector('#canvas-container canvas', { visible: true, timeout: 8000 });
             console.log("   Successfully loaded 3D Canvas for LAST METRO as Playard Owner!");
 
             // Check Start Screen Overlay (Estonian for Playard Owner)

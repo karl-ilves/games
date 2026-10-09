@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PlacedObject, CatalogItem } from '../types';
+import { PlacedObject, CatalogItem, ScreenElement } from '../types';
 import {
     scene,
     placedObjects,
@@ -21,9 +21,20 @@ import {
     updateInspectorDisplay,
     autoSaveDraft
 } from './creatorUI';
+import {
+    openScreenElementEditor,
+    renderScreenElements,
+    deleteScreenElement
+} from './screenElements';
 
 // Set of collapsed parent node IDs in the workspace tree
 const collapsedNodes = new Set<string>();
+
+// Currently selected screen element ID in explorer
+export let selectedScreenElementId: string | null = null;
+export function clearScreenElementSelection() {
+    selectedScreenElementId = null;
+}
 
 // Dragged item ID during HTML5 drag-and-drop
 let draggedItemId: string | null = null;
@@ -582,6 +593,374 @@ export function renderWorkspaceTree() {
     for (const obj of topLevelObjects) {
         renderNode(obj, 0);
     }
+
+    // ============================================
+    // 2. ScreenGui / Ekraanielemendid Section
+    // ============================================
+    const screenElementsList: ScreenElement[] = csState.screenElements || [];
+    const isScreenGuiCollapsed = collapsedNodes.has('screengui_root');
+
+    // Filter screen elements if search query is active
+    const matchingScreenElems = q
+        ? screenElementsList.filter(e =>
+            (e.name || '').toLowerCase().includes(q) ||
+            (e.type || '').toLowerCase().includes(q) ||
+            (e.text || '').toLowerCase().includes(q)
+        )
+        : screenElementsList;
+
+    // Show ScreenGui if search matches or if no search active
+    if (!q || matchingScreenElems.length > 0) {
+        const screenRootEl = document.createElement('div');
+        screenRootEl.id = 'workspace-screengui-root-node';
+        screenRootEl.className = 'workspace-screengui-header';
+        screenRootEl.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px dashed rgba(16, 185, 129, 0.45);
+            border-radius: 8px;
+            margin-top: 10px;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #10b981;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        `;
+
+        // Collapse / Expand Chevron
+        const screenChevron = document.createElement('span');
+        screenChevron.style.cssText = `
+            width: 14px;
+            text-align: center;
+            font-size: 0.72rem;
+            color: #10b981;
+            cursor: pointer;
+        `;
+        screenChevron.innerText = isScreenGuiCollapsed ? '▶' : '▼';
+        screenRootEl.appendChild(screenChevron);
+
+        const screenIcon = document.createElement('span');
+        screenIcon.innerText = '🖥️';
+        screenIcon.style.fontSize = '1.05rem';
+        screenRootEl.appendChild(screenIcon);
+
+        const screenTitle = document.createElement('span');
+        screenTitle.innerText = 'ScreenGui (Ekraan)';
+        screenTitle.style.flex = '1';
+        screenRootEl.appendChild(screenTitle);
+
+        const screenCount = document.createElement('span');
+        screenCount.style.cssText = 'font-size: 0.72rem; color: #94a3b8; font-weight: normal;';
+        screenCount.innerText = `(${screenElementsList.length} elementi)`;
+        screenRootEl.appendChild(screenCount);
+
+        // Quick '+' button on ScreenGui header to open screen element dropdown
+        const addScreenQuickBtn = document.createElement('button');
+        addScreenQuickBtn.innerHTML = '+';
+        addScreenQuickBtn.title = 'Lisa ekraanile midagi';
+        addScreenQuickBtn.style.cssText = `
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #10b981;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0 6px;
+            margin-left: 6px;
+            transition: all 0.2s;
+        `;
+        addScreenQuickBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const btnDropdown = document.getElementById('btn-add-screen-element');
+            btnDropdown?.click();
+        });
+        screenRootEl.appendChild(addScreenQuickBtn);
+
+        screenRootEl.addEventListener('click', () => {
+            if (isScreenGuiCollapsed) {
+                collapsedNodes.delete('screengui_root');
+            } else {
+                collapsedNodes.add('screengui_root');
+            }
+            renderWorkspaceTree();
+        });
+
+        container.appendChild(screenRootEl);
+
+        // Render each Screen Element row if not collapsed
+        if (!isScreenGuiCollapsed) {
+            if (matchingScreenElems.length === 0) {
+                const emptyHint = document.createElement('div');
+                emptyHint.style.cssText = `
+                    padding: 6px 12px;
+                    padding-left: 28px;
+                    font-size: 0.75rem;
+                    color: #64748b;
+                    font-style: italic;
+                `;
+                emptyHint.innerText = 'Pole veel ühtegi ekraanielementi. Klõpsa "+ Lisa ekraanile midagi"';
+                container.appendChild(emptyHint);
+            } else {
+                for (const elem of matchingScreenElems) {
+                    renderScreenElementNode(elem, container);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Renders a single ScreenElement row in the Workspace Explorer tree.
+ */
+function renderScreenElementNode(elem: ScreenElement, container: HTMLElement) {
+    const isSelected = selectedScreenElementId === elem.id;
+
+    const row = document.createElement('div');
+    row.className = 'workspace-tree-row workspace-screen-row' + (isSelected ? ' active' : '');
+    row.dataset.screenId = elem.id;
+
+    row.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 8px;
+        padding-left: 24px;
+        border-radius: 6px;
+        margin-bottom: 2px;
+        font-size: 0.8rem;
+        color: ${isSelected ? '#10b981' : '#e2e8f0'};
+        background: ${isSelected ? 'rgba(16, 185, 129, 0.2)' : 'transparent'};
+        border: 1px solid ${isSelected ? '#10b981' : 'transparent'};
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.15s;
+    `;
+
+    // Icon & Type info
+    const iconSpan = document.createElement('span');
+    let icon = '🔘';
+    let typeName = 'Nupp';
+    let typeBadgeColor = '#10b981';
+    let typeBadgeBg = 'rgba(16, 185, 129, 0.15)';
+
+    if (elem.type === 'button') {
+        icon = '🔘';
+        typeName = 'Nupp';
+        typeBadgeColor = '#10b981';
+        typeBadgeBg = 'rgba(16, 185, 129, 0.15)';
+    } else if (elem.type === 'screen') {
+        icon = '🖥️';
+        typeName = 'Ekraan';
+        typeBadgeColor = '#38bdf8';
+        typeBadgeBg = 'rgba(56, 189, 248, 0.15)';
+    } else if (elem.type === 'image_button') {
+        icon = '🖼️🔘';
+        typeName = 'Pildi Nupp';
+        typeBadgeColor = '#ffd32a';
+        typeBadgeBg = 'rgba(255, 211, 42, 0.15)';
+    } else if (elem.type === 'image_screen') {
+        icon = '🖼️';
+        typeName = 'Pildi Ekraan';
+        typeBadgeColor = '#a855f7';
+        typeBadgeBg = 'rgba(168, 85, 247, 0.15)';
+    }
+
+    iconSpan.innerText = icon;
+    iconSpan.style.fontSize = '0.95rem';
+    row.appendChild(iconSpan);
+
+    // Name label (supports inline rename on double-click)
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'workspace-item-name';
+    nameSpan.innerText = elem.name || typeName;
+    nameSpan.style.cssText = `
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 600;
+    `;
+    nameSpan.title = 'Topeltklõps nime muutmiseks (Double-click to rename)';
+
+    nameSpan.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        startInlineScreenElementRename(nameSpan, elem);
+    });
+
+    row.appendChild(nameSpan);
+
+    // Type Badge
+    const badge = document.createElement('span');
+    badge.innerText = typeName;
+    badge.style.cssText = `
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 4px;
+        color: ${typeBadgeColor};
+        background: ${typeBadgeBg};
+        white-space: nowrap;
+    `;
+    row.appendChild(badge);
+
+    // Visibility Toggle (Eye icon)
+    const visBtn = document.createElement('button');
+    visBtn.innerHTML = elem.visible !== false ? '👁️' : '🕶️';
+    visBtn.title = elem.visible !== false ? 'Peida ekraanilt' : 'Näita ekraanil';
+    visBtn.style.cssText = `
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 2px 4px;
+        font-size: 0.8rem;
+        opacity: ${elem.visible !== false ? '0.7' : '0.35'};
+        transition: opacity 0.2s;
+    `;
+    visBtn.addEventListener('mouseenter', () => visBtn.style.opacity = '1');
+    visBtn.addEventListener('mouseleave', () => visBtn.style.opacity = elem.visible !== false ? '0.7' : '0.35');
+    visBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elem.visible = elem.visible === false ? true : false;
+        renderScreenElements();
+        renderWorkspaceTree();
+        autoSaveDraft();
+    });
+    row.appendChild(visBtn);
+
+    // Settings / Edit Button (Gear icon)
+    const editBtn = document.createElement('button');
+    editBtn.innerHTML = '⚙️';
+    editBtn.title = 'Seadista (Edit Properties)';
+    editBtn.style.cssText = `
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 2px 4px;
+        font-size: 0.8rem;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    `;
+    editBtn.addEventListener('mouseenter', () => editBtn.style.opacity = '1');
+    editBtn.addEventListener('mouseleave', () => editBtn.style.opacity = '0.7');
+    editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectScreenElementInExplorer(elem.id);
+        openScreenElementEditor(elem);
+    });
+    row.appendChild(editBtn);
+
+    // Delete Button (Red ✕)
+    const delBtn = document.createElement('button');
+    delBtn.innerHTML = '✕';
+    delBtn.title = 'Kustuta element (Delete)';
+    delBtn.style.cssText = `
+        background: transparent;
+        border: none;
+        color: #ff4757;
+        font-size: 0.8rem;
+        cursor: pointer;
+        padding: 2px 4px;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    `;
+    delBtn.addEventListener('mouseenter', () => delBtn.style.opacity = '1');
+    delBtn.addEventListener('mouseleave', () => delBtn.style.opacity = '0.6');
+    delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteScreenElement(elem.id);
+        if (selectedScreenElementId === elem.id) {
+            selectedScreenElementId = null;
+        }
+        renderWorkspaceTree();
+    });
+    row.appendChild(delBtn);
+
+    // Click on row -> Select element in explorer, highlight on screen, open editor
+    row.addEventListener('click', () => {
+        selectScreenElementInExplorer(elem.id);
+        openScreenElementEditor(elem);
+    });
+
+    container.appendChild(row);
+}
+
+/**
+ * Selects a screen element in Explorer, deselects 3D object, and flashes the screen element on screen.
+ */
+export function selectScreenElementInExplorer(id: string | null) {
+    selectedScreenElementId = id;
+    if (id) {
+        // Deselect 3D object
+        selectObject(null);
+
+        // Highlight element on screen
+        const screenElDom = document.getElementById(`gui-${id}`);
+        if (screenElDom) {
+            screenElDom.style.outline = '3px solid #10b981';
+            screenElDom.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.9)';
+            screenElDom.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+            setTimeout(() => {
+                if (screenElDom) {
+                    screenElDom.style.outline = '';
+                    screenElDom.style.boxShadow = '';
+                }
+            }, 1200);
+        }
+    }
+    renderWorkspaceTree();
+}
+
+/**
+ * Handles inline renaming directly in the tree node label for screen elements.
+ */
+function startInlineScreenElementRename(nameSpan: HTMLElement, elem: ScreenElement) {
+    const origName = elem.name || 'Element';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = origName;
+    input.style.cssText = `
+        flex: 1;
+        background: #0f172a;
+        border: 1px solid #10b981;
+        border-radius: 4px;
+        color: white;
+        font-size: 0.8rem;
+        padding: 1px 4px;
+        outline: none;
+    `;
+
+    const finishRename = () => {
+        const val = input.value.trim();
+        if (val && val !== origName) {
+            elem.name = val;
+            autoSaveDraft();
+            renderScreenElements();
+        }
+        renderWorkspaceTree();
+    };
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            finishRename();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            renderWorkspaceTree();
+        }
+    });
+
+    input.addEventListener('blur', finishRename);
+
+    nameSpan.innerHTML = '';
+    nameSpan.appendChild(input);
+    input.focus();
+    input.select();
 }
 
 /**

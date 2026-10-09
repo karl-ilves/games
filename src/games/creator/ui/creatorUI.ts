@@ -11,7 +11,8 @@ import {
     renderWorkspaceTree,
     duplicateObjectWithChildren,
     deleteObjectWithChildren,
-    getDescendantIds
+    getDescendantIds,
+    clearScreenElementSelection
 } from './workspaceExplorer';
 import { openHandAnimationEditor } from './handAnimationEditor';
 import * as THREE from 'three';
@@ -998,6 +999,8 @@ export function selectObject(placed: PlacedObject | null) {
         renderWorkspaceTree();
         return;
     }
+
+    clearScreenElementSelection();
 
     if (info) info.style.display = 'none';
     if (props) props.style.display = 'block';
