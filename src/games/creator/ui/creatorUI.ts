@@ -2,7 +2,7 @@ import { createAirplane3DMesh, createSpeedboat3DMesh } from '../models/objectMod
 import { performRedo, performUndo } from '../systems/undoRedo';
 import { playerAttack, enterVehicle, respawnPlayerAtCheckpoint, openDimensionTravelModal, equipCustomItemInHand, clearHeldItemFromHand, toggleInventorySlot } from '../systems/physics';
 import { nearbyVehicle, moveGizmoHandles, pullGizmoHandles, pullActiveAxis, pullStartScaleVector, pullStartBoxMin, pullStartLocalMin, pullStartBoxMax, pullStartLocalMax, checkpointPosition } from '../state/creatorState';
-import { showFloatingPullIndicator, hideFloatingPullIndicator, spawnBlockObject } from '../systems/gizmos';
+import { showFloatingPullIndicator, hideFloatingPullIndicator, spawnBlockObject, beginMoveGizmoDrag, computeMoveGizmoDragPosition, endMoveGizmoDrag, studioRayFromClient } from '../systems/gizmos';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../../shared/mobileControls';
 import { PlayardImageGenerationEngine } from '../../../shared/imageGenerationEngine';
 import { setupScriptingEvents } from '../systems/scriptRunner';
@@ -1377,7 +1377,10 @@ export function setupStudioEvents() {
                         csState.isMovingWithGizmo = true;
                         csState.moveActiveAxis = axis;
                         csState.moveStartMousePos = { x: e.clientX, y: e.clientY };
-                        moveStartObjectPos.copy(selectedObject.mesh.position);
+                        moveStartObjectPos.x = selectedObject.mesh.position.x;
+                        moveStartObjectPos.y = selectedObject.mesh.position.y;
+                        moveStartObjectPos.z = selectedObject.mesh.position.z;
+                        csState.moveStartObjectPos = moveStartObjectPos;
 
                         selectedObject.mesh.updateMatrixWorld(true);
                         const box = new THREE.Box3().setFromObject(selectedObject.mesh);
@@ -1409,7 +1412,9 @@ export function setupStudioEvents() {
                         const visibleHeight = 2 * Math.tan(vFov / 2) * dist;
                         csState.worldUnitsPerPixel = visibleHeight / window.innerHeight;
 
+                        beginMoveGizmoDrag(axis, selectedObject, raycaster.ray);
                         dom.style.cursor = 'grabbing';
+                        e.preventDefault();
                         return;
                     }
                 }
@@ -1560,6 +1565,7 @@ export function setupStudioEvents() {
             if (isMovingWithGizmo) {
                 csState.isMovingWithGizmo = false;
                 csState.moveActiveAxis = null;
+                endMoveGizmoDrag();
                 dom.style.cursor = studioToolMode === 'mover' ? 'move' : 'default';
                 autoSaveDraft();
             }
@@ -1664,6 +1670,29 @@ export function setupStudioEvents() {
             updatePullGizmo();
             showFloatingPullIndicator(e.clientX, e.clientY, selectedObject.mesh.scale, pullActiveAxis);
         } else if (isMovingWithGizmo && selectedObject && moveActiveAxis && !isPlayTestMode) {
+            // Exact 1:1 tracking: intersect the cursor ray with the drag plane
+            const target = computeMoveGizmoDragPosition(selectedObject, studioRayFromClient(e.clientX, e.clientY));
+            if (target) {
+                if (moveActiveAxis === 'x') {
+                    selectedObject.mesh.position.x = Number(target.x.toFixed(3));
+                    selectedObject.position.x = selectedObject.mesh.position.x;
+                } else if (moveActiveAxis === 'y') {
+                    selectedObject.mesh.position.y = Math.max(0, Number(target.y.toFixed(3)));
+                    selectedObject.position.y = selectedObject.mesh.position.y;
+                } else if (moveActiveAxis === 'z') {
+                    selectedObject.mesh.position.z = Number(target.z.toFixed(3));
+                    selectedObject.position.z = selectedObject.mesh.position.z;
+                }
+                if (selectedObject.movement) {
+                    selectedObject.movement.origin.x = selectedObject.position.x;
+                    selectedObject.movement.origin.y = selectedObject.position.y;
+                    selectedObject.movement.origin.z = selectedObject.position.z;
+                }
+                updateInspectorDisplay();
+                updateMoveGizmo();
+                return;
+            }
+
             const mouseDx = e.clientX - moveStartMousePos.x;
             const mouseDy = e.clientY - moveStartMousePos.y;
             const pixelDrag = mouseDx * moveScreenDir.x + mouseDy * moveScreenDir.y;

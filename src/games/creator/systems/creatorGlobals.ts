@@ -6,7 +6,7 @@ import {
     playerSpeedMultiplier, isCheatersConfirmed, currentPublishThumbnail,
     currentGameMaxPlayers, currentGameMinAge, currentGameAgeRating,
     currentVehicle, playTestWorldSnapshots, characterYaw, setCharacterYaw,
-    keys, placedObjects, selectedObject, isPlayTestMode
+    keys, placedObjects, selectedObject, isPlayTestMode, camera, renderer
 } from '../state/creatorState';
 import { CATALOG_DATABASE, getStudioTestPlaybux, updateStudioTestPlaybuxDisplay } from '../catalog/creatorCatalog';
 import {
@@ -67,6 +67,8 @@ export function setupCreatorGlobals() {
     (window as any).creatorStudio = {
         THREE,
         get scene() { return scene; },
+        get camera() { return camera; },
+        get renderer() { return renderer; },
         get humanCharacter() { return humanCharacter; },
         get playerAvatarRig() { return playerAvatarRig; },
         get emotesWidget() { return emotesWidget; },

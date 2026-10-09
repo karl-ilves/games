@@ -3461,6 +3461,60 @@ await (async () => {
                 throw new Error("Moving selected object along X axis failed!");
             }
 
+            // Center selected object in view so gizmo arrows are in open canvas area (not under sidebar)
+            await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                cs.selectedObject.mesh.position.set(0, 1, 0);
+                cs.selectedObject.position = { x: 0, y: 1, z: 0 };
+                cs.updateMoveGizmo();
+            });
+
+            // Real mouse drag on the red X arrow must move the object 1:1 with the cursor
+            const dragPts = await page.evaluate(() => {
+                const cs = window.creatorStudio;
+                const THREE = cs.THREE;
+                const cam = cs.camera;
+                const dom = cs.renderer.domElement;
+                cs.updateMoveGizmo();
+                const g = cs.moveGizmoGroup;
+                g.updateMatrixWorld(true);
+
+                const xArrowGroup = g.getObjectByName('moveGizmoAxis_x');
+                xArrowGroup.updateMatrixWorld(true);
+                const shaftMesh = xArrowGroup.children[0];
+                const shaftWorld = new THREE.Vector3();
+                shaftMesh.getWorldPosition(shaftWorld);
+
+                const rect = dom.getBoundingClientRect();
+                const toScreen = (v) => {
+                    const p = v.clone().project(cam);
+                    return { x: rect.left + (p.x + 1) / 2 * rect.width, y: rect.top + (1 - p.y) / 2 * rect.height };
+                };
+
+                const targetWorld = shaftWorld.clone().add(new THREE.Vector3(3, 0, 0));
+                return {
+                    from: toScreen(shaftWorld),
+                    to: toScreen(targetWorld),
+                    startX: cs.selectedObject.mesh.position.x
+                };
+            });
+            await page.mouse.move(dragPts.from.x, dragPts.from.y);
+            await page.mouse.down();
+            const steps = 8;
+            for (let i = 1; i <= steps; i++) {
+                await page.mouse.move(
+                    dragPts.from.x + (dragPts.to.x - dragPts.from.x) * i / steps,
+                    dragPts.from.y + (dragPts.to.y - dragPts.from.y) * i / steps
+                );
+            }
+            await page.mouse.up();
+            const dragEndX = await page.evaluate(() => window.creatorStudio.selectedObject.mesh.position.x);
+            const dragDelta = dragEndX - dragPts.startX;
+            console.log(`   Mover X-arrow mouse drag moved object by ${dragDelta.toFixed(2)} (expected ~3.00)`);
+            if (Math.abs(dragDelta - 3) > 0.35) {
+                throw new Error(`Mover arrow drag is not 1:1 with cursor: moved ${dragDelta.toFixed(2)}, expected ~3`);
+            }
+
             // 5c. Test switching to 'Pööraja' (Rotator) mode & 3D 3-ring gizmo
             console.log("   Testing Rotator Tool ('pööraja') & 3D 3-ring gizmo...");
             await page.click('#btn-tool-rotator');

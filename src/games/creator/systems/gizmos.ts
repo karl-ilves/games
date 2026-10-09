@@ -524,6 +524,64 @@ export function updateMoveGizmo() {
     moveGizmoGroup.scale.set(scale, scale, scale);
 }
 
+// ---- 1:1 ray-plane dragging for the Mover arrows ----
+const moveDragPlane = new THREE.Plane();
+const moveDragStartHit = new THREE.Vector3();
+const moveDragHit = new THREE.Vector3();
+const moveDragAxis = new THREE.Vector3(1, 0, 0);
+const moveDragStartWorld = new THREE.Vector3();
+let moveDragValid = false;
+const moveDragRaycaster = new THREE.Raycaster();
+
+/** Builds a world ray from a client (screen) position using the studio camera. */
+export function studioRayFromClient(clientX: number, clientY: number): THREE.Ray {
+    const rect = renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    moveDragRaycaster.setFromCamera(ndc, camera);
+    return moveDragRaycaster.ray;
+}
+
+/**
+ * Starts a Mover drag along a world axis. The drag plane contains the axis and
+ * faces the camera as much as possible, so cursor motion maps 1:1 to world motion.
+ */
+export function beginMoveGizmoDrag(axis: 'x' | 'y' | 'z', obj: PlacedObject, ray: THREE.Ray) {
+    obj.mesh.updateMatrixWorld(true);
+    obj.mesh.getWorldPosition(moveDragStartWorld);
+    moveDragAxis.set(axis === 'x' ? 1 : 0, axis === 'y' ? 1 : 0, axis === 'z' ? 1 : 0);
+
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    const normal = new THREE.Vector3().crossVectors(moveDragAxis, camDir).cross(moveDragAxis);
+    if (normal.lengthSq() < 1e-6) normal.copy(camDir).negate();
+    normal.normalize();
+    moveDragPlane.setFromNormalAndCoplanarPoint(normal, moveDragStartWorld);
+    const hit = ray.intersectPlane(moveDragPlane, moveDragStartHit);
+    moveDragValid = !!hit;
+}
+
+/** Returns the new LOCAL position (in the object's parent space) for the current ray, or null. */
+export function computeMoveGizmoDragPosition(obj: PlacedObject, ray: THREE.Ray): THREE.Vector3 | null {
+    if (!moveDragValid) return null;
+    if (!ray.intersectPlane(moveDragPlane, moveDragHit)) return null;
+    const dist = moveDragHit.clone().sub(moveDragStartHit).dot(moveDragAxis);
+    const targetWorld = moveDragStartWorld.clone().addScaledVector(moveDragAxis, dist);
+    targetWorld.y = Math.max(0, targetWorld.y);
+    const parent = obj.mesh.parent;
+    if (parent && parent !== scene) {
+        parent.updateMatrixWorld(true);
+        parent.worldToLocal(targetWorld);
+    }
+    return targetWorld;
+}
+
+export function endMoveGizmoDrag() {
+    moveDragValid = false;
+}
+
 export function showFloatingPullIndicator(
     clientX: number,
     clientY: number,
