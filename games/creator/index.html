@@ -418,24 +418,43 @@
             </button>
             <!-- Lisa ekraanile midagi (Screen UI selector) -->
             <div id="screen-element-dropdown-wrapper" style="position: relative; display: inline-block;">
-                <button id="btn-add-screen-element" class="btn-studio" title="Lisa ekraanile midagi (Nupp, Ekraan, Lae oma pilt)" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399; color: #fff; font-weight: 800; box-shadow: 0 4px 14px rgba(16,185,129,0.35); display: flex; align-items: center; gap: 6px;">
+                <button id="btn-add-screen-element" class="btn-studio" title="Lisa ekraanile midagi (Frame, TextFrame, TextButton, FrameButton)" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399; color: #fff; font-weight: 800; box-shadow: 0 4px 14px rgba(16,185,129,0.35); display: flex; align-items: center; gap: 6px;">
                     <span>🖥️</span> <span>Lisa ekraanile midagi</span> <span style="font-size: 0.7rem;">▼</span>
                 </button>
-                <div id="screen-element-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 250px; background: rgba(15, 23, 42, 0.98); border: 2px solid #10b981; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 20px rgba(16,185,129,0.25); z-index: 10000; overflow: hidden; backdrop-filter: blur(12px); flex-direction: column;">
-                    <button class="dropdown-item-screen-element" id="btn-add-screen-btn" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
+                <div id="screen-element-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 260px; background: rgba(15, 23, 42, 0.98); border: 2px solid #10b981; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 20px rgba(16,185,129,0.25); z-index: 10000; overflow: hidden; backdrop-filter: blur(12px); flex-direction: column;">
+                    <!-- 1. Frame -->
+                    <button class="dropdown-item-screen-element" id="btn-add-screen-frame" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.25rem;">🔲</span>
+                        <div>
+                            <div style="color: #38bdf8; font-weight: 800;">Frame</div>
+                            <div style="font-size: 0.73rem; color: #94a3b8;">Tühi raam / paneel ekraanil</div>
+                        </div>
+                    </button>
+                    <!-- 2. TextFrame -->
+                    <button class="dropdown-item-screen-element" id="btn-add-screen-textframe" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.25rem;">📄</span>
+                        <div>
+                            <div style="color: #a78bfa; font-weight: 800;">TextFrame</div>
+                            <div style="font-size: 0.73rem; color: #94a3b8;">Tekstiga raam / teadete aken</div>
+                        </div>
+                    </button>
+                    <!-- 3. TextButton -->
+                    <button class="dropdown-item-screen-element" id="btn-add-screen-textbutton" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 1.25rem;">🔘</span>
                         <div>
-                            <div style="color: #34d399; font-weight: 800;">Nupp</div>
-                            <div style="font-size: 0.73rem; color: #94a3b8;">Klikitav ekraaninupp tegevusega</div>
+                            <div style="color: #34d399; font-weight: 800;">TextButton</div>
+                            <div style="font-size: 0.73rem; color: #94a3b8;">Klikitav tekstinupp tegevusega</div>
                         </div>
                     </button>
-                    <button class="dropdown-item-screen-element" id="btn-add-screen-panel" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">🖥️</span>
+                    <!-- 4. FrameButton -->
+                    <button class="dropdown-item-screen-element" id="btn-add-screen-framebutton" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.25rem;">🔲🔘</span>
                         <div>
-                            <div style="color: #38bdf8; font-weight: 800;">Ekraan</div>
-                            <div style="font-size: 0.73rem; color: #94a3b8;">Infoaken / paneel ekraanil</div>
+                            <div style="color: #f59e0b; font-weight: 800;">FrameButton</div>
+                            <div style="font-size: 0.73rem; color: #94a3b8;">Interaktiivne raam-nupp</div>
                         </div>
                     </button>
+                    <!-- 5. Lae oma pilt nupp -->
                     <button class="dropdown-item-screen-element" id="btn-add-screen-img-btn" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 1.25rem;">🖼️🔘</span>
                         <div>
@@ -443,6 +462,7 @@
                             <div style="font-size: 0.73rem; color: #94a3b8;">Oma pildiga klikitav nupp</div>
                         </div>
                     </button>
+                    <!-- 6. Lae oma pilt ekraan -->
                     <button class="dropdown-item-screen-element" id="btn-add-screen-img-panel" style="padding: 11px 15px; background: transparent; border: none; color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 1.25rem;">🖼️🖥️</span>
                         <div>

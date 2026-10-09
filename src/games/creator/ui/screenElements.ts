@@ -44,25 +44,48 @@ function setupDropdownListeners() {
         }
     });
 
-    // 1. Nupp (Button)
+    // 1. Frame (Raam)
+    document.getElementById('btn-add-screen-frame')?.addEventListener('click', () => {
+        if (menu) menu.style.display = 'none';
+        addScreenElement('frame');
+    });
+
+    // 2. TextFrame (Tekstiraam)
+    document.getElementById('btn-add-screen-textframe')?.addEventListener('click', () => {
+        if (menu) menu.style.display = 'none';
+        addScreenElement('text_frame');
+    });
+
+    // 3. TextButton (Tekstinupp)
+    document.getElementById('btn-add-screen-textbutton')?.addEventListener('click', () => {
+        if (menu) menu.style.display = 'none';
+        addScreenElement('text_button');
+    });
+
+    // 4. FrameButton (Raamnupp)
+    document.getElementById('btn-add-screen-framebutton')?.addEventListener('click', () => {
+        if (menu) menu.style.display = 'none';
+        addScreenElement('frame_button');
+    });
+
+    // Legacy listeners support
     document.getElementById('btn-add-screen-btn')?.addEventListener('click', () => {
         if (menu) menu.style.display = 'none';
-        addScreenElement('button');
+        addScreenElement('text_button');
     });
 
-    // 2. Ekraan (Screen panel)
     document.getElementById('btn-add-screen-panel')?.addEventListener('click', () => {
         if (menu) menu.style.display = 'none';
-        addScreenElement('screen');
+        addScreenElement('text_frame');
     });
 
-    // 3. Lae oma pilt nupp (Custom image button)
+    // 5. Lae oma pilt nupp (Custom image button)
     document.getElementById('btn-add-screen-img-btn')?.addEventListener('click', () => {
         if (menu) menu.style.display = 'none';
         addScreenElement('image_button');
     });
 
-    // 4. Lae oma pilt ekraan (Custom image screen display)
+    // 6. Lae oma pilt ekraan (Custom image screen display)
     document.getElementById('btn-add-screen-img-panel')?.addEventListener('click', () => {
         if (menu) menu.style.display = 'none';
         addScreenElement('image_screen');
@@ -77,17 +100,32 @@ export function addScreenElement(type: ScreenElementType, customData?: Partial<S
     const count = list.length + 1;
     const id = 'screen_el_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 
-    let defaultTitle = 'Nupp';
-    let defaultWidth = 140;
-    let defaultHeight = 48;
-    let defaultBg = 'linear-gradient(135deg, #10b981, #059669)';
+    let defaultTitle = 'Frame';
+    let defaultWidth = 200;
+    let defaultHeight = 120;
+    let defaultBg = 'rgba(15, 23, 42, 0.85)';
     let defaultTextColor = '#ffffff';
 
-    if (type === 'screen') {
-        defaultTitle = 'Ekraani Paneel';
+    if (type === 'frame') {
+        defaultTitle = 'Frame';
+        defaultWidth = 200;
+        defaultHeight = 130;
+        defaultBg = 'rgba(15, 23, 42, 0.85)';
+    } else if (type === 'text_frame' || type === 'screen') {
+        defaultTitle = 'TextFrame';
         defaultWidth = 260;
         defaultHeight = 160;
         defaultBg = 'rgba(15, 23, 42, 0.92)';
+    } else if (type === 'text_button' || type === 'button') {
+        defaultTitle = 'TextButton';
+        defaultWidth = 140;
+        defaultHeight = 48;
+        defaultBg = 'linear-gradient(135deg, #10b981, #059669)';
+    } else if (type === 'frame_button') {
+        defaultTitle = 'FrameButton';
+        defaultWidth = 160;
+        defaultHeight = 80;
+        defaultBg = 'linear-gradient(135deg, #1e293b, #334155)';
     } else if (type === 'image_button') {
         defaultTitle = 'Pildi Nupp';
         defaultWidth = 80;
@@ -104,11 +142,21 @@ export function addScreenElement(type: ScreenElementType, customData?: Partial<S
     const defaultX = 60 + ((count * 30) % 300);
     const defaultY = 120 + ((count * 30) % 250);
 
+    const isButtonType = type === 'text_button' || type === 'frame_button' || type === 'button' || type === 'image_button';
+    let defaultText = '';
+    if (type === 'text_button' || type === 'button') {
+        defaultText = 'Vajuta siia!';
+    } else if (type === 'frame_button') {
+        defaultText = 'Nupp';
+    } else if (type === 'text_frame' || type === 'screen') {
+        defaultText = 'Tere tulemast mängu! Siin on sinu teade.';
+    }
+
     const newElement: ScreenElement = {
         id,
         type,
         name: `${defaultTitle} ${count}`,
-        text: type === 'button' ? 'Vajuta siia!' : (type === 'screen' ? 'Tere tulemast mängu! Siin on sinu teade.' : ''),
+        text: defaultText,
         imageUrl: (type === 'image_button' || type === 'image_screen') 
             ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%231e293b" rx="12"/><text x="50" y="55" font-size="34" text-anchor="middle" dominant-baseline="middle">🖼️</text></svg>'
             : undefined,
@@ -116,9 +164,9 @@ export function addScreenElement(type: ScreenElementType, customData?: Partial<S
         size: { width: defaultWidth, height: defaultHeight },
         backgroundColor: defaultBg,
         textColor: defaultTextColor,
-        borderRadius: type === 'image_button' ? 16 : 12,
-        fontSize: type === 'button' ? 15 : 14,
-        action: (type === 'button' || type === 'image_button') ? { type: 'message', value: 'Vajutasid ekraaninuppu! 🎉' } : undefined,
+        borderRadius: (type === 'image_button' || type === 'frame_button') ? 14 : 12,
+        fontSize: (type === 'text_button' || type === 'button') ? 15 : 14,
+        action: isButtonType ? { type: 'message', value: 'Vajutasid ekraaninuppu! 🎉' } : undefined,
         visible: true,
         ...customData
     };
@@ -190,16 +238,47 @@ export function renderScreenElements() {
         }
 
         // Inner Content based on type
-        if (elem.type === 'button') {
+        if (elem.type === 'text_button' || elem.type === 'button') {
             const btnSpan = document.createElement('span');
             btnSpan.style.color = elem.textColor || '#fff';
             btnSpan.style.fontWeight = '800';
             btnSpan.style.fontSize = `${elem.fontSize || 15}px`;
             btnSpan.style.padding = '4px 10px';
             btnSpan.style.textAlign = 'center';
-            btnSpan.textContent = elem.text || 'Nupp';
+            btnSpan.textContent = elem.text || 'TextButton';
             elDiv.appendChild(btnSpan);
-        } else if (elem.type === 'screen') {
+        } else if (elem.type === 'frame_button') {
+            elDiv.style.border = inPlayMode ? '2px solid rgba(245, 158, 11, 0.7)' : '2px dashed rgba(245, 158, 11, 0.8)';
+            elDiv.style.boxShadow = '0 6px 18px rgba(0,0,0,0.4)';
+            if (elem.text) {
+                const btnSpan = document.createElement('span');
+                btnSpan.style.color = elem.textColor || '#fff';
+                btnSpan.style.fontWeight = '700';
+                btnSpan.style.fontSize = `${elem.fontSize || 14}px`;
+                btnSpan.style.padding = '4px 8px';
+                btnSpan.style.textAlign = 'center';
+                btnSpan.textContent = elem.text;
+                elDiv.appendChild(btnSpan);
+            }
+        } else if (elem.type === 'frame') {
+            // Frame is an empty container/panel
+            elDiv.style.border = inPlayMode ? '1px solid rgba(255, 255, 255, 0.15)' : '2px dashed rgba(56, 189, 248, 0.7)';
+            if (!inPlayMode && !elem.text) {
+                const emptyHint = document.createElement('span');
+                emptyHint.style.fontSize = '11px';
+                emptyHint.style.color = 'rgba(255,255,255,0.3)';
+                emptyHint.style.fontWeight = '600';
+                emptyHint.textContent = `[Frame: ${elem.name}]`;
+                elDiv.appendChild(emptyHint);
+            } else if (elem.text) {
+                const txt = document.createElement('div');
+                txt.style.padding = '6px';
+                txt.style.color = elem.textColor || '#cbd5e1';
+                txt.style.fontSize = `${elem.fontSize || 13}px`;
+                txt.textContent = elem.text;
+                elDiv.appendChild(txt);
+            }
+        } else if (elem.type === 'text_frame' || elem.type === 'screen') {
             const titleBar = document.createElement('div');
             titleBar.style.width = '100%';
             titleBar.style.padding = '6px 10px';
@@ -207,11 +286,11 @@ export function renderScreenElements() {
             titleBar.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
             titleBar.style.fontWeight = '800';
             titleBar.style.fontSize = '0.8rem';
-            titleBar.style.color = '#38bdf8';
+            titleBar.style.color = '#a78bfa';
             titleBar.style.display = 'flex';
             titleBar.style.alignItems = 'center';
             titleBar.style.justifyContent = 'space-between';
-            titleBar.innerHTML = `<span>🖥️ ${elem.name}</span>`;
+            titleBar.innerHTML = `<span>📄 ${elem.name}</span>`;
 
             const content = document.createElement('div');
             content.style.flex = '1';
@@ -221,7 +300,7 @@ export function renderScreenElements() {
             content.style.fontSize = `${elem.fontSize || 13}px`;
             content.style.overflowY = 'auto';
             content.style.lineHeight = '1.4';
-            content.textContent = elem.text || 'Info';
+            content.textContent = elem.text || '';
 
             elDiv.appendChild(titleBar);
             elDiv.appendChild(content);
@@ -321,7 +400,7 @@ export function renderScreenElements() {
             // Play Mode Click Reaction
             elDiv.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (elem.type === 'button' || elem.type === 'image_button') {
+                if (elem.type === 'text_button' || elem.type === 'frame_button' || elem.type === 'button' || elem.type === 'image_button') {
                     // Micro bounce animation
                     elDiv.style.transform = 'scale(0.95)';
                     setTimeout(() => { elDiv.style.transform = 'scale(1)'; }, 100);
@@ -408,8 +487,11 @@ export function openScreenElementEditor(elem: ScreenElement) {
 
     const titleEl = document.getElementById('modal-screen-element-title');
     if (titleEl) {
-        let typeLabel = 'Nupp';
-        if (elem.type === 'screen') typeLabel = 'Ekraani Paneel';
+        let typeLabel = 'Frame';
+        if (elem.type === 'frame') typeLabel = 'Frame (Raam)';
+        else if (elem.type === 'text_frame' || elem.type === 'screen') typeLabel = 'TextFrame (Tekstiraam)';
+        else if (elem.type === 'text_button' || elem.type === 'button') typeLabel = 'TextButton (Tekstinupp)';
+        else if (elem.type === 'frame_button') typeLabel = 'FrameButton (Raamnupp)';
         else if (elem.type === 'image_button') typeLabel = 'Pildi Nupp';
         else if (elem.type === 'image_screen') typeLabel = 'Pildi Ekraan';
         titleEl.textContent = `Seadista: ${typeLabel}`;
@@ -438,12 +520,12 @@ export function openScreenElementEditor(elem: ScreenElement) {
         }
     }
 
-    // Action Section (visible for button and image_button)
+    // Action Section (visible for text_button, frame_button, button, image_button)
     const actionWrap = document.getElementById('screen-elem-action-wrap');
     const actionSelect = document.getElementById('screen-elem-action-select') as HTMLSelectElement | null;
     const actionValInput = document.getElementById('screen-elem-action-val') as HTMLInputElement | null;
     if (actionWrap) {
-        const isClickable = elem.type === 'button' || elem.type === 'image_button';
+        const isClickable = elem.type === 'text_button' || elem.type === 'frame_button' || elem.type === 'button' || elem.type === 'image_button';
         actionWrap.style.display = isClickable ? 'flex' : 'none';
         if (isClickable) {
             if (actionSelect) actionSelect.value = elem.action?.type || 'message';
@@ -527,7 +609,8 @@ function setupEditModalListeners() {
             if (heightInput) elem.size.height = Math.max(20, parseInt(heightInput.value, 10) || 40);
             if (bgInput) elem.backgroundColor = bgInput.value;
 
-            if (elem.type === 'button' || elem.type === 'image_button') {
+            const isClickable = elem.type === 'text_button' || elem.type === 'frame_button' || elem.type === 'button' || elem.type === 'image_button';
+            if (isClickable) {
                 if (actionSelect) {
                     elem.action = {
                         type: actionSelect.value as any,

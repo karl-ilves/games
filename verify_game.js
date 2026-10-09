@@ -91,13 +91,13 @@ await (async () => {
         return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
     };
     page.evaluate = async (pageFunction, ...args) => {
-        for (let attempt = 1; attempt <= 10; attempt++) {
+        for (let attempt = 1; attempt <= 15; attempt++) {
             try {
                 const targetFrame = getActiveFrame();
                 return await targetFrame.evaluate(pageFunction, ...args);
             } catch (err) {
-                const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached frame') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 10) {
+                const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 15) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -106,13 +106,13 @@ await (async () => {
         }
     };
     page.click = async (selector, options) => {
-        for (let attempt = 1; attempt <= 6; attempt++) {
+        for (let attempt = 1; attempt <= 10; attempt++) {
             try {
                 const targetFrame = getActiveFrame();
                 return await targetFrame.click(selector, options);
             } catch (err) {
-                const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached frame') || msg.includes('execution context was destroyed')) && attempt < 6) {
+                const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed')) && attempt < 10) {
                     await new Promise(r => setTimeout(r, 300 * attempt));
                 } else {
                     throw err;
@@ -5217,7 +5217,7 @@ await (async () => {
         console.log("   ✅ Roblox Hotbar Inventory (10 slots 1-0, keys 1-0 toggle, bottom placement & click equipping into hand socket visibly) verified successfully in Creator Studio!");
 
         // 6f5. Testing Screen UI Elements ("Lisa ekraanile midagi": Nupp, Ekraan, Lae oma pilt nupp, Lae oma pilt ekraan)
-        console.log("6f5. Testing Screen UI Elements ('Lisa ekraanile midagi': Nupp, Ekraan, Lae oma pilt nupp, Lae oma pilt ekraan)...");
+        console.log("6f5. Testing Screen UI Elements ('Lisa ekraanile midagi': Frame, TextFrame, TextButton, FrameButton, Lae oma pilt nupp, Lae oma pilt ekraan)...");
         const screenElementsTestResult = await page.evaluate(async () => {
             const cs = window.creatorStudio;
             if (!cs) return { error: "creatorStudio not found" };
@@ -5233,18 +5233,22 @@ await (async () => {
             btnDropdown.click();
             const dropdownOpened = dropdownMenu.style.display === 'flex';
 
-            // Verify all 4 option buttons exist in dropdown
-            const btnAddBtn = document.getElementById('btn-add-screen-btn');
-            const btnAddPanel = document.getElementById('btn-add-screen-panel');
+            // Verify all option buttons exist in dropdown (Frame, TextFrame, TextButton, FrameButton, etc.)
+            const btnFrame = document.getElementById('btn-add-screen-frame');
+            const btnTextFrame = document.getElementById('btn-add-screen-textframe');
+            const btnTextBtn = document.getElementById('btn-add-screen-textbutton');
+            const btnFrameBtn = document.getElementById('btn-add-screen-framebutton');
             const btnAddImgBtn = document.getElementById('btn-add-screen-img-btn');
             const btnAddImgPanel = document.getElementById('btn-add-screen-img-panel');
-            if (!btnAddBtn || !btnAddPanel || !btnAddImgBtn || !btnAddImgPanel) {
-                return { error: "Missing one of the 4 screen element buttons in dropdown" };
+            if (!btnFrame || !btnTextFrame || !btnTextBtn || !btnFrameBtn || !btnAddImgBtn || !btnAddImgPanel) {
+                return { error: "Missing screen element buttons in dropdown (Frame, TextFrame, TextButton, FrameButton, img buttons)" };
             }
 
-            // 2. Click all 4 buttons to add elements
-            btnAddBtn.click();
-            btnAddPanel.click();
+            // 2. Click buttons to add elements
+            btnFrame.click();
+            btnTextFrame.click();
+            btnTextBtn.click();
+            btnFrameBtn.click();
             btnAddImgBtn.click();
             btnAddImgPanel.click();
 
@@ -5256,8 +5260,8 @@ await (async () => {
             const renderedCount = container ? container.querySelectorAll('.screen-gui-element').length : 0;
 
             // 3. Test element editor modal
-            const btnElem = elements.find(e => e.type === 'button');
-            if (!btnElem) return { error: "Button element was not created" };
+            const btnElem = elements.find(e => e.type === 'text_button' || e.type === 'button');
+            if (!btnElem) return { error: "TextButton element was not created" };
 
             cs.openScreenElementEditor(btnElem);
             const modal = document.getElementById('screen-element-edit-modal');
@@ -5283,7 +5287,7 @@ await (async () => {
 
             // 4. Test scene serialization and loading
             const sceneData = cs.serializeCurrentScene();
-            const serializedHasScreenElements = Array.isArray(sceneData.screenElements) && sceneData.screenElements.length === 4;
+            const serializedHasScreenElements = Array.isArray(sceneData.screenElements) && sceneData.screenElements.length === 6;
 
             // Clear and reload
             cs.loadSceneFromData(sceneData);
@@ -5324,15 +5328,21 @@ await (async () => {
             if (modal) modal.style.display = 'none';
 
             // Test eye toggle in explorer to hide/show element
-            const eyeBtn = firstScreenRow ? firstScreenRow.querySelector('button') : null;
+            const textBtnRow = Array.from(treeContainer?.querySelectorAll('.workspace-screen-row') || [])
+                .find(row => (row.getAttribute('data-id') === btnElem.id || (row.dataset && row.dataset.screenId === btnElem.id)));
+            const eyeBtn = textBtnRow ? textBtnRow.querySelector('.workspace-screen-vis-btn') : null;
             if (eyeBtn) {
                 eyeBtn.click();
             }
-            const currentBtnElem = (cs.screenElements || []).find(e => e.type === 'button');
+            const currentBtnElem = (cs.screenElements || []).find(e => e.id === btnElem.id);
             const hiddenElementState = currentBtnElem ? currentBtnElem.visible === false : false;
-            // Restore visibility
-            if (eyeBtn) {
-                eyeBtn.click();
+
+            // Re-query eyeBtn because renderWorkspaceTree() re-rendered the tree rows
+            const textBtnRow2 = Array.from(treeContainer?.querySelectorAll('.workspace-screen-row') || [])
+                .find(row => (row.getAttribute('data-id') === btnElem.id || (row.dataset && row.dataset.screenId === btnElem.id)));
+            const eyeBtn2 = textBtnRow2 ? textBtnRow2.querySelector('.workspace-screen-vis-btn') : null;
+            if (eyeBtn2) {
+                eyeBtn2.click();
             }
             const restoredElementState = currentBtnElem ? currentBtnElem.visible === true : false;
 
@@ -5365,11 +5375,11 @@ await (async () => {
         if (!screenElementsTestResult.dropdownOpened) {
             throw new Error("Screen element dropdown menu failed to open on click!");
         }
-        if (screenElementsTestResult.createdCount !== 4 || screenElementsTestResult.renderedCount !== 4) {
-            throw new Error(`Expected 4 screen elements created and rendered, got created=${screenElementsTestResult.createdCount}, rendered=${screenElementsTestResult.renderedCount}`);
+        if (screenElementsTestResult.createdCount !== 6 || screenElementsTestResult.renderedCount !== 6) {
+            throw new Error(`Expected 6 screen elements created and rendered, got created=${screenElementsTestResult.createdCount}, rendered=${screenElementsTestResult.renderedCount}`);
         }
-        if (!screenElementsTestResult.types.includes('button') || !screenElementsTestResult.types.includes('screen') || !screenElementsTestResult.types.includes('image_button') || !screenElementsTestResult.types.includes('image_screen')) {
-            throw new Error(`Expected all 4 types (button, screen, image_button, image_screen), got: ${JSON.stringify(screenElementsTestResult.types)}`);
+        if (!screenElementsTestResult.types.includes('frame') || !screenElementsTestResult.types.includes('text_frame') || !screenElementsTestResult.types.includes('text_button') || !screenElementsTestResult.types.includes('frame_button')) {
+            throw new Error(`Expected types (frame, text_frame, text_button, frame_button), got: ${JSON.stringify(screenElementsTestResult.types)}`);
         }
         if (!screenElementsTestResult.modalOpened || !screenElementsTestResult.modalClosed) {
             throw new Error("Screen element properties edit modal open/close failed!");
@@ -5377,13 +5387,13 @@ await (async () => {
         if (screenElementsTestResult.updatedText !== 'Super Nupp' || screenElementsTestResult.updatedAction !== 'heal') {
             throw new Error(`Screen element editing failed: text=${screenElementsTestResult.updatedText}, action=${screenElementsTestResult.updatedAction}`);
         }
-        if (!screenElementsTestResult.serializedHasScreenElements || screenElementsTestResult.reloadedCount !== 4 || screenElementsTestResult.reloadedDomCount !== 4) {
+        if (!screenElementsTestResult.serializedHasScreenElements || screenElementsTestResult.reloadedCount !== 6 || screenElementsTestResult.reloadedDomCount !== 6) {
             throw new Error(`Screen elements serialization/reloading failed: serialized=${screenElementsTestResult.serializedHasScreenElements}, reloaded=${screenElementsTestResult.reloadedCount}`);
         }
         if (screenElementsTestResult.healthAfterClick < 80) {
             throw new Error(`Screen element button click in Play Test mode should have healed player (expected >= 80, got ${screenElementsTestResult.healthAfterClick})`);
         }
-        if (!screenElementsTestResult.hasScreenGuiHeader || screenElementsTestResult.screenRowsInExplorer !== 4) {
+        if (!screenElementsTestResult.hasScreenGuiHeader || screenElementsTestResult.screenRowsInExplorer !== 6) {
             throw new Error(`ScreenGui in Workspace Explorer check failed: hasHeader=${screenElementsTestResult.hasScreenGuiHeader}, rowsInExplorer=${screenElementsTestResult.screenRowsInExplorer}`);
         }
         if (!screenElementsTestResult.modalOpenedFromExplorer) {
@@ -5392,7 +5402,7 @@ await (async () => {
         if (!screenElementsTestResult.hiddenElementState || !screenElementsTestResult.restoredElementState) {
             throw new Error("Toggling visibility eye button in Workspace Explorer failed!");
         }
-        console.log("   ✅ Screen UI Elements ('Lisa ekraanile midagi': Nupp, Ekraan, Lae oma pilt nupp, Lae oma pilt ekraan, Workspace Explorer ScreenGui, Edit Modal, Serialization, Play Mode Actions) verified successfully!");
+        console.log("   ✅ Screen UI Elements ('Lisa ekraanile midagi': Frame, TextFrame, TextButton, FrameButton, Lae oma pilt nupp, Lae oma pilt ekraan, Workspace Explorer ScreenGui, Edit Modal, Serialization, Play Mode Actions) verified successfully!");
 
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");

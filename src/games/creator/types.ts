@@ -286,7 +286,15 @@ export interface PlayardAiContextMemory {
     learnedRules?: AiSchoolRule[];
 }
 
-export type ScreenElementType = 'button' | 'screen' | 'image_button' | 'image_screen';
+export type ScreenElementType = 
+    | 'frame' 
+    | 'text_frame' 
+    | 'text_button' 
+    | 'frame_button' 
+    | 'button' 
+    | 'screen' 
+    | 'image_button' 
+    | 'image_screen';
 
 export interface ScreenElementAction {
     type: 'message' | 'sound' | 'heal' | 'speed_boost' | 'coins';

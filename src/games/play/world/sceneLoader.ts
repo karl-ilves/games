@@ -85,16 +85,39 @@ function renderPlayScreenElements(elements: any[], state: PlayState) {
             elDiv.style.background = elem.backgroundColor;
         }
 
-        if (elem.type === 'button') {
+        if (elem.type === 'text_button' || elem.type === 'button') {
             const btnSpan = document.createElement('span');
             btnSpan.style.color = elem.textColor || '#fff';
             btnSpan.style.fontWeight = '800';
             btnSpan.style.fontSize = `${elem.fontSize || 15}px`;
             btnSpan.style.padding = '4px 10px';
             btnSpan.style.textAlign = 'center';
-            btnSpan.textContent = elem.text || 'Nupp';
+            btnSpan.textContent = elem.text || 'TextButton';
             elDiv.appendChild(btnSpan);
-        } else if (elem.type === 'screen') {
+        } else if (elem.type === 'frame_button') {
+            elDiv.style.border = '2px solid rgba(245, 158, 11, 0.7)';
+            elDiv.style.boxShadow = '0 6px 18px rgba(0,0,0,0.4)';
+            if (elem.text) {
+                const btnSpan = document.createElement('span');
+                btnSpan.style.color = elem.textColor || '#fff';
+                btnSpan.style.fontWeight = '700';
+                btnSpan.style.fontSize = `${elem.fontSize || 14}px`;
+                btnSpan.style.padding = '4px 8px';
+                btnSpan.style.textAlign = 'center';
+                btnSpan.textContent = elem.text;
+                elDiv.appendChild(btnSpan);
+            }
+        } else if (elem.type === 'frame') {
+            elDiv.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+            if (elem.text) {
+                const txt = document.createElement('div');
+                txt.style.padding = '6px';
+                txt.style.color = elem.textColor || '#cbd5e1';
+                txt.style.fontSize = `${elem.fontSize || 13}px`;
+                txt.textContent = elem.text;
+                elDiv.appendChild(txt);
+            }
+        } else if (elem.type === 'text_frame' || elem.type === 'screen') {
             const titleBar = document.createElement('div');
             titleBar.style.width = '100%';
             titleBar.style.padding = '6px 10px';
@@ -102,8 +125,8 @@ function renderPlayScreenElements(elements: any[], state: PlayState) {
             titleBar.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
             titleBar.style.fontWeight = '800';
             titleBar.style.fontSize = '0.8rem';
-            titleBar.style.color = '#38bdf8';
-            titleBar.innerHTML = `<span>🖥️ ${elem.name || 'Ekraan'}</span>`;
+            titleBar.style.color = '#a78bfa';
+            titleBar.innerHTML = `<span>📄 ${elem.name || 'TextFrame'}</span>`;
 
             const content = document.createElement('div');
             content.style.flex = '1';
@@ -166,7 +189,8 @@ function renderPlayScreenElements(elements: any[], state: PlayState) {
             }
         }
 
-        if (elem.type === 'button' || elem.type === 'image_button') {
+        const isClickable = elem.type === 'text_button' || elem.type === 'frame_button' || elem.type === 'button' || elem.type === 'image_button';
+        if (isClickable) {
             elDiv.addEventListener('click', (e) => {
                 e.stopPropagation();
                 elDiv.style.transform = 'scale(0.95)';

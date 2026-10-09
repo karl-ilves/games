@@ -724,6 +724,7 @@ function renderScreenElementNode(elem: ScreenElement, container: HTMLElement) {
     const row = document.createElement('div');
     row.className = 'workspace-tree-row workspace-screen-row' + (isSelected ? ' active' : '');
     row.dataset.screenId = elem.id;
+    row.setAttribute('data-id', elem.id);
 
     row.style.cssText = `
         display: flex;
@@ -749,16 +750,26 @@ function renderScreenElementNode(elem: ScreenElement, container: HTMLElement) {
     let typeBadgeColor = '#10b981';
     let typeBadgeBg = 'rgba(16, 185, 129, 0.15)';
 
-    if (elem.type === 'button') {
-        icon = '🔘';
-        typeName = 'Nupp';
-        typeBadgeColor = '#10b981';
-        typeBadgeBg = 'rgba(16, 185, 129, 0.15)';
-    } else if (elem.type === 'screen') {
-        icon = '🖥️';
-        typeName = 'Ekraan';
+    if (elem.type === 'frame') {
+        icon = '🔲';
+        typeName = 'Frame';
         typeBadgeColor = '#38bdf8';
         typeBadgeBg = 'rgba(56, 189, 248, 0.15)';
+    } else if (elem.type === 'text_frame' || elem.type === 'screen') {
+        icon = '📄';
+        typeName = 'TextFrame';
+        typeBadgeColor = '#a78bfa';
+        typeBadgeBg = 'rgba(167, 139, 250, 0.15)';
+    } else if (elem.type === 'text_button' || elem.type === 'button') {
+        icon = '🔘';
+        typeName = 'TextButton';
+        typeBadgeColor = '#10b981';
+        typeBadgeBg = 'rgba(16, 185, 129, 0.15)';
+    } else if (elem.type === 'frame_button') {
+        icon = '🔲🔘';
+        typeName = 'FrameButton';
+        typeBadgeColor = '#f59e0b';
+        typeBadgeBg = 'rgba(245, 158, 11, 0.15)';
     } else if (elem.type === 'image_button') {
         icon = '🖼️🔘';
         typeName = 'Pildi Nupp';
@@ -767,8 +778,8 @@ function renderScreenElementNode(elem: ScreenElement, container: HTMLElement) {
     } else if (elem.type === 'image_screen') {
         icon = '🖼️';
         typeName = 'Pildi Ekraan';
-        typeBadgeColor = '#a855f7';
-        typeBadgeBg = 'rgba(168, 85, 247, 0.15)';
+        typeBadgeColor = '#ec4899';
+        typeBadgeBg = 'rgba(236, 72, 153, 0.15)';
     }
 
     iconSpan.innerText = icon;
@@ -811,6 +822,7 @@ function renderScreenElementNode(elem: ScreenElement, container: HTMLElement) {
 
     // Visibility Toggle (Eye icon)
     const visBtn = document.createElement('button');
+    visBtn.className = 'workspace-screen-vis-btn';
     visBtn.innerHTML = elem.visible !== false ? '👁️' : '🕶️';
     visBtn.title = elem.visible !== false ? 'Peida ekraanilt' : 'Näita ekraanil';
     visBtn.style.cssText = `
