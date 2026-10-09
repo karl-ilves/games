@@ -82,6 +82,8 @@ export interface PlacedObject {
     pbxPrice?: number;
     dealsDamage?: boolean;
     damageAmount?: number;
+    holdableRole?: HoldableRole;
+    weaponConfig?: WeaponConfig;
     isHeld?: boolean;
     gripOffset?: GripOffset;
     customModelData?: {
@@ -203,6 +205,18 @@ export interface GripOffset {
     position: { x: number; y: number; z: number };
     rotation: { x: number; y: number; z: number };
     scale: { x: number; y: number; z: number };
+}
+
+export type HoldableRole = 'item' | 'sword' | 'gun';
+
+export interface WeaponConfig {
+    role: HoldableRole;
+    damage: number;
+    reachDistance?: number;
+    secondHandPos?: { x: number; y: number; z: number };
+    bulletOffset?: { x: number; y: number; z: number };
+    bulletRotation?: { x: number; y: number; z: number };
+    bulletScale?: { x: number; y: number; z: number };
 }
 
 export type StudioToolMode = "mouse" | "mover" | "puller" | "rotator";

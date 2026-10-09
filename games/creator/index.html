@@ -1127,9 +1127,56 @@
                 <button id="btn-close-hand-anim" style="background: transparent; border: none; color: #fff; font-size: 1.3rem; cursor: pointer; padding: 4px 8px;">✕</button>
             </div>
 
-            <!-- Top Toolbar: Mover vs Puller tool (NO mouse tool!) + Rotation shortcuts -->
+            <!-- Top Toolbar Row 1: Role Selector (Asi vs Mõõk vs Püss) & Weapon Damage / Config -->
+            <div style="padding: 8px 18px; background: rgba(13, 19, 31, 0.98); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <!-- Role Selector -->
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.8rem; font-weight: 800; color: #a855f7;">Eseme tüüp:</span>
+                    <button id="btn-hand-role-item" class="btn-studio active" style="padding: 5px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000;">
+                        <span>📦</span> <span>Asi</span>
+                    </button>
+                    <button id="btn-hand-role-sword" class="btn-studio" style="padding: 5px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; background: rgba(255,255,255,0.08); color: #94a3b8; border-color: rgba(255,255,255,0.15);">
+                        <span>⚔️</span> <span>Mõõk</span>
+                    </button>
+                    <button id="btn-hand-role-gun" class="btn-studio" style="padding: 5px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; background: rgba(255,255,255,0.08); color: #94a3b8; border-color: rgba(255,255,255,0.15);">
+                        <span>🔫</span> <span>Püss</span>
+                    </button>
+                </div>
+
+                <!-- Weapon Damage & Weapon-specific buttons -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <!-- Damage Input (visible for sword and gun) -->
+                    <div id="hand-damage-wrap" style="display: none; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.8rem; font-weight: 800; color: #f87171;">💥 Kahju (HP):</span>
+                        <input type="number" id="hand-damage-input" value="35" min="1" max="1000" style="width: 60px; background: #1e293b; border: 1.5px solid #ef4444; border-radius: 6px; color: #fff; padding: 3px 8px; font-size: 0.82rem; font-weight: 800; outline: none;">
+                    </div>
+
+                    <!-- Sword Reach Indicator & Target Switcher -->
+                    <div id="hand-sword-reach-indicator" style="display: none; align-items: center; gap: 5px; font-size: 0.78rem; color: #c084fc; font-weight: 800; background: rgba(168,85,247,0.15); border: 1px solid #a855f7; border-radius: 6px; padding: 3px 9px;">
+                        <span>📏 Ulatus:</span>
+                        <span id="hand-sword-reach-val" style="color: #ffd32a;">1.8</span><span>m</span>
+                    </div>
+
+                    <div id="hand-sword-target-wrap" style="display: none; align-items: center; gap: 4px;">
+                        <button id="btn-hand-target-sword" class="btn-studio active" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 800; border-radius: 6px; background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff;">
+                            <span>⚔️ Mõõk</span>
+                        </button>
+                        <button id="btn-hand-target-hand2" class="btn-studio" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 800; border-radius: 6px; background: rgba(255,255,255,0.08); color: #94a3b8; border-color: rgba(255,255,255,0.15);">
+                            <span>✋ Teine käsi (ainult liiguta)</span>
+                        </button>
+                    </div>
+
+                    <!-- Gun: "Sea kuul" Button -->
+                    <button id="btn-hand-configure-bullet" class="btn-studio" style="display: none; padding: 5px 14px; font-size: 0.82rem; font-weight: 800; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: 1px solid #34d399; box-shadow: 0 0 12px rgba(16,185,129,0.35); cursor: pointer;">
+                        <span>🎯</span> <span id="hand-bullet-btn-label">Sea kuul</span>
+                    </button>
+                    <span id="hand-bullet-mode-badge" style="display: none; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #34d399; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; font-weight: 700;">🟢 Kuuli režiim (Püss lukustatud)</span>
+                </div>
+            </div>
+
+            <!-- Top Toolbar Row 2: Mover vs Puller vs Rotator tools + Rotation shortcuts -->
             <div style="padding: 10px 18px; background: rgba(10, 14, 23, 0.95); border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <!-- Tools Selector (Only Mover and Puller, no mouse!) -->
+                <!-- Tools Selector -->
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <span style="font-size: 0.8rem; font-weight: 800; color: #ffd32a;">Tööriist:</span>
                     <button id="btn-hand-tool-mover" class="btn-studio active" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 800; border-radius: 8px; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000;">

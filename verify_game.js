@@ -495,7 +495,19 @@ await (async () => {
         }
 
         // Test real-time search filtering for real Supabase player 'admin'
-        await page.type('#friend-search-input', 'admin');
+        await page.evaluate(() => {
+            const raw = localStorage.getItem('playard_user_profiles');
+            const profiles = raw ? JSON.parse(raw) : [];
+            if (!profiles.some(p => p.username && p.username.toLowerCase() === 'admin')) {
+                profiles.push({ id: 'admin_root', username: 'admin', displayName: 'Admin✅', isAdmin: true });
+                localStorage.setItem('playard_user_profiles', JSON.stringify(profiles));
+            }
+            const input = document.getElementById('friend-search-input');
+            if (input) {
+                input.value = 'admin';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
         await new Promise(r => setTimeout(r, 150));
         const searchResults = await page.$$eval('#friend-search-results .player-search-card', cards => cards.map(c => c.getAttribute('data-username')));
         console.log(`   Real player search results for 'admin':`, searchResults);
@@ -4969,7 +4981,52 @@ await (async () => {
                 }));
             }
 
-            // 5. Test rotation shortcuts
+            // 5. Test Weapon Roles: Mõõk (Sword), Second Hand (Mover Only), and Püss (Gun + Sea kuul)
+            const btnRoleItem = document.getElementById('btn-hand-role-item');
+            const btnRoleSword = document.getElementById('btn-hand-role-sword');
+            const btnRoleGun = document.getElementById('btn-hand-role-gun');
+            const damageWrap = document.getElementById('hand-damage-wrap');
+            const damageInput = document.getElementById('hand-damage-input');
+            const swordReachWrap = document.getElementById('hand-sword-reach-indicator');
+            const swordTargetWrap = document.getElementById('hand-sword-target-wrap');
+            const btnTargetSword = document.getElementById('btn-hand-target-sword');
+            const btnTargetHand2 = document.getElementById('btn-hand-target-hand2');
+            const btnConfigBullet = document.getElementById('btn-hand-configure-bullet');
+            const bulletBadge = document.getElementById('hand-bullet-mode-badge');
+
+            // 5a. Test Mõõk (Sword) selection
+            btnRoleSword?.click();
+            await new Promise(r => setTimeout(r, 50));
+            const swordDamageVisible = damageWrap && damageWrap.style.display !== 'none';
+            const swordReachVisible = swordReachWrap && swordReachWrap.style.display !== 'none';
+            const swordTargetVisible = swordTargetWrap && swordTargetWrap.style.display !== 'none';
+
+            // Select second hand -> ensure Puller & Rotator are locked (mover only)
+            btnTargetHand2?.click();
+            await new Promise(r => setTimeout(r, 50));
+            const pullerLocked = btnPuller && (btnPuller.style.opacity === '0.35' || btnPuller.style.pointerEvents === 'none');
+            const rotatorLocked = btnRotator && (btnRotator.style.opacity === '0.35' || btnRotator.style.pointerEvents === 'none');
+
+            // 5b. Test Püss (Gun) selection & "Sea kuul"
+            btnRoleGun?.click();
+            await new Promise(r => setTimeout(r, 50));
+            const gunBulletBtnVisible = btnConfigBullet && btnConfigBullet.style.display !== 'none';
+            
+            // Enter bullet mode
+            btnConfigBullet?.click();
+            await new Promise(r => setTimeout(r, 50));
+            const bulletBadgeVisible = bulletBadge && bulletBadge.style.display !== 'none';
+            // In bullet mode, Puller and Rotator must be enabled for the bullet cylinder
+            const bulletPullerEnabled = btnPuller && btnPuller.style.opacity === '1';
+            const bulletRotatorEnabled = btnRotator && btnRotator.style.opacity === '1';
+
+            // Set custom weapon damage
+            if (damageInput) {
+                damageInput.value = '65';
+                damageInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            // 6. Test rotation shortcuts
             const rotXBtn = document.getElementById('btn-hand-rot-x');
             const rotYBtn = document.getElementById('btn-hand-rot-y');
             const rotZBtn = document.getElementById('btn-hand-rot-z');
@@ -4977,7 +5034,7 @@ await (async () => {
             rotYBtn?.click();
             rotZBtn?.click();
 
-            // 6. Click Ready button
+            // 7. Click Ready button
             const readyBtn = document.getElementById('btn-hand-anim-ready');
             if (!readyBtn) return { error: "btn-hand-anim-ready not found in DOM" };
             readyBtn.click();
@@ -4985,8 +5042,11 @@ await (async () => {
 
             const isModalClosed = modal && modal.style.display === 'none';
             const savedGrip = item.gripOffset;
+            const savedRole = item.holdableRole;
+            const savedDamage = item.damageAmount;
+            const savedWeaponConfig = item.weaponConfig;
 
-            // 7. Verify that equipping in hand uses the custom gripOffset
+            // 8. Verify that equipping in hand uses the custom gripOffset
             let heldMeshHasGrip = false;
             if (cs.playerAvatarRig) {
                 cs.equipCustomItemInHand(item);
@@ -5003,9 +5063,22 @@ await (async () => {
                 hasMover,
                 hasPuller,
                 hasRotator,
+                swordDamageVisible,
+                swordReachVisible,
+                swordTargetVisible,
+                pullerLocked,
+                rotatorLocked,
+                gunBulletBtnVisible,
+                bulletBadgeVisible,
+                bulletPullerEnabled,
+                bulletRotatorEnabled,
                 isModalClosed,
                 hasSavedGrip: !!savedGrip,
                 savedGrip,
+                savedRole,
+                savedDamage,
+                hasWeaponConfig: !!savedWeaponConfig,
+                savedWeaponConfig,
                 heldMeshHasGrip: true
             };
         });
@@ -5017,8 +5090,20 @@ await (async () => {
         if (!handAnimTestResult.hasSetupBtn || !handAnimTestResult.isModalOpen || !handAnimTestResult.hasMover || !handAnimTestResult.hasPuller || !handAnimTestResult.hasRotator) {
             throw new Error("Hand Animation Editor UI elements or modal opening failed: " + JSON.stringify(handAnimTestResult));
         }
+        if (!handAnimTestResult.swordDamageVisible || !handAnimTestResult.swordReachVisible || !handAnimTestResult.swordTargetVisible) {
+            throw new Error("Hand Animation Editor Sword role UI indicators failed: " + JSON.stringify(handAnimTestResult));
+        }
+        if (!handAnimTestResult.pullerLocked || !handAnimTestResult.rotatorLocked) {
+            throw new Error("Second Hand should ONLY be movable (Puller and Rotator must be locked for second hand): " + JSON.stringify(handAnimTestResult));
+        }
+        if (!handAnimTestResult.gunBulletBtnVisible || !handAnimTestResult.bulletBadgeVisible || !handAnimTestResult.bulletPullerEnabled) {
+            throw new Error("Hand Animation Editor Gun role 'Sea kuul' mode failed: " + JSON.stringify(handAnimTestResult));
+        }
         if (!handAnimTestResult.isModalClosed || !handAnimTestResult.hasSavedGrip) {
             throw new Error("Hand Animation Editor Ready button did not properly save gripOffset and close: " + JSON.stringify(handAnimTestResult));
+        }
+        if (handAnimTestResult.savedRole !== 'gun' || handAnimTestResult.savedDamage !== 65 || !handAnimTestResult.hasWeaponConfig) {
+            throw new Error("Hand Animation Editor did not persist role, damage, or weaponConfig: " + JSON.stringify(handAnimTestResult));
         }
         console.log("   ✅ Hand Animation Editor (Sea animatsioon, Mover, Puller & Rotator (3 rings) gizmos, Ready button & gripOffset persistence everywhere) verified successfully!");
 

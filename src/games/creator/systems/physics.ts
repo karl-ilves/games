@@ -349,6 +349,14 @@ export function equipCustomItemInHand(item: PlacedObject | CatalogItem) {
     if (slotIdx !== -1) {
         setEquippedInventoryIndex(slotIdx);
     }
+
+    // Update player attack damage if weapon has custom damage or config
+    if ('weaponConfig' in item && item.weaponConfig?.damage) {
+        csState.playerAttackDamage = item.weaponConfig.damage;
+    } else if ('damageAmount' in item && item.damageAmount) {
+        csState.playerAttackDamage = item.damageAmount;
+    }
+
     updateGameplayHUD();
 }
 
@@ -455,14 +463,51 @@ export function playerAttack() {
     humanCharacter.rotation.x = -0.3;
     setTimeout(() => { humanCharacter.rotation.x = 0; }, 150);
 
+    const equippedItem = equippedInventoryIndex >= 0 ? playerInventory[equippedInventoryIndex] : null;
+    const holdableObj = equippedItem?.objectRef as PlacedObject | undefined;
+    const role = holdableObj?.holdableRole || holdableObj?.weaponConfig?.role || 'item';
+    const effectiveDamage = holdableObj?.weaponConfig?.damage || holdableObj?.damageAmount || playerAttackDamage;
+    const reach = (role === 'sword' && holdableObj?.weaponConfig?.reachDistance)
+        ? Math.max(3.0, holdableObj.weaponConfig.reachDistance)
+        : (role === 'gun' ? 30.0 : 4.2);
+
+    // If gun: shoot visual bullet projectile forward
+    if (role === 'gun') {
+        const bulletGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.35, 12);
+        bulletGeo.rotateX(Math.PI / 2);
+        const bulletMat = new THREE.MeshStandardMaterial({
+            color: 0xf59e0b,
+            emissive: 0xd97706,
+            emissiveIntensity: 0.8,
+            metalness: 0.8
+        });
+        const bulletMesh = new THREE.Mesh(bulletGeo, bulletMat);
+        const shootOrigin = humanCharacter.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+        bulletMesh.position.copy(shootOrigin);
+        bulletMesh.rotation.copy(humanCharacter.rotation);
+        scene.add(bulletMesh);
+
+        const shootDir = new THREE.Vector3(0, 0, 1).applyEuler(humanCharacter.rotation).normalize();
+        let traveled = 0;
+        const speed = 1.0;
+        const bulletInterval = setInterval(() => {
+            bulletMesh.position.addScaledVector(shootDir, speed);
+            traveled += speed;
+            if (traveled >= 25 || !isPlayTestMode) {
+                clearInterval(bulletInterval);
+                scene.remove(bulletMesh);
+            }
+        }, 16);
+    }
+
     // Hit nearby enemies
     for (let i = placedObjects.length - 1; i >= 0; i--) {
         const obj = placedObjects[i];
         if (obj.gameItemType === 'enemy' || obj.gameItemType === 'boss' || obj.enemyData) {
             const dist = humanCharacter.position.distanceTo(obj.mesh.position);
-            if (dist < 4.2) {
+            if (dist < reach) {
                 if (obj.enemyData) {
-                    obj.enemyData.health -= playerAttackDamage;
+                    obj.enemyData.health -= effectiveDamage;
                     playGameSound('hit');
                     
                     // Flash enemy white/red
