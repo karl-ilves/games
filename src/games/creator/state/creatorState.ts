@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PlacedObject, SeaConfig, SceneSnapshot, PlayTestSnapshot, StudioToolMode, PullEdgeAxis } from '../types';
+import { PlacedObject, SeaConfig, SceneSnapshot, PlayTestSnapshot, StudioToolMode, PullEdgeAxis, ScreenElement } from '../types';
 import { AvatarRig } from '../../../shared/avatar/AvatarRig';
 import { InGameEmotesWidget } from '../../../shared/avatar/InGameEmotesWidget';
 
@@ -19,6 +19,9 @@ export function setPlayTestMode(val: boolean) { isPlayTestMode = val; }
 
 export let placedObjects: PlacedObject[] = [];
 export function setPlacedObjects(val: PlacedObject[]) { placedObjects = val; }
+
+export let screenElements: ScreenElement[] = [];
+export function setScreenElements(val: ScreenElement[]) { screenElements = val; }
 
 export let selectedObject: PlacedObject | null = null;
 export function setSelectedObject(val: PlacedObject | null) { selectedObject = val; }
@@ -264,6 +267,7 @@ export const csState: any = {
     get clock() { return clock; }, set clock(val: any) { clock = val; },
     get isPlayTestMode() { return isPlayTestMode; }, set isPlayTestMode(val: any) { isPlayTestMode = val; },
     get placedObjects() { return placedObjects; }, set placedObjects(val: any) { placedObjects = val; },
+    get screenElements() { return screenElements; }, set screenElements(val: any) { screenElements = val; },
     get selectedObject() { return selectedObject; }, set selectedObject(val: any) { selectedObject = val; },
     get isTeleporting() { return isTeleporting; }, set isTeleporting(val: any) { isTeleporting = val; },
     get playerHealth() { return playerHealth; }, set playerHealth(val: any) { playerHealth = val; },

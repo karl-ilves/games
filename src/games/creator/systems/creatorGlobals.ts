@@ -6,7 +6,7 @@ import {
     playerSpeedMultiplier, isCheatersConfirmed, currentPublishThumbnail,
     currentGameMaxPlayers, currentGameMinAge, currentGameAgeRating,
     currentVehicle, playTestWorldSnapshots, characterYaw, setCharacterYaw,
-    keys, placedObjects, selectedObject, isPlayTestMode, camera, renderer
+    keys, placedObjects, selectedObject, isPlayTestMode, camera, renderer, screenElements
 } from '../state/creatorState';
 import { CATALOG_DATABASE, getStudioTestPlaybux, updateStudioTestPlaybuxDisplay } from '../catalog/creatorCatalog';
 import {
@@ -62,6 +62,12 @@ import {
     spawnBlockObject, pullSelectedObject
 } from './gizmos';
 import { aiTierService, AI_TIER_CONFIGS } from '../../../shared/aiTierService';
+import {
+    addScreenElement,
+    renderScreenElements,
+    openScreenElementEditor,
+    executeScreenElementAction
+} from '../ui/screenElements';
 
 export function setupCreatorGlobals() {
     (window as any).creatorStudio = {
@@ -187,6 +193,11 @@ export function setupCreatorGlobals() {
         getDescendantIds,
         toggleWorkspacePanel,
         openHandAnimationEditor,
-        closeHandAnimationEditor
+        closeHandAnimationEditor,
+        get screenElements() { return screenElements; },
+        addScreenElement,
+        renderScreenElements,
+        openScreenElementEditor,
+        executeScreenElementAction
     };
 }

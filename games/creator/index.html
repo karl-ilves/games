@@ -416,6 +416,42 @@
             <button id="btn-add-block" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; box-shadow: 0 4px 14px rgba(0,242,254,0.4);">
                 <span>Add Block</span>
             </button>
+            <!-- Lisa ekraanile midagi (Screen UI selector) -->
+            <div id="screen-element-dropdown-wrapper" style="position: relative; display: inline-block;">
+                <button id="btn-add-screen-element" class="btn-studio" title="Lisa ekraanile midagi (Nupp, Ekraan, Lae oma pilt)" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399; color: #fff; font-weight: 800; box-shadow: 0 4px 14px rgba(16,185,129,0.35); display: flex; align-items: center; gap: 6px;">
+                    <span>🖥️</span> <span>Lisa ekraanile midagi</span> <span style="font-size: 0.7rem;">▼</span>
+                </button>
+                <div id="screen-element-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 250px; background: rgba(15, 23, 42, 0.98); border: 2px solid #10b981; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 20px rgba(16,185,129,0.25); z-index: 10000; overflow: hidden; backdrop-filter: blur(12px); flex-direction: column;">
+                    <button class="dropdown-item-screen-element" id="btn-add-screen-btn" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.25rem;">🔘</span>
+                        <div>
+                            <div style="color: #34d399; font-weight: 800;">Nupp</div>
+                            <div style="font-size: 0.73rem; color: #94a3b8;">Klikitav ekraaninupp tegevusega</div>
+                        </div>
+                    </button>
+                    <button class="dropdown-item-screen-element" id="btn-add-screen-panel" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.25rem;">🖥️</span>
+                        <div>
+                            <div style="color: #38bdf8; font-weight: 800;">Ekraan</div>
+                            <div style="font-size: 0.73rem; color: #94a3b8;">Infoaken / paneel ekraanil</div>
+                        </div>
+                    </button>
+                    <button class="dropdown-item-screen-element" id="btn-add-screen-img-btn" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.25rem;">🖼️🔘</span>
+                        <div>
+                            <div style="color: #ffd32a; font-weight: 800;">Lae oma pilt nupp</div>
+                            <div style="font-size: 0.73rem; color: #94a3b8;">Oma pildiga klikitav nupp</div>
+                        </div>
+                    </button>
+                    <button class="dropdown-item-screen-element" id="btn-add-screen-img-panel" style="padding: 11px 15px; background: transparent; border: none; color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.25rem;">🖼️🖥️</span>
+                        <div>
+                            <div style="color: #f472b6; font-weight: 800;">Lae oma pilt ekraan</div>
+                            <div style="font-size: 0.73rem; color: #94a3b8;">Oma pildi kuvamise paneel</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
             <button id="btn-toggle-workspace" class="btn-studio" title="Ava / peida Workspace Exploreri aken" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(59, 130, 246, 0.25)); border: 1.5px solid #00f2fe; color: #00f2fe; font-weight: 800; box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);">
                 <span>🌐</span> <span>Workspace</span>
             </button>
@@ -2027,6 +2063,92 @@
         <span style="font-size: 1.25rem;">🤖🎒</span>
         <span>Playard AI</span>
     </button>
+
+    <!-- 2D Screen Elements Overlay (ScreenGui: Nupud, Ekraanid, Pildid) -->
+    <div id="screen-gui-container" style="position: fixed; inset: 0; pointer-events: none; z-index: 95; overflow: hidden;"></div>
+
+    <!-- Screen Element Properties / Settings Modal -->
+    <div id="screen-element-edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: rgba(15, 23, 42, 0.98); border: 2px solid #10b981; border-radius: 18px; width: 440px; max-width: 90vw; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(16,185,129,0.25); color: #fff; display: flex; flex-direction: column; gap: 14px;">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                <h3 id="modal-screen-element-title" style="margin: 0; font-size: 1.15rem; color: #34d399; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <span>⚙️</span> <span>Seadista ekraanielementi</span>
+                </h3>
+                <button id="btn-close-screen-elem-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; padding: 2px 6px;">✕</button>
+            </div>
+
+            <!-- Name / Identifier -->
+            <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px;">Nimi / Identifikaator:</label>
+                <input type="text" id="screen-elem-name-input" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.88rem; outline: none;">
+            </div>
+
+            <!-- Text / Caption -->
+            <div id="screen-elem-text-wrap">
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px;">Tekst / Kirjeldus:</label>
+                <input type="text" id="screen-elem-text-input" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.88rem; outline: none;">
+            </div>
+
+            <!-- Image Upload (Visible for Image Button & Image Screen) -->
+            <div id="screen-elem-image-wrap" style="display: none; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #ffd32a; display: flex; align-items: center; gap: 6px;">
+                    <span>🖼️</span> <span>Lae oma pilt (Upload Picture):</span>
+                </label>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img id="screen-elem-image-preview" src="" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #0f172a;">
+                    <div style="flex: 1;">
+                        <input type="file" id="screen-elem-file-input" accept="image/*" style="display: none;">
+                        <button type="button" id="btn-upload-screen-elem-file" class="btn-studio" style="background: linear-gradient(135deg, #ffd32a, #f59e0b); color: #000; font-weight: 800; padding: 8px 14px; font-size: 0.82rem; border-radius: 8px; cursor: pointer; border: none;">
+                            <span>📁</span> <span>Vali pilt arvutist</span>
+                        </button>
+                        <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 4px;">PNG, JPG või SVG fail otse seadmest</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Click Action (Visible for Buttons) -->
+            <div id="screen-elem-action-wrap" style="display: none; flex-direction: column; gap: 6px;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Tegevus vajutamisel (Action on Click):</label>
+                <div style="display: flex; gap: 8px;">
+                    <select id="screen-elem-action-select" style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 10px; font-size: 0.84rem; outline: none;">
+                        <option value="message">💬 Kuva teade</option>
+                        <option value="sound">🔊 Heliefekt</option>
+                        <option value="heal">💖 Ravi mängijat (+25 HP)</option>
+                        <option value="speed_boost">⚡ Kiiruse booster (5s)</option>
+                        <option value="coins">💰 Anna münte (+10)</option>
+                    </select>
+                    <input type="text" id="screen-elem-action-val" placeholder="Teate tekst või väärtus..." style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 10px; font-size: 0.84rem; outline: none;">
+                </div>
+            </div>
+
+            <!-- Size & Dimensions -->
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px;">Laius (Width px):</label>
+                    <input type="number" id="screen-elem-width-input" min="30" max="1000" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 6px 10px; font-size: 0.85rem; outline: none;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px;">Kõrgus (Height px):</label>
+                    <input type="number" id="screen-elem-height-input" min="20" max="1000" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 6px 10px; font-size: 0.85rem; outline: none;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px;">Taustavärv:</label>
+                    <input type="text" id="screen-elem-bg-input" value="#10b981" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 6px 10px; font-size: 0.85rem; outline: none;">
+                </div>
+            </div>
+
+            <!-- Actions footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+                <button type="button" id="btn-delete-screen-elem" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; font-weight: 700; cursor: pointer;">
+                    <span>🗑️ Kustuta</span>
+                </button>
+                <button type="button" id="btn-save-screen-elem" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; border-radius: 8px; padding: 8px 22px; font-size: 0.88rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(16,185,129,0.35);">
+                    <span>✓ Valmis</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="/src/games/creator/main.ts"></script>
 </body>

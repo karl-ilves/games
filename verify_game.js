@@ -5212,6 +5212,143 @@ await (async () => {
         }
         console.log("   ✅ Roblox Hotbar Inventory (10 slots 1-0, keys 1-0 toggle, bottom placement & click equipping into hand socket visibly) verified successfully in Creator Studio!");
 
+        // 6f5. Testing Screen UI Elements ("Lisa ekraanile midagi": Nupp, Ekraan, Lae oma pilt nupp, Lae oma pilt ekraan)
+        console.log("6f5. Testing Screen UI Elements ('Lisa ekraanile midagi': Nupp, Ekraan, Lae oma pilt nupp, Lae oma pilt ekraan)...");
+        const screenElementsTestResult = await page.evaluate(async () => {
+            const cs = window.creatorStudio;
+            if (!cs) return { error: "creatorStudio not found" };
+
+            // 1. Verify #btn-add-screen-element exists and dropdown menu exists
+            const btnDropdown = document.getElementById('btn-add-screen-element');
+            const dropdownMenu = document.getElementById('screen-element-dropdown-menu');
+            if (!btnDropdown || !dropdownMenu) {
+                return { error: "Screen element dropdown or button not found in DOM" };
+            }
+
+            // Click button to toggle dropdown menu
+            btnDropdown.click();
+            const dropdownOpened = dropdownMenu.style.display === 'flex';
+
+            // Verify all 4 option buttons exist in dropdown
+            const btnAddBtn = document.getElementById('btn-add-screen-btn');
+            const btnAddPanel = document.getElementById('btn-add-screen-panel');
+            const btnAddImgBtn = document.getElementById('btn-add-screen-img-btn');
+            const btnAddImgPanel = document.getElementById('btn-add-screen-img-panel');
+            if (!btnAddBtn || !btnAddPanel || !btnAddImgBtn || !btnAddImgPanel) {
+                return { error: "Missing one of the 4 screen element buttons in dropdown" };
+            }
+
+            // 2. Click all 4 buttons to add elements
+            btnAddBtn.click();
+            btnAddPanel.click();
+            btnAddImgBtn.click();
+            btnAddImgPanel.click();
+
+            const elements = cs.screenElements || [];
+            const types = elements.map(e => e.type);
+
+            // Verify container in DOM
+            const container = document.getElementById('screen-gui-container');
+            const renderedCount = container ? container.querySelectorAll('.screen-gui-element').length : 0;
+
+            // 3. Test element editor modal
+            const btnElem = elements.find(e => e.type === 'button');
+            if (!btnElem) return { error: "Button element was not created" };
+
+            cs.openScreenElementEditor(btnElem);
+            const modal = document.getElementById('screen-element-edit-modal');
+            const modalOpened = modal && modal.style.display !== 'none';
+
+            // Change properties: text = 'Super Nupp', action = 'heal', value = '50'
+            const textInput = document.getElementById('screen-elem-text-input');
+            const actionSelect = document.getElementById('screen-elem-action-select');
+            const actionValInput = document.getElementById('screen-elem-action-val');
+            if (textInput) textInput.value = 'Super Nupp';
+            if (actionSelect) {
+                actionSelect.value = 'heal';
+                actionSelect.dispatchEvent(new Event('change'));
+            }
+            if (actionValInput) actionValInput.value = '50';
+
+            // Save modal
+            document.getElementById('btn-save-screen-elem')?.click();
+            const modalClosed = modal && modal.style.display === 'none';
+            const updatedText = btnElem.text;
+            const updatedAction = btnElem.action?.type;
+            const updatedVal = btnElem.action?.value;
+
+            // 4. Test scene serialization and loading
+            const sceneData = cs.serializeCurrentScene();
+            const serializedHasScreenElements = Array.isArray(sceneData.screenElements) && sceneData.screenElements.length === 4;
+
+            // Clear and reload
+            cs.loadSceneFromData(sceneData);
+            const reloadedCount = (cs.screenElements || []).length;
+            const reloadedDomCount = container ? container.querySelectorAll('.screen-gui-element').length : 0;
+
+            // 5. Test Play Test mode execution of button action
+            // Enter play mode
+            document.getElementById('btn-toggle-play-test')?.click();
+            await new Promise(r => setTimeout(r, 200));
+
+            // Set health down to 40 inside play mode
+            cs.damagePlayer(60);
+
+            const btnDom = container?.querySelector(`[data-id="${btnElem.id}"]`);
+            if (btnDom) {
+                btnDom.click();
+            }
+            await new Promise(r => setTimeout(r, 200));
+            const healthAfterClick = cs.playerHealth;
+
+            // Exit play mode
+            document.getElementById('btn-toggle-play-test')?.click();
+            await new Promise(r => setTimeout(r, 150));
+
+            return {
+                dropdownOpened,
+                createdCount: elements.length,
+                types,
+                renderedCount,
+                modalOpened,
+                modalClosed,
+                updatedText,
+                updatedAction,
+                updatedVal,
+                serializedHasScreenElements,
+                reloadedCount,
+                reloadedDomCount,
+                healthAfterClick
+            };
+        });
+
+        console.log("   Screen UI Elements Test Results:", screenElementsTestResult);
+        if (screenElementsTestResult.error) {
+            throw new Error(`Screen UI Elements error: ${screenElementsTestResult.error}`);
+        }
+        if (!screenElementsTestResult.dropdownOpened) {
+            throw new Error("Screen element dropdown menu failed to open on click!");
+        }
+        if (screenElementsTestResult.createdCount !== 4 || screenElementsTestResult.renderedCount !== 4) {
+            throw new Error(`Expected 4 screen elements created and rendered, got created=${screenElementsTestResult.createdCount}, rendered=${screenElementsTestResult.renderedCount}`);
+        }
+        if (!screenElementsTestResult.types.includes('button') || !screenElementsTestResult.types.includes('screen') || !screenElementsTestResult.types.includes('image_button') || !screenElementsTestResult.types.includes('image_screen')) {
+            throw new Error(`Expected all 4 types (button, screen, image_button, image_screen), got: ${JSON.stringify(screenElementsTestResult.types)}`);
+        }
+        if (!screenElementsTestResult.modalOpened || !screenElementsTestResult.modalClosed) {
+            throw new Error("Screen element properties edit modal open/close failed!");
+        }
+        if (screenElementsTestResult.updatedText !== 'Super Nupp' || screenElementsTestResult.updatedAction !== 'heal') {
+            throw new Error(`Screen element editing failed: text=${screenElementsTestResult.updatedText}, action=${screenElementsTestResult.updatedAction}`);
+        }
+        if (!screenElementsTestResult.serializedHasScreenElements || screenElementsTestResult.reloadedCount !== 4 || screenElementsTestResult.reloadedDomCount !== 4) {
+            throw new Error(`Screen elements serialization/reloading failed: serialized=${screenElementsTestResult.serializedHasScreenElements}, reloaded=${screenElementsTestResult.reloadedCount}`);
+        }
+        if (screenElementsTestResult.healthAfterClick < 80) {
+            throw new Error(`Screen element button click in Play Test mode should have healed player (expected >= 80, got ${screenElementsTestResult.healthAfterClick})`);
+        }
+        console.log("   ✅ Screen UI Elements ('Lisa ekraanile midagi': Nupp, Ekraan, Lae oma pilt nupp, Lae oma pilt ekraan, Edit Modal, Serialization, Play Mode Actions) verified successfully!");
+
         // 6g. Game deletion + programmed behaviours in PUBLISHED games
         console.log("6g. Testing Published Game Deletion & Programmed Behaviours (Superhüpe, Speed Boost, Damage) in Published Games...");
         const publishedSetup = await page.evaluate(async () => {

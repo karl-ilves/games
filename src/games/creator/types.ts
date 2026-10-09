@@ -143,6 +143,7 @@ export interface SceneSnapshot {
         script?: ObjectScript;
         customModelData?: any;
     }>;
+    screenElements?: ScreenElement[];
 }
 
 export interface PlayTestSnapshot {
@@ -283,4 +284,27 @@ export interface PlayardAiContextMemory {
     crystalCooldownSec?: number;
     lastConversationTopic?: string;
     learnedRules?: AiSchoolRule[];
+}
+
+export type ScreenElementType = 'button' | 'screen' | 'image_button' | 'image_screen';
+
+export interface ScreenElementAction {
+    type: 'message' | 'sound' | 'heal' | 'speed_boost' | 'coins';
+    value?: string | number;
+}
+
+export interface ScreenElement {
+    id: string;
+    type: ScreenElementType;
+    name: string;
+    text?: string;
+    imageUrl?: string;
+    position: { x: number; y: number }; // percentage 0-100 or px
+    size: { width: number; height: number }; // px
+    backgroundColor?: string;
+    textColor?: string;
+    borderRadius?: number;
+    fontSize?: number;
+    action?: ScreenElementAction;
+    visible?: boolean;
 }

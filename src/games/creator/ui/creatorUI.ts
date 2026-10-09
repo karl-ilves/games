@@ -149,6 +149,7 @@ import { yardService } from '../../../shared/yardService';
 import { getCurrentUserProfile, isPlayardOwner } from '../../../auth';
 import { t } from '../../../shared/i18n_dict';
 import { updateOrbitCamera } from './orbitCamera';
+import { initScreenElementsSystem, renderScreenElements } from './screenElements';
 
 export function spawnObjectIntoScene(itemOrId: CatalogItem | string) {
     let catalogItem: CatalogItem;
@@ -391,6 +392,7 @@ export function serializeCurrentScene() {
                 portalTargetTitle: p.portalTargetTitle
             };
         }),
+        screenElements: csState.screenElements ? JSON.parse(JSON.stringify(csState.screenElements)) : [],
         updatedAt: Date.now()
     };
 }
@@ -934,6 +936,12 @@ export function loadSceneFromData(sceneData: any) {
         });
         renderWorkspaceTree();
     }
+
+    // Restore Screen Elements (Lisa ekraanile midagi)
+    csState.screenElements = Array.isArray(sceneData.screenElements)
+        ? JSON.parse(JSON.stringify(sceneData.screenElements))
+        : [];
+    renderScreenElements();
 }
 
 export function deleteSelectedObject() {
@@ -1983,6 +1991,7 @@ export function setupStudioEvents() {
                 }
 
                 updateGameplayHUD();
+                renderScreenElements();
             } else {
                 if (currentVehicle) exitVehicle();
                 csState.currentVehicle = null;
@@ -2092,6 +2101,7 @@ export function setupStudioEvents() {
                 if (shopModal) shopModal.style.display = 'none';
 
                 updateOrbitCamera();
+                renderScreenElements();
             }
         });
     }
@@ -2497,6 +2507,9 @@ export function setupStudioEvents() {
             });
         }
     }
+
+    // Initialize 2D Screen Elements (Lisa ekraanile midagi)
+    initScreenElementsSystem();
 }
 
 export function setupCatalogEvents() {

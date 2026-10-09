@@ -402,6 +402,11 @@ export function healPlayer(amount: number) {
     setTimeout(() => { document.body.style.boxShadow = 'none'; }, 200);
 }
 
+export function boostPlayerSpeed(multiplier = 1.6, durationSeconds = 5) {
+    csState.playerSpeedMultiplier = multiplier;
+    csState.playerSpeedBoostEndTime = Date.now() + durationSeconds * 1000;
+}
+
 export function isPlayerTouchingOrOnTop(playerPos: THREE.Vector3, p: PlacedObject): boolean {
     if (!p.mesh) return false;
     const box = new THREE.Box3().setFromObject(p.mesh);
