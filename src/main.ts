@@ -65,6 +65,8 @@ try {
     });
     (window as any).playardAvatarWidget = avatarWidget;
     (window as any).playardAvatarShop = avatarShopModal;
+    const curProf = getCurrentUserProfile();
+    updateAdminControlsVisibility(curProf?.email, curProf?.username);
     import('./shared/avatar/EmoteAudio').then(m => {
         (window as any).playardEmoteAudio = m.emoteAudio;
     }).catch(() => {});
@@ -73,8 +75,8 @@ try {
 }
 
 window.addEventListener('playard_auth_changed', (e: any) => {
-    const profile = e.detail?.profile || e.detail;
-    updateAdminControlsVisibility(profile?.email, profile?.username);
+    const profile = e.detail && 'profile' in e.detail ? e.detail.profile : e.detail;
+    updateAdminControlsVisibility(profile ? profile.email : null, profile ? profile.username : null);
     renderRecentlyPlayed();
     if (avatarWidget) avatarWidget.updateProfileUI();
 });

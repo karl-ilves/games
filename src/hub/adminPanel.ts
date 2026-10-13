@@ -17,7 +17,12 @@ export function updateAdminControlsVisibility(userEmail?: string | null, usernam
     const usernameToCheck = username !== undefined ? username : prof?.username;
 
     const showAdminPanel = isUserAdmin(emailToCheck);
-    const isEstonian = isPlayardOwner(emailToCheck) || (userEmail === undefined ? isOwnerUser(prof) : isOwnerUser(usernameToCheck));
+    const isEstonian = !showAdminPanel && (
+        isPlayardOwner(emailToCheck) ||
+        isOwnerUser(usernameToCheck) ||
+        (userEmail !== null && isOwnerUser(prof)) ||
+        (userEmail !== null && !!prof?.isAdmin && !isUserAdmin(prof?.email))
+    );
 
     if (adminStreakControls) {
         adminStreakControls.style.display = showAdminPanel ? 'flex' : 'none';

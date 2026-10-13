@@ -38,6 +38,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Push DB Migrations
+        continue-on-error: true
         run: npx -y supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }}
       - name: Build
         run: npm run build

@@ -864,7 +864,8 @@ export function setupOwnerPanel() {
     if (openOwnerBtn && modalOwner) {
         openOwnerBtn.addEventListener('click', () => {
             const prof = getCurrentUserProfile();
-            if (!isPlayardOwner(prof?.email) && !isOwnerUser(prof)) {
+            const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof) || (!!prof?.isAdmin && (prof?.email || '').trim().toLowerCase() !== 'grx@trenet.ee');
+            if (!isOwner) {
                 return;
             }
             modalOwner.style.display = 'flex';
@@ -897,7 +898,8 @@ export function setupOwnerPanel() {
     if (banSubmitBtn && banInput) {
         const triggerManualBan = async () => {
             const prof = getCurrentUserProfile();
-            if (!isPlayardOwner(prof?.email) && !isOwnerUser(prof)) {
+            const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof) || (!!prof?.isAdmin && (prof?.email || '').trim().toLowerCase() !== 'grx@trenet.ee');
+            if (!isOwner) {
                 if (statusEl) {
                     statusEl.textContent = '❌ Ainult Playard Owner saab mängijaid bännida!';
                     statusEl.style.color = '#ff4757';

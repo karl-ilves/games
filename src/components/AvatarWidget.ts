@@ -113,7 +113,7 @@ export class AvatarWidget {
             yardVal.textContent = yardService.getYards().toLocaleString();
         }
         if (ownerBtn) {
-            const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof);
+            const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof) || (!!prof?.isAdmin && (prof?.email || '').trim().toLowerCase() !== 'grx@trenet.ee');
             ownerBtn.style.display = isOwner ? 'inline-flex' : 'none';
         }
     }
