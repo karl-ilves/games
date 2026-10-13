@@ -262,6 +262,31 @@ export function generateLargeGameBannerDataUrl(game: GamePreviewInfo): string {
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+const TEST_DUMMY_USERNAMES = new Set([
+    'driver_bob',
+    'playeralpha',
+    'playerbeta',
+    'historicalplayer1',
+    'bantestplayer99',
+    'kawe1234',
+    'player9yo',
+    'minionbanana0_0'
+]);
+
+const realDatabaseUsernames = new Set<string>();
+
+function isTestModeActive(): boolean {
+    return typeof window !== 'undefined' && !!(window as any).__PLAYARD_TEST_MODE__;
+}
+
+export function isTestDummyOrFakePlayer(username: string): boolean {
+    const u = (username || '').trim().toLowerCase();
+    if (!u) return true;
+    if (TEST_DUMMY_USERNAMES.has(u)) return true;
+    if (u.startsWith('test_') || u.startsWith('bantest')) return true;
+    return false;
+}
+
 function getCurrentPlayerIdentifier(): string {
     const prof = getCurrentUserProfile();
     if (prof && prof.username && prof.username.trim()) {
@@ -275,6 +300,56 @@ function getCurrentPlayerIdentifier(): string {
         } catch (e) {}
     }
     return guestId;
+}
+
+function isRealAllowedPlayerIdent(ident: string, isTestEnv: boolean): boolean {
+    const clean = (ident || '').trim().toLowerCase();
+    if (!clean) return false;
+    if (isTestEnv) return true;
+    if (isTestDummyOrFakePlayer(clean)) return false;
+    if (clean.startsWith('guest_')) return false;
+    if (realDatabaseUsernames.size > 0 && !realDatabaseUsernames.has(clean)) {
+        const myProf = getCurrentUserProfile();
+        const myUser = myProf?.username?.trim().toLowerCase();
+        if (clean !== myUser) return false;
+    }
+    return true;
+}
+
+function purgeFakeAndStaleLocalData() {
+    if (isTestModeActive()) return;
+    const now = Date.now();
+    const isOnHub = typeof window !== 'undefined' && !window.location.pathname.toLowerCase().includes('/games/');
+    const myProf = getCurrentUserProfile();
+    const myUser = myProf?.username?.trim().toLowerCase() || '';
+
+    try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('playard_active_game_')) {
+                const u = key.replace('playard_active_game_', '').trim().toLowerCase();
+                if (isTestDummyOrFakePlayer(u) || (isOnHub && u === myUser)) {
+                    keysToRemove.push(key);
+                    continue;
+                }
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    try {
+                        const parsed = JSON.parse(raw);
+                        const ts = parsed?.timestamp || 0;
+                        // Active game heartbeat must be within the last 45 seconds
+                        if (!parsed || !parsed.url || (now - ts > 45000)) {
+                            keysToRemove.push(key);
+                        }
+                    } catch (e) {
+                        keysToRemove.push(key);
+                    }
+                }
+            }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
 }
 
 function loadAllGameStats(): Record<string, GameStatsRecord> {
@@ -303,6 +378,11 @@ export function getGameStats(gameId: string): {
     activePlayersCount: number;
     activePlayerNames: string[];
 } {
+    const isTestEnv = isTestModeActive();
+    if (!isTestEnv) {
+        purgeFakeAndStaleLocalData();
+    }
+
     const cleanId = (gameId || '').trim().toLowerCase();
     const all = loadAllGameStats();
     const record: GameStatsRecord = all[cleanId] || {
@@ -313,28 +393,51 @@ export function getGameStats(gameId: string): {
     };
 
     const me = getCurrentPlayerIdentifier();
-    const likedSet = new Set((record.likedBy || []).map(u => u.toLowerCase()));
-    const uniqueSet = new Set((record.uniquePlayers || []).map(u => u.toLowerCase()));
+    const isOnHub = typeof window !== 'undefined' && !window.location.pathname.toLowerCase().includes('/games/');
 
-    // Also include players who have this game in localStorage recently played or active games
-    try {
-        const recentRaw = localStorage.getItem('playard_recently_played_games');
-        if (recentRaw) {
-            const recentList = JSON.parse(recentRaw);
-            if (Array.isArray(recentList) && recentList.some((g: any) => (g.id || '').toLowerCase() === cleanId)) {
-                uniqueSet.add(me);
+    const likedSet = new Set(
+        (record.likedBy || [])
+            .map(u => u.toLowerCase().trim())
+            .filter(u => isTestEnv || !isTestDummyOrFakePlayer(u))
+    );
+
+    const uniqueSet = new Set(
+        (record.uniquePlayers || [])
+            .map(u => u.toLowerCase().trim())
+            .filter(u => isRealAllowedPlayerIdent(u, isTestEnv))
+    );
+
+    // Include logged-in real player if they have actually played this game in their Recently Played history
+    if (isRealAllowedPlayerIdent(me, isTestEnv)) {
+        try {
+            const recentKey = !isTestEnv && me && !me.startsWith('guest_')
+                ? `playard_yards_recently_played_${me}`
+                : 'playard_recently_played_games';
+            const recentRaw = localStorage.getItem(recentKey) || localStorage.getItem('playard_recently_played_games');
+            if (recentRaw) {
+                const recentList = JSON.parse(recentRaw);
+                if (Array.isArray(recentList) && recentList.some((g: any) => (g.id || '').toLowerCase() === cleanId)) {
+                    uniqueSet.add(me);
+                }
             }
-        }
-    } catch (e) {}
+        } catch (e) {}
+    }
 
-    // Scan active games in localStorage (`playard_active_game_<username>`)
+    // Scan live active games (`playard_active_game_<username>`)
     const activePlayerNames: string[] = [];
     const now = Date.now();
+    const activeWindowMs = isTestEnv ? 1800000 : 45000;
+
     try {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && key.startsWith('playard_active_game_')) {
-                const username = key.replace('playard_active_game_', '');
+                const username = key.replace('playard_active_game_', '').trim();
+                const lowerUser = username.toLowerCase();
+                if (!isRealAllowedPlayerIdent(lowerUser, isTestEnv)) continue;
+                // If the current user is on the Hub menu in real mode, they are not inside a game
+                if (!isTestEnv && isOnHub && lowerUser === me) continue;
+
                 const valRaw = localStorage.getItem(key);
                 if (valRaw) {
                     const parsed = JSON.parse(valRaw);
@@ -342,9 +445,9 @@ export function getGameStats(gameId: string): {
                         const matchesId = (parsed.id || '').toLowerCase() === cleanId;
                         const matchesUrl = parsed.url && parsed.url.toLowerCase().includes(`/games/${cleanId}/`);
                         if (matchesId || matchesUrl) {
-                            uniqueSet.add(username.toLowerCase());
-                            const ts = parsed.timestamp || now;
-                            if (now - ts < 1800000) {
+                            uniqueSet.add(lowerUser);
+                            const ts = parsed.timestamp || 0;
+                            if (now - ts < activeWindowMs) {
                                 activePlayerNames.push(username);
                             }
                         }
@@ -354,9 +457,15 @@ export function getGameStats(gameId: string): {
         }
     } catch (e) {}
 
-    // Persist any newly discovered unique players
-    if (uniqueSet.size !== (record.uniquePlayers || []).length) {
-        record.uniquePlayers = Array.from(uniqueSet);
+    // Persist cleaned unique players & likes
+    const newUniqueArr = Array.from(uniqueSet);
+    const newLikedArr = Array.from(likedSet);
+    if (
+        newUniqueArr.length !== (record.uniquePlayers || []).length ||
+        newLikedArr.length !== (record.likedBy || []).length
+    ) {
+        record.uniquePlayers = newUniqueArr;
+        record.likedBy = newLikedArr;
         all[cleanId] = record;
         saveAllGameStats(all);
     }
@@ -374,6 +483,7 @@ export function toggleGameLike(gameId: string): {
     likesCount: number;
     isLikedByMe: boolean;
 } {
+    const isTestEnv = isTestModeActive();
     const cleanId = (gameId || '').trim().toLowerCase();
     const all = loadAllGameStats();
     const record: GameStatsRecord = all[cleanId] || {
@@ -384,7 +494,11 @@ export function toggleGameLike(gameId: string): {
     };
 
     const me = getCurrentPlayerIdentifier();
-    const likedSet = new Set((record.likedBy || []).map(u => u.toLowerCase()));
+    const likedSet = new Set(
+        (record.likedBy || [])
+            .map(u => u.toLowerCase().trim())
+            .filter(u => isTestEnv || !isTestDummyOrFakePlayer(u))
+    );
 
     let isLikedByMe = false;
     if (likedSet.has(me)) {
@@ -409,6 +523,7 @@ export function toggleGameLike(gameId: string): {
 }
 
 export function recordUniquePlayerPlay(gameId: string, customUsername?: string): number {
+    const isTestEnv = isTestModeActive();
     const cleanId = (gameId || '').trim().toLowerCase();
     if (!cleanId) return 0;
     const all = loadAllGameStats();
@@ -423,8 +538,15 @@ export function recordUniquePlayerPlay(gameId: string, customUsername?: string):
         ? customUsername.trim().toLowerCase()
         : getCurrentPlayerIdentifier();
 
-    const uniqueSet = new Set((record.uniquePlayers || []).map(u => u.toLowerCase()));
-    uniqueSet.add(playerIdent);
+    const uniqueSet = new Set(
+        (record.uniquePlayers || [])
+            .map(u => u.toLowerCase().trim())
+            .filter(u => isRealAllowedPlayerIdent(u, isTestEnv))
+    );
+
+    if (isRealAllowedPlayerIdent(playerIdent, isTestEnv)) {
+        uniqueSet.add(playerIdent);
+    }
 
     record.uniquePlayers = Array.from(uniqueSet);
     record.updatedAt = Date.now();
@@ -436,14 +558,17 @@ export function recordUniquePlayerPlay(gameId: string, customUsername?: string):
 }
 
 async function syncGameStatsToCloud(record: GameStatsRecord) {
-    const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+    const isTestEnv = isTestModeActive() || (typeof navigator !== 'undefined' && navigator.webdriver);
     if (!supabase || isTestEnv) return;
     try {
+        const cleanLikes = (record.likedBy || []).filter(u => !isTestDummyOrFakePlayer(u));
+        const cleanUnique = (record.uniquePlayers || []).filter(u => !isTestDummyOrFakePlayer(u) && !u.startsWith('guest_'));
+
         const titleKey = `GAME_STATS:${record.gameId}`;
         const payloadStr = JSON.stringify({
             gameId: record.gameId,
-            likedBy: record.likedBy,
-            uniquePlayers: record.uniquePlayers,
+            likedBy: cleanLikes,
+            uniquePlayers: cleanUnique,
             updatedAt: record.updatedAt
         });
 
@@ -451,14 +576,19 @@ async function syncGameStatsToCloud(record: GameStatsRecord) {
             .from('user_created_games')
             .select('id, description')
             .eq('category', 'game_stats_meta')
-            .eq('title', titleKey)
-            .limit(1);
+            .eq('title', titleKey);
 
         if (existing && existing.length > 0) {
             await supabase
                 .from('user_created_games')
                 .update({ description: payloadStr, status: 'active' })
                 .eq('id', existing[0].id);
+            // Clean up any duplicate rows for the same game
+            if (existing.length > 1) {
+                for (let i = 1; i < existing.length; i++) {
+                    await supabase.from('user_created_games').delete().eq('id', existing[i].id);
+                }
+            }
         } else {
             await supabase
                 .from('user_created_games')
@@ -473,27 +603,95 @@ async function syncGameStatsToCloud(record: GameStatsRecord) {
     } catch (e) {}
 }
 
-async function fetchCloudGameStats() {
-    const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+export async function fetchCloudGameStats() {
+    const isTestEnv = isTestModeActive() || (typeof navigator !== 'undefined' && navigator.webdriver);
     if (!supabase || isTestEnv) return;
     try {
+        purgeFakeAndStaleLocalData();
+
+        // 1. Load real registered players from Supabase profiles + user_yards
+        const userIdToUsername = new Map<string, string>();
+        try {
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, username');
+            if (Array.isArray(profiles)) {
+                realDatabaseUsernames.clear();
+                profiles.forEach(p => {
+                    if (p.username && p.username.trim() && !isTestDummyOrFakePlayer(p.username)) {
+                        const cleanU = p.username.trim().toLowerCase();
+                        realDatabaseUsernames.add(cleanU);
+                        if (p.id) userIdToUsername.set(p.id, cleanU);
+                    }
+                });
+            }
+        } catch (e) {}
+
+        const localAll = loadAllGameStats();
+        let changed = false;
+
+        const addRealUniquePlayerToGame = (gid: string, username: string) => {
+            const cleanU = username.trim().toLowerCase();
+            if (!cleanU || isTestDummyOrFakePlayer(cleanU) || cleanU.startsWith('guest_')) return;
+            const rec = localAll[gid] || { gameId: gid, likedBy: [], uniquePlayers: [], updatedAt: Date.now() };
+            const set = new Set((rec.uniquePlayers || []).map(x => x.toLowerCase().trim()));
+            if (!set.has(cleanU)) {
+                set.add(cleanU);
+                rec.uniquePlayers = Array.from(set);
+                localAll[gid] = rec;
+                changed = true;
+            }
+        };
+
+        // 2. Discover real players who have saved game progress/items in user_yards
+        try {
+            const { data: yardsRows } = await supabase
+                .from('user_yards')
+                .select('user_id, inventory');
+            if (Array.isArray(yardsRows)) {
+                yardsRows.forEach(row => {
+                    const uName = userIdToUsername.get(row.user_id);
+                    if (!uName || !Array.isArray(row.inventory)) return;
+                    const inv: string[] = row.inventory.map((x: any) => String(x));
+                    if (inv.some(i => i.startsWith('meta_train_money:') && i !== 'meta_train_money:0')) {
+                        addRealUniquePlayerToGame('train', uName);
+                    }
+                    if (inv.some(i => (i.startsWith('meta_war_money:') && i !== 'meta_war_money:0') || i.startsWith('war_'))) {
+                        addRealUniquePlayerToGame('war', uName);
+                    }
+                    if (inv.some(i => i === 'pass_all_rockets' || i === 'pass_2x_score')) {
+                        addRealUniquePlayerToGame('rocket', uName);
+                    }
+                    if (inv.some(i => i.startsWith('defender_'))) {
+                        addRealUniquePlayerToGame('defender', uName);
+                    }
+                    if (inv.some(i => i.startsWith('metro_'))) {
+                        addRealUniquePlayerToGame('metro', uName);
+                    }
+                });
+            }
+        } catch (e) {}
+
+        // 3. Load persisted game_stats_meta rows from Supabase
         const { data } = await supabase
             .from('user_created_games')
-            .select('title, description')
+            .select('id, title, description')
             .eq('category', 'game_stats_meta')
             .eq('status', 'active');
 
         if (Array.isArray(data) && data.length > 0) {
-            const localAll = loadAllGameStats();
-            let changed = false;
             data.forEach(row => {
                 try {
                     const parsed = typeof row.description === 'string' ? JSON.parse(row.description) : row.description;
                     if (parsed && parsed.gameId) {
                         const gid = parsed.gameId.toLowerCase();
                         const existing = localAll[gid] || { gameId: gid, likedBy: [], uniquePlayers: [], updatedAt: 0 };
-                        const mergedLikes = Array.from(new Set([...(existing.likedBy || []), ...(parsed.likedBy || [])]));
-                        const mergedUnique = Array.from(new Set([...(existing.uniquePlayers || []), ...(parsed.uniquePlayers || [])]));
+                        const mergedLikes = Array.from(new Set([...(existing.likedBy || []), ...(parsed.likedBy || [])]))
+                            .map(u => u.toLowerCase().trim())
+                            .filter(u => !isTestDummyOrFakePlayer(u));
+                        const mergedUnique = Array.from(new Set([...(existing.uniquePlayers || []), ...(parsed.uniquePlayers || [])]))
+                            .map(u => u.toLowerCase().trim())
+                            .filter(u => isRealAllowedPlayerIdent(u, false));
                         localAll[gid] = {
                             gameId: gid,
                             likedBy: mergedLikes,
@@ -504,17 +702,64 @@ async function fetchCloudGameStats() {
                     }
                 } catch (e) {}
             });
-            if (changed) {
-                saveAllGameStats(localAll);
-                if (currentOpenedGame) {
-                    refreshGamePreviewStatsUI(currentOpenedGame.id);
-                }
+        }
+
+        // 4. Sync real-time active players from Supabase (`player_active_game`)
+        try {
+            const { data: activeRows } = await supabase
+                .from('user_created_games')
+                .select('creator_username, description, status')
+                .eq('category', 'player_active_game');
+
+            if (Array.isArray(activeRows)) {
+                const now = Date.now();
+                const isOnHub = typeof window !== 'undefined' && !window.location.pathname.toLowerCase().includes('/games/');
+                const myProf = getCurrentUserProfile();
+                const myUser = myProf?.username?.trim().toLowerCase() || '';
+
+                activeRows.forEach(ag => {
+                    const pUser = (ag.creator_username || '').trim().toLowerCase();
+                    if (!pUser || isTestDummyOrFakePlayer(pUser)) {
+                        localStorage.removeItem(`playard_active_game_${pUser}`);
+                        return;
+                    }
+                    if (isOnHub && pUser === myUser) {
+                        localStorage.removeItem(`playard_active_game_${pUser}`);
+                        return;
+                    }
+                    if (ag.status !== 'playing') {
+                        localStorage.removeItem(`playard_active_game_${pUser}`);
+                        return;
+                    }
+                    try {
+                        const parsed = typeof ag.description === 'string' ? JSON.parse(ag.description) : ag.description;
+                        const ts = parsed?.timestamp || 0;
+                        if (parsed && parsed.url && (now - ts < 45000)) {
+                            localStorage.setItem(`playard_active_game_${pUser}`, JSON.stringify(parsed));
+                            if (parsed.id) {
+                                addRealUniquePlayerToGame(String(parsed.id).toLowerCase(), pUser);
+                            }
+                        } else {
+                            localStorage.removeItem(`playard_active_game_${pUser}`);
+                        }
+                    } catch (e) {
+                        localStorage.removeItem(`playard_active_game_${pUser}`);
+                    }
+                });
             }
+        } catch (e) {}
+
+        if (changed) {
+            saveAllGameStats(localAll);
+        }
+        if (currentOpenedGame) {
+            refreshGamePreviewStatsUI(currentOpenedGame.id);
         }
     } catch (e) {}
 }
 
 let currentOpenedGame: GamePreviewInfo | null = null;
+let liveStatsInterval: any = null;
 
 export function refreshGamePreviewStatsUI(gameId: string) {
     const stats = getGameStats(gameId);
@@ -601,12 +846,26 @@ export function openGamePreviewModal(game: GamePreviewInfo) {
 
     refreshGamePreviewStatsUI(game.id);
     modal.style.display = 'flex';
+
+    // Immediately fetch latest real stats & live active players from Supabase
+    fetchCloudGameStats();
+    if (liveStatsInterval) clearInterval(liveStatsInterval);
+    liveStatsInterval = setInterval(() => {
+        if (currentOpenedGame) {
+            fetchCloudGameStats();
+            refreshGamePreviewStatsUI(currentOpenedGame.id);
+        }
+    }, 10000);
 }
 
 export function closeGamePreviewModal() {
     const modal = document.getElementById('modal-game-preview');
     if (modal) {
         modal.style.display = 'none';
+    }
+    if (liveStatsInterval) {
+        clearInterval(liveStatsInterval);
+        liveStatsInterval = null;
     }
     currentOpenedGame = null;
 }

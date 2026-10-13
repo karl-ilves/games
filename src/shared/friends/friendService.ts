@@ -380,7 +380,8 @@ export class FriendService {
 
         // Persist to Supabase Cloud so friends on any device/browser see it live!
         const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
-        if (supabase && !isTestEnv) {
+        const dummySet = new Set(['driver_bob', 'playeralpha', 'playerbeta', 'historicalplayer1', 'bantestplayer99', 'kawe1234', 'player9yo', 'minionbanana0_0']);
+        if (supabase && !isTestEnv && !dummySet.has(cleanUser) && !cleanUser.startsWith('test_') && !cleanUser.startsWith('guest_')) {
             try {
                 const gameTitleKey = `ACTIVE_GAME:${cleanUser}`;
                 const { data: existing } = await supabase
@@ -409,6 +410,56 @@ export class FriendService {
                             category: 'player_active_game',
                             status: 'playing'
                         });
+                }
+
+                // Also ensure this real player is recorded in GAME_STATS:<game.id> uniquePlayers
+                if (game.id) {
+                    const cleanGid = game.id.toLowerCase().trim();
+                    const statsKey = `GAME_STATS:${cleanGid}`;
+                    const { data: statsRows } = await supabase
+                        .from('user_created_games')
+                        .select('id, description')
+                        .eq('category', 'game_stats_meta')
+                        .eq('title', statsKey)
+                        .limit(1);
+
+                    if (statsRows && statsRows.length > 0) {
+                        const parsed = typeof statsRows[0].description === 'string'
+                            ? JSON.parse(statsRows[0].description)
+                            : statsRows[0].description;
+                        const uList: string[] = Array.isArray(parsed?.uniquePlayers) ? parsed.uniquePlayers : [];
+                        if (!uList.map(x => String(x).toLowerCase()).includes(cleanUser)) {
+                            uList.push(cleanUser);
+                            await supabase
+                                .from('user_created_games')
+                                .update({
+                                    description: JSON.stringify({
+                                        gameId: cleanGid,
+                                        likedBy: Array.isArray(parsed?.likedBy) ? parsed.likedBy : [],
+                                        uniquePlayers: uList,
+                                        updatedAt: Date.now()
+                                    }),
+                                    status: 'active'
+                                })
+                                .eq('id', statsRows[0].id);
+                        }
+                    } else {
+                        await supabase
+                            .from('user_created_games')
+                            .insert({
+                                id: generateUUID(),
+                                creator_username: 'PlayardStats',
+                                title: statsKey,
+                                description: JSON.stringify({
+                                    gameId: cleanGid,
+                                    likedBy: [],
+                                    uniquePlayers: [cleanUser],
+                                    updatedAt: Date.now()
+                                }),
+                                category: 'game_stats_meta',
+                                status: 'active'
+                            });
+                    }
                 }
             } catch (e) {
                 console.warn('Could not sync active game to Supabase:', e);
@@ -526,28 +577,34 @@ export class FriendService {
 
         if (path.includes('/games/racing/')) {
             gameInfo = { id: 'racing', title: '🏎️ Racing Simulator', url: '/games/racing/index.html' };
+        } else if (path.includes('/games/flight/')) {
+            gameInfo = { id: 'flight', title: '✈️ 3D Flight Simulator', url: '/games/flight/index.html' };
         } else if (path.includes('/games/mmp1/')) {
-            gameInfo = { id: 'mmp1', title: '🔪 MMP1 - Murder Mystery', url: '/games/mmp1/index.html' };
+            gameInfo = { id: 'mmp1', title: '⚔️ MMP1: Multi-Map Battle Arena', url: '/games/mmp1/index.html' };
         } else if (path.includes('/games/metro/')) {
-            gameInfo = { id: 'metro', title: '🚇 LAST METRO', url: '/games/metro/index.html' };
+            gameInfo = { id: 'metro', title: '🚇 Last Metro', url: '/games/metro/index.html' };
         } else if (path.includes('/games/war/')) {
-            gameInfo = { id: 'war', title: '⚔️ 3D War Game', url: '/games/war/index.html' };
+            gameInfo = { id: 'war', title: '⚓ 3D Naval & Air Warfare', url: '/games/war/index.html' };
         } else if (path.includes('/games/train/')) {
-            gameInfo = { id: 'train', title: '🚂 Train Simulator', url: '/games/train/index.html' };
+            gameInfo = { id: 'train', title: '🚆 Rongimäng', url: '/games/train/index.html' };
         } else if (path.includes('/games/crown/')) {
             gameInfo = { id: 'crown', title: '👑 24K Crown Obby', url: '/games/crown/index.html' };
         } else if (path.includes('/games/obby/')) {
             gameInfo = { id: 'obby', title: '🏃 3D Parkour Obby', url: '/games/obby/index.html' };
         } else if (path.includes('/games/cooking/')) {
-            gameInfo = { id: 'cooking', title: '🍳 Master Chef Cooking', url: '/games/cooking/index.html' };
+            gameInfo = { id: 'cooking', title: '🍳 3D Master Chef', url: '/games/cooking/index.html' };
         } else if (path.includes('/games/rocket/')) {
-            gameInfo = { id: 'rocket', title: '🚀 ROCKET PLAYARD', url: '/games/rocket/index.html' };
+            gameInfo = { id: 'rocket', title: '🚀 3D Rocket Builder', url: '/games/rocket/index.html' };
         } else if (path.includes('/games/creator/')) {
             gameInfo = { id: 'creator', title: '🛠️ 3D Game Creator Studio', url: '/games/creator/index.html' };
         } else if (path.includes('/games/citycar/')) {
-            gameInfo = { id: 'citycar', title: '🚗 3D City & Nature Drive', url: '/games/citycar/index.html' };
+            gameInfo = { id: 'citycar', title: '🚓 3D Linnasõit', url: '/games/citycar/index.html' };
         } else if (path.includes('/games/defender/')) {
-            gameInfo = { id: 'defender', title: '🛡️ 2D Earth Defender', url: '/games/defender/index.html' };
+            gameInfo = { id: 'defender', title: '🛡️ 3D Base Defender', url: '/games/defender/index.html' };
+        } else if (path.includes('/games/breakout/')) {
+            gameInfo = { id: 'breakout', title: '🟢 Roheline Ruut', url: '/games/breakout/index.html' };
+        } else if (path.includes('/games/snake/')) {
+            gameInfo = { id: 'snake', title: '🐍 2D Ussimäng', url: '/games/snake/index.html' };
         } else if (path.includes('/games/play/')) {
             const titleEl = document.querySelector('title')?.textContent || 'Community Game';
             gameInfo = { id: 'play', title: `🎮 ${titleEl}`, url: window.location.pathname + window.location.search };
@@ -561,16 +618,33 @@ export class FriendService {
                     if (prof && prof.username && gameInfo) {
                         this.setPlayerActiveGame(prof.username, gameInfo);
                     }
-                }, 20000);
+                }, 15000);
             }
             if (!this.isTrackingCurrentGame) {
                 this.isTrackingCurrentGame = true;
-                window.addEventListener('beforeunload', () => {
+                const clearOnExit = () => {
                     const prof = getCurrentUserProfile();
                     if (prof && prof.username) {
                         this.clearPlayerActiveGame(prof.username);
                     }
-                });
+                };
+                window.addEventListener('beforeunload', clearOnExit);
+                window.addEventListener('pagehide', clearOnExit);
+            }
+        } else {
+            // Player is on the Hub menu (not inside a game) -> clear active game status
+            const cleanUser = profile.username.toLowerCase().trim();
+            try {
+                localStorage.removeItem(`playard_active_game_${cleanUser}`);
+            } catch (e) {}
+            const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+            if (supabase && !isTestEnv) {
+                supabase
+                    .from('user_created_games')
+                    .update({ status: 'idle', description: JSON.stringify({ timestamp: Date.now() }) })
+                    .eq('category', 'player_active_game')
+                    .eq('creator_username', cleanUser)
+                    .then(() => {}, () => {});
             }
         }
     }
