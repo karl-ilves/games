@@ -1404,8 +1404,10 @@ await (async () => {
         // Click Buy on Viking Helmet
         const buyBtn = await page.$('[data-buy-id="hat_viking_helm"]');
         if (buyBtn) {
+            await page.evaluate(() => { window.__AUTO_CONFIRM_YARD_PURCHASE__ = true; });
             await page.click('[data-buy-id="hat_viking_helm"]');
             await new Promise(r => setTimeout(r, 400));
+            await page.evaluate(() => { window.__AUTO_CONFIRM_YARD_PURCHASE__ = false; });
             console.log("   Successfully purchased Viking Horned Helmet with Yards!");
         }
 
@@ -13414,6 +13416,111 @@ await (async () => {
                 throw new Error("Flight Simulator verification failed: " + JSON.stringify(flightTest));
             }
             console.log("   ✅ 3D Flight Simulator verified successfully (Takeoff, Aerodynamics, Gear, Autopilot, F-22 Fighter, Stunt Rings)!");
+
+            // =========================================================================
+            // 24. Testing Game Preview Modal (Large Image, Like Button & Count, Unique Players, Active Players, Play Button)
+            // =========================================================================
+            console.log("24. Testing Game Preview Modal (Large Image, Like Button & Count, Unique Players, Active Players, Play Button)...");
+            await page.goto('http://localhost:4173/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 800));
+
+            const gamePreviewTest = await page.evaluate(() => {
+                localStorage.removeItem('playard_game_stats_v1');
+
+                // Simulate two active players playing Racing Simulator
+                if (window.friendService) {
+                    window.friendService.setPlayerActiveGame('PlayerAlpha', {
+                        id: 'racing',
+                        title: '🏎️ Racing Simulator',
+                        url: './games/racing/index.html'
+                    });
+                    window.friendService.setPlayerActiveGame('PlayerBeta', {
+                        id: 'racing',
+                        title: '🏎️ Racing Simulator',
+                        url: './games/racing/index.html'
+                    });
+                }
+
+                // Also record a 3rd historical unique player who played Racing earlier
+                if (window.gamePreviewModal) {
+                    window.gamePreviewModal.recordUniquePlayerPlay('racing', 'HistoricalPlayer1');
+                }
+
+                // Click on the Racing Simulator game card
+                const racingCard = document.querySelector('a.game-card[href="./games/racing/index.html"]');
+                if (!racingCard) return { success: false, reason: 'racingCard not found' };
+                racingCard.click();
+
+                const modal = document.getElementById('modal-game-preview');
+                const modalOpen = modal && window.getComputedStyle(modal).display === 'flex';
+                const imgEl = document.getElementById('game-preview-image');
+                const bannerEl = document.getElementById('game-preview-banner');
+                const hasLargeImage = !!(imgEl && imgEl.getAttribute('src') && imgEl.getAttribute('src').startsWith('data:image/svg+xml') && bannerEl && bannerEl.clientHeight >= 200);
+
+                const titleText = document.getElementById('game-preview-title')?.textContent || '';
+                const likeBtn = document.getElementById('btn-game-preview-like');
+                const likesCountEl = document.getElementById('game-preview-likes-count');
+                const uniquePlayersEl = document.getElementById('game-preview-unique-players');
+                const activePlayersEl = document.getElementById('game-preview-active-players');
+                const playBtn = document.getElementById('btn-game-preview-play');
+
+                const initialLikes = parseInt(likesCountEl?.textContent || '0', 10);
+                const uniquePlayersCount = parseInt(uniquePlayersEl?.textContent || '0', 10);
+                const activePlayersCount = parseInt(activePlayersEl?.textContent || '0', 10);
+
+                // Click Like button -> should increment by 1 and set data-liked="true"
+                if (likeBtn) likeBtn.click();
+                const likesAfterClick = parseInt(likesCountEl?.textContent || '0', 10);
+                const isLikedAfterClick = likeBtn?.getAttribute('data-liked') === 'true';
+
+                // Click Like button again -> should toggle off
+                if (likeBtn) likeBtn.click();
+                const likesAfterUnlike = parseInt(likesCountEl?.textContent || '0', 10);
+                const isLikedAfterUnlike = likeBtn?.getAttribute('data-liked') === 'false';
+
+                // Like once more to keep it liked
+                if (likeBtn) likeBtn.click();
+
+                // Close modal
+                const closeBtn = document.getElementById('btn-close-game-preview');
+                if (closeBtn) closeBtn.click();
+                const modalClosed = modal && window.getComputedStyle(modal).display === 'none';
+
+                return {
+                    success: true,
+                    modalOpen,
+                    hasLargeImage,
+                    titleText,
+                    initialLikes,
+                    likesAfterClick,
+                    isLikedAfterClick,
+                    likesAfterUnlike,
+                    isLikedAfterUnlike,
+                    uniquePlayersCount,
+                    activePlayersCount,
+                    hasPlayBtn: !!playBtn,
+                    modalClosed
+                };
+            });
+
+            console.log("   Game Preview Modal Test Results:", gamePreviewTest);
+            if (
+                !gamePreviewTest.success ||
+                !gamePreviewTest.modalOpen ||
+                !gamePreviewTest.hasLargeImage ||
+                !gamePreviewTest.titleText.includes('Racing') ||
+                gamePreviewTest.likesAfterClick !== gamePreviewTest.initialLikes + 1 ||
+                !gamePreviewTest.isLikedAfterClick ||
+                gamePreviewTest.likesAfterUnlike !== gamePreviewTest.initialLikes ||
+                !gamePreviewTest.isLikedAfterUnlike ||
+                gamePreviewTest.uniquePlayersCount < 3 ||
+                gamePreviewTest.activePlayersCount < 2 ||
+                !gamePreviewTest.hasPlayBtn ||
+                !gamePreviewTest.modalClosed
+            ) {
+                throw new Error("Game Preview Modal verification failed: " + JSON.stringify(gamePreviewTest));
+            }
+            console.log("   ✅ Game Preview Modal (Large Image, Like Button & Count, Unique Players, Active Players, Play Button) verified!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

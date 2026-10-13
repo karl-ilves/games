@@ -202,6 +202,9 @@ export function renderRecentlyPlayed() {
                     return;
                 }
             }
+            if (document.getElementById('modal-game-preview')) {
+                return;
+            }
             const targetGame = top3.find(g => g.id === gameId);
             if (targetGame) {
                 yardService.recordPlayedGame(targetGame);
@@ -310,6 +313,9 @@ export function setupGameCardTracking() {
                         if (modal) modal.style.display = 'flex';
                         return;
                     }
+                }
+                if (document.getElementById('modal-game-preview')) {
+                    return;
                 }
                 yardService.recordPlayedGame(officialGameMap[href]);
             });

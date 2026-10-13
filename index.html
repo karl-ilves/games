@@ -2100,6 +2100,63 @@
         </div>
     </div>
 
+    <!-- Game Details & Preview Modal (Opens when clicking any game card) -->
+    <div id="modal-game-preview" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(6, 10, 18, 0.88); backdrop-filter: blur(12px); z-index: 99990; justify-content: center; align-items: center; padding: 20px;">
+        <div class="modal-card" style="max-width: 680px; width: 100%; background: linear-gradient(165deg, #131b26 0%, #0d131c 100%); border: 1.5px solid rgba(0, 242, 254, 0.35); border-radius: 22px; padding: 22px; text-align: left; position: relative; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(0, 242, 254, 0.15);">
+            <button class="modal-close" id="btn-close-game-preview" title="Sulge" style="position: absolute; top: 14px; right: 16px; z-index: 10; background: rgba(13, 19, 28, 0.85); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;">&times;</button>
+
+            <!-- Large Game Image Banner -->
+            <div id="game-preview-banner" style="width: 100%; height: 265px; border-radius: 16px; overflow: hidden; position: relative; margin-bottom: 18px; border: 1.5px solid rgba(255, 255, 255, 0.12); background: #090d16; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <img id="game-preview-image" src="" alt="Game Banner" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+                <span id="game-preview-badge" style="position: absolute; bottom: 12px; right: 12px; background: rgba(9, 13, 22, 0.88); border: 1.5px solid #00f2fe; color: #00f2fe; padding: 5px 13px; border-radius: 20px; font-size: 0.78rem; font-weight: 800; backdrop-filter: blur(6px);">Playard 3D</span>
+            </div>
+
+            <!-- Game Title & Description -->
+            <div style="margin-bottom: 16px;">
+                <h2 id="game-preview-title" style="margin: 0 0 6px 0; color: #ffffff; font-size: 1.65rem; font-weight: 900; letter-spacing: -0.3px;">🎮 Mängu Nimi</h2>
+                <p id="game-preview-description" style="margin: 0; color: #a4b0be; font-size: 0.95rem; line-height: 1.5;">Mängu kirjeldus...</p>
+            </div>
+
+            <!-- Stats & Like Bar Below Large Image -->
+            <div id="game-preview-stats-bar" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px;">
+                <!-- 1. Like Button & Like Count -->
+                <button type="button" id="btn-game-preview-like" data-liked="false" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 12px 10px; border-radius: 14px; border: 1.5px solid rgba(11, 232, 129, 0.45); background: rgba(11, 232, 129, 0.12); color: #0be881; cursor: pointer; transition: all 0.2s ease; font-family: inherit;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 1.3rem; font-weight: 900;">
+                        <span>👍</span>
+                        <span id="game-preview-likes-count">0</span>
+                    </div>
+                    <span id="game-preview-like-label" style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Like (Meeldib)</span>
+                </button>
+
+                <!-- 2. Unique Players Played Count -->
+                <div id="game-preview-unique-players-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 12px 10px; border-radius: 14px; border: 1.5px solid rgba(0, 242, 254, 0.3); background: rgba(0, 242, 254, 0.08); color: #00f2fe; text-align: center;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 1.3rem; font-weight: 900;">
+                        <span>👥</span>
+                        <span id="game-preview-unique-players">0</span>
+                    </div>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: #cbe9f7; line-height: 1.2;">Erinevat mängijat mänginud</span>
+                </div>
+
+                <!-- 3. Currently Playing Players Count -->
+                <div id="game-preview-active-players-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 12px 10px; border-radius: 14px; border: 1.5px solid rgba(255, 211, 42, 0.35); background: rgba(255, 211, 42, 0.08); color: #ffd32a; text-align: center;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 1.3rem; font-weight: 900;">
+                        <span>🟢</span>
+                        <span id="game-preview-active-players">0</span>
+                    </div>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: #faecc0; line-height: 1.2;">Praegu mängimas</span>
+                </div>
+            </div>
+
+            <div id="game-preview-active-players-names" style="display: none; margin-bottom: 14px; padding: 8px 12px; border-radius: 10px; background: rgba(11, 232, 129, 0.1); border: 1px solid rgba(11, 232, 129, 0.25); color: #0be881; font-size: 0.83rem; font-weight: 700;"></div>
+
+            <!-- Play Button -->
+            <button type="button" id="btn-game-preview-play" style="width: 100%; padding: 16px 24px; border-radius: 14px; border: none; background: linear-gradient(135deg, #0be881 0%, #00d2d3 100%); color: #071018; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 8px 25px rgba(11, 232, 129, 0.4); transition: transform 0.15s ease;">
+                <span style="font-size: 1.35rem;">▶️</span>
+                <span>PLAY / MÄNGI</span>
+            </button>
+        </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -13,6 +13,7 @@ import { updateAdminControlsVisibility, setupAdminPanel } from './hub/adminPanel
 import { setupOwnerPanel } from './hub/ownerPanel';
 import { setupModals } from './hub/modals';
 import { setupIcons } from './hub/icons';
+import { setupGamePreviewModal } from './hub/gamePreviewModal';
 
 // Re-exports for test and module compatibility
 export {
@@ -31,6 +32,7 @@ setupIcons();
 setupModals();
 setupAdminPanel();
 setupOwnerPanel();
+setupGamePreviewModal();
 initFriendsUI();
 renderRecentlyPlayed();
 setupGameCardTracking();
