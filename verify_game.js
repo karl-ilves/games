@@ -13458,6 +13458,7 @@ await (async () => {
                 const hasLargeImage = !!(imgEl && imgEl.getAttribute('src') && imgEl.getAttribute('src').startsWith('data:image/svg+xml') && bannerEl && bannerEl.clientHeight >= 200);
 
                 const titleText = document.getElementById('game-preview-title')?.textContent || '';
+                const creatorText = document.getElementById('game-preview-creator')?.textContent?.trim() || '';
                 const likeBtn = document.getElementById('btn-game-preview-like');
                 const likesCountEl = document.getElementById('game-preview-likes-count');
                 const uniquePlayersEl = document.getElementById('game-preview-unique-players');
@@ -13491,6 +13492,7 @@ await (async () => {
                     modalOpen,
                     hasLargeImage,
                     titleText,
+                    creatorText,
                     initialLikes,
                     likesAfterClick,
                     isLikedAfterClick,
@@ -13509,6 +13511,7 @@ await (async () => {
                 !gamePreviewTest.modalOpen ||
                 !gamePreviewTest.hasLargeImage ||
                 !gamePreviewTest.titleText.includes('Racing') ||
+                gamePreviewTest.creatorText !== 'Playard Games' ||
                 gamePreviewTest.likesAfterClick !== gamePreviewTest.initialLikes + 1 ||
                 !gamePreviewTest.isLikedAfterClick ||
                 gamePreviewTest.likesAfterUnlike !== gamePreviewTest.initialLikes ||
@@ -13520,7 +13523,7 @@ await (async () => {
             ) {
                 throw new Error("Game Preview Modal verification failed: " + JSON.stringify(gamePreviewTest));
             }
-            console.log("   ✅ Game Preview Modal (Large Image, Like Button & Count, Unique Players, Active Players, Play Button) verified!");
+            console.log("   ✅ Game Preview Modal (Large Image, Creator 'Playard Games', Like Button & Count, Unique Players, Active Players, Play Button) verified!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

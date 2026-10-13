@@ -11,6 +11,7 @@ export interface GamePreviewInfo {
     icon: string;
     badgeText: string;
     badgeColor: string;
+    creatorName?: string;
     thumbnail?: string;
 }
 
@@ -31,7 +32,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/crown/index.html',
         icon: '👑',
         badgeText: '🏆 50 Stages Obby',
-        badgeColor: '#ffd700'
+        badgeColor: '#ffd700',
+        creatorName: 'Playard Games'
     },
     racing: {
         id: 'racing',
@@ -40,7 +42,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/racing/index.html',
         icon: '🏎️',
         badgeText: 'Circuit Racing',
-        badgeColor: '#ffd32a'
+        badgeColor: '#ffd32a',
+        creatorName: 'Playard Games'
     },
     flight: {
         id: 'flight',
@@ -49,7 +52,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/flight/index.html',
         icon: '✈️',
         badgeText: 'Open Sky',
-        badgeColor: '#00f2fe'
+        badgeColor: '#00f2fe',
+        creatorName: 'Playard Games'
     },
     cooking: {
         id: 'cooking',
@@ -58,7 +62,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/cooking/index.html',
         icon: '🍳',
         badgeText: '💎 +20 kuni +40 Playbux',
-        badgeColor: '#ff9f43'
+        badgeColor: '#ff9f43',
+        creatorName: 'Playard Games'
     },
     war: {
         id: 'war',
@@ -67,7 +72,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/war/index.html',
         icon: '⚓',
         badgeText: 'Naval & Air Combat',
-        badgeColor: '#ff4757'
+        badgeColor: '#ff4757',
+        creatorName: 'Playard Games'
     },
     train: {
         id: 'train',
@@ -76,7 +82,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/train/index.html',
         icon: '🚆',
         badgeText: 'Railway Sim',
-        badgeColor: '#ff793f'
+        badgeColor: '#ff793f',
+        creatorName: 'Playard Games'
     },
     obby: {
         id: 'obby',
@@ -85,7 +92,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/obby/index.html',
         icon: '🏃',
         badgeText: '💎 +25 Playbux võit',
-        badgeColor: '#0be881'
+        badgeColor: '#0be881',
+        creatorName: 'Playard Games'
     },
     metro: {
         id: 'metro',
@@ -94,7 +102,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/metro/index.html',
         icon: '🚇',
         badgeText: '👻 Horror Survival',
-        badgeColor: '#ff4757'
+        badgeColor: '#ff4757',
+        creatorName: 'Playard Games'
     },
     mmp1: {
         id: 'mmp1',
@@ -103,7 +112,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/mmp1/index.html',
         icon: '⚔️',
         badgeText: '💎 +5 Playbux iga Killi eest',
-        badgeColor: '#ff4757'
+        badgeColor: '#ff4757',
+        creatorName: 'Playard Games'
     },
     rocket: {
         id: 'rocket',
@@ -112,7 +122,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/rocket/index.html',
         icon: '🚀',
         badgeText: 'Space Sandbox',
-        badgeColor: '#00f2fe'
+        badgeColor: '#00f2fe',
+        creatorName: 'Playard Games'
     },
     citycar: {
         id: 'citycar',
@@ -121,7 +132,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/citycar/index.html',
         icon: '🚓',
         badgeText: 'Open City',
-        badgeColor: '#00d2d3'
+        badgeColor: '#00d2d3',
+        creatorName: 'Playard Games'
     },
     defender: {
         id: 'defender',
@@ -130,7 +142,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/defender/index.html',
         icon: '🛡️',
         badgeText: 'Tower Defense',
-        badgeColor: '#a55eea'
+        badgeColor: '#a55eea',
+        creatorName: 'Playard Games'
     },
     breakout: {
         id: 'breakout',
@@ -139,7 +152,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/breakout/index.html',
         icon: '🟢',
         badgeText: '🟢 2D Retro Arcade',
-        badgeColor: '#2ed573'
+        badgeColor: '#2ed573',
+        creatorName: 'Playard Games'
     },
     snake: {
         id: 'snake',
@@ -148,7 +162,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/snake/index.html',
         icon: '🐍',
         badgeText: '🐍 Retro Snake',
-        badgeColor: '#2ed573'
+        badgeColor: '#2ed573',
+        creatorName: 'Playard Games'
     },
     play: {
         id: 'play',
@@ -157,7 +172,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         url: './games/play/index.html',
         icon: '🎮',
         badgeText: 'Community Play',
-        badgeColor: '#00f2fe'
+        badgeColor: '#00f2fe',
+        creatorName: 'Playard Games'
     }
 };
 
@@ -193,6 +209,7 @@ export function generateLargeGameBannerDataUrl(game: GamePreviewInfo): string {
     const safeTitle = (game.title || 'Playard Game').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const safeSub = theme.subtitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const safeBadge = (game.badgeText || 'Playard Official').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeCreator = (game.creatorName || 'Playard Games').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420">
         <defs>
@@ -237,9 +254,9 @@ export function generateLargeGameBannerDataUrl(game: GamePreviewInfo): string {
         <text x="42" y="165" font-family="system-ui, -apple-system, sans-serif" font-size="40" font-weight="900" fill="#ffffff">${safeTitle}</text>
         <text x="44" y="205" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="800" fill="${theme.accent}" letter-spacing="2.5">${safeSub}</text>
         <text x="44" y="255" font-family="system-ui, -apple-system, sans-serif" font-size="34">${theme.decor}</text>
-        <!-- Playard Official Watermark -->
-        <rect x="42" y="345" width="185" height="38" rx="10" fill="#090d16" fill-opacity="0.75" stroke="#ffffff" stroke-opacity="0.15"/>
-        <text x="134" y="369" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" fill="#cbd5e1" text-anchor="middle" letter-spacing="1">⚡ PLAYARD 3D HUB</text>
+        <!-- Creator Watermark -->
+        <rect x="42" y="345" width="245" height="38" rx="10" fill="#090d16" fill-opacity="0.82" stroke="#ffffff" stroke-opacity="0.15"/>
+        <text x="164" y="369" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" fill="#00f2fe" text-anchor="middle" letter-spacing="0.8">👤 By: ${safeCreator}</text>
     </svg>`;
 
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -553,8 +570,12 @@ export function openGamePreviewModal(game: GamePreviewInfo) {
 
     const imgEl = document.getElementById('game-preview-image') as HTMLImageElement | null;
     const titleEl = document.getElementById('game-preview-title');
+    const creatorEl = document.getElementById('game-preview-creator');
+    const creatorVerifiedEl = document.getElementById('game-preview-creator-verified');
     const descEl = document.getElementById('game-preview-description');
     const badgeEl = document.getElementById('game-preview-badge');
+
+    const creatorName = game.creatorName || 'Playard Games';
 
     if (imgEl) {
         imgEl.src = generateLargeGameBannerDataUrl(game);
@@ -562,6 +583,12 @@ export function openGamePreviewModal(game: GamePreviewInfo) {
     }
     if (titleEl) {
         titleEl.textContent = game.title;
+    }
+    if (creatorEl) {
+        creatorEl.textContent = creatorName;
+    }
+    if (creatorVerifiedEl) {
+        creatorVerifiedEl.style.display = creatorName === 'Playard Games' ? 'inline-flex' : 'none';
     }
     if (descEl) {
         descEl.textContent = game.description;
@@ -609,6 +636,8 @@ function resolveGameInfoFromCard(card: HTMLElement): GamePreviewInfo | null {
         const titleEl = card.querySelector('h2, h3');
         const descEl = card.querySelector('p');
         const imgEl = card.querySelector('img') as HTMLImageElement | null;
+        const creatorFromAttr = card.getAttribute('data-creator');
+        const creatorFromTag = card.querySelector('.reward-tag strong')?.textContent?.trim();
         const urlIdMatch = href.match(/[?&]id=([^&]+)/);
         const customId = dataId || (urlIdMatch ? urlIdMatch[1] : href.replace(/[^a-z0-9]/gi, '_'));
 
@@ -620,6 +649,7 @@ function resolveGameInfoFromCard(card: HTMLElement): GamePreviewInfo | null {
             icon: '🎮',
             badgeText: 'Community 3D Game',
             badgeColor: '#00f2fe',
+            creatorName: creatorFromAttr || creatorFromTag || 'Playard Games',
             thumbnail: imgEl?.src || undefined
         };
     }

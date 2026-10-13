@@ -27,6 +27,7 @@ export async function renderCommunityGames() {
         );
         const card = document.createElement('div');
         card.className = 'game-card';
+        card.setAttribute('data-creator', game.creatorUsername || 'Playard Games');
         card.style.position = 'relative';
         const thumbHtml = game.thumbnail
             ? `<div style="width: 100%; height: 140px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; background: #0b111a; border: 1px solid rgba(0, 242, 254, 0.2);"><img src="${game.thumbnail}" alt="${game.title}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></div>`
