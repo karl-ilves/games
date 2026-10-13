@@ -174,11 +174,14 @@ export function generateUUID(): string {
 }
 
 export async function saveProfileToSupabase(profile: UserProfile): Promise<boolean> {
-    if (!hasSupabase) return false;
+    if (!hasSupabase || isTestMode(profile.email)) return false;
     try {
+        const isValidUuid = profile.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile.id);
+        const safeId = isValidUuid ? profile.id : generateUUID();
+
         // Try full upsert with all extended columns
         const fullPayload: any = {
-            id: profile.id,
+            id: safeId,
             username: profile.username,
             display_name: profile.displayName,
             email: profile.email,
@@ -195,9 +198,26 @@ export async function saveProfileToSupabase(profile: UserProfile): Promise<boole
             return true;
         }
 
+        // Fallback without device/is_mobile columns
+        const standardPayload: any = {
+            id: safeId,
+            username: profile.username,
+            display_name: profile.displayName,
+            email: profile.email,
+            is_admin: !!profile.isAdmin
+        };
+        if (profile.birthDate) standardPayload.birth_date = profile.birthDate;
+        if (profile.age !== undefined) standardPayload.age = profile.age;
+        if (profile.gender) standardPayload.gender = profile.gender;
+
+        const { error: stdErr } = await supabase.from('profiles').upsert(standardPayload);
+        if (!stdErr) {
+            return true;
+        }
+
         // If extended columns don't exist yet in Supabase, fallback to basic core columns
         const corePayload = {
-            id: profile.id,
+            id: safeId,
             username: profile.username,
             display_name: profile.displayName,
             is_admin: !!profile.isAdmin
@@ -820,6 +840,9 @@ export async function initAuth() {
     const currentProf = getCurrentUserProfile();
     if (currentProf) {
         updateAuthDisplay(currentProf);
+        if (hasSupabase && !isTestMode(currentProf.email)) {
+            saveProfileToSupabase(currentProf).catch(() => {});
+        }
     } else if (hasSupabase) {
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -839,6 +862,7 @@ export async function initAuth() {
                 };
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
+                saveProfileToSupabase(profile).catch(() => {});
                 updateAuthDisplay(profile);
             } else {
                 updateAuthDisplay(null);

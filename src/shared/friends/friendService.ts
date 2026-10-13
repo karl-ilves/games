@@ -249,7 +249,8 @@ export class FriendService {
     }
 
     public async syncCloudFriends(currentUsername: string) {
-        if (!supabase || !currentUsername) return;
+        const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+        if (!supabase || !currentUsername || isTestEnv) return;
         const cleanUser = currentUsername.toLowerCase().trim();
         try {
             // 1. Fetch pending friend requests for current user from cloud
@@ -378,7 +379,8 @@ export class FriendService {
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanUser, game: data } }));
 
         // Persist to Supabase Cloud so friends on any device/browser see it live!
-        if (supabase) {
+        const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+        if (supabase && !isTestEnv) {
             try {
                 const gameTitleKey = `ACTIVE_GAME:${cleanUser}`;
                 const { data: existing } = await supabase
@@ -428,7 +430,8 @@ export class FriendService {
         });
         window.dispatchEvent(new CustomEvent('playard_friends_updated', { detail: { username: cleanUser, game: null } }));
 
-        if (supabase) {
+        const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+        if (supabase && !isTestEnv) {
             try {
                 await supabase
                     .from('user_created_games')
@@ -484,7 +487,8 @@ export class FriendService {
         const local = this.getPlayerActivity(cleanUser);
         if (local.isPlaying) return local;
 
-        if (!supabase) return local;
+        const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+        if (!supabase || isTestEnv) return local;
         try {
             const { data } = await supabase
                 .from('user_created_games')
@@ -646,7 +650,8 @@ export class FriendService {
         }
 
         // 3. Save to Supabase Cloud so offline users receive it!
-        if (supabase) {
+        const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+        if (supabase && !isTestEnv) {
             try {
                 const reqTitle = `FRIEND_REQ:${cleanFrom.toLowerCase()}->${cleanTo.toLowerCase()}`;
                 const { data: existing } = await supabase
@@ -694,7 +699,8 @@ export class FriendService {
         this.addFriendDirect(cleanFrom, cleanCurrent);
 
         // 3. Update in Supabase Cloud
-        if (supabase) {
+        const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+        if (supabase && !isTestEnv) {
             try {
                 await supabase
                     .from('user_created_games')
@@ -746,7 +752,8 @@ export class FriendService {
 
         this.cleanRequestsAfterAccept(cleanFrom, cleanCurrent);
 
-        if (supabase) {
+        const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+        if (supabase && !isTestEnv) {
             try {
                 await supabase
                     .from('user_created_games')
@@ -778,7 +785,8 @@ export class FriendService {
         this.removeFriendDirect(cleanCurrent, cleanFriend);
         this.removeFriendDirect(cleanFriend, cleanCurrent);
 
-        if (supabase) {
+        const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+        if (supabase && !isTestEnv) {
             try {
                 await supabase
                     .from('user_created_games')

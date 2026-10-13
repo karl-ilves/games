@@ -555,21 +555,25 @@ export async function banPlayerFromPlayard(target: {
 export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     const playersMap = new Map<string, PlayerDatabaseEntry>();
     const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+    const automatedTestBots = new Set(['combat_warrior', 'guestuser', 'tester', 'kawe1234', 'remote_p2']);
 
     const addCandidate = (entry: Partial<PlayerDatabaseEntry> & { username: string }) => {
         const cleanUser = (entry.username || '').trim();
         if (!cleanUser) return;
         const lowerKey = cleanUser.toLowerCase();
 
+        // Filter out automated test bot names in real production view
+        if (!isTestEnv && automatedTestBots.has(lowerKey)) return;
+
         // If banned, their database rows are gone — do not show in active database players
         if (isPlayerBanned(cleanUser, entry.email, entry.id)) return;
 
         const existing = playersMap.get(lowerKey);
         if (existing) {
-            if (!existing.id && entry.id) existing.id = entry.id;
+            if ((!existing.id || existing.id.startsWith('user_')) && entry.id) existing.id = entry.id;
             if ((!existing.email || existing.email.endsWith('@playard.com')) && entry.email) existing.email = entry.email;
             if (!existing.displayName && entry.displayName) existing.displayName = entry.displayName;
-            if (existing.age === undefined && entry.age !== undefined) existing.age = entry.age;
+            if (existing.age === undefined && entry.age !== undefined && entry.age !== null) existing.age = entry.age;
             if (!existing.gender && entry.gender) existing.gender = entry.gender;
             if (!existing.source.includes(entry.source || '')) {
                 existing.source = `${existing.source}, ${entry.source}`;
@@ -581,8 +585,8 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
                 displayName: entry.displayName || (isPlayardOwner(entry.email) ? 'Playard Owner ✔' : `@${cleanUser}`),
                 email: entry.email || `${lowerKey.replace(/[^a-z0-9_.-]/g, '')}@playard.com`,
                 isAdmin: !!entry.isAdmin,
-                age: entry.age,
-                gender: entry.gender,
+                age: entry.age ?? undefined,
+                gender: entry.gender ?? undefined,
                 source: entry.source || 'local'
             });
         }
@@ -607,13 +611,33 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
         }
     } catch (e) {}
 
-    // 2. Supabase cloud tables
+    // 2. Supabase cloud tables & auth.users RPC
     if (supabase && !isTestEnv) {
+        try {
+            const { data: rpcPlayers } = await supabase.rpc('get_all_playard_players');
+            if (Array.isArray(rpcPlayers)) {
+                rpcPlayers.forEach((r: any) => {
+                    if (r && r.username) {
+                        addCandidate({
+                            id: r.id,
+                            username: r.username,
+                            displayName: r.display_name || `@${r.username}`,
+                            email: r.email || '',
+                            isAdmin: !!r.is_admin,
+                            age: r.age ?? undefined,
+                            gender: r.gender ?? undefined,
+                            source: 'supabase:auth+profiles'
+                        });
+                    }
+                });
+            }
+        } catch (e) {}
+
         try {
             const { data: profData } = await supabase
                 .from('profiles')
                 .select('*')
-                .limit(200);
+                .limit(500);
             if (Array.isArray(profData)) {
                 profData.forEach((r: any) => {
                     if (r.username) {
@@ -623,8 +647,8 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
                             displayName: r.display_name || `@${r.username}`,
                             email: r.email || '',
                             isAdmin: !!r.is_admin,
-                            age: r.age,
-                            gender: r.gender,
+                            age: r.age ?? undefined,
+                            gender: r.gender ?? undefined,
                             source: 'supabase:profiles'
                         });
                     }
@@ -636,7 +660,7 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
             const { data: warData } = await supabase
                 .from('war_game_stats')
                 .select('user_id, username')
-                .limit(200);
+                .limit(500);
             if (Array.isArray(warData)) {
                 warData.forEach((r: any) => {
                     if (r.username) {
@@ -653,16 +677,25 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
         try {
             const { data: gamesData } = await supabase
                 .from('user_created_games')
-                .select('user_id, creator_username')
-                .limit(200);
+                .select('user_id, creator_username, category, description')
+                .limit(500);
             if (Array.isArray(gamesData)) {
                 gamesData.forEach((r: any) => {
-                    if (r.creator_username) {
+                    if (r.creator_username && r.category !== 'admin_update') {
                         addCandidate({
                             id: r.user_id,
                             username: r.creator_username,
                             source: 'supabase:user_created_games'
                         });
+                    }
+                    if ((r.category === 'friend_request' || r.category === 'friend_relation') && r.description) {
+                        try {
+                            const parsed = typeof r.description === 'string' ? JSON.parse(r.description) : r.description;
+                            if (parsed?.fromUsername) addCandidate({ username: parsed.fromUsername, displayName: parsed.fromDisplayName, source: 'supabase:friends' });
+                            if (parsed?.toUsername) addCandidate({ username: parsed.toUsername, source: 'supabase:friends' });
+                            if (parsed?.user1) addCandidate({ username: parsed.user1, displayName: parsed.displayName1, source: 'supabase:friends' });
+                            if (parsed?.user2) addCandidate({ username: parsed.user2, displayName: parsed.displayName2, source: 'supabase:friends' });
+                        } catch (err) {}
                     }
                 });
             }
