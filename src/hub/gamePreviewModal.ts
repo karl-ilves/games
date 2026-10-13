@@ -448,7 +448,7 @@ export function getGameStats(gameId: string): {
                             uniqueSet.add(lowerUser);
                             const ts = parsed.timestamp || 0;
                             if (now - ts < activeWindowMs) {
-                                activePlayerNames.push(isOwnerUser(username) ? formatOwnerNametag('Playard Owner', true) : username);
+                                activePlayerNames.push(isOwnerUser(username) ? formatOwnerNametag('Playard Owner', true) : formatOwnerNametag(username));
                             }
                         }
                     }

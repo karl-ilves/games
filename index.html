@@ -1882,6 +1882,9 @@
                 <button type="button" id="tab-admin-ai-logs" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">
                     🤖 Playard AI Tegevused (Audit Log)
                 </button>
+                <button type="button" id="tab-admin-verified" style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); color: #2ecc71; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">
+                    ✔ Nime Linnukesed (Verified)
+                </button>
             </div>
 
             <!-- Section 1: Updates -->
@@ -1944,6 +1947,37 @@
                     <div style="text-align: center; color: #718093; padding: 20px;">Playard AI logisid pole veel salvestatud.</div>
                 </div>
             </div>
+
+            <!-- Section 3: Verified Checkmarks (Linnukesed) -->
+            <div id="admin-verified-section" style="display: none; flex-direction: column; gap: 14px;">
+                <div style="background: #1c2430; border: 1.5px solid rgba(46, 204, 113, 0.35); border-radius: 12px; padding: 16px;">
+                    <h3 style="color: #2ecc71; margin: 0 0 8px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                        <span>✔</span> Mängija Nime Kontrollitud Linnukese Halda (Verified Badge)
+                    </h3>
+                    <p style="color: #a4b0be; font-size: 0.85rem; margin: 0 0 12px 0;">
+                        Vali või sisesta mängija kasutajanimi, kelle nime lõppu lisatakse ametlik kontrollitud linnuke <strong>✔</strong> kõigis mängudes, vestluses, edetabelites ja profiilil.
+                    </p>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="admin-verified-username-input" placeholder="nt kasutajanimi..." style="flex: 1; min-width: 180px; padding: 10px 12px; border-radius: 8px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.92rem;">
+                        <button type="button" id="btn-admin-add-verified" style="padding: 10px 18px; background: linear-gradient(135deg, #2ecc71, #27ae60); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-weight: 800; font-size: 0.92rem; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 4px 14px rgba(46, 204, 113, 0.4);">
+                            <span>✔</span>
+                            <span>Lisa linnuke</span>
+                        </button>
+                    </div>
+                    <div id="admin-verified-status" style="margin-top: 8px; font-weight: bold; font-size: 0.85rem;"></div>
+                </div>
+
+                <!-- Active Verified Players List -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                    <h4 style="color: #00f2fe; margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+                        <span>👥</span> Kinnitatud mängijad nimekirjas
+                    </h4>
+                    <span id="admin-verified-count-badge" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;">0 kinnitatud</span>
+                </div>
+                <div id="admin-verified-players-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                    <div style="text-align: center; color: #718093; padding: 16px;">Laen kinnitatud mängijaid...</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1979,6 +2013,24 @@
                     </button>
                 </div>
                 <div id="owner-ban-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
+            </div>
+
+            <!-- Quick Verified Checkmark Box -->
+            <div style="background: #15222e; border: 1.5px solid rgba(46, 204, 113, 0.35); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;">
+                <h3 style="color: #2ecc71; margin: 0 0 8px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                    <span>✔</span> Vali kelle nime lõpus on ametlik linnuke (Verified)
+                </h3>
+                <p style="color: #a4b0be; font-size: 0.82rem; margin: 0 0 10px 0;">
+                    Saad allolevas nimekirjas klõpsata nupule <strong>✔ Anna linnuke</strong> või sisestada siia kasutajanime, et lisada/eemaldada tema nime lõpust kinnitatud linnuke <strong>✔</strong>.
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="owner-verified-username-input" placeholder="nt mängija kasutajanimi..." style="flex: 1; min-width: 180px; padding: 9px 12px; border-radius: 8px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.9rem;">
+                    <button type="button" id="btn-owner-add-verified" style="padding: 9px 16px; background: linear-gradient(135deg, #2ecc71, #27ae60); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-weight: 800; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.35);">
+                        <span>✔</span>
+                        <span>Lisa / Eemalda linnuke</span>
+                    </button>
+                </div>
+                <div id="owner-verified-status" style="margin-top: 6px; font-weight: bold; font-size: 0.85rem;"></div>
             </div>
 
             <!-- Active Database Players List -->

@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { getCurrentUserProfile, getLocalProfiles, isPlayardOwner, isOwnerUser, formatOwnerNametag, UserProfile } from '../auth';
+import { getCurrentUserProfile, getLocalProfiles, isPlayardOwner, isOwnerUser, formatOwnerNametag, UserProfile, isPlayerVerified, toggleVerifiedPlayer, addVerifiedPlayer, removeVerifiedPlayer } from '../auth';
 import { yardService } from '../shared/yardService';
 import { friendService } from '../shared/friends/friendService';
 import { renderCommunityGames, renderDatabaseGamesList } from './communityGames';
@@ -763,20 +763,36 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
             flex-wrap: wrap;
         `;
 
+        const isVerified = isOwner || isPlayerVerified(player.username, player.email);
+        const verifiedBadge = isVerified ? `<span style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.35); padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">✔ Kinnitatud</span>` : '';
         const ageBadge = player.age !== undefined ? `<span style="background: rgba(11,232,129,0.12); color: #0be881; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">🎂 ${player.age}a</span>` : '';
+
+        const verifiedToggleBtn = isOwner ? '' : `
+            <button type="button" class="btn-owner-toggle-verified" data-username="${player.username}" data-verified="${isVerified ? 'true' : 'false'}" style="background: ${isVerified ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255, 255, 255, 0.06)'}; border: 1px solid ${isVerified ? '#2ecc71' : 'rgba(255, 255, 255, 0.25)'}; color: ${isVerified ? '#2ecc71' : '#ffffff'}; border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                <span>${isVerified ? '✔ Linnuke: SEES' : '➕ Anna linnuke ✔'}</span>
+            </button>
+        `;
+
         const actionHtml = isOwner
             ? `<span style="background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.5); color: #ffd32a; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800;">👑 Playard Owner ✔ (Kaitstud)</span>`
-            : `<button type="button" class="btn-owner-ban-player" data-username="${player.username}" data-user-id="${player.id}" data-email="${player.email}" style="background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 14px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);">
-                <span>🔨</span>
-                <span>Banni & Kustuta</span>
-            </button>`;
+            : `<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                ${verifiedToggleBtn}
+                <button type="button" class="btn-owner-ban-player" data-username="${player.username}" data-user-id="${player.id}" data-email="${player.email}" style="background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 14px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);">
+                    <span>🔨</span>
+                    <span>Banni & Kustuta</span>
+                </button>
+            </div>`;
 
-        const displayStr = isOwner ? formatOwnerNametag(player.displayName || 'Playard Owner', true) : player.displayName;
+        const displayStr = isOwner 
+            ? formatOwnerNametag(player.displayName || 'Playard Owner', true) 
+            : (isVerified ? formatOwnerNametag(player.displayName || player.username, true) : (player.displayName || player.username).replace(/\s*✔$/g, ''));
+
         row.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <strong style="color: #ffffff; font-size: 0.98rem;">${displayStr}</strong>
                     <span style="color: #00f2fe; font-size: 0.82rem; font-family: monospace;">@${player.username}</span>
+                    ${verifiedBadge}
                     ${ageBadge}
                 </div>
                 <div style="font-size: 0.75rem; color: #8899a6; display: flex; gap: 10px; flex-wrap: wrap;">
@@ -788,6 +804,22 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
         `;
 
         listContainer.appendChild(row);
+    });
+
+    listContainer.querySelectorAll('.btn-owner-toggle-verified').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const targetBtn = e.currentTarget as HTMLButtonElement;
+            const username = targetBtn.getAttribute('data-username') || '';
+            if (!username) return;
+            const res = await toggleVerifiedPlayer(username);
+            const verifiedStatusEl = document.getElementById('owner-verified-status');
+            if (verifiedStatusEl) {
+                verifiedStatusEl.textContent = res.message;
+                verifiedStatusEl.style.color = res.verified ? '#2ecc71' : '#ffd32a';
+            }
+            const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
+            await renderOwnerPanelPlayersList(searchInput?.value || '');
+        });
     });
 
     listContainer.querySelectorAll('.btn-owner-ban-player').forEach(btn => {
@@ -986,10 +1018,44 @@ export function setupOwnerPanel() {
         });
     }
 
+    const verifiedInput = document.getElementById('owner-verified-username-input') as HTMLInputElement | null;
+    const verifiedBtn = document.getElementById('btn-owner-add-verified');
+    const verifiedStatusEl = document.getElementById('owner-verified-status');
+
+    if (verifiedBtn && verifiedInput) {
+        verifiedBtn.addEventListener('click', async () => {
+            const targetUsername = verifiedInput.value.trim();
+            if (!targetUsername) {
+                if (verifiedStatusEl) {
+                    verifiedStatusEl.textContent = 'Palun sisesta mängija kasutajanimi!';
+                    verifiedStatusEl.style.color = '#ff4757';
+                }
+                return;
+            }
+            const res = await toggleVerifiedPlayer(targetUsername);
+            if (verifiedStatusEl) {
+                verifiedStatusEl.textContent = res.message;
+                verifiedStatusEl.style.color = res.verified ? '#2ecc71' : '#ffd32a';
+            }
+            verifiedInput.value = '';
+            renderOwnerPanelPlayersList(searchInput?.value || '');
+        });
+    }
+
+    window.addEventListener('playard_verified_players_updated', () => {
+        if (modalOwner && modalOwner.style.display !== 'none') {
+            renderOwnerPanelPlayersList(searchInput?.value || '');
+        }
+    });
+
     if (typeof window !== 'undefined') {
         (window as any).banPlayerFromPlayard = banPlayerFromPlayard;
         (window as any).isPlayerBanned = isPlayerBanned;
         (window as any).getBannedPlayers = getBannedPlayers;
         (window as any).unbanPlayerFromPlayard = unbanPlayerFromPlayard;
+        (window as any).isPlayerVerified = isPlayerVerified;
+        (window as any).toggleVerifiedPlayer = toggleVerifiedPlayer;
+        (window as any).addVerifiedPlayer = addVerifiedPlayer;
+        (window as any).removeVerifiedPlayer = removeVerifiedPlayer;
     }
 }

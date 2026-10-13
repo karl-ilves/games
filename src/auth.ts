@@ -126,11 +126,19 @@ export function isOwnerUser(profileOrName?: any): boolean {
     return clean.includes('owner') || clean === 'karl' || clean === 'karl ilves' || clean === '1karl.ilves@gmail.com';
 }
 
+import { isPlayerVerified, getVerifiedPlayers, saveVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer, toggleVerifiedPlayer } from './shared/verifiedPlayers';
+export { isPlayerVerified, getVerifiedPlayers, saveVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer, toggleVerifiedPlayer };
+
 export function formatOwnerNametag(name: string, isOwner?: boolean): string {
     if (!name) return '';
     const clean = name.trim();
-    const isOwnerPlayer = isOwner !== undefined ? isOwner : isOwnerUser(clean);
-    if (!isOwnerPlayer) return clean;
+    const isVerified = isOwner !== undefined ? isOwner : (isOwnerUser(clean) || isPlayerVerified(clean));
+    if (!isVerified) {
+        if (clean.endsWith('✔')) {
+            return clean.replace(/[👑✅☑✔✓\s]+$/g, '').trim();
+        }
+        return clean;
+    }
 
     if (clean.endsWith('✔')) {
         return clean;
@@ -279,6 +287,8 @@ export function getCurrentUserProfile(): UserProfile | null {
             }
             if (isPlayardOwner(prof.email) || isOwnerUser(prof)) {
                 prof.displayName = formatOwnerNametag(prof.displayName || 'Playard Owner', true);
+            } else if (isPlayerVerified(prof.username, prof.email)) {
+                prof.displayName = formatOwnerNametag(prof.displayName || prof.username, true);
             }
             if (prof.birthDate) {
                 prof.age = calculateAge(prof.birthDate);
@@ -302,6 +312,8 @@ export function getLocalProfiles(): UserProfile[] {
                 return list.map(p => {
                     if (isPlayardOwner(p?.email) || isOwnerUser(p)) {
                         p.displayName = formatOwnerNametag(p.displayName || 'Playard Owner', true);
+                    } else if (isPlayerVerified(p?.username, p?.email)) {
+                        p.displayName = formatOwnerNametag(p.displayName || p.username, true);
                     }
                     return p;
                 });
@@ -314,6 +326,8 @@ export function getLocalProfiles(): UserProfile[] {
 export function saveLocalProfile(profile: UserProfile) {
     if (isPlayardOwner(profile.email) || isOwnerUser(profile)) {
         profile.displayName = formatOwnerNametag(profile.displayName || 'Playard Owner', true);
+    } else if (isPlayerVerified(profile.username, profile.email)) {
+        profile.displayName = formatOwnerNametag(profile.displayName || profile.username, true);
     }
     if (!profile.device) {
         profile.device = detectUserDevice();
@@ -608,6 +622,8 @@ export function updateAuthDisplay(profile: UserProfile | null) {
         const isOwner = isPlayardOwner(profile.email) || isOwnerUser(profile);
         if (isOwner) {
             profile.displayName = formatOwnerNametag(profile.displayName || 'Playard Owner', true);
+        } else if (isPlayerVerified(profile.username, profile.email)) {
+            profile.displayName = formatOwnerNametag(profile.displayName || profile.username, true);
         }
         if (loginForm) loginForm.style.display = 'none';
         if (userInfo) userInfo.style.display = 'block';

@@ -279,31 +279,138 @@ export function renderAdminAiLogs() {
     }
 }
 
+import { getVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer } from '../shared/verifiedPlayers';
+
+export function renderAdminVerifiedPlayersList() {
+    const container = document.getElementById('admin-verified-players-list');
+    const countBadge = document.getElementById('admin-verified-count-badge');
+    if (!container) return;
+
+    const list = getVerifiedPlayers();
+    if (countBadge) {
+        countBadge.textContent = `${list.length} kinnitatud`;
+    }
+
+    if (list.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #718093; padding: 18px;">Ühtegi mängijat pole veel kinnitatud.</div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    list.forEach(uname => {
+        const isOwner = isPlayardOwner(uname) || uname === 'playard owner' || uname === '1karl.ilves@gmail.com';
+        const item = document.createElement('div');
+        item.style.cssText = 'background: #1a2432; border: 1px solid rgba(46, 204, 113, 0.25); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;';
+        item.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #2ecc71; font-weight: 800; font-size: 1rem;">✔</span>
+                <strong style="color: #ffffff; font-size: 0.95rem;">@${uname}</strong>
+                ${isOwner ? '<span style="font-size: 0.72rem; background: rgba(255, 211, 42, 0.2); color: #ffd32a; padding: 2px 6px; border-radius: 4px; font-weight: 700;">👑 Owner (Püsiv)</span>' : ''}
+            </div>
+            <div>
+                ${isOwner ? '<span style="color: #718093; font-size: 0.8rem; font-style: italic;">Kaitstud</span>' : `
+                    <button type="button" class="btn-remove-verified-badge" data-username="${uname}" style="background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.4); color: #ff4757; border-radius: 6px; padding: 4px 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
+                        Eemalda linnuke ❌
+                    </button>
+                `}
+            </div>
+        `;
+        container.appendChild(item);
+    });
+
+    container.querySelectorAll('.btn-remove-verified-badge').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const targetBtn = e.currentTarget as HTMLButtonElement;
+            const uname = targetBtn.getAttribute('data-username') || '';
+            if (!uname) return;
+            await removeVerifiedPlayer(uname);
+            renderAdminVerifiedPlayersList();
+        });
+    });
+}
+
 export function setupAdminPanel() {
     const tabAdminUpdates = document.getElementById('tab-admin-updates');
     const tabAdminAiLogs = document.getElementById('tab-admin-ai-logs');
+    const tabAdminVerified = document.getElementById('tab-admin-verified');
     const adminUpdatesSection = document.getElementById('admin-updates-section');
     const adminAiLogsSection = document.getElementById('admin-ai-logs-section');
+    const adminVerifiedSection = document.getElementById('admin-verified-section');
+
+    const resetTabs = () => {
+        if (tabAdminUpdates) {
+            tabAdminUpdates.style.background = 'rgba(255, 211, 42, 0.1)';
+            tabAdminUpdates.style.borderColor = 'rgba(255, 211, 42, 0.3)';
+        }
+        if (tabAdminAiLogs) {
+            tabAdminAiLogs.style.background = 'rgba(56, 189, 248, 0.1)';
+            tabAdminAiLogs.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+        }
+        if (tabAdminVerified) {
+            tabAdminVerified.style.background = 'rgba(46, 204, 113, 0.1)';
+            tabAdminVerified.style.borderColor = 'rgba(46, 204, 113, 0.3)';
+        }
+        if (adminUpdatesSection) adminUpdatesSection.style.display = 'none';
+        if (adminAiLogsSection) adminAiLogsSection.style.display = 'none';
+        if (adminVerifiedSection) adminVerifiedSection.style.display = 'none';
+    };
 
     if (tabAdminUpdates && tabAdminAiLogs && adminUpdatesSection && adminAiLogsSection) {
         tabAdminUpdates.addEventListener('click', () => {
+            resetTabs();
             adminUpdatesSection.style.display = 'block';
-            adminAiLogsSection.style.display = 'none';
             tabAdminUpdates.style.background = 'rgba(255, 211, 42, 0.2)';
             tabAdminUpdates.style.borderColor = '#ffd32a';
-            tabAdminAiLogs.style.background = 'rgba(56, 189, 248, 0.1)';
-            tabAdminAiLogs.style.borderColor = 'rgba(56, 189, 248, 0.3)';
         });
         tabAdminAiLogs.addEventListener('click', () => {
-            adminUpdatesSection.style.display = 'none';
+            resetTabs();
             adminAiLogsSection.style.display = 'flex';
             tabAdminAiLogs.style.background = 'rgba(56, 189, 248, 0.2)';
             tabAdminAiLogs.style.borderColor = '#38bdf8';
-            tabAdminUpdates.style.background = 'rgba(255, 211, 42, 0.1)';
-            tabAdminUpdates.style.borderColor = 'rgba(255, 211, 42, 0.3)';
             renderAdminAiLogs();
         });
+        if (tabAdminVerified && adminVerifiedSection) {
+            tabAdminVerified.addEventListener('click', () => {
+                resetTabs();
+                adminVerifiedSection.style.display = 'flex';
+                tabAdminVerified.style.background = 'rgba(46, 204, 113, 0.2)';
+                tabAdminVerified.style.borderColor = '#2ecc71';
+                renderAdminVerifiedPlayersList();
+            });
+        }
     }
+
+    const btnAdminAddVerified = document.getElementById('btn-admin-add-verified');
+    const inputAdminVerified = document.getElementById('admin-verified-username-input') as HTMLInputElement | null;
+    const statusAdminVerified = document.getElementById('admin-verified-status');
+
+    if (btnAdminAddVerified && inputAdminVerified) {
+        btnAdminAddVerified.addEventListener('click', async () => {
+            const rawUser = inputAdminVerified.value.trim();
+            if (!rawUser) {
+                if (statusAdminVerified) {
+                    statusAdminVerified.textContent = 'Palun sisesta kasutajanimi!';
+                    statusAdminVerified.style.color = '#ff4757';
+                }
+                return;
+            }
+            const res = await addVerifiedPlayer(rawUser);
+            if (statusAdminVerified) {
+                statusAdminVerified.textContent = res.message;
+                statusAdminVerified.style.color = res.success ? '#2ecc71' : '#ff4757';
+            }
+            if (res.success) {
+                inputAdminVerified.value = '';
+                renderAdminVerifiedPlayersList();
+            }
+        });
+    }
+
+    window.addEventListener('playard_verified_players_updated', () => {
+        if (adminVerifiedSection && adminVerifiedSection.style.display !== 'none') {
+            renderAdminVerifiedPlayersList();
+        }
+    });
 
     window.addEventListener('playard_ai_logs_updated', () => {
         if (adminAiLogsSection && adminAiLogsSection.style.display !== 'none') {

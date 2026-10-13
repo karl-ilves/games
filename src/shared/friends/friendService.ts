@@ -103,7 +103,7 @@ export class FriendService {
                         const isOwner = isOwnerUser(rawUser) || isOwnerUser(rawDisplay);
                         return {
                             username: rawUser,
-                            displayName: isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay,
+                            displayName: formatOwnerNametag(rawDisplay, isOwner ? true : undefined),
                             color: getPlayerColor(rawUser)
                         };
                     });
@@ -935,7 +935,7 @@ export class FriendService {
             const isOwner = isOwnerUser(p.username) || isOwnerUser(p.displayName);
             results.push({
                 username: p.username,
-                displayName: isOwner ? formatOwnerNametag(p.displayName || 'Playard Owner', true) : p.displayName,
+                displayName: formatOwnerNametag(p.displayName || p.username, isOwner ? true : undefined),
                 color: p.color,
                 isFriend: friendUsernames.has(lowerKey),
                 hasPendingOutgoing: outgoingSet.has(lowerKey),

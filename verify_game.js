@@ -13558,6 +13558,82 @@ await (async () => {
             }
             console.log("   ✅ Playard Owner Checkmark (✔) everywhere verified!");
 
+            // Verify Admin Panel & Owner Panel Verified Checkmark (✔) Management
+            console.log("   Verifying Admin Panel & Owner Panel Verified Checkmark (✔) Management...");
+            const verifiedManagementTest = await page.evaluate(async () => {
+                // 1. Test Admin Panel Verified tab and adding a player
+                const adminModal = document.getElementById('modal-admin-panel');
+                const tabVerified = document.getElementById('tab-admin-verified');
+                const adminSection = document.getElementById('admin-verified-section');
+                const inputVerified = document.getElementById('admin-verified-username-input');
+                const btnAddVerified = document.getElementById('btn-admin-add-verified');
+                const listVerified = document.getElementById('admin-verified-players-list');
+
+                if (adminModal) adminModal.style.display = 'flex';
+                if (tabVerified) tabVerified.click();
+
+                const tabSwitchedOk = adminSection && adminSection.style.display !== 'none';
+
+                if (inputVerified && btnAddVerified) {
+                    inputVerified.value = 'MarkusPlayard99';
+                    btnAddVerified.click();
+                }
+                await new Promise(r => setTimeout(r, 100));
+
+                const listHasMarkus = listVerified?.textContent?.toLowerCase().includes('markusplayard99') || false;
+                const formattedMarkus = window.formatOwnerNametag ? window.formatOwnerNametag('MarkusPlayard99') : '';
+
+                // 2. Test Owner Panel toggle on a player
+                const modalOwner = document.getElementById('modal-owner-panel');
+                if (modalOwner) modalOwner.style.display = 'flex';
+                const ownerInput = document.getElementById('owner-verified-username-input');
+                const ownerBtn = document.getElementById('btn-owner-add-verified');
+
+                if (ownerInput && ownerBtn) {
+                    ownerInput.value = 'MikkSuperGamer';
+                    ownerBtn.click();
+                }
+                await new Promise(r => setTimeout(r, 100));
+
+                const formattedMikk = window.formatOwnerNametag ? window.formatOwnerNametag('MikkSuperGamer') : '';
+
+                // Toggle MikkSuperGamer off
+                if (ownerInput && ownerBtn) {
+                    ownerInput.value = 'MikkSuperGamer';
+                    ownerBtn.click();
+                }
+                await new Promise(r => setTimeout(r, 100));
+
+                const formattedMikkAfterRemove = window.formatOwnerNametag ? window.formatOwnerNametag('MikkSuperGamer') : '';
+                const ownerRemainsProtected = window.formatOwnerNametag ? window.formatOwnerNametag('Playard Owner') : '';
+
+                // Close modals
+                if (adminModal) adminModal.style.display = 'none';
+                if (modalOwner) modalOwner.style.display = 'none';
+
+                return {
+                    tabSwitchedOk,
+                    listHasMarkus,
+                    formattedMarkus,
+                    formattedMikk,
+                    formattedMikkAfterRemove,
+                    ownerRemainsProtected
+                };
+            });
+
+            console.log("   Verified Checkmark Management Test Results:", verifiedManagementTest);
+            if (
+                !verifiedManagementTest.tabSwitchedOk ||
+                !verifiedManagementTest.listHasMarkus ||
+                !verifiedManagementTest.formattedMarkus.includes('✔') ||
+                !verifiedManagementTest.formattedMikk.includes('✔') ||
+                verifiedManagementTest.formattedMikkAfterRemove.includes('✔') ||
+                !verifiedManagementTest.ownerRemainsProtected.includes('✔')
+            ) {
+                throw new Error("Verified Checkmark Management test failed: " + JSON.stringify(verifiedManagementTest));
+            }
+            console.log("   ✅ Admin Panel & Owner Panel Verified Checkmark (✔) Selection and Toggle verified successfully!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();
