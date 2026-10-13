@@ -1,4 +1,4 @@
-import { getCurrentUserProfile, UserProfile } from '../../auth';
+import { getCurrentUserProfile, UserProfile, formatOwnerNametag } from '../../auth';
 import { friendService, Friend, FriendRequest, PlayerSearchResult } from './friendService';
 import { getLanguage } from '../i18n';
 
@@ -104,7 +104,7 @@ function renderFriendsSection(profile: UserProfile | null) {
                         ${statusDot}
                     </div>
                     <span style="font-size: 0.78rem; font-weight: 600; color: #f1f2f6; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;">
-                        ${f.displayName || f.username}
+                        ${formatOwnerNametag(f.displayName || f.username)}
                     </span>
                     ${isPlaying ? `<span style="font-size: 0.65rem; color: #0be881; font-weight: 700; white-space: nowrap; max-width: 65px; overflow: hidden; text-overflow: ellipsis;">🎮 ${isEt ? 'Mängib' : 'Playing'}</span>` : ''}
                 </div>
@@ -146,7 +146,7 @@ export function openFriendProfile(friendUsername: string) {
 
     const nameEl = document.getElementById('friend-profile-name');
     if (nameEl) {
-        nameEl.textContent = friend.displayName || friend.username;
+        nameEl.textContent = formatOwnerNametag(friend.displayName || friend.username);
     }
 
     const usernameEl = document.getElementById('friend-profile-username');
@@ -297,7 +297,7 @@ function renderIncomingRequestsModal(username: string) {
                     👤
                 </div>
                 <div style="text-align: left;">
-                    <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">${req.fromDisplayName || req.fromUsername}</div>
+                    <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">${formatOwnerNametag(req.fromDisplayName || req.fromUsername)}</div>
                     <div style="font-size: 0.78rem; color: #0be881;">${isEt ? 'Saatis sulle sõbrakutse' : 'Sent you a friend request'}</div>
                 </div>
             </div>
@@ -388,7 +388,7 @@ function renderSearchResults(query: string, currentUsername: string) {
                         👤
                     </div>
                     <div style="text-align: left;">
-                        <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">${player.displayName || player.username}</div>
+                        <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">${formatOwnerNametag(player.displayName || player.username)}</div>
                         <div style="font-size: 0.78rem; color: #8899a6;">@${player.username.toLowerCase()}</div>
                     </div>
                 </div>

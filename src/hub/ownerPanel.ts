@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { getCurrentUserProfile, getLocalProfiles, isPlayardOwner, isOwnerUser, UserProfile } from '../auth';
+import { getCurrentUserProfile, getLocalProfiles, isPlayardOwner, isOwnerUser, formatOwnerNametag, UserProfile } from '../auth';
 import { yardService } from '../shared/yardService';
 import { friendService } from '../shared/friends/friendService';
 import { renderCommunityGames, renderDatabaseGamesList } from './communityGames';
@@ -765,16 +765,17 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
 
         const ageBadge = player.age !== undefined ? `<span style="background: rgba(11,232,129,0.12); color: #0be881; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">🎂 ${player.age}a</span>` : '';
         const actionHtml = isOwner
-            ? `<span style="background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.5); color: #ffd32a; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800;">👑 Playard Owner (Kaitstud)</span>`
+            ? `<span style="background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.5); color: #ffd32a; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800;">👑 Playard Owner ✔ (Kaitstud)</span>`
             : `<button type="button" class="btn-owner-ban-player" data-username="${player.username}" data-user-id="${player.id}" data-email="${player.email}" style="background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 14px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);">
                 <span>🔨</span>
                 <span>Banni & Kustuta</span>
             </button>`;
 
+        const displayStr = isOwner ? formatOwnerNametag(player.displayName || 'Playard Owner', true) : player.displayName;
         row.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <strong style="color: #ffffff; font-size: 0.98rem;">${player.displayName}</strong>
+                    <strong style="color: #ffffff; font-size: 0.98rem;">${displayStr}</strong>
                     <span style="color: #00f2fe; font-size: 0.82rem; font-family: monospace;">@${player.username}</span>
                     ${ageBadge}
                 </div>

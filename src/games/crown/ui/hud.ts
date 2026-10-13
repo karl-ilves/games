@@ -57,6 +57,9 @@ export class CrownHud {
 
         if (this.ownerBadge) {
             this.ownerBadge.style.display = this.gameState.getIsOwner() ? 'inline-block' : 'none';
+            if (this.gameState.getIsOwner()) {
+                this.ownerBadge.textContent = '👑 PLAYARD OWNER ✔';
+            }
         }
     }
 

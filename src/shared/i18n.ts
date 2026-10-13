@@ -163,7 +163,7 @@ export function applyLocalization() {
         const tTrain = trainCard.querySelector('.reward-tag span:last-child');
         if (tTrain) tTrain.textContent = isEt ? '🪙 JAAMAPEATUSED (+50 € Rongiraha jaama kohta)' : '🪙 STATION STOPS (+50 € Train Money per stop)';
         const ownerPill = trainCard.querySelector('.owner-badge-pill');
-        if (ownerPill) ownerPill.textContent = isEt ? '👑 PLAYARD OWNER' : '🔥 NEW 3D GAME';
+        if (ownerPill) ownerPill.textContent = isEt ? '👑 PLAYARD OWNER ✔' : '🔥 NEW 3D GAME';
     }
 
     // Obby (Takistusrada) Game Card

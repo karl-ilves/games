@@ -132,12 +132,12 @@ export function formatOwnerNametag(name: string, isOwner?: boolean): string {
     const isOwnerPlayer = isOwner !== undefined ? isOwner : isOwnerUser(clean);
     if (!isOwnerPlayer) return clean;
 
-    if (clean.endsWith('✔') || clean.endsWith('✓')) {
+    if (clean.endsWith('✔')) {
         return clean;
     }
 
     // Strip trailing crowns, check emojis or whitespace
-    const base = clean.replace(/[👑✅☑✔✓\s]+$/g, '').trim();
+    const base = clean.replace(/[👑✅☑✔✓\s]+$/g, '').trim() || 'Playard Owner';
     return `${base} ✔`;
 }
 
@@ -277,6 +277,9 @@ export function getCurrentUserProfile(): UserProfile | null {
                 localStorage.removeItem(CURRENT_PROFILE_KEY);
                 return null;
             }
+            if (isPlayardOwner(prof.email) || isOwnerUser(prof)) {
+                prof.displayName = formatOwnerNametag(prof.displayName || 'Playard Owner', true);
+            }
             if (prof.birthDate) {
                 prof.age = calculateAge(prof.birthDate);
             }
@@ -293,12 +296,25 @@ export function getCurrentUserProfile(): UserProfile | null {
 export function getLocalProfiles(): UserProfile[] {
     try {
         const raw = localStorage.getItem(PROFILES_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+            const list = JSON.parse(raw) as UserProfile[];
+            if (Array.isArray(list)) {
+                return list.map(p => {
+                    if (isPlayardOwner(p?.email) || isOwnerUser(p)) {
+                        p.displayName = formatOwnerNametag(p.displayName || 'Playard Owner', true);
+                    }
+                    return p;
+                });
+            }
+        }
     } catch (e) {}
     return [];
 }
 
 export function saveLocalProfile(profile: UserProfile) {
+    if (isPlayardOwner(profile.email) || isOwnerUser(profile)) {
+        profile.displayName = formatOwnerNametag(profile.displayName || 'Playard Owner', true);
+    }
     if (!profile.device) {
         profile.device = detectUserDevice();
         profile.isMobile = profile.device === 'phone';
@@ -495,16 +511,107 @@ function _renderGenderInUI(profile: UserProfile) {
     }
 }
 
+export function ensureGlobalOwnerCheckmarkUI() {
+    if (typeof document === 'undefined') return;
+    const prof = getCurrentUserProfile();
+    const isOwner = !!(prof && (isPlayardOwner(prof.email) || isOwnerUser(prof)));
+
+    // 1. Update any existing owner HUD badges / pills in games
+    const ownerHudBadge = document.getElementById('owner-hud-badge');
+    if (ownerHudBadge) {
+        if (isOwner) {
+            ownerHudBadge.style.display = 'inline-block';
+            ownerHudBadge.textContent = '👑 PLAYARD OWNER ✔';
+        } else {
+            ownerHudBadge.style.display = 'none';
+        }
+    }
+
+    const obbyOwnerPill = document.getElementById('hud-owner-pill');
+    if (obbyOwnerPill) {
+        if (isOwner) {
+            obbyOwnerPill.style.display = 'inline-block';
+            obbyOwnerPill.textContent = '👑 PLAYARD OWNER ✔';
+        } else {
+            obbyOwnerPill.style.display = 'none';
+        }
+    }
+
+    const trainOwnerPill = document.getElementById('owner-badge-pill');
+    if (trainOwnerPill && isOwner) {
+        trainOwnerPill.textContent = '👑 PLAYARD OWNER ✔';
+    }
+
+    document.querySelectorAll('.owner-pill').forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.id === 'hud-owner-pill' || htmlEl.id === 'owner-badge-pill' || htmlEl.id === 'environment-mode-badge') return;
+        if (isOwner) {
+            htmlEl.style.display = 'inline-block';
+            htmlEl.textContent = '👑 PLAYARD OWNER ✔';
+        }
+    });
+
+    // 2. For any game page that doesn't already have an owner badge element, inject/toggle #owner-hud-badge
+    const isGamePage = typeof window !== 'undefined' && window.location.pathname.toLowerCase().includes('/games/');
+    if (isGamePage && !ownerHudBadge && !obbyOwnerPill && !trainOwnerPill) {
+        let injected = document.getElementById('global-owner-checkmark-badge') as HTMLElement | null;
+        if (isOwner) {
+            if (!injected) {
+                injected = document.createElement('span');
+                injected.id = 'global-owner-checkmark-badge';
+                injected.className = 'owner-checkmark-badge';
+                injected.style.cssText = 'display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; font-weight: 900; color: #ffd700; background: rgba(255, 215, 0, 0.16); border: 1px solid rgba(255, 215, 0, 0.5); padding: 4px 10px; border-radius: 8px; white-space: nowrap; pointer-events: none; z-index: 999;';
+                injected.textContent = '👑 Playard Owner ✔';
+                const hudContainer =
+                    document.querySelector('.top-hud .hud-right') ||
+                    document.querySelector('#top-hud .hud-right') ||
+                    document.querySelector('.top-hud') ||
+                    document.querySelector('#top-hud') ||
+                    document.querySelector('#hud-top') ||
+                    document.querySelector('#play-health-hud') ||
+                    document.querySelector('header');
+                if (hudContainer) {
+                    hudContainer.appendChild(injected);
+                } else if (document.body) {
+                    injected.style.position = 'fixed';
+                    injected.style.top = '10px';
+                    injected.style.right = '14px';
+                    document.body.appendChild(injected);
+                }
+            } else {
+                injected.style.display = 'inline-flex';
+                injected.textContent = '👑 Playard Owner ✔';
+            }
+        } else if (injected) {
+            injected.style.display = 'none';
+        }
+    }
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).formatOwnerNametag = formatOwnerNametag;
+    (window as any).ensureGlobalOwnerCheckmarkUI = ensureGlobalOwnerCheckmarkUI;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => ensureGlobalOwnerCheckmarkUI());
+    } else {
+        setTimeout(() => ensureGlobalOwnerCheckmarkUI(), 0);
+    }
+    window.addEventListener('playard_auth_changed', () => ensureGlobalOwnerCheckmarkUI());
+}
+
 export function updateAuthDisplay(profile: UserProfile | null) {
     const loginForm = document.getElementById('login-form');
     const userInfo = document.getElementById('user-info');
     const emailSpan = document.getElementById('user-email');
 
     if (profile) {
+        const isOwner = isPlayardOwner(profile.email) || isOwnerUser(profile);
+        if (isOwner) {
+            profile.displayName = formatOwnerNametag(profile.displayName || 'Playard Owner', true);
+        }
         if (loginForm) loginForm.style.display = 'none';
         if (userInfo) userInfo.style.display = 'block';
         if (emailSpan) {
-            const isOwner = isPlayardOwner(profile.email);
             const isInternalEmail = !profile.email || profile.email.endsWith('@playard.player') || profile.email.endsWith('@playard.com');
             const emailSubtitle = (!isInternalEmail && !isOwner && profile.email) 
                 ? ` <span style="font-size: 0.8rem; color: #718093;">(${profile.email})</span>` 
@@ -512,6 +619,7 @@ export function updateAuthDisplay(profile: UserProfile | null) {
             emailSpan.innerHTML = `<strong>${profile.displayName}</strong>${emailSubtitle}`;
         }
         window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: profile }));
+        ensureGlobalOwnerCheckmarkUI();
         _renderAgeInUI(profile);
         _renderGenderInUI(profile);
         if (typeof (window as any).__updateGameAgeRestrictions === 'function') {
@@ -528,6 +636,7 @@ export function updateAuthDisplay(profile: UserProfile | null) {
             ageSpan.textContent = '';
         }
         window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: null }));
+        ensureGlobalOwnerCheckmarkUI();
         if (typeof (window as any).__updateGameAgeRestrictions === 'function') {
             (window as any).__updateGameAgeRestrictions();
         }

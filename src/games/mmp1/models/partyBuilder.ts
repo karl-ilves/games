@@ -3,14 +3,16 @@ import { Character } from '../types';
 import { createCharacterMesh } from './characterBuilder';
 import { MmpCrateManager } from '../state/crateManager';
 import { AvatarConfig } from '../../../shared/avatar/types';
-import { getCurrentUserProfile, isPlayardOwner } from '../../../auth';
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag } from '../../../auth';
 
 export function getPlayerDisplayName(): { username: string; displayName: string } {
     const prof = getCurrentUserProfile();
-    const username = prof?.username || "Player";
-    const isOwner = isPlayardOwner(prof?.email);
-    const displayName = `${username} (Sina)${isOwner ? ' 👑' : ''}`;
-    return { username, displayName };
+    const rawUser = prof?.username || "Player";
+    const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof);
+    const displayName = isOwner
+        ? `${formatOwnerNametag(prof?.displayName || rawUser, true)} (Sina) 👑`
+        : `${rawUser} (Sina)`;
+    return { username: rawUser, displayName };
 }
 
 export interface MmpBotPreset {

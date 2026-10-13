@@ -13525,6 +13525,39 @@ await (async () => {
             }
             console.log("   ✅ Game Preview Modal (Large Image, Creator 'Playard Games', Like Button & Count, Unique Players, Active Players, Play Button) verified!");
 
+            // Verify Playard Owner Checkmark ✔ everywhere
+            console.log("   Verifying Playard Owner Checkmark (✔) everywhere...");
+            await page.evaluate(() => {
+                const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner 👑', isAdmin: true, isOwner: true };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
+                window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: ownerProf } }));
+            });
+            await new Promise(r => setTimeout(r, 250));
+
+            const ownerCheckmarkTest = await page.evaluate(() => {
+                const userEmailText = document.getElementById('user-email')?.textContent || '';
+                const widgetUsername = document.getElementById('widget-avatar-username')?.textContent || '';
+                const widgetRole = document.getElementById('widget-avatar-role')?.textContent || '';
+                const ownerPanelBtn = document.getElementById('btn-open-owner-panel');
+                if (ownerPanelBtn) ownerPanelBtn.click();
+                const ownerModalText = document.getElementById('owner-players-list-container')?.textContent || '';
+                return {
+                    userEmailText,
+                    widgetUsername,
+                    widgetRole,
+                    ownerModalHasCheckmark: ownerModalText.includes('Playard Owner ✔')
+                };
+            });
+            console.log("   Owner Checkmark Test Results:", ownerCheckmarkTest);
+            if (
+                !ownerCheckmarkTest.userEmailText.includes('✔') ||
+                !ownerCheckmarkTest.widgetUsername.includes('✔') ||
+                !ownerCheckmarkTest.widgetRole.includes('✔')
+            ) {
+                throw new Error("Playard Owner Checkmark verification failed: " + JSON.stringify(ownerCheckmarkTest));
+            }
+            console.log("   ✅ Playard Owner Checkmark (✔) everywhere verified!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();

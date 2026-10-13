@@ -1,5 +1,6 @@
 import { GridPoint, FoodItem, FoodType, Direction } from '../types';
 import { SNAKE_CONFIG } from '../catalog';
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag } from '../../../auth';
 
 export interface SnakeThemeConfig {
     head?: string;
@@ -289,6 +290,37 @@ export class SnakeRenderer {
             else if (direction === 'UP') { tx = cx - 1; ty = hy - 6; tw = 2; th = 6; }
             else if (direction === 'DOWN') { tx = cx - 1; ty = hy + hsize; tw = 2; th = 6; }
             ctx.fillRect(tx, ty, tw, th);
+        }
+
+        // 4. Nametag above snake head
+        let tagText = _nameTag;
+        if (!tagText) {
+            const prof = getCurrentUserProfile();
+            if (prof && (isPlayardOwner(prof.email) || isOwnerUser(prof))) {
+                tagText = formatOwnerNametag(prof.displayName || 'Playard Owner', true);
+            }
+        }
+        if (tagText) {
+            ctx.save();
+            ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            const metrics = ctx.measureText(tagText);
+            const tagW = metrics.width + 12;
+            const tagH = 18;
+            const tagX = cx - tagW / 2;
+            const tagY = hy - 8;
+
+            ctx.fillStyle = 'rgba(7, 10, 18, 0.85)';
+            ctx.strokeStyle = tagText.includes('✔') ? '#ffd700' : 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            this.drawRoundedRect(ctx, tagX, tagY - tagH, tagW, tagH, 6);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = tagText.includes('✔') ? '#ffd700' : '#ffffff';
+            ctx.fillText(tagText, cx, tagY - 3);
+            ctx.restore();
         }
 
         ctx.restore();

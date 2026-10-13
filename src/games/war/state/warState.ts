@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/supabase';
-import { getCurrentUserProfile, isPlayardOwner } from '../../../auth';
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag } from '../../../auth';
 import { yardService } from '../../../shared/yardService';
 import { Team, UnitClass, ActiveWeapon, CombatUnit } from '../types';
 
@@ -47,7 +47,9 @@ export class WarGameState {
         const prof = getCurrentUserProfile();
         this.isOwnerLang = false;
         if (prof) {
-            this.localUsername = prof.displayName || prof.username || 'Commander';
+            const rawName = prof.displayName || prof.username || 'Commander';
+            const isOwner = isPlayardOwner(prof.email) || isOwnerUser(prof);
+            this.localUsername = isOwner ? formatOwnerNametag(rawName, true) : rawName;
             if (prof.id) this.localPlayerId = prof.id;
         } else {
             this.localUsername = 'Commander';

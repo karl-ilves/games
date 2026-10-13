@@ -1,5 +1,5 @@
 import { MultiplayerInvite, Direction, GridPoint, FoodItem, RemotePlayerInfo, ServerRoomState } from '../types';
-import { getCurrentUserProfile } from '../../../auth';
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag } from '../../../auth';
 import { getSnakeColorPreset, SnakeColorPreset } from '../catalog';
 import { DemoAiSystem } from './demoAi';
 import { supabase } from '../../../lib/supabase';
@@ -143,7 +143,9 @@ export class SnakeMultiplayerSystem {
     public announcePresence(): void {
         const profile = getCurrentUserProfile();
         const username = profile?.username || 'Guest';
-        const displayName = profile?.display_name || username;
+        const isOwner = isPlayardOwner(profile?.email) || isOwnerUser(profile);
+        const rawDisplay = profile?.displayName || (profile as any)?.display_name || username;
+        const displayName = isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay;
         this.broadcastPayload({
             type: 'SNAKE_PRESENCE_ANNOUNCE',
             senderTabId: this.tabId,
@@ -157,7 +159,7 @@ export class SnakeMultiplayerSystem {
         const result: { username: string; displayName: string }[] = [];
         this.activeOnlinePlayers.forEach((info) => {
             if (now - info.lastSeen < 60000) {
-                result.push({ username: info.username, displayName: info.displayName });
+                result.push({ username: info.username, displayName: formatOwnerNametag(info.displayName || info.username) });
             }
         });
         return result;
@@ -171,7 +173,9 @@ export class SnakeMultiplayerSystem {
             case 'SNAKE_PRESENCE_PING': {
                 const profile = getCurrentUserProfile();
                 const username = profile?.username || 'Guest';
-                const displayName = profile?.display_name || username;
+                const isOwner = isPlayardOwner(profile?.email) || isOwnerUser(profile);
+                const rawDisplay = profile?.displayName || (profile as any)?.display_name || username;
+                const displayName = isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay;
                 this.broadcastPayload({
                     type: 'SNAKE_PRESENCE_ANNOUNCE',
                     senderTabId: this.tabId,
@@ -187,7 +191,7 @@ export class SnakeMultiplayerSystem {
                 if (data.username) {
                     this.activeOnlinePlayers.set(data.username.toLowerCase(), {
                         username: data.username,
-                        displayName: data.displayName || data.username,
+                        displayName: formatOwnerNametag(data.displayName || data.username),
                         tabId: data.senderTabId,
                         lastSeen: Date.now()
                     });
@@ -360,7 +364,9 @@ export class SnakeMultiplayerSystem {
     }): void {
         const profile = getCurrentUserProfile();
         const username = profile?.username || 'Mängija';
-        const displayName = profile?.display_name || username;
+        const isOwner = isPlayardOwner(profile?.email) || isOwnerUser(profile);
+        const rawDisplay = profile?.displayName || (profile as any)?.display_name || username;
+        const displayName = isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay;
 
         const payload = {
             type: 'SNAKE_SERVER_UPDATE',
@@ -493,7 +499,9 @@ export class SnakeMultiplayerSystem {
     public sendInvite(toUsername: string): MultiplayerInvite {
         const profile = getCurrentUserProfile();
         const fromUsername = profile?.username || 'Guest';
-        const fromDisplayName = profile?.display_name || fromUsername;
+        const isOwner = isPlayardOwner(profile?.email) || isOwnerUser(profile);
+        const rawDisplay = profile?.displayName || (profile as any)?.display_name || fromUsername;
+        const fromDisplayName = isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay;
 
         // Check if the other player ALREADY sent us an invite!
         // If so, both have now sent an invite ("kui mõlemad saadavad kutse siis läheb mäng ussimängus käima")!
@@ -548,7 +556,9 @@ export class SnakeMultiplayerSystem {
     public respondToInvite(invite: MultiplayerInvite, accepted: boolean): void {
         const profile = getCurrentUserProfile();
         const fromUsername = profile?.username || 'Guest';
-        const fromDisplayName = profile?.display_name || fromUsername;
+        const isOwner = isPlayardOwner(profile?.email) || isOwnerUser(profile);
+        const rawDisplay = profile?.displayName || (profile as any)?.display_name || fromUsername;
+        const fromDisplayName = isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay;
 
         if (accepted) {
             this.activeOpponent = invite.fromUsername;

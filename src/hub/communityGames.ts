@@ -1,5 +1,5 @@
 import { yardService } from '../shared/yardService';
-import { getCurrentUserProfile, isUserAdminEmail } from '../auth';
+import { getCurrentUserProfile, isUserAdminEmail, formatOwnerNametag } from '../auth';
 
 export async function renderCommunityGames() {
     const container = document.getElementById('community-games-grid');
@@ -25,9 +25,10 @@ export async function renderCommunityGames() {
             (currentUser && (currentUser.username?.toLowerCase() === game.creatorUsername?.toLowerCase() || isAdmin)) ||
             yardService.isMyCreatedGame(game.id)
         );
+        const creatorFormatted = formatOwnerNametag(game.creatorUsername || 'Playard Games');
         const card = document.createElement('div');
         card.className = 'game-card';
-        card.setAttribute('data-creator', game.creatorUsername || 'Playard Games');
+        card.setAttribute('data-creator', creatorFormatted);
         card.style.position = 'relative';
         const thumbHtml = game.thumbnail
             ? `<div style="width: 100%; height: 140px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; background: #0b111a; border: 1px solid rgba(0, 242, 254, 0.2);"><img src="${game.thumbnail}" alt="${game.title}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></div>`
@@ -39,7 +40,7 @@ export async function renderCommunityGames() {
                 <p>${game.description || 'Community created 3D game. Explore the world and have fun!'}</p>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
                     <div class="reward-tag">
-                        <span>👤 By: <strong>${game.creatorUsername}</strong></span>
+                        <span>👤 By: <strong>${creatorFormatted}</strong></span>
                     </div>
                     <span style="color: #00f2fe; font-weight: bold; font-size: 0.9rem;">▶️ Play</span>
                 </div>

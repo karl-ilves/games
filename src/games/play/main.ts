@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { yardService } from '../../shared/yardService';
-import { getCurrentUserProfile, isPlayardOwner } from '../../auth';
+import { getCurrentUserProfile, isPlayardOwner, formatOwnerNametag } from '../../auth';
 import { avatarService } from '../../shared/avatar/AvatarService';
 import { AvatarRig } from '../../shared/avatar/AvatarRig';
 import { translateDOM, t } from '../../shared/i18n_dict';
@@ -109,7 +109,8 @@ async function initPlayer() {
 
         if (playState.currentGame) {
             if (titleDisp) titleDisp.innerText = playState.currentGame.title;
-            if (authorDisp) authorDisp.innerHTML = `By: <strong style="color: #ffd32a;">${playState.currentGame.creatorUsername}</strong> | Category: ${playState.currentGame.category}`;
+            const creatorDisplay = formatOwnerNametag(playState.currentGame.creatorUsername || 'Playard Games');
+            if (authorDisp) authorDisp.innerHTML = `By: <strong style="color: #ffd32a;">${creatorDisplay}</strong> | Category: ${playState.currentGame.category}`;
             
             if (playState.currentGame.sceneData?.mapType === 'sea' && playState.currentGame.sceneData.seaConfig) {
                 const seaRes = createUltraOcean(scene, playState.currentGame.sceneData.seaConfig);

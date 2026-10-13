@@ -13,7 +13,7 @@ import { SpectatorSystem } from "./spectatorSystem";
 import { MmpOnlineNetwork } from "./mmpOnlineNetwork";
 import { MmpRosterManager } from "./mmpRosterManager";
 import { MmpSyncSystem } from "./mmpSyncSystem";
-import { getCurrentUserProfile, isPlayardOwner } from "../../../auth";
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag } from "../../../auth";
 
 export function createGameSystems(game: any): {
     combatSystem: CombatSystem;
@@ -170,8 +170,9 @@ export function createGameSystems(game: any): {
     });
 
     const prof = getCurrentUserProfile();
-    const username = prof?.username || "Player";
-    const isOwner = isPlayardOwner(prof?.email);
+    const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof);
+    const rawUser = prof?.username || "Player";
+    const username = isOwner ? formatOwnerNametag(rawUser, true) : rawUser;
     const playerId = "mmp_" + Math.random().toString(36).substring(2, 9);
 
     const onlineNetwork = new MmpOnlineNetwork(playerId, username, isOwner);

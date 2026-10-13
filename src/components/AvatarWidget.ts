@@ -1,6 +1,6 @@
 import { avatarService } from '../shared/avatar/AvatarService';
 import { AvatarViewer } from '../shared/avatar/AvatarViewer';
-import { getCurrentUserProfile, isPlayardOwner, isOwnerUser } from '../auth';
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag } from '../auth';
 import { yardService } from '../shared/yardService';
 
 export class AvatarWidget {
@@ -102,18 +102,19 @@ export class AvatarWidget {
         const roleEl = this.container.querySelector('#widget-avatar-role');
         const yardVal = this.container.querySelector('#widget-yard-val');
         const ownerBtn = this.container.querySelector('#btn-widget-open-owner-panel') as HTMLElement | null;
+        const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof) || (!!prof?.isAdmin && (prof?.email || '').trim().toLowerCase() !== 'grx@trenet.ee');
 
         if (userEl) {
-            userEl.textContent = prof ? (prof.displayName || `@${prof.username}`) : 'Guest Player';
+            const rawName = prof ? (prof.displayName || `@${prof.username}`) : 'Guest Player';
+            userEl.textContent = isOwner ? formatOwnerNametag(rawName, true) : rawName;
         }
         if (roleEl) {
-            roleEl.textContent = prof?.isAdmin ? '⭐ OWNER' : '⭐ Lv.1';
+            roleEl.textContent = isOwner ? '👑 PLAYARD OWNER ✔' : (prof?.isAdmin ? '⭐ ADMIN' : '⭐ Lv.1');
         }
         if (yardVal) {
             yardVal.textContent = yardService.getYards().toLocaleString();
         }
         if (ownerBtn) {
-            const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof) || (!!prof?.isAdmin && (prof?.email || '').trim().toLowerCase() !== 'grx@trenet.ee');
             ownerBtn.style.display = isOwner ? 'inline-flex' : 'none';
         }
     }

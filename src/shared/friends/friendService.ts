@@ -1,4 +1,4 @@
-import { getLocalProfiles, getCurrentUserProfile } from '../../auth';
+import { getLocalProfiles, getCurrentUserProfile, isOwnerUser, formatOwnerNametag } from '../../auth';
 import { supabase } from '../../lib/supabase';
 
 export interface Friend {
@@ -97,11 +97,16 @@ export class FriendService {
             if (data && Array.isArray(data) && !error) {
                 this.cachedSupabasePlayers = data
                     .filter(p => p.username && p.username.trim())
-                    .map(p => ({
-                        username: p.username.trim(),
-                        displayName: p.display_name || p.username.trim(),
-                        color: getPlayerColor(p.username.trim())
-                    }));
+                    .map(p => {
+                        const rawUser = p.username.trim();
+                        const rawDisplay = p.display_name || rawUser;
+                        const isOwner = isOwnerUser(rawUser) || isOwnerUser(rawDisplay);
+                        return {
+                            username: rawUser,
+                            displayName: isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay,
+                            color: getPlayerColor(rawUser)
+                        };
+                    });
                 window.dispatchEvent(new CustomEvent('playard_friends_updated'));
             }
         } catch (e) {
@@ -927,9 +932,10 @@ export class FriendService {
                 return;
             }
 
+            const isOwner = isOwnerUser(p.username) || isOwnerUser(p.displayName);
             results.push({
                 username: p.username,
-                displayName: p.displayName,
+                displayName: isOwner ? formatOwnerNametag(p.displayName || 'Playard Owner', true) : p.displayName,
                 color: p.color,
                 isFriend: friendUsernames.has(lowerKey),
                 hasPendingOutgoing: outgoingSet.has(lowerKey),

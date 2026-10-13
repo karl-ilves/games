@@ -1,4 +1,4 @@
-import { getCurrentUserProfile, isPlayardOwner } from '../auth';
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag } from '../auth';
 import { yardService } from '../shared/yardService';
 import { friendService } from '../shared/friends/friendService';
 import { supabase } from '../lib/supabase';
@@ -448,7 +448,7 @@ export function getGameStats(gameId: string): {
                             uniqueSet.add(lowerUser);
                             const ts = parsed.timestamp || 0;
                             if (now - ts < activeWindowMs) {
-                                activePlayerNames.push(username);
+                                activePlayerNames.push(isOwnerUser(username) ? formatOwnerNametag('Playard Owner', true) : username);
                             }
                         }
                     }
@@ -830,10 +830,10 @@ export function openGamePreviewModal(game: GamePreviewInfo) {
         titleEl.textContent = game.title;
     }
     if (creatorEl) {
-        creatorEl.textContent = creatorName;
+        creatorEl.textContent = creatorName.replace(/[✔✓✅\s]+$/g, '').trim();
     }
     if (creatorVerifiedEl) {
-        creatorVerifiedEl.style.display = creatorName === 'Playard Games' ? 'inline-flex' : 'none';
+        creatorVerifiedEl.style.display = (creatorName === 'Playard Games' || isOwnerUser(creatorName)) ? 'inline-flex' : 'none';
     }
     if (descEl) {
         descEl.textContent = game.description;

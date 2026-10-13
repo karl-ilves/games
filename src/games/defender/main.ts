@@ -79,7 +79,7 @@ export class EarthDefenderGame {
             icon: '🛡️'
         });
 
-        this.hud.showToast(ownerAccess ? "👑 Welcome, Playard Owner! Earth needs your defense!" : "🛡️ Welcome, Space Defender! Earth needs your defense!", "#ffd700");
+        this.hud.showToast(ownerAccess ? "👑 Welcome, Playard Owner ✔! Earth needs your defense!" : "🛡️ Welcome, Space Defender! Earth needs your defense!", "#ffd700");
 
         this.isRunning = true;
         this.lastTime = performance.now();

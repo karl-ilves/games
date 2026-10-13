@@ -1,6 +1,6 @@
 import { LeaderboardEntry } from '../types';
 import { DefenderState } from '../state/defenderState';
-import { getCurrentUserProfile, isOwnerUser } from '../../../auth';
+import { getCurrentUserProfile, isOwnerUser, formatOwnerNametag } from '../../../auth';
 
 const DEFENDER_PLAYED_PLAYERS_STORAGE = 'playard_defender_played_players_v1';
 
@@ -92,7 +92,8 @@ export class DefenderLeaderboardUI {
         const profile = getCurrentUserProfile();
         const isOwner = this.state.getIsOwner();
         const username = profile?.username || (isOwner ? 'karl.ilves' : 'karl.ilves');
-        const displayName = profile?.displayName || profile?.username || (isOwner ? 'Karl Ilves' : 'Karl Ilves');
+        const rawDisplay = profile?.displayName || profile?.username || (isOwner ? 'Playard Owner ✔' : 'Karl Ilves');
+        const displayName = isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay;
         const stats = this.state.getStats();
         const currentScore = Math.max(stats.score, stats.highScore);
 
@@ -120,6 +121,8 @@ export class DefenderLeaderboardUI {
         if (!username) return;
         const list = this.getPlayedPlayers();
         const cleanUser = username.trim().toLowerCase();
+        const ownerFlag = isOwner || isOwnerUser(username) || isOwnerUser(displayName);
+        const formattedDisplay = ownerFlag ? formatOwnerNametag(displayName || username, true) : (displayName || username);
 
         let existing = list.find((p) => (p.username || p.name).toLowerCase() === cleanUser);
 
@@ -130,19 +133,20 @@ export class DefenderLeaderboardUI {
                 existing.asteroidsDestroyed = Math.max(existing.asteroidsDestroyed, destroyed);
             }
             existing.lastPlayed = Date.now();
-            existing.name = displayName || existing.name;
+            existing.name = formattedDisplay || existing.name;
+            existing.isOwner = existing.isOwner || ownerFlag;
         } else {
             existing = {
                 id: `usr_${cleanUser}`,
-                name: displayName || username,
+                name: formattedDisplay,
                 username: username,
                 score: score,
                 wave: wave || 1,
                 asteroidsDestroyed: destroyed || 0,
                 lastPlayed: Date.now(),
-                isOwner: isOwner || isOwnerUser(undefined, username),
+                isOwner: ownerFlag,
                 isRealPlayer: true,
-                avatarIcon: isOwner ? '👑' : '👤'
+                avatarIcon: ownerFlag ? '👑' : '👤'
             };
             list.push(existing);
         }
@@ -164,7 +168,8 @@ export class DefenderLeaderboardUI {
         const profile = getCurrentUserProfile();
         const isOwner = this.state.getIsOwner();
         const username = profile?.username || (isOwner ? 'karl.ilves' : 'karl.ilves');
-        const displayName = profile?.displayName || profile?.username || (isOwner ? 'Karl Ilves' : 'Karl Ilves');
+        const rawDisplay = profile?.displayName || profile?.username || (isOwner ? 'Playard Owner ✔' : 'Karl Ilves');
+        const displayName = isOwner ? formatOwnerNametag(rawDisplay, true) : rawDisplay;
         this.recordPlayedScore(username, displayName, score, wave, destroyed, isOwner);
     }
 
@@ -291,8 +296,8 @@ export class DefenderLeaderboardUI {
                                     </div>
                                     <div style="min-width: 0; flex: 1;">
                                         <div style="font-weight: 800; font-size: 0.92rem; color: #ffffff; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                            <span>${escapeHtml(entry.name)}</span>
-                                            ${entry.isOwner ? '<span style="font-size: 0.65rem; color: #ffd700; background: rgba(255,215,0,0.2); padding: 1px 6px; border-radius: 4px; border: 1px solid #ffd700; font-weight: 900;">👑 OWNER</span>' : ''}
+                                            <span>${escapeHtml(entry.isOwner ? formatOwnerNametag(entry.name, true) : entry.name)}</span>
+                                            ${entry.isOwner ? '<span style="font-size: 0.65rem; color: #ffd700; background: rgba(255,215,0,0.2); padding: 1px 6px; border-radius: 4px; border: 1px solid #ffd700; font-weight: 900;">👑 OWNER ✔</span>' : ''}
                                             <span style="font-size: 0.62rem; color: #2ed573; background: rgba(46, 213, 115, 0.15); border: 1px solid rgba(46, 213, 115, 0.4); padding: 1px 5px; border-radius: 4px; font-weight: 800;">✓ PLAYED</span>
                                             ${entry.isCurrentPlayer ? '<span style="font-size: 0.65rem; color: #00f2fe; background: rgba(0,242,254,0.25); padding: 1px 6px; border-radius: 4px; border: 1px solid #00f2fe; font-weight: 900;">✨ YOU</span>' : ''}
                                         </div>
