@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { getCurrentUserProfile, isUserAdmin, isPlayardOwner } from '../auth';
+import { getCurrentUserProfile, isUserAdmin, isPlayardOwner, isOwnerUser } from '../auth';
 import { yardService } from '../shared/yardService';
 import { setLanguage } from '../shared/i18n';
 import { renderRecentlyPlayed } from './recentlyPlayed';
@@ -9,6 +9,7 @@ export function updateAdminControlsVisibility(userEmail?: string | null, usernam
     const adminStreakControls = document.getElementById('streak-admin-controls');
     const adminNavBtn = document.getElementById('btn-open-admin-panel');
     const ownerNavBtn = document.getElementById('btn-open-owner-panel');
+    const widgetOwnerBtn = document.getElementById('btn-widget-open-owner-panel');
     const dbNavBtn = document.getElementById('btn-open-database-panel');
     
     const prof = getCurrentUserProfile();
@@ -16,7 +17,7 @@ export function updateAdminControlsVisibility(userEmail?: string | null, usernam
     const usernameToCheck = username !== undefined ? username : prof?.username;
 
     const showAdminPanel = isUserAdmin(emailToCheck);
-    const isEstonian = isPlayardOwner(emailToCheck);
+    const isEstonian = isPlayardOwner(emailToCheck) || (userEmail === undefined ? isOwnerUser(prof) : isOwnerUser(usernameToCheck));
 
     if (adminStreakControls) {
         adminStreakControls.style.display = showAdminPanel ? 'flex' : 'none';
@@ -28,6 +29,10 @@ export function updateAdminControlsVisibility(userEmail?: string | null, usernam
 
     if (ownerNavBtn) {
         ownerNavBtn.style.display = isEstonian ? 'flex' : 'none';
+    }
+
+    if (widgetOwnerBtn) {
+        widgetOwnerBtn.style.display = isEstonian ? 'inline-flex' : 'none';
     }
     
     if (dbNavBtn) {

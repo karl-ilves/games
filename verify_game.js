@@ -1002,6 +1002,21 @@ await (async () => {
                 throw new Error("Playard Owner Panel button (#btn-open-owner-panel) must be visible for Playard Owner!");
             }
 
+            const isNextToPlaybux = await page.evaluate(() => {
+                const walletBadge = document.getElementById('btn-wallet-badge');
+                const ownerBtn = document.getElementById('btn-open-owner-panel');
+                const widgetPill = document.querySelector('#playard-avatar-widget-box .avatar-yard-pill');
+                const widgetOwnerBtn = document.getElementById('btn-widget-open-owner-panel');
+                return {
+                    headerRightOfPlaybux: !!(walletBadge && ownerBtn && walletBadge.nextElementSibling === ownerBtn),
+                    widgetRightOfPlaybux: !!(widgetPill && widgetOwnerBtn && widgetPill.nextElementSibling === widgetOwnerBtn)
+                };
+            });
+            console.log(`   Owner Panel button next to Playbux count: header=${isNextToPlaybux.headerRightOfPlaybux}, widget=${isNextToPlaybux.widgetRightOfPlaybux}`);
+            if (!isNextToPlaybux.headerRightOfPlaybux || !isNextToPlaybux.widgetRightOfPlaybux) {
+                throw new Error("Owner Panel button must be located immediately to the right of the Playbux count!");
+            }
+
             // Test Playard Owner Panel Ban & Complete Database Row Wipe
             console.log("   Testing Playard Owner Panel player ban & complete database row wipe...");
             await page.evaluate(() => {

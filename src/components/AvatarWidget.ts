@@ -1,6 +1,6 @@
 import { avatarService } from '../shared/avatar/AvatarService';
 import { AvatarViewer } from '../shared/avatar/AvatarViewer';
-import { getCurrentUserProfile } from '../auth';
+import { getCurrentUserProfile, isPlayardOwner, isOwnerUser } from '../auth';
 import { yardService } from '../shared/yardService';
 
 export class AvatarWidget {
@@ -32,6 +32,9 @@ export class AvatarWidget {
                             <span id="widget-yard-icon"></span>
                             <strong id="widget-yard-val">0</strong> PLAYBUX
                         </span>
+                        <button class="btn-open-avatar-shop" id="btn-widget-open-owner-panel" style="display: none; background: linear-gradient(135deg, #ff416c, #ff4b2b); border: 1px solid #ffd32a; color: #fff; font-weight: 800;">
+                            👑 Owner Paneel
+                        </button>
                         <button class="btn-open-avatar-shop" id="btn-widget-open-shop">
                             🛍️ Avatar Shop
                         </button>
@@ -69,6 +72,21 @@ export class AvatarWidget {
             }
         });
 
+        // Owner panel button inside widget
+        const ownerBtn = this.container.querySelector('#btn-widget-open-owner-panel') as HTMLButtonElement | null;
+        if (ownerBtn) {
+            ownerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const mainOwnerBtn = document.getElementById('btn-open-owner-panel');
+                if (mainOwnerBtn) {
+                    mainOwnerBtn.click();
+                } else {
+                    const modalOwner = document.getElementById('modal-owner-panel');
+                    if (modalOwner) modalOwner.style.display = 'flex';
+                }
+            });
+        }
+
         // Click on widget opens shop
         const widgetBox = this.container.querySelector('#playard-avatar-widget-box');
         if (widgetBox) {
@@ -83,6 +101,7 @@ export class AvatarWidget {
         const userEl = this.container.querySelector('#widget-avatar-username');
         const roleEl = this.container.querySelector('#widget-avatar-role');
         const yardVal = this.container.querySelector('#widget-yard-val');
+        const ownerBtn = this.container.querySelector('#btn-widget-open-owner-panel') as HTMLElement | null;
 
         if (userEl) {
             userEl.textContent = prof ? (prof.displayName || `@${prof.username}`) : 'Guest Player';
@@ -92,6 +111,10 @@ export class AvatarWidget {
         }
         if (yardVal) {
             yardVal.textContent = yardService.getYards().toLocaleString();
+        }
+        if (ownerBtn) {
+            const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof);
+            ownerBtn.style.display = isOwner ? 'inline-flex' : 'none';
         }
     }
 }
