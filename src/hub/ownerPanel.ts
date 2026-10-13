@@ -996,11 +996,30 @@ export function setupOwnerPanel() {
         }
     });
 
+    const clearSearchBtn = document.getElementById('btn-owner-clear-search');
+
+    const updateClearBtnVisibility = () => {
+        if (clearSearchBtn) {
+            clearSearchBtn.style.display = searchInput?.value ? 'flex' : 'none';
+        }
+    };
+
     searchInput?.addEventListener('input', () => {
+        updateClearBtnVisibility();
         renderOwnerPanelPlayersList(searchInput.value);
     });
 
+    clearSearchBtn?.addEventListener('click', () => {
+        if (searchInput) {
+            searchInput.value = '';
+            updateClearBtnVisibility();
+            searchInput.focus();
+        }
+        renderOwnerPanelPlayersList('');
+    });
+
     refreshBtn?.addEventListener('click', () => {
+        updateClearBtnVisibility();
         renderOwnerPanelPlayersList(searchInput?.value || '');
         renderOwnerBannedPlayersList();
     });

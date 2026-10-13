@@ -13669,6 +13669,55 @@ await (async () => {
             }
             console.log("   ✅ Owner Panel mode switch (Bannimine <-> Ferty) verified!");
 
+            // Verify Owner Panel prominent search bar
+            console.log("   Verifying Owner Panel prominent search bar...");
+            const searchBarTest = await page.evaluate(async () => {
+                const modalOwner = document.getElementById('modal-owner-panel');
+                if (modalOwner) modalOwner.style.display = 'flex';
+                const searchWrap = document.getElementById('owner-search-bar-wrap');
+                const searchInput = document.getElementById('owner-player-search-input');
+                const clearBtn = document.getElementById('btn-owner-clear-search');
+                const list = document.getElementById('owner-players-list');
+
+                const hasSearchWrap = !!searchWrap && !!searchInput;
+                const initialClearHidden = clearBtn ? window.getComputedStyle(clearBtn).display === 'none' : false;
+
+                // Search for owner or test player
+                if (searchInput) {
+                    searchInput.value = 'owner';
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+                await new Promise(r => setTimeout(r, 200));
+
+                const clearVisibleWhenTyping = clearBtn ? window.getComputedStyle(clearBtn).display !== 'none' : false;
+                const rowsCountAfterFilter = list ? list.querySelectorAll('.owner-player-row').length : 0;
+                const filteredHasOwner = list?.textContent?.toLowerCase().includes('owner') || false;
+
+                // Clear search
+                clearBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const clearHiddenAfterClick = clearBtn ? window.getComputedStyle(clearBtn).display === 'none' : false;
+                const inputEmptyAfterClear = searchInput ? searchInput.value === '' : false;
+
+                if (modalOwner) modalOwner.style.display = 'none';
+
+                return {
+                    hasSearchWrap,
+                    initialClearHidden,
+                    clearVisibleWhenTyping,
+                    filteredHasOwner,
+                    rowsCountAfterFilter: rowsCountAfterFilter > 0,
+                    clearHiddenAfterClick,
+                    inputEmptyAfterClear
+                };
+            });
+            console.log("   Search Bar Test Results:", searchBarTest);
+            if (Object.values(searchBarTest).some(v => !v)) {
+                throw new Error("Owner Panel search bar test failed: " + JSON.stringify(searchBarTest));
+            }
+            console.log("   ✅ Owner Panel prominent search bar verified!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();
