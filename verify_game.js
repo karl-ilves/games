@@ -13634,6 +13634,41 @@ await (async () => {
             }
             console.log("   ✅ Admin Panel & Owner Panel Verified Checkmark (✔) Selection and Toggle verified successfully!");
 
+            // Verify Owner Panel top mode switch (Bannimine <-> Ferty)
+            console.log("   Verifying Owner Panel mode switch (Bannimine <-> Ferty)...");
+            const modeSwitchTest = await page.evaluate(async () => {
+                const vis = (id) => {
+                    const el = document.getElementById(id);
+                    return !!el && window.getComputedStyle(el).display !== 'none';
+                };
+                const modalOwner = document.getElementById('modal-owner-panel');
+                if (modalOwner) modalOwner.style.display = 'flex';
+                const banModeBtn = document.getElementById('btn-owner-mode-ban');
+                const verifyModeBtn = document.getElementById('btn-owner-mode-verify');
+                const hasSwitch = !!banModeBtn && !!verifyModeBtn;
+
+                const defaultBanVisible = vis('owner-ban-box') && !vis('owner-verified-box');
+
+                verifyModeBtn?.click();
+                await new Promise(r => setTimeout(r, 300));
+                const verifyModeOk = !vis('owner-ban-box') && vis('owner-verified-box') && !vis('owner-banned-section') && vis('owner-panel-desc-verify') && !vis('owner-panel-desc-ban');
+                const list = document.getElementById('owner-players-list');
+                const verifyRowsNoBan = list ? list.querySelectorAll('.btn-owner-ban-player').length === 0 : false;
+
+                banModeBtn?.click();
+                await new Promise(r => setTimeout(r, 300));
+                const backToBanOk = vis('owner-ban-box') && !vis('owner-verified-box') && vis('owner-banned-section');
+                const banRowsNoVerify = list ? list.querySelectorAll('.btn-owner-toggle-verified').length === 0 : false;
+
+                if (modalOwner) modalOwner.style.display = 'none';
+                return { hasSwitch, defaultBanVisible, verifyModeOk, verifyRowsNoBan, backToBanOk, banRowsNoVerify };
+            });
+            console.log("   Mode Switch Test Results:", modeSwitchTest);
+            if (Object.values(modeSwitchTest).some(v => !v)) {
+                throw new Error("Owner Panel mode switch test failed: " + JSON.stringify(modeSwitchTest));
+            }
+            console.log("   ✅ Owner Panel mode switch (Bannimine <-> Ferty) verified!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();

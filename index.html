@@ -1989,12 +1989,21 @@
                 <span style="font-size: 1.9rem;">👑</span>
                 <h2 style="margin: 0; color: #ffd32a; font-size: 1.65rem;">Playard Owneri Paneel</h2>
             </div>
-            <p style="color: #a4b0be; margin: 0 0 18px 0; font-size: 0.9rem;">
+            <p id="owner-panel-desc-ban" style="color: #a4b0be; margin: 0 0 14px 0; font-size: 0.9rem;">
                 Logitud sisse kui <strong style="color: #ffd32a;">Playard Owner ✔</strong> (<span style="color: #00f2fe;">1karl.ilves@gmail.com</span>). Siit saad mängijaid Playardist bännida — bännimisel kustutatakse automaatselt <strong>kõik mängija read andmebaasist</strong> (profiil, Playbux, mängude progress, loodud mängud, avatar, sõbrad ja logid).
             </p>
+            <p id="owner-panel-desc-verify" style="display: none; color: #a4b0be; margin: 0 0 14px 0; font-size: 0.9rem;">
+                Logitud sisse kui <strong style="color: #ffd32a;">Playard Owner ✔</strong>. Siit saad valida, kelle nime lõpus on ametlik kinnitatud linnuke <strong style="color: #2ecc71;">✔</strong> — see kuvatakse kõigis mängudes, edetabelites, sõprade nimekirjas ja profiilil.
+            </p>
+
+            <!-- Owner Panel Mode Switch (Bannimine / Ferty) -->
+            <div id="owner-panel-mode-switch" style="display: flex; gap: 8px; margin-bottom: 16px; background: #131920; padding: 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                <button type="button" id="btn-owner-mode-ban" data-active="true" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid #ff4757; background: rgba(255, 71, 87, 0.22); color: #ff4757; font-weight: 800; font-size: 0.9rem; cursor: pointer;">🔨 Bannimine</button>
+                <button type="button" id="btn-owner-mode-verify" data-active="false" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.9rem; cursor: pointer;">✔ Ferty (Linnukesed)</button>
+            </div>
 
             <!-- Direct Ban Input Box -->
-            <div style="background: #1c2430; border: 1.5px solid rgba(255, 71, 87, 0.35); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div id="owner-ban-box" style="background: #1c2430; border: 1.5px solid rgba(255, 71, 87, 0.35); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
                 <h3 style="color: #ff4757; margin: 0 0 12px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
                     <span>🔨</span> Banni mängija ja kustuta kõik read andmebaasist
                 </h3>
@@ -2015,22 +2024,22 @@
                 <div id="owner-ban-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
             </div>
 
-            <!-- Quick Verified Checkmark Box -->
-            <div style="background: #15222e; border: 1.5px solid rgba(46, 204, 113, 0.35); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;">
-                <h3 style="color: #2ecc71; margin: 0 0 8px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
-                    <span>✔</span> Vali kelle nime lõpus on ametlik linnuke (Verified)
+            <!-- Verified Checkmark (Ferty) Box -->
+            <div id="owner-verified-box" style="display: none; background: #15222e; border: 1.5px solid rgba(46, 204, 113, 0.35); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <h3 style="color: #2ecc71; margin: 0 0 12px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                    <span>✔</span> Anna või eemalda mängija nime lõpust linnuke
                 </h3>
-                <p style="color: #a4b0be; font-size: 0.82rem; margin: 0 0 10px 0;">
-                    Saad allolevas nimekirjas klõpsata nupule <strong>✔ Anna linnuke</strong> või sisestada siia kasutajanime, et lisada/eemaldada tema nime lõpust kinnitatud linnuke <strong>✔</strong>.
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <input type="text" id="owner-verified-username-input" placeholder="nt mängija kasutajanimi..." style="flex: 1; min-width: 180px; padding: 9px 12px; border-radius: 8px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.9rem;">
-                    <button type="button" id="btn-owner-add-verified" style="padding: 9px 16px; background: linear-gradient(135deg, #2ecc71, #27ae60); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-weight: 800; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.35);">
+                <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 180px;">
+                        <label style="font-size: 0.8rem; color: #a4b0be; display: block; margin-bottom: 4px;">Mängija kasutajanimi:</label>
+                        <input type="text" id="owner-verified-username-input" placeholder="nt kasutajanimi..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.92rem;">
+                    </div>
+                    <button type="button" id="btn-owner-add-verified" style="padding: 10px 18px; background: linear-gradient(135deg, #2ecc71, #27ae60); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-weight: 800; font-size: 0.92rem; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 4px 14px rgba(46, 204, 113, 0.4);">
                         <span>✔</span>
                         <span>Lisa / Eemalda linnuke</span>
                     </button>
                 </div>
-                <div id="owner-verified-status" style="margin-top: 6px; font-weight: bold; font-size: 0.85rem;"></div>
+                <div id="owner-verified-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
             </div>
 
             <!-- Active Database Players List -->
@@ -2049,16 +2058,18 @@
                 <div style="text-align: center; color: #718093; padding: 18px;">Laen mängijaid andmebaasist...</div>
             </div>
 
-            <!-- Banned Players Log -->
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                <h3 style="color: #ff4757; margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
-                    <span>🚫</span> Bännitud mängijad (Andmebaasist kustutatud)
-                </h3>
-                <span id="owner-banned-count-badge" style="background: rgba(255, 71, 87, 0.15); color: #ff4757; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;">0 bännitud</span>
-            </div>
+            <!-- Banned Players Log (only in Bannimine mode) -->
+            <div id="owner-banned-section">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <h3 style="color: #ff4757; margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+                        <span>🚫</span> Bännitud mängijad (Andmebaasist kustutatud)
+                    </h3>
+                    <span id="owner-banned-count-badge" style="background: rgba(255, 71, 87, 0.15); color: #ff4757; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;">0 bännitud</span>
+                </div>
 
-            <div id="owner-banned-players-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 10px; border: 1px solid rgba(255,255,255,0.06);">
-                <div style="text-align: center; color: #718093; padding: 16px; font-size: 0.85rem;">Ühtegi mängijat pole veel bännitud.</div>
+                <div id="owner-banned-players-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                    <div style="text-align: center; color: #718093; padding: 16px; font-size: 0.85rem;">Ühtegi mängijat pole veel bännitud.</div>
+                </div>
             </div>
         </div>
     </div>

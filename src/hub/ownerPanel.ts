@@ -711,6 +711,49 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     });
 }
 
+export type OwnerPanelMode = 'ban' | 'verify';
+let ownerPanelMode: OwnerPanelMode = 'ban';
+
+export function getOwnerPanelMode(): OwnerPanelMode {
+    return ownerPanelMode;
+}
+
+/**
+ * Switches the Owner Panel between Bannimine (ban) and Ferty (verified checkmark) modes.
+ * Ban texts/boxes are replaced by the Ferty box and vice versa.
+ */
+export function setOwnerPanelMode(mode: OwnerPanelMode) {
+    ownerPanelMode = mode;
+    const isVerify = mode === 'verify';
+    const show = (id: string, visible: boolean) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = visible ? '' : 'none';
+    };
+    show('owner-panel-desc-ban', !isVerify);
+    show('owner-ban-box', !isVerify);
+    show('owner-banned-section', !isVerify);
+    show('owner-panel-desc-verify', isVerify);
+    show('owner-verified-box', isVerify);
+
+    const banBtn = document.getElementById('btn-owner-mode-ban');
+    const verifyBtn = document.getElementById('btn-owner-mode-verify');
+    if (banBtn) {
+        banBtn.setAttribute('data-active', String(!isVerify));
+        banBtn.style.background = !isVerify ? 'rgba(255, 71, 87, 0.22)' : 'transparent';
+        banBtn.style.borderColor = !isVerify ? '#ff4757' : 'transparent';
+        banBtn.style.color = !isVerify ? '#ff4757' : '#a4b0be';
+    }
+    if (verifyBtn) {
+        verifyBtn.setAttribute('data-active', String(isVerify));
+        verifyBtn.style.background = isVerify ? 'rgba(46, 204, 113, 0.22)' : 'transparent';
+        verifyBtn.style.borderColor = isVerify ? '#2ecc71' : 'transparent';
+        verifyBtn.style.color = isVerify ? '#2ecc71' : '#a4b0be';
+    }
+
+    const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
+    renderOwnerPanelPlayersList(searchInput?.value || '');
+}
+
 export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
     const listContainer = document.getElementById('owner-players-list');
     const countBadge = document.getElementById('owner-players-count-badge');
@@ -769,19 +812,20 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
 
         const verifiedToggleBtn = isOwner ? '' : `
             <button type="button" class="btn-owner-toggle-verified" data-username="${player.username}" data-verified="${isVerified ? 'true' : 'false'}" style="background: ${isVerified ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255, 255, 255, 0.06)'}; border: 1px solid ${isVerified ? '#2ecc71' : 'rgba(255, 255, 255, 0.25)'}; color: ${isVerified ? '#2ecc71' : '#ffffff'}; border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                <span>${isVerified ? '✔ Linnuke: SEES' : '➕ Anna linnuke ✔'}</span>
+                <span>${isVerified ? '✔ Linnuke: SEES (eemalda)' : '➕ Anna linnuke ✔'}</span>
+            </button>
+        `;
+
+        const banBtn = `
+            <button type="button" class="btn-owner-ban-player" data-username="${player.username}" data-user-id="${player.id}" data-email="${player.email}" style="background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 14px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);">
+                <span>🔨</span>
+                <span>Banni & Kustuta</span>
             </button>
         `;
 
         const actionHtml = isOwner
             ? `<span style="background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.5); color: #ffd32a; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800;">👑 Playard Owner ✔ (Kaitstud)</span>`
-            : `<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                ${verifiedToggleBtn}
-                <button type="button" class="btn-owner-ban-player" data-username="${player.username}" data-user-id="${player.id}" data-email="${player.email}" style="background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 14px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);">
-                    <span>🔨</span>
-                    <span>Banni & Kustuta</span>
-                </button>
-            </div>`;
+            : (ownerPanelMode === 'verify' ? verifiedToggleBtn : banBtn);
 
         const displayStr = isOwner 
             ? formatOwnerNametag(player.displayName || 'Playard Owner', true) 
@@ -1017,6 +1061,9 @@ export function setupOwnerPanel() {
             if (e.key === 'Enter') triggerManualBan();
         });
     }
+
+    document.getElementById('btn-owner-mode-ban')?.addEventListener('click', () => setOwnerPanelMode('ban'));
+    document.getElementById('btn-owner-mode-verify')?.addEventListener('click', () => setOwnerPanelMode('verify'));
 
     const verifiedInput = document.getElementById('owner-verified-username-input') as HTMLInputElement | null;
     const verifiedBtn = document.getElementById('btn-owner-add-verified');
