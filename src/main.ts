@@ -10,6 +10,7 @@ import { updateStreakTimerLive, renderStreakCards, updateYardDisplay } from './h
 import { renderRecentlyPlayed, setupGameCardTracking, updateRecentlyPlayedTimestamps } from './hub/recentlyPlayed';
 import { renderCommunityGames, renderDatabaseGamesList } from './hub/communityGames';
 import { updateAdminControlsVisibility, setupAdminPanel } from './hub/adminPanel';
+import { setupOwnerPanel } from './hub/ownerPanel';
 import { setupModals } from './hub/modals';
 import { setupIcons } from './hub/icons';
 
@@ -29,6 +30,7 @@ setupAgeRestrictionModal();
 setupIcons();
 setupModals();
 setupAdminPanel();
+setupOwnerPanel();
 initFriendsUI();
 renderRecentlyPlayed();
 setupGameCardTracking();

@@ -995,6 +995,132 @@ await (async () => {
             throw new Error("Admin panel must be removed from Playard Owner!");
         }
 
+        {
+            const playardOwnerHubBtnDisplay = await page.$eval('#btn-open-owner-panel', el => window.getComputedStyle(el).display);
+            console.log(`   Playard Owner Panel Button visibility (Expected: flex): ${playardOwnerHubBtnDisplay}`);
+            if (playardOwnerHubBtnDisplay !== 'flex') {
+                throw new Error("Playard Owner Panel button (#btn-open-owner-panel) must be visible for Playard Owner!");
+            }
+
+            // Test Playard Owner Panel Ban & Complete Database Row Wipe
+            console.log("   Testing Playard Owner Panel player ban & complete database row wipe...");
+            await page.evaluate(() => {
+                const profiles = JSON.parse(localStorage.getItem('playard_user_profiles') || '[]');
+                profiles.push({
+                    id: 'user_bantestplayer99',
+                    username: 'BanTestPlayer99',
+                    email: 'bantestplayer99@playard.com',
+                    displayName: '@BanTestPlayer99',
+                    isAdmin: false,
+                    age: 15,
+                    gender: 'boy'
+                });
+                localStorage.setItem('playard_user_profiles', JSON.stringify(profiles));
+                localStorage.setItem('playard_yards_user_bantestplayer99', JSON.stringify({ yards: 500, inventory: ['hat_crown'] }));
+                localStorage.setItem('playard_war_data_bantestplayer99', JSON.stringify({ user_id: 'user_bantestplayer99', username: 'BanTestPlayer99', money: 2500 }));
+                localStorage.setItem('playard_train_money_user_bantestplayer99', '1200');
+                localStorage.setItem('playard_avatar_config_bantestplayer99', JSON.stringify({ bodyId: 'body_standard' }));
+                localStorage.setItem('playard_friends_bantestplayer99', JSON.stringify([{ username: 'other', displayName: 'Other' }]));
+
+                const games = JSON.parse(localStorage.getItem('playard_created_games') || '[]');
+                games.push({
+                    id: 'game_by_bantestplayer99',
+                    creatorUsername: 'BanTestPlayer99',
+                    title: 'Banned Player World',
+                    description: 'Test world',
+                    category: 'Adventure',
+                    status: 'approved'
+                });
+                localStorage.setItem('playard_created_games', JSON.stringify(games));
+
+                const bugs = JSON.parse(localStorage.getItem('playard_bug_reports') || '[]');
+                bugs.push({
+                    username: 'BanTestPlayer99',
+                    email: 'bantestplayer99@playard.com',
+                    title: 'Spam bug',
+                    description: 'Spam',
+                    status: 'new'
+                });
+                localStorage.setItem('playard_bug_reports', JSON.stringify(bugs));
+            });
+
+            await page.click('#btn-open-owner-panel');
+            await new Promise(r => setTimeout(r, 250));
+
+            const hubOwnerModalDisplay = await page.$eval('#modal-owner-panel', el => window.getComputedStyle(el).display);
+            if (hubOwnerModalDisplay !== 'flex') {
+                throw new Error("Owner Panel modal (#modal-owner-panel) did not open when clicking #btn-open-owner-panel!");
+            }
+
+            const playersListBeforeBan = await page.$eval('#owner-players-list', el => el.textContent || '');
+            if (!playersListBeforeBan.includes('BanTestPlayer99')) {
+                throw new Error(`Expected BanTestPlayer99 to appear in Owner Panel players list, got: ${playersListBeforeBan}`);
+            }
+
+            // Ban BanTestPlayer99 via Owner Panel input & button
+            await page.evaluate(() => {
+                const inp = document.getElementById('owner-ban-username-input');
+                const reasonInp = document.getElementById('owner-ban-reason-input');
+                if (inp) inp.value = 'BanTestPlayer99';
+                if (reasonInp) reasonInp.value = 'Cheating & spam';
+            });
+            await page.click('#btn-owner-ban-by-input');
+            await new Promise(r => setTimeout(r, 350));
+
+            const banVerify = await page.evaluate(async () => {
+                const profiles = JSON.parse(localStorage.getItem('playard_user_profiles') || '[]');
+                const games = JSON.parse(localStorage.getItem('playard_created_games') || '[]');
+                const bugs = JSON.parse(localStorage.getItem('playard_bug_reports') || '[]');
+                const ownerProtected = await window.banPlayerFromPlayard({ username: 'playard owner', email: '1karl.ilves@gmail.com' });
+
+                return {
+                    profileStillExists: profiles.some(p => p.username.toLowerCase() === 'bantestplayer99'),
+                    yardsStillExists: localStorage.getItem('playard_yards_user_bantestplayer99') !== null,
+                    warStillExists: localStorage.getItem('playard_war_data_bantestplayer99') !== null,
+                    trainStillExists: localStorage.getItem('playard_train_money_user_bantestplayer99') !== null,
+                    avatarStillExists: localStorage.getItem('playard_avatar_config_bantestplayer99') !== null,
+                    friendsStillExists: localStorage.getItem('playard_friends_bantestplayer99') !== null,
+                    gameStillExists: games.some(g => (g.creatorUsername || '').toLowerCase() === 'bantestplayer99'),
+                    bugStillExists: bugs.some(b => (b.username || '').toLowerCase() === 'bantestplayer99'),
+                    isMarkedBanned: window.isPlayerBanned('BanTestPlayer99'),
+                    playersListText: document.getElementById('owner-players-list')?.textContent || '',
+                    bannedListText: document.getElementById('owner-banned-players-list')?.textContent || '',
+                    deletedSummary: window.__lastBanDeletedSummary,
+                    ownerProtectedSuccess: ownerProtected.success
+                };
+            });
+            console.log("   Playard Owner Ban & DB Wipe verification:", {
+                profileStillExists: banVerify.profileStillExists,
+                yardsStillExists: banVerify.yardsStillExists,
+                warStillExists: banVerify.warStillExists,
+                gameStillExists: banVerify.gameStillExists,
+                isMarkedBanned: banVerify.isMarkedBanned,
+                deletedTablesCount: banVerify.deletedSummary?.deletedTables?.length
+            });
+
+            if (
+                banVerify.profileStillExists ||
+                banVerify.yardsStillExists ||
+                banVerify.warStillExists ||
+                banVerify.trainStillExists ||
+                banVerify.avatarStillExists ||
+                banVerify.friendsStillExists ||
+                banVerify.gameStillExists ||
+                banVerify.bugStillExists
+            ) {
+                throw new Error(`Player database rows were NOT completely wiped on ban: ${JSON.stringify(banVerify)}`);
+            }
+            if (!banVerify.isMarkedBanned || banVerify.playersListText.includes('BanTestPlayer99') || !banVerify.bannedListText.includes('BanTestPlayer99')) {
+                throw new Error(`Banned player UI state invalid: ${JSON.stringify(banVerify)}`);
+            }
+            if (banVerify.ownerProtectedSuccess !== false) {
+                throw new Error("Playard Owner must be protected from being banned!");
+            }
+
+            await page.click('#btn-close-owner-panel');
+            await new Promise(r => setTimeout(r, 150));
+        }
+
         const ownerWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
         console.log(`   Playard Owner War Game Card visibility (Expected: flex): ${ownerWarCardDisplay}`);
         if (ownerWarCardDisplay !== 'flex') {

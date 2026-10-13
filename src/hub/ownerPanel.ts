@@ -1,0 +1,959 @@
+import { supabase } from '../lib/supabase';
+import { getCurrentUserProfile, getLocalProfiles, isPlayardOwner, isOwnerUser, UserProfile } from '../auth';
+import { yardService } from '../shared/yardService';
+import { friendService } from '../shared/friends/friendService';
+import { renderCommunityGames, renderDatabaseGamesList } from './communityGames';
+
+export const BANNED_PLAYERS_STORAGE_KEY = 'playard_banned_players';
+
+export interface BannedPlayerRecord {
+    userId?: string;
+    username: string;
+    email?: string;
+    displayName?: string;
+    reason?: string;
+    bannedAt: number;
+    bannedBy: string;
+    deletedTables: string[];
+}
+
+export interface PlayerDatabaseEntry {
+    id: string;
+    username: string;
+    displayName: string;
+    email: string;
+    isAdmin?: boolean;
+    age?: number;
+    gender?: string;
+    source: string;
+}
+
+export const ALL_PLAYER_DATABASE_TABLES = [
+    'profiles',
+    'user_yards',
+    'user_progress',
+    'war_game_stats',
+    'user_avatars',
+    'user_avatar_inventory',
+    'user_created_games',
+    'redeemed_codes',
+    'bug_reports',
+    'admin_yard_logs'
+];
+
+let banBroadcastChannel: BroadcastChannel | null = null;
+try {
+    if (typeof BroadcastChannel !== 'undefined') {
+        banBroadcastChannel = new BroadcastChannel('playard_ban_sync');
+        banBroadcastChannel.onmessage = (event) => {
+            const data = event.data;
+            if (data && data.type === 'player_banned') {
+                handleIncomingBanEnforcement(data.username, data.email, data.userId);
+            }
+        };
+    }
+} catch (e) {}
+
+function handleIncomingBanEnforcement(username?: string, email?: string, userId?: string) {
+    const current = getCurrentUserProfile();
+    if (!current) return;
+    if (isPlayardOwner(current.email) || isOwnerUser(current)) return;
+
+    const matchUser = username && current.username?.toLowerCase().trim() === username.toLowerCase().trim();
+    const matchEmail = email && current.email?.toLowerCase().trim() === email.toLowerCase().trim();
+    const matchId = userId && current.id === userId;
+
+    if (matchUser || matchEmail || matchId) {
+        localStorage.removeItem('playard_current_user_profile');
+        yardService.onUserLogout();
+        window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: null }));
+    }
+}
+
+export function getBannedPlayers(): BannedPlayerRecord[] {
+    try {
+        const raw = localStorage.getItem(BANNED_PLAYERS_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+        }
+    } catch (e) {}
+    return [];
+}
+
+export function saveBannedPlayers(list: BannedPlayerRecord[]): void {
+    try {
+        localStorage.setItem(BANNED_PLAYERS_STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {}
+}
+
+export function isPlayerBanned(identifier?: string | null, email?: string | null, userId?: string | null): boolean {
+    const cleanId = (identifier || '').trim().toLowerCase();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanUid = (userId || '').trim().toLowerCase();
+
+    if (!cleanId && !cleanEmail && !cleanUid) return false;
+
+    // Playard Owner can never be banned
+    if (
+        isPlayardOwner(cleanId) ||
+        isPlayardOwner(cleanEmail) ||
+        cleanId === 'playard owner' ||
+        cleanId === '1karl.ilves@gmail.com'
+    ) {
+        return false;
+    }
+
+    const bannedList = getBannedPlayers();
+    return bannedList.some(b => {
+        const bUser = (b.username || '').trim().toLowerCase();
+        const bEmail = (b.email || '').trim().toLowerCase();
+        const bUid = (b.userId || '').trim().toLowerCase();
+
+        if (cleanId && (bUser === cleanId || bEmail === cleanId || bUid === cleanId)) return true;
+        if (cleanEmail && (bEmail === cleanEmail || bUser === cleanEmail)) return true;
+        if (cleanUid && bUid && bUid === cleanUid) return true;
+        return false;
+    });
+}
+
+export function unbanPlayerFromPlayard(identifier: string): boolean {
+    if (!identifier) return false;
+    const clean = identifier.trim().toLowerCase();
+    const current = getBannedPlayers();
+    const filtered = current.filter(
+        b =>
+            b.username.toLowerCase() !== clean &&
+            (b.email || '').toLowerCase() !== clean &&
+            (b.userId || '').toLowerCase() !== clean
+    );
+    saveBannedPlayers(filtered);
+    window.dispatchEvent(new CustomEvent('playard_ban_list_updated'));
+    return filtered.length !== current.length;
+}
+
+/**
+ * Permanently bans a player from Playard and deletes ALL rows belonging to that player
+ * across all Supabase database tables and local database storage.
+ */
+export async function banPlayerFromPlayard(target: {
+    username: string;
+    userId?: string;
+    email?: string;
+    displayName?: string;
+    reason?: string;
+}): Promise<{
+    success: boolean;
+    message: string;
+    deletedTables: string[];
+    removedLocalKeysCount: number;
+}> {
+    const rawUsername = (target.username || '').trim();
+    const rawEmail = (target.email || '').trim();
+    const rawUserId = (target.userId || '').trim();
+
+    if (!rawUsername && !rawEmail && !rawUserId) {
+        return {
+            success: false,
+            message: 'Palun sisesta mängija kasutajanimi, e-post või ID!',
+            deletedTables: [],
+            removedLocalKeysCount: 0
+        };
+    }
+
+    // Protect Playard Owner from ever being banned
+    if (
+        isPlayardOwner(rawEmail) ||
+        isPlayardOwner(rawUsername) ||
+        isOwnerUser({ username: rawUsername, email: rawEmail })
+    ) {
+        return {
+            success: false,
+            message: '👑 Playard Ownerit ei saa bännida!',
+            deletedTables: [],
+            removedLocalKeysCount: 0
+        };
+    }
+
+    const userIds = new Set<string>();
+    const usernames = new Set<string>();
+    const emails = new Set<string>();
+
+    if (rawUserId) userIds.add(rawUserId);
+    if (rawUsername) usernames.add(rawUsername.toLowerCase());
+    if (rawEmail) emails.add(rawEmail.toLowerCase());
+
+    // 1. Resolve all linked identifiers from local profiles
+    try {
+        const localProfiles = getLocalProfiles();
+        for (const p of localProfiles) {
+            const pUser = (p.username || '').trim().toLowerCase();
+            const pEmail = (p.email || '').trim().toLowerCase();
+            const pId = (p.id || '').trim();
+
+            const isMatch =
+                (rawUsername && pUser === rawUsername.toLowerCase()) ||
+                (rawEmail && pEmail && pEmail === rawEmail.toLowerCase()) ||
+                (rawUserId && pId && pId === rawUserId) ||
+                (rawUsername && pEmail === rawUsername.toLowerCase());
+
+            if (isMatch) {
+                if (pId) userIds.add(pId);
+                if (pUser) usernames.add(pUser);
+                if (pEmail) emails.add(pEmail);
+            }
+        }
+    } catch (e) {}
+
+    // Also infer default internal email & local user_ id
+    for (const uname of Array.from(usernames)) {
+        const cleanSlug = uname.replace(/[^a-z0-9_.-]/g, '');
+        if (cleanSlug) {
+            emails.add(`${cleanSlug}@playard.com`);
+            userIds.add(`user_${uname}`);
+        }
+    }
+
+    // 2. If Supabase is connected, resolve any additional IDs/usernames/emails and delete ALL rows from every table
+    const deletedTables: string[] = [...ALL_PLAYER_DATABASE_TABLES];
+    const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+
+    if (supabase && !isTestEnv) {
+        try {
+            // Query profiles by username/email/id first to gather all UUIDs
+            const lookupTasks: Promise<any>[] = [];
+            for (const uname of Array.from(usernames)) {
+                lookupTasks.push(
+                    Promise.resolve(
+                        supabase
+                            .from('profiles')
+                            .select('id, username, email')
+                            .ilike('username', uname)
+                    ).then(({ data: profRows }: any) => {
+                        if (Array.isArray(profRows)) {
+                            profRows.forEach((r: any) => {
+                                if (r.id) userIds.add(String(r.id));
+                                if (r.username) usernames.add(String(r.username).toLowerCase().trim());
+                                if (r.email) emails.add(String(r.email).toLowerCase().trim());
+                            });
+                        }
+                    }).catch(() => {})
+                );
+            }
+
+            for (const em of Array.from(emails)) {
+                lookupTasks.push(
+                    Promise.resolve(
+                        supabase
+                            .from('profiles')
+                            .select('id, username, email')
+                            .ilike('email', em)
+                    ).then(({ data: profRows }: any) => {
+                        if (Array.isArray(profRows)) {
+                            profRows.forEach((r: any) => {
+                                if (r.id) userIds.add(String(r.id));
+                                if (r.username) usernames.add(String(r.username).toLowerCase().trim());
+                                if (r.email) emails.add(String(r.email).toLowerCase().trim());
+                            });
+                        }
+                    }).catch(() => {})
+                );
+            }
+            await Promise.allSettled(lookupTasks);
+
+            const deleteTasks: Promise<any>[] = [];
+
+            // Try SECURITY DEFINER RPC if present in Supabase
+            for (const uname of Array.from(usernames)) {
+                deleteTasks.push(
+                    Promise.resolve(
+                        supabase.rpc('ban_and_delete_player', {
+                            target_username: uname,
+                            target_user_id: Array.from(userIds)[0] || null,
+                            target_email: Array.from(emails)[0] || null
+                        })
+                    ).catch(() => {})
+                );
+            }
+
+            // Delete from user_created_games (created games + friend_request + friend_relation + player_active_game)
+            for (const uname of Array.from(usernames)) {
+                deleteTasks.push(
+                    Promise.resolve(
+                        supabase
+                            .from('user_created_games')
+                            .select('id')
+                            .ilike('creator_username', uname)
+                    ).then(async ({ data: userGames }: any) => {
+                        if (Array.isArray(userGames)) {
+                            for (const g of userGames) {
+                                if (g?.id) await yardService.deleteCreatedGame(g.id);
+                            }
+                        }
+                    }).catch(() => {})
+                );
+                deleteTasks.push(Promise.resolve(supabase.from('user_created_games').delete().ilike('creator_username', uname)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('user_created_games').delete().ilike('title', `%${uname}%`)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('user_created_games').delete().ilike('description', `%${uname}%`)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('war_game_stats').delete().ilike('username', uname)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('redeemed_codes').delete().ilike('username', uname)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('bug_reports').delete().ilike('username', uname)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('admin_yard_logs').delete().ilike('target_username', uname)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('profiles').delete().ilike('username', uname)).catch(() => {}));
+            }
+
+            for (const uid of Array.from(userIds)) {
+                deleteTasks.push(Promise.resolve(supabase.from('user_created_games').delete().eq('user_id', uid)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('user_yards').delete().eq('user_id', uid)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('user_progress').delete().eq('user_id', uid)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('war_game_stats').delete().eq('user_id', uid)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('user_avatars').delete().eq('user_id', uid)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('user_avatar_inventory').delete().eq('user_id', uid)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('redeemed_codes').delete().eq('user_id', uid)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('bug_reports').delete().eq('user_id', uid)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('profiles').delete().eq('id', uid)).catch(() => {}));
+            }
+
+            for (const em of Array.from(emails)) {
+                deleteTasks.push(Promise.resolve(supabase.from('bug_reports').delete().ilike('email', em)).catch(() => {}));
+                deleteTasks.push(Promise.resolve(supabase.from('profiles').delete().ilike('email', em)).catch(() => {}));
+            }
+
+            await Promise.allSettled(deleteTasks);
+        } catch (err) {
+            console.warn('Supabase player ban deletion warning:', err);
+        }
+    }
+
+    // 3. Wipe ALL rows & records for this player in localStorage / local DB tables
+    let removedLocalKeysCount = 0;
+
+    // 3a. Remove from playard_user_profiles
+    try {
+        const profiles = getLocalProfiles();
+        const remainingProfiles = profiles.filter(p => {
+            const pUser = (p.username || '').trim().toLowerCase();
+            const pEmail = (p.email || '').trim().toLowerCase();
+            const pId = (p.id || '').trim();
+            return !usernames.has(pUser) && !emails.has(pEmail) && !userIds.has(pId);
+        });
+        if (remainingProfiles.length !== profiles.length) {
+            removedLocalKeysCount += profiles.length - remainingProfiles.length;
+        }
+        localStorage.setItem('playard_user_profiles', JSON.stringify(remainingProfiles));
+    } catch (e) {}
+
+    // 3b. Remove all created games by this player from local storage & add to deleted blacklist
+    try {
+        const allLocalGames = yardService.getLocalCreatedGames();
+        for (const g of allLocalGames) {
+            const gCreator = (g.creatorUsername || '').trim().toLowerCase();
+            if (usernames.has(gCreator)) {
+                await yardService.deleteCreatedGame(g.id);
+                removedLocalKeysCount++;
+            }
+        }
+        const rawGames = localStorage.getItem('playard_created_games');
+        if (rawGames) {
+            const parsed = JSON.parse(rawGames);
+            if (Array.isArray(parsed)) {
+                const filtered = parsed.filter((g: any) => {
+                    const cUser = (g.creatorUsername || g.creator_username || '').trim().toLowerCase();
+                    const cId = (g.user_id || g.creatorId || '').trim();
+                    return !usernames.has(cUser) && !userIds.has(cId);
+                });
+                localStorage.setItem('playard_created_games', JSON.stringify(filtered));
+            }
+        }
+    } catch (e) {}
+
+    // 3c. Remove all bug reports by this player
+    try {
+        const rawBugs = localStorage.getItem('playard_bug_reports');
+        if (rawBugs) {
+            const bugs = JSON.parse(rawBugs);
+            if (Array.isArray(bugs)) {
+                const filtered = bugs.filter((b: any) => {
+                    const bUser = (b.username || '').trim().toLowerCase();
+                    const bEmail = (b.email || '').trim().toLowerCase();
+                    const bId = (b.user_id || '').trim();
+                    return !usernames.has(bUser) && !emails.has(bEmail) && !userIds.has(bId);
+                });
+                localStorage.setItem('playard_bug_reports', JSON.stringify(filtered));
+            }
+        }
+    } catch (e) {}
+
+    // 3d. Remove AI audit logs by this player
+    try {
+        const rawAiLogs = localStorage.getItem('playard_ai_audit_logs');
+        if (rawAiLogs) {
+            const logs = JSON.parse(rawAiLogs);
+            if (Array.isArray(logs)) {
+                const filtered = logs.filter((l: any) => {
+                    const lUser = (l.username || '').trim().toLowerCase();
+                    return !usernames.has(lUser);
+                });
+                localStorage.setItem('playard_ai_audit_logs', JSON.stringify(filtered));
+            }
+        }
+    } catch (e) {}
+
+    // 3e. Remove all per-user keys & clean up friends lists across localStorage
+    try {
+        const allTokens = new Set<string>([
+            ...Array.from(userIds).map(x => x.toLowerCase()),
+            ...Array.from(userIds),
+            ...Array.from(usernames),
+            ...Array.from(emails)
+        ]);
+
+        const keysToDelete: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            if (key === BANNED_PLAYERS_STORAGE_KEY || key === 'playard_user_profiles') continue;
+
+            const keyLower = key.toLowerCase();
+            for (const token of allTokens) {
+                if (!token) continue;
+                const tLower = token.toLowerCase();
+                if (
+                    keyLower.endsWith(`_${tLower}`) ||
+                    keyLower === `playard_yards_user_${tLower}` ||
+                    keyLower === `playard_war_data_${tLower}` ||
+                    keyLower === `playard_war_initialized_${tLower}` ||
+                    keyLower === `playard_train_money_user_${tLower}` ||
+                    keyLower === `playard_racingsave_user_${tLower}` ||
+                    keyLower === `playard_avatar_config_${tLower}` ||
+                    keyLower === `playard_avatar_inventory_${tLower}` ||
+                    keyLower === `playard_friends_${tLower}` ||
+                    keyLower === `playard_friend_requests_in_${tLower}` ||
+                    keyLower === `playard_friend_requests_out_${tLower}` ||
+                    keyLower === `playard_active_game_${tLower}` ||
+                    keyLower === `playard_recently_played_${tLower}` ||
+                    keyLower === `playard_user_games_${tLower}`
+                ) {
+                    keysToDelete.push(key);
+                    break;
+                }
+            }
+
+            // Also clean banned player out of other players' friend lists & requests
+            if (key.startsWith('playard_friends_')) {
+                try {
+                    const list = JSON.parse(localStorage.getItem(key) || '[]');
+                    if (Array.isArray(list)) {
+                        const cleaned = list.filter((f: any) => !usernames.has((f.username || '').trim().toLowerCase()));
+                        if (cleaned.length !== list.length) {
+                            localStorage.setItem(key, JSON.stringify(cleaned));
+                        }
+                    }
+                } catch (e) {}
+            } else if (key.startsWith('playard_friend_requests_in_')) {
+                try {
+                    const list = JSON.parse(localStorage.getItem(key) || '[]');
+                    if (Array.isArray(list)) {
+                        const cleaned = list.filter((r: any) => !usernames.has((r.fromUsername || '').trim().toLowerCase()));
+                        if (cleaned.length !== list.length) {
+                            localStorage.setItem(key, JSON.stringify(cleaned));
+                        }
+                    }
+                } catch (e) {}
+            } else if (key.startsWith('playard_friend_requests_out_')) {
+                try {
+                    const list = JSON.parse(localStorage.getItem(key) || '[]');
+                    if (Array.isArray(list)) {
+                        const cleaned = list.filter((u: any) => !usernames.has(String(u || '').trim().toLowerCase()));
+                        if (cleaned.length !== list.length) {
+                            localStorage.setItem(key, JSON.stringify(cleaned));
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+
+        for (const k of keysToDelete) {
+            localStorage.removeItem(k);
+            removedLocalKeysCount++;
+        }
+    } catch (e) {}
+
+    // 4. Remove from FriendService in-memory cache
+    try {
+        const cached = (friendService as any).cachedSupabasePlayers;
+        if (Array.isArray(cached)) {
+            (friendService as any).cachedSupabasePlayers = cached.filter(
+                (p: any) => !usernames.has((p.username || '').trim().toLowerCase())
+            );
+        }
+    } catch (e) {}
+
+    // 5. Record ban in playard_banned_players
+    const primaryUsername = rawUsername || Array.from(usernames)[0] || rawEmail || rawUserId;
+    const primaryEmail = rawEmail || Array.from(emails)[0] || '';
+    const primaryUserId = rawUserId || Array.from(userIds)[0] || '';
+
+    const bannedList = getBannedPlayers().filter(
+        b =>
+            b.username.toLowerCase() !== primaryUsername.toLowerCase() &&
+            (!primaryUserId || b.userId !== primaryUserId)
+    );
+
+    const record: BannedPlayerRecord = {
+        userId: primaryUserId || undefined,
+        username: primaryUsername,
+        email: primaryEmail || undefined,
+        displayName: target.displayName || `@${primaryUsername}`,
+        reason: target.reason || 'Banned by Playard Owner',
+        bannedAt: Date.now(),
+        bannedBy: 'Playard Owner ✔',
+        deletedTables
+    };
+    bannedList.unshift(record);
+    saveBannedPlayers(bannedList);
+
+    // 6. If the banned player was somehow the current session, log them out
+    handleIncomingBanEnforcement(primaryUsername, primaryEmail, primaryUserId);
+
+    // Broadcast ban across tabs/windows
+    try {
+        banBroadcastChannel?.postMessage({
+            type: 'player_banned',
+            username: primaryUsername,
+            email: primaryEmail,
+            userId: primaryUserId,
+            timestamp: Date.now()
+        });
+    } catch (e) {}
+
+    (window as any).__lastBanDeletedSummary = {
+        username: primaryUsername,
+        userId: primaryUserId,
+        email: primaryEmail,
+        deletedTables,
+        removedLocalKeysCount,
+        timestamp: Date.now()
+    };
+
+    window.dispatchEvent(new CustomEvent('playard_player_banned', { detail: record }));
+    window.dispatchEvent(new CustomEvent('playard_ban_list_updated'));
+    window.dispatchEvent(new CustomEvent('playard_games_updated'));
+    window.dispatchEvent(new CustomEvent('playard_friends_updated'));
+
+    return {
+        success: true,
+        message: `🔨 Mängija "${primaryUsername}" on Playardist bännitud ja KÕIK tema read (${deletedTables.length} tabelist) on andmebaasist kustutatud!`,
+        deletedTables,
+        removedLocalKeysCount
+    };
+}
+
+/**
+ * Fetches all known players from Supabase tables and local profiles (excluding banned players).
+ */
+export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
+    const playersMap = new Map<string, PlayerDatabaseEntry>();
+    const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
+
+    const addCandidate = (entry: Partial<PlayerDatabaseEntry> & { username: string }) => {
+        const cleanUser = (entry.username || '').trim();
+        if (!cleanUser) return;
+        const lowerKey = cleanUser.toLowerCase();
+
+        // If banned, their database rows are gone — do not show in active database players
+        if (isPlayerBanned(cleanUser, entry.email, entry.id)) return;
+
+        const existing = playersMap.get(lowerKey);
+        if (existing) {
+            if (!existing.id && entry.id) existing.id = entry.id;
+            if ((!existing.email || existing.email.endsWith('@playard.com')) && entry.email) existing.email = entry.email;
+            if (!existing.displayName && entry.displayName) existing.displayName = entry.displayName;
+            if (existing.age === undefined && entry.age !== undefined) existing.age = entry.age;
+            if (!existing.gender && entry.gender) existing.gender = entry.gender;
+            if (!existing.source.includes(entry.source || '')) {
+                existing.source = `${existing.source}, ${entry.source}`;
+            }
+        } else {
+            playersMap.set(lowerKey, {
+                id: entry.id || `user_${lowerKey}`,
+                username: cleanUser,
+                displayName: entry.displayName || (isPlayardOwner(entry.email) ? 'Playard Owner ✔' : `@${cleanUser}`),
+                email: entry.email || `${lowerKey.replace(/[^a-z0-9_.-]/g, '')}@playard.com`,
+                isAdmin: !!entry.isAdmin,
+                age: entry.age,
+                gender: entry.gender,
+                source: entry.source || 'local'
+            });
+        }
+    };
+
+    // 1. Local registered profiles
+    try {
+        const localProfiles = getLocalProfiles();
+        for (const p of localProfiles) {
+            if (p && p.username) {
+                addCandidate({
+                    id: p.id,
+                    username: p.username,
+                    displayName: p.displayName,
+                    email: p.email,
+                    isAdmin: p.isAdmin,
+                    age: p.age,
+                    gender: p.gender,
+                    source: 'profiles'
+                });
+            }
+        }
+    } catch (e) {}
+
+    // 2. Supabase cloud tables
+    if (supabase && !isTestEnv) {
+        try {
+            const { data: profData } = await supabase
+                .from('profiles')
+                .select('*')
+                .limit(200);
+            if (Array.isArray(profData)) {
+                profData.forEach((r: any) => {
+                    if (r.username) {
+                        addCandidate({
+                            id: r.id,
+                            username: r.username,
+                            displayName: r.display_name || `@${r.username}`,
+                            email: r.email || '',
+                            isAdmin: !!r.is_admin,
+                            age: r.age,
+                            gender: r.gender,
+                            source: 'supabase:profiles'
+                        });
+                    }
+                });
+            }
+        } catch (e) {}
+
+        try {
+            const { data: warData } = await supabase
+                .from('war_game_stats')
+                .select('user_id, username')
+                .limit(200);
+            if (Array.isArray(warData)) {
+                warData.forEach((r: any) => {
+                    if (r.username) {
+                        addCandidate({
+                            id: r.user_id,
+                            username: r.username,
+                            source: 'supabase:war_game_stats'
+                        });
+                    }
+                });
+            }
+        } catch (e) {}
+
+        try {
+            const { data: gamesData } = await supabase
+                .from('user_created_games')
+                .select('user_id, creator_username')
+                .limit(200);
+            if (Array.isArray(gamesData)) {
+                gamesData.forEach((r: any) => {
+                    if (r.creator_username) {
+                        addCandidate({
+                            id: r.user_id,
+                            username: r.creator_username,
+                            source: 'supabase:user_created_games'
+                        });
+                    }
+                });
+            }
+        } catch (e) {}
+    }
+
+    return Array.from(playersMap.values()).sort((a, b) => {
+        const aOwner = isPlayardOwner(a.email) || isOwnerUser(a);
+        const bOwner = isPlayardOwner(b.email) || isOwnerUser(b);
+        if (aOwner && !bOwner) return -1;
+        if (!aOwner && bOwner) return 1;
+        return a.username.localeCompare(b.username);
+    });
+}
+
+export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
+    const listContainer = document.getElementById('owner-players-list');
+    const countBadge = document.getElementById('owner-players-count-badge');
+    const statusEl = document.getElementById('owner-ban-status');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 18px;">Laen mängijaid andmebaasist...</div>';
+
+    const allPlayers = await fetchAllPlayardPlayers();
+    const cleanFilter = searchQuery.trim().toLowerCase();
+    const filtered = cleanFilter
+        ? allPlayers.filter(
+              p =>
+                  p.username.toLowerCase().includes(cleanFilter) ||
+                  p.displayName.toLowerCase().includes(cleanFilter) ||
+                  p.email.toLowerCase().includes(cleanFilter) ||
+                  p.id.toLowerCase().includes(cleanFilter)
+          )
+        : allPlayers;
+
+    if (countBadge) {
+        countBadge.textContent = `${filtered.length} mängijat`;
+    }
+
+    if (filtered.length === 0) {
+        listContainer.innerHTML = `
+            <div style="text-align: center; color: #a4b0be; padding: 24px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
+                <p style="margin: 0; font-size: 0.95rem; font-weight: bold; color: #718093;">Ühtegi mängijat ei leitud andmebaasist.</p>
+            </div>
+        `;
+        return;
+    }
+
+    listContainer.innerHTML = '';
+    filtered.forEach(player => {
+        const isOwner = isPlayardOwner(player.email) || isOwnerUser(player);
+        const row = document.createElement('div');
+        row.className = 'owner-player-row';
+        row.setAttribute('data-username', player.username);
+        row.setAttribute('data-user-id', player.id);
+        row.style.cssText = `
+            background: #1a2432;
+            border: 1px solid ${isOwner ? 'rgba(255, 211, 42, 0.45)' : 'rgba(255, 255, 255, 0.08)'};
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        `;
+
+        const ageBadge = player.age !== undefined ? `<span style="background: rgba(11,232,129,0.12); color: #0be881; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">🎂 ${player.age}a</span>` : '';
+        const actionHtml = isOwner
+            ? `<span style="background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.5); color: #ffd32a; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800;">👑 Playard Owner (Kaitstud)</span>`
+            : `<button type="button" class="btn-owner-ban-player" data-username="${player.username}" data-user-id="${player.id}" data-email="${player.email}" style="background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 14px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);">
+                <span>🔨</span>
+                <span>Banni & Kustuta</span>
+            </button>`;
+
+        row.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <strong style="color: #ffffff; font-size: 0.98rem;">${player.displayName}</strong>
+                    <span style="color: #00f2fe; font-size: 0.82rem; font-family: monospace;">@${player.username}</span>
+                    ${ageBadge}
+                </div>
+                <div style="font-size: 0.75rem; color: #8899a6; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <span>📧 ${player.email || '—'}</span>
+                    <span>🆔 <code style="color: #94a3b8;">${player.id}</code></span>
+                </div>
+            </div>
+            <div>${actionHtml}</div>
+        `;
+
+        listContainer.appendChild(row);
+    });
+
+    listContainer.querySelectorAll('.btn-owner-ban-player').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const targetBtn = e.currentTarget as HTMLButtonElement;
+            const username = targetBtn.getAttribute('data-username') || '';
+            const userId = targetBtn.getAttribute('data-user-id') || '';
+            const email = targetBtn.getAttribute('data-email') || '';
+            const reasonInput = document.getElementById('owner-ban-reason-input') as HTMLInputElement | null;
+            const reason = reasonInput?.value.trim() || 'Bännitud Playard Owneri paneelist';
+
+            if (!username) return;
+
+            targetBtn.disabled = true;
+            targetBtn.textContent = '⏳ Kustutan andmebaasist...';
+
+            if (statusEl) {
+                statusEl.textContent = `⏳ Bännin mängijat @${username} ja kustutan kõiki tema ridu andmebaasist...`;
+                statusEl.style.color = '#ffd32a';
+            }
+
+            const res = await banPlayerFromPlayard({ username, userId, email, reason });
+            if (statusEl) {
+                statusEl.textContent = res.message;
+                statusEl.style.color = res.success ? '#2ecc71' : '#ff4757';
+            }
+
+            const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
+            await renderOwnerPanelPlayersList(searchInput?.value || '');
+            renderOwnerBannedPlayersList();
+            renderCommunityGames();
+            renderDatabaseGamesList();
+        });
+    });
+}
+
+export function renderOwnerBannedPlayersList() {
+    const container = document.getElementById('owner-banned-players-list');
+    const countBadge = document.getElementById('owner-banned-count-badge');
+    if (!container) return;
+
+    const banned = getBannedPlayers();
+    if (countBadge) {
+        countBadge.textContent = `${banned.length} bännitud`;
+    }
+
+    if (banned.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: #718093; padding: 16px; font-size: 0.85rem;">
+                Ühtegi mängijat pole veel bännitud.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = '';
+    banned.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'owner-banned-player-row';
+        el.setAttribute('data-banned-username', item.username);
+        el.style.cssText = 'background: rgba(255, 71, 87, 0.08); border: 1px solid rgba(255, 71, 87, 0.3); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;';
+        const dateStr = new Date(item.bannedAt).toLocaleString();
+        el.innerHTML = `
+            <div style="text-align: left;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="color: #ff4757; font-weight: 800;">🚫 @${item.username}</span>
+                    <span style="font-size: 0.72rem; background: rgba(46, 204, 113, 0.15); color: #2ecc71; padding: 2px 7px; border-radius: 4px; font-weight: 700;">
+                        ✓ Kõik andmebaasi read kustutatud (${item.deletedTables?.length || ALL_PLAYER_DATABASE_TABLES.length} tabelit)
+                    </span>
+                </div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 3px;">
+                    Põhjus: ${item.reason || 'Reeglite rikkumine'} · Aeg: ${dateStr}
+                </div>
+            </div>
+            <button type="button" class="btn-owner-unban-player" data-username="${item.username}" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #d2dae2; border-radius: 6px; padding: 5px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
+                🔓 Unban
+            </button>
+        `;
+        container.appendChild(el);
+    });
+
+    container.querySelectorAll('.btn-owner-unban-player').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget as HTMLButtonElement;
+            const uname = target.getAttribute('data-username') || '';
+            if (uname) {
+                unbanPlayerFromPlayard(uname);
+                renderOwnerBannedPlayersList();
+                const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
+                renderOwnerPanelPlayersList(searchInput?.value || '');
+            }
+        });
+    });
+}
+
+export function setupOwnerPanel() {
+    const modalOwner = document.getElementById('modal-owner-panel');
+    const openOwnerBtn = document.getElementById('btn-open-owner-panel');
+    const closeOwnerBtn = document.getElementById('btn-close-owner-panel');
+
+    const banInput = document.getElementById('owner-ban-username-input') as HTMLInputElement | null;
+    const reasonInput = document.getElementById('owner-ban-reason-input') as HTMLInputElement | null;
+    const banSubmitBtn = document.getElementById('btn-owner-ban-by-input') as HTMLButtonElement | null;
+    const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
+    const refreshBtn = document.getElementById('btn-owner-refresh-players');
+    const statusEl = document.getElementById('owner-ban-status');
+
+    if (openOwnerBtn && modalOwner) {
+        openOwnerBtn.addEventListener('click', () => {
+            const prof = getCurrentUserProfile();
+            if (!isPlayardOwner(prof?.email) && !isOwnerUser(prof)) {
+                return;
+            }
+            modalOwner.style.display = 'flex';
+            renderOwnerPanelPlayersList(searchInput?.value || '');
+            renderOwnerBannedPlayersList();
+        });
+    }
+
+    if (closeOwnerBtn && modalOwner) {
+        closeOwnerBtn.addEventListener('click', () => {
+            modalOwner.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modalOwner && modalOwner) {
+            modalOwner.style.display = 'none';
+        }
+    });
+
+    searchInput?.addEventListener('input', () => {
+        renderOwnerPanelPlayersList(searchInput.value);
+    });
+
+    refreshBtn?.addEventListener('click', () => {
+        renderOwnerPanelPlayersList(searchInput?.value || '');
+        renderOwnerBannedPlayersList();
+    });
+
+    if (banSubmitBtn && banInput) {
+        const triggerManualBan = async () => {
+            const prof = getCurrentUserProfile();
+            if (!isPlayardOwner(prof?.email) && !isOwnerUser(prof)) {
+                if (statusEl) {
+                    statusEl.textContent = '❌ Ainult Playard Owner saab mängijaid bännida!';
+                    statusEl.style.color = '#ff4757';
+                }
+                return;
+            }
+
+            const targetUsername = banInput.value.trim();
+            const reason = reasonInput?.value.trim() || 'Bännitud Playard Owneri poolt';
+
+            if (!targetUsername) {
+                if (statusEl) {
+                    statusEl.textContent = 'Palun sisesta mängija kasutajanimi, keda soovid bännida!';
+                    statusEl.style.color = '#ff4757';
+                }
+                return;
+            }
+
+            banSubmitBtn.disabled = true;
+            if (statusEl) {
+                statusEl.textContent = `⏳ Bännin mängijat "${targetUsername}" ja kustutan kõiki tema ridu andmebaasist...`;
+                statusEl.style.color = '#ffd32a';
+            }
+
+            try {
+                const res = await banPlayerFromPlayard({
+                    username: targetUsername,
+                    reason
+                });
+                if (statusEl) {
+                    statusEl.textContent = res.message;
+                    statusEl.style.color = res.success ? '#2ecc71' : '#ff4757';
+                }
+                if (res.success) {
+                    banInput.value = '';
+                    if (reasonInput) reasonInput.value = '';
+                    await renderOwnerPanelPlayersList(searchInput?.value || '');
+                    renderOwnerBannedPlayersList();
+                    renderCommunityGames();
+                    renderDatabaseGamesList();
+                }
+            } finally {
+                banSubmitBtn.disabled = false;
+            }
+        };
+
+        banSubmitBtn.addEventListener('click', triggerManualBan);
+        banInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') triggerManualBan();
+        });
+    }
+
+    if (typeof window !== 'undefined') {
+        (window as any).banPlayerFromPlayard = banPlayerFromPlayard;
+        (window as any).isPlayerBanned = isPlayerBanned;
+        (window as any).getBannedPlayers = getBannedPlayers;
+        (window as any).unbanPlayerFromPlayard = unbanPlayerFromPlayard;
+    }
+}

@@ -8,6 +8,7 @@ import { updateGameAgeRestrictions } from './ageRestrictions';
 export function updateAdminControlsVisibility(userEmail?: string | null, username?: string | null) {
     const adminStreakControls = document.getElementById('streak-admin-controls');
     const adminNavBtn = document.getElementById('btn-open-admin-panel');
+    const ownerNavBtn = document.getElementById('btn-open-owner-panel');
     const dbNavBtn = document.getElementById('btn-open-database-panel');
     
     const prof = getCurrentUserProfile();
@@ -23,6 +24,10 @@ export function updateAdminControlsVisibility(userEmail?: string | null, usernam
     
     if (adminNavBtn) {
         adminNavBtn.style.display = showAdminPanel ? 'flex' : 'none';
+    }
+
+    if (ownerNavBtn) {
+        ownerNavBtn.style.display = isEstonian ? 'flex' : 'none';
     }
     
     if (dbNavBtn) {

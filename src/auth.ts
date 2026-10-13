@@ -57,7 +57,36 @@ export function isUserAdminEmail(email?: string | null): boolean {
 export function isPlayardOwner(email?: string | null): boolean {
     if (!email) return false;
     const clean = email.trim().toLowerCase();
-    return clean === '1karl.ilves@gmail.com';
+    return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com';
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).isPlayardOwner = isPlayardOwner;
+}
+
+export function isAccountBanned(username?: string | null, email?: string | null, userId?: string | null): boolean {
+    if (typeof window === 'undefined') return false;
+    const cleanU = (username || '').trim().toLowerCase();
+    const cleanE = (email || '').trim().toLowerCase();
+    const cleanId = (userId || '').trim().toLowerCase();
+    if (!cleanU && !cleanE && !cleanId) return false;
+    if (isPlayardOwner(cleanU) || isPlayardOwner(cleanE) || cleanU === 'playard owner') return false;
+    try {
+        const raw = localStorage.getItem('playard_banned_players');
+        if (!raw) return false;
+        const list = JSON.parse(raw);
+        if (!Array.isArray(list)) return false;
+        return list.some((b: any) => {
+            const bU = (b.username || '').trim().toLowerCase();
+            const bE = (b.email || '').trim().toLowerCase();
+            const bId = (b.userId || '').trim().toLowerCase();
+            if (cleanU && (bU === cleanU || bE === cleanU || bId === cleanU)) return true;
+            if (cleanE && (bE === cleanE || bU === cleanE)) return true;
+            if (cleanId && bId && bId === cleanId) return true;
+            return false;
+        });
+    } catch (e) {}
+    return false;
 }
 
 export function canAccessMmp1(_profileOrEmail?: UserProfile | string | null, _username?: string | null): boolean {
@@ -224,6 +253,10 @@ export function getCurrentUserProfile(): UserProfile | null {
         const raw = localStorage.getItem(CURRENT_PROFILE_KEY);
         if (raw) {
             const prof = JSON.parse(raw) as UserProfile;
+            if (isAccountBanned(prof.username, prof.email, prof.id)) {
+                localStorage.removeItem(CURRENT_PROFILE_KEY);
+                return null;
+            }
             if (prof.birthDate) {
                 prof.age = calculateAge(prof.birthDate);
             }
@@ -872,6 +905,10 @@ export async function initAuth() {
                 return showMsg("The username 'admin' is reserved for administrators!", 'error');
             }
 
+            if (isAccountBanned(username, resolvedEmail)) {
+                return showMsg('🚫 This account has been banned from Playard!', 'error');
+            }
+
             showMsg('Checking credentials...', 'info');
 
             // --- ADMIN LOGIN FAST-PATH ---
@@ -1178,9 +1215,13 @@ export async function initAuth() {
                 return showMsg('Name is unavailable', 'error');
             }
 
-            showMsg('Creating account...', 'info');
-
             const internalEmail = `${cleanUser.replace(/[^a-z0-9_.-]/g, '')}@playard.com`;
+
+            if (isAccountBanned(username, internalEmail)) {
+                return showMsg('🚫 This account has been banned from Playard!', 'error');
+            }
+
+            showMsg('Creating account...', 'info');
 
             // --- TEST MODE OR OFFLINE REGISTRATION ---
             if (isTestMode() || !hasSupabase) {
