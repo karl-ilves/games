@@ -13634,8 +13634,8 @@ await (async () => {
             }
             console.log("   ✅ Admin Panel & Owner Panel Verified Checkmark (✔) Selection and Toggle verified successfully!");
 
-            // Verify Owner Panel top mode switch (Bannimine <-> Ferty)
-            console.log("   Verifying Owner Panel mode switch (Bannimine <-> Ferty)...");
+            // Verify Owner Panel top mode switch (Bannimine <-> Ferty <-> PlayBux Give)
+            console.log("   Verifying Owner Panel mode switch (Bannimine <-> Ferty <-> PlayBux Give)...");
             const modeSwitchTest = await page.evaluate(async () => {
                 const vis = (id) => {
                     const el = document.getElementById(id);
@@ -13645,29 +13645,94 @@ await (async () => {
                 if (modalOwner) modalOwner.style.display = 'flex';
                 const banModeBtn = document.getElementById('btn-owner-mode-ban');
                 const verifyModeBtn = document.getElementById('btn-owner-mode-verify');
-                const hasSwitch = !!banModeBtn && !!verifyModeBtn;
+                const playbuxModeBtn = document.getElementById('btn-owner-mode-playbux');
+                const hasSwitch = !!banModeBtn && !!verifyModeBtn && !!playbuxModeBtn;
 
-                const defaultBanVisible = vis('owner-ban-box') && !vis('owner-verified-box');
+                const defaultBanVisible = vis('owner-ban-box') && !vis('owner-verified-box') && !vis('owner-playbux-box');
 
+                // 1. Switch to Ferty mode
                 verifyModeBtn?.click();
-                await new Promise(r => setTimeout(r, 300));
-                const verifyModeOk = !vis('owner-ban-box') && vis('owner-verified-box') && !vis('owner-banned-section') && vis('owner-panel-desc-verify') && !vis('owner-panel-desc-ban');
+                await new Promise(r => setTimeout(r, 200));
+                const verifyModeOk = !vis('owner-ban-box') && vis('owner-verified-box') && !vis('owner-playbux-box') && !vis('owner-banned-section') && vis('owner-panel-desc-verify') && !vis('owner-panel-desc-ban') && !vis('owner-panel-desc-playbux');
                 const list = document.getElementById('owner-players-list');
                 const verifyRowsNoBan = list ? list.querySelectorAll('.btn-owner-ban-player').length === 0 : false;
 
+                // 2. Switch to PlayBux Give mode
+                playbuxModeBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+                const playbuxModeOk = !vis('owner-ban-box') && !vis('owner-verified-box') && vis('owner-playbux-box') && !vis('owner-banned-section') && vis('owner-panel-desc-playbux') && !vis('owner-panel-desc-ban') && !vis('owner-panel-desc-verify');
+                const playbuxRowsHasQuick = list ? list.querySelectorAll('.btn-owner-quick-give').length > 0 : false;
+                const playbuxRowsNoBan = list ? list.querySelectorAll('.btn-owner-ban-player').length === 0 : false;
+
+                // 3. Switch back to Ban mode
                 banModeBtn?.click();
-                await new Promise(r => setTimeout(r, 300));
-                const backToBanOk = vis('owner-ban-box') && !vis('owner-verified-box') && vis('owner-banned-section');
+                await new Promise(r => setTimeout(r, 200));
+                const backToBanOk = vis('owner-ban-box') && !vis('owner-verified-box') && !vis('owner-playbux-box') && vis('owner-banned-section');
                 const banRowsNoVerify = list ? list.querySelectorAll('.btn-owner-toggle-verified').length === 0 : false;
 
                 if (modalOwner) modalOwner.style.display = 'none';
-                return { hasSwitch, defaultBanVisible, verifyModeOk, verifyRowsNoBan, backToBanOk, banRowsNoVerify };
+                return { hasSwitch, defaultBanVisible, verifyModeOk, verifyRowsNoBan, playbuxModeOk, playbuxRowsHasQuick, playbuxRowsNoBan, backToBanOk, banRowsNoVerify };
             });
             console.log("   Mode Switch Test Results:", modeSwitchTest);
             if (Object.values(modeSwitchTest).some(v => !v)) {
                 throw new Error("Owner Panel mode switch test failed: " + JSON.stringify(modeSwitchTest));
             }
-            console.log("   ✅ Owner Panel mode switch (Bannimine <-> Ferty) verified!");
+            console.log("   ✅ Owner Panel 3-way mode switch (Bannimine <-> Ferty <-> PlayBux Give) verified!");
+
+            // Verify PlayBux Give functionality in Owner Panel
+            console.log("   Verifying Owner Panel PlayBux Give functionality (presets, top input, row buttons, balance)...");
+            const playbuxGiveTest = await page.evaluate(async () => {
+                const modalOwner = document.getElementById('modal-owner-panel');
+                if (modalOwner) modalOwner.style.display = 'flex';
+
+                // Switch to playbux mode
+                document.getElementById('btn-owner-mode-playbux')?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const userInput = document.getElementById('owner-playbux-username-input');
+                const amountInput = document.getElementById('owner-playbux-amount-input');
+                const giveBtn = document.getElementById('btn-owner-give-playbux');
+                const statusEl = document.getElementById('owner-playbux-status');
+                const presets = document.querySelectorAll('.btn-owner-playbux-preset');
+
+                // Test preset button click (e.g., 1000)
+                const preset1000 = Array.from(presets).find(p => p.getAttribute('data-amount') === '1000');
+                preset1000?.click();
+                const presetWorked = amountInput?.value === '1000';
+
+                // Test manual give to a test player
+                const testUser = 'pbxtestplayer_' + Date.now();
+                if (userInput) userInput.value = testUser;
+                if (amountInput) amountInput.value = '750';
+
+                giveBtn?.click();
+                await new Promise(r => setTimeout(r, 300));
+
+                const statusSuccess = statusEl?.textContent?.includes('Edukalt') || false;
+                const balanceAfterTopGive = window.getPlayerYards ? window.getPlayerYards(testUser) : 0;
+                const topGiveBalanceOk = balanceAfterTopGive === 750;
+
+                // Test row quick give via helper
+                const quickRes = await window.givePlayerPlaybux(testUser, 250, 'Quick Test');
+                const quickGiveOk = quickRes && quickRes.success && quickRes.newBalance === 1000;
+                const finalBalance = window.getPlayerYards ? window.getPlayerYards(testUser) : 0;
+                const finalBalanceOk = finalBalance === 1000;
+
+                if (modalOwner) modalOwner.style.display = 'none';
+
+                return {
+                    presetWorked,
+                    statusSuccess,
+                    topGiveBalanceOk,
+                    quickGiveOk,
+                    finalBalanceOk
+                };
+            });
+            console.log("   PlayBux Give Test Results:", playbuxGiveTest);
+            if (Object.values(playbuxGiveTest).some(v => !v)) {
+                throw new Error("PlayBux Give test failed: " + JSON.stringify(playbuxGiveTest));
+            }
+            console.log("   ✅ Owner Panel PlayBux Give functionality verified successfully!");
 
             // Verify Owner Panel prominent search bar
             console.log("   Verifying Owner Panel prominent search bar...");

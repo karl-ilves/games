@@ -1000,6 +1000,15 @@ class YardService {
         };
     }
 
+    public async grantYardsByUsername(
+        username: string,
+        amount: number,
+        reason = 'Admin Grant',
+        adminEmail = '1karl.ilves@gmail.com'
+    ) {
+        return this.adminGiveYardsByUsername(username, amount, reason, adminEmail);
+    }
+
     // --- Admin Give Yards by Username ---
     public async adminGiveYardsByUsername(
         username: string,
@@ -1105,10 +1114,12 @@ class YardService {
 
         // 4. Local storage fallback search
         const userSpecificKey = `${STORAGE_PREFIX}username_${cleanUsername.toLowerCase()}`;
-        let rawTarget = localStorage.getItem(userSpecificKey);
+        const userDirectKey = `${STORAGE_PREFIX}user_${cleanUsername.toLowerCase()}`;
+        let rawTarget = localStorage.getItem(userDirectKey) || localStorage.getItem(userSpecificKey);
         let targetData = rawTarget ? JSON.parse(rawTarget) : { yards: 0 };
         targetData.yards = (targetData.yards || 0) + grantAmount;
         localStorage.setItem(userSpecificKey, JSON.stringify(targetData));
+        localStorage.setItem(userDirectKey, JSON.stringify(targetData));
 
         return {
             success: true,

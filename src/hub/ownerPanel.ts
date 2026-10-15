@@ -711,43 +711,131 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     });
 }
 
-export type OwnerPanelMode = 'ban' | 'verify';
+export type OwnerPanelMode = 'ban' | 'verify' | 'playbux';
 let ownerPanelMode: OwnerPanelMode = 'ban';
 
 export function getOwnerPanelMode(): OwnerPanelMode {
     return ownerPanelMode;
 }
 
+export function getPlayerYards(username: string, userId?: string): number {
+    const cleanUser = (username || '').trim().toLowerCase();
+    const cleanUid = (userId || '').trim();
+
+    const cur = getCurrentUserProfile();
+    if (cur) {
+        if ((cleanUser && cur.username?.toLowerCase() === cleanUser) || (cleanUid && cur.id === cleanUid)) {
+            return yardService.getYards();
+        }
+    }
+
+    const candidateKeys = [
+        cleanUser ? `playard_yards_user_${cleanUser}` : '',
+        cleanUid ? `playard_yards_user_${cleanUid}` : '',
+        cleanUser ? `playard_yards_username_${cleanUser}` : '',
+    ].filter(Boolean);
+
+    for (const key of candidateKeys) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed === 'number') return parsed;
+                if (parsed && typeof parsed.yards === 'number') return parsed.yards;
+            }
+        } catch (e) {}
+    }
+
+    return 0;
+}
+
+export async function givePlayerPlaybux(
+    username: string,
+    amount: number,
+    reason: string = 'Playard Owner Kingitus'
+): Promise<{ success: boolean; message: string; newBalance?: number }> {
+    const prof = getCurrentUserProfile();
+    const isOwner = isPlayardOwner(prof?.email) || isOwnerUser(prof) || (!!prof?.isAdmin && (prof?.email || '').trim().toLowerCase() !== 'grx@trenet.ee');
+    if (!isOwner) {
+        return {
+            success: false,
+            message: '❌ Ainult Playard Owner saab PlayBuxe anda!'
+        };
+    }
+
+    const cleanUser = (username || '').trim();
+    if (!cleanUser) {
+        return {
+            success: false,
+            message: 'Palun sisesta mängija kasutajanimi!'
+        };
+    }
+
+    const numAmount = Math.round(Number(amount));
+    if (isNaN(numAmount) || numAmount <= 0) {
+        return {
+            success: false,
+            message: 'Palun sisesta korrektne positiivne summa!'
+        };
+    }
+
+    const res = await yardService.grantYardsByUsername(cleanUser, numAmount, reason, prof?.email || '1karl.ilves@gmail.com');
+    
+    // Dispatch event to update avatar widget, wallet badge, and other components
+    window.dispatchEvent(new CustomEvent('playard_yards_updated', {
+        detail: { username: cleanUser, amount: numAmount, totalYards: res.targetYards }
+    }));
+
+    return {
+        success: res.success,
+        message: res.success ? `💎 Edukalt lisatud +${numAmount.toLocaleString()} PlayBuxi mängijale @${cleanUser}!` : res.message,
+        newBalance: res.targetYards
+    };
+}
+
 /**
- * Switches the Owner Panel between Bannimine (ban) and Ferty (verified checkmark) modes.
- * Ban texts/boxes are replaced by the Ferty box and vice versa.
+ * Switches the Owner Panel between Bannimine (ban), Ferty (verified checkmark) and PlayBux Give modes.
  */
 export function setOwnerPanelMode(mode: OwnerPanelMode) {
     ownerPanelMode = mode;
+    const isBan = mode === 'ban';
     const isVerify = mode === 'verify';
+    const isPlaybux = mode === 'playbux';
+
     const show = (id: string, visible: boolean) => {
         const el = document.getElementById(id);
         if (el) el.style.display = visible ? '' : 'none';
     };
-    show('owner-panel-desc-ban', !isVerify);
-    show('owner-ban-box', !isVerify);
-    show('owner-banned-section', !isVerify);
+    show('owner-panel-desc-ban', isBan);
+    show('owner-ban-box', isBan);
+    show('owner-banned-section', isBan);
+
     show('owner-panel-desc-verify', isVerify);
     show('owner-verified-box', isVerify);
 
+    show('owner-panel-desc-playbux', isPlaybux);
+    show('owner-playbux-box', isPlaybux);
+
     const banBtn = document.getElementById('btn-owner-mode-ban');
     const verifyBtn = document.getElementById('btn-owner-mode-verify');
+    const playbuxBtn = document.getElementById('btn-owner-mode-playbux');
     if (banBtn) {
-        banBtn.setAttribute('data-active', String(!isVerify));
-        banBtn.style.background = !isVerify ? 'rgba(255, 71, 87, 0.22)' : 'transparent';
-        banBtn.style.borderColor = !isVerify ? '#ff4757' : 'transparent';
-        banBtn.style.color = !isVerify ? '#ff4757' : '#a4b0be';
+        banBtn.setAttribute('data-active', String(isBan));
+        banBtn.style.background = isBan ? 'rgba(255, 71, 87, 0.22)' : 'transparent';
+        banBtn.style.borderColor = isBan ? '#ff4757' : 'transparent';
+        banBtn.style.color = isBan ? '#ff4757' : '#a4b0be';
     }
     if (verifyBtn) {
         verifyBtn.setAttribute('data-active', String(isVerify));
         verifyBtn.style.background = isVerify ? 'rgba(46, 204, 113, 0.22)' : 'transparent';
         verifyBtn.style.borderColor = isVerify ? '#2ecc71' : 'transparent';
         verifyBtn.style.color = isVerify ? '#2ecc71' : '#a4b0be';
+    }
+    if (playbuxBtn) {
+        playbuxBtn.setAttribute('data-active', String(isPlaybux));
+        playbuxBtn.style.background = isPlaybux ? 'rgba(0, 242, 254, 0.22)' : 'transparent';
+        playbuxBtn.style.borderColor = isPlaybux ? '#00f2fe' : 'transparent';
+        playbuxBtn.style.color = isPlaybux ? '#00f2fe' : '#a4b0be';
     }
 
     const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
@@ -808,6 +896,8 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
 
         const isVerified = isOwner || isPlayerVerified(player.username, player.email);
         const verifiedBadge = isVerified ? `<span style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.35); padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">✔ Kinnitatud</span>` : '';
+        const currentYards = getPlayerYards(player.username, player.id);
+        const yardsBadge = `<span class="owner-player-yards-badge" style="background: rgba(0, 242, 254, 0.12); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.3); padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">💎 ${currentYards.toLocaleString()} PBX</span>`;
         const ageBadge = player.age !== undefined ? `<span style="background: rgba(11,232,129,0.12); color: #0be881; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">🎂 ${player.age}a</span>` : '';
 
         const verifiedToggleBtn = isOwner ? '' : `
@@ -823,9 +913,33 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
             </button>
         `;
 
-        const actionHtml = isOwner
-            ? `<span style="background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.5); color: #ffd32a; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800;">👑 Playard Owner ✔ (Kaitstud)</span>`
-            : (ownerPanelMode === 'verify' ? verifiedToggleBtn : banBtn);
+        const playbuxActions = `
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn-owner-quick-give" data-username="${player.username}" data-amount="100" style="background: rgba(0, 242, 254, 0.15); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 800; cursor: pointer;" title="Anna +100 💎">
+                    +100 💎
+                </button>
+                <button type="button" class="btn-owner-quick-give" data-username="${player.username}" data-amount="500" style="background: rgba(0, 242, 254, 0.15); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 800; cursor: pointer;" title="Anna +500 💎">
+                    +500 💎
+                </button>
+                <button type="button" class="btn-owner-quick-give" data-username="${player.username}" data-amount="1000" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 800; cursor: pointer;" title="Anna +1,000 💎">
+                    +1,000 💎
+                </button>
+                <button type="button" class="btn-owner-select-give" data-username="${player.username}" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer;" title="Vali mängija ja sisesta muu summa">
+                    ✏️ Muu summa...
+                </button>
+            </div>
+        `;
+
+        let actionHtml = '';
+        if (ownerPanelMode === 'playbux') {
+            actionHtml = playbuxActions;
+        } else if (isOwner) {
+            actionHtml = `<span style="background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.5); color: #ffd32a; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800;">👑 Playard Owner ✔ (Kaitstud)</span>`;
+        } else if (ownerPanelMode === 'verify') {
+            actionHtml = verifiedToggleBtn;
+        } else {
+            actionHtml = banBtn;
+        }
 
         const displayStr = isOwner 
             ? formatOwnerNametag(player.displayName || 'Playard Owner', true) 
@@ -837,6 +951,7 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
                     <strong style="color: #ffffff; font-size: 0.98rem;">${displayStr}</strong>
                     <span style="color: #00f2fe; font-size: 0.82rem; font-family: monospace;">@${player.username}</span>
                     ${verifiedBadge}
+                    ${yardsBadge}
                     ${ageBadge}
                 </div>
                 <div style="font-size: 0.75rem; color: #8899a6; display: flex; gap: 10px; flex-wrap: wrap;">
@@ -848,6 +963,55 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
         `;
 
         listContainer.appendChild(row);
+    });
+
+    listContainer.querySelectorAll('.btn-owner-quick-give').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const targetBtn = e.currentTarget as HTMLButtonElement;
+            const username = targetBtn.getAttribute('data-username') || '';
+            const amount = parseInt(targetBtn.getAttribute('data-amount') || '100', 10);
+            if (!username) return;
+
+            targetBtn.disabled = true;
+            const originalText = targetBtn.textContent;
+            targetBtn.textContent = '⏳...';
+
+            const playbuxStatusEl = document.getElementById('owner-playbux-status');
+            if (playbuxStatusEl) {
+                playbuxStatusEl.textContent = `⏳ Annan +${amount} PlayBuxi mängijale @${username}...`;
+                playbuxStatusEl.style.color = '#ffd32a';
+            }
+
+            try {
+                const res = await givePlayerPlaybux(username, amount, 'Playard Owner Kiir-Kingitus');
+                if (playbuxStatusEl) {
+                    playbuxStatusEl.textContent = res.message;
+                    playbuxStatusEl.style.color = res.success ? '#00f2fe' : '#ff4757';
+                }
+                const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
+                await renderOwnerPanelPlayersList(searchInput?.value || '');
+            } finally {
+                targetBtn.disabled = false;
+                targetBtn.textContent = originalText;
+            }
+        });
+    });
+
+    listContainer.querySelectorAll('.btn-owner-select-give').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const targetBtn = e.currentTarget as HTMLButtonElement;
+            const username = targetBtn.getAttribute('data-username') || '';
+            const userInput = document.getElementById('owner-playbux-username-input') as HTMLInputElement | null;
+            const amountInput = document.getElementById('owner-playbux-amount-input') as HTMLInputElement | null;
+            if (userInput) {
+                userInput.value = username;
+            }
+            if (amountInput) {
+                amountInput.focus();
+                amountInput.select();
+            }
+            document.getElementById('owner-playbux-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
     });
 
     listContainer.querySelectorAll('.btn-owner-toggle-verified').forEach(btn => {
@@ -1083,6 +1247,7 @@ export function setupOwnerPanel() {
 
     document.getElementById('btn-owner-mode-ban')?.addEventListener('click', () => setOwnerPanelMode('ban'));
     document.getElementById('btn-owner-mode-verify')?.addEventListener('click', () => setOwnerPanelMode('verify'));
+    document.getElementById('btn-owner-mode-playbux')?.addEventListener('click', () => setOwnerPanelMode('playbux'));
 
     const verifiedInput = document.getElementById('owner-verified-username-input') as HTMLInputElement | null;
     const verifiedBtn = document.getElementById('btn-owner-add-verified');
@@ -1108,7 +1273,81 @@ export function setupOwnerPanel() {
         });
     }
 
+    // PlayBux Give Top Box Form Handling
+    const playbuxUserInput = document.getElementById('owner-playbux-username-input') as HTMLInputElement | null;
+    const playbuxAmountInput = document.getElementById('owner-playbux-amount-input') as HTMLInputElement | null;
+    const playbuxReasonInput = document.getElementById('owner-playbux-reason-input') as HTMLInputElement | null;
+    const playbuxSubmitBtn = document.getElementById('btn-owner-give-playbux') as HTMLButtonElement | null;
+    const playbuxStatusEl = document.getElementById('owner-playbux-status');
+
+    document.querySelectorAll('.btn-owner-playbux-preset').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const amount = (e.currentTarget as HTMLElement).getAttribute('data-amount') || '500';
+            if (playbuxAmountInput) {
+                playbuxAmountInput.value = amount;
+                playbuxAmountInput.focus();
+            }
+        });
+    });
+
+    if (playbuxSubmitBtn && playbuxUserInput && playbuxAmountInput) {
+        const triggerGivePlaybux = async () => {
+            const targetUser = playbuxUserInput.value.trim();
+            const amount = parseInt(playbuxAmountInput.value.trim(), 10);
+            const reason = playbuxReasonInput?.value.trim() || 'Playard Owner Kingitus';
+
+            if (!targetUser) {
+                if (playbuxStatusEl) {
+                    playbuxStatusEl.textContent = 'Palun sisesta mängija kasutajanimi!';
+                    playbuxStatusEl.style.color = '#ff4757';
+                }
+                return;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                if (playbuxStatusEl) {
+                    playbuxStatusEl.textContent = 'Palun sisesta korrektne PlayBux summa!';
+                    playbuxStatusEl.style.color = '#ff4757';
+                }
+                return;
+            }
+
+            playbuxSubmitBtn.disabled = true;
+            if (playbuxStatusEl) {
+                playbuxStatusEl.textContent = `⏳ Annan +${amount.toLocaleString()} PlayBuxi mängijale @${targetUser}...`;
+                playbuxStatusEl.style.color = '#ffd32a';
+            }
+
+            try {
+                const res = await givePlayerPlaybux(targetUser, amount, reason);
+                if (playbuxStatusEl) {
+                    playbuxStatusEl.textContent = res.message;
+                    playbuxStatusEl.style.color = res.success ? '#00f2fe' : '#ff4757';
+                }
+                if (res.success) {
+                    playbuxUserInput.value = '';
+                    await renderOwnerPanelPlayersList(searchInput?.value || '');
+                }
+            } finally {
+                playbuxSubmitBtn.disabled = false;
+            }
+        };
+
+        playbuxSubmitBtn.addEventListener('click', triggerGivePlaybux);
+        playbuxUserInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') triggerGivePlaybux();
+        });
+        playbuxAmountInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') triggerGivePlaybux();
+        });
+    }
+
     window.addEventListener('playard_verified_players_updated', () => {
+        if (modalOwner && modalOwner.style.display !== 'none') {
+            renderOwnerPanelPlayersList(searchInput?.value || '');
+        }
+    });
+
+    window.addEventListener('playard_yards_updated', () => {
         if (modalOwner && modalOwner.style.display !== 'none') {
             renderOwnerPanelPlayersList(searchInput?.value || '');
         }
@@ -1123,5 +1362,9 @@ export function setupOwnerPanel() {
         (window as any).toggleVerifiedPlayer = toggleVerifiedPlayer;
         (window as any).addVerifiedPlayer = addVerifiedPlayer;
         (window as any).removeVerifiedPlayer = removeVerifiedPlayer;
+        (window as any).givePlayerPlaybux = givePlayerPlaybux;
+        (window as any).getPlayerYards = getPlayerYards;
+        (window as any).setOwnerPanelMode = setOwnerPanelMode;
+        (window as any).getOwnerPanelMode = getOwnerPanelMode;
     }
 }
