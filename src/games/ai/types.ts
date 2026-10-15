@@ -88,6 +88,7 @@ export type AiIntentType =
     | 'PERFORMANCE_OPTIMIZE'
     | 'COPILOT_ADVISE'
     | 'IMAGE_GENERATION'
+    | 'PYGA_BUILD'
     | 'HELP_OR_CHAT';
 
 

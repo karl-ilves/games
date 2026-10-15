@@ -568,6 +568,65 @@ export class PreviewViewport {
             });
         }
 
+        const anim = (obj as any).extra?.anim;
+        if (anim) {
+            const origPos = mesh.position.clone();
+            const origRot = mesh.rotation.clone();
+            const origColor = (mat as THREE.MeshStandardMaterial).color ? (mat as THREE.MeshStandardMaterial).color.getHex() : 0xffffff;
+            const speed = anim.speed || 1;
+            const amp = anim.amplitude || 1;
+
+            if (anim.kind === 'spin') {
+                const axis = anim.axis || 'z';
+                this.animatedMeshes.push({
+                    mesh,
+                    update: (_t) => {
+                        mesh.rotation[axis] += speed * 0.03;
+                    }
+                });
+            } else if (anim.kind === 'swing') {
+                const axis = anim.axis || 'y';
+                this.animatedMeshes.push({
+                    mesh,
+                    update: (t) => {
+                        mesh.rotation[axis] = origRot[axis] + Math.sin(t * speed) * amp;
+                    }
+                });
+            } else if (anim.kind === 'slide') {
+                const axis = anim.axis || 'y';
+                this.animatedMeshes.push({
+                    mesh,
+                    update: (t) => {
+                        mesh.position[axis] = origPos[axis] + Math.sin(t * speed) * amp;
+                    }
+                });
+            } else if (anim.kind === 'blink') {
+                const col2 = anim.color2 ? parseInt(anim.color2.replace('#', '0x'), 16) : 0x000000;
+                this.animatedMeshes.push({
+                    mesh,
+                    update: (t) => {
+                        const on = Math.sin(t * speed * Math.PI) > 0;
+                        (mat as THREE.MeshStandardMaterial).emissive.setHex(on ? origColor : col2);
+                    }
+                });
+            } else if (anim.kind === 'bob') {
+                this.animatedMeshes.push({
+                    mesh,
+                    update: (t) => {
+                        mesh.position.y = origPos.y + Math.sin(t * speed) * amp;
+                    }
+                });
+            } else if (anim.kind === 'retract') {
+                const axis = anim.axis || 'y';
+                this.animatedMeshes.push({
+                    mesh,
+                    update: (t) => {
+                        mesh.position[axis] = origPos[axis] + (Math.sin(t * speed) > 0 ? 0 : -amp);
+                    }
+                });
+            }
+        }
+
         return mesh;
     }
 

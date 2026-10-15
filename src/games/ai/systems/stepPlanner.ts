@@ -347,6 +347,39 @@ export class StepPlanner {
             ];
         }
 
+        if (command.intent === 'PYGA_BUILD') {
+            return [
+                {
+                    id: 'step-pyga-1',
+                    title: 'PYGA: Kuju, värvide ja proportsioonide analüüs',
+                    description: `Planeeritakse detailid objektile "${command.parameters?.title || command.parameters?.pygaInstruction?.title || '3D Mudel'}".`,
+                    status: 'pending',
+                    actionType: 'pyga_analyze'
+                },
+                {
+                    id: 'step-pyga-2',
+                    title: 'PYGA: Protseduurilise 3D geomeetria konstrueerimine',
+                    description: 'Luuakse mitmeosalised kere-, tiiva-, mootori- ja struktuuridetailid.',
+                    status: 'pending',
+                    actionType: 'pyga_mesh'
+                },
+                {
+                    id: 'step-pyga-3',
+                    title: 'PYGA: Reaalaja kineetiliste animatsioonide ja tulede seadistamine',
+                    description: 'Aktiveeritakse pöörlevad turbiinid, vilkuvad tuled ja liikuvad telikud.',
+                    status: 'pending',
+                    actionType: 'pyga_animate'
+                },
+                {
+                    id: 'step-pyga-4',
+                    title: 'PYGA: Proportsioonide ja hierarhia kvaliteedikontroll (100%)',
+                    description: 'Kontrollitakse AABB mõõtmeid, osade mittesisselõikuvust ja modifitseeritavust.',
+                    status: 'pending',
+                    actionType: 'pyga_verify'
+                }
+            ];
+        }
+
         // Generic fallback steps
         return [
             {

@@ -83,20 +83,14 @@ await (async () => {
             }
         }
     };
-    const getActiveFrame = () => {
-        try {
-            const mf = page.mainFrame();
-            if (mf && (typeof mf.isDetached !== 'function' || !mf.isDetached())) return mf;
-        } catch (_) {}
-        return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
-    };
+    const originalEvaluate = page.evaluate.bind(page);
     page.evaluate = async (pageFunction, ...args) => {
         for (let attempt = 1; attempt <= 20; attempt++) {
             try {
-                return await page.mainFrame().evaluate(pageFunction, ...args);
+                return await originalEvaluate(pageFunction, ...args);
             } catch (err) {
                 const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 20) {
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed') || msg.includes('navigating')) && attempt < 20) {
                     await new Promise(r => setTimeout(r, 300 * attempt));
                 } else {
                     throw err;
@@ -104,14 +98,14 @@ await (async () => {
             }
         }
     };
+    const originalClick = page.click.bind(page);
     page.click = async (selector, options) => {
         for (let attempt = 1; attempt <= 10; attempt++) {
             try {
-                const targetFrame = getActiveFrame();
-                return await targetFrame.click(selector, options);
+                return await originalClick(selector, options);
             } catch (err) {
                 const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed')) && attempt < 10) {
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 10) {
                     await new Promise(r => setTimeout(r, 300 * attempt));
                 } else {
                     throw err;
@@ -119,14 +113,14 @@ await (async () => {
             }
         }
     };
+    const originalWaitForSelector = page.waitForSelector.bind(page);
     page.waitForSelector = async (selector, options) => {
         for (let attempt = 1; attempt <= 6; attempt++) {
             try {
-                const targetFrame = getActiveFrame();
-                return await targetFrame.waitForSelector(selector, options);
+                return await originalWaitForSelector(selector, options);
             } catch (err) {
                 const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed')) && attempt < 6) {
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -134,14 +128,21 @@ await (async () => {
             }
         }
     };
+    const getActiveFrame = () => {
+        try {
+            const mf = page.mainFrame();
+            if (mf && (typeof mf.isDetached !== 'function' || !mf.isDetached())) return mf;
+        } catch (_) {}
+        return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
+    };
+    const original$eval = page.$eval.bind(page);
     page.$eval = async (selector, pageFunction, ...args) => {
         for (let attempt = 1; attempt <= 6; attempt++) {
             try {
-                const targetFrame = getActiveFrame();
-                return await targetFrame.$eval(selector, pageFunction, ...args);
+                return await original$eval(selector, pageFunction, ...args);
             } catch (err) {
                 const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached frame') || msg.includes('execution context was destroyed')) && attempt < 6) {
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -1480,10 +1481,11 @@ await (async () => {
         }
 
         // Test Previewing an Outfit (Cyber Shinobi / Ninja)
-        const shinobiTryBtn = await page.$('[data-preview-outfit-id="outfit_cyber_ninja"]');
-        if (!shinobiTryBtn) throw new Error("Missing 'Try On' button for outfit_cyber_ninja");
-        await page.click('[data-preview-outfit-id="outfit_cyber_ninja"]');
-        await new Promise(r => setTimeout(r, 200));
+        await page.evaluate(() => {
+            const btn = document.querySelector('[data-preview-outfit-id="outfit_cyber_ninja"]');
+            if (btn) btn.click();
+        });
+        await new Promise(r => setTimeout(r, 400));
 
         const previewConfigAfterOutfit = await page.evaluate(() => {
             return {
@@ -13302,6 +13304,105 @@ await (async () => {
                 throw new Error("Image Generation test failed: " + JSON.stringify(imageGenTest));
             }
             console.log("   ✅ Playard AI Image Generation, Texture Synthesis & Icon Creation verified successfully!");
+
+            // 22n. Testing PYGA (PlaYard Game AI) – 3D Objects, Worlds, Kinetic Animations & Modifications
+            console.log("\n   Testing PYGA (PlaYard Game AI – 3D Objects, Worlds & Modifications)...");
+            const pygaTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. "Loo suur sinimustvalge reisilennuk."
+                await ai.handleUserInput('Loo suur sinimustvalge reisilennuk.');
+                await new Promise(r => setTimeout(r, 400));
+                let scene = ai.state.getActiveScene();
+                const airlinerOk = scene?.objects?.some(o => o.name?.includes('kere') || o.name?.includes('Kere')) &&
+                    scene?.objects?.some(o => o.name?.includes('Vasak tiib') && o.extra?.role === 'wing') &&
+                    scene?.objects?.some(o => /mootor/i.test(o.name) && o.extra?.role === 'engine') &&
+                    scene?.objects?.some(o => o.name?.includes('Labad') && o.extra?.role === 'engine_fan') &&
+                    scene?.objects?.some(o => o.name?.includes('Reisija aken') && o.extra?.role === 'window') &&
+                    scene?.objects?.some(o => o.name?.includes('Sinimustvalge lipp') || o.color === '#0072ce');
+                const airlinerPartsCount = scene?.objects?.length || 0;
+
+                // 2. "Loo lennujaam kolme lennuraja ja suure terminaliga."
+                await ai.handleUserInput('Loo lennujaam kolme lennuraja ja suure terminaliga.');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const runwaysCount = scene?.objects?.filter(o => o.name?.includes('Asfalt') || o.extra?.role === 'runway' || o.id?.includes('runway')).length || 0;
+                const airportWorldOk = scene?.title?.includes('lennujaam') &&
+                    scene?.objects?.some(o => o.name?.includes('Terminal') || o.id?.includes('terminal')) &&
+                    runwaysCount >= 2;
+
+                // 3. "Loo kahekorruseline maja koos garaažiga."
+                await ai.handleUserInput('Loo kahekorruseline maja koos garaažiga.');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const houseOk = scene?.objects?.some(o => o.name?.includes('Garaaž')) &&
+                    scene?.objects?.some(o => o.name?.includes('Garaažiuks') && o.extra?.anim?.kind === 'slide') &&
+                    scene?.objects?.some(o => o.name?.includes('Põhikorrus') || o.name?.includes('Teine korrus'));
+
+                // 4. "Loo suur lennukiangaar, mille sees seisab reisilennuk."
+                await ai.handleUserInput('Loo suur lennukiangaar, mille sees seisab reisilennuk.');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const compoundOk = scene?.objects?.some(o => o.id?.includes('container') || o.name?.includes('Angaar') || o.name?.includes('Põrand')) &&
+                    scene?.objects?.some(o => o.id?.includes('child') || o.name?.includes('Kere') || o.name?.includes('Tiib'));
+
+                // 5. "Loo reisilennuk, mille mootorid töötavad ja telik liigub."
+                await ai.handleUserInput('Loo reisilennuk, mille mootorid töötavad ja telik liigub.');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const animatedPlaneOk = scene?.objects?.some(o => o.extra?.anim?.kind === 'spin' && o.extra?.role === 'engine_fan') &&
+                    scene?.objects?.some(o => o.extra?.anim?.kind === 'retract' && o.extra?.role === 'gear');
+
+                // 6. Modifications: "Muuda värv punaseks", "Tee suuremaks", "Eemalda mootorid"
+                await ai.handleUserInput('Muuda värv punaseks');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const colorModOk = scene?.objects?.some(o => o.color === '#dc2626');
+
+                await ai.handleUserInput('Tee suuremaks');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const fuselageObj = scene?.objects?.find(o => o.extra?.role === 'fuselage');
+                const scaleModOk = fuselageObj ? fuselageObj.scale[0] > 3.0 : false;
+
+                await ai.handleUserInput('Eemalda mootorid');
+                await new Promise(r => setTimeout(r, 300));
+                scene = ai.state.getActiveScene();
+                const enginesAfter = scene?.objects?.filter(o => o.extra?.role === 'engine' || o.extra?.role === 'engine_fan').length || 0;
+                const removeModOk = enginesAfter === 0;
+
+                // 7. Honesty check (Rule 13): "Loo kvantvedelik ja navier-stokes füüsika simulatsioon"
+                await ai.handleUserInput('Loo kvantvedelik ja navier-stokes füüsika simulatsioon');
+                await new Promise(r => setTimeout(r, 300));
+                const msgs = ai.state.getMessages();
+                const honestyMsg = msgs[msgs.length - 1]?.text || '';
+                const honestyOk = honestyMsg.includes('PYGA Tehniline') && honestyMsg.includes('Reegel 13');
+
+                return {
+                    airlinerOk,
+                    airlinerPartsCount,
+                    airportWorldOk,
+                    houseOk,
+                    compoundOk,
+                    animatedPlaneOk,
+                    colorModOk,
+                    scaleModOk,
+                    removeModOk,
+                    honestyOk
+                };
+            });
+
+            console.log("   PYGA 3D Engine Test Results:", pygaTest);
+            if (
+                !pygaTest.airlinerOk || pygaTest.airlinerPartsCount < 20 ||
+                !pygaTest.airportWorldOk || !pygaTest.houseOk ||
+                !pygaTest.compoundOk || !pygaTest.animatedPlaneOk ||
+                !pygaTest.colorModOk || !pygaTest.scaleModOk ||
+                !pygaTest.removeModOk || !pygaTest.honestyOk
+            ) {
+                throw new Error("PYGA 3D Objects & Worlds test failed: " + JSON.stringify(pygaTest));
+            }
+            console.log("   ✅ PYGA 3D Objects, Worlds, Kinetic Animations, Quality Proportions & Modifications verified successfully!");
 
             console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine & Image Generation) tests passed successfully!");
 

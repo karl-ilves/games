@@ -19,6 +19,7 @@ import {
     type TechnicalGamePlan
 } from '../../shared/playardAiKnowledge';
 import { PlayardImageGenerationEngine } from '../../shared/imageGenerationEngine';
+import { PygaEngine } from './pyga/pygaEngine';
 
 class PlayardAiApp {
     public state: AiState;
@@ -225,14 +226,14 @@ class PlayardAiApp {
         }
 
         // Planeeri sammud
-
         const steps = StepPlanner.planSteps(parsed);
-
         this.state.setCurrentSteps(steps);
         this.state.setIsBuilding(true);
 
         try {
-            if (parsed.intent === 'CREATE_GAME') {
+            if (parsed.intent === 'PYGA_BUILD') {
+                await PygaEngine.handleBuild(parsed, this.state, () => this.updateHeaderBadges());
+            } else if (parsed.intent === 'CREATE_GAME') {
                 await this.executeGameCreation(parsed);
             } else {
                 await this.executeModification(parsed);

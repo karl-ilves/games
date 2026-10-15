@@ -21,6 +21,7 @@ import {
 } from '../../../shared/playardAiKnowledge';
 import { PlayardSkySystem } from '../../../shared/skySystem';
 import { PlayardSpatialGeometryEngine } from '../../../shared/spatialGeometryEngine';
+import { PygaEngine } from '../pyga/pygaEngine';
 
 
 export interface ParsedCommand {
@@ -290,6 +291,36 @@ export class ConversationEngine {
                 parameters: skyParsed.parameters,
                 safetyReport
             };
+        }
+
+        // PYGA (PlaYard Game AI) – 3D-objektide ja maailmade loomine ning muutmine
+        if (PygaEngine.isPygaIntent(text)) {
+            const pygaInst = PygaEngine.parseInstruction(text);
+            if (pygaInst) {
+                if (pygaInst.kind === 'honesty_notice') {
+                    return {
+                        intent: 'GENERAL_KNOWLEDGE',
+                        confidence: 0.99,
+                        rawText: text,
+                        parameters: {
+                            answer: `ℹ️ **${pygaInst.title} (Reegel 13):**\n\n📌 **Päring:** ${pygaInst.honestyTopic}\n\n⚠️ **Tehniline selgitus:** ${pygaInst.honestyReason}`
+                        },
+                        safetyReport
+                    };
+                }
+
+                return {
+                    intent: 'PYGA_BUILD',
+                    confidence: 0.99,
+                    rawText: text,
+                    actionTarget: pygaInst.blueprintId || pygaInst.worldId || 'pyga_object',
+                    parameters: {
+                        pygaInstruction: pygaInst,
+                        title: pygaInst.title
+                    },
+                    safetyReport
+                };
+            }
         }
 
         // Spatial Geometry & Object Manipulation System
