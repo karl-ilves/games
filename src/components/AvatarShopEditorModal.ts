@@ -43,7 +43,7 @@ export class AvatarShopEditorModal {
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 16px;">
-                        <div class="avatar-modal-yard-pill">
+                        <div class="avatar-modal-yard-pill" id="modal-shop-yard-pill" style="cursor: pointer;" title="Osta PlayBuxe (Buy Playbux)">
                             <span id="modal-yard-icon"></span>
                             <strong id="modal-shop-yard-val">0</strong> Playbux
                         </div>
@@ -137,6 +137,19 @@ export class AvatarShopEditorModal {
         // Close button
         const closeBtn = this.modalEl.querySelector('#btn-close-avatar-shop');
         if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+
+        // Yard pill click opens Buy Playbux modal
+        const yardPill = this.modalEl.querySelector('#modal-shop-yard-pill');
+        if (yardPill) {
+            yardPill.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if ((window as any).openBuyPlaybuxModal) {
+                    (window as any).openBuyPlaybuxModal();
+                } else {
+                    document.getElementById('btn-wallet-badge')?.click();
+                }
+            });
+        }
 
         this.modalEl.addEventListener('click', (e) => {
             if (e.target === this.modalEl) this.close();

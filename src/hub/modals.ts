@@ -6,11 +6,10 @@ import { renderAdminUpdatesList } from './adminPanel';
 import { renderDatabaseGamesList } from './communityGames';
 
 export function setupModals() {
-    // 1. Streak Modal
+    // 1. Streak Modal (Opened via Daily Rewards button)
     const modalStreak = document.getElementById('modal-streak');
     const openStreakBtn = document.getElementById('btn-open-streak');
     const closeStreakBtn = document.getElementById('btn-close-streak');
-    const walletBadge = document.getElementById('btn-wallet-badge');
 
     if (openStreakBtn && modalStreak) {
         openStreakBtn.addEventListener('click', () => {
@@ -19,15 +18,63 @@ export function setupModals() {
             updateStreakTimerLive();
         });
     }
-    if (walletBadge && modalStreak) {
-        walletBadge.addEventListener('click', () => {
-            modalStreak.style.display = 'flex';
-            renderStreakCards();
-            updateStreakTimerLive();
-        });
-    }
     if (closeStreakBtn && modalStreak) {
         closeStreakBtn.addEventListener('click', () => { modalStreak.style.display = 'none'; });
+    }
+
+    // 2. Buy Playbux (PBX Store) Modal
+    const modalBuyPbx = document.getElementById('modal-buy-playbux');
+    const closeBuyPbxBtn = document.getElementById('btn-close-buy-playbux');
+    const walletBadge = document.getElementById('btn-wallet-badge');
+    const pbxNotice = document.getElementById('pbx-buy-notice');
+
+    const openBuyPbxModal = () => {
+        if (!modalBuyPbx) return;
+        if (pbxNotice) pbxNotice.style.display = 'none';
+        modalBuyPbx.style.display = 'flex';
+    };
+
+    const closeBuyPbxModal = () => {
+        if (modalBuyPbx) modalBuyPbx.style.display = 'none';
+    };
+
+    if (walletBadge) {
+        walletBadge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openBuyPbxModal();
+        });
+    }
+
+    if (closeBuyPbxBtn) {
+        closeBuyPbxBtn.addEventListener('click', closeBuyPbxModal);
+    }
+
+    modalBuyPbx?.addEventListener('click', (e) => {
+        if (e.target === modalBuyPbx) {
+            closeBuyPbxModal();
+        }
+    });
+
+    // Wire tier purchase buttons: clicking any tier displays "PBX BUY IS NOT AVAILABLE"
+    document.querySelectorAll('.btn-buy-pbx-tier').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (pbxNotice) {
+                pbxNotice.style.display = 'block';
+                pbxNotice.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            const btnEl = btn as HTMLElement;
+            const originalText = btnEl.textContent;
+            btnEl.textContent = 'PBX BUY IS NOT AVAILABLE';
+            setTimeout(() => {
+                if (originalText) btnEl.textContent = originalText;
+            }, 3000);
+        });
+    });
+
+    if (typeof window !== 'undefined') {
+        (window as any).openBuyPlaybuxModal = openBuyPbxModal;
+        (window as any).closeBuyPlaybuxModal = closeBuyPbxModal;
     }
 
     // Crown Obby Coming Soon Modal & Passcode Unlock (133731)

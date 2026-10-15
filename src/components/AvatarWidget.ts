@@ -28,7 +28,7 @@ export class AvatarWidget {
                         <span class="avatar-badge-tag" id="widget-avatar-role">Lv.1</span>
                     </div>
                     <div class="avatar-stats-row">
-                        <span class="avatar-yard-pill">
+                        <span class="avatar-yard-pill" id="widget-avatar-yard-pill" style="cursor: pointer;" title="Osta PlayBuxe (Buy Playbux)">
                             <span id="widget-yard-icon"></span>
                             <strong id="widget-yard-val">0</strong> PLAYBUX
                         </span>
@@ -83,6 +83,19 @@ export class AvatarWidget {
                 } else {
                     const modalOwner = document.getElementById('modal-owner-panel');
                     if (modalOwner) modalOwner.style.display = 'flex';
+                }
+            });
+        }
+
+        // Yard pill click opens Buy Playbux modal
+        const yardPill = this.container.querySelector('#widget-avatar-yard-pill');
+        if (yardPill) {
+            yardPill.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if ((window as any).openBuyPlaybuxModal) {
+                    (window as any).openBuyPlaybuxModal();
+                } else {
+                    document.getElementById('btn-wallet-badge')?.click();
                 }
             });
         }

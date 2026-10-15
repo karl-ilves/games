@@ -14084,6 +14084,66 @@ await (async () => {
             }
             console.log("   ✅ Owner Panel Reports mode (tab, list, badge, clear) verified!");
 
+            // 27. Verifying PlayBux Store Modal (Clicking PBX pill, 100 PBX 0,49€, 500 PBX 0,99€, 1000 PBX 1,99€, 5000 PBX 5,99€ & 'PBX BUY IS NOT AVAILABLE' notice)
+            console.log("27. Testing PlayBux Store Modal (Clicking PBX pill, 4 purchase tiers, and 'PBX BUY IS NOT AVAILABLE' notice)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const pbxStoreTest = await page.evaluate(async () => {
+                const walletBadge = document.getElementById('btn-wallet-badge');
+                const modal = document.getElementById('modal-buy-playbux');
+                const closeBtn = document.getElementById('btn-close-buy-playbux');
+                const noticeBox = document.getElementById('pbx-buy-notice');
+
+                const initialHidden = !modal || window.getComputedStyle(modal).display === 'none';
+
+                // Click PBX badge to open modal
+                walletBadge?.click();
+                await new Promise(r => setTimeout(r, 150));
+
+                const isOpen = !!modal && window.getComputedStyle(modal).display !== 'none';
+                const initialNoticeHidden = !noticeBox || window.getComputedStyle(noticeBox).display === 'none';
+
+                // Check 4 tiers are present
+                const modalText = modal?.textContent || '';
+                const has100 = modalText.includes('100 PBX') && modalText.includes('0,49€');
+                const has500 = modalText.includes('500 PBX') && modalText.includes('0,99€');
+                const has1000 = modalText.includes('1000 PBX') && modalText.includes('1,99€');
+                const has5000 = modalText.includes('5000 PBX') && modalText.includes('5,99€');
+
+                // Click first buy button (100 PBX)
+                const firstBuyBtn = modal?.querySelector('.btn-buy-pbx-tier');
+                firstBuyBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const noticeVisibleAfterClick = !!noticeBox && window.getComputedStyle(noticeBox).display !== 'none';
+                const noticeText = noticeBox?.textContent || '';
+                const hasNoticeText = noticeText.includes('PBX BUY IS NOT AVAILABLE');
+
+                // Close modal
+                closeBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const isClosed = !modal || window.getComputedStyle(modal).display === 'none';
+
+                return {
+                    initialHidden,
+                    isOpen,
+                    initialNoticeHidden,
+                    has100,
+                    has500,
+                    has1000,
+                    has5000,
+                    noticeVisibleAfterClick,
+                    hasNoticeText,
+                    isClosed
+                };
+            });
+            console.log("   PBX Store Modal Results:", pbxStoreTest);
+            if (Object.values(pbxStoreTest).some(v => !v)) {
+                throw new Error("PlayBux Store Modal test failed: " + JSON.stringify(pbxStoreTest));
+            }
+            console.log("   ✅ PlayBux Store Modal (PBX click, 100/500/1000/5000 tiers, 'PBX BUY IS NOT AVAILABLE' notice) verified!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();
