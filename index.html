@@ -1998,12 +1998,16 @@
             <p id="owner-panel-desc-playbux" style="display: none; color: #a4b0be; margin: 0 0 14px 0; font-size: 0.9rem;">
                 Logitud sisse kui <strong style="color: #ffd32a;">Playard Owner ✔</strong>. Siit saad anda mängijatele tasuta PlayBuxe <strong style="color: #00f2fe;">💎</strong> — summa kantakse otse mängija kontole ja sünkroonitakse andmebaasiga.
             </p>
+            <p id="owner-panel-desc-reports" style="display: none; color: #a4b0be; margin: 0 0 14px 0; font-size: 0.9rem;">
+                Logitud sisse kui <strong style="color: #ffd32a;">Playard Owner ✔</strong>. Siit näed kõiki mängijate esitatud raporteid (Cheating, Spamming jne) ning saad reeglite rikkujad ühe klikiga bännida ja andmebaasist eemaldada.
+            </p>
 
-            <!-- Owner Panel Mode Switch (Bannimine / Ferty / PlayBux Give) -->
+            <!-- Owner Panel Mode Switch (Bannimine / Ferty / PlayBux Give / Raportid) -->
             <div id="owner-panel-mode-switch" style="display: flex; gap: 8px; margin-bottom: 14px; background: #131920; padding: 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
                 <button type="button" id="btn-owner-mode-ban" data-active="true" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid #ff4757; background: rgba(255, 71, 87, 0.22); color: #ff4757; font-weight: 800; font-size: 0.9rem; cursor: pointer;">🔨 Bannimine</button>
                 <button type="button" id="btn-owner-mode-verify" data-active="false" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.9rem; cursor: pointer;">✔ Ferty (Linnukesed)</button>
                 <button type="button" id="btn-owner-mode-playbux" data-active="false" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.9rem; cursor: pointer;">💎 PlayBux Give</button>
+                <button type="button" id="btn-owner-mode-reports" data-active="false" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.9rem; cursor: pointer;">🚨 Raportid (<span id="owner-reports-count-badge">0</span>)</button>
             </div>
 
             <!-- Suur Otsinguriba (Otsib nime, kasutajanime, e-posti ja ID järgi) -->
@@ -2088,6 +2092,23 @@
                     <button type="button" class="btn-owner-playbux-preset" data-amount="10000" style="background: rgba(0,242,254,0.12); border: 1px solid rgba(0,242,254,0.3); color: #00f2fe; border-radius: 6px; padding: 3px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">+10,000 💎</button>
                 </div>
                 <div id="owner-playbux-status" style="margin-top: 10px; font-weight: bold; font-size: 0.9rem; text-align: center;"></div>
+            </div>
+
+            <!-- Player Reports Box -->
+            <div id="owner-reports-box" style="display: none; background: #1a1622; border: 1.5px solid rgba(255, 71, 87, 0.4); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2rem;">🚨</span>
+                        <h3 style="color: #ff6b81; margin: 0; font-size: 1.05rem;">Raporteeritud mängijad</h3>
+                        <span id="owner-reports-list-count" style="background: rgba(255, 71, 87, 0.15); color: #ff6b81; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold;">0</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button type="button" id="btn-owner-clear-all-reports" style="background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.35); color: #ff6b81; border-radius: 8px; padding: 5px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">🗑️ Kustuta kõik raportid</button>
+                    </div>
+                </div>
+                <div id="owner-reports-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                    <div style="text-align: center; color: #718093; padding: 16px; font-size: 0.85rem;">Ühtegi raportit pole veel esitatud.</div>
+                </div>
             </div>
 
             <!-- Active Database Players List -->

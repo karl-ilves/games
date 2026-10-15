@@ -3,6 +3,7 @@ import { getCurrentUserProfile, getLocalProfiles, isPlayardOwner, isOwnerUser, f
 import { yardService } from '../shared/yardService';
 import { friendService } from '../shared/friends/friendService';
 import { renderCommunityGames, renderDatabaseGamesList } from './communityGames';
+import { getPlayerReports, deletePlayerReport, clearAllPlayerReports, getReportsForPlayer, PlayerReport } from '../shared/playerReports';
 
 export const BANNED_PLAYERS_STORAGE_KEY = 'playard_banned_players';
 
@@ -711,11 +712,93 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     });
 }
 
-export type OwnerPanelMode = 'ban' | 'verify' | 'playbux';
+export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports';
 let ownerPanelMode: OwnerPanelMode = 'ban';
 
 export function getOwnerPanelMode(): OwnerPanelMode {
     return ownerPanelMode;
+}
+
+export function updateOwnerReportsBadge(): void {
+    const reports = getPlayerReports();
+    const countBadge = document.getElementById('owner-reports-count-badge');
+    const listCountBadge = document.getElementById('owner-reports-list-count');
+    if (countBadge) countBadge.textContent = String(reports.length);
+    if (listCountBadge) listCountBadge.textContent = String(reports.length);
+}
+
+export function renderOwnerReportsList(): void {
+    updateOwnerReportsBadge();
+    const listEl = document.getElementById('owner-reports-list');
+    if (!listEl) return;
+
+    const reports = getPlayerReports();
+    if (reports.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: #718093; padding: 18px; font-size: 0.88rem;">Ühtegi raportit pole veel esitatud.</div>';
+        return;
+    }
+
+    listEl.innerHTML = '';
+    reports.forEach((rep) => {
+        const item = document.createElement('div');
+        item.style.cssText = 'background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 71, 87, 0.25); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;';
+
+        const reasonBg = rep.reason.toLowerCase().includes('cheat')
+            ? 'background: rgba(255, 71, 87, 0.2); color: #ff6b81; border: 1px solid #ff4757;'
+            : rep.reason.toLowerCase().includes('spam')
+            ? 'background: rgba(254, 154, 46, 0.2); color: #fe9a2e; border: 1px solid #fe9a2e;'
+            : 'background: rgba(0, 242, 254, 0.2); color: #00f2fe; border: 1px solid #00f2fe;';
+
+        const dateStr = new Date(rep.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        item.innerHTML = `
+            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-size: 1.1rem;">🎯</span>
+                    <strong style="color: #ffffff; font-size: 0.95rem;">${rep.targetPlayer}</strong>
+                    <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; font-weight: 800; ${reasonBg}">${rep.reason}</span>
+                    <span style="font-size: 0.72rem; color: #a4b0be; background: rgba(255,255,255,0.06); padding: 2px 7px; border-radius: 6px;">🎮 ${rep.game}</span>
+                </div>
+                ${rep.details ? `<div style="font-size: 0.82rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 6px; border-left: 2px solid #ff4757;">"${rep.details}"</div>` : ''}
+                <div style="font-size: 0.72rem; color: #718093;">
+                    Raporteeris: <strong style="color: #cbd5e1;">${rep.reporter}</strong> kell ${dateStr}
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" class="btn-owner-ban-reported" data-target="${rep.targetPlayer}" data-reason="${rep.reason}" style="padding: 7px 12px; background: linear-gradient(135deg, #ff4757, #c0392b); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(255, 71, 87, 0.35);">
+                    <span>🔨</span>
+                    <span>Banni</span>
+                </button>
+                <button type="button" class="btn-owner-dismiss-report" data-id="${rep.id}" style="padding: 7px 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #cbd5e1; font-weight: 700; font-size: 0.78rem; cursor: pointer;" title="Kustuta raport">
+                    ✕
+                </button>
+            </div>
+        `;
+        listEl.appendChild(item);
+    });
+
+    listEl.querySelectorAll('.btn-owner-ban-reported').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.getAttribute('data-target') || '';
+            const reason = btn.getAttribute('data-reason') || '';
+            setOwnerPanelMode('ban');
+            const banInput = document.getElementById('owner-ban-username-input') as HTMLInputElement | null;
+            const reasonInput = document.getElementById('owner-ban-reason-input') as HTMLInputElement | null;
+            if (banInput) banInput.value = target;
+            if (reasonInput) reasonInput.value = `Report: ${reason}`;
+            document.getElementById('owner-ban-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+    });
+
+    listEl.querySelectorAll('.btn-owner-dismiss-report').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id') || '';
+            if (id) {
+                deletePlayerReport(id);
+                renderOwnerReportsList();
+            }
+        });
+    });
 }
 
 export function getPlayerYards(username: string, userId?: string): number {
@@ -794,13 +877,14 @@ export async function givePlayerPlaybux(
 }
 
 /**
- * Switches the Owner Panel between Bannimine (ban), Ferty (verified checkmark) and PlayBux Give modes.
+ * Switches the Owner Panel between Bannimine (ban), Ferty (verified checkmark), PlayBux Give and Raportid modes.
  */
 export function setOwnerPanelMode(mode: OwnerPanelMode) {
     ownerPanelMode = mode;
     const isBan = mode === 'ban';
     const isVerify = mode === 'verify';
     const isPlaybux = mode === 'playbux';
+    const isReports = mode === 'reports';
 
     const show = (id: string, visible: boolean) => {
         const el = document.getElementById(id);
@@ -816,9 +900,13 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     show('owner-panel-desc-playbux', isPlaybux);
     show('owner-playbux-box', isPlaybux);
 
+    show('owner-panel-desc-reports', isReports);
+    show('owner-reports-box', isReports);
+
     const banBtn = document.getElementById('btn-owner-mode-ban');
     const verifyBtn = document.getElementById('btn-owner-mode-verify');
     const playbuxBtn = document.getElementById('btn-owner-mode-playbux');
+    const reportsBtn = document.getElementById('btn-owner-mode-reports');
     if (banBtn) {
         banBtn.setAttribute('data-active', String(isBan));
         banBtn.style.background = isBan ? 'rgba(255, 71, 87, 0.22)' : 'transparent';
@@ -836,6 +924,16 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
         playbuxBtn.style.background = isPlaybux ? 'rgba(0, 242, 254, 0.22)' : 'transparent';
         playbuxBtn.style.borderColor = isPlaybux ? '#00f2fe' : 'transparent';
         playbuxBtn.style.color = isPlaybux ? '#00f2fe' : '#a4b0be';
+    }
+    if (reportsBtn) {
+        reportsBtn.setAttribute('data-active', String(isReports));
+        reportsBtn.style.background = isReports ? 'rgba(255, 71, 87, 0.22)' : 'transparent';
+        reportsBtn.style.borderColor = isReports ? '#ff4757' : 'transparent';
+        reportsBtn.style.color = isReports ? '#ff6b81' : '#a4b0be';
+    }
+
+    if (isReports) {
+        renderOwnerReportsList();
     }
 
     const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
@@ -945,6 +1043,11 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
             ? formatOwnerNametag(player.displayName || 'Playard Owner', true) 
             : (isVerified ? formatOwnerNametag(player.displayName || player.username, true) : (player.displayName || player.username).replace(/\s*✔$/g, ''));
 
+        const playerReports = getReportsForPlayer(player.username);
+        const reportBadge = playerReports.length > 0
+            ? `<span class="badge-reported-player" data-username="${player.username}" style="background: rgba(255, 71, 87, 0.22); color: #ff6b81; border: 1px solid #ff4757; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Vaata ${playerReports.length} esitatud raportit">🚨 ${playerReports.length} Raport${playerReports.length > 1 ? 'it' : ''}</span>`
+            : '';
+
         row.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -952,6 +1055,7 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
                     <span style="color: #00f2fe; font-size: 0.82rem; font-family: monospace;">@${player.username}</span>
                     ${verifiedBadge}
                     ${yardsBadge}
+                    ${reportBadge}
                     ${ageBadge}
                 </div>
                 <div style="font-size: 0.75rem; color: #8899a6; display: flex; gap: 10px; flex-wrap: wrap;">
@@ -1060,6 +1164,14 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
             renderOwnerBannedPlayersList();
             renderCommunityGames();
             renderDatabaseGamesList();
+        });
+    });
+
+    listContainer.querySelectorAll('.badge-reported-player').forEach(badge => {
+        badge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setOwnerPanelMode('reports');
+            document.getElementById('owner-reports-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
     });
 }
@@ -1248,6 +1360,12 @@ export function setupOwnerPanel() {
     document.getElementById('btn-owner-mode-ban')?.addEventListener('click', () => setOwnerPanelMode('ban'));
     document.getElementById('btn-owner-mode-verify')?.addEventListener('click', () => setOwnerPanelMode('verify'));
     document.getElementById('btn-owner-mode-playbux')?.addEventListener('click', () => setOwnerPanelMode('playbux'));
+    document.getElementById('btn-owner-mode-reports')?.addEventListener('click', () => setOwnerPanelMode('reports'));
+
+    document.getElementById('btn-owner-clear-all-reports')?.addEventListener('click', () => {
+        clearAllPlayerReports();
+        renderOwnerReportsList();
+    });
 
     const verifiedInput = document.getElementById('owner-verified-username-input') as HTMLInputElement | null;
     const verifiedBtn = document.getElementById('btn-owner-add-verified');
@@ -1353,6 +1471,18 @@ export function setupOwnerPanel() {
         }
     });
 
+    window.addEventListener('playard:reports_updated', () => {
+        updateOwnerReportsBadge();
+        if (ownerPanelMode === 'reports') {
+            renderOwnerReportsList();
+        }
+        if (modalOwner && modalOwner.style.display !== 'none') {
+            renderOwnerPanelPlayersList(searchInput?.value || '');
+        }
+    });
+
+    updateOwnerReportsBadge();
+
     if (typeof window !== 'undefined') {
         (window as any).banPlayerFromPlayard = banPlayerFromPlayard;
         (window as any).isPlayerBanned = isPlayerBanned;
@@ -1366,5 +1496,9 @@ export function setupOwnerPanel() {
         (window as any).getPlayerYards = getPlayerYards;
         (window as any).setOwnerPanelMode = setOwnerPanelMode;
         (window as any).getOwnerPanelMode = getOwnerPanelMode;
+        (window as any).renderOwnerReportsList = renderOwnerReportsList;
+        (window as any).getPlayerReports = getPlayerReports;
+        (window as any).deletePlayerReport = deletePlayerReport;
+        (window as any).clearAllPlayerReports = clearAllPlayerReports;
     }
 }

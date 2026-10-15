@@ -13967,6 +13967,123 @@ await (async () => {
 
             console.log("   ✅ In-Game Menu (Top-Right 'P' Button, Server Player Count, Leave Button) verified in all games!");
 
+            // 26. Verifying In-Game Player Reporting & Owner Panel Reports Management
+            console.log("26. Testing In-Game Player Reporting (Report button, reason selection, custom reason, Owner Panel reports mode)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/racing/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const inGameReportTest = await page.evaluate(async () => {
+                const pBtn = document.getElementById('btn-playard-menu');
+                const modal = document.getElementById('modal-playard-menu');
+                const reportModal = document.getElementById('modal-playard-report');
+                
+                // Open menu
+                pBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+
+                const reportButtons = document.querySelectorAll('.btn-player-report');
+                const hasReportButtons = reportButtons.length > 0;
+
+                // Click first report button (e.g. Välk_AI)
+                const firstReportBtn = reportButtons[0];
+                const reportedTarget = firstReportBtn?.getAttribute('data-player') || '';
+                firstReportBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const isReportModalOpen = reportModal?.classList.contains('active');
+                const targetDisplay = document.getElementById('report-target-player-name')?.textContent || '';
+                const targetMatches = targetDisplay.length > 0 && (targetDisplay === reportedTarget || targetDisplay.includes(reportedTarget));
+
+                // Select 'Cheating' and submit
+                const customReasonInput = document.getElementById('report-custom-reason-input');
+                if (customReasonInput) customReasonInput.value = 'Speedhack and flying';
+                const submitBtn = document.getElementById('btn-submit-player-report');
+                submitBtn?.click();
+                await new Promise(r => setTimeout(r, 800));
+
+                // Check stored reports
+                const rawReports = localStorage.getItem('playard_player_reports');
+                const reports = rawReports ? JSON.parse(rawReports) : [];
+                const hasSavedReport = reports.some(r => r.targetPlayer === reportedTarget && r.reason === 'Cheating');
+
+                return {
+                    hasReportButtons,
+                    isReportModalOpen,
+                    targetMatches,
+                    hasSavedReport
+                };
+            });
+            console.log("   In-Game Player Report Results:", inGameReportTest);
+            if (Object.values(inGameReportTest).some(v => !v)) {
+                throw new Error("In-game player report test failed: " + JSON.stringify(inGameReportTest));
+            }
+            console.log("   ✅ In-game player report button, reason selection and submission verified!");
+
+            // Test Owner Panel Reports Mode on Hub
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const ownerPanelReportsTest = await page.evaluate(async () => {
+                // Ensure owner is logged in
+                const mockProfile = {
+                    id: 'user_playard_owner',
+                    username: 'playard owner',
+                    displayName: 'Playard Owner',
+                    email: '1karl.ilves@gmail.com',
+                    isOwner: true,
+                    isAdmin: true
+                };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(mockProfile));
+
+                // Open owner panel
+                const ownerModal = document.getElementById('modal-owner-panel');
+                if (ownerModal) ownerModal.style.display = 'flex';
+
+                const reportsTabBtn = document.getElementById('btn-owner-mode-reports');
+                const reportsBadge = document.getElementById('owner-reports-count-badge');
+                const reportsBox = document.getElementById('owner-reports-box');
+                const banBox = document.getElementById('owner-ban-box');
+
+                const hasReportsTab = !!reportsTabBtn;
+                const initialCountText = reportsBadge?.textContent?.trim() || '0';
+                const hasCount = parseInt(initialCountText, 10) >= 1;
+
+                // Switch to reports mode
+                reportsTabBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const isReportsBoxVisible = reportsBox?.style.display !== 'none';
+                const isBanBoxHidden = banBox?.style.display === 'none';
+
+                // Check reports list contains the reported player
+                const reportsList = document.getElementById('owner-reports-list');
+                const listText = reportsList?.textContent || '';
+                const hasReportedPlayerInList = listText.includes('Cheating') || listText.includes('Välk_AI');
+
+                // Test dismiss single report or clear all
+                const clearAllBtn = document.getElementById('btn-owner-clear-all-reports');
+                clearAllBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const rawAfterClear = localStorage.getItem('playard_player_reports');
+                const reportsAfterClear = rawAfterClear ? JSON.parse(rawAfterClear) : [];
+                const clearedSuccessfully = reportsAfterClear.length === 0;
+
+                return {
+                    hasReportsTab,
+                    hasCount,
+                    isReportsBoxVisible,
+                    isBanBoxHidden,
+                    hasReportedPlayerInList,
+                    clearedSuccessfully
+                };
+            });
+            console.log("   Owner Panel Reports Mode Results:", ownerPanelReportsTest);
+            if (Object.values(ownerPanelReportsTest).some(v => !v)) {
+                throw new Error("Owner Panel reports mode test failed: " + JSON.stringify(ownerPanelReportsTest));
+            }
+            console.log("   ✅ Owner Panel Reports mode (tab, list, badge, clear) verified!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();
