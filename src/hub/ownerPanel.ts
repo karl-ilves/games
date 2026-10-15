@@ -4,6 +4,7 @@ import { yardService } from '../shared/yardService';
 import { friendService } from '../shared/friends/friendService';
 import { renderCommunityGames, renderDatabaseGamesList } from './communityGames';
 import { getPlayerReports, deletePlayerReport, clearAllPlayerReports, getReportsForPlayer, PlayerReport } from '../shared/playerReports';
+import { bindPlayerSuggestions } from '../shared/playerSuggestions';
 
 export const BANNED_PLAYERS_STORAGE_KEY = 'playard_banned_players';
 
@@ -1397,6 +1398,18 @@ export function setupOwnerPanel() {
     const playbuxReasonInput = document.getElementById('owner-playbux-reason-input') as HTMLInputElement | null;
     const playbuxSubmitBtn = document.getElementById('btn-owner-give-playbux') as HTMLButtonElement | null;
     const playbuxStatusEl = document.getElementById('owner-playbux-status');
+
+    // Autocomplete player suggestions for owner PlayBux input
+    const playbuxSuggestionsEl = document.getElementById('owner-playbux-suggestions');
+    bindPlayerSuggestions({
+        input: playbuxUserInput,
+        container: playbuxSuggestionsEl,
+        excludeCurrent: false,
+        onSelect: () => {
+            if (playbuxStatusEl) playbuxStatusEl.textContent = '';
+            playbuxAmountInput?.focus();
+        }
+    });
 
     document.querySelectorAll('.btn-owner-playbux-preset').forEach(btn => {
         btn.addEventListener('click', (e) => {

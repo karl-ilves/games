@@ -4,6 +4,7 @@ import { getCurrentUserProfile, isUserAdmin } from '../auth';
 import { renderStreakCards, updateStreakTimerLive } from './streak';
 import { renderAdminUpdatesList } from './adminPanel';
 import { renderDatabaseGamesList } from './communityGames';
+import { bindPlayerSuggestions } from '../shared/playerSuggestions';
 
 export function setupModals() {
     // 1. Streak Modal (Opened via Daily Rewards button)
@@ -28,6 +29,8 @@ export function setupModals() {
     const walletBadge = document.getElementById('btn-wallet-badge');
     const pbxNotice = document.getElementById('pbx-buy-notice');
 
+    const sendSuggestionsEl = document.getElementById('send-pbx-suggestions');
+
     const openBuyPbxModal = () => {
         if (!modalBuyPbx) return;
         if (pbxNotice) pbxNotice.style.display = 'none';
@@ -36,6 +39,10 @@ export function setupModals() {
 
     const closeBuyPbxModal = () => {
         if (modalBuyPbx) modalBuyPbx.style.display = 'none';
+        if (sendSuggestionsEl) {
+            sendSuggestionsEl.style.display = 'none';
+            sendSuggestionsEl.innerHTML = '';
+        }
     };
 
     if (walletBadge) {
@@ -77,6 +84,17 @@ export function setupModals() {
     const sendAmountInput = document.getElementById('send-pbx-amount-input') as HTMLInputElement | null;
     const sendStatusEl = document.getElementById('send-pbx-status');
     const sendSubmitBtn = document.getElementById('btn-submit-send-pbx');
+
+    // Autocomplete suggestions for player username
+    bindPlayerSuggestions({
+        input: sendRecipientInput,
+        container: sendSuggestionsEl,
+        excludeCurrent: true,
+        onSelect: () => {
+            if (sendStatusEl) sendStatusEl.style.display = 'none';
+            sendAmountInput?.focus();
+        }
+    });
 
     // Preset buttons
     document.querySelectorAll('.btn-send-pbx-preset').forEach(btn => {

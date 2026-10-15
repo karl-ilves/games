@@ -1866,9 +1866,11 @@
 
                 <div id="pbx-send-form" style="display: flex; flex-direction: column; gap: 10px;">
                     <div style="display: grid; grid-template-columns: 1.2fr 0.9fr auto; gap: 10px; align-items: end;">
-                        <div>
+                        <div style="position: relative;">
                             <label style="font-size: 0.78rem; color: #a4b0be; display: block; margin-bottom: 4px; font-weight: 700;">Saaja (@kasutajanimi):</label>
-                            <input type="text" id="send-pbx-recipient-input" placeholder="nt kasutajanimi..." style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; background: #0e1622; color: #ffffff; font-weight: 700; font-size: 0.9rem; outline: none;">
+                            <input type="text" id="send-pbx-recipient-input" autocomplete="off" placeholder="nt kasutajanimi..." style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; background: #0e1622; color: #ffffff; font-weight: 700; font-size: 0.9rem; outline: none;">
+                            <!-- Suggestions Dropdown under name input -->
+                            <div id="send-pbx-suggestions" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 190px; overflow-y: auto; background: #131c27; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.85); z-index: 100010;"></div>
                         </div>
                         <div>
                             <label style="font-size: 0.78rem; color: #a4b0be; display: block; margin-bottom: 4px; font-weight: 700;">Summa (PBX 💎):</label>
@@ -2182,9 +2184,11 @@
                     <span>💎</span> Anna mängijale PlayBuxe
                 </h3>
                 <div style="display: grid; grid-template-columns: 1.2fr 0.9fr 1fr auto; gap: 10px; align-items: end; flex-wrap: wrap;">
-                    <div>
+                    <div style="position: relative;">
                         <label style="font-size: 0.8rem; color: #a4b0be; display: block; margin-bottom: 4px;">Mängija kasutajanimi:</label>
-                        <input type="text" id="owner-playbux-username-input" placeholder="nt kasutajanimi..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.92rem;">
+                        <input type="text" id="owner-playbux-username-input" autocomplete="off" placeholder="nt kasutajanimi..." style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #485460; background: #131920; color: white; font-weight: bold; font-size: 0.92rem;">
+                        <!-- Suggestions Dropdown under owner name input -->
+                        <div id="owner-playbux-suggestions" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 180px; overflow-y: auto; background: #131c27; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.85); z-index: 100010;"></div>
                     </div>
                     <div>
                         <label style="font-size: 0.8rem; color: #a4b0be; display: block; margin-bottom: 4px;">PlayBux summa (💎):</label>

@@ -14140,13 +14140,41 @@ await (async () => {
                 await new Promise(r => setTimeout(r, 50));
                 const showsEmptyRecipientError = sendStatus?.textContent?.includes('Palun sisesta saaja kasutajanimi!') || false;
 
-                // Test sending PBX to test recipient
-                if (recipientInput) recipientInput.value = 'ManguKaaslane42';
+                // Test live name autocomplete suggestions underneath input
+                const suggestionsBox = document.getElementById('send-pbx-suggestions');
+                const hasSuggestionsBox = !!suggestionsBox;
+
+                // Ensure a target player exists in local profiles
+                const rawProfiles = localStorage.getItem('playard_user_profiles');
+                const profiles = rawProfiles ? JSON.parse(rawProfiles) : [];
+                if (!profiles.some(p => p.username === 'MarkusPlayard99')) {
+                    profiles.push({ id: 'test_u_markus', username: 'MarkusPlayard99', displayName: 'MarkusPlayard99' });
+                    localStorage.setItem('playard_user_profiles', JSON.stringify(profiles));
+                }
+
+                if (recipientInput) {
+                    recipientInput.value = 'mark';
+                    recipientInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                await new Promise(r => setTimeout(r, 100));
+
+                const suggestionsVisible = !!suggestionsBox && window.getComputedStyle(suggestionsBox).display !== 'none';
+                const markusSuggestionItem = suggestionsBox?.querySelector('.player-suggestion-item[data-username="MarkusPlayard99"]');
+                const hasMatchingSuggestion = !!markusSuggestionItem;
+
+                // Click suggestion item to autofill recipient
+                markusSuggestionItem?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const autofilledCorrectly = recipientInput?.value === 'MarkusPlayard99';
+                const suggestionsClosedAfterPick = !suggestionsBox || window.getComputedStyle(suggestionsBox).display === 'none';
+
+                // Test sending PBX to selected recipient
                 if (amountInput) amountInput.value = '100';
                 sendSubmitBtn?.click();
                 await new Promise(r => setTimeout(r, 200));
 
-                const sendSuccess = sendStatus?.textContent?.includes('Edukalt saadetud +100 PBX mängijale @ManguKaaslane42!') || false;
+                const sendSuccess = sendStatus?.textContent?.includes('Edukalt saadetud +100 PBX mängijale @MarkusPlayard99!') || false;
 
                 // Close modal
                 closeBtn?.click();
@@ -14166,6 +14194,11 @@ await (async () => {
                     hasSendSection,
                     presetWorks,
                     showsEmptyRecipientError,
+                    hasSuggestionsBox,
+                    suggestionsVisible,
+                    hasMatchingSuggestion,
+                    autofilledCorrectly,
+                    suggestionsClosedAfterPick,
                     sendSuccess,
                     isClosed
                 };
@@ -14174,7 +14207,7 @@ await (async () => {
             if (Object.values(pbxStoreTest).some(v => !v)) {
                 throw new Error("PlayBux Store Modal test failed: " + JSON.stringify(pbxStoreTest));
             }
-            console.log("   ✅ PlayBux Store Modal (PBX click, 100/500/1000/5000 tiers, 'PBX BUY IS NOT AVAILABLE' notice & Send PBX feature) verified!");
+            console.log("   ✅ PlayBux Store Modal (PBX click, tiers, notice, Send PBX & Live Name Suggestions Autocomplete) verified!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
