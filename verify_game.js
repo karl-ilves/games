@@ -14120,6 +14120,34 @@ await (async () => {
                 const noticeText = noticeBox?.textContent || '';
                 const hasNoticeText = noticeText.includes('PBX BUY IS NOT AVAILABLE');
 
+                // Test 'Send PBX' section positioned above 100 PBX card
+                const sendSection = document.getElementById('pbx-send-section');
+                const recipientInput = document.getElementById('send-pbx-recipient-input');
+                const amountInput = document.getElementById('send-pbx-amount-input');
+                const sendSubmitBtn = document.getElementById('btn-submit-send-pbx');
+                const sendStatus = document.getElementById('send-pbx-status');
+
+                const hasSendSection = !!sendSection && !!recipientInput && !!amountInput && !!sendSubmitBtn && !!sendStatus;
+
+                // Test preset buttons
+                const preset500Btn = modal?.querySelector('.btn-send-pbx-preset[data-amount="500"]');
+                preset500Btn?.click();
+                const presetWorks = amountInput?.value === '500';
+
+                // Test empty recipient validation
+                if (recipientInput) recipientInput.value = '';
+                sendSubmitBtn?.click();
+                await new Promise(r => setTimeout(r, 50));
+                const showsEmptyRecipientError = sendStatus?.textContent?.includes('Palun sisesta saaja kasutajanimi!') || false;
+
+                // Test sending PBX to test recipient
+                if (recipientInput) recipientInput.value = 'ManguKaaslane42';
+                if (amountInput) amountInput.value = '100';
+                sendSubmitBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const sendSuccess = sendStatus?.textContent?.includes('Edukalt saadetud +100 PBX mängijale @ManguKaaslane42!') || false;
+
                 // Close modal
                 closeBtn?.click();
                 await new Promise(r => setTimeout(r, 100));
@@ -14135,6 +14163,10 @@ await (async () => {
                     has5000,
                     noticeVisibleAfterClick,
                     hasNoticeText,
+                    hasSendSection,
+                    presetWorks,
+                    showsEmptyRecipientError,
+                    sendSuccess,
                     isClosed
                 };
             });
@@ -14142,7 +14174,7 @@ await (async () => {
             if (Object.values(pbxStoreTest).some(v => !v)) {
                 throw new Error("PlayBux Store Modal test failed: " + JSON.stringify(pbxStoreTest));
             }
-            console.log("   ✅ PlayBux Store Modal (PBX click, 100/500/1000/5000 tiers, 'PBX BUY IS NOT AVAILABLE' notice) verified!");
+            console.log("   ✅ PlayBux Store Modal (PBX click, 100/500/1000/5000 tiers, 'PBX BUY IS NOT AVAILABLE' notice & Send PBX feature) verified!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

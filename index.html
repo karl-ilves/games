@@ -1854,6 +1854,44 @@
                 </div>
             </div>
 
+            <!-- Send PBX Section (Right above 100 PBX) -->
+            <div id="pbx-send-section" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.08), rgba(79, 172, 254, 0.04)); border: 1.5px solid rgba(0, 242, 254, 0.35); border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.25rem;">📤</span>
+                        <strong style="color: #00f2fe; font-size: 1.05rem; font-weight: 800;">Send PBX</strong>
+                        <span style="font-size: 0.74rem; color: #a4b0be; background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.25); padding: 2px 8px; border-radius: 6px;">Saada PlayBuxe teisele mängijale</span>
+                    </div>
+                </div>
+
+                <div id="pbx-send-form" style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: grid; grid-template-columns: 1.2fr 0.9fr auto; gap: 10px; align-items: end;">
+                        <div>
+                            <label style="font-size: 0.78rem; color: #a4b0be; display: block; margin-bottom: 4px; font-weight: 700;">Saaja (@kasutajanimi):</label>
+                            <input type="text" id="send-pbx-recipient-input" placeholder="nt kasutajanimi..." style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; background: #0e1622; color: #ffffff; font-weight: 700; font-size: 0.9rem; outline: none;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.78rem; color: #a4b0be; display: block; margin-bottom: 4px; font-weight: 700;">Summa (PBX 💎):</label>
+                            <input type="number" id="send-pbx-amount-input" min="1" step="10" value="100" placeholder="100" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; background: #0e1622; color: #00f2fe; font-weight: 800; font-size: 0.95rem; outline: none;">
+                        </div>
+                        <button type="button" id="btn-submit-send-pbx" style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgba(0, 242, 254, 0.6); background: linear-gradient(135deg, #00f2fe, #4facfe); color: #0b1118; font-weight: 900; font-size: 0.92rem; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(0, 242, 254, 0.35);">
+                            <span>📤</span>
+                            <span>Send PBX</span>
+                        </button>
+                    </div>
+
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <span style="font-size: 0.74rem; color: #8899a6; font-weight: 700;">Kiirvalik:</span>
+                        <button type="button" class="btn-send-pbx-preset" data-amount="50" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 6px; padding: 2px 8px; font-size: 0.74rem; font-weight: 700; cursor: pointer;">50 PBX</button>
+                        <button type="button" class="btn-send-pbx-preset" data-amount="100" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 6px; padding: 2px 8px; font-size: 0.74rem; font-weight: 700; cursor: pointer;">100 PBX</button>
+                        <button type="button" class="btn-send-pbx-preset" data-amount="500" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 6px; padding: 2px 8px; font-size: 0.74rem; font-weight: 700; cursor: pointer;">500 PBX</button>
+                        <button type="button" class="btn-send-pbx-preset" data-amount="1000" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 6px; padding: 2px 8px; font-size: 0.74rem; font-weight: 700; cursor: pointer;">1,000 PBX</button>
+                    </div>
+
+                    <div id="send-pbx-status" style="display: none; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; text-align: center;"></div>
+                </div>
+            </div>
+
             <!-- Tiers Grid (100 PBX 0,49€, 500 PBX 0,99€, 1000 PBX 1,99€, 5000 PBX 5,99€) -->
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 16px;">
                 <!-- 100 PBX - 0,49€ -->

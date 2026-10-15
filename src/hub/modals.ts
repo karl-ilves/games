@@ -72,9 +72,120 @@ export function setupModals() {
         });
     });
 
+    // Wire Send PBX form
+    const sendRecipientInput = document.getElementById('send-pbx-recipient-input') as HTMLInputElement | null;
+    const sendAmountInput = document.getElementById('send-pbx-amount-input') as HTMLInputElement | null;
+    const sendStatusEl = document.getElementById('send-pbx-status');
+    const sendSubmitBtn = document.getElementById('btn-submit-send-pbx');
+
+    // Preset buttons
+    document.querySelectorAll('.btn-send-pbx-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const amt = btn.getAttribute('data-amount') || '100';
+            if (sendAmountInput) sendAmountInput.value = amt;
+        });
+    });
+
+    const handleSendPbx = async () => {
+        const recipient = (sendRecipientInput?.value || '').trim();
+        const amount = parseInt(sendAmountInput?.value || '0', 10);
+
+        if (!recipient) {
+            if (sendStatusEl) {
+                sendStatusEl.style.display = 'block';
+                sendStatusEl.style.background = 'rgba(255, 71, 87, 0.2)';
+                sendStatusEl.style.color = '#ff6b81';
+                sendStatusEl.style.border = '1px solid #ff4757';
+                sendStatusEl.textContent = 'Palun sisesta saaja kasutajanimi!';
+            }
+            return;
+        }
+
+        const current = getCurrentUserProfile();
+        const cleanRecipient = recipient.replace(/^@/, '').toLowerCase().trim();
+        if (current && current.username && current.username.toLowerCase().trim() === cleanRecipient) {
+            if (sendStatusEl) {
+                sendStatusEl.style.display = 'block';
+                sendStatusEl.style.background = 'rgba(255, 71, 87, 0.2)';
+                sendStatusEl.style.color = '#ff6b81';
+                sendStatusEl.style.border = '1px solid #ff4757';
+                sendStatusEl.textContent = 'Sa ei saa iseendale PlayBuxe saata!';
+            }
+            return;
+        }
+
+        if (isNaN(amount) || amount <= 0) {
+            if (sendStatusEl) {
+                sendStatusEl.style.display = 'block';
+                sendStatusEl.style.background = 'rgba(255, 71, 87, 0.2)';
+                sendStatusEl.style.color = '#ff6b81';
+                sendStatusEl.style.border = '1px solid #ff4757';
+                sendStatusEl.textContent = 'Palun sisesta korrektne positiivne summa!';
+            }
+            return;
+        }
+
+        const isInfinite = yardService.hasInfiniteYards();
+        const senderYards = yardService.getYards();
+        if (!isInfinite && senderYards < amount) {
+            if (sendStatusEl) {
+                sendStatusEl.style.display = 'block';
+                sendStatusEl.style.background = 'rgba(255, 71, 87, 0.2)';
+                sendStatusEl.style.color = '#ff6b81';
+                sendStatusEl.style.border = '1px solid #ff4757';
+                sendStatusEl.textContent = `Sul pole piisavalt PlayBuxe! Sinu saldo: ${senderYards.toLocaleString()} PBX`;
+            }
+            return;
+        }
+
+        // Deduct from sender
+        if (!isInfinite) {
+            const spent = yardService.spendYards(amount, undefined, `Saadetud mängijale @${recipient}`);
+            if (!spent) {
+                if (sendStatusEl) {
+                    sendStatusEl.style.display = 'block';
+                    sendStatusEl.style.background = 'rgba(255, 71, 87, 0.2)';
+                    sendStatusEl.style.color = '#ff6b81';
+                    sendStatusEl.style.border = '1px solid #ff4757';
+                    sendStatusEl.textContent = 'Tehing ebaõnnestus. Kontrolli saldot!';
+                }
+                return;
+            }
+        }
+
+        // Credit to recipient
+        const senderName = current?.displayName || current?.username || 'Mängija';
+        const senderEmail = current?.email || '1karl.ilves@gmail.com';
+        await yardService.grantYardsByUsername(cleanRecipient, amount, `Saadetud mängijalt ${senderName}`, senderEmail);
+
+        // Update header & widget balance
+        window.dispatchEvent(new CustomEvent('playard_yards_updated', {
+            detail: { username: cleanRecipient, amount, senderYards: yardService.getYards() }
+        }));
+
+        if (sendStatusEl) {
+            sendStatusEl.style.display = 'block';
+            sendStatusEl.style.background = 'rgba(46, 204, 113, 0.2)';
+            sendStatusEl.style.color = '#2ecc71';
+            sendStatusEl.style.border = '1px solid #2ecc71';
+            sendStatusEl.textContent = `✅ Edukalt saadetud +${amount.toLocaleString()} PBX mängijale @${recipient}!`;
+        }
+
+        if (sendRecipientInput) sendRecipientInput.value = '';
+    };
+
+    sendSubmitBtn?.addEventListener('click', handleSendPbx);
+    sendRecipientInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSendPbx();
+    });
+    sendAmountInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSendPbx();
+    });
+
     if (typeof window !== 'undefined') {
         (window as any).openBuyPlaybuxModal = openBuyPbxModal;
         (window as any).closeBuyPlaybuxModal = closeBuyPbxModal;
+        (window as any).sendPlayerPlaybux = handleSendPbx;
     }
 
     // Crown Obby Coming Soon Modal & Passcode Unlock (133731)
