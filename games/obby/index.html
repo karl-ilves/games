@@ -518,10 +518,10 @@
     <!-- Top HUD Navigation -->
     <div class="top-hud">
         <div class="hud-left">
-            <a href="../../index.html" class="btn-action" id="btn-back-hub">
+            <div class="btn-action" id="btn-back-hub" style="cursor: default;">
                 <img src="../../assets/playard_logo.svg" alt="Playard Games Logo" style="width: 22px; height: 22px;">
                 <span>Playard Games</span>
-            </a>
+            </div>
             <div class="logo-badge">
                 <span>🏃‍♂️</span>
                 <span>PARKOUR OBBY 3D</span>
@@ -561,7 +561,7 @@
             </div>
         </div>
 
-        <div class="hud-right">
+        <div class="hud-right" style="padding-right: 52px;">
             <!-- Obby Coins -->
             <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.4); background: rgba(255, 211, 42, 0.1);">
                 <span>🪙</span>
@@ -791,6 +791,7 @@
     </div>
 
     <!-- Obby Main TS -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/obby/main.ts"></script>
 </body>
 </html>

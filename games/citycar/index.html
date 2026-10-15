@@ -640,10 +640,10 @@
         <!-- Header -->
         <div class="hud-header">
             <div class="top-left-panel hud-interactive">
-                <a href="../../index.html" class="btn-hub-back">
+                <div class="btn-hub-back" style="cursor: default;">
                     <span>⬅</span>
-                    <span>Playard Hub</span>
-                </a>
+                    <span>Playard City</span>
+                </div>
                 <div class="game-title-badge">
                     <span class="status-dot"></span>
                     <strong style="color: #ffffff;">3D City & Nature Drive</strong>
@@ -652,7 +652,7 @@
             </div>
 
             <!-- Active Drivers Roster & Wanted Level -->
-            <div class="top-right-panel hud-interactive">
+            <div class="top-right-panel hud-interactive" style="margin-right: 52px;">
                 <!-- Wanted Level Display -->
                 <div class="wanted-card" id="wanted-card" style="display: none;">
                     <div class="wanted-title">WANTED</div>
@@ -778,6 +778,7 @@
         </div>
     </div>
 
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/citycar/main.ts"></script>
 </body>
 </html>

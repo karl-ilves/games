@@ -491,9 +491,6 @@
     <!-- Top HUD Navigation -->
     <header id="top-hud">
         <div class="hud-left">
-            <a href="../../index.html" class="btn-hub-back" id="btn-back-hub">
-                <span>&larr;</span> <span>Hub</span>
-            </a>
             <div class="title-badge">
                 <span class="live-dot"></span>
                 <span>✈️ 3D Flight Simulator</span>
@@ -506,7 +503,7 @@
             </div>
         </div>
 
-        <div class="hud-right">
+        <div class="hud-right" style="padding-right: 52px;">
             <button class="hud-btn" id="btn-open-hangar" title="Switch Aircraft">
                 <span>🛩️ Hangar</span>
             </button>
@@ -743,6 +740,7 @@
     </div>
 
     <!-- Game Script Entry Point -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/flight/main.ts"></script>
 </body>
 </html>

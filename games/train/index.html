@@ -689,10 +689,10 @@
     <!-- Top HUD Navigation -->
     <header class="top-hud">
         <div class="hud-left">
-            <a href="../../index.html" class="logo-badge">
+            <div class="logo-badge">
                 <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 30px; height: 30px;">
                 <span id="logo-title-text">3D TRAIN SIMULATOR</span>
-            </a>
+            </div>
             <span class="owner-pill" id="owner-badge-pill">🔥 3D SIMULATOR</span>
             <span class="owner-pill" id="environment-mode-badge" style="background: rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">🌲 SURFACE</span>
             <button id="btn-open-depot" class="btn-action" style="background: linear-gradient(135deg, #ffd32a, #ff9f1a); color: #111; font-weight: 900; border: none; box-shadow: 0 0 12px rgba(255,211,42,0.4);">
@@ -713,7 +713,7 @@
             </div>
         </div>
 
-        <div class="hud-right">
+        <div class="hud-right" style="padding-right: 50px;">
             <!-- In-game Train Money Balance -->
             <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.45); background: rgba(255, 211, 42, 0.12);" id="train-money-box" title="Train Money (earn +50€ per station)">
                 <span>🪙</span>
@@ -725,7 +725,6 @@
             <button id="btn-toggle-weather" class="btn-action" title="Day / Sunset / Night (Key N)">☀️ Day</button>
             <button id="btn-sound-toggle" class="btn-action">🔊 Sound</button>
             <button id="btn-open-help" class="btn-action">❓ Help</button>
-            <a href="../../index.html" class="btn-action" style="border-color: #00f2fe; color: #00f2fe;">🏠 Hub</a>
         </div>
     </header>
 
@@ -932,6 +931,7 @@
     </div>
 
     <!-- Game Script Entry Point -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/train/main.ts"></script>
 </body>
 </html>

@@ -590,7 +590,7 @@
             </div>
         </div>
 
-        <div class="hud-right" style="display: flex; align-items: center; gap: 6px;">
+        <div class="hud-right" style="display: flex; align-items: center; gap: 6px; padding-right: 52px;">
             <button class="btn-hud-action" id="btn-toggle-audio" title="Heli sisse/välja" style="padding: 6px 10px; border-radius: 50%;">
                 <span>🔊</span>
             </button>
@@ -598,10 +598,6 @@
                 <span>🌐</span>
                 <span>ET/EN</span>
             </button>
-            <a href="../../index.html" class="btn-hud-action" style="border-color: rgba(255, 71, 87, 0.4); color: #ff4757; padding: 5px 12px; font-size: 0.8rem;">
-                <span>🏠</span>
-                <span>Hub</span>
-            </a>
             <!-- Keep hidden for test compatibility and hotbar shortcuts -->
             <div style="display: none;">
                 <button id="btn-backpack-folder"><span id="backpack-btn-text">Kaust (0)</span></button>
@@ -852,6 +848,7 @@
     </div>
 
     <!-- Last Metro Main Script -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/metro/main.ts"></script>
 </body>
 </html>

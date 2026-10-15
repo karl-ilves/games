@@ -307,7 +307,6 @@
     <!-- Top HUD -->
     <div class="top-hud">
         <div style="display: flex; align-items: center; gap: 8px;">
-            <a href="../../index.html" class="hud-btn" id="btn-back-hub">🏠 Hub</a>
             <div style="display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 1rem; color: #2ed573;">
                 <span>🐍</span>
                 <span style="background: linear-gradient(135deg, #2ed573, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">USSIMÄNG</span>
@@ -324,7 +323,7 @@
             <div class="hud-stat-pill" id="hud-powerup" style="display: none;">🫐 BOONUS</div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding-right: 52px;">
             <button class="hud-btn" id="btn-pause" title="Paus (Tühik)">⏸️ Paus</button>
             <button class="hud-btn" id="btn-toggle-sound" title="Lülita heli sisse/välja">🔊 Heli: SEES</button>
         </div>
@@ -509,6 +508,7 @@
     </div>
 
     <!-- Bundled Game Entry -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/snake/main.ts"></script>
 </body>
 </html>

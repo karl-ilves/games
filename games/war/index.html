@@ -714,10 +714,10 @@
     <!-- Top HUD Navigation & Scoreboard -->
     <header class="top-hud">
         <div class="hud-left">
-            <a href="../../index.html" class="logo-badge">
+            <div class="logo-badge">
                 <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 30px; height: 30px;">
                 <span>WAR GAME</span>
-            </a>
+            </div>
             <div class="server-status-badge">
                 <span class="online-dot"></span>
                 <span id="server-players-count">1 / 20 Mängijat (10v10 Lahing)</span>
@@ -738,7 +738,7 @@
             </div>
         </div>
 
-        <div class="hud-right">
+        <div class="hud-right" style="padding-right: 52px;">
             <div class="hud-stat-box" style="border-color: rgba(255, 211, 42, 0.3);">
                 <span>💥 Kills:</span>
                 <span id="stat-kills" style="color: #ffd32a;">0</span>
@@ -751,7 +751,6 @@
             <button id="btn-open-loadout" class="btn-action" style="border-color: #ffd32a; color: #ffd32a;">⚔️ Vali Tiim / Roll</button>
             <button id="btn-sound-toggle" class="btn-action">🔊 Sound</button>
             <button id="btn-open-help" class="btn-action">❓ Abi</button>
-            <a href="../../index.html" class="btn-action" style="border-color: #ff4757; color: #ff6b81;">🏠 Hub</a>
         </div>
     </header>
 
@@ -1031,6 +1030,7 @@
     </div>
 
     <!-- Game Script Entry Point -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/war/main.ts"></script>
 </body>
 </html>

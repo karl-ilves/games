@@ -712,10 +712,10 @@
     <!-- Top HUD Navigation -->
     <div class="top-hud">
         <div class="hud-left">
-            <a href="../../index.html" class="btn-action" id="btn-back-hub" style="display: flex; align-items: center; gap: 8px;">
+            <div class="btn-action" id="btn-back-hub" style="display: flex; align-items: center; gap: 8px; cursor: default;">
                 <img src="../../assets/playard_logo.svg" alt="Playard Games Logo" style="width: 22px; height: 22px;">
-                <span>Playard Games Hub</span>
-            </a>
+                <span>Playard Games</span>
+            </div>
             <div class="logo-badge">
                 <span>🍳</span>
                 <span>MASTER CHEF 3D</span>
@@ -738,7 +738,7 @@
             </div>
         </div>
 
-        <div class="hud-right">
+        <div class="hud-right" style="padding-right: 52px;">
             <!-- Yard Wallet Badge -->
             <div class="hud-stat-box" style="border: 2px solid #00f2fe; background: linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(46, 213, 115, 0.22)); box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); padding: 6px 14px; border-radius: 20px; gap: 8px;">
                 <span id="cooking-yard-icon"></span>
@@ -892,8 +892,7 @@
     </div>
 
     <!-- Game Script Entry Point -->
-
-    <!-- Game Script Entry Point -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/cooking/main.ts"></script>
 </body>
 </html>

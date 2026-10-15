@@ -444,7 +444,6 @@
     <!-- Top HUD -->
     <div class="top-hud">
         <div style="display: flex; align-items: center; gap: 10px;">
-            <a href="../../index.html" class="hud-btn" id="btn-back-hub">🏠 Hub</a>
             <div style="display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 1.1rem; color: #ffd700;">
                 <span>👑</span>
                 <span style="background: linear-gradient(135deg, #ffd700, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">24K CROWN OBBY</span>
@@ -455,7 +454,7 @@
             <div class="stage-pill" id="hud-stage-pill">STAGE 1 / 50</div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding-right: 52px;">
             <button class="hud-btn" id="btn-reset-checkpoint">🔄 Reset to Checkpoint</button>
             <span style="font-size: 0.75rem; font-weight: 800; color: #ffd700; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.4); padding: 6px 10px; border-radius: 8px;" id="owner-hud-badge">👑 PLAYARD OWNER ✔</span>
         </div>
@@ -553,6 +552,7 @@
     </div>
 
     <!-- Bundled Game Logic -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/crown/main.ts"></script>
 </body>
 </html>

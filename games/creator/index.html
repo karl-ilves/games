@@ -370,10 +370,10 @@
     <!-- Top Studio Bar -->
     <div class="studio-top-bar">
         <div class="studio-logo" style="display: flex; align-items: center; gap: 8px;">
-            <a href="../../index.html" class="btn-back" style="display: flex; align-items: center; gap: 6px; text-decoration: none;">
+            <div class="btn-back" style="display: flex; align-items: center; gap: 6px; cursor: default;">
                 <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 24px; height: 24px;">
                 <span style="font-weight: 800; color: #00f2fe;">Playard Games</span>
-            </a>
+            </div>
             <span style="color: rgba(255,255,255,0.2);">|</span>
             <span>3D Creator Studio</span>
         </div>
@@ -391,7 +391,7 @@
             </button>
         </div>
 
-        <div class="studio-actions">
+        <div class="studio-actions" style="padding-right: 52px;">
             <div id="studio-test-pbx-badge" style="display: flex; align-items: center; gap: 6px; background: rgba(0, 242, 254, 0.12); border: 1.5px solid rgba(0, 242, 254, 0.5); padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; color: #00f2fe; box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);">
                 <span>💎</span>
                 <span id="studio-test-pbx">6,000,000</span> PBX
@@ -2170,6 +2170,7 @@
         </div>
     </div>
 
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/creator/main.ts"></script>
 </body>
 </html>

@@ -1255,10 +1255,10 @@
     <!-- Top HUD Navigation -->
     <div class="top-hud">
         <div class="hud-left">
-            <a href="../../index.html" class="logo-badge" id="btn-back-hub">
+            <div class="logo-badge" id="btn-back-hub" style="cursor: default;">
                 <span>◀</span>
                 <span>PLAYARD</span>
-            </a>
+            </div>
             <span class="owner-pill">👑 PLAYARD OWNER ✔</span>
             <button class="btn-hud-action" id="btn-crate-shop" style="background: rgba(155, 89, 182, 0.25); border-color: #9b59b6; color: #e056fd; font-weight: 800;" title="Ava Kastipood ja Relvainventar">
                 <span>📦</span>
@@ -1289,7 +1289,7 @@
             </div>
         </div>
 
-        <div class="hud-right">
+        <div class="hud-right" style="padding-right: 52px;">
             <div class="hud-badge" id="hud-money-badge" style="border-color: #2ecc71; color: #2ecc71; font-weight: 900;" title="MMP1 Mänguraha (€)">
                 <span>💶</span>
                 <span id="hud-money-val">100</span>
@@ -1664,6 +1664,7 @@
     </div>
 
     <!-- Main Game Script -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/mmp1/main.ts"></script>
 </body>
 </html>

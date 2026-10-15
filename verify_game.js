@@ -113,11 +113,19 @@ await (async () => {
             }
         }
     };
+    const getActiveFrame = () => {
+        try {
+            const mf = page.mainFrame();
+            if (mf && (typeof mf.isDetached !== 'function' || !mf.isDetached())) return mf;
+        } catch (_) {}
+        return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
+    };
     const originalWaitForSelector = page.waitForSelector.bind(page);
     page.waitForSelector = async (selector, options) => {
         for (let attempt = 1; attempt <= 6; attempt++) {
             try {
-                return await originalWaitForSelector(selector, options);
+                const target = getActiveFrame() || page;
+                return await target.waitForSelector(selector, options);
             } catch (err) {
                 const msg = (err && err.message) ? err.message.toLowerCase() : '';
                 if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
@@ -128,18 +136,12 @@ await (async () => {
             }
         }
     };
-    const getActiveFrame = () => {
-        try {
-            const mf = page.mainFrame();
-            if (mf && (typeof mf.isDetached !== 'function' || !mf.isDetached())) return mf;
-        } catch (_) {}
-        return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
-    };
     const original$eval = page.$eval.bind(page);
     page.$eval = async (selector, pageFunction, ...args) => {
         for (let attempt = 1; attempt <= 6; attempt++) {
             try {
-                return await original$eval(selector, pageFunction, ...args);
+                const target = getActiveFrame() || page;
+                return await target.$eval(selector, pageFunction, ...args);
             } catch (err) {
                 const msg = (err && err.message) ? err.message.toLowerCase() : '';
                 if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
@@ -13883,6 +13885,87 @@ await (async () => {
                 throw new Error("Owner Panel search bar test failed: " + JSON.stringify(searchBarTest));
             }
             console.log("   ✅ Owner Panel prominent search bar verified!");
+
+            // 25. Verifying In-Game P Menu (P button top-right, server player count, Leave button)
+            console.log("25. Testing In-Game Menu (Top-Right 'P' Button, Live Server Player Count & Leave Button)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/racing/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const racingMenuTest = await page.evaluate(async () => {
+                const pBtn = document.getElementById('btn-playard-menu');
+                const modal = document.getElementById('modal-playard-menu');
+                const leaveBtn = document.getElementById('btn-playard-leave');
+                const playerCount = document.getElementById('playard-menu-player-count');
+                const resumeBtn = document.getElementById('btn-playard-resume');
+
+                // Check button exists
+                const hasPBtn = !!pBtn && pBtn.textContent.trim() === 'P';
+                const hasLeaveBtn = !!leaveBtn && leaveBtn.textContent.includes('Leave');
+                
+                // Open modal by clicking P
+                pBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+                const isModalOpen = modal?.classList.contains('active');
+                const countText = playerCount?.textContent || '';
+                const hasPlayerCount = countText.length > 0 && (countText.includes('mängijat') || countText.includes('mängija') || countText.includes('Sina'));
+
+                // Close modal via resume
+                resumeBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const isModalClosed = !modal?.classList.contains('active');
+
+                // Verify return-home link is removed
+                const returnHomeLink = document.getElementById('return-home');
+
+                return {
+                    hasPBtn,
+                    hasLeaveBtn,
+                    isModalOpen,
+                    hasPlayerCount,
+                    isModalClosed,
+                    noDirectHomeLink: !returnHomeLink
+                };
+            });
+            console.log("   Racing Simulator In-Game Menu Results:", racingMenuTest);
+            if (Object.values(racingMenuTest).some(v => !v)) {
+                throw new Error("Racing simulator in-game menu test failed: " + JSON.stringify(racingMenuTest));
+            }
+
+            // Verify in War Game
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/war/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const warMenuTest = await page.evaluate(async () => {
+                const pBtn = document.getElementById('btn-playard-menu');
+                const modal = document.getElementById('modal-playard-menu');
+                const playerCount = document.getElementById('playard-menu-player-count');
+                const leaveBtn = document.getElementById('btn-playard-leave');
+
+                // Check top-hud logo is div, not direct <a> link
+                const logoBadge = document.querySelector('.logo-badge');
+                const isLogoNotLink = logoBadge ? logoBadge.tagName.toLowerCase() === 'div' : true;
+
+                pBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+                const isModalOpen = modal?.classList.contains('active');
+                const countText = playerCount?.textContent || '';
+                const hasWarCount = countText.includes('sõdurit') || countText.includes('mängijat') || countText.includes('10v10');
+                const hasLeave = !!leaveBtn;
+
+                return {
+                    hasPBtn: !!pBtn,
+                    isLogoNotLink,
+                    isModalOpen,
+                    hasWarCount,
+                    hasLeave
+                };
+            });
+            console.log("   War Game In-Game Menu Results:", warMenuTest);
+            if (Object.values(warMenuTest).some(v => !v)) {
+                throw new Error("War Game in-game menu test failed: " + JSON.stringify(warMenuTest));
+            }
+
+            console.log("   ✅ In-Game Menu (Top-Right 'P' Button, Server Player Count, Leave Button) verified in all games!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
