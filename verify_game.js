@@ -74,159 +74,207 @@ await (async () => {
             '--js-flags=--max-old-space-size=4096'
         ]
     });
-    const page = await browser.newPage();
-    const originalGoto = page.goto.bind(page);
-    page.goto = async (url, options) => {
-        const normalizedUrl = typeof url === 'string' ? url.replace('http://localhost:4173', 'http://127.0.0.1:4173') : url;
-        for (let attempt = 1; attempt <= 5; attempt++) {
+    let hasErrors = false;
+    let rawPage = await browser.newPage();
+    const setupPageInstance = async (p) => {
+        p.on('error', err => {
+            console.error('PAGE CRASHED / RENDERER TERMINATED:', err.message);
+        });
+        p.on('framenavigated', frame => {
             try {
-                return await originalGoto(normalizedUrl, options);
-            } catch (err) {
-                const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
-                if ((msg.includes('err_connection') || msg.includes('err_aborted') || msg.includes('detached') || msg.includes('lifecyclewatcher') || msg.includes('execution context was destroyed') || msg.includes('target closed')) && attempt < 5) {
-                    console.log(`[Retry] Navigation error (${err.message}) on ${normalizedUrl}, retrying (attempt ${attempt}/5)...`);
-                    await new Promise(r => setTimeout(r, 600 * attempt));
-                    for (let p = 0; p < 10; p++) {
-                        try {
-                            const res = await fetch('http://127.0.0.1:4173/');
-                            if (res.status < 500) break;
-                        } catch (e) {}
-                        await new Promise(r => setTimeout(r, 200));
-                    }
-                } else {
-                    throw err;
+                if (frame === p.mainFrame()) {
+                    console.log('MAIN FRAME NAVIGATED TO:', frame.url());
                 }
+            } catch (_) {}
+        });
+        await p.evaluateOnNewDocument(() => {
+            window.__PLAYARD_TEST_MODE__ = true;
+            window.alert = () => {};
+            window.confirm = () => true;
+            window.prompt = () => 'Test';
+        });
+        await p.setViewport({ width: 1400, height: 900 });
+        p.on('pageerror', error => {
+            console.log('PAGE ERROR:', error.message);
+            hasErrors = true;
+        });
+        p.on('console', msg => {
+            if (msg.type() === 'error') {
+                if (msg.text().includes('404') || msg.text().includes('400') || msg.text().includes('Failed to load resource') || msg.text().includes('supabase') || msg.text().includes('MAX_FRAGMENT_UNIFORM_VECTORS') || msg.text().includes('Shader Error') || msg.text().includes('VALIDATE_STATUS')) return;
+                console.log('CONSOLE ERROR:', msg.text());
+                hasErrors = true;
             }
-        }
+        });
     };
-    const originalEvaluate = page.evaluate.bind(page);
-    page.evaluate = async (pageFunction, ...args) => {
-        for (let attempt = 1; attempt <= 20; attempt++) {
-            try {
-                return await originalEvaluate(pageFunction, ...args);
-            } catch (err) {
-                const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed') || msg.includes('navigating')) && attempt < 20) {
-                    await new Promise(r => setTimeout(r, 300 * attempt));
-                } else {
-                    throw err;
-                }
+    await setupPageInstance(rawPage);
+
+    const ensurePageActive = async () => {
+        try {
+            const mf = rawPage.mainFrame();
+            if (mf && (typeof mf.isDetached === 'function' ? !mf.isDetached() : !mf.detached)) {
+                return rawPage;
             }
-        }
+        } catch (_) {}
+        console.log('[Puppeteer] Active frame was detached, recycling browser tab...');
+        try { await rawPage.close().catch(() => {}); } catch (_) {}
+        rawPage = await browser.newPage();
+        await setupPageInstance(rawPage);
+        return rawPage;
     };
+
     const getActiveFrame = () => {
         try {
-            const mf = page.mainFrame();
-            if (mf && (typeof mf.isDetached !== 'function' || !mf.isDetached())) return mf;
+            const mf = rawPage.mainFrame();
+            if (mf && (typeof mf.isDetached === 'function' ? !mf.isDetached() : !mf.detached)) return mf;
         } catch (_) {}
-        return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
+        try {
+            const valid = rawPage.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.detached);
+            if (valid) return valid;
+        } catch (_) {}
+        return rawPage.mainFrame();
     };
-    page.click = async (selector, options) => {
-        for (let attempt = 1; attempt <= 10; attempt++) {
-            try {
-                const target = getActiveFrame() || page;
-                return await target.click(selector, options);
-            } catch (err) {
-                const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('frame')) && attempt < 10) {
-                    await new Promise(r => setTimeout(r, 300 * attempt));
-                } else {
-                    throw err;
-                }
+
+    const page = new Proxy({}, {
+        get(_, prop) {
+            if (prop === 'goto') {
+                return async (url, options) => {
+                    const normalizedUrl = typeof url === 'string' ? url.replace('http://localhost:4173', 'http://127.0.0.1:4173') : url;
+                    for (let attempt = 1; attempt <= 5; attempt++) {
+                        try {
+                            const p = await ensurePageActive();
+                            return await p.goto(normalizedUrl, options);
+                        } catch (err) {
+                            const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                            if ((msg.includes('err_connection') || msg.includes('err_aborted') || msg.includes('detached') || msg.includes('lifecyclewatcher') || msg.includes('execution context was destroyed') || msg.includes('target closed')) && attempt < 5) {
+                                console.log(`[Retry] Navigation error (${err.message}) on ${normalizedUrl}, retrying (attempt ${attempt}/5)...`);
+                                try { await rawPage.close().catch(() => {}); } catch (_) {}
+                                rawPage = await browser.newPage();
+                                await setupPageInstance(rawPage);
+                                await new Promise(r => setTimeout(r, 600 * attempt));
+                                for (let p = 0; p < 10; p++) {
+                                    try {
+                                        const res = await fetch('http://127.0.0.1:4173/');
+                                        if (res.status < 500) break;
+                                    } catch (e) {}
+                                    await new Promise(r => setTimeout(r, 200));
+                                }
+                            } else {
+                                throw err;
+                            }
+                        }
+                    }
+                };
             }
-        }
-    };
-    const originalWaitForSelector = page.waitForSelector.bind(page);
-    page.waitForSelector = async (selector, options) => {
-        for (let attempt = 1; attempt <= 6; attempt++) {
-            try {
-                const target = getActiveFrame() || page;
-                return await target.waitForSelector(selector, options);
-            } catch (err) {
-                const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
-                    await new Promise(r => setTimeout(r, 400 * attempt));
-                } else {
-                    throw err;
-                }
+            if (prop === 'evaluate') {
+                return async (pageFunction, ...args) => {
+                    for (let attempt = 1; attempt <= 20; attempt++) {
+                        try {
+                            const active = getActiveFrame();
+                            if (active && (typeof active.isDetached === 'function' ? !active.isDetached() : !active.detached)) {
+                                return await active.evaluate(pageFunction, ...args);
+                            }
+                            return await rawPage.evaluate(pageFunction, ...args);
+                        } catch (err) {
+                            const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed') || msg.includes('navigating')) && attempt < 20) {
+                                await new Promise(r => setTimeout(r, 300 * attempt));
+                            } else {
+                                throw err;
+                            }
+                        }
+                    }
+                };
             }
-        }
-    };
-    const original$eval = page.$eval.bind(page);
-    page.$eval = async (selector, pageFunction, ...args) => {
-        for (let attempt = 1; attempt <= 6; attempt++) {
-            try {
-                const target = getActiveFrame() || page;
-                return await target.$eval(selector, pageFunction, ...args);
-            } catch (err) {
-                const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
-                    await new Promise(r => setTimeout(r, 400 * attempt));
-                } else {
-                    throw err;
-                }
+            if (prop === 'click') {
+                return async (selector, options) => {
+                    for (let attempt = 1; attempt <= 10; attempt++) {
+                        try {
+                            const target = getActiveFrame() || rawPage;
+                            return await target.click(selector, options);
+                        } catch (err) {
+                            const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('frame')) && attempt < 10) {
+                                await new Promise(r => setTimeout(r, 300 * attempt));
+                            } else {
+                                throw err;
+                            }
+                        }
+                    }
+                };
             }
-        }
-    };
-    const original$ = page.$.bind(page);
-    page.$ = async (selector) => {
-        for (let attempt = 1; attempt <= 6; attempt++) {
-            try {
-                const target = getActiveFrame() || page;
-                return await target.$(selector);
-            } catch (err) {
-                const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 6) {
-                    await new Promise(r => setTimeout(r, 400 * attempt));
-                } else {
-                    throw err;
-                }
+            if (prop === 'waitForSelector') {
+                return async (selector, options) => {
+                    for (let attempt = 1; attempt <= 6; attempt++) {
+                        try {
+                            const target = getActiveFrame() || rawPage;
+                            return await target.waitForSelector(selector, options);
+                        } catch (err) {
+                            const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
+                                await new Promise(r => setTimeout(r, 400 * attempt));
+                            } else {
+                                throw err;
+                            }
+                        }
+                    }
+                };
             }
-        }
-    };
-    const original$$ = page.$$.bind(page);
-    page.$$ = async (selector) => {
-        for (let attempt = 1; attempt <= 6; attempt++) {
-            try {
-                const target = getActiveFrame() || page;
-                return await target.$$(selector);
-            } catch (err) {
-                const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 6) {
-                    await new Promise(r => setTimeout(r, 400 * attempt));
-                } else {
-                    throw err;
-                }
+            if (prop === '$eval') {
+                return async (selector, pageFunction, ...args) => {
+                    for (let attempt = 1; attempt <= 6; attempt++) {
+                        try {
+                            const target = getActiveFrame() || rawPage;
+                            return await target.$eval(selector, pageFunction, ...args);
+                        } catch (err) {
+                            const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
+                                await new Promise(r => setTimeout(r, 400 * attempt));
+                            } else {
+                                throw err;
+                            }
+                        }
+                    }
+                };
             }
-        }
-    };
-    page.on('error', err => {
-        console.error('PAGE CRASHED / RENDERER TERMINATED:', err.message);
-    });
-    page.on('framenavigated', frame => {
-        if (frame === page.mainFrame()) {
-            console.log('MAIN FRAME NAVIGATED TO:', frame.url());
-        }
-    });
-    await page.evaluateOnNewDocument(() => {
-        window.__PLAYARD_TEST_MODE__ = true;
-        window.alert = () => {};
-        window.confirm = () => true;
-        window.prompt = () => 'Test';
-    });
-    await page.setViewport({ width: 1400, height: 900 });
-    
-    let hasErrors = false;
-    page.on('pageerror', error => {
-        console.log('PAGE ERROR:', error.message);
-        hasErrors = true;
-    });
-    
-    page.on('console', msg => {
-        if (msg.type() === 'error') {
-            if (msg.text().includes('404') || msg.text().includes('400') || msg.text().includes('Failed to load resource') || msg.text().includes('supabase') || msg.text().includes('MAX_FRAGMENT_UNIFORM_VECTORS') || msg.text().includes('Shader Error') || msg.text().includes('VALIDATE_STATUS')) return;
-            console.log('CONSOLE ERROR:', msg.text());
-            hasErrors = true;
+            if (prop === '$') {
+                return async (selector) => {
+                    for (let attempt = 1; attempt <= 6; attempt++) {
+                        try {
+                            const target = getActiveFrame() || rawPage;
+                            return await target.$(selector);
+                        } catch (err) {
+                            const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 6) {
+                                await new Promise(r => setTimeout(r, 400 * attempt));
+                            } else {
+                                throw err;
+                            }
+                        }
+                    }
+                };
+            }
+            if (prop === '$$') {
+                return async (selector) => {
+                    for (let attempt = 1; attempt <= 6; attempt++) {
+                        try {
+                            const target = getActiveFrame() || rawPage;
+                            return await target.$$(selector);
+                        } catch (err) {
+                            const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 6) {
+                                await new Promise(r => setTimeout(r, 400 * attempt));
+                            } else {
+                                throw err;
+                            }
+                        }
+                    }
+                };
+            }
+            const val = rawPage[prop];
+            if (typeof val === 'function') {
+                return val.bind(rawPage);
+            }
+            return val;
         }
     });
 
@@ -12001,7 +12049,13 @@ await (async () => {
             console.log("   Loading Playard AI standalone page...");
             await page.goto('http://localhost:4173/games/ai/index.html', { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 1500));
-            await page.evaluate(() => { (window).playardAi && ((window).__FAST_TEST_MODE__ = true); });
+            await page.evaluate(() => {
+                if (window.playardAi) {
+                    (window).__FAST_TEST_MODE__ = true;
+                }
+                localStorage.setItem('playard_ai_tier_subscription', JSON.stringify({ tier: 'VIP', subscribedAt: Date.now(), expiresAt: Date.now() + 1000000000 }));
+                localStorage.setItem('playard_ai_daily_usage', JSON.stringify({ count: 0, lastReset: Date.now() }));
+            });
 
             const aiPageTest = await page.evaluate(() => {
                 return {
@@ -13736,10 +13790,15 @@ await (async () => {
                 const autofilledCorrectly = recipientInput?.value === 'MarkusPlayard99';
                 const suggestionsClosedAfterPick = !suggestionsBox || window.getComputedStyle(suggestionsBox).display === 'none';
 
+                // Ensure sender has enough PBX balance to send
+                if (window.yardService && window.yardService.addYards) {
+                    window.yardService.addYards(1000);
+                }
+
                 // Test sending PBX to selected recipient
                 if (amountInput) amountInput.value = '100';
                 sendSubmitBtn?.click();
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 400));
 
                 const sendSuccess = sendStatus?.textContent?.includes('Edukalt saadetud +100 PBX mängijale @MarkusPlayard99!') || false;
 
@@ -13857,6 +13916,8 @@ await (async () => {
                 }
                 await new Promise(r => setTimeout(r, 50));
 
+                const noFakeAiInServers = !listText.includes('(AI)') && !listText.includes('(Bot)');
+
                 return {
                     hasTabBtn,
                     isBoxVisible,
@@ -13868,14 +13929,51 @@ await (async () => {
                     hasSnakeMax3,
                     hasSinglePlayerRule,
                     serverCreatedSuccessfully,
-                    searchFilteredCorrectly
+                    searchFilteredCorrectly,
+                    noFakeAiInServers
                 };
             });
             console.log("   Owner Panel Servers Mode Results:", serversPanelTest);
             if (Object.values(serversPanelTest).some(v => !v)) {
                 throw new Error("Owner Panel Servers mode test failed: " + JSON.stringify(serversPanelTest));
             }
-            console.log("   ✅ Owner Panel Servers Mode (MMP1 max 10 auto-split, 3D City max 5, Snake max 3, Others max 1) verified!");
+            console.log("   ✅ Owner Panel Servers Mode (MMP1 max 10 auto-split, 3D City max 5, Snake max 3, Others max 1, Zero Fake AI) verified!");
+
+            // 29. Test in-game menu shows strictly REAL players (zero fake AI)
+            console.log("29. Testing In-Game Menu shows strictly REAL players (no fake bots / AI)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/citycar/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const inGameRealPlayersTest = await page.evaluate(async () => {
+                const pBtn = document.getElementById('btn-playard-menu');
+                const modal = document.getElementById('modal-playard-menu');
+                const listEl = document.getElementById('playard-menu-player-list');
+                const countEl = document.getElementById('playard-menu-player-count');
+
+                pBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+
+                const listText = listEl?.textContent || '';
+                const countText = countEl?.textContent || '';
+
+                const hasSelf = listText.includes('(Sina)') || listText.includes('Playard Owner');
+                const noFakeAi = !listText.includes('(AI)') && !listText.includes('Turbo_AI') && !listText.includes('Välk_AI');
+                const hasPlayerRows = (listEl?.children.length || 0) >= 1;
+                const hasRealCount = countText.includes('5 mängijat') || countText.includes('sõitjat');
+
+                return {
+                    isOpen: modal?.classList.contains('active'),
+                    hasSelf,
+                    noFakeAi,
+                    hasPlayerRows,
+                    hasRealCount
+                };
+            });
+            console.log("   In-Game Menu Real Players Test Results:", inGameRealPlayersTest);
+            if (Object.values(inGameRealPlayersTest).some(v => !v)) {
+                throw new Error("In-Game Menu real players test failed: " + JSON.stringify(inGameRealPlayersTest));
+            }
+            console.log("   ✅ In-Game Menu strictly real players (zero fake AI) verified!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

@@ -1069,7 +1069,7 @@ export function renderOwnerServersList(filterQuery: string = '') {
                                         <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                                             ${s.players.map(p => `
                                                 <div style="display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 3px 8px; font-size: 0.74rem; color: #cbd5e1;">
-                                                    <span>${p.isOwner ? '👑' : (p.isAi ? '🤖' : '👤')}</span>
+                                                    <span>${p.isOwner ? '👑' : (p.isVerified ? '✔' : '👤')}</span>
                                                     <span style="font-weight: 700; color: #fff;">${p.displayName || p.username}</span>
                                                     <span style="font-size: 0.68rem; color: #2ecc71;">⚡${p.pingMs}ms</span>
                                                 </div>

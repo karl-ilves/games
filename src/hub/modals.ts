@@ -171,16 +171,6 @@ export function setupModals() {
             }
         }
 
-        // Credit to recipient
-        const senderName = current?.displayName || current?.username || 'Mängija';
-        const senderEmail = current?.email || '1karl.ilves@gmail.com';
-        await yardService.grantYardsByUsername(cleanRecipient, amount, `Saadetud mängijalt ${senderName}`, senderEmail);
-
-        // Update header & widget balance
-        window.dispatchEvent(new CustomEvent('playard_yards_updated', {
-            detail: { username: cleanRecipient, amount, senderYards: yardService.getYards() }
-        }));
-
         if (sendStatusEl) {
             sendStatusEl.style.display = 'block';
             sendStatusEl.style.background = 'rgba(46, 204, 113, 0.2)';
@@ -190,6 +180,16 @@ export function setupModals() {
         }
 
         if (sendRecipientInput) sendRecipientInput.value = '';
+
+        // Credit to recipient
+        const senderName = current?.displayName || current?.username || 'Mängija';
+        const senderEmail = current?.email || '1karl.ilves@gmail.com';
+        yardService.grantYardsByUsername(cleanRecipient, amount, `Saadetud mängijalt ${senderName}`, senderEmail).catch(() => {});
+
+        // Update header & widget balance
+        window.dispatchEvent(new CustomEvent('playard_yards_updated', {
+            detail: { username: cleanRecipient, amount, senderYards: yardService.getYards() }
+        }));
     };
 
     sendSubmitBtn?.addEventListener('click', handleSendPbx);

@@ -12,6 +12,7 @@
  */
 
 import { addPlayerReport } from './playerReports';
+import { serverManager } from './serverManager';
 
 export interface PlayardMenuOptions {
     gameTitle?: string;
@@ -20,7 +21,7 @@ export interface PlayardMenuOptions {
 }
 
 function getDetectedServerPlayerInfo(): { countStr: string; players: string[] } {
-    let currentUserName = 'Mängija (Sina)';
+    let currentUserName = 'Mängija';
     let isOwner = false;
     let isVerified = false;
 
@@ -36,107 +37,18 @@ function getDetectedServerPlayerInfo(): { countStr: string; players: string[] } 
             if (email === '1karl.ilves@gmail.com' || uname === 'playard owner' || p.isOwner) {
                 isOwner = true;
                 isVerified = true;
+            } else if (p.isVerified) {
+                isVerified = true;
             }
         }
     } catch (e) {}
 
     const ownerTag = isOwner ? ' 👑 Playard Owner ✔' : (isVerified ? ' ✔' : '');
-    const myNameDisplay = currentUserName + ownerTag;
+    const cleanBaseName = currentUserName.replace(/👑.*$/, '').replace(/✔.*$/, '').replace(/\(Sina\)/i, '').trim();
+    const myNameDisplay = `${cleanBaseName}${ownerTag} (Sina)`;
 
     const path = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
-
-
-    // 2. MMP1 (Murder Mystery - Max 10 enne uue serveri tegemist)
-    if (path.includes('/mmp1/')) {
-        const rosterCount = (window as any).mmp1RosterCount || 5;
-        const bounded = Math.min(Math.max(rosterCount, 1), 10);
-        return {
-            countStr: `Server #1 (${bounded} / 10 mängijat)`,
-            players: [myNameDisplay, 'Sam (AI)', 'Jordan (AI)', 'Alex (AI)', 'Taylor (AI)']
-        };
-    }
-
-    // 3. CityCar Driving (Max 5)
-    if (path.includes('/citycar/')) {
-        return {
-            countStr: `Server #1 (3 / 5 sõitjat)`,
-            players: [myNameDisplay, '🚗 Linnasõitja_EST', '🏎️ SpeedDemon_99', '🚙 Tallinn_Cruiser']
-        };
-    }
-
-    // 4. Crown Obby (Max 1)
-    if (path.includes('/crown/')) {
-        return {
-            countStr: 'Server #1 (1 / 1 mängija)',
-            players: [myNameDisplay]
-        };
-    }
-
-    // 5. Racing Simulator (Max 5)
-    if (path.includes('/racing/')) {
-        return {
-            countStr: 'Server #1 (4 / 5 mängijat - Sina + 3 AI)',
-            players: [myNameDisplay, '🏎️ Välk_AI', '🏎️ Turbo_AI', '🏎️ Nitro_AI']
-        };
-    }
-
-    // 6. Ussimäng (Snake - Max 3)
-    if (path.includes('/snake/')) {
-        const sEl = document.getElementById('hud-server-info');
-        const text = sEl?.textContent?.replace('🌐', '').trim() || 'Server 1 (1 / 3 mängijat)';
-        return {
-            countStr: text,
-            players: [myNameDisplay]
-        };
-    }
-
-    // 7. 3D Train Simulator (Max 1)
-    if (path.includes('/train/')) {
-        const passEl = document.getElementById('stat-passengers');
-        const passText = passEl ? ` | 👥 ${passEl.textContent?.trim()} reisijat` : '';
-        return {
-            countStr: `Server #1 (1 / 1 vedurijuht - Sina)${passText}`,
-            players: [myNameDisplay]
-        };
-    }
-
-    // 8. 3D Parkour Obby (Max 1)
-    if (path.includes('/obby/')) {
-        return {
-            countStr: 'Server #1 (1 / 1 mängija)',
-            players: [myNameDisplay]
-        };
-    }
-
-    // 9. Rocket Playard (Max 1)
-    if (path.includes('/rocket/')) {
-        return {
-            countStr: 'Server #1 (1 / 1 mängija areenil)',
-            players: [myNameDisplay]
-        };
-    }
-
-    // 10. Flight Simulator (Max 1)
-    if (path.includes('/flight/')) {
-        return {
-            countStr: 'Server #1 (1 / 1 piloot taevas)',
-            players: [myNameDisplay]
-        };
-    }
-
-    // 11. Last Metro (Max 1)
-    if (path.includes('/metro/')) {
-        return {
-            countStr: 'Server #1 (1 / 1 ellujääja rongis)',
-            players: [myNameDisplay]
-        };
-    }
-
-    // 12. Creator Studio / Play Community / Others
-    return {
-        countStr: '1 mängija serveris (Sina)',
-        players: [myNameDisplay]
-    };
+    return serverManager.getInGameServerDisplay(path, myNameDisplay);
 }
 
 function getDetectedGameTitle(): string {
