@@ -65,16 +65,6 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         badgeColor: '#ff9f43',
         creatorName: 'Playard Games'
     },
-    war: {
-        id: 'war',
-        title: '⚓ 3D Naval & Air Warfare',
-        description: 'Juhi sõjalaevu ja hävituslennukeid suurejoonelistes mere- ja õhulahingutes ning kaitse oma baasi!',
-        url: './games/war/index.html',
-        icon: '⚓',
-        badgeText: 'Naval & Air Combat',
-        badgeColor: '#ff4757',
-        creatorName: 'Playard Games'
-    },
     train: {
         id: 'train',
         title: '🚆 Rongimäng (3D Train Simulator)',
@@ -182,7 +172,6 @@ const BANNERS_THEME: Record<string, { bg1: string; bg2: string; accent: string; 
     racing: { bg1: '#1e0b0b', bg2: '#4a151b', accent: '#ffd32a', subtitle: 'HIGH SPEED CIRCUIT RACING', decor: '🏎️🏁⚡' },
     flight: { bg1: '#071a2e', bg2: '#0f385c', accent: '#00f2fe', subtitle: 'OPEN SKY AVIATION SIMULATOR', decor: '✈️☁️🌍' },
     cooking: { bg1: '#2b1406', bg2: '#592808', accent: '#ff9f43', subtitle: '3D RESTAURANT & KITCHEN RUSH', decor: '🍳🍔🍕' },
-    war: { bg1: '#0d1b26', bg2: '#2c1620', accent: '#ff4757', subtitle: 'NAVAL FLEET & AIR COMBAT', decor: '⚓✈️💥' },
     train: { bg1: '#261408', bg2: '#4d260b', accent: '#ff793f', subtitle: 'ELRON 3D RAILWAY SIMULATOR', decor: '🚆🛤️🏔️' },
     obby: { bg1: '#092418', bg2: '#124a32', accent: '#0be881', subtitle: '3D PARKOUR OBSTACLE COURSE', decor: '🏃💎🔥' },
     metro: { bg1: '#090b10', bg2: '#240b15', accent: '#ff4757', subtitle: 'UNDERGROUND SURVIVAL HORROR', decor: '🚇🔦👻' },
@@ -655,9 +644,6 @@ export async function fetchCloudGameStats() {
                     const inv: string[] = row.inventory.map((x: any) => String(x));
                     if (inv.some(i => i.startsWith('meta_train_money:') && i !== 'meta_train_money:0')) {
                         addRealUniquePlayerToGame('train', uName);
-                    }
-                    if (inv.some(i => (i.startsWith('meta_war_money:') && i !== 'meta_war_money:0') || i.startsWith('war_'))) {
-                        addRealUniquePlayerToGame('war', uName);
                     }
                     if (inv.some(i => i === 'pass_all_rockets' || i === 'pass_2x_score')) {
                         addRealUniquePlayerToGame('rocket', uName);

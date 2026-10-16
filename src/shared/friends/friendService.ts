@@ -588,8 +588,6 @@ export class FriendService {
             gameInfo = { id: 'mmp1', title: '⚔️ MMP1: Multi-Map Battle Arena', url: '/games/mmp1/index.html' };
         } else if (path.includes('/games/metro/')) {
             gameInfo = { id: 'metro', title: '🚇 Last Metro', url: '/games/metro/index.html' };
-        } else if (path.includes('/games/war/')) {
-            gameInfo = { id: 'war', title: '⚓ 3D Naval & Air Warfare', url: '/games/war/index.html' };
         } else if (path.includes('/games/train/')) {
             gameInfo = { id: 'train', title: '🚆 Rongimäng', url: '/games/train/index.html' };
         } else if (path.includes('/games/crown/')) {

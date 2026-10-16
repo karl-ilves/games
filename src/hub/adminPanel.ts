@@ -48,9 +48,6 @@ export function updateAdminControlsVisibility(userEmail?: string | null, usernam
         btnOpenStreak.style.display = showAdminPanel ? 'none' : 'flex';
     }
     
-    // War game on avaldatud KÕIKIDELE mängijatele
-    const warGameCard = document.getElementById('card-war-game');
-    if (warGameCard) warGameCard.style.display = 'flex';
 
     // Rongimäng on avaldatud KÕIKIDELE mängijatele
     const trainGameCard = document.getElementById('card-train-game');

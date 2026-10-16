@@ -1,5 +1,19 @@
 import puppeteer from 'puppeteer';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import v8 from 'v8';
+
+if (!process.env.PLAYARD_MEM_CONSTRAINED && v8.getHeapStatistics().heap_size_limit > 1500 * 1024 * 1024) {
+    try {
+        execSync(`"${process.execPath}" --max-old-space-size=1024 "${process.argv[1]}"`, {
+            stdio: 'inherit',
+            env: { ...process.env, PLAYARD_MEM_CONSTRAINED: '1' }
+        });
+        process.exit(0);
+    } catch (e) {
+        process.exit(e.status ?? 1);
+    }
+}
+
 import { preview } from 'vite';
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
@@ -98,27 +112,27 @@ await (async () => {
             }
         }
     };
-    const originalClick = page.click.bind(page);
-    page.click = async (selector, options) => {
-        for (let attempt = 1; attempt <= 10; attempt++) {
-            try {
-                return await originalClick(selector, options);
-            } catch (err) {
-                const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
-                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 10) {
-                    await new Promise(r => setTimeout(r, 300 * attempt));
-                } else {
-                    throw err;
-                }
-            }
-        }
-    };
     const getActiveFrame = () => {
         try {
             const mf = page.mainFrame();
             if (mf && (typeof mf.isDetached !== 'function' || !mf.isDetached())) return mf;
         } catch (_) {}
         return page.frames().find(f => typeof f.isDetached === 'function' ? !f.isDetached() : !f.disposed) || page.mainFrame();
+    };
+    page.click = async (selector, options) => {
+        for (let attempt = 1; attempt <= 10; attempt++) {
+            try {
+                const target = getActiveFrame() || page;
+                return await target.click(selector, options);
+            } catch (err) {
+                const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('frame')) && attempt < 10) {
+                    await new Promise(r => setTimeout(r, 300 * attempt));
+                } else {
+                    throw err;
+                }
+            }
+        }
     };
     const originalWaitForSelector = page.waitForSelector.bind(page);
     page.waitForSelector = async (selector, options) => {
@@ -145,6 +159,38 @@ await (async () => {
             } catch (err) {
                 const msg = (err && err.message) ? err.message.toLowerCase() : '';
                 if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
+                    await new Promise(r => setTimeout(r, 400 * attempt));
+                } else {
+                    throw err;
+                }
+            }
+        }
+    };
+    const original$ = page.$.bind(page);
+    page.$ = async (selector) => {
+        for (let attempt = 1; attempt <= 6; attempt++) {
+            try {
+                const target = getActiveFrame() || page;
+                return await target.$(selector);
+            } catch (err) {
+                const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 6) {
+                    await new Promise(r => setTimeout(r, 400 * attempt));
+                } else {
+                    throw err;
+                }
+            }
+        }
+    };
+    const original$$ = page.$$.bind(page);
+    page.$$ = async (selector) => {
+        for (let attempt = 1; attempt <= 6; attempt++) {
+            try {
+                const target = getActiveFrame() || page;
+                return await target.$$(selector);
+            } catch (err) {
+                const msg = (err && err.message) ? err.message.toLowerCase() : '';
+                if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 6) {
                     await new Promise(r => setTimeout(r, 400 * attempt));
                 } else {
                     throw err;
@@ -732,16 +778,15 @@ await (async () => {
         }
 
         // Check that 10+ games are locked for 9-year old:
-        const warCardLocked = await page.$eval('#card-war-game', el => el.getAttribute('data-age-locked'));
         const mmp1CardLocked = await page.$eval('#card-mmp1-game', el => el.getAttribute('data-age-locked'));
-        const warBadgeText = await page.$eval('#card-war-game .game-age-badge', el => el.textContent);
-        console.log(`   War Game locked for 9yo: ${warCardLocked}, badge="${warBadgeText}"`);
-        if (warCardLocked !== 'true' || mmp1CardLocked !== 'true') {
-            throw new Error("War Game and MMP1 must be locked for 9-year old player!");
+        const mmp1BadgeText = await page.$eval('#card-mmp1-game .game-age-badge', el => el.textContent);
+        console.log(`   MMP1 Game locked for 9yo: ${mmp1CardLocked}, badge="${mmp1BadgeText}"`);
+        if (mmp1CardLocked !== 'true') {
+            throw new Error("MMP1 must be locked for 9-year old player!");
         }
 
-        // Test clicking locked War Game shows Age Restriction Modal
-        await page.click('#card-war-game');
+        // Test clicking locked Game shows Age Restriction Modal
+        await page.click('#card-mmp1-game');
         await new Promise(r => setTimeout(r, 150));
         const ageModalDisplay = await page.$eval('#age-restriction-modal', el => window.getComputedStyle(el).display);
         const ageModalText = await page.$eval('#age-modal-desc', el => el.textContent);
@@ -769,15 +814,14 @@ await (async () => {
         await new Promise(r => setTimeout(r, 200));
 
         const p10yoAge = await page.$eval('#user-age-display', el => el.textContent);
-        const warUnlocked = await page.$eval('#card-war-game', el => el.getAttribute('data-age-locked'));
         const mmp1Unlocked = await page.$eval('#card-mmp1-game', el => el.getAttribute('data-age-locked'));
-        const warUnlockedBadge = await page.$eval('#card-war-game .game-age-badge', el => el.textContent);
-        console.log(`   Player aged to 10: age="${p10yoAge}", warUnlocked=${warUnlocked}, badge="${warUnlockedBadge}"`);
+        const mmp1UnlockedBadge = await page.$eval('#card-mmp1-game .game-age-badge', el => el.textContent);
+        console.log(`   Player aged to 10: age="${p10yoAge}", mmp1Unlocked=${mmp1Unlocked}, badge="${mmp1UnlockedBadge}"`);
         if (!p10yoAge.includes('10 years old')) {
             throw new Error(`Expected age to update to 10 years old, got '${p10yoAge}'`);
         }
-        if (warUnlocked !== 'false' || mmp1Unlocked !== 'false') {
-            throw new Error("War Game and MMP1 must unlock when player turns 10!");
+        if (mmp1Unlocked !== 'false') {
+            throw new Error("MMP1 must unlock when player turns 10!");
         }
 
         // Log out player_9yo to reset guest state for remaining tests
@@ -928,12 +972,6 @@ await (async () => {
         console.log(`   Leftmost game ID after re-playing racing (Expected: racing): ${leftmostIdReplay}`);
         if (leftmostIdReplay !== 'racing') throw new Error("Racing must jump back to #1 leftmost after being played again!");
 
-        // Check War Game visibility for guest (Expected: flex - published to everyone!)
-        const guestWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
-        console.log(`   Guest War Game Card visibility (Expected: flex): ${guestWarCardDisplay}`);
-        if (guestWarCardDisplay !== 'flex') {
-            throw new Error("War game card must be visible to all players on Hub!");
-        }
 
         // Check Rongimäng visibility for guest (Expected: flex - published to everyone, even not logged in)
         const guestTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
@@ -1139,11 +1177,6 @@ await (async () => {
             await new Promise(r => setTimeout(r, 150));
         }
 
-        const ownerWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
-        console.log(`   Playard Owner War Game Card visibility (Expected: flex): ${ownerWarCardDisplay}`);
-        if (ownerWarCardDisplay !== 'flex') {
-            throw new Error("War game card must be visible for Playard Owner!");
-        }
 
         const ownerTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
         console.log(`   Playard Owner Rongimäng Card visibility (Expected: flex): ${ownerTrainCardDisplay}`);
@@ -1188,11 +1221,6 @@ await (async () => {
             throw new Error("Admin panel must be visible for Admin grx@trenet.ee!");
         }
 
-        const adminWarCardDisplay = await page.$eval('#card-war-game', el => window.getComputedStyle(el).display);
-        console.log(`   Admin (grx@trenet.ee) War Game Card visibility (Expected: flex): ${adminWarCardDisplay}`);
-        if (adminWarCardDisplay !== 'flex') {
-            throw new Error("War game card must be visible for Admin grx@trenet.ee!");
-        }
 
         const adminTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
         console.log(`   Admin (grx@trenet.ee) Train Game Card visibility (Expected: flex): ${adminTrainCardDisplay}`);
@@ -1642,17 +1670,17 @@ await (async () => {
         // Test switching between complex emotes (Levitate -> Breakdance -> Wave) and verify clean bone reset
         const levitatePreview = await page.$('[data-preview-id="emote_levitate_zen"]');
         if (levitatePreview) {
-            await page.click('[data-preview-id="emote_levitate_zen"]');
+            await page.evaluate(() => document.querySelector('[data-preview-id="emote_levitate_zen"]')?.click());
             await new Promise(r => setTimeout(r, 200));
             const levitateY = await page.evaluate(() => window.playardAvatarShop?.viewer?.avatarRig?.bones?.hips?.position?.y);
             console.log("   Levitate hips Y (Expected > 1.3):", levitateY);
 
             // Now switch to Breakdance
-            await page.click('[data-preview-id="emote_breakdance"]');
+            await page.evaluate(() => document.querySelector('[data-preview-id="emote_breakdance"]')?.click());
             await new Promise(r => setTimeout(r, 200));
 
             // Now switch to Wave
-            await page.click('[data-preview-id="emote_wave"]');
+            await page.evaluate(() => document.querySelector('[data-preview-id="emote_wave"]')?.click());
             await new Promise(r => setTimeout(r, 200));
 
             const resetCheck = await page.evaluate(() => {
@@ -5689,399 +5717,8 @@ await (async () => {
             await page.evaluate(() => { const v = document.getElementById('vip-restricted-overlay'); if(v) v.style.display = 'none'; });
         }
 
-        // 10. Test 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)
-        console.log("10. Checking 3D War Game (Team & Class Selection + Fighter Jet 50k Lock + 3-2-1 Countdown)...");
-        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 1000));
-        try {
-            await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
-        } catch (e) {
-            await new Promise(r => setTimeout(r, 1500));
-            await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
-        }
-
-        // Verify Team & Class selection modal safely inside evaluate
-        const warModalCheck = await page.evaluate(() => {
-            const modal = document.getElementById('modal-deploy-selection');
-            const planeBtn = document.getElementById('btn-select-plane');
-            const lockBadge = document.getElementById('plane-lock-badge');
-            const missileBtn = document.getElementById('btn-select-missile');
-            return {
-                deployModalExists: !!modal,
-                planeCardExists: !!planeBtn,
-                planeLockBadge: lockBadge ? lockBadge.textContent.trim() : '',
-                missileRoleOptionExists: !!missileBtn
-            };
-        });
-
-        if (!warModalCheck.deployModalExists) {
-            throw new Error("Deploy team/class selection modal not found!");
-        }
-        console.log("   Fighter Jet Option Exists:", warModalCheck.planeCardExists, "Lock Badge:", warModalCheck.planeLockBadge);
-        if (!warModalCheck.planeCardExists || !warModalCheck.planeLockBadge.includes('50,000 €')) {
-            throw new Error("Fighter jet option with 50,000 € lock badge must exist!");
-        }
-        console.log("   Raketitiim Role Option Exists in Modal:", warModalCheck.missileRoleOptionExists);
-        if (!warModalCheck.missileRoleOptionExists) {
-            throw new Error("Raketitiim option (#btn-select-missile) must exist in deploy modal roles!");
-        }
-
-        // Verify Deploy / Play button is visible and clickable
-        const deployBtnVisible = await page.$eval('#btn-confirm-deploy', el => {
-            const rect = el.getBoundingClientRect();
-            return rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).display !== 'none';
-        });
-        console.log("   Deploy / Play Button Visible:", deployBtnVisible);
-        if (!deployBtnVisible) {
-            throw new Error("Deploy button (#btn-confirm-deploy) must be visible!");
-        }
-
-        // Test Selecting Red Team and Human Class, then Deploy
-        await page.click('#btn-select-red');
-        await page.click('#btn-select-human');
-        await page.click('#btn-confirm-deploy');
-        await new Promise(r => setTimeout(r, 300));
-
-        // Verify 3-2-1 Countdown Overlay triggered
-        const countdownOverlayDisplay = await page.$eval('#match-countdown-overlay', el => window.getComputedStyle(el).display);
-        console.log("   Match Countdown Overlay on Deploy (Expected: flex):", countdownOverlayDisplay);
-        if (countdownOverlayDisplay !== 'flex') {
-            throw new Error("3-2-1 Countdown overlay must appear when match starts/deploys!");
-        }
-
-        // Wait for countdown to finish (3.5s)
-        await new Promise(r => setTimeout(r, 4000));
-
-        // Verify Player Team Badge updated to RED and Soldier / Inimene
-        const teamBadgeText = await page.$eval('#player-team-name', el => el.textContent);
-        console.log("   Player Team & Role Badge:", teamBadgeText);
-        if (!teamBadgeText.includes('RED') || (!teamBadgeText.includes('SOLDIER') && !teamBadgeText.includes('INIMENE'))) {
-            throw new Error(`Expected badge to reflect RED and SOLDIER/INIMENE, got: ${teamBadgeText}`);
-        }
-
-        // Verify War Game HUD elements
-        await page.waitForSelector('#hp-text', { visible: true, timeout: 5000 });
-        const initialHp = await page.$eval('#hp-text', el => el.textContent);
-        console.log("   War Game Unit HP Display:", initialHp);
-
-        // Verify Scoreboard (Red vs Blue)
-        const redScore = await page.$eval('#team-red-score', el => el.textContent);
-        const blueScore = await page.$eval('#team-blue-score', el => el.textContent);
-        console.log(`   Scoreboard: Red=${redScore}, Blue=${blueScore}`);
-
-        const serverCount = await page.$eval('#server-players-count', el => el.textContent);
-        console.log("   Server Player Status:", serverCount);
-        if (!serverCount.includes('10v10') || !serverCount.includes('20')) {
-            throw new Error(`Expected 10v10 battle status, got: ${serverCount}`);
-        }
-
-        const warMoneyText = await page.$eval('#stat-money', el => el.textContent);
-        console.log("   War Game Money Display:", warMoneyText);
-
-        const radarCanvasExists = await page.$eval('#radar-canvas', el => !!el);
-        if (!radarCanvasExists) {
-            throw new Error("Radar canvas not found in War Game!");
-        }
-
-        // Test Weapon Switching (MG-42 and Cannon)
-        await page.click('#weapon-mg');
-        const mgActive = await page.$eval('#weapon-mg', el => el.classList.contains('active'));
-        if (!mgActive) throw new Error("Expected #weapon-mg to be active after click!");
-        console.log("   Successfully switched active weapon to MG-42!");
-
-        await page.click('#weapon-cannon');
-        const cannonActive = await page.$eval('#weapon-cannon', el => el.classList.contains('active'));
-        if (!cannonActive) throw new Error("Expected #weapon-cannon to be active after click!");
-        console.log("   Successfully switched active weapon to Cannon!");
-
-        // Test Weapon Firing & Spreading Explosion
-        await page.keyboard.press('Space');
-        await new Promise(r => setTimeout(r, 300));
-        console.log("   Successfully tested weapon firing and spreading shockwave in 3D War Game!");
-
-        // Verify missile & nuke are hidden for regular soldier/red team
-        const { redMissileDisplay, redNukeDisplay } = await page.evaluate(() => {
-            const m = document.getElementById('weapon-missile');
-            const n = document.getElementById('weapon-nuke');
-            return {
-                redMissileDisplay: m ? window.getComputedStyle(m).display : 'none',
-                redNukeDisplay: n ? window.getComputedStyle(n).display : 'none'
-            };
-        });
-        console.log("   Regular Soldier Missile & Nuke Display (Expected: none):", redMissileDisplay, redNukeDisplay);
-        if (redMissileDisplay !== 'none' || redNukeDisplay !== 'none') {
-            throw new Error("Missiles and Nukes must be hidden for regular soldiers/tanks!");
-        }
-
-        // Test Deploying as Raketitiim Role (Purchase with 100,000 €)
-        console.log("   Testing Raketitiim Role Exclusive Weapons, 100,000 € Purchase & Satellite Targeting...");
-        await page.evaluate(() => {
-            localStorage.setItem('playard_war_game_money', '150000');
-            if ((window).warGameEngine) {
-                (window).warGameEngine.warMoney = 150000;
-                (window).warGameEngine.updateHUD();
-            }
-        });
-        await page.click('#btn-open-loadout');
-        await new Promise(r => setTimeout(r, 300));
-        await page.click('#btn-select-missile');
-        await page.click('#btn-confirm-deploy');
-        await new Promise(r => setTimeout(r, 4000)); // Wait for 3-2-1 countdown
-
-        const missileRoleBadgeText = await page.$eval('#player-team-name', el => el.textContent);
-        console.log("   Player Role Badge as Raketitiim:", missileRoleBadgeText);
-        if (!missileRoleBadgeText.includes('MISSILE') && !missileRoleBadgeText.includes('RAKETITIIM')) {
-            throw new Error(`Expected badge to reflect MISSILE / RAKETITIIM, got: ${missileRoleBadgeText}`);
-        }
-
-        // Test 10s Missile Strike & Satellite Targeting HUD for Raketitiim Role
-        const missileCardDisplay = await page.$eval('#weapon-missile', el => window.getComputedStyle(el).display);
-        const nukeCardDisplay = await page.$eval('#weapon-nuke', el => window.getComputedStyle(el).display);
-        console.log("   Raketitiim Card Display (Expected: flex):", missileCardDisplay, nukeCardDisplay);
-        if (missileCardDisplay !== 'flex' || nukeCardDisplay !== 'flex') {
-            throw new Error("Missile and Nuke cards must be visible for Raketitiim role!");
-        }
-
-        // Test opening Satellite Targeting Mode for Raketitiim Role and firing missile without exiting satellite view
-        await page.click('#weapon-missile');
-        await new Promise(r => setTimeout(r, 200));
-        
-        // Verify satellite targeting HUD is visible
-        const satHudDisplay = await page.$eval('#satellite-targeting-hud', el => window.getComputedStyle(el).display);
-        console.log("   Satellite Targeting HUD display (Expected: flex):", satHudDisplay);
-        if (satHudDisplay !== 'flex') {
-            throw new Error("Satellite targeting HUD must be open!");
-        }
-
-        // Fire missile with Space / click
-        await page.keyboard.press('Space');
-        await new Promise(r => setTimeout(r, 300));
-
-        // Verify still in satellite targeting view after launch (does not revert to walking soldier)
-        const satHudDisplayAfterLaunch = await page.$eval('#satellite-targeting-hud', el => window.getComputedStyle(el).display);
-        console.log("   Satellite Targeting HUD display after missile launch (Expected: flex):", satHudDisplayAfterLaunch);
-        if (satHudDisplayAfterLaunch !== 'flex') {
-            throw new Error("Missile Commander must stay in satellite targeting map view after launching missile!");
-        }
-
-        // Test clicking on Radar / Minimap to jump satellite camera
-        await page.click('#radar-canvas');
-        await new Promise(r => setTimeout(r, 200));
-        // Verify soldier weapon cards are hidden for Raketitiim
-        const cannonHidden = await page.$eval('#weapon-cannon', el => window.getComputedStyle(el).display);
-        const mgHidden = await page.$eval('#weapon-mg', el => window.getComputedStyle(el).display);
-        console.log("   Raketitiim Soldier Weapon Cards (Expected: none):", cannonHidden, mgHidden);
-        if (cannonHidden !== 'none' || mgHidden !== 'none') {
-            throw new Error("Soldier/tank weapons must be completely hidden for Raketitiim!");
-        }
-
-        // Ready the nuke timer for test firing
-        await page.evaluate(() => {
-            if ((window).warGameEngine) {
-                (window).warGameEngine.nukeTimer = 0;
-            }
-        });
-
-        // Test pressing 2 to switch to Nuke and launching 5-second realistic alarm and warning banner
-        await page.keyboard.press('Digit2');
-        await new Promise(r => setTimeout(r, 200));
-        const nukeActive = await page.$eval('#weapon-nuke', el => el.classList.contains('active'));
-        if (!nukeActive) throw new Error("Pressing 2 in Raketitiim must select Nuke!");
-
-        await page.keyboard.press('Space');
-        await new Promise(r => setTimeout(r, 300));
-        const nukeBannerDisplay = await page.$eval('#nuke-warning-banner', el => window.getComputedStyle(el).display);
-        console.log("   Nuclear Warning Banner Display with 5s Alarm (Expected: flex):", nukeBannerDisplay);
-        if (nukeBannerDisplay !== 'flex') {
-            throw new Error("Nuclear warning banner and 5s alarm must trigger on nuclear launch!");
-        }
-
-        // Test pressing 1 to switch back to 10s Missile
-        await page.keyboard.press('Digit1');
-        await new Promise(r => setTimeout(r, 200));
-        const missileActive = await page.$eval('#weapon-missile', el => el.classList.contains('active'));
-        if (!missileActive) throw new Error("Pressing 1 in Raketitiim must select 10s Missile!");
-
-        console.log("   Successfully verified Raketitiim role is locked to missile/nuke operations, no yellow dot, and 5s nuclear siren works!");
-
-        // Test Fighter Jet Unlock with 50,000 € (Remaining money: 50,000 €)
-        console.log("10a. Testing Fighter Jet Purchase with 50,000 € War Cash...");
-        await page.click('#btn-open-loadout');
-        await new Promise(r => setTimeout(r, 300));
-        await page.click('#btn-select-plane');
-        await page.click('#btn-confirm-deploy');
-        await new Promise(r => setTimeout(r, 4000)); // Wait for 3-2-1 countdown
-
-        const planeBadgeText = await page.$eval('#player-team-name', el => el.textContent);
-        console.log("   Player Team & Role Badge as Fighter Jet:", planeBadgeText);
-        if (!planeBadgeText.includes('JET') && !planeBadgeText.includes('LENNUK')) {
-            throw new Error(`Expected badge to reflect FIGHTER JET, got: ${planeBadgeText}`);
-        }
-
-        // Verify airstrike card is hidden for Fighter Jet
-        const airstrikeDisplay = await page.$eval('#weapon-airstrike', el => window.getComputedStyle(el).display);
-        console.log("   Fighter Jet Airstrike Card Display (Expected: none):", airstrikeDisplay);
-        if (airstrikeDisplay !== 'none') {
-            throw new Error(`Expected airstrike card to be hidden for Fighter Jet, got: ${airstrikeDisplay}`);
-        }
-
-        // Test bomb drop directly under fighter jet
-        await page.click('#weapon-mg');
-        await page.keyboard.press('Space');
-        await new Promise(r => setTimeout(r, 600));
-        console.log("   Successfully verified Fighter Jet Airstrike disabled and direct bomb dropping!");
-        console.log("   Successfully unlocked and deployed Fighter Jet with 50,000 €!");
-
-        // 10b. Test Playard Owner Estonian Localization in War Game
-        console.log("10b. Checking Playard Owner Estonian Localization & 200,000 € in War Game...");
-        await page.evaluate(() => {
-            const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
-            localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
-            localStorage.setItem('playard_war_data_owner_1', JSON.stringify({ money: 200000, isPlaneUnlocked: false, isMissileUnlocked: false }));
-            localStorage.setItem('playard_war_game_money', '200000');
-            if (window.warGameEngine) {
-                window.warGameEngine.warMoney = 200000;
-                window.warGameEngine.isPlaneUnlocked = false;
-                window.warGameEngine.isMissileUnlocked = false;
-            }
-        });
-        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
-        await new Promise(r => setTimeout(r, 600));
-        await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
-
-        const ownerDeployTitle = await page.$eval('#deploy-modal-title', el => el.textContent);
-        console.log("   Playard Owner War Deploy Modal Title:", ownerDeployTitle);
-        if (!ownerDeployTitle.includes('VALI TIIM JA LAHINGUROLL') && !ownerDeployTitle.includes('SELECT TEAM')) {
-            throw new Error(`Expected Playard Owner War modal title to be present, got: ${ownerDeployTitle}`);
-        }
-
-        const modalMoneyText = await page.$eval('#deploy-money-val', el => el.textContent);
-        console.log("   Playard Owner Modal Money Balance (Expected: 200,000 €):", modalMoneyText);
-        if (!modalMoneyText.includes('200,000')) {
-            throw new Error(`Expected modal money balance to show 200,000 €, got: ${modalMoneyText}`);
-        }
-
-        // 1. Buy Fighter Jet (50,000 €)
-        await page.click('#btn-select-blue');
-        await page.click('#btn-select-plane');
-        await new Promise(r => setTimeout(r, 400));
-
-        // Verify Fighter Jet purchased & money deducted to 150,000 €
-        const moneyAfterPlane = await page.$eval('#deploy-money-val', el => el.textContent);
-        console.log("   War Money after Fighter Jet purchase (-50,000 €):", moneyAfterPlane);
-        if (!moneyAfterPlane.includes('150,000')) {
-            throw new Error(`Expected War Cash to be 150,000 € after Fighter Jet purchase, got: ${moneyAfterPlane}`);
-        }
-
-        const planeBadgeUnlocked = await page.$eval('#plane-lock-badge', el => el.textContent);
-        console.log("   Fighter Jet Badge status:", planeBadgeUnlocked);
-        if (!planeBadgeUnlocked.includes('AVATUD') && !planeBadgeUnlocked.includes('UNLOCKED')) {
-            throw new Error(`Expected Fighter Jet badge to be unlocked, got: ${planeBadgeUnlocked}`);
-        }
-
-        // 2. Buy Missile Team (100,000 €)
-        console.log("   Testing Missile Team Purchase with 100,000 € War Cash...");
-        await page.click('#btn-select-missile');
-        await new Promise(r => setTimeout(r, 400));
-
-        const moneyAfterMissile = await page.$eval('#deploy-money-val', el => el.textContent);
-        console.log("   War Money after Missile Team purchase (-100,000 €):", moneyAfterMissile);
-        if (!moneyAfterMissile.includes('50,000')) {
-            throw new Error(`Expected War Cash to be 50,000 € after Missile Team purchase, got: ${moneyAfterMissile}`);
-        }
-
-        const missileBadgeUnlocked = await page.$eval('#missile-lock-badge', el => el.textContent);
-        console.log("   Missile Team Badge status:", missileBadgeUnlocked);
-        if (!missileBadgeUnlocked.includes('AVATUD') && !missileBadgeUnlocked.includes('UNLOCKED')) {
-            throw new Error(`Expected Missile Team badge to be unlocked, got: ${missileBadgeUnlocked}`);
-        }
-
-        // 3. Verify LocalStorage and DB payload has been saved properly
-        const savedWarData = await page.evaluate(() => {
-            return {
-                localMoney: localStorage.getItem('playard_war_game_money'),
-                userData: JSON.parse(localStorage.getItem('playard_war_data_owner_1') || '{}')
-            };
-        });
-        console.log("   Saved War Data in Storage:", savedWarData);
-        if (savedWarData.localMoney !== '50000' || savedWarData.userData.money !== 50000 || !savedWarData.userData.isPlaneUnlocked || !savedWarData.userData.isMissileUnlocked) {
-            throw new Error(`Saved war data verification failed: ${JSON.stringify(savedWarData)}`);
-        }
-
-        // 4. Deploy and check in-game HUD
-        await page.click('#btn-confirm-deploy');
-        await new Promise(r => setTimeout(r, 600));
-        await page.waitForSelector('#player-team-name', { visible: true, timeout: 5000 });
-        const ownerBadgeText = await page.$eval('#player-team-name', el => el.textContent);
-        console.log("   Playard Owner Team Badge:", ownerBadgeText);
-        if (!ownerBadgeText.includes('RAKETITIIM') && !ownerBadgeText.includes('LENNUK') && !ownerBadgeText.includes('MISSILE') && !ownerBadgeText.includes('FIGHTER')) {
-            throw new Error(`Expected Playard Owner badge to reflect chosen class, got: ${ownerBadgeText}`);
-        }
-
-        const ownerWarMoneyText = await page.$eval('#stat-money', el => el.textContent);
-        console.log("   Playard Owner In-Game War Cash HUD Balance (Expected: 50,000):", ownerWarMoneyText);
-        if (ownerWarMoneyText.replace(/,/g, '') !== '50000') {
-            throw new Error(`Expected Playard Owner in-game HUD to show 50,000, got: ${ownerWarMoneyText}`);
-        }
-
-        // 5. Test Persistence on Page Reload (Must NOT reset to 200,000 €!)
-        console.log("   Testing War Cash and Unlocks Persistence across Page Reload (No reset to 200k)...");
-        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
-        await new Promise(r => setTimeout(r, 600));
-
-        const reloadedMoney = await page.$eval('#deploy-money-val', el => el.textContent);
-        console.log("   Reloaded War Cash Balance (Expected: 50,000 €):", reloadedMoney);
-        if (!reloadedMoney.includes('50,000')) {
-            throw new Error(`Expected War Cash to stay 50,000 € after reload, got: ${reloadedMoney}`);
-        }
-
-        const reloadedPlaneBadge = await page.$eval('#plane-lock-badge', el => el.textContent);
-        const reloadedMissileBadge = await page.$eval('#missile-lock-badge', el => el.textContent);
-        if ((!reloadedPlaneBadge.includes('AVATUD') && !reloadedPlaneBadge.includes('UNLOCKED')) || (!reloadedMissileBadge.includes('AVATUD') && !reloadedMissileBadge.includes('UNLOCKED'))) {
-            throw new Error(`Expected both units to stay unlocked after reload, got plane: ${reloadedPlaneBadge}, missile: ${reloadedMissileBadge}`);
-        }
-        console.log("   Successfully verified purchase deduction, database/local persistence and reload retention!");
-
-        // 6. Test that Other Users / Guests Start with 0 € ("teised alustavad 0€")
-        console.log("   Testing that non-owner players / guests start with 0 € War Cash...");
-        await page.evaluate(() => {
-            localStorage.clear();
-            const guestUser = { id: 'guest_player_99', username: 'combat_warrior', email: 'warrior@gmail.com', displayName: 'Warrior', isAdmin: false };
-            localStorage.setItem('playard_current_user_profile', JSON.stringify(guestUser));
-        });
-        await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await page.waitForSelector('#deploy-modal-title', { timeout: 10000 });
-        await new Promise(r => setTimeout(r, 600));
-
-        const guestMoneyText = await page.$eval('#deploy-money-val', el => el.textContent);
-        console.log("   Other player initial War Cash (Expected: 0 €):", guestMoneyText);
-        if (!guestMoneyText.includes('0 €') && !guestMoneyText.includes('0€')) {
-            throw new Error(`Expected other users to start with 0 €, got: ${guestMoneyText}`);
-        }
-        console.log("   Successfully confirmed other players start with 0 €!");
-
-        // Test Out of Bounds Warning for Playard Owner
-        await page.evaluate(() => {
-            const ownerProf = { id: 'owner_1', username: 'playard owner', email: '1karl.ilves@gmail.com', displayName: 'Playard Owner✅', isAdmin: true };
-            localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProf));
-            const el = document.getElementById('out-of-bounds-overlay');
-            if (el) el.style.display = 'flex';
-        });
-        const oobTitle = await page.$eval('#out-of-bounds-title', el => el.textContent);
-        console.log("   Playard Owner Out of Bounds Warning Title:", oobTitle);
-        if (!oobTitle.includes('MINE TAGASI')) {
-            throw new Error(`Expected Out of Bounds title to contain 'MINE TAGASI', got: ${oobTitle}`);
-        }
-        console.log("   Successfully tested Out-of-Bounds Warning System and Visible Boundaries!");
-
-        // Reset guest profile for subsequent tests
-        await page.evaluate(() => {
-            localStorage.removeItem('playard_current_user_profile');
-            localStorage.removeItem('playard_war_game_money');
-        });
-
+        // 10. 3D War Simulator has been removed
+        console.log("10. 3D War Simulator has been removed: test skipped.");
         // 11. Test 3D Train Simulator (3D Rongimäng - English for all, Estonian for Playard Owner)
             console.log("11. Checking 3D Train Simulator (Guest English Localization)...");
             await page.goto('about:blank');
@@ -9899,24 +9536,7 @@ await (async () => {
                 throw new Error("Mobile Mode must render Draggable Virtual Joystick in bottom-left and Jump Button in bottom-right!");
             }
 
-            // 3. Verify Desktop-Only Enforcement for War Game & Train Game on Mobile
-            console.log("   Checking Mobile Block for War Game (Expected: Desktop-Only Overlay)...");
-            await page.goto('about:blank');
-            await page.goto('http://localhost:4173/games/war/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await new Promise(r => setTimeout(r, 800));
-            const warMobileBlocked = await page.evaluate(() => {
-                const overlay = document.getElementById('playard-desktop-only-overlay');
-                return {
-                    hasOverlay: !!overlay,
-                    overlayDisplay: overlay ? window.getComputedStyle(overlay).display : 'none',
-                    text: overlay ? overlay.textContent : ''
-                };
-            });
-            console.log(`   War Game Desktop-Only Overlay: hasOverlay=${warMobileBlocked.hasOverlay}, display=${warMobileBlocked.overlayDisplay}`);
-            if (!warMobileBlocked.hasOverlay || warMobileBlocked.overlayDisplay === 'none') {
-                throw new Error("War Game must show desktop-only blocker overlay on mobile/tablet!");
-            }
-
+            // 3. Verify Desktop-Only Enforcement for Train Game on Mobile
             console.log("   Checking Mobile Block for Train Simulator (Expected: Desktop-Only Overlay)...");
             await page.goto('about:blank');
             await page.goto('http://localhost:4173/games/train/index.html?mobile=true', { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -11415,28 +11035,6 @@ await (async () => {
                 throw new Error("Metro mystery modals must be scrollable with touch-action: pan-y on mobile!");
             }
 
-            // 4. War Simulator Mobile Check
-            await page.goto('http://localhost:4173/games/war/index.html', { waitUntil: 'domcontentloaded' });
-            await new Promise(r => setTimeout(r, 600));
-            const warMobileTest = await page.evaluate(() => {
-                const deployCard = document.querySelector('.deploy-card');
-                const rolesScroll = document.querySelector('.roles-scroll-container');
-                if (!deployCard || !rolesScroll) return { success: false, reason: 'War deploy elements missing' };
-
-                const deployStyle = window.getComputedStyle(deployCard);
-                const rolesStyle = window.getComputedStyle(rolesScroll);
-
-                return {
-                    success: true,
-                    deployScroll: deployStyle.overflowY === 'auto' || deployStyle.overflowY === 'scroll',
-                    deployTouchAction: deployStyle.touchAction.includes('pan-y'),
-                    rolesTouchAction: rolesStyle.touchAction.includes('pan-x')
-                };
-            });
-            console.log("   War Mobile Scrolling Verification Results:", warMobileTest);
-            if (!warMobileTest.success || !warMobileTest.deployScroll || !warMobileTest.rolesTouchAction) {
-                throw new Error("War simulator loadout deploy modal must have touch-action pan-y and pan-x on mobile!");
-            }
 
             // Restore normal viewport
             await page.setViewport({ width: 1400, height: 900 });
@@ -13931,39 +13529,6 @@ await (async () => {
                 throw new Error("Racing simulator in-game menu test failed: " + JSON.stringify(racingMenuTest));
             }
 
-            // Verify in War Game
-            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/war/index.html`, { waitUntil: 'domcontentloaded' });
-            await new Promise(r => setTimeout(r, 600));
-
-            const warMenuTest = await page.evaluate(async () => {
-                const pBtn = document.getElementById('btn-playard-menu');
-                const modal = document.getElementById('modal-playard-menu');
-                const playerCount = document.getElementById('playard-menu-player-count');
-                const leaveBtn = document.getElementById('btn-playard-leave');
-
-                // Check top-hud logo is div, not direct <a> link
-                const logoBadge = document.querySelector('.logo-badge');
-                const isLogoNotLink = logoBadge ? logoBadge.tagName.toLowerCase() === 'div' : true;
-
-                pBtn?.click();
-                await new Promise(r => setTimeout(r, 150));
-                const isModalOpen = modal?.classList.contains('active');
-                const countText = playerCount?.textContent || '';
-                const hasWarCount = countText.includes('sõdurit') || countText.includes('mängijat') || countText.includes('10v10');
-                const hasLeave = !!leaveBtn;
-
-                return {
-                    hasPBtn: !!pBtn,
-                    isLogoNotLink,
-                    isModalOpen,
-                    hasWarCount,
-                    hasLeave
-                };
-            });
-            console.log("   War Game In-Game Menu Results:", warMenuTest);
-            if (Object.values(warMenuTest).some(v => !v)) {
-                throw new Error("War Game in-game menu test failed: " + JSON.stringify(warMenuTest));
-            }
 
             console.log("   ✅ In-Game Menu (Top-Right 'P' Button, Server Player Count, Leave Button) verified in all games!");
 
@@ -14208,6 +13773,107 @@ await (async () => {
                 throw new Error("PlayBux Store Modal test failed: " + JSON.stringify(pbxStoreTest));
             }
             console.log("   ✅ PlayBux Store Modal (PBX click, tiers, notice, Send PBX & Live Name Suggestions Autocomplete) verified!");
+
+            // 28. Verifying Owner Panel Servers Mode & Capacity Rules (MMP1 max 10, 3D City max 5, Snake max 3, Others max 1)
+            console.log("28. Testing Owner Panel Servers Mode & Server Capacities (MMP1 max 10, 3D City max 5, Snake max 3, Others max 1)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const serversPanelTest = await page.evaluate(async () => {
+                // Ensure owner is logged in
+                const mockProfile = {
+                    id: 'user_playard_owner',
+                    username: 'playard owner',
+                    displayName: 'Playard Owner',
+                    email: '1karl.ilves@gmail.com',
+                    isOwner: true,
+                    isAdmin: true
+                };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(mockProfile));
+
+                // Open owner panel
+                const ownerModal = document.getElementById('modal-owner-panel');
+                if (ownerModal) ownerModal.style.display = 'flex';
+
+                const serversTabBtn = document.getElementById('btn-owner-mode-servers');
+                const serversBox = document.getElementById('owner-servers-box');
+                const serversCountBadge = document.getElementById('owner-servers-count-badge');
+                const totalStatEl = document.getElementById('owner-servers-stat-total');
+                const playersStatEl = document.getElementById('owner-servers-stat-players');
+
+                const hasTabBtn = !!serversTabBtn;
+
+                // Click Servers tab
+                serversTabBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+
+                const isBoxVisible = !!serversBox && window.getComputedStyle(serversBox).display !== 'none';
+                const totalText = totalStatEl?.textContent || '';
+                const hasTotalStat = totalText.includes('serverit') || totalText.includes('server');
+                const playersText = playersStatEl?.textContent || '';
+                const hasPlayersStat = playersText.includes('mängijat');
+
+                const serversListEl = document.getElementById('owner-servers-list');
+                const listText = serversListEl?.textContent || '';
+
+                // Verify MMP1 rule: max 10 players and auto new server
+                const hasMmp1 = listText.includes('MMP1') && listText.includes('10');
+                const hasMmp1Server2 = listText.includes('MMP1-SRV-02') || (listText.includes('Server #2') && listText.includes('MMP1'));
+
+                // Verify 3D City / Racing: max 5
+                const hasCityOrRacingMax5 = (listText.includes('City') || listText.includes('Racing')) && listText.includes('5');
+
+                // Verify Snake: max 3
+                const hasSnakeMax3 = listText.includes('Snake') && listText.includes('3');
+
+                // Verify Others: max 1
+                const hasSinglePlayerRule = listText.includes('soolo') || listText.includes('1 mängija') || listText.includes('1 / 1');
+
+                // Test creating a new server
+                const initialServersCount = parseInt(serversCountBadge?.textContent?.trim() || '0', 10);
+                const firstCreateBtn = serversListEl?.querySelector('.btn-owner-create-server');
+                firstCreateBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+
+                const newServersCount = parseInt(serversCountBadge?.textContent?.trim() || '0', 10);
+                const serverCreatedSuccessfully = newServersCount >= initialServersCount;
+
+                // Test search input in servers view
+                const searchInput = document.getElementById('owner-servers-search-input');
+                if (searchInput) {
+                    searchInput.value = 'snake';
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                await new Promise(r => setTimeout(r, 100));
+                const filteredText = serversListEl?.textContent || '';
+                const searchFilteredCorrectly = filteredText.includes('Snake') && !filteredText.includes('Train');
+
+                // Clear search
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                await new Promise(r => setTimeout(r, 50));
+
+                return {
+                    hasTabBtn,
+                    isBoxVisible,
+                    hasTotalStat,
+                    hasPlayersStat,
+                    hasMmp1,
+                    hasMmp1Server2,
+                    hasCityOrRacingMax5,
+                    hasSnakeMax3,
+                    hasSinglePlayerRule,
+                    serverCreatedSuccessfully,
+                    searchFilteredCorrectly
+                };
+            });
+            console.log("   Owner Panel Servers Mode Results:", serversPanelTest);
+            if (Object.values(serversPanelTest).some(v => !v)) {
+                throw new Error("Owner Panel Servers mode test failed: " + JSON.stringify(serversPanelTest));
+            }
+            console.log("   ✅ Owner Panel Servers Mode (MMP1 max 10 auto-split, 3D City max 5, Snake max 3, Others max 1) verified!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

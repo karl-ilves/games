@@ -13,8 +13,6 @@ export function setupIcons() {
     const cardCookingYardIcon = document.getElementById('card-cooking-yard-icon');
     if (cardCookingYardIcon) cardCookingYardIcon.innerHTML = yardService.renderYardSvg(22);
 
-    const cardWarYardIcon = document.getElementById('card-war-yard-icon');
-    if (cardWarYardIcon) cardWarYardIcon.innerHTML = yardService.renderYardSvg(22);
 
     const cardTrainYardIcon = document.getElementById('card-train-yard-icon');
     if (cardTrainYardIcon) cardTrainYardIcon.innerHTML = yardService.renderYardSvg(22);

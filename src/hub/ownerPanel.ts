@@ -5,6 +5,7 @@ import { friendService } from '../shared/friends/friendService';
 import { renderCommunityGames, renderDatabaseGamesList } from './communityGames';
 import { getPlayerReports, deletePlayerReport, clearAllPlayerReports, getReportsForPlayer, PlayerReport } from '../shared/playerReports';
 import { bindPlayerSuggestions } from '../shared/playerSuggestions';
+import { serverManager, GameServerInstance } from '../shared/serverManager';
 
 export const BANNED_PLAYERS_STORAGE_KEY = 'playard_banned_players';
 
@@ -713,7 +714,7 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     });
 }
 
-export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports';
+export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports' | 'servers';
 let ownerPanelMode: OwnerPanelMode = 'ban';
 
 export function getOwnerPanelMode(): OwnerPanelMode {
@@ -878,7 +879,7 @@ export async function givePlayerPlaybux(
 }
 
 /**
- * Switches the Owner Panel between Bannimine (ban), Ferty (verified checkmark), PlayBux Give and Raportid modes.
+ * Switches the Owner Panel between Bannimine (ban), Ferty (verified checkmark), PlayBux Give, Raportid and Serverid modes.
  */
 export function setOwnerPanelMode(mode: OwnerPanelMode) {
     ownerPanelMode = mode;
@@ -886,6 +887,7 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     const isVerify = mode === 'verify';
     const isPlaybux = mode === 'playbux';
     const isReports = mode === 'reports';
+    const isServers = mode === 'servers';
 
     const show = (id: string, visible: boolean) => {
         const el = document.getElementById(id);
@@ -904,10 +906,20 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     show('owner-panel-desc-reports', isReports);
     show('owner-reports-box', isReports);
 
+    show('owner-panel-desc-servers', isServers);
+    show('owner-servers-box', isServers);
+
+    // Hide search bar, database player header, and player list when in servers mode
+    show('owner-search-bar-wrap', !isServers);
+    show('owner-players-header-wrap', !isServers);
+    show('owner-players-list', !isServers);
+
     const banBtn = document.getElementById('btn-owner-mode-ban');
     const verifyBtn = document.getElementById('btn-owner-mode-verify');
     const playbuxBtn = document.getElementById('btn-owner-mode-playbux');
     const reportsBtn = document.getElementById('btn-owner-mode-reports');
+    const serversBtn = document.getElementById('btn-owner-mode-servers');
+
     if (banBtn) {
         banBtn.setAttribute('data-active', String(isBan));
         banBtn.style.background = isBan ? 'rgba(255, 71, 87, 0.22)' : 'transparent';
@@ -932,13 +944,207 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
         reportsBtn.style.borderColor = isReports ? '#ff4757' : 'transparent';
         reportsBtn.style.color = isReports ? '#ff6b81' : '#a4b0be';
     }
+    if (serversBtn) {
+        serversBtn.setAttribute('data-active', String(isServers));
+        serversBtn.style.background = isServers ? 'rgba(0, 242, 254, 0.22)' : 'transparent';
+        serversBtn.style.borderColor = isServers ? '#00f2fe' : 'transparent';
+        serversBtn.style.color = isServers ? '#00f2fe' : '#a4b0be';
+    }
 
     if (isReports) {
         renderOwnerReportsList();
     }
+    if (isServers) {
+        renderOwnerServersList();
+    }
 
-    const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
-    renderOwnerPanelPlayersList(searchInput?.value || '');
+    if (!isServers) {
+        const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
+        renderOwnerPanelPlayersList(searchInput?.value || '');
+    }
+}
+
+export function renderOwnerServersList(filterQuery: string = '') {
+    const container = document.getElementById('owner-servers-list');
+    const badge = document.getElementById('owner-servers-count-badge');
+    const totalServersEl = document.getElementById('owner-servers-stat-total');
+    const totalPlayersEl = document.getElementById('owner-servers-stat-players');
+    if (!container) return;
+
+    const allServers = serverManager.getAllServers();
+    const cleanFilter = filterQuery.trim().toLowerCase();
+
+    const filtered = cleanFilter
+        ? allServers.filter(s =>
+            s.gameTitle.toLowerCase().includes(cleanFilter) ||
+            s.gameId.toLowerCase().includes(cleanFilter) ||
+            s.serverId.toLowerCase().includes(cleanFilter) ||
+            s.players.some(p => p.username.toLowerCase().includes(cleanFilter) || p.displayName.toLowerCase().includes(cleanFilter))
+        )
+        : allServers;
+
+    const totalActiveServers = allServers.length;
+    const totalPlayers = allServers.reduce((sum, s) => sum + s.players.length, 0);
+
+    if (badge) badge.textContent = `${totalActiveServers}`;
+    if (totalServersEl) totalServersEl.textContent = `${totalActiveServers} serverit`;
+    if (totalPlayersEl) totalPlayersEl.textContent = `${totalPlayers} mängijat`;
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: #718093; padding: 24px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
+                <p style="margin: 0; font-size: 0.95rem; font-weight: bold;">Ühtegi serverit ei leitud otsinguga "${filterQuery}".</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Group servers by gameId
+    const groups = new Map<string, GameServerInstance[]>();
+    filtered.forEach(s => {
+        if (!groups.has(s.gameId)) groups.set(s.gameId, []);
+        groups.get(s.gameId)!.push(s);
+    });
+
+    let html = '';
+    groups.forEach((servers, gameId) => {
+        const rule = serverManager.getGameRule(gameId);
+        const gameTotalPlayers = servers.reduce((acc, s) => acc + s.players.length, 0);
+
+        html += `
+            <div class="owner-game-server-group" style="background: #182230; border: 1.5px solid rgba(0, 242, 254, 0.25); border-radius: 12px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.3);">
+                <!-- Game Header -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5rem;">${rule.icon}</span>
+                        <div>
+                            <div style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">${rule.gameTitle}</div>
+                            <div style="font-size: 0.76rem; color: #00f2fe; font-weight: 700; margin-top: 2px;">
+                                ⚡ ${rule.ruleDescription}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 0.78rem; color: #a4b0be; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px;">
+                            👥 Kokku mängus: <strong style="color: #00f2fe;">${gameTotalPlayers}</strong>
+                        </span>
+                        <button type="button" class="btn-owner-create-server" data-game="${gameId}" style="background: rgba(0, 242, 254, 0.15); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; font-weight: 800; cursor: pointer;">
+                            ➕ Tee uus server
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Servers List for this game -->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    ${servers.map(s => {
+                        const isFull = s.players.length >= s.maxPlayers;
+                        const fillPercent = Math.min(100, Math.round((s.players.length / s.maxPlayers) * 100));
+                        const statusColor = isFull ? '#ff4757' : (fillPercent >= 70 ? '#ffa502' : '#2ecc71');
+                        const statusText = isFull ? `🔴 TÄIS (${s.players.length}/${s.maxPlayers}) -> Uus server loodud` : `🟢 AKTIIVNE (${s.players.length}/${s.maxPlayers} mängijat)`;
+
+                        return `
+                            <div class="owner-server-item" data-server-id="${s.id}" data-game-id="${s.gameId}" style="background: #111822; border: 1px solid ${isFull ? 'rgba(255, 71, 87, 0.4)' : 'rgba(255,255,255,0.08)'}; border-radius: 10px; padding: 12px; transition: border-color 0.2s;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-weight: 900; color: #ffffff; font-size: 0.92rem;">Server #${s.serverNumber}</span>
+                                        <span style="font-size: 0.72rem; color: #8899a6; font-family: monospace; background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px;">${s.serverId}</span>
+                                        <span style="font-size: 0.7rem; color: #cbd5e1; background: rgba(0,242,254,0.1); padding: 1px 6px; border-radius: 4px;">📍 ${s.region}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 0.74rem; font-weight: 800; color: ${statusColor}; background: rgba(255,255,255,0.04); padding: 2px 8px; border-radius: 6px; border: 1px solid ${statusColor}40;">
+                                            ${statusText}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Load bar -->
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 10px;">
+                                    <div style="width: ${fillPercent}%; height: 100%; background: ${statusColor}; transition: width 0.3s;"></div>
+                                </div>
+
+                                <!-- Players in this server -->
+                                <div style="margin-bottom: 10px;">
+                                    <div style="font-size: 0.72rem; color: #8899a6; font-weight: 700; margin-bottom: 4px;">Mängijad serveris:</div>
+                                    ${s.players.length === 0 ? '<div style="font-size: 0.74rem; color: #64748b; font-style: italic;">Server on tühi (ootab mängijaid)</div>' : `
+                                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                            ${s.players.map(p => `
+                                                <div style="display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 3px 8px; font-size: 0.74rem; color: #cbd5e1;">
+                                                    <span>${p.isOwner ? '👑' : (p.isAi ? '🤖' : '👤')}</span>
+                                                    <span style="font-weight: 700; color: #fff;">${p.displayName || p.username}</span>
+                                                    <span style="font-size: 0.68rem; color: #2ecc71;">⚡${p.pingMs}ms</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    `}
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 8px;">
+                                    <button type="button" class="btn-owner-join-server" data-url="${s.gameUrl}" style="background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; color: #0b1118; border-radius: 6px; padding: 5px 12px; font-size: 0.76rem; font-weight: 900; cursor: pointer;">
+                                        🚀 Liitu serveriga
+                                    </button>
+                                    <button type="button" class="btn-owner-restart-server" data-id="${s.id}" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255,255,255,0.2); color: #cbd5e1; border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; font-weight: 700; cursor: pointer;">
+                                        🔄 Taaskäivita
+                                    </button>
+                                    ${s.isCustom ? `
+                                        <button type="button" class="btn-owner-close-server" data-id="${s.id}" style="background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.35); color: #ff6b81; border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; font-weight: 700; cursor: pointer;">
+                                            🛑 Sulge
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    // Bind action buttons
+    container.querySelectorAll('.btn-owner-create-server').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const gid = (e.currentTarget as HTMLElement).getAttribute('data-game');
+            if (gid) {
+                serverManager.createNewServer(gid);
+                renderOwnerServersList((document.getElementById('owner-servers-search-input') as HTMLInputElement)?.value || '');
+            }
+        });
+    });
+
+    container.querySelectorAll('.btn-owner-restart-server').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const btnEl = e.currentTarget as HTMLElement;
+            const sid = btnEl.getAttribute('data-id');
+            if (sid) {
+                btnEl.textContent = '⏳ Taaskäivitan...';
+                serverManager.restartServer(sid);
+                setTimeout(() => {
+                    renderOwnerServersList((document.getElementById('owner-servers-search-input') as HTMLInputElement)?.value || '');
+                }, 1100);
+            }
+        });
+    });
+
+    container.querySelectorAll('.btn-owner-close-server').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const sid = (e.currentTarget as HTMLElement).getAttribute('data-id');
+            if (sid) {
+                serverManager.closeServer(sid);
+                renderOwnerServersList((document.getElementById('owner-servers-search-input') as HTMLInputElement)?.value || '');
+            }
+        });
+    });
+
+    container.querySelectorAll('.btn-owner-join-server').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const url = (e.currentTarget as HTMLElement).getAttribute('data-url');
+            if (url) {
+                window.location.href = url;
+            }
+        });
+    });
 }
 
 export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
@@ -1362,6 +1568,22 @@ export function setupOwnerPanel() {
     document.getElementById('btn-owner-mode-verify')?.addEventListener('click', () => setOwnerPanelMode('verify'));
     document.getElementById('btn-owner-mode-playbux')?.addEventListener('click', () => setOwnerPanelMode('playbux'));
     document.getElementById('btn-owner-mode-reports')?.addEventListener('click', () => setOwnerPanelMode('reports'));
+    document.getElementById('btn-owner-mode-servers')?.addEventListener('click', () => setOwnerPanelMode('servers'));
+
+    const serverSearchInput = document.getElementById('owner-servers-search-input') as HTMLInputElement | null;
+    serverSearchInput?.addEventListener('input', () => {
+        renderOwnerServersList(serverSearchInput.value);
+    });
+    document.getElementById('btn-owner-refresh-servers')?.addEventListener('click', () => {
+        serverManager.loadServers();
+        renderOwnerServersList(serverSearchInput?.value || '');
+    });
+    window.addEventListener('playard_servers_changed', () => {
+        if (getOwnerPanelMode() === 'servers') {
+            const curSearch = (document.getElementById('owner-servers-search-input') as HTMLInputElement)?.value || '';
+            renderOwnerServersList(curSearch);
+        }
+    });
 
     document.getElementById('btn-owner-clear-all-reports')?.addEventListener('click', () => {
         clearAllPlayerReports();

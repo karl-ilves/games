@@ -80,10 +80,6 @@ export function renderRecentlyPlayed() {
                 gameTitle = '🍳 3D Master Chef';
                 gameDesc = 'Cook burgers, pizzas, and pasta dishes as master chef, satisfy customer orders, and earn Yards!';
                 badgeText = '💎 +20Y to +40Y';
-            } else if (game.id === 'war') {
-                gameTitle = '⚔️ War game';
-                gameDesc = 'Lead advanced 3D armored combat units, command tactical firepower, defeat enemy forces, and capture strategic zones.';
-                badgeText = '🎖️ Combat (+50Y)';
             } else if (game.id === 'train') {
                 gameTitle = '🚂 3D Train Simulator';
                 gameDesc = 'Drive realistic 3D locomotives across scenic railway networks, switch tracks, blow the horn, stop at stations, and earn Train Money!';
@@ -118,10 +114,6 @@ export function renderRecentlyPlayed() {
                 gameTitle = '🍳 3D Master Chef';
                 gameDesc = 'Valmista restorani peakokana burgereid, pitsasid ja pastasid, täida tellimusi ja teeni Yarde!';
                 badgeText = '💎 +20Y kuni +40Y';
-            } else if (game.id === 'war') {
-                gameTitle = '⚔️ War game';
-                gameDesc = 'Juhi 3D soomustehnikat, lahingüksusi ja alista vaenlased 10v10 lahingus!';
-                badgeText = '🎖️ Lahing (+50Y)';
             } else if (game.id === 'train') {
                 gameTitle = '🚂 Rongimäng';
                 gameDesc = 'Juhi võimsat 3D vedurit mööda raudteevõrku, vaheta pöörmeid ja teeninda jaamu!';
@@ -241,15 +233,6 @@ export function setupGameCardTracking() {
             icon: '🍳',
             badgeText: '💎 +20Y to +40Y',
             badgeColor: '#ffd32a'
-        },
-        './games/war/index.html': {
-            id: 'war',
-            title: '⚔️ War game',
-            description: 'Lead advanced 3D armored combat units, command tactical firepower, defeat enemy forces, and capture strategic zones.',
-            url: './games/war/index.html',
-            icon: '⚔️',
-            badgeText: '🎖️ Combat (+50Y)',
-            badgeColor: '#ff4757'
         },
         './games/train/index.html': {
             id: 'train',

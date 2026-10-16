@@ -45,98 +45,89 @@ function getDetectedServerPlayerInfo(): { countStr: string; players: string[] } 
 
     const path = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
 
-    // 1. War Game
-    if (path.includes('/war/')) {
-        const warEl = document.getElementById('server-players-count');
-        const countText = warEl?.textContent?.trim() || '1 / 20 Mängijat (10v10 Lahing)';
-        return {
-            countStr: countText,
-            players: [myNameDisplay, '🤖 Red Soldier (Commander)', '🤖 Blue Tanker', '🤖 Blue Pilot']
-        };
-    }
 
-    // 2. MMP1 (Murder Mystery)
+    // 2. MMP1 (Murder Mystery - Max 10 enne uue serveri tegemist)
     if (path.includes('/mmp1/')) {
         const rosterCount = (window as any).mmp1RosterCount || 5;
+        const bounded = Math.min(Math.max(rosterCount, 1), 10);
         return {
-            countStr: `${rosterCount} mängijat serveris`,
+            countStr: `Server #1 (${bounded} / 10 mängijat)`,
             players: [myNameDisplay, 'Sam (AI)', 'Jordan (AI)', 'Alex (AI)', 'Taylor (AI)']
         };
     }
 
-    // 3. CityCar Driving
+    // 3. CityCar Driving (Max 5)
     if (path.includes('/citycar/')) {
-        const driversCount = (window as any).cityCarDriversCount || 8;
         return {
-            countStr: `${driversCount} sõitjat serveris`,
+            countStr: `Server #1 (3 / 5 sõitjat)`,
             players: [myNameDisplay, '🚗 Linnasõitja_EST', '🏎️ SpeedDemon_99', '🚙 Tallinn_Cruiser']
         };
     }
 
-    // 4. Crown Obby
+    // 4. Crown Obby (Max 1)
     if (path.includes('/crown/')) {
         return {
-            countStr: '1 / 50 mängijat online',
+            countStr: 'Server #1 (1 / 1 mängija)',
             players: [myNameDisplay]
         };
     }
 
-    // 5. Racing Simulator
+    // 5. Racing Simulator (Max 5)
     if (path.includes('/racing/')) {
         return {
-            countStr: '4 mängijat sinu serveris (Sina + 3 AI)',
+            countStr: 'Server #1 (4 / 5 mängijat - Sina + 3 AI)',
             players: [myNameDisplay, '🏎️ Välk_AI', '🏎️ Turbo_AI', '🏎️ Nitro_AI']
         };
     }
 
-    // 6. Ussimäng (Snake)
+    // 6. Ussimäng (Snake - Max 3)
     if (path.includes('/snake/')) {
         const sEl = document.getElementById('hud-server-info');
-        const text = sEl?.textContent?.replace('🌐', '').trim() || 'Server 1 (1/3 mängijat)';
+        const text = sEl?.textContent?.replace('🌐', '').trim() || 'Server 1 (1 / 3 mängijat)';
         return {
             countStr: text,
             players: [myNameDisplay]
         };
     }
 
-    // 7. 3D Train Simulator
+    // 7. 3D Train Simulator (Max 1)
     if (path.includes('/train/')) {
         const passEl = document.getElementById('stat-passengers');
         const passText = passEl ? ` | 👥 ${passEl.textContent?.trim()} reisijat` : '';
         return {
-            countStr: `1 vedurijuht (Sina)${passText}`,
+            countStr: `Server #1 (1 / 1 vedurijuht - Sina)${passText}`,
             players: [myNameDisplay]
         };
     }
 
-    // 8. 3D Parkour Obby
+    // 8. 3D Parkour Obby (Max 1)
     if (path.includes('/obby/')) {
         return {
-            countStr: '1 mängija serveris (Sina)',
+            countStr: 'Server #1 (1 / 1 mängija)',
             players: [myNameDisplay]
         };
     }
 
-    // 9. Rocket Playard
+    // 9. Rocket Playard (Max 1)
     if (path.includes('/rocket/')) {
         return {
-            countStr: '1 mängija areenil (Sina)',
+            countStr: 'Server #1 (1 / 1 mängija areenil)',
             players: [myNameDisplay]
         };
     }
 
-    // 10. Flight Simulator
+    // 10. Flight Simulator (Max 1)
     if (path.includes('/flight/')) {
         return {
-            countStr: '1 piloot taevas (Sina)',
+            countStr: 'Server #1 (1 / 1 piloot taevas)',
             players: [myNameDisplay]
         };
     }
 
-    // 11. Last Metro
+    // 11. Last Metro (Max 1)
     if (path.includes('/metro/')) {
         return {
-            countStr: '1 ellujääja rongis (Sina)',
+            countStr: 'Server #1 (1 / 1 ellujääja rongis)',
             players: [myNameDisplay]
         };
     }

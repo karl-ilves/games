@@ -19,7 +19,6 @@ const GAME_SYNONYMS: Record<string, string[]> = {
     'card-racing-game': ['auto', 'racing', 'võidusõit', 'kihutamine', 'sportauto', 'mootorratas', 'car', 'drive', 'speed'],
     'card-citycar-game': ['auto', 'citycar', 'sõit', 'linn', 'mets', 'jõgi', 'liiklus', 'drift', 'nature', 'drive', 'car'],
     'card-cooking-game': ['kokk', 'chef', 'cooking', 'burger', 'pizza', 'köök', 'söök', 'restoran', 'toit'],
-    'card-war-game': ['sõda', 'war', 'tank', 'relv', 'rakett', 'lahing', 'missile', 'battle', 'soldier', '10v10'],
     'card-train-game': ['rong', 'train', 'vedur', 'raudtee', 'jaam', 'locomotive', 'railway', 'metroo', 'rongimäng'],
     'card-obby-game': ['obby', 'obbi', 'parkour', 'takistusrada', 'hüppamine', 'hüppa', 'jump'],
     'card-crown-game': ['crown', 'kroon', 'kuld', 'kuningas', 'obby', 'obbi', 'grand prize', '50 stages'],

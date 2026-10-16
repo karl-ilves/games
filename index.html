@@ -1650,18 +1650,6 @@
                 </div>
             </a>
 
-            <!-- War Game (Published to all players in English, Estonian for Owner) -->
-            <a href="./games/war/index.html" class="game-card" id="card-war-game" style="border-color: rgba(255, 71, 87, 0.6); box-shadow: 0 0 25px rgba(255, 71, 87, 0.3); background: linear-gradient(135deg, #1c151b 0%, #24141e 100%);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span class="war-badge-pill" style="font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; color: #ffd32a; background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.4); padding: 3px 8px; border-radius: 6px;">⚔️ 10v10 MULTIPLAYER</span>
-                    <span style="font-size: 0.75rem; color: #00f2fe; font-weight: 800; background: rgba(0, 242, 254, 0.12); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(0, 242, 254, 0.3);">💻 PC ONLY</span>
-                </div>
-                <h2>⚔️ 3D War Simulator</h2>
-                <p>Command powerful 3D tanks and soldiers, unleash tactical firepower, defeat enemy forces, and earn War Cash!</p>
-                <div class="reward-tag" style="border-color: #ffd32a; color: #ffd32a; background: rgba(255, 211, 42, 0.15); font-weight: 800;">
-                    <span>💰 10v10 BATTLE · EARN WAR CASH (+150 € / +1,000 €)</span>
-                </div>
-            </a>
 
             <!-- 3D Train Simulator / Rongimäng -->
             <a href="./games/train/index.html" class="game-card" id="card-train-game" style="display: none; border-color: rgba(0, 242, 254, 0.6); box-shadow: 0 0 25px rgba(0, 242, 254, 0.35); background: linear-gradient(135deg, #12212f 0%, #172a3a 100%);">
@@ -2120,13 +2108,17 @@
             <p id="owner-panel-desc-reports" style="display: none; color: #a4b0be; margin: 0 0 14px 0; font-size: 0.9rem;">
                 Logitud sisse kui <strong style="color: #ffd32a;">Playard Owner ✔</strong>. Siit näed kõiki mängijate esitatud raporteid (Cheating, Spamming jne) ning saad reeglite rikkujad ühe klikiga bännida ja andmebaasist eemaldada.
             </p>
+            <p id="owner-panel-desc-servers" style="display: none; color: #a4b0be; margin: 0 0 14px 0; font-size: 0.9rem;">
+                Logitud sisse kui <strong style="color: #ffd32a;">Playard Owner ✔</strong>. Siit näed kõiki Playardi servereid reaalajas: <strong>MMP1</strong> (max 10 mängijat enne uue serveri tegemist), <strong>3D City jne</strong> (max 5), <strong>Ussimäng</strong> (max 3) ja <strong>kõik ülejäänud</strong> (max 1 mängija). Saad servereid jälgida, liituda või luua uusi servereid.
+            </p>
 
-            <!-- Owner Panel Mode Switch (Bannimine / Ferty / PlayBux Give / Raportid) -->
-            <div id="owner-panel-mode-switch" style="display: flex; gap: 8px; margin-bottom: 14px; background: #131920; padding: 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
-                <button type="button" id="btn-owner-mode-ban" data-active="true" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid #ff4757; background: rgba(255, 71, 87, 0.22); color: #ff4757; font-weight: 800; font-size: 0.9rem; cursor: pointer;">🔨 Bannimine</button>
-                <button type="button" id="btn-owner-mode-verify" data-active="false" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.9rem; cursor: pointer;">✔ Ferty (Linnukesed)</button>
-                <button type="button" id="btn-owner-mode-playbux" data-active="false" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.9rem; cursor: pointer;">💎 PlayBux Give</button>
-                <button type="button" id="btn-owner-mode-reports" data-active="false" style="flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.9rem; cursor: pointer;">🚨 Raportid (<span id="owner-reports-count-badge">0</span>)</button>
+            <!-- Owner Panel Mode Switch (Bannimine / Ferty / PlayBux Give / Raportid / Serverid) -->
+            <div id="owner-panel-mode-switch" style="display: flex; gap: 8px; margin-bottom: 14px; background: #131920; padding: 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap;">
+                <button type="button" id="btn-owner-mode-ban" data-active="true" style="flex: 1; min-width: 120px; padding: 9px 12px; border-radius: 8px; border: 1px solid #ff4757; background: rgba(255, 71, 87, 0.22); color: #ff4757; font-weight: 800; font-size: 0.86rem; cursor: pointer;">🔨 Bannimine</button>
+                <button type="button" id="btn-owner-mode-verify" data-active="false" style="flex: 1; min-width: 120px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">✔ Ferty</button>
+                <button type="button" id="btn-owner-mode-playbux" data-active="false" style="flex: 1; min-width: 120px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">💎 PlayBux Give</button>
+                <button type="button" id="btn-owner-mode-reports" data-active="false" style="flex: 1; min-width: 120px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">🚨 Raportid (<span id="owner-reports-count-badge">0</span>)</button>
+                <button type="button" id="btn-owner-mode-servers" data-active="false" style="flex: 1; min-width: 120px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">🌐 Serverid (<span id="owner-servers-count-badge">0</span>)</button>
             </div>
 
             <!-- Suur Otsinguriba (Otsib nime, kasutajanime, e-posti ja ID järgi) -->
@@ -2232,8 +2224,49 @@
                 </div>
             </div>
 
+            <!-- Owner Servers Box (Server Monitor & Browser) -->
+            <div id="owner-servers-box" style="display: none; background: #0f1924; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <!-- Summary Stats Bar -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
+                    <div style="background: rgba(0,242,254,0.08); border: 1px solid rgba(0,242,254,0.25); border-radius: 10px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 0.72rem; color: #8899a6; font-weight: 700; text-transform: uppercase;">Aktiivseid servereid</div>
+                        <div id="owner-servers-stat-total" style="font-size: 1.3rem; font-weight: 900; color: #00f2fe; margin-top: 2px;">0 serverit</div>
+                    </div>
+                    <div style="background: rgba(46,204,113,0.08); border: 1px solid rgba(46,204,113,0.25); border-radius: 10px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 0.72rem; color: #8899a6; font-weight: 700; text-transform: uppercase;">Mängijaid kokku</div>
+                        <div id="owner-servers-stat-players" style="font-size: 1.3rem; font-weight: 900; color: #2ecc71; margin-top: 2px;">0 mängijat</div>
+                    </div>
+                    <div style="background: rgba(255,211,42,0.08); border: 1px solid rgba(255,211,42,0.25); border-radius: 10px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 0.72rem; color: #8899a6; font-weight: 700; text-transform: uppercase;">Serverite tervis</div>
+                        <div style="font-size: 1.15rem; font-weight: 900; color: #ffd32a; margin-top: 4px;">🟢 100% Töökorras</div>
+                    </div>
+                </div>
+
+                <!-- Server Rules Note -->
+                <div style="background: rgba(0,242,254,0.05); border: 1px dashed rgba(0,242,254,0.3); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 0.78rem; color: #cbd5e1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 900; color: #00f2fe;">📋 Serverite mahureeglid:</span>
+                    <span>⚔️ <strong>MMP1</strong>: max 10 (kuni teeb uue serveri)</span> • 
+                    <span>🚗 <strong>3D City / Racing</strong>: max 5</span> • 
+                    <span>🐍 <strong>Ussimäng</strong>: max 3</span> • 
+                    <span>🎮 <strong>Kõik ülejäänud</strong>: max 1 (soolo)</span>
+                </div>
+
+                <!-- Search & Filter bar for servers -->
+                <div style="display: flex; gap: 10px; margin-bottom: 14px; align-items: center;">
+                    <input type="text" id="owner-servers-search-input" placeholder="Otsi mängu või serverit (nt mmp1, 3d city, ussimäng)..." style="flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid #334155; background: #131920; color: white; font-size: 0.88rem; outline: none;">
+                    <button type="button" id="btn-owner-refresh-servers" style="background: rgba(0, 242, 254, 0.15); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; border-radius: 8px; padding: 9px 14px; font-size: 0.82rem; font-weight: 700; cursor: pointer; white-space: nowrap;">
+                        🔄 Värskenda
+                    </button>
+                </div>
+
+                <!-- Server Cards Container -->
+                <div id="owner-servers-list" style="display: flex; flex-direction: column; gap: 12px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+                    <div style="text-align: center; color: #718093; padding: 20px;">Laen servereid...</div>
+                </div>
+            </div>
+
             <!-- Active Database Players List -->
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+            <div id="owner-players-header-wrap" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <h3 style="color: #00f2fe; margin: 0; font-size: 1.05rem;">👥 Mängijad andmebaasis</h3>
                     <span id="owner-players-count-badge" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;">0 mängijat</span>

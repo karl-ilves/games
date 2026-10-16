@@ -1,7 +1,6 @@
 import { getCurrentUserProfile, isPlayardOwner, calculateAge } from '../auth';
 
 export const GAME_AGE_REQUIREMENTS: Record<string, { minAge: number; title: string }> = {
-    'card-war-game': { minAge: 10, title: '3D War Simulator' },
     'card-mmp1-game': { minAge: 10, title: 'MMP1 (Murder Mystery)' },
     'card-metro-game': { minAge: 10, title: 'LAST METRO' }
 };
