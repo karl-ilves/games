@@ -82,9 +82,11 @@ await (async () => {
             try {
                 return await originalGoto(normalizedUrl, options);
             } catch (err) {
-                if (err.message && (err.message.includes('ERR_CONNECTION_REFUSED') || err.message.includes('ERR_CONNECTION_RESET') || err.message.includes('ERR_ABORTED')) && attempt < 5) {
-                    console.log(`[Retry] Connection error on ${normalizedUrl}, waiting for preview server (attempt ${attempt}/5)...`);
-                    for (let p = 0; p < 20; p++) {
+                const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                if ((msg.includes('err_connection') || msg.includes('err_aborted') || msg.includes('detached') || msg.includes('lifecyclewatcher') || msg.includes('execution context was destroyed') || msg.includes('target closed')) && attempt < 5) {
+                    console.log(`[Retry] Navigation error (${err.message}) on ${normalizedUrl}, retrying (attempt ${attempt}/5)...`);
+                    await new Promise(r => setTimeout(r, 600 * attempt));
+                    for (let p = 0; p < 10; p++) {
                         try {
                             const res = await fetch('http://127.0.0.1:4173/');
                             if (res.status < 500) break;
