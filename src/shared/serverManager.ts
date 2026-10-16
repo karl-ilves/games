@@ -457,7 +457,7 @@ export class ServerManager {
         return false;
     }
 
-    public getInGameServerDisplay(gamePath: string, defaultName: string = 'Mängija'): { countStr: string; players: string[] } {
+    public getInGameServerDisplay(gamePath: string, defaultName: string = 'Mängija (Sina)'): { countStr: string; players: string[] } {
         const path = (gamePath || '').toLowerCase();
         let targetGameId = 'other';
 
@@ -474,38 +474,44 @@ export class ServerManager {
         else if (path.includes('/cooking/')) targetGameId = 'cooking';
         else if (path.includes('/defender/')) targetGameId = 'defender';
         else if (path.includes('/breakout/')) targetGameId = 'breakout';
+        else if (path.includes('/ai/')) targetGameId = 'ai';
+        else if (path.includes('/play/')) targetGameId = 'play';
+        else if (path.includes('/creator/')) targetGameId = 'creator';
 
         const rule = this.getGameRule(targetGameId);
         const gameServers = this.getServersByGame(targetGameId);
-        const activeServer = gameServers[0];
+        const activeServer = gameServers[0] || (this.servers.length > 0 ? this.createNewServer(targetGameId) : null);
 
-        if (targetGameId === 'mmp1') {
-            const currentCount = activeServer ? activeServer.players.length : 5;
+        // Kõik soolo mängud (max 1 mängija / server)
+        if (rule.maxPlayers === 1) {
             return {
-                countStr: `Server #1 (${Math.min(currentCount, 10)} / 10 mängijat)`,
-                players: [defaultName, 'Sam_Sniper (AI)', 'Jordan_Sheriff (AI)', 'Alex_Detective (AI)', 'Taylor_Rogue (AI)']
+                countStr: 'Server #1 (1 / 1 mängija)',
+                players: [defaultName]
             };
         }
 
-        if (targetGameId === 'citycar' || targetGameId === 'racing') {
-            const currentCount = activeServer ? Math.min(activeServer.players.length, 5) : 4;
+        // Mitmikmängud (mmp1 max 10, citycar/racing max 5, snake max 3)
+        if (activeServer) {
+            const cleanDefault = defaultName.replace(/^[^\w\s]+/, '').replace(/✔.*$/, '').replace(/👑.*$/, '').trim().toLowerCase();
+
+            const otherPlayers = activeServer.players
+                .map(p => p.displayName || p.username)
+                .filter(name => {
+                    const cleanExisting = name.replace(/^[^\w\s]+/, '').replace(/✔.*$/, '').replace(/👑.*$/, '').trim().toLowerCase();
+                    return cleanExisting !== cleanDefault && !name.includes('(AI)') && !cleanExisting.includes('sina');
+                });
+
+            const allRealPlayers = [defaultName, ...otherPlayers].slice(0, activeServer.maxPlayers);
+            const count = allRealPlayers.length;
+
             return {
-                countStr: `Server #1 (${currentCount} / 5 mängijat)`,
-                players: [defaultName, '🏎️ Välk_AI', '🏎️ Turbo_AI', '🏎️ Nitro_AI']
+                countStr: `Server #${activeServer.serverNumber} (${count} / ${activeServer.maxPlayers} mängijat)`,
+                players: allRealPlayers
             };
         }
 
-        if (targetGameId === 'snake') {
-            const currentCount = activeServer ? Math.min(activeServer.players.length, 3) : 2;
-            return {
-                countStr: `Server 1 (${currentCount} / 3 mängijat)`,
-                players: [defaultName, '🐍 Kobra_Est (AI)']
-            };
-        }
-
-        // Kõik ülejäänud: 1 mängija (soolo / privaatserver)
         return {
-            countStr: `Server #1 (1 / 1 mängija - Sina)`,
+            countStr: `Server #1 (1 / ${rule.maxPlayers} mängijat)`,
             players: [defaultName]
         };
     }
