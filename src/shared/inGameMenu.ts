@@ -20,7 +20,16 @@ export interface PlayardMenuOptions {
     hubUrl?: string;
 }
 
-function getDetectedServerPlayerInfo(): { countStr: string; players: string[] } {
+let sessionTabId = '';
+if (typeof sessionStorage !== 'undefined') {
+    sessionTabId = sessionStorage.getItem('playard_game_session_tab_id') || '';
+    if (!sessionTabId) {
+        sessionTabId = 'tab_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+        sessionStorage.setItem('playard_game_session_tab_id', sessionTabId);
+    }
+}
+
+export function getMyDisplayNameAndRole(): { myNameDisplay: string; isOwner: boolean; isVerified: boolean } {
     let currentUserName = 'Mängija';
     let isOwner = false;
     let isVerified = false;
@@ -43,10 +52,20 @@ function getDetectedServerPlayerInfo(): { countStr: string; players: string[] } 
         }
     } catch (e) {}
 
-    const ownerTag = isOwner ? ' 👑 Playard Owner ✔' : (isVerified ? ' ✔' : '');
-    const cleanBaseName = currentUserName.replace(/👑.*$/, '').replace(/✔.*$/, '').replace(/\(Sina\)/i, '').trim();
-    const myNameDisplay = `${cleanBaseName}${ownerTag} (Sina)`;
+    let myNameDisplay = '';
+    if (isOwner) {
+        myNameDisplay = 'Playard Owner 👑 ✔ (Sina)';
+    } else {
+        const cleanBaseName = currentUserName.replace(/👑.*$/, '').replace(/✔.*$/, '').replace(/\(Sina\)/i, '').trim() || 'Mängija';
+        const tag = isVerified ? ' ✔' : '';
+        myNameDisplay = `${cleanBaseName}${tag} (Sina)`;
+    }
 
+    return { myNameDisplay, isOwner, isVerified };
+}
+
+function getDetectedServerPlayerInfo(): { countStr: string; players: string[] } {
+    const { myNameDisplay } = getMyDisplayNameAndRole();
     const path = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
     return serverManager.getInGameServerDisplay(path, myNameDisplay);
 }
@@ -500,10 +519,31 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
         toggleMenu();
     });
 
+    // Presence heartbeat
+    const sendPresence = () => {
+        if (typeof window === 'undefined') return;
+        const { myNameDisplay, isOwner, isVerified } = getMyDisplayNameAndRole();
+        serverManager.heartbeatPlayer(window.location.pathname, myNameDisplay, sessionTabId, isOwner, isVerified);
+    };
+
+    sendPresence();
+    const presenceInterval = setInterval(sendPresence, 5000);
+
+    const cleanupPresence = () => {
+        clearInterval(presenceInterval);
+        if (typeof window !== 'undefined') {
+            serverManager.removePlayer(window.location.pathname, sessionTabId);
+        }
+    };
+
+    window.addEventListener('beforeunload', cleanupPresence);
+    window.addEventListener('pagehide', cleanupPresence);
+
     document.getElementById('btn-close-playard-menu')?.addEventListener('click', closeMenu);
     document.getElementById('btn-playard-resume')?.addEventListener('click', closeMenu);
 
     document.getElementById('btn-playard-leave')?.addEventListener('click', () => {
+        cleanupPresence();
         window.location.href = hubUrl;
     });
 

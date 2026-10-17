@@ -13598,6 +13598,9 @@ await (async () => {
                 const modal = document.getElementById('modal-playard-menu');
                 const reportModal = document.getElementById('modal-playard-report');
                 
+                // Register a real live opponent in this server to test reporting another player
+                window.serverManager?.heartbeatPlayer(window.location.pathname, 'Kaspar_Speed', 'tab_test_opponent');
+
                 // Open menu
                 pBtn?.click();
                 await new Promise(r => setTimeout(r, 150));
@@ -13605,7 +13608,7 @@ await (async () => {
                 const reportButtons = document.querySelectorAll('.btn-player-report');
                 const hasReportButtons = reportButtons.length > 0;
 
-                // Click first report button (e.g. Välk_AI)
+                // Click first report button (Kaspar_Speed)
                 const firstReportBtn = reportButtons[0];
                 const reportedTarget = firstReportBtn?.getAttribute('data-player') || '';
                 firstReportBtn?.click();
@@ -13621,6 +13624,9 @@ await (async () => {
                 const submitBtn = document.getElementById('btn-submit-player-report');
                 submitBtn?.click();
                 await new Promise(r => setTimeout(r, 800));
+
+                // Clean up test opponent from server
+                window.serverManager?.removePlayer(window.location.pathname, 'tab_test_opponent');
 
                 // Check stored reports
                 const rawReports = localStorage.getItem('playard_player_reports');
