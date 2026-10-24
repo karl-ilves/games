@@ -1,4 +1,5 @@
 import { yardService } from '../shared/yardService';
+import { getAdvertisedGames, AdvertisedGame } from '../shared/advertisedGames';
 
 export function setupAdRewardModal() {
     const btnWatchAd = document.getElementById('btn-watch-ad-pbx');
@@ -95,6 +96,16 @@ export function setupAdRewardModal() {
         let timeLeft = 20;
         let slideIndex = 0;
 
+        const advertisedGames = getAdvertisedGames();
+        let activeSponsoredGame: AdvertisedGame | null = null;
+
+        if (advertisedGames.length === 1) {
+            activeSponsoredGame = advertisedGames[0];
+        } else if (advertisedGames.length > 1) {
+            const randIdx = Math.floor(Math.random() * advertisedGames.length);
+            activeSponsoredGame = advertisedGames[randIdx];
+        }
+
         if (slideContainer) slideContainer.style.display = 'flex';
         if (celebrationContainer) celebrationContainer.style.display = 'none';
         if (progressBar) progressBar.style.width = '0%';
@@ -115,19 +126,34 @@ export function setupAdRewardModal() {
         }
 
         const updateSlideUI = () => {
-            const slide = AD_SLIDES[slideIndex % AD_SLIDES.length];
-            if (slideIcon) slideIcon.textContent = slide.icon;
-            if (slideTitle) slideTitle.textContent = slide.title;
-            if (slideSubtitle) slideSubtitle.textContent = slide.subtitle;
-            if (slideFeaturePill) slideFeaturePill.textContent = slide.pill;
+            if (activeSponsoredGame) {
+                if (slideIcon) {
+                    if (activeSponsoredGame.thumbnail) {
+                        slideIcon.innerHTML = `<img src="${activeSponsoredGame.thumbnail}" alt="${activeSponsoredGame.title}" style="width: 140px; height: 90px; object-fit: cover; border-radius: 10px; border: 1.5px solid #ffd32a; box-shadow: 0 4px 15px rgba(255,211,42,0.4);">`;
+                    } else {
+                        slideIcon.textContent = '🎮';
+                    }
+                }
+                if (slideTitle) slideTitle.textContent = activeSponsoredGame.title;
+                if (slideSubtitle) slideSubtitle.textContent = activeSponsoredGame.description || 'Mängi seda uut mängu Playardis!';
+                if (slideFeaturePill) slideFeaturePill.innerHTML = `🔥 <strong>REKLAAMITUD MÄNG</strong> · Looja: @${activeSponsoredGame.creator || 'Creator'}`;
+            } else {
+                const slide = AD_SLIDES[slideIndex % AD_SLIDES.length];
+                if (slideIcon) slideIcon.textContent = slide.icon;
+                if (slideTitle) slideTitle.textContent = slide.title;
+                if (slideSubtitle) slideSubtitle.textContent = slide.subtitle;
+                if (slideFeaturePill) slideFeaturePill.textContent = slide.pill;
+            }
         };
 
         updateSlideUI();
         clearInterval(slideInterval);
-        slideInterval = setInterval(() => {
-            slideIndex++;
-            updateSlideUI();
-        }, 4000);
+        if (!activeSponsoredGame) {
+            slideInterval = setInterval(() => {
+                slideIndex++;
+                updateSlideUI();
+            }, 4000);
+        }
 
         clearInterval(countdownInterval);
         countdownInterval = setInterval(() => {

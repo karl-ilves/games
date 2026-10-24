@@ -147,6 +147,8 @@ import { updateGameplayHUD, exitVehicle } from '../systems/physics';
 import { executeObjectScript, openScriptModal, updateScriptInspectorDisplay } from '../systems/scriptRunner';
 import { openWorkbenchModal } from '../workbench/customItemWorkbench';
 import { yardService } from '../../../shared/yardService';
+import { showYardPurchaseConfirm } from '../../../shared/yardPurchaseModal';
+import { saveAdvertisedGame } from '../../../shared/advertisedGames';
 import { getCurrentUserProfile, isPlayardOwner } from '../../../auth';
 import { t } from '../../../shared/i18n_dict';
 import { updateOrbitCamera } from './orbitCamera';
@@ -2342,6 +2344,58 @@ export function setupStudioEvents() {
         if (options) {
             options.style.display = isChecked ? 'grid' : 'none';
         }
+    });
+
+    // Publish Modal: Mängu Reklaam (10,000 PBX)
+    document.getElementById('btn-publish-buy-ad')?.addEventListener('click', () => {
+        const titleInput = document.getElementById('publish-game-title') as HTMLInputElement | null;
+        const descInput = document.getElementById('publish-game-desc') as HTMLTextAreaElement | null;
+        const previewImg = document.getElementById('publish-image-preview') as HTMLImageElement | null;
+        const statusMsg = document.getElementById('publish-ad-status-msg');
+
+        const currentScene = serializeCurrentScene();
+        const title = (titleInput?.value || '').trim() || currentScene.title || 'Created Game';
+        const description = (descInput?.value || '').trim() || currentScene.description || 'Mängi seda uut mängu Playardis!';
+        const thumbnail = previewImg?.src || currentScene.thumbnail || '';
+        const profile = getCurrentUserProfile();
+        const username = profile?.username || 'Creator';
+
+        showYardPurchaseConfirm({
+            title: 'Kas soovid osta Mängu Reklaami 10,000 PBX eest?',
+            itemName: `Mängu Reklaam: "${title}"`,
+            yardCost: 10000,
+            description: 'Sinu mäng ilmub 20-sekundilises Playardi reklaamimängijas kõigile kasutajatele!',
+            onConfirm: async () => {
+                const success = yardService.spendYards(10000, 'game_ad_promo', `Mängu Reklaam: ${title}`);
+                if (!success) {
+                    if (statusMsg) {
+                        statusMsg.style.display = 'block';
+                        statusMsg.style.background = 'rgba(239, 68, 68, 0.2)';
+                        statusMsg.style.color = '#ff6b81';
+                        statusMsg.style.border = '1px solid #ef4444';
+                        statusMsg.textContent = '❌ Pole piisavalt PlayBuxi (Vajalik: 10,000 PBX)!';
+                    }
+                    return;
+                }
+
+                saveAdvertisedGame({
+                    id: 'ad_' + Date.now(),
+                    title,
+                    description,
+                    thumbnail,
+                    creator: username,
+                    advertisedAt: Date.now()
+                });
+
+                if (statusMsg) {
+                    statusMsg.style.display = 'block';
+                    statusMsg.style.background = 'rgba(46, 204, 113, 0.2)';
+                    statusMsg.style.color = '#2ecc71';
+                    statusMsg.style.border = '1px solid #2ecc71';
+                    statusMsg.innerHTML = '✅ Mängu Reklaam edukalt ostetud (10,000 PBX maha arvatud)! Sinu mängu kuvatakse reklaamides.';
+                }
+            }
+        });
     });
 
     // Publish Modal: Game Cover Image Drag-and-Drop & Upload Listeners

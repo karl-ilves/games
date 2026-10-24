@@ -14022,6 +14022,102 @@ await (async () => {
             }
             console.log("   ✅ In-Game Menu strictly real players (zero fake AI) verified!");
 
+            // 30. Test Game Creator 10,000 PBX "Mängu Reklaam" purchase & Ad Player presentation
+            console.log("30. Testing Game Creator 10,000 PBX 'Mängu Reklaam' purchase & Ad Player presentation...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/creator/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const creatorAdPurchaseTest = await page.evaluate(async () => {
+                // Set auto-confirm for purchase modal
+                window.__AUTO_CONFIRM_YARD_PURCHASE__ = true;
+
+                // Open Publish modal
+                const publishBtn = document.getElementById('btn-submit-review');
+                publishBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const publishModal = document.getElementById('publish-game-modal');
+                const isPublishOpen = publishModal?.style.display === 'flex';
+
+                // Check ad promo section and buy button
+                const adSection = document.getElementById('publish-ad-promo-section');
+                const buyAdBtn = document.getElementById('btn-publish-buy-ad');
+                const hasAdBtn = !!buyAdBtn && (buyAdBtn.textContent.includes('Mängu Reklaam') || adSection?.textContent.includes('10,000 PBX'));
+
+                // Set game title & description
+                const titleInput = document.getElementById('publish-game-title');
+                if (titleInput) {
+                    titleInput.value = 'Super Space Quest';
+                }
+                const descInput = document.getElementById('publish-game-desc');
+                if (descInput) {
+                    descInput.value = 'Eepiline kosmose seiklusmäng!';
+                }
+
+                // Click Buy Ad
+                buyAdBtn?.click();
+                await new Promise(r => setTimeout(r, 400));
+
+                const statusMsg = document.getElementById('publish-ad-status-msg');
+                const isPurchasedSuccess = statusMsg?.style.display !== 'none' && (statusMsg?.textContent?.toLowerCase().includes('reklaam edukalt ostetud') || statusMsg?.textContent?.toLowerCase().includes('10,000 pbx'));
+
+                // Check localStorage playard_advertised_games
+                const storedAds = JSON.parse(localStorage.getItem('playard_advertised_games') || '[]');
+                const foundAd = storedAds.find(a => a.title === 'Super Space Quest' || a.id.includes('ad_'));
+
+                return {
+                    isPublishOpen,
+                    hasAdBtn,
+                    isPurchasedSuccess,
+                    hasSavedAd: !!foundAd,
+                    savedAdTitle: foundAd?.title
+                };
+            });
+            console.log("   Creator Ad Purchase Test Results:", creatorAdPurchaseTest);
+            if (!creatorAdPurchaseTest.isPublishOpen || !creatorAdPurchaseTest.hasAdBtn || !creatorAdPurchaseTest.isPurchasedSuccess || !creatorAdPurchaseTest.hasSavedAd) {
+                throw new Error("Game Creator Ad purchase test failed: " + JSON.stringify(creatorAdPurchaseTest));
+            }
+            console.log("   ✅ Game Creator 10,000 PBX Mängu Reklaam purchase verified!");
+
+            // Test Ad Player displays the advertised game
+            console.log("30b. Testing Ad Player shows the newly advertised game in Hub...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const adPlayerPresentationTest = await page.evaluate(async () => {
+                // Open PBX Store modal
+                const pbxBtn = document.getElementById('btn-hub-playbux');
+                pbxBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                // Click '+ 15 PBX' ad watch button
+                const watchAdBtn = document.getElementById('btn-watch-ad-pbx');
+                watchAdBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const adModal = document.getElementById('modal-ad-player');
+                const isAdOpen = adModal?.style.display === 'flex';
+
+                const adTitle = document.getElementById('ad-slide-title')?.textContent || '';
+                const adDesc = document.getElementById('ad-slide-subtitle')?.textContent || '';
+                const badge = document.getElementById('ad-slide-feature-pill')?.textContent || '';
+
+                const showsAdvertisedGame = adTitle.includes('Super Space Quest') || badge.includes('REKLAAMITUD MÄNG');
+
+                return {
+                    isAdOpen,
+                    adTitle,
+                    adDesc,
+                    badge,
+                    showsAdvertisedGame
+                };
+            });
+            console.log("   Ad Player Presentation Test Results:", adPlayerPresentationTest);
+            if (!adPlayerPresentationTest.isAdOpen || !adPlayerPresentationTest.showsAdvertisedGame) {
+                throw new Error("Ad player presentation of advertised game failed: " + JSON.stringify(adPlayerPresentationTest));
+            }
+            console.log("   ✅ Ad Player dynamically displays player's advertised game verified!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();
