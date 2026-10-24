@@ -1927,8 +1927,100 @@
                 </div>
             </div>
 
+            <!-- Free PBX via 20s Ad Section: + 15 PBX -->
+            <div id="pbx-ad-reward-section" style="background: linear-gradient(135deg, rgba(46, 204, 113, 0.12), rgba(0, 242, 254, 0.08)); border: 1.5px solid rgba(46, 204, 113, 0.45); border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; text-align: left; box-shadow: 0 4px 18px rgba(46, 204, 113, 0.2);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                            🎬
+                        </div>
+                        <div>
+                            <div style="color: #ffffff; font-weight: 800; font-size: 1.05rem;">
+                                Vaata reklaami ja teeni tasuta!
+                            </div>
+                            <div style="color: #a4b0be; font-size: 0.8rem; margin-top: 2px;">
+                                Vaata 20-sekundilist reklaami ja teeni oma kontole 15 PlayBuxi
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" id="btn-watch-ad-pbx" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: #0b1118; border: 1px solid #2ecc71; border-radius: 10px; padding: 11px 22px; font-weight: 900; font-size: 1.15rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4); transition: transform 0.15s, box-shadow 0.15s; white-space: nowrap;">
+                        <span style="font-size: 1.35rem; font-weight: 900; line-height: 1;">+</span>
+                        <span>15 PBX</span>
+                    </button>
+                </div>
+            </div>
+
             <div style="font-size: 0.8rem; color: #718093; margin-top: 8px;">
                 PlayBux (PBX) on ametlik Playard platvormi virtuaalvaluuta.
+            </div>
+        </div>
+    </div>
+
+    <!-- 20-Second Ad Player Modal (+15 PBX) -->
+    <div id="modal-ad-player" class="modal-overlay" style="display: none; z-index: 100050;">
+        <div class="modal-card" style="max-width: 640px; padding: 0; overflow: hidden; border-color: rgba(46, 204, 113, 0.6); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(46, 204, 113, 0.35); background: #0c121c;">
+            <!-- Ad Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.2rem;">🎬</span>
+                    <strong style="color: #ffffff; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.5px;">REKLAAM (ADVERTISEMENT)</strong>
+                    <span style="background: rgba(46, 204, 113, 0.18); border: 1px solid #2ecc71; color: #2ecc71; font-size: 0.75rem; font-weight: 800; padding: 2px 7px; border-radius: 6px;">+15 PBX REWARD</span>
+                </div>
+                <div id="ad-timer-badge" style="background: rgba(255, 211, 42, 0.15); border: 1.5px solid #ffd32a; color: #ffd32a; font-weight: 900; font-size: 0.92rem; padding: 4px 12px; border-radius: 20px; font-family: monospace; display: flex; align-items: center; gap: 6px;">
+                    <span>⏱️</span>
+                    <span id="ad-timer-text">20s</span>
+                </div>
+            </div>
+
+            <!-- Ad Video Screen / Animated Player -->
+            <div id="ad-screen-container" style="position: relative; height: 320px; background: radial-gradient(circle at center, #1b2838 0%, #080d14 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; padding: 20px; box-sizing: border-box;">
+                <!-- Animated Game Teaser Slides -->
+                <div id="ad-screen-slide" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; max-width: 480px; z-index: 2;">
+                    <div id="ad-slide-icon" style="font-size: 3.8rem; filter: drop-shadow(0 0 20px rgba(0,242,254,0.6));">
+                        🎮
+                    </div>
+                    <div>
+                        <div id="ad-slide-title" style="font-size: 1.6rem; font-weight: 900; color: #ffffff; letter-spacing: 0.5px; text-shadow: 0 0 15px rgba(0,242,254,0.5);">
+                            Playard 3D Arena & Games
+                        </div>
+                        <div id="ad-slide-subtitle" style="font-size: 0.92rem; color: #00f2fe; margin-top: 6px; font-weight: 700;">
+                            Mängi üle 15 tasuta 3D mängu otse brauseris!
+                        </div>
+                    </div>
+                    <div id="ad-slide-feature-pill" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 20px; padding: 6px 14px; font-size: 0.8rem; color: #cbd5e1;">
+                        🏎️ City Car Driving · ⚔️ MMP1 Arena · 🚇 Last Metro · ✈️ Flight Sim
+                    </div>
+                </div>
+
+                <!-- Finished Reward Celebration Overlay (initially hidden) -->
+                <div id="ad-reward-celebration" style="display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; z-index: 5;">
+                    <div style="font-size: 4rem;">🎉</div>
+                    <div style="font-size: 1.8rem; font-weight: 900; color: #2ecc71; text-shadow: 0 0 20px rgba(46, 204, 113, 0.8);">
+                        Palju õnne!
+                    </div>
+                    <div style="font-size: 1.1rem; color: #ffffff; font-weight: 700;">
+                        Vaatasid reklaami lõpuni ja teenisid <span style="color: #00f2fe; font-weight: 900;">+15 PlayBuxi (PBX)</span>!
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a4b0be;">
+                        Sinu PlayBuxi saldo on edukalt uuendatud!
+                    </div>
+                </div>
+
+                <!-- Progress Bar at bottom of screen -->
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 6px; background: rgba(255,255,255,0.1);">
+                    <div id="ad-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #00f2fe, #2ecc71); transition: width 0.2s linear;"></div>
+                </div>
+            </div>
+
+            <!-- Ad Footer / Controls -->
+            <div style="padding: 16px 20px; background: #0c121c; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+                <div style="font-size: 0.82rem; color: #8899a6; display: flex; align-items: center; gap: 6px;">
+                    <span id="ad-footer-status">Vaata reklaam lõpuni, et saada auhind:</span>
+                    <strong style="color: #2ecc71;">+15 PBX</strong>
+                </div>
+                <button type="button" id="btn-close-ad-player" disabled style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15); color: #718093; border-radius: 8px; padding: 10px 18px; font-weight: 800; font-size: 0.88rem; cursor: not-allowed; transition: all 0.2s;">
+                    🔒 Reklaami saab sulgeda: <span id="ad-close-countdown">20</span>s
+                </button>
             </div>
         </div>
     </div>

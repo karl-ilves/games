@@ -13461,9 +13461,11 @@ await (async () => {
                 const testUser = 'pbxtestplayer_' + Date.now();
                 if (userInput) userInput.value = testUser;
                 if (amountInput) amountInput.value = '750';
-
                 giveBtn?.click();
-                await new Promise(r => setTimeout(r, 300));
+                for (let i = 0; i < 25; i++) {
+                    await new Promise(r => setTimeout(r, 100));
+                    if (statusEl?.textContent?.includes('Edukalt')) break;
+                }
 
                 const statusSuccess = statusEl?.textContent?.includes('Edukalt') || false;
                 const balanceAfterTopGive = window.getPlayerYards ? window.getPlayerYards(testUser) : 0;
@@ -13808,7 +13810,40 @@ await (async () => {
 
                 const sendSuccess = sendStatus?.textContent?.includes('Edukalt saadetud +100 PBX mängijale @MarkusPlayard99!') || false;
 
-                // Close modal
+                // Test +15 PBX Ad Reward Button in modal
+                const watchAdBtn = document.getElementById('btn-watch-ad-pbx');
+                const hasWatchAdBtn = !!watchAdBtn && watchAdBtn.textContent.includes('+') && watchAdBtn.textContent.includes('15 PBX');
+
+                const adModal = document.getElementById('modal-ad-player');
+                const prevYards = window.yardService ? window.yardService.getYards() : 0;
+
+                // Click +15 PBX button to launch 20-second ad
+                watchAdBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const isAdModalOpen = !!adModal && window.getComputedStyle(adModal).display !== 'none';
+                const adTimerText = document.getElementById('ad-timer-text')?.textContent || '';
+                const has20sTimer = adTimerText.includes('20s');
+
+                // Finish ad reward
+                window.__finishAdRewardForTest?.();
+                await new Promise(r => setTimeout(r, 100));
+
+                const celebrationEl = document.getElementById('ad-reward-celebration');
+                const isCelebrationVisible = !!celebrationEl && window.getComputedStyle(celebrationEl).display !== 'none';
+                const transactions = (window.yardService && window.yardService.data) ? window.yardService.data.transactions : [];
+                const hasAdTx = transactions.some(t => t.amount === 15 && t.reason?.includes('reklaam'));
+                const earned15Pbx = isCelebrationVisible && (hasAdTx || newYards === prevYards + 15);
+
+                const closeAdBtn = document.getElementById('btn-close-ad-player');
+                const isAdCloseUnlocked = !closeAdBtn?.disabled;
+
+                // Close ad modal
+                closeAdBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const isAdModalClosed = !adModal || window.getComputedStyle(adModal).display === 'none';
+
+                // Close buy playbux modal
                 closeBtn?.click();
                 await new Promise(r => setTimeout(r, 100));
                 const isClosed = !modal || window.getComputedStyle(modal).display === 'none';
@@ -13832,6 +13867,12 @@ await (async () => {
                     autofilledCorrectly,
                     suggestionsClosedAfterPick,
                     sendSuccess,
+                    hasWatchAdBtn,
+                    isAdModalOpen,
+                    has20sTimer,
+                    earned15Pbx,
+                    isAdCloseUnlocked,
+                    isAdModalClosed,
                     isClosed
                 };
             });
@@ -13839,7 +13880,7 @@ await (async () => {
             if (Object.values(pbxStoreTest).some(v => !v)) {
                 throw new Error("PlayBux Store Modal test failed: " + JSON.stringify(pbxStoreTest));
             }
-            console.log("   ✅ PlayBux Store Modal (PBX click, tiers, notice, Send PBX & Live Name Suggestions Autocomplete) verified!");
+            console.log("   ✅ PlayBux Store Modal (PBX click, tiers, notice, Send PBX & +15 PBX 20s Ad Reward) verified!");
 
             // 28. Verifying Owner Panel Servers Mode & Capacity Rules (MMP1 max 10, 3D City max 5, Snake max 3, Others max 1)
             console.log("28. Testing Owner Panel Servers Mode & Server Capacities (MMP1 max 10, 3D City max 5, Snake max 3, Others max 1)...");

@@ -14,6 +14,7 @@ import { setupOwnerPanel } from './hub/ownerPanel';
 import { setupModals } from './hub/modals';
 import { setupIcons } from './hub/icons';
 import { setupGamePreviewModal } from './hub/gamePreviewModal';
+import { setupAdRewardModal } from './hub/adReward';
 
 // Re-exports for test and module compatibility
 export {
@@ -30,6 +31,7 @@ initGamesSearch();
 setupAgeRestrictionModal();
 setupIcons();
 setupModals();
+setupAdRewardModal();
 setupAdminPanel();
 setupOwnerPanel();
 setupGamePreviewModal();
