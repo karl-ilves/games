@@ -14131,6 +14131,7 @@ await (async () => {
                 pbxBtn?.click();
                 await new Promise(r => setTimeout(r, 200));
 
+                const adRewardSection = document.getElementById('pbx-ad-reward-section');
                 const plusSection = document.getElementById('playard-plus-section');
                 const plus500Btn = document.querySelector('.btn-buy-plus-plan[data-tier="plus500"]');
                 const plus2000Btn = document.querySelector('.btn-buy-plus-plan[data-tier="plus2000"]');
@@ -14138,6 +14139,9 @@ await (async () => {
                 const hasPlusSection = !!plusSection;
                 const hasPlus500Btn = !!plus500Btn;
                 const hasPlus2000Btn = !!plus2000Btn;
+
+                // Check that plusSection is placed below adRewardSection in DOM
+                const isBelowAd = !!adRewardSection && !!plusSection && (adRewardSection.compareDocumentPosition(plusSection) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 
                 // Click Plus 500 subscription
                 plus500Btn?.click();
@@ -14154,6 +14158,7 @@ await (async () => {
 
                 return {
                     hasPlusSection,
+                    isBelowAd,
                     hasPlus500Btn,
                     hasPlus2000Btn,
                     hasPlus500Tag,
@@ -14161,10 +14166,10 @@ await (async () => {
                 };
             });
             console.log("   Playard Plus Test Results:", plusTestResults);
-            if (!plusTestResults.hasPlusSection || !plusTestResults.hasPlus500Btn || !plusTestResults.hasPlus2000Btn || !plusTestResults.hasPlus500Tag || !plusTestResults.hasPlus2000Tag) {
+            if (!plusTestResults.hasPlusSection || !plusTestResults.isBelowAd || !plusTestResults.hasPlus500Btn || !plusTestResults.hasPlus2000Btn || !plusTestResults.hasPlus500Tag || !plusTestResults.hasPlus2000Tag) {
                 throw new Error("Playard Plus tests failed: " + JSON.stringify(plusTestResults));
             }
-            console.log("   ✅ Playard Plus 500 (P) and Plus 2000 (2P00) golden tags verified!");
+            console.log("   ✅ Playard Plus 500 (P) and Plus 2000 (2P00) golden tags & placement below ads verified!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
