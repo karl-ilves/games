@@ -57,7 +57,8 @@ export function getMyDisplayNameAndRole(): { myNameDisplay: string; isOwner: boo
 
     let myNameDisplay = '';
     if (isOwner) {
-        myNameDisplay = 'Playard Owner 👑 ✔ (Sina)';
+        const plusSuffix = plusTier === 'plus2000' ? '(2P00)' : (plusTier === 'plus500' ? '(P)' : '');
+        myNameDisplay = `Playard Owner${plusSuffix} 👑 ✔ (Sina)`;
     } else {
         const cleanBaseName = currentUserName.replace(/👑.*$/, '').replace(/✔.*$/, '').replace(/\(Sina\)/i, '').trim() || 'Mängija';
         const withPlus = formatUsernameWithPlusPlain(cleanBaseName, plusTier as any);

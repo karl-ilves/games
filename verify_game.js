@@ -14171,6 +14171,34 @@ await (async () => {
             }
             console.log("   ✅ Playard Plus 500 (P) and Plus 2000 (2P00) golden tags & placement below ads verified!");
 
+            // 31b. Test golden Plus tag is visible across games in In-Game Menu (P button)
+            console.log("31b. Testing golden Plus tag in all games (In-Game Menu P button)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/citycar/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const inGamePlusTest = await page.evaluate(async () => {
+                const pBtn = document.getElementById('btn-playard-menu');
+                pBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const listEl = document.getElementById('playard-menu-player-list');
+                const listHtml = listEl?.innerHTML || '';
+                const listText = listEl?.textContent || '';
+
+                const hasGoldenTag = listHtml.includes('(2P00)') && listHtml.includes('#ffd32a');
+                const hasTagInText = listText.includes('(2P00)');
+
+                return {
+                    hasGoldenTag,
+                    hasTagInText
+                };
+            });
+            console.log("   In-Game Menu Plus Tag Results:", inGamePlusTest);
+            if (!inGamePlusTest.hasGoldenTag || !inGamePlusTest.hasTagInText) {
+                throw new Error("In-Game Menu golden Plus tag failed: " + JSON.stringify(inGamePlusTest));
+            }
+            console.log("   ✅ Golden (2P00) tag verified inside games in In-Game Menu!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();
