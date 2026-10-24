@@ -1785,13 +1785,23 @@ class YardService {
             }
         }
 
+        const hasPlus = (typeof localStorage !== 'undefined') && (() => {
+            try {
+                const cur = localStorage.getItem('playard_current_user_plus');
+                return cur === 'plus500' || cur === 'plus2000';
+            } catch(e) { return false; }
+        })();
+        const multiplier = hasPlus ? 3 : 1;
+
         const nextDayIndex = effectiveStreak >= 7 ? 1 : effectiveStreak + 1;
-        const nextRewardAmount = nextDayIndex === 7 ? DAY_7_JACKPOT_REWARD : DAILY_STREAK_REWARD;
+        const baseReward = nextDayIndex === 7 ? DAY_7_JACKPOT_REWARD : DAILY_STREAK_REWARD;
+        const nextRewardAmount = baseReward * multiplier;
 
         const days = [];
         for (let i = 1; i <= 7; i++) {
             const isJackpot = (i === 7);
-            const reward = isJackpot ? DAY_7_JACKPOT_REWARD : DAILY_STREAK_REWARD;
+            const base = isJackpot ? DAY_7_JACKPOT_REWARD : DAILY_STREAK_REWARD;
+            const reward = base * multiplier;
             let status: 'claimed' | 'available' | 'locked';
 
             if (i <= effectiveStreak) {
@@ -1833,7 +1843,7 @@ class YardService {
         }
 
         const nextStreak = (info.currentStreak >= 7 || info.currentStreak === 0) ? 1 : info.currentStreak + 1;
-        const rewardAmount = nextStreak === 7 ? DAY_7_JACKPOT_REWARD : DAILY_STREAK_REWARD;
+        const rewardAmount = info.nextRewardAmount || (nextStreak === 7 ? DAY_7_JACKPOT_REWARD : DAILY_STREAK_REWARD);
 
         this.data.streak = nextStreak;
         this.data.lastClaimTimestamp = Date.now();
@@ -1843,7 +1853,7 @@ class YardService {
             id: 'tx_' + Date.now(),
             amount: rewardAmount,
             type: 'claim',
-            reason: `Daily Streak Day ${nextStreak} Reward${nextStreak === 7 ? ' (Day 7 Jackpot)' : ''}`,
+            reason: `Daily Streak Day ${nextStreak} Reward${nextStreak === 7 ? ' (Day 7 Jackpot)' : ''}${rewardAmount > (nextStreak === 7 ? DAY_7_JACKPOT_REWARD : DAILY_STREAK_REWARD) ? ' (3X Plus Bonus)' : ''}`,
             timestamp: Date.now()
         });
 

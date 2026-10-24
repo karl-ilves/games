@@ -2,6 +2,7 @@ import { avatarService } from '../shared/avatar/AvatarService';
 import { AvatarViewer } from '../shared/avatar/AvatarViewer';
 import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag } from '../auth';
 import { yardService } from '../shared/yardService';
+import { getUserPlusTier, formatUsernameWithPlusHtml } from '../shared/plusMembership';
 
 export class AvatarWidget {
     private container: HTMLElement;
@@ -119,7 +120,9 @@ export class AvatarWidget {
 
         if (userEl) {
             const rawName = prof ? (prof.displayName || `@${prof.username}`) : 'Guest Player';
-            userEl.textContent = isOwner ? formatOwnerNametag(rawName, true) : rawName;
+            const baseFormatted = isOwner ? formatOwnerNametag(rawName, true) : rawName;
+            const plusTier = getUserPlusTier(prof?.username);
+            userEl.innerHTML = formatUsernameWithPlusHtml(baseFormatted, plusTier);
         }
         if (roleEl) {
             roleEl.textContent = isOwner ? '👑 PLAYARD OWNER ✔' : (prof?.isAdmin ? '⭐ ADMIN' : '⭐ Lv.1');

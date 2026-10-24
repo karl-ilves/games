@@ -1,10 +1,12 @@
 import { yardService } from '../shared/yardService';
 import { supabase } from '../lib/supabase';
-import { getCurrentUserProfile, isUserAdmin } from '../auth';
+import { getCurrentUserProfile, isUserAdmin, updateAuthDisplay } from '../auth';
 import { renderStreakCards, updateStreakTimerLive } from './streak';
 import { renderAdminUpdatesList } from './adminPanel';
 import { renderDatabaseGamesList } from './communityGames';
 import { bindPlayerSuggestions } from '../shared/playerSuggestions';
+import { setUserPlusTier, getUserPlusTier, PlusTier } from '../shared/plusMembership';
+import { showYardPurchaseConfirm } from '../shared/yardPurchaseModal';
 
 export function setupModals() {
     // 1. Streak Modal (Opened via Daily Rewards button)
@@ -76,6 +78,51 @@ export function setupModals() {
             setTimeout(() => {
                 if (originalText) btnEl.textContent = originalText;
             }, 3000);
+        });
+    });
+
+    // Wire Playard Plus subscription buttons
+    document.querySelectorAll('.btn-buy-plus-plan').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tier = btn.getAttribute('data-tier') as PlusTier;
+            const price = btn.getAttribute('data-price') || '3,99€';
+            const profile = getCurrentUserProfile();
+            const username = profile?.username || 'Mängija';
+            const is2000 = tier === 'plus2000';
+            const bonusPbx = is2000 ? 2000 : 500;
+            const tagSuffix = is2000 ? '(2P00)' : '(P)';
+
+            showYardPurchaseConfirm({
+                title: `Telli Playard Plus ${is2000 ? '2000' : '500'} (${price})?`,
+                itemName: `Playard Plus: ${bonusPbx} PBX + Kuldne ${tagSuffix} märk nime lõppu`,
+                yardCost: 0,
+                description: `Saad kohe +${bonusPbx} PBX oma kontole, 3X rohkem tasuta PBX iga päev ning eksklusiivse kuldse ${tagSuffix} märgi nime taha!`,
+                onConfirm: async () => {
+                    // Activate Plus tier
+                    setUserPlusTier(username, tier);
+                    // Add bonus PBX
+                    yardService.addYards(bonusPbx, `Playard Plus ${is2000 ? '2000' : '500'} tellimus (+${bonusPbx} PBX)`);
+                    // Update auth display and header
+                    if (profile) {
+                        updateAuthDisplay(profile);
+                    }
+                    window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: profile }));
+
+                    const btnEl = btn as HTMLElement;
+                    const prevText = btnEl.textContent;
+                    btnEl.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
+                    btnEl.style.borderColor = '#2ecc71';
+                    btnEl.style.color = '#0b1118';
+                    btnEl.innerHTML = `✅ Aktiveeritud! (+${bonusPbx} PBX)`;
+                    setTimeout(() => {
+                        if (prevText) btnEl.innerHTML = prevText;
+                        btnEl.style.background = '';
+                        btnEl.style.borderColor = '';
+                        btnEl.style.color = '';
+                    }, 4000);
+                }
+            });
         });
     });
 

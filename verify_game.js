@@ -14118,6 +14118,54 @@ await (async () => {
             }
             console.log("   ✅ Ad Player dynamically displays player's advertised game verified!");
 
+            // 31. Test Playard Plus 500 & Plus 2000 (Golden (P) and (2P00) tags & subscription)
+            console.log("31. Testing Playard Plus 500 & Plus 2000 (Golden (P) and (2P00) tags)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const plusTestResults = await page.evaluate(async () => {
+                window.__AUTO_CONFIRM_YARD_PURCHASE__ = true;
+
+                // Open PBX Store Modal
+                const pbxBtn = document.getElementById('btn-hub-playbux');
+                pbxBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+
+                const plusSection = document.getElementById('playard-plus-section');
+                const plus500Btn = document.querySelector('.btn-buy-plus-plan[data-tier="plus500"]');
+                const plus2000Btn = document.querySelector('.btn-buy-plus-plan[data-tier="plus2000"]');
+
+                const hasPlusSection = !!plusSection;
+                const hasPlus500Btn = !!plus500Btn;
+                const hasPlus2000Btn = !!plus2000Btn;
+
+                // Click Plus 500 subscription
+                plus500Btn?.click();
+                await new Promise(r => setTimeout(r, 300));
+
+                const userEmailEl = document.getElementById('user-email');
+                const hasPlus500Tag = userEmailEl?.innerHTML.includes('(P)') && userEmailEl?.innerHTML.includes('#ffd32a');
+
+                // Click Plus 2000 subscription
+                plus2000Btn?.click();
+                await new Promise(r => setTimeout(r, 300));
+
+                const hasPlus2000Tag = userEmailEl?.innerHTML.includes('(2P00)') && userEmailEl?.innerHTML.includes('#ffd32a');
+
+                return {
+                    hasPlusSection,
+                    hasPlus500Btn,
+                    hasPlus2000Btn,
+                    hasPlus500Tag,
+                    hasPlus2000Tag
+                };
+            });
+            console.log("   Playard Plus Test Results:", plusTestResults);
+            if (!plusTestResults.hasPlusSection || !plusTestResults.hasPlus500Btn || !plusTestResults.hasPlus2000Btn || !plusTestResults.hasPlus500Tag || !plusTestResults.hasPlus2000Tag) {
+                throw new Error("Playard Plus tests failed: " + JSON.stringify(plusTestResults));
+            }
+            console.log("   ✅ Playard Plus 500 (P) and Plus 2000 (2P00) golden tags verified!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
         } catch(err) { console.error("Verification failed:", err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
 })();

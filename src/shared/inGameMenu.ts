@@ -13,6 +13,7 @@
 
 import { addPlayerReport } from './playerReports';
 import { serverManager } from './serverManager';
+import { getUserPlusTier, formatUsernameWithPlusPlain } from './plusMembership';
 
 export interface PlayardMenuOptions {
     gameTitle?: string;
@@ -33,6 +34,7 @@ export function getMyDisplayNameAndRole(): { myNameDisplay: string; isOwner: boo
     let currentUserName = 'Mängija';
     let isOwner = false;
     let isVerified = false;
+    let plusTier = 'none';
 
     try {
         const raw = localStorage.getItem('playard_current_user_profile');
@@ -49,6 +51,7 @@ export function getMyDisplayNameAndRole(): { myNameDisplay: string; isOwner: boo
             } else if (p.isVerified) {
                 isVerified = true;
             }
+            plusTier = getUserPlusTier(uname);
         }
     } catch (e) {}
 
@@ -57,8 +60,9 @@ export function getMyDisplayNameAndRole(): { myNameDisplay: string; isOwner: boo
         myNameDisplay = 'Playard Owner 👑 ✔ (Sina)';
     } else {
         const cleanBaseName = currentUserName.replace(/👑.*$/, '').replace(/✔.*$/, '').replace(/\(Sina\)/i, '').trim() || 'Mängija';
+        const withPlus = formatUsernameWithPlusPlain(cleanBaseName, plusTier as any);
         const tag = isVerified ? ' ✔' : '';
-        myNameDisplay = `${cleanBaseName}${tag} (Sina)`;
+        myNameDisplay = `${withPlus}${tag} (Sina)`;
     }
 
     return { myNameDisplay, isOwner, isVerified };
@@ -457,11 +461,14 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
 
                 const isSelf = idx === 0 || pName.includes('(Sina)');
                 const cleanName = pName.replace(/^[^\w\s]+/, '').replace(/✔.*$/, '').replace(/👑.*$/, '').trim();
+                const formattedPName = pName
+                    .replace(/\(2P00\)/g, '<span style="color: #ffd32a; font-weight: 900; text-shadow: 0 0 10px rgba(255,211,42,0.8);">(2P00)</span>')
+                    .replace(/\(P\)/g, '<span style="color: #ffd32a; font-weight: 900; text-shadow: 0 0 10px rgba(255,211,42,0.8);">(P)</span>');
 
                 row.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         <span style="font-size: 0.75rem; color: #00f2fe; flex-shrink: 0;">#${idx + 1}</span>
-                        <span style="color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${pName}</span>
+                        <span style="color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${formattedPName}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                         <span style="font-size: 0.7rem; color: #2ecc71; background: rgba(46, 204, 113, 0.12); padding: 1px 6px; border-radius: 4px;">🟢 Sees</span>

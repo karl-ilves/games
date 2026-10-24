@@ -127,7 +127,8 @@ export function isOwnerUser(profileOrName?: any): boolean {
 }
 
 import { isPlayerVerified, getVerifiedPlayers, saveVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer, toggleVerifiedPlayer } from './shared/verifiedPlayers';
-export { isPlayerVerified, getVerifiedPlayers, saveVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer, toggleVerifiedPlayer };
+import { getUserPlusTier, formatUsernameWithPlusPlain, formatUsernameWithPlusHtml, setUserPlusTier } from './shared/plusMembership';
+export { isPlayerVerified, getVerifiedPlayers, saveVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer, toggleVerifiedPlayer, getUserPlusTier, formatUsernameWithPlusPlain, formatUsernameWithPlusHtml, setUserPlusTier };
 
 export function formatOwnerNametag(name: string, isOwner?: boolean): string {
     if (!name) return '';
@@ -632,7 +633,9 @@ export function updateAuthDisplay(profile: UserProfile | null) {
             const emailSubtitle = (!isInternalEmail && !isOwner && profile.email) 
                 ? ` <span style="font-size: 0.8rem; color: #718093;">(${profile.email})</span>` 
                 : '';
-            emailSpan.innerHTML = `<strong>${profile.displayName}</strong>${emailSubtitle}`;
+            const plusTier = getUserPlusTier(profile.username);
+            const formattedDisplay = formatUsernameWithPlusHtml(profile.displayName, plusTier);
+            emailSpan.innerHTML = `<strong>${formattedDisplay}</strong>${emailSubtitle}`;
         }
         window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: profile }));
         ensureGlobalOwnerCheckmarkUI();
