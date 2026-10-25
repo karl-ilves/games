@@ -89,6 +89,8 @@ export type AiIntentType =
     | 'COPILOT_ADVISE'
     | 'IMAGE_GENERATION'
     | 'PYGA_BUILD'
+    | 'CODE_GENERATE'
+    | 'CONVERT_TO_GAME'
     | 'HELP_OR_CHAT';
 
 

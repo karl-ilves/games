@@ -380,6 +380,65 @@ export class StepPlanner {
             ];
         }
 
+        if (command.intent === 'CONVERT_TO_GAME') {
+            return [
+                {
+                    id: 'step-game-1',
+                    title: 'Mängija avatari, füüsika ja alguspunkti (Spawn) seadistamine',
+                    description: 'Paigutatakse mängija alguskoordinaadid, hüppejõud ja kaamera jälgimine.',
+                    status: 'pending',
+                    actionType: 'setup_player'
+                },
+                {
+                    id: 'step-game-2',
+                    title: 'Mängu eesmärgi (Quest), ajalimiidi ja reeglite genereerimine',
+                    description: 'Määratakse võidu- ja kaotustingimused ning 120s ajalimiit.',
+                    status: 'pending',
+                    actionType: 'setup_rules'
+                },
+                {
+                    id: 'step-game-3',
+                    title: 'Interaktiivsete kristallmüntide ja võiduvärava (Goal) paigutamine',
+                    description: 'Luuakse heliefektidega kogutavad esemed ja võiduvärav.',
+                    status: 'pending',
+                    actionType: 'spawn_collectibles'
+                },
+                {
+                    id: 'step-game-4',
+                    title: 'Reaalajas mängutsükli skriptide ja HUD liidese aktiveerimine',
+                    description: 'Seotakse eluriba, skoori loendur ja võidufanfaar.',
+                    status: 'pending',
+                    actionType: 'activate_hud'
+                }
+            ];
+        }
+
+        if (command.intent === 'CODE_GENERATE') {
+            return [
+                {
+                    id: 'step-code-1',
+                    title: 'Mänguloogika nõuete ja mehaanikate analüüs',
+                    description: 'Tuvastatakse vajalikud funktsioonid, sündmused ja füüsikavalemid.',
+                    status: 'pending',
+                    actionType: 'analyze_code'
+                },
+                {
+                    id: 'step-code-2',
+                    title: 'TypeScript/JavaScript mänguskripti ja klasside süntees',
+                    description: 'Genereeritakse veavaba, optimeeritud ja kommenteeritud kood.',
+                    status: 'pending',
+                    actionType: 'synthesize_code'
+                },
+                {
+                    id: 'step-code-3',
+                    title: 'Koodi turvakontroll ja õpetusjuhiste koostamine',
+                    description: 'Koostatakse samm-sammuline õpetus, kuidas koodi 3D mängus kasutada.',
+                    status: 'pending',
+                    actionType: 'document_code'
+                }
+            ];
+        }
+
         // Generic fallback steps
         return [
             {

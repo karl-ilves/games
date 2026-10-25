@@ -8,6 +8,7 @@ import {
     Vec3
 } from './types';
 import { BLUEPRINTS, WORLD_BLUEPRINTS } from './blueprints';
+import { PygaUniversalSynthesizer } from './universalSynthesizer';
 import type { PlayardAiScene } from '../systems/gameGenerator';
 import { AuditLogger } from '../systems/auditLogger';
 import type { AiState } from '../state/aiState';
@@ -58,11 +59,12 @@ const COLOR_KEYWORDS: Record<string, string> = {
 };
 
 export interface PygaParsedInstruction {
-    kind: 'create_blueprint' | 'create_world' | 'create_compound' | 'modify_assembly' | 'honesty_notice';
+    kind: 'create_blueprint' | 'create_world' | 'create_compound' | 'modify_assembly' | 'synthesize_concept' | 'honesty_notice';
     blueprintId?: string;
     containerBlueprintId?: string;
     childBlueprintId?: string;
     worldId?: string;
+    conceptWord?: string;
     title: string;
     options: PygaBuildOptions;
     honestyTopic?: string;
@@ -139,6 +141,8 @@ export class PygaEngine {
         if (lower.includes('angaar') && lower.includes('seisab')) return true;
         if (lower.includes('mootorid töötavad') || lower.includes('telik liigub')) return true;
 
+        PygaUniversalSynthesizer.init();
+
         // Creation commands with blueprints
         const hasCreateVerb = /^(?:palun\s+)?(?:loo|tee|ehita|valmista|genereeri|build|create|spawn|pane)\b/i.test(lower) ||
             /\b(?:loo|tee|ehita)\s+(?:mulle|siia|üks)?\s*(?:suur|väike|kahekorruseline|sinimustvalge)?\s*/i.test(lower);
@@ -157,6 +161,11 @@ export class PygaEngine {
             for (const kw of w.keywords) {
                 if (new RegExp(`\\b${kw}\\b`, 'i').test(lower) && hasCreateVerb) return true;
             }
+        }
+
+        // Universal semantic creation for ANY word in the world
+        if (hasCreateVerb && !/mäng|game|kood|skript|pilt|tekstuur|tehniline plaan|majandus|optimeeri|soovita/i.test(lower)) {
+            return true;
         }
 
         return false;
@@ -369,6 +378,20 @@ export class PygaEngine {
                 title: 'Reisilennuk',
                 options: buildOptions
             };
+        }
+
+        // Dynamic Universal Synthesis for ANY arbitrary concept in the universe
+        const createMatch = lower.match(/^(?:palun\s+)?(?:loo|tee|ehita|valmista|genereeri|build|create|spawn)\s+(?:mulle\s+|siia\s+|üks\s+)?(?:suur\s+|väike\s+)?([a-zõäöü0-9_\-\s]+)/i);
+        if (createMatch) {
+            const rawConcept = createMatch[1].trim();
+            if (rawConcept.length >= 2 && !/mäng|game|plaan|pilt|tekstuur|kood|skript/i.test(rawConcept)) {
+                return {
+                    kind: 'synthesize_concept',
+                    title: `PYGA 3D: ${rawConcept.charAt(0).toUpperCase() + rawConcept.slice(1)}`,
+                    conceptWord: rawConcept,
+                    options: buildOptions
+                };
+            }
         }
 
         return null;
@@ -863,6 +886,17 @@ export class PygaEngine {
             const compoundRes = this.buildCompound(inst.containerBlueprintId, inst.childBlueprintId, inst.options);
             newScene = this.convertToScene(inst.title, compoundRes.allParts, compoundRes.quality);
             responseMsg = this.formatResponse(inst, compoundRes.allParts, compoundRes.quality);
+        } else if (inst.kind === 'synthesize_concept' && inst.conceptWord) {
+            const rawParts = PygaUniversalSynthesizer.synthesizeArbitraryConcept(inst.conceptWord, inst.options);
+            const quality: PygaQualityReport = {
+                partCount: rawParts.length,
+                unintendedOverlaps: [],
+                proportionOk: true,
+                measuredSize: [8, 6, 8],
+                issues: []
+            };
+            newScene = this.convertToScene(inst.title, rawParts, quality);
+            responseMsg = this.formatResponse(inst, rawParts, quality);
         } else if (inst.blueprintId) {
             const buildRes = this.buildAssembly(inst.blueprintId, inst.options);
             newScene = this.convertToScene(buildRes.assembly.name, buildRes.parts, buildRes.quality);

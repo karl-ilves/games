@@ -22,6 +22,8 @@ import {
 import { PlayardSkySystem } from '../../../shared/skySystem';
 import { PlayardSpatialGeometryEngine } from '../../../shared/spatialGeometryEngine';
 import { PygaEngine } from '../pyga/pygaEngine';
+import { PlayardGameMaker } from './gameMaker';
+import { PlayardCodeSynthesizer } from './codeSynthesizer';
 
 
 export interface ParsedCommand {
@@ -125,6 +127,41 @@ export class ConversationEngine {
         }
 
         const lower = text.toLowerCase();
+ 
+        // 0.01 Make this a playable game ("Tee see mänguks!", "Muuda see mänguks!")
+        if (PlayardGameMaker.isGameMakerRequest(text)) {
+            return {
+                intent: 'CONVERT_TO_GAME',
+                confidence: 0.99,
+                rawText: text,
+                safetyReport
+            };
+        }
+
+        // 0.02 Code Assistance & Debugging / Bug Fixing
+        if (/paranda kood|leia koodiviga|leia viga|optimeeri kood|koodi parandamine|fix code|repair code|debug code/i.test(lower)) {
+            return {
+                intent: 'CODE_ASSIST',
+                confidence: 0.95,
+                rawText: text,
+                parameters: {
+                    code: text
+                },
+                safetyReport
+            };
+        }
+
+        // 0.03 Universal Game Code Synthesizer & Tutor
+        if (PlayardCodeSynthesizer.isCodeRequest(text)) {
+            const synthesized = PlayardCodeSynthesizer.synthesizeCode(text);
+            return {
+                intent: 'CODE_GENERATE',
+                confidence: 0.98,
+                rawText: text,
+                parameters: { synthesized },
+                safetyReport
+            };
+        }
 
         // 0. General Knowledge & Facts / Anti-Hallucination
         const generalAnswer = PlayardGeneralKnowledge.answerQuestion(text);
@@ -173,22 +210,6 @@ export class ConversationEngine {
                 parameters: {
                     stage: stageKey,
                     guidance: PLAYARD_PIPELINE_STAGES[stageKey]
-                },
-                safetyReport
-            };
-        }
-
-        // 0.2 Code Assistance & Debugging / Bug Fixing
-        if (
-            /paranda kood|leia koodiviga|leia viga|optimeeri kood|koodi parandamine|fix code|repair code|debug code/i.test(lower) ||
-            (/kirjuta kood|tee skript|write code|loo kood/i.test(lower) && !/mäng|game/i.test(lower))
-        ) {
-            return {
-                intent: 'CODE_ASSIST',
-                confidence: 0.95,
-                rawText: text,
-                parameters: {
-                    code: text
                 },
                 safetyReport
             };
@@ -289,6 +310,24 @@ export class ConversationEngine {
                 rawText: text,
                 actionTarget: 'sky',
                 parameters: skyParsed.parameters,
+                safetyReport
+            };
+        }
+
+        // Universal Creation Intent: handles robots, dinosaurs, tanks, space, submarines, volcanoes, pyramids, or any custom game idea
+        if (
+            /robot|mech|dino|t-rex|tank|kosmos|ufo|space|tulnuk|vulkaan|lava|püramiid|pyramid/i.test(lower) &&
+            /tee|loo|ehita|valmista|create|make|build/i.test(lower)
+        ) {
+            return {
+                intent: 'CREATE_GAME',
+                confidence: 0.98,
+                rawText: text,
+                parameters: {
+                    theme: 'universal_custom',
+                    title: text.replace(/^(?:palun\s+)?(?:tee|loo|ehita|valmista|create|build|make)\s+/i, '').trim(),
+                    rawPrompt: text
+                },
                 safetyReport
             };
         }
@@ -496,23 +535,6 @@ export class ConversationEngine {
             };
         }
 
-        // Universal Creation Intent: handles robots, dinosaurs, tanks, space, submarines, volcanoes, pyramids, or any custom game idea
-        if (
-            /robot|mech|dino|t-rex|tank|kosmos|ufo|space|tulnuk|allvee|submarine|vulkaan|lava|püramiid|pyramid/i.test(lower) &&
-            /tee|loo|ehita|valmista|create|make|build/i.test(lower)
-        ) {
-            return {
-                intent: 'CREATE_GAME',
-                confidence: 0.98,
-                rawText: text,
-                parameters: {
-                    theme: 'universal_custom',
-                    title: text.replace(/^(?:palun\s+)?(?:tee|loo|ehita|valmista|create|build|make)\s+/i, '').trim(),
-                    rawPrompt: text
-                },
-                safetyReport
-            };
-        }
 
         if (/tee|loo|ehita|valmista|create|make|build/i.test(lower) && /mäng|game|maailm|areen|seiklus/i.test(lower)) {
             return {

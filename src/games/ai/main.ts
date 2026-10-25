@@ -10,16 +10,10 @@ import { ChatView } from './ui/chatView';
 import { StepTrackerView } from './ui/stepTrackerView';
 import { yardService } from '../../shared/yardService';
 import { aiTierService, AI_TIER_CONFIGS } from '../../shared/aiTierService';
-import {
-    AiCodeAndSystemEngine,
-    PlayardNaturalLanguageCompiler,
-    PlayardEconomyAndBalanceEngine,
-    PlayardPerformanceOptimizer,
-    PlayardCoPilotAdvisor,
-    type TechnicalGamePlan
-} from '../../shared/playardAiKnowledge';
+import { AiCodeAndSystemEngine, PlayardNaturalLanguageCompiler, PlayardEconomyAndBalanceEngine, PlayardPerformanceOptimizer, PlayardCoPilotAdvisor } from '../../shared/playardAiKnowledge';
 import { PlayardImageGenerationEngine } from '../../shared/imageGenerationEngine';
 import { PygaEngine } from './pyga/pygaEngine';
+import { PlayardGameMaker } from './systems/gameMaker';
 
 class PlayardAiApp {
     public state: AiState;
@@ -35,9 +29,7 @@ class PlayardAiApp {
 
     private initUI() {
         const viewportContainer = document.getElementById('ai-viewport-container');
-        if (viewportContainer) {
-            this.viewport = new PreviewViewport(viewportContainer);
-        }
+        if (viewportContainer) this.viewport = new PreviewViewport(viewportContainer);
 
         const stepTrackerContainer = document.getElementById('ai-step-tracker-container');
         if (stepTrackerContainer) {
@@ -57,15 +49,9 @@ class PlayardAiApp {
         }
 
         this.state.subscribe(() => {
-            if (this.chatView) {
-                this.chatView.render(this.state.getMessages(), this.state.getIsBuilding());
-            }
-            if (this.stepTracker) {
-                this.stepTracker.render(this.state.getCurrentSteps(), this.state.getIsBuilding());
-            }
-            if (this.viewport) {
-                this.viewport.renderScene(this.state.getActiveScene());
-            }
+            if (this.chatView) this.chatView.render(this.state.getMessages(), this.state.getIsBuilding());
+            if (this.stepTracker) this.stepTracker.render(this.state.getCurrentSteps(), this.state.getIsBuilding());
+            if (this.viewport) this.viewport.renderScene(this.state.getActiveScene());
             this.updateHeaderBadges();
         });
     }
@@ -99,12 +85,10 @@ class PlayardAiApp {
             const modal = document.getElementById('modal-test-play');
             if (modal) modal.style.display = 'flex';
         });
-
         document.getElementById('btn-close-test-play')?.addEventListener('click', () => {
             const modal = document.getElementById('modal-test-play');
             if (modal) modal.style.display = 'none';
         });
-
 
         // Close Code Modal
         document.getElementById('btn-close-code-modal')?.addEventListener('click', () => {
@@ -224,6 +208,11 @@ class PlayardAiApp {
             const img = PlayardImageGenerationEngine.generateImage(parsed.parameters?.prompt || parsed.rawText, parsed.parameters);
             return this.state.addAiMessage(`🎨 **Playard AI Pildigeneraator:**\nValmis pilt teemal "${img.title}" (${img.width}x${img.height} px, stiil: ${img.style})!`, { generatedImage: img });
         }
+        if (parsed.intent === 'CODE_GENERATE' && parsed.parameters?.synthesized) {
+            const s = parsed.parameters.synthesized;
+            const feats = s.features.map((f: string) => `• ${f}`).join('\n');
+            return this.state.addAiMessage(`💻 **Playard Koodimootor:** ${s.title}\n\n${s.explanation}\n\n**Funktsionaalsus:**\n${feats}\n\n💡 **Kasutamine:** ${s.howToUse}`, { codeSnippet: s.code });
+        }
 
         // Planeeri sammud
         const steps = StepPlanner.planSteps(parsed);
@@ -231,7 +220,12 @@ class PlayardAiApp {
         this.state.setIsBuilding(true);
 
         try {
-            if (parsed.intent === 'PYGA_BUILD') {
+            if (parsed.intent === 'CONVERT_TO_GAME') {
+                const res = PlayardGameMaker.transformToPlayableGame(this.state.getActiveScene(), parsed.rawText);
+                this.state.setActiveScene(res.scene);
+                this.updateHeaderBadges();
+                this.state.addAiMessage(res.summary, { codeSnippet: res.script });
+            } else if (parsed.intent === 'PYGA_BUILD') {
                 await PygaEngine.handleBuild(parsed, this.state, () => this.updateHeaderBadges());
             } else if (parsed.intent === 'CREATE_GAME') {
                 await this.executeGameCreation(parsed);

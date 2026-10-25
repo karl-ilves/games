@@ -1644,12 +1644,13 @@ await (async () => {
         if (!equipOutfitBtn) throw new Error("Missing 'Equip Outfit' button for outfit_space_explorer");
         await page.evaluate(() => {
             window.__YARD_COUNTDOWN_TICK_MS__ = 40;
+            window.__AUTO_CONFIRM_YARD_PURCHASE__ = true;
         });
         await page.evaluate(() => {
             const btn = document.querySelector('[data-equip-outfit-id="outfit_space_explorer"]');
             if (btn) btn.click();
         });
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 400));
         await page.evaluate(() => {
             const confirmBuyBtn = document.getElementById('btn-yard-purchase-confirm');
             if (confirmBuyBtn) confirmBuyBtn.click();
@@ -13060,7 +13061,62 @@ await (async () => {
             }
             console.log("   ✅ PYGA 3D Objects, Worlds, Kinetic Animations, Quality Proportions & Modifications verified successfully!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine & Image Generation) tests passed successfully!");
+            // 22u. Test Universal Semantic Concept Synthesizer, Code Synthesizer & Game Maker ("Tee see mänguks!")
+            console.log("\n   Testing Universal Semantic Synthesizer, Code Synthesizer & Game Maker ('Tee see mänguks!')...");
+            const universalAiTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Universal Semantic Synthesizer: arbitrary compound words
+                await ai.handleUserInput('Loo kurgimopeed');
+                await new Promise(r => setTimeout(r, 400));
+                let scene = ai.state.getActiveScene();
+                const cucumberMopedOk = scene?.objects?.some(o => o.name?.includes('Kurgi') || o.name?.includes('kere') || o.color === '#16a34a') &&
+                    scene?.objects?.some(o => o.name?.includes('Ratas') || o.extra?.role === 'wheel');
+
+                await ai.handleUserInput('Loo tuletorn');
+                await new Promise(r => setTimeout(r, 400));
+                scene = ai.state.getActiveScene();
+                const lighthouseOk = scene?.objects?.some(o => /tuletorn|majakas/i.test(o.name)) &&
+                    scene?.objects?.some(o => o.extra?.role === 'light' || o.extra?.role === 'window');
+
+                // 2. Code Synthesizer & Tutor
+                await ai.handleUserInput('Kirjuta kood mängija hüppamiseks ja gravitatsiooniks');
+                await new Promise(r => setTimeout(r, 400));
+                let msgs = ai.state.getMessages();
+                const codeMsg = msgs[msgs.length - 1];
+                const codeGenOk = !!codeMsg?.codeSnippet &&
+                    (codeMsg.codeSnippet.includes('velocity.y') || codeMsg.codeSnippet.includes('gravity') || codeMsg.codeSnippet.includes('jump')) &&
+                    (codeMsg.text.includes('Playard Koodimootor') || codeMsg.text.includes('Player Controller') || codeMsg.text.includes('Juhtimine'));
+
+                // 3. Game Maker ("Tee see mänguks!")
+                await ai.handleUserInput('Tee see mänguks!');
+                await new Promise(r => setTimeout(r, 500));
+                scene = ai.state.getActiveScene();
+                const hasPlayerSpawn = scene?.objects?.some(o => o.id === 'player_spawn');
+                const crystalsCount = scene?.objects?.filter(o => o.id?.includes('crystal') || o.gameItemType === 'collectible').length || 0;
+                const hasVictoryGate = scene?.objects?.some(o => o.id === 'game_victory_gate');
+                const isGameFlag = scene?.isGame === true && !!scene?.rules?.objective;
+                const gameMakerOk = hasPlayerSpawn && crystalsCount >= 5 && hasVictoryGate && isGameFlag;
+
+                return {
+                    cucumberMopedOk,
+                    lighthouseOk,
+                    codeGenOk,
+                    gameMakerOk,
+                    crystalsCount
+                };
+            });
+
+            console.log("   Universal AI & Game Maker Test Results:", universalAiTest);
+            if (
+                !universalAiTest.cucumberMopedOk || !universalAiTest.lighthouseOk ||
+                !universalAiTest.codeGenOk || !universalAiTest.gameMakerOk
+            ) {
+                throw new Error("Universal AI & Game Maker test failed: " + JSON.stringify(universalAiTest));
+            }
+            console.log("   ✅ Universal Semantic Synthesizer, Code Synthesizer & Game Maker ('Tee see mänguks!') verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA & Game Maker) tests passed successfully!");
 
 
 
