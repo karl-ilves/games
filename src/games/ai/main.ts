@@ -17,6 +17,7 @@ import { PlayardGameMaker } from './systems/gameMaker';
 import { GeminiCloudEngine } from './systems/geminiCloudEngine';
 import { NeuralKeyModal } from './ui/neuralKeyModal';
 import { PlayardGameMatrixEngine } from './systems/gameMatrixEngine';
+import { PlayardAutoEnhanceEngine } from './systems/autoEnhanceEngine';
 
 class PlayardAiApp {
     public state: AiState;
@@ -70,6 +71,11 @@ class PlayardAiApp {
             localStorage.setItem('playard_pending_review_games', JSON.stringify(games));
             this.state.addSystemMessage(`📋 Mäng "${scene.title}" on esitatud Playard Ownerile ülevaatamiseks!`);
             alert(`✅ Mäng "${scene.title}" edukalt saadetud ülevaatamisele!`);
+        });
+
+        // Auto-Enhance Magic Wand button
+        document.getElementById('btn-auto-enhance')?.addEventListener('click', () => {
+            this.handleUserInput('Tee see mäng põnevamaks! Lisa efektid, valgus ja boonused');
         });
 
         // Open in Creator Studio
@@ -164,22 +170,13 @@ class PlayardAiApp {
             return;
         }
 
-        // Üldteadmised, teadus, kosmos, tehnoloogia või anti-hallutsinatsiooni selgitus
-        if (parsed.intent === 'GENERAL_KNOWLEDGE') {
-            this.state.addAiMessage(parsed.parameters?.answer || 'Siin on vastus sinu küsimusele.');
-            return;
-        }
+        if (parsed.intent === 'GENERAL_KNOWLEDGE') return this.state.addAiMessage(parsed.parameters?.answer || 'Siin on vastus sinu küsimusele.');
 
         // 7-etapiline arenduskonveier (IDEA -> PLAAN -> LOOMINE -> KOOD -> TESTIMINE -> PARANDAMINE -> AVALDAMINE)
-        if (parsed.intent === 'PIPELINE_STEP') {
-            const guidance = parsed.parameters?.guidance;
-            const stage = parsed.parameters?.stage;
-            if (guidance) {
-                const checklist = guidance.checklist.map((c: string) => `• ${c}`).join('\n');
-                const msg = `🚀 **Playard Arenduskonveier: Etapp ${guidance.stageNumber} / 7 – ${guidance.title} (${stage})**\n\n${guidance.description}\n\n📋 **Tegevuskava & Kontrollnimekiri:**\n${checklist}\n\n💡 **Soovitus:** ${guidance.actionPrompt}`;
-                this.state.addAiMessage(msg, guidance.codeTemplate ? { codeSnippet: guidance.codeTemplate } : undefined);
-                return;
-            }
+        if (parsed.intent === 'PIPELINE_STEP' && parsed.parameters?.guidance) {
+            const g = parsed.parameters.guidance;
+            const msg = `🚀 **Playard Arenduskonveier: Etapp ${g.stageNumber} / 7 – ${g.title} (${parsed.parameters?.stage})**\n\n${g.description}\n\n📋 **Tegevuskava & Kontrollnimekiri:**\n${g.checklist.map((c: string) => `• ${c}`).join('\n')}\n\n💡 **Soovitus:** ${g.actionPrompt}`;
+            return this.state.addAiMessage(msg, g.codeTemplate ? { codeSnippet: g.codeTemplate } : undefined);
         }
 
         // Koodi parandamine, silumine ja optimeerimine
@@ -235,6 +232,11 @@ class PlayardAiApp {
                 this.state.setActiveScene(res.scene);
                 this.updateHeaderBadges();
                 this.state.addAiMessage(res.summary, { codeSnippet: res.script });
+            } else if (parsed.intent === 'AUTO_ENHANCE') {
+                const res = PlayardAutoEnhanceEngine.enhanceScene(this.state.getActiveScene(), parsed.rawText);
+                this.state.setActiveScene(res.scene);
+                this.updateHeaderBadges();
+                this.state.addAiMessage(res.summary, res.script ? { codeSnippet: res.script } : undefined);
             } else if (parsed.intent === 'PYGA_BUILD') {
                 await PygaEngine.handleBuild(parsed, this.state, () => this.updateHeaderBadges());
             } else if (parsed.intent === 'CREATE_GAME') {

@@ -13253,7 +13253,53 @@ await (async () => {
             }
             console.log("   ✅ Combinatorial 100,000+ Game Matrix Engine & Universal Synthesizer verified successfully!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000 & 100,000+ Game Matrix) tests passed successfully!");
+            // 22x. Test AI Auto-Enhance Magic Wand ("Tee põnevamaks!")
+            console.log("\n   Testing AI Auto-Enhance Magic Wand ('Tee põnevamaks!')...");
+            const enhanceTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Verify #btn-auto-enhance button exists
+                const btnEnhance = document.getElementById('btn-auto-enhance');
+                const btnExists = !!btnEnhance && btnEnhance.offsetParent !== null;
+
+                // 2. Trigger auto-enhance via AI input
+                await ai.handleUserInput('Tee see mäng põnevamaks! Lisa efektid, sära ja maagia');
+                await new Promise(r => setTimeout(r, 500));
+
+                const scene = ai.state.getActiveScene();
+                const isEnhancedFlag = scene?.isEnhanced === true;
+                const hasCrystals = scene?.objects?.some(o => o.id?.includes('enhance_crystal_'));
+                const hasTorches = scene?.objects?.some(o => o.id?.includes('enhance_torch_'));
+                const hasFlames = scene?.objects?.some(o => o.id?.includes('enhance_flame_'));
+                const hasSpeedBoost = scene?.playerConfig?.speed >= 9.5;
+
+                const msgs = ai.state.getMessages();
+                const lastMsg = msgs[msgs.length - 1];
+                const responseOk = !!lastMsg && lastMsg.text.includes('Võlukepp rakendatud') && !!lastMsg.codeSnippet;
+
+                return {
+                    btnExists,
+                    isEnhancedFlag,
+                    hasCrystals,
+                    hasTorches,
+                    hasFlames,
+                    hasSpeedBoost,
+                    responseOk
+                };
+            });
+
+            console.log("   Auto-Enhance Magic Wand Test Results:", enhanceTest);
+            if (
+                !enhanceTest.btnExists || !enhanceTest.isEnhancedFlag ||
+                !enhanceTest.hasCrystals || !enhanceTest.hasTorches ||
+                !enhanceTest.hasFlames || !enhanceTest.hasSpeedBoost ||
+                !enhanceTest.responseOk
+            ) {
+                throw new Error("Auto-Enhance Magic Wand test failed: " + JSON.stringify(enhanceTest));
+            }
+            console.log("   ✅ AI Auto-Enhance Magic Wand ('Tee põnevamaks!') verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix & Magic Wand) tests passed successfully!");
 
 
 

@@ -26,6 +26,7 @@ import { PlayardGameMaker } from './gameMaker';
 import { PlayardCodeSynthesizer } from './codeSynthesizer';
 import { GeminiCloudEngine } from './geminiCloudEngine';
 import { PlayardGameMatrixEngine } from './gameMatrixEngine';
+import { PlayardAutoEnhanceEngine } from './autoEnhanceEngine';
 
 
 export interface ParsedCommand {
@@ -175,6 +176,16 @@ export class ConversationEngine {
         if (PlayardGameMaker.isGameMakerRequest(text)) {
             return {
                 intent: 'CONVERT_TO_GAME',
+                confidence: 0.99,
+                rawText: text,
+                safetyReport
+            };
+        }
+
+        // 0.015 Auto-Enhance & Magic Wand ("Tee põnevamaks!", "Võlukepp", "Lisa efektid ja sära")
+        if (PlayardAutoEnhanceEngine.isEnhanceRequest(text)) {
+            return {
+                intent: 'AUTO_ENHANCE',
                 confidence: 0.99,
                 rawText: text,
                 safetyReport

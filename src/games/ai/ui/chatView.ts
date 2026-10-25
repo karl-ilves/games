@@ -166,6 +166,9 @@ export class ChatView {
             </div>
             <!-- Quick Suggestion Chips -->
             <div style="padding: 6px 14px; display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid rgba(255,255,255,0.06);">
+                <button type="button" class="ai-suggestion-chip" data-prompt="Tee see mäng põnevamaks! Lisa efektid ja maagia" style="white-space: nowrap; background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(168, 85, 247, 0.2)); border: 1px solid rgba(234, 179, 8, 0.5); color: #fde047; border-radius: 12px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-weight: 700;">
+                    🪄 ✨ Tee põnevamaks!
+                </button>
                 <button type="button" class="ai-suggestion-chip" data-prompt="Loo pilt draakonist" style="white-space: nowrap; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8; border-radius: 12px; padding: 4px 10px; font-size: 11px; cursor: pointer;">
                     🎨 Loo pilt draakonist
                 </button>

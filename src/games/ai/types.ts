@@ -93,6 +93,7 @@ export type AiIntentType =
     | 'CONVERT_TO_GAME'
     | 'NEURAL_QUERY'
     | 'GAME_MATRIX_GENERATE'
+    | 'AUTO_ENHANCE'
     | 'HELP_OR_CHAT';
 
 
