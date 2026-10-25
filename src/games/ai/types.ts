@@ -92,6 +92,7 @@ export type AiIntentType =
     | 'CODE_GENERATE'
     | 'CONVERT_TO_GAME'
     | 'NEURAL_QUERY'
+    | 'GAME_MATRIX_GENERATE'
     | 'HELP_OR_CHAT';
 
 

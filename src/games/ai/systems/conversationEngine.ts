@@ -25,6 +25,7 @@ import { PygaEngine } from '../pyga/pygaEngine';
 import { PlayardGameMaker } from './gameMaker';
 import { PlayardCodeSynthesizer } from './codeSynthesizer';
 import { GeminiCloudEngine } from './geminiCloudEngine';
+import { PlayardGameMatrixEngine } from './gameMatrixEngine';
 
 
 export interface ParsedCommand {
@@ -129,20 +130,33 @@ export class ConversationEngine {
 
         const lower = text.toLowerCase();
 
-        // 0.005 AI IQ Status & Gemini 8000 Key Management
-        if (/ai tase|ai iq|närvimootor|gemini võti|api võti|hybrid 8000|hinnang|tase 8000/i.test(lower)) {
+        // 0.005 AI IQ Status & Gemini 8000 Key Management & 100,000 Game Matrix Stats
+        if (/ai tase|ai iq|närvimootor|gemini võti|api võti|hybrid 8000|hinnang|tase 8000|100\s*000\s*mäng|mängu maatriks|800\s*000/i.test(lower)) {
             const keyMatch = text.match(/(?:võti|key)[:\s]+([A-Za-z0-9_\-]{20,})/i);
             if (keyMatch) {
                 GeminiCloudEngine.getInstance().setApiKey(keyMatch[1]);
             }
             const status = GeminiCloudEngine.getInstance().getStatus();
+            const matrixTotal = PlayardGameMatrixEngine.getTotalUniqueGamesCount();
             return {
                 intent: 'GENERAL_KNOWLEDGE',
                 confidence: 0.99,
                 rawText: text,
                 parameters: {
-                    answer: `🧠 **Playard AI Arhitektuur:**\n\n• **Aktiivne tase:** ${status.label}\n• **IQ Skoor:** ${status.iqScore} / 10 000\n• **Kirjeldus:** ${status.description}\n\n💡 *Nõuanne: Gemini API võtme salvestamiseks kirjuta "Gemini võti: <sinu-võti>". Testimiseks töötab ka automaatne režiim.*`
+                    answer: `🧠 **Playard AI Arhitektuur & Mängumaatriks:**\n\n• **Aktiivne režiim:** ${status.label}\n• **IQ Skoor:** ${status.iqScore} / 10 000\n• **🎲 Mängumaatriks:** ${matrixTotal.toLocaleString()} unikaalset 3D mängu (20 žanrit × 25 keskkonda × 20 eesmärki × 20 ohtu × 15 mutaatorit = 3 000 000 variatsiooni!)\n• **🎨 Universaalne Looja:** Oskab luua mis tahes 3D objekti (sõidukid, olendid, ehitised, relvad, mööbel, tehnika, maagia).\n• **Kirjeldus:** ${status.description}\n\n💡 *Proovi: kirjuta "Loo mäng nr 42891" või "Loo küberpunk parkuur mäng"!*`
                 },
+                safetyReport
+            };
+        }
+
+        // 0.007 Combinatorial 100,000+ Game Matrix Engine
+        if (PlayardGameMatrixEngine.isMatrixRequest(text)) {
+            const perm = PlayardGameMatrixEngine.resolveFromPrompt(text);
+            return {
+                intent: 'GAME_MATRIX_GENERATE',
+                confidence: 0.99,
+                rawText: text,
+                parameters: { permutation: perm },
                 safetyReport
             };
         }

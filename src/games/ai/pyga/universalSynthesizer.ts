@@ -709,10 +709,15 @@ export class PygaUniversalSynthesizer {
         }
 
         // Determine visual archetype based on semantics
-        const isVehicle = /mopeed|auto|laev|sõiduk|kopter|rakett|taldrik|vanker|kelk|masin/i.test(lower);
-        const isCreature = /loom|koer|kass|madu|draakon|lind|kala|ämblik|elukas|koll|tulnukas|memm/i.test(lower);
-        const isBuilding = /maja|tehas|koda|torn|palee|onn|angaar|varjend|pood/i.test(lower);
-        const isFood = /pitsa|kook|tort|leib|sai|burger|õun|toit/i.test(lower);
+        const isVehicle = /mopeed|auto|laev|sõiduk|kopter|rakett|taldrik|vanker|kelk|masin|tank|traktor/i.test(lower);
+        const isCreature = /loom|koer|kass|madu|draakon|lind|kala|ämblik|elukas|koll|tulnukas|memm|dino|hunt|karu|koletis|hobune|tiiger/i.test(lower);
+        const isBuilding = /maja|tehas|koda|torn|palee|onn|angaar|varjend|pood|loss|kindlus|sild|bunker|kirik/i.test(lower);
+        const isFood = /pitsa|kook|tort|leib|sai|burger|õun|toit|jäätis|banaan|kartul|salat|jook/i.test(lower);
+        const isWeapon = /mõõk|vibu|püss|laser|kahur|vasar|sau|kirves|relv|tera|oda|granaat/i.test(lower);
+        const isFurniture = /tool|laud|voodi|kapp|riiul|diivan|lamp|troon|pink|kamin/i.test(lower);
+        const isPlantOrNature = /puu|lill|kaktus|põõsas|seen|taim|kalju|kivi|kristall|mägi/i.test(lower);
+        const isCosmicOrTech = /portaal|satelliit|radar|reaktor|antenn|arvuti|ekraan|droon|mootor/i.test(lower);
+        const isMagicOrTreasure = /laegas|kirst|altar|talisman|aare|võlukepp|amulett/i.test(lower);
 
         if (isVehicle) {
             // Main body
@@ -760,6 +765,63 @@ export class PygaUniversalSynthesizer {
                 material: 'wood',
                 interactive: 'door',
                 anim: { kind: 'swing', axis: 'y', amplitude: 1.4, trigger: 'click' }
+            }));
+        } else if (isWeapon) {
+            // Weapon Handle / Grip
+            parts.push(createPart('dyn_w_grip', `${word} - Käepide`, 'frame', 'cylinder', [0.3 * s, 1.6 * s, 0.3 * s], [0, 0.8 * s, 0], '#78350f', { material: 'wood' }));
+            // Crossguard / Core
+            parts.push(createPart('dyn_w_guard', 'Kaitse / Ristraud', 'frame', 'box', [1.8 * s, 0.25 * s, 0.5 * s], [0, 1.6 * s, 0], '#94a3b8', { material: 'metal' }));
+            // Blade / Barrel / Beam
+            parts.push(createPart('dyn_w_blade', `${word} - Tera / Kahuritoru`, 'weapon', 'box', [0.5 * s, 4.2 * s, 0.15 * s], [0, 3.8 * s, 0], primaryColor, {
+                material: 'metal',
+                anim: { kind: 'spin', axis: 'y', speed: 1.5 }
+            }));
+            // Energy tip
+            parts.push(createPart('dyn_w_tip', 'Energiaots', 'light', 'cone', [0.5 * s, 1.0 * s, 0.5 * s], [0, 6.2 * s, 0], '#38bdf8', { material: 'neon' }));
+        } else if (isFurniture) {
+            // Seat or Tabletop
+            parts.push(createPart('dyn_f_top', `${word} - Pind / Iste`, 'frame', 'box', [3.0 * s, 0.3 * s, 3.0 * s], [0, 1.8 * s, 0], primaryColor, { material: 'wood' }));
+            // 4 Legs
+            const fLegs = [
+                { id: '1', x: -1.2, z: 1.2 },
+                { id: '2', x: 1.2, z: 1.2 },
+                { id: '3', x: -1.2, z: -1.2 },
+                { id: '4', x: 1.2, z: -1.2 }
+            ];
+            fLegs.forEach(fl => {
+                parts.push(createPart(`dyn_f_leg_${fl.id}`, `Jalg ${fl.id}`, 'wheel', 'cylinder', [0.25 * s, 1.8 * s, 0.25 * s], [fl.x * s, 0.9 * s, fl.z * s], '#451a03', { material: 'wood' }));
+            });
+            // Backrest
+            parts.push(createPart('dyn_f_back', 'Seljatugi', 'wall', 'box', [3.0 * s, 2.4 * s, 0.3 * s], [0, 3.1 * s, -1.35 * s], primaryColor, { material: 'wood' }));
+        } else if (isPlantOrNature) {
+            // Trunk / Stem / Rock Base
+            parts.push(createPart('dyn_p_stem', `${word} - Tüvi / Baas`, 'fuselage', 'cylinder', [1.2 * s, 4.0 * s, 1.2 * s], [0, 2.0 * s, 0], '#78350f', { material: 'wood' }));
+            // Foliage / Crystal Cluster
+            parts.push(createPart('dyn_p_crown', `${word} - Võra / Kristallid`, 'roof', 'cone', [4.5 * s, 5.0 * s, 4.5 * s], [0, 5.8 * s, 0], primaryColor, { material: 'standard' }));
+            // Flower / Light Bud
+            parts.push(createPart('dyn_p_bud', 'Õis / Valgushelendus', 'light', 'sphere', [1.2 * s, 1.2 * s, 1.2 * s], [0, 8.4 * s, 0], '#f43f5e', {
+                material: 'neon',
+                anim: { kind: 'bob', speed: 2.0, amplitude: 0.3 }
+            }));
+        } else if (isCosmicOrTech) {
+            // Tech Generator Pedestal
+            parts.push(createPart('dyn_c_base', `${word} - Tehniline Alus`, 'frame', 'cylinder', [3.2 * s, 1.0 * s, 3.2 * s], [0, 0.5 * s, 0], '#0f172a', { material: 'metal' }));
+            // Holographic / Energy Core Ring
+            parts.push(createPart('dyn_c_core', `${word} - Kvanttuum`, 'light', 'cylinder', [2.4 * s, 3.0 * s, 2.4 * s], [0, 2.8 * s, 0], primaryColor, {
+                material: 'neon',
+                anim: { kind: 'spin', axis: 'y', speed: 4.0 }
+            }));
+            // Sensor Emitter
+            parts.push(createPart('dyn_c_sensor', 'Sensoriantenn', 'light', 'cone', [1.4 * s, 2.2 * s, 1.4 * s], [0, 5.0 * s, 0], '#38bdf8', { material: 'metal' }));
+        } else if (isMagicOrTreasure) {
+            // Chest / Altar Body
+            parts.push(createPart('dyn_m_body', `${word} - Kere`, 'frame', 'box', [3.2 * s, 2.0 * s, 2.2 * s], [0, 1.0 * s, 0], primaryColor, { material: 'wood' }));
+            // Golden Locks & Borders
+            parts.push(createPart('dyn_m_lock', 'Kuldne Lukk & Raam', 'decoration', 'box', [0.8 * s, 0.8 * s, 0.3 * s], [0, 1.4 * s, 1.15 * s], '#eab308', { material: 'metal' }));
+            // Floating Magic Orb
+            parts.push(createPart('dyn_m_orb', 'Hõljuv Võlukristall', 'light', 'sphere', [1.2 * s, 1.2 * s, 1.2 * s], [0, 3.2 * s, 0], '#a855f7', {
+                material: 'neon',
+                anim: { kind: 'bob', speed: 2.5, amplitude: 0.4 }
             }));
         } else if (isFood) {
             // Circular tray/plate

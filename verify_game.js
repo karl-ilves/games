@@ -13186,7 +13186,74 @@ await (async () => {
             }
             console.log("   ✅ Playard AI Hybrid 8000 Architecture (Gemini Neural Engine & 12 Complete Game Mechanics) verified successfully!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker & Hybrid 8000 Gemini Neural Engine) tests passed successfully!");
+            // 22w. Test Combinatorial 100,000+ Game Matrix Engine & Universal Expanded Synthesizer
+            console.log("\n   Testing Combinatorial 100,000+ Game Matrix Engine & Universal Expanded Synthesizer...");
+            const matrixTest = await page.evaluate(async () => {
+                const ai = window.playardAi;
+
+                // 1. Test Game Matrix status query
+                await ai.handleUserInput('mis on 100 000 mängu maatriks ja ai tase');
+                await new Promise(r => setTimeout(r, 400));
+                let msgs = ai.state.getMessages();
+                const statusMsg = msgs[msgs.length - 1];
+                const matrixInfoOk = !!statusMsg && statusMsg.text.includes('Mängumaatriks') && statusMsg.text.includes('3 000 000');
+
+                // 2. Test generating game by exact number (#42891)
+                await ai.handleUserInput('Loo mäng nr 42891');
+                await new Promise(r => setTimeout(r, 500));
+                let scene = ai.state.getActiveScene();
+                const gameByNumOk = scene?.isGame === true &&
+                    scene?.gameNumber === 42891 &&
+                    scene.objects.some(o => o.id === 'player_spawn') &&
+                    scene.objects.some(o => o.id?.includes('obj_target_')) &&
+                    scene.objects.some(o => o.id?.includes('hazard_trap_')) &&
+                    scene.objects.some(o => o.id === 'game_victory_gate');
+
+                msgs = ai.state.getMessages();
+                const gameMsg = msgs[msgs.length - 1];
+                const scriptOk = !!gameMsg?.codeSnippet && gameMsg.codeSnippet.includes('PlayardMatrixGame_42891');
+
+                // 3. Test generating game by genre & biome keywords
+                await ai.handleUserInput('Loo küberpunk parkuur mäng');
+                await new Promise(r => setTimeout(r, 500));
+                scene = ai.state.getActiveScene();
+                const keywordGameOk = scene?.isGame === true &&
+                    scene.objects.some(o => o.id === 'player_spawn') &&
+                    (scene.title.includes('Parkuur') || scene.title.includes('Cyberpunk') || scene.title.includes('Neo-Tokyo'));
+
+                // 4. Test Universal 3D Synthesizer for arbitrary weapon archetype
+                await ai.handleUserInput('Loo laser-mõõk');
+                await new Promise(r => setTimeout(r, 500));
+                scene = ai.state.getActiveScene();
+                const weaponArchetypeOk = scene.objects.some(o => o.name?.includes('laser-mõõk') || o.name?.includes('Tera') || o.name?.includes('Käepide'));
+
+                // 5. Test Universal 3D Synthesizer for arbitrary plant/nature archetype
+                await ai.handleUserInput('Loo kristallpuu');
+                await new Promise(r => setTimeout(r, 500));
+                scene = ai.state.getActiveScene();
+                const natureArchetypeOk = scene.objects.some(o => o.name?.includes('kristallpuu') || o.name?.includes('Võra') || o.name?.includes('Tüvi'));
+
+                return {
+                    matrixInfoOk,
+                    gameByNumOk,
+                    scriptOk,
+                    keywordGameOk,
+                    weaponArchetypeOk,
+                    natureArchetypeOk
+                };
+            });
+
+            console.log("   100,000+ Game Matrix & Universal Synthesizer Test Results:", matrixTest);
+            if (
+                !matrixTest.matrixInfoOk || !matrixTest.gameByNumOk ||
+                !matrixTest.scriptOk || !matrixTest.keywordGameOk ||
+                !matrixTest.weaponArchetypeOk || !matrixTest.natureArchetypeOk
+            ) {
+                throw new Error("100,000+ Game Matrix test failed: " + JSON.stringify(matrixTest));
+            }
+            console.log("   ✅ Combinatorial 100,000+ Game Matrix Engine & Universal Synthesizer verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000 & 100,000+ Game Matrix) tests passed successfully!");
 
 
 

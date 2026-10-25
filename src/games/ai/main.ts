@@ -16,6 +16,7 @@ import { PygaEngine } from './pyga/pygaEngine';
 import { PlayardGameMaker } from './systems/gameMaker';
 import { GeminiCloudEngine } from './systems/geminiCloudEngine';
 import { NeuralKeyModal } from './ui/neuralKeyModal';
+import { PlayardGameMatrixEngine } from './systems/gameMatrixEngine';
 
 class PlayardAiApp {
     public state: AiState;
@@ -213,12 +214,14 @@ class PlayardAiApp {
         }
         if (parsed.intent === 'CODE_GENERATE' && parsed.parameters?.synthesized) {
             const s = parsed.parameters.synthesized;
-            const feats = s.features.map((f: string) => `• ${f}`).join('\n');
-            return this.state.addAiMessage(`💻 **Playard Koodimootor:** ${s.title}\n\n${s.explanation}\n\n**Funktsionaalsus:**\n${feats}\n\n💡 **Kasutamine:** ${s.howToUse}`, { codeSnippet: s.code });
+            return this.state.addAiMessage(`💻 **Playard Koodimootor:** ${s.title}\n\n${s.explanation}\n\n**Funktsionaalsus:**\n${s.features.map((f: string) => `• ${f}`).join('\n')}\n\n💡 **Kasutamine:** ${s.howToUse}`, { codeSnippet: s.code });
         }
         if (parsed.intent === 'NEURAL_QUERY') {
             const nRes = await GeminiCloudEngine.getInstance().queryNeural(parsed.rawText, this.state.getActiveScene());
             return this.state.addAiMessage(nRes.text, nRes.codeSnippet ? { codeSnippet: nRes.codeSnippet } : undefined);
+        }
+        if (parsed.intent === 'GAME_MATRIX_GENERATE') {
+            return PlayardGameMatrixEngine.handleBuild(parsed, this.state, () => this.updateHeaderBadges());
         }
 
         // Planeeri sammud
@@ -331,14 +334,9 @@ class PlayardAiApp {
     }
 
     public applyTexture(url: string) {
-        if (this.viewport?.applyTextureToActiveObject(url)) {
-            this.state.addAiMessage('🧱 Rakendasin genereeritud tekstuuri aktiivsele 3D objektile!');
-        }
+        if (this.viewport?.applyTextureToActiveObject(url)) this.state.addAiMessage('🧱 Rakendasin genereeritud tekstuuri aktiivsele 3D objektile!');
     }
-
-    public triage(input: string) {
-        return ConversationEngine.triageInput(input);
-    }
+    public triage(input: string) { return ConversationEngine.triageInput(input); }
 }
 
 // Start application
