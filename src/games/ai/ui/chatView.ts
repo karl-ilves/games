@@ -1,4 +1,5 @@
 import type { AiMessage } from '../types';
+import { ModelsPlansModal } from './modelsPlansModal';
 
 export class ChatView {
     private container: HTMLElement;
@@ -23,6 +24,7 @@ export class ChatView {
         this.onApplyTexture = callbacks.onApplyTexture;
 
         this.bindEvents();
+        ModelsPlansModal.getInstance().init();
     }
 
     private bindEvents() {
@@ -195,9 +197,12 @@ export class ChatView {
                 </button>
             </div>
             <!-- Input Area -->
-            <form id="ai-chat-form" style="display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.1); background: #0f172a;">
+            <form id="ai-chat-form" style="display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.1); background: #0f172a; align-items: center;">
                 <input id="ai-chat-input" type="text" placeholder="Kirjelda mängu või muudatust..." autocomplete="off" style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 14px; color: #ffffff; font-size: 13px; outline: none;" />
-                <button id="ai-chat-submit" type="submit" style="background: #3b82f6; color: #ffffff; border: none; border-radius: 8px; padding: 0 16px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <button id="btn-ai-model-plus" type="button" title="AI Mudelid & Limiidid (Playard game ai 1.1)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0;">
+                    +
+                </button>
+                <button id="ai-chat-submit" type="submit" style="background: #3b82f6; color: #ffffff; border: none; border-radius: 8px; padding: 0 16px; height: 38px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                     <span>Saada</span>
                 </button>
             </form>

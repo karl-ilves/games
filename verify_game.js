@@ -13299,7 +13299,78 @@ await (async () => {
             }
             console.log("   ✅ AI Auto-Enhance Magic Wand ('Tee põnevamaks!') verified successfully!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix & Magic Wand) tests passed successfully!");
+            // 22y. Test AI Models & Plans Modal (Plus button, Playard game ai 1.1, circular progress ring, and plans)
+            console.log("\n   Testing AI Models & Plans Modal (Plus button, Playard game ai 1.1 & Limit Ring)...");
+            const modelsModalTest = await page.evaluate(async () => {
+                const plusBtn = document.getElementById('btn-ai-model-plus');
+                const modal = document.getElementById('modal-ai-models-plans');
+                const btnClose = document.getElementById('btn-close-models-modal');
+                const btnTabPlans = document.getElementById('btn-tab-plans');
+                const btnTabModel = document.getElementById('btn-tab-model');
+
+                if (!plusBtn || !modal) {
+                    return { ok: false, reason: 'Plus button or modal not found in DOM' };
+                }
+
+                // Initial state
+                const initialHidden = window.getComputedStyle(modal).display === 'none';
+
+                // Click Plus Button
+                plusBtn.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const modalOpened = window.getComputedStyle(modal).display !== 'none';
+                const bodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
+
+                const hasActiveModelName = bodyHtml.includes('Playard game ai 1.1');
+                const hasSvgRing = bodyHtml.includes('<svg') && bodyHtml.includes('stroke-dasharray');
+                const hasRemainingCounter = bodyHtml.includes('jäänud');
+
+                // Switch to Plans tab
+                btnTabPlans?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const plansHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
+                const hasPlans = plansHtml.includes('FREE') && plansHtml.includes('PRO') && plansHtml.includes('PLUS') && plansHtml.includes('VIP');
+                const hasTierButtons = document.querySelectorAll('.btn-select-tier').length >= 4;
+
+                // Switch back to Model tab
+                btnTabModel?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const switchedBackModel = (document.getElementById('models-modal-dynamic-body')?.innerHTML || '').includes('Playard game ai 1.1');
+
+                // Close modal
+                btnClose?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const modalClosed = window.getComputedStyle(modal).display === 'none';
+
+                return {
+                    ok: true,
+                    initialHidden,
+                    modalOpened,
+                    hasActiveModelName,
+                    hasSvgRing,
+                    hasRemainingCounter,
+                    hasPlans,
+                    hasTierButtons,
+                    switchedBackModel,
+                    modalClosed
+                };
+            });
+
+            console.log("   AI Models & Plans Modal Test Results:", modelsModalTest);
+            if (
+                !modelsModalTest.ok || !modelsModalTest.initialHidden ||
+                !modelsModalTest.modalOpened || !modelsModalTest.hasActiveModelName ||
+                !modelsModalTest.hasSvgRing || !modelsModalTest.hasRemainingCounter ||
+                !modelsModalTest.hasPlans || !modelsModalTest.hasTierButtons ||
+                !modelsModalTest.switchedBackModel || !modelsModalTest.modalClosed
+            ) {
+                throw new Error("AI Models & Plans Modal test failed: " + JSON.stringify(modelsModalTest));
+            }
+            console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1 & Limit Ring) verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand & Models/Plans Modal) tests passed successfully!");
 
 
 
