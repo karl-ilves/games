@@ -24,6 +24,7 @@ import { PlayardSpatialGeometryEngine } from '../../../shared/spatialGeometryEng
 import { PygaEngine } from '../pyga/pygaEngine';
 import { PlayardGameMaker } from './gameMaker';
 import { PlayardCodeSynthesizer } from './codeSynthesizer';
+import { GeminiCloudEngine } from './geminiCloudEngine';
 
 
 export interface ParsedCommand {
@@ -127,6 +128,34 @@ export class ConversationEngine {
         }
 
         const lower = text.toLowerCase();
+
+        // 0.005 AI IQ Status & Gemini 8000 Key Management
+        if (/ai tase|ai iq|närvimootor|gemini võti|api võti|hybrid 8000|hinnang|tase 8000/i.test(lower)) {
+            const keyMatch = text.match(/(?:võti|key)[:\s]+([A-Za-z0-9_\-]{20,})/i);
+            if (keyMatch) {
+                GeminiCloudEngine.getInstance().setApiKey(keyMatch[1]);
+            }
+            const status = GeminiCloudEngine.getInstance().getStatus();
+            return {
+                intent: 'GENERAL_KNOWLEDGE',
+                confidence: 0.99,
+                rawText: text,
+                parameters: {
+                    answer: `🧠 **Playard AI Arhitektuur:**\n\n• **Aktiivne tase:** ${status.label}\n• **IQ Skoor:** ${status.iqScore} / 10 000\n• **Kirjeldus:** ${status.description}\n\n💡 *Nõuanne: Gemini API võtme salvestamiseks kirjuta "Gemini võti: <sinu-võti>". Testimiseks töötab ka automaatne režiim.*`
+                },
+                safetyReport
+            };
+        }
+
+        // 0.008 Explicit Neural Query
+        if (/^(?:küsi geminilt|küsi närvimootorilt|neural|gemini)\s*[:,\s]/i.test(lower) && GeminiCloudEngine.getInstance().isNeuralModeActive()) {
+            return {
+                intent: 'NEURAL_QUERY',
+                confidence: 0.99,
+                rawText: text.replace(/^(?:küsi geminilt|küsi närvimootorilt|neural|gemini)\s*[:,\s]\s*/i, ''),
+                safetyReport
+            };
+        }
  
         // 0.01 Make this a playable game ("Tee see mänguks!", "Muuda see mänguks!")
         if (PlayardGameMaker.isGameMakerRequest(text)) {

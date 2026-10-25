@@ -91,6 +91,7 @@ export type AiIntentType =
     | 'PYGA_BUILD'
     | 'CODE_GENERATE'
     | 'CONVERT_TO_GAME'
+    | 'NEURAL_QUERY'
     | 'HELP_OR_CHAT';
 
 

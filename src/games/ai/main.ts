@@ -14,6 +14,8 @@ import { AiCodeAndSystemEngine, PlayardNaturalLanguageCompiler, PlayardEconomyAn
 import { PlayardImageGenerationEngine } from '../../shared/imageGenerationEngine';
 import { PygaEngine } from './pyga/pygaEngine';
 import { PlayardGameMaker } from './systems/gameMaker';
+import { GeminiCloudEngine } from './systems/geminiCloudEngine';
+import { NeuralKeyModal } from './ui/neuralKeyModal';
 
 class PlayardAiApp {
     public state: AiState;
@@ -54,6 +56,7 @@ class PlayardAiApp {
             if (this.viewport) this.viewport.renderScene(this.state.getActiveScene());
             this.updateHeaderBadges();
         });
+        NeuralKeyModal.getInstance().init();
     }
 
     private initEventListeners() {
@@ -212,6 +215,10 @@ class PlayardAiApp {
             const s = parsed.parameters.synthesized;
             const feats = s.features.map((f: string) => `• ${f}`).join('\n');
             return this.state.addAiMessage(`💻 **Playard Koodimootor:** ${s.title}\n\n${s.explanation}\n\n**Funktsionaalsus:**\n${feats}\n\n💡 **Kasutamine:** ${s.howToUse}`, { codeSnippet: s.code });
+        }
+        if (parsed.intent === 'NEURAL_QUERY') {
+            const nRes = await GeminiCloudEngine.getInstance().queryNeural(parsed.rawText, this.state.getActiveScene());
+            return this.state.addAiMessage(nRes.text, nRes.codeSnippet ? { codeSnippet: nRes.codeSnippet } : undefined);
         }
 
         // Planeeri sammud

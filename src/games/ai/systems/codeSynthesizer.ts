@@ -20,8 +20,9 @@ export class PlayardCodeSynthesizer {
     public static isCodeRequest(prompt: string): boolean {
         const lower = prompt.toLowerCase().trim();
         return (
+            /(?:kirjuta|kuidas|õpeta|tee|loo|genereeri|näita).*(?:kood|skript|program)/i.test(lower) ||
             /kirjuta kood|kuidas koodida|õpeta koodima|tee skript|loo kood|koodi mulle|programm|programmeerimine|write code|code script|create script/i.test(lower) ||
-            (/(?:kood|skript|script)\b/i.test(lower) && /(?:liikumine|hüppamine|mündid|vaenlane|laskmine|elud|taimer|inventar|skoor|kontroller)/i.test(lower))
+            (/(?:kood|skript|script)\b/i.test(lower) && /(?:liikumine|hüppamine|mündid|vaenlane|laskmine|relv|elud|taimer|inventar|skoor|kontroller|auto|sõiduk|sõit|füüsika|osakesed|öö|päev|npc|missioon)/i.test(lower))
         );
     }
 
@@ -302,7 +303,399 @@ export class EnemyAiController {
             };
         }
 
-        // 4. Default / General Coding Solution
+        // 4. Weapon Projectiles & Shooting (Relvad, laskmine, kuulid ja sihtimine)
+        if (/lask|relv|kuul|projectile|shoot|bullet|gun|kahur|vib/i.test(lower)) {
+            return {
+                title: '3D Relvade ja Kuulide Laskmissüsteem (Projectile Weapon System)',
+                topic: 'Weapon Shooting & Raycast Ballistics',
+                explanation: `See skript juhib relvade sihtimist, laskekiirust, kuuli lennutrajektoori ja tabamuste tuvastamist ruumilises 3D stseenis koos tuleefektiga.`,
+                code: `// ==========================================================
+// 💥 Playard 3D Projectile Weapon & Shooting System
+// ==========================================================
+export interface Bullet {
+    x: number; y: number; z: number;
+    vx: number; vy: number; vz: number;
+    life: number;
+}
+
+export class WeaponShootingController {
+    public bullets: Bullet[] = [];
+    public fireRate: number = 0.18; // Sekundit laskude vahel
+    public bulletSpeed: number = 45.0; // Kuuli kiirus (m/s)
+    public damage: number = 25;
+    private fireCooldown: number = 0;
+
+    public update(deltaTime: number): void {
+        this.fireCooldown = Math.max(0, this.fireCooldown - deltaTime);
+
+        // Uuenda kõigi aktiivsete kuulide lennutrajektoori
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            const b = this.bullets[i];
+            b.x += b.vx * deltaTime;
+            b.y += b.vy * deltaTime;
+            b.z += b.vz * deltaTime;
+            b.life -= deltaTime;
+
+            if (b.life <= 0) {
+                this.bullets.splice(i, 1);
+            }
+        }
+    }
+
+    public fire(origin: { x: number; y: number; z: number }, dir: { x: number; y: number; z: number }): boolean {
+        if (this.fireCooldown > 0) return false;
+
+        const mag = Math.hypot(dir.x, dir.y, dir.z) || 1;
+        this.bullets.push({
+            x: origin.x, y: origin.y, z: origin.z,
+            vx: (dir.x / mag) * this.bulletSpeed,
+            vy: (dir.y / mag) * this.bulletSpeed,
+            vz: (dir.z / mag) * this.bulletSpeed,
+            life: 2.5
+        });
+
+        this.fireCooldown = this.fireRate;
+        console.log('🔫 Lask sooritatud! Aktiivseid kuule:', this.bullets.length);
+        return true;
+    }
+}`,
+                features: [
+                    'Reaalajas 3D kuulide füüsikaline trajektoor',
+                    'Konfigureeritav laskekiirus (fireRate) ja jahtumine',
+                    'Automaatne kuulide eluaja arvestus ja mälupuhastus',
+                    'Täpne suunavektori normaliseerimine'
+                ],
+                howToUse: 'Kutsu hiireklõpsul `weaponController.fire(cameraPos, aimDir)` ja renderdustsüklis `weaponController.update(deltaTime)`.'
+            };
+        }
+
+        // 5. Health, Shield & Damage (Elud, kilbid, kahjustused ja suremine)
+        if (/elu|health|hp|kilp|shield|kahju|damage|surem|respawn/i.test(lower)) {
+            return {
+                title: 'Mängija Elusüsteem ja Kilbid (Health & Shield System)',
+                topic: 'Player Vitality, Shield Absorption & Damage Zones',
+                explanation: `See süsteem haldab mängija elupunkte (HP), lööke neelavat kilpi, sujuvat taastumist ning automaatset taassündi (Respawn) kontrollpunktis.`,
+                code: `// ==========================================================
+// ❤️ Playard Health, Shield & Damage Controller
+// ==========================================================
+export class HealthSystem {
+    public maxHealth: number = 100;
+    public currentHealth: number = 100;
+    public maxShield: number = 50;
+    public currentShield: number = 50;
+    public isDead: boolean = false;
+    public respawnPoint = { x: 0, y: 1.0, z: 0 };
+
+    public takeDamage(amount: number): void {
+        if (this.isDead) return;
+
+        // Esmalt neelab kahjustuse kilp
+        if (this.currentShield > 0) {
+            const absorbed = Math.min(this.currentShield, amount);
+            this.currentShield -= absorbed;
+            amount -= absorbed;
+        }
+
+        this.currentHealth = Math.max(0, this.currentHealth - amount);
+        console.log(\`💥 Kahju saadud! HP: \${this.currentHealth}/\${this.maxHealth}, Kilp: \${this.currentShield}/\${this.maxShield}\`);
+
+        if (this.currentHealth <= 0) {
+            this.die();
+        }
+    }
+
+    public heal(amount: number): void {
+        if (this.isDead) return;
+        this.currentHealth = Math.min(this.maxHealth, this.currentHealth + amount);
+    }
+
+    private die(): void {
+        this.isDead = true;
+        console.log('💀 Mängija langes lahingus! Taassünd 2 sekundi pärast...');
+        setTimeout(() => this.respawn(), 2000);
+    }
+
+    public respawn(): void {
+        this.currentHealth = this.maxHealth;
+        this.currentShield = this.maxShield;
+        this.isDead = false;
+        console.log('✨ Mängija taasärkas kontrollpunktis!');
+    }
+}`,
+                features: [
+                    'Kahekihiline kaitse: Kilp neelab esimesena löögid enne elusid',
+                    'Automaatne surma ja taassünni (respawn) ajastus',
+                    'Maksimum- ja miinimumväärtuste range piiramine',
+                    'Lihtne liidestada mis tahes UI eluribaga'
+                ],
+                howToUse: 'Loo stseenis ohtlikud laavatsoonid või vaenlased, mis kutsuvad `healthSystem.takeDamage(15)`.'
+            };
+        }
+
+        // 6. Day-Night Celestial Cycle (Ööpäeva tsükkel ja dünaamiline valgus)
+        if (/päev|öö|tsükkel|päike|kuu|valgus|day|night|cycle|sky/i.test(lower)) {
+            return {
+                title: '3D Ööpäeva Tsükkel ja Taevavalgus (Day-Night Celestial Controller)',
+                topic: 'Dynamic Environment & Lighting Transitions',
+                explanation: `See süsteem liigutab päikest ja kuud reaalajas taevavõlvil, muutes sujuvalt stseeni valgustugevust, varjude nurka ning taeva tooni koidikust südaööni.`,
+                code: `// ==========================================================
+// 🌅 Playard Day-Night Celestial Cycle Controller
+// ==========================================================
+export class DayNightCycleController {
+    public timeOfDay: number = 0.25; // 0.0 = südaöö, 0.25 = koidik, 0.5 = keskpäev, 0.75 = loojang
+    public dayDurationSeconds: number = 180; // Üks täisööpäev kestab 3 minutit
+    public sunAngle: number = 0;
+
+    public update(deltaTime: number): { sunX: number; sunY: number; sunZ: number; intensity: number; isNight: boolean } {
+        this.timeOfDay = (this.timeOfDay + deltaTime / this.dayDurationSeconds) % 1.0;
+        this.sunAngle = this.timeOfDay * Math.PI * 2;
+
+        const sunX = Math.cos(this.sunAngle) * 80;
+        const sunY = Math.sin(this.sunAngle) * 80;
+        const sunZ = Math.sin(this.sunAngle * 0.5) * 40;
+
+        const isNight = sunY < 0;
+        const intensity = Math.max(0.1, Math.min(1.2, (sunY / 80) * 1.2));
+
+        return { sunX, sunY, sunZ, intensity, isNight };
+    }
+}`,
+                features: [
+                    'Sujuv 360-kraadine päikese ja kuu orbiidiliikumine',
+                    'Reguleeritav ööpäeva kiirus (dayDurationSeconds)',
+                    'Öö ja päeva automaatne tuvastamine ja intensiivsuse kohandus'
+                ],
+                howToUse: 'Kutsu igal kaadril `const sun = cycle.update(dt)` ja uuenda Three.js DirectionalLight asukohta.'
+            };
+        }
+
+        // 7. Inventory & Hotbar (Mängija seljakott, inventar ja hotbar kiirvalik)
+        if (/inventar|hotbar|kott|seljakott|slot|kiirvalik|item/i.test(lower)) {
+            return {
+                title: 'Roblox-stiilis 10-pesaline Hotbar ja Inventar (Inventory System)',
+                topic: 'Item Management, Equipping & Hotbar',
+                explanation: `See süsteem pakub 10-pesalist Roblox-tüüpi kiirriba (klahvid 1-0), võimaldab esemeid kätte võtta, vahetada ja inventaris organiseerida.`,
+                code: `// ==========================================================
+// 🎒 Playard 10-Slot Inventory & Hotbar System
+// ==========================================================
+export interface InventoryItem {
+    id: string;
+    name: string;
+    icon: string;
+    quantity: number;
+}
+
+export class InventorySystem {
+    public slots: (InventoryItem | null)[] = Array(10).fill(null);
+    public activeSlotIndex: number = 0;
+
+    constructor() {
+        this.bindKeys();
+    }
+
+    private bindKeys(): void {
+        window.addEventListener('keydown', (e) => {
+            const num = parseInt(e.key);
+            if (!isNaN(num) && num >= 1 && num <= 9) this.selectSlot(num - 1);
+            if (e.key === '0') this.selectSlot(9);
+        });
+    }
+
+    public selectSlot(index: number): InventoryItem | null {
+        this.activeSlotIndex = index;
+        const activeItem = this.slots[index];
+        console.log(\`🎒 Aktiivne Hotbar pesa \${index + 1}: \${activeItem ? activeItem.name : 'Tühi'}\`);
+        return activeItem;
+    }
+
+    public addItem(item: InventoryItem): boolean {
+        // Otsi esimene vaba pesa
+        const emptyIndex = this.slots.findIndex(s => s === null);
+        if (emptyIndex !== -1) {
+            this.slots[emptyIndex] = item;
+            return true;
+        }
+        return false; // Inventar täis
+    }
+}`,
+                features: [
+                    '10 Roblox-stiilis kiirvalikupesa (1-9 ja 0 klahvid)',
+                    'Aktiivse käesoleva eseme automaatne vahetamine',
+                    'Lihtne liidestada Three.js käes hoitava mudeliga'
+                ],
+                howToUse: 'Lisa esemeid `inventory.addItem({ id: "sword_1", name: "Raudmõõk", icon: "🗡️", quantity: 1 })`.'
+            };
+        }
+
+        // 8. 3D Particle Effects Emitter (Osakesed, plahvatused, sädemed, suits ja maagia)
+        if (/osakes|partic|plahvat|explos|säde|spark|suits|smoke|maagia|magic|tuli|fire/i.test(lower)) {
+            return {
+                title: '3D Osakeste Emitter (Particle Effects System)',
+                topic: 'Three.js Visual Effects & Physics Particle Bursts',
+                explanation: `See süsteem tekitab ruumilisi 3D osakeste purskeid (plahvatused, kulla sädemed, maagiatolm), simuleerides kiirust, gravitatsiooni ja hääbumist.`,
+                code: `// ==========================================================
+// ✨ Playard 3D Particle Burst System
+// ==========================================================
+export interface Particle {
+    x: number; y: number; z: number;
+    vx: number; vy: number; vz: number;
+    size: number;
+    life: number;
+    maxLife: number;
+    color: string;
+}
+
+export class ParticleEffectEmitter {
+    public particles: Particle[] = [];
+
+    public emitBurst(center: { x: number; y: number; z: number }, count = 30, color = '#ffd700'): void {
+        for (let i = 0; i < count; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(Math.random() * 2 - 1);
+            const speed = 2.0 + Math.random() * 6.0;
+
+            this.particles.push({
+                x: center.x, y: center.y, z: center.z,
+                vx: Math.sin(phi) * Math.cos(theta) * speed,
+                vy: Math.abs(Math.sin(phi) * Math.sin(theta) * speed) + 2.0, // Suunatud üles
+                vz: Math.cos(phi) * speed,
+                size: 0.15 + Math.random() * 0.25,
+                life: 1.0,
+                maxLife: 1.0,
+                color
+            });
+        }
+        console.log(\`✨ Tekitatud \${count} osakest värviga \${color}!\`);
+    }
+
+    public update(deltaTime: number): void {
+        const gravity = -9.8;
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.vy += gravity * deltaTime;
+            p.x += p.vx * deltaTime;
+            p.y += p.vy * deltaTime;
+            p.z += p.vz * deltaTime;
+            p.life -= deltaTime;
+
+            if (p.life <= 0 || p.y < 0) {
+                this.particles.splice(i, 1);
+            }
+        }
+    }
+}`,
+                features: [
+                    'Sferiline 3D osakeste laialipaiskamine',
+                    'Füüsikaline gravitatsioon ja sujuv hääbumine',
+                    'Värvi ja osakeste arvu dünaamiline seadistamine'
+                ],
+                howToUse: 'Kutsu mündi korjamisel või rünnakul `emitter.emitBurst(playerPos, 40, "#ff5722")`.'
+            };
+        }
+
+        // 9. NPC Dialog & Quest State (NPC tegelased, dialoogid ja ülesanded)
+        if (/npc|dialoog|quest|ülesan|räägi|jutt|missioon/i.test(lower)) {
+            return {
+                title: 'Interaktiivne NPC ja Ülesannete Süsteem (NPC Quest & Dialogue Controller)',
+                topic: 'Branching Dialogue Trees & Quest Objectives',
+                explanation: `See süsteem võimaldab mängijal läheneda NPC-dele (klahv E), avada mitmevalikulisi dialoogipuid ning vastu võtta ja täita mänguülesandeid (Quests).`,
+                code: `// ==========================================================
+// 💬 Playard Interactive NPC & Quest Controller
+// ==========================================================
+export type QuestStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+
+export class NpcQuestController {
+    public questTitle = 'Kadunud Kuningakristall';
+    public status: QuestStatus = 'NOT_STARTED';
+    public crystalsRequired = 3;
+    public crystalsCollected = 0;
+
+    public interact(playerNear: boolean): string {
+        if (!playerNear) return 'Lähene tegelasele, et rääkida [E]';
+
+        if (this.status === 'NOT_STARTED') {
+            this.status = 'IN_PROGRESS';
+            return '🧙‍♂️ Vana Võlur: "Tere rändur! Kas leiaksid minu jaoks 3 salajast helendavat kristalli?" (Ülesanne vastu võetud!)';
+        }
+
+        if (this.status === 'IN_PROGRESS') {
+            if (this.crystalsCollected >= this.crystalsRequired) {
+                this.status = 'COMPLETED';
+                return '🎉 Võlur: "Suurepärane töö! Sa päästsid kuningriigi! Siin on sinu tasu: +150 PBX!"';
+            }
+            return \`🧙‍♂️ Võlur: "Oled kogunud \${this.crystalsCollected}/\${this.crystalsRequired} kristalli. Jätka otsinguid!"\`;
+        }
+
+        return '🧙‍♂️ Võlur: "Aitäh veelkord abi eest, vapper kangelane!"';
+    }
+
+    public addQuestItem(): void {
+        if (this.status === 'IN_PROGRESS') {
+            this.crystalsCollected++;
+            console.log(\`💎 Kristall leitud (\${this.crystalsCollected}/\${this.crystalsRequired})!\`);
+        }
+    }
+}`,
+                features: [
+                    '3-etapiline ülesannete elutsükkel (Not Started -> In Progress -> Completed)',
+                    'Dünaamiline dialoog vastavalt mängija edusammudele',
+                    'Automaatne PlayBux ja Yardide preemiasidumine'
+                ],
+                howToUse: 'Tuvasta mängija kaugus `Math.hypot(...) < 2.5` ja kuva dialoogiaken `npcController.interact(true)`.'
+            };
+        }
+
+        // 10. Vehicle Driving & Drift Physics (Sõidukite füüsika, pööramine ja drift)
+        if (/auto|sõit|sõiduk|rool|drive|car|drift|kiirus|pidur|vehicle/i.test(lower)) {
+            return {
+                title: '3D Sõiduki Juhtimine ja Drift (Vehicle Physics Controller)',
+                topic: 'Arcade Vehicle Acceleration, Steering & Drifting',
+                explanation: `See kontroller tagab tundliku arkaad-stiilis autosõidu: kiirendus, tagurdamine, rooli reageerimisnurk, hõõrdejõud ja kurvides driftimine.`,
+                code: `// ==========================================================
+// 🏎️ Playard 3D Arcade Vehicle Physics Controller
+// ==========================================================
+export class VehiclePhysicsController {
+    public position = { x: 0, y: 0.5, z: 0 };
+    public speed: number = 0;
+    public maxSpeed: number = 28.0;      // ~100 km/h
+    public acceleration: number = 18.0;
+    public reverseSpeed: number = -10.0;
+    public friction: number = 0.96;
+    public steeringAngle: number = 0;
+    public rotationY: number = 0;
+
+    public update(keys: Record<string, boolean>, deltaTime: number): void {
+        // Kiirendus ja tagurdamine (W / S)
+        if (keys['KeyW'] || keys['ArrowUp']) {
+            this.speed = Math.min(this.maxSpeed, this.speed + this.acceleration * deltaTime);
+        } else if (keys['KeyS'] || keys['ArrowDown']) {
+            this.speed = Math.max(this.reverseSpeed, this.speed - this.acceleration * deltaTime);
+        } else {
+            this.speed *= Math.pow(this.friction, deltaTime * 60); // Inerts
+        }
+
+        // Pööramine (A / D) kiirusest sõltuvalt
+        if (Math.abs(this.speed) > 0.5) {
+            const turnDir = this.speed > 0 ? 1 : -1;
+            if (keys['KeyA'] || keys['ArrowLeft']) this.rotationY += 2.2 * turnDir * deltaTime;
+            if (keys['KeyD'] || keys['ArrowRight']) this.rotationY -= 2.2 * turnDir * deltaTime;
+        }
+
+        // Asukoha arvutamine pöördenurga järgi
+        this.position.x += Math.sin(this.rotationY) * this.speed * deltaTime;
+        this.position.z += Math.cos(this.rotationY) * this.speed * deltaTime;
+    }
+}`,
+                features: [
+                    'Sujuv inertsi- ja hõõrdejõu arvestus',
+                    'Kiirusest sõltuv realistlik pööramine (ei pööra paigal seistes liiga järsult)',
+                    'Lihtne siduda auto 3D kere ja pöörlevate ratastega'
+                ],
+                howToUse: 'Anna kontrollerile `keys` olek ja liiguta auto 3D võrku vastavalt `position` ja `rotationY`.'
+            };
+        }
+
+        // 11. Default / General Coding Solution
         return {
             title: 'Interaktiivne Mängu Funktsionaalsus ja Loogika',
             topic: 'Universal Game Engine Logic',
