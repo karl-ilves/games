@@ -272,6 +272,22 @@ export class ConversationEngine {
             };
         }
 
+        // 0.34 Image Capability Q&A ("kas sa oskad pilte teha", "kas sa saad piltide genereerimise lisada", "kuidas pilte genereerida")
+        if (
+            (/(?:kas sa|kuidas).*(?:pilt|joonista|illustratsioon)/i.test(lower) && /(?:saad|oskad|teha|luua|genereer|lisada|töötab)/i.test(lower)) ||
+            /^(?:kas saad pilt|piltide genereerimine|kuidas pilte luua)/i.test(lower)
+        ) {
+            return {
+                intent: 'GENERAL_KNOWLEDGE',
+                confidence: 0.99,
+                rawText: text,
+                parameters: {
+                    answer: `🎨 **Jah! Piltide genereerimine on Playard AI-sse juba täielikult lisatud ja kasutusvalmis!**\n\nSaad paluda mul luua:\n• 🖼️ **Pilte & illustratsioone:** *"Loo pilt draakonist kosmoses"*, *"Joonista robotlinn"*, *"Tee pilt piraadilaevast"*.\n• 🧱 **3D Tekstuure:** *"Loo kiviaia tekstuur"*, *"Loo laava tekstuur"*, *"Loo puidu muster"* – neid saad nupuvajutusega otse oma 3D stseeni mudelitele kanda!\n• 🏷️ **Mänguikoone & aumärke:** *"Tee mängu ikoon"*, *"Loo kuldne karikas"*, *"Loo kosmoselaeva märk"*.\n\nIga pildiga tuleb kaasa:\n1. 📥 **"Laadi alla"** nupp (PNG fail arvutisse).\n2. 🧱 **"Rakenda tekstuurina"** nupp (katab 3D stseenis valitud objekti pildiga).\n\n💡 *Proovi kohe! Kirjuta näiteks: **"Loo pilt draakonist"** või **"Loo kosmosebaasi pilt"**!*`
+                },
+                safetyReport
+            };
+        }
+
         // 0.35 Image & Texture Generation ("Loo pilt draakonist", "genereeri pilt", "joonista mõõk", "loo kiviaia tekstuur", "mängu ikoon")
         const isImageIntent =
             /(?:tekstuur|texture|ikoon|icon|märk|badge|thumbnail)\b/i.test(lower) ||
