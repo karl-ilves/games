@@ -45,6 +45,7 @@ import { PlayardImageGenerationEngine } from '../../../shared/imageGenerationEng
 import { getCurrentUserProfile, isUserAdminEmail } from '../../../auth';
 import { yardService } from '../../../shared/yardService';
 import { t } from '../../../shared/i18n_dict';
+import { ModelsPlansModal } from '../../ai/ui/modelsPlansModal';
 
 export function isCurrentUserAdmin(): boolean {
     const profile = getCurrentUserProfile();
@@ -197,6 +198,10 @@ export function setupAiAssistantEvents() {
 
     updateAiAssistantLocalization();
     updateAiTierDisplay();
+    ModelsPlansModal.getInstance().init();
+    window.addEventListener('ai-tier-changed', () => {
+        updateAiTierDisplay();
+    });
 
     if (toggleBtn && aiModal) {
         toggleBtn.addEventListener('click', () => {

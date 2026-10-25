@@ -2402,6 +2402,51 @@ await (async () => {
             if (!modalCentering || modalCentering.diffX > 50 || modalCentering.diffY > 50 || modalCentering.zIndex < 2000) {
                 throw new Error("AI Assistant modal is not properly centered on the screen! Details: " + JSON.stringify(modalCentering));
             }
+
+            // Verify Creator Studio AI input Plus Button & Models/Plans Modal
+            const creatorPlusTest = await page.evaluate(async () => {
+                const plusBtn = document.getElementById('btn-ai-model-plus');
+                const modelsModal = document.getElementById('modal-ai-models-plans');
+                const btnTabPlans = document.getElementById('btn-tab-plans');
+                const btnCloseModels = document.getElementById('btn-close-models-modal');
+
+                if (!plusBtn || !modelsModal) return { ok: false, reason: 'Plus button or modal not found' };
+
+                // Click Plus Button
+                plusBtn.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const isOpened = window.getComputedStyle(modelsModal).display !== 'none';
+                const bodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
+                const hasModel = bodyHtml.includes('Playard game ai 1.1');
+                const hasRing = bodyHtml.includes('<svg') && bodyHtml.includes('stroke-dasharray');
+
+                // Switch to Plans
+                btnTabPlans?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const plansHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
+                const hasPlans = plansHtml.includes('FREE') && plansHtml.includes('PRO');
+
+                // Close modal
+                btnCloseModels?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const isClosed = window.getComputedStyle(modelsModal).display === 'none';
+
+                return {
+                    ok: true,
+                    isOpened,
+                    hasModel,
+                    hasRing,
+                    hasPlans,
+                    isClosed
+                };
+            });
+            console.log("   Creator Studio AI Plus & Models Modal test:", creatorPlusTest);
+            if (!creatorPlusTest.ok || !creatorPlusTest.isOpened || !creatorPlusTest.hasModel || !creatorPlusTest.hasRing || !creatorPlusTest.hasPlans || !creatorPlusTest.isClosed) {
+                throw new Error("Creator Studio AI Plus & Models Modal verification failed: " + JSON.stringify(creatorPlusTest));
+            }
+            console.log("   ✅ Creator Studio AI Plus (+) button & Models/Plans modal verified!");
+
             await page.click('#btn-close-ai');
             await new Promise(r => setTimeout(r, 200));
             console.log("   ✅ Playard AI modal screen centering verified!");

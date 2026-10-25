@@ -12,37 +12,28 @@ export class ModelsPlansModal {
         return this.instance;
     }
 
-    public init(): void {
-        const modal = document.getElementById('modal-ai-models-plans');
-        const closeBtn = document.getElementById('btn-close-models-modal');
-        const btnTabPlans = document.getElementById('btn-tab-plans');
-        const btnTabModel = document.getElementById('btn-tab-model');
+    private initialized = false;
 
-        // Global delegation for opening plus button (since chatView re-renders)
+    public init(): void {
+        if (this.initialized) return;
+        this.initialized = true;
+
+        // Global delegation for opening plus button and modal controls
         document.addEventListener('click', (e) => {
             const target = e.target as HTMLElement;
-            if (target && target.closest('#btn-ai-model-plus')) {
+            if (!target) return;
+
+            if (target.closest('#btn-ai-model-plus')) {
                 this.openModal();
+            } else if (target.closest('#btn-close-models-modal')) {
+                const modal = document.getElementById('modal-ai-models-plans');
+                if (modal) modal.style.display = 'none';
+            } else if (target.closest('#btn-tab-plans')) {
+                this.switchTab('plans');
+            } else if (target.closest('#btn-tab-model')) {
+                this.switchTab('model');
             }
         });
-
-        if (closeBtn && modal) {
-            closeBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
-            });
-        }
-
-        if (btnTabPlans) {
-            btnTabPlans.addEventListener('click', () => {
-                this.switchTab('plans');
-            });
-        }
-
-        if (btnTabModel) {
-            btnTabModel.addEventListener('click', () => {
-                this.switchTab('model');
-            });
-        }
     }
 
     public openModal(): void {
@@ -216,6 +207,7 @@ export class ModelsPlansModal {
                     const res = aiTierService.upgradeToTier(tier);
                     if (res.success) {
                         alert(res.message);
+                        window.dispatchEvent(new CustomEvent('ai-tier-changed'));
                         this.renderContent();
                     } else {
                         alert(`❌ ${res.message}`);
