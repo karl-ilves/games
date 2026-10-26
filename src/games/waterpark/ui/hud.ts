@@ -1,140 +1,137 @@
-import { waterParkState } from '../state/waterParkState';
-import { BuildCategory } from '../types';
+import { BuildCategory, SubCategory } from '../types';
 import { PARK_ATTRACTIONS_CATALOG } from '../catalog';
 
 export class WaterParkHUD {
-    private onSelectAttractionCallback: (id: string) => void;
-    private onToggleWaveCallback: () => void;
-    private onDemolishCallback: () => void;
+    private onSelectItemCallback: (id: string) => void;
     private currentCategory: BuildCategory = 'pools';
+    private currentSubCategory: SubCategory = 'main';
 
-    constructor(
-        onSelectAttraction: (id: string) => void,
-        onToggleWave: () => void,
-        onDemolish: () => void
-    ) {
-        this.onSelectAttractionCallback = onSelectAttraction;
-        this.onToggleWaveCallback = onToggleWave;
-        this.onDemolishCallback = onDemolish;
-
-        this.initEventListeners();
+    constructor(onSelectItem: (id: string) => void) {
+        this.onSelectItemCallback = onSelectItem;
+        this.initEvents();
         this.renderCatalog();
     }
 
-    private initEventListeners() {
-        // Tab buttons
-        const tabs = document.querySelectorAll('.build-cat-tab');
-        tabs.forEach((tab) => {
-            tab.addEventListener('click', (e) => {
-                tabs.forEach((t) => t.classList.remove('active'));
-                const btn = e.currentTarget as HTMLElement;
-                btn.classList.add('active');
-                this.currentCategory = btn.dataset.category as BuildCategory;
-                this.renderCatalog();
-            });
+    private initEvents() {
+        // Category tabs: Basseinid vs Veetorud
+        const tabPools = document.getElementById('tab-cat-pools');
+        const tabTubes = document.getElementById('tab-cat-tubes');
+
+        tabPools?.addEventListener('click', () => {
+            this.currentCategory = 'pools';
+            this.currentSubCategory = 'main';
+            tabPools.classList.add('active');
+            tabTubes?.classList.remove('active');
+            this.renderCatalog();
         });
 
-        // Wave pool button
-        const btnWave = document.getElementById('btn-toggle-wavepool');
-        if (btnWave) {
-            btnWave.addEventListener('click', () => {
-                this.onToggleWaveCallback();
-                this.updateStats();
-            });
-        }
-
-        // Clean park button
-        const btnClean = document.getElementById('btn-clean-park');
-        if (btnClean) {
-            btnClean.addEventListener('click', () => {
-                waterParkState.cleanPark();
-                this.updateStats();
-            });
-        }
+        tabTubes?.addEventListener('click', () => {
+            this.currentCategory = 'tubes';
+            this.currentSubCategory = 'main';
+            tabTubes.classList.add('active');
+            tabPools?.classList.remove('active');
+            this.renderCatalog();
+        });
 
         // Open build drawer button
-        const btnBuildMenu = document.getElementById('btn-open-build');
+        const btnOpenBuild = document.getElementById('btn-open-build');
         const buildDrawer = document.getElementById('build-drawer');
-        if (btnBuildMenu && buildDrawer) {
-            btnBuildMenu.addEventListener('click', () => {
-                const isOpen = buildDrawer.style.display === 'flex';
-                buildDrawer.style.display = isOpen ? 'none' : 'flex';
-            });
-        }
+        btnOpenBuild?.addEventListener('click', () => {
+            const isOpen = buildDrawer?.style.display === 'flex';
+            if (buildDrawer) buildDrawer.style.display = isOpen ? 'none' : 'flex';
+        });
 
         const btnCloseDrawer = document.getElementById('btn-close-drawer');
-        if (btnCloseDrawer && buildDrawer) {
-            btnCloseDrawer.addEventListener('click', () => {
-                buildDrawer.style.display = 'none';
-            });
-        }
+        btnCloseDrawer?.addEventListener('click', () => {
+            if (buildDrawer) buildDrawer.style.display = 'none';
+        });
     }
 
     public renderCatalog() {
         const grid = document.getElementById('build-items-grid');
+        const subNav = document.getElementById('drawer-subnav');
         if (!grid) return;
         grid.innerHTML = '';
 
-        const items = PARK_ATTRACTIONS_CATALOG.filter((a) => a.category === this.currentCategory);
-        const cash = waterParkState.getCash();
+        if (subNav) {
+            subNav.innerHTML = '';
+            // If in sub-category 'kids_tubes', show "Tagasi" button!
+            // "kui selle peale vajutan ilmub nende asjade asemele tagasi nupp"
+            if (this.currentCategory === 'tubes' && this.currentSubCategory === 'kids_tubes') {
+                const backBtn = document.createElement('button');
+                backBtn.className = 'btn-subnav-back';
+                backBtn.innerHTML = '⬅️ Tagasi (Veetorude Peamenüü)';
+                backBtn.addEventListener('click', () => {
+                    this.currentSubCategory = 'main';
+                    this.renderCatalog();
+                });
+                subNav.appendChild(backBtn);
+            }
+        }
 
-        items.forEach((item) => {
-            const card = document.createElement('div');
-            card.className = 'build-item-card';
-            const canAfford = cash >= item.cost;
+        if (this.currentCategory === 'pools') {
+            // Pools category: kids bassein, sügav bassein, pikk bassein
+            const pools = PARK_ATTRACTIONS_CATALOG.filter(a => a.category === 'pools');
+            pools.forEach(item => {
+                const card = this.createItemCard(item);
+                grid.appendChild(card);
+            });
+        } else if (this.currentCategory === 'tubes') {
+            if (this.currentSubCategory === 'main') {
+                // Main tubes menu: Torn + Laste veetoru folder/button
+                const towerItem = PARK_ATTRACTIONS_CATALOG.find(a => a.id === 'tower_segment');
+                if (towerItem) {
+                    const card = this.createItemCard(towerItem);
+                    grid.appendChild(card);
+                }
 
-            card.innerHTML = `
-                <div class="card-icon">${item.icon}</div>
-                <div class="card-info">
-                    <div class="card-title">${item.name}</div>
-                    <div class="card-desc">${item.description}</div>
-                    <div class="card-stats">
-                        <span class="card-price">🪙 ${item.cost} €</span>
-                        <span class="card-income">+${item.incomePerMin} €/min</span>
-                        <span class="card-rating">⭐ +${item.ratingBonus}</span>
+                // Laste veetorud button
+                const kidsFolderCard = document.createElement('div');
+                kidsFolderCard.className = 'build-item-card folder-card';
+                kidsFolderCard.innerHTML = `
+                    <div class="card-icon">🛝</div>
+                    <div class="card-info">
+                        <div class="card-title" style="color: #00f2fe; font-size: 1.05rem;">👶 Laste Veetorud (Ava osad)</div>
+                        <div class="card-desc">Start, otse toru, alla 20° toru, vasakule ja paremale pöörded.</div>
                     </div>
-                </div>
-                <button class="btn-build-item ${canAfford ? '' : 'disabled'}" data-id="${item.id}">
-                    ${canAfford ? 'Ehita' : 'Puudu raha'}
-                </button>
-            `;
-
-            const btn = card.querySelector('.btn-build-item');
-            if (btn && canAfford) {
-                btn.addEventListener('click', () => {
-                    this.onSelectAttractionCallback(item.id);
-                    // Close drawer on selection for easy placing
-                    const buildDrawer = document.getElementById('build-drawer');
-                    if (buildDrawer) buildDrawer.style.display = 'none';
+                    <button class="btn-build-item" style="background: #00f2fe; color: #0b1320;">Ava Valik ➔</button>
+                `;
+                kidsFolderCard.addEventListener('click', () => {
+                    this.currentSubCategory = 'kids_tubes';
+                    this.renderCatalog();
+                });
+                grid.appendChild(kidsFolderCard);
+            } else if (this.currentSubCategory === 'kids_tubes') {
+                // Inside "laste veetorud": start, otse, alla 20, paremale, vasakule
+                const kidsPipes = PARK_ATTRACTIONS_CATALOG.filter(a => a.subCategory === 'kids_tubes');
+                kidsPipes.forEach(item => {
+                    const card = this.createItemCard(item);
+                    grid.appendChild(card);
                 });
             }
-
-            grid.appendChild(card);
-        });
+        }
     }
 
-    public updateStats(visitorsCount: number = 0) {
-        const cashVal = document.getElementById('hud-cash-val');
-        if (cashVal) cashVal.textContent = waterParkState.getCash().toLocaleString();
+    private createItemCard(item: any): HTMLElement {
+        const card = document.createElement('div');
+        card.className = 'build-item-card';
+        card.innerHTML = `
+            <div class="card-icon">${item.icon}</div>
+            <div class="card-info">
+                <div class="card-title">${item.name}</div>
+                <div class="card-desc">${item.description}</div>
+            </div>
+            <button class="btn-build-item" data-id="${item.id}">Vali</button>
+        `;
 
-        const repVal = document.getElementById('hud-rep-val');
-        if (repVal) repVal.textContent = waterParkState.getReputation().toString() + '%';
+        const btn = card.querySelector('.btn-build-item');
+        btn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.onSelectItemCallback(item.id);
+            const buildDrawer = document.getElementById('build-drawer');
+            if (buildDrawer) buildDrawer.style.display = 'none';
+        });
 
-        const cleanVal = document.getElementById('hud-clean-val');
-        if (cleanVal) cleanVal.textContent = waterParkState.getCleanliness().toString() + '%';
-
-        const guestsVal = document.getElementById('hud-guests-val');
-        if (guestsVal) {
-            const cap = waterParkState.calculateCapacity();
-            guestsVal.textContent = `${visitorsCount} / ${cap}`;
-        }
-
-        const waveBtn = document.getElementById('btn-toggle-wavepool');
-        if (waveBtn) {
-            const isWave = waterParkState.isWavePoolActive();
-            waveBtn.textContent = isWave ? '🌊 Mega Lained: SEES' : '🌊 Mega Lained: VÄLJAS';
-            waveBtn.style.borderColor = isWave ? '#00f2fe' : 'rgba(255,255,255,0.2)';
-            waveBtn.style.color = isWave ? '#00f2fe' : '#ffffff';
-        }
+        return card;
     }
 }

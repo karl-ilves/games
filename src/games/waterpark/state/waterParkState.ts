@@ -1,64 +1,15 @@
-import { PlacedStructure, ParkStats, ParkTheme } from '../types';
-import { PARK_ATTRACTIONS_CATALOG, DEFAULT_TICKET_PRICE } from '../catalog';
+import { PlacedStructure } from '../types';
+import { PARK_ATTRACTIONS_CATALOG } from '../catalog';
 
-const STORAGE_KEY = 'playard_waterpark_state_v1';
+const STORAGE_KEY = 'playard_waterpark_state_v2';
 
 export class WaterParkStateManager {
-    private cash: number = 1500; // Starting budget
+    private cash: number = 2000;
     private structures: PlacedStructure[] = [];
-    private reputation: number = 50;
-    private cleanliness: number = 95;
-    private ticketPrice: number = DEFAULT_TICKET_PRICE;
-    private wavePoolActive: boolean = false;
-    private parkTheme: ParkTheme = 'tropical';
-    private parkName: string = 'Playard Aqua Resort';
-    private totalGuestsVisited: number = 0;
-    private isAudioMuted: boolean = false;
 
     constructor() {
         this.loadState();
-        if (this.structures.length === 0) {
-            // Starter layout
-            this.structures = [
-                {
-                    instanceId: 'starter_kiddie',
-                    attractionId: 'kiddie_pool',
-                    x: -12,
-                    y: 0,
-                    z: -10,
-                    rotationY: 0,
-                    builtAt: Date.now()
-                },
-                {
-                    instanceId: 'starter_slide',
-                    attractionId: 'speed_slide',
-                    x: 12,
-                    y: 0,
-                    z: -12,
-                    rotationY: Math.PI / 4,
-                    builtAt: Date.now()
-                },
-                {
-                    instanceId: 'starter_shack',
-                    attractionId: 'icecream_shack',
-                    x: -8,
-                    y: 0,
-                    z: 14,
-                    rotationY: 0,
-                    builtAt: Date.now()
-                },
-                {
-                    instanceId: 'starter_palm',
-                    attractionId: 'palm_grove',
-                    x: 10,
-                    y: 0,
-                    z: 14,
-                    rotationY: 0,
-                    builtAt: Date.now()
-                }
-            ];
-            this.saveState();
-        }
+        // User requested: "alguses pole midagi" (at start there is nothing)
     }
 
     private loadState(): void {
@@ -68,13 +19,6 @@ export class WaterParkStateManager {
                 const data = JSON.parse(raw);
                 if (typeof data.cash === 'number') this.cash = data.cash;
                 if (Array.isArray(data.structures)) this.structures = data.structures;
-                if (typeof data.reputation === 'number') this.reputation = data.reputation;
-                if (typeof data.cleanliness === 'number') this.cleanliness = data.cleanliness;
-                if (typeof data.ticketPrice === 'number') this.ticketPrice = data.ticketPrice;
-                if (typeof data.wavePoolActive === 'boolean') this.wavePoolActive = data.wavePoolActive;
-                if (data.parkName) this.parkName = data.parkName;
-                if (data.parkTheme) this.parkTheme = data.parkTheme;
-                if (typeof data.isAudioMuted === 'boolean') this.isAudioMuted = data.isAudioMuted;
             }
         } catch (e) {
             console.warn('[WaterParkState] Failed to load state:', e);
@@ -85,19 +29,10 @@ export class WaterParkStateManager {
         try {
             const data = {
                 cash: this.cash,
-                structures: this.structures,
-                reputation: this.reputation,
-                cleanliness: this.cleanliness,
-                ticketPrice: this.ticketPrice,
-                wavePoolActive: this.wavePoolActive,
-                parkName: this.parkName,
-                parkTheme: this.parkTheme,
-                isAudioMuted: this.isAudioMuted
+                structures: this.structures
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        } catch (e) {
-            console.warn('[WaterParkState] Failed to save state:', e);
-        }
+        } catch (e) {}
     }
 
     public getCash(): number {
@@ -125,139 +60,25 @@ export class WaterParkStateManager {
         return [...this.structures];
     }
 
-    public buildStructure(attractionId: string, x: number, z: number, rotationY: number = 0): PlacedStructure | null {
-        const def = PARK_ATTRACTIONS_CATALOG.find(a => a.id === attractionId);
-        if (!def) return null;
-        if (!this.spendCash(def.cost)) return null;
-
-        const newStruct: PlacedStructure = {
-            instanceId: 'struct_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-            attractionId,
-            x,
-            y: 0,
-            z,
-            rotationY,
-            builtAt: Date.now()
-        };
-
-        this.structures.push(newStruct);
-        this.reputation = Math.min(100, this.reputation + def.ratingBonus * 0.4);
+    public addStructure(struct: PlacedStructure): void {
+        this.structures.push(struct);
         this.saveState();
-        return newStruct;
     }
 
-    public demolishStructure(instanceId: string): boolean {
-        const index = this.structures.findIndex(s => s.instanceId === instanceId);
-        if (index === -1) return false;
-
-        const struct = this.structures[index];
-        const def = PARK_ATTRACTIONS_CATALOG.find(a => a.id === struct.attractionId);
-        if (def) {
-            // Refund 50%
-            this.cash += Math.floor(def.cost * 0.5);
-            this.reputation = Math.max(10, this.reputation - def.ratingBonus * 0.3);
+    public removeStructure(instanceId: string): boolean {
+        const idx = this.structures.findIndex(s => s.instanceId === instanceId);
+        if (idx !== -1) {
+            this.structures.splice(idx, 1);
+            this.saveState();
+            return true;
         }
-
-        this.structures.splice(index, 1);
-        this.saveState();
-        return true;
-    }
-
-    public getReputation(): number {
-        return Math.round(this.reputation);
-    }
-
-    public getCleanliness(): number {
-        return Math.round(this.cleanliness);
-    }
-
-    public cleanPark(): void {
-        this.cleanliness = 100;
-        this.saveState();
-    }
-
-    public degradeCleanliness(amount: number = 0.5): void {
-        this.cleanliness = Math.max(20, this.cleanliness - amount);
-    }
-
-    public getTicketPrice(): number {
-        return this.ticketPrice;
-    }
-
-    public setTicketPrice(price: number): void {
-        this.ticketPrice = Math.max(5, Math.min(100, Math.floor(price)));
-        this.saveState();
-    }
-
-    public isWavePoolActive(): boolean {
-        return this.wavePoolActive;
-    }
-
-    public toggleWavePool(): boolean {
-        this.wavePoolActive = !this.wavePoolActive;
-        this.saveState();
-        return this.wavePoolActive;
-    }
-
-    public getParkName(): string {
-        return this.parkName;
-    }
-
-    public setParkName(name: string): void {
-        this.parkName = name.trim() || 'Playard Aqua Resort';
-        this.saveState();
-    }
-
-    public getTheme(): ParkTheme {
-        return this.parkTheme;
-    }
-
-    public setTheme(theme: ParkTheme): void {
-        this.parkTheme = theme;
-        this.saveState();
-    }
-
-    public isMuted(): boolean {
-        return this.isAudioMuted;
-    }
-
-    public setMuted(muted: boolean): void {
-        this.isAudioMuted = muted;
-        this.saveState();
-    }
-
-    public calculateCapacity(): number {
-        let cap = 20; // Base capacity
-        for (const s of this.structures) {
-            const def = PARK_ATTRACTIONS_CATALOG.find(a => a.id === s.attractionId);
-            if (def) {
-                if (def.category === 'pools') cap += 25;
-                else if (def.category === 'slides') cap += 15;
-                else if (def.category === 'attractions') cap += 12;
-                else if (def.category === 'amenities') cap += 8;
-            }
-        }
-        return cap;
-    }
-
-    public calculateTotalIncomePerMin(): number {
-        let total = 0;
-        for (const s of this.structures) {
-            const def = PARK_ATTRACTIONS_CATALOG.find(a => a.id === s.attractionId);
-            if (def) total += def.incomePerMin;
-        }
-        return total;
+        return false;
     }
 
     public reset(): void {
         localStorage.removeItem(STORAGE_KEY);
-        this.cash = 1500;
+        this.cash = 2000;
         this.structures = [];
-        this.reputation = 50;
-        this.cleanliness = 95;
-        this.ticketPrice = DEFAULT_TICKET_PRICE;
-        this.wavePoolActive = false;
-        this.parkTheme = 'tropical';
     }
 }
 

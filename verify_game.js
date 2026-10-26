@@ -14769,8 +14769,8 @@ await (async () => {
             }
             console.log("   ✅ Golden (2P00) tag verified inside games in In-Game Menu!");
 
-            // 32. Testing 🏖️ Build a Water Park Simulator
-            console.log("32. Checking 🏖️ Build a Water Park (3D Water Park Simulator)...");
+            // 32. Testing 🏖️ Build a Water Park Simulator (Avatar, Pools, Veetorud, Laste Veetorud & Tagasi)
+            console.log("32. Checking 🏖️ Build a Water Park (Walking Avatar, Pools, Veetorud & Subcategory)...");
             await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/waterpark/index.html`, { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 600));
 
@@ -14778,49 +14778,85 @@ await (async () => {
                 const canvas = document.getElementById('game-canvas');
                 const hasCanvas = !!canvas && canvas.tagName === 'CANVAS';
 
-                // Check HUD badges
-                const cashVal = document.getElementById('hud-cash-val')?.textContent || '';
-                const repVal = document.getElementById('hud-rep-val')?.textContent || '';
-                const cleanVal = document.getElementById('hud-clean-val')?.textContent || '';
-                const guestsVal = document.getElementById('hud-guests-val')?.textContent || '';
+                // Check game instance & AvatarRig player
+                const game = window.__waterParkGame;
+                const hasGameInstance = !!game;
+                const hasAvatar = !!game?.playerAvatar?.rig?.rootGroup;
+
+                // Move avatar using keys
+                const initialPosZ = game?.playerAvatar?.position.z || 0;
+                window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+                await new Promise(r => setTimeout(r, 150));
+                window.dispatchEvent(new KeyboardEvent('keyup', { key: 'w' }));
+                await new Promise(r => setTimeout(r, 50));
 
                 // Open Build Drawer
                 const btnOpenBuild = document.getElementById('btn-open-build');
                 btnOpenBuild?.click();
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 150));
 
                 const buildDrawer = document.getElementById('build-drawer');
                 const isDrawerOpen = buildDrawer?.style.display === 'flex';
-                const itemsCount = document.querySelectorAll('.build-item-card').length;
 
-                // Toggle Wave Pool
-                const btnWave = document.getElementById('btn-toggle-wavepool');
-                const textBeforeWave = btnWave?.textContent || '';
-                btnWave?.click();
+                // Pools Category: kids bassein, sügav bassein, pikk bassein
+                const poolCards = Array.from(document.querySelectorAll('.build-item-card .card-title')).map(el => el.textContent || '');
+                const hasKidsPool = poolCards.some(t => t.includes('Kids Bassein'));
+                const hasDeepPool = poolCards.some(t => t.includes('Sügav Bassein'));
+                const hasLongPool = poolCards.some(t => t.includes('Pikk Bassein'));
+
+                // Switch to Veetorud category
+                const tabTubes = document.getElementById('tab-cat-tubes');
+                tabTubes?.click();
                 await new Promise(r => setTimeout(r, 150));
-                const textAfterWave = btnWave?.textContent || '';
-                const waveToggled = textBeforeWave !== textAfterWave && textAfterWave.includes('SEES');
 
-                // Camera Mode Cycle
-                const btnCam = document.getElementById('btn-cycle-camera');
-                btnCam?.click();
-                await new Promise(r => setTimeout(r, 100));
-                const camTag = document.getElementById('cam-name-tag')?.textContent || '';
+                const tubeCards = Array.from(document.querySelectorAll('.build-item-card .card-title')).map(el => el.textContent || '');
+                const hasTower = tubeCards.some(t => t.includes('Treppidega Torn') || t.includes('Torn'));
+                const hasKidsFolder = tubeCards.some(t => t.includes('Laste Veetorud'));
 
-                // Verify game instance
-                const hasGameInstance = !!window.__waterParkGame;
+                // Click into "Laste Veetorud" folder
+                const folderCard = document.querySelector('.build-item-card.folder-card');
+                folderCard?.click();
+                await new Promise(r => setTimeout(r, 150));
+
+                // Check "Tagasi" button appears
+                const backBtn = document.querySelector('.btn-subnav-back');
+                const hasBackBtn = !!backBtn;
+
+                // Check kids tube parts: start, otse, alla 20, paremale, vasakule
+                const subItems = Array.from(document.querySelectorAll('.build-item-card .card-title')).map(el => el.textContent || '');
+                const hasStart = subItems.some(t => t.includes('Start'));
+                const hasStraight = subItems.some(t => t.includes('Otse'));
+                const hasDown20 = subItems.some(t => t.includes('Alla') && t.includes('20'));
+                const hasTurnRight = subItems.some(t => t.includes('Paremale'));
+                const hasTurnLeft = subItems.some(t => t.includes('Vasakule'));
+
+                // Click Tagasi button
+                backBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+                const cardsAfterBack = Array.from(document.querySelectorAll('.build-item-card .card-title')).map(el => el.textContent || '');
+                const returnedToMain = cardsAfterBack.some(t => t.includes('Torn'));
+
+                // Check In-game Menu 'P' button is present
+                const hasPBtn = !!document.getElementById('btn-playard-menu');
 
                 return {
                     hasCanvas,
                     hasGameInstance,
-                    hasCash: cashVal.length > 0,
-                    hasRep: repVal.includes('%'),
-                    hasClean: cleanVal.includes('%'),
-                    hasGuests: guestsVal.includes('/'),
+                    hasAvatar,
                     isDrawerOpen,
-                    itemsCount,
-                    waveToggled,
-                    camTag
+                    hasKidsPool,
+                    hasDeepPool,
+                    hasLongPool,
+                    hasTower,
+                    hasKidsFolder,
+                    hasBackBtn,
+                    hasStart,
+                    hasStraight,
+                    hasDown20,
+                    hasTurnRight,
+                    hasTurnLeft,
+                    returnedToMain,
+                    hasPBtn
                 };
             });
 
@@ -14828,17 +14864,25 @@ await (async () => {
             if (
                 !waterParkTest.hasCanvas ||
                 !waterParkTest.hasGameInstance ||
-                !waterParkTest.hasCash ||
-                !waterParkTest.hasRep ||
-                !waterParkTest.hasClean ||
-                !waterParkTest.hasGuests ||
+                !waterParkTest.hasAvatar ||
                 !waterParkTest.isDrawerOpen ||
-                waterParkTest.itemsCount < 4 ||
-                !waterParkTest.waveToggled
+                !waterParkTest.hasKidsPool ||
+                !waterParkTest.hasDeepPool ||
+                !waterParkTest.hasLongPool ||
+                !waterParkTest.hasTower ||
+                !waterParkTest.hasKidsFolder ||
+                !waterParkTest.hasBackBtn ||
+                !waterParkTest.hasStart ||
+                !waterParkTest.hasStraight ||
+                !waterParkTest.hasDown20 ||
+                !waterParkTest.hasTurnRight ||
+                !waterParkTest.hasTurnLeft ||
+                !waterParkTest.returnedToMain ||
+                !waterParkTest.hasPBtn
             ) {
-                throw new Error("Build a Water Park test failed: " + JSON.stringify(waterParkTest));
+                throw new Error("Build a Water Park updated test failed: " + JSON.stringify(waterParkTest));
             }
-            console.log("   ✅ Build a Water Park (Canvas, 3D Engine, Build Drawer, Wave Pool & HUD) verified successfully!");
+            console.log("   ✅ Build a Water Park (Walking Avatar, Pools, Tower, Laste Veetorud, Tagasi & P button) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);

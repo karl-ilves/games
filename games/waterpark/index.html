@@ -1,11 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Playard Games - 🏖️ Build a Water Park | 3D Water Park Simulator</title>
-    <meta name="description" content="Build your dream 3D Water Park resort! Construct giant wave pools, kamikaze slides, vortex bowls, lazy rivers, and manage visitors and park finances.">
-    <meta name="keywords" content="water park, build a water park, 3d simulator, theme park tycoon, tycoon game, playard games">
+    <title>Playard Games - 🏖️ Build a Water Park</title>
     <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -37,7 +35,7 @@
             left: 0;
             right: 0;
             height: 60px;
-            background: linear-gradient(180deg, rgba(10, 16, 26, 0.92) 0%, rgba(10, 16, 26, 0.6) 80%, transparent 100%);
+            background: linear-gradient(180deg, rgba(10, 16, 26, 0.85) 0%, rgba(10, 16, 26, 0.4) 80%, transparent 100%);
             backdrop-filter: blur(8px);
             display: flex;
             justify-content: space-between;
@@ -53,33 +51,12 @@
             gap: 10px;
         }
 
-        .btn-hub-back {
-            background: rgba(20, 28, 42, 0.85);
-            border: 1.5px solid rgba(0, 242, 254, 0.5);
-            color: #ffffff;
-            font-size: 0.88rem;
-            font-weight: 800;
-            padding: 7px 14px;
-            border-radius: 10px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        .btn-hub-back:hover {
-            border-color: #00f2fe;
-            background: rgba(0, 242, 254, 0.2);
-            transform: translateY(-1px);
-        }
-
         .title-badge {
             background: rgba(14, 23, 38, 0.85);
             border: 1px solid rgba(255, 255, 255, 0.15);
             padding: 6px 12px;
             border-radius: 8px;
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             font-weight: 700;
             display: flex;
             align-items: center;
@@ -92,39 +69,6 @@
             border-radius: 50%;
             background: #00f2fe;
             box-shadow: 0 0 8px #00f2fe;
-        }
-
-        .hud-btn {
-            background: rgba(18, 28, 44, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #f1f5f9;
-            font-size: 0.82rem;
-            font-weight: 700;
-            padding: 7px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-        }
-        .hud-btn:hover {
-            border-color: #00f2fe;
-            background: rgba(0, 242, 254, 0.15);
-            transform: translateY(-1px);
-        }
-
-        .currency-badge {
-            background: rgba(18, 28, 44, 0.9);
-            border: 1px solid rgba(255, 215, 0, 0.4);
-            color: #ffd700;
-            font-weight: 800;
-            font-size: 0.88rem;
-            padding: 6px 14px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
         /* Bottom Floating Bar */
@@ -161,7 +105,7 @@
             box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4);
         }
         .btn-action-main:hover {
-            transform: scale(1.05);
+            transform: scale(1.04);
             box-shadow: 0 6px 20px rgba(0, 242, 254, 0.6);
         }
 
@@ -173,7 +117,7 @@
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
-            max-width: 720px;
+            max-width: 680px;
             background: rgba(14, 23, 38, 0.95);
             border: 1.5px solid rgba(0, 242, 254, 0.4);
             border-radius: 16px;
@@ -195,7 +139,6 @@
         .drawer-categories {
             display: flex;
             gap: 8px;
-            overflow-x: auto;
             padding-bottom: 4px;
         }
 
@@ -203,9 +146,9 @@
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.15);
             color: #cbd5e1;
-            font-size: 0.82rem;
-            font-weight: 700;
-            padding: 6px 14px;
+            font-size: 0.88rem;
+            font-weight: 800;
+            padding: 8px 18px;
             border-radius: 20px;
             cursor: pointer;
             white-space: nowrap;
@@ -214,6 +157,25 @@
             background: #00f2fe;
             color: #0b1320;
             border-color: #00f2fe;
+        }
+
+        .btn-subnav-back {
+            background: rgba(255, 71, 87, 0.2);
+            border: 1.5px solid #ff4757;
+            color: #ff6b81;
+            font-weight: 800;
+            font-size: 0.88rem;
+            padding: 7px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .btn-subnav-back:hover {
+            background: #ff4757;
+            color: #ffffff;
         }
 
         #build-items-grid {
@@ -227,41 +189,33 @@
 
         .build-item-card {
             background: rgba(22, 34, 52, 0.75);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
             border-radius: 12px;
-            padding: 10px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
             gap: 6px;
-            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
         }
         .build-item-card:hover {
             border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.08);
         }
 
         .card-icon {
-            font-size: 1.8rem;
+            font-size: 2rem;
         }
         .card-title {
             font-weight: 800;
-            font-size: 0.88rem;
+            font-size: 0.92rem;
             color: #ffffff;
         }
         .card-desc {
-            font-size: 0.72rem;
+            font-size: 0.75rem;
             color: #94a3b8;
-            line-height: 1.3;
+            line-height: 1.35;
         }
-        .card-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.72rem;
-            font-weight: 800;
-            margin-top: 4px;
-        }
-        .card-price { color: #ffd700; }
-        .card-income { color: #2ecc71; }
-        .card-rating { color: #f1c40f; }
 
         .btn-build-item {
             background: rgba(0, 242, 254, 0.2);
@@ -271,92 +225,27 @@
             padding: 6px;
             border-radius: 8px;
             cursor: pointer;
-            margin-top: 4px;
+            margin-top: 6px;
         }
         .btn-build-item:hover {
             background: #00f2fe;
             color: #0b1320;
-        }
-        .btn-build-item.disabled {
-            opacity: 0.4;
-            pointer-events: none;
-            border-color: #747d8c;
-            color: #747d8c;
-        }
-
-        /* Help Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(4, 8, 14, 0.85);
-            backdrop-filter: blur(12px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
-        .modal-card {
-            background: #0d1522;
-            border: 1.5px solid rgba(0, 242, 254, 0.4);
-            border-radius: 16px;
-            padding: 24px;
-            max-width: 550px;
-            width: 100%;
-            position: relative;
-        }
-        .modal-close {
-            position: absolute;
-            top: 14px;
-            right: 18px;
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 1.5rem;
-            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <canvas id="game-canvas"></canvas>
 
-    <!-- Top HUD Navigation -->
+    <!-- Top HUD Navigation (Ainult P nupp ja pealkiri) -->
     <header id="top-hud">
         <div class="hud-left">
             <div class="title-badge">
                 <span class="live-dot"></span>
                 <span>🏖️ Build a Water Park</span>
             </div>
-            <div class="currency-badge" id="hud-cash-badge">
-                <span>🪙</span> <span id="hud-cash-val">1,500</span> €
-            </div>
-            <div class="currency-badge" id="hud-rep-badge" style="border-color: rgba(255, 215, 0, 0.3);">
-                <span>⭐</span> <span id="hud-rep-val">50%</span>
-            </div>
-            <div class="currency-badge" id="hud-clean-badge" style="border-color: rgba(46, 204, 113, 0.4);">
-                <span>🧹</span> <span id="hud-clean-val">95%</span>
-            </div>
-            <div class="currency-badge" id="hud-guests-badge" style="border-color: rgba(0, 242, 254, 0.4);">
-                <span>👥</span> <span id="hud-guests-val">0 / 60</span>
-            </div>
         </div>
-
         <div class="hud-right" style="padding-right: 52px;">
-            <button class="hud-btn" id="btn-toggle-wavepool">
-                <span>🌊 Mega Lained: VÄLJAS</span>
-            </button>
-            <button class="hud-btn" id="btn-clean-park">
-                <span>🧹 Puhasta Park</span>
-            </button>
-            <button class="hud-btn" id="btn-cycle-camera" title="Cycle Camera Mode">
-                <span>🎥 <span id="cam-name-tag">ORBIT</span></span>
-            </button>
-            <button class="hud-btn" id="btn-toggle-sound" title="Toggle Sound">
-                <span>🔊</span>
-            </button>
-            <button class="hud-btn" id="btn-open-help" title="Instructions & Controls">
-                <span>❓ Abi</span>
-            </button>
+            <!-- P nupp inGameMenu.ts poolt paremas ülanurgas -->
         </div>
     </header>
 
@@ -364,56 +253,27 @@
     <div id="bottom-bar">
         <button class="btn-action-main" id="btn-open-build">
             <span>🔨</span>
-            <span>EHITA VEEPARKI</span>
+            <span>EHITA (AVA POOD)</span>
         </button>
     </div>
 
-    <!-- Build Drawer (Catalog) -->
+    <!-- Build Drawer (Pood) -->
     <div id="build-drawer">
         <div class="drawer-header">
             <h3 style="margin: 0; color: #00f2fe; display: flex; align-items: center; gap: 8px;">
-                <span>🏗️ Veepargi Ehituskataloog</span>
+                <span>🏗️ Veepargi Ehituspood</span>
             </h3>
             <button id="btn-close-drawer" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">&times;</button>
         </div>
         <div class="drawer-categories">
-            <button class="build-cat-tab active" data-category="pools">🏊 Basseinid</button>
-            <button class="build-cat-tab" data-category="slides">⚡ Veeliumäed</button>
-            <button class="build-cat-tab" data-category="attractions">🎡 Atraktsioonid</button>
-            <button class="build-cat-tab" data-category="amenities">🍹 Kohvikud & Lamamistoolid</button>
-            <button class="build-cat-tab" data-category="scenery">🌴 Loodus & Palmid</button>
+            <button class="build-cat-tab active" id="tab-cat-pools">🏊 Basseinid</button>
+            <button class="build-cat-tab" id="tab-cat-tubes">🌊 Veetorud</button>
         </div>
+        <div id="drawer-subnav"></div>
         <div id="build-items-grid"></div>
     </div>
 
-    <!-- Help Modal -->
-    <div class="modal-overlay" id="modal-help">
-        <div class="modal-card">
-            <button class="modal-close" id="btn-close-help">&times;</button>
-            <h2 style="color: #00f2fe; margin-top: 0;">🏖️ Kuidas mängida "Build a Water Park"?</h2>
-            <div style="font-size: 0.92rem; line-height: 1.6; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
-                <div><strong style="color: #00f2fe;">1. Ehita basseinid ja liiumäed:</strong> Klõpsa all <strong>"EHITA VEEPARKI"</strong> nupule, vali meelepärane atraktsioon ning paiguta see hiireklõpsuga kaardile. Vajuta <strong>R</strong> klahvi, et objekti pöörata!</div>
-                <div><strong style="color: #ffd700;">2. Teeni piletitulu ja passiivset sissetulekut:</strong> Iga sisenev külastaja maksab piletiraha. Kohvikud, liugurid ja basseinid toovad passiivset tulu.</div>
-                <div><strong style="color: #2ed573;">3. Juhi Mega Laineid:</strong> Aktiveeri <strong>"Mega Lained"</strong> lüliti, et luua realistlikud lained ja veepritsmed!</div>
-                <div><strong style="color: #ff4757;">4. Hoia park puhas:</strong> Puhasta parki aeg-ajalt, et säilitada kõrge maine ja meelitada rohkem puhkajaid.</div>
-                <div><strong style="color: #38bdf8;">Kaamera juhtimine:</strong> Lohista hiirega vaate pööramiseks, kasuta hiireratast suumimiseks või vajuta <strong>🎥 ORBIT</strong> nupule, et vahetada ülaltvaate või liuguri vaate vahel.</div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Modal wiring
-        document.getElementById('btn-open-help')?.addEventListener('click', () => {
-            const m = document.getElementById('modal-help');
-            if (m) m.style.display = 'flex';
-        });
-        document.getElementById('btn-close-help')?.addEventListener('click', () => {
-            const m = document.getElementById('modal-help');
-            if (m) m.style.display = 'none';
-        });
-    </script>
-
-    <!-- Game Script Entry Point -->
+    <!-- Game Scripts -->
     <script type="module" src="/src/shared/inGameMenu.ts"></script>
     <script type="module" src="/src/games/waterpark/main.ts"></script>
 </body>

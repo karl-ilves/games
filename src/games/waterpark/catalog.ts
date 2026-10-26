@@ -1,212 +1,116 @@
 import { ParkAttractionDef } from './types';
 
 export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
-    // --- POOLS ---
+    // --- KATEGOORIA: BASSEINID (POOLS) ---
     {
-        id: 'kiddie_pool',
-        name: 'Laste Loduujula (Kiddie Splash Pool)',
+        id: 'kids_pool',
+        name: 'Kids Bassein (Lastebassein)',
         category: 'pools',
-        cost: 250,
-        ratingBonus: 5,
-        incomePerMin: 15,
-        description: 'Madal ja soe lastebassein rõõmsate minipritsmetega.',
+        cost: 200,
+        description: 'Madal ja ohutu bassein lastele ja pisikestele suplejatele.',
         icon: '👶',
         color: 0x38bdf8,
-        dimensions: { x: 8, y: 0.8, z: 8 },
-        unlockedByDefault: true
+        dimensions: { x: 8, y: 0.8, z: 8 }
     },
     {
-        id: 'wave_pool',
-        name: 'Mega Laine Bassen (Giant Wave Pool)',
+        id: 'deep_pool',
+        name: 'Sügav Bassein',
         category: 'pools',
-        cost: 1200,
-        ratingBonus: 22,
-        incomePerMin: 85,
-        description: 'Võimsate tehislainetega ookeanisarnane elamusbassein!',
-        icon: '🌊',
-        color: 0x00f2fe,
-        dimensions: { x: 18, y: 1.6, z: 24 }
-    },
-    {
-        id: 'lazy_river',
-        name: 'Laisk Jõgi (Lazy River Loop)',
-        category: 'pools',
-        cost: 1800,
-        ratingBonus: 30,
-        incomePerMin: 120,
-        description: 'Voolav ringikujuline jõekanal, kus külastajad ujuvad kummirõngastel.',
-        icon: '🛟',
-        color: 0x0be881,
-        dimensions: { x: 28, y: 1.2, z: 28 }
-    },
-    {
-        id: 'jacuzzi_oasis',
-        name: 'Mullivannide Oaas (Luxury Jacuzzi Spa)',
-        category: 'pools',
-        cost: 650,
-        ratingBonus: 14,
-        incomePerMin: 45,
-        description: 'Soojendusega luksuslik mullibassein troopilise auruga.',
-        icon: '🫧',
-        color: 0x48dbfb,
-        dimensions: { x: 7, y: 1.0, z: 7 }
-    },
-
-    // --- SLIDES ---
-    {
-        id: 'speed_slide',
-        name: 'Välkkiire Toru (Kamikaze Speed Slide)',
-        category: 'slides',
-        cost: 800,
-        ratingBonus: 18,
-        incomePerMin: 55,
-        description: 'Järsk ja adrenaliinirohke püstloodis liugur julgetele suplejatele!',
-        icon: '⚡',
-        color: 0xff4757,
-        dimensions: { x: 6, y: 14, z: 20 },
-        unlockedByDefault: true
-    },
-    {
-        id: 'tornado_bowl',
-        name: 'Tornado Keeris (Mega Vortex Bowl)',
-        category: 'slides',
-        cost: 2400,
-        ratingBonus: 40,
-        incomePerMin: 160,
-        description: 'Hiiglaslik tsentrifugaallehter, kus keerled ringi enne vette kukkumist.',
-        icon: '🌀',
-        color: 0xffa502,
-        dimensions: { x: 16, y: 16, z: 22 }
-    },
-    {
-        id: 'twister_spiral',
-        name: 'Spiraaltoru (Hydro Spiral Twister)',
-        category: 'slides',
-        cost: 1500,
-        ratingBonus: 28,
-        incomePerMin: 100,
-        description: 'Kahekordne looklev liugur erksate kurvide ja veepihustitega.',
-        icon: '🎢',
-        color: 0x2ed573,
-        dimensions: { x: 10, y: 12, z: 18 }
-    },
-    {
-        id: 'raft_slide',
-        name: 'Parve Rallitakso (Family Raft Slide)',
-        category: 'slides',
-        cost: 2100,
-        ratingBonus: 35,
-        incomePerMin: 140,
-        description: 'Lai kummiparvede liurada kogu perele!',
-        icon: '🛶',
-        color: 0x1e90ff,
-        dimensions: { x: 12, y: 10, z: 24 }
-    },
-
-    // --- ATTRACTIONS ---
-    {
-        id: 'tipping_bucket',
-        name: 'Hiidämber (Splash Water Fortress)',
-        category: 'attractions',
-        cost: 950,
-        ratingBonus: 20,
-        incomePerMin: 65,
-        description: 'Iga 30 sekundi järel kummutab 1000 liitrit vett allakoonduvatele külastajatele.',
-        icon: '🪣',
-        color: 0xff6b81,
-        dimensions: { x: 10, y: 11, z: 10 }
-    },
-    {
-        id: 'water_cannons',
-        name: 'Veesuurtükkide Areena (Hydro Cannon Zone)',
-        category: 'attractions',
-        cost: 450,
-        ratingBonus: 10,
-        incomePerMin: 30,
-        description: 'Interaktiivne pritsimise ja lahingu ala lastele ja noortele.',
-        icon: '🔫',
-        color: 0x70a1ff,
-        dimensions: { x: 8, y: 3, z: 8 }
-    },
-    {
-        id: 'diving_board',
-        name: 'Olümpia Hüppetorn (10m Diving Tower)',
-        category: 'attractions',
-        cost: 700,
-        ratingBonus: 15,
-        incomePerMin: 45,
-        description: '3m, 5m ja 10m hüppeplatvormid sügavasse vette saltode tegemiseks.',
-        icon: '🏊‍♂️',
-        color: 0x3742fa,
-        dimensions: { x: 6, y: 12, z: 8 }
-    },
-
-    // --- AMENITIES ---
-    {
-        id: 'icecream_shack',
-        name: 'Troopiline Jäätisekiosk (Gelato & Slushie)',
-        category: 'amenities',
-        cost: 350,
-        ratingBonus: 8,
-        incomePerMin: 35,
-        description: 'Värskendav käsitööjäätis ja troopilised jääjoogid.',
-        icon: '🍦',
-        color: 0xffcccc,
-        dimensions: { x: 4, y: 3.5, z: 4 },
-        unlockedByDefault: true
-    },
-    {
-        id: 'tiki_snack_bar',
-        name: 'Tiki Rannabaar (Smoothies & Nachos)',
-        category: 'amenities',
-        cost: 600,
-        ratingBonus: 12,
-        incomePerMin: 55,
-        description: 'Rannatoit, mahlad ja suupisted päikesevarjude all.',
-        icon: '🍹',
-        color: 0xeccc68,
-        dimensions: { x: 6, y: 4, z: 5 }
-    },
-    {
-        id: 'cabana_lounge',
-        name: 'VIP Rannatoolide Salaaed (Luxury Cabanas)',
-        category: 'amenities',
         cost: 500,
-        ratingBonus: 11,
-        incomePerMin: 40,
-        description: 'Pehmed lamamistoolid ja varikatused lõõgastumiseks.',
-        icon: '🏖️',
-        color: 0xfffa65,
-        dimensions: { x: 8, y: 3, z: 6 }
+        description: 'Sügav bassein sukeldumiseks ja vettehüpeteks.',
+        icon: '🏊‍♂️',
+        color: 0x0984e3,
+        dimensions: { x: 14, y: 3.5, z: 14 }
+    },
+    {
+        id: 'long_pool',
+        name: 'Pikk Bassein',
+        category: 'pools',
+        cost: 450,
+        description: 'Pikk ujumisrada ja voolav bassein ujumiseks.',
+        icon: '🌊',
+        color: 0x00cec9,
+        dimensions: { x: 8, y: 1.5, z: 28 }
     },
 
-    // --- SCENERY ---
+    // --- KATEGOORIA: VEETORUD (TUBES) - PEAMINE ---
     {
-        id: 'palm_grove',
-        name: 'Kookospalmide Salu (Tropical Palms)',
-        category: 'scenery',
+        id: 'tower_segment',
+        name: 'Treppidega Torn (Toru platvorm)',
+        category: 'tubes',
+        subCategory: 'main',
+        cost: 250,
+        description: 'Torn kust saab treppidest üles minna toru juurde. Saab panna maha või teise peale kuni 6 tükki!',
+        icon: '🗼',
+        color: 0xe17055,
+        dimensions: { x: 4, y: 3.5, z: 4 },
+        isTower: true
+    },
+
+    // --- KATEGOORIA: VEETORUD - LASTE VEETORUD (SUB-KATEGOORIA) ---
+    {
+        id: 'pipe_start',
+        name: 'Toru Start (Algusplatvorm)',
+        category: 'tubes',
+        subCategory: 'kids_tubes',
         cost: 150,
-        ratingBonus: 4,
-        incomePerMin: 5,
-        description: 'Kõrged troopilised palmipuud, mis lisavad pargile sooja rannavaibi.',
-        icon: '🌴',
-        color: 0x2ed573,
-        dimensions: { x: 4, y: 7, z: 4 },
-        unlockedByDefault: true
+        description: 'Veetoru algus. Saab panna AINULT torni külge!',
+        icon: '🚪',
+        color: 0x00b894,
+        dimensions: { x: 3, y: 2, z: 3.5 },
+        isSlideStart: true,
+        isKidsSlide: true
     },
     {
-        id: 'rocky_fountain',
-        name: 'Kivine Geisri Purskkaev (Rock Fountain)',
-        category: 'scenery',
-        cost: 300,
-        ratingBonus: 7,
-        incomePerMin: 10,
-        description: 'Looduskivist laotud pritsiv purskkaev LED-valgusega.',
-        icon: '⛲',
-        color: 0x747d8c,
-        dimensions: { x: 5, y: 3.5, z: 5 }
+        id: 'pipe_straight',
+        name: 'Otse Veetoru',
+        category: 'tubes',
+        subCategory: 'kids_tubes',
+        cost: 100,
+        description: 'Sirge horisontaalne veetoru. Saab panna ainult stardi või teiste torude külge!',
+        icon: '➖',
+        color: 0x0984e3,
+        dimensions: { x: 2, y: 2, z: 4 },
+        isSlideSegment: true,
+        isKidsSlide: true
+    },
+    {
+        id: 'pipe_down20',
+        name: 'Alla Veetoru (20°)',
+        category: 'tubes',
+        subCategory: 'kids_tubes',
+        cost: 120,
+        description: '20-kraadise langusega torusektsioon veeliu kiirendamiseks.',
+        icon: '📉',
+        color: 0x6c5ce7,
+        dimensions: { x: 2, y: 2.5, z: 4.5 },
+        isSlideSegment: true,
+        isKidsSlide: true
+    },
+    {
+        id: 'pipe_turn_right',
+        name: 'Paremale Pööre Veetoru',
+        category: 'tubes',
+        subCategory: 'kids_tubes',
+        cost: 130,
+        description: '90-kraadine kurv paremale. Ühendub stardi või teiste torude otsa.',
+        icon: '↪️',
+        color: 0xfdcb6e,
+        dimensions: { x: 4, y: 2, z: 4 },
+        isSlideSegment: true,
+        isKidsSlide: true
+    },
+    {
+        id: 'pipe_turn_left',
+        name: 'Vasakule Pööre Veetoru',
+        category: 'tubes',
+        subCategory: 'kids_tubes',
+        cost: 130,
+        description: '90-kraadine kurv vasakule. Ühendub stardi või teiste torude otsa.',
+        icon: '↩️',
+        color: 0xe84393,
+        dimensions: { x: 4, y: 2, z: 4 },
+        isSlideSegment: true,
+        isKidsSlide: true
     }
 ];
-
-export const DEFAULT_TICKET_PRICE = 15;
-export const MAX_GUESTS_PER_STRUCTURE = 12;
