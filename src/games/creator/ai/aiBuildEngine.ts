@@ -121,6 +121,7 @@ export function updateAiTierDisplay() {
     const tier = aiTierService.getTier();
     const config = aiTierService.getActiveConfig();
     const usage = aiTierService.getDailyUsage();
+    const limits = aiTierService.getLimits();
 
     const badgeEl = document.getElementById('ai-current-tier-badge');
     if (badgeEl) {
@@ -128,6 +129,18 @@ export function updateAiTierDisplay() {
         badgeEl.style.color = config.accentColor;
         badgeEl.style.borderColor = config.accentColor;
         badgeEl.style.background = `${config.accentColor}25`;
+    }
+
+    const limit5hPctEl = document.getElementById('ai-limit-5h-pct');
+    if (limit5hPctEl) {
+        limit5hPctEl.textContent = `${limits.fiveHourRemainingPct}%`;
+        limit5hPctEl.style.color = limits.fiveHourRemainingPct > 20 ? config.accentColor : '#ef4444';
+    }
+
+    const limit5pPctEl = document.getElementById('ai-limit-5p-pct');
+    if (limit5pPctEl) {
+        limit5pPctEl.textContent = `${limits.fiveDayRemainingPct}%`;
+        limit5pPctEl.style.color = limits.fiveDayRemainingPct > 20 ? '#10b981' : '#ef4444';
     }
 
     const usedEl = document.getElementById('ai-quota-used');

@@ -75,10 +75,9 @@ export class ModelsPlansModal {
         const quota = aiTierService.canMakeRequest();
         const activeTier = quota.tier;
         const tierCfg = AI_TIER_CONFIGS[activeTier];
-        const dailyLimit = quota.dailyLimit;
-        const usedToday = quota.usedToday;
-        const remaining = Math.max(0, dailyLimit - usedToday);
-        const percentRemaining = dailyLimit > 0 ? Math.round((remaining / dailyLimit) * 100) : 100;
+        const limits = aiTierService.getLimits();
+        const fiveHourRemaining = limits.fiveHourRemainingPct;
+        const fiveDayRemaining = limits.fiveDayRemainingPct;
 
         // Update Tab buttons visual
         const btnTabPlans = document.getElementById('btn-tab-plans');
@@ -101,15 +100,15 @@ export class ModelsPlansModal {
         if (!bodyEl) return;
 
         if (this.currentTab === 'model') {
-            // Render Model View with Circular Progress Ring
+            // Render Model View with Circular Progress Ring for 5h Limit
             const radius = 46;
             const circumference = 2 * Math.PI * radius; // ~289.02
-            const strokeDashoffset = circumference * (1 - remaining / dailyLimit);
-            const ringColor = percentRemaining > 25 ? '#38bdf8' : (percentRemaining > 0 ? '#f59e0b' : '#ef4444');
+            const strokeDashoffset5h = circumference * (1 - fiveHourRemaining / 100);
+            const ringColor = fiveHourRemaining > 25 ? '#38bdf8' : (fiveHourRemaining > 0 ? '#f59e0b' : '#ef4444');
 
             bodyEl.innerHTML = `
                 <!-- Active Model Card -->
-                <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid #38bdf8; border-radius: 14px; padding: 16px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
+                <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid #38bdf8; border-radius: 14px; padding: 16px; margin-bottom: 16px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);">
@@ -133,34 +132,54 @@ export class ModelsPlansModal {
                 </div>
 
                 <!-- Circular Limit & Usage Ring Container -->
-                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 24px;">
-                    <!-- SVG Circular Progress Ring -->
-                    <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
-                        <svg width="120" height="120" style="transform: rotate(-90deg);">
-                            <circle cx="60" cy="60" r="${radius}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="10" fill="transparent" />
-                            <circle cx="60" cy="60" r="${radius}" stroke="${ringColor}" stroke-width="10" stroke-linecap="round" fill="transparent"
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; display: flex; align-items: center; gap: 20px; margin-bottom: 14px;">
+                    <!-- SVG Circular Progress Ring (5h Limit) -->
+                    <div style="position: relative; width: 115px; height: 115px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                        <svg width="115" height="115" style="transform: rotate(-90deg);">
+                            <circle cx="57.5" cy="57.5" r="${radius}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="10" fill="transparent" />
+                            <circle cx="57.5" cy="57.5" r="${radius}" stroke="${ringColor}" stroke-width="10" stroke-linecap="round" fill="transparent"
                                 stroke-dasharray="${circumference}"
-                                stroke-dashoffset="${strokeDashoffset}"
+                                stroke-dashoffset="${strokeDashoffset5h}"
                                 style="transition: stroke-dashoffset 0.6s ease, stroke 0.4s ease;"
                             />
                         </svg>
                         <div style="position: absolute; text-align: center;">
-                            <span style="font-size: 22px; font-weight: 800; color: #ffffff; display: block; line-height: 1;">
-                                ${remaining}
+                            <span style="font-size: 20px; font-weight: 800; color: #ffffff; display: block; line-height: 1;">
+                                ${fiveHourRemaining}%
                             </span>
-                            <span style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: 600;">jäänud</span>
+                            <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">5h jäänud</span>
                         </div>
                     </div>
 
-                    <!-- Details & Upgrade Prompt -->
+                    <!-- Dual Limits Status: 5h and 5 Days -->
                     <div style="flex: 1;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                            <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">Tänane Päevalimiit</span>
+                            <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">AI Limiidid (${tierCfg.questionLevel})</span>
                             <span style="font-size: 12px; font-weight: 800; color: ${tierCfg.accentColor};">${tierCfg.badge}</span>
                         </div>
-                        <p style="font-size: 12px; color: #94a3b8; margin: 0 0 10px 0; line-height: 1.4;">
-                            Tänaseks kasutatud: <strong style="color: #ffffff;">${usedToday}</strong> / <strong style="color: #ffffff;">${dailyLimit}</strong> päringut (${percentRemaining}% alles). Limiit lähtestub automaatselt iga 24 tunni järel.
-                        </p>
+
+                        <!-- 5h limit bar -->
+                        <div style="margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
+                                <span>⏳ <strong>5h limiit:</strong></span>
+                                <span style="font-weight: 800; color: ${fiveHourRemaining > 20 ? '#38bdf8' : '#ef4444'};">${fiveHourRemaining}% alles (-${tierCfg.pct5hPerQuery}% / küsimus)</span>
+                            </div>
+                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                <div style="width: ${fiveHourRemaining}%; height: 100%; background: ${ringColor}; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+
+                        <!-- 5 päeva limit bar -->
+                        <div style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
+                                <span>📅 <strong>5 päeva limiit:</strong></span>
+                                <span style="font-weight: 800; color: ${fiveDayRemaining > 20 ? '#10b981' : '#ef4444'};">${fiveDayRemaining}% alles (-${tierCfg.pct5dPerQuery}% / küsimus)</span>
+                            </div>
+                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                <div style="width: ${fiveDayRemaining}%; height: 100%; background: ${fiveDayRemaining > 25 ? '#10b981' : '#f59e0b'}; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+
                         <button type="button" id="btn-open-plans-from-model" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); border: none; color: #ffffff; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
                             <span>📋</span> Vaata Plaane & Suurenda Limiiti
                         </button>
@@ -205,8 +224,12 @@ export class ModelsPlansModal {
                                 <h5 style="margin: 0; font-size: 14px; font-weight: 800; color: #ffffff;">${cfg.badge}</h5>
                                 <span style="font-size: 12px; font-weight: 700; color: #ffd700;">${cfg.pricePbx === 0 ? 'Tasuta' : `${cfg.pricePbx} PBX`}</span>
                             </div>
-                            <div style="font-size: 13px; font-weight: 700; color: ${cfg.accentColor}; margin-bottom: 8px;">
-                                🎯 ${cfg.dailyLimit} päringut päevas
+                            <div style="font-size: 13px; font-weight: 800; color: #ffd32a; margin-bottom: 4px;">
+                                💬 ${cfg.questionLevel}
+                            </div>
+                            <div style="font-size: 11px; font-weight: 700; color: ${cfg.accentColor}; margin-bottom: 8px; line-height: 1.3;">
+                                ⏳ 5h limiit: -${cfg.pct5hPerQuery}% / küsimus<br>
+                                📅 5 päeva limiit: -${cfg.pct5dPerQuery}% / küsimus
                             </div>
                             <ul style="margin: 0 0 12px 0; padding-left: 16px; font-size: 11px; color: #94a3b8; line-height: 1.4;">
                                 ${cfg.features.slice(0, 3).map(f => `<li>${f}</li>`).join('')}

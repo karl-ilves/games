@@ -2950,6 +2950,8 @@ await (async () => {
                 const tierBadge = document.getElementById('ai-current-tier-badge');
                 const quotaUsedEl = document.getElementById('ai-quota-used');
                 const quotaMaxEl = document.getElementById('ai-quota-max');
+                const limit5hPctEl = document.getElementById('ai-limit-5h-pct');
+                const limit5pPctEl = document.getElementById('ai-limit-5p-pct');
                 const openTiersBtn = document.getElementById('btn-open-ai-tiers');
                 const tiersModal = document.getElementById('modal-ai-tiers');
 
@@ -2960,12 +2962,22 @@ await (async () => {
                     hasTierBadge: !!tierBadge && tierBadge.textContent.includes('FREE'),
                     hasQuotaUsed: !!quotaUsedEl,
                     hasQuotaMax: !!quotaMaxEl && quotaMaxEl.textContent === '20',
+                    hasLimit5hPct: !!limit5hPctEl && limit5hPctEl.textContent === '100%',
+                    hasLimit5pPct: !!limit5pPctEl && limit5pPctEl.textContent === '100%',
                     hasOpenBtn: !!openTiersBtn,
                     hasModal: !!tiersModal
                 };
 
-                // 3. Simulate hitting the 20 questions limit
-                tierService.simulateUsage(20);
+                // Check dual limit configs for all tiers
+                const dualLimitConfigs = {
+                    free: { ql: configs.FREE.questionLevel, p5h: configs.FREE.pct5hPerQuery, p5d: configs.FREE.pct5dPerQuery },
+                    pro: { ql: configs.PRO.questionLevel, p5h: configs.PRO.pct5hPerQuery, p5d: configs.PRO.pct5dPerQuery },
+                    plus: { ql: configs.PLUS.questionLevel, p5h: configs.PLUS.pct5hPerQuery, p5d: configs.PLUS.pct5dPerQuery },
+                    vip: { ql: configs.VIP.questionLevel, p5h: configs.VIP.pct5hPerQuery, p5d: configs.VIP.pct5dPerQuery }
+                };
+
+                // 3. Simulate hitting the 5h limit (100% used in Free = 20 queries * 5%)
+                tierService.simulateUsage(20, 100, 20);
                 const limitReachedCheck = tierService.canMakeRequest();
                 const blockedResult = await cs.executeAiBuild('mis on 2+2?');
 
@@ -2997,6 +3009,7 @@ await (async () => {
                     initialTier,
                     initialDailyLimit: initialUsage.dailyLimit,
                     domChecks,
+                    dualLimitConfigs,
                     limitReachedAllowed: limitReachedCheck.allowed,
                     limitMessage: limitReachedCheck.message,
                     blockedResult,
@@ -3016,16 +3029,28 @@ await (async () => {
             if (aiTierTest.initialTier !== 'FREE' || aiTierTest.initialDailyLimit !== 20) {
                 throw new Error(`Expected initial tier to be FREE with 20 daily limit! Got ${aiTierTest.initialTier} (${aiTierTest.initialDailyLimit})`);
             }
-            if (!aiTierTest.domChecks.hasStatusBar || !aiTierTest.domChecks.hasTierBadge || !aiTierTest.domChecks.hasQuotaMax) {
+            if (!aiTierTest.domChecks.hasStatusBar || !aiTierTest.domChecks.hasTierBadge || !aiTierTest.domChecks.hasQuotaMax || !aiTierTest.domChecks.hasLimit5hPct || !aiTierTest.domChecks.hasLimit5pPct) {
                 throw new Error(`AI Tier DOM status bar elements missing: ${JSON.stringify(aiTierTest.domChecks)}`);
+            }
+            if (aiTierTest.dualLimitConfigs.free.ql !== 'Vähe küsimusi' || aiTierTest.dualLimitConfigs.free.p5h !== 5 || aiTierTest.dualLimitConfigs.free.p5d !== 1) {
+                throw new Error(`FREE dual limits config incorrect: ${JSON.stringify(aiTierTest.dualLimitConfigs.free)}`);
+            }
+            if (aiTierTest.dualLimitConfigs.pro.ql !== 'Rohkem küsimusi' || aiTierTest.dualLimitConfigs.pro.p5h !== 2 || aiTierTest.dualLimitConfigs.pro.p5d !== 0.5) {
+                throw new Error(`PRO dual limits config incorrect: ${JSON.stringify(aiTierTest.dualLimitConfigs.pro)}`);
+            }
+            if (aiTierTest.dualLimitConfigs.plus.ql !== 'Palju küsimusi' || aiTierTest.dualLimitConfigs.plus.p5h !== 1 || aiTierTest.dualLimitConfigs.plus.p5d !== 0.2) {
+                throw new Error(`PLUS dual limits config incorrect: ${JSON.stringify(aiTierTest.dualLimitConfigs.plus)}`);
+            }
+            if (aiTierTest.dualLimitConfigs.vip.ql !== 'Väga palju küsimusi' || aiTierTest.dualLimitConfigs.vip.p5h !== 0.5 || aiTierTest.dualLimitConfigs.vip.p5d !== 0.1) {
+                throw new Error(`VIP dual limits config incorrect: ${JSON.stringify(aiTierTest.dualLimitConfigs.vip)}`);
             }
             if (aiTierTest.limitReachedAllowed !== false) {
                 throw new Error("AI failed to enforce daily limit when 20 questions reached!");
             }
-            if (!aiTierTest.limitMessage.includes('Sa oled tänase AI limiidi ära kasutanud')) {
+            if (!aiTierTest.limitMessage.includes('Sa oled') || !aiTierTest.limitMessage.includes('limiidi ära kasutanud')) {
                 throw new Error(`Expected exact limit message, got: "${aiTierTest.limitMessage}"`);
             }
-            if (!aiTierTest.blockedResult.includes('Sa oled tänase AI limiidi ära kasutanud')) {
+            if (!aiTierTest.blockedResult.includes('Sa oled') || !aiTierTest.blockedResult.includes('limiidi ära kasutanud')) {
                 throw new Error(`executeAiBuild failed to return limit warning when quota exhausted: "${aiTierTest.blockedResult}"`);
             }
             if (!aiTierTest.proUpgradeSuccess || aiTierTest.proTier !== 'PRO' || aiTierTest.proDailyLimit !== 100 || !aiTierTest.proCanRequest) {
@@ -3040,7 +3065,7 @@ await (async () => {
             if (aiTierTest.vipTier !== 'VIP' || aiTierTest.vipDailyLimit !== 2000) {
                 throw new Error(`VIP tier upgrade verification failed: ${JSON.stringify(aiTierTest)}`);
             }
-            console.log("   ✅ Playard AI Tiers, Prices & Limits (FREE, PRO, PLUS, VIP) verified successfully!");
+            console.log("   ✅ Playard AI Tiers, 5h & 5p Limits, Question Levels & Prices (FREE, PRO, PLUS, VIP) verified successfully!");
 
             // Test Undo and Redo
             console.log("   Testing Undo and Redo...");

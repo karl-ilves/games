@@ -23,7 +23,10 @@ export interface AiTierConfig {
     badge: string;
     icon: string;
     pricePbx: number; // PBX per month
-    dailyLimit: number; // questions/requests per day
+    dailyLimit: number; // questions/requests per day (legacy compatibility)
+    questionLevel: string; // "Vähe küsimusi", "Rohkem küsimusi", "Palju küsimusi", "Väga palju küsimusi"
+    pct5hPerQuery: number; // % reduction in 5-hour limit per query (e.g. 5, 2, 1, 0.5)
+    pct5dPerQuery: number; // % reduction in 5-day limit per query (e.g. 1, 0.5, 0.2, 0.1)
     accentColor: string;
     bgGradient: string;
     description: string;
@@ -39,6 +42,9 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
         icon: '🆓',
         pricePbx: 0,
         dailyLimit: 20,
+        questionLevel: 'Vähe küsimusi',
+        pct5hPerQuery: 5, // 5h limiit väheneb 5% iga küsimuse korral
+        pct5dPerQuery: 1, // 5 päeva limiit väheneb 1% iga küsimuse korral
         accentColor: '#38bdf8',
         bgGradient: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.1))',
         description: 'Algtase kõigile tasuta katsetamiseks ja lihtsate asjade ehitamiseks.',
@@ -47,7 +53,7 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
             'Lihtne Playardi abi & mänguideede loomine',
             'Lihtsate objektide & piiratud mängude loomine',
             'Piiratud koodi loomine',
-            '20 AI küsimust päevas (lähtestub iga 24h järel)'
+            '5h limiit: -5% küsimus • 5 päeva limiit: -1% küsimus'
         ],
         capabilities: {
             maxObjectsPerGen: 15,
@@ -71,6 +77,9 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
         icon: '⚡',
         pricePbx: 100,
         dailyLimit: 100,
+        questionLevel: 'Rohkem küsimusi',
+        pct5hPerQuery: 2, // 5h limiit väheneb 2% iga küsimuse kohta
+        pct5dPerQuery: 0.5, // 5 päeva limiit väheneb 0.5% iga küsimuse kohta
         accentColor: '#a855f7',
         bgGradient: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(147, 51, 234, 0.15))',
         description: 'Tõsisele mänguloojale – suuremad kaardid, rohkem objekte ja kiirem AI.',
@@ -81,7 +90,7 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
             'Keerukamate mängusüsteemide loomine',
             'Koodi automaatne parandamine',
             'Suuremad kaardid & kiirem AI',
-            '100 AI küsimust päevas'
+            '5h limiit: -2% küsimus • 5 päeva limiit: -0.5% küsimus'
         ],
         capabilities: {
             maxObjectsPerGen: 50,
@@ -105,6 +114,9 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
         icon: '🌟',
         pricePbx: 300,
         dailyLimit: 500,
+        questionLevel: 'Palju küsimusi',
+        pct5hPerQuery: 1, // 5h limiit 1% iga küsimuse kohta
+        pct5dPerQuery: 0.2, // 5 päeva 0.2%
         accentColor: '#eab308',
         bgGradient: 'linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(202, 138, 4, 0.15))',
         description: 'Professionaalne tase – automaatne testimine, vigade parandus ja väga suured kaardid.',
@@ -115,7 +127,7 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
             'Automaatne vigade parandamine',
             'Täiustatud 3D objektide ja NPC-de loomine',
             'Pikem projektimälu & mitmeastmeliste ülesannete automaatne täitmine',
-            '500 AI küsimust päevas'
+            '5h limiit: -1% küsimus • 5 päeva limiit: -0.2% küsimus'
         ],
         capabilities: {
             maxObjectsPerGen: 150,
@@ -139,6 +151,9 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
         icon: '👑',
         pricePbx: 750,
         dailyLimit: 2000,
+        questionLevel: 'Väga palju küsimusi',
+        pct5hPerQuery: 0.5, // 5h 0.5%
+        pct5dPerQuery: 0.1, // 5 päeva 0.1%
         accentColor: '#f43f5e',
         bgGradient: 'linear-gradient(135deg, rgba(244, 63, 94, 0.3), rgba(225, 29, 72, 0.2))',
         description: 'Kõrgeim tase – massiivsed projektid, ülikiire AI ja terve mängu ehitamine üheainsa käsuga!',
@@ -150,7 +165,7 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
             'Keerukad mängumehaanikad & täiustatud animatsioonid',
             'Väga pikkade ülesannete automaatne täitmine',
             'Võimalus ehitada suur osa mängust ühe käsu põhjal',
-            '2 000 AI küsimust päevas'
+            '5h limiit: -0.5% küsimus • 5 päeva limiit: -0.1% küsimus'
         ],
         capabilities: {
             maxObjectsPerGen: 600,
@@ -171,6 +186,7 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
 
 const STORAGE_KEY_TIER = 'playard_ai_tier_subscription';
 const STORAGE_KEY_USAGE = 'playard_ai_daily_usage';
+const STORAGE_KEY_LIMITS = 'playard_ai_dual_limits';
 
 interface StoredTierData {
     tier: PlayardAiTier;
@@ -182,6 +198,27 @@ interface StoredUsageData {
     count: number;
     lastReset: number;
 }
+
+export interface StoredDualLimitsData {
+    fiveHourUsedPct: number;
+    fiveHourResetTime: number;
+    fiveDayUsedPct: number;
+    fiveDayResetTime: number;
+}
+
+export interface DualLimitsStatus {
+    fiveHourRemainingPct: number;
+    fiveHourUsedPct: number;
+    fiveHourResetsInMs: number;
+    fiveDayRemainingPct: number;
+    fiveDayUsedPct: number;
+    fiveDayResetsInMs: number;
+    canRequest: boolean;
+    blockedReason?: '5h' | '5p';
+}
+
+const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 
 export class AiTierService {
     private static instance: AiTierService;
@@ -248,12 +285,81 @@ export class AiTierService {
     }
 
     /**
+     * Get 5h and 5 päeva limit percentages and reset status.
+     * 5h window resets after 5 hours, 5 päeva window resets after 5 days.
+     */
+    public getLimits(): DualLimitsStatus {
+        const now = Date.now();
+        let data: StoredDualLimitsData = {
+            fiveHourUsedPct: 0,
+            fiveHourResetTime: now + FIVE_HOURS_MS,
+            fiveDayUsedPct: 0,
+            fiveDayResetTime: now + FIVE_DAYS_MS
+        };
+
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY_LIMITS);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.fiveHourUsedPct === 'number') data.fiveHourUsedPct = parsed.fiveHourUsedPct;
+                if (typeof parsed.fiveHourResetTime === 'number') data.fiveHourResetTime = parsed.fiveHourResetTime;
+                if (typeof parsed.fiveDayUsedPct === 'number') data.fiveDayUsedPct = parsed.fiveDayUsedPct;
+                if (typeof parsed.fiveDayResetTime === 'number') data.fiveDayResetTime = parsed.fiveDayResetTime;
+            }
+        } catch (e) {}
+
+        let modified = false;
+        // Check 5 hour expiration
+        if (now >= data.fiveHourResetTime) {
+            data.fiveHourUsedPct = 0;
+            data.fiveHourResetTime = now + FIVE_HOURS_MS;
+            modified = true;
+        }
+
+        // Check 5 day expiration
+        if (now >= data.fiveDayResetTime) {
+            data.fiveDayUsedPct = 0;
+            data.fiveDayResetTime = now + FIVE_DAYS_MS;
+            modified = true;
+        }
+
+        if (modified) {
+            localStorage.setItem(STORAGE_KEY_LIMITS, JSON.stringify(data));
+        }
+
+        const fiveHourRemainingPct = Math.max(0, Math.round((100 - data.fiveHourUsedPct) * 10) / 10);
+        const fiveDayRemainingPct = Math.max(0, Math.round((100 - data.fiveDayUsedPct) * 10) / 10);
+        const fiveHourResetsInMs = Math.max(0, data.fiveHourResetTime - now);
+        const fiveDayResetsInMs = Math.max(0, data.fiveDayResetTime - now);
+
+        let blockedReason: '5h' | '5p' | undefined;
+        if (fiveHourRemainingPct <= 0) {
+            blockedReason = '5h';
+        } else if (fiveDayRemainingPct <= 0) {
+            blockedReason = '5p';
+        }
+
+        return {
+            fiveHourRemainingPct,
+            fiveHourUsedPct: Math.min(100, Math.round(data.fiveHourUsedPct * 10) / 10),
+            fiveHourResetsInMs,
+            fiveDayRemainingPct,
+            fiveDayUsedPct: Math.min(100, Math.round(data.fiveDayUsedPct * 10) / 10),
+            fiveDayResetsInMs,
+            canRequest: !blockedReason,
+            blockedReason
+        };
+    }
+
+    /**
      * Get daily usage and limit status.
      * Limit strictly resets every 24 hours.
+     * Also maintained for backwards compatibility with legacy tests.
      */
     public getDailyUsage(): { usedToday: number; dailyLimit: number; remaining: number; resetsInMs: number } {
         const tier = this.getTier();
-        const limit = AI_TIER_CONFIGS[tier].dailyLimit;
+        const cfg = AI_TIER_CONFIGS[tier];
+        const limit = cfg.dailyLimit;
         const now = Date.now();
         const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -288,18 +394,30 @@ export class AiTierService {
 
     /**
      * Check if user is allowed to make an AI question/request.
+     * Enforces both 5h limit and 5 päeva limit.
      */
-    public canMakeRequest(): { allowed: boolean; message?: string; tier: PlayardAiTier; usedToday: number; dailyLimit: number } {
+    public canMakeRequest(): { allowed: boolean; message?: string; tier: PlayardAiTier; usedToday: number; dailyLimit: number; limits: DualLimitsStatus } {
         const tier = this.getTier();
         const usage = this.getDailyUsage();
+        const limits = this.getLimits();
 
-        if (usage.usedToday >= usage.dailyLimit) {
+        if (!limits.canRequest || usage.usedToday >= usage.dailyLimit) {
+            let detail = 'Sa oled AI limiidi ära kasutanud.';
+            if (limits.blockedReason === '5h') {
+                const mins = Math.ceil(limits.fiveHourResetsInMs / (60 * 1000));
+                detail = `Sa oled 5 tunni AI limiidi ära kasutanud (0% alles). Uus limiit vabaneb ${mins} minuti pärast.`;
+            } else if (limits.blockedReason === '5p') {
+                const hours = Math.ceil(limits.fiveDayResetsInMs / (3600 * 1000));
+                detail = `Sa oled 5 päeva AI limiidi ära kasutanud (0% alles). Uus limiit vabaneb ${hours} tunni pärast.`;
+            }
+
             return {
                 allowed: false,
-                message: 'Sa oled tänase AI limiidi ära kasutanud. Proovi uuesti pärast limiidi lähtestamist või vali kõrgem AI tase.',
+                message: `Sa oled tänase AI limiidi ära kasutanud. ${detail} Proovi uuesti pärast limiidi lähtestamist või vali kõrgem AI tase.`,
                 tier,
                 usedToday: usage.usedToday,
-                dailyLimit: usage.dailyLimit
+                dailyLimit: usage.dailyLimit,
+                limits
             };
         }
 
@@ -307,51 +425,86 @@ export class AiTierService {
             allowed: true,
             tier,
             usedToday: usage.usedToday,
-            dailyLimit: usage.dailyLimit
+            dailyLimit: usage.dailyLimit,
+            limits
         };
     }
 
     /**
-     * Consume one AI request from daily quota.
-     * AI cannot bypass or change its own limit.
+     * Consume one AI request from 5h and 5 päeva quotas.
+     * Reduces 5h limit by pct5hPerQuery and 5 päeva limit by pct5dPerQuery.
      */
-    public recordRequest(): { success: boolean; usedToday: number; dailyLimit: number; remaining: number } {
+    public recordRequest(): { success: boolean; usedToday: number; dailyLimit: number; remaining: number; limits: DualLimitsStatus } {
         const check = this.canMakeRequest();
         if (!check.allowed) {
             return {
                 success: false,
                 usedToday: check.usedToday,
                 dailyLimit: check.dailyLimit,
-                remaining: 0
+                remaining: 0,
+                limits: check.limits
             };
         }
 
         const now = Date.now();
+        const tier = this.getTier();
+        const cfg = AI_TIER_CONFIGS[tier];
+
+        // 1. Update legacy usage count
         const ONE_DAY_MS = 24 * 60 * 60 * 1000;
         let usage: StoredUsageData = { count: 0, lastReset: now };
-
         try {
             const raw = localStorage.getItem(STORAGE_KEY_USAGE);
-            if (raw) {
-                usage = JSON.parse(raw);
-            }
+            if (raw) usage = JSON.parse(raw);
         } catch (e) {}
 
         if (now - usage.lastReset >= ONE_DAY_MS) {
             usage.count = 0;
             usage.lastReset = now;
         }
-
         usage.count += 1;
         localStorage.setItem(STORAGE_KEY_USAGE, JSON.stringify(usage));
+
+        // 2. Update dual limits (5h and 5 days)
+        let limitsData: StoredDualLimitsData = {
+            fiveHourUsedPct: 0,
+            fiveHourResetTime: now + FIVE_HOURS_MS,
+            fiveDayUsedPct: 0,
+            fiveDayResetTime: now + FIVE_DAYS_MS
+        };
+        try {
+            const rawLimits = localStorage.getItem(STORAGE_KEY_LIMITS);
+            if (rawLimits) {
+                const parsed = JSON.parse(rawLimits);
+                if (typeof parsed.fiveHourUsedPct === 'number') limitsData.fiveHourUsedPct = parsed.fiveHourUsedPct;
+                if (typeof parsed.fiveHourResetTime === 'number') limitsData.fiveHourResetTime = parsed.fiveHourResetTime;
+                if (typeof parsed.fiveDayUsedPct === 'number') limitsData.fiveDayUsedPct = parsed.fiveDayUsedPct;
+                if (typeof parsed.fiveDayResetTime === 'number') limitsData.fiveDayResetTime = parsed.fiveDayResetTime;
+            }
+        } catch (e) {}
+
+        if (now >= limitsData.fiveHourResetTime) {
+            limitsData.fiveHourUsedPct = 0;
+            limitsData.fiveHourResetTime = now + FIVE_HOURS_MS;
+        }
+        if (now >= limitsData.fiveDayResetTime) {
+            limitsData.fiveDayUsedPct = 0;
+            limitsData.fiveDayResetTime = now + FIVE_DAYS_MS;
+        }
+
+        limitsData.fiveHourUsedPct = Math.min(100, limitsData.fiveHourUsedPct + cfg.pct5hPerQuery);
+        limitsData.fiveDayUsedPct = Math.min(100, limitsData.fiveDayUsedPct + cfg.pct5dPerQuery);
+        localStorage.setItem(STORAGE_KEY_LIMITS, JSON.stringify(limitsData));
+
         this.notify();
 
-        const limit = AI_TIER_CONFIGS[this.getTier()].dailyLimit;
+        const currentLimits = this.getLimits();
         return {
             success: true,
             usedToday: usage.count,
-            dailyLimit: limit,
-            remaining: Math.max(0, limit - usage.count)
+            dailyLimit: cfg.dailyLimit,
+            remaining: Math.max(0, cfg.dailyLimit - usage.count),
+            limits: currentLimits
         };
     }
 
@@ -392,37 +545,63 @@ export class AiTierService {
         }
 
         this.setTier(targetTier);
+        // Reset limits to give new tier full capacity immediately upon upgrade
+        this.resetDailyUsage();
+
         return {
             success: true,
-            message: `🎉 Palju õnne! Oled nüüd Playard AI ${targetConfig.name} (${targetConfig.badge}) kasutaja! Päevane limiit: ${targetConfig.dailyLimit} küsimust.`,
+            message: `🎉 Palju õnne! Oled nüüd Playard AI ${targetConfig.name} (${targetConfig.badge}) kasutaja! ${targetConfig.questionLevel}: 5h limiit -${targetConfig.pct5hPerQuery}%, 5 päeva limiit -${targetConfig.pct5dPerQuery}% küsimuse kohta.`,
             newTier: targetTier
         };
     }
 
     /**
-     * Helper for tests or debug to simulate questions count
+     * Helper for tests or debug to simulate questions count and percentage consumption
      */
-    public simulateUsage(count: number): void {
+    public simulateUsage(count: number, fiveHourUsedPct?: number, fiveDayUsedPct?: number): void {
+        const now = Date.now();
         const usage: StoredUsageData = {
             count,
-            lastReset: Date.now()
+            lastReset: now
         };
         localStorage.setItem(STORAGE_KEY_USAGE, JSON.stringify(usage));
+
+        const tier = this.getTier();
+        const cfg = AI_TIER_CONFIGS[tier];
+        const limitsData: StoredDualLimitsData = {
+            fiveHourUsedPct: typeof fiveHourUsedPct === 'number' ? fiveHourUsedPct : Math.min(100, count * cfg.pct5hPerQuery),
+            fiveHourResetTime: now + FIVE_HOURS_MS,
+            fiveDayUsedPct: typeof fiveDayUsedPct === 'number' ? fiveDayUsedPct : Math.min(100, count * cfg.pct5dPerQuery),
+            fiveDayResetTime: now + FIVE_DAYS_MS
+        };
+        localStorage.setItem(STORAGE_KEY_LIMITS, JSON.stringify(limitsData));
+
         this.notify();
     }
 
     /**
-     * Reset daily usage counter
+     * Reset daily usage counter and dual limits
      */
     public resetDailyUsage(): void {
+        const now = Date.now();
         const usage: StoredUsageData = {
             count: 0,
-            lastReset: Date.now()
+            lastReset: now
         };
         localStorage.setItem(STORAGE_KEY_USAGE, JSON.stringify(usage));
+
+        const limitsData: StoredDualLimitsData = {
+            fiveHourUsedPct: 0,
+            fiveHourResetTime: now + FIVE_HOURS_MS,
+            fiveDayUsedPct: 0,
+            fiveDayResetTime: now + FIVE_DAYS_MS
+        };
+        localStorage.setItem(STORAGE_KEY_LIMITS, JSON.stringify(limitsData));
+
         this.notify();
     }
 }
 
 export const aiTierService = AiTierService.getInstance();
 (window as any).aiTierService = aiTierService;
+
