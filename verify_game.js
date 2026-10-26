@@ -2406,17 +2406,19 @@ await (async () => {
             // Verify Creator Studio AI input Plus Button & Models/Plans Modal
             const creatorPlusTest = await page.evaluate(async () => {
                 const plusBtn = document.getElementById('btn-ai-model-plus');
+                const aiModal = document.getElementById('ai-assistant-modal');
                 const modelsModal = document.getElementById('modal-ai-models-plans');
                 const btnTabPlans = document.getElementById('btn-tab-plans');
-                const btnCloseModels = document.getElementById('btn-close-models-modal');
+                const btnBackModels = document.getElementById('btn-back-models-modal');
 
-                if (!plusBtn || !modelsModal) return { ok: false, reason: 'Plus button or modal not found' };
+                if (!plusBtn || !modelsModal || !aiModal) return { ok: false, reason: 'Plus button, ai modal or models modal not found' };
 
                 // Click Plus Button
                 plusBtn.click();
                 await new Promise(r => setTimeout(r, 100));
 
                 const isOpened = window.getComputedStyle(modelsModal).display !== 'none';
+                const aiModalHiddenOnPlus = window.getComputedStyle(aiModal).display === 'none';
                 const bodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
                 const hasModel = bodyHtml.includes('Playard game ai 1.1');
                 const hasRing = bodyHtml.includes('<svg') && bodyHtml.includes('stroke-dasharray');
@@ -2427,25 +2429,39 @@ await (async () => {
                 const plansHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
                 const hasPlans = plansHtml.includes('FREE') && plansHtml.includes('PRO');
 
-                // Close modal
-                btnCloseModels?.click();
+                // Test "Tagasi mudeli ja limiidi juurde" button
+                const btnBackToLimit = document.getElementById('btn-back-to-limit-from-plans');
+                btnBackToLimit?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const backToLimitOk = (document.getElementById('models-modal-dynamic-body')?.innerHTML || '').includes('Playard game ai 1.1');
+
+                // Click Back Button on models modal
+                btnBackModels?.click();
                 await new Promise(r => setTimeout(r, 100));
                 const isClosed = window.getComputedStyle(modelsModal).display === 'none';
+                const aiModalRestored = window.getComputedStyle(aiModal).display === 'flex';
 
                 return {
                     ok: true,
                     isOpened,
+                    aiModalHiddenOnPlus,
                     hasModel,
                     hasRing,
                     hasPlans,
-                    isClosed
+                    backToLimitOk,
+                    isClosed,
+                    aiModalRestored
                 };
             });
             console.log("   Creator Studio AI Plus & Models Modal test:", creatorPlusTest);
-            if (!creatorPlusTest.ok || !creatorPlusTest.isOpened || !creatorPlusTest.hasModel || !creatorPlusTest.hasRing || !creatorPlusTest.hasPlans || !creatorPlusTest.isClosed) {
+            if (
+                !creatorPlusTest.ok || !creatorPlusTest.isOpened || !creatorPlusTest.aiModalHiddenOnPlus ||
+                !creatorPlusTest.hasModel || !creatorPlusTest.hasRing || !creatorPlusTest.hasPlans ||
+                !creatorPlusTest.backToLimitOk || !creatorPlusTest.isClosed || !creatorPlusTest.aiModalRestored
+            ) {
                 throw new Error("Creator Studio AI Plus & Models Modal verification failed: " + JSON.stringify(creatorPlusTest));
             }
-            console.log("   ✅ Creator Studio AI Plus (+) button & Models/Plans modal verified!");
+            console.log("   ✅ Creator Studio AI Plus (+) button & Models/Plans modal (hide AI on open, back to limits, restore on close) verified!");
 
             await page.click('#btn-close-ai');
             await new Promise(r => setTimeout(r, 200));

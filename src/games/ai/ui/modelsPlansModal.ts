@@ -4,6 +4,7 @@ import { yardService } from '../../../shared/yardService';
 export class ModelsPlansModal {
     private static instance: ModelsPlansModal;
     private currentTab: 'model' | 'plans' = 'model';
+    private wasAiAssistantOpen = false;
 
     public static getInstance(): ModelsPlansModal {
         if (!this.instance) {
@@ -25,12 +26,11 @@ export class ModelsPlansModal {
 
             if (target.closest('#btn-ai-model-plus')) {
                 this.openModal();
-            } else if (target.closest('#btn-close-models-modal')) {
-                const modal = document.getElementById('modal-ai-models-plans');
-                if (modal) modal.style.display = 'none';
+            } else if (target.closest('#btn-close-models-modal') || target.closest('#btn-back-models-modal')) {
+                this.closeModal();
             } else if (target.closest('#btn-tab-plans')) {
                 this.switchTab('plans');
-            } else if (target.closest('#btn-tab-model')) {
+            } else if (target.closest('#btn-tab-model') || target.closest('#btn-back-to-limit-from-plans')) {
                 this.switchTab('model');
             }
         });
@@ -39,8 +39,31 @@ export class ModelsPlansModal {
     public openModal(): void {
         const modal = document.getElementById('modal-ai-models-plans');
         if (!modal) return;
+
+        // Hide AI assistant modal so it does not stay behind or on top
+        const aiModal = document.getElementById('ai-assistant-modal');
+        if (aiModal && (aiModal.style.display === 'flex' || window.getComputedStyle(aiModal).display === 'flex')) {
+            this.wasAiAssistantOpen = true;
+            aiModal.style.display = 'none';
+        } else {
+            this.wasAiAssistantOpen = false;
+        }
+
         this.renderContent();
         modal.style.display = 'flex';
+    }
+
+    public closeModal(): void {
+        const modal = document.getElementById('modal-ai-models-plans');
+        if (modal) modal.style.display = 'none';
+
+        // When going back, restore AI assistant modal
+        if (this.wasAiAssistantOpen) {
+            const aiModal = document.getElementById('ai-assistant-modal');
+            if (aiModal) {
+                aiModal.style.display = 'flex';
+            }
+        }
     }
 
     public switchTab(tab: 'model' | 'plans'): void {
@@ -154,8 +177,10 @@ export class ModelsPlansModal {
             const tiers: PlayardAiTier[] = ['FREE', 'PRO', 'PLUS', 'VIP'];
 
             let plansHtml = `
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <span style="font-size: 12px; color: #94a3b8;">Vali sobiv plaan, et saada rohkem AI päringuid ja suuremad limiidid!</span>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-back-to-limit-from-plans" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        ⬅️ Tagasi mudeli ja limiidi juurde
+                    </button>
                     <span style="font-size: 12px; font-weight: 700; color: #ffd700; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); padding: 3px 10px; border-radius: 12px;">
                         💰 Sinu PlayBux: ${userPbx} PBX
                     </span>
