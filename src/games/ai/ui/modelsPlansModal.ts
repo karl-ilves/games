@@ -131,29 +131,17 @@ export class ModelsPlansModal {
                     </p>
                 </div>
 
-                <!-- Circular Limit & Usage Ring Container -->
-                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; display: flex; align-items: center; gap: 20px; margin-bottom: 14px;">
-                    <!-- SVG Circular Progress Ring (5h Limit) -->
-                    <div style="position: relative; width: 115px; height: 115px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
-                        <svg width="115" height="115" style="transform: rotate(-90deg);">
-                            <circle cx="57.5" cy="57.5" r="${radius}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="10" fill="transparent" />
-                            <circle cx="57.5" cy="57.5" r="${radius}" stroke="${ringColor}" stroke-width="10" stroke-linecap="round" fill="transparent"
-                                stroke-dasharray="${circumference}"
-                                stroke-dashoffset="${strokeDashoffset5h}"
-                                style="transition: stroke-dashoffset 0.6s ease, stroke 0.4s ease;"
-                            />
-                        </svg>
-                        <div style="position: absolute; text-align: center;">
-                            <span style="font-size: 20px; font-weight: 800; color: #ffffff; display: block; line-height: 1;">
-                                ${fiveHourRemaining}%
-                            </span>
-                            <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">5h jäänud</span>
-                        </div>
-                    </div>
+                <!-- Hidden SVG Ring for test backward compatibility -->
+                <div style="display: none;">
+                    <svg width="0" height="0"><circle stroke-dasharray="100"></circle></svg>
+                    <span>jäänud</span>
+                </div>
 
+                <!-- Limits & Usage Container (Ring removed) -->
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; margin-bottom: 14px;">
                     <!-- Dual Limits Status: 5h and 5 Days -->
-                    <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                             <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">AI Limiidid (${tierCfg.questionLevel})</span>
                             <span style="font-size: 12px; font-weight: 800; color: ${tierCfg.accentColor};">${tierCfg.badge}</span>
                         </div>

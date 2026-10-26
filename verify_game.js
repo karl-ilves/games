@@ -221,14 +221,15 @@ await (async () => {
             }
             if (prop === '$eval') {
                 return async (selector, pageFunction, ...args) => {
-                    for (let attempt = 1; attempt <= 6; attempt++) {
+                    for (let attempt = 1; attempt <= 10; attempt++) {
                         try {
-                            const target = getActiveFrame() || rawPage;
+                            const active = getActiveFrame();
+                            const target = (active && (typeof active.isDetached === 'function' ? !active.isDetached() : !active.detached)) ? active : rawPage;
                             return await target.$eval(selector, pageFunction, ...args);
                         } catch (err) {
-                            const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context')) && attempt < 6) {
-                                await new Promise(r => setTimeout(r, 400 * attempt));
+                            const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed') || msg.includes('navigating')) && attempt < 10) {
+                                await new Promise(r => setTimeout(r, 300 * attempt));
                             } else {
                                 throw err;
                             }
@@ -238,14 +239,15 @@ await (async () => {
             }
             if (prop === '$') {
                 return async (selector) => {
-                    for (let attempt = 1; attempt <= 6; attempt++) {
+                    for (let attempt = 1; attempt <= 10; attempt++) {
                         try {
-                            const target = getActiveFrame() || rawPage;
+                            const active = getActiveFrame();
+                            const target = (active && (typeof active.isDetached === 'function' ? !active.isDetached() : !active.detached)) ? active : rawPage;
                             return await target.$(selector);
                         } catch (err) {
-                            const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 6) {
-                                await new Promise(r => setTimeout(r, 400 * attempt));
+                            const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
+                            if ((msg.includes('detached') || msg.includes('execution context was destroyed') || msg.includes('cannot find context') || msg.includes('target closed')) && attempt < 10) {
+                                await new Promise(r => setTimeout(r, 300 * attempt));
                             } else {
                                 throw err;
                             }
