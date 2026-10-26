@@ -13468,11 +13468,11 @@ await (async () => {
                 const bodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
 
                 const hasActiveModelName = bodyHtml.includes('Playard game ai 1.1');
-                const hasPlayAi2Model = bodyHtml.includes('PlayAi 2');
+                const hasPlayAi2Model = bodyHtml.includes('PlayAi 2.1');
                 const hasSvgRing = bodyHtml.includes('<svg') && bodyHtml.includes('stroke-dasharray');
                 const hasRemainingCounter = bodyHtml.includes('jäänud');
 
-                // Test clicking PlayAi 2 as non-VIP (should trigger 'you tont own vip')
+                // Test clicking PlayAi 2.1 as non-VIP (should trigger 'you tont own vip')
                 let nonVipErrorTriggered = false;
                 const origAlert = window.alert;
                 window.alert = (msg) => {
@@ -13487,20 +13487,20 @@ await (async () => {
                 const errorBannerText = document.getElementById('ai-model-error-text')?.textContent || '';
                 const hasErrorBanner = errorBannerText.includes('you tont own vip');
 
-                // Test switching to VIP tier and selecting PlayAi 2
+                // Test switching to VIP tier and selecting PlayAi 2.1
                 window.aiTierService.setTier('VIP');
                 window.aiTierService.resetDailyUsage();
 
-                // Click select PlayAi 2 as VIP
+                // Click select PlayAi 2.1 as VIP
                 const playAi2SelectBtnVip = document.querySelector('.btn-select-model[data-model="play_ai_2"]');
                 playAi2SelectBtnVip?.click();
                 await new Promise(r => setTimeout(r, 100));
 
                 const bodyHtmlVip = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
-                const playAi2SelectedActive = bodyHtmlVip.includes('PlayAi 2') && bodyHtmlVip.includes('AINULT 5 PÄEVA');
+                const playAi2SelectedActive = bodyHtmlVip.includes('PlayAi 2.1') && bodyHtmlVip.includes('AINULT 5 PÄEVA');
                 const playAi2HasNo5h = !bodyHtmlVip.includes('5h limiit:');
 
-                // Record a question on PlayAi 2 and verify -2.5%
+                // Record a question on PlayAi 2.1 and verify -2.5%
                 const playAi2Rec = window.aiTierService.recordRequest();
                 const playAi2RemainingAfter1 = playAi2Rec.playAi2Limits?.fiveDayRemainingPct; // should be 97.5%
 
@@ -13561,7 +13561,7 @@ await (async () => {
             ) {
                 throw new Error("AI Models & Plans Modal test failed: " + JSON.stringify(modelsModalTest));
             }
-            console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1 & PlayAi 2 VIP-only 'you tont own vip' & 5P-only -2.5% limit) verified successfully!");
+            console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1 & PlayAi 2.1 VIP-only 'you tont own vip' & 5P-only -2.5% limit) verified successfully!");
 
             console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand & Models/Plans Modal) tests passed successfully!");
 

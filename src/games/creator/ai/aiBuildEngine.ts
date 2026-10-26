@@ -129,7 +129,7 @@ export function updateAiTierDisplay() {
     const badgeEl = document.getElementById('ai-current-tier-badge');
     if (badgeEl) {
         if (isPlayAi2) {
-            badgeEl.textContent = '💎 PlayAi 2';
+            badgeEl.textContent = '💎 PlayAi 2.1';
             badgeEl.style.color = '#f43f5e';
             badgeEl.style.borderColor = '#f43f5e';
             badgeEl.style.background = 'rgba(244, 63, 94, 0.25)';

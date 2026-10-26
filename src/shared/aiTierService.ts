@@ -31,7 +31,7 @@ export const PLAYARD_AI_MODELS: Record<PlayardAiModelId, PlayardAiModelConfig> =
     },
     play_ai_2: {
         id: 'play_ai_2',
-        name: 'PlayAi 2',
+        name: 'PlayAi 2.1',
         subtitle: '👑 Eksklusiivne VIP tehisintellekt',
         description: 'VIP tellijatele loodud võimas tehisintellekt. Sama nutikas ja võimekas kui Playard game ai 1.1, spetsiaalse 5 päeva limiidiga.',
         icon: '💎',
@@ -538,7 +538,7 @@ export class AiTierService {
                 const hours = Math.ceil(playAi2Limits.fiveDayResetsInMs / (3600 * 1000));
                 return {
                     allowed: false,
-                    message: `Sa oled PlayAi 2 5 päeva limiidi ära kasutanud (0% alles). Uus limiit vabaneb ${hours} tunni pärast.`,
+                    message: `Sa oled PlayAi 2.1 5 päeva limiidi ära kasutanud (0% alles). Uus limiit vabaneb ${hours} tunni pärast.`,
                     tier,
                     usedToday: usage.usedToday,
                     dailyLimit: usage.dailyLimit,

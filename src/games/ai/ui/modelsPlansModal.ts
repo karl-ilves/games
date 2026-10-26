@@ -176,7 +176,7 @@ export class ModelsPlansModal {
                         </p>
                     </div>
 
-                    <!-- Model 2: PlayAi 2 (VIP Only, Always Visible) -->
+                    <!-- Model 2: PlayAi 2.1 (VIP Only, Always Visible) -->
                     <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid ${isPlayAi2 ? '#f43f5e' : 'rgba(244, 63, 94, 0.3)'}; border-radius: 14px; padding: 16px; box-shadow: ${isPlayAi2 ? '0 0 20px rgba(244, 63, 94, 0.25)' : 'none'}; position: relative;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
@@ -186,7 +186,7 @@ export class ModelsPlansModal {
                                 <div>
                                     <div style="display: flex; align-items: center; gap: 6px;">
                                         <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.2px;">
-                                            PlayAi 2
+                                            PlayAi 2.1
                                         </h4>
                                         <span style="background: rgba(244, 63, 94, 0.25); border: 1px solid #f43f5e; color: #fda4af; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 8px;">
                                             👑 VIP AINULT
@@ -215,14 +215,14 @@ export class ModelsPlansModal {
                 <!-- Limits & Usage Container -->
                 <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; margin-bottom: 14px;">
                     ${isPlayAi2 ? `
-                        <!-- PlayAi 2 Limits: ONLY 5 Päeva Limit (-2.5% / küsimus) -->
+                        <!-- PlayAi 2.1 Limits: ONLY 5 Päeva Limit (-2.5% / küsimus) -->
                         <div>
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                                <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">PlayAi 2 Limiit (AINULT 5 PÄEVA)</span>
+                                <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">PlayAi 2.1 Limiit (AINULT 5 PÄEVA)</span>
                                 <span style="font-size: 12px; font-weight: 800; color: #f43f5e;">👑 VIP</span>
                             </div>
 
-                            <!-- 5 päeva limit bar for PlayAi 2 -->
+                            <!-- 5 päeva limit bar for PlayAi 2.1 -->
                             <div style="margin-bottom: 12px;">
                                 <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
                                     <span>📅 <strong>5 päeva limiit:</strong></span>
