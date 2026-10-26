@@ -199,40 +199,91 @@ export class BuildSystem {
                     reason: 'Veetoru starti saab panna AINULT torni külge! Ehita esmalt torn.'
                 };
             } else {
-                // Find nearest tower deck
-                const intersection = new THREE.Vector3();
-                this.raycaster.ray.intersectPlane(this.groundPlane, intersection);
+                // Raycast first against tower meshes, fallback to raycaster ground plane
+                const towerMeshes = towers.map(t => this.structureMeshes.get(t.instanceId)).filter(Boolean) as THREE.Group[];
+                const hit = this.raycaster.intersectObjects(towerMeshes, true);
 
                 let closestTower: PlacedStructure | null = null;
-                let minDist = Infinity;
-                for (const t of towers) {
-                    const d = Math.hypot(t.x - intersection.x, t.z - intersection.z);
-                    if (d < minDist) {
-                        minDist = d;
-                        closestTower = t;
+                let lookPt = new THREE.Vector3();
+
+                if (hit.length > 0) {
+                    lookPt.copy(hit[0].point);
+                    // Find matching tower
+                    let obj: THREE.Object3D | null = hit[0].object;
+                    while (obj && !towers.some(t => this.structureMeshes.get(t.instanceId) === obj)) {
+                        obj = obj.parent;
+                    }
+                    closestTower = towers.find(t => this.structureMeshes.get(t.instanceId) === obj) || null;
+                }
+
+                if (!closestTower) {
+                    const intersection = new THREE.Vector3();
+                    this.raycaster.ray.intersectPlane(this.groundPlane, intersection);
+                    lookPt.copy(intersection);
+
+                    let minDist = Infinity;
+                    for (const t of towers) {
+                        const d = Math.hypot(t.x - intersection.x, t.z - intersection.z);
+                        if (d < minDist) {
+                            minDist = d;
+                            closestTower = t;
+                        }
+                    }
+                    if (minDist > 12) {
+                        closestTower = null;
                     }
                 }
 
-                if (closestTower && minDist < 6) {
-                    // Attach to tower platform edge
-                    const level = closestTower.stackLevel ?? 0;
+                if (closestTower) {
+                    // Find highest tower stack in this column so slide starts from the top deck
+                    const columnTowers = towers.filter(t => Math.abs(t.x - closestTower!.x) < 1 && Math.abs(t.z - closestTower!.z) < 1);
+                    const topTower = columnTowers.reduce((prev, curr) => ((curr.stackLevel ?? 0) > (prev.stackLevel ?? 0) ? curr : prev), closestTower);
+                    const level = topTower.stackLevel ?? 0;
                     const deckY = (level + 1) * 3.5;
-                    const attachPos = new THREE.Vector3(closestTower.x, deckY, closestTower.z + 2.0);
-                    const exitPos = new THREE.Vector3(attachPos.x, deckY, attachPos.z + 1.6);
+
+                    // Choose exit direction towards the cursor relative to tower center (North, South, East, West)
+                    const dx = lookPt.x - topTower.x;
+                    const dz = lookPt.z - topTower.z;
+                    let rotY = 0;
+                    let attachOffset = new THREE.Vector3(0, 0, 2.0);
+
+                    if (Math.abs(dx) > Math.abs(dz)) {
+                        if (dx > 0) {
+                            rotY = Math.PI / 2;
+                            attachOffset.set(2.0, 0, 0);
+                        } else {
+                            rotY = -Math.PI / 2;
+                            attachOffset.set(-2.0, 0, 0);
+                        }
+                    } else {
+                        if (dz < 0) {
+                            rotY = Math.PI;
+                            attachOffset.set(0, 0, -2.0);
+                        } else {
+                            rotY = 0;
+                            attachOffset.set(0, 0, 2.0);
+                        }
+                    }
+
+                    const attachPos = new THREE.Vector3(topTower.x + attachOffset.x, deckY, topTower.z + attachOffset.z);
+                    // The exit of pipe_start is at local z = 1.4
+                    const forward = new THREE.Vector3(0, 0, 1.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+                    const exitPos = attachPos.clone().add(forward);
+
                     this.targetCandidate = {
                         pos: attachPos,
-                        rotY: 0,
+                        rotY: rotY,
                         valid: true,
-                        attachedToId: closestTower.instanceId,
+                        attachedToId: topTower.instanceId,
                         exitPos,
-                        exitRotY: 0
+                        exitRotY: rotY
                     };
                 } else {
                     this.targetCandidate = {
                         pos: new THREE.Vector3(),
                         rotY: 0,
                         valid: false,
-                        reason: 'Toru starti saab panna AINULT torni külge! Liigu hiirega torni lähedale.'
+                        reason: 'Toru starti saab panna AINULT torni külge! Liigu kursoriga torni peale.'
                     };
                 }
             }
@@ -248,24 +299,43 @@ export class BuildSystem {
                     reason: 'Toru saab panna AINULT stardi või teiste torude külge! Paigalda esmalt Toru Start.'
                 };
             } else {
-                // Find the open end of a pipe
-                const intersection = new THREE.Vector3();
-                this.raycaster.ray.intersectPlane(this.groundPlane, intersection);
+                // Raycast against existing pipe meshes first, or test nearest endpoint
+                const pipeMeshes = existingPipes.map(p => this.structureMeshes.get(p.instanceId)).filter(Boolean) as THREE.Group[];
+                const hit = this.raycaster.intersectObjects(pipeMeshes, true);
 
-                // Find closest pipe endpoint
                 let bestPipe: PlacedStructure | null = null;
-                let minEndDist = Infinity;
+                let lookPt = new THREE.Vector3();
 
-                for (const p of existingPipes) {
-                    const exit = p.exitPos || { x: p.x, y: p.y, z: p.z + 4 };
-                    const d = Math.hypot(exit.x - intersection.x, exit.z - intersection.z);
-                    if (d < minEndDist) {
-                        minEndDist = d;
-                        bestPipe = p;
+                if (hit.length > 0) {
+                    lookPt.copy(hit[0].point);
+                    let obj: THREE.Object3D | null = hit[0].object;
+                    while (obj && !existingPipes.some(p => this.structureMeshes.get(p.instanceId) === obj)) {
+                        obj = obj.parent;
+                    }
+                    bestPipe = existingPipes.find(p => this.structureMeshes.get(p.instanceId) === obj) || null;
+                }
+
+                if (!bestPipe) {
+                    const intersection = new THREE.Vector3();
+                    this.raycaster.ray.intersectPlane(this.groundPlane, intersection);
+                    lookPt.copy(intersection);
+
+                    // Find closest pipe endpoint
+                    let minEndDist = Infinity;
+                    for (const p of existingPipes) {
+                        const exit = p.exitPos || { x: p.x, y: p.y, z: p.z + 4 };
+                        const d = Math.hypot(exit.x - lookPt.x, exit.z - lookPt.z);
+                        if (d < minEndDist) {
+                            minEndDist = d;
+                            bestPipe = p;
+                        }
+                    }
+                    if (minEndDist > 25) {
+                        bestPipe = null;
                     }
                 }
 
-                if (bestPipe && minEndDist < 10) {
+                if (bestPipe) {
                     const attachPos = bestPipe.exitPos ? new THREE.Vector3(bestPipe.exitPos.x, bestPipe.exitPos.y, bestPipe.exitPos.z) : new THREE.Vector3(bestPipe.x, bestPipe.y, bestPipe.z + 2);
                     const attachRot = bestPipe.exitRotY ?? bestPipe.rotationY;
 
@@ -274,16 +344,21 @@ export class BuildSystem {
                     let nextExitRot = attachRot;
 
                     if (def.id === 'pipe_straight') {
-                        const forward = new THREE.Vector3(0, 0, 4).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
+                        const forward = new THREE.Vector3(0, 0, 4.0).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
                         nextExitPos.add(forward);
                     } else if (def.id === 'pipe_down20') {
-                        const forward = new THREE.Vector3(0, -1.37, 3.75).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
+                        // 4.0m length rotated down by 20 deg
+                        const dy = -Math.sin(THREE.MathUtils.degToRad(20)) * 4.0;
+                        const dz = Math.cos(THREE.MathUtils.degToRad(20)) * 4.0;
+                        const forward = new THREE.Vector3(0, dy, dz).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
                         nextExitPos.add(forward);
                     } else if (def.id === 'pipe_turn_right') {
+                        // 90 deg turn right: offset x = +2.5, z = +2.5
                         const offset = new THREE.Vector3(2.5, 0, 2.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
                         nextExitPos.add(offset);
                         nextExitRot = attachRot - Math.PI / 2;
                     } else if (def.id === 'pipe_turn_left') {
+                        // 90 deg turn left: offset x = -2.5, z = +2.5
                         const offset = new THREE.Vector3(-2.5, 0, 2.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
                         nextExitPos.add(offset);
                         nextExitRot = attachRot + Math.PI / 2;

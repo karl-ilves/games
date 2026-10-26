@@ -5,9 +5,10 @@ import { avatarService } from '../../../shared/avatar/AvatarService';
 export class PlayerAvatarSystem {
     public rig: AvatarRig;
     public position: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-    public rotationY: number = 0;
-    private velocity: THREE.Vector3 = new THREE.Vector3();
-    private isMoving: boolean = false;
+    public characterYaw: number = 0;
+    public velocityY: number = 0;
+    public isGrounded: boolean = true;
+    public isMoving: boolean = false;
     private keys: Record<string, boolean> = {};
 
     constructor(scene: THREE.Scene) {
@@ -33,41 +34,66 @@ export class PlayerAvatarSystem {
         });
     }
 
-    public update(delta: number, cameraAngleY: number) {
-        // WASD / Arrow movement relative to camera
-        const forward = (this.keys['w'] || this.keys['arrowup'] ? 1 : 0) - (this.keys['s'] || this.keys['arrowdown'] ? 1 : 0);
-        const strafe = (this.keys['d'] || this.keys['arrowright'] ? 1 : 0) - (this.keys['a'] || this.keys['arrowleft'] ? 1 : 0);
+    public update(delta: number) {
+        // Creator Studio exact movement & turning controls:
+        // Turn view with A / D or ArrowLeft / ArrowRight
+        const turnSpeed = 2.8;
+        if (this.keys['KeyA'] || this.keys['ArrowLeft'] || this.keys['a']) {
+            this.characterYaw += turnSpeed * delta;
+        }
+        if (this.keys['KeyD'] || this.keys['ArrowRight'] || this.keys['d']) {
+            this.characterYaw -= turnSpeed * delta;
+        }
 
-        const moveDir = new THREE.Vector3(strafe, 0, -forward);
-        this.isMoving = moveDir.lengthSq() > 0;
+        // Only W and S move the player! (W = forward in view direction, S = backward)
+        let moveMagnitude = 0;
+        if (this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w']) moveMagnitude += 1;
+        if (this.keys['KeyS'] || this.keys['ArrowDown'] || this.keys['s']) moveMagnitude -= 1;
 
-        if (this.isMoving) {
-            moveDir.normalize();
-            // Rotate move direction by camera's azimuthal angle
-            moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleY);
+        const forwardX = Math.sin(this.characterYaw);
+        const forwardZ = Math.cos(this.characterYaw);
 
-            const speed = 7.0;
-            this.position.x += moveDir.x * speed * delta;
-            this.position.z += moveDir.z * speed * delta;
+        const moveSpeed = 9.0;
+        const hasHoriMove = moveMagnitude !== 0;
+        this.isMoving = hasHoriMove;
+
+        if (hasHoriMove) {
+            this.position.x += forwardX * moveMagnitude * moveSpeed * delta;
+            this.position.z += forwardZ * moveMagnitude * moveSpeed * delta;
 
             // Clamping inside water park grounds
             this.position.x = Math.max(-55, Math.min(55, this.position.x));
             this.position.z = Math.max(-55, Math.min(55, this.position.z));
-
-            // Smoothly rotate avatar towards movement direction
-            const targetRot = Math.atan2(moveDir.x, moveDir.z);
-            let diff = targetRot - this.rotationY;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            this.rotationY += diff * 12 * delta;
         }
 
+        // Jump & Gravity (Creator Studio physics)
+        if ((this.keys['Space'] || this.keys[' ']) && this.isGrounded) {
+            this.velocityY = 9.0;
+            this.isGrounded = false;
+        }
+
+        if (!this.isGrounded) {
+            this.velocityY -= 22 * delta;
+            this.position.y += this.velocityY * delta;
+            if (this.position.y <= 0) {
+                this.position.y = 0;
+                this.velocityY = 0;
+                this.isGrounded = true;
+            }
+        }
+
+        // Smooth rotation to characterYaw
         this.rig.rootGroup.position.copy(this.position);
-        this.rig.rootGroup.rotation.y = this.rotationY;
+        this.rig.rootGroup.rotation.y = THREE.MathUtils.lerp(this.rig.rootGroup.rotation.y, this.characterYaw, 0.25);
 
         // Animate legs and arms using AvatarRig
         const time = performance.now() * 0.001;
-        const animState = this.isMoving ? 'walk' : 'idle';
+        let animState: 'idle' | 'walk' | 'run' | 'jump' = 'idle';
+        if (!this.isGrounded) {
+            animState = 'jump';
+        } else if (hasHoriMove) {
+            animState = 'run';
+        }
         this.rig.updateAnimation(time, animState);
     }
 }

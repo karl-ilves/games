@@ -14839,6 +14839,53 @@ await (async () => {
                 // Check In-game Menu 'P' button is present
                 const hasPBtn = !!document.getElementById('btn-playard-menu');
 
+                // Test Creator Studio movement: A/D rotates characterYaw, W moves forward, Space jumps
+                const initialYaw = game.playerAvatar.characterYaw;
+                window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', code: 'KeyA' }));
+                game.playerAvatar.update(0.1);
+                window.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', code: 'KeyA' }));
+                const yawAfterA = game.playerAvatar.characterYaw;
+                const yawChanged = yawAfterA > initialYaw;
+
+                // Test jump
+                const initialPosY = game.playerAvatar.position.y;
+                window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space' }));
+                game.playerAvatar.update(0.1);
+                window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space' }));
+                const jumped = game.playerAvatar.position.y > initialPosY;
+
+                // Test pipe snapping:
+                // 1. Place a tower segment
+                game.buildSystem.selectItem('tower_segment');
+                // Simulate candidate placement on ground
+                game.buildSystem.targetCandidate = {
+                    pos: { x: 0, y: 0, z: 0 },
+                    rotY: 0,
+                    valid: true,
+                    stackLevel: 0
+                };
+                const canvasEl = document.getElementById('game-canvas');
+                canvasEl?.dispatchEvent(new MouseEvent('pointerdown', { button: 0, clientX: 100, clientY: 100 }));
+                await new Promise(r => setTimeout(r, 50));
+
+                // 2. Select pipe_start and verify it attaches to the tower
+                game.buildSystem.selectItem('pipe_start');
+                game.buildSystem.updateCandidatePlacement();
+                const pipeStartCandidate = game.buildSystem.targetCandidate;
+                const pipeStartSnapsToTower = !!pipeStartCandidate && pipeStartCandidate.valid && !!pipeStartCandidate.attachedToId;
+
+                // Place pipe_start
+                if (pipeStartSnapsToTower) {
+                    canvasEl?.dispatchEvent(new MouseEvent('pointerdown', { button: 0, clientX: 100, clientY: 100 }));
+                    await new Promise(r => setTimeout(r, 50));
+                }
+
+                // 3. Select pipe_straight and verify it connects to the pipe_start exit
+                game.buildSystem.selectItem('pipe_straight');
+                game.buildSystem.updateCandidatePlacement();
+                const pipeStraightCandidate = game.buildSystem.targetCandidate;
+                const pipeStraightSnaps = !!pipeStraightCandidate && pipeStraightCandidate.valid && !!pipeStraightCandidate.attachedToId;
+
                 return {
                     hasCanvas,
                     hasGameInstance,
@@ -14856,7 +14903,11 @@ await (async () => {
                     hasTurnRight,
                     hasTurnLeft,
                     returnedToMain,
-                    hasPBtn
+                    hasPBtn,
+                    yawChanged,
+                    jumped,
+                    pipeStartSnapsToTower,
+                    pipeStraightSnaps
                 };
             });
 
@@ -14878,11 +14929,15 @@ await (async () => {
                 !waterParkTest.hasTurnRight ||
                 !waterParkTest.hasTurnLeft ||
                 !waterParkTest.returnedToMain ||
-                !waterParkTest.hasPBtn
+                !waterParkTest.hasPBtn ||
+                !waterParkTest.yawChanged ||
+                !waterParkTest.jumped ||
+                !waterParkTest.pipeStartSnapsToTower ||
+                !waterParkTest.pipeStraightSnaps
             ) {
                 throw new Error("Build a Water Park updated test failed: " + JSON.stringify(waterParkTest));
             }
-            console.log("   ✅ Build a Water Park (Walking Avatar, Pools, Tower, Laste Veetorud, Tagasi & P button) verified successfully!");
+            console.log("   ✅ Build a Water Park (Walking Avatar, Creator Studio Controls, Pipe Snapping, Pools, Tower, Laste Veetorud, Tagasi & P button) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);

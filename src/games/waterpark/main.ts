@@ -30,7 +30,9 @@ export class WaterParkGame {
 
         this.environment = new WaterParkEnvironment(this.scene);
         this.playerAvatar = new PlayerAvatarSystem(this.scene);
-        this.followCamera = new ThirdPersonFollowCamera(this.camera, canvas);
+        this.followCamera = new ThirdPersonFollowCamera(this.camera, canvas, (deltaYaw) => {
+            this.playerAvatar.characterYaw -= deltaYaw;
+        });
         this.buildSystem = new BuildSystem(this.scene, this.camera, canvas);
 
         this.hud = new WaterParkHUD((id: string) => {
@@ -52,11 +54,11 @@ export class WaterParkGame {
         const delta = Math.min(0.1, (now - this.lastTime) / 1000);
         this.lastTime = now;
 
-        // Player walking controls & 3D AvatarRig animation
-        this.playerAvatar.update(delta, this.followCamera.angleY);
+        // Player walking controls & 3D AvatarRig animation (Creator Studio controls)
+        this.playerAvatar.update(delta);
 
         // Follow player avatar with camera
-        this.followCamera.update(this.playerAvatar.position);
+        this.followCamera.update(this.playerAvatar.position, this.playerAvatar.characterYaw);
 
         this.renderer.render(this.scene, this.camera);
     };
