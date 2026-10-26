@@ -1,10 +1,12 @@
-import { aiTierService, AI_TIER_CONFIGS, type PlayardAiTier } from '../../../shared/aiTierService';
+import { aiTierService, AI_TIER_CONFIGS, type PlayardAiTier, type PlayardAiModelId } from '../../../shared/aiTierService';
 import { yardService } from '../../../shared/yardService';
+import { getLocalProfiles, getCurrentUserProfile, type UserProfile } from '../../../auth';
 
 export class ModelsPlansModal {
     private static instance: ModelsPlansModal;
     private currentTab: 'model' | 'plans' = 'model';
     private wasAiAssistantOpen = false;
+    private showAddMembersModal = false;
 
     public static getInstance(): ModelsPlansModal {
         if (!this.instance) {
@@ -35,10 +37,36 @@ export class ModelsPlansModal {
             } else if (target.closest('#btn-dismiss-model-error')) {
                 const banner = document.getElementById('ai-model-error-banner');
                 if (banner) banner.style.display = 'none';
+            } else if (target.closest('#btn-open-add-members-modal')) {
+                this.showAddMembersModal = true;
+                this.renderContent();
+            } else if (target.closest('#btn-close-add-members-modal')) {
+                this.showAddMembersModal = false;
+                this.renderContent();
             } else {
+                const addMemberBtn = target.closest('.btn-add-team-player') as HTMLElement | null;
+                if (addMemberBtn) {
+                    const username = addMemberBtn.getAttribute('data-username');
+                    if (username) {
+                        aiTierService.addTeamMember(username);
+                        this.renderContent();
+                    }
+                    return;
+                }
+
+                const removeMemberBtn = target.closest('.btn-remove-team-member') as HTMLElement | null;
+                if (removeMemberBtn) {
+                    const username = removeMemberBtn.getAttribute('data-username');
+                    if (username) {
+                        aiTierService.removeTeamMember(username);
+                        this.renderContent();
+                    }
+                    return;
+                }
+
                 const modelBtn = target.closest('.btn-select-model') as HTMLElement | null;
                 if (modelBtn) {
-                    const modelId = modelBtn.getAttribute('data-model') as any;
+                    const modelId = modelBtn.getAttribute('data-model') as PlayardAiModelId;
                     const res = aiTierService.setSelectedModel(modelId);
                     if (!res.success) {
                         const errorMsg = res.message || 'you tont own vip';
@@ -125,11 +153,27 @@ export class ModelsPlansModal {
             const selectedModel = aiTierService.getSelectedModel();
             const playAi2Limits = aiTierService.getPlayAi2Limits();
             const isPlayAi2 = selectedModel === 'play_ai_2';
+            const isPlayAi22 = selectedModel === 'play_ai_2_2';
+            const isSpecialModel = isPlayAi2 || isPlayAi22;
 
-            const radius = 46;
-            const circumference = 2 * Math.PI * radius; // ~289.02
-            const strokeDashoffset5h = circumference * (1 - fiveHourRemaining / 100);
             const ringColor = fiveHourRemaining > 25 ? '#38bdf8' : (fiveHourRemaining > 0 ? '#f59e0b' : '#ef4444');
+
+            const teamMembers = aiTierService.getTeamMembers();
+            const isTeamTier = activeTier === 'TEAM';
+
+            // Get strictly real players from registered local profiles (excluding current user and fake bots)
+            const currentProfile = getCurrentUserProfile();
+            const currentUsername = currentProfile?.username || '';
+            const allProfiles = getLocalProfiles();
+            const realPlayers = allProfiles.filter(p => {
+                if (!p || !p.username) return false;
+                const u = p.username.trim();
+                if (!u) return false;
+                if (currentUsername && u.toLowerCase() === currentUsername.toLowerCase()) return false;
+                // STRICTLY REAL PLAYERS - exclude fake AI bots
+                if (u.toLowerCase().startsWith('bot_') || u.toLowerCase().startsWith('ai_') || u.toLowerCase() === 'system') return false;
+                return true;
+            });
 
             bodyEl.innerHTML = `
                 <!-- Error notification banner -->
@@ -144,10 +188,89 @@ export class ModelsPlansModal {
                     <span>jäänud</span>
                 </div>
 
+                <!-- Team Management Section (Shown when user owns TEAM tier) -->
+                ${isTeamTier ? `
+                    <div id="team-management-panel" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(14, 165, 233, 0.1)); border: 2px solid #06b6d4; border-radius: 14px; padding: 16px; margin-bottom: 16px; box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 22px;">👥</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 15px; font-weight: 800; color: #ffffff;">Meeskonna Haldus (TEAM)</h4>
+                                    <span style="font-size: 11px; color: #67e8f9; font-weight: 600;">Liikmeid tiimis: ${teamMembers.length}</span>
+                                </div>
+                            </div>
+                            <button type="button" id="btn-open-add-members-modal" style="background: linear-gradient(135deg, #06b6d4, #0284c7); border: none; color: #ffffff; font-size: 12px; font-weight: 800; padding: 6px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);">
+                                <span>➕</span> Add members
+                            </button>
+                        </div>
+
+                        <!-- Current Team Members List -->
+                        <div id="team-members-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            ${teamMembers.length === 0 ? `
+                                <div style="font-size: 12px; color: #94a3b8; font-style: italic; padding: 6px 0;">
+                                    Sul ei ole veel ühtegi tiimiliiget. Klõpsa nupule "Add members", et lisada päris mängijaid!
+                                </div>
+                            ` : teamMembers.map(member => `
+                                <div class="team-member-item" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 16px;">👤</span>
+                                        <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">${member}</span>
+                                        <span style="font-size: 10px; background: rgba(6, 182, 212, 0.2); color: #67e8f9; border: 1px solid #06b6d4; padding: 1px 6px; border-radius: 6px; font-weight: 700;">Liige</span>
+                                    </div>
+                                    <button type="button" class="btn-remove-team-member" data-username="${member}" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                        <span>🚪</span> Leave
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Add Members Drawer / Modal Overlay -->
+                ${this.showAddMembersModal ? `
+                    <div id="team-add-members-modal" style="background: rgba(15, 23, 42, 0.95); border: 2px solid #06b6d4; border-radius: 14px; padding: 16px; margin-bottom: 16px; box-shadow: 0 0 25px rgba(6, 182, 212, 0.35);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 20px;">👥</span>
+                                <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: #ffffff;">Lisa tiimiliikmeid (Ainult päris mängijad)</h4>
+                            </div>
+                            <button type="button" id="btn-close-add-members-modal" style="background: transparent; border: none; color: #cbd5e1; font-size: 16px; cursor: pointer;">✕</button>
+                        </div>
+
+                        <div id="real-players-picker-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+                            ${realPlayers.length === 0 ? `
+                                <div style="font-size: 12px; color: #94a3b8; padding: 10px 0; text-align: center;">
+                                    Teisi registreeritud mängijaid ei leitud.
+                                </div>
+                            ` : realPlayers.map(p => {
+                                const isAlreadyMember = teamMembers.some(m => m.toLowerCase() === p.username.toLowerCase());
+                                return `
+                                    <div class="real-player-row" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="font-size: 16px;">🎮</span>
+                                            <div>
+                                                <div style="font-size: 13px; font-weight: 700; color: #ffffff;">${p.displayName || p.username}</div>
+                                                <div style="font-size: 10px; color: #94a3b8;">@${p.username}</div>
+                                            </div>
+                                        </div>
+                                        ${isAlreadyMember ? `
+                                            <span style="font-size: 11px; color: #10b981; font-weight: 700;">✓ Lisatud</span>
+                                        ` : `
+                                            <button type="button" class="btn-add-team-player" data-username="${p.username}" style="background: linear-gradient(135deg, #06b6d4, #0284c7); border: none; color: #ffffff; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
+                                                Add
+                                            </button>
+                                        `}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
                 <!-- Models Grid / List -->
                 <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
                     <!-- Model 1: Playard game ai 1.1 -->
-                    <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid ${!isPlayAi2 ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'}; border-radius: 14px; padding: 16px; box-shadow: ${!isPlayAi2 ? '0 0 20px rgba(56, 189, 248, 0.2)' : 'none'};">
+                    <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid ${!isSpecialModel ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'}; border-radius: 14px; padding: 16px; box-shadow: ${!isSpecialModel ? '0 0 20px rgba(56, 189, 248, 0.2)' : 'none'};">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);">
@@ -160,7 +283,7 @@ export class ModelsPlansModal {
                                     <span style="font-size: 11px; color: #38bdf8; font-weight: 600;">⚡ Välkkiire 3D mängulooja & koodimootor</span>
                                 </div>
                             </div>
-                            ${!isPlayAi2 ? `
+                            ${!isSpecialModel ? `
                                 <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px;">
                                     <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
                                     Aktiivne
@@ -210,19 +333,54 @@ export class ModelsPlansModal {
                             VIP tellijatele loodud võimas tehisintellekt. Sama nutikas ja võimekas kui Playard game ai 1.1, spetsiaalse AINULT 5 päeva limiidiga (-2.5% iga küsimusega).
                         </p>
                     </div>
+
+                    <!-- Model 3: PlayAi 2.2 (VIP Only, Always Visible) -->
+                    <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid ${isPlayAi22 ? '#8b5cf6' : 'rgba(139, 92, 246, 0.3)'}; border-radius: 14px; padding: 16px; box-shadow: ${isPlayAi22 ? '0 0 20px rgba(139, 92, 246, 0.25)' : 'none'}; position: relative;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #7c3aed, #8b5cf6); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);">
+                                    🔮
+                                </div>
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.2px;">
+                                            PlayAi 2.2
+                                        </h4>
+                                        <span style="background: rgba(139, 92, 246, 0.25); border: 1px solid #8b5cf6; color: #c4b5fd; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 8px;">
+                                            👑 VIP AINULT
+                                        </span>
+                                    </div>
+                                    <span style="font-size: 11px; color: #c4b5fd; font-weight: 600;">👑 Eksklusiivne AI mudel (AINULT 5 P limiit, -2.5% küsimus)</span>
+                                </div>
+                            </div>
+                            ${isPlayAi22 ? `
+                                <span style="background: rgba(139, 92, 246, 0.25); border: 1px solid #8b5cf6; color: #c4b5fd; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px;">
+                                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #8b5cf6;"></span>
+                                    Aktiivne
+                                </span>
+                            ` : `
+                                <button type="button" class="btn-select-model" data-model="play_ai_2_2" style="background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(139, 92, 246, 0.3)); border: 1px solid #8b5cf6; color: #ffffff; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 10px; cursor: pointer;">
+                                    ${activeTier === 'VIP' ? 'Vali see mudel' : '🔒 VIP Mudel'}
+                                </button>
+                            `}
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                            Täpselt sama nutikas ja võimekas mudel nagu teised, aga teine spetsiaalne mudel. Limiit kulub sama nagu PlayAi 2.1 (AINULT 5 päeva limiit, -2.5% iga küsimusega).
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Limits & Usage Container -->
                 <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; margin-bottom: 14px;">
-                    ${isPlayAi2 ? `
-                        <!-- PlayAi 2.1 Limits: ONLY 5 Päeva Limit (-2.5% / küsimus) -->
+                    ${isSpecialModel ? `
+                        <!-- PlayAi 2.1 / 2.2 Limits: ONLY 5 Päeva Limit (-2.5% / küsimus) -->
                         <div>
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                                <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">PlayAi 2.1 Limiit (AINULT 5 PÄEVA)</span>
+                                <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">${selectedModel === 'play_ai_2_2' ? 'PlayAi 2.2' : 'PlayAi 2.1'} Limiit (AINULT 5 PÄEVA)</span>
                                 <span style="font-size: 12px; font-weight: 800; color: #f43f5e;">👑 VIP</span>
                             </div>
 
-                            <!-- 5 päeva limit bar for PlayAi 2.1 -->
+                            <!-- 5 päeva limit bar for PlayAi 2.1 / 2.2 -->
                             <div style="margin-bottom: 12px;">
                                 <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
                                     <span>📅 <strong>5 päeva limiit:</strong></span>
@@ -281,7 +439,7 @@ export class ModelsPlansModal {
         } else {
             // Render Plans Selection View
             const userPbx = yardService.getPlaybux();
-            const tiers: PlayardAiTier[] = ['FREE', 'PRO', 'PLUS', 'VIP'];
+            const tiers: PlayardAiTier[] = ['FREE', 'PRO', 'PLUS', 'VIP', 'TEAM'];
 
             let plansHtml = `
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 8px; flex-wrap: wrap;">
@@ -353,3 +511,4 @@ export class ModelsPlansModal {
         }
     }
 }
+

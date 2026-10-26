@@ -1065,16 +1065,14 @@ export class MetroAudioEngine {
     }
 
     // High-pitched eerie horror piano track (Vagun 26 - 31)
-    private isEeriePianoActive: boolean = false;
+    public isEeriePianoActive: boolean = false;
     private eeriePianoInterval: any = null;
     private eeriePianoMasterGain: GainNode | null = null;
 
     public startEerieHighPianoTrack() {
+        this.isEeriePianoActive = true;
         this.initContext();
         if (!this.ctx || !this.masterGain) return;
-        if (this.isEeriePianoActive) return;
-
-        this.isEeriePianoActive = true;
 
         if (!this.eeriePianoMasterGain) {
             this.eeriePianoMasterGain = this.ctx.createGain();

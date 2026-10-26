@@ -1,8 +1,8 @@
 import { yardService } from './yardService';
 
-export type PlayardAiTier = 'FREE' | 'PRO' | 'PLUS' | 'VIP';
+export type PlayardAiTier = 'FREE' | 'PRO' | 'PLUS' | 'VIP' | 'TEAM';
 
-export type PlayardAiModelId = 'playard_game_ai_1_1' | 'play_ai_2';
+export type PlayardAiModelId = 'playard_game_ai_1_1' | 'play_ai_2' | 'play_ai_2_2';
 
 export interface PlayardAiModelConfig {
     id: PlayardAiModelId;
@@ -14,7 +14,7 @@ export interface PlayardAiModelConfig {
     vipOnly: boolean;
     has5hLimit: boolean;
     has5dLimit: boolean;
-    pct5dPerQuery?: number; // For PlayAi 2: 2.5%
+    pct5dPerQuery?: number; // For PlayAi 2 & 2.2: 2.5%
 }
 
 export const PLAYARD_AI_MODELS: Record<PlayardAiModelId, PlayardAiModelConfig> = {
@@ -35,6 +35,18 @@ export const PLAYARD_AI_MODELS: Record<PlayardAiModelId, PlayardAiModelConfig> =
         subtitle: '👑 Eksklusiivne VIP tehisintellekt',
         description: 'VIP tellijatele loodud võimas tehisintellekt. Sama nutikas ja võimekas kui Playard game ai 1.1, spetsiaalse 5 päeva limiidiga.',
         icon: '💎',
+        badge: '👑 VIP AINULT',
+        vipOnly: true,
+        has5hLimit: false,
+        has5dLimit: true,
+        pct5dPerQuery: 2.5
+    },
+    play_ai_2_2: {
+        id: 'play_ai_2_2',
+        name: 'PlayAi 2.2',
+        subtitle: '👑 Eksklusiivne VIP & Team tehisintellekt',
+        description: 'Võimas täiendav AI mudel. Täpselt sama nutikas nagu teised mudelid, spetsiaalse AINULT 5 päeva limiidiga (-2.5% iga küsimusega).',
+        icon: '🔮',
         badge: '👑 VIP AINULT',
         vipOnly: true,
         has5hLimit: false,
@@ -222,6 +234,42 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
             singlePromptMassiveBuild: true,
             fastestAi: true
         }
+    },
+    TEAM: {
+        id: 'TEAM',
+        name: 'Team',
+        badge: '👥 TEAM',
+        icon: '👥',
+        pricePbx: 2000,
+        dailyLimit: 500,
+        questionLevel: 'Palju küsimusi',
+        pct5hPerQuery: 1, // Sama mis PLUS: 5h limiit 1% iga küsimuse kohta
+        pct5dPerQuery: 0.2, // Sama mis PLUS: 5 päeva limiit 0.2% iga küsimuse kohta
+        accentColor: '#06b6d4',
+        bgGradient: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(14, 165, 233, 0.15))',
+        description: 'Meeskonna tase – 2000 PBX! Lisa oma tiimi päris mängijaid ja looge koos mänge.',
+        features: [
+            'Kõik Plus taseme võimalused & limiidid',
+            '👥 Meeskonna haldus: Lisa oma tiimi päris mängijaid (Add members)',
+            'Mängijate eemaldamise / lahkumise võimalus (Leave)',
+            'Automaatne mängu testimine & vigade parandus',
+            'Pikem projektimälu & mitmeastmelised ülesanded',
+            '5h limiit: -1% küsimus • 5 päeva limiit: -0.2% küsimus'
+        ],
+        capabilities: {
+            maxObjectsPerGen: 150,
+            maxNpcs: 40,
+            maxMapRadius: 280,
+            canAutoTest: true,
+            canAutoFindBugs: true,
+            canAutoFixBugs: true,
+            advanced3D: true,
+            advancedNpc: true,
+            advancedAnimations: true,
+            multiStepExecution: true,
+            singlePromptMassiveBuild: false,
+            fastestAi: true
+        }
     }
 };
 
@@ -230,6 +278,7 @@ const STORAGE_KEY_USAGE = 'playard_ai_daily_usage';
 const STORAGE_KEY_LIMITS = 'playard_ai_dual_limits';
 const STORAGE_KEY_MODEL = 'playard_ai_selected_model';
 const STORAGE_KEY_PLAYAI2_LIMITS = 'playard_ai_playai2_limits';
+const STORAGE_KEY_TEAM_MEMBERS = 'playard_ai_team_members';
 
 interface StoredTierData {
     tier: PlayardAiTier;
@@ -300,17 +349,20 @@ export class AiTierService {
             if (raw === 'play_ai_2') {
                 return 'play_ai_2';
             }
+            if (raw === 'play_ai_2_2') {
+                return 'play_ai_2_2';
+            }
         } catch (e) {}
         return 'playard_game_ai_1_1';
     }
 
     /**
      * Set selected AI model.
-     * PlayAi 2 can only be selected by VIP subscribers.
-     * If free, pro, or plus user tries to select it, returns error: "you tont own vip"
+     * PlayAi 2 and PlayAi 2.2 can only be selected by VIP subscribers.
+     * If free, pro, plus, or team user tries to select it, returns error: "you tont own vip"
      */
     public setSelectedModel(modelId: PlayardAiModelId): { success: boolean; message?: string } {
-        if (modelId === 'play_ai_2') {
+        if (modelId === 'play_ai_2' || modelId === 'play_ai_2_2') {
             const currentTier = this.getTier();
             if (currentTier !== 'VIP') {
                 return {
@@ -325,7 +377,55 @@ export class AiTierService {
     }
 
     /**
-     * Get limit status for PlayAi 2 (ONLY 5 päeva limit, 2.5% per question)
+     * Team members management for TEAM tier.
+     * Members must be real players (username strings).
+     */
+    public getTeamMembers(): string[] {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY_TEAM_MEMBERS);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    return parsed;
+                }
+            }
+        } catch (e) {}
+        return [];
+    }
+
+    public addTeamMember(username: string): boolean {
+        const clean = (username || '').trim();
+        if (!clean) return false;
+        const current = this.getTeamMembers();
+        if (current.some(u => u.toLowerCase() === clean.toLowerCase())) {
+            return false;
+        }
+        current.push(clean);
+        localStorage.setItem(STORAGE_KEY_TEAM_MEMBERS, JSON.stringify(current));
+        this.notify();
+        return true;
+    }
+
+    public removeTeamMember(username: string): boolean {
+        const clean = (username || '').trim();
+        if (!clean) return false;
+        const current = this.getTeamMembers();
+        const updated = current.filter(u => u.toLowerCase() !== clean.toLowerCase());
+        if (updated.length !== current.length) {
+            localStorage.setItem(STORAGE_KEY_TEAM_MEMBERS, JSON.stringify(updated));
+            this.notify();
+            return true;
+        }
+        return false;
+    }
+
+    public clearTeamMembers(): void {
+        localStorage.removeItem(STORAGE_KEY_TEAM_MEMBERS);
+        this.notify();
+    }
+
+    /**
+     * Get limit status for PlayAi 2 and PlayAi 2.2 (ONLY 5 päeva limit, 2.5% per question)
      */
     public getPlayAi2Limits(): { fiveDayRemainingPct: number; fiveDayUsedPct: number; fiveDayResetsInMs: number; canRequest: boolean } {
         const now = Date.now();
@@ -520,7 +620,7 @@ export class AiTierService {
         const usage = this.getDailyUsage();
         const limits = this.getLimits();
 
-        if (selectedModel === 'play_ai_2') {
+        if (selectedModel === 'play_ai_2' || selectedModel === 'play_ai_2_2') {
             if (tier !== 'VIP') {
                 return {
                     allowed: false,
@@ -536,9 +636,10 @@ export class AiTierService {
             const playAi2Limits = this.getPlayAi2Limits();
             if (!playAi2Limits.canRequest) {
                 const hours = Math.ceil(playAi2Limits.fiveDayResetsInMs / (3600 * 1000));
+                const modelName = selectedModel === 'play_ai_2_2' ? 'PlayAi 2.2' : 'PlayAi 2.1';
                 return {
                     allowed: false,
-                    message: `Sa oled PlayAi 2.1 5 päeva limiidi ära kasutanud (0% alles). Uus limiit vabaneb ${hours} tunni pärast.`,
+                    message: `Sa oled ${modelName} 5 päeva limiidi ära kasutanud (0% alles). Uus limiit vabaneb ${hours} tunni pärast.`,
                     tier,
                     usedToday: usage.usedToday,
                     dailyLimit: usage.dailyLimit,
@@ -593,7 +694,7 @@ export class AiTierService {
     /**
      * Consume one AI request from quotas based on active model.
      * For Playard game ai 1.1: reduces 5h and 5 päeva limits by tier percentages.
-     * For PlayAi 2: reduces ONLY 5 päeva limit by 2.5%.
+     * For PlayAi 2 & PlayAi 2.2: reduces ONLY 5 päeva limit by 2.5%.
      */
     public recordRequest(): { success: boolean; usedToday: number; dailyLimit: number; remaining: number; limits: DualLimitsStatus; selectedModel: PlayardAiModelId; playAi2Limits?: { fiveDayRemainingPct: number; fiveDayUsedPct: number; fiveDayResetsInMs: number } } {
         const check = this.canMakeRequest();
@@ -613,7 +714,7 @@ export class AiTierService {
         const tier = this.getTier();
         const selectedModel = this.getSelectedModel();
 
-        if (selectedModel === 'play_ai_2') {
+        if (selectedModel === 'play_ai_2' || selectedModel === 'play_ai_2_2') {
             let p2Data: StoredPlayAi2LimitsData = {
                 fiveDayUsedPct: 0,
                 fiveDayResetTime: now + FIVE_DAYS_MS
@@ -643,7 +744,7 @@ export class AiTierService {
                 dailyLimit: check.dailyLimit,
                 remaining: Math.round(p2Limits.fiveDayRemainingPct / 2.5),
                 limits: check.limits,
-                selectedModel: 'play_ai_2',
+                selectedModel: selectedModel,
                 playAi2Limits: p2Limits
             };
         }

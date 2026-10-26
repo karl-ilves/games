@@ -595,8 +595,21 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
         }
     };
 
-    // 1. Local registered profiles
+    // 1. Local registered profiles and current user profile
     try {
+        const curProf = getCurrentUserProfile();
+        if (curProf && curProf.username) {
+            addCandidate({
+                id: curProf.id,
+                username: curProf.username,
+                displayName: curProf.displayName,
+                email: curProf.email,
+                isAdmin: curProf.isAdmin,
+                age: curProf.age,
+                gender: curProf.gender,
+                source: 'current_profile'
+            });
+        }
         const localProfiles = getLocalProfiles();
         for (const p of localProfiles) {
             if (p && p.username) {
