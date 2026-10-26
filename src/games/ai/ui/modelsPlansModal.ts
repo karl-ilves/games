@@ -32,6 +32,28 @@ export class ModelsPlansModal {
                 this.switchTab('plans');
             } else if (target.closest('#btn-tab-model') || target.closest('#btn-back-to-limit-from-plans')) {
                 this.switchTab('model');
+            } else if (target.closest('#btn-dismiss-model-error')) {
+                const banner = document.getElementById('ai-model-error-banner');
+                if (banner) banner.style.display = 'none';
+            } else {
+                const modelBtn = target.closest('.btn-select-model') as HTMLElement | null;
+                if (modelBtn) {
+                    const modelId = modelBtn.getAttribute('data-model') as any;
+                    const res = aiTierService.setSelectedModel(modelId);
+                    if (!res.success) {
+                        const errorMsg = res.message || 'you tont own vip';
+                        const banner = document.getElementById('ai-model-error-banner');
+                        const errorText = document.getElementById('ai-model-error-text');
+                        if (banner && errorText) {
+                            errorText.textContent = errorMsg;
+                            banner.style.display = 'flex';
+                        }
+                        alert(errorMsg);
+                    } else {
+                        window.dispatchEvent(new CustomEvent('ai-tier-changed'));
+                        this.renderContent();
+                    }
+                }
             }
         });
     }
@@ -100,35 +122,20 @@ export class ModelsPlansModal {
         if (!bodyEl) return;
 
         if (this.currentTab === 'model') {
-            // Render Model View with Circular Progress Ring for 5h Limit
+            const selectedModel = aiTierService.getSelectedModel();
+            const playAi2Limits = aiTierService.getPlayAi2Limits();
+            const isPlayAi2 = selectedModel === 'play_ai_2';
+
             const radius = 46;
             const circumference = 2 * Math.PI * radius; // ~289.02
             const strokeDashoffset5h = circumference * (1 - fiveHourRemaining / 100);
             const ringColor = fiveHourRemaining > 25 ? '#38bdf8' : (fiveHourRemaining > 0 ? '#f59e0b' : '#ef4444');
 
             bodyEl.innerHTML = `
-                <!-- Active Model Card -->
-                <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid #38bdf8; border-radius: 14px; padding: 16px; margin-bottom: 16px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);">
-                                🤖
-                            </div>
-                            <div>
-                                <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.2px;">
-                                    Playard game ai 1.1
-                                </h4>
-                                <span style="font-size: 11px; color: #38bdf8; font-weight: 600;">⚡ Välkkiire 3D mängulooja & koodimootor</span>
-                            </div>
-                        </div>
-                        <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px;">
-                            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
-                            Aktiivne
-                        </span>
-                    </div>
-                    <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                        Optimeeritud mudel Playard 3D maailmade ehitamiseks, skriptimiseks, füüsika arvutamiseks ja semantiliseks sünteesiks.
-                    </p>
+                <!-- Error notification banner -->
+                <div id="ai-model-error-banner" style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-size: 13px; font-weight: 700; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; align-items: center; justify-content: space-between;">
+                    <span id="ai-model-error-text">you tont own vip</span>
+                    <button type="button" id="btn-dismiss-model-error" style="background: transparent; border: none; color: #fca5a5; font-size: 14px; cursor: pointer;">✕</button>
                 </div>
 
                 <!-- Hidden SVG Ring for test backward compatibility -->
@@ -137,41 +144,134 @@ export class ModelsPlansModal {
                     <span>jäänud</span>
                 </div>
 
-                <!-- Limits & Usage Container (Ring removed) -->
-                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; margin-bottom: 14px;">
-                    <!-- Dual Limits Status: 5h and 5 Days -->
-                    <div>
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                            <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">AI Limiidid (${tierCfg.questionLevel})</span>
-                            <span style="font-size: 12px; font-weight: 800; color: ${tierCfg.accentColor};">${tierCfg.badge}</span>
+                <!-- Models Grid / List -->
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                    <!-- Model 1: Playard game ai 1.1 -->
+                    <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid ${!isPlayAi2 ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'}; border-radius: 14px; padding: 16px; box-shadow: ${!isPlayAi2 ? '0 0 20px rgba(56, 189, 248, 0.2)' : 'none'};">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);">
+                                    🤖
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.2px;">
+                                        Playard game ai 1.1
+                                    </h4>
+                                    <span style="font-size: 11px; color: #38bdf8; font-weight: 600;">⚡ Välkkiire 3D mängulooja & koodimootor</span>
+                                </div>
+                            </div>
+                            ${!isPlayAi2 ? `
+                                <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px;">
+                                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+                                    Aktiivne
+                                </span>
+                            ` : `
+                                <button type="button" class="btn-select-model" data-model="playard_game_ai_1_1" style="background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 10px; cursor: pointer;">
+                                    Vali see mudel
+                                </button>
+                            `}
                         </div>
-
-                        <!-- 5h limit bar -->
-                        <div style="margin-bottom: 8px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
-                                <span>⏳ <strong>5h limiit:</strong></span>
-                                <span style="font-weight: 800; color: ${fiveHourRemaining > 20 ? '#38bdf8' : '#ef4444'};">${fiveHourRemaining}% alles (-${tierCfg.pct5hPerQuery}% / küsimus)</span>
-                            </div>
-                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
-                                <div style="width: ${fiveHourRemaining}%; height: 100%; background: ${ringColor}; transition: width 0.3s;"></div>
-                            </div>
-                        </div>
-
-                        <!-- 5 päeva limit bar -->
-                        <div style="margin-bottom: 12px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
-                                <span>📅 <strong>5 päeva limiit:</strong></span>
-                                <span style="font-weight: 800; color: ${fiveDayRemaining > 20 ? '#10b981' : '#ef4444'};">${fiveDayRemaining}% alles (-${tierCfg.pct5dPerQuery}% / küsimus)</span>
-                            </div>
-                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
-                                <div style="width: ${fiveDayRemaining}%; height: 100%; background: ${fiveDayRemaining > 25 ? '#10b981' : '#f59e0b'}; transition: width 0.3s;"></div>
-                            </div>
-                        </div>
-
-                        <button type="button" id="btn-open-plans-from-model" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); border: none; color: #ffffff; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
-                            <span>📋</span> Vaata Plaane & Suurenda Limiiti
-                        </button>
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                            Optimeeritud mudel Playard 3D maailmade ehitamiseks, skriptimiseks, füüsika arvutamiseks ja semantiliseks sünteesiks.
+                        </p>
                     </div>
+
+                    <!-- Model 2: PlayAi 2 (VIP Only, Always Visible) -->
+                    <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid ${isPlayAi2 ? '#f43f5e' : 'rgba(244, 63, 94, 0.3)'}; border-radius: 14px; padding: 16px; box-shadow: ${isPlayAi2 ? '0 0 20px rgba(244, 63, 94, 0.25)' : 'none'}; position: relative;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #e11d48, #f43f5e); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);">
+                                    💎
+                                </div>
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.2px;">
+                                            PlayAi 2
+                                        </h4>
+                                        <span style="background: rgba(244, 63, 94, 0.25); border: 1px solid #f43f5e; color: #fda4af; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 8px;">
+                                            👑 VIP AINULT
+                                        </span>
+                                    </div>
+                                    <span style="font-size: 11px; color: #fda4af; font-weight: 600;">👑 Eksklusiivne VIP AI mudel (AINULT 5 P limiit, -2.5% küsimus)</span>
+                                </div>
+                            </div>
+                            ${isPlayAi2 ? `
+                                <span style="background: rgba(244, 63, 94, 0.25); border: 1px solid #f43f5e; color: #fda4af; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px;">
+                                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f43f5e;"></span>
+                                    Aktiivne
+                                </span>
+                            ` : `
+                                <button type="button" class="btn-select-model" data-model="play_ai_2" style="background: linear-gradient(135deg, rgba(225, 29, 72, 0.3), rgba(244, 63, 94, 0.3)); border: 1px solid #f43f5e; color: #ffffff; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 10px; cursor: pointer;">
+                                    ${activeTier === 'VIP' ? 'Vali see mudel' : '🔒 VIP Mudel'}
+                                </button>
+                            `}
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                            VIP tellijatele loodud võimas tehisintellekt. Sama nutikas ja võimekas kui Playard game ai 1.1, spetsiaalse AINULT 5 päeva limiidiga (-2.5% iga küsimusega).
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Limits & Usage Container -->
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 18px; margin-bottom: 14px;">
+                    ${isPlayAi2 ? `
+                        <!-- PlayAi 2 Limits: ONLY 5 Päeva Limit (-2.5% / küsimus) -->
+                        <div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">PlayAi 2 Limiit (AINULT 5 PÄEVA)</span>
+                                <span style="font-size: 12px; font-weight: 800; color: #f43f5e;">👑 VIP</span>
+                            </div>
+
+                            <!-- 5 päeva limit bar for PlayAi 2 -->
+                            <div style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
+                                    <span>📅 <strong>5 päeva limiit:</strong></span>
+                                    <span style="font-weight: 800; color: ${playAi2Limits.fiveDayRemainingPct > 20 ? '#f43f5e' : '#ef4444'};">${playAi2Limits.fiveDayRemainingPct}% alles (-2.5% / küsimus)</span>
+                                </div>
+                                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: ${playAi2Limits.fiveDayRemainingPct}%; height: 100%; background: linear-gradient(90deg, #e11d48, #f43f5e); transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+
+                            <button type="button" id="btn-open-plans-from-model" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); border: none; color: #ffffff; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+                                <span>📋</span> Vaata Plaane
+                            </button>
+                        </div>
+                    ` : `
+                        <!-- Dual Limits Status: 5h and 5 Days for Playard game ai 1.1 -->
+                        <div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                <span style="font-size: 13px; font-weight: 700; color: #f1f5f9;">AI Limiidid (${tierCfg.questionLevel})</span>
+                                <span style="font-size: 12px; font-weight: 800; color: ${tierCfg.accentColor};">${tierCfg.badge}</span>
+                            </div>
+
+                            <!-- 5h limit bar -->
+                            <div style="margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
+                                    <span>⏳ <strong>5h limiit:</strong></span>
+                                    <span style="font-weight: 800; color: ${fiveHourRemaining > 20 ? '#38bdf8' : '#ef4444'};">${fiveHourRemaining}% alles (-${tierCfg.pct5hPerQuery}% / küsimus)</span>
+                                </div>
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${fiveHourRemaining}%; height: 100%; background: ${ringColor}; transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+
+                            <!-- 5 päeva limit bar -->
+                            <div style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; margin-bottom: 3px;">
+                                    <span>📅 <strong>5 päeva limiit:</strong></span>
+                                    <span style="font-weight: 800; color: ${fiveDayRemaining > 20 ? '#10b981' : '#ef4444'};">${fiveDayRemaining}% alles (-${tierCfg.pct5dPerQuery}% / küsimus)</span>
+                                </div>
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${fiveDayRemaining}%; height: 100%; background: ${fiveDayRemaining > 25 ? '#10b981' : '#f59e0b'}; transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+
+                            <button type="button" id="btn-open-plans-from-model" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); border: none; color: #ffffff; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+                                <span>📋</span> Vaata Plaane & Suurenda Limiiti
+                            </button>
+                        </div>
+                    `}
                 </div>
             `;
 

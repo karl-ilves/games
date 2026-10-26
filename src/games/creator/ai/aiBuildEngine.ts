@@ -122,13 +122,28 @@ export function updateAiTierDisplay() {
     const config = aiTierService.getActiveConfig();
     const usage = aiTierService.getDailyUsage();
     const limits = aiTierService.getLimits();
+    const selectedModel = aiTierService.getSelectedModel();
+    const isPlayAi2 = selectedModel === 'play_ai_2';
+    const playAi2Limits = aiTierService.getPlayAi2Limits();
 
     const badgeEl = document.getElementById('ai-current-tier-badge');
     if (badgeEl) {
-        badgeEl.textContent = config.badge;
-        badgeEl.style.color = config.accentColor;
-        badgeEl.style.borderColor = config.accentColor;
-        badgeEl.style.background = `${config.accentColor}25`;
+        if (isPlayAi2) {
+            badgeEl.textContent = '💎 PlayAi 2';
+            badgeEl.style.color = '#f43f5e';
+            badgeEl.style.borderColor = '#f43f5e';
+            badgeEl.style.background = 'rgba(244, 63, 94, 0.25)';
+        } else {
+            badgeEl.textContent = config.badge;
+            badgeEl.style.color = config.accentColor;
+            badgeEl.style.borderColor = config.accentColor;
+            badgeEl.style.background = `${config.accentColor}25`;
+        }
+    }
+
+    const wrap5h = document.getElementById('ai-limit-5h-wrap');
+    if (wrap5h) {
+        wrap5h.style.display = isPlayAi2 ? 'none' : 'inline';
     }
 
     const limit5hPctEl = document.getElementById('ai-limit-5h-pct');
@@ -139,8 +154,13 @@ export function updateAiTierDisplay() {
 
     const limit5pPctEl = document.getElementById('ai-limit-5p-pct');
     if (limit5pPctEl) {
-        limit5pPctEl.textContent = `${limits.fiveDayRemainingPct}%`;
-        limit5pPctEl.style.color = limits.fiveDayRemainingPct > 20 ? '#10b981' : '#ef4444';
+        if (isPlayAi2) {
+            limit5pPctEl.textContent = `${playAi2Limits.fiveDayRemainingPct}%`;
+            limit5pPctEl.style.color = playAi2Limits.fiveDayRemainingPct > 20 ? '#f43f5e' : '#ef4444';
+        } else {
+            limit5pPctEl.textContent = `${limits.fiveDayRemainingPct}%`;
+            limit5pPctEl.style.color = limits.fiveDayRemainingPct > 20 ? '#10b981' : '#ef4444';
+        }
     }
 
     const usedEl = document.getElementById('ai-quota-used');

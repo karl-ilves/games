@@ -9972,7 +9972,7 @@ await (async () => {
             await new Promise(r => setTimeout(r, 600));
 
             // Check recently played updated with crown card
-            await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded', timeout: 30000 });
             await page.waitForSelector('#recently-played-list .recently-played-card, #recently-played-list .game-card, #recently-played-empty', { timeout: 6000 }).catch(() => {});
             await new Promise(r => setTimeout(r, 1000));
 
@@ -13468,8 +13468,47 @@ await (async () => {
                 const bodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
 
                 const hasActiveModelName = bodyHtml.includes('Playard game ai 1.1');
+                const hasPlayAi2Model = bodyHtml.includes('PlayAi 2');
                 const hasSvgRing = bodyHtml.includes('<svg') && bodyHtml.includes('stroke-dasharray');
                 const hasRemainingCounter = bodyHtml.includes('jäänud');
+
+                // Test clicking PlayAi 2 as non-VIP (should trigger 'you tont own vip')
+                let nonVipErrorTriggered = false;
+                const origAlert = window.alert;
+                window.alert = (msg) => {
+                    if (msg === 'you tont own vip') nonVipErrorTriggered = true;
+                };
+
+                const playAi2SelectBtn = document.querySelector('.btn-select-model[data-model="play_ai_2"]');
+                playAi2SelectBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const errorBanner = document.getElementById('ai-model-error-banner');
+                const errorBannerText = document.getElementById('ai-model-error-text')?.textContent || '';
+                const hasErrorBanner = errorBannerText.includes('you tont own vip');
+
+                // Test switching to VIP tier and selecting PlayAi 2
+                window.aiTierService.setTier('VIP');
+                window.aiTierService.resetDailyUsage();
+
+                // Click select PlayAi 2 as VIP
+                const playAi2SelectBtnVip = document.querySelector('.btn-select-model[data-model="play_ai_2"]');
+                playAi2SelectBtnVip?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const bodyHtmlVip = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
+                const playAi2SelectedActive = bodyHtmlVip.includes('PlayAi 2') && bodyHtmlVip.includes('AINULT 5 PÄEVA');
+                const playAi2HasNo5h = !bodyHtmlVip.includes('5h limiit:');
+
+                // Record a question on PlayAi 2 and verify -2.5%
+                const playAi2Rec = window.aiTierService.recordRequest();
+                const playAi2RemainingAfter1 = playAi2Rec.playAi2Limits?.fiveDayRemainingPct; // should be 97.5%
+
+                // Reset back to FREE and default model for subsequent tests
+                window.aiTierService.setSelectedModel('playard_game_ai_1_1');
+                window.aiTierService.setTier('FREE');
+                window.aiTierService.resetDailyUsage();
+                window.alert = origAlert;
 
                 // Switch to Plans tab
                 btnTabPlans?.click();
@@ -13494,6 +13533,12 @@ await (async () => {
                     initialHidden,
                     modalOpened,
                     hasActiveModelName,
+                    hasPlayAi2Model,
+                    nonVipErrorTriggered,
+                    hasErrorBanner,
+                    playAi2SelectedActive,
+                    playAi2HasNo5h,
+                    playAi2RemainingAfter1,
                     hasSvgRing,
                     hasRemainingCounter,
                     hasPlans,
@@ -13507,13 +13552,16 @@ await (async () => {
             if (
                 !modelsModalTest.ok || !modelsModalTest.initialHidden ||
                 !modelsModalTest.modalOpened || !modelsModalTest.hasActiveModelName ||
+                !modelsModalTest.hasPlayAi2Model || (!modelsModalTest.nonVipErrorTriggered && !modelsModalTest.hasErrorBanner) ||
+                !modelsModalTest.hasErrorBanner || !modelsModalTest.playAi2SelectedActive ||
+                !modelsModalTest.playAi2HasNo5h || modelsModalTest.playAi2RemainingAfter1 !== 97.5 ||
                 !modelsModalTest.hasSvgRing || !modelsModalTest.hasRemainingCounter ||
                 !modelsModalTest.hasPlans || !modelsModalTest.hasTierButtons ||
                 !modelsModalTest.switchedBackModel || !modelsModalTest.modalClosed
             ) {
                 throw new Error("AI Models & Plans Modal test failed: " + JSON.stringify(modelsModalTest));
             }
-            console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1 & Limit Ring) verified successfully!");
+            console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1 & PlayAi 2 VIP-only 'you tont own vip' & 5P-only -2.5% limit) verified successfully!");
 
             console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand & Models/Plans Modal) tests passed successfully!");
 

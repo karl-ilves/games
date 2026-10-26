@@ -2,6 +2,47 @@ import { yardService } from './yardService';
 
 export type PlayardAiTier = 'FREE' | 'PRO' | 'PLUS' | 'VIP';
 
+export type PlayardAiModelId = 'playard_game_ai_1_1' | 'play_ai_2';
+
+export interface PlayardAiModelConfig {
+    id: PlayardAiModelId;
+    name: string;
+    subtitle: string;
+    description: string;
+    icon: string;
+    badge: string;
+    vipOnly: boolean;
+    has5hLimit: boolean;
+    has5dLimit: boolean;
+    pct5dPerQuery?: number; // For PlayAi 2: 2.5%
+}
+
+export const PLAYARD_AI_MODELS: Record<PlayardAiModelId, PlayardAiModelConfig> = {
+    playard_game_ai_1_1: {
+        id: 'playard_game_ai_1_1',
+        name: 'Playard game ai 1.1',
+        subtitle: '⚡ Välkkiire 3D mängulooja & koodimootor',
+        description: 'Optimeeritud mudel Playard 3D maailmade ehitamiseks, skriptimiseks, füüsika arvutamiseks ja semantiliseks sünteesiks.',
+        icon: '🤖',
+        badge: 'Universaalne',
+        vipOnly: false,
+        has5hLimit: true,
+        has5dLimit: true
+    },
+    play_ai_2: {
+        id: 'play_ai_2',
+        name: 'PlayAi 2',
+        subtitle: '👑 Eksklusiivne VIP tehisintellekt',
+        description: 'VIP tellijatele loodud võimas tehisintellekt. Sama nutikas ja võimekas kui Playard game ai 1.1, spetsiaalse 5 päeva limiidiga.',
+        icon: '💎',
+        badge: '👑 VIP AINULT',
+        vipOnly: true,
+        has5hLimit: false,
+        has5dLimit: true,
+        pct5dPerQuery: 2.5
+    }
+};
+
 export interface AiTierCapabilities {
     maxObjectsPerGen: number;
     maxNpcs: number;
@@ -187,6 +228,8 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
 const STORAGE_KEY_TIER = 'playard_ai_tier_subscription';
 const STORAGE_KEY_USAGE = 'playard_ai_daily_usage';
 const STORAGE_KEY_LIMITS = 'playard_ai_dual_limits';
+const STORAGE_KEY_MODEL = 'playard_ai_selected_model';
+const STORAGE_KEY_PLAYAI2_LIMITS = 'playard_ai_playai2_limits';
 
 interface StoredTierData {
     tier: PlayardAiTier;
@@ -202,6 +245,11 @@ interface StoredUsageData {
 export interface StoredDualLimitsData {
     fiveHourUsedPct: number;
     fiveHourResetTime: number;
+    fiveDayUsedPct: number;
+    fiveDayResetTime: number;
+}
+
+export interface StoredPlayAi2LimitsData {
     fiveDayUsedPct: number;
     fiveDayResetTime: number;
 }
@@ -241,6 +289,75 @@ export class AiTierService {
         this.subscribers.forEach(cb => {
             try { cb(); } catch (e) { console.error('AiTier subscriber error:', e); }
         });
+    }
+
+    /**
+     * Get active selected AI model
+     */
+    public getSelectedModel(): PlayardAiModelId {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY_MODEL);
+            if (raw === 'play_ai_2') {
+                return 'play_ai_2';
+            }
+        } catch (e) {}
+        return 'playard_game_ai_1_1';
+    }
+
+    /**
+     * Set selected AI model.
+     * PlayAi 2 can only be selected by VIP subscribers.
+     * If free, pro, or plus user tries to select it, returns error: "you tont own vip"
+     */
+    public setSelectedModel(modelId: PlayardAiModelId): { success: boolean; message?: string } {
+        if (modelId === 'play_ai_2') {
+            const currentTier = this.getTier();
+            if (currentTier !== 'VIP') {
+                return {
+                    success: false,
+                    message: 'you tont own vip'
+                };
+            }
+        }
+        localStorage.setItem(STORAGE_KEY_MODEL, modelId);
+        this.notify();
+        return { success: true };
+    }
+
+    /**
+     * Get limit status for PlayAi 2 (ONLY 5 päeva limit, 2.5% per question)
+     */
+    public getPlayAi2Limits(): { fiveDayRemainingPct: number; fiveDayUsedPct: number; fiveDayResetsInMs: number; canRequest: boolean } {
+        const now = Date.now();
+        let data: StoredPlayAi2LimitsData = {
+            fiveDayUsedPct: 0,
+            fiveDayResetTime: now + FIVE_DAYS_MS
+        };
+
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY_PLAYAI2_LIMITS);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.fiveDayUsedPct === 'number') data.fiveDayUsedPct = parsed.fiveDayUsedPct;
+                if (typeof parsed.fiveDayResetTime === 'number') data.fiveDayResetTime = parsed.fiveDayResetTime;
+            }
+        } catch (e) {}
+
+        if (now >= data.fiveDayResetTime) {
+            data.fiveDayUsedPct = 0;
+            data.fiveDayResetTime = now + FIVE_DAYS_MS;
+            localStorage.setItem(STORAGE_KEY_PLAYAI2_LIMITS, JSON.stringify(data));
+        }
+
+        const fiveDayRemainingPct = Math.max(0, Math.round((100 - data.fiveDayUsedPct) * 10) / 10);
+        const fiveDayResetsInMs = Math.max(0, data.fiveDayResetTime - now);
+
+        return {
+            fiveDayRemainingPct,
+            fiveDayUsedPct: Math.min(100, Math.round(data.fiveDayUsedPct * 10) / 10),
+            fiveDayResetsInMs,
+            canRequest: fiveDayRemainingPct > 0
+        };
     }
 
     /**
@@ -394,12 +511,53 @@ export class AiTierService {
 
     /**
      * Check if user is allowed to make an AI question/request.
-     * Enforces both 5h limit and 5 päeva limit.
+     * Enforces both 5h limit and 5 päeva limit for Playard game ai 1.1.
+     * For PlayAi 2: VIP only, requires "you tont own vip" error if not VIP, and enforces 5-day limit only.
      */
-    public canMakeRequest(): { allowed: boolean; message?: string; tier: PlayardAiTier; usedToday: number; dailyLimit: number; limits: DualLimitsStatus } {
+    public canMakeRequest(): { allowed: boolean; message?: string; tier: PlayardAiTier; usedToday: number; dailyLimit: number; limits: DualLimitsStatus; selectedModel: PlayardAiModelId; playAi2Limits?: { fiveDayRemainingPct: number; fiveDayUsedPct: number; fiveDayResetsInMs: number } } {
         const tier = this.getTier();
+        const selectedModel = this.getSelectedModel();
         const usage = this.getDailyUsage();
         const limits = this.getLimits();
+
+        if (selectedModel === 'play_ai_2') {
+            if (tier !== 'VIP') {
+                return {
+                    allowed: false,
+                    message: 'you tont own vip',
+                    tier,
+                    usedToday: usage.usedToday,
+                    dailyLimit: usage.dailyLimit,
+                    limits,
+                    selectedModel
+                };
+            }
+
+            const playAi2Limits = this.getPlayAi2Limits();
+            if (!playAi2Limits.canRequest) {
+                const hours = Math.ceil(playAi2Limits.fiveDayResetsInMs / (3600 * 1000));
+                return {
+                    allowed: false,
+                    message: `Sa oled PlayAi 2 5 päeva limiidi ära kasutanud (0% alles). Uus limiit vabaneb ${hours} tunni pärast.`,
+                    tier,
+                    usedToday: usage.usedToday,
+                    dailyLimit: usage.dailyLimit,
+                    limits,
+                    selectedModel,
+                    playAi2Limits
+                };
+            }
+
+            return {
+                allowed: true,
+                tier,
+                usedToday: usage.usedToday,
+                dailyLimit: usage.dailyLimit,
+                limits,
+                selectedModel,
+                playAi2Limits
+            };
+        }
 
         if (!limits.canRequest || usage.usedToday >= usage.dailyLimit) {
             let detail = 'Sa oled AI limiidi ära kasutanud.';
@@ -417,7 +575,8 @@ export class AiTierService {
                 tier,
                 usedToday: usage.usedToday,
                 dailyLimit: usage.dailyLimit,
-                limits
+                limits,
+                selectedModel
             };
         }
 
@@ -426,15 +585,17 @@ export class AiTierService {
             tier,
             usedToday: usage.usedToday,
             dailyLimit: usage.dailyLimit,
-            limits
+            limits,
+            selectedModel
         };
     }
 
     /**
-     * Consume one AI request from 5h and 5 päeva quotas.
-     * Reduces 5h limit by pct5hPerQuery and 5 päeva limit by pct5dPerQuery.
+     * Consume one AI request from quotas based on active model.
+     * For Playard game ai 1.1: reduces 5h and 5 päeva limits by tier percentages.
+     * For PlayAi 2: reduces ONLY 5 päeva limit by 2.5%.
      */
-    public recordRequest(): { success: boolean; usedToday: number; dailyLimit: number; remaining: number; limits: DualLimitsStatus } {
+    public recordRequest(): { success: boolean; usedToday: number; dailyLimit: number; remaining: number; limits: DualLimitsStatus; selectedModel: PlayardAiModelId; playAi2Limits?: { fiveDayRemainingPct: number; fiveDayUsedPct: number; fiveDayResetsInMs: number } } {
         const check = this.canMakeRequest();
         if (!check.allowed) {
             return {
@@ -442,12 +603,51 @@ export class AiTierService {
                 usedToday: check.usedToday,
                 dailyLimit: check.dailyLimit,
                 remaining: 0,
-                limits: check.limits
+                limits: check.limits,
+                selectedModel: check.selectedModel,
+                playAi2Limits: check.playAi2Limits
             };
         }
 
         const now = Date.now();
         const tier = this.getTier();
+        const selectedModel = this.getSelectedModel();
+
+        if (selectedModel === 'play_ai_2') {
+            let p2Data: StoredPlayAi2LimitsData = {
+                fiveDayUsedPct: 0,
+                fiveDayResetTime: now + FIVE_DAYS_MS
+            };
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_PLAYAI2_LIMITS);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (typeof parsed.fiveDayUsedPct === 'number') p2Data.fiveDayUsedPct = parsed.fiveDayUsedPct;
+                    if (typeof parsed.fiveDayResetTime === 'number') p2Data.fiveDayResetTime = parsed.fiveDayResetTime;
+                }
+            } catch (e) {}
+
+            if (now >= p2Data.fiveDayResetTime) {
+                p2Data.fiveDayUsedPct = 0;
+                p2Data.fiveDayResetTime = now + FIVE_DAYS_MS;
+            }
+
+            p2Data.fiveDayUsedPct = Math.min(100, p2Data.fiveDayUsedPct + 2.5); // 2.5% per question
+            localStorage.setItem(STORAGE_KEY_PLAYAI2_LIMITS, JSON.stringify(p2Data));
+            this.notify();
+
+            const p2Limits = this.getPlayAi2Limits();
+            return {
+                success: true,
+                usedToday: check.usedToday,
+                dailyLimit: check.dailyLimit,
+                remaining: Math.round(p2Limits.fiveDayRemainingPct / 2.5),
+                limits: check.limits,
+                selectedModel: 'play_ai_2',
+                playAi2Limits: p2Limits
+            };
+        }
+
         const cfg = AI_TIER_CONFIGS[tier];
 
         // 1. Update legacy usage count
@@ -504,7 +704,8 @@ export class AiTierService {
             usedToday: usage.count,
             dailyLimit: cfg.dailyLimit,
             remaining: Math.max(0, cfg.dailyLimit - usage.count),
-            limits: currentLimits
+            limits: currentLimits,
+            selectedModel: 'playard_game_ai_1_1'
         };
     }
 
@@ -580,7 +781,20 @@ export class AiTierService {
     }
 
     /**
-     * Reset daily usage counter and dual limits
+     * Reset PlayAi 2 limit (5 days)
+     */
+    public resetPlayAi2Usage(): void {
+        const now = Date.now();
+        const p2Data: StoredPlayAi2LimitsData = {
+            fiveDayUsedPct: 0,
+            fiveDayResetTime: now + FIVE_DAYS_MS
+        };
+        localStorage.setItem(STORAGE_KEY_PLAYAI2_LIMITS, JSON.stringify(p2Data));
+        this.notify();
+    }
+
+    /**
+     * Reset daily usage counter, dual limits and PlayAi 2 limits
      */
     public resetDailyUsage(): void {
         const now = Date.now();
@@ -597,6 +811,12 @@ export class AiTierService {
             fiveDayResetTime: now + FIVE_DAYS_MS
         };
         localStorage.setItem(STORAGE_KEY_LIMITS, JSON.stringify(limitsData));
+
+        const p2Data: StoredPlayAi2LimitsData = {
+            fiveDayUsedPct: 0,
+            fiveDayResetTime: now + FIVE_DAYS_MS
+        };
+        localStorage.setItem(STORAGE_KEY_PLAYAI2_LIMITS, JSON.stringify(p2Data));
 
         this.notify();
     }
