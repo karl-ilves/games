@@ -196,9 +196,27 @@ export class ChatView {
                     🪙 +100 Raha
                 </button>
             </div>
+            <!-- Uploaded Image Preview Strip -->
+            <div id="ai-chat-image-preview-strip" style="display: none; padding: 6px 14px; background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(56, 189, 248, 0.3); align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                    <img id="ai-chat-image-preview-thumb" src="" alt="Eelvaade" style="width: 32px; height: 32px; object-fit: cover; border-radius: 6px; border: 1px solid #38bdf8;" />
+                    <div style="font-size: 11px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">
+                        <span id="ai-chat-image-preview-name" style="font-weight: 700; color: #38bdf8;">Pilt lisatud</span>
+                        <span id="ai-chat-image-preview-dims" style="display: block; font-size: 10px; color: #94a3b8;">Valmis analüüsiks</span>
+                    </div>
+                </div>
+                <button type="button" id="btn-chat-remove-image" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
+                    ✕ Eemalda
+                </button>
+            </div>
+
             <!-- Input Area -->
-            <form id="ai-chat-form" style="display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.1); background: #0f172a; align-items: center;">
-                <input id="ai-chat-input" type="text" placeholder="Kirjelda mängu või muudatust..." autocomplete="off" style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 14px; color: #ffffff; font-size: 13px; outline: none;" />
+            <form id="ai-chat-form" style="display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.1); background: #0f172a; align-items: center; position: relative;">
+                <input type="file" id="ai-chat-file-input" accept="image/*" style="display: none;" />
+                <button id="btn-chat-upload-image" type="button" title="Laadi pilt üles arvutist või lohista siia (AI analüüsib pilti!)" style="background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.5); color: #d8b4fe; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0;">
+                    🖼️
+                </button>
+                <input id="ai-chat-input" type="text" placeholder="Kirjelda mängu (või lohista siia pilt)..." autocomplete="off" style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 14px; color: #ffffff; font-size: 13px; outline: none;" />
                 <button id="btn-ai-model-plus" type="button" title="AI Mudelid & Limiidid (Playard game ai 1.1)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0;">
                     +
                 </button>
@@ -216,15 +234,106 @@ export class ChatView {
             msgList.scrollTop = msgList.scrollHeight;
         }
 
+        // Image attachment & drag-and-drop
+        let attachedImageDataUrl: string | null = null;
+        let attachedImageName: string = '';
+
+        const fileInput = this.container.querySelector('#ai-chat-file-input') as HTMLInputElement | null;
+        const uploadBtn = this.container.querySelector('#btn-chat-upload-image');
+        const previewStrip = this.container.querySelector('#ai-chat-image-preview-strip') as HTMLElement | null;
+        const previewThumb = this.container.querySelector('#ai-chat-image-preview-thumb') as HTMLImageElement | null;
+        const previewName = this.container.querySelector('#ai-chat-image-preview-name');
+        const previewDims = this.container.querySelector('#ai-chat-image-preview-dims');
+        const removeBtn = this.container.querySelector('#btn-chat-remove-image');
+        const form = this.container.querySelector('#ai-chat-form') as HTMLFormElement | null;
+        const input = this.container.querySelector('#ai-chat-input') as HTMLInputElement | null;
+
+        const setImg = (url: string, name: string) => {
+            attachedImageDataUrl = url;
+            attachedImageName = name;
+            if (previewStrip && previewThumb && previewName) {
+                previewThumb.src = url;
+                previewName.textContent = name;
+                const img = new Image();
+                img.onload = () => {
+                    if (previewDims) previewDims.textContent = `${img.width}x${img.height} • AI näeb pilti`;
+                };
+                img.src = url;
+                previewStrip.style.display = 'flex';
+            }
+        };
+
+        const clearImg = () => {
+            attachedImageDataUrl = null;
+            attachedImageName = '';
+            if (previewStrip) previewStrip.style.display = 'none';
+            if (fileInput) fileInput.value = '';
+        };
+
+        uploadBtn?.addEventListener('click', () => {
+            fileInput?.click();
+        });
+
+        fileInput?.addEventListener('change', () => {
+            const file = fileInput.files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => setImg(reader.result as string, file.name);
+                reader.readAsDataURL(file);
+            }
+        });
+
+        removeBtn?.addEventListener('click', clearImg);
+
+        // Drag-and-drop images onto chat form
+        if (form) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                form.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    form.style.background = 'rgba(56, 189, 248, 0.15)';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                form.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    form.style.background = '#0f172a';
+                }, false);
+            });
+
+            form.addEventListener('drop', (e: DragEvent) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    const file = dt.files[0];
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = () => setImg(reader.result as string, file.name);
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+        }
+
         // Attach form submit
-        const form = this.container.querySelector('#ai-chat-form');
-        const input = this.container.querySelector('#ai-chat-input') as HTMLInputElement;
         if (form && input) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const val = input.value.trim();
-                if (val) {
-                    input.value = '';
+                const currentImg = attachedImageDataUrl;
+                const currentName = attachedImageName;
+
+                if (!val && !currentImg) return;
+
+                input.value = '';
+                clearImg();
+
+                if (currentImg) {
+                    // Send with image vision intent indicator
+                    const fullText = val ? `${val} (Pilt: ${currentName})` : `Loo selle pildi põhjal 3D maailm (Pilt: ${currentName})`;
+                    this.onSendMessage(fullText);
+                } else {
                     this.onSendMessage(val);
                 }
             });

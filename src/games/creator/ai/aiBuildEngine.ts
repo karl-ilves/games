@@ -46,6 +46,7 @@ import { getCurrentUserProfile, isUserAdminEmail } from '../../../auth';
 import { yardService } from '../../../shared/yardService';
 import { t } from '../../../shared/i18n_dict';
 import { ModelsPlansModal } from '../../ai/ui/modelsPlansModal';
+import { ImageVisionEngine, type ImageAnalysisResult } from '../../../shared/imageVisionEngine';
 
 export function isCurrentUserAdmin(): boolean {
     const profile = getCurrentUserProfile();
@@ -274,12 +275,105 @@ export function setupAiAssistantEvents() {
         updateAiTierDisplay();
     });
 
+    // Image Upload & Drag-and-Drop state
+    let attachedImageDataUrl: string | null = null;
+    let attachedImageName: string = '';
+
+    const imageFileInput = document.getElementById('ai-image-file-input') as HTMLInputElement | null;
+    const uploadImageBtn = document.getElementById('btn-ai-upload-image');
+    const imagePreviewStrip = document.getElementById('ai-image-preview-strip');
+    const imagePreviewThumb = document.getElementById('ai-image-preview-thumb') as HTMLImageElement | null;
+    const imagePreviewName = document.getElementById('ai-image-preview-name');
+    const imagePreviewDims = document.getElementById('ai-image-preview-dims');
+    const removeImageBtn = document.getElementById('btn-ai-remove-image');
+    const dropZone = document.getElementById('ai-input-drop-zone') || aiModal;
+
+    const setAttachedImage = (dataUrl: string, name: string) => {
+        attachedImageDataUrl = dataUrl;
+        attachedImageName = name;
+        if (imagePreviewStrip && imagePreviewThumb && imagePreviewName) {
+            imagePreviewThumb.src = dataUrl;
+            imagePreviewName.textContent = name;
+            const img = new Image();
+            img.onload = () => {
+                if (imagePreviewDims) {
+                    imagePreviewDims.textContent = `${img.width}x${img.height} • AI analüüsib pilti`;
+                }
+            };
+            img.src = dataUrl;
+            imagePreviewStrip.style.display = 'flex';
+        }
+    };
+
+    const clearAttachedImage = () => {
+        attachedImageDataUrl = null;
+        attachedImageName = '';
+        if (imagePreviewStrip) imagePreviewStrip.style.display = 'none';
+        if (imageFileInput) imageFileInput.value = '';
+    };
+
+    uploadImageBtn?.addEventListener('click', () => {
+        imageFileInput?.click();
+    });
+
+    imageFileInput?.addEventListener('change', async () => {
+        const file = imageFileInput.files?.[0];
+        if (file) {
+            try {
+                const dataUrl = await ImageVisionEngine.readFileAsDataUrl(file);
+                setAttachedImage(dataUrl, file.name);
+            } catch (err) {
+                console.error("Error reading uploaded image:", err);
+            }
+        }
+    });
+
+    removeImageBtn?.addEventListener('click', clearAttachedImage);
+
+    // Drag-and-drop image support onto AI modal / drop zone
+    if (dropZone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.style.border = '2px dashed #38bdf8';
+                dropZone.style.background = 'rgba(56, 189, 248, 0.15)';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.style.border = '';
+                dropZone.style.background = '';
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', async (e: DragEvent) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                const file = dt.files[0];
+                if (file.type.startsWith('image/')) {
+                    const dataUrl = await ImageVisionEngine.readFileAsDataUrl(file);
+                    setAttachedImage(dataUrl, file.name);
+                }
+            }
+        });
+    }
+
     const handleSend = () => {
         if (!inputField) return;
         const promptText = inputField.value.trim();
-        if (!promptText) return;
+        const currentImage = attachedImageDataUrl;
+        const currentImageName = attachedImageName;
+
+        if (!promptText && !currentImage) return;
+
         inputField.value = '';
-        executeAiBuild(promptText);
+        clearAttachedImage();
+
+        executeAiBuild(promptText || 'Loo selle pildi põhjal 3D maailm ja objektid', currentImage, currentImageName);
     };
 
     submitBtn?.addEventListener('click', handleSend);
@@ -410,7 +504,7 @@ export const aiContextMemory: PlayardAiContextMemory = {
     recentActions: []
 };
 
-export function executeAiBuild(promptText: string) {
+export async function executeAiBuild(promptText: string, imageDataUrl?: string | null, imageName?: string) {
     const chatLog = document.getElementById('ai-chat-log');
     const titleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
     const catSelect = document.getElementById('game-category-select') as HTMLSelectElement | null;
@@ -421,8 +515,19 @@ export function executeAiBuild(promptText: string) {
     // Append User message to chat
     if (chatLog) {
         const userMsg = document.createElement('div');
-        userMsg.style.cssText = 'background: rgba(168, 85, 247, 0.2); border-radius: 8px; padding: 8px 12px; color: #fff; align-self: flex-end; max-width: 85%; font-weight: 600;';
-        userMsg.innerText = `👤 ${promptText}`;
+        userMsg.style.cssText = 'background: rgba(168, 85, 247, 0.2); border-radius: 8px; padding: 8px 12px; color: #fff; align-self: flex-end; max-width: 85%; font-weight: 600; display: flex; flex-direction: column; gap: 6px;';
+        
+        if (imageDataUrl) {
+            userMsg.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #d8b4fe;">
+                    <span>🖼️ ${imageName || 'Üleslaaditud pilt'}</span>
+                </div>
+                <img src="${imageDataUrl}" style="max-width: 200px; max-height: 120px; object-fit: contain; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);" />
+                <div>👤 ${promptText}</div>
+            `;
+        } else {
+            userMsg.innerText = `👤 ${promptText}`;
+        }
         chatLog.appendChild(userMsg);
         chatLog.scrollTop = chatLog.scrollHeight;
     }
@@ -497,8 +602,81 @@ export function executeAiBuild(promptText: string) {
         }
     }
 
+    // --- 🖼️ IMAGE VISION & 3D SYNTHESIS IF IMAGE IS ATTACHED ---
+    let imageAnalysis: ImageAnalysisResult | null = null;
+    if (imageDataUrl) {
+        try {
+            imageAnalysis = await ImageVisionEngine.analyzeImageDataUrl(imageDataUrl, imageName || 'pilt.png', promptText);
+        } catch (e) {
+            console.error("Error analyzing uploaded image:", e);
+        }
+    }
+
+    if (imageAnalysis) {
+        if (titleInput && !titleInput.value) {
+            titleInput.value = imageAnalysis.suggestedGameTitle;
+        }
+
+        // Apply environment from vision
+        setDayNightMode(imageAnalysis.suggestedSky === 'night' || imageAnalysis.suggestedSky === 'space');
+
+        // Apply texture if requested
+        if (imageAnalysis.isTexture) {
+            try {
+                const textureLoader = new THREE.TextureLoader();
+                const tex = textureLoader.load(imageDataUrl!);
+                tex.wrapS = THREE.RepeatWrapping;
+                tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(4, 4);
+
+                placedObjects.forEach(obj => {
+                    if (obj.mesh && (obj.mesh as any).material) {
+                        const mat = (obj.mesh as any).material;
+                        if (Array.isArray(mat)) {
+                            mat.forEach(m => { m.map = tex; m.needsUpdate = true; });
+                        } else {
+                            mat.map = tex;
+                            mat.needsUpdate = true;
+                        }
+                    }
+                });
+            } catch (e) {}
+        }
+
+        // Spawn 3D objects matching image theme & colors
+        const itemsToSpawn = imageAnalysis.suggestedObjects.length > 0
+            ? imageAnalysis.suggestedObjects
+            : ['lossi_torn', 'kristallpuu', 'valguse_sammas'];
+
+        itemsToSpawn.forEach((name, idx) => {
+            const mesh = createCustomProceduralMesh(name, name, false);
+            if (mesh) {
+                mesh.position.set((idx - 1) * 6, 0, -5 - idx * 3);
+                scene.add(mesh);
+                placedObjects.push({
+                    id: 'placed_ai_vision_' + Date.now() + '_' + idx,
+                    mesh,
+                    catalogId: 'procedural_vision_' + idx,
+                    name: `🖼️ ${name}`,
+                    category: 'custom',
+                    position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                    rotation: { x: 0, y: 0, z: 0 },
+                    scale: { x: 1, y: 1, z: 1 },
+                    color: imageAnalysis?.dominantColorHex || '#38bdf8'
+                });
+                generatedObjectsCount++;
+            }
+        });
+
+        aiResponse = `👁️ <strong>Playard AI Nägemismootor analüüsis sinu pilti!</strong><br>
+        🖼️ <strong>Pilt:</strong> "${imageAnalysis.fileName}" (${imageAnalysis.width}x${imageAnalysis.height})<br>
+        🎨 <strong>Põhivärv & palett:</strong> <span style="display:inline-block;width:12px;height:12px;background:${imageAnalysis.dominantColorHex};border-radius:2px;vertical-align:middle;"></span> <code>${imageAnalysis.dominantColorHex}</code> | Teema: <strong>${imageAnalysis.theme.toUpperCase()}</strong><br>
+        🌌 <strong>Atmosfäär:</strong> ${imageAnalysis.suggestedSky} taevas<br>
+        🏗️ <strong>Loodud 3D objektid pildi põhjal:</strong> ${imageAnalysis.suggestedObjects.join(', ')} (${generatedObjectsCount} objekti stseenis).<br>
+        ${imageAnalysis.description ? `<p style="margin-top:6px;font-size:0.8rem;color:#93c5fd;">${imageAnalysis.description}</p>` : ''}`;
+
     // --- 0.0 UNDO & REDO COMMANDS ---
-    if (p === 'undo' || p.includes('võta tagasi') || p.includes('vota tagasi') || p.includes('tagasi')) {
+    } else if (p === 'undo' || p.includes('võta tagasi') || p.includes('vota tagasi') || p.includes('tagasi')) {
         performUndo();
         aiResponse = isAdmin ? `↩️ <strong>Viimane tegevus edukalt tagasi võetud (Undo)!</strong>` : `↩️ <strong>Last action successfully undone!</strong>`;
 

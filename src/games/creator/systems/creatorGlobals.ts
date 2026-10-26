@@ -38,6 +38,7 @@ import {
     executeAiBuild, loadAiSchoolMemory, saveAiSchoolMemory,
     updateAiTierDisplay, aiContextMemory
 } from '../ai/aiBuildEngine';
+import { ImageVisionEngine } from '../../../shared/imageVisionEngine';
 import {
     executeObjectScript, applyScriptPreset, openScriptModal,
     closeScriptModal, saveScriptFromModal, renderScriptActionParams,
@@ -121,6 +122,7 @@ export function setupCreatorGlobals() {
         loadSceneFromData,
         isPositionInWater,
         executeAiBuild,
+        ImageVisionEngine,
         loadAiSchoolMemory,
         saveAiSchoolMemory,
         selectObject,

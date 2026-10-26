@@ -2463,6 +2463,63 @@ await (async () => {
             }
             console.log("   ✅ Creator Studio AI Plus (+) button & Models/Plans modal (hide AI on open, back to limits, restore on close) verified!");
 
+            // Verify Creator Studio AI Image Upload, Drag-and-Drop & Vision Synthesis
+            console.log("\n   Testing Creator Studio AI Image Upload & Vision Synthesis...");
+            const imageVisionTest = await page.evaluate(async () => {
+                const uploadBtn = document.getElementById('btn-ai-upload-image');
+                const fileInput = document.getElementById('ai-image-file-input');
+                const previewStrip = document.getElementById('ai-image-preview-strip');
+                const previewThumb = document.getElementById('ai-image-preview-thumb');
+                const previewName = document.getElementById('ai-image-preview-name');
+                const removeBtn = document.getElementById('btn-ai-remove-image');
+                const dropZone = document.getElementById('ai-input-drop-zone');
+
+                if (!uploadBtn || !fileInput || !previewStrip || !previewThumb || !dropZone) {
+                    return { ok: false, reason: 'Image upload or preview elements missing' };
+                }
+
+                const initialStripHidden = window.getComputedStyle(previewStrip).display === 'none';
+
+                // Test creating a mock image data URL (green nature square)
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fillRect(0, 0, 64, 64);
+                }
+                const mockDataUrl = canvas.toDataURL('image/png');
+
+                // Test ImageVisionEngine directly
+                const visionResult = await window.creatorStudio?.ImageVisionEngine?.analyzeImageDataUrl(mockDataUrl, 'mets.png', 'Loo mets');
+                const visionAnalysisOk = !!visionResult && typeof visionResult.dominantColorHex === 'string';
+
+                // Test building from image in executeAiBuild
+                const cs = window.creatorStudio;
+                if (cs && cs.executeAiBuild) {
+                    await cs.executeAiBuild('Loo selle pildi põhjal 3D maailm', mockDataUrl, 'mets.png');
+                }
+
+                const chatLog = document.getElementById('ai-chat-log');
+                const hasVisionResponse = (chatLog?.innerHTML || '').includes('Playard AI Nägemismootor analüüsis');
+                const hasImageInChat = (chatLog?.innerHTML || '').includes('mets.png');
+
+                return {
+                    ok: true,
+                    initialStripHidden,
+                    uploadBtnVisible: !!uploadBtn,
+                    visionAnalysisOk,
+                    hasVisionResponse,
+                    hasImageInChat
+                };
+            });
+            console.log("   Creator Studio Image Vision Test Results:", imageVisionTest);
+            if (!imageVisionTest.ok || !imageVisionTest.initialStripHidden || !imageVisionTest.visionAnalysisOk || !imageVisionTest.hasVisionResponse || !imageVisionTest.hasImageInChat) {
+                throw new Error("Creator Studio Image Vision test failed: " + JSON.stringify(imageVisionTest));
+            }
+            console.log("   ✅ Creator Studio Image Upload & Vision 3D Synthesis verified!");
+
             await page.click('#btn-close-ai');
             await new Promise(r => setTimeout(r, 200));
             console.log("   ✅ Playard AI modal screen centering verified!");
@@ -2910,7 +2967,7 @@ await (async () => {
                 // 3. Simulate hitting the 20 questions limit
                 tierService.simulateUsage(20);
                 const limitReachedCheck = tierService.canMakeRequest();
-                const blockedResult = cs.executeAiBuild('mis on 2+2?');
+                const blockedResult = await cs.executeAiBuild('mis on 2+2?');
 
                 // 4. Upgrade to PRO (100 PBX)
                 // Ensure user has at least 2000 PBX for tests
