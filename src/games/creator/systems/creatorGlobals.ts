@@ -45,6 +45,13 @@ import {
     updateScriptInspectorDisplay, playScriptSound
 } from './scriptRunner';
 import {
+    showStartupScriptPrompt, closeStartupScriptPrompt,
+    openScriptLibraryModal, closeScriptLibraryModal,
+    renderScriptLibraryCards, insertScriptIntoEditor,
+    setupScriptLibraryEvents
+} from '../ui/scriptLibraryUI';
+import { SCRIPT_LIBRARY_20 } from '../catalog/scriptLibrary20';
+import {
     damagePlayer, healPlayer, isPlayerTouchingOrOnTop,
     equipCustomItemInHand, clearHeldItemFromHand,
     enterVehicle, exitVehicle
@@ -131,6 +138,14 @@ export function setupCreatorGlobals() {
         openScriptModal,
         closeScriptModal,
         saveScriptFromModal,
+        showStartupScriptPrompt,
+        closeStartupScriptPrompt,
+        openScriptLibraryModal,
+        closeScriptLibraryModal,
+        renderScriptLibraryCards,
+        insertScriptIntoEditor,
+        setupScriptLibraryEvents,
+        SCRIPT_LIBRARY_20,
         renderScriptActionParams,
         updateScriptInspectorDisplay,
         playScriptSound,

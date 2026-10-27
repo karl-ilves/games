@@ -1040,7 +1040,7 @@ class YardService {
         existingLogs.unshift(logEntry);
         localStorage.setItem(ADMIN_LOGS_KEY, JSON.stringify(existingLogs.slice(0, 100)));
 
-        if (supabase) {
+        if (supabase && !isTestMode()) {
             try {
                 await supabase.from('admin_yard_logs').insert({
                     id: logEntry.id,
@@ -1076,7 +1076,7 @@ class YardService {
         }
 
         // 3. Search target user in Supabase by username
-        if (supabase) {
+        if (supabase && !isTestMode()) {
             try {
                 const { data: profile } = await supabase
                     .from('profiles')

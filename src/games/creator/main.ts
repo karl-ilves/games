@@ -84,6 +84,9 @@ export { serializeCurrentScene, autoSaveDraft, saveCurrentGame, captureSceneSnap
 import { setupWorkspaceEvents, renderWorkspaceTree, reparentObject, renameObject, duplicateObjectWithChildren, deleteObjectWithChildren, getDescendantIds, toggleWorkspacePanel } from './ui/workspaceExplorer';
 export { setupWorkspaceEvents, renderWorkspaceTree, reparentObject, renameObject, duplicateObjectWithChildren, deleteObjectWithChildren, getDescendantIds, toggleWorkspacePanel };
 
+import { showStartupScriptPrompt, closeStartupScriptPrompt, openScriptLibraryModal, closeScriptLibraryModal, renderScriptLibraryCards, insertScriptIntoEditor, setupScriptLibraryEvents } from './ui/scriptLibraryUI';
+export { showStartupScriptPrompt, closeStartupScriptPrompt, openScriptLibraryModal, closeScriptLibraryModal, renderScriptLibraryCards, insertScriptIntoEditor, setupScriptLibraryEvents };
+
 import { updateOrbitCamera } from './ui/orbitCamera';
 import { animate } from './systems/studioLoop';
 import { setupCreatorGlobals } from './systems/creatorGlobals';
@@ -180,6 +183,10 @@ async function initStudio() {
     setupInspectorEvents();
     setupWorkspaceEvents();
     setupAiAssistantEvents();
+    setupScriptLibraryEvents();
+
+    // Show prompt to user asking if they want to see JavaSkripte (IGA KORD kui sisenetakse)
+    showStartupScriptPrompt();
 
     window.addEventListener('resize', onWindowResize);
 

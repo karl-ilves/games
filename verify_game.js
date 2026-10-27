@@ -2003,6 +2003,99 @@ await (async () => {
         await new Promise(r => setTimeout(r, 2500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 
+        // Test Startup Script Prompt Modal & 20 Scripts Library with Search
+        console.log("   Testing Startup Script Prompt Modal & 20 Scripts Library with Search...");
+        const scriptLibraryTestResult = await page.evaluate(async () => {
+            const promptModal = document.getElementById('startup-script-prompt-modal');
+            const libraryModal = document.getElementById('script-library-modal');
+            const btnYes = document.getElementById('btn-startup-scripts-yes');
+            const searchInput = document.getElementById('script-library-search-input');
+            const clearBtn = document.getElementById('btn-clear-script-search');
+            const closeLibBtn = document.getElementById('btn-close-script-library');
+            const countLabel = document.getElementById('script-library-count-label');
+
+            const isPromptModalOpen = !!promptModal && window.getComputedStyle(promptModal).display === 'flex';
+
+            // Click JAH, NÄITA
+            btnYes?.click();
+            await new Promise(r => setTimeout(r, 100));
+
+            const isPromptClosed = !!promptModal && window.getComputedStyle(promptModal).display === 'none';
+            const isLibraryOpen = !!libraryModal && window.getComputedStyle(libraryModal).display === 'flex';
+
+            const cards = document.querySelectorAll('#script-library-cards-container .script-library-card');
+            const totalCardsCount = cards.length;
+
+            // Test Search by Name (e.g., 'kiirendus' or 'hüpe')
+            if (searchInput) {
+                searchInput.value = 'kiirendus';
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            await new Promise(r => setTimeout(r, 50));
+            const nameSearchCards = document.querySelectorAll('#script-library-cards-container .script-library-card');
+            const nameSearchMatches = Array.from(nameSearchCards).every(card => {
+                const text = card.textContent.toLowerCase();
+                return text.includes('kiirendus') || text.includes('kiirus');
+            });
+
+            // Test Search by Description / "Mida teeb" (e.g., 'kahju' or 'part' or 'taevasse')
+            if (searchInput) {
+                searchInput.value = 'taevasse';
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            await new Promise(r => setTimeout(r, 50));
+            const descSearchCards = document.querySelectorAll('#script-library-cards-container .script-library-card');
+            const descSearchMatches = descSearchCards.length > 0 && Array.from(descSearchCards).every(card => {
+                const desc = card.querySelector('.script-card-desc')?.textContent.toLowerCase() || '';
+                return desc.includes('taevasse');
+            });
+
+            // Test Clear button
+            clearBtn?.click();
+            await new Promise(r => setTimeout(r, 50));
+            const cardsAfterClear = document.querySelectorAll('#script-library-cards-container .script-library-card').length;
+
+            // Test inserting script into editor
+            const firstInsertBtn = document.querySelector('.btn-insert-library-script');
+            firstInsertBtn?.click();
+            await new Promise(r => setTimeout(r, 100));
+
+            const scriptEditorModal = document.getElementById('script-editor-modal');
+            const codeEditor = document.getElementById('script-code-editor');
+            const codeInserted = !!codeEditor && codeEditor.value.trim().length > 10;
+            const editorOpened = !!scriptEditorModal && window.getComputedStyle(scriptEditorModal).display === 'flex';
+
+            // Close script editor
+            document.getElementById('btn-close-script-modal')?.click();
+
+            return {
+                isPromptModalOpen,
+                isPromptClosed,
+                isLibraryOpen,
+                totalCardsCount,
+                nameSearchMatches,
+                descSearchMatches,
+                cardsAfterClear,
+                codeInserted,
+                editorOpened
+            };
+        });
+        console.log("   Script Library Test Results:", scriptLibraryTestResult);
+        if (
+            !scriptLibraryTestResult.isPromptModalOpen ||
+            !scriptLibraryTestResult.isPromptClosed ||
+            !scriptLibraryTestResult.isLibraryOpen ||
+            scriptLibraryTestResult.totalCardsCount !== 20 ||
+            !scriptLibraryTestResult.nameSearchMatches ||
+            !scriptLibraryTestResult.descSearchMatches ||
+            scriptLibraryTestResult.cardsAfterClear !== 20 ||
+            !scriptLibraryTestResult.codeInserted ||
+            !scriptLibraryTestResult.editorOpened
+        ) {
+            throw new Error("Script Library and Startup Prompt test failed: " + JSON.stringify(scriptLibraryTestResult));
+        }
+        console.log("   ✅ Creator Studio Startup Script Prompt & 20 Scripts Library with dynamic Search verified successfully!");
+
         // Verify 10,000 items catalog badge
         const catalogCountText = await page.$eval('#catalog-count-badge', el => el.textContent);
         console.log("   Catalog object count badge:", catalogCountText);
