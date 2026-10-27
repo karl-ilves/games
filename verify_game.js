@@ -3235,10 +3235,54 @@ await (async () => {
                 throw new Error("Expected code snippet to be inserted into #script-code-editor!");
             }
 
-            // 3. Switch back to Visual Tab, configure Give Coins action, and save
-            console.log("   Testing Visual Form Builder: Give Coins Action...");
+            // Test IGA ASI snippet button
+            console.log("   Testing IGA ASI (Ese/Part) Snippet Button...");
+            const igaAsiBtn = await page.$('#btn-snippet-iga-asi');
+            if (!igaAsiBtn) {
+                throw new Error("Expected #btn-snippet-iga-asi button to exist!");
+            }
+            await igaAsiBtn.click();
+            const codeAfterIgaAsi = await page.$eval('#script-code-editor', el => el.value);
+            if (!codeAfterIgaAsi.includes('api.object.isHoldable()') || !codeAfterIgaAsi.includes('api.object.pickup()')) {
+                throw new Error("Expected #btn-snippet-iga-asi snippet to contain isHoldable() and pickup()!");
+            }
+
+            // 3. Switch back to Visual Tab, test onInteract / Proximity Prompt (E / your text), configure Give Coins action, and save
+            console.log("   Testing Visual Form Builder: onInteract with Roblox-style Proximity Prompt (Key & Text)...");
             await page.click('#script-tab-visual');
             await new Promise(r => setTimeout(r, 200));
+
+            // Select onInteract trigger
+            await page.select('#script-form-trigger', 'onInteract');
+            await page.evaluate(() => {
+                document.getElementById('script-form-trigger').dispatchEvent(new Event('change'));
+            });
+            await new Promise(r => setTimeout(r, 200));
+
+            const promptRowDisplay = await page.$eval('#script-prompt-settings-row', el => window.getComputedStyle(el).display);
+            if (promptRowDisplay === 'none') {
+                throw new Error("Expected #script-prompt-settings-row to be visible when onInteract is chosen!");
+            }
+
+            // Check default values: Key 'E', Text 'your text'
+            const defaultPromptKey = await page.$eval('#script-prompt-key', el => el.value);
+            const defaultPromptText = await page.$eval('#script-prompt-text', el => el.value);
+            if (defaultPromptKey !== 'E' || defaultPromptText !== 'your text') {
+                throw new Error(`Expected default prompt key 'E' and text 'your text', got key='${defaultPromptKey}', text='${defaultPromptText}'`);
+            }
+
+            // Test floating proximity prompt widget presence in DOM
+            const hasFloatingPromptWidget = await page.evaluate(() => {
+                const w = document.getElementById('floating-proximity-prompt');
+                const k = document.getElementById('floating-prompt-key-badge');
+                const t = document.getElementById('floating-prompt-text-label');
+                return !!(w && k && t);
+            });
+            if (!hasFloatingPromptWidget) {
+                throw new Error("Expected floating Roblox-style proximity prompt elements (#floating-proximity-prompt, #floating-prompt-key-badge, #floating-prompt-text-label) to exist!");
+            }
+
+            console.log("   Testing Visual Form Builder: Give Coins Action...");
             await page.select('#script-form-action', 'give_coins');
             await page.evaluate(() => {
                 document.getElementById('script-form-action').dispatchEvent(new Event('change'));

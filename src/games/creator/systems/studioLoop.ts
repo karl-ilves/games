@@ -634,6 +634,7 @@ export function animate() {
 
         // Check General Triggers & Dialogue & Interactive Gameplay Items
         let activeTrigger: PlacedObject | null = null;
+        let activePromptObj: PlacedObject | null = null;
         const playerPos = humanCharacter.position;
 
         // Fall check (Falling off world / parkour)
@@ -835,18 +836,34 @@ export function animate() {
                 } else if (p.script.trigger === 'onInteract') {
                     const interactRad = p.trigger?.radius || 3.8;
                     if (dist <= interactRad) {
+                        if (!activePromptObj) {
+                            activePromptObj = p;
+                        }
                         if (!activeTrigger) {
                             activeTrigger = {
                                 ...p,
                                 trigger: {
                                     type: 'proximity',
-                                    message: 'Vajuta [E] suhtlemiseks / käivitamiseks',
+                                    message: p.script.promptText || 'your text',
                                     title: p.name
                                 }
                             };
                         }
-                        if (keys['KeyE']) {
-                            executeObjectScript(p, playerPos, 'onInteract');
+                        const targetKeyLetter = (p.script.promptKey || 'E').toUpperCase();
+                        const keyName = 'Key' + targetKeyLetter;
+                        if (keys[keyName] || (targetKeyLetter === 'E' && keys['KeyE'])) {
+                            if (keys[keyName]) keys[keyName] = false;
+                            if (keys['KeyE']) keys['KeyE'] = false;
+                            const isHoldableObj = !!(p.isHoldable || p.customModelData?.isHoldable);
+                            if (isHoldableObj && !p.isHeld) {
+                                equipCustomItemInHand(p);
+                                p.isHeld = true;
+                                p.mesh.visible = false;
+                                playGameSound('coin');
+                                showDialogMessage('✋ Ese Käes!', `Võtsid eseme "${p.name}" kätte!`, '✋');
+                            } else {
+                                executeObjectScript(p, playerPos, 'onInteract');
+                            }
                         }
                     }
                 }
@@ -861,12 +878,40 @@ export function animate() {
             }
         }
 
+        // Floating 3D Roblox-style Proximity Prompt (Hõljub eseme sees/kohal)
+        const floatingPrompt = document.getElementById('floating-proximity-prompt');
+        const floatingPromptKey = document.getElementById('floating-prompt-key-badge');
+        const floatingPromptText = document.getElementById('floating-prompt-text-label');
+
+        if (activePromptObj && floatingPrompt && floatingPromptKey && floatingPromptText) {
+            const objWorldPos = new THREE.Vector3();
+            activePromptObj.mesh.getWorldPosition(objWorldPos);
+            objWorldPos.y += 1.2; // Hover slightly above object center
+
+            const projected = objWorldPos.clone().project(camera);
+            // Check if object is in front of the camera (z < 1)
+            if (projected.z < 1) {
+                const screenX = (projected.x * 0.5 + 0.5) * window.innerWidth;
+                const screenY = (-(projected.y * 0.5) + 0.5) * window.innerHeight;
+
+                floatingPromptKey.innerText = (activePromptObj.script?.promptKey || 'E').toUpperCase();
+                floatingPromptText.innerText = activePromptObj.script?.promptText || 'your text';
+                floatingPrompt.style.left = `${screenX}px`;
+                floatingPrompt.style.top = `${screenY}px`;
+                floatingPrompt.style.display = 'flex';
+            } else {
+                floatingPrompt.style.display = 'none';
+            }
+        } else if (floatingPrompt && floatingPrompt.style.display !== 'none') {
+            floatingPrompt.style.display = 'none';
+        }
+
         const dialogPopup = document.getElementById('game-dialog-popup');
         const dialogTitle = document.getElementById('game-dialog-title');
         const dialogText = document.getElementById('game-dialog-text');
         const dialogIcon = document.getElementById('game-dialog-icon');
 
-        if (activeTrigger && dialogPopup && dialogTitle && dialogText && dialogIcon) {
+        if (activeTrigger && !activePromptObj && dialogPopup && dialogTitle && dialogText && dialogIcon) {
             const isTree = activeTrigger.name.toLowerCase().includes('tree') || activeTrigger.name.toLowerCase().includes('puu') || activeTrigger.category === 'nature';
             dialogIcon.innerText = isTree ? '🌲' : (activeTrigger.gameItemType === 'shop' ? '🛒' : (activeTrigger.category === 'gameplay' ? '💎' : '💬'));
             dialogTitle.innerText = activeTrigger.trigger?.title || activeTrigger.name;
@@ -882,6 +927,10 @@ export function animate() {
         const dialogPopup = document.getElementById('game-dialog-popup');
         if (dialogPopup && dialogPopup.style.display !== 'none') {
             dialogPopup.style.display = 'none';
+        }
+        const floatingPrompt = document.getElementById('floating-proximity-prompt');
+        if (floatingPrompt && floatingPrompt.style.display !== 'none') {
+            floatingPrompt.style.display = 'none';
         }
         // Edit Mode: Smooth Camera Pan with Arrow Keys and WASD
         const panSpeed = 16;

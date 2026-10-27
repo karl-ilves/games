@@ -1,4 +1,4 @@
-import { collectCoin } from '../systems/physics';
+import { collectCoin, equipCustomItemInHand } from '../systems/physics';
 import { getCurrentUserProfile } from '../../../auth';
 import { yardService } from '../../../shared/yardService';
 import { checkpointPosition } from '../state/creatorState';
@@ -140,6 +140,16 @@ export function executeScriptCustomCode(obj: PlacedObject, code: string, playerP
                 showMessage: (text: string, title = 'Teade') => showDialogMessage(title, text)
             },
             object: {
+                getId: () => obj.id,
+                getName: () => obj.name,
+                isHoldable: () => !!(obj.isHoldable || obj.customModelData?.isHoldable),
+                pickup: () => {
+                    equipCustomItemInHand(obj);
+                    obj.isHeld = true;
+                    obj.mesh.visible = false;
+                    playGameSound('coin');
+                    showDialogMessage('✋ Ese Käes!', `Võtsid eseme "${obj.name}" kätte!`, '✋');
+                },
                 setColor: (hex: string) => {
                     obj.color = hex;
                     obj.mesh.traverse((child) => {
@@ -600,6 +610,9 @@ export function openScriptModal() {
     }
 
     const triggerSelect = document.getElementById('script-form-trigger') as HTMLSelectElement | null;
+    const promptSettingsRow = document.getElementById('script-prompt-settings-row');
+    const promptKeyInput = document.getElementById('script-prompt-key') as HTMLInputElement | null;
+    const promptTextInput = document.getElementById('script-prompt-text') as HTMLInputElement | null;
     const cooldownInput = document.getElementById('script-cooldown') as HTMLInputElement | null;
     const timerIntervalRow = document.getElementById('script-timer-interval-row');
     const timerIntervalInput = document.getElementById('script-timer-interval') as HTMLInputElement | null;
@@ -609,6 +622,9 @@ export function openScriptModal() {
     const scr = selectedObject.script;
     if (scr) {
         if (triggerSelect) triggerSelect.value = scr.trigger || 'onPlayerTouch';
+        if (promptSettingsRow) promptSettingsRow.style.display = scr.trigger === 'onInteract' ? 'block' : 'none';
+        if (promptKeyInput) promptKeyInput.value = (scr.promptKey || 'E').toUpperCase();
+        if (promptTextInput) promptTextInput.value = scr.promptText || 'your text';
         if (cooldownInput) cooldownInput.value = (scr.cooldown ?? 1.5).toString();
         if (timerIntervalInput) timerIntervalInput.value = (scr.timerInterval ?? 3).toString();
         if (timerIntervalRow) timerIntervalRow.style.display = scr.trigger === 'onTimer' ? 'block' : 'none';
@@ -624,6 +640,9 @@ export function openScriptModal() {
         }
     } else {
         if (triggerSelect) triggerSelect.value = 'onPlayerTouch';
+        if (promptSettingsRow) promptSettingsRow.style.display = 'none';
+        if (promptKeyInput) promptKeyInput.value = 'E';
+        if (promptTextInput) promptTextInput.value = 'your text';
         if (cooldownInput) cooldownInput.value = '1.5';
         if (timerIntervalInput) timerIntervalInput.value = '3';
         if (timerIntervalRow) timerIntervalRow.style.display = 'none';
@@ -740,13 +759,18 @@ export function saveScriptFromModal() {
         actions.push(act);
     }
 
+    const promptKeyVal = (document.getElementById('script-prompt-key') as HTMLInputElement)?.value?.trim().toUpperCase() || 'E';
+    const promptTextVal = (document.getElementById('script-prompt-text') as HTMLInputElement)?.value?.trim() || 'your text';
+
     selectedObject.script = {
         trigger,
         cooldown,
         timerInterval,
         enabled: isEnabled,
         actions,
-        customJsCode: customJsCode.trim() ? customJsCode : undefined
+        customJsCode: customJsCode.trim() ? customJsCode : undefined,
+        promptKey: promptKeyVal,
+        promptText: promptTextVal
     };
 
     updateScriptInspectorDisplay(selectedObject);
@@ -782,6 +806,10 @@ export function setupScriptingEvents() {
         const timerRow = document.getElementById('script-timer-interval-row');
         if (timerRow) {
             timerRow.style.display = val === 'onTimer' ? 'block' : 'none';
+        }
+        const promptRow = document.getElementById('script-prompt-settings-row');
+        if (promptRow) {
+            promptRow.style.display = val === 'onInteract' ? 'block' : 'none';
         }
     });
 

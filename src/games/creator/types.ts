@@ -24,6 +24,8 @@ export interface ObjectScript {
     actions: ObjectScriptAction[];
     customJsCode?: string;
     enabled?: boolean;
+    promptKey?: string; // Default 'E'
+    promptText?: string; // Default 'your text'
 }
 
 export interface PlacedObject {
