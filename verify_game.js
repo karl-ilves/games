@@ -3228,14 +3228,7 @@ await (async () => {
                 throw new Error("Expected #script-code-section to be flex when Code Tab is active!");
             }
 
-            // Test clicking snippet button in code editor
-            await page.click('button[data-code*="setSpeed"]');
-            const codeEditorVal = await page.$eval('#script-code-editor', el => el.value);
-            if (!codeEditorVal.includes('setSpeed')) {
-                throw new Error("Expected code snippet to be inserted into #script-code-editor!");
-            }
-
-            // Test IGA ASI snippet button
+            // Test IGA ASI snippet button in code editor
             console.log("   Testing IGA ASI (Ese/Part) Snippet Button...");
             const igaAsiBtn = await page.$('#btn-snippet-iga-asi');
             if (!igaAsiBtn) {

@@ -103,6 +103,37 @@ export function executePlayCustomJs(code: string, group: THREE.Group, playerPos:
             },
             hud: {
                 showMessage: (text: string, title = 'Teade') => state.showPlayDialogMessage(title, text, '💬', 3.5)
+            },
+            object: {
+                getId: () => group.userData?.id,
+                getName: () => group.userData?.name || 'Objekt',
+                isHoldable: () => !!(group.userData?.isHoldable || group.userData?.customModelData?.isHoldable),
+                pickup: () => {
+                    state.equipPlayItemInHand(group.userData);
+                    group.visible = false;
+                    group.userData.isCollected = true;
+                    playPlaySound('coin');
+                },
+                setColor: (hex: string) => {
+                    group.traverse((child) => {
+                        if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).material) {
+                            const mat = (child as THREE.Mesh).material;
+                            if (Array.isArray(mat)) mat.forEach(m => (m as any).color?.set(hex));
+                            else (mat as any).color?.set(hex);
+                        }
+                    });
+                },
+                rotate: (x = 0, y = 0, z = 0) => {
+                    group.rotation.x += x;
+                    group.rotation.y += y;
+                    group.rotation.z += z;
+                },
+                move: (dx = 0, dy = 0, dz = 0) => {
+                    group.position.x += dx;
+                    group.position.y += dy;
+                    group.position.z += dz;
+                },
+                getPosition: () => ({ x: group.position.x, y: group.position.y, z: group.position.z })
             }
         };
         const fn = new Function('api', code);
@@ -181,19 +212,34 @@ export function checkGameplayTriggers(state: PlayState, promptPurchase: (objData
             }
         }
 
-        // 4. Object Custom Scripts
-        if (u.script && u.script.enabled !== false && (isTouching || distSq < 3.5)) {
-            const now = Date.now();
-            const cd = (u.script.cooldown ?? 1.0) * 1000;
-            if (now - (u._lastScriptTrigger || 0) >= cd) {
-                u._lastScriptTrigger = now;
-                if (Array.isArray(u.script.actions)) {
-                    for (const act of u.script.actions) {
-                        executePlayScriptAction(act, group, pPos, state);
-                    }
+        // 4. Object Custom Scripts (onPlayerTouch vs onInteract)
+        if (u.script && u.script.enabled !== false) {
+            const isInteractTrigger = u.script.trigger === 'onInteract';
+            const triggerKeyLetter = (u.script.promptKey || 'E').toUpperCase();
+            const keyName = 'Key' + triggerKeyLetter;
+            const isKeyPressed = isInteractTrigger && (Boolean(state.keys[keyName]) || (triggerKeyLetter === 'E' && Boolean(state.keys['KeyE'])));
+
+            const shouldTrigger = isInteractTrigger
+                ? (distSq < 16.0 && isKeyPressed)
+                : (isTouching || distSq < 3.5);
+
+            if (shouldTrigger) {
+                if (isInteractTrigger) {
+                    if (state.keys[keyName]) state.keys[keyName] = false;
+                    if (state.keys['KeyE']) state.keys['KeyE'] = false;
                 }
-                if (u.script.customJsCode && u.script.customJsCode.trim()) {
-                    executePlayCustomJs(u.script.customJsCode, group, pPos, state);
+                const now = Date.now();
+                const cd = (u.script.cooldown ?? 1.0) * 1000;
+                if (now - (u._lastScriptTrigger || 0) >= cd) {
+                    u._lastScriptTrigger = now;
+                    if (Array.isArray(u.script.actions)) {
+                        for (const act of u.script.actions) {
+                            executePlayScriptAction(act, group, pPos, state);
+                        }
+                    }
+                    if (u.script.customJsCode && u.script.customJsCode.trim()) {
+                        executePlayCustomJs(u.script.customJsCode, group, pPos, state);
+                    }
                 }
             }
         }
