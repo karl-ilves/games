@@ -410,12 +410,26 @@
             <button id="btn-new-game" class="btn-studio" style="background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71;">
                 <span>New</span>
             </button>
-            <button id="btn-save-draft" class="btn-studio" style="background: rgba(0, 242, 254, 0.15); border-color: rgba(0, 242, 254, 0.4); color: #00f2fe;">
-                <span>Save Game</span>
-            </button>
-            <button id="btn-add-block" class="btn-studio" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; box-shadow: 0 4px 14px rgba(0,242,254,0.4);">
-                <span>Add Block</span>
-            </button>
+            <!-- Roblox Studio Part Dropdown (Block, Sphere, Cylinder, Wedge) -->
+            <div id="roblox-part-dropdown-wrapper" style="position: relative; display: inline-block;">
+                <button id="btn-add-block" class="btn-studio" title="Lisa Part (Block, Sphere, Wedge, Cylinder)" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; box-shadow: 0 4px 14px rgba(0,242,254,0.4); display: flex; align-items: center; gap: 5px;">
+                    <span>🧱</span> <span>Part</span> <span style="font-size: 0.7rem;">▼</span>
+                </button>
+                <div id="roblox-part-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 190px; background: rgba(15, 23, 42, 0.98); border: 2px solid #00f2fe; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 20px rgba(0,242,254,0.3); z-index: 10000; overflow: hidden; backdrop-filter: blur(12px); flex-direction: column;">
+                    <button class="dropdown-item-part" data-shape="block" id="btn-part-block" style="padding: 9px 14px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                        <span>📦</span> <span>Block</span>
+                    </button>
+                    <button class="dropdown-item-part" data-shape="sphere" id="btn-part-sphere" style="padding: 9px 14px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                        <span>⚽</span> <span>Sphere</span>
+                    </button>
+                    <button class="dropdown-item-part" data-shape="cylinder" id="btn-part-cylinder" style="padding: 9px 14px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                        <span>🛢️</span> <span>Cylinder</span>
+                    </button>
+                    <button class="dropdown-item-part" data-shape="wedge" id="btn-part-wedge" style="padding: 9px 14px; background: transparent; border: none; color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                        <span>📐</span> <span>Wedge</span>
+                    </button>
+                </div>
+            </div>
             <!-- Lisa ekraanile midagi (Screen UI selector) -->
             <div id="screen-element-dropdown-wrapper" style="position: relative; display: inline-block;">
                 <button id="btn-add-screen-element" class="btn-studio" title="Lisa ekraanile midagi (Frame, TextFrame, TextButton, FrameButton)" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399; color: #fff; font-weight: 800; box-shadow: 0 4px 14px rgba(16,185,129,0.35); display: flex; align-items: center; gap: 6px;">
@@ -492,17 +506,17 @@
     <div id="studio-tool-mode-selector" style="position: absolute; top: 75px; left: 20px; z-index: 1005; background: rgba(15, 23, 42, 0.94); border: 2px solid rgba(0, 242, 254, 0.4); border-radius: 14px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
         <span style="font-size: 0.82rem; font-weight: 800; color: #ffd32a; padding: 0 4px; user-select: none;">Tool:</span>
         <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 3px; border-radius: 10px; border: 1px solid rgba(0,242,254,0.25);">
-            <button id="btn-tool-mouse" class="btn-studio-tool active" title="Mouse Tool (Select objects)" style="padding: 7px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
-                Mouse
+            <button id="btn-tool-mouse" class="btn-studio-tool active" title="Select Tool (Vali objekte)" style="padding: 7px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                <span>👆</span> <span>Select</span>
             </button>
-            <button id="btn-tool-mover" class="btn-studio-tool" title="Mover Tool (Move objects with XYZ arrow gizmo)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
-                Mover
+            <button id="btn-tool-mover" class="btn-studio-tool" title="Move Tool (Liiguta XYZ nooltega)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                <span>✥</span> <span>Move</span>
             </button>
-            <button id="btn-tool-puller" class="btn-studio-tool" title="Puller Tool (Drag and stretch blocks)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
-                Puller
+            <button id="btn-tool-puller" class="btn-studio-tool" title="Scale Tool (Venita ja muuda mõõtmeid)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                <span>⤢</span> <span>Scale</span>
             </button>
-            <button id="btn-tool-rotator" class="btn-studio-tool" title="Rotator Tool (Rotate objects with 3 rings)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
-                Rotator
+            <button id="btn-tool-rotator" class="btn-studio-tool" title="Rotate Tool (Pööra 3 ringiga)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                <span>🔄</span> <span>Rotate</span>
             </button>
         </div>
     </div>
@@ -906,7 +920,50 @@
                 <label>Color Tint:</label>
                 <input type="color" id="obj-color-input" value="#ffffff">
             </div>
+            <!-- Roblox Studio Part Properties: Material, Transparency, Reflectance, Anchored, CanCollide -->
             <div class="prop-row">
+                <label>Material:</label>
+                <select id="obj-material-select" style="padding: 4px 8px; background: #0f172a; border: 1px solid #485460; border-radius: 6px; color: #fff; font-size: 0.8rem;">
+                    <option value="Plastic">Plastic</option>
+                    <option value="SmoothPlastic">SmoothPlastic</option>
+                    <option value="Neon">Neon (Hõõguv / Emissive)</option>
+                    <option value="Metal">Metal (Metall)</option>
+                    <option value="Glass">Glass (Klaas)</option>
+                    <option value="Wood">Wood (Puit)</option>
+                    <option value="Brick">Brick (Telliskivi)</option>
+                    <option value="Concrete">Concrete (Betoon)</option>
+                    <option value="Granite">Granite (Graniit)</option>
+                    <option value="Foil">Foil (Läikiv foolium)</option>
+                    <option value="Forcefield">Forcefield (Jõuväli)</option>
+                </select>
+            </div>
+            <div class="prop-row">
+                <label>Transparency (0 - 1):</label>
+                <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
+                    <input type="range" id="obj-transparency-range" min="0" max="1" step="0.05" value="0" style="flex: 1; accent-color: #00f2fe; cursor: pointer;">
+                    <input type="number" id="obj-transparency-input" min="0" max="1" step="0.05" value="0" style="width: 50px; text-align: center; font-size: 0.78rem; padding: 2px 4px;">
+                </div>
+            </div>
+            <div class="prop-row">
+                <label>Reflectance (0 - 1):</label>
+                <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
+                    <input type="range" id="obj-reflectance-range" min="0" max="1" step="0.05" value="0" style="flex: 1; accent-color: #ffd32a; cursor: pointer;">
+                    <input type="number" id="obj-reflectance-input" min="0" max="1" step="0.05" value="0" style="width: 50px; text-align: center; font-size: 0.78rem; padding: 2px 4px;">
+                </div>
+            </div>
+            <div class="prop-row" style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="obj-anchored-check" checked style="cursor: pointer; transform: scale(1.15);">
+                    <span style="font-weight: 700; color: #2ecc71;">Anchored (Ankurdatud / Paigal)</span>
+                </label>
+            </div>
+            <div class="prop-row" style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="obj-cancollide-check" checked style="cursor: pointer; transform: scale(1.15);">
+                    <span style="font-weight: 700; color: #38bdf8;">CanCollide (Kokkupõrge aktiivne)</span>
+                </label>
+            </div>
+            <div class="prop-row" style="display: none;">
                 <label>Läbikäidavus / Kokkupõrge:</label>
                 <select id="obj-passable-select" style="padding: 4px 8px; background: #0f172a; border: 1px solid #485460; border-radius: 6px; color: #fff; font-size: 0.8rem;">
                     <option value="solid">Ei (Tahke plokk / takistus)</option>

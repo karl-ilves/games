@@ -54,14 +54,14 @@ export {
 import { generate10000ObjectCatalog, getStudioTestPlaybux, updateStudioTestPlaybuxDisplay } from './catalog/creatorCatalog';
 export { getStudioTestPlaybux, updateStudioTestPlaybuxDisplay };
 
-import { isAirplaneObject, isBoatObject, createUltraRealisticGrass, createUltraRealisticHuman, createAirplane3DMesh, createSpeedboat3DMesh, createWedgeGeometry, createSinglePartMesh, createCustomModel3DMesh } from './models/objectModels';
-export { isAirplaneObject, isBoatObject, createAirplane3DMesh, createSpeedboat3DMesh, createWedgeGeometry, createSinglePartMesh, createCustomModel3DMesh };
+import { isAirplaneObject, isBoatObject, createUltraRealisticGrass, createUltraRealisticHuman, createAirplane3DMesh, createSpeedboat3DMesh, createWedgeGeometry, createSinglePartMesh, createCustomModel3DMesh, applyObjectMaterialAndTransparency } from './models/objectModels';
+export { isAirplaneObject, isBoatObject, createAirplane3DMesh, createSpeedboat3DMesh, createWedgeGeometry, createSinglePartMesh, createCustomModel3DMesh, applyObjectMaterialAndTransparency };
 
 import { removeSea, setMapEnvironment, getMapEnvironment, updateMapEnvironmentUI, isPositionInWater, createWholeMapOcean, createPartMapOcean, createIslandOcean, setDayNightMode } from './world/environment';
 export { removeSea, setMapEnvironment, getMapEnvironment, updateMapEnvironmentUI, isPositionInWater, createWholeMapOcean, createPartMapOcean, createIslandOcean, setDayNightMode };
 
-import { getStudioToolMode, getPullActiveAxis, setPullActiveAxis, setStudioToolMode, updatePullGizmo, updateMoveGizmo, updateRotateGizmo, showFloatingPullIndicator, hideFloatingPullIndicator, pullSelectedObject, spawnBlockObject, moveSelectedObject, rotateSelectedObject } from './systems/gizmos';
-export { getStudioToolMode, getPullActiveAxis, setPullActiveAxis, setStudioToolMode, updatePullGizmo, updateMoveGizmo, updateRotateGizmo, showFloatingPullIndicator, hideFloatingPullIndicator, pullSelectedObject, spawnBlockObject, moveSelectedObject, rotateSelectedObject };
+import { getStudioToolMode, getPullActiveAxis, setPullActiveAxis, setStudioToolMode, updatePullGizmo, updateMoveGizmo, updateRotateGizmo, showFloatingPullIndicator, hideFloatingPullIndicator, pullSelectedObject, spawnBlockObject, spawnPartShape, moveSelectedObject, rotateSelectedObject } from './systems/gizmos';
+export { getStudioToolMode, getPullActiveAxis, setPullActiveAxis, setStudioToolMode, updatePullGizmo, updateMoveGizmo, updateRotateGizmo, showFloatingPullIndicator, hideFloatingPullIndicator, pullSelectedObject, spawnBlockObject, spawnPartShape, moveSelectedObject, rotateSelectedObject };
 
 import { enterVehicle, exitVehicle, updateGameplayHUD, equipCustomItemInHand, clearHeldItemFromHand, damagePlayer, healPlayer, isPlayerTouchingOrOnTop, collectCoin, collectKey, playerAttack, triggerVictory, triggerGameOver, respawnPlayerAtCheckpoint, openInGameShop, buyShopItem, openDimensionTravelModal } from './systems/physics';
 export { enterVehicle, exitVehicle, updateGameplayHUD, equipCustomItemInHand, clearHeldItemFromHand, damagePlayer, healPlayer, isPlayerTouchingOrOnTop, collectCoin, collectKey, playerAttack, triggerVictory, triggerGameOver, respawnPlayerAtCheckpoint, openInGameShop, buyShopItem, openDimensionTravelModal };

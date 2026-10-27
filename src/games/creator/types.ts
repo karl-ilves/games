@@ -38,6 +38,11 @@ export interface PlacedObject {
     rotation: { x: number; y: number; z: number };
     scale: { x: number; y: number; z: number };
     color: string;
+    material?: string;
+    transparency?: number;
+    reflectance?: number;
+    anchored?: boolean;
+    canCollide?: boolean;
     isPassable?: boolean;
     parentId?: string | null;
     isAirplane?: boolean;

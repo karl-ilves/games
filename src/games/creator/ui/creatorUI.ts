@@ -1,8 +1,8 @@
-import { createAirplane3DMesh, createSpeedboat3DMesh } from '../models/objectModels';
+import { createAirplane3DMesh, createSpeedboat3DMesh, applyObjectMaterialAndTransparency } from '../models/objectModels';
 import { performRedo, performUndo } from '../systems/undoRedo';
 import { playerAttack, enterVehicle, respawnPlayerAtCheckpoint, openDimensionTravelModal, equipCustomItemInHand, clearHeldItemFromHand, toggleInventorySlot } from '../systems/physics';
 import { nearbyVehicle, moveGizmoHandles, pullGizmoHandles, pullActiveAxis, pullStartScaleVector, pullStartBoxMin, pullStartLocalMin, pullStartBoxMax, pullStartLocalMax, checkpointPosition } from '../state/creatorState';
-import { showFloatingPullIndicator, hideFloatingPullIndicator, spawnBlockObject, beginMoveGizmoDrag, computeMoveGizmoDragPosition, endMoveGizmoDrag, studioRayFromClient } from '../systems/gizmos';
+import { showFloatingPullIndicator, hideFloatingPullIndicator, spawnBlockObject, spawnPartShape, beginMoveGizmoDrag, computeMoveGizmoDragPosition, endMoveGizmoDrag, studioRayFromClient } from '../systems/gizmos';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../../shared/mobileControls';
 import { PlayardImageGenerationEngine } from '../../../shared/imageGenerationEngine';
 import { setupScriptingEvents } from '../systems/scriptRunner';
@@ -1052,6 +1052,34 @@ export function selectObject(placed: PlacedObject | null) {
     const passableSelect = document.getElementById('obj-passable-select') as HTMLSelectElement | null;
     if (passableSelect) {
         passableSelect.value = placed.isPassable ? 'passable' : 'solid';
+    }
+
+    // Sync Roblox Studio Part properties
+    const materialSelect = document.getElementById('obj-material-select') as HTMLSelectElement | null;
+    if (materialSelect) {
+        materialSelect.value = placed.material || 'Plastic';
+    }
+
+    const transRange = document.getElementById('obj-transparency-range') as HTMLInputElement | null;
+    const transInput = document.getElementById('obj-transparency-input') as HTMLInputElement | null;
+    const transVal = placed.transparency ?? 0;
+    if (transRange) transRange.value = transVal.toString();
+    if (transInput) transInput.value = transVal.toString();
+
+    const reflRange = document.getElementById('obj-reflectance-range') as HTMLInputElement | null;
+    const reflInput = document.getElementById('obj-reflectance-input') as HTMLInputElement | null;
+    const reflVal = placed.reflectance ?? 0;
+    if (reflRange) reflRange.value = reflVal.toString();
+    if (reflInput) reflInput.value = reflVal.toString();
+
+    const anchoredCheck = document.getElementById('obj-anchored-check') as HTMLInputElement | null;
+    if (anchoredCheck) {
+        anchoredCheck.checked = placed.anchored !== false;
+    }
+
+    const canCollideCheck = document.getElementById('obj-cancollide-check') as HTMLInputElement | null;
+    if (canCollideCheck) {
+        canCollideCheck.checked = placed.canCollide !== false && !placed.isPassable;
     }
 
     // Sync Holdable and Weapon Settings
@@ -2179,10 +2207,36 @@ export function setupStudioEvents() {
         setMapEnvironment('sea');
     });
 
-    // Top "Add Block" Button
-    document.getElementById('btn-add-block')?.addEventListener('click', () => {
-        spawnBlockObject();
-    });
+    // Top "Part" Dropdown Button & Sub-items (Block, Sphere, Cylinder, Wedge)
+    const partDropdownMenu = document.getElementById('roblox-part-dropdown-menu');
+    const partDropdownBtn = document.getElementById('btn-add-block');
+
+    if (partDropdownBtn && partDropdownMenu) {
+        partDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = partDropdownMenu.style.display === 'flex';
+            partDropdownMenu.style.display = isOpen ? 'none' : 'flex';
+            if (!isOpen) {
+                // Also spawn standard block when clicking Part button directly
+                spawnPartShape('block');
+            }
+        });
+
+        document.querySelectorAll('.dropdown-item-part').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const shape = (btn as HTMLElement).getAttribute('data-shape') as 'block' | 'sphere' | 'cylinder' | 'wedge';
+                spawnPartShape(shape || 'block');
+                partDropdownMenu.style.display = 'none';
+            });
+        });
+
+        document.addEventListener('click', () => {
+            if (partDropdownMenu.style.display === 'flex') {
+                partDropdownMenu.style.display = 'none';
+            }
+        });
+    }
 
     // Tool Mode Selector (Hiir vs Liigutaja vs Tõmbaja)
     document.getElementById('btn-tool-mouse')?.addEventListener('click', () => {
@@ -2719,12 +2773,67 @@ export function setupInspectorEvents() {
     if (colorInput) {
         colorInput.addEventListener('input', () => {
             if (selectedObject) {
-                selectedObject.color = colorInput.value;
-                selectedObject.mesh.traverse(child => {
-                    if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).material) {
-                        ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(colorInput.value);
-                    }
-                });
+                applyObjectMaterialAndTransparency(selectedObject, { color: colorInput.value });
+                autoSaveDraft();
+            }
+        });
+    }
+
+    // Roblox Studio Part Properties: Material, Transparency, Reflectance, Anchored, CanCollide
+    const materialSelect = document.getElementById('obj-material-select') as HTMLSelectElement | null;
+    if (materialSelect) {
+        materialSelect.addEventListener('change', () => {
+            if (selectedObject) {
+                applyObjectMaterialAndTransparency(selectedObject, { material: materialSelect.value });
+                autoSaveDraft();
+            }
+        });
+    }
+
+    const transRange = document.getElementById('obj-transparency-range') as HTMLInputElement | null;
+    const transInput = document.getElementById('obj-transparency-input') as HTMLInputElement | null;
+    const syncTransparency = (val: number) => {
+        if (!selectedObject) return;
+        const clamped = Math.max(0, Math.min(1, val));
+        if (transRange && transRange.value !== clamped.toString()) transRange.value = clamped.toString();
+        if (transInput && transInput.value !== clamped.toString()) transInput.value = clamped.toString();
+        applyObjectMaterialAndTransparency(selectedObject, { transparency: clamped });
+        autoSaveDraft();
+    };
+    transRange?.addEventListener('input', () => syncTransparency(parseFloat(transRange.value) || 0));
+    transInput?.addEventListener('input', () => syncTransparency(parseFloat(transInput.value) || 0));
+
+    const reflRange = document.getElementById('obj-reflectance-range') as HTMLInputElement | null;
+    const reflInput = document.getElementById('obj-reflectance-input') as HTMLInputElement | null;
+    const syncReflectance = (val: number) => {
+        if (!selectedObject) return;
+        const clamped = Math.max(0, Math.min(1, val));
+        if (reflRange && reflRange.value !== clamped.toString()) reflRange.value = clamped.toString();
+        if (reflInput && reflInput.value !== clamped.toString()) reflInput.value = clamped.toString();
+        applyObjectMaterialAndTransparency(selectedObject, { reflectance: clamped });
+        autoSaveDraft();
+    };
+    reflRange?.addEventListener('input', () => syncReflectance(parseFloat(reflRange.value) || 0));
+    reflInput?.addEventListener('input', () => syncReflectance(parseFloat(reflInput.value) || 0));
+
+    const anchoredCheck = document.getElementById('obj-anchored-check') as HTMLInputElement | null;
+    if (anchoredCheck) {
+        anchoredCheck.addEventListener('change', () => {
+            if (selectedObject) {
+                selectedObject.anchored = anchoredCheck.checked;
+                autoSaveDraft();
+            }
+        });
+    }
+
+    const canCollideCheck = document.getElementById('obj-cancollide-check') as HTMLInputElement | null;
+    if (canCollideCheck) {
+        canCollideCheck.addEventListener('change', () => {
+            if (selectedObject) {
+                selectedObject.canCollide = canCollideCheck.checked;
+                selectedObject.isPassable = !canCollideCheck.checked;
+                const passableSelect = document.getElementById('obj-passable-select') as HTMLSelectElement | null;
+                if (passableSelect) passableSelect.value = selectedObject.isPassable ? 'passable' : 'solid';
                 autoSaveDraft();
             }
         });

@@ -718,25 +718,53 @@ export function pullSelectedObject(deltaScale: number, axis?: PullEdgeAxis) {
     hideFloatingPullIndicator(1500);
 }
 
-export function spawnBlockObject(color: string = '#00cec9', name: string = 'Part'): PlacedObject {
+export function spawnPartShape(shapeType: 'block' | 'sphere' | 'cylinder' | 'wedge' = 'block', color: string = '#00cec9', name?: string): PlacedObject {
     const group = new THREE.Group();
-    const boxMat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshStandardMaterial({
         color: color,
         roughness: 0.35,
         metalness: 0.15
     });
-    const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), boxMat);
-    boxMesh.position.y = 1;
-    boxMesh.castShadow = true;
-    boxMesh.receiveShadow = true;
-    group.add(boxMesh);
 
-    // Stylish edge highlight
-    const wireMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
-    const wireGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2));
-    const wireLine = new THREE.LineSegments(wireGeo, wireMat);
-    wireLine.position.y = 1;
-    group.add(wireLine);
+    let geo: THREE.BufferGeometry;
+    let posY = 1;
+    let defaultName = 'Part';
+
+    if (shapeType === 'sphere') {
+        geo = new THREE.SphereGeometry(1, 24, 20);
+        defaultName = 'Sphere';
+    } else if (shapeType === 'cylinder') {
+        geo = new THREE.CylinderGeometry(1, 1, 2, 24);
+        defaultName = 'Cylinder';
+    } else if (shapeType === 'wedge') {
+        // Wedge geometry
+        const wedgeShape = new THREE.Shape();
+        wedgeShape.moveTo(-1, 0);
+        wedgeShape.lineTo(1, 0);
+        wedgeShape.lineTo(-1, 2);
+        wedgeShape.closePath();
+        geo = new THREE.ExtrudeGeometry(wedgeShape, { depth: 2, bevelEnabled: false });
+        geo.center();
+        defaultName = 'Wedge';
+    } else {
+        geo = new THREE.BoxGeometry(2, 2, 2);
+        defaultName = 'Part';
+    }
+
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.y = posY;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+
+    // Edge wireframe highlight
+    try {
+        const wireMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 });
+        const wireGeo = new THREE.EdgesGeometry(geo);
+        const wireLine = new THREE.LineSegments(wireGeo, wireMat);
+        wireLine.position.y = posY;
+        group.add(wireLine);
+    } catch (e) {}
 
     const spawnX = orbitTarget.x + (Math.random() - 0.5) * 4;
     const spawnZ = orbitTarget.z + (Math.random() - 0.5) * 4;
@@ -745,15 +773,20 @@ export function spawnBlockObject(color: string = '#00cec9', name: string = 'Part
     scene.add(group);
 
     const placed: PlacedObject = {
-        id: 'block_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        id: 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         mesh: group,
-        catalogId: 'block_cube',
-        name: name,
+        catalogId: 'part_' + shapeType,
+        name: name || defaultName,
         category: 'custom',
         position: { x: spawnX, y: 0, z: spawnZ },
         rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
         color: color,
+        material: 'Plastic',
+        transparency: 0,
+        reflectance: 0,
+        anchored: true,
+        canCollide: true,
         isPassable: false
     };
 
@@ -762,5 +795,9 @@ export function spawnBlockObject(color: string = '#00cec9', name: string = 'Part
     setStudioToolMode('puller');
     autoSaveDraft();
     return placed;
+}
+
+export function spawnBlockObject(color: string = '#00cec9', name: string = 'Part'): PlacedObject {
+    return spawnPartShape('block', color, name);
 }
 export { moveGizmoGroup, pullGizmoGroup, rotateGizmoGroup, isMovingWithGizmo, isRotatingWithGizmo, moveActiveAxis, rotateActiveAxis, moveStartObjectPos, moveStartMousePos, rotateStartObjectRot, rotateStartMousePos, moveScreenDir, worldUnitsPerPixel, pullActiveSign, isPullingObject, pullStartPos, pullHandleScreenDir, studioToolMode, pullActiveAxis, pullGizmoBoxHelper, pullGizmoHandles, moveGizmoHandles, rotateGizmoHandles } from '../state/creatorState';

@@ -713,6 +713,59 @@ export function renderWorkspaceTree() {
             }
         }
     }
+
+    // ============================================
+    // 3. Roblox Studio Services (Lighting, ReplicatedStorage, ServerScriptService, StarterPlayer)
+    // ============================================
+    const services = [
+        { id: 'service_lighting', name: 'Lighting', icon: '💡', desc: 'Päike, valgustus & taevas' },
+        { id: 'service_replicated_storage', name: 'ReplicatedStorage', icon: '📦', desc: 'Jagatud objektid & moodulid' },
+        { id: 'service_server_script_service', name: 'ServerScriptService', icon: '📜', desc: 'Serveri skriptid' },
+        { id: 'service_starter_player', name: 'StarterPlayer', icon: '🏃', desc: 'Mängija seaded & kiirus' }
+    ];
+
+    for (const s of services) {
+        if (q && !s.name.toLowerCase().includes(q)) continue;
+        const srvEl = document.createElement('div');
+        srvEl.className = 'workspace-tree-row workspace-service-row';
+        srvEl.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            padding-left: 10px;
+            border-radius: 6px;
+            margin-top: 2px;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+        `;
+        srvEl.innerHTML = `
+            <span style="font-size: 0.95rem;">${s.icon}</span>
+            <span style="font-weight: 700; flex: 1;">${s.name}</span>
+            <span style="font-size: 0.68rem; color: #64748b;">${s.desc}</span>
+        `;
+        srvEl.addEventListener('mouseenter', () => {
+            srvEl.style.background = 'rgba(255, 255, 255, 0.08)';
+        });
+        srvEl.addEventListener('mouseleave', () => {
+            srvEl.style.background = 'rgba(255, 255, 255, 0.03)';
+        });
+        srvEl.addEventListener('click', () => {
+            if (s.id === 'service_lighting') {
+                const dayNightBtn = document.getElementById('btn-env-land');
+                dayNightBtn?.scrollIntoView({ behavior: 'smooth' });
+            } else if (s.id === 'service_starter_player') {
+                const hpInp = document.getElementById('game-player-health-input');
+                hpInp?.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+        container.appendChild(srvEl);
+    }
 }
 
 /**

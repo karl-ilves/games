@@ -916,3 +916,117 @@ export function createObjectMesh(item: CatalogItem, color?: string): THREE.Group
 
     return group;
 }
+
+/**
+ * Updates an object's meshes with material, transparency, reflectance and color
+ * just like Roblox Studio Part properties!
+ */
+export function applyObjectMaterialAndTransparency(
+    obj: PlacedObject,
+    opts: {
+        color?: string;
+        material?: string;
+        transparency?: number;
+        reflectance?: number;
+    }
+) {
+    if (opts.color !== undefined) obj.color = opts.color;
+    if (opts.material !== undefined) obj.material = opts.material;
+    if (opts.transparency !== undefined) obj.transparency = opts.transparency;
+    if (opts.reflectance !== undefined) obj.reflectance = opts.reflectance;
+
+    const colHex = obj.color || '#00f2fe';
+    const matType = obj.material || 'Plastic';
+    const trans = Math.max(0, Math.min(1, obj.transparency ?? 0));
+    const refl = Math.max(0, Math.min(1, obj.reflectance ?? 0));
+
+    // Configure roughness / metalness / emissive based on Roblox material presets
+    let roughness = 0.4;
+    let metalness = 0.1;
+    let emissiveIntensity = 0;
+    let wireframe = false;
+
+    switch (matType) {
+        case 'Neon':
+            roughness = 0.1;
+            metalness = 0.0;
+            emissiveIntensity = 0.85;
+            break;
+        case 'Metal':
+            roughness = 0.2;
+            metalness = 0.9;
+            break;
+        case 'Glass':
+            roughness = 0.05;
+            metalness = 0.1;
+            break;
+        case 'Wood':
+            roughness = 0.85;
+            metalness = 0.02;
+            break;
+        case 'Brick':
+            roughness = 0.9;
+            metalness = 0.05;
+            break;
+        case 'Concrete':
+            roughness = 0.95;
+            metalness = 0.05;
+            break;
+        case 'Granite':
+            roughness = 0.55;
+            metalness = 0.2;
+            break;
+        case 'Foil':
+            roughness = 0.15;
+            metalness = 0.95;
+            break;
+        case 'Forcefield':
+            roughness = 0.1;
+            metalness = 0.4;
+            emissiveIntensity = 0.5;
+            wireframe = true;
+            break;
+        case 'Plastic':
+        case 'SmoothPlastic':
+        default:
+            roughness = matType === 'SmoothPlastic' ? 0.2 : 0.45;
+            metalness = 0.1;
+            break;
+    }
+
+    if (refl > 0) {
+        metalness = Math.min(1, metalness + refl * 0.7);
+        roughness = Math.max(0.05, roughness - refl * 0.35);
+    }
+
+    obj.mesh.traverse(child => {
+        if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).material) {
+            const mesh = child as THREE.Mesh;
+            const currentMat = mesh.material as THREE.MeshStandardMaterial;
+            if (currentMat.isMeshStandardMaterial) {
+                currentMat.color.set(colHex);
+                currentMat.roughness = roughness;
+                currentMat.metalness = metalness;
+                currentMat.wireframe = wireframe;
+
+                if (emissiveIntensity > 0) {
+                    currentMat.emissive.set(colHex);
+                    currentMat.emissiveIntensity = emissiveIntensity;
+                } else {
+                    currentMat.emissive.setHex(0x000000);
+                    currentMat.emissiveIntensity = 0;
+                }
+
+                if (trans > 0 || matType === 'Glass') {
+                    currentMat.transparent = true;
+                    currentMat.opacity = 1 - trans;
+                    currentMat.needsUpdate = true;
+                } else {
+                    currentMat.transparent = false;
+                    currentMat.opacity = 1;
+                    currentMat.needsUpdate = true;
+                }
+            }
+        }
+    });
+}

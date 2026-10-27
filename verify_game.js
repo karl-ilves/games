@@ -14779,6 +14779,106 @@ await (async () => {
             }
             console.log("   ✅ Game Creator 10,000 PBX Mängu Reklaam purchase verified!");
 
+            // 30a. Verify Roblox Studio features (Part Dropdown, Select/Move/Scale/Rotate tools, Explorer Services, Properties)
+            console.log("30a. Testing Roblox Studio features (Part dropdown, Select/Move/Scale/Rotate, Explorer services, Material/Transparency/Anchored)...");
+            const robloxStudioTest = await page.evaluate(async () => {
+                // Close publish modal if open
+                const closePublishBtn = document.getElementById('btn-close-publish-modal');
+                closePublishBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                // 1. Part Dropdown (Block, Sphere, Cylinder, Wedge)
+                const partDropdownBtn = document.getElementById('btn-add-block');
+                const partMenu = document.getElementById('roblox-part-dropdown-menu');
+                const btnBlock = document.getElementById('btn-part-block');
+                const btnSphere = document.getElementById('btn-part-sphere');
+                const btnCylinder = document.getElementById('btn-part-cylinder');
+                const btnWedge = document.getElementById('btn-part-wedge');
+
+                const hasPartBtn = !!partDropdownBtn && partDropdownBtn.textContent.includes('Part');
+                const hasPartMenu = !!partMenu && !!btnBlock && !!btnSphere && !!btnCylinder && !!btnWedge;
+
+                // Click Part dropdown to spawn part
+                partDropdownBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+                btnSphere?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const sphereObj = window.creatorStudio?.placedObjects?.find(o => o.name === 'Sphere' || o.catalogId === 'part_sphere');
+                const sphereCreated = !!sphereObj;
+
+                // 2. Roblox Studio Tools: Select, Move, Scale, Rotate
+                const btnSelect = document.getElementById('btn-tool-mouse');
+                const btnMove = document.getElementById('btn-tool-mover');
+                const btnScale = document.getElementById('btn-tool-puller');
+                const btnRotate = document.getElementById('btn-tool-rotator');
+
+                const hasRobloxToolLabels = btnSelect?.textContent?.includes('Select') &&
+                    btnMove?.textContent?.includes('Move') &&
+                    btnScale?.textContent?.includes('Scale') &&
+                    btnRotate?.textContent?.includes('Rotate');
+
+                btnScale?.click();
+                const scaleModeActive = window.creatorStudio?.studioToolMode === 'puller';
+                btnMove?.click();
+                const moveModeActive = window.creatorStudio?.studioToolMode === 'mover';
+
+                // 3. Explorer Tree Services (Lighting, ReplicatedStorage, ServerScriptService, StarterPlayer)
+                const treeContainer = document.getElementById('workspace-tree-container');
+                const treeText = treeContainer?.textContent || '';
+                const hasLighting = treeText.includes('Lighting');
+                const hasReplicated = treeText.includes('ReplicatedStorage');
+                const hasServerScript = treeText.includes('ServerScriptService');
+                const hasStarterPlayer = treeText.includes('StarterPlayer');
+
+                // 4. Properties Panel (Material, Transparency, Reflectance, Anchored, CanCollide)
+                const materialSelect = document.getElementById('obj-material-select');
+                const transRange = document.getElementById('obj-transparency-range');
+                const transInput = document.getElementById('obj-transparency-input');
+                const reflRange = document.getElementById('obj-reflectance-range');
+                const anchoredCheck = document.getElementById('obj-anchored-check');
+                const canCollideCheck = document.getElementById('obj-cancollide-check');
+
+                const hasProperties = !!materialSelect && !!transRange && !!reflRange && !!anchoredCheck && !!canCollideCheck;
+
+                // Test changing material and transparency
+                if (materialSelect) {
+                    materialSelect.value = 'Neon';
+                    materialSelect.dispatchEvent(new Event('change'));
+                }
+                if (transInput) {
+                    transInput.value = '0.5';
+                    transInput.dispatchEvent(new Event('input'));
+                }
+                if (anchoredCheck) {
+                    anchoredCheck.checked = true;
+                    anchoredCheck.dispatchEvent(new Event('change'));
+                }
+
+                const sel = window.creatorStudio?.selectedObject;
+                const propValuesApplied = sel?.material === 'Neon' && sel?.transparency === 0.5 && sel?.anchored === true;
+
+                return {
+                    hasPartBtn,
+                    hasPartMenu,
+                    sphereCreated,
+                    hasRobloxToolLabels,
+                    scaleModeActive,
+                    moveModeActive,
+                    hasLighting,
+                    hasReplicated,
+                    hasServerScript,
+                    hasStarterPlayer,
+                    hasProperties,
+                    propValuesApplied
+                };
+            });
+            console.log("   Roblox Studio Test Results:", robloxStudioTest);
+            if (Object.values(robloxStudioTest).some(v => !v)) {
+                throw new Error("Roblox Studio features test failed: " + JSON.stringify(robloxStudioTest));
+            }
+            console.log("   ✅ Roblox Studio features (Part Dropdown, Select/Move/Scale/Rotate, Explorer Services, Material/Transparency/Anchored) verified!");
+
             // Test Ad Player displays the advertised game
             console.log("30b. Testing Ad Player shows the newly advertised game in Hub...");
             await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });

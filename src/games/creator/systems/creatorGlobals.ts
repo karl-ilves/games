@@ -68,8 +68,9 @@ import {
     isMovingWithGizmo, isRotatingWithGizmo, moveActiveAxis, rotateActiveAxis, pullActiveAxis,
     setPullActiveAxis, getPullActiveAxis, updatePullGizmo,
     pullGizmoGroup, moveSelectedObject, rotateSelectedObject,
-    spawnBlockObject, pullSelectedObject
+    spawnBlockObject, spawnPartShape, pullSelectedObject
 } from './gizmos';
+import { applyObjectMaterialAndTransparency } from '../models/objectModels';
 import { aiTierService, AI_TIER_CONFIGS } from '../../../shared/aiTierService';
 import {
     addScreenElement,
@@ -188,6 +189,8 @@ export function setupCreatorGlobals() {
         moveSelectedObject,
         rotateSelectedObject,
         spawnBlockObject,
+        spawnPartShape,
+        applyObjectMaterialAndTransparency,
         pullSelectedObject,
         setObjectPassable,
         enterVehicle,
