@@ -13,9 +13,14 @@ export class BuildSystem {
     private mouse: THREE.Vector2 = new THREE.Vector2();
 
     private isBuildActive: boolean = false;
+    private isDeleteMode: boolean = false;
     private selectedDef: ParkAttractionDef | null = null;
     private ghostMesh: THREE.Group | null = null;
     private structureMeshes: Map<string, THREE.Group> = new Map();
+
+    public getPlacedStructureMeshes(): Map<string, THREE.Group> {
+        return this.structureMeshes;
+    }
 
     private groundPlane: THREE.Plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     private currentRotation: number = 0;
@@ -43,16 +48,50 @@ export class BuildSystem {
 
     private initEvents() {
         this.domElement.addEventListener('pointermove', (e) => {
-            if (!this.isBuildActive || !this.selectedDef) return;
             const rect = this.domElement.getBoundingClientRect();
             this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
+            if (this.isDeleteMode) {
+                this.updateDeleteHighlight();
+                return;
+            }
+
+            if (!this.isBuildActive || !this.selectedDef) return;
             this.updateCandidatePlacement();
         });
 
         this.domElement.addEventListener('pointerdown', (e) => {
-            if (!this.isBuildActive || e.button !== 0 || !this.selectedDef) return;
+            if (e.button !== 0) return;
+
+            // Delete mode handling: click structure to delete it
+            if (this.isDeleteMode) {
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const allMeshes = Array.from(this.structureMeshes.values());
+                const hits = this.raycaster.intersectObjects(allMeshes, true);
+                if (hits.length > 0) {
+                    let hitObj: THREE.Object3D | null = hits[0].object;
+                    let foundId: string | null = null;
+                    while (hitObj) {
+                        for (const [id, m] of this.structureMeshes.entries()) {
+                            if (m === hitObj) {
+                                foundId = id;
+                                break;
+                            }
+                        }
+                        if (foundId) break;
+                        hitObj = hitObj.parent;
+                    }
+
+                    if (foundId) {
+                        this.deleteStructure(foundId);
+                        return;
+                    }
+                }
+                return;
+            }
+
+            if (!this.isBuildActive || !this.selectedDef) return;
 
             if (!this.targetCandidate || !this.targetCandidate.valid) {
                 if (this.targetCandidate?.reason) {
@@ -104,7 +143,11 @@ export class BuildSystem {
                     this.updateCandidatePlacement();
                 }
             } else if (e.key === 'Escape') {
-                this.cancelBuild();
+                if (this.isDeleteMode) {
+                    this.setDeleteMode(false);
+                } else {
+                    this.cancelBuild();
+                }
             }
         });
     }
@@ -151,12 +194,12 @@ export class BuildSystem {
                     return mesh && (mesh === hitParent || mesh.children.includes(hitObj.object as any));
                 });
                 if (found) {
-                    // Check highest stack at this column
-                    const columnTowers = existingTowers.filter(t => Math.abs(t.x - found.x) < 1 && Math.abs(t.z - found.z) < 1);
+                    // Check highest stack at this column (tower height is 7.0m when 2x scaled)
+                    const columnTowers = existingTowers.filter(t => Math.abs(t.x - found.x) < 2 && Math.abs(t.z - found.z) < 2);
                     const currentMaxLevel = Math.max(...columnTowers.map(t => t.stackLevel ?? 0));
                     if (currentMaxLevel < 5) { // 0 to 5 = 6 pieces total
                         this.targetCandidate = {
-                            pos: new THREE.Vector3(found.x, (currentMaxLevel + 1) * 3.5, found.z),
+                            pos: new THREE.Vector3(found.x, (currentMaxLevel + 1) * 7.0, found.z),
                             rotY: found.rotationY,
                             valid: true,
                             stackLevel: currentMaxLevel + 1,
@@ -164,7 +207,7 @@ export class BuildSystem {
                         };
                     } else {
                         this.targetCandidate = {
-                            pos: new THREE.Vector3(found.x, (currentMaxLevel + 1) * 3.5, found.z),
+                            pos: new THREE.Vector3(found.x, (currentMaxLevel + 1) * 7.0, found.z),
                             rotY: found.rotationY,
                             valid: false,
                             reason: 'Maksimaalselt saab panna 6 tornitükki üksteise peale!'
@@ -177,8 +220,8 @@ export class BuildSystem {
                 // Place on ground
                 const intersection = new THREE.Vector3();
                 if (this.raycaster.ray.intersectPlane(this.groundPlane, intersection)) {
-                    const snapX = Math.round(intersection.x / 2) * 2;
-                    const snapZ = Math.round(intersection.z / 2) * 2;
+                    const snapX = Math.round(intersection.x / 4) * 4;
+                    const snapZ = Math.round(intersection.z / 4) * 4;
                     this.targetCandidate = {
                         pos: new THREE.Vector3(snapX, 0, snapZ),
                         rotY: this.currentRotation,
@@ -229,45 +272,46 @@ export class BuildSystem {
                             closestTower = t;
                         }
                     }
-                    if (minDist > 12) {
+                    if (minDist > 20) {
                         closestTower = null;
                     }
                 }
 
                 if (closestTower) {
                     // Find highest tower stack in this column so slide starts from the top deck
-                    const columnTowers = towers.filter(t => Math.abs(t.x - closestTower!.x) < 1 && Math.abs(t.z - closestTower!.z) < 1);
+                    const columnTowers = towers.filter(t => Math.abs(t.x - closestTower!.x) < 2 && Math.abs(t.z - closestTower!.z) < 2);
                     const topTower = columnTowers.reduce((prev, curr) => ((curr.stackLevel ?? 0) > (prev.stackLevel ?? 0) ? curr : prev), closestTower);
                     const level = topTower.stackLevel ?? 0;
-                    const deckY = (level + 1) * 3.5;
+                    const deckY = (level + 1) * 7.0;
 
-                    // Choose exit direction towards the cursor relative to tower center (North, South, East, West)
+                    // Choose exit direction towards cursor relative to tower center (North, South, East, West)
+                    // Tower width is 8.0m (half-width = 4.0m)
                     const dx = lookPt.x - topTower.x;
                     const dz = lookPt.z - topTower.z;
                     let rotY = 0;
-                    let attachOffset = new THREE.Vector3(0, 0, 2.0);
+                    let attachOffset = new THREE.Vector3(0, 0, 4.0);
 
                     if (Math.abs(dx) > Math.abs(dz)) {
                         if (dx > 0) {
                             rotY = Math.PI / 2;
-                            attachOffset.set(2.0, 0, 0);
+                            attachOffset.set(4.0, 0, 0);
                         } else {
                             rotY = -Math.PI / 2;
-                            attachOffset.set(-2.0, 0, 0);
+                            attachOffset.set(-4.0, 0, 0);
                         }
                     } else {
                         if (dz < 0) {
                             rotY = Math.PI;
-                            attachOffset.set(0, 0, -2.0);
+                            attachOffset.set(0, 0, -4.0);
                         } else {
                             rotY = 0;
-                            attachOffset.set(0, 0, 2.0);
+                            attachOffset.set(0, 0, 4.0);
                         }
                     }
 
                     const attachPos = new THREE.Vector3(topTower.x + attachOffset.x, deckY, topTower.z + attachOffset.z);
-                    // The exit of pipe_start is at local z = 1.4
-                    const forward = new THREE.Vector3(0, 0, 1.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+                    // The exit of pipe_start is at local z = 1.4 * 2 = 2.8m
+                    const forward = new THREE.Vector3(0, 0, 2.8).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
                     const exitPos = attachPos.clone().add(forward);
 
                     this.targetCandidate = {
@@ -323,43 +367,43 @@ export class BuildSystem {
                     // Find closest pipe endpoint
                     let minEndDist = Infinity;
                     for (const p of existingPipes) {
-                        const exit = p.exitPos || { x: p.x, y: p.y, z: p.z + 4 };
+                        const exit = p.exitPos || { x: p.x, y: p.y, z: p.z + 8 };
                         const d = Math.hypot(exit.x - lookPt.x, exit.z - lookPt.z);
                         if (d < minEndDist) {
                             minEndDist = d;
                             bestPipe = p;
                         }
                     }
-                    if (minEndDist > 25) {
+                    if (minEndDist > 40) {
                         bestPipe = null;
                     }
                 }
 
                 if (bestPipe) {
-                    const attachPos = bestPipe.exitPos ? new THREE.Vector3(bestPipe.exitPos.x, bestPipe.exitPos.y, bestPipe.exitPos.z) : new THREE.Vector3(bestPipe.x, bestPipe.y, bestPipe.z + 2);
+                    const attachPos = bestPipe.exitPos ? new THREE.Vector3(bestPipe.exitPos.x, bestPipe.exitPos.y, bestPipe.exitPos.z) : new THREE.Vector3(bestPipe.x, bestPipe.y, bestPipe.z + 4);
                     const attachRot = bestPipe.exitRotY ?? bestPipe.rotationY;
 
-                    // Calculate new exit position and rotation based on segment type
+                    // Calculate new exit position and rotation based on segment type (scaled 2x)
                     let nextExitPos = attachPos.clone();
                     let nextExitRot = attachRot;
 
                     if (def.id === 'pipe_straight') {
-                        const forward = new THREE.Vector3(0, 0, 4.0).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
+                        const forward = new THREE.Vector3(0, 0, 8.0).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
                         nextExitPos.add(forward);
                     } else if (def.id === 'pipe_down20') {
-                        // 4.0m length rotated down by 20 deg
-                        const dy = -Math.sin(THREE.MathUtils.degToRad(20)) * 4.0;
-                        const dz = Math.cos(THREE.MathUtils.degToRad(20)) * 4.0;
+                        // 8.0m length rotated down by 20 deg
+                        const dy = -Math.sin(THREE.MathUtils.degToRad(20)) * 8.0;
+                        const dz = Math.cos(THREE.MathUtils.degToRad(20)) * 8.0;
                         const forward = new THREE.Vector3(0, dy, dz).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
                         nextExitPos.add(forward);
                     } else if (def.id === 'pipe_turn_right') {
-                        // 90 deg turn right: offset x = +2.5, z = +2.5
-                        const offset = new THREE.Vector3(2.5, 0, 2.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
+                        // 90 deg turn right: offset x = +5.0, z = +5.0
+                        const offset = new THREE.Vector3(5.0, 0, 5.0).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
                         nextExitPos.add(offset);
                         nextExitRot = attachRot - Math.PI / 2;
                     } else if (def.id === 'pipe_turn_left') {
-                        // 90 deg turn left: offset x = -2.5, z = +2.5
-                        const offset = new THREE.Vector3(-2.5, 0, 2.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
+                        // 90 deg turn left: offset x = -5.0, z = +5.0
+                        const offset = new THREE.Vector3(-5.0, 0, 5.0).applyAxisAngle(new THREE.Vector3(0, 1, 0), attachRot);
                         nextExitPos.add(offset);
                         nextExitRot = attachRot + Math.PI / 2;
                     }
@@ -449,6 +493,87 @@ export class BuildSystem {
                 this.structureMeshes.set(p.instanceId, mesh);
             }
         }
+    }
+
+    public setDeleteMode(enable: boolean) {
+        this.isDeleteMode = enable;
+        if (enable) {
+            this.cancelBuild();
+            this.showToast('Kustutusrežiim aktiivne! Klõpsa esemel, mida soovid eemaldada.');
+        } else {
+            this.clearDeleteHighlight();
+        }
+    }
+
+    public getDeleteMode(): boolean {
+        return this.isDeleteMode;
+    }
+
+    private hoveredStructureId: string | null = null;
+
+    private updateDeleteHighlight() {
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const allMeshes = Array.from(this.structureMeshes.values());
+        const hits = this.raycaster.intersectObjects(allMeshes, true);
+
+        let hitId: string | null = null;
+        if (hits.length > 0) {
+            let hitObj: THREE.Object3D | null = hits[0].object;
+            while (hitObj) {
+                for (const [id, m] of this.structureMeshes.entries()) {
+                    if (m === hitObj) {
+                        hitId = id;
+                        break;
+                    }
+                }
+                if (hitId) break;
+                hitObj = hitObj.parent;
+            }
+        }
+
+        if (hitId !== this.hoveredStructureId) {
+            this.clearDeleteHighlight();
+            this.hoveredStructureId = hitId;
+            if (hitId) {
+                const mesh = this.structureMeshes.get(hitId);
+                mesh?.traverse((c) => {
+                    if ((c as THREE.Mesh).isMesh) {
+                        const m = c as THREE.Mesh;
+                        (m as any)._origColor = (m.material as any).color?.getHex();
+                        (m.material as any).color?.setHex(0xff3838);
+                    }
+                });
+            }
+        }
+    }
+
+    private clearDeleteHighlight() {
+        if (this.hoveredStructureId) {
+            const mesh = this.structureMeshes.get(this.hoveredStructureId);
+            mesh?.traverse((c) => {
+                if ((c as THREE.Mesh).isMesh) {
+                    const m = c as THREE.Mesh;
+                    if ((m as any)._origColor !== undefined) {
+                        (m.material as any).color?.setHex((m as any)._origColor);
+                    }
+                }
+            });
+            this.hoveredStructureId = null;
+        }
+    }
+
+    public deleteStructure(instanceId: string): boolean {
+        const mesh = this.structureMeshes.get(instanceId);
+        if (mesh) {
+            this.scene.remove(mesh);
+            this.structureMeshes.delete(instanceId);
+        }
+        const removed = waterParkState.removeStructure(instanceId);
+        if (removed) {
+            waterAudio.playDemolish();
+            this.showToast('Ese edukalt kustutatud!');
+        }
+        return removed;
     }
 
     private showToast(msg: string) {

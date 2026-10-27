@@ -11,8 +11,8 @@ export class WaterParkEnvironment {
     constructor(scene: THREE.Scene) {
         this.scene = scene;
 
-        // Ground: Resort paved sandstone patio tiles
-        const groundGeo = new THREE.PlaneGeometry(160, 160, 32, 32);
+        // Ground: Resort paved sandstone patio tiles (expanded for 2x larger park attractions)
+        const groundGeo = new THREE.PlaneGeometry(300, 300, 32, 32);
         const groundMat = new THREE.MeshStandardMaterial({
             color: 0xf5f6fa, // Clean beach resort patio tiles
             roughness: 0.8
@@ -24,7 +24,7 @@ export class WaterParkEnvironment {
         this.scene.add(this.groundMesh);
 
         // Surrounding lush grass border
-        const grassBorderGeo = new THREE.RingGeometry(80, 130, 32);
+        const grassBorderGeo = new THREE.RingGeometry(150, 240, 32);
         const grassMat = new THREE.MeshStandardMaterial({ color: 0x4cd137, roughness: 0.9 });
         const grassBorder = new THREE.Mesh(grassBorderGeo, grassMat);
         grassBorder.rotation.x = -Math.PI / 2;
@@ -33,11 +33,11 @@ export class WaterParkEnvironment {
 
         // Lighting
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7);
-        this.hemiLight.position.set(0, 50, 0);
+        this.hemiLight.position.set(0, 80, 0);
         this.scene.add(this.hemiLight);
 
         this.sunLight = new THREE.DirectionalLight(0xfff9e6, 1.2);
-        this.sunLight.position.set(40, 60, 30);
+        this.sunLight.position.set(60, 100, 50);
         this.sunLight.castShadow = true;
         this.scene.add(this.sunLight);
 
@@ -54,34 +54,34 @@ export class WaterParkEnvironment {
 
         // Main Entrance Arch
         const archMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, roughness: 0.3 });
-        const leftPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 6, 12), archMat);
-        leftPillar.position.set(-6, 3, 40);
+        const leftPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 8, 12), archMat);
+        leftPillar.position.set(-8, 4, 80);
         group.add(leftPillar);
 
-        const rightPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 6, 12), archMat);
-        rightPillar.position.set(6, 3, 40);
+        const rightPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 8, 12), archMat);
+        rightPillar.position.set(8, 4, 80);
         group.add(rightPillar);
 
-        const banner = new THREE.Mesh(new THREE.BoxGeometry(14, 1.4, 0.5), new THREE.MeshStandardMaterial({ color: 0xff4757 }));
-        banner.position.set(0, 6, 40);
+        const banner = new THREE.Mesh(new THREE.BoxGeometry(18, 1.8, 0.6), new THREE.MeshStandardMaterial({ color: 0xff4757 }));
+        banner.position.set(0, 8, 80);
         group.add(banner);
 
         // Welcome sign on banner
         const signMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-        const sign = new THREE.Mesh(new THREE.BoxGeometry(11, 0.8, 0.55), signMat);
-        sign.position.set(0, 6, 40);
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(15, 1.0, 0.65), signMat);
+        sign.position.set(0, 8, 80);
         group.add(sign);
 
         // Perimeter fence surrounding the water park
         const fenceMat = new THREE.MeshStandardMaterial({ color: 0x747d8c });
-        const fenceRadius = 60;
-        const postsCount = 36;
+        const fenceRadius = 110;
+        const postsCount = 48;
         for (let i = 0; i < postsCount; i++) {
             const angle = (i / postsCount) * Math.PI * 2;
-            if (Math.abs(angle - Math.PI / 2) < 0.25) continue; // Entrance gap
+            if (Math.abs(angle - Math.PI / 2) < 0.2) continue; // Entrance gap
 
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.2, 8), fenceMat);
-            post.position.set(Math.cos(angle) * fenceRadius, 1.1, Math.sin(angle) * fenceRadius);
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.8, 8), fenceMat);
+            post.position.set(Math.cos(angle) * fenceRadius, 1.4, Math.sin(angle) * fenceRadius);
             group.add(post);
         }
 

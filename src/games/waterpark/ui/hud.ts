@@ -3,11 +3,14 @@ import { PARK_ATTRACTIONS_CATALOG } from '../catalog';
 
 export class WaterParkHUD {
     private onSelectItemCallback: (id: string) => void;
+    private onToggleDeleteCallback?: (active: boolean) => void;
     private currentCategory: BuildCategory = 'pools';
     private currentSubCategory: SubCategory = 'main';
+    private isDeleteActive: boolean = false;
 
-    constructor(onSelectItem: (id: string) => void) {
+    constructor(onSelectItem: (id: string) => void, onToggleDelete?: (active: boolean) => void) {
         this.onSelectItemCallback = onSelectItem;
+        this.onToggleDeleteCallback = onToggleDelete;
         this.initEvents();
         this.renderCatalog();
     }
@@ -39,12 +42,39 @@ export class WaterParkHUD {
         btnOpenBuild?.addEventListener('click', () => {
             const isOpen = buildDrawer?.style.display === 'flex';
             if (buildDrawer) buildDrawer.style.display = isOpen ? 'none' : 'flex';
+            if (this.isDeleteActive) {
+                this.setDeleteActive(false);
+            }
         });
 
         const btnCloseDrawer = document.getElementById('btn-close-drawer');
         btnCloseDrawer?.addEventListener('click', () => {
             if (buildDrawer) buildDrawer.style.display = 'none';
         });
+
+        // Delete mode toggle button
+        const btnDelete = document.getElementById('btn-delete-mode');
+        btnDelete?.addEventListener('click', () => {
+            this.setDeleteActive(!this.isDeleteActive);
+            if (this.isDeleteActive && buildDrawer) {
+                buildDrawer.style.display = 'none';
+            }
+        });
+    }
+
+    public setDeleteActive(active: boolean) {
+        this.isDeleteActive = active;
+        const btnDelete = document.getElementById('btn-delete-mode');
+        if (active) {
+            btnDelete?.classList.add('active');
+            if (btnDelete) btnDelete.innerHTML = '<span>❌</span><span>LÕPETA KUSTUTAMINE</span>';
+        } else {
+            btnDelete?.classList.remove('active');
+            if (btnDelete) btnDelete.innerHTML = '<span>🗑️</span><span>KUSTUTA</span>';
+        }
+        if (this.onToggleDeleteCallback) {
+            this.onToggleDeleteCallback(active);
+        }
     }
 
     public renderCatalog() {

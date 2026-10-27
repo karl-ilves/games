@@ -14886,6 +14886,38 @@ await (async () => {
                 const pipeStraightCandidate = game.buildSystem.targetCandidate;
                 const pipeStraightSnaps = !!pipeStraightCandidate && pipeStraightCandidate.valid && !!pipeStraightCandidate.attachedToId;
 
+                // 4. Test 2X scale on placed tower mesh
+                const towerMesh = game.buildSystem.getPlacedStructureMeshes().values().next().value;
+                const is2XScale = !!towerMesh && Math.abs(towerMesh.scale.x - 2.0) < 0.01;
+
+                // 5. Test climbing on tower stairs/platform
+                // Place player near the tower and update physics
+                const initialTowerPosY = game.playerAvatar.position.y;
+                game.playerAvatar.position.set(0, 0.5, 0);
+                game.playerAvatar.update(0.1, game.buildSystem.getPlacedStructureMeshes());
+                const canClimb = game.playerAvatar.position.y >= 0.5;
+
+                // 6. Test Delete Mode & Delete Button
+                const btnDelete = document.getElementById('btn-delete-mode');
+                const hasDeleteBtn = !!btnDelete;
+                btnDelete?.click();
+                await new Promise(r => setTimeout(r, 50));
+                const isDeleteActive = game.buildSystem.getDeleteMode();
+
+                // Test deleting a placed structure
+                const structsBefore = game.buildSystem.getPlacedStructureMeshes().size;
+                const firstStructId = game.buildSystem.getPlacedStructureMeshes().keys().next().value;
+                if (firstStructId) {
+                    game.buildSystem.deleteStructure(firstStructId);
+                }
+                const structsAfter = game.buildSystem.getPlacedStructureMeshes().size;
+                const deletedSuccessfully = structsAfter < structsBefore;
+
+                // Turn off delete mode
+                btnDelete?.click();
+                await new Promise(r => setTimeout(r, 50));
+                const isDeleteDeactivated = !game.buildSystem.getDeleteMode();
+
                 return {
                     hasCanvas,
                     hasGameInstance,
@@ -14907,7 +14939,13 @@ await (async () => {
                     yawChanged,
                     jumped,
                     pipeStartSnapsToTower,
-                    pipeStraightSnaps
+                    pipeStraightSnaps,
+                    hasDeleteBtn,
+                    isDeleteActive,
+                    deletedSuccessfully,
+                    isDeleteDeactivated,
+                    is2XScale,
+                    canClimb
                 };
             });
 
@@ -14933,11 +14971,17 @@ await (async () => {
                 !waterParkTest.yawChanged ||
                 !waterParkTest.jumped ||
                 !waterParkTest.pipeStartSnapsToTower ||
-                !waterParkTest.pipeStraightSnaps
+                !waterParkTest.pipeStraightSnaps ||
+                !waterParkTest.hasDeleteBtn ||
+                !waterParkTest.isDeleteActive ||
+                !waterParkTest.deletedSuccessfully ||
+                !waterParkTest.isDeleteDeactivated ||
+                !waterParkTest.is2XScale ||
+                !waterParkTest.canClimb
             ) {
                 throw new Error("Build a Water Park updated test failed: " + JSON.stringify(waterParkTest));
             }
-            console.log("   ✅ Build a Water Park (Walking Avatar, Creator Studio Controls, Pipe Snapping, Pools, Tower, Laste Veetorud, Tagasi & P button) verified successfully!");
+            console.log("   ✅ Build a Water Park (Walking Avatar, Delete Button, 2X Scale, Tower Climbing, Pipe Snapping & P button) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);

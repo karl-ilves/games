@@ -3,28 +3,42 @@ import { ParkAttractionDef } from '../types';
 
 export class AttractionModelBuilder {
     public static createStructureMesh(def: ParkAttractionDef): THREE.Group {
+        let group: THREE.Group;
         switch (def.id) {
             case 'kids_pool':
-                return this.buildKidsPool();
+                group = this.buildKidsPool();
+                break;
             case 'deep_pool':
-                return this.buildDeepPool();
+                group = this.buildDeepPool();
+                break;
             case 'long_pool':
-                return this.buildLongPool();
+                group = this.buildLongPool();
+                break;
             case 'tower_segment':
-                return this.buildTowerSegment();
+                group = this.buildTowerSegment();
+                break;
             case 'pipe_start':
-                return this.buildPipeStart();
+                group = this.buildPipeStart();
+                break;
             case 'pipe_straight':
-                return this.buildPipeStraight();
+                group = this.buildPipeStraight();
+                break;
             case 'pipe_down20':
-                return this.buildPipeDown20();
+                group = this.buildPipeDown20();
+                break;
             case 'pipe_turn_right':
-                return this.buildPipeTurnRight();
+                group = this.buildPipeTurnRight();
+                break;
             case 'pipe_turn_left':
-                return this.buildPipeTurnLeft();
+                group = this.buildPipeTurnLeft();
+                break;
             default:
-                return this.buildGenericBox(def);
+                group = this.buildGenericBox(def);
+                break;
         }
+        // User request: "te nii et asjad on 2X suuremad" -> scale by 2.0
+        group.scale.set(2, 2, 2);
+        return group;
     }
 
     // 1. Kids Pool (Madal ja soe lastebassein)

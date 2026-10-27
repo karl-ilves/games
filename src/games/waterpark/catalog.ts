@@ -10,7 +10,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: 'Madal ja ohutu bassein lastele ja pisikestele suplejatele.',
         icon: '👶',
         color: 0x38bdf8,
-        dimensions: { x: 8, y: 0.8, z: 8 }
+        dimensions: { x: 16, y: 1.6, z: 16 }
     },
     {
         id: 'deep_pool',
@@ -20,7 +20,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: 'Sügav bassein sukeldumiseks ja vettehüpeteks.',
         icon: '🏊‍♂️',
         color: 0x0984e3,
-        dimensions: { x: 14, y: 3.5, z: 14 }
+        dimensions: { x: 28, y: 7.0, z: 28 }
     },
     {
         id: 'long_pool',
@@ -30,7 +30,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: 'Pikk ujumisrada ja voolav bassein ujumiseks.',
         icon: '🌊',
         color: 0x00cec9,
-        dimensions: { x: 8, y: 1.5, z: 28 }
+        dimensions: { x: 16, y: 3.0, z: 56 }
     },
 
     // --- KATEGOORIA: VEETORUD (TUBES) - PEAMINE ---
@@ -43,7 +43,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: 'Torn kust saab treppidest üles minna toru juurde. Saab panna maha või teise peale kuni 6 tükki!',
         icon: '🗼',
         color: 0xe17055,
-        dimensions: { x: 4, y: 3.5, z: 4 },
+        dimensions: { x: 8, y: 7.0, z: 8 },
         isTower: true
     },
 
@@ -57,7 +57,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: 'Veetoru algus. Saab panna AINULT torni külge!',
         icon: '🚪',
         color: 0x00b894,
-        dimensions: { x: 3, y: 2, z: 3.5 },
+        dimensions: { x: 6, y: 4, z: 7 },
         isSlideStart: true,
         isKidsSlide: true
     },
@@ -70,7 +70,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: 'Sirge horisontaalne veetoru. Saab panna ainult stardi või teiste torude külge!',
         icon: '➖',
         color: 0x0984e3,
-        dimensions: { x: 2, y: 2, z: 4 },
+        dimensions: { x: 4, y: 4, z: 8 },
         isSlideSegment: true,
         isKidsSlide: true
     },
@@ -83,7 +83,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: '20-kraadise langusega torusektsioon veeliu kiirendamiseks.',
         icon: '📉',
         color: 0x6c5ce7,
-        dimensions: { x: 2, y: 2.5, z: 4.5 },
+        dimensions: { x: 4, y: 5, z: 9 },
         isSlideSegment: true,
         isKidsSlide: true
     },
@@ -96,7 +96,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: '90-kraadine kurv paremale. Ühendub stardi või teiste torude otsa.',
         icon: '↪️',
         color: 0xfdcb6e,
-        dimensions: { x: 4, y: 2, z: 4 },
+        dimensions: { x: 8, y: 4, z: 8 },
         isSlideSegment: true,
         isKidsSlide: true
     },
@@ -109,7 +109,7 @@ export const PARK_ATTRACTIONS_CATALOG: ParkAttractionDef[] = [
         description: '90-kraadine kurv vasakule. Ühendub stardi või teiste torude otsa.',
         icon: '↩️',
         color: 0xe84393,
-        dimensions: { x: 4, y: 2, z: 4 },
+        dimensions: { x: 8, y: 4, z: 8 },
         isSlideSegment: true,
         isKidsSlide: true
     }

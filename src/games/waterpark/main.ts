@@ -35,9 +35,14 @@ export class WaterParkGame {
         });
         this.buildSystem = new BuildSystem(this.scene, this.camera, canvas);
 
-        this.hud = new WaterParkHUD((id: string) => {
-            this.buildSystem.selectItem(id);
-        });
+        this.hud = new WaterParkHUD(
+            (id: string) => {
+                this.buildSystem.selectItem(id);
+            },
+            (isDelete: boolean) => {
+                this.buildSystem.setDeleteMode(isDelete);
+            }
+        );
 
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -54,8 +59,8 @@ export class WaterParkGame {
         const delta = Math.min(0.1, (now - this.lastTime) / 1000);
         this.lastTime = now;
 
-        // Player walking controls & 3D AvatarRig animation (Creator Studio controls)
-        this.playerAvatar.update(delta);
+        // Player walking controls & physical climbing on 2x stairs / towers
+        this.playerAvatar.update(delta, this.buildSystem.getPlacedStructureMeshes());
 
         // Follow player avatar with camera
         this.followCamera.update(this.playerAvatar.position, this.playerAvatar.characterYaw);

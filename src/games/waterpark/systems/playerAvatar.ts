@@ -34,7 +34,7 @@ export class PlayerAvatarSystem {
         });
     }
 
-    public update(delta: number) {
+    public update(delta: number, structureMeshes?: Map<string, THREE.Group>) {
         // Creator Studio exact movement & turning controls:
         // Turn view with A / D or ArrowLeft / ArrowRight
         const turnSpeed = 2.8;
@@ -61,24 +61,74 @@ export class PlayerAvatarSystem {
             this.position.x += forwardX * moveMagnitude * moveSpeed * delta;
             this.position.z += forwardZ * moveMagnitude * moveSpeed * delta;
 
-            // Clamping inside water park grounds
-            this.position.x = Math.max(-55, Math.min(55, this.position.x));
-            this.position.z = Math.max(-55, Math.min(55, this.position.z));
+            // Clamping inside water park grounds (expanded for 2x scale)
+            this.position.x = Math.max(-105, Math.min(105, this.position.x));
+            this.position.z = Math.max(-105, Math.min(105, this.position.z));
         }
 
         // Jump & Gravity (Creator Studio physics)
         if ((this.keys['Space'] || this.keys[' ']) && this.isGrounded) {
-            this.velocityY = 9.0;
+            this.velocityY = 10.0;
             this.isGrounded = false;
         }
 
-        if (!this.isGrounded) {
+        // Vertical physics & solid structure collision (Stairs, Decks, Platforms)
+        // Only ground player on y=0 when not jumping upwards!
+        let supportedOnSurface = false;
+        const pPos = this.position;
+        if (pPos.y <= 0.001 && this.velocityY <= 0) {
+            supportedOnSurface = true;
+        }
+
+        if (structureMeshes && structureMeshes.size > 0) {
+            for (const [_, mesh] of structureMeshes) {
+                if (!mesh || mesh.visible === false) continue;
+                const dx = mesh.position.x - pPos.x;
+                const dz = mesh.position.z - pPos.z;
+                if (dx * dx + dz * dz > 2500) continue; // cull far structures
+
+                // Test collision against meshes/children
+                const meshBox = new THREE.Box3().setFromObject(mesh);
+                if (meshBox.isEmpty()) continue;
+
+                // Check horizontal overlap
+                const isHorizontallyOver = (
+                    pPos.x >= meshBox.min.x - 0.25 &&
+                    pPos.x <= meshBox.max.x + 0.25 &&
+                    pPos.z >= meshBox.min.z - 0.25 &&
+                    pPos.z <= meshBox.max.z + 0.25
+                );
+
+                if (isHorizontallyOver) {
+                    // Check if walking up stairs / stepping onto platform:
+                    // If near top of mesh box or step surface
+                    const diffY = meshBox.max.y - pPos.y;
+                    // Auto-step up stairs (step height up to 1.2m allowed for climbing tower stairs)
+                    if (diffY >= -0.15 && diffY <= 1.2 && this.velocityY <= 0.5) {
+                        pPos.y = THREE.MathUtils.lerp(pPos.y, meshBox.max.y, 0.4);
+                        this.velocityY = 0;
+                        supportedOnSurface = true;
+                    } else if (pPos.y >= meshBox.max.y - 0.25 && this.velocityY <= 0) {
+                        pPos.y = meshBox.max.y;
+                        this.velocityY = 0;
+                        supportedOnSurface = true;
+                    }
+                }
+            }
+        }
+
+        if (supportedOnSurface) {
+            this.isGrounded = true;
+            if (this.velocityY < 0) this.velocityY = 0;
+        } else {
             this.velocityY -= 22 * delta;
-            this.position.y += this.velocityY * delta;
-            if (this.position.y <= 0) {
-                this.position.y = 0;
+            pPos.y += this.velocityY * delta;
+            if (pPos.y <= 0) {
+                pPos.y = 0;
                 this.velocityY = 0;
                 this.isGrounded = true;
+            } else {
+                this.isGrounded = false;
             }
         }
 
