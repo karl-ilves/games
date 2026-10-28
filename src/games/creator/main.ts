@@ -90,6 +90,8 @@ export { showStartupScriptPrompt, closeStartupScriptPrompt, openScriptLibraryMod
 import { updateOrbitCamera } from './ui/orbitCamera';
 import { animate } from './systems/studioLoop';
 import { setupCreatorGlobals } from './systems/creatorGlobals';
+import { setupRobloxRibbonUI } from './ui/robloxRibbonUI';
+export { setupRobloxRibbonUI };
 
 console.log("3D Game Creator Studio Loading...");
 
@@ -184,6 +186,7 @@ async function initStudio() {
     setupWorkspaceEvents();
     setupAiAssistantEvents();
     setupScriptLibraryEvents();
+    setupRobloxRibbonUI();
 
     // Show prompt to user asking if they want to see JavaSkripte (IGA KORD kui sisenetakse)
     showStartupScriptPrompt();

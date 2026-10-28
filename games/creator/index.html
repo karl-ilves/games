@@ -30,53 +30,183 @@
             left: 0;
         }
 
-        /* Top Studio Bar */
+        /* Roblox Studio Theme Styling */
+        :root {
+            --studio-bg: #222222;
+            --studio-panel-bg: #262626;
+            --studio-ribbon-bg: #2b2b2b;
+            --studio-tab-active: #383838;
+            --studio-border: #3c3c3c;
+            --studio-text: #e2e8f0;
+            --studio-text-dim: #94a3b8;
+            --studio-accent: #00a2ff;
+            --studio-selection: #007acc;
+        }
+
+        /* Top Studio Bar / Roblox Studio Ribbon Bar */
         .studio-top-bar {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 60px;
-            background: rgba(20, 27, 36, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(0, 242, 254, 0.25);
+            height: 98px;
+            background: var(--studio-bg);
+            border-bottom: 1px solid var(--studio-border);
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 14px;
+            flex-direction: column;
+            padding: 0;
             z-index: 100;
+            overflow: visible;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        /* Studio Quick Access + Tabs Row */
+        .roblox-studio-header-row {
+            height: 32px;
+            background: #1e1e1e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            border-bottom: 1px solid var(--studio-border);
+        }
+
+        .roblox-quick-access {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .roblox-qa-icon {
+            cursor: pointer;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #ccc;
+            transition: all 0.15s;
+        }
+        .roblox-qa-icon:hover {
+            background: #333;
+            color: #fff;
+        }
+
+        .roblox-ribbon-tabs {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 100%;
+            margin-left: 12px;
+        }
+
+        .roblox-ribbon-tab {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            padding: 0 14px;
+            height: 100%;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            display: flex;
+            align-items: center;
+        }
+        .roblox-ribbon-tab:hover {
+            color: #fff;
+            background: #2a2a2a;
+        }
+        .roblox-ribbon-tab.active {
+            color: #fff;
+            background: var(--studio-ribbon-bg);
+            border-bottom: 2px solid var(--studio-accent);
+        }
+
+        /* Ribbon Toolbar Body */
+        .roblox-ribbon-toolbar {
+            height: 66px;
+            background: var(--studio-ribbon-bg);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 10px;
             overflow-x: auto;
             scrollbar-width: none;
         }
-        .studio-top-bar::-webkit-scrollbar {
-            display: none;
-        }
+        .roblox-ribbon-toolbar::-webkit-scrollbar { display: none; }
 
-        .studio-title {
+        .roblox-ribbon-group {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-weight: 800;
-            font-size: 1.15rem;
+            gap: 6px;
+            padding: 0 10px;
+            border-right: 1px solid var(--studio-border);
+            height: 52px;
+            position: relative;
+        }
+        .roblox-ribbon-group-label {
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            color: #718096;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .roblox-ribbon-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--studio-text);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 48px;
+            height: 48px;
+            gap: 2px;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .roblox-ribbon-btn:hover {
+            background: #383838;
+            border-color: #4a4a4a;
+        }
+        .roblox-ribbon-btn.active {
+            background: #007acc;
             color: #fff;
-            flex-shrink: 0;
+            border-color: #00a2ff;
+        }
+        .roblox-ribbon-btn-icon {
+            font-size: 1.15rem;
+            line-height: 1;
         }
 
         .studio-actions {
             display: flex;
             align-items: center;
             gap: 7px;
+            margin-left: auto;
             flex-shrink: 0;
         }
 
         .btn-studio {
             padding: 6px 12px;
-            border-radius: 8px;
+            border-radius: 6px;
             font-weight: 700;
-            font-size: 0.84rem;
+            font-size: 0.82rem;
             cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: #2d3748;
+            border: 1px solid var(--studio-border);
+            background: #333333;
             color: #fff;
             display: flex;
             align-items: center;
@@ -86,46 +216,42 @@
             flex-shrink: 0;
         }
         .btn-studio:hover {
-            transform: translateY(-2px);
-            background: #3d4d65;
+            background: #444444;
+            border-color: #555555;
         }
 
         .btn-play-test {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-            border-color: #2ecc71;
-            color: white;
+            background: #27ae60 !important;
+            border-color: #2ecc71 !important;
+            color: white !important;
         }
         .btn-submit-review {
-            background: linear-gradient(135deg, #00f2fe, #4facfe);
-            border-color: #00f2fe;
-            color: #111;
-            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+            background: #007acc !important;
+            border-color: #00a2ff !important;
+            color: #fff !important;
         }
 
         .active-map-env {
-            background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+            background: #27ae60 !important;
             color: #fff !important;
-            border: 1.5px solid #2ecc71 !important;
-            box-shadow: 0 0 10px rgba(46, 204, 113, 0.4) !important;
+            border: 1px solid #2ecc71 !important;
         }
         .active-map-env-sea {
-            background: linear-gradient(135deg, #0984e3, #00cec9) !important;
+            background: #007acc !important;
             color: #fff !important;
-            border: 1.5px solid #00f2fe !important;
-            box-shadow: 0 0 12px rgba(0, 242, 254, 0.5) !important;
+            border: 1px solid #00a2ff !important;
         }
 
-        /* Left Object Catalog (5000 Objects Library) */
+        /* Left Object Catalog (Roblox Studio Toolbox) */
         .catalog-panel {
             position: absolute;
-            top: 70px;
-            left: 20px;
+            top: 106px;
+            left: 10px;
             width: 320px;
             bottom: 30px;
-            background: rgba(20, 27, 36, 0.92);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+            background: var(--studio-panel-bg);
+            border: 1px solid var(--studio-border);
+            border-radius: 8px;
             z-index: 100;
             display: flex;
             flex-direction: column;
@@ -215,21 +341,20 @@
             white-space: nowrap;
         }
 
-        /* Right Inspector / Transform Panel */
+        /* Right Inspector / Explorer & Properties Dock */
         .inspector-panel {
             position: absolute;
-            top: 70px;
-            right: 20px;
+            top: 106px;
+            right: 10px;
             width: 380px;
             max-width: calc(100vw - 30px);
-            background: rgba(18, 25, 38, 0.96);
-            backdrop-filter: blur(16px);
-            border: 1.5px solid rgba(0, 242, 254, 0.35);
-            border-radius: 16px;
+            background: var(--studio-panel-bg);
+            border: 1px solid var(--studio-border);
+            border-radius: 8px;
             z-index: 1050;
-            padding: 14px;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 242, 254, 0.15);
-            max-height: calc(100vh - 90px);
+            padding: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            max-height: calc(100vh - 120px);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -238,7 +363,29 @@
         .inspector-panel h4 {
             margin: 0 0 10px 0;
             color: #ffd32a;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Roblox Output Window (Bottom Dock) */
+        #roblox-output-window {
+            position: absolute;
+            bottom: 0;
+            left: 335px;
+            right: 395px;
+            height: 180px;
+            background: #181818;
+            border-top: 1px solid var(--studio-border);
+            border-left: 1px solid var(--studio-border);
+            border-right: 1px solid var(--studio-border);
+            border-radius: 8px 8px 0 0;
+            z-index: 1020;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
         }
 
         #ai-assistant-modal {
@@ -367,157 +514,229 @@
 </head>
 <body>
 
-    <!-- Top Studio Bar -->
+    <!-- Authentic Roblox Studio Ribbon Bar -->
     <div class="studio-top-bar">
-        <div class="studio-logo" style="display: flex; align-items: center; gap: 8px;">
-            <div class="btn-back" style="display: flex; align-items: center; gap: 6px; cursor: default;">
-                <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 24px; height: 24px;">
-                <span style="font-weight: 800; color: #00f2fe;">Playard Games</span>
-            </div>
-            <span style="color: rgba(255,255,255,0.2);">|</span>
-            <span>3D Creator Studio</span>
-        </div>
-
-        <!-- Kaardi alguse tüübi valik: Maa või Meri -->
-        <div id="map-environment-selector" style="display: flex; align-items: center; background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 12px; padding: 4px 8px; gap: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.5);">
-            <span style="font-size: 0.85rem; font-weight: 800; color: #ffd32a; display: flex; align-items: center; gap: 4px; user-select: none;">
-                <span>Mapp:</span>
-            </span>
-            <button id="btn-env-land" class="btn-studio active-map-env" title="Maa keskkond (roheline muru ja kindel pinnas)" style="padding: 5px 14px; font-size: 0.85rem; border-radius: 8px; font-weight: 800; cursor: pointer; transition: all 0.2s;">
-                Maa
-            </button>
-            <button id="btn-env-sea" class="btn-studio" title="Mere keskkond (suur ookean, paadisild ja ujumisvesi)" style="padding: 5px 14px; font-size: 0.85rem; border-radius: 8px; font-weight: 800; background: rgba(255, 255, 255, 0.08); color: #74b9ff; border: 1.5px solid rgba(0, 242, 254, 0.25); cursor: pointer; transition: all 0.2s;">
-                Meri
-            </button>
-        </div>
-
-        <div class="studio-actions" style="padding-right: 52px;">
-            <div id="studio-test-pbx-badge" style="display: flex; align-items: center; gap: 6px; background: rgba(0, 242, 254, 0.12); border: 1.5px solid rgba(0, 242, 254, 0.5); padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; color: #00f2fe; box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);">
-                <span>💎</span>
-                <span id="studio-test-pbx">6,000,000</span> PBX
-                <span style="background: #e74c3c; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 8px; margin-left: 2px; letter-spacing: 0.5px;">TEST</span>
-            </div>
-            <span id="draft-status-indicator" style="font-size: 0.8rem; color: #2ecc71; font-weight: 600;"></span>
-            <button id="btn-undo" class="btn-studio" title="Undo Last Action (Ctrl+Z)" style="padding: 8px 12px; background: rgba(255,255,255,0.08);">
-                <span>Undo</span>
-            </button>
-            <button id="btn-redo" class="btn-studio" title="Redo Action (Ctrl+Y)" style="padding: 8px 12px; background: rgba(255,255,255,0.08);">
-                <span>Redo</span>
-            </button>
-            <button id="btn-open-my-games" class="btn-studio" style="background: rgba(0, 242, 254, 0.2); border-color: #00f2fe; color: #00f2fe;">
-                <span>My Games</span>
-            </button>
-            <button id="btn-new-game" class="btn-studio" style="background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71;">
-                <span>New</span>
-            </button>
-            <!-- Roblox Studio Part Dropdown (Block, Sphere, Cylinder, Wedge) -->
-            <div id="roblox-part-dropdown-wrapper" style="position: relative; display: inline-block;">
-                <button id="btn-add-block" class="btn-studio" title="Lisa Part (Block, Sphere, Wedge, Cylinder)" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; box-shadow: 0 4px 14px rgba(0,242,254,0.4); display: flex; align-items: center; gap: 5px;">
-                    <span>🧱</span> <span>Part</span> <span style="font-size: 0.7rem;">▼</span>
-                </button>
-                <div id="roblox-part-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 190px; background: rgba(15, 23, 42, 0.98); border: 2px solid #00f2fe; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 20px rgba(0,242,254,0.3); z-index: 10000; overflow: hidden; backdrop-filter: blur(12px); flex-direction: column;">
-                    <button class="dropdown-item-part" data-shape="block" id="btn-part-block" style="padding: 9px 14px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
-                        <span>📦</span> <span>Block</span>
-                    </button>
-                    <button class="dropdown-item-part" data-shape="sphere" id="btn-part-sphere" style="padding: 9px 14px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
-                        <span>⚽</span> <span>Sphere</span>
-                    </button>
-                    <button class="dropdown-item-part" data-shape="cylinder" id="btn-part-cylinder" style="padding: 9px 14px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
-                        <span>🛢️</span> <span>Cylinder</span>
-                    </button>
-                    <button class="dropdown-item-part" data-shape="wedge" id="btn-part-wedge" style="padding: 9px 14px; background: transparent; border: none; color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
-                        <span>📐</span> <span>Wedge</span>
-                    </button>
+        <!-- Studio Header Row (Logo, Quick Access, Ribbon Tabs) -->
+        <div class="roblox-studio-header-row">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="btn-back" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <img src="../../assets/playard_logo.svg" alt="Playard Logo" style="width: 20px; height: 20px;">
+                    <span style="font-weight: 800; color: #fff; font-size: 0.85rem; letter-spacing: 0.5px;">ROBLOX STUDIO</span>
+                </div>
+                <!-- Quick Access: Undo, Redo, Save -->
+                <div class="roblox-quick-access">
+                    <button id="btn-undo" class="roblox-qa-icon" title="Undo (Ctrl+Z)" style="background: none; border: none; cursor: pointer;">↩️</button>
+                    <button id="btn-redo" class="roblox-qa-icon" title="Redo (Ctrl+Y)" style="background: none; border: none; cursor: pointer;">↪️</button>
+                    <button id="btn-save-draft" class="roblox-qa-icon" title="Save Game (Ctrl+S)" style="background: none; border: none; cursor: pointer;">💾</button>
+                    <button id="btn-open-my-games" class="roblox-qa-icon" title="My Games" style="background: none; border: none; cursor: pointer;">📂</button>
+                    <button id="btn-new-game" class="roblox-qa-icon" title="New Game" style="background: none; border: none; cursor: pointer;">📄</button>
+                </div>
+                <!-- Ribbon Tabs (HOME, MODEL, TEST, VIEW) -->
+                <div class="roblox-ribbon-tabs">
+                    <button class="roblox-ribbon-tab active" data-tab="home">HOME</button>
+                    <button class="roblox-ribbon-tab" data-tab="model">MODEL</button>
+                    <button class="roblox-ribbon-tab" data-tab="test">TEST</button>
+                    <button class="roblox-ribbon-tab" data-tab="view">VIEW</button>
                 </div>
             </div>
-            <!-- Lisa ekraanile midagi (Screen UI selector) -->
-            <div id="screen-element-dropdown-wrapper" style="position: relative; display: inline-block;">
-                <button id="btn-add-screen-element" class="btn-studio" title="Lisa ekraanile midagi (Frame, TextFrame, TextButton, FrameButton)" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399; color: #fff; font-weight: 800; box-shadow: 0 4px 14px rgba(16,185,129,0.35); display: flex; align-items: center; gap: 6px;">
-                    <span>🖥️</span> <span>Lisa ekraanile midagi</span> <span style="font-size: 0.7rem;">▼</span>
+
+            <!-- Header Right Status Badges & Publish -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="draft-status-indicator" style="font-size: 0.75rem; color: #2ecc71; font-weight: 600;"></span>
+                <div id="studio-test-pbx-badge" style="display: flex; align-items: center; gap: 5px; background: rgba(0, 162, 255, 0.15); border: 1px solid var(--studio-accent); padding: 3px 10px; border-radius: 14px; font-weight: 800; font-size: 0.78rem; color: var(--studio-accent);">
+                    <span>💎</span>
+                    <span id="studio-test-pbx">6,000,000</span> PBX
+                </div>
+                <button id="btn-toggle-ai" class="btn-studio" title="Ava Playard AI Assistent & Kool" style="background: #8e44ad; border-color: #a855f7; color: #fff; font-weight: 800; font-size: 0.78rem; padding: 4px 10px;">
+                    <span>🤖🎒</span> <span>Playard AI</span>
                 </button>
-                <div id="screen-element-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 260px; background: rgba(15, 23, 42, 0.98); border: 2px solid #10b981; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 20px rgba(16,185,129,0.25); z-index: 10000; overflow: hidden; backdrop-filter: blur(12px); flex-direction: column;">
-                    <!-- 1. Frame -->
-                    <button class="dropdown-item-screen-element" id="btn-add-screen-frame" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">🔲</span>
-                        <div>
-                            <div style="color: #38bdf8; font-weight: 800;">Frame</div>
-                            <div style="font-size: 0.73rem; color: #94a3b8;">Tühi raam / paneel ekraanil</div>
-                        </div>
+                <button id="btn-submit-review" class="btn-studio btn-submit-review" style="padding: 4px 12px; font-size: 0.8rem;">
+                    <span>Publish a game</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Ribbon Toolbar Content Area -->
+        <div class="roblox-ribbon-toolbar">
+            <!-- 1. HOME TAB SECTION -->
+            <div class="roblox-ribbon-content-section" data-section="home" style="display: flex; align-items: center; gap: 4px;">
+                <!-- Tools Group: Select, Move, Scale, Rotate -->
+                <div class="roblox-ribbon-group" id="studio-tool-mode-selector">
+                    <button id="btn-tool-mouse" class="btn-studio-tool roblox-ribbon-btn active" title="Select (Vali)">
+                        <span class="roblox-ribbon-btn-icon">👆</span>
+                        <span>Select</span>
                     </button>
-                    <!-- 2. TextFrame -->
-                    <button class="dropdown-item-screen-element" id="btn-add-screen-textframe" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">📄</span>
-                        <div>
-                            <div style="color: #a78bfa; font-weight: 800;">TextFrame</div>
-                            <div style="font-size: 0.73rem; color: #94a3b8;">Tekstiga raam / teadete aken</div>
-                        </div>
+                    <button id="btn-tool-mover" class="btn-studio-tool roblox-ribbon-btn" title="Move (Liiguta)">
+                        <span class="roblox-ribbon-btn-icon">✥</span>
+                        <span>Move</span>
                     </button>
-                    <!-- 3. TextButton -->
-                    <button class="dropdown-item-screen-element" id="btn-add-screen-textbutton" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">🔘</span>
-                        <div>
-                            <div style="color: #34d399; font-weight: 800;">TextButton</div>
-                            <div style="font-size: 0.73rem; color: #94a3b8;">Klikitav tekstinupp tegevusega</div>
-                        </div>
+                    <button id="btn-tool-puller" class="btn-studio-tool roblox-ribbon-btn" title="Scale (Venita)">
+                        <span class="roblox-ribbon-btn-icon">⤢</span>
+                        <span>Scale</span>
                     </button>
-                    <!-- 4. FrameButton -->
-                    <button class="dropdown-item-screen-element" id="btn-add-screen-framebutton" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">🔲🔘</span>
-                        <div>
-                            <div style="color: #f59e0b; font-weight: 800;">FrameButton</div>
-                            <div style="font-size: 0.73rem; color: #94a3b8;">Interaktiivne raam-nupp</div>
-                        </div>
+                    <button id="btn-tool-rotator" class="btn-studio-tool roblox-ribbon-btn" title="Rotate (Pööra)">
+                        <span class="roblox-ribbon-btn-icon">🔄</span>
+                        <span>Rotate</span>
                     </button>
-                    <!-- 5. Lae oma pilt nupp -->
-                    <button class="dropdown-item-screen-element" id="btn-add-screen-img-btn" style="padding: 11px 15px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">🖼️🔘</span>
-                        <div>
-                            <div style="color: #ffd32a; font-weight: 800;">Lae oma pilt nupp</div>
-                            <div style="font-size: 0.73rem; color: #94a3b8;">Oma pildiga klikitav nupp</div>
+                    <span class="roblox-ribbon-group-label">Tools</span>
+                </div>
+
+                <!-- Insert Group: Part Dropdown, Screen UI -->
+                <div class="roblox-ribbon-group">
+                    <div id="roblox-part-dropdown-wrapper" style="position: relative; display: inline-block;">
+                        <button id="btn-add-block" class="roblox-ribbon-btn" title="Lisa Part (Block, Sphere, Wedge, Cylinder)" style="min-width: 60px;">
+                            <span class="roblox-ribbon-btn-icon">🧱</span>
+                            <span>Part ▼</span>
+                        </button>
+                        <div id="roblox-part-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 170px; background: #262626; border: 1px solid var(--studio-border); border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 10000; overflow: hidden; flex-direction: column;">
+                            <button class="dropdown-item-part" data-shape="block" id="btn-part-block" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>📦</span> <span>Block</span>
+                            </button>
+                            <button class="dropdown-item-part" data-shape="sphere" id="btn-part-sphere" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>⚽</span> <span>Sphere</span>
+                            </button>
+                            <button class="dropdown-item-part" data-shape="cylinder" id="btn-part-cylinder" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🛢️</span> <span>Cylinder</span>
+                            </button>
+                            <button class="dropdown-item-part" data-shape="wedge" id="btn-part-wedge" style="padding: 8px 12px; background: transparent; border: none; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>📐</span> <span>Wedge</span>
+                            </button>
                         </div>
-                    </button>
-                    <!-- 6. Lae oma pilt ekraan -->
-                    <button class="dropdown-item-screen-element" id="btn-add-screen-img-panel" style="padding: 11px 15px; background: transparent; border: none; color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">🖼️🖥️</span>
-                        <div>
-                            <div style="color: #f472b6; font-weight: 800;">Lae oma pilt ekraan</div>
-                            <div style="font-size: 0.73rem; color: #94a3b8;">Oma pildi kuvamise paneel</div>
+                    </div>
+
+                    <!-- Lisa ekraanile midagi (Screen UI selector) -->
+                    <div id="screen-element-dropdown-wrapper" style="position: relative; display: inline-block;">
+                        <button id="btn-add-screen-element" class="roblox-ribbon-btn" title="Lisa ekraanile midagi (ScreenGui Elements)">
+                            <span class="roblox-ribbon-btn-icon">🖥️</span>
+                            <span>UI Elements ▼</span>
+                        </button>
+                        <div id="screen-element-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 240px; background: #262626; border: 1px solid var(--studio-border); border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 10000; overflow: hidden; flex-direction: column;">
+                            <button class="dropdown-item-screen-element" id="btn-add-screen-frame" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🔲</span> <div><div style="color: #38bdf8;">Frame</div><div style="font-size: 0.7rem; color: #888;">Tühi paneel</div></div>
+                            </button>
+                            <button class="dropdown-item-screen-element" id="btn-add-screen-textframe" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>📄</span> <div><div style="color: #a78bfa;">TextFrame</div><div style="font-size: 0.7rem; color: #888;">Tekstikast</div></div>
+                            </button>
+                            <button class="dropdown-item-screen-element" id="btn-add-screen-textbutton" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🔘</span> <div><div style="color: #34d399;">TextButton</div><div style="font-size: 0.7rem; color: #888;">Klikitav nupp</div></div>
+                            </button>
+                            <button class="dropdown-item-screen-element" id="btn-add-screen-framebutton" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🔲🔘</span> <div><div style="color: #f59e0b;">FrameButton</div><div style="font-size: 0.7rem; color: #888;">Raam-nupp</div></div>
+                            </button>
+                            <button class="dropdown-item-screen-element" id="btn-add-screen-img-btn" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🖼️🔘</span> <div><div style="color: #ffd32a;">Pildi Nupp</div><div style="font-size: 0.7rem; color: #888;">Pildiga nupp</div></div>
+                            </button>
+                            <button class="dropdown-item-screen-element" id="btn-add-screen-img-panel" style="padding: 8px 12px; background: transparent; border: none; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🖼️🖥️</span> <div><div style="color: #f472b6;">Pildi Ekraan</div><div style="font-size: 0.7rem; color: #888;">Oma pilt</div></div>
+                            </button>
                         </div>
+                    </div>
+                    <span class="roblox-ribbon-group-label">Insert</span>
+                </div>
+
+                <!-- Environment Group: Land vs Sea -->
+                <div class="roblox-ribbon-group" id="map-environment-selector">
+                    <button id="btn-env-land" class="roblox-ribbon-btn active" title="Maa (Terrain)">
+                        <span class="roblox-ribbon-btn-icon">🌱</span>
+                        <span>Land</span>
                     </button>
+                    <button id="btn-env-sea" class="roblox-ribbon-btn" title="Meri (Water)">
+                        <span class="roblox-ribbon-btn-icon">🌊</span>
+                        <span>Sea</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Terrain</span>
+                </div>
+
+                <!-- Test Group: Play Test Button -->
+                <div class="roblox-ribbon-group">
+                    <button id="btn-toggle-play-test" class="roblox-ribbon-btn btn-play-test" style="min-width: 65px;">
+                        <span class="roblox-ribbon-btn-icon">▶️</span>
+                        <span>Play Test Mode</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Test</span>
+                </div>
+
+                <!-- Windows Group: Toggle Explorer & Properties -->
+                <div class="roblox-ribbon-group">
+                    <button id="btn-toggle-workspace" class="roblox-ribbon-btn" title="Toggle Workspace Explorer">
+                        <span class="roblox-ribbon-btn-icon">🌐</span>
+                        <span>Workspace</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Windows</span>
                 </div>
             </div>
-            <button id="btn-toggle-workspace" class="btn-studio" title="Ava / peida Workspace Exploreri aken" style="background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(59, 130, 246, 0.25)); border: 1.5px solid #00f2fe; color: #00f2fe; font-weight: 800; box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);">
-                <span>🌐</span> <span>Workspace</span>
-            </button>
-            <button id="btn-toggle-ai" class="btn-studio" title="Ava Playard AI Assistent & Kool" style="background: linear-gradient(135deg, #8e44ad, #a855f7); border: 2px solid #e056fd; color: #fff; font-weight: 800; box-shadow: 0 0 18px rgba(168, 85, 247, 0.55); font-size: 0.88rem; padding: 6px 14px;">
-                <span style="font-size: 1.15rem;">🤖🎒</span> <span>Playard AI</span>
-            </button>
-            <button id="btn-create-custom-item" style="display: none;"></button>
-            <button id="btn-toggle-play-test" class="btn-studio btn-play-test">
-                <span>Play Test Mode</span>
-            </button>
-            <button id="btn-submit-review" class="btn-studio btn-submit-review">
-                <span>Publish a game</span>
-            </button>
-        </div>
-    </div>
 
-    <!-- Top-Left Tool Mode Selector: Mouse vs Mover vs Puller vs Rotator -->
-    <div id="studio-tool-mode-selector" style="position: absolute; top: 75px; left: 20px; z-index: 1005; background: rgba(15, 23, 42, 0.94); border: 2px solid rgba(0, 242, 254, 0.4); border-radius: 14px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
-        <span style="font-size: 0.82rem; font-weight: 800; color: #ffd32a; padding: 0 4px; user-select: none;">Tool:</span>
-        <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 3px; border-radius: 10px; border: 1px solid rgba(0,242,254,0.25);">
-            <button id="btn-tool-mouse" class="btn-studio-tool active" title="Select Tool (Vali objekte)" style="padding: 7px 16px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); color: #000; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
-                <span>👆</span> <span>Select</span>
-            </button>
-            <button id="btn-tool-mover" class="btn-studio-tool" title="Move Tool (Liiguta XYZ nooltega)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
-                <span>✥</span> <span>Move</span>
-            </button>
-            <button id="btn-tool-puller" class="btn-studio-tool" title="Scale Tool (Venita ja muuda mõõtmeid)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
-                <span>⤢</span> <span>Scale</span>
-            </button>
-            <button id="btn-tool-rotator" class="btn-studio-tool" title="Rotate Tool (Pööra 3 ringiga)" style="padding: 7px 16px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
-                <span>🔄</span> <span>Rotate</span>
-            </button>
+            <!-- 2. MODEL TAB SECTION -->
+            <div class="roblox-ribbon-content-section" data-section="model" style="display: none; align-items: center; gap: 4px;">
+                <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-add-block')?.click()">
+                        <span class="roblox-ribbon-btn-icon">🧱</span>
+                        <span>Part</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-tool-mover')?.click()">
+                        <span class="roblox-ribbon-btn-icon">✥</span>
+                        <span>Move</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-tool-puller')?.click()">
+                        <span class="roblox-ribbon-btn-icon">⤢</span>
+                        <span>Scale</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-tool-rotator')?.click()">
+                        <span class="roblox-ribbon-btn-icon">🔄</span>
+                        <span>Rotate</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Transform</span>
+                </div>
+                <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-duplicate-obj')?.click()">
+                        <span class="roblox-ribbon-btn-icon">📋</span>
+                        <span>Duplicate</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-delete-obj')?.click()" style="color: #f87171;">
+                        <span class="roblox-ribbon-btn-icon">🗑️</span>
+                        <span>Delete</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Actions</span>
+                </div>
+            </div>
+
+            <!-- 3. TEST TAB SECTION -->
+            <div class="roblox-ribbon-content-section" data-section="test" style="display: none; align-items: center; gap: 4px;">
+                <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn btn-play-test" onclick="document.getElementById('btn-toggle-play-test')?.click()">
+                        <span class="roblox-ribbon-btn-icon">▶️</span>
+                        <span>Play</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-toggle-play-test')?.click()">
+                        <span class="roblox-ribbon-btn-icon">⏹️</span>
+                        <span>Stop</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Simulation</span>
+                </div>
+            </div>
+
+            <!-- 4. VIEW TAB SECTION -->
+            <div class="roblox-ribbon-content-section" data-section="view" style="display: none; align-items: center; gap: 4px;">
+                <div class="roblox-ribbon-group" style="padding: 0 14px; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; color: #cbd5e1; cursor: pointer;">
+                        <input type="checkbox" id="chk-view-explorer" checked style="cursor: pointer; accent-color: var(--studio-accent);">
+                        <span>Explorer</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; color: #cbd5e1; cursor: pointer;">
+                        <input type="checkbox" id="chk-view-properties" checked style="cursor: pointer; accent-color: var(--studio-accent);">
+                        <span>Properties</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; color: #cbd5e1; cursor: pointer;">
+                        <input type="checkbox" id="chk-view-toolbox" checked style="cursor: pointer; accent-color: var(--studio-accent);">
+                        <span>Toolbox</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; color: #cbd5e1; cursor: pointer;">
+                        <input type="checkbox" id="chk-view-output" style="cursor: pointer; accent-color: var(--studio-accent);">
+                        <span>Output</span>
+                    </label>
+                    <span class="roblox-ribbon-group-label">Show / Hide Windows</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -759,23 +978,25 @@
         </div>
     </div>
 
-    <!-- Left Object Catalog (10,000+ Objects Engine) -->
+    <!-- Left Object Catalog (Roblox Studio Toolbox) -->
     <div class="catalog-panel" id="catalog-panel">
-        <div class="catalog-header">
-            <h3>
-                <span>10,000 Objects Library</span>
-                <span id="catalog-count-badge" style="font-size: 0.75rem; color: #a4b0be; background: #131920; padding: 2px 6px; border-radius: 10px;">10,000 items</span>
+        <div class="catalog-header" style="background: #202020; border-bottom: 1px solid var(--studio-border); padding: 10px 12px;">
+            <h3 style="margin: 0 0 8px 0; color: #fff; font-size: 0.92rem; font-weight: 800; display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                    <span>🧰</span> <span>Toolbox</span>
+                </span>
+                <span id="catalog-count-badge" style="font-size: 0.72rem; color: #94a3b8; background: #181818; padding: 2px 6px; border-radius: 6px; border: 1px solid #333;">10,000 items</span>
             </h3>
-            <input type="text" id="catalog-search-input" class="catalog-search" placeholder="Search 10000 objects...">
-            <div class="catalog-categories">
-                <button class="cat-btn active" data-cat="spawn" style="color: #00f2fe; font-weight: bold;">Spawn Kohad</button>
-                <button class="cat-btn" data-cat="holdable" style="color: #e056fd; font-weight: bold;">✋ Kätte võetavad (1000)</button>
-                <button class="cat-btn" data-cat="custom" style="color: #ffd32a; font-weight: bold;">Players Created</button>
-                <button class="cat-btn" data-cat="nature">Nature</button>
-                <button class="cat-btn" data-cat="city">City</button>
-                <button class="cat-btn" data-cat="vehicles">Vehicles</button>
-                <button class="cat-btn" data-cat="gameplay">Gameplay</button>
-                <button class="cat-btn" data-cat="scifi">Sci-Fi</button>
+            <input type="text" id="catalog-search-input" class="catalog-search" placeholder="Search Models, Meshes, Audio..." style="background: #181818; border: 1px solid #3a3a3a; border-radius: 6px; color: #fff; padding: 6px 10px; font-size: 0.8rem;">
+            <div class="catalog-categories" style="display: flex; gap: 4px; overflow-x: auto; padding-top: 4px;">
+                <button class="cat-btn active" data-cat="spawn" style="background: #007acc; color: #fff; font-weight: bold; border-radius: 4px; padding: 3px 8px;">Models</button>
+                <button class="cat-btn" data-cat="holdable" style="font-weight: bold; border-radius: 4px; padding: 3px 8px;">Weapons</button>
+                <button class="cat-btn" data-cat="custom" style="border-radius: 4px; padding: 3px 8px;">Meshes</button>
+                <button class="cat-btn" data-cat="nature" style="border-radius: 4px; padding: 3px 8px;">Nature</button>
+                <button class="cat-btn" data-cat="city" style="border-radius: 4px; padding: 3px 8px;">City</button>
+                <button class="cat-btn" data-cat="vehicles" style="border-radius: 4px; padding: 3px 8px;">Vehicles</button>
+                <button class="cat-btn" data-cat="gameplay" style="border-radius: 4px; padding: 3px 8px;">Gameplay</button>
+                <button class="cat-btn" data-cat="scifi" style="border-radius: 4px; padding: 3px 8px;">Audio</button>
             </div>
         </div>
 
@@ -1085,6 +1306,22 @@
         </div>
     </div>
     </div> <!-- close #inspector-panel -->
+
+    <!-- Roblox Studio Output Window (Console Logs) -->
+    <div id="roblox-output-window" style="display: none;">
+        <div style="height: 28px; background: #222222; border-bottom: 1px solid var(--studio-border); display: flex; align-items: center; justify-content: space-between; padding: 0 10px;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 800; color: #cbd5e1;">
+                <span>📜</span> <span>Output</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <button id="btn-clear-output" class="btn-studio" style="padding: 2px 8px; font-size: 0.72rem; height: 20px;">Clear</button>
+                <button id="btn-close-output" style="background: transparent; border: none; color: #888; cursor: pointer; font-size: 0.85rem; padding: 2px 4px;">✕</button>
+            </div>
+        </div>
+        <div id="roblox-output-logs" style="flex: 1; overflow-y: auto; padding: 6px 10px; background: #141414; color: #e2e8f0;">
+            <!-- Output log rows appended dynamically -->
+        </div>
+    </div>
 
     <!-- In-Game Interaction Dialog Popup (When walking through/near objects) -->
     <div id="game-dialog-popup" style="display: none; position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95)); border: 2px solid #00f2fe; border-radius: 16px; padding: 12px 24px; color: #fff; z-index: 1200; box-shadow: 0 10px 35px rgba(0,242,254,0.35); backdrop-filter: blur(12px); min-width: 320px; max-width: 600px; text-align: center; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
