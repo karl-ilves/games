@@ -1999,7 +1999,7 @@ await (async () => {
 
         // 5. Test 3D Game Creator Studio (Ultra Grass, Human, 10,000 Objects)
         console.log("5. Testing 3D Game Creator Studio...");
-        await page.goto('http://localhost:4173/games/creator/index.html', { waitUntil: 'networkidle0', timeout: 30000 });
+        await page.goto('http://localhost:4173/games/creator/index.html?testScripts=1', { waitUntil: 'networkidle0', timeout: 30000 });
         await new Promise(r => setTimeout(r, 2500));
         await page.evaluate(() => { window.alert = () => {}; window.confirm = () => true; });
 

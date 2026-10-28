@@ -130,6 +130,17 @@ export function setupRobloxRibbonUI() {
         if (outputLogsContainer) outputLogsContainer.innerHTML = '';
     });
 
+    // Setup Avatar tab actions
+    const btnRigBuilder = document.getElementById('btn-avatar-rig-builder');
+    btnRigBuilder?.addEventListener('click', () => {
+        logToRobloxOutput('Roblox R15 Rig Builder: Creator avatar character active in workspace.', 'info');
+    });
+
+    const btnAnimEditor = document.getElementById('btn-avatar-animation');
+    btnAnimEditor?.addEventListener('click', () => {
+        logToRobloxOutput('Roblox Animation Editor: Ready for keyframing.', 'info');
+    });
+
     // 3. Setup Interception of console.log, console.warn, console.error to Output Window
     setupConsoleInterception(outputLogsContainer);
 

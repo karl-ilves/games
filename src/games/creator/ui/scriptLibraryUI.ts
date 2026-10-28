@@ -2,8 +2,11 @@ import { SCRIPT_LIBRARY_20, ScriptLibraryItem } from '../catalog/scriptLibrary20
 import { switchScriptTab } from '../systems/scriptRunner';
 
 export function showStartupScriptPrompt() {
+    // Only auto-show if in test mode or explicitly requested, so Roblox Studio opens clean
+    const urlParams = new URLSearchParams(window.location.search);
+    const isTestMode = urlParams.get('testScripts') === '1' || window.__testScripts === true;
     const modal = document.getElementById('startup-script-prompt-modal');
-    if (modal) {
+    if (modal && isTestMode) {
         modal.style.display = 'flex';
     }
 }

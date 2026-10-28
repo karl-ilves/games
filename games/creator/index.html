@@ -531,12 +531,14 @@
                     <button id="btn-open-my-games" class="roblox-qa-icon" title="My Games" style="background: none; border: none; cursor: pointer;">📂</button>
                     <button id="btn-new-game" class="roblox-qa-icon" title="New Game" style="background: none; border: none; cursor: pointer;">📄</button>
                 </div>
-                <!-- Ribbon Tabs (HOME, MODEL, TEST, VIEW) -->
+                <!-- Ribbon Tabs (HOME, MODEL, AVATAR, TEST, VIEW, PLUGINS) -->
                 <div class="roblox-ribbon-tabs">
                     <button class="roblox-ribbon-tab active" data-tab="home">HOME</button>
                     <button class="roblox-ribbon-tab" data-tab="model">MODEL</button>
+                    <button class="roblox-ribbon-tab" data-tab="avatar">AVATAR</button>
                     <button class="roblox-ribbon-tab" data-tab="test">TEST</button>
                     <button class="roblox-ribbon-tab" data-tab="view">VIEW</button>
+                    <button class="roblox-ribbon-tab" data-tab="plugins">PLUGINS</button>
                 </div>
             </div>
 
@@ -739,6 +741,50 @@
                         <span>Assistant</span>
                     </label>
                     <span class="roblox-ribbon-group-label">Show / Hide Windows</span>
+                </div>
+            </div>
+
+            <!-- 5. AVATAR TAB SECTION -->
+            <div class="roblox-ribbon-content-section" data-section="avatar" style="display: none; align-items: center; gap: 4px;">
+                <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn" id="btn-avatar-rig-builder" title="Rig Builder (R15 Avatar)">
+                        <span class="roblox-ribbon-btn-icon">🧍</span>
+                        <span>Rig Builder</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" id="btn-avatar-animation" title="Animation Editor">
+                        <span class="roblox-ribbon-btn-icon">🎬</span>
+                        <span>Animations</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Characters</span>
+                </div>
+                <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn" id="btn-avatar-workbench-tool" onclick="document.getElementById('btn-open-workbench')?.click()" title="Accessory & Item Creator">
+                        <span class="roblox-ribbon-btn-icon">🎩</span>
+                        <span>Accessories</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Fitting</span>
+                </div>
+            </div>
+
+            <!-- 6. PLUGINS TAB SECTION -->
+            <div class="roblox-ribbon-content-section" data-section="plugins" style="display: none; align-items: center; gap: 4px;">
+                <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn" id="btn-plugin-open-scripts" onclick="document.getElementById('btn-open-script-library')?.click()" title="20 JavaScript Script Library">
+                        <span class="roblox-ribbon-btn-icon">📜</span>
+                        <span>Script Library</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" id="btn-plugin-item-workbench" onclick="document.getElementById('btn-open-workbench')?.click()" title="3D Mesh Workbench">
+                        <span class="roblox-ribbon-btn-icon">🛠️</span>
+                        <span>Item Builder</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Built-in Plugins</span>
+                </div>
+                <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-toggle-ai')?.click()" title="Playard AI Studio Copilot Plugin">
+                        <span class="roblox-ribbon-btn-icon">🤖</span>
+                        <span>AI Copilot</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">AI Extensions</span>
                 </div>
             </div>
         </div>
