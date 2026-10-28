@@ -324,45 +324,88 @@ export function renderWorkspaceTree() {
 
     container.innerHTML = '';
 
-    // Root Workspace Node
+    // ============================================
+    // 1. Root Workspace Node (Roblox Studio Style)
+    // ============================================
+    const isWorkspaceCollapsed = collapsedNodes.has('workspace_root');
     const rootEl = document.createElement('div');
     rootEl.id = 'workspace-root-node';
+    rootEl.className = 'workspace-tree-row workspace-studio-root-row';
     rootEl.style.cssText = `
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 10px;
-        background: rgba(0, 242, 254, 0.08);
-        border: 1px dashed rgba(0, 242, 254, 0.4);
-        border-radius: 8px;
-        margin-bottom: 6px;
-        font-size: 0.85rem;
-        font-weight: 800;
-        color: #00f2fe;
+        padding: 4px 8px;
+        background: #262626;
+        border: 1px solid #3c3c3c;
+        border-radius: 4px;
+        margin-bottom: 2px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #ffffff;
         cursor: pointer;
         user-select: none;
-        transition: all 0.2s;
+        transition: background 0.15s;
     `;
-    rootEl.innerHTML = `
-        <span style="font-size: 1.1rem;">🌐</span>
-        <span>Workspace</span>
-        <span style="font-size: 0.72rem; color: #94a3b8; font-weight: normal; margin-left: auto;">(${placedObjects.length} objects)</span>
+
+    const wsChevron = document.createElement('span');
+    wsChevron.style.cssText = `
+        width: 14px;
+        text-align: center;
+        font-size: 0.72rem;
+        color: #94a3b8;
+        cursor: pointer;
     `;
+    wsChevron.innerText = isWorkspaceCollapsed ? '▶' : '▼';
+    wsChevron.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (isWorkspaceCollapsed) {
+            collapsedNodes.delete('workspace_root');
+        } else {
+            collapsedNodes.add('workspace_root');
+        }
+        renderWorkspaceTree();
+    });
+    rootEl.appendChild(wsChevron);
+
+    const wsIcon = document.createElement('span');
+    wsIcon.innerText = '🌐';
+    wsIcon.style.fontSize = '0.95rem';
+    rootEl.appendChild(wsIcon);
+
+    const wsLabel = document.createElement('span');
+    wsLabel.innerText = 'Workspace';
+    wsLabel.style.flex = '1';
+    rootEl.appendChild(wsLabel);
+
+    const wsCount = document.createElement('span');
+    wsCount.style.cssText = 'font-size: 0.72rem; color: #888888; font-weight: normal;';
+    wsCount.innerText = `(${placedObjects.length})`;
+    rootEl.appendChild(wsCount);
+
+    rootEl.addEventListener('click', () => {
+        if (isWorkspaceCollapsed) {
+            collapsedNodes.delete('workspace_root');
+        } else {
+            collapsedNodes.add('workspace_root');
+        }
+        renderWorkspaceTree();
+    });
 
     // Root drag over & drop to unparent objects back to top-level Workspace
     rootEl.addEventListener('dragover', (e) => {
         e.preventDefault();
-        rootEl.style.background = 'rgba(0, 242, 254, 0.25)';
-        rootEl.style.borderColor = '#00f2fe';
+        rootEl.style.background = '#007acc';
+        rootEl.style.borderColor = '#00a2ff';
     });
     rootEl.addEventListener('dragleave', () => {
-        rootEl.style.background = 'rgba(0, 242, 254, 0.08)';
-        rootEl.style.borderColor = 'rgba(0, 242, 254, 0.4)';
+        rootEl.style.background = '#262626';
+        rootEl.style.borderColor = '#3c3c3c';
     });
     rootEl.addEventListener('drop', (e) => {
         e.preventDefault();
-        rootEl.style.background = 'rgba(0, 242, 254, 0.08)';
-        rootEl.style.borderColor = 'rgba(0, 242, 254, 0.4)';
+        rootEl.style.background = '#262626';
+        rootEl.style.borderColor = '#3c3c3c';
         if (draggedItemId) {
             reparentObject(draggedItemId, null);
             draggedItemId = null;
@@ -390,6 +433,71 @@ export function renderWorkspaceTree() {
         }
     }
 
+    // Standard built-in Workspace children (Roblox Studio Camera & Terrain)
+    if (!isWorkspaceCollapsed && (!q || 'camera'.includes(q) || 'terrain'.includes(q))) {
+        // Camera node
+        if (!q || 'camera'.includes(q)) {
+            const camRow = document.createElement('div');
+            camRow.className = 'workspace-tree-row workspace-studio-child-row';
+            camRow.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 3px 8px;
+                padding-left: 24px;
+                border-radius: 4px;
+                margin-bottom: 2px;
+                font-size: 0.8rem;
+                color: #d1d5db;
+                cursor: pointer;
+                user-select: none;
+                transition: background 0.15s;
+            `;
+            camRow.innerHTML = `
+                <span style="width: 14px; text-align: center; font-size: 0.72rem; visibility: hidden;">▶</span>
+                <span style="font-size: 0.95rem;">🎥</span>
+                <span style="flex: 1; font-weight: 500;">Camera</span>
+                <span style="font-size: 0.68rem; color: #718096;">CurrentCamera</span>
+            `;
+            camRow.addEventListener('mouseenter', () => camRow.style.background = '#323232');
+            camRow.addEventListener('mouseleave', () => camRow.style.background = 'transparent');
+            container.appendChild(camRow);
+        }
+
+        // Terrain node
+        if (!q || 'terrain'.includes(q)) {
+            const terrainRow = document.createElement('div');
+            terrainRow.className = 'workspace-tree-row workspace-studio-child-row';
+            terrainRow.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 3px 8px;
+                padding-left: 24px;
+                border-radius: 4px;
+                margin-bottom: 2px;
+                font-size: 0.8rem;
+                color: #d1d5db;
+                cursor: pointer;
+                user-select: none;
+                transition: background 0.15s;
+            `;
+            terrainRow.innerHTML = `
+                <span style="width: 14px; text-align: center; font-size: 0.72rem; visibility: hidden;">▶</span>
+                <span style="font-size: 0.95rem;">🏔️</span>
+                <span style="flex: 1; font-weight: 500;">Terrain</span>
+                <span style="font-size: 0.68rem; color: #718096;">SmoothVoxels</span>
+            `;
+            terrainRow.addEventListener('mouseenter', () => terrainRow.style.background = '#323232');
+            terrainRow.addEventListener('mouseleave', () => terrainRow.style.background = 'transparent');
+            terrainRow.addEventListener('click', () => {
+                const envLand = document.getElementById('btn-env-land');
+                envLand?.click();
+            });
+            container.appendChild(terrainRow);
+        }
+    }
+
     // Recursive item renderer
     function renderNode(obj: PlacedObject, depth: number) {
         if (q && !matchingIds.has(obj.id)) return;
@@ -408,17 +516,17 @@ export function renderWorkspaceTree() {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 8px;
-            padding-left: ${10 + depth * 16}px;
-            border-radius: 6px;
+            padding: 3px 8px;
+            padding-left: ${24 + depth * 14}px;
+            border-radius: 4px;
             margin-bottom: 2px;
             font-size: 0.8rem;
-            color: ${isSelected ? '#00f2fe' : '#e2e8f0'};
-            background: ${isSelected ? 'rgba(0, 242, 254, 0.2)' : 'transparent'};
-            border: 1px solid ${isSelected ? '#00f2fe' : 'transparent'};
+            color: ${isSelected ? '#ffffff' : '#d1d5db'};
+            background: ${isSelected ? '#007acc' : 'transparent'};
+            border: 1px solid ${isSelected ? '#00a2ff' : 'transparent'};
             cursor: pointer;
             user-select: none;
-            transition: all 0.15s;
+            transition: all 0.12s;
         `;
 
         // Expand / Collapse Chevron
@@ -558,20 +666,20 @@ export function renderWorkspaceTree() {
         row.addEventListener('dragover', (e) => {
             if (draggedItemId && draggedItemId !== obj.id) {
                 e.preventDefault();
-                row.style.background = 'rgba(0, 242, 254, 0.3)';
-                row.style.borderColor = '#00f2fe';
+                row.style.background = '#007acc';
+                row.style.borderColor = '#00a2ff';
             }
         });
 
         row.addEventListener('dragleave', () => {
-            row.style.background = isSelected ? 'rgba(0, 242, 254, 0.2)' : 'transparent';
-            row.style.borderColor = isSelected ? '#00f2fe' : 'transparent';
+            row.style.background = isSelected ? '#007acc' : 'transparent';
+            row.style.borderColor = isSelected ? '#00a2ff' : 'transparent';
         });
 
         row.addEventListener('drop', (e) => {
             e.preventDefault();
-            row.style.background = isSelected ? 'rgba(0, 242, 254, 0.2)' : 'transparent';
-            row.style.borderColor = isSelected ? '#00f2fe' : 'transparent';
+            row.style.background = isSelected ? '#007acc' : 'transparent';
+            row.style.borderColor = isSelected ? '#00a2ff' : 'transparent';
             if (draggedItemId && draggedItemId !== obj.id) {
                 reparentObject(draggedItemId, obj.id);
                 draggedItemId = null;
@@ -588,14 +696,109 @@ export function renderWorkspaceTree() {
         }
     }
 
-    // Render top-level objects (objects with no parentId or whose parent does not exist)
-    const topLevelObjects = placedObjects.filter(p => !p.parentId || !placedObjects.some(parent => parent.id === p.parentId));
-    for (const obj of topLevelObjects) {
-        renderNode(obj, 0);
+    // Render top-level objects under Workspace if Workspace is expanded
+    if (!isWorkspaceCollapsed) {
+        const topLevelObjects = placedObjects.filter(p => !p.parentId || !placedObjects.some(parent => parent.id === p.parentId));
+        for (const obj of topLevelObjects) {
+            renderNode(obj, 0);
+        }
     }
 
     // ============================================
-    // 2. ScreenGui / Ekraanielemendid Section
+    // 2. Roblox Studio Services: Players & MaterialService
+    // ============================================
+    const preServices = [
+        { id: 'service_players', name: 'Players', icon: '👥', desc: 'Mängijad serveris' },
+        { id: 'service_lighting', name: 'Lighting', icon: '💡', desc: 'Päike, valgustus & taevas' },
+        { id: 'service_material_service', name: 'MaterialService', icon: '🎨', desc: 'Tekstuurid & materjalid' }
+    ];
+
+    for (const s of preServices) {
+        if (q && !s.name.toLowerCase().includes(q)) continue;
+        const srvEl = document.createElement('div');
+        srvEl.className = 'workspace-tree-row workspace-service-row';
+        srvEl.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            padding-left: 10px;
+            border-radius: 4px;
+            margin-top: 2px;
+            font-size: 0.8rem;
+            color: #d1d5db;
+            background: #262626;
+            border: 1px solid #383838;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+        `;
+        srvEl.innerHTML = `
+            <span style="font-size: 0.95rem;">${s.icon}</span>
+            <span style="font-weight: 700; flex: 1;">${s.name}</span>
+            <span style="font-size: 0.68rem; color: #718096;">${s.desc}</span>
+        `;
+        srvEl.addEventListener('mouseenter', () => {
+            srvEl.style.background = '#323232';
+        });
+        srvEl.addEventListener('mouseleave', () => {
+            srvEl.style.background = '#262626';
+        });
+        srvEl.addEventListener('click', () => {
+            if (s.id === 'service_lighting') {
+                const dayNightBtn = document.getElementById('btn-env-land');
+                dayNightBtn?.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+        container.appendChild(srvEl);
+    }
+
+    // ============================================
+    // 3. Storage Services (ReplicatedFirst, ReplicatedStorage, ServerScriptService, ServerStorage)
+    // ============================================
+    const storageServices = [
+        { id: 'service_replicated_first', name: 'ReplicatedFirst', icon: '📁', desc: 'Esimesena laetavad skriptid' },
+        { id: 'service_replicated_storage', name: 'ReplicatedStorage', icon: '📦', desc: 'Jagatud objektid & moodulid' },
+        { id: 'service_server_script_service', name: 'ServerScriptService', icon: '📜', desc: 'Serveri skriptid' },
+        { id: 'service_server_storage', name: 'ServerStorage', icon: '🗄️', desc: 'Serveri varad & mudelid' }
+    ];
+
+    for (const s of storageServices) {
+        if (q && !s.name.toLowerCase().includes(q)) continue;
+        const srvEl = document.createElement('div');
+        srvEl.className = 'workspace-tree-row workspace-service-row';
+        srvEl.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            padding-left: 10px;
+            border-radius: 4px;
+            margin-top: 2px;
+            font-size: 0.8rem;
+            color: #d1d5db;
+            background: #262626;
+            border: 1px solid #383838;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+        `;
+        srvEl.innerHTML = `
+            <span style="font-size: 0.95rem;">${s.icon}</span>
+            <span style="font-weight: 700; flex: 1;">${s.name}</span>
+            <span style="font-size: 0.68rem; color: #718096;">${s.desc}</span>
+        `;
+        srvEl.addEventListener('mouseenter', () => {
+            srvEl.style.background = '#323232';
+        });
+        srvEl.addEventListener('mouseleave', () => {
+            srvEl.style.background = '#262626';
+        });
+        container.appendChild(srvEl);
+    }
+
+    // ============================================
+    // 4. StarterGui / ScreenGui Section (Roblox Studio Style)
     // ============================================
     const screenElementsList: ScreenElement[] = csState.screenElements || [];
     const isScreenGuiCollapsed = collapsedNodes.has('screengui_root');
@@ -609,8 +812,8 @@ export function renderWorkspaceTree() {
         )
         : screenElementsList;
 
-    // Show ScreenGui if search matches or if no search active
-    if (!q || matchingScreenElems.length > 0) {
+    // Show StarterGui / ScreenGui if search matches or if no search active
+    if (!q || matchingScreenElems.length > 0 || 'startergui'.includes(q) || 'screengui'.includes(q)) {
         const screenRootEl = document.createElement('div');
         screenRootEl.id = 'workspace-screengui-root-node';
         screenRootEl.className = 'workspace-screengui-header';
@@ -618,18 +821,18 @@ export function renderWorkspaceTree() {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 10px;
-            background: rgba(16, 185, 129, 0.08);
-            border: 1px dashed rgba(16, 185, 129, 0.45);
-            border-radius: 8px;
-            margin-top: 10px;
-            margin-bottom: 4px;
-            font-size: 0.85rem;
-            font-weight: 800;
-            color: #10b981;
+            padding: 4px 8px;
+            background: #262626;
+            border: 1px solid #383838;
+            border-radius: 4px;
+            margin-top: 2px;
+            margin-bottom: 2px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #d1d5db;
             cursor: pointer;
             user-select: none;
-            transition: all 0.2s;
+            transition: all 0.15s;
         `;
 
         // Collapse / Expand Chevron
@@ -638,7 +841,7 @@ export function renderWorkspaceTree() {
             width: 14px;
             text-align: center;
             font-size: 0.72rem;
-            color: #10b981;
+            color: #94a3b8;
             cursor: pointer;
         `;
         screenChevron.innerText = isScreenGuiCollapsed ? '▶' : '▼';
@@ -646,17 +849,17 @@ export function renderWorkspaceTree() {
 
         const screenIcon = document.createElement('span');
         screenIcon.innerText = '🖥️';
-        screenIcon.style.fontSize = '1.05rem';
+        screenIcon.style.fontSize = '0.95rem';
         screenRootEl.appendChild(screenIcon);
 
         const screenTitle = document.createElement('span');
-        screenTitle.innerText = 'ScreenGui (Ekraan)';
+        screenTitle.innerText = 'StarterGui';
         screenTitle.style.flex = '1';
         screenRootEl.appendChild(screenTitle);
 
         const screenCount = document.createElement('span');
-        screenCount.style.cssText = 'font-size: 0.72rem; color: #94a3b8; font-weight: normal;';
-        screenCount.innerText = `(${screenElementsList.length} elementi)`;
+        screenCount.style.cssText = 'font-size: 0.72rem; color: #888888; font-weight: normal;';
+        screenCount.innerText = `(${screenElementsList.length})`;
         screenRootEl.appendChild(screenCount);
 
         // Quick '+' button on ScreenGui header to open screen element dropdown
@@ -693,18 +896,41 @@ export function renderWorkspaceTree() {
 
         container.appendChild(screenRootEl);
 
-        // Render each Screen Element row if not collapsed
+        // Render ScreenGui child folder + each Screen Element row if not collapsed
         if (!isScreenGuiCollapsed) {
+            // ScreenGui child container
+            const subGuiRow = document.createElement('div');
+            subGuiRow.className = 'workspace-tree-row';
+            subGuiRow.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 3px 8px;
+                padding-left: 24px;
+                border-radius: 4px;
+                margin-bottom: 2px;
+                font-size: 0.8rem;
+                color: #10b981;
+                user-select: none;
+            `;
+            subGuiRow.innerHTML = `
+                <span style="width: 14px; text-align: center; font-size: 0.72rem; color: #10b981;">▼</span>
+                <span style="font-size: 0.95rem;">📱</span>
+                <span style="font-weight: 700; flex: 1;">ScreenGui</span>
+                <span style="font-size: 0.68rem; color: #718096;">UI Layer</span>
+            `;
+            container.appendChild(subGuiRow);
+
             if (matchingScreenElems.length === 0) {
                 const emptyHint = document.createElement('div');
                 emptyHint.style.cssText = `
-                    padding: 6px 12px;
-                    padding-left: 28px;
+                    padding: 4px 12px;
+                    padding-left: 38px;
                     font-size: 0.75rem;
                     color: #64748b;
                     font-style: italic;
                 `;
-                emptyHint.innerText = 'Pole veel ühtegi ekraanielementi. Klõpsa "+ Lisa ekraanile midagi"';
+                emptyHint.innerText = 'Pole veel ekraanielemente. Klõpsa "+"';
                 container.appendChild(emptyHint);
             } else {
                 for (const elem of matchingScreenElems) {
@@ -715,16 +941,15 @@ export function renderWorkspaceTree() {
     }
 
     // ============================================
-    // 3. Roblox Studio Services (Lighting, ReplicatedStorage, ServerScriptService, StarterPlayer)
+    // 5. Player & Gameplay Services (StarterPack, StarterPlayer, SoundService)
     // ============================================
-    const services = [
-        { id: 'service_lighting', name: 'Lighting', icon: '💡', desc: 'Päike, valgustus & taevas' },
-        { id: 'service_replicated_storage', name: 'ReplicatedStorage', icon: '📦', desc: 'Jagatud objektid & moodulid' },
-        { id: 'service_server_script_service', name: 'ServerScriptService', icon: '📜', desc: 'Serveri skriptid' },
-        { id: 'service_starter_player', name: 'StarterPlayer', icon: '🏃', desc: 'Mängija seaded & kiirus' }
+    const postServices = [
+        { id: 'service_starter_pack', name: 'StarterPack', icon: '🎒', desc: 'Mängija alginventar & tööriistad' },
+        { id: 'service_starter_player', name: 'StarterPlayer', icon: '🏃', desc: 'Mängija seaded & kiirus' },
+        { id: 'service_sound_service', name: 'SoundService', icon: '🔊', desc: 'Heliefektid & muusika' }
     ];
 
-    for (const s of services) {
+    for (const s of postServices) {
         if (q && !s.name.toLowerCase().includes(q)) continue;
         const srvEl = document.createElement('div');
         srvEl.className = 'workspace-tree-row workspace-service-row';
@@ -732,14 +957,14 @@ export function renderWorkspaceTree() {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 5px 8px;
+            padding: 4px 8px;
             padding-left: 10px;
-            border-radius: 6px;
+            border-radius: 4px;
             margin-top: 2px;
             font-size: 0.8rem;
-            color: #cbd5e1;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: #d1d5db;
+            background: #262626;
+            border: 1px solid #383838;
             cursor: pointer;
             user-select: none;
             transition: all 0.15s;
@@ -747,19 +972,16 @@ export function renderWorkspaceTree() {
         srvEl.innerHTML = `
             <span style="font-size: 0.95rem;">${s.icon}</span>
             <span style="font-weight: 700; flex: 1;">${s.name}</span>
-            <span style="font-size: 0.68rem; color: #64748b;">${s.desc}</span>
+            <span style="font-size: 0.68rem; color: #718096;">${s.desc}</span>
         `;
         srvEl.addEventListener('mouseenter', () => {
-            srvEl.style.background = 'rgba(255, 255, 255, 0.08)';
+            srvEl.style.background = '#323232';
         });
         srvEl.addEventListener('mouseleave', () => {
-            srvEl.style.background = 'rgba(255, 255, 255, 0.03)';
+            srvEl.style.background = '#262626';
         });
         srvEl.addEventListener('click', () => {
-            if (s.id === 'service_lighting') {
-                const dayNightBtn = document.getElementById('btn-env-land');
-                dayNightBtn?.scrollIntoView({ behavior: 'smooth' });
-            } else if (s.id === 'service_starter_player') {
+            if (s.id === 'service_starter_player') {
                 const hpInp = document.getElementById('game-player-health-input');
                 hpInp?.scrollIntoView({ behavior: 'smooth' });
             }
