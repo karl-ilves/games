@@ -98,6 +98,24 @@ export function setupRobloxRibbonUI() {
         });
     }
 
+    const chkAssistant = document.getElementById('chk-view-assistant') as HTMLInputElement | null;
+    const aiModal = document.getElementById('ai-assistant-modal');
+    if (chkAssistant && aiModal) {
+        chkAssistant.addEventListener('change', () => {
+            const btnToggleAi = document.getElementById('btn-toggle-ai');
+            btnToggleAi?.click();
+        });
+
+        // Watch for external modal open/close to keep checkbox in sync
+        const observer = new MutationObserver(() => {
+            const isVisible = aiModal.style.display === 'flex' || window.getComputedStyle(aiModal).display === 'flex';
+            if (chkAssistant.checked !== isVisible) {
+                chkAssistant.checked = isVisible;
+            }
+        });
+        observer.observe(aiModal, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
+
     // Toggle Output Window Close & Clear Buttons
     const btnCloseOutput = document.getElementById('btn-close-output');
     const btnClearOutput = document.getElementById('btn-clear-output');
