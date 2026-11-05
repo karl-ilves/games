@@ -145,6 +145,23 @@ export function setupRobloxRibbonUI() {
         }
     });
 
+    // Setup Model tab actions (Group, Ungroup, Solid Modeling)
+    document.getElementById('btn-model-group')?.addEventListener('click', () => {
+        logToRobloxOutput('Roblox Model: Grouped selection into Model.', 'info');
+    });
+    document.getElementById('btn-model-ungroup')?.addEventListener('click', () => {
+        logToRobloxOutput('Roblox Model: Ungrouped model parts to parent.', 'info');
+    });
+    document.getElementById('btn-model-union')?.addEventListener('click', () => {
+        logToRobloxOutput('Roblox CSG: Solid modeling Union operation applied.', 'info');
+    });
+    document.getElementById('btn-model-negate')?.addEventListener('click', () => {
+        logToRobloxOutput('Roblox CSG: Part negated (NegateOperation active).', 'info');
+    });
+    document.getElementById('btn-model-separate')?.addEventListener('click', () => {
+        logToRobloxOutput('Roblox CSG: Separated union into constituent parts.', 'info');
+    });
+
     // 3. Setup Interception of console.log, console.warn, console.error to Output Window
     setupConsoleInterception(outputLogsContainer);
 

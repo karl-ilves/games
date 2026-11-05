@@ -25,7 +25,8 @@ import { spawnPartShape } from '../systems/gizmos';
 import {
     openScreenElementEditor,
     renderScreenElements,
-    deleteScreenElement
+    deleteScreenElement,
+    addScreenElement
 } from './screenElements';
 
 // Set of collapsed parent node IDs in the workspace tree
@@ -310,7 +311,312 @@ function getObjectIcon(obj: PlacedObject): string {
     return '📦';
 }
 
-function createExplorerPlusBtn(title: string, onClick: (e: MouseEvent) => void): HTMLButtonElement {
+export interface InsertMenuItem {
+    name: string;
+    icon: string;
+    category: string;
+    desc: string;
+    action: () => void;
+}
+
+/**
+ * Displays authentic Roblox Studio "Insert Object" floating popup menu
+ */
+function showInsertObjectPopup(triggerBtn: HTMLElement, parentContext: string, onSelect?: () => void) {
+    const existing = document.getElementById('roblox-insert-object-popup');
+    if (existing) {
+        existing.remove();
+    }
+
+    const popup = document.createElement('div');
+    popup.id = 'roblox-insert-object-popup';
+    popup.style.cssText = `
+        position: fixed;
+        width: 280px;
+        max-height: 420px;
+        background: #252526;
+        border: 1px solid #3c3c3c;
+        border-radius: 6px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
+        z-index: 100000;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #cccccc;
+        font-size: 0.8rem;
+    `;
+
+    // Calculate position
+    const rect = triggerBtn.getBoundingClientRect();
+    let top = rect.bottom + 4;
+    let left = Math.max(10, rect.right - 280);
+    if (top + 400 > window.innerHeight) {
+        top = Math.max(10, rect.top - 400);
+    }
+    popup.style.top = `${top}px`;
+    popup.style.left = `${left}px`;
+
+    // Header with search input
+    const header = document.createElement('div');
+    header.style.cssText = `
+        padding: 8px 10px;
+        background: #2d2d2d;
+        border-bottom: 1px solid #3c3c3c;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    `;
+
+    const titleRow = document.createElement('div');
+    titleRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+    titleRow.innerHTML = `
+        <span style="font-weight: 700; color: #ffffff; font-size: 0.82rem; display: flex; align-items: center; gap: 5px;">
+            <span>➕</span> <span>Insert Object into ${parentContext}</span>
+        </span>
+        <button id="btn-close-insert-popup" style="background: none; border: none; color: #888; cursor: pointer; font-size: 0.9rem; padding: 0 4px;">✕</button>
+    `;
+    header.appendChild(titleRow);
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search object (Frame, TextButton, Part...)...';
+    searchInput.style.cssText = `
+        background: #1e1e1e;
+        border: 1px solid #3c3c3c;
+        border-radius: 4px;
+        padding: 5px 8px;
+        color: #ffffff;
+        font-size: 0.78rem;
+        outline: none;
+    `;
+    header.appendChild(searchInput);
+    popup.appendChild(header);
+
+    // List container
+    const listContainer = document.createElement('div');
+    listContainer.style.cssText = `
+        padding: 4px 0;
+        overflow-y: auto;
+        max-height: 330px;
+        display: flex;
+        flex-direction: column;
+    `;
+
+    // Define all available insertable objects in Roblox Studio
+    const items: InsertMenuItem[] = [
+        // --- ScreenGui / UI Elements ---
+        {
+            name: 'Frame',
+            icon: '🔲',
+            category: 'UI (StarterGui)',
+            desc: 'Tühi taustaraam / paneel',
+            action: () => addScreenElement('frame')
+        },
+        {
+            name: 'TextLabel (TextFrame)',
+            icon: '📄',
+            category: 'UI (StarterGui)',
+            desc: 'Tekstikast / silt ekraanil',
+            action: () => addScreenElement('text_frame')
+        },
+        {
+            name: 'TextButton',
+            icon: '🔘',
+            category: 'UI (StarterGui)',
+            desc: 'Klikitav tekstinupp tegevusega',
+            action: () => addScreenElement('text_button')
+        },
+        {
+            name: 'FrameButton',
+            icon: '🔲🔘',
+            category: 'UI (StarterGui)',
+            desc: 'Stiliseeritud raam-nupp',
+            action: () => addScreenElement('frame_button')
+        },
+        {
+            name: 'ImageButton',
+            icon: '🖼️🔘',
+            category: 'UI (StarterGui)',
+            desc: 'Pildiga klikitav nupp',
+            action: () => addScreenElement('image_button')
+        },
+        {
+            name: 'ImageLabel (ImageScreen)',
+            icon: '🖼️🖥️',
+            category: 'UI (StarterGui)',
+            desc: 'Pildinäidik / logo ekraanil',
+            action: () => addScreenElement('image_screen')
+        },
+        // --- 3D Parts & Models ---
+        {
+            name: 'Part (Block)',
+            icon: '📦',
+            category: '3D Objects',
+            desc: 'Tavaline neljakandiline klots',
+            action: () => spawnPartShape('block')
+        },
+        {
+            name: 'Part (Sphere)',
+            icon: '⚽',
+            category: '3D Objects',
+            desc: 'Ümar kuul / kera',
+            action: () => spawnPartShape('sphere')
+        },
+        {
+            name: 'Part (Cylinder)',
+            icon: '🛢️',
+            category: '3D Objects',
+            desc: 'Silinder / tünn',
+            action: () => spawnPartShape('cylinder')
+        },
+        {
+            name: 'Part (Wedge)',
+            icon: '📐',
+            category: '3D Objects',
+            desc: 'Kaldpind / kiil',
+            action: () => spawnPartShape('wedge')
+        },
+        // --- Scripts & Logic ---
+        {
+            name: 'Script (ServerScript)',
+            icon: '📜',
+            category: 'Scripting',
+            desc: 'Kood / skripti teek',
+            action: () => {
+                const sBtn = document.getElementById('btn-open-script-library');
+                sBtn?.click();
+            }
+        },
+        // --- Environment & Audio ---
+        {
+            name: 'Sound',
+            icon: '🔊',
+            category: 'Audio',
+            desc: 'Heliefekt või muusika',
+            action: () => {
+                const sndBtn = document.getElementById('btn-env-sounds');
+                sndBtn?.click();
+            }
+        },
+        {
+            name: 'PointLight (Lighting)',
+            icon: '💡',
+            category: 'Lighting',
+            desc: 'Valgusallikas / taevas',
+            action: () => {
+                const dayNightBtn = document.getElementById('btn-env-land');
+                dayNightBtn?.click();
+            }
+        }
+    ];
+
+    function renderItems(filterText: string) {
+        listContainer.innerHTML = '';
+        const ft = filterText.toLowerCase().trim();
+
+        // If parentContext is StarterGui or ScreenGui, prioritize UI elements
+        const sortedItems = [...items].sort((a, b) => {
+            if (parentContext.toLowerCase().includes('gui')) {
+                const aIsGui = a.category.includes('UI') ? 1 : 0;
+                const bIsGui = b.category.includes('UI') ? 1 : 0;
+                return bIsGui - aIsGui;
+            }
+            return 0;
+        });
+
+        let lastCat = '';
+        for (const item of sortedItems) {
+            if (ft && !item.name.toLowerCase().includes(ft) && !item.desc.toLowerCase().includes(ft) && !item.category.toLowerCase().includes(ft)) {
+                continue;
+            }
+
+            if (item.category !== lastCat) {
+                lastCat = item.category;
+                const catHeader = document.createElement('div');
+                catHeader.style.cssText = `
+                    padding: 4px 10px;
+                    font-size: 0.68rem;
+                    font-weight: 700;
+                    color: #888888;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    background: #1c1c1c;
+                    margin-top: 3px;
+                `;
+                catHeader.innerText = item.category;
+                listContainer.appendChild(catHeader);
+            }
+
+            const row = document.createElement('div');
+            row.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 12px;
+                cursor: pointer;
+                transition: background 0.12s;
+            `;
+            row.innerHTML = `
+                <span style="font-size: 1.1rem; width: 22px; text-align: center;">${item.icon}</span>
+                <div style="flex: 1; overflow: hidden;">
+                    <div style="font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+                    <div style="font-size: 0.68rem; color: #888888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.desc}</div>
+                </div>
+            `;
+            row.addEventListener('mouseenter', () => {
+                row.style.background = '#094771';
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.background = 'transparent';
+            });
+            row.addEventListener('click', () => {
+                popup.remove();
+                item.action();
+                onSelect?.();
+            });
+            listContainer.appendChild(row);
+        }
+
+        if (listContainer.children.length === 0) {
+            const noMatch = document.createElement('div');
+            noMatch.style.cssText = 'padding: 12px; text-align: center; color: #888; font-style: italic;';
+            noMatch.innerText = 'No objects found';
+            listContainer.appendChild(noMatch);
+        }
+    }
+
+    renderItems('');
+
+    searchInput.addEventListener('input', () => {
+        renderItems(searchInput.value);
+    });
+
+    popup.appendChild(listContainer);
+    document.body.appendChild(popup);
+
+    setTimeout(() => {
+        searchInput.focus();
+    }, 50);
+
+    const closeBtn = titleRow.querySelector('#btn-close-insert-popup');
+    closeBtn?.addEventListener('click', () => {
+        popup.remove();
+    });
+
+    // Close on outside click
+    const outsideListener = (ev: MouseEvent) => {
+        if (!popup.contains(ev.target as Node) && ev.target !== triggerBtn) {
+            popup.remove();
+            document.removeEventListener('pointerdown', outsideListener);
+        }
+    };
+    setTimeout(() => {
+        document.addEventListener('pointerdown', outsideListener);
+    }, 10);
+}
+
+function createExplorerPlusBtn(title: string, onClick: (e: MouseEvent, btn: HTMLButtonElement) => void): HTMLButtonElement {
     const btn = document.createElement('button');
     btn.className = 'workspace-row-add-btn';
     btn.innerHTML = '➕';
@@ -345,7 +651,7 @@ function createExplorerPlusBtn(title: string, onClick: (e: MouseEvent) => void):
     });
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        onClick(e);
+        onClick(e, btn);
     });
     return btn;
 }
@@ -425,8 +731,8 @@ export function renderWorkspaceTree() {
     rootEl.appendChild(wsCount);
 
     // Roblox Studio Explorer "Insert Object" Plus Button on Workspace
-    const wsAddBtn = createExplorerPlusBtn('Insert Object into Workspace (Lisa Part / Objekt)', () => {
-        spawnPartShape('block');
+    const wsAddBtn = createExplorerPlusBtn('Insert Object into Workspace (Lisa Part / Objekt)', (e, btn) => {
+        showInsertObjectPopup(btn, 'Workspace');
     });
     rootEl.appendChild(wsAddBtn);
 
@@ -632,14 +938,8 @@ export function renderWorkspaceTree() {
         row.appendChild(nameSpan);
 
         // Roblox Studio "Insert Child Part" plus button
-        const partAddBtn = createExplorerPlusBtn(`Insert Child Part into ${obj.name || 'Part'}`, () => {
-            const childObj = spawnPartShape('block');
-            if (childObj && obj.mesh) {
-                obj.mesh.attach(childObj.mesh);
-                childObj.parentId = obj.id;
-                renderWorkspaceTree();
-                autoSaveDraft();
-            }
+        const partAddBtn = createExplorerPlusBtn(`Insert Child Part into ${obj.name || 'Part'}`, (e, btn) => {
+            showInsertObjectPopup(btn, obj.name || 'Part');
         });
         row.appendChild(partAddBtn);
 
@@ -1007,10 +1307,8 @@ export function renderWorkspaceTree() {
         screenRootEl.appendChild(screenCount);
 
         // Roblox Studio Insert Object button on StarterGui header to open UI elements dropdown
-        const addScreenQuickBtn = createExplorerPlusBtn('Insert UI Element (Lisa ekraanielement)', (e) => {
-            e.stopPropagation();
-            const btnDropdown = document.getElementById('btn-add-screen-element');
-            btnDropdown?.click();
+        const addScreenQuickBtn = createExplorerPlusBtn('Insert UI Element (Lisa ekraanielement)', (e, btn) => {
+            showInsertObjectPopup(btn, 'StarterGui');
         });
         screenRootEl.appendChild(addScreenQuickBtn);
 
@@ -1048,10 +1346,8 @@ export function renderWorkspaceTree() {
                 <span style="font-weight: 700; flex: 1;">ScreenGui</span>
                 <span style="font-size: 0.68rem; color: #718096; margin-right: 4px;">UI Layer</span>
             `;
-            subGuiRow.appendChild(createExplorerPlusBtn('Insert Element into ScreenGui', (e) => {
-                e.stopPropagation();
-                const btnDropdown = document.getElementById('btn-add-screen-element');
-                btnDropdown?.click();
+            subGuiRow.appendChild(createExplorerPlusBtn('Insert Element into ScreenGui', (e, btn) => {
+                showInsertObjectPopup(btn, 'ScreenGui');
             }));
             container.appendChild(subGuiRow);
 
@@ -1261,6 +1557,12 @@ function renderScreenElementNode(elem: ScreenElement, container: HTMLElement) {
         white-space: nowrap;
     `;
     row.appendChild(badge);
+
+    // Plus button to insert child element into this UI element
+    const elemAddBtn = createExplorerPlusBtn(`Insert UI Object into ${elem.name || typeName}`, (e, btn) => {
+        showInsertObjectPopup(btn, elem.name || typeName);
+    });
+    row.appendChild(elemAddBtn);
 
     // Visibility Toggle (Eye icon)
     const visBtn = document.createElement('button');

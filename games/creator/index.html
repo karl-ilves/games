@@ -636,6 +636,23 @@
                     <span class="roblox-ribbon-group-label">Insert</span>
                 </div>
 
+                <!-- Edit Group: Color, Material, Anchor (Authentic Roblox Studio Style) -->
+                <div class="roblox-ribbon-group">
+                    <button id="btn-ribbon-color" class="roblox-ribbon-btn" title="Color (Muuda klotsi värvi)" onclick="document.getElementById('obj-color-input')?.click()">
+                        <span class="roblox-ribbon-btn-icon">🎨</span>
+                        <span>Color</span>
+                    </button>
+                    <button id="btn-ribbon-material" class="roblox-ribbon-btn" title="Material Manager" onclick="const s = document.getElementById('obj-material-select'); if (s) { s.scrollIntoView({behavior: 'smooth'}); s.focus(); }">
+                        <span class="roblox-ribbon-btn-icon">🧱</span>
+                        <span>Material</span>
+                    </button>
+                    <button id="btn-ribbon-anchor" class="roblox-ribbon-btn" title="Toggle Anchor" onclick="const a = document.getElementById('obj-anchored-check'); if (a) { a.checked = !a.checked; a.dispatchEvent(new Event('change')); }">
+                        <span class="roblox-ribbon-btn-icon">⚓</span>
+                        <span>Anchor</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Edit</span>
+                </div>
+
                 <!-- Environment Group: Land vs Sea -->
                 <div class="roblox-ribbon-group" id="map-environment-selector">
                     <button id="btn-env-land" class="roblox-ribbon-btn active" title="Maa (Terrain)">
@@ -690,6 +707,14 @@
                     <span class="roblox-ribbon-group-label">Transform</span>
                 </div>
                 <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn" id="btn-model-group" title="Group (Ctrl+G)">
+                        <span class="roblox-ribbon-btn-icon">📁</span>
+                        <span>Group</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" id="btn-model-ungroup" title="Ungroup (Ctrl+U)">
+                        <span class="roblox-ribbon-btn-icon">📂</span>
+                        <span>Ungroup</span>
+                    </button>
                     <button class="roblox-ribbon-btn" onclick="document.getElementById('btn-duplicate-obj')?.click()">
                         <span class="roblox-ribbon-btn-icon">📋</span>
                         <span>Duplicate</span>
@@ -698,7 +723,23 @@
                         <span class="roblox-ribbon-btn-icon">🗑️</span>
                         <span>Delete</span>
                     </button>
-                    <span class="roblox-ribbon-group-label">Actions</span>
+                    <span class="roblox-ribbon-group-label">Model</span>
+                </div>
+                <!-- Solid Modeling: Union, Negate, Separate -->
+                <div class="roblox-ribbon-group">
+                    <button class="roblox-ribbon-btn" id="btn-model-union" title="Union (CSG Join)">
+                        <span class="roblox-ribbon-btn-icon">🔲</span>
+                        <span>Union</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" id="btn-model-negate" title="Negate (Cutout Part)">
+                        <span class="roblox-ribbon-btn-icon">✂️</span>
+                        <span>Negate</span>
+                    </button>
+                    <button class="roblox-ribbon-btn" id="btn-model-separate" title="Separate (Disassemble)">
+                        <span class="roblox-ribbon-btn-icon">🧩</span>
+                        <span>Separate</span>
+                    </button>
+                    <span class="roblox-ribbon-group-label">Solid Modeling</span>
                 </div>
             </div>
 
