@@ -21,6 +21,7 @@ import {
     updateInspectorDisplay,
     autoSaveDraft
 } from './creatorUI';
+import { spawnPartShape } from '../systems/gizmos';
 import {
     openScreenElementEditor,
     renderScreenElements,
@@ -309,6 +310,46 @@ function getObjectIcon(obj: PlacedObject): string {
     return '📦';
 }
 
+function createExplorerPlusBtn(title: string, onClick: (e: MouseEvent) => void): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.className = 'workspace-row-add-btn';
+    btn.innerHTML = '➕';
+    btn.title = title;
+    btn.style.cssText = `
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #cbd5e1;
+        font-size: 0.72rem;
+        cursor: pointer;
+        padding: 1px 4px;
+        margin-left: auto;
+        border-radius: 3px;
+        opacity: 0.75;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+    `;
+    btn.addEventListener('mouseenter', () => {
+        btn.style.opacity = '1';
+        btn.style.background = '#007acc';
+        btn.style.borderColor = '#00a2ff';
+        btn.style.color = '#ffffff';
+    });
+    btn.addEventListener('mouseleave', () => {
+        btn.style.opacity = '0.75';
+        btn.style.background = 'transparent';
+        btn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+        btn.style.color = '#cbd5e1';
+    });
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onClick(e);
+    });
+    return btn;
+}
+
 /**
  * Renders the Workspace tree inside `#workspace-tree-container`.
  */
@@ -379,9 +420,15 @@ export function renderWorkspaceTree() {
     rootEl.appendChild(wsLabel);
 
     const wsCount = document.createElement('span');
-    wsCount.style.cssText = 'font-size: 0.72rem; color: #888888; font-weight: normal;';
+    wsCount.style.cssText = 'font-size: 0.72rem; color: #888888; font-weight: normal; margin-right: 4px;';
     wsCount.innerText = `(${placedObjects.length})`;
     rootEl.appendChild(wsCount);
+
+    // Roblox Studio Explorer "Insert Object" Plus Button on Workspace
+    const wsAddBtn = createExplorerPlusBtn('Insert Object into Workspace (Lisa Part / Objekt)', () => {
+        spawnPartShape('block');
+    });
+    rootEl.appendChild(wsAddBtn);
 
     rootEl.addEventListener('click', () => {
         if (isWorkspaceCollapsed) {
@@ -457,8 +504,12 @@ export function renderWorkspaceTree() {
                 <span style="width: 14px; text-align: center; font-size: 0.72rem; visibility: hidden;">▶</span>
                 <span style="font-size: 0.95rem;">🎥</span>
                 <span style="flex: 1; font-weight: 500;">Camera</span>
-                <span style="font-size: 0.68rem; color: #718096;">CurrentCamera</span>
+                <span style="font-size: 0.68rem; color: #718096; margin-right: 4px;">CurrentCamera</span>
             `;
+            camRow.appendChild(createExplorerPlusBtn('Insert Camera Effect / Script', () => {
+                const scriptBtn = document.getElementById('btn-open-script-library');
+                scriptBtn?.click();
+            }));
             camRow.addEventListener('mouseenter', () => camRow.style.background = '#323232');
             camRow.addEventListener('mouseleave', () => camRow.style.background = 'transparent');
             container.appendChild(camRow);
@@ -486,8 +537,12 @@ export function renderWorkspaceTree() {
                 <span style="width: 14px; text-align: center; font-size: 0.72rem; visibility: hidden;">▶</span>
                 <span style="font-size: 0.95rem;">🏔️</span>
                 <span style="flex: 1; font-weight: 500;">Terrain</span>
-                <span style="font-size: 0.68rem; color: #718096;">SmoothVoxels</span>
+                <span style="font-size: 0.68rem; color: #718096; margin-right: 4px;">SmoothVoxels</span>
             `;
+            terrainRow.appendChild(createExplorerPlusBtn('Configure Terrain / Landscape', () => {
+                const envLand = document.getElementById('btn-env-land');
+                envLand?.click();
+            }));
             terrainRow.addEventListener('mouseenter', () => terrainRow.style.background = '#323232');
             terrainRow.addEventListener('mouseleave', () => terrainRow.style.background = 'transparent');
             terrainRow.addEventListener('click', () => {
@@ -575,6 +630,18 @@ export function renderWorkspaceTree() {
             startInlineRename(nameSpan, obj);
         });
         row.appendChild(nameSpan);
+
+        // Roblox Studio "Insert Child Part" plus button
+        const partAddBtn = createExplorerPlusBtn(`Insert Child Part into ${obj.name || 'Part'}`, () => {
+            const childObj = spawnPartShape('block');
+            if (childObj && obj.mesh) {
+                obj.mesh.attach(childObj.mesh);
+                childObj.parentId = obj.id;
+                renderWorkspaceTree();
+                autoSaveDraft();
+            }
+        });
+        row.appendChild(partAddBtn);
 
         // Quick Rename Pencil Button
         const editBtn = document.createElement('button');
@@ -708,9 +775,38 @@ export function renderWorkspaceTree() {
     // 2. Roblox Studio Services: Players & MaterialService
     // ============================================
     const preServices = [
-        { id: 'service_players', name: 'Players', icon: '👥', desc: 'Mängijad serveris' },
-        { id: 'service_lighting', name: 'Lighting', icon: '💡', desc: 'Päike, valgustus & taevas' },
-        { id: 'service_material_service', name: 'MaterialService', icon: '🎨', desc: 'Tekstuurid & materjalid' }
+        {
+            id: 'service_players',
+            name: 'Players',
+            icon: '👥',
+            desc: 'Mängijad serveris',
+            onAdd: () => {
+                const charBtn = document.getElementById('btn-avatar-rig-builder');
+                charBtn?.click();
+            }
+        },
+        {
+            id: 'service_lighting',
+            name: 'Lighting',
+            icon: '💡',
+            desc: 'Päike, valgustus & taevas',
+            onAdd: () => {
+                const dayNightBtn = document.getElementById('btn-env-land');
+                dayNightBtn?.click();
+                dayNightBtn?.scrollIntoView({ behavior: 'smooth' });
+            }
+        },
+        {
+            id: 'service_material_service',
+            name: 'MaterialService',
+            icon: '🎨',
+            desc: 'Tekstuurid & materjalid',
+            onAdd: () => {
+                const matSelect = document.getElementById('obj-material-select');
+                matSelect?.scrollIntoView({ behavior: 'smooth' });
+                matSelect?.focus();
+            }
+        }
     ];
 
     for (const s of preServices) {
@@ -736,8 +832,11 @@ export function renderWorkspaceTree() {
         srvEl.innerHTML = `
             <span style="font-size: 0.95rem;">${s.icon}</span>
             <span style="font-weight: 700; flex: 1;">${s.name}</span>
-            <span style="font-size: 0.68rem; color: #718096;">${s.desc}</span>
+            <span style="font-size: 0.68rem; color: #718096; margin-right: 4px;">${s.desc}</span>
         `;
+        srvEl.appendChild(createExplorerPlusBtn(`Insert into ${s.name}`, () => {
+            s.onAdd?.();
+        }));
         srvEl.addEventListener('mouseenter', () => {
             srvEl.style.background = '#323232';
         });
@@ -748,6 +847,9 @@ export function renderWorkspaceTree() {
             if (s.id === 'service_lighting') {
                 const dayNightBtn = document.getElementById('btn-env-land');
                 dayNightBtn?.scrollIntoView({ behavior: 'smooth' });
+            } else if (s.id === 'service_material_service') {
+                const matSelect = document.getElementById('obj-material-select');
+                matSelect?.focus();
             }
         });
         container.appendChild(srvEl);
@@ -757,10 +859,46 @@ export function renderWorkspaceTree() {
     // 3. Storage Services (ReplicatedFirst, ReplicatedStorage, ServerScriptService, ServerStorage)
     // ============================================
     const storageServices = [
-        { id: 'service_replicated_first', name: 'ReplicatedFirst', icon: '📁', desc: 'Esimesena laetavad skriptid' },
-        { id: 'service_replicated_storage', name: 'ReplicatedStorage', icon: '📦', desc: 'Jagatud objektid & moodulid' },
-        { id: 'service_server_script_service', name: 'ServerScriptService', icon: '📜', desc: 'Serveri skriptid' },
-        { id: 'service_server_storage', name: 'ServerStorage', icon: '🗄️', desc: 'Serveri varad & mudelid' }
+        {
+            id: 'service_replicated_first',
+            name: 'ReplicatedFirst',
+            icon: '📁',
+            desc: 'Esimesena laetavad skriptid',
+            onAdd: () => {
+                const scriptBtn = document.getElementById('btn-open-script-library');
+                scriptBtn?.click();
+            }
+        },
+        {
+            id: 'service_replicated_storage',
+            name: 'ReplicatedStorage',
+            icon: '📦',
+            desc: 'Jagatud objektid & moodulid',
+            onAdd: () => {
+                const catalogBtn = document.getElementById('btn-toggle-catalog');
+                catalogBtn?.click();
+            }
+        },
+        {
+            id: 'service_server_script_service',
+            name: 'ServerScriptService',
+            icon: '📜',
+            desc: 'Serveri skriptid',
+            onAdd: () => {
+                const scriptBtn = document.getElementById('btn-open-script-library');
+                scriptBtn?.click();
+            }
+        },
+        {
+            id: 'service_server_storage',
+            name: 'ServerStorage',
+            icon: '🗄️',
+            desc: 'Serveri varad & mudelid',
+            onAdd: () => {
+                const catalogBtn = document.getElementById('btn-toggle-catalog');
+                catalogBtn?.click();
+            }
+        }
     ];
 
     for (const s of storageServices) {
@@ -786,13 +924,19 @@ export function renderWorkspaceTree() {
         srvEl.innerHTML = `
             <span style="font-size: 0.95rem;">${s.icon}</span>
             <span style="font-weight: 700; flex: 1;">${s.name}</span>
-            <span style="font-size: 0.68rem; color: #718096;">${s.desc}</span>
+            <span style="font-size: 0.68rem; color: #718096; margin-right: 4px;">${s.desc}</span>
         `;
+        srvEl.appendChild(createExplorerPlusBtn(`Insert into ${s.name}`, () => {
+            s.onAdd?.();
+        }));
         srvEl.addEventListener('mouseenter', () => {
             srvEl.style.background = '#323232';
         });
         srvEl.addEventListener('mouseleave', () => {
             srvEl.style.background = '#262626';
+        });
+        srvEl.addEventListener('click', () => {
+            s.onAdd?.();
         });
         container.appendChild(srvEl);
     }
@@ -858,27 +1002,12 @@ export function renderWorkspaceTree() {
         screenRootEl.appendChild(screenTitle);
 
         const screenCount = document.createElement('span');
-        screenCount.style.cssText = 'font-size: 0.72rem; color: #888888; font-weight: normal;';
+        screenCount.style.cssText = 'font-size: 0.72rem; color: #888888; font-weight: normal; margin-right: 4px;';
         screenCount.innerText = `(${screenElementsList.length})`;
         screenRootEl.appendChild(screenCount);
 
-        // Quick '+' button on ScreenGui header to open screen element dropdown
-        const addScreenQuickBtn = document.createElement('button');
-        addScreenQuickBtn.innerHTML = '+';
-        addScreenQuickBtn.title = 'Lisa ekraanile midagi';
-        addScreenQuickBtn.style.cssText = `
-            background: rgba(16, 185, 129, 0.2);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            color: #10b981;
-            font-size: 0.85rem;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            padding: 0 6px;
-            margin-left: 6px;
-            transition: all 0.2s;
-        `;
-        addScreenQuickBtn.addEventListener('click', (e) => {
+        // Roblox Studio Insert Object button on StarterGui header to open UI elements dropdown
+        const addScreenQuickBtn = createExplorerPlusBtn('Insert UI Element (Lisa ekraanielement)', (e) => {
             e.stopPropagation();
             const btnDropdown = document.getElementById('btn-add-screen-element');
             btnDropdown?.click();
@@ -917,8 +1046,13 @@ export function renderWorkspaceTree() {
                 <span style="width: 14px; text-align: center; font-size: 0.72rem; color: #10b981;">▼</span>
                 <span style="font-size: 0.95rem;">📱</span>
                 <span style="font-weight: 700; flex: 1;">ScreenGui</span>
-                <span style="font-size: 0.68rem; color: #718096;">UI Layer</span>
+                <span style="font-size: 0.68rem; color: #718096; margin-right: 4px;">UI Layer</span>
             `;
+            subGuiRow.appendChild(createExplorerPlusBtn('Insert Element into ScreenGui', (e) => {
+                e.stopPropagation();
+                const btnDropdown = document.getElementById('btn-add-screen-element');
+                btnDropdown?.click();
+            }));
             container.appendChild(subGuiRow);
 
             if (matchingScreenElems.length === 0) {
@@ -944,9 +1078,37 @@ export function renderWorkspaceTree() {
     // 5. Player & Gameplay Services (StarterPack, StarterPlayer, SoundService)
     // ============================================
     const postServices = [
-        { id: 'service_starter_pack', name: 'StarterPack', icon: '🎒', desc: 'Mängija alginventar & tööriistad' },
-        { id: 'service_starter_player', name: 'StarterPlayer', icon: '🏃', desc: 'Mängija seaded & kiirus' },
-        { id: 'service_sound_service', name: 'SoundService', icon: '🔊', desc: 'Heliefektid & muusika' }
+        {
+            id: 'service_starter_pack',
+            name: 'StarterPack',
+            icon: '🎒',
+            desc: 'Mängija alginventar & tööriistad',
+            onAdd: () => {
+                const catalogBtn = document.getElementById('btn-toggle-catalog');
+                catalogBtn?.click();
+            }
+        },
+        {
+            id: 'service_starter_player',
+            name: 'StarterPlayer',
+            icon: '🏃',
+            desc: 'Mängija seaded & kiirus',
+            onAdd: () => {
+                const hpInp = document.getElementById('game-player-health-input');
+                hpInp?.scrollIntoView({ behavior: 'smooth' });
+                hpInp?.focus();
+            }
+        },
+        {
+            id: 'service_sound_service',
+            name: 'SoundService',
+            icon: '🔊',
+            desc: 'Heliefektid & muusika',
+            onAdd: () => {
+                const soundBtn = document.getElementById('btn-env-sounds');
+                soundBtn?.click();
+            }
+        }
     ];
 
     for (const s of postServices) {
@@ -972,8 +1134,11 @@ export function renderWorkspaceTree() {
         srvEl.innerHTML = `
             <span style="font-size: 0.95rem;">${s.icon}</span>
             <span style="font-weight: 700; flex: 1;">${s.name}</span>
-            <span style="font-size: 0.68rem; color: #718096;">${s.desc}</span>
+            <span style="font-size: 0.68rem; color: #718096; margin-right: 4px;">${s.desc}</span>
         `;
+        srvEl.appendChild(createExplorerPlusBtn(`Insert into ${s.name}`, () => {
+            s.onAdd?.();
+        }));
         srvEl.addEventListener('mouseenter', () => {
             srvEl.style.background = '#323232';
         });
@@ -984,6 +1149,8 @@ export function renderWorkspaceTree() {
             if (s.id === 'service_starter_player') {
                 const hpInp = document.getElementById('game-player-health-input');
                 hpInp?.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                s.onAdd?.();
             }
         });
         container.appendChild(srvEl);

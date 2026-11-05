@@ -139,6 +139,10 @@ export function setupRobloxRibbonUI() {
     const btnAnimEditor = document.getElementById('btn-avatar-animation');
     btnAnimEditor?.addEventListener('click', () => {
         logToRobloxOutput('Roblox Animation Editor: Ready for keyframing.', 'info');
+        const animBtn = document.getElementById('btn-setup-hand-animation');
+        if (animBtn) {
+            animBtn.click();
+        }
     });
 
     // 3. Setup Interception of console.log, console.warn, console.error to Output Window
