@@ -2118,9 +2118,13 @@ await (async () => {
         console.log("   Creator In-Game Emotes Bar exists in top-left:", !!creatorEmotesBar);
         if (!creatorEmotesBar) throw new Error("Expected In-Game Emotes Widget in Creator Studio!");
 
-        // Test Map Environment Selector (Maa vs Meri) at the start
-        console.log("   Testing Map Environment Selector (Maa vs Meri) at the start...");
+        // Test Map Environment Selector (Roblox Studio Terrain Tool: Grass, Ocean, Coastline, Island)
+        console.log("   Testing Map Environment Selector (Roblox Studio Terrain Tool)...");
         await page.waitForSelector('#map-environment-selector', { visible: true, timeout: 5000 });
+        await page.waitForSelector('#btn-env-terrain', { visible: true, timeout: 5000 });
+        // Open the Terrain dropdown menu
+        await page.click('#btn-env-terrain');
+        await new Promise(r => setTimeout(r, 200));
         await page.waitForSelector('#btn-env-land', { visible: true, timeout: 5000 });
         await page.waitForSelector('#btn-env-sea', { visible: true, timeout: 5000 });
 
@@ -2184,7 +2188,9 @@ await (async () => {
             throw new Error("Pure Ocean swimming mechanics or animations failed!");
         }
 
-        // Click Maa button to switch back to Land
+        // Click Maa button to switch back to Land (open Terrain dropdown first)
+        await page.click('#btn-env-terrain');
+        await new Promise(r => setTimeout(r, 200));
         await page.click('#btn-env-land');
         await new Promise(r => setTimeout(r, 400));
         const landMapEnv = await page.evaluate(() => {
@@ -2327,7 +2333,9 @@ await (async () => {
 
         // Test 5C: Underwater Swimming & 10m Diving in Ocean (Vee alla ujumine ~10 m)
         console.log("   Testing Underwater Swimming & Diving down to ~10m in Pure Ocean...");
-        // Switch to Sea environment
+        // Switch to Sea environment (open Terrain dropdown first)
+        await page.click('#btn-env-terrain');
+        await new Promise(r => setTimeout(r, 200));
         await page.click('#btn-env-sea');
         await new Promise(r => setTimeout(r, 400));
 
@@ -2414,6 +2422,8 @@ await (async () => {
         // Exit Play Test Mode and switch back to Land for remaining tests
         await page.click('#btn-toggle-play-test');
         await new Promise(r => setTimeout(r, 400));
+        await page.click('#btn-env-terrain');
+        await new Promise(r => setTimeout(r, 200));
         await page.click('#btn-env-land');
         await new Promise(r => setTimeout(r, 400));
 

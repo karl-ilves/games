@@ -2198,13 +2198,44 @@ export function setupStudioEvents() {
         startNewEmptyGame('sea');
     });
 
-    // Map Environment Toggle (Maa vs Meri)
+    // Map Environment Toggle (Roblox Studio Terrain Tool: Grass, Ocean, Beach Coastline, Island)
+    const terrainDropdownBtn = document.getElementById('btn-env-terrain');
+    const terrainDropdownMenu = document.getElementById('roblox-terrain-dropdown-menu');
+
+    if (terrainDropdownBtn && terrainDropdownMenu) {
+        terrainDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = terrainDropdownMenu.style.display === 'flex';
+            terrainDropdownMenu.style.display = isOpen ? 'none' : 'flex';
+        });
+
+        document.querySelectorAll('.dropdown-item-terrain').forEach(btn => {
+            btn.addEventListener('click', () => {
+                terrainDropdownMenu.style.display = 'none';
+            });
+        });
+
+        document.addEventListener('click', () => {
+            if (terrainDropdownMenu.style.display === 'flex') {
+                terrainDropdownMenu.style.display = 'none';
+            }
+        });
+    }
+
     document.getElementById('btn-env-land')?.addEventListener('click', () => {
         setMapEnvironment('land');
     });
 
     document.getElementById('btn-env-sea')?.addEventListener('click', () => {
         setMapEnvironment('sea');
+    });
+
+    document.getElementById('btn-env-part-sea')?.addEventListener('click', () => {
+        createPartMapOcean('z', 'negative', true);
+    });
+
+    document.getElementById('btn-env-island-sea')?.addEventListener('click', () => {
+        createIslandOcean(true);
     });
 
     // Top "Part" Dropdown Button & Sub-items (Block, Sphere, Cylinder, Wedge)

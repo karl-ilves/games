@@ -653,16 +653,28 @@
                     <span class="roblox-ribbon-group-label">Edit</span>
                 </div>
 
-                <!-- Environment Group: Land vs Sea -->
+                <!-- Authentic Roblox Studio Terrain Tool (Editor / Generator) -->
                 <div class="roblox-ribbon-group" id="map-environment-selector">
-                    <button id="btn-env-land" class="roblox-ribbon-btn active" title="Maa (Terrain)">
-                        <span class="roblox-ribbon-btn-icon">🌱</span>
-                        <span>Land</span>
-                    </button>
-                    <button id="btn-env-sea" class="roblox-ribbon-btn" title="Meri (Water)">
-                        <span class="roblox-ribbon-btn-icon">🌊</span>
-                        <span>Sea</span>
-                    </button>
+                    <div id="roblox-terrain-dropdown-wrapper" style="position: relative; display: inline-block;">
+                        <button id="btn-env-terrain" class="roblox-ribbon-btn active" title="Terrain Editor (Roblox Studio Terrain Tool)" style="min-width: 60px;">
+                            <span class="roblox-ribbon-btn-icon">🏔️</span>
+                            <span>Terrain ▼</span>
+                        </button>
+                        <div id="roblox-terrain-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 200px; background: #262626; border: 1px solid var(--studio-border); border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 10000; overflow: hidden; flex-direction: column;">
+                            <button id="btn-env-land" class="dropdown-item-terrain active-map-env" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🌱</span> <div><div>Generate Grass Plains</div><div style="font-size: 0.68rem; color: #888;">Muru & roheline maastik</div></div>
+                            </button>
+                            <button id="btn-env-sea" class="dropdown-item-terrain" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🌊</span> <div><div>Generate Ocean / Water</div><div style="font-size: 0.68rem; color: #888;">Ookean & süvavesi</div></div>
+                            </button>
+                            <button id="btn-env-part-sea" class="dropdown-item-terrain" style="padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid #333; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🏖️</span> <div><div>Coastline & Beach</div><div style="font-size: 0.68rem; color: #888;">Rand ja liivakallas</div></div>
+                            </button>
+                            <button id="btn-env-island-sea" class="dropdown-item-terrain" style="padding: 8px 12px; background: transparent; border: none; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                                <span>🏝️</span> <div><div>Tropical Island</div><div style="font-size: 0.68rem; color: #888;">Troopiline saar paadiga</div></div>
+                            </button>
+                        </div>
+                    </div>
                     <span class="roblox-ribbon-group-label">Terrain</span>
                 </div>
 
