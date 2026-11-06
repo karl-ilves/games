@@ -582,6 +582,87 @@ export function createObjectMesh(item: CatalogItem, color?: string): THREE.Group
             const leaves2 = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.8, 7), material);
             leaves2.position.y = 3.2;
             group.add(leaves2);
+        } else if (item.geometryType.includes('campfire') || item.name.toLowerCase().includes('campfire') || item.name.toLowerCase().includes('lõke')) {
+            // Realistic Campfire with stone ring, wooden logs and glowing flickering fire
+            const ringGeo = new THREE.TorusGeometry(0.9, 0.22, 8, 16);
+            const ringMat = new THREE.MeshStandardMaterial({ color: 0x57606f, roughness: 0.9 });
+            const stoneRing = new THREE.Mesh(ringGeo, ringMat);
+            stoneRing.rotation.x = Math.PI / 2;
+            stoneRing.position.y = 0.12;
+            group.add(stoneRing);
+
+            // Campfire Wood Logs
+            const logMat = new THREE.MeshStandardMaterial({ color: 0x4a2e12, roughness: 0.85 });
+            for (let a = 0; a < 4; a++) {
+                const log = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1.4, 8), logMat);
+                log.rotation.z = Math.PI / 3;
+                log.rotation.y = (a * Math.PI) / 2;
+                log.position.set(0, 0.22, 0);
+                group.add(log);
+            }
+
+            // Glowing Fire Core & Flame Cones
+            const fireMat = new THREE.MeshStandardMaterial({
+                color: 0xff4757,
+                emissive: 0xff6b81,
+                emissiveIntensity: 1.5,
+                roughness: 0.2
+            });
+            const flame1 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.1, 7), fireMat);
+            flame1.position.y = 0.65;
+            group.add(flame1);
+
+            const flame2 = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 6), new THREE.MeshStandardMaterial({ color: 0xffa502, emissive: 0xffa502, emissiveIntensity: 1.8 }));
+            flame2.position.y = 0.55;
+            group.add(flame2);
+
+            // Warm campfire point light
+            const fireLight = new THREE.PointLight(0xff6b4a, 2.5, 14);
+            fireLight.position.set(0, 0.9, 0);
+            group.add(fireLight);
+        } else if (item.geometryType.includes('log') || item.name.toLowerCase().includes('log') || item.name.toLowerCase().includes('puit') || item.name.toLowerCase().includes('halg')) {
+            // Cut Wood Log
+            const logMat = new THREE.MeshStandardMaterial({ color: 0x6e4720, roughness: 0.8 });
+            const woodLog = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 1.2, 8), logMat);
+            woodLog.rotation.z = Math.PI / 2;
+            woodLog.position.y = 0.22;
+            group.add(woodLog);
+        } else if (item.geometryType.includes('stalker') || item.name.toLowerCase().includes('stalker') || item.name.toLowerCase().includes('monster') || item.name.toLowerCase().includes('koll')) {
+            // Dark Forest Stalker Creature
+            const darkBodyMat = new THREE.MeshStandardMaterial({ color: 0x11161d, roughness: 0.9 });
+            const redEyeMat = new THREE.MeshBasicMaterial({ color: 0xff0044 });
+
+            // Tall spindly body
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.8, 0.6), darkBodyMat);
+            body.position.y = 1.9;
+            group.add(body);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.6, 0.55), darkBodyMat);
+            head.position.y = 3.1;
+            group.add(head);
+
+            // Glowing Eyes
+            [-0.14, 0.14].forEach(ex => {
+                const eye = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.1), redEyeMat);
+                eye.position.set(ex, 3.15, -0.28);
+                group.add(eye);
+            });
+
+            // Antlers / Horns
+            [-0.22, 0.22].forEach(hx => {
+                const horn = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.08, 0.8, 6), darkBodyMat);
+                horn.position.set(hx, 3.7, 0);
+                horn.rotation.z = hx * -0.5;
+                group.add(horn);
+            });
+
+            // Long spindly legs
+            [-0.24, 0.24].forEach(lx => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.8, 6), darkBodyMat);
+                leg.position.set(lx, 0.9, 0);
+                group.add(leg);
+            });
         } else if (item.geometryType.includes('rock') || item.geometryType.includes('boulder')) {
             const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 1), material);
             rock.position.y = 0.9;

@@ -13,7 +13,7 @@ import {
     activeSeaConfig, oceanWaterMesh,
     createWholeMapOcean, createPartMapOcean, createIslandOcean,
     removeSea, setMapEnvironment, getMapEnvironment, updateMapEnvironmentUI,
-    isPositionInWater
+    isPositionInWater, setDayNightMode
 } from '../world/environment';
 import {
     startNewEmptyGame, saveCurrentGame, publishCurrentGame,
@@ -109,6 +109,7 @@ export function setupCreatorGlobals() {
         setMapEnvironment,
         getMapEnvironment,
         updateMapEnvironmentUI,
+        setDayNightMode,
         startNewEmptyGame,
         saveCurrentGame,
         publishCurrentGame,

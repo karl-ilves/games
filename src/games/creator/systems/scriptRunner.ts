@@ -7,6 +7,7 @@ import { setupWorkbenchEvents } from '../workbench/customItemWorkbench';
 import { playGameSound, playScriptSound } from '../audio';
 export { playGameSound, playScriptSound };
 import { csState } from "../state/creatorState";
+import { setDayNightMode } from '../world/environment';
 import * as THREE from 'three';
 import { ObjectScript, ObjectScriptAction, PlacedObject } from '../types';
 import {
@@ -138,6 +139,54 @@ export function executeScriptCustomCode(obj: PlacedObject, code: string, playerP
             },
             hud: {
                 showMessage: (text: string, title = 'Teade') => showDialogMessage(title, text)
+            },
+            environment: {
+                setMode: (mode: 'day' | 'night' | 'sunset' | 'horror_fog') => setDayNightMode(mode),
+                getMode: () => csState.currentEnvMode,
+                setSkyColor: (hex: number | string) => {
+                    if (scene) scene.background = new THREE.Color(hex);
+                }
+            },
+            gui: {
+                setText: (elemIdOrName: string, text: string) => {
+                    const list = csState.screenElements || [];
+                    const elem = list.find(e => e.id === elemIdOrName || e.name === elemIdOrName || e.name.toLowerCase() === elemIdOrName.toLowerCase());
+                    if (elem) {
+                        elem.text = text;
+                        const el = document.getElementById(`gui-${elem.id}`) || document.querySelector(`[data-gui-name="${elemIdOrName}"]`);
+                        if (el) {
+                            const contentEl = el.querySelector('.screen-gui-content') || el.querySelector('span') || el;
+                            (contentEl as HTMLElement).innerText = text;
+                        }
+                    }
+                }
+            },
+            findObject: (nameOrId: string) => {
+                const target = placedObjects.find(p => p.id === nameOrId || p.name.toLowerCase() === nameOrId.toLowerCase());
+                if (!target) return null;
+                return {
+                    id: target.id,
+                    name: target.name,
+                    getPosition: () => ({ x: target.mesh.position.x, y: target.mesh.position.y, z: target.mesh.position.z }),
+                    move: (dx = 0, dy = 0, dz = 0) => {
+                        target.mesh.position.x += dx;
+                        target.mesh.position.y += dy;
+                        target.mesh.position.z += dz;
+                        target.position.x = target.mesh.position.x;
+                        target.position.y = target.mesh.position.y;
+                        target.position.z = target.mesh.position.z;
+                    },
+                    setColor: (hex: string) => {
+                        target.color = hex;
+                        target.mesh.traverse((child) => {
+                            if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).material) {
+                                const mat = (child as THREE.Mesh).material;
+                                if (Array.isArray(mat)) mat.forEach(m => (m as any).color?.set(hex));
+                                else (mat as any).color?.set(hex);
+                            }
+                        });
+                    }
+                };
             },
             object: {
                 getId: () => obj.id,
@@ -298,8 +347,9 @@ export function executeObjectScript(obj: PlacedObject, playerPos: THREE.Vector3,
         }
     }
 
-    if (obj.script.customJsCode && obj.script.customJsCode.trim()) {
-        executeScriptCustomCode(obj, obj.script.customJsCode, playerPos);
+    const customCodeToRun = obj.script.customJsCode || (obj.script as any).customCode;
+    if (customCodeToRun && customCodeToRun.trim()) {
+        executeScriptCustomCode(obj, customCodeToRun, playerPos);
     }
 }
 

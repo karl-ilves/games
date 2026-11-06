@@ -206,6 +206,7 @@ export function renderScreenElements() {
         elDiv.id = `gui-${elem.id}`;
         elDiv.className = 'screen-gui-element';
         elDiv.setAttribute('data-id', elem.id);
+        elDiv.setAttribute('data-gui-name', elem.name);
 
         // Styling
         elDiv.style.position = 'absolute';
@@ -296,6 +297,7 @@ export function renderScreenElements() {
             titleBar.innerHTML = `<span>📄 ${elem.name}</span>`;
 
             const content = document.createElement('div');
+            content.className = 'screen-gui-content';
             content.style.flex = '1';
             content.style.width = '100%';
             content.style.padding = '8px 12px';

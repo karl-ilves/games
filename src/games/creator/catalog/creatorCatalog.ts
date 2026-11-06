@@ -140,8 +140,8 @@ export function generate10000ObjectCatalog() {
             id: 'nature',
             name: 'Nature',
             icon: '🌲',
-            types: ['Pine Tree', 'Oak Tree', 'Palm Tree', 'Redwood', 'Alpine Rock', 'Granite Boulder', 'Flower Cluster', 'Bush', 'Lily Pad', 'Crystal Peak'],
-            colors: ['#2ecc71', '#27ae60', '#16a085', '#7f8c8d', '#95a5a6', '#e67e22', '#1abc9c', '#34495e']
+            types: ['Pine Tree', 'Oak Tree', 'Campfire', 'Wood Log', 'Dark Stalker', 'Palm Tree', 'Redwood', 'Alpine Rock', 'Granite Boulder', 'Flower Cluster', 'Bush', 'Lily Pad', 'Crystal Peak'],
+            colors: ['#2ecc71', '#27ae60', '#e67e22', '#d35400', '#11161d', '#16a085', '#7f8c8d', '#95a5a6', '#1abc9c', '#34495e']
         },
         {
             id: 'city',

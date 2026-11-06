@@ -190,7 +190,9 @@ await (async () => {
                 return async (selector, options) => {
                     for (let attempt = 1; attempt <= 10; attempt++) {
                         try {
-                            const target = getActiveFrame() || rawPage;
+                            await ensurePageActive();
+                            const active = getActiveFrame();
+                            const target = (active && (typeof active.isDetached === 'function' ? !active.isDetached() : !active.detached)) ? active : rawPage;
                             return await target.click(selector, options);
                         } catch (err) {
                             const msg = (err && (err.message || String(err))) ? (err.message || String(err)).toLowerCase() : '';
@@ -207,7 +209,9 @@ await (async () => {
                 return async (selector, options) => {
                     for (let attempt = 1; attempt <= 6; attempt++) {
                         try {
-                            const target = getActiveFrame() || rawPage;
+                            await ensurePageActive();
+                            const active = getActiveFrame();
+                            const target = (active && (typeof active.isDetached === 'function' ? !active.isDetached() : !active.detached)) ? active : rawPage;
                             return await target.waitForSelector(selector, options);
                         } catch (err) {
                             const msg = (err && err.message) ? err.message.toLowerCase() : '';
@@ -4818,6 +4822,154 @@ await (async () => {
         });
         console.log("   ✅ 'Publish a game' modal (title, description, cover image upload & drag-and-drop, max players, age rating) and publish flow passed!");
 
+        // 6a-2. Build & Publish '99 Nights in the Forest' using Creator Studio natively
+        console.log("6a-2. Building & Publishing '99 Nights in the Forest' directly inside Creator Studio (No AI generator)...");
+        {
+            const forestResult = await page.evaluate(async () => {
+                const cs = window.creatorStudio;
+                if (!cs) return { ok: false, error: 'creatorStudio not found' };
+
+                // 1. Reset / Start clean scene
+                cs.startNewEmptyGame();
+                cs.setMapEnvironment('land');
+                cs.setDayNightMode('night');
+
+                // 2. Add Night Counter Screen Element (TextFrame / GUI)
+                const counterGui = cs.addScreenElement('text_frame', {
+                    name: 'NightCounter',
+                    text: '🌙 ÖÖ 1 / 99 (NIGHT 1 / 99)\n🌲 Mets on pime ja jahe. Hoia lõket põlemas!',
+                    position: { x: Math.max(20, Math.floor((window.innerWidth - 320) / 2)), y: 20 },
+                    size: { width: 320, height: 90 },
+                    backgroundColor: 'rgba(10, 15, 25, 0.88)',
+                    textColor: '#38bdf8',
+                    fontSize: 15
+                });
+
+                // 3. Spawn Central Campfire
+                const campfire = cs.spawnObjectIntoScene('Campfire');
+                if (campfire && campfire.mesh) {
+                    campfire.mesh.position.set(0, 0, 0);
+                    campfire.position = { x: 0, y: 0, z: 0 };
+                }
+
+                // 4. Spawn Surrounding Pine Trees (Forest perimeter)
+                const treeCoordinates = [
+                    { x: -15, z: -15 }, { x: 0, z: -20 }, { x: 15, z: -15 },
+                    { x: -22, z: 0 }, { x: 22, z: 0 },
+                    { x: -16, z: 16 }, { x: 0, z: 22 }, { x: 16, z: 16 },
+                    { x: -30, z: -10 }, { x: 30, z: 10 }, { x: -28, z: 25 }, { x: 25, z: -25 }
+                ];
+                treeCoordinates.forEach(coord => {
+                    const tree = cs.spawnObjectIntoScene('Pine Tree');
+                    if (tree && tree.mesh) {
+                        tree.mesh.position.set(coord.x, 0, coord.z);
+                        tree.position = { x: coord.x, y: 0, z: coord.z };
+                    }
+                });
+
+                // 5. Spawn Collectible Wood Logs scattered in forest
+                const woodPositions = [
+                    { x: -6, z: 4 }, { x: 7, z: -5 }, { x: -8, z: -7 }, { x: 9, z: 6 }
+                ];
+                woodPositions.forEach(wpos => {
+                    const log = cs.spawnObjectIntoScene('Wood Log');
+                    if (log && log.mesh) {
+                        log.mesh.position.set(wpos.x, 0.2, wpos.z);
+                        log.position = { x: wpos.x, y: 0.2, z: wpos.z };
+                    }
+                });
+
+                // 6. Spawn Dark Stalker creature hiding among the trees
+                const stalker = cs.spawnObjectIntoScene('Dark Stalker');
+                if (stalker && stalker.mesh) {
+                    stalker.mesh.position.set(18, 0, 18);
+                    stalker.position = { x: 18, y: 0, z: 18 };
+                }
+
+                // 7. Add Night Progression Master Script to Campfire
+                if (campfire) {
+                    campfire.script = {
+                        trigger: 'onTimer',
+                        timerInterval: 2,
+                        customJsCode: `
+                            var night = (window.__forest_night || 1);
+                            night++;
+                            window.__forest_night = night;
+                            api.gui.setText('NightCounter', '🌙 ÖÖ ' + night + ' / 99\\n🌲 Mets kohiseb... Jää ellu!');
+                        `,
+                        customCode: `
+                            var night = (window.__forest_night || 1);
+                            night++;
+                            window.__forest_night = night;
+                            api.gui.setText('NightCounter', '🌙 ÖÖ ' + night + ' / 99\\n🌲 Mets kohiseb... Jää ellu!');
+                        `,
+                        enabled: true
+                    };
+                    // Test Script Execution / Night increment
+                    cs.executeObjectScript(campfire, { x: 0, y: 0, z: 0 }, 'onTimer', true);
+                }
+
+                // 8. Publish the game natively through publishCurrentGame
+                const publishSuccess = await cs.publishCurrentGame({
+                    title: '99 Nights in the Forest',
+                    description: 'Survive 99 dark nights in the mysterious haunted forest. Gather wood, keep the campfire burning, and survive the creature of the night!',
+                    maxPlayers: 8,
+                    minAge: 7,
+                    ageRating: '7+',
+                    thumbnail: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                    skipPrompt: true,
+                    cheatersPolicy: {
+                        detectFly: true,
+                        detectTeleport: true,
+                        detectMoney: true,
+                        moneyInterval: '5m',
+                        moneyMaxAmount: 1000,
+                        detectAutoClick: true,
+                        detectGodmode: true,
+                        action: 'ban_perm',
+                        sensitivity: 'high',
+                        confirmed: true,
+                        confirmedAt: Date.now()
+                    }
+                });
+
+                // Verify saved in localStorage
+                const userGames = JSON.parse(localStorage.getItem('playard_user_created_games') || '[]');
+                const publishedForestGame = userGames.find(g => g.title === '99 Nights in the Forest');
+
+                return {
+                    ok: true,
+                    placedCount: cs.placedObjects.length,
+                    hasCampfire: !!cs.placedObjects.find(o => (o.name || o.catalogId || '').toLowerCase().includes('campfire')),
+                    hasStalker: !!cs.placedObjects.find(o => (o.name || o.catalogId || '').toLowerCase().includes('stalker')),
+                    hasWoodLogs: cs.placedObjects.filter(o => (o.name || o.catalogId || '').toLowerCase().includes('wood log')).length >= 4,
+                    hasCounterGui: !!counterGui && !!document.getElementById(`gui-${counterGui.id}`),
+                    nightIncremented: (window.__forest_night || 0) >= 2,
+                    publishSuccess: !!publishSuccess,
+                    hasPublishedForestGame: !!publishedForestGame,
+                    publishedGameTitle: publishedForestGame?.title,
+                    publishedGameObjectsCount: publishedForestGame?.sceneData?.objects?.length,
+                    publishedGameEnvMode: publishedForestGame?.sceneData?.envMode
+                };
+            });
+
+            console.log("   '99 Nights in the Forest' Studio Build & Publish Results:", forestResult);
+            if (
+                !forestResult.ok ||
+                !forestResult.hasCampfire ||
+                !forestResult.hasStalker ||
+                !forestResult.hasWoodLogs ||
+                !forestResult.hasCounterGui ||
+                !forestResult.nightIncremented ||
+                !forestResult.hasPublishedForestGame ||
+                forestResult.publishedGameTitle !== '99 Nights in the Forest' ||
+                forestResult.publishedGameEnvMode !== 'night'
+            ) {
+                throw new Error("99 Nights in the Forest verification failed: " + JSON.stringify(forestResult));
+            }
+            console.log("   ✅ '99 Nights in the Forest' built, verified and published successfully in Creator Studio!");
+        }
+
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
         await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 3000 }).catch(() => {});
@@ -5754,6 +5906,10 @@ await (async () => {
             if (!btnFrame || !btnTextFrame || !btnTextBtn || !btnFrameBtn || !btnAddImgBtn || !btnAddImgPanel) {
                 return { error: "Missing screen element buttons in dropdown (Frame, TextFrame, TextButton, FrameButton, img buttons)" };
             }
+
+            // Reset any previous screen elements from earlier tests
+            cs.screenElements.length = 0;
+            cs.renderScreenElements();
 
             // 2. Click buttons to add elements
             btnFrame.click();

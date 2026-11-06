@@ -104,6 +104,61 @@ export function executePlayCustomJs(code: string, group: THREE.Group, playerPos:
             hud: {
                 showMessage: (text: string, title = 'Teade') => state.showPlayDialogMessage(title, text, '💬', 3.5)
             },
+            environment: {
+                setMode: (mode: 'day' | 'night' | 'sunset' | 'horror_fog') => {
+                    if (state.scene) {
+                        if (mode === 'night') {
+                            state.scene.background = new THREE.Color(0x0a0e17);
+                            state.scene.fog = new THREE.FogExp2(0x0a0e17, 0.015);
+                        } else if (mode === 'horror_fog') {
+                            state.scene.background = new THREE.Color(0x05070a);
+                            state.scene.fog = new THREE.FogExp2(0x05070a, 0.04);
+                        } else if (mode === 'sunset') {
+                            state.scene.background = new THREE.Color(0x2c1b18);
+                            state.scene.fog = new THREE.FogExp2(0x2c1b18, 0.012);
+                        } else {
+                            state.scene.background = new THREE.Color(0x87ceeb);
+                            state.scene.fog = new THREE.FogExp2(0x87ceeb, 0.008);
+                        }
+                    }
+                },
+                getMode: () => 'custom',
+                setSkyColor: (hex: number | string) => {
+                    if (state.scene) state.scene.background = new THREE.Color(hex);
+                }
+            },
+            gui: {
+                setText: (elemIdOrName: string, text: string) => {
+                    const el = document.getElementById(`play-gui-${elemIdOrName}`) || document.querySelector(`[data-gui-name="${elemIdOrName}"]`);
+                    if (el) {
+                        const span = el.querySelector('span, div') || el;
+                        (span as HTMLElement).innerText = text;
+                    }
+                }
+            },
+            findObject: (nameOrId: string) => {
+                const target = state.sceneObjects.find(p => p.userData?.id === nameOrId || p.userData?.name?.toLowerCase() === nameOrId.toLowerCase());
+                if (!target) return null;
+                return {
+                    id: target.userData?.id,
+                    name: target.userData?.name,
+                    getPosition: () => ({ x: target.position.x, y: target.position.y, z: target.position.z }),
+                    move: (dx = 0, dy = 0, dz = 0) => {
+                        target.position.x += dx;
+                        target.position.y += dy;
+                        target.position.z += dz;
+                    },
+                    setColor: (hex: string) => {
+                        target.traverse((child) => {
+                            if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).material) {
+                                const mat = (child as THREE.Mesh).material;
+                                if (Array.isArray(mat)) mat.forEach(m => (m as any).color?.set(hex));
+                                else (mat as any).color?.set(hex);
+                            }
+                        });
+                    }
+                };
+            },
             object: {
                 getId: () => group.userData?.id,
                 getName: () => group.userData?.name || 'Objekt',
@@ -212,16 +267,29 @@ export function checkGameplayTriggers(state: PlayState, promptPurchase: (objData
             }
         }
 
-        // 4. Object Custom Scripts (onPlayerTouch vs onInteract)
+        // 4. Object Custom Scripts (onPlayerTouch, onInteract, onTimer, onStart)
         if (u.script && u.script.enabled !== false) {
+            const isTimerTrigger = u.script.trigger === 'onTimer';
+            const isStartTrigger = u.script.trigger === 'onStart';
             const isInteractTrigger = u.script.trigger === 'onInteract';
             const triggerKeyLetter = (u.script.promptKey || 'E').toUpperCase();
             const keyName = 'Key' + triggerKeyLetter;
             const isKeyPressed = isInteractTrigger && (Boolean(state.keys[keyName]) || (triggerKeyLetter === 'E' && Boolean(state.keys['KeyE'])));
 
-            const shouldTrigger = isInteractTrigger
-                ? (distSq < 16.0 && isKeyPressed)
-                : (isTouching || distSq < 3.5);
+            let shouldTrigger = false;
+            if (isStartTrigger) {
+                if (!u._lastScriptTrigger) shouldTrigger = true;
+            } else if (isTimerTrigger) {
+                const intervalMs = (u.script.timerInterval ?? u.script.cooldown ?? 3) * 1000;
+                const now = Date.now();
+                if (now - (u._lastScriptTrigger || 0) >= intervalMs) {
+                    shouldTrigger = true;
+                }
+            } else if (isInteractTrigger) {
+                shouldTrigger = (distSq < 16.0 && isKeyPressed);
+            } else {
+                shouldTrigger = (isTouching || distSq < 3.5);
+            }
 
             if (shouldTrigger) {
                 if (isInteractTrigger) {
@@ -229,7 +297,7 @@ export function checkGameplayTriggers(state: PlayState, promptPurchase: (objData
                     if (state.keys['KeyE']) state.keys['KeyE'] = false;
                 }
                 const now = Date.now();
-                const cd = (u.script.cooldown ?? 1.0) * 1000;
+                const cd = isTimerTrigger ? 0 : ((u.script.cooldown ?? 1.0) * 1000);
                 if (now - (u._lastScriptTrigger || 0) >= cd) {
                     u._lastScriptTrigger = now;
                     if (Array.isArray(u.script.actions)) {
@@ -237,8 +305,9 @@ export function checkGameplayTriggers(state: PlayState, promptPurchase: (objData
                             executePlayScriptAction(act, group, pPos, state);
                         }
                     }
-                    if (u.script.customJsCode && u.script.customJsCode.trim()) {
-                        executePlayCustomJs(u.script.customJsCode, group, pPos, state);
+                    const customCode = u.script.customJsCode || (u.script as any).customCode;
+                    if (customCode && customCode.trim()) {
+                        executePlayCustomJs(customCode, group, pPos, state);
                     }
                 }
             }

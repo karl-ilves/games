@@ -105,6 +105,7 @@ import {
     setMapEnvironment,
     getMapEnvironment,
     updateMapEnvironmentUI,
+    setDayNightMode,
     activeSeaConfig
 } from '../world/environment';
 import { saveUndoSnapshot } from '../systems/undoRedo';
@@ -141,7 +142,8 @@ import {
     pullStartPos,
     pullHandleScreenDir,
     recordPullStartState,
-    setPullActiveAxis
+    setPullActiveAxis,
+    rotateGizmoHandles
 } from '../systems/gizmos';
 import { updateGameplayHUD, exitVehicle } from '../systems/physics';
 import { executeObjectScript, openScriptModal, updateScriptInspectorDisplay } from '../systems/scriptRunner';
@@ -271,6 +273,29 @@ export function spawnObjectIntoScene(itemOrId: CatalogItem | string) {
         placed.gameItemType = 'goal';
     } else if (lowerName.includes('checkpoint')) {
         placed.gameItemType = 'checkpoint';
+    } else if (lowerName.includes('campfire') || lowerName.includes('lõke')) {
+        placed.gameItemType = 'npc';
+        placed.script = {
+            trigger: 'onInteract',
+            promptKey: 'E',
+            promptText: 'Soojenda lõkke ääres / Lisa puid (+25 HP)',
+            cooldown: 2.0,
+            enabled: true,
+            actions: [{ type: 'heal', amount: 25 }, { type: 'play_sound', soundName: 'powerup' }]
+        };
+    } else if (lowerName.includes('wood log') || lowerName.includes('puit') || lowerName.includes('halg')) {
+        placed.isHoldable = true;
+    } else if (lowerName.includes('stalker') || lowerName.includes('monster') || lowerName.includes('koll')) {
+        placed.gameItemType = 'enemy';
+        placed.enemyData = {
+            name: 'Pime Metsakoll (Stalker)',
+            health: 80,
+            maxHealth: 80,
+            damage: 25,
+            speed: 3.5
+        };
+        placed.dealsDamage = true;
+        placed.damageAmount = 25;
     }
 
     if (catalogItem.customModelData) {
@@ -359,6 +384,7 @@ export function serializeCurrentScene() {
         playerMaxAsma: asmaInput ? (parseInt(asmaInput.value, 10) || 100) : playerMaxAsma,
         isAsmaVisible: asmaVisSelect ? (asmaVisSelect.value === 'visible') : isAsmaVisible,
         mapType: activeSeaConfig ? 'sea' : 'land',
+        envMode: csState.currentEnvMode || 'day',
         seaConfig: activeSeaConfig ? JSON.parse(JSON.stringify(activeSeaConfig)) : null,
         objects: placedObjects.map(p => {
             const pos = p.movement?.origin
@@ -688,11 +714,14 @@ export async function publishCurrentGame(options?: {
     ageRating?: string;
     thumbnail?: string;
     cheatersPolicy?: any;
+    skipPrompt?: boolean;
 }) {
     // Confirmation prompt ("are you shure")
-    const isConfirmed = confirm('Are you sure you want to publish this game?');
-    if (!isConfirmed) {
-        return false;
+    if (!options?.skipPrompt) {
+        const isConfirmed = confirm('Are you sure you want to publish this game?');
+        if (!isConfirmed) {
+            return false;
+        }
     }
 
     const profile = getCurrentUserProfile();
@@ -760,9 +789,11 @@ export async function publishCurrentGame(options?: {
         autoSaveDraft();
 
         // Finish a game notification and option to play now or stay in Studio
-        const playNow = confirm(`🎉 Finish a game!\n\n"${title}" has been published and is now live and public for everyone to play!\n\nPress OK to play your game now, or Cancel to stay in Creator Studio.`);
-        if (playNow) {
-            window.location.href = `../play/index.html?id=${res.gameId}`;
+        if (!options?.skipPrompt) {
+            const playNow = confirm(`🎉 Finish a game!\n\n"${title}" has been published and is now live and public for everyone to play!\n\nPress OK to play your game now, or Cancel to stay in Creator Studio.`);
+            if (playNow) {
+                window.location.href = `../play/index.html?id=${res.gameId}`;
+            }
         }
         return true;
     } else {
@@ -787,6 +818,9 @@ export function loadSceneFromData(sceneData: any) {
         }
     } else {
         removeSea();
+    }
+    if (sceneData.envMode) {
+        setDayNightMode(sceneData.envMode);
     }
     updateMapEnvironmentUI();
 
