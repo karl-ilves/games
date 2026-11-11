@@ -526,6 +526,82 @@ function _renderGenderInUI(profile: UserProfile) {
     }
 }
 
+export function showMobileExperienceWarning() {
+    if (typeof document === 'undefined') return;
+    const existing = document.getElementById('modal-mobile-warning');
+    if (existing) {
+        existing.style.display = 'flex';
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-mobile-warning';
+    modal.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 15, 25, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100000;
+        padding: 20px;
+    `;
+
+    const card = document.createElement('div');
+    card.id = 'mobile-warning-card';
+    card.style.cssText = `
+        background: linear-gradient(135deg, #1e272e, #131920);
+        border: 2px solid #f39c12;
+        border-radius: 18px;
+        max-width: 440px;
+        width: 100%;
+        padding: 24px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(243, 156, 18, 0.35);
+        color: #ffffff;
+        text-align: center;
+        font-family: inherit;
+        animation: mobileWarningPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    `;
+
+    card.innerHTML = `
+        <div style="font-size: 3rem; margin-bottom: 12px; filter: drop-shadow(0 0 12px rgba(243, 156, 18, 0.6));">📱⚠️</div>
+        <h3 id="mobile-warning-title" style="margin: 0 0 10px 0; color: #f39c12; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.5px;">
+            Notice for Mobile Players
+        </h3>
+        <p id="mobile-warning-text" style="color: #f1f2f6; font-size: 0.96rem; line-height: 1.5; margin: 0 0 16px 0; background: rgba(0,0,0,0.3); padding: 12px 14px; border-radius: 10px; border-left: 4px solid #f39c12; text-align: left;">
+            We are sorry, playing on mobile is not very good yet. We are working hard to improve and update it soon!
+        </p>
+        <div style="font-size: 0.82rem; color: #a4b0be; margin-bottom: 20px;">
+            💡 <em>Tip: For the best full 3D experience, try playing on a PC or laptop.</em>
+        </div>
+        <button id="btn-close-mobile-warning" style="
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(243, 156, 18, 0.4);
+            transition: transform 0.15s ease, filter 0.15s ease;
+        ">
+            I Understand / OK
+        </button>
+    `;
+
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    const closeBtn = card.querySelector('#btn-close-mobile-warning');
+    closeBtn?.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+}
+
 export function ensureGlobalOwnerCheckmarkUI() {
     if (typeof document === 'undefined') return;
     const prof = getCurrentUserProfile();
@@ -957,12 +1033,16 @@ export async function initAuth() {
             if (registerFields) registerFields.style.display = 'block';
             if (loginBtn) loginBtn.style.display = 'none';
             if (registerBtn) registerBtn.style.display = 'block';
+
+            // Show mobile warning when switching to create an account
+            showMobileExperienceWarning();
         }
     }
 
     tabLogin?.addEventListener('click', () => switchMode('login'));
     tabCreateAccount?.addEventListener('click', () => switchMode('register'));
     (window as any).__switchAuthMode = switchMode;
+    (window as any).showMobileExperienceWarning = showMobileExperienceWarning;
 
     // 1. Check existing session
     const currentProf = getCurrentUserProfile();
@@ -1395,6 +1475,7 @@ export async function initAuth() {
                 restoreUserGameProgress(profile);
 
                 showMsg(`Account created! You are logged in as ${displayName}.`, 'success');
+                showMobileExperienceWarning();
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
                 if (ageInput) ageInput.value = '';
@@ -1471,6 +1552,7 @@ export async function initAuth() {
                 restoreUserGameProgress(profile);
 
                 showMsg(`Account created! You are logged in as ${displayName}.`, 'success');
+                showMobileExperienceWarning();
                 if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
                 if (ageInput) ageInput.value = '';

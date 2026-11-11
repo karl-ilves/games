@@ -392,6 +392,37 @@ await (async () => {
             throw new Error("Create Account mode must show age, gender, and Create Account button!");
         }
 
+        // 2b. Test Mobile Experience Warning Modal (English warning about mobile gameplay)
+        console.log("   Testing Mobile Experience Warning Modal upon account creation / switch...");
+        const mobileWarningInfo = await page.evaluate(() => {
+            const modal = document.getElementById('modal-mobile-warning');
+            const textEl = document.getElementById('mobile-warning-text');
+            const closeBtn = document.getElementById('btn-close-mobile-warning');
+            const isVisible = modal ? window.getComputedStyle(modal).display !== 'none' : false;
+            const text = textEl ? textEl.textContent || '' : '';
+            return {
+                hasModal: !!modal,
+                isVisible,
+                hasCloseBtn: !!closeBtn,
+                text
+            };
+        });
+        console.log("   Mobile warning modal info:", mobileWarningInfo);
+        if (!mobileWarningInfo.hasModal || !mobileWarningInfo.isVisible) {
+            throw new Error("Mobile warning modal (#modal-mobile-warning) should be displayed when opening Create Account mode!");
+        }
+        if (!mobileWarningInfo.text.toLowerCase().includes('mobile is not very good') || !mobileWarningInfo.text.toLowerCase().includes('update')) {
+            throw new Error(`Mobile warning text does not contain required warning message: "${mobileWarningInfo.text}"`);
+        }
+        // Test dismissing the warning modal
+        await page.click('#btn-close-mobile-warning');
+        await new Promise(r => setTimeout(r, 100));
+        const modalDisplayAfterClose = await page.$eval('#modal-mobile-warning', el => window.getComputedStyle(el).display);
+        if (modalDisplayAfterClose !== 'none') {
+            throw new Error("Expected #modal-mobile-warning to be hidden after clicking close button!");
+        }
+        console.log("   ✅ Mobile experience warning modal verified successfully!");
+
         // 3. Test Emoji Rejection in Create Account mode
         await page.evaluate(() => {
             const userInput = document.getElementById('auth-username');
@@ -520,6 +551,12 @@ await (async () => {
             const el = document.getElementById('user-info');
             return el && window.getComputedStyle(el).display === 'block';
         }, { timeout: 5000 }).catch(() => {});
+        // Dismiss mobile warning modal that pops up upon registration
+        await page.evaluate(() => {
+            const warnBtn = document.getElementById('btn-close-mobile-warning');
+            if (warnBtn) warnBtn.click();
+        });
+        await new Promise(r => setTimeout(r, 100));
         const userInfoDisplay = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
         const userTitle = await page.$eval('#user-email', el => el.textContent);
         const userAgeText = await page.$eval('#user-age-display', el => el.textContent);
@@ -841,6 +878,13 @@ await (async () => {
         if (mmp1CardLocked !== 'true') {
             throw new Error("MMP1 must be locked for 9-year old player!");
         }
+
+        // Dismiss mobile warning modal if open after player9yo registration
+        await page.evaluate(() => {
+            const warnBtn = document.getElementById('btn-close-mobile-warning');
+            if (warnBtn) warnBtn.click();
+        });
+        await new Promise(r => setTimeout(r, 100));
 
         // Test clicking locked Game shows Age Restriction Modal
         await page.click('#card-mmp1-game');
