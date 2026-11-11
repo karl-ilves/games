@@ -663,6 +663,97 @@ export function createObjectMesh(item: CatalogItem, color?: string): THREE.Group
                 leg.position.set(lx, 0.9, 0);
                 group.add(leg);
             });
+        } else if (item.geometryType.includes('cauldron') || item.name.toLowerCase().includes('cauldron') || item.name.toLowerCase().includes('pada') || item.name.toLowerCase().includes('katel')) {
+            // Alchemy Cauldron with glowing green/purple bubbling potion liquid
+            const ironMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.7, metalness: 0.8 });
+            const pot = new THREE.Mesh(new THREE.SphereGeometry(0.8, 14, 12), ironMat);
+            pot.position.y = 0.8;
+            group.add(pot);
+
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.12, 8, 16), ironMat);
+            rim.rotation.x = Math.PI / 2;
+            rim.position.y = 1.15;
+            group.add(rim);
+
+            // Bubbling magical potion liquid surface
+            const potionMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00cc66, emissiveIntensity: 1.6, roughness: 0.1 });
+            const liquid = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.1, 14), potionMat);
+            liquid.position.y = 1.1;
+            group.add(liquid);
+
+            // Tripod legs
+            [-0.45, 0.45].forEach(lx => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.6, 6), ironMat);
+                leg.position.set(lx, 0.3, 0);
+                leg.rotation.z = lx * -0.4;
+                group.add(leg);
+            });
+
+            // Green alchemy PointLight
+            const brewLight = new THREE.PointLight(0x00ff88, 2.0, 8);
+            brewLight.position.set(0, 1.3, 0);
+            group.add(brewLight);
+        } else if (item.geometryType.includes('wand') || item.name.toLowerCase().includes('wand') || item.name.toLowerCase().includes('sau') || item.name.toLowerCase().includes('võlusau')) {
+            // Magic Wand with wood handle and spinning glowing crystal tip
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2714, roughness: 0.6 });
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.2, 8), woodMat);
+            shaft.position.y = 0.6;
+            group.add(shaft);
+
+            // Crystal tip
+            const gemMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 2.0, roughness: 0.1 });
+            const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), gemMat);
+            gem.position.y = 1.3;
+            group.add(gem);
+
+            const gemLight = new THREE.PointLight(0x38bdf8, 1.5, 6);
+            gemLight.position.set(0, 1.3, 0);
+            group.add(gemLight);
+        } else if (item.geometryType.includes('rune') || item.name.toLowerCase().includes('rune') || item.name.toLowerCase().includes('ruun')) {
+            // Ancient Rune Stone with glowing carved glyph
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
+            const monolith = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.8, 0.5), stoneMat);
+            monolith.position.y = 0.9;
+            group.add(monolith);
+
+            // Glowing cyan glyph line
+            const glyphMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+            const glyphV = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.52), glyphMat);
+            glyphV.position.y = 1.0;
+            group.add(glyphV);
+
+            const glyphH = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.52), glyphMat);
+            glyphH.position.y = 1.1;
+            group.add(glyphH);
+        } else if (item.geometryType.includes('ice') || item.name.toLowerCase().includes('ice') || item.name.toLowerCase().includes('jää')) {
+            // Spiky Ice Crystal
+            const iceMat = new THREE.MeshStandardMaterial({ color: 0xa5f3fc, emissive: 0x38bdf8, emissiveIntensity: 0.8, roughness: 0.1, transparent: true, opacity: 0.85 });
+            const crystal = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.6, 5), iceMat);
+            crystal.position.y = 0.8;
+            group.add(crystal);
+
+            const crystal2 = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.1, 5), iceMat);
+            crystal2.position.set(0.3, 0.55, 0.2);
+            crystal2.rotation.z = -0.3;
+            group.add(crystal2);
+        } else if (item.geometryType.includes('mushroom') || item.name.toLowerCase().includes('mushroom') || item.name.toLowerCase().includes('seen')) {
+            // Poison Mushroom with purple cap and glowing toxic spores
+            const stemMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.8 });
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 0.7, 8), stemMat);
+            stem.position.y = 0.35;
+            group.add(stem);
+
+            const capMat = new THREE.MeshStandardMaterial({ color: 0x9333ea, emissive: 0x581c87, emissiveIntensity: 0.9, roughness: 0.4 });
+            const cap = new THREE.Mesh(new THREE.SphereGeometry(0.65, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+            cap.position.y = 0.7;
+            group.add(cap);
+
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+            [-0.25, 0.25].forEach(dx => {
+                const dot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), dotMat);
+                dot.position.set(dx, 0.85, 0.25);
+                group.add(dot);
+            });
         } else if (item.geometryType.includes('rock') || item.geometryType.includes('boulder')) {
             const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 1), material);
             rock.position.y = 0.9;

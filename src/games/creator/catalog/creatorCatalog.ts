@@ -138,10 +138,10 @@ export function generate10000ObjectCatalog() {
         },
         {
             id: 'nature',
-            name: 'Nature',
+            name: 'Nature & Fantasy',
             icon: '🌲',
-            types: ['Pine Tree', 'Oak Tree', 'Campfire', 'Wood Log', 'Dark Stalker', 'Palm Tree', 'Redwood', 'Alpine Rock', 'Granite Boulder', 'Flower Cluster', 'Bush', 'Lily Pad', 'Crystal Peak'],
-            colors: ['#2ecc71', '#27ae60', '#e67e22', '#d35400', '#11161d', '#16a085', '#7f8c8d', '#95a5a6', '#1abc9c', '#34495e']
+            types: ['Pine Tree', 'Oak Tree', 'Campfire', 'Wood Log', 'Dark Stalker', 'Alchemy Cauldron', 'Magic Wand', 'Ancient Rune Stone', 'Ice Crystal', 'Poison Mushroom', 'Palm Tree', 'Redwood', 'Alpine Rock', 'Granite Boulder', 'Flower Cluster', 'Bush', 'Lily Pad', 'Crystal Peak'],
+            colors: ['#2ecc71', '#27ae60', '#e67e22', '#d35400', '#11161d', '#9b59b6', '#3498db', '#f1c40f', '#e74c3c', '#16a085', '#7f8c8d', '#95a5a6', '#1abc9c', '#34495e']
         },
         {
             id: 'city',

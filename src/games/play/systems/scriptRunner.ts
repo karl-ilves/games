@@ -143,6 +143,12 @@ export function executePlayCustomJs(code: string, group: THREE.Group, playerPos:
                     id: target.userData?.id,
                     name: target.userData?.name,
                     getPosition: () => ({ x: target.position.x, y: target.position.y, z: target.position.z }),
+                    setPosition: (x: number, y: number, z: number) => {
+                        target.position.set(x, y, z);
+                    },
+                    setVisible: (vis: boolean) => {
+                        target.visible = vis;
+                    },
                     move: (dx = 0, dy = 0, dz = 0) => {
                         target.position.x += dx;
                         target.position.y += dy;
@@ -158,6 +164,16 @@ export function executePlayCustomJs(code: string, group: THREE.Group, playerPos:
                         });
                     }
                 };
+            },
+            inventory: {
+                hasItem: (itemNameOrId: string) => {
+                    const held = state.heldItemMesh?.userData;
+                    if (held && (held.id === itemNameOrId || (held.name && held.name.toLowerCase().includes(itemNameOrId.toLowerCase())))) return true;
+                    return false;
+                },
+                getHeldItem: () => {
+                    return state.heldItemMesh?.userData?.name || null;
+                }
             },
             object: {
                 getId: () => group.userData?.id,

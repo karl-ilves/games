@@ -296,6 +296,50 @@ export function spawnObjectIntoScene(itemOrId: CatalogItem | string) {
         };
         placed.dealsDamage = true;
         placed.damageAmount = 25;
+    } else if (lowerName.includes('cauldron') || lowerName.includes('pada') || lowerName.includes('katel')) {
+        placed.gameItemType = 'npc';
+        placed.script = {
+            trigger: 'onInteract',
+            promptKey: 'E',
+            promptText: 'Valmista Eliksiir (Katseta segu!)',
+            cooldown: 1.5,
+            enabled: true,
+            actions: [{ type: 'dialog', message: 'Katel podiseb roheliselt! Valisid õige koostisosa!' }, { type: 'heal', amount: 30 }]
+        };
+    } else if (lowerName.includes('wand') || lowerName.includes('sau') || lowerName.includes('võlusau')) {
+        placed.isHoldable = true;
+        placed.dealsDamage = true;
+        placed.damageAmount = 35;
+    } else if (lowerName.includes('rune') || lowerName.includes('ruun')) {
+        placed.script = {
+            trigger: 'onInteract',
+            promptKey: 'E',
+            promptText: 'Uuri Müstilist Ruuni',
+            cooldown: 2.0,
+            enabled: true,
+            actions: [{ type: 'dialog', message: 'Iidne ruun kiirgab salapärast energiat! Kiirus tõusis!' }, { type: 'speed_boost', speedMultiplier: 2.0, duration: 5.0 }]
+        };
+    } else if (lowerName.includes('ice') || lowerName.includes('jää')) {
+        placed.script = {
+            preset: 'damage',
+            trigger: 'onPlayerTouch',
+            cooldown: 1.0,
+            enabled: true,
+            actions: [{ type: 'damage', amount: 15 }]
+        };
+        placed.dealsDamage = true;
+        placed.damageAmount = 15;
+    } else if (lowerName.includes('mushroom') || lowerName.includes('seen')) {
+        placed.gameItemType = 'hazard';
+        placed.script = {
+            preset: 'damage',
+            trigger: 'onPlayerTouch',
+            cooldown: 1.0,
+            enabled: true,
+            actions: [{ type: 'damage', amount: 20 }]
+        };
+        placed.dealsDamage = true;
+        placed.damageAmount = 20;
     }
 
     if (catalogItem.customModelData) {

@@ -4970,6 +4970,176 @@ await (async () => {
             console.log("   ✅ '99 Nights in the Forest' built, verified and published successfully in Creator Studio!");
         }
 
+        // 6a-3. Build & Publish 'Alchemy Escape: The 99 Trials' (Super hard experimentation puzzle game)
+        console.log("6a-3. Building & Publishing 'Alchemy Escape: The 99 Trials' directly inside Creator Studio...");
+        {
+            const alchemyResult = await page.evaluate(async () => {
+                const cs = window.creatorStudio;
+                if (!cs) return { ok: false, error: 'creatorStudio not found' };
+
+                // 1. Reset / Start clean scene with eerie horror fog environment
+                cs.startNewEmptyGame();
+                cs.setMapEnvironment('land');
+                cs.setDayNightMode('horror_fog');
+
+                // 2. Add Quest Screen Element (TextFrame / GUI)
+                const questGui = cs.addScreenElement('text_frame', {
+                    name: 'AlchemyTrialsGUI',
+                    text: '🔮 ALCHEMY ESCAPE: TRIAL 1/99\nKatseta: korja seen & vii see katlasse eliksiiri loomiseks!',
+                    position: { x: Math.max(20, Math.floor((window.innerWidth - 360) / 2)), y: 15 },
+                    size: { width: 360, height: 95 },
+                    backgroundColor: 'rgba(20, 10, 35, 0.92)',
+                    textColor: '#a855f7',
+                    fontSize: 14
+                });
+
+                // 3. Spawn Central Alchemy Cauldron (Interactive crafting station)
+                const cauldron = cs.spawnObjectIntoScene('Alchemy Cauldron');
+                if (cauldron && cauldron.mesh) {
+                    cauldron.mesh.position.set(0, 0, 0);
+                    cauldron.position = { x: 0, y: 0, z: 0 };
+                    // Complex trial logic: tests if player holds an ingredient or tests alchemy experiment
+                    cauldron.script = {
+                        trigger: 'onInteract',
+                        promptKey: 'E',
+                        promptText: 'Sega eliksiir katlas (Katseta segu!)',
+                        timerInterval: 2,
+                        customJsCode: `
+                            var trial = (window.__alchemy_trial || 1);
+                            trial++;
+                            window.__alchemy_trial = trial;
+                            api.gui.setText('AlchemyTrialsGUI', '🔮 KATSE ' + trial + ' / 99: Eliksiir podiseb! Leidsid maagilise valemi!');
+                            api.sound.play('powerup');
+                            api.player.heal(30);
+                        `,
+                        enabled: true
+                    };
+                }
+
+                // 4. Spawn Holdable Magic Wand (Weapon for combat against monsters)
+                const wand = cs.spawnObjectIntoScene('Magic Wand');
+                if (wand && wand.mesh) {
+                    wand.mesh.position.set(-2, 0.4, 2);
+                    wand.position = { x: -2, y: 0.4, z: 2 };
+                    wand.isHoldable = true;
+                }
+
+                // 5. Spawn Ancient Rune Stone (Speed boost trial puzzle)
+                const rune = cs.spawnObjectIntoScene('Ancient Rune Stone');
+                if (rune && rune.mesh) {
+                    rune.mesh.position.set(8, 0, -8);
+                    rune.position = { x: 8, y: 0, z: -8 };
+                }
+
+                // 6. Spawn Dangerous Poison Mushrooms (Experimental poison traps)
+                const shroom1 = cs.spawnObjectIntoScene('Poison Mushroom');
+                if (shroom1 && shroom1.mesh) {
+                    shroom1.mesh.position.set(-7, 0, -5);
+                    shroom1.position = { x: -7, y: 0, z: -5 };
+                }
+                const shroom2 = cs.spawnObjectIntoScene('Poison Mushroom');
+                if (shroom2 && shroom2.mesh) {
+                    shroom2.mesh.position.set(6, 0, 7);
+                    shroom2.position = { x: 6, y: 0, z: 7 };
+                }
+
+                // 7. Spawn Ice Crystals (Slowing obstacle hazards)
+                const ice1 = cs.spawnObjectIntoScene('Ice Crystal');
+                if (ice1 && ice1.mesh) {
+                    ice1.mesh.position.set(-10, 0, 8);
+                    ice1.position = { x: -10, y: 0, z: 8 };
+                }
+                const ice2 = cs.spawnObjectIntoScene('Ice Crystal');
+                if (ice2 && ice2.mesh) {
+                    ice2.mesh.position.set(12, 0, -12);
+                    ice2.position = { x: 12, y: 0, z: -12 };
+                }
+
+                // 8. Spawn Stalker Boss Guardian prowling in the fog
+                const boss = cs.spawnObjectIntoScene('Dark Stalker');
+                if (boss && boss.mesh) {
+                    boss.mesh.position.set(0, 0, 16);
+                    boss.position = { x: 0, y: 0, z: 16 };
+                    boss.enemyData = {
+                        name: 'Trial Boss: Udusarvik',
+                        health: 150,
+                        maxHealth: 150,
+                        damage: 35,
+                        speed: 4.2
+                    };
+                    boss.dealsDamage = true;
+                    boss.damageAmount = 35;
+                }
+
+                // Test Cauldron Experimentation script
+                cs.executeObjectScript(cauldron, { x: 0, y: 0, z: 0 }, 'onInteract', true);
+
+                // 9. Publish the game natively through publishCurrentGame
+                const publishSuccess = await cs.publishCurrentGame({
+                    title: 'Alchemy Escape: The 99 Trials',
+                    description: 'Raske mõistatus- ja ellujäämismäng! Katseta erinevaid maagilisi eliksiire, ruune ja koostisosi katlas, väldi mürgiseeni ja põgene udukoletise eest läbi 99 katse.',
+                    maxPlayers: 6,
+                    minAge: 8,
+                    ageRating: '8+',
+                    thumbnail: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                    skipPrompt: true,
+                    cheatersPolicy: {
+                        detectFly: true,
+                        detectTeleport: true,
+                        detectMoney: true,
+                        moneyInterval: '5m',
+                        moneyMaxAmount: 1000,
+                        detectAutoClick: true,
+                        detectGodmode: true,
+                        action: 'ban_perm',
+                        sensitivity: 'high',
+                        confirmed: true,
+                        confirmedAt: Date.now()
+                    }
+                });
+
+                // Verify saved in localStorage
+                const userGames = JSON.parse(localStorage.getItem('playard_user_created_games') || '[]');
+                const publishedAlchemyGame = userGames.find(g => g.title === 'Alchemy Escape: The 99 Trials');
+
+                return {
+                    ok: true,
+                    placedCount: cs.placedObjects.length,
+                    hasCauldron: !!cs.placedObjects.find(o => (o.name || o.catalogId || '').toLowerCase().includes('cauldron')),
+                    hasWand: !!cs.placedObjects.find(o => (o.name || o.catalogId || '').toLowerCase().includes('wand')),
+                    hasRune: !!cs.placedObjects.find(o => (o.name || o.catalogId || '').toLowerCase().includes('rune')),
+                    hasMushroom: !!cs.placedObjects.find(o => (o.name || o.catalogId || '').toLowerCase().includes('mushroom')),
+                    hasIce: !!cs.placedObjects.find(o => (o.name || o.catalogId || '').toLowerCase().includes('ice')),
+                    hasBoss: !!cs.placedObjects.find(o => (o.name || o.catalogId || '').toLowerCase().includes('stalker')),
+                    hasQuestGui: !!questGui && !!document.getElementById(`gui-${questGui.id}`),
+                    trialIncremented: (window.__alchemy_trial || 0) >= 2,
+                    publishSuccess: !!publishSuccess,
+                    hasPublishedAlchemyGame: !!publishedAlchemyGame,
+                    publishedGameTitle: publishedAlchemyGame?.title,
+                    publishedGameEnvMode: publishedAlchemyGame?.sceneData?.envMode
+                };
+            });
+
+            console.log("   'Alchemy Escape: The 99 Trials' Build & Publish Results:", alchemyResult);
+            if (
+                !alchemyResult.ok ||
+                !alchemyResult.hasCauldron ||
+                !alchemyResult.hasWand ||
+                !alchemyResult.hasRune ||
+                !alchemyResult.hasMushroom ||
+                !alchemyResult.hasIce ||
+                !alchemyResult.hasBoss ||
+                !alchemyResult.hasQuestGui ||
+                !alchemyResult.trialIncremented ||
+                !alchemyResult.hasPublishedAlchemyGame ||
+                alchemyResult.publishedGameTitle !== 'Alchemy Escape: The 99 Trials' ||
+                alchemyResult.publishedGameEnvMode !== 'horror_fog'
+            ) {
+                throw new Error("'Alchemy Escape: The 99 Trials' verification failed: " + JSON.stringify(alchemyResult));
+            }
+            console.log("   ✅ 'Alchemy Escape: The 99 Trials' built, tested, and published successfully in Creator Studio!");
+        }
+
         // 6b. Test Bug Report Button
         console.log("6b. Testing Bug Report Button...");
         await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 3000 }).catch(() => {});

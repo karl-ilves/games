@@ -168,6 +168,15 @@ export function executeScriptCustomCode(obj: PlacedObject, code: string, playerP
                     id: target.id,
                     name: target.name,
                     getPosition: () => ({ x: target.mesh.position.x, y: target.mesh.position.y, z: target.mesh.position.z }),
+                    setPosition: (x: number, y: number, z: number) => {
+                        target.mesh.position.set(x, y, z);
+                        target.position.x = x;
+                        target.position.y = y;
+                        target.position.z = z;
+                    },
+                    setVisible: (vis: boolean) => {
+                        target.mesh.visible = vis;
+                    },
                     move: (dx = 0, dy = 0, dz = 0) => {
                         target.mesh.position.x += dx;
                         target.mesh.position.y += dy;
@@ -187,6 +196,17 @@ export function executeScriptCustomCode(obj: PlacedObject, code: string, playerP
                         });
                     }
                 };
+            },
+            inventory: {
+                hasItem: (itemNameOrId: string) => {
+                    const held = csState.playerInventory[csState.equippedInventoryIndex];
+                    if (held && (held.id === itemNameOrId || (held.name && held.name.toLowerCase().includes(itemNameOrId.toLowerCase())))) return true;
+                    return csState.playerInventory.some(item => item && (item.id === itemNameOrId || (item.name && item.name.toLowerCase().includes(itemNameOrId.toLowerCase()))));
+                },
+                getHeldItem: () => {
+                    const held = csState.playerInventory[csState.equippedInventoryIndex];
+                    return held ? held.name : null;
+                }
             },
             object: {
                 getId: () => obj.id,
