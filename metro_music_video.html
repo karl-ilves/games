@@ -176,17 +176,18 @@
             await audio.play();
             isStarted = true;
 
-            // Combine fxCanvas stream + audio stream
-            const canvasStream = fxCanvas.captureStream(60);
+            // Combine fxCanvas stream + audio stream (30 FPS for optimal encoding and size)
+            const canvasStream = fxCanvas.captureStream(30);
             const combinedStream = new MediaStream([
                 ...canvasStream.getVideoTracks(),
                 ...audioDestination.stream.getAudioTracks()
             ]);
 
+            // Total bitrate ~600 kbps (video 520k + audio 96k) -> 240s = ~17.5 MB (strictly under 20 MB)
             const options = {
                 mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-                videoBitsPerSecond: 2000000,
-                audioBitsPerSecond: 192000
+                videoBitsPerSecond: 520000,
+                audioBitsPerSecond: 96000
             };
 
             const recorder = new MediaRecorder(combinedStream, options);
