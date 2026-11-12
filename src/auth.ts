@@ -57,7 +57,7 @@ export function isUserAdminEmail(email?: string | null): boolean {
 export function isPlayardOwner(email?: string | null): boolean {
     if (!email) return false;
     const clean = email.trim().toLowerCase();
-    return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com';
+    return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com' || clean === 'playard owner' || clean === 'playard owner ✔';
 }
 
 if (typeof window !== 'undefined') {
@@ -1044,10 +1044,24 @@ export async function initAuth() {
     (window as any).__switchAuthMode = switchMode;
     (window as any).showMobileExperienceWarning = showMobileExperienceWarning;
 
+    async function syncUserCloudSession(profile: UserProfile) {
+        try {
+            await yardService.onUserLogin(profile.id, profile.username, profile.email);
+            if (profile.username) {
+                await yardService.fetchUserSavedGamesFromCloud(profile.username);
+            }
+            restoreUserGameProgress(profile);
+            ensureGlobalOwnerCheckmarkUI();
+        } catch (e) {
+            console.warn('syncUserCloudSession warning:', e);
+        }
+    }
+
     // 1. Check existing session
     const currentProf = getCurrentUserProfile();
     if (currentProf) {
         updateAuthDisplay(currentProf);
+        syncUserCloudSession(currentProf).catch(() => {});
         if (hasSupabase && !isTestMode(currentProf.email)) {
             saveProfileToSupabase(currentProf).catch(() => {});
         }
@@ -1072,6 +1086,7 @@ export async function initAuth() {
                 saveLocalProfile(profile);
                 saveProfileToSupabase(profile).catch(() => {});
                 updateAuthDisplay(profile);
+                syncUserCloudSession(profile).catch(() => {});
             } else {
                 updateAuthDisplay(null);
             }

@@ -305,6 +305,18 @@ export class AiTierService {
                 return 'play_ai_2_2';
             }
         } catch (e) {}
+
+        try {
+            const prof = getCurrentUserProfile();
+            if (prof) {
+                const u = (prof.username || '').toLowerCase();
+                const e = (prof.email || '').toLowerCase();
+                if (isPlayardOwner(e) || isPlayardOwner(u) || u === 'playard owner' || prof.isAdmin) {
+                    return 'playard_game_ai_1_2';
+                }
+            }
+        } catch (e) {}
+
         return 'playard_game_ai_1_1';
     }
 
@@ -421,7 +433,7 @@ export class AiTierService {
             const raw = localStorage.getItem(STORAGE_KEY_TIER);
             if (raw) {
                 const data: StoredTierData = JSON.parse(raw);
-                if (data.tier && data.tier !== 'FREE') {
+                if (data.tier) {
                     if (Date.now() > data.expiresAt) {
                         this.setTier('FREE');
                         return 'FREE';
@@ -430,6 +442,22 @@ export class AiTierService {
                 }
             }
         } catch (e) {}
+
+        try {
+            const prof = getCurrentUserProfile();
+            if (prof) {
+                const u = (prof.username || '').toLowerCase();
+                const e = (prof.email || '').toLowerCase();
+                if (isPlayardOwner(e) || isPlayardOwner(u) || u === 'playard owner' || prof.isAdmin) {
+                    return 'VIP';
+                }
+            }
+        } catch (e) {}
+
+        if (yardService.hasItem('ai_tier_vip')) return 'VIP';
+        if (yardService.hasItem('ai_tier_plus')) return 'PLUS';
+        if (yardService.hasItem('ai_tier_pro')) return 'PRO';
+
         return 'FREE';
     }
 

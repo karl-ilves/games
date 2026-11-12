@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { friendService } from './friends/friendService';
-import { getCurrentUserProfile } from '../auth';
+import { getCurrentUserProfile, isPlayardOwner } from '../auth';
+import { setUserPlusTier } from './plusMembership';
 
 function isTestMode(): boolean {
     if (typeof window !== 'undefined') {
@@ -467,14 +468,22 @@ class YardService {
                 // Restore game progress encoded in inventory metadata
                 this.restoreCrossGameMetadata(mergedInventory);
 
+                // Fetch user saved games from cloud
+                if (this.currentUserUsername) {
+                    await this.fetchUserSavedGamesFromCloud(this.currentUserUsername);
+                }
+
                 this.saveLocally(this.data);
                 this.notifyListeners();
 
                 // If local had more yards than cloud, push the higher local yards back to cloud
-                if (this.data.yards > yardRecord.yards) {
+                if (this.data.yards > yardRecord.yards || this.isOwnerUser()) {
                     await this.saveToCloud();
                 }
             } else {
+                if (this.currentUserUsername) {
+                    await this.fetchUserSavedGamesFromCloud(this.currentUserUsername);
+                }
                 const { data: progRecord } = await supabase
                     .from('user_progress')
                     .select('yards')
@@ -500,15 +509,17 @@ class YardService {
 
     private restoreCrossGameMetadata(inventory: string[]) {
         try {
+            const isOwner = this.isOwnerUser();
             for (const item of inventory) {
                 if (item.startsWith('meta_train_money:')) {
                     const val = parseInt(item.replace('meta_train_money:', ''), 10);
                     if (!isNaN(val)) {
+                        const finalVal = isOwner ? Math.max(val, 100000) : val;
                         const cur = parseInt(localStorage.getItem('playard_train_money') || '0', 10);
-                        if (val > cur) {
-                            localStorage.setItem('playard_train_money', val.toString());
-                            localStorage.setItem('rongimäng', val.toString());
-                            localStorage.setItem('ronginäng', val.toString());
+                        if (finalVal > cur || isOwner) {
+                            localStorage.setItem('playard_train_money', finalVal.toString());
+                            localStorage.setItem('rongimäng', finalVal.toString());
+                            localStorage.setItem('ronginäng', finalVal.toString());
                         }
                     }
                 } else if (item.startsWith('meta_war_money:')) {
@@ -519,6 +530,43 @@ class YardService {
                             localStorage.setItem('playard_war_game_money', val.toString());
                         }
                     }
+                } else if (item.startsWith('meta_racing_save:')) {
+                    try {
+                        const racingJson = item.replace('meta_racing_save:', '');
+                        const parsed = JSON.parse(racingJson);
+                        if (parsed && typeof parsed === 'object') {
+                            localStorage.setItem('racingSave', racingJson);
+                            if (this.currentUserUsername) {
+                                localStorage.setItem(`playard_racingSave_user_${this.currentUserUsername.toLowerCase()}`, racingJson);
+                            }
+                            if (this.currentUserId) {
+                                localStorage.setItem(`playard_racingSave_user_${this.currentUserId}`, racingJson);
+                            }
+                        }
+                    } catch (e) {}
+                } else if (item.startsWith('meta_plus_tier:')) {
+                    try {
+                        const tier = item.replace('meta_plus_tier:', '') as any;
+                        if (tier && this.currentUserUsername) {
+                            setUserPlusTier(this.currentUserUsername, tier);
+                        }
+                    } catch (e) {}
+                } else if (item.startsWith('meta_ai_tier:')) {
+                    try {
+                        const tier = item.replace('meta_ai_tier:', '');
+                        if (tier === 'VIP' || tier === 'PLUS' || tier === 'PRO') {
+                            const subData = {
+                                tier,
+                                subscribedAt: Date.now(),
+                                expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000
+                            };
+                            localStorage.setItem('playard_ai_tier_subscription', JSON.stringify(subData));
+                            if (tier === 'VIP' || isOwner) {
+                                localStorage.setItem('playard_ai_selected_model', 'playard_game_ai_1_2');
+                            }
+                            window.dispatchEvent(new CustomEvent('playard_ai_tier_changed', { detail: { tier } }));
+                        }
+                    } catch (e) {}
                 } else if (item.startsWith('meta_avatar_config:')) {
                     try {
                         const avatarJson = item.replace('meta_avatar_config:', '');
@@ -526,6 +574,9 @@ class YardService {
                         if (parsed && typeof parsed === 'object') {
                             const uKey = this.currentUserId || 'guest';
                             localStorage.setItem(`playard_avatar_config_${uKey}`, avatarJson);
+                            if (this.currentUserUsername) {
+                                localStorage.setItem(`playard_avatar_config_${this.currentUserUsername.toLowerCase()}`, avatarJson);
+                            }
                             localStorage.setItem('playard_avatar_config_guest', avatarJson);
                             const avService = (window as any).playardAvatar;
                             if (avService && typeof avService.applyConfigFromCloud === 'function') {
@@ -534,6 +585,22 @@ class YardService {
                         }
                     } catch (e) {}
                 }
+            }
+
+            // Restore AI Tier if inventory contains tier flags
+            if (inventory.includes('ai_tier_vip') || isOwner) {
+                const subData = { tier: 'VIP', subscribedAt: Date.now(), expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000 };
+                localStorage.setItem('playard_ai_tier_subscription', JSON.stringify(subData));
+                localStorage.setItem('playard_ai_selected_model', 'playard_game_ai_1_2');
+                window.dispatchEvent(new CustomEvent('playard_ai_tier_changed', { detail: { tier: 'VIP' } }));
+            } else if (inventory.includes('ai_tier_plus')) {
+                const subData = { tier: 'PLUS', subscribedAt: Date.now(), expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 };
+                localStorage.setItem('playard_ai_tier_subscription', JSON.stringify(subData));
+                window.dispatchEvent(new CustomEvent('playard_ai_tier_changed', { detail: { tier: 'PLUS' } }));
+            } else if (inventory.includes('ai_tier_pro')) {
+                const subData = { tier: 'PRO', subscribedAt: Date.now(), expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 };
+                localStorage.setItem('playard_ai_tier_subscription', JSON.stringify(subData));
+                window.dispatchEvent(new CustomEvent('playard_ai_tier_changed', { detail: { tier: 'PRO' } }));
             }
         } catch (e) {}
     }
@@ -568,8 +635,20 @@ class YardService {
             }
 
             if (targetUserId && uuidRegex.test(targetUserId)) {
+                const isOwner = this.isOwnerUser();
+
+                // If owner, guarantee VIP AI and infinite items
+                if (isOwner) {
+                    if (!this.data.inventory.includes('ai_tier_vip')) {
+                        this.data.inventory.push('ai_tier_vip');
+                    }
+                    if (!this.data.inventory.includes('owner_vip_pass')) {
+                        this.data.inventory.push('owner_vip_pass');
+                    }
+                }
+
                 // Ensure current game progress is represented in inventory metadata
-                const trainMoney = localStorage.getItem('playard_train_money') || localStorage.getItem('rongimäng');
+                const trainMoney = localStorage.getItem('playard_train_money') || localStorage.getItem('rongimäng') || (isOwner ? '100000' : null);
                 if (trainMoney) {
                     const trainMeta = `meta_train_money:${trainMoney}`;
                     this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_train_money:'));
@@ -586,6 +665,7 @@ class YardService {
                 // Ensure current avatar configuration is represented in inventory metadata
                 const uKey = targetUserId || this.currentUserId || 'guest';
                 const rawAvatar = localStorage.getItem(`playard_avatar_config_${uKey}`) ||
+                                  (this.currentUserUsername ? localStorage.getItem(`playard_avatar_config_${this.currentUserUsername.toLowerCase()}`) : null) ||
                                   localStorage.getItem('playard_avatar_config_guest');
                 if (rawAvatar) {
                     const avatarMeta = `meta_avatar_config:${rawAvatar}`;
@@ -593,9 +673,51 @@ class YardService {
                     this.data.inventory.push(avatarMeta);
                 }
 
+                // Ensure Racing Simulator save is represented in metadata
+                const racingSave = localStorage.getItem('racingSave') ||
+                                   (this.currentUserUsername ? localStorage.getItem(`playard_racingSave_user_${this.currentUserUsername.toLowerCase()}`) : null) ||
+                                   localStorage.getItem(`playard_racingSave_user_${uKey}`);
+                if (racingSave) {
+                    const racingMeta = `meta_racing_save:${racingSave}`;
+                    this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_racing_save:'));
+                    this.data.inventory.push(racingMeta);
+                }
+
+                // Ensure Plus membership tier is represented
+                if (this.currentUserUsername) {
+                    try {
+                        const plusRaw = localStorage.getItem('playard_plus_memberships');
+                        if (plusRaw) {
+                            const plusMap = JSON.parse(plusRaw);
+                            const tier = plusMap[this.currentUserUsername.toLowerCase()];
+                            if (tier) {
+                                const plusMeta = `meta_plus_tier:${tier}`;
+                                this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_plus_tier:'));
+                                this.data.inventory.push(plusMeta);
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                // Ensure AI tier subscription is represented
+                try {
+                    const aiTierRaw = localStorage.getItem('playard_ai_tier_subscription');
+                    if (aiTierRaw) {
+                        const parsedAi = JSON.parse(aiTierRaw);
+                        if (parsedAi?.tier) {
+                            const aiMeta = `meta_ai_tier:${parsedAi.tier}`;
+                            this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_ai_tier:'));
+                            this.data.inventory.push(aiMeta);
+                        }
+                    } else if (isOwner) {
+                        this.data.inventory = this.data.inventory.filter(i => !i.startsWith('meta_ai_tier:'));
+                        this.data.inventory.push('meta_ai_tier:VIP');
+                    }
+                } catch (e) {}
+
                 const payload = {
                     user_id: targetUserId,
-                    yards: this.data.yards,
+                    yards: this.hasInfiniteYards() ? 999999999 : this.data.yards,
                     streak: this.data.streak,
                     last_claim_timestamp: this.data.lastClaimTimestamp,
                     inventory: this.data.inventory,
@@ -606,7 +728,7 @@ class YardService {
                 try {
                     await supabase.from('user_progress').upsert({
                         user_id: targetUserId,
-                        yards: this.data.yards
+                        yards: this.hasInfiniteYards() ? 999999999 : this.data.yards
                     });
                 } catch (e) {}
             }
@@ -617,18 +739,21 @@ class YardService {
 
     private isOwnerUser(): boolean {
         let email = this.currentUserEmail;
-        if (!email) {
+        let username = this.currentUserUsername;
+        if (!email || !username) {
             try {
                 const profRaw = localStorage.getItem('playard_current_user_profile');
                 if (profRaw) {
                     const prof = JSON.parse(profRaw);
-                    email = prof.email || null;
+                    email = email || prof.email || null;
+                    username = username || prof.username || null;
                 }
             } catch (e) {}
         }
-        if (!email) return false;
-        const clean = email.trim().toLowerCase();
-        return clean === '1karl.ilves@gmail.com' || clean === '1karl.ilves@gmailo.com' || clean === '1karl.iles@gmail.com';
+        if (isPlayardOwner(email) || isPlayardOwner(username)) return true;
+        const cleanEmail = (email || '').trim().toLowerCase();
+        const cleanUser = (username || '').trim().toLowerCase();
+        return cleanEmail === '1karl.ilves@gmail.com' || cleanEmail === '1karl.ilves@gmailo.com' || cleanEmail === '1karl.iles@gmail.com' || cleanUser === 'playard owner' || cleanUser === 'playard owner ✔';
     }
 
     private isMinionBananaUser(targetUsername?: string | null): boolean {
@@ -1655,6 +1780,56 @@ class YardService {
         return [];
     }
 
+    public async fetchUserSavedGamesFromCloud(username?: string | null): Promise<any[]> {
+        const u = username || this.currentUserUsername;
+        if (!u || !supabase || isTestMode()) {
+            return this.getUserSavedGames(u);
+        }
+        try {
+            const { data, error } = await supabase
+                .from('user_created_games')
+                .select('*')
+                .ilike('creator_username', u.trim());
+
+            if (!error && Array.isArray(data) && data.length > 0) {
+                const currentLocal = this.getUserSavedGames(u);
+                const localMap = new Map<string, any>();
+                currentLocal.forEach(g => {
+                    const k = (g.id || g.title || '').toString();
+                    if (k) localMap.set(k, g);
+                });
+
+                data.forEach(d => {
+                    if (d.category === 'friend_request' || d.category === 'friend_relation') return;
+                    const sceneData = d.scene_data || {};
+                    const gameObj = {
+                        ...sceneData,
+                        id: d.id,
+                        title: d.title,
+                        category: d.category || 'Adventure',
+                        description: d.description || '',
+                        thumbnail: d.thumbnail || sceneData.thumbnail || '',
+                        status: d.status,
+                        updatedAt: new Date(d.updated_at || d.created_at).getTime()
+                    };
+                    const k = (gameObj.id || gameObj.title || '').toString();
+                    if (!localMap.has(k) || (gameObj.updatedAt > (localMap.get(k)?.updatedAt || 0))) {
+                        localMap.set(k, gameObj);
+                    }
+                });
+
+                const mergedList = Array.from(localMap.values());
+                const raw = JSON.stringify(mergedList);
+                localStorage.setItem('playard_user_games_global', raw);
+                localStorage.setItem(`playard_user_games_${u.toLowerCase()}`, raw);
+                return mergedList;
+            }
+        } catch (e) {
+            console.warn('Could not fetch user saved games from cloud:', e);
+        }
+        return this.getUserSavedGames(u);
+    }
+
     public saveUserGame(username: string | null, gameData: any) {
         if (!gameData) return;
         this.saveDraftGame(username, gameData);
@@ -1695,6 +1870,57 @@ class YardService {
             }
         } catch (e) {
             console.warn(e);
+        }
+
+        // Also push to Supabase cloud if connected
+        if (supabase && !isTestMode()) {
+            (async () => {
+                try {
+                    const u = username || this.currentUserUsername || 'creator';
+                    let targetUserId = this.currentUserId;
+                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    if (!targetUserId || !uuidRegex.test(targetUserId)) {
+                        if (this.isOwnerUser()) targetUserId = '5cc22da5-ea52-4623-8978-09a2c33bc5b2';
+                    }
+                    if (targetUserId && uuidRegex.test(targetUserId)) {
+                        // Check if game already exists in user_created_games
+                        let cloudId = savedEntry.id;
+                        if (!uuidRegex.test(cloudId)) {
+                            // Find existing or generate deterministic UUID or let Supabase insert
+                            const { data: existingRows } = await supabase
+                                .from('user_created_games')
+                                .select('id')
+                                .eq('user_id', targetUserId)
+                                .eq('title', gameTitle)
+                                .limit(1);
+                            if (existingRows && existingRows.length > 0) {
+                                cloudId = existingRows[0].id;
+                            }
+                        }
+
+                        const cloudPayload: any = {
+                            user_id: targetUserId,
+                            creator_username: u,
+                            title: gameTitle,
+                            description: savedEntry.description || '',
+                            category: savedEntry.category || 'Adventure',
+                            thumbnail: savedEntry.thumbnail || '',
+                            scene_data: savedEntry,
+                            status: savedEntry.status || 'saved',
+                            updated_at: new Date().toISOString()
+                        };
+
+                        if (uuidRegex.test(cloudId)) {
+                            cloudPayload.id = cloudId;
+                        }
+
+                        await supabase.from('user_created_games').upsert(cloudPayload);
+                    }
+                    await this.saveToCloud();
+                } catch (err) {
+                    console.warn('Could not save game to cloud:', err);
+                }
+            })();
         }
     }
 

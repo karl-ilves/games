@@ -3139,12 +3139,23 @@ export function startNewEmptyGame(initialEnv: 'land' | 'sea' = 'land') {
         : '✨ Uus tühi mäng loodud! Vali esemeid vasakult kataloogist või küsi AI Assistendilt abi!');
 }
 
-export function renderMySavedGamesModal() {
+export async function renderMySavedGamesModal() {
     const profile = getCurrentUserProfile();
     const listContainer = document.getElementById('my-games-list-container');
     if (!listContainer) return;
 
-    const savedGames = yardService.getUserSavedGames(profile?.username ?? null);
+    let savedGames = yardService.getUserSavedGames(profile?.username ?? null);
+
+    if (savedGames.length === 0 && profile?.username) {
+        listContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; color: #a4b0be;">
+                <div style="font-size: 2.5rem; margin-bottom: 10px;">⏳</div>
+                <h4 style="color: #fff; margin-bottom: 6px;">Otsin pilvesalvestusi...</h4>
+                <p style="font-size: 0.85rem;">Sünkroniseerin sinu mänge pilvest...</p>
+            </div>
+        `;
+        savedGames = await yardService.fetchUserSavedGamesFromCloud(profile.username);
+    }
 
     if (savedGames.length === 0) {
         listContainer.innerHTML = `
