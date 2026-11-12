@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Last Metro - Official Music Video</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body, html {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Montserrat', sans-serif;
+        }
+        #stage {
+            position: relative;
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+        }
+        #bg-canvas, #fx-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1920px;
+            height: 1080px;
+        }
+        #vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1920px;
+            height: 1080px;
+            pointer-events: none;
+            background: radial-gradient(circle at 50% 50%, rgba(10, 15, 26, 0.1) 0%, rgba(5, 8, 15, 0.6) 55%, rgba(0, 0, 0, 0.95) 100%);
+            box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.9);
+        }
+        #header-banner {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .tagline {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 8px;
+            color: #00f2fe;
+            text-shadow: 0 0 15px rgba(0, 242, 254, 0.8);
+            text-transform: uppercase;
+        }
+        .main-title {
+            font-family: 'Cinzel', serif;
+            font-size: 64px;
+            font-weight: 900;
+            letter-spacing: 12px;
+            background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 50%, #64748b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+        }
+        .sub-title {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 5px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        #footer-banner {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+        }
+        .pill-badge {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 40px;
+            padding: 12px 30px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .pill-badge span.icon {
+            font-size: 20px;
+        }
+        .pill-badge.glow {
+            border-color: rgba(255, 215, 0, 0.6);
+            color: #ffd700;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.35);
+        }
+    </style>
+</head>
+<body>
+    <div id="stage">
+        <canvas id="bg-canvas" width="1920" height="1080"></canvas>
+        <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+        <div id="vignette"></div>
+
+        <div id="header-banner">
+            <div class="tagline">Official Soundtrack · Playard 3D Mystery</div>
+            <div class="main-title">LAST METRO</div>
+            <div class="sub-title">ORIGINAL GAME SOUNDTRACK</div>
+        </div>
+
+        <div id="footer-banner">
+            <div class="pill-badge glow"><span class="icon">🎮</span> PLAY AT PLAYARD GAMES</div>
+            <div class="pill-badge"><span class="icon">🚇</span> 3D MYSTERY ADVENTURE</div>
+            <div class="pill-badge"><span class="icon">🎧</span> HIGH FIDELITY AUDIO</div>
+        </div>
+    </div>
+
+    <audio id="audio" src="public/audio/last_metro.mp3" preload="auto" crossorigin="anonymous"></audio>
+
+    <script>
+        const audio = document.getElementById('audio');
+        const bgCanvas = document.getElementById('bg-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        const fxCanvas = document.getElementById('fx-canvas');
+        const fxCtx = fxCanvas.getContext('2d');
+
+        const bgImg = new Image();
+        bgImg.src = 'metro_clean_bg.jpg';
+
+        let audioCtx, analyser, audioSource;
+        let dataArray, bufferLength;
+        let isStarted = false;
+        let audioDestination;
+
+        function initAudio() {
+            if (audioCtx) return;
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContextClass();
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+            bufferLength = analyser.frequencyBinCount; // 256
+            dataArray = new Uint8Array(bufferLength);
+
+            audioSource = audioCtx.createMediaElementSource(audio);
+            audioDestination = audioCtx.createMediaStreamDestination();
+
+            audioSource.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            analyser.connect(audioDestination);
+        }
+
+        window.startPlaybackAndRecording = async function(maxDurationSec = 239) {
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            await audio.play();
+            isStarted = true;
+
+            // Combine fxCanvas stream + audio stream
+            const canvasStream = fxCanvas.captureStream(60);
+            const combinedStream = new MediaStream([
+                ...canvasStream.getVideoTracks(),
+                ...audioDestination.stream.getAudioTracks()
+            ]);
+
+            const options = {
+                mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+                videoBitsPerSecond: 2000000,
+                audioBitsPerSecond: 192000
+            };
+
+            const recorder = new MediaRecorder(combinedStream, options);
+            const chunks = [];
+
+            recorder.ondataavailable = e => {
+                if (e.data && e.data.size > 0) chunks.push(e.data);
+            };
+
+            const recordingFinishedPromise = new Promise(resolve => {
+                recorder.onstop = async () => {
+                    const blob = new Blob(chunks, { type: 'video/mp4' });
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        window.__recordedDataUrl = reader.result;
+                        resolve(reader.result);
+                    };
+                    reader.readAsDataURL(blob);
+                };
+            });
+
+            recorder.start(1000);
+
+            // Auto stop when song ends or maxDurationSec reached
+            const timeout = setTimeout(() => {
+                if (recorder.state === 'recording') recorder.stop();
+            }, (maxDurationSec + 1) * 1000);
+
+            audio.onended = () => {
+                clearTimeout(timeout);
+                if (recorder.state === 'recording') recorder.stop();
+            };
+
+            return recordingFinishedPromise;
+        };
+
+        // Render loop
+        let startTime = performance.now();
+        const particles = [];
+        for (let i = 0; i < 90; i++) {
+            particles.push({
+                x: Math.random() * 1920,
+                y: Math.random() * 1080,
+                vx: (Math.random() - 0.5) * 0.4,
+                vy: -Math.random() * 0.8 - 0.2,
+                size: Math.random() * 3 + 1,
+                alpha: Math.random() * 0.6 + 0.2
+            });
+        }
+
+        function render(time) {
+            requestAnimationFrame(render);
+            const elapsed = (time - startTime) * 0.001;
+
+            // 1. Draw Slow Drifting Background
+            if (bgImg.complete && bgImg.naturalWidth > 0) {
+                const zoom = 1.05 + 0.03 * Math.sin(elapsed * 0.15);
+                const panX = 15 * Math.cos(elapsed * 0.12);
+                const panY = 10 * Math.sin(elapsed * 0.1);
+
+                const dw = 1920 * zoom;
+                const dh = 1080 * zoom;
+                const dx = (1920 - dw) / 2 + panX;
+                const dy = (1080 - dh) / 2 + panY;
+
+                bgCtx.clearRect(0, 0, 1920, 1080);
+                bgCtx.drawImage(bgImg, dx, dy, dw, dh);
+                
+                // Color tint for mysterious metro vibe
+                bgCtx.fillStyle = 'rgba(10, 15, 30, 0.45)';
+                bgCtx.fillRect(0, 0, 1920, 1080);
+            }
+
+            // 2. Draw Audio Visualizer on fxCanvas
+            fxCtx.clearRect(0, 0, 1920, 1080);
+            // Draw background copy onto fxCanvas so captureStream includes everything
+            fxCtx.drawImage(bgCanvas, 0, 0);
+
+            // Floating dust particles in metro air
+            fxCtx.fillStyle = 'rgba(255, 230, 150, 0.4)';
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.y < 0) p.y = 1080;
+                if (p.x < 0) p.x = 1920;
+                if (p.x > 1920) p.x = 0;
+                fxCtx.beginPath();
+                fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                fxCtx.fillStyle = `rgba(220, 240, 255, ${p.alpha * 0.6})`;
+                fxCtx.fill();
+            });
+
+            // Get Frequency Data
+            let bass = 0;
+            let mid = 0;
+            let treble = 0;
+
+            if (analyser && isStarted) {
+                analyser.getByteFrequencyData(dataArray);
+                for (let i = 0; i < 16; i++) bass += dataArray[i];
+                bass /= 16; // 0..255
+                for (let i = 16; i < 64; i++) mid += dataArray[i];
+                mid /= 48;
+                for (let i = 64; i < 160; i++) treble += dataArray[i];
+                treble /= 96;
+            } else {
+                bass = 30 + 10 * Math.sin(elapsed * 2);
+                mid = 20 + 8 * Math.cos(elapsed * 3);
+            }
+
+            const bassNorm = bass / 255;
+            const midNorm = mid / 255;
+
+            const cx = 1920 / 2;
+            const cy = 1080 / 2 + 10;
+            const baseRadius = 150 + bassNorm * 22;
+
+            // Outer rhythmic wave equalizer rings
+            const numRays = 120;
+            const angleStep = (Math.PI * 2) / numRays;
+
+            // Draw glowing halo behind logo
+            const haloGrad = fxCtx.createRadialGradient(cx, cy, baseRadius * 0.6, cx, cy, baseRadius * 2.2);
+            haloGrad.addColorStop(0, `rgba(255, 215, 0, ${0.25 + bassNorm * 0.35})`);
+            haloGrad.addColorStop(0.5, `rgba(0, 210, 255, ${0.15 + midNorm * 0.25})`);
+            haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            fxCtx.fillStyle = haloGrad;
+            fxCtx.beginPath();
+            fxCtx.arc(cx, cy, baseRadius * 2.5, 0, Math.PI * 2);
+            fxCtx.fill();
+
+            // Wave equalizer rings (Outer)
+            if (dataArray) {
+                // Secondary circular wave line
+                fxCtx.save();
+                fxCtx.beginPath();
+                for (let i = 0; i <= numRays; i++) {
+                    const idx = i % numRays;
+                    const freqIdx = Math.floor((idx / numRays) * (bufferLength * 0.7));
+                    const val = (dataArray[freqIdx] || 0) / 255;
+                    const r = baseRadius + 45 + val * 70;
+                    const ang = idx * angleStep + elapsed * 0.4;
+                    const x = cx + Math.cos(ang) * r;
+                    const y = cy + Math.sin(ang) * r;
+                    if (i === 0) fxCtx.moveTo(x, y);
+                    else fxCtx.lineTo(x, y);
+                }
+                fxCtx.closePath();
+                fxCtx.strokeStyle = `rgba(0, 242, 254, ${0.6 + midNorm * 0.4})`;
+                fxCtx.lineWidth = 3;
+                fxCtx.shadowColor = '#00f2fe';
+                fxCtx.shadowBlur = 15 + bassNorm * 20;
+                fxCtx.stroke();
+                fxCtx.restore();
+
+                // Primary energetic audio ray equalizer spikes
+                for (let i = 0; i < numRays; i++) {
+                    const freqIdx = Math.floor((i / numRays) * (bufferLength * 0.8));
+                    const val = (dataArray[freqIdx] || 0) / 255;
+                    const rayLen = 15 + val * 85 + bassNorm * 25;
+                    const ang = i * angleStep;
+
+                    const x1 = cx + Math.cos(ang) * (baseRadius + 8);
+                    const y1 = cy + Math.sin(ang) * (baseRadius + 8);
+                    const x2 = cx + Math.cos(ang) * (baseRadius + 8 + rayLen);
+                    const y2 = cy + Math.sin(ang) * (baseRadius + 8 + rayLen);
+
+                    // Dynamic gold-to-cyan gradient on rays
+                    const grad = fxCtx.createLinearGradient(x1, y1, x2, y2);
+                    grad.addColorStop(0, '#ffd700');
+                    grad.addColorStop(0.5, '#ff9f43');
+                    grad.addColorStop(1, '#00f2fe');
+
+                    fxCtx.save();
+                    fxCtx.strokeStyle = grad;
+                    fxCtx.lineWidth = 3.5;
+                    fxCtx.lineCap = 'round';
+                    fxCtx.beginPath();
+                    fxCtx.moveTo(x1, y1);
+                    fxCtx.lineTo(x2, y2);
+                    fxCtx.stroke();
+                    fxCtx.restore();
+                }
+            }
+
+            // 3. Center PLAYARD GAMES Logo Badge
+            fxCtx.save();
+            fxCtx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+            fxCtx.shadowBlur = 35;
+
+            // Outer golden ring
+            fxCtx.beginPath();
+            fxCtx.arc(cx, cy, baseRadius, 0, Math.PI * 2);
+            fxCtx.fillStyle = 'rgba(15, 20, 32, 0.94)';
+            fxCtx.fill();
+
+            fxCtx.lineWidth = 7;
+            const ringGrad = fxCtx.createLinearGradient(cx - baseRadius, cy - baseRadius, cx + baseRadius, cy + baseRadius);
+            ringGrad.addColorStop(0, '#ffeaa7');
+            ringGrad.addColorStop(0.3, '#ffd700');
+            ringGrad.addColorStop(0.7, '#d35400');
+            ringGrad.addColorStop(1, '#ffd700');
+            fxCtx.strokeStyle = ringGrad;
+            fxCtx.shadowColor = '#ffd700';
+            fxCtx.shadowBlur = 20 + bassNorm * 30;
+            fxCtx.stroke();
+            fxCtx.restore();
+
+            // Inner badge decorative border
+            fxCtx.save();
+            fxCtx.beginPath();
+            fxCtx.arc(cx, cy, baseRadius - 12, 0, Math.PI * 2);
+            fxCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            fxCtx.lineWidth = 1.5;
+            fxCtx.setLineDash([8, 6]);
+            fxCtx.stroke();
+            fxCtx.restore();
+
+            // Center Logo Content: Crown + Controller + PLAYARD GAMES
+            fxCtx.save();
+            fxCtx.textAlign = 'center';
+            fxCtx.textBaseline = 'middle';
+
+            // Crown Icon
+            fxCtx.font = '54px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+            fxCtx.fillText('👑', cx, cy - 65);
+
+            // Controller Icon
+            fxCtx.font = '42px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+            fxCtx.fillText('🎮', cx, cy - 12);
+
+            // Brand Text
+            fxCtx.font = '900 25px "Montserrat", sans-serif';
+            fxCtx.letterSpacing = '5px';
+            const textGrad = fxCtx.createLinearGradient(cx - 100, cy, cx + 100, cy);
+            textGrad.addColorStop(0, '#ffffff');
+            textGrad.addColorStop(0.5, '#ffeaa7');
+            textGrad.addColorStop(1, '#ffd700');
+            fxCtx.fillStyle = textGrad;
+            fxCtx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+            fxCtx.shadowBlur = 12;
+            fxCtx.fillText('PLAYARD', cx, cy + 42);
+
+            // Secondary "GAMES" text
+            fxCtx.font = '800 15px "Montserrat", sans-serif';
+            fxCtx.fillStyle = '#00f2fe';
+            fxCtx.shadowColor = '#00f2fe';
+            fxCtx.shadowBlur = 10;
+            fxCtx.fillText('G A M E S', cx, cy + 70);
+
+            fxCtx.restore();
+
+            // Overlay subtle scanlines & vignette on canvas
+            fxCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            for (let y = 0; y < 1080; y += 4) {
+                fxCtx.fillRect(0, y, 1920, 1.5);
+            }
+        }
+
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>
