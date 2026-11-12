@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playard 25s Promo Video Renderer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+        canvas {
+            box-shadow: 0 0 50px rgba(0, 242, 254, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="promo-canvas" width="1080" height="1920"></canvas>
+    <audio id="bg-audio" src="/audio/last_metro.mp3" preload="auto"></audio>
+
+    <script>
+        const canvas = document.getElementById('promo-canvas');
+        const ctx = canvas.getContext('2d');
+        const audio = document.getElementById('bg-audio');
+
+        const W = canvas.width;
+        const H = canvas.height;
+
+        let startTime = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        window.__RECORDING_DONE__ = false;
+        window.__RECORDED_BASE64__ = null;
+
+        // Particle system for background
+        const particles = [];
+        for (let i = 0; i < 70; i++) {
+            particles.push({
+                x: Math.random() * W,
+                y: Math.random() * H,
+                size: Math.random() * 6 + 2,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: -Math.random() * 2 - 1,
+                color: ['#00f2fe', '#4facfe', '#a855f7', '#ffd32a', '#ff4757', '#2ecc71'][Math.floor(Math.random() * 6)],
+                alpha: Math.random() * 0.8 + 0.2
+            });
+        }
+
+        // 25 second storyboard:
+        // Scene 1: 0s - 4.5s -> "WELCOME TO PLAYARD GAMES!" + "Esimene Mängija on Kohal!"
+        // Scene 2: 4.5s - 9.5s -> "19+ EPIC 3D MÄNGU" (Racing, Obby, Train, Waterpark, AI Creator)
+        // Scene 3: 9.5s - 14.5s -> "ROBLOX-STIILIS CREATOR STUDIO" (Ehita, Mängi sõpradega!)
+        // Scene 4: 14.5s - 19.5s -> "PLAYBUX, SHOP & REWARDS" (Võida punkte, ava uusi asju!)
+        // Scene 5: 19.5s - 25.0s -> "TULE MÄNGIMA NÜÜD! playard.games" + Follow & Like!
+
+        function drawScene(t) {
+            ctx.clearRect(0, 0, W, H);
+
+            // Dynamic dark cyber background with pulsing glow
+            const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, 1100);
+            const pulse = Math.sin(t * 3) * 0.15 + 0.85;
+            bgGrad.addColorStop(0, `rgba(18, 24, 48, ${pulse})`);
+            bgGrad.addColorStop(0.5, '#0a0d18');
+            bgGrad.addColorStop(1, '#030509');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Floating Cyber Grid Lines
+            ctx.strokeStyle = 'rgba(0, 242, 254, 0.08)';
+            ctx.lineWidth = 2;
+            const gridOffset = (t * 40) % 80;
+            for (let y = gridOffset; y < H; y += 80) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }
+            for (let x = 0; x < W; x += 80) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, H);
+                ctx.stroke();
+            }
+
+            // Update & Draw Particles
+            particles.forEach(p => {
+                p.y += p.vy;
+                p.x += p.vx;
+                if (p.y < 0) p.y = H;
+                if (p.x < 0) p.x = W;
+                if (p.x > W) p.x = 0;
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(t * 4 + p.x));
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Top Header: PLAYARD LOGO & BADGE
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.roundRect(W / 2 - 240, 100, 480, 80, 40);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 242, 254, 0.5)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.font = '900 38px sans-serif';
+            ctx.fillStyle = '#00f2fe';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#00f2fe';
+            ctx.shadowBlur = 20;
+            ctx.fillText('🎮 PLAYARD GAMES 👑', W / 2, 155);
+            ctx.restore();
+
+            // Progress bar at bottom
+            const progress = Math.min(1, t / 25.0);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.fillRect(80, H - 90, W - 160, 16);
+            const barGrad = ctx.createLinearGradient(80, 0, W - 80, 0);
+            barGrad.addColorStop(0, '#00f2fe');
+            barGrad.addColorStop(0.5, '#a855f7');
+            barGrad.addColorStop(1, '#ff4757');
+            ctx.fillStyle = barGrad;
+            ctx.fillRect(80, H - 90, (W - 160) * progress, 16);
+
+            // Timer display
+            ctx.font = '700 24px sans-serif';
+            ctx.fillStyle = '#8899a6';
+            ctx.textAlign = 'right';
+            const remaining = Math.max(0, 25 - t).toFixed(1);
+            ctx.fillText(`${remaining}s`, W - 80, H - 110);
+
+            // SCENE LOGIC
+            if (t < 4.8) {
+                // SCENE 1: Welcome 1st player celebration
+                const st = t;
+                const scale = Math.min(1.15, 0.8 + st * 0.1);
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 120);
+                ctx.scale(scale, scale);
+
+                // Big celebration trophy badge
+                ctx.font = '120px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🏆', 0, -180);
+
+                ctx.font = '900 64px sans-serif';
+                ctx.fillStyle = '#ffd32a';
+                ctx.shadowColor = '#ffd32a';
+                ctx.shadowBlur = 35;
+                ctx.fillText('ESIMENE MÄNGIJA!', 0, -40);
+
+                ctx.font = '900 82px sans-serif';
+                const grad1 = ctx.createLinearGradient(-300, 0, 300, 0);
+                grad1.addColorStop(0, '#00f2fe');
+                grad1.addColorStop(1, '#4facfe');
+                ctx.fillStyle = grad1;
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 25;
+                ctx.fillText('WELCOME TO', 0, 60);
+                ctx.fillText('PLAYARD 👑', 0, 160);
+
+                ctx.font = '700 36px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 0;
+                ctx.fillText('Ajalugu on tehtud! 🚀', 0, 260);
+                ctx.fillText('Esimene mängija liitus serveriga!', 0, 310);
+                ctx.restore();
+
+            } else if (t < 9.8) {
+                // SCENE 2: 19+ Epic 3D games showcase
+                const st = t - 4.8;
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 200);
+
+                ctx.font = '900 74px sans-serif';
+                const grad2 = ctx.createLinearGradient(-300, 0, 300, 0);
+                grad2.addColorStop(0, '#ff4757');
+                grad2.addColorStop(1, '#ff6b81');
+                ctx.fillStyle = grad2;
+                ctx.shadowColor = '#ff4757';
+                ctx.shadowBlur = 30;
+                ctx.textAlign = 'center';
+                ctx.fillText('19+ EPIC MÄNGU! 🔥', 0, -60);
+
+                ctx.font = '700 36px sans-serif';
+                ctx.fillStyle = '#e2e8f0';
+                ctx.shadowBlur = 0;
+                ctx.fillText('Kõik tasuta otse brauseris!', 0, 20);
+
+                // Game Pills Grid
+                const games = [
+                    { icon: '🏎️', title: 'Racing Simulator 3D', col: '#ff4757' },
+                    { icon: '👑', title: 'Crown Obby Parkour', col: '#ffd32a' },
+                    { icon: '🚆', title: 'Train & Metro Sim', col: '#00f2fe' },
+                    { icon: '🏖️', title: 'Build a Water Park', col: '#00cec9' },
+                    { icon: '🚀', title: 'Rocket Playard 3D', col: '#a855f7' },
+                    { icon: '✈️', title: 'Flight Simulator 3D', col: '#2ecc71' }
+                ];
+
+                games.forEach((g, idx) => {
+                    const row = Math.floor(idx / 2);
+                    const col = idx % 2;
+                    const x = col === 0 ? -240 : 240;
+                    const y = 110 + row * 130;
+
+                    const animOffset = Math.sin(st * 3 + idx) * 8;
+
+                    ctx.save();
+                    ctx.translate(x, y + animOffset);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+                    ctx.roundRect(-210, -45, 420, 90, 20);
+                    ctx.fill();
+                    ctx.strokeStyle = g.col;
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+
+                    ctx.font = '40px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(g.icon, -180, 15);
+
+                    ctx.font = '800 24px sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(g.title, -115, 10);
+                    ctx.restore();
+                });
+
+                ctx.restore();
+
+            } else if (t < 14.8) {
+                // SCENE 3: Roblox-style Creator Studio & Multiplayer
+                const st = t - 9.8;
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 150);
+
+                ctx.font = '110px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🛠️🤖', 0, -120);
+
+                ctx.font = '900 66px sans-serif';
+                const grad3 = ctx.createLinearGradient(-300, 0, 300, 0);
+                grad3.addColorStop(0, '#a855f7');
+                grad3.addColorStop(1, '#c084fc');
+                ctx.fillStyle = grad3;
+                ctx.shadowColor = '#a855f7';
+                ctx.shadowBlur = 30;
+                ctx.fillText('CREATOR STUDIO 3D', 0, 0);
+
+                ctx.font = '900 48px sans-serif';
+                ctx.fillStyle = '#00f2fe';
+                ctx.fillText('+ PLAYARD AI KOOL 🎒', 0, 70);
+
+                ctx.font = '600 34px sans-serif';
+                ctx.fillStyle = '#e2e8f0';
+                ctx.shadowBlur = 0;
+                ctx.fillText('✨ Ehita oma maailm (Roblox-stiilis)', 0, 170);
+                ctx.fillText('🧠 Õpeta AI-d ja loo mänge sekundiga!', 0, 230);
+                ctx.fillText('👥 Mängi koos sõpradega serveris!', 0, 290);
+                ctx.restore();
+
+            } else if (t < 19.8) {
+                // SCENE 4: Playbux, Shop, Rewards & Vip
+                const st = t - 14.8;
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 150);
+
+                ctx.font = '110px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('💎🪙', 0, -120);
+
+                ctx.font = '900 68px sans-serif';
+                const grad4 = ctx.createLinearGradient(-300, 0, 300, 0);
+                grad4.addColorStop(0, '#ffd32a');
+                grad4.addColorStop(1, '#ff9f43');
+                ctx.fillStyle = grad4;
+                ctx.shadowColor = '#ffd32a';
+                ctx.shadowBlur = 30;
+                ctx.fillText('PLAYBUX & POOD 💎', 0, 0);
+
+                ctx.font = '700 36px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 0;
+                ctx.fillText('Võida mänge ja teeni Playbuxe!', 0, 80);
+
+                // Features box
+                ctx.fillStyle = 'rgba(255, 211, 42, 0.08)';
+                ctx.roundRect(-420, 130, 840, 220, 24);
+                ctx.fill();
+                ctx.strokeStyle = '#ffd32a';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.font = '800 32px sans-serif';
+                ctx.fillStyle = '#ffd32a';
+                ctx.fillText('✨ Ava unikaalseid sõidukeid ja riideid', 0, 190);
+                ctx.fillText('🎁 Saada sõpradele PlayBuxe kingituseks', 0, 250);
+                ctx.fillText('⭐ Playard Plus kuldsed staatused', 0, 310);
+                ctx.restore();
+
+            } else {
+                // SCENE 5: Call to Action (Follow, Play, Share)
+                const st = t - 19.8;
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 140);
+
+                ctx.font = '100px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🚀🔥', 0, -140);
+
+                ctx.font = '900 78px sans-serif';
+                const grad5 = ctx.createLinearGradient(-300, 0, 300, 0);
+                grad5.addColorStop(0, '#00f2fe');
+                grad5.addColorStop(0.5, '#ffd32a');
+                grad5.addColorStop(1, '#ff4757');
+                ctx.fillStyle = grad5;
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 35;
+                ctx.fillText('TULE MÄNGIMA!', 0, -20);
+
+                // Callout Button
+                const btnPulse = Math.sin(st * 6) * 10;
+                ctx.fillStyle = 'linear-gradient(135deg, #00f2fe, #0072ff)';
+                ctx.fillStyle = '#0072ff';
+                ctx.roundRect(-360 - btnPulse / 2, 70, 720 + btnPulse, 120, 60);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                ctx.font = '900 48px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#000000';
+                ctx.shadowBlur = 10;
+                ctx.fillText('👉 PLAYARD.GAMES 👈', 0, 145);
+
+                ctx.font = '800 38px sans-serif';
+                ctx.fillStyle = '#2ecc71';
+                ctx.shadowBlur = 0;
+                ctx.fillText('🔴 YouTube: @PlayardGames', 0, 260);
+                ctx.fillText('🎵 TikTok: @playardgames', 0, 320);
+
+                ctx.font = '700 30px sans-serif';
+                ctx.fillStyle = '#ffd32a';
+                ctx.fillText('LIKE & FOLLOW FOR MORE! ❤️', 0, 400);
+                ctx.restore();
+            }
+        }
+
+        // Start Recording Function
+        window.startPromoRecording = async function() {
+            console.log("Starting Promo Video Rendering & Recording...");
+            recordedChunks = [];
+            window.__RECORDING_DONE__ = false;
+
+            // Setup audio stream & audio graph
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtx.createMediaElementSource(audio);
+            const dest = audioCtx.createMediaStreamDestination();
+            source.connect(dest);
+            source.connect(audioCtx.destination);
+
+            // Canvas stream (60 FPS)
+            const canvasStream = canvas.captureStream(60);
+
+            // Combine video and audio tracks
+            const combinedStream = new MediaStream([
+                ...canvasStream.getVideoTracks(),
+                ...dest.stream.getAudioTracks()
+            ]);
+
+            // Choose best mimeType (prefer MP4, fallback to WebM)
+            let mimeType = 'video/mp4';
+            if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.42E01E,mp4a.40.2')) {
+                mimeType = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2';
+            } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+                mimeType = 'video/mp4';
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
+                mimeType = 'video/webm;codecs=h264';
+            }
+
+            mediaRecorder = new MediaRecorder(combinedStream, {
+                mimeType: mimeType,
+                videoBitsPerSecond: 8000000
+            });
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                console.log("Recording stopped, building blob...");
+                const blob = new Blob(recordedChunks, { type: mimeType });
+                console.log("Blob size:", blob.size);
+
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    window.__RECORDED_BASE64__ = reader.result;
+                    window.__RECORDING_DONE__ = true;
+                    console.log("Base64 ready! Length:", window.__RECORDED_BASE64__.length);
+                };
+                reader.readAsDataURL(blob);
+            };
+
+            // Start audio & recorder
+            try {
+                await audio.play();
+            } catch (err) {
+                console.warn("Audio play warning:", err);
+            }
+            mediaRecorder.start(100);
+            startTime = performance.now();
+            isRecording = true;
+
+            function loop() {
+                const now = performance.now();
+                const elapsed = (now - startTime) / 1000;
+
+                drawScene(elapsed);
+
+                if (elapsed >= 25.0) {
+                    isRecording = false;
+                    audio.pause();
+                    mediaRecorder.stop();
+                    console.log("Reached 25.0s, stopping recorder!");
+                    return;
+                }
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+        };
+    </script>
+</body>
+</html>
