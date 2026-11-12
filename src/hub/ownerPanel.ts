@@ -983,28 +983,55 @@ export function renderOwnerServersList(filterQuery: string = '') {
     const badge = document.getElementById('owner-servers-count-badge');
     const totalServersEl = document.getElementById('owner-servers-stat-total');
     const totalPlayersEl = document.getElementById('owner-servers-stat-players');
+    const activeToggle = document.getElementById('owner-servers-only-active-toggle') as HTMLInputElement | null;
     if (!container) return;
 
     const allServers = serverManager.getAllServers();
     const cleanFilter = filterQuery.trim().toLowerCase();
+    const onlyActive = activeToggle ? activeToggle.checked : true;
+
+    // Filter by active players if enabled (show only servers where someone is playing)
+    const serversWithFilter = onlyActive
+        ? allServers.filter(s => s.players && s.players.length > 0)
+        : allServers;
 
     const filtered = cleanFilter
-        ? allServers.filter(s =>
+        ? serversWithFilter.filter(s =>
             s.gameTitle.toLowerCase().includes(cleanFilter) ||
             s.gameId.toLowerCase().includes(cleanFilter) ||
             s.serverId.toLowerCase().includes(cleanFilter) ||
             s.players.some(p => p.username.toLowerCase().includes(cleanFilter) || p.displayName.toLowerCase().includes(cleanFilter))
         )
-        : allServers;
+        : serversWithFilter;
 
-    const totalActiveServers = allServers.length;
-    const totalPlayers = allServers.reduce((sum, s) => sum + s.players.length, 0);
+    const totalActiveServers = allServers.filter(s => s.players && s.players.length > 0).length;
+    const totalPlayers = allServers.reduce((sum, s) => sum + (s.players ? s.players.length : 0), 0);
 
-    if (badge) badge.textContent = `${totalActiveServers}`;
-    if (totalServersEl) totalServersEl.textContent = `${totalActiveServers} serverit`;
+    if (badge) badge.textContent = `${onlyActive ? totalActiveServers : allServers.length}`;
+    if (totalServersEl) totalServersEl.textContent = onlyActive ? `${totalActiveServers} aktiivset serverit` : `${allServers.length} serverit`;
     if (totalPlayersEl) totalPlayersEl.textContent = `${totalPlayers} mängijat`;
 
     if (filtered.length === 0) {
+        if (onlyActive && allServers.length > 0 && !cleanFilter) {
+            container.innerHTML = `
+                <div style="text-align: center; color: #94a3b8; padding: 32px 20px; background: rgba(0, 242, 254, 0.04); border: 1.5px dashed rgba(0, 242, 254, 0.25); border-radius: 12px;">
+                    <div style="font-size: 2.2rem; margin-bottom: 8px;">🎮💤</div>
+                    <p style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: #ffffff;">Hetkel pole üheski serveris aktiivseid mängijaid</p>
+                    <p style="margin: 0; font-size: 0.8rem; color: #64748b;">Kõik ${allServers.length} serverit on tühjad. Serverid ilmuvad siia automaatselt kohe, kui mõni mängija liitub!</p>
+                    <button type="button" id="btn-owner-servers-show-all-empty" style="margin-top: 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #cbd5e1; border-radius: 8px; padding: 7px 14px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
+                        👀 Näita ka tühje ootavaid servereid (${allServers.length})
+                    </button>
+                </div>
+            `;
+            document.getElementById('btn-owner-servers-show-all-empty')?.addEventListener('click', () => {
+                if (activeToggle) {
+                    activeToggle.checked = false;
+                    renderOwnerServersList(cleanFilter);
+                }
+            });
+            return;
+        }
+
         container.innerHTML = `
             <div style="text-align: center; color: #718093; padding: 24px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
                 <p style="margin: 0; font-size: 0.95rem; font-weight: bold;">Ühtegi serverit ei leitud otsinguga "${filterQuery}".</p>
@@ -1585,8 +1612,12 @@ export function setupOwnerPanel() {
     document.getElementById('btn-owner-mode-servers')?.addEventListener('click', () => setOwnerPanelMode('servers'));
 
     const serverSearchInput = document.getElementById('owner-servers-search-input') as HTMLInputElement | null;
+    const serverActiveToggle = document.getElementById('owner-servers-only-active-toggle') as HTMLInputElement | null;
     serverSearchInput?.addEventListener('input', () => {
         renderOwnerServersList(serverSearchInput.value);
+    });
+    serverActiveToggle?.addEventListener('change', () => {
+        renderOwnerServersList(serverSearchInput?.value || '');
     });
     document.getElementById('btn-owner-refresh-servers')?.addEventListener('click', () => {
         serverManager.loadServers();

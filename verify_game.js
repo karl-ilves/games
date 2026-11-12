@@ -15002,6 +15002,19 @@ await (async () => {
                 const hasPlayersStat = playersText.includes('mängijat');
 
                 const serversListEl = document.getElementById('owner-servers-list');
+                const activeToggleEl = document.getElementById('owner-servers-only-active-toggle');
+                
+                // By default, only active (with players) servers are shown.
+                // When 0 players are currently playing, it shows the friendly empty state message.
+                const defaultEmptyNoticeVisible = (serversListEl?.textContent || '').includes('Hetkel pole üheski serveris aktiivseid mängijaid') || activeToggleEl?.checked;
+
+                // Uncheck active-only toggle to inspect all configured servers and rules
+                if (activeToggleEl) {
+                    activeToggleEl.checked = false;
+                    activeToggleEl.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                await new Promise(r => setTimeout(r, 100));
+
                 const listText = serversListEl?.textContent || '';
 
                 // Verify MMP1 rule: max 10 players and auto new server
@@ -15043,6 +15056,15 @@ await (async () => {
                 }
                 await new Promise(r => setTimeout(r, 50));
 
+                // Switch back to only-active toggle and verify that empty servers are hidden
+                if (activeToggleEl) {
+                    activeToggleEl.checked = true;
+                    activeToggleEl.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                await new Promise(r => setTimeout(r, 100));
+                const activeOnlyText = serversListEl?.textContent || '';
+                const emptyServersHidden = activeOnlyText.includes('Hetkel pole üheski serveris aktiivseid mängijaid') || !activeOnlyText.includes('Server #');
+
                 const noFakeAiInServers = !listText.includes('(AI)') && !listText.includes('(Bot)');
 
                 return {
@@ -15050,6 +15072,7 @@ await (async () => {
                     isBoxVisible,
                     hasTotalStat,
                     hasPlayersStat,
+                    defaultEmptyNoticeVisible,
                     hasMmp1,
                     hasMmp1Server2,
                     hasCityOrRacingMax5,
@@ -15057,6 +15080,7 @@ await (async () => {
                     hasSinglePlayerRule,
                     serverCreatedSuccessfully,
                     searchFilteredCorrectly,
+                    emptyServersHidden,
                     noFakeAiInServers
                 };
             });
