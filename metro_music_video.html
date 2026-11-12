@@ -122,9 +122,7 @@
         <div id="vignette"></div>
 
         <div id="header-banner">
-            <div class="tagline">Official Soundtrack · Playard 3D Mystery</div>
-            <div class="main-title">LAST METRO</div>
-            <div class="sub-title">ORIGINAL GAME SOUNDTRACK</div>
+            <div class="tagline">Official Soundtrack · Playard Games</div>
         </div>
 
         <div id="footer-banner">
@@ -145,6 +143,9 @@
 
         const bgImg = new Image();
         bgImg.src = 'metro_clean_bg.jpg';
+
+        const logoImg = new Image();
+        logoImg.src = 'public/assets/playard_logo.svg';
 
         let audioCtx, analyser, audioSource;
         let dataArray, bufferLength;
@@ -406,21 +407,41 @@
             fxCtx.stroke();
             fxCtx.restore();
 
-            // Center Logo Content: Crown + Controller + PLAYARD GAMES
+            // Center Content: LAST METRO text ABOVE logo + REAL Playard Logo in center
             fxCtx.save();
             fxCtx.textAlign = 'center';
             fxCtx.textBaseline = 'middle';
 
-            // Crown Icon
-            fxCtx.font = '54px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-            fxCtx.fillText('👑', cx, cy - 65);
+            // 1. Text "LAST METRO" directly ABOVE the logo
+            fxCtx.font = '900 52px "Cinzel", "Montserrat", sans-serif';
+            fxCtx.letterSpacing = '10px';
+            const titleGrad = fxCtx.createLinearGradient(cx - 200, cy - baseRadius - 55, cx + 200, cy - baseRadius - 55);
+            titleGrad.addColorStop(0, '#ffffff');
+            titleGrad.addColorStop(0.5, '#00f2fe');
+            titleGrad.addColorStop(1, '#ffffff');
+            fxCtx.fillStyle = titleGrad;
+            fxCtx.shadowColor = 'rgba(0, 242, 254, 0.95)';
+            fxCtx.shadowBlur = 25 + bassNorm * 30;
+            fxCtx.fillText('LAST METRO', cx, cy - baseRadius - 60);
 
-            // Controller Icon
-            fxCtx.font = '42px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-            fxCtx.fillText('🎮', cx, cy - 12);
+            // Subtitle text above logo
+            fxCtx.font = '800 16px "Montserrat", sans-serif';
+            fxCtx.letterSpacing = '6px';
+            fxCtx.fillStyle = '#ffd700';
+            fxCtx.shadowColor = '#ffd700';
+            fxCtx.shadowBlur = 12;
+            fxCtx.fillText('OFFICIAL SOUNDTRACK', cx, cy - baseRadius - 22);
 
-            // Brand Text
-            fxCtx.font = '900 25px "Montserrat", sans-serif';
+            // 2. Draw REAL Playard Games SVG Logo in the center
+            if (logoImg.complete && logoImg.naturalWidth > 0) {
+                const logoSize = baseRadius * 1.25;
+                fxCtx.shadowColor = 'rgba(0, 242, 254, 0.8)';
+                fxCtx.shadowBlur = 25 + bassNorm * 20;
+                fxCtx.drawImage(logoImg, cx - logoSize / 2, cy - logoSize / 2 - 10, logoSize, logoSize);
+            }
+
+            // 3. Playard Games brand label under the logo
+            fxCtx.font = '900 20px "Montserrat", sans-serif';
             fxCtx.letterSpacing = '5px';
             const textGrad = fxCtx.createLinearGradient(cx - 100, cy, cx + 100, cy);
             textGrad.addColorStop(0, '#ffffff');
@@ -429,14 +450,7 @@
             fxCtx.fillStyle = textGrad;
             fxCtx.shadowColor = 'rgba(255, 215, 0, 0.8)';
             fxCtx.shadowBlur = 12;
-            fxCtx.fillText('PLAYARD', cx, cy + 42);
-
-            // Secondary "GAMES" text
-            fxCtx.font = '800 15px "Montserrat", sans-serif';
-            fxCtx.fillStyle = '#00f2fe';
-            fxCtx.shadowColor = '#00f2fe';
-            fxCtx.shadowBlur = 10;
-            fxCtx.fillText('G A M E S', cx, cy + 70);
+            fxCtx.fillText('PLAYARD GAMES', cx, cy + baseRadius - 32);
 
             fxCtx.restore();
 

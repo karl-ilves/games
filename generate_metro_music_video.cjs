@@ -33,6 +33,7 @@ const server = http.createServer((req, res) => {
         '.css': 'text/css',
         '.png': 'image/png',
         '.jpg': 'image/jpeg',
+        '.svg': 'image/svg+xml',
         '.mp3': 'audio/mpeg',
         '.mp4': 'video/mp4'
     };
