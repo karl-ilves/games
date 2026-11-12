@@ -14,6 +14,7 @@
 import { addPlayerReport } from './playerReports';
 import { serverManager } from './serverManager';
 import { getUserPlusTier, formatUsernameWithPlusPlain } from './plusMembership';
+import { showGameJoinWarningModal } from './gameCloseNotice';
 
 export interface PlayardMenuOptions {
     gameTitle?: string;
@@ -647,6 +648,11 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
             }
         }
     });
+
+    // Check and display Game Join Warning Modal (e.g. Sunday update notice)
+    setTimeout(() => {
+        showGameJoinWarningModal();
+    }, 400);
 
     // Also export on window for testing
     if (typeof window !== 'undefined') {

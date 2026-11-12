@@ -6,6 +6,14 @@ import { renderCommunityGames, renderDatabaseGamesList } from './communityGames'
 import { getPlayerReports, deletePlayerReport, clearAllPlayerReports, getReportsForPlayer, PlayerReport } from '../shared/playerReports';
 import { bindPlayerSuggestions } from '../shared/playerSuggestions';
 import { serverManager, GameServerInstance } from '../shared/serverManager';
+import { OFFICIAL_GAMES_CATALOG, GamePreviewInfo } from './gamePreviewModal';
+import {
+    GameCloseNoticeConfig,
+    getGameCloseNotices,
+    setGameCloseNotice,
+    removeGameCloseNotice,
+    DEFAULT_SUNDAY_UPDATE_NOTICE
+} from '../shared/gameCloseNotice';
 
 export const BANNED_PLAYERS_STORAGE_KEY = 'playard_banned_players';
 
@@ -727,7 +735,7 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     });
 }
 
-export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports' | 'servers';
+export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports' | 'servers' | 'closegames';
 let ownerPanelMode: OwnerPanelMode = 'ban';
 
 export function getOwnerPanelMode(): OwnerPanelMode {
@@ -902,6 +910,7 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     const isPlaybux = mode === 'playbux';
     const isReports = mode === 'reports';
     const isServers = mode === 'servers';
+    const isCloseGames = mode === 'closegames';
 
     const show = (id: string, visible: boolean) => {
         const el = document.getElementById(id);
@@ -923,16 +932,21 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     show('owner-panel-desc-servers', isServers);
     show('owner-servers-box', isServers);
 
-    // Hide search bar, database player header, and player list when in servers mode
-    show('owner-search-bar-wrap', !isServers);
-    show('owner-players-header-wrap', !isServers);
-    show('owner-players-list', !isServers);
+    show('owner-panel-desc-closegames', isCloseGames);
+    show('owner-closegames-box', isCloseGames);
+
+    // Hide search bar, database player header, and player list when in servers or closegames mode
+    const hidePlayerComponents = isServers || isCloseGames;
+    show('owner-search-bar-wrap', !hidePlayerComponents);
+    show('owner-players-header-wrap', !hidePlayerComponents);
+    show('owner-players-list', !hidePlayerComponents);
 
     const banBtn = document.getElementById('btn-owner-mode-ban');
     const verifyBtn = document.getElementById('btn-owner-mode-verify');
     const playbuxBtn = document.getElementById('btn-owner-mode-playbux');
     const reportsBtn = document.getElementById('btn-owner-mode-reports');
     const serversBtn = document.getElementById('btn-owner-mode-servers');
+    const closeGamesBtn = document.getElementById('btn-owner-mode-closegames');
 
     if (banBtn) {
         banBtn.setAttribute('data-active', String(isBan));
@@ -964,6 +978,12 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
         serversBtn.style.borderColor = isServers ? '#00f2fe' : 'transparent';
         serversBtn.style.color = isServers ? '#00f2fe' : '#a4b0be';
     }
+    if (closeGamesBtn) {
+        closeGamesBtn.setAttribute('data-active', String(isCloseGames));
+        closeGamesBtn.style.background = isCloseGames ? 'rgba(255, 71, 87, 0.25)' : 'transparent';
+        closeGamesBtn.style.borderColor = isCloseGames ? '#ff4757' : 'transparent';
+        closeGamesBtn.style.color = isCloseGames ? '#ff6b81' : '#a4b0be';
+    }
 
     if (isReports) {
         renderOwnerReportsList();
@@ -971,8 +991,11 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     if (isServers) {
         renderOwnerServersList();
     }
+    if (isCloseGames) {
+        renderOwnerCloseGamesList();
+    }
 
-    if (!isServers) {
+    if (!hidePlayerComponents) {
         const searchInput = document.getElementById('owner-player-search-input') as HTMLInputElement | null;
         renderOwnerPanelPlayersList(searchInput?.value || '');
     }
@@ -1186,6 +1209,271 @@ export function renderOwnerServersList(filterQuery: string = '') {
             }
         });
     });
+}
+
+/**
+ * Interface representing a game in the "Sulge mänge" tab.
+ */
+export interface OwnerClosableGame {
+    id: string;
+    title: string;
+    description: string;
+    url: string;
+    creator: string;
+    category: string;
+    isOfficial: boolean;
+    isOwnerGame: boolean;
+    icon?: string;
+    thumbnail?: string;
+}
+
+export async function fetchAllClosableGames(): Promise<OwnerClosableGame[]> {
+    const list: OwnerClosableGame[] = [];
+    const seenIds = new Set<string>();
+
+    // 1. Official Games
+    for (const key of Object.keys(OFFICIAL_GAMES_CATALOG)) {
+        const og = OFFICIAL_GAMES_CATALOG[key];
+        seenIds.add(og.id);
+        list.push({
+            id: og.id,
+            title: og.title,
+            description: og.description,
+            url: og.url,
+            creator: og.creatorName || 'Playard Games',
+            category: 'Official Playard',
+            isOfficial: true,
+            isOwnerGame: false,
+            icon: og.icon
+        });
+    }
+
+    // 2. User created games & Playard Owner created games
+    try {
+        const created = await yardService.getAllCreatedGames();
+        created.forEach(cg => {
+            if (seenIds.has(cg.id)) return;
+            seenIds.add(cg.id);
+            const isOwner = isPlayardOwner(cg.creatorUsername) || cg.creatorUsername?.toLowerCase() === 'playard owner';
+            list.push({
+                id: cg.id,
+                title: cg.title,
+                description: cg.description || '',
+                url: `./games/play/index.html?id=${cg.id}`,
+                creator: cg.creatorUsername || 'Creator',
+                category: cg.category || 'Adventure',
+                isOfficial: false,
+                isOwnerGame: isOwner,
+                icon: isOwner ? '👑' : '🎨',
+                thumbnail: cg.thumbnail
+            });
+        });
+    } catch (e) {
+        console.warn('Could not fetch all created games for close list:', e);
+    }
+
+    return list;
+}
+
+export async function renderOwnerCloseGamesList(searchQuery: string = '') {
+    const container = document.getElementById('owner-closegames-list');
+    const countBadge = document.getElementById('owner-closegames-count-badge');
+    const noticeBadge = document.getElementById('owner-active-notices-badge');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align: center; color: #718093; padding: 24px;">Laen mänge...</div>';
+
+    const allGames = await fetchAllClosableGames();
+    const cleanQ = searchQuery.trim().toLowerCase();
+    const filtered = cleanQ
+        ? allGames.filter(g =>
+              g.title.toLowerCase().includes(cleanQ) ||
+              g.creator.toLowerCase().includes(cleanQ) ||
+              g.category.toLowerCase().includes(cleanQ) ||
+              g.id.toLowerCase().includes(cleanQ)
+          )
+        : allGames;
+
+    if (countBadge) countBadge.textContent = `${filtered.length} mängu`;
+    const notices = getGameCloseNotices().filter(n => n.active);
+    if (noticeBadge) noticeBadge.textContent = `${notices.length} aktiivset teadet`;
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: #94a3b8; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                Ühtegi mängu ei leitud otsinguga "${searchQuery}".
+            </div>
+        `;
+        return;
+    }
+
+    const deletedIds = new Set(yardService.getDeletedGameIds());
+
+    container.innerHTML = '';
+    filtered.forEach(game => {
+        const isDeleted = deletedIds.has(game.id);
+        const card = document.createElement('div');
+        card.className = 'owner-closegame-item';
+        card.setAttribute('data-game-id', game.id);
+        card.style.cssText = `
+            background: #182230;
+            border: 1.5px solid ${game.isOwnerGame ? 'rgba(255, 211, 42, 0.45)' : (game.isOfficial ? 'rgba(0, 242, 254, 0.35)' : 'rgba(255, 255, 255, 0.1)')};
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+            ${isDeleted ? 'opacity: 0.55; filter: grayscale(0.5);' : ''}
+        `;
+
+        const creatorFormatted = game.isOwnerGame ? '👑 Playard Owner ✔' : `@${game.creator}`;
+        const typeBadge = game.isOwnerGame
+            ? '<span style="background: rgba(255, 211, 42, 0.18); color: #ffd32a; border: 1px solid rgba(255,211,42,0.45); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">👑 Owneri Mäng</span>'
+            : (game.isOfficial
+                ? '<span style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.4); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">⭐ Ametlik Mäng</span>'
+                : '<span style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.4); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">👥 Kommuuni Mäng</span>');
+
+        const statusTag = isDeleted
+            ? '<span style="background: rgba(255, 71, 87, 0.2); color: #ff6b81; border: 1px solid #ff4757; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">🛑 Kustutatud / Suletud</span>'
+            : '<span style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.35); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">🟢 Avatud</span>';
+
+        card.innerHTML = `
+            <div style="flex: 1; min-width: 220px; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                    <span style="font-size: 1.3rem;">${game.icon || '🎮'}</span>
+                    <strong style="color: #ffffff; font-size: 1.05rem;">${game.title}</strong>
+                    ${typeBadge}
+                    ${statusTag}
+                </div>
+                <div style="font-size: 0.78rem; color: #a4b0be; margin-bottom: 4px;">
+                    Looja: <strong style="color: ${game.isOwnerGame ? '#ffd32a' : '#00f2fe'};">${creatorFormatted}</strong>
+                    &nbsp;·&nbsp; Kategooria: <span style="color: #cbd5e1;">${game.category}</span>
+                    &nbsp;·&nbsp; ID: <code style="color: #64748b; font-size: 0.72rem;">${game.id}</code>
+                </div>
+                <div style="font-size: 0.8rem; color: #cbd5e1; max-width: 500px; line-height: 1.4;">
+                    ${game.description || 'Kirjeldus puudub.'}
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn-owner-game-notify" data-id="${game.id}" data-title="${game.title.replace(/"/g, '&quot;')}" style="
+                    background: linear-gradient(135deg, #00f2fe, #0984e3);
+                    border: none;
+                    color: #0b1118;
+                    border-radius: 8px;
+                    padding: 8px 14px;
+                    font-size: 0.84rem;
+                    font-weight: 900;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    box-shadow: 0 4px 12px rgba(0, 242, 254, 0.35);
+                ">
+                    <span>📢</span>
+                    <span>Teavita</span>
+                </button>
+
+                <button type="button" class="btn-owner-game-delete" data-id="${game.id}" data-title="${game.title.replace(/"/g, '&quot;')}" style="
+                    background: linear-gradient(135deg, #ff4757, #c0392b);
+                    border: 1px solid rgba(255,255,255,0.2);
+                    border-radius: 8px;
+                    color: #ffffff;
+                    padding: 8px 14px;
+                    font-size: 0.84rem;
+                    font-weight: 900;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);
+                ">
+                    <span>🗑️</span>
+                    <span>Kustuta</span>
+                </button>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+
+    // Wire "Teavita" buttons
+    container.querySelectorAll('.btn-owner-game-notify').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const btnEl = e.currentTarget as HTMLElement;
+            const gid = btnEl.getAttribute('data-id') || '';
+            const gtitle = btnEl.getAttribute('data-title') || 'Game';
+            openOwnerNoticeModal(gid, gtitle);
+        });
+    });
+
+    // Wire "Kustuta" buttons
+    container.querySelectorAll('.btn-owner-game-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const btnEl = e.currentTarget as HTMLElement;
+            const gid = btnEl.getAttribute('data-id') || '';
+            const gtitle = btnEl.getAttribute('data-title') || 'Game';
+
+            if (confirm(`KUSTUTA MÄNG: Kas oled kindel, et soovid mängu "${gtitle}" sulgeda ja kustutada? Seda näevad kõik mängijad.`)) {
+                await yardService.deleteCreatedGame(gid);
+                yardService.addDeletedGameId(gid);
+                serverManager.closeGameServers(gid);
+
+                const statusEl = document.getElementById('owner-closegames-status');
+                if (statusEl) {
+                    statusEl.textContent = `✅ Mäng "${gtitle}" on edukalt suletud ja kustutatud!`;
+                    statusEl.style.color = '#2ecc71';
+                }
+
+                await renderOwnerCloseGamesList((document.getElementById('owner-closegames-search-input') as HTMLInputElement)?.value || '');
+                renderCommunityGames();
+                renderDatabaseGamesList();
+            }
+        });
+    });
+}
+
+/**
+ * Open the Teavituse (Notice) Modal where Owner configures name, description and repeat count.
+ */
+export function openOwnerNoticeModal(gameId: string = 'all', gameTitle: string = 'Kõik mängud') {
+    const modal = document.getElementById('modal-owner-create-notice');
+    if (!modal) return;
+
+    const gameTargetEl = document.getElementById('owner-notice-target-game');
+    const titleInput = document.getElementById('owner-notice-title-input') as HTMLInputElement | null;
+    const descInput = document.getElementById('owner-notice-desc-input') as HTMLTextAreaElement | null;
+    const repeatSelect = document.getElementById('owner-notice-repeat-select') as HTMLSelectElement | null;
+    const hiddenGameId = document.getElementById('owner-notice-game-id-val') as HTMLInputElement | null;
+    const statusEl = document.getElementById('owner-notice-status');
+
+    if (gameTargetEl) gameTargetEl.textContent = gameTitle;
+    if (hiddenGameId) hiddenGameId.value = gameId;
+
+    if (titleInput) {
+        titleInput.value = 'Sorry. Update. Playard Game 2';
+    }
+    if (descInput) {
+        descInput.value = 'We are deleting all games this Sunday at 14:00 UTC (16:00 Estonian time). We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team';
+    }
+    if (repeatSelect) {
+        repeatSelect.value = '0'; // every time
+    }
+    if (statusEl) {
+        statusEl.textContent = '';
+        statusEl.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
+}
+
+export function closeOwnerNoticeModal() {
+    const modal = document.getElementById('modal-owner-create-notice');
+    if (modal) modal.style.display = 'none';
 }
 
 export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
@@ -1610,6 +1898,57 @@ export function setupOwnerPanel() {
     document.getElementById('btn-owner-mode-playbux')?.addEventListener('click', () => setOwnerPanelMode('playbux'));
     document.getElementById('btn-owner-mode-reports')?.addEventListener('click', () => setOwnerPanelMode('reports'));
     document.getElementById('btn-owner-mode-servers')?.addEventListener('click', () => setOwnerPanelMode('servers'));
+    document.getElementById('btn-owner-mode-closegames')?.addEventListener('click', () => setOwnerPanelMode('closegames'));
+
+    // "Sulge mänge" tab search input & Notice modal actions
+    const closeGamesSearchInput = document.getElementById('owner-closegames-search-input') as HTMLInputElement | null;
+    closeGamesSearchInput?.addEventListener('input', () => {
+        renderOwnerCloseGamesList(closeGamesSearchInput.value);
+    });
+    document.getElementById('btn-owner-refresh-closegames')?.addEventListener('click', () => {
+        renderOwnerCloseGamesList(closeGamesSearchInput?.value || '');
+    });
+
+    document.getElementById('btn-close-owner-notice')?.addEventListener('click', () => closeOwnerNoticeModal());
+    document.getElementById('btn-cancel-owner-notice')?.addEventListener('click', () => closeOwnerNoticeModal());
+
+    document.getElementById('btn-save-owner-notice')?.addEventListener('click', () => {
+        const titleInput = document.getElementById('owner-notice-title-input') as HTMLInputElement | null;
+        const descInput = document.getElementById('owner-notice-desc-input') as HTMLTextAreaElement | null;
+        const repeatSelect = document.getElementById('owner-notice-repeat-select') as HTMLSelectElement | null;
+        const hiddenGameId = document.getElementById('owner-notice-game-id-val') as HTMLInputElement | null;
+        const statusEl = document.getElementById('owner-notice-status');
+
+        const title = titleInput?.value.trim() || 'Sorry. Update. Playard Game 2';
+        const desc = descInput?.value.trim() || 'We are deleting all games this Sunday at 14:00 UTC (16:00 Estonian time). We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team';
+        const repeatCount = parseInt(repeatSelect?.value || '0', 10);
+        const targetGameId = hiddenGameId?.value || 'all';
+
+        const newNotice: GameCloseNoticeConfig = {
+            id: `notice_${Date.now()}`,
+            gameId: targetGameId,
+            gameTitle: targetGameId === 'all' ? 'All Games (Playard Game 2)' : targetGameId,
+            title,
+            description: desc,
+            repeatCount: isNaN(repeatCount) ? 0 : repeatCount,
+            active: true,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        setGameCloseNotice(newNotice);
+
+        if (statusEl) {
+            statusEl.textContent = '✅ Teavitus edukalt salvestatud ja aktiveeritud!';
+            statusEl.style.color = '#2ecc71';
+            statusEl.style.display = 'block';
+        }
+
+        setTimeout(() => {
+            closeOwnerNoticeModal();
+            renderOwnerCloseGamesList(closeGamesSearchInput?.value || '');
+        }, 600);
+    });
 
     const serverSearchInput = document.getElementById('owner-servers-search-input') as HTMLInputElement | null;
     const serverActiveToggle = document.getElementById('owner-servers-only-active-toggle') as HTMLInputElement | null;
@@ -1780,5 +2119,9 @@ export function setupOwnerPanel() {
         (window as any).getPlayerReports = getPlayerReports;
         (window as any).deletePlayerReport = deletePlayerReport;
         (window as any).clearAllPlayerReports = clearAllPlayerReports;
+        (window as any).renderOwnerCloseGamesList = renderOwnerCloseGamesList;
+        (window as any).openOwnerNoticeModal = openOwnerNoticeModal;
+        (window as any).closeOwnerNoticeModal = closeOwnerNoticeModal;
+        (window as any).fetchAllClosableGames = fetchAllClosableGames;
     }
 }

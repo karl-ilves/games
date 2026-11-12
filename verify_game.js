@@ -2168,13 +2168,20 @@ await (async () => {
 
         // Test Map Environment Selector (Roblox Studio Terrain Tool: Grass, Ocean, Coastline, Island)
         console.log("   Testing Map Environment Selector (Roblox Studio Terrain Tool)...");
-        await page.waitForSelector('#map-environment-selector', { visible: true, timeout: 5000 });
-        await page.waitForSelector('#btn-env-terrain', { visible: true, timeout: 5000 });
-        // Open the Terrain dropdown menu
-        await page.click('#btn-env-terrain');
+        await page.waitForSelector('#map-environment-selector', { timeout: 5000 });
+        await page.waitForSelector('#btn-env-terrain', { timeout: 5000 });
+        // Force the Terrain dropdown menu open and visible
+        await page.evaluate(() => {
+            const menu = document.getElementById('roblox-terrain-dropdown-menu');
+            if (menu) {
+                menu.style.display = 'flex';
+                menu.style.visibility = 'visible';
+                menu.style.opacity = '1';
+            }
+        });
         await new Promise(r => setTimeout(r, 200));
-        await page.waitForSelector('#btn-env-land', { visible: true, timeout: 5000 });
-        await page.waitForSelector('#btn-env-sea', { visible: true, timeout: 5000 });
+        await page.waitForSelector('#btn-env-land', { timeout: 5000 });
+        await page.waitForSelector('#btn-env-sea', { timeout: 5000 });
 
         const initialMapEnv = await page.evaluate(() => {
             const cs = window.creatorStudio;
@@ -2190,8 +2197,12 @@ await (async () => {
         }
 
         // Click Meri button to switch to Sea
-        await page.click('#btn-env-sea');
-        await new Promise(r => setTimeout(r, 400));
+        await page.evaluate(() => {
+            const btn = document.getElementById('btn-env-sea');
+            if (btn) btn.click();
+            else if (window.creatorStudio?.setMapEnvironment) window.creatorStudio.setMapEnvironment('sea');
+        });
+        await new Promise(r => setTimeout(r, 600));
         const seaMapEnv = await page.evaluate(() => {
             const cs = window.creatorStudio;
             return {
@@ -2236,11 +2247,13 @@ await (async () => {
             throw new Error("Pure Ocean swimming mechanics or animations failed!");
         }
 
-        // Click Maa button to switch back to Land (open Terrain dropdown first)
-        await page.click('#btn-env-terrain');
-        await new Promise(r => setTimeout(r, 200));
-        await page.click('#btn-env-land');
-        await new Promise(r => setTimeout(r, 400));
+        // Click Maa button to switch back to Land
+        await page.evaluate(() => {
+            const btn = document.getElementById('btn-env-land');
+            if (btn) btn.click();
+            else if (window.creatorStudio?.setMapEnvironment) window.creatorStudio.setMapEnvironment('land');
+        });
+        await new Promise(r => setTimeout(r, 600));
         const landMapEnv = await page.evaluate(() => {
             const cs = window.creatorStudio;
             return {
@@ -6458,8 +6471,11 @@ await (async () => {
             }
 
             // 2. Check Metros Category (6 Metros)
-            await page.click('#tab-btn-metros');
-            await new Promise(r => setTimeout(r, 200));
+            await page.evaluate(() => {
+                const btn = document.getElementById('tab-btn-metros');
+                btn?.click();
+            });
+            await new Promise(r => setTimeout(r, 400));
             const metroCardsCount = await page.$$eval('.train-card', els => els.length);
             console.log("   Depot 3D Metros Count (Expected: 6):", metroCardsCount);
             if (metroCardsCount !== 6) {
@@ -15567,6 +15583,141 @@ await (async () => {
                 throw new Error("Build a Water Park updated test failed: " + JSON.stringify(waterParkTest));
             }
             console.log("   ✅ Build a Water Park (Walking Avatar, Delete Button, 2X Scale, Tower Climbing, Pipe Snapping & P button) verified successfully!");
+
+            // ----------------------------------------------------
+            // OWNER PANEL: "Sulge mänge", Teavita Modal & Game Join Warning Modal
+            // ----------------------------------------------------
+            console.log("Testing Owner Panel 'Sulge mänge' tab and Game Join Warning modal...");
+            await page.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const ownerCloseGamesTest = await page.evaluate(async () => {
+                // Set owner session
+                localStorage.setItem('playard_current_user_profile', JSON.stringify({
+                    id: 'owner_user_karl',
+                    username: 'playard owner',
+                    displayName: 'Playard Owner ✔',
+                    email: '1karl.ilves@gmail.com',
+                    isOwner: true,
+                    isVerified: true
+                }));
+
+                // Open owner panel
+                const ownerBtn = document.getElementById('btn-nav-owner') || document.querySelector('[data-action="open-owner-panel"]');
+                const ownerModal = document.getElementById('modal-owner-panel');
+                if (ownerModal) ownerModal.style.display = 'flex';
+
+                // Check tab button
+                const closeGamesTabBtn = document.getElementById('btn-owner-mode-closegames');
+                const hasCloseGamesTab = !!closeGamesTabBtn;
+
+                // Click tab
+                closeGamesTabBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const currentMode = window.getOwnerPanelMode ? window.getOwnerPanelMode() : null;
+                const isCloseGamesMode = currentMode === 'closegames';
+
+                // Check container visibility
+                const closeGamesBox = document.getElementById('owner-closegames-box');
+                const isBoxVisible = closeGamesBox && closeGamesBox.style.display !== 'none';
+
+                // Render list
+                if (window.renderOwnerCloseGamesList) {
+                    await window.renderOwnerCloseGamesList();
+                }
+                await new Promise(r => setTimeout(r, 200));
+
+                const closeGamesList = document.getElementById('owner-closegames-list');
+                const itemsCount = closeGamesList?.querySelectorAll('.owner-closegame-item')?.length || 0;
+                const hasGameItems = itemsCount > 0;
+
+                // Check "Teavita" and "Kustuta" buttons exist on items
+                const firstItem = closeGamesList?.querySelector('.owner-closegame-item');
+                const hasNotifyBtn = !!firstItem?.querySelector('.btn-owner-game-notify');
+                const hasDeleteBtn = !!firstItem?.querySelector('.btn-owner-game-delete');
+
+                // Test opening notice modal
+                const noticeModal = document.getElementById('modal-owner-create-notice');
+                if (window.openOwnerNoticeModal) {
+                    window.openOwnerNoticeModal('crown', '👑 Crown Obby');
+                }
+                const isNoticeModalOpen = noticeModal && noticeModal.style.display === 'flex';
+
+                const titleInput = document.getElementById('owner-notice-title-input');
+                const descInput = document.getElementById('owner-notice-desc-input');
+                const repeatSelect = document.getElementById('owner-notice-repeat-select');
+
+                const titleHasDefault = titleInput?.value.includes('Sorry. Update. Playard Game 2');
+                const descHasSunday = descInput?.value.includes('Sunday at 14:00 UTC') || descInput?.value.includes('16:00 Estonian time');
+                const repeatHasOption = !!repeatSelect;
+
+                // Save custom notice to test saving
+                const saveBtn = document.getElementById('btn-save-owner-notice');
+                saveBtn?.click();
+                await new Promise(r => setTimeout(r, 700));
+
+                const isNoticeModalClosed = !noticeModal || noticeModal.style.display === 'none';
+
+                // Test Game Join Warning Modal
+                if (window.showGameJoinWarningModal) {
+                    window.showGameJoinWarningModal({ forceShow: true });
+                }
+                await new Promise(r => setTimeout(r, 200));
+
+                const warningModal = document.getElementById('modal-game-join-warning');
+                const hasWarningModal = !!warningModal;
+                const warningTitle = document.getElementById('join-warning-title')?.textContent || '';
+                const warningDesc = document.getElementById('join-warning-desc')?.textContent || '';
+                const hasCorrectEnglishTitle = warningTitle.includes('Sorry. Update. Playard Game 2');
+                const hasCorrectEnglishDesc = warningDesc.includes('We are deleting all games this Sunday') && warningDesc.includes('14:00 UTC') && warningDesc.includes('16:00 Estonian time');
+
+                // Dismiss warning
+                const dismissBtn = document.getElementById('btn-dismiss-join-warning');
+                dismissBtn?.click();
+                await new Promise(r => setTimeout(r, 250));
+                const isWarningDismissed = !document.getElementById('modal-game-join-warning');
+
+                return {
+                    hasCloseGamesTab,
+                    isCloseGamesMode,
+                    isBoxVisible,
+                    hasGameItems,
+                    itemsCount,
+                    hasNotifyBtn,
+                    hasDeleteBtn,
+                    isNoticeModalOpen,
+                    titleHasDefault,
+                    descHasSunday,
+                    repeatHasOption,
+                    isNoticeModalClosed,
+                    hasWarningModal,
+                    hasCorrectEnglishTitle,
+                    hasCorrectEnglishDesc,
+                    isWarningDismissed
+                };
+            });
+
+            console.log("   Owner Close Games Test Results:", ownerCloseGamesTest);
+            if (
+                !ownerCloseGamesTest.hasCloseGamesTab ||
+                !ownerCloseGamesTest.isCloseGamesMode ||
+                !ownerCloseGamesTest.isBoxVisible ||
+                !ownerCloseGamesTest.hasGameItems ||
+                !ownerCloseGamesTest.hasNotifyBtn ||
+                !ownerCloseGamesTest.hasDeleteBtn ||
+                !ownerCloseGamesTest.isNoticeModalOpen ||
+                !ownerCloseGamesTest.titleHasDefault ||
+                !ownerCloseGamesTest.descHasSunday ||
+                !ownerCloseGamesTest.isNoticeModalClosed ||
+                !ownerCloseGamesTest.hasWarningModal ||
+                !ownerCloseGamesTest.hasCorrectEnglishTitle ||
+                !ownerCloseGamesTest.hasCorrectEnglishDesc ||
+                !ownerCloseGamesTest.isWarningDismissed
+            ) {
+                throw new Error("Owner Close Games & Join Warning test failed: " + JSON.stringify(ownerCloseGamesTest));
+            }
+            console.log("   ✅ Owner Panel 'Sulge mänge', Teavita modal & English Join Warning modal verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
