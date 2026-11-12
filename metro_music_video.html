@@ -412,17 +412,17 @@
             fxCtx.textAlign = 'center';
             fxCtx.textBaseline = 'middle';
 
-            // 1. Text "LAST METRO" directly ABOVE the logo
-            fxCtx.font = '900 52px "Cinzel", "Montserrat", sans-serif';
-            fxCtx.letterSpacing = '10px';
-            const titleGrad = fxCtx.createLinearGradient(cx - 200, cy - baseRadius - 55, cx + 200, cy - baseRadius - 55);
+            // 1. Text "LAST METRO" directly ABOVE the logo (elevated above wave peaks)
+            fxCtx.font = '900 58px "Cinzel", "Montserrat", sans-serif';
+            fxCtx.letterSpacing = '12px';
+            const titleGrad = fxCtx.createLinearGradient(cx - 220, cy - baseRadius - 100, cx + 220, cy - baseRadius - 100);
             titleGrad.addColorStop(0, '#ffffff');
             titleGrad.addColorStop(0.5, '#00f2fe');
             titleGrad.addColorStop(1, '#ffffff');
             fxCtx.fillStyle = titleGrad;
             fxCtx.shadowColor = 'rgba(0, 242, 254, 0.95)';
             fxCtx.shadowBlur = 25 + bassNorm * 30;
-            fxCtx.fillText('LAST METRO', cx, cy - baseRadius - 60);
+            fxCtx.fillText('LAST METRO', cx, cy - baseRadius - 95);
 
             // Subtitle text above logo
             fxCtx.font = '800 16px "Montserrat", sans-serif';
@@ -430,7 +430,7 @@
             fxCtx.fillStyle = '#ffd700';
             fxCtx.shadowColor = '#ffd700';
             fxCtx.shadowBlur = 12;
-            fxCtx.fillText('OFFICIAL SOUNDTRACK', cx, cy - baseRadius - 22);
+            fxCtx.fillText('OFFICIAL SOUNDTRACK', cx, cy - baseRadius - 55);
 
             // 2. Draw REAL Playard Games SVG Logo in the center
             if (logoImg.complete && logoImg.naturalWidth > 0) {
