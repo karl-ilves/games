@@ -146,7 +146,7 @@
 
             // SCENE LOGIC
             if (t < 4.8) {
-                // SCENE 1: Welcome 1st player celebration
+                // SCENE 1: Welcome 1st player celebration featuring twoserrmvp
                 const st = t;
                 const scale = Math.min(1.15, 0.8 + st * 0.1);
                 ctx.save();
@@ -158,27 +158,41 @@
                 ctx.textAlign = 'center';
                 ctx.fillText('🏆', 0, -180);
 
-                ctx.font = '900 64px sans-serif';
+                ctx.font = '900 60px sans-serif';
                 ctx.fillStyle = '#ffd32a';
                 ctx.shadowColor = '#ffd32a';
                 ctx.shadowBlur = 35;
-                ctx.fillText('ESIMENE MÄNGIJA!', 0, -40);
+                ctx.fillText('FIRST PLAYER IS HERE!', 0, -50);
 
-                ctx.font = '900 82px sans-serif';
+                // Player name badge for twoserrmvp
+                ctx.fillStyle = 'rgba(168, 85, 247, 0.2)';
+                ctx.roundRect(-300, -20, 600, 80, 24);
+                ctx.fill();
+                ctx.strokeStyle = '#a855f7';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.font = '900 50px sans-serif';
+                ctx.fillStyle = '#00f2fe';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 20;
+                ctx.fillText('👤 @twoserrmvp ⭐', 0, 36);
+
+                ctx.font = '900 80px sans-serif';
                 const grad1 = ctx.createLinearGradient(-300, 0, 300, 0);
                 grad1.addColorStop(0, '#00f2fe');
                 grad1.addColorStop(1, '#4facfe');
                 ctx.fillStyle = grad1;
                 ctx.shadowColor = '#00f2fe';
                 ctx.shadowBlur = 25;
-                ctx.fillText('WELCOME TO', 0, 60);
-                ctx.fillText('PLAYARD 👑', 0, 160);
+                ctx.fillText('WELCOME TO', 0, 150);
+                ctx.fillText('PLAYARD 👑', 0, 240);
 
-                ctx.font = '700 36px sans-serif';
+                ctx.font = '700 34px sans-serif';
                 ctx.fillStyle = '#ffffff';
                 ctx.shadowBlur = 0;
-                ctx.fillText('Ajalugu on tehtud! 🚀', 0, 260);
-                ctx.fillText('Esimene mängija liitus serveriga!', 0, 310);
+                ctx.fillText('History has been made! 🚀', 0, 330);
+                ctx.fillText('First player joined the live server!', 0, 380);
                 ctx.restore();
 
             } else if (t < 9.8) {
@@ -195,12 +209,12 @@
                 ctx.shadowColor = '#ff4757';
                 ctx.shadowBlur = 30;
                 ctx.textAlign = 'center';
-                ctx.fillText('19+ EPIC MÄNGU! 🔥', 0, -60);
+                ctx.fillText('19+ EPIC 3D GAMES! 🔥', 0, -60);
 
                 ctx.font = '700 36px sans-serif';
                 ctx.fillStyle = '#e2e8f0';
                 ctx.shadowBlur = 0;
-                ctx.fillText('Kõik tasuta otse brauseris!', 0, 20);
+                ctx.fillText('Play instantly in your browser!', 0, 20);
 
                 // Game Pills Grid
                 const games = [
@@ -242,16 +256,16 @@
                 ctx.restore();
 
             } else if (t < 14.8) {
-                // SCENE 3: Roblox-style Creator Studio & Multiplayer
+                // SCENE 3: Roblox-style Creator Studio & Multiplayer (Playard Kool removed!)
                 const st = t - 9.8;
                 ctx.save();
                 ctx.translate(W / 2, H / 2 - 150);
 
                 ctx.font = '110px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('🛠️🤖', 0, -120);
+                ctx.fillText('🛠️🎮', 0, -120);
 
-                ctx.font = '900 66px sans-serif';
+                ctx.font = '900 68px sans-serif';
                 const grad3 = ctx.createLinearGradient(-300, 0, 300, 0);
                 grad3.addColorStop(0, '#a855f7');
                 grad3.addColorStop(1, '#c084fc');
@@ -260,16 +274,16 @@
                 ctx.shadowBlur = 30;
                 ctx.fillText('CREATOR STUDIO 3D', 0, 0);
 
-                ctx.font = '900 48px sans-serif';
+                ctx.font = '900 44px sans-serif';
                 ctx.fillStyle = '#00f2fe';
-                ctx.fillText('+ PLAYARD AI KOOL 🎒', 0, 70);
+                ctx.fillText('BUILD & MULTIPLAYER 🌐', 0, 70);
 
                 ctx.font = '600 34px sans-serif';
                 ctx.fillStyle = '#e2e8f0';
                 ctx.shadowBlur = 0;
-                ctx.fillText('✨ Ehita oma maailm (Roblox-stiilis)', 0, 170);
-                ctx.fillText('🧠 Õpeta AI-d ja loo mänge sekundiga!', 0, 230);
-                ctx.fillText('👥 Mängi koos sõpradega serveris!', 0, 290);
+                ctx.fillText('✨ Build your custom 3D worlds', 0, 170);
+                ctx.fillText('🚀 Real-time physics & sandbox tools', 0, 230);
+                ctx.fillText('👥 Play online with your friends!', 0, 290);
                 ctx.restore();
 
             } else if (t < 19.8) {
@@ -289,12 +303,12 @@
                 ctx.fillStyle = grad4;
                 ctx.shadowColor = '#ffd32a';
                 ctx.shadowBlur = 30;
-                ctx.fillText('PLAYBUX & POOD 💎', 0, 0);
+                ctx.fillText('PLAYBUX & SHOP 💎', 0, 0);
 
                 ctx.font = '700 36px sans-serif';
                 ctx.fillStyle = '#ffffff';
                 ctx.shadowBlur = 0;
-                ctx.fillText('Võida mänge ja teeni Playbuxe!', 0, 80);
+                ctx.fillText('Win games and earn Playbux!', 0, 80);
 
                 // Features box
                 ctx.fillStyle = 'rgba(255, 211, 42, 0.08)';
@@ -306,22 +320,22 @@
 
                 ctx.font = '800 32px sans-serif';
                 ctx.fillStyle = '#ffd32a';
-                ctx.fillText('✨ Ava unikaalseid sõidukeid ja riideid', 0, 190);
-                ctx.fillText('🎁 Saada sõpradele PlayBuxe kingituseks', 0, 250);
-                ctx.fillText('⭐ Playard Plus kuldsed staatused', 0, 310);
+                ctx.fillText('✨ Unlock unique vehicles and skins', 0, 190);
+                ctx.fillText('🎁 Send Playbux gifts to friends', 0, 250);
+                ctx.fillText('⭐ Playard Plus golden statuses', 0, 310);
                 ctx.restore();
 
             } else {
-                // SCENE 5: Call to Action (Follow, Play, Share)
+                // SCENE 5: Clean Call to Action (Follow, Play, Share - Button removed!)
                 const st = t - 19.8;
                 ctx.save();
                 ctx.translate(W / 2, H / 2 - 140);
 
-                ctx.font = '100px sans-serif';
+                ctx.font = '110px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('🚀🔥', 0, -140);
+                ctx.fillText('🚀🔥', 0, -120);
 
-                ctx.font = '900 78px sans-serif';
+                ctx.font = '900 80px sans-serif';
                 const grad5 = ctx.createLinearGradient(-300, 0, 300, 0);
                 grad5.addColorStop(0, '#00f2fe');
                 grad5.addColorStop(0.5, '#ffd32a');
@@ -329,33 +343,26 @@
                 ctx.fillStyle = grad5;
                 ctx.shadowColor = '#00f2fe';
                 ctx.shadowBlur = 35;
-                ctx.fillText('TULE MÄNGIMA!', 0, -20);
+                ctx.fillText('JOIN THE GAME!', 0, 0);
 
-                // Callout Button
-                const btnPulse = Math.sin(st * 6) * 10;
-                ctx.fillStyle = 'linear-gradient(135deg, #00f2fe, #0072ff)';
-                ctx.fillStyle = '#0072ff';
-                ctx.roundRect(-360 - btnPulse / 2, 70, 720 + btnPulse, 120, 60);
-                ctx.fill();
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 4;
-                ctx.stroke();
-
-                ctx.font = '900 48px sans-serif';
+                ctx.font = '900 52px sans-serif';
                 ctx.fillStyle = '#ffffff';
-                ctx.shadowColor = '#000000';
-                ctx.shadowBlur = 10;
-                ctx.fillText('👉 PLAYARD.GAMES 👈', 0, 145);
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 15;
+                ctx.fillText('PLAYARD.GAMES', 0, 100);
 
-                ctx.font = '800 38px sans-serif';
-                ctx.fillStyle = '#2ecc71';
+                ctx.font = '800 42px sans-serif';
+                ctx.fillStyle = '#ff4757';
                 ctx.shadowBlur = 0;
-                ctx.fillText('🔴 YouTube: @PlayardGames', 0, 260);
-                ctx.fillText('🎵 TikTok: @playardgames', 0, 320);
+                ctx.fillText('🔴 YouTube: @PlayardGames', 0, 210);
 
-                ctx.font = '700 30px sans-serif';
+                ctx.font = '800 42px sans-serif';
+                ctx.fillStyle = '#00f2fe';
+                ctx.fillText('🎵 TikTok: @playardgames', 0, 280);
+
+                ctx.font = '800 34px sans-serif';
                 ctx.fillStyle = '#ffd32a';
-                ctx.fillText('LIKE & FOLLOW FOR MORE! ❤️', 0, 400);
+                ctx.fillText('LIKE & FOLLOW FOR MORE! ❤️', 0, 370);
                 ctx.restore();
             }
         }

@@ -74,19 +74,19 @@ server.listen(8999, '127.0.0.1', async () => {
         process.exit(1);
     }
 
-    const commaIndex = dataUrl.indexOf(',');
-    if (commaIndex === -1) {
-        console.error("Invalid data URL string, no comma found!");
+    const base64Marker = ';base64,';
+    const markerIndex = dataUrl.indexOf(base64Marker);
+    if (markerIndex === -1) {
+        console.error("Invalid data URL string, ;base64, not found!");
         await browser.close();
         server.close();
         process.exit(1);
     }
 
-    const header = dataUrl.substring(0, commaIndex);
-    const base64Data = dataUrl.substring(commaIndex + 1);
+    const header = dataUrl.substring(0, markerIndex);
+    const base64Data = dataUrl.substring(markerIndex + base64Marker.length);
     const mime = header.split(';')[0].replace('data:', '');
     const buffer = Buffer.from(base64Data, 'base64');
-    const isMp4 = mime.includes('mp4');
     const outputPath = path.join(__dirname, 'playard_first_player_promo.mp4');
 
     fs.writeFileSync(outputPath, buffer);

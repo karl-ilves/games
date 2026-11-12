@@ -15724,7 +15724,34 @@ await (async () => {
             ) {
                 throw new Error("Owner Close Games & Join Warning test failed: " + JSON.stringify(ownerCloseGamesTest));
             }
-            console.log("   ✅ Owner Panel 'Sulge mänge', Teavita modal & English Join Warning modal verified successfully!");
+            // 33. Testing TikTok and YouTube Hub Buttons
+            console.log("33. Testing 'Find us on TikTok' and 'Find us on YouTube' buttons on Hub...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const socialButtonsTest = await page.evaluate(() => {
+                const tiktokBtn = document.getElementById('btn-find-tiktok');
+                const youtubeBtn = document.getElementById('btn-find-youtube');
+                const searchSec = document.getElementById('games-search-section');
+
+                const hasTiktok = !!tiktokBtn && tiktokBtn.getAttribute('href') === 'https://www.tiktok.com/@playardgames';
+                const hasYoutube = !!youtubeBtn && youtubeBtn.getAttribute('href') === 'https://www.youtube.com/@PlayardGames';
+                const tiktokText = tiktokBtn?.textContent || '';
+                const youtubeText = youtubeBtn?.textContent || '';
+
+                return {
+                    hasTiktok,
+                    hasYoutube,
+                    hasTiktokText: tiktokText.includes('Find us on TikTok'),
+                    hasYoutubeText: youtubeText.includes('Find us on YouTube'),
+                    isAboveSearch: !!searchSec && !!tiktokBtn
+                };
+            });
+            console.log("   Social Buttons Test Results:", socialButtonsTest);
+            if (!socialButtonsTest.hasTiktok || !socialButtonsTest.hasYoutube || !socialButtonsTest.hasTiktokText || !socialButtonsTest.hasYoutubeText) {
+                throw new Error("Social buttons test failed: " + JSON.stringify(socialButtonsTest));
+            }
+            console.log("   ✅ 'Find us on TikTok' and 'Find us on YouTube' buttons verified!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
