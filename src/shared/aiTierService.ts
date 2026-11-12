@@ -1,8 +1,9 @@
 import { yardService } from './yardService';
+import { getCurrentUserProfile, isPlayardOwner, isUserAdminEmail } from '../auth';
 
 export type PlayardAiTier = 'FREE' | 'PRO' | 'PLUS' | 'VIP';
 
-export type PlayardAiModelId = 'playard_game_ai_1_1' | 'play_ai_2' | 'play_ai_2_2';
+export type PlayardAiModelId = 'playard_game_ai_1_1' | 'playard_game_ai_1_2' | 'play_ai_2' | 'play_ai_2_2';
 
 export interface PlayardAiModelConfig {
     id: PlayardAiModelId;
@@ -25,6 +26,17 @@ export const PLAYARD_AI_MODELS: Record<string, PlayardAiModelConfig> = {
         description: 'Optimeeritud mudel Playard 3D maailmade ehitamiseks, skriptimiseks, füüsika arvutamiseks ja semantiliseks sünteesiks.',
         icon: '🤖',
         badge: 'Universaalne',
+        vipOnly: false,
+        has5hLimit: true,
+        has5dLimit: true
+    },
+    playard_game_ai_1_2: {
+        id: 'playard_game_ai_1_2',
+        name: 'Playard game ai 1.2',
+        subtitle: '🧠 Palju targem tehisintellekt & reaalajas assistent',
+        description: 'Palju targem ja täpsem AI mudel. Jälgib mida mängijad kirjutavad, mõistab konteksti süvitsi ja vastab nutikalt igale soovile.',
+        icon: '🧠✨',
+        badge: 'Palju Targem',
         vipOnly: false,
         has5hLimit: true,
         has5dLimit: true
@@ -70,19 +82,19 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
         badge: '🆓 FREE',
         icon: '🆓',
         pricePbx: 0,
-        dailyLimit: 20,
-        questionLevel: 'Vähe küsimusi',
-        pct5hPerQuery: 5, // 5h limiit väheneb 5% iga küsimuse korral
-        pct5dPerQuery: 1, // 5 päeva limiit väheneb 1% iga küsimuse korral
+        dailyLimit: 5,
+        questionLevel: '5 küsimust päevas',
+        pct5hPerQuery: 20, // 5h limiit väheneb 20% iga küsimuse korral (5 küsimust / 5h)
+        pct5dPerQuery: 4, // 5 päeva limiit väheneb 4% iga küsimuse korral (25 küsimust / 5p)
         accentColor: '#38bdf8',
         bgGradient: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.1))',
         description: 'Algtase kõigile tasuta katsetamiseks ja lihtsate asjade ehitamiseks.',
         features: [
+            '5 küsimust päevas',
             'Tavaline AI vestlus & üldistele küsimustele vastamine',
             'Lihtne Playardi abi & mänguideede loomine',
             'Lihtsate objektide & piiratud mängude loomine',
-            'Piiratud koodi loomine',
-            '5h limiit: -5% küsimus • 5 päeva limiit: -1% küsimus'
+            'Piiratud koodi loomine'
         ],
         capabilities: {
             maxObjectsPerGen: 15,
@@ -105,21 +117,20 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
         badge: '⚡ PRO',
         icon: '⚡',
         pricePbx: 100,
-        dailyLimit: 100,
-        questionLevel: 'Rohkem küsimusi',
-        pct5hPerQuery: 2, // 5h limiit väheneb 2% iga küsimuse kohta
-        pct5dPerQuery: 0.5, // 5 päeva limiit väheneb 0.5% iga küsimuse kohta
+        dailyLimit: 10,
+        questionLevel: '10 küsimust päevas',
+        pct5hPerQuery: 10, // 5h limiit väheneb 10% iga küsimuse kohta (10 küsimust / 5h)
+        pct5dPerQuery: 2, // 5 päeva limiit väheneb 2% iga küsimuse kohta (50 küsimust / 5p)
         accentColor: '#a855f7',
         bgGradient: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(147, 51, 234, 0.15))',
-        description: 'Tõsisele mänguloojale – suuremad kaardid, rohkem objekte ja kiirem AI.',
+        description: 'Tõsisele mänguloojale – 10 küsimust päevas, suuremad kaardid ja kiirem AI.',
         features: [
+            '10 küsimust päevas (2x rohkem kui Free)',
             'Kõik Free taseme võimalused',
             'Suuremate mängude loomine & rohkem objekte ja NPC-sid',
             'Rohkem skripte & parem projektimälu',
             'Keerukamate mängusüsteemide loomine',
-            'Koodi automaatne parandamine',
-            'Suuremad kaardid & kiirem AI',
-            '5h limiit: -2% küsimus • 5 päeva limiit: -0.5% küsimus'
+            'Koodi automaatne parandamine'
         ],
         capabilities: {
             maxObjectsPerGen: 50,
@@ -142,21 +153,20 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
         badge: '🌟 PLUS',
         icon: '🌟',
         pricePbx: 300,
-        dailyLimit: 500,
-        questionLevel: 'Palju küsimusi',
-        pct5hPerQuery: 1, // 5h limiit 1% iga küsimuse kohta
-        pct5dPerQuery: 0.2, // 5 päeva 0.2%
+        dailyLimit: 20,
+        questionLevel: '20 küsimust päevas',
+        pct5hPerQuery: 5, // 5h limiit 5% iga küsimuse kohta (20 küsimust / 5h)
+        pct5dPerQuery: 1, // 5 päeva 1% (100 küsimust / 5p)
         accentColor: '#eab308',
         bgGradient: 'linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(202, 138, 4, 0.15))',
-        description: 'Professionaalne tase – automaatne testimine, vigade parandus ja väga suured kaardid.',
+        description: 'Professionaalne tase – 20 küsimust päevas, automaatne testimine ja vigade parandus.',
         features: [
+            '20 küsimust päevas (4x rohkem kui Free)',
             'Kõik Pro taseme võimalused',
             'Suurte mängude loomine & väga suured kaardid',
             'Automaatne mängu testimine & vigade leidmine',
             'Automaatne vigade parandamine',
-            'Täiustatud 3D objektide ja NPC-de loomine',
-            'Pikem projektimälu & mitmeastmeliste ülesannete automaatne täitmine',
-            '5h limiit: -1% küsimus • 5 päeva limiit: -0.2% küsimus'
+            'Täiustatud 3D objektide ja NPC-de loomine'
         ],
         capabilities: {
             maxObjectsPerGen: 150,
@@ -179,22 +189,21 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
         badge: '👑 VIP',
         icon: '👑',
         pricePbx: 750,
-        dailyLimit: 2000,
-        questionLevel: 'Väga palju küsimusi',
-        pct5hPerQuery: 0.5, // 5h 0.5%
-        pct5dPerQuery: 0.1, // 5 päeva 0.1%
+        dailyLimit: 30,
+        questionLevel: '30 küsimust päevas',
+        pct5hPerQuery: 3.33, // 5h 3.33% (30 küsimust / 5h)
+        pct5dPerQuery: 0.67, // 5 päeva 0.67% (150 küsimust / 5p)
         accentColor: '#f43f5e',
         bgGradient: 'linear-gradient(135deg, rgba(244, 63, 94, 0.3), rgba(225, 29, 72, 0.2))',
-        description: 'Kõrgeim tase – massiivsed projektid, ülikiire AI ja terve mängu ehitamine üheainsa käsuga!',
+        description: 'Kõrgeim tase – 30 küsimust päevas, massiivsed projektid ja terve mängu ehitamine üheainsa käsuga!',
         features: [
+            '30 küsimust päevas (kõrgeim VIP limiit)',
             'Kõik Plus taseme võimalused',
             'Kõige suuremad projektid & maksimaalne projektimälu',
             'Kõige kiirem AI & kõige keerukamate mängude loomine',
             'Täiustatud Game Creator & hiiglaslikud kaardid',
             'Keerukad mängumehaanikad & täiustatud animatsioonid',
-            'Väga pikkade ülesannete automaatne täitmine',
-            'Võimalus ehitada suur osa mängust ühe käsu põhjal',
-            '5h limiit: -0.5% küsimus • 5 päeva limiit: -0.1% küsimus'
+            'Võimalus ehitada suur osa mängust ühe käsu põhjal'
         ],
         capabilities: {
             maxObjectsPerGen: 600,
@@ -286,6 +295,9 @@ export class AiTierService {
     public getSelectedModel(): PlayardAiModelId {
         try {
             const raw = localStorage.getItem(STORAGE_KEY_MODEL);
+            if (raw === 'playard_game_ai_1_2') {
+                return 'playard_game_ai_1_2';
+            }
             if (raw === 'play_ai_2') {
                 return 'play_ai_2';
             }
@@ -599,6 +611,7 @@ export class AiTierService {
                 playAi2Limits
             };
         }
+
 
         if (!limits.canRequest || usage.usedToday >= usage.dailyLimit) {
             let detail = 'Sa oled AI limiidi ära kasutanud.';

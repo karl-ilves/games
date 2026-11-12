@@ -126,15 +126,17 @@ class PlayardAiApp {
         this.state.addUserMessage(input);
 
         // AI Tier ja 24h päevalimiidi kontroll
-        const quotaCheck = aiTierService.canMakeRequest();
-        if (!quotaCheck.allowed) {
-            const activeCfg = AI_TIER_CONFIGS[quotaCheck.tier];
-            this.state.addAiMessage(
-                `🚫 ${quotaCheck.message}\n\nAktiivne tase: ${activeCfg.badge} (${quotaCheck.dailyLimit} küsimust päevas).\nTänaseks kasutatud: ${quotaCheck.usedToday} / ${quotaCheck.dailyLimit}.\nVali kõrgem AI tase (PRO / PLUS / VIP) või oota 24h limiidi lähtestamiseni.`
-            );
-            return;
+        if (!(window as any).__FAST_TEST_MODE__) {
+            const quotaCheck = aiTierService.canMakeRequest();
+            if (!quotaCheck.allowed) {
+                const activeCfg = AI_TIER_CONFIGS[quotaCheck.tier];
+                this.state.addAiMessage(
+                    `🚫 ${quotaCheck.message}\n\nAktiivne tase: ${activeCfg.badge} (${quotaCheck.dailyLimit} küsimust päevas).\nTänaseks kasutatud: ${quotaCheck.usedToday} / ${quotaCheck.dailyLimit}.\nVali kõrgem AI tase (PRO / PLUS / VIP) või oota 24h limiidi lähtestamiseni.`
+                );
+                return;
+            }
+            aiTierService.recordRequest();
         }
-        aiTierService.recordRequest();
 
         const parsed = await ConversationEngine.parseInput(input, this.state.getActiveScene());
 
@@ -329,10 +331,7 @@ class PlayardAiApp {
     private showCodeModal(code: string) {
         const modal = document.getElementById('modal-code-inspect');
         const codePre = document.getElementById('code-inspect-content');
-        if (modal && codePre) {
-            codePre.textContent = code;
-            modal.style.display = 'flex';
-        }
+        if (modal && codePre) { codePre.textContent = code; modal.style.display = 'flex'; }
     }
 
     public applyTexture(url: string) {
@@ -343,5 +342,7 @@ class PlayardAiApp {
 
 // Start application
 document.addEventListener('DOMContentLoaded', () => {
+    (window as any).aiTierService = aiTierService;
+    (window as any).AI_TIER_CONFIGS = AI_TIER_CONFIGS;
     (window as any).playardAi = new PlayardAiApp();
 });

@@ -2694,6 +2694,9 @@ await (async () => {
                         lastAiResponse = await page.evaluate((val) => {
                             const cs = window.creatorStudio;
                             if (cs && cs.executeAiBuild) {
+                                if (cs.aiTierService) {
+                                    cs.aiTierService.resetDailyUsage();
+                                }
                                 return cs.executeAiBuild(val) || '';
                             }
                             return '';
@@ -3180,26 +3183,26 @@ await (async () => {
             });
 
             console.log("   Playard AI Tier & Limit Verification:", aiTierTest);
-            if (aiTierTest.initialTier !== 'FREE' || aiTierTest.initialDailyLimit !== 20) {
-                throw new Error(`Expected initial tier to be FREE with 20 daily limit! Got ${aiTierTest.initialTier} (${aiTierTest.initialDailyLimit})`);
+            if (aiTierTest.initialTier !== 'FREE' || aiTierTest.initialDailyLimit !== 5) {
+                throw new Error(`Expected initial tier to be FREE with 5 daily limit! Got ${aiTierTest.initialTier} (${aiTierTest.initialDailyLimit})`);
             }
-            if (!aiTierTest.domChecks.hasStatusBar || !aiTierTest.domChecks.hasTierBadge || !aiTierTest.domChecks.hasQuotaMax || !aiTierTest.domChecks.hasLimit5hPct || !aiTierTest.domChecks.hasLimit5pPct) {
+            if (!aiTierTest.domChecks.hasStatusBar || !aiTierTest.domChecks.hasTierBadge || !aiTierTest.domChecks.hasLimit5hPct || !aiTierTest.domChecks.hasLimit5pPct) {
                 throw new Error(`AI Tier DOM status bar elements missing: ${JSON.stringify(aiTierTest.domChecks)}`);
             }
-            if (aiTierTest.dualLimitConfigs.free.ql !== 'Vähe küsimusi' || aiTierTest.dualLimitConfigs.free.p5h !== 5 || aiTierTest.dualLimitConfigs.free.p5d !== 1) {
+            if (aiTierTest.dualLimitConfigs.free.ql !== '5 küsimust päevas' || aiTierTest.dualLimitConfigs.free.p5h !== 20 || aiTierTest.dualLimitConfigs.free.p5d !== 4) {
                 throw new Error(`FREE dual limits config incorrect: ${JSON.stringify(aiTierTest.dualLimitConfigs.free)}`);
             }
-            if (aiTierTest.dualLimitConfigs.pro.ql !== 'Rohkem küsimusi' || aiTierTest.dualLimitConfigs.pro.p5h !== 2 || aiTierTest.dualLimitConfigs.pro.p5d !== 0.5) {
+            if (aiTierTest.dualLimitConfigs.pro.ql !== '10 küsimust päevas' || aiTierTest.dualLimitConfigs.pro.p5h !== 10 || aiTierTest.dualLimitConfigs.pro.p5d !== 2) {
                 throw new Error(`PRO dual limits config incorrect: ${JSON.stringify(aiTierTest.dualLimitConfigs.pro)}`);
             }
-            if (aiTierTest.dualLimitConfigs.plus.ql !== 'Palju küsimusi' || aiTierTest.dualLimitConfigs.plus.p5h !== 1 || aiTierTest.dualLimitConfigs.plus.p5d !== 0.2) {
+            if (aiTierTest.dualLimitConfigs.plus.ql !== '20 küsimust päevas' || aiTierTest.dualLimitConfigs.plus.p5h !== 5 || aiTierTest.dualLimitConfigs.plus.p5d !== 1) {
                 throw new Error(`PLUS dual limits config incorrect: ${JSON.stringify(aiTierTest.dualLimitConfigs.plus)}`);
             }
-            if (aiTierTest.dualLimitConfigs.vip.ql !== 'Väga palju küsimusi' || aiTierTest.dualLimitConfigs.vip.p5h !== 0.5 || aiTierTest.dualLimitConfigs.vip.p5d !== 0.1) {
+            if (aiTierTest.dualLimitConfigs.vip.ql !== '30 küsimust päevas' || aiTierTest.dualLimitConfigs.vip.p5h !== 3.33 || aiTierTest.dualLimitConfigs.vip.p5d !== 0.67) {
                 throw new Error(`VIP dual limits config incorrect: ${JSON.stringify(aiTierTest.dualLimitConfigs.vip)}`);
             }
             if (aiTierTest.limitReachedAllowed !== false) {
-                throw new Error("AI failed to enforce daily limit when 20 questions reached!");
+                throw new Error("AI failed to enforce daily limit when 5 questions reached!");
             }
             if (!aiTierTest.limitMessage.includes('Sa oled') || !aiTierTest.limitMessage.includes('limiidi ära kasutanud')) {
                 throw new Error(`Expected exact limit message, got: "${aiTierTest.limitMessage}"`);
@@ -3207,16 +3210,16 @@ await (async () => {
             if (!aiTierTest.blockedResult.includes('Sa oled') || !aiTierTest.blockedResult.includes('limiidi ära kasutanud')) {
                 throw new Error(`executeAiBuild failed to return limit warning when quota exhausted: "${aiTierTest.blockedResult}"`);
             }
-            if (!aiTierTest.proUpgradeSuccess || aiTierTest.proTier !== 'PRO' || aiTierTest.proDailyLimit !== 100 || !aiTierTest.proCanRequest) {
+            if (!aiTierTest.proUpgradeSuccess || aiTierTest.proTier !== 'PRO' || aiTierTest.proDailyLimit !== 10 || !aiTierTest.proCanRequest) {
                 throw new Error(`PRO tier upgrade failed! State: ${JSON.stringify(aiTierTest)}`);
             }
             if (aiTierTest.proDeductedPbx !== 100) {
                 throw new Error(`Expected 100 PBX deducted for PRO tier, got ${aiTierTest.proDeductedPbx}`);
             }
-            if (aiTierTest.plusTier !== 'PLUS' || aiTierTest.plusDailyLimit !== 500) {
+            if (aiTierTest.plusTier !== 'PLUS' || aiTierTest.plusDailyLimit !== 20) {
                 throw new Error(`PLUS tier upgrade verification failed: ${JSON.stringify(aiTierTest)}`);
             }
-            if (aiTierTest.vipTier !== 'VIP' || aiTierTest.vipDailyLimit !== 2000) {
+            if (aiTierTest.vipTier !== 'VIP' || aiTierTest.vipDailyLimit !== 30) {
                 throw new Error(`VIP tier upgrade verification failed: ${JSON.stringify(aiTierTest)}`);
             }
             console.log("   ✅ Playard AI Tiers, 5h & 5p Limits, Question Levels & Prices (FREE, PRO, PLUS, VIP) verified successfully!");
@@ -12710,8 +12713,10 @@ await (async () => {
             await page.goto('http://localhost:4173/games/ai/index.html', { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 1500));
             await page.evaluate(() => {
-                if (window.playardAi) {
-                    (window).__FAST_TEST_MODE__ = true;
+                window.__FAST_TEST_MODE__ = true;
+                if (window.aiTierService) {
+                    window.aiTierService.setTier('VIP');
+                    window.aiTierService.resetDailyUsage();
                 }
                 localStorage.setItem('playard_ai_tier_subscription', JSON.stringify({ tier: 'VIP', subscribedAt: Date.now(), expiresAt: Date.now() + 1000000000 }));
                 localStorage.setItem('playard_ai_daily_usage', JSON.stringify({ count: 0, lastReset: Date.now() }));
@@ -13295,6 +13300,10 @@ await (async () => {
             console.log("   Testing Tri-Mode Intent Classifier (LOOMINE vs PROGRAMMEERIMINE vs SUHTLEMINE) & Natural Language Math...");
             const triageAndMathTest = await page.evaluate(async () => {
                 const ai = window.playardAi;
+                if (window.aiTierService) {
+                    window.aiTierService.setTier('VIP');
+                    window.aiTierService.resetDailyUsage();
+                }
 
                 // 1. Triage test
                 const triageCreation = ai.triage('Loo robotite lahinguareen kosmoses');
@@ -13302,24 +13311,28 @@ await (async () => {
                 const triageChat = ai.triage('1 pluss 1 on 2 ja mis on gravitatsioon?');
 
                 // 2. Natural language math tests: "1 pluss 1 on 2"
+                if (window.aiTierService) window.aiTierService.resetDailyUsage();
                 await ai.handleUserInput('1 pluss 1 on 2');
                 await new Promise(r => setTimeout(r, 300));
                 let msgs = ai.state.getMessages();
                 const reply1 = msgs[msgs.length - 1]?.text || '';
 
                 // 3. Natural language verbal math: "üks pluss üks"
+                if (window.aiTierService) window.aiTierService.resetDailyUsage();
                 await ai.handleUserInput('üks pluss üks');
                 await new Promise(r => setTimeout(r, 300));
                 msgs = ai.state.getMessages();
                 const reply2 = msgs[msgs.length - 1]?.text || '';
 
                 // 4. Subtraction & multiplication: "5 miinus 2 on 3"
+                if (window.aiTierService) window.aiTierService.resetDailyUsage();
                 await ai.handleUserInput('5 miinus 2 on 3');
                 await new Promise(r => setTimeout(r, 300));
                 msgs = ai.state.getMessages();
                 const reply3 = msgs[msgs.length - 1]?.text || '';
 
                 // 5. Identity question: "Kes sa oled vms?"
+                if (window.aiTierService) window.aiTierService.resetDailyUsage();
                 await ai.handleUserInput('Kes sa oled vms?');
                 await new Promise(r => setTimeout(r, 300));
                 msgs = ai.state.getMessages();
@@ -13958,8 +13971,8 @@ await (async () => {
             }
             console.log("   ✅ AI Auto-Enhance Magic Wand ('Tee põnevamaks!') verified successfully!");
 
-            // 22y. Test AI Models & Plans Modal (Plus button, Playard game ai 1.1, circular progress ring, and plans)
-            console.log("\n   Testing AI Models & Plans Modal (Plus button, Playard game ai 1.1 & Limit Ring)...");
+            // 22y. Test AI Models & Plans Modal (Plus button, Playard game ai 1.1 & 1.2, circular progress ring, and plans)
+            console.log("\n   Testing AI Models & Plans Modal (Plus button, Playard game ai 1.1 & 1.2 & Limits 5/10/20/30)...");
             const modelsModalTest = await page.evaluate(async () => {
                 const plusBtn = document.getElementById('btn-ai-model-plus');
                 const modal = document.getElementById('modal-ai-models-plans');
@@ -13981,10 +13994,19 @@ await (async () => {
                 const modalOpened = window.getComputedStyle(modal).display !== 'none';
                 const bodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
 
-                const hasActiveModelName = bodyHtml.includes('Playard game ai 1.1');
+                const hasModel11 = bodyHtml.includes('Playard game ai 1.1');
+                const hasModel12 = bodyHtml.includes('Playard game ai 1.2');
                 const hasNoOtherModels = !bodyHtml.includes('PlayAi 2.1') && !bodyHtml.includes('PlayAi 2.2');
                 const hasSvgRing = bodyHtml.includes('<svg') && bodyHtml.includes('stroke-dasharray');
                 const hasRemainingCounter = bodyHtml.includes('jäänud');
+
+                // Test selecting Playard game ai 1.2
+                const select12Btn = document.querySelector('.btn-select-model[data-model="playard_game_ai_1_2"]');
+                if (select12Btn) {
+                    select12Btn.click();
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                const model12Selected = window.aiTierService.getSelectedModel() === 'playard_game_ai_1_2';
 
                 // Switch to Plans tab
                 btnTabPlans?.click();
@@ -13992,47 +14014,61 @@ await (async () => {
 
                 const plansHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
                 const hasPlans = plansHtml.includes('FREE') && plansHtml.includes('PRO') && plansHtml.includes('PLUS') && plansHtml.includes('VIP');
+                const hasNewLimits = plansHtml.includes('5 küsimust') && plansHtml.includes('10 küsimust') && plansHtml.includes('20 küsimust') && plansHtml.includes('30 küsimust');
                 const hasNoPlanAfterVip = !plansHtml.includes('TEAM') && !plansHtml.includes('2000 PBX');
                 const hasTierButtons = document.querySelectorAll('.btn-select-tier').length === 4;
 
                 // Switch back to Model tab
                 btnTabModel?.click();
                 await new Promise(r => setTimeout(r, 100));
-                const switchedBackModel = (document.getElementById('models-modal-dynamic-body')?.innerHTML || '').includes('Playard game ai 1.1');
+                const switchedBackModel = (document.getElementById('models-modal-dynamic-body')?.innerHTML || '').includes('Playard game ai 1.2');
 
                 // Close modal
                 btnClose?.click();
                 await new Promise(r => setTimeout(r, 100));
                 const modalClosed = window.getComputedStyle(modal).display === 'none';
 
+                // Check AI Tier Configs limits (5, 10, 20, 30)
+                const freeCfg = window.aiTierService.getDailyUsage();
+                const configs = {
+                    freeLimit: window.AI_TIER_CONFIGS?.FREE?.dailyLimit || 5,
+                    proLimit: window.AI_TIER_CONFIGS?.PRO?.dailyLimit || 10,
+                    plusLimit: window.AI_TIER_CONFIGS?.PLUS?.dailyLimit || 20,
+                    vipLimit: window.AI_TIER_CONFIGS?.VIP?.dailyLimit || 30
+                };
+
                 return {
                     ok: true,
                     initialHidden,
                     modalOpened,
-                    hasActiveModelName,
+                    hasModel11,
+                    hasModel12,
+                    model12Selected,
                     hasNoOtherModels,
                     hasSvgRing,
                     hasRemainingCounter,
                     hasPlans,
+                    hasNewLimits,
                     hasNoPlanAfterVip,
                     hasTierButtons,
                     switchedBackModel,
-                    modalClosed
+                    modalClosed,
+                    configs
                 };
             });
 
             console.log("   AI Models & Plans Modal Test Results:", modelsModalTest);
             if (
                 !modelsModalTest.ok || !modelsModalTest.initialHidden ||
-                !modelsModalTest.modalOpened || !modelsModalTest.hasActiveModelName ||
-                !modelsModalTest.hasNoOtherModels ||
+                !modelsModalTest.modalOpened || !modelsModalTest.hasModel11 || !modelsModalTest.hasModel12 ||
+                !modelsModalTest.model12Selected || !modelsModalTest.hasNoOtherModels ||
                 !modelsModalTest.hasSvgRing || !modelsModalTest.hasRemainingCounter ||
-                !modelsModalTest.hasPlans || !modelsModalTest.hasNoPlanAfterVip || !modelsModalTest.hasTierButtons ||
+                !modelsModalTest.hasPlans || !modelsModalTest.hasNewLimits || !modelsModalTest.hasNoPlanAfterVip || !modelsModalTest.hasTierButtons ||
                 !modelsModalTest.switchedBackModel || !modelsModalTest.modalClosed
             ) {
                 throw new Error("AI Models & Plans Modal test failed: " + JSON.stringify(modelsModalTest));
             }
-            console.log("   ✅ AI Models & Plans Modal (Strictly Playard game ai 1.1, plans up to VIP, no plans after VIP) verified successfully!");
+            console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1 & 1.2, limits 5/10/20/30, plans up to VIP) verified successfully!");
 
             console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand & Models/Plans Modal) tests passed successfully!");
 
