@@ -13982,108 +13982,18 @@ await (async () => {
                 const bodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
 
                 const hasActiveModelName = bodyHtml.includes('Playard game ai 1.1');
-                const hasPlayAi2Model = bodyHtml.includes('PlayAi 2.1');
-                const hasPlayAi22Model = bodyHtml.includes('PlayAi 2.2');
+                const hasNoOtherModels = !bodyHtml.includes('PlayAi 2.1') && !bodyHtml.includes('PlayAi 2.2');
                 const hasSvgRing = bodyHtml.includes('<svg') && bodyHtml.includes('stroke-dasharray');
                 const hasRemainingCounter = bodyHtml.includes('jäänud');
-
-                // Test clicking PlayAi 2.1 and PlayAi 2.2 as non-VIP (should trigger 'you tont own vip')
-                let nonVipErrorTriggered = false;
-                const origAlert = window.alert;
-                window.alert = (msg) => {
-                    if (msg === 'you tont own vip') nonVipErrorTriggered = true;
-                };
-
-                const playAi2SelectBtn = document.querySelector('.btn-select-model[data-model="play_ai_2"]');
-                playAi2SelectBtn?.click();
-                await new Promise(r => setTimeout(r, 100));
-
-                const errorBanner = document.getElementById('ai-model-error-banner');
-                const errorBannerText = document.getElementById('ai-model-error-text')?.textContent || '';
-                const hasErrorBanner = errorBannerText.includes('you tont own vip');
-
-                // Test switching to VIP tier and selecting PlayAi 2.2
-                window.aiTierService.setTier('VIP');
-                window.aiTierService.resetDailyUsage();
-
-                // Click select PlayAi 2.2 as VIP
-                const playAi22SelectBtnVip = document.querySelector('.btn-select-model[data-model="play_ai_2_2"]');
-                playAi22SelectBtnVip?.click();
-                await new Promise(r => setTimeout(r, 100));
-
-                const bodyHtmlVip = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
-                const playAi22SelectedActive = bodyHtmlVip.includes('PlayAi 2.2') && bodyHtmlVip.includes('AINULT 5 PÄEVA');
-                const playAi22HasNo5h = !bodyHtmlVip.includes('5h limiit:');
-
-                // Record a question on PlayAi 2.2 and verify -2.5%
-                const playAi22Rec = window.aiTierService.recordRequest();
-                const playAi22RemainingAfter1 = playAi22Rec.playAi2Limits?.fiveDayRemainingPct; // should be 97.5%
-
-                // Test TEAM Plan (2000 PBX) and Team Members Management
-                window.aiTierService.setTier('TEAM');
-                window.aiTierService.clearTeamMembers();
-                // Backup and set mock real player profile
-                const prevProfilesRaw = localStorage.getItem('playard_user_profiles');
-                let existingProfiles = [];
-                try {
-                    if (prevProfilesRaw) existingProfiles = JSON.parse(prevProfilesRaw);
-                } catch (e) {}
-                const combinedProfiles = [
-                    ...existingProfiles,
-                    { username: 'RealGamer99', displayName: 'Real Gamer 99', email: 'gamer@example.com' },
-                    { username: 'AwesomeDev', displayName: 'Awesome Dev', email: 'dev@example.com' }
-                ];
-                localStorage.setItem('playard_user_profiles', JSON.stringify(combinedProfiles));
-
-                // Trigger render to show Team Management
-                document.getElementById('btn-tab-model')?.click();
-                await new Promise(r => setTimeout(r, 100));
-                const teamBodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
-                const hasTeamManagement = teamBodyHtml.includes('Meeskonna Haldus (TEAM)') && teamBodyHtml.includes('Add members');
-
-                // Click "Add members"
-                const btnAddMembers = document.getElementById('btn-open-add-members-modal');
-                btnAddMembers?.click();
-                await new Promise(r => setTimeout(r, 100));
-
-                const addModalHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
-                const hasAddModal = addModalHtml.includes('Lisa tiimiliikmeid (Ainult päris mängijad)') && addModalHtml.includes('Real Gamer 99');
-
-                // Click Add on RealGamer99
-                const addRealPlayerBtn = document.querySelector('.btn-add-team-player[data-username="RealGamer99"]');
-                addRealPlayerBtn?.click();
-                await new Promise(r => setTimeout(r, 100));
-
-                const membersAfterAdd = window.aiTierService.getTeamMembers();
-                const addedOk = membersAfterAdd.includes('RealGamer99');
-
-                // Test Leave button
-                const leaveBtn = document.querySelector('.btn-remove-team-member[data-username="RealGamer99"]');
-                const hasLeaveBtn = !!leaveBtn;
-                leaveBtn?.click();
-                await new Promise(r => setTimeout(r, 100));
-                const membersAfterLeave = window.aiTierService.getTeamMembers();
-                const leaveOk = !membersAfterLeave.includes('RealGamer99');
-
-                // Restore previous profiles
-                if (prevProfilesRaw !== null) {
-                    localStorage.setItem('playard_user_profiles', prevProfilesRaw);
-                }
-
-                // Reset back to FREE and default model for subsequent tests
-                window.aiTierService.setSelectedModel('playard_game_ai_1_1');
-                window.aiTierService.setTier('FREE');
-                window.aiTierService.resetDailyUsage();
-                window.alert = origAlert;
 
                 // Switch to Plans tab
                 btnTabPlans?.click();
                 await new Promise(r => setTimeout(r, 100));
 
                 const plansHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
-                const hasPlans = plansHtml.includes('FREE') && plansHtml.includes('PRO') && plansHtml.includes('PLUS') && plansHtml.includes('VIP') && plansHtml.includes('TEAM');
-                const hasTeamPlanPrice = plansHtml.includes('2000 PBX');
-                const hasTierButtons = document.querySelectorAll('.btn-select-tier').length >= 5;
+                const hasPlans = plansHtml.includes('FREE') && plansHtml.includes('PRO') && plansHtml.includes('PLUS') && plansHtml.includes('VIP');
+                const hasNoPlanAfterVip = !plansHtml.includes('TEAM') && !plansHtml.includes('2000 PBX');
+                const hasTierButtons = document.querySelectorAll('.btn-select-tier').length === 4;
 
                 // Switch back to Model tab
                 btnTabModel?.click();
@@ -14100,22 +14010,11 @@ await (async () => {
                     initialHidden,
                     modalOpened,
                     hasActiveModelName,
-                    hasPlayAi2Model,
-                    hasPlayAi22Model,
-                    nonVipErrorTriggered,
-                    hasErrorBanner,
-                    playAi22SelectedActive,
-                    playAi22HasNo5h,
-                    playAi22RemainingAfter1,
-                    hasTeamManagement,
-                    hasAddModal,
-                    addedOk,
-                    hasLeaveBtn,
-                    leaveOk,
+                    hasNoOtherModels,
                     hasSvgRing,
                     hasRemainingCounter,
                     hasPlans,
-                    hasTeamPlanPrice,
+                    hasNoPlanAfterVip,
                     hasTierButtons,
                     switchedBackModel,
                     modalClosed
@@ -14126,19 +14025,14 @@ await (async () => {
             if (
                 !modelsModalTest.ok || !modelsModalTest.initialHidden ||
                 !modelsModalTest.modalOpened || !modelsModalTest.hasActiveModelName ||
-                !modelsModalTest.hasPlayAi2Model || !modelsModalTest.hasPlayAi22Model ||
-                (!modelsModalTest.nonVipErrorTriggered && !modelsModalTest.hasErrorBanner) ||
-                !modelsModalTest.hasErrorBanner || !modelsModalTest.playAi22SelectedActive ||
-                !modelsModalTest.playAi22HasNo5h || modelsModalTest.playAi22RemainingAfter1 !== 97.5 ||
-                !modelsModalTest.hasTeamManagement || !modelsModalTest.hasAddModal ||
-                !modelsModalTest.addedOk || !modelsModalTest.hasLeaveBtn || !modelsModalTest.leaveOk ||
+                !modelsModalTest.hasNoOtherModels ||
                 !modelsModalTest.hasSvgRing || !modelsModalTest.hasRemainingCounter ||
-                !modelsModalTest.hasPlans || !modelsModalTest.hasTeamPlanPrice || !modelsModalTest.hasTierButtons ||
+                !modelsModalTest.hasPlans || !modelsModalTest.hasNoPlanAfterVip || !modelsModalTest.hasTierButtons ||
                 !modelsModalTest.switchedBackModel || !modelsModalTest.modalClosed
             ) {
                 throw new Error("AI Models & Plans Modal test failed: " + JSON.stringify(modelsModalTest));
             }
-            console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1, PlayAi 2.1 & PlayAi 2.2, TEAM 2000 PBX, Add members & Leave) verified successfully!");
+            console.log("   ✅ AI Models & Plans Modal (Strictly Playard game ai 1.1, plans up to VIP, no plans after VIP) verified successfully!");
 
             console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand & Models/Plans Modal) tests passed successfully!");
 

@@ -1,6 +1,6 @@
 import { yardService } from './yardService';
 
-export type PlayardAiTier = 'FREE' | 'PRO' | 'PLUS' | 'VIP' | 'TEAM';
+export type PlayardAiTier = 'FREE' | 'PRO' | 'PLUS' | 'VIP';
 
 export type PlayardAiModelId = 'playard_game_ai_1_1' | 'play_ai_2' | 'play_ai_2_2';
 
@@ -14,10 +14,10 @@ export interface PlayardAiModelConfig {
     vipOnly: boolean;
     has5hLimit: boolean;
     has5dLimit: boolean;
-    pct5dPerQuery?: number; // For PlayAi 2 & 2.2: 2.5%
+    pct5dPerQuery?: number;
 }
 
-export const PLAYARD_AI_MODELS: Record<PlayardAiModelId, PlayardAiModelConfig> = {
+export const PLAYARD_AI_MODELS: Record<string, PlayardAiModelConfig> = {
     playard_game_ai_1_1: {
         id: 'playard_game_ai_1_1',
         name: 'Playard game ai 1.1',
@@ -28,30 +28,6 @@ export const PLAYARD_AI_MODELS: Record<PlayardAiModelId, PlayardAiModelConfig> =
         vipOnly: false,
         has5hLimit: true,
         has5dLimit: true
-    },
-    play_ai_2: {
-        id: 'play_ai_2',
-        name: 'PlayAi 2.1',
-        subtitle: '👑 Eksklusiivne VIP tehisintellekt',
-        description: 'VIP tellijatele loodud võimas tehisintellekt. Sama nutikas ja võimekas kui Playard game ai 1.1, spetsiaalse 5 päeva limiidiga.',
-        icon: '💎',
-        badge: '👑 VIP AINULT',
-        vipOnly: true,
-        has5hLimit: false,
-        has5dLimit: true,
-        pct5dPerQuery: 2.5
-    },
-    play_ai_2_2: {
-        id: 'play_ai_2_2',
-        name: 'PlayAi 2.2',
-        subtitle: '👑 Eksklusiivne VIP & Team tehisintellekt',
-        description: 'Võimas täiendav AI mudel. Täpselt sama nutikas nagu teised mudelid, spetsiaalse AINULT 5 päeva limiidiga (-2.5% iga küsimusega).',
-        icon: '🔮',
-        badge: '👑 VIP AINULT',
-        vipOnly: true,
-        has5hLimit: false,
-        has5dLimit: true,
-        pct5dPerQuery: 2.5
     }
 };
 
@@ -232,42 +208,6 @@ export const AI_TIER_CONFIGS: Record<PlayardAiTier, AiTierConfig> = {
             advancedAnimations: true,
             multiStepExecution: true,
             singlePromptMassiveBuild: true,
-            fastestAi: true
-        }
-    },
-    TEAM: {
-        id: 'TEAM',
-        name: 'Team',
-        badge: '👥 TEAM',
-        icon: '👥',
-        pricePbx: 2000,
-        dailyLimit: 500,
-        questionLevel: 'Palju küsimusi',
-        pct5hPerQuery: 1, // Sama mis PLUS: 5h limiit 1% iga küsimuse kohta
-        pct5dPerQuery: 0.2, // Sama mis PLUS: 5 päeva limiit 0.2% iga küsimuse kohta
-        accentColor: '#06b6d4',
-        bgGradient: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(14, 165, 233, 0.15))',
-        description: 'Meeskonna tase – 2000 PBX! Lisa oma tiimi päris mängijaid ja looge koos mänge.',
-        features: [
-            'Kõik Plus taseme võimalused & limiidid',
-            '👥 Meeskonna haldus: Lisa oma tiimi päris mängijaid (Add members)',
-            'Mängijate eemaldamise / lahkumise võimalus (Leave)',
-            'Automaatne mängu testimine & vigade parandus',
-            'Pikem projektimälu & mitmeastmelised ülesanded',
-            '5h limiit: -1% küsimus • 5 päeva limiit: -0.2% küsimus'
-        ],
-        capabilities: {
-            maxObjectsPerGen: 150,
-            maxNpcs: 40,
-            maxMapRadius: 280,
-            canAutoTest: true,
-            canAutoFindBugs: true,
-            canAutoFixBugs: true,
-            advanced3D: true,
-            advancedNpc: true,
-            advancedAnimations: true,
-            multiStepExecution: true,
-            singlePromptMassiveBuild: false,
             fastestAi: true
         }
     }
