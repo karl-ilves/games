@@ -2421,10 +2421,19 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
         }
 
     } else if (p.includes('kes sa oled') || p.includes('mis sa oled') || p.includes('who are you') || p.includes('what are you') || p.includes('kes sa selline oled') || p.includes('tutvusta ennast')) {
-        if (isAdmin) {
-            aiResponse = `🤖 <strong>Mina olen Playard Game Creator AI!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, genereerida uusi unikaalseid 3D objekte (dinosaurused, robotid, lossid jne), arvutada matemaatikat (nt 1+1), vastata maailma faktidele (nt mis lennukid on suurimad) ning programmeerida mänguloogikat!`;
+        const activeModel = aiTierService.getSelectedModel();
+        if (activeModel === 'playard_game_ai_1_2') {
+            if (isAdmin) {
+                aiResponse = `🧠✨ <strong>Mina olen Playard Game Creator AI (Playard game ai 1.2 / Antigravity AI)!</strong><br>Olen palju targem tehisintellekt – jälgin reaalajas kõike, mida keegi kirjutab, analüüsin konteksti ja vastan koheselt! Oskan luua 3D maailmu, ehitada sõidukeid ja maju, programmeerida koodi ja lahendada mis tahes ülesandeid.`;
+            } else {
+                aiResponse = `🧠✨ <strong>Mina olen Playard Game Creator AI (Playard game ai 1.2 / Antigravity AI)!</strong><br>I am the much smarter AI model – I actively monitor what anyone writes in real-time, analyze context, and respond instantly with 3D worlds, scripts, math solutions, and game logic!`;
+            }
         } else {
-            aiResponse = `🤖 <strong>Mina olen Playard Game Creator AI (I am Playard Game Creator AI)!</strong><br>I can build 3D worlds, construct asphalt roads with drivable cars, create custom 3D models (dinosaurs, robots, castles), solve math (1+1), answer general knowledge (e.g. largest airplanes), and program interactive game logic!`;
+            if (isAdmin) {
+                aiResponse = `🤖 <strong>Mina olen Playard Game Creator AI!</strong><br>Oskan ehitada 3D maailmu, luua asfalteeritud teid ja sõidetavaid autosid, kaunistada loodust, genereerida uusi unikaalseid 3D objekte (dinosaurused, robotid, lossid jne), arvutada matemaatikat (nt 1+1), vastata maailma faktidele (nt mis lennukid on suurimad) ning programmeerida mänguloogikat!`;
+            } else {
+                aiResponse = `🤖 <strong>Mina olen Playard Game Creator AI (I am Playard Game Creator AI)!</strong><br>I can build 3D worlds, construct asphalt roads with drivable cars, create custom 3D models (dinosaurs, robots, castles), solve math (1+1), answer general knowledge (e.g. largest airplanes), and program interactive game logic!`;
+            }
         }
 
     } else if (p.includes('mis mäng see on') || p.includes('mis mang see on') || p.includes('mis on playard') || p.includes('what is playard') || p.includes('what game is this')) {

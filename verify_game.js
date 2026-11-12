@@ -14070,7 +14070,28 @@ await (async () => {
             }
             console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1 & 1.2, limits 5/10/20/30, plans up to VIP) verified successfully!");
 
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand & Models/Plans Modal) tests passed successfully!");
+            // 22z. Verify Playard game ai 1.2 live watcher & identity response
+            console.log("   Verifying Playard game ai 1.2 live watcher & identity response...");
+            const identity12Test = await page.evaluate(async () => {
+                const ai = window.playardAi;
+                window.aiTierService.setSelectedModel('playard_game_ai_1_2');
+                await ai.handleUserInput('Kes sa oled?');
+                await new Promise(r => setTimeout(r, 200));
+                const msgs = ai.state.getMessages();
+                const lastMsg = msgs[msgs.length - 1]?.text || '';
+                return {
+                    has12: lastMsg.includes('Playard game ai 1.2'),
+                    hasAntigravity: lastMsg.includes('Antigravity') || lastMsg.includes('targem'),
+                    hasWatching: lastMsg.includes('jälgin') && lastMsg.includes('kirjutab')
+                };
+            });
+            console.log("   Playard game ai 1.2 Identity & Watcher Results:", identity12Test);
+            if (!identity12Test.has12 || !identity12Test.hasWatching) {
+                throw new Error("Playard game ai 1.2 identity / watcher verification failed: " + JSON.stringify(identity12Test));
+            }
+            console.log("   ✅ Playard game ai 1.2 (Antigravity live watcher & smart identity) verified successfully!");
+
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand, Models/Plans Modal & Playard AI 1.2 Live Watcher) tests passed successfully!");
 
 
 

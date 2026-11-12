@@ -1142,6 +1142,10 @@ export class PlayardGeneralKnowledge {
             q.includes('what are you') || q.includes('tutvusta ennast') || q.includes('mis ai sa oled') ||
             q.includes('mis ai see on') || q === 'kes sa oled' || q === 'kes sa oled?'
         ) {
+            const activeModel = typeof window !== 'undefined' && (window as any).aiTierService ? (window as any).aiTierService.getSelectedModel() : 'playard_game_ai_1_1';
+            if (activeModel === 'playard_game_ai_1_2') {
+                return '🧠✨ Mina olen Playard Game Creator AI (Playard game ai 1.2 / Antigravity AI)! Olen palju targem tehisintellekt – jälgin reaalajas kõike mida keegi kirjutab ja vastan koheselt, analüüsides mängu, koodi ja konteksti.';
+            }
             return '🤖 Mina olen Playard Game Creator AI! Oskan luua 3D mänge, ehitada maailmu ja objekte, kirjutada ning siluda koodi ja skripte, lahendada matemaatikat ning vastata kõikidele sinu küsimustele.';
         }
 
