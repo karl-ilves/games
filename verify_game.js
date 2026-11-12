@@ -14610,7 +14610,14 @@ await (async () => {
                 await new Promise(r => setTimeout(r, 150));
                 const isModalOpen = modal?.classList.contains('active');
                 const countText = playerCount?.textContent || '';
-                const hasPlayerCount = countText.length > 0 && (countText.includes('mängijat') || countText.includes('mängija') || countText.includes('Sina'));
+                const hasPlayerCount = countText.length > 0 && (
+                    countText.toLowerCase().includes('player') ||
+                    countText.toLowerCase().includes('players') ||
+                    countText.includes('mängijat') ||
+                    countText.includes('mängija') ||
+                    countText.includes('Sina') ||
+                    countText.includes('You')
+                );
 
                 // Close modal via resume
                 resumeBtn?.click();
@@ -15077,7 +15084,7 @@ await (async () => {
                 const hasSelf = listText.includes('(Sina)') || listText.includes('Playard Owner');
                 const noFakeAi = !listText.includes('(AI)') && !listText.includes('Turbo_AI') && !listText.includes('Välk_AI');
                 const hasPlayerRows = (listEl?.children.length || 0) >= 1;
-                const hasRealCount = countText.includes('5 mängijat') || countText.includes('sõitjat');
+                const hasRealCount = countText.includes('5 mängijat') || countText.includes('sõitjat') || countText.includes('5 players') || countText.includes('5 player');
 
                 return {
                     isOpen: modal?.classList.contains('active'),

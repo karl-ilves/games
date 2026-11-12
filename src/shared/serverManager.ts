@@ -578,12 +578,12 @@ export class ServerManager {
         // Kõik soolo mängud (max 1 mängija / server)
         if (rule.maxPlayers === 1) {
             return {
-                countStr: 'Server #1 (1 / 1 mängija)',
+                countStr: 'Server #1 (1 / 1 player)',
                 players: [defaultName]
             };
         }
 
-        const normalize = (name: string) => name.toLowerCase().replace(/^[^\w\s]+/, '').replace(/✔.*$/, '').replace(/👑.*$/, '').replace(/\(sina\)/i, '').trim();
+        const normalize = (name: string) => name.toLowerCase().replace(/^[^\w\s]+/, '').replace(/✔.*$/, '').replace(/👑.*$/, '').replace(/\(sina\)/i, '').replace(/\(you\)/i, '').trim();
         const normDefault = normalize(defaultName);
 
         // Mitmikmängud (mmp1 max 10, citycar/racing max 5, snake max 3)
@@ -592,7 +592,7 @@ export class ServerManager {
                 .map(p => p.displayName || p.username)
                 .filter(name => {
                     const normOther = normalize(name);
-                    return normOther !== normDefault && !name.includes('(AI)') && !name.toLowerCase().includes('(sina)');
+                    return normOther !== normDefault && !name.includes('(AI)') && !name.toLowerCase().includes('(sina)') && !name.toLowerCase().includes('(you)');
                 });
 
             // Päris mängija (defaultName) on alati esimesel kohal, millele järgnevad ainult teised reaalsed mängijad selles serveris
@@ -600,13 +600,13 @@ export class ServerManager {
             const count = allRealPlayers.length;
 
             return {
-                countStr: `Server #${activeServer.serverNumber} (${count} / ${activeServer.maxPlayers} mängijat)`,
+                countStr: `Server #${activeServer.serverNumber} (${count} / ${activeServer.maxPlayers} players)`,
                 players: allRealPlayers
             };
         }
 
         return {
-            countStr: `Server #1 (1 / ${rule.maxPlayers} mängijat)`,
+            countStr: `Server #1 (1 / ${rule.maxPlayers} players)`,
             players: [defaultName]
         };
     }

@@ -59,12 +59,12 @@ export function getMyDisplayNameAndRole(): { myNameDisplay: string; isOwner: boo
     let myNameDisplay = '';
     if (isOwner) {
         const plusSuffix = plusTier === 'plus2000' ? '(2P00)' : (plusTier === 'plus500' ? '(P)' : '');
-        myNameDisplay = `Playard Owner${plusSuffix} 👑 ✔ (Sina)`;
+        myNameDisplay = `Playard Owner${plusSuffix} 👑 ✔ (You)`;
     } else {
-        const cleanBaseName = currentUserName.replace(/👑.*$/, '').replace(/✔.*$/, '').replace(/\(Sina\)/i, '').trim() || 'Mängija';
+        const cleanBaseName = currentUserName.replace(/👑.*$/, '').replace(/✔.*$/, '').replace(/\(Sina\)/i, '').replace(/\(You\)/i, '').trim() || 'Player';
         const withPlus = formatUsernameWithPlusPlain(cleanBaseName, plusTier as any);
         const tag = isVerified ? ' ✔' : '';
-        myNameDisplay = `${withPlus}${tag} (Sina)`;
+        myNameDisplay = `${withPlus}${tag} (You)`;
     }
 
     return { myNameDisplay, isOwner, isVerified };
@@ -267,7 +267,7 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
     const pBtn = document.createElement('button');
     pBtn.id = 'btn-playard-menu';
     pBtn.type = 'button';
-    pBtn.title = 'Playard Menüü [P]';
+    pBtn.title = 'Playard Menu [P]';
     pBtn.innerHTML = `<span class="playard-p-letter">P</span>`;
     document.body.appendChild(pBtn);
 
@@ -287,7 +287,7 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
                         <span style="font-size: 0.75rem; color: #718093; font-weight: 600;">Playard Games Server</span>
                     </div>
                 </div>
-                <button type="button" id="btn-close-playard-menu" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; width: 32px; height: 32px; border-radius: 50%; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Sulge menüü">✕</button>
+                <button type="button" id="btn-close-playard-menu" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; width: 32px; height: 32px; border-radius: 50%; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Close Menu">✕</button>
             </div>
 
             <!-- Server Status & Player Count Box -->
@@ -295,7 +295,7 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 10px #2ecc71;"></span>
-                        <strong style="color: #ffffff; font-size: 0.92rem;">Sinu server</strong>
+                        <strong style="color: #ffffff; font-size: 0.92rem;">Your Server</strong>
                     </div>
                     <span style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.35); padding: 2px 8px; border-radius: 8px; font-size: 0.72rem; font-weight: 800;">ONLINE</span>
                 </div>
@@ -303,13 +303,13 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
                 <div style="display: flex; align-items: center; gap: 12px; background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
                     <span style="font-size: 1.5rem; user-select: none;">👥</span>
                     <div>
-                        <div style="font-size: 0.78rem; color: #a4b0be; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Mängijad sinu serveris:</div>
-                        <div id="playard-menu-player-count" style="font-size: 1.15rem; font-weight: 800; color: #00f2fe;">Laen...</div>
+                        <div style="font-size: 0.78rem; color: #a4b0be; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Players in this server:</div>
+                        <div id="playard-menu-player-count" style="font-size: 1.15rem; font-weight: 800; color: #00f2fe;">Loading...</div>
                     </div>
                 </div>
 
                 <!-- Server Players List -->
-                <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; margin-bottom: 6px;">Serveri nimekiri:</div>
+                <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; margin-bottom: 6px;">Server Players:</div>
                 <div id="playard-menu-player-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; padding-right: 4px;">
                     <!-- Dynamically populated -->
                 </div>
@@ -318,11 +318,11 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
             <!-- Bottom Actions: Resume & Leave Button -->
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button type="button" id="btn-playard-resume" style="width: 100%; padding: 12px; border-radius: 10px; border: 1.5px solid rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.15); color: #00f2fe; font-weight: 800; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
-                    ▶️ Jätka mängu (Resume)
+                    ▶️ Resume Game
                 </button>
                 <button type="button" id="btn-playard-leave" style="width: 100%; padding: 13px; border-radius: 10px; border: 1.5px solid rgba(255, 71, 87, 0.5); background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; font-weight: 900; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 16px rgba(255, 71, 87, 0.45); transition: all 0.2s;">
                     <span>🚪</span>
-                    <span>Leave (Lahku Hubi)</span>
+                    <span>Leave to Hub</span>
                 </button>
             </div>
         </div>
@@ -341,42 +341,42 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
                         🚩
                     </div>
                     <div>
-                        <h3 style="margin: 0; font-size: 1.05rem; color: #ff6b81; font-weight: 800;">Raporteeri mängijat</h3>
-                        <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Teade edastatakse Playard Owneri paneeli</span>
+                        <h3 style="margin: 0; font-size: 1.05rem; color: #ff6b81; font-weight: 800;">Report Player</h3>
+                        <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Report will be sent to Playard Owner Panel</span>
                     </div>
                 </div>
-                <button type="button" id="btn-close-playard-report" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; width: 30px; height: 30px; border-radius: 50%; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Sulge">✕</button>
+                <button type="button" id="btn-close-playard-report" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; width: 30px; height: 30px; border-radius: 50%; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Close">✕</button>
             </div>
 
             <!-- Target player info badge -->
             <div style="background: rgba(255, 71, 87, 0.1); border: 1px solid rgba(255, 71, 87, 0.3); border-radius: 10px; padding: 9px 12px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.8rem; color: #cbd5e1; font-weight: 600;">Raporteeritav mängija:</span>
+                <span style="font-size: 0.8rem; color: #cbd5e1; font-weight: 600;">Reported Player:</span>
                 <strong id="report-target-player-name" style="color: #ff6b81; font-size: 0.92rem; font-weight: 800;">-</strong>
             </div>
 
             <!-- Reason selection -->
             <div style="margin-bottom: 12px;">
-                <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 6px;">Vali rikkumise põhjus:</label>
+                <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 6px;">Select Violation Reason:</label>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 10px; cursor: pointer;">
                         <input type="radio" name="playard-report-reason" value="Cheating" checked style="accent-color: #ff4757;">
                         <div>
-                            <strong style="color: #ffffff; font-size: 0.84rem; display: block;">⚡ Cheating</strong>
-                            <span style="font-size: 0.7rem; color: #8899a6;">Koodimine, kiiruse häkk, läbi seinte liikumine</span>
+                            <strong style="color: #ffffff; font-size: 0.84rem; display: block;">⚡ Cheating / Exploiting</strong>
+                            <span style="font-size: 0.7rem; color: #8899a6;">Speedhack, noclip, wallhack, scripts</span>
                         </div>
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 10px; cursor: pointer;">
                         <input type="radio" name="playard-report-reason" value="Spamming" style="accent-color: #ff4757;">
                         <div>
-                            <strong style="color: #ffffff; font-size: 0.84rem; display: block;">📢 Spamming</strong>
-                            <span style="font-size: 0.7rem; color: #8899a6;">Vestluse risustamine, ropendamine või tüütamine</span>
+                            <strong style="color: #ffffff; font-size: 0.84rem; display: block;">📢 Chat Spamming / Harassment</strong>
+                            <span style="font-size: 0.7rem; color: #8899a6;">Abusive chat, flood, advertising or harassment</span>
                         </div>
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 10px; cursor: pointer;">
                         <input type="radio" name="playard-report-reason" value="custom" style="accent-color: #ff4757;">
                         <div>
-                            <strong style="color: #ffffff; font-size: 0.84rem; display: block;">✍️ Oma põhjus (Kirjuta ise)</strong>
-                            <span style="font-size: 0.7rem; color: #8899a6;">Sisesta vabas vormis oma põhjendus</span>
+                            <strong style="color: #ffffff; font-size: 0.84rem; display: block;">✍️ Custom Reason</strong>
+                            <span style="font-size: 0.7rem; color: #8899a6;">Specify details in the text area below</span>
                         </div>
                     </label>
                 </div>
@@ -384,8 +384,8 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
 
             <!-- Custom / Details Input -->
             <div style="margin-bottom: 14px;">
-                <label style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 4px;">Täpsem selgitus (või sinu põhjus):</label>
-                <textarea id="report-custom-reason-input" rows="2" placeholder="nt Teeb speedhacki või hüppab läbi lae..." style="width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #334155; background: #0b1118; color: #ffffff; font-size: 0.85rem; font-family: inherit; resize: none; outline: none;"></textarea>
+                <label style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 4px;">Detailed explanation:</label>
+                <textarea id="report-custom-reason-input" rows="2" placeholder="e.g. Using speedhack or jumping through ceiling..." style="width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #334155; background: #0b1118; color: #ffffff; font-size: 0.85rem; font-family: inherit; resize: none; outline: none;"></textarea>
             </div>
 
             <div id="report-submit-status" style="display: none; padding: 8px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; margin-bottom: 12px; text-align: center;"></div>
@@ -393,11 +393,11 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
             <!-- Actions -->
             <div style="display: flex; gap: 8px;">
                 <button type="button" id="btn-cancel-player-report" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #cbd5e1; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
-                    Tühista
+                    Cancel
                 </button>
                 <button type="button" id="btn-submit-player-report" style="flex: 1.6; padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 71, 87, 0.5); background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; font-weight: 800; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(255, 71, 87, 0.4);">
                     <span>🚩</span>
-                    <span>Saada raport</span>
+                    <span>Submit Report</span>
                 </button>
             </div>
         </div>
@@ -461,7 +461,7 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
                 const row = document.createElement('div');
                 row.style.cssText = 'background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; font-weight: 700; gap: 8px;';
 
-                const isSelf = idx === 0 || pName.includes('(Sina)');
+                const isSelf = idx === 0 || pName.includes('(Sina)') || pName.includes('(You)');
                 const cleanName = pName.replace(/^[^\w\s]+/, '').replace(/✔.*$/, '').replace(/👑.*$/, '').trim();
                 const formattedPName = pName
                     .replace(/\(2P00\)/g, '<span style="color: #ffd32a; font-weight: 900; text-shadow: 0 0 10px rgba(255,211,42,0.8);">(2P00)</span>')
@@ -473,9 +473,9 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
                         <span style="color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${formattedPName}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                        <span style="font-size: 0.7rem; color: #2ecc71; background: rgba(46, 204, 113, 0.12); padding: 1px 6px; border-radius: 4px;">🟢 Sees</span>
+                        <span style="font-size: 0.7rem; color: #2ecc71; background: rgba(46, 204, 113, 0.12); padding: 1px 6px; border-radius: 4px;">🟢 Online</span>
                         ${!isSelf ? `
-                            <button type="button" class="btn-player-report" data-player="${cleanName || pName}" title="Raporteeri mängijat">
+                            <button type="button" class="btn-player-report" data-player="${cleanName || pName}" title="Report Player">
                                 <span>🚩</span>
                                 <span>Report</span>
                             </button>
@@ -489,7 +489,7 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
             listEl.querySelectorAll('.btn-player-report').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const target = (btn as HTMLElement).getAttribute('data-player') || 'Mängija';
+                    const target = (btn as HTMLElement).getAttribute('data-player') || 'Player';
                     openReportModal(target);
                 });
             });
@@ -588,21 +588,21 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
                 statusEl.style.background = 'rgba(255, 71, 87, 0.2)';
                 statusEl.style.color = '#ff6b81';
                 statusEl.style.border = '1px solid #ff4757';
-                statusEl.textContent = 'Palun kirjuta oma põhjus tekstikasti!';
+                statusEl.textContent = 'Please provide a reason in the text box!';
             }
             return;
         }
 
-        const finalReason = selectedReason === 'custom' ? (customText || 'Oma põhjus') : selectedReason;
+        const finalReason = selectedReason === 'custom' ? (customText || 'Custom Reason') : selectedReason;
         const currentGame = document.getElementById('playard-menu-game-title')?.textContent || gameTitle;
 
         // Find reporter username from local storage
-        let reporterName = 'Mängija';
+        let reporterName = 'Player';
         try {
             const raw = localStorage.getItem('playard_current_user_profile');
             if (raw) {
                 const p = JSON.parse(raw);
-                reporterName = p.displayName || p.username || 'Mängija';
+                reporterName = p.displayName || p.username || 'Player';
             }
         } catch (e) {}
 
@@ -619,7 +619,7 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
             statusEl.style.background = 'rgba(46, 204, 113, 0.2)';
             statusEl.style.color = '#2ecc71';
             statusEl.style.border = '1px solid #2ecc71';
-            statusEl.textContent = '✅ Raport edukalt saadetud Playard Ownerile!';
+            statusEl.textContent = '✅ Report successfully submitted to Playard Owner!';
         }
 
         setTimeout(() => {
