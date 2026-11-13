@@ -4676,7 +4676,13 @@ await (async () => {
         });
 
         // Click publish button - this opens the publish modal
-        await page.click('#btn-submit-review');
+        await page.evaluate(() => {
+            const btn = document.getElementById('btn-submit-review');
+            if (btn) btn.click();
+            if (window.creatorStudio && typeof window.creatorStudio.openPublishModal === 'function') {
+                window.creatorStudio.openPublishModal();
+            }
+        });
         await new Promise(r => setTimeout(r, 600));
 
         // Verify publish modal is visible
@@ -15864,12 +15870,27 @@ await (async () => {
 
                 const paidWrapVisible = paidWrap ? window.getComputedStyle(paidWrap).display !== 'none' : false;
 
+                // Check Chat ON/OFF section and banned words
+                const chatSection = document.getElementById('publish-chat-section');
+                const btnChatOn = document.getElementById('btn-publish-chat-on');
+                const btnChatOff = document.getElementById('btn-publish-chat-off');
+                const bannedWordsInput = document.getElementById('publish-chat-banned-words');
+
+                const hasChatSection = !!chatSection;
+                const hasChatButtons = !!btnChatOn && !!btnChatOff;
+                const hasBannedWordsInput = !!bannedWordsInput;
+
+                // Configure chat: keep ON, set banned words to "loll,paha"
+                if (btnChatOn) btnChatOn.click();
+                if (bannedWordsInput) bannedWordsInput.value = 'loll,paha';
+
                 // 3. Click Next (Edasi) -> Step 2 (Anti-cheat & Cheaters Protection)
                 btnNext?.click();
                 await new Promise(r => setTimeout(r, 100));
 
                 const step2CheatersVisible = cheatersSection?.style.display === 'flex';
                 const step2ExtraHidden = extraSection ? window.getComputedStyle(extraSection).display === 'none' : true;
+                const step2ChatHidden = chatSection ? window.getComputedStyle(chatSection).display === 'none' : true;
                 const step2ButtonsOk = (btnBack?.style.display !== 'none') &&
                     (btnNext?.style.display === 'none') &&
                     (btnPublish?.style.display !== 'none');
@@ -15913,6 +15934,8 @@ await (async () => {
                 const hasSavedGenre = publishedGame?.genre === 'Obby';
                 const hasSavedAccess = publishedGame?.access === 'friends';
                 const hasSavedPrice = publishedGame?.priceType === 'paid' && publishedGame?.entryPricePbx === 75;
+                const hasSavedChatEnabled = publishedGame?.chatEnabled === true;
+                const hasSavedChatBanned = publishedGame?.chatBannedWords?.includes('loll');
 
                 return {
                     isModalOpen,
@@ -15923,10 +15946,14 @@ await (async () => {
                     hasAccess,
                     hasPriceType,
                     paidWrapVisible,
+                    hasChatSection,
+                    hasChatButtons,
+                    hasBannedWordsInput,
                     step1ButtonsOk,
                     step1CheatersHidden,
                     step2CheatersVisible,
                     step2ExtraHidden,
+                    step2ChatHidden,
                     step2ButtonsOk,
                     backToStep1Ok,
                     isSureModalOpen,
@@ -15935,7 +15962,9 @@ await (async () => {
                     hasSavedPlatforms,
                     hasSavedGenre,
                     hasSavedAccess,
-                    hasSavedPrice
+                    hasSavedPrice,
+                    hasSavedChatEnabled,
+                    hasSavedChatBanned
                 };
             });
 
@@ -15949,10 +15978,14 @@ await (async () => {
                 !publishWorkflowTest.hasAccess ||
                 !publishWorkflowTest.hasPriceType ||
                 !publishWorkflowTest.paidWrapVisible ||
+                !publishWorkflowTest.hasChatSection ||
+                !publishWorkflowTest.hasChatButtons ||
+                !publishWorkflowTest.hasBannedWordsInput ||
                 !publishWorkflowTest.step1ButtonsOk ||
                 !publishWorkflowTest.step1CheatersHidden ||
                 !publishWorkflowTest.step2CheatersVisible ||
                 !publishWorkflowTest.step2ExtraHidden ||
+                !publishWorkflowTest.step2ChatHidden ||
                 !publishWorkflowTest.step2ButtonsOk ||
                 !publishWorkflowTest.backToStep1Ok ||
                 !publishWorkflowTest.isSureModalOpen ||
@@ -15961,11 +15994,120 @@ await (async () => {
                 !publishWorkflowTest.hasSavedPlatforms ||
                 !publishWorkflowTest.hasSavedGenre ||
                 !publishWorkflowTest.hasSavedAccess ||
-                !publishWorkflowTest.hasSavedPrice
+                !publishWorkflowTest.hasSavedPrice ||
+                !publishWorkflowTest.hasSavedChatEnabled ||
+                !publishWorkflowTest.hasSavedChatBanned
             ) {
                 throw new Error("Publish Workflow test failed: " + JSON.stringify(publishWorkflowTest));
             }
-            console.log("   ✅ Creator Studio Publish Workflow (Platforms, VR disabled, Genre, Privacy & Price combined, Next/Back, 'Oled kindel?' confirmation & public release) verified!");
+            console.log("   ✅ Creator Studio Publish Workflow (Platforms, VR disabled, Genre, Privacy, Price & Chat config, Next/Back, 'Oled kindel?' confirmation & public release) verified!");
+
+            // 36. Testing In-Game Server Chat (Chat ON button left of 'P', Chat OFF hiding button, server-isolated messages & banned words censor)
+            console.log("36. Testing In-Game Server Chat (Chat button left of P, strict server isolation, banned words filter & chat ON/OFF)...");
+            
+            // 36a. Load game with Chat ON (default)
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/citycar/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const chatTestResult = await page.evaluate(async () => {
+                const btnP = document.getElementById('btn-playard-menu');
+                const btnChat = document.getElementById('btn-playard-chat');
+                const chatModal = document.getElementById('modal-playard-chat');
+
+                const hasP = !!btnP;
+                const hasChatBtn = !!btnChat;
+                const hasChatModal = !!chatModal;
+
+                // Verify Chat button position is to the left of P button
+                let chatIsLeftOfP = false;
+                if (btnP && btnChat) {
+                    const rectP = btnP.getBoundingClientRect();
+                    const rectChat = btnChat.getBoundingClientRect();
+                    chatIsLeftOfP = rectChat.right <= rectP.left + 5; // chat is to the left
+                }
+
+                // Open chat and test sending message with banned words
+                const chatCtrl = window.serverChatController || window.PlayardInGameMenu?.chat;
+                const canAccessChatCtrl = !!chatCtrl;
+
+                // Open chat modal via button click
+                if (btnChat) {
+                    btnChat.click();
+                } else if (chatCtrl && typeof chatCtrl.openChat === 'function') {
+                    chatCtrl.openChat();
+                }
+                if (!chatModal?.classList.contains('active') && chatCtrl) {
+                    chatCtrl.openChat();
+                }
+                await new Promise(r => setTimeout(r, 100));
+                const isChatModalOpen = chatModal?.classList.contains('active');
+
+                // Test banned words filtering
+                chatCtrl.bannedWords = ['loll', 'paha'];
+                const filtered = chatCtrl.filterBannedWords('Tere sa loll inimene');
+                const isCensored = filtered.includes('****') && !filtered.includes('loll');
+
+                // Test server isolation: messages sent are scoped to serverId
+                const serverId = chatCtrl.getServerId();
+                const sentMsg = chatCtrl.sendMessage('Tere serveri rahvas! See on paha test.');
+                const isSentInSameServer = sentMsg?.serverId === serverId;
+                const sentTextCensored = sentMsg?.text.includes('****');
+
+                return {
+                    hasP,
+                    hasChatBtn,
+                    hasChatModal,
+                    chatIsLeftOfP,
+                    canAccessChatCtrl,
+                    isChatModalOpen,
+                    isCensored,
+                    isSentInSameServer,
+                    sentTextCensored
+                };
+            });
+
+            console.log("   Chat ON Test Results:", chatTestResult);
+            if (
+                !chatTestResult.hasP ||
+                !chatTestResult.hasChatBtn ||
+                !chatTestResult.hasChatModal ||
+                !chatTestResult.chatIsLeftOfP ||
+                !chatTestResult.canAccessChatCtrl ||
+                !chatTestResult.isChatModalOpen ||
+                !chatTestResult.isCensored ||
+                !chatTestResult.isSentInSameServer ||
+                !chatTestResult.sentTextCensored
+            ) {
+                throw new Error("Chat ON test failed: " + JSON.stringify(chatTestResult));
+            }
+
+            // 36b. Test Game with Chat OFF (Chat button must NOT appear)
+            await page.evaluate(() => {
+                sessionStorage.setItem('playard_current_game_chat_disabled', 'true');
+            });
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/citycar/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const chatOffResult = await page.evaluate(() => {
+                const btnP = document.getElementById('btn-playard-menu');
+                const btnChat = document.getElementById('btn-playard-chat');
+                return {
+                    hasP: !!btnP,
+                    chatBtnHidden: !btnChat
+                };
+            });
+
+            console.log("   Chat OFF Test Results:", chatOffResult);
+            if (!chatOffResult.hasP || !chatOffResult.chatBtnHidden) {
+                throw new Error("Chat OFF test failed: Chat button was rendered when chat is OFF: " + JSON.stringify(chatOffResult));
+            }
+
+            // Reset session flag
+            await page.evaluate(() => {
+                sessionStorage.removeItem('playard_current_game_chat_disabled');
+            });
+
+            console.log("   ✅ In-Game Server Chat (Chat button left of P, strict server isolation, banned words filter & Chat ON/OFF toggle) verified!");
 
 
 

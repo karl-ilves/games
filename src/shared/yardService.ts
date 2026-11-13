@@ -88,6 +88,8 @@ export interface CreatedGame {
     access?: 'public' | 'friends' | 'private'; // Avalik, Ainult sõbrad, Privaatne
     priceType?: 'free' | 'paid'; // Tasuta või Tasuline
     entryPricePbx?: number; // Sissepääsu hind PlayBuxides (nt 50 PBX)
+    chatEnabled?: boolean; // Serveri chat: true (on) / false (off)
+    chatBannedWords?: string; // Keelatud sõnad komadega eraldatuna
     createdAt: number;
     updatedAt: number;
 }

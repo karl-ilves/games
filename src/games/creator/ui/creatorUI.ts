@@ -474,6 +474,8 @@ export function serializeCurrentScene() {
         access: csState.publishAccess || (document.getElementById('publish-game-access') as HTMLSelectElement)?.value || 'public',
         priceType: csState.publishPriceType || (document.getElementById('publish-price-type') as HTMLSelectElement)?.value || 'free',
         entryPricePbx: csState.publishEntryPricePbx || parseInt((document.getElementById('publish-entry-price-pbx') as HTMLInputElement)?.value || '0', 10) || 0,
+        chatEnabled: csState.publishChatEnabled !== undefined ? csState.publishChatEnabled : true,
+        chatBannedWords: csState.publishChatBannedWords || (document.getElementById('publish-chat-banned-words') as HTMLInputElement)?.value || '',
         updatedAt: Date.now()
     };
 }
@@ -629,6 +631,7 @@ export function switchPublishStep(step: 'details' | 'security') {
     const gridContainer = document.getElementById('publish-max-players')?.parentElement?.parentElement as HTMLElement | null;
     const platformsContainer = document.getElementById('publish-platforms-section');
     const extraSettingsSection = document.getElementById('publish-extra-settings-section');
+    const chatSection = document.getElementById('publish-chat-section');
     const cheatersSection = document.getElementById('publish-cheaters-section');
     const adPromoSection = document.getElementById('publish-ad-promo-section');
 
@@ -644,6 +647,7 @@ export function switchPublishStep(step: 'details' | 'security') {
         if (gridContainer) gridContainer.style.display = 'grid';
         if (platformsContainer) platformsContainer.style.display = 'flex';
         if (extraSettingsSection) extraSettingsSection.style.display = 'flex';
+        if (chatSection) chatSection.style.display = 'flex';
         if (adPromoSection) adPromoSection.style.display = 'flex';
 
         // Hide Step 2 Anti-Cheat
@@ -662,6 +666,7 @@ export function switchPublishStep(step: 'details' | 'security') {
         if (gridContainer) gridContainer.style.display = 'none';
         if (platformsContainer) platformsContainer.style.display = 'none';
         if (extraSettingsSection) extraSettingsSection.style.display = 'none';
+        if (chatSection) chatSection.style.display = 'none';
         if (adPromoSection) adPromoSection.style.display = 'none';
 
         // Show Step 2 Anti-Cheat
@@ -718,15 +723,18 @@ export function openPublishModal() {
     const modal = document.getElementById('publish-game-modal');
     if (!modal) return;
 
-    const sceneData = serializeCurrentScene();
-    const titleInput = document.getElementById('publish-game-title') as HTMLInputElement | null;
-    const descInput = document.getElementById('publish-game-desc') as HTMLTextAreaElement | null;
-    const playersSelect = document.getElementById('publish-max-players') as HTMLSelectElement | null;
-    const ageSelect = document.getElementById('publish-age-rating') as HTMLSelectElement | null;
+    modal.style.display = 'flex';
 
-    if (titleInput) {
-        titleInput.value = sceneData.title || 'My 3D Adventure';
-    }
+    try {
+        const sceneData = serializeCurrentScene();
+        const titleInput = document.getElementById('publish-game-title') as HTMLInputElement | null;
+        const descInput = document.getElementById('publish-game-desc') as HTMLTextAreaElement | null;
+        const playersSelect = document.getElementById('publish-max-players') as HTMLSelectElement | null;
+        const ageSelect = document.getElementById('publish-age-rating') as HTMLSelectElement | null;
+
+        if (titleInput) {
+            titleInput.value = sceneData.title || 'My 3D Adventure';
+        }
     if (descInput) {
         descInput.value = sceneData.description || '';
     }
@@ -786,6 +794,68 @@ export function openPublishModal() {
         entryPriceInput.value = String(sceneData.entryPricePbx ?? 50);
     }
 
+    // Chat ON/OFF & Banned words
+    const btnChatOn = document.getElementById('btn-publish-chat-on');
+    const btnChatOff = document.getElementById('btn-publish-chat-off');
+    const chatBadge = document.getElementById('publish-chat-status-badge');
+    const bannedWordsInput = document.getElementById('publish-chat-banned-words') as HTMLInputElement | null;
+    const bannedWrap = document.getElementById('publish-chat-banned-words-wrap');
+
+    const updateChatToggleUI = (enabled: boolean) => {
+        csState.publishChatEnabled = enabled;
+        if (btnChatOn) {
+            if (enabled) {
+                btnChatOn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                btnChatOn.style.borderColor = '#34d399';
+                btnChatOn.style.color = '#fff';
+            } else {
+                btnChatOn.style.background = 'transparent';
+                btnChatOn.style.borderColor = 'transparent';
+                btnChatOn.style.color = '#94a3b8';
+            }
+        }
+        if (btnChatOff) {
+            if (!enabled) {
+                btnChatOff.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
+                btnChatOff.style.borderColor = '#f87171';
+                btnChatOff.style.color = '#fff';
+            } else {
+                btnChatOff.style.background = 'transparent';
+                btnChatOff.style.borderColor = 'transparent';
+                btnChatOff.style.color = '#94a3b8';
+            }
+        }
+        if (chatBadge) {
+            if (enabled) {
+                chatBadge.textContent = '🟢 SEES (ON)';
+                chatBadge.style.background = 'rgba(46, 204, 113, 0.2)';
+                chatBadge.style.color = '#2ecc71';
+                chatBadge.style.borderColor = '#2ecc71';
+            } else {
+                chatBadge.textContent = '🔴 VÄLJAS (OFF)';
+                chatBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+                chatBadge.style.color = '#f87171';
+                chatBadge.style.borderColor = '#ef4444';
+            }
+        }
+        if (bannedWrap) {
+            bannedWrap.style.display = enabled ? 'flex' : 'none';
+        }
+    };
+
+    const initialChatEnabled = sceneData.chatEnabled !== false;
+    updateChatToggleUI(initialChatEnabled);
+
+    if (btnChatOn) {
+        btnChatOn.onclick = () => updateChatToggleUI(true);
+    }
+    if (btnChatOff) {
+        btnChatOff.onclick = () => updateChatToggleUI(false);
+    }
+    if (bannedWordsInput) {
+        bannedWordsInput.value = sceneData.chatBannedWords || '';
+    }
+
     if (sceneData.thumbnail) {
         setPublishModalThumbnail(sceneData.thumbnail);
     } else {
@@ -822,10 +892,11 @@ export function openPublishModal() {
     const warnEl = document.getElementById('cheaters-tap-ok-warning');
     if (warnEl) warnEl.style.display = 'none';
 
-    // Always start at Step 1 (Details & Platforms)
-    switchPublishStep('details');
-
-    modal.style.display = 'flex';
+        // Always start at Step 1 (Details & Platforms)
+        switchPublishStep('details');
+    } catch (err) {
+        console.error('Error opening publish modal:', err);
+    }
 }
 
 export function closePublishModal() {
@@ -899,16 +970,21 @@ export async function confirmAndPublishGame() {
     const accessSelect = document.getElementById('publish-game-access') as HTMLSelectElement | null;
     const priceTypeSelect = document.getElementById('publish-price-type') as HTMLSelectElement | null;
     const entryPriceInput = document.getElementById('publish-entry-price-pbx') as HTMLInputElement | null;
+    const bannedWordsInput = document.getElementById('publish-chat-banned-words') as HTMLInputElement | null;
 
     const genre = genreSelect?.value || 'Adventure';
     const access = (accessSelect?.value as 'public' | 'friends' | 'private') || 'public';
     const priceType = (priceTypeSelect?.value as 'free' | 'paid') || 'free';
     const entryPricePbx = priceType === 'paid' ? (parseInt(entryPriceInput?.value || '50', 10) || 50) : 0;
+    const chatEnabled = csState.publishChatEnabled !== undefined ? csState.publishChatEnabled : true;
+    const chatBannedWords = bannedWordsInput?.value.trim() || csState.publishChatBannedWords || '';
 
     csState.publishGenre = genre;
     csState.publishAccess = access;
     csState.publishPriceType = priceType;
     csState.publishEntryPricePbx = entryPricePbx;
+    csState.publishChatEnabled = chatEnabled;
+    csState.publishChatBannedWords = chatBannedWords;
 
     const sceneTitleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
     if (sceneTitleInput) sceneTitleInput.value = gameTitle;
@@ -932,6 +1008,8 @@ export async function confirmAndPublishGame() {
                 access,
                 priceType,
                 entryPricePbx,
+                chatEnabled,
+                chatBannedWords,
                 skipPrompt: true // already confirmed via "Oled kindel?" modal
             });
             resolve(!!result);
@@ -952,6 +1030,8 @@ export async function publishCurrentGame(options?: {
     access?: 'public' | 'friends' | 'private';
     priceType?: 'free' | 'paid';
     entryPricePbx?: number;
+    chatEnabled?: boolean;
+    chatBannedWords?: string;
     skipPrompt?: boolean;
 }) {
     // Confirmation prompt ("are you shure")
@@ -981,6 +1061,8 @@ export async function publishCurrentGame(options?: {
     const access = options?.access !== undefined ? options.access : (sceneData.access || 'public');
     const priceType = options?.priceType !== undefined ? options.priceType : (sceneData.priceType || 'free');
     const entryPricePbx = options?.entryPricePbx !== undefined ? options.entryPricePbx : (sceneData.entryPricePbx || 0);
+    const chatEnabled = options?.chatEnabled !== undefined ? options.chatEnabled : (sceneData.chatEnabled !== false);
+    const chatBannedWords = options?.chatBannedWords !== undefined ? options.chatBannedWords : (sceneData.chatBannedWords || '');
 
     sceneData.title = title;
     sceneData.description = description;
@@ -993,6 +1075,8 @@ export async function publishCurrentGame(options?: {
     sceneData.access = access;
     sceneData.priceType = priceType;
     sceneData.entryPricePbx = entryPricePbx;
+    sceneData.chatEnabled = chatEnabled;
+    sceneData.chatBannedWords = chatBannedWords;
     if (thumbnail) {
         sceneData.thumbnail = thumbnail;
     }
@@ -1028,6 +1112,8 @@ export async function publishCurrentGame(options?: {
         access,
         priceType,
         entryPricePbx,
+        chatEnabled,
+        chatBannedWords,
         cheatersPolicy: cheatersPolicy || sceneData.cheatersPolicy
     });
 
@@ -2672,10 +2758,24 @@ export function setupStudioEvents() {
     // Publish a Game Button & Publish Modal Listeners
     const submitBtn = document.getElementById('btn-submit-review');
     if (submitBtn) {
-        submitBtn.addEventListener('click', () => {
+        submitBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openPublishModal();
+        };
+        submitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             openPublishModal();
         });
     }
+
+    document.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement | null;
+        if (target && (target.id === 'btn-submit-review' || target.closest('#btn-submit-review'))) {
+            openPublishModal();
+        }
+    });
 
     document.getElementById('btn-close-publish-x')?.addEventListener('click', () => {
         closePublishModal();

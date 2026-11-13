@@ -162,6 +162,8 @@ export interface SceneSnapshot {
     access?: 'public' | 'friends' | 'private';
     priceType?: 'free' | 'paid';
     entryPricePbx?: number;
+    chatEnabled?: boolean;
+    chatBannedWords?: string;
 }
 
 export interface PlayTestSnapshot {

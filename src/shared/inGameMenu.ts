@@ -15,6 +15,7 @@ import { addPlayerReport } from './playerReports';
 import { serverManager } from './serverManager';
 import { getUserPlusTier, formatUsernameWithPlusPlain } from './plusMembership';
 import { showGameJoinWarningModal } from './gameCloseNotice';
+import { serverChatController } from './serverChat';
 
 export interface PlayardMenuOptions {
     gameTitle?: string;
@@ -150,6 +151,148 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
             pointer-events: none;
         }
 
+        /* Playard Top-Right Chat Button (Left of P Button) */
+        #btn-playard-chat {
+            position: fixed;
+            top: 12px;
+            right: 60px;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1.5px solid rgba(0, 242, 254, 0.5);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 242, 254, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 99999;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
+            outline: none;
+            padding: 0;
+            color: #ffffff;
+        }
+        #btn-playard-chat:hover {
+            transform: scale(1.08);
+            border-color: #00f2fe;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.6), inset 0 0 14px rgba(0, 242, 254, 0.3);
+        }
+        #btn-playard-chat:active {
+            transform: scale(0.96);
+        }
+
+        /* Playard Server Chat Modal / Card */
+        #modal-playard-chat {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 360px;
+            max-width: calc(100vw - 32px);
+            z-index: 99998;
+            display: none;
+            flex-direction: column;
+            pointer-events: auto;
+            font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+            opacity: 0;
+            transform: translateY(12px) scale(0.96);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        #modal-playard-chat.active {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        .playard-chat-card {
+            background: linear-gradient(180deg, rgba(19, 28, 40, 0.96) 0%, rgba(12, 18, 26, 0.97) 100%);
+            border: 1.5px solid rgba(0, 242, 254, 0.4);
+            border-radius: 16px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.85), 0 0 25px rgba(0, 242, 254, 0.15);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 380px;
+        }
+        .playard-chat-header {
+            padding: 10px 14px;
+            background: rgba(0, 242, 254, 0.08);
+            border-bottom: 1px solid rgba(0, 242, 254, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .playard-chat-close-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #cbd5e1;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .playard-chat-close-btn:hover {
+            background: rgba(255, 71, 87, 0.3);
+            border-color: #ff4757;
+            color: #ffffff;
+        }
+        .playard-chat-body {
+            flex: 1;
+            padding: 10px 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .playard-chat-input-bar {
+            padding: 8px 10px;
+            background: rgba(10, 15, 22, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        #input-playard-chat {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 8px;
+            padding: 8px 10px;
+            color: #ffffff;
+            font-size: 0.82rem;
+            outline: none;
+            font-family: inherit;
+        }
+        #input-playard-chat:focus {
+            border-color: #00f2fe;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+        }
+        #btn-send-playard-chat {
+            background: linear-gradient(135deg, #00f2fe, #0984e3);
+            border: none;
+            border-radius: 8px;
+            color: #0b1118;
+            font-weight: 800;
+            font-size: 0.8rem;
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: transform 0.15s ease;
+        }
+        #btn-send-playard-chat:hover {
+            transform: scale(1.04);
+        }
+
         /* Playard In-Game Menu Modal Overlay */
         #modal-playard-menu {
             position: fixed;
@@ -270,6 +413,9 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
     pBtn.title = 'Playard Menu [P]';
     pBtn.innerHTML = `<span class="playard-p-letter">P</span>`;
     document.body.appendChild(pBtn);
+
+    // 2b. Inject Server Chat Button (left of P button) & Modal if chat enabled
+    serverChatController.init();
 
     // 3. Inject Modal
     const modal = document.createElement('div');
@@ -649,6 +795,9 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
         }
     });
 
+    // Initialize server-isolated in-game chat (if enabled for this game)
+    serverChatController.init();
+
     // Check and display Game Join Warning Modal (e.g. Sunday update notice)
     setTimeout(() => {
         showGameJoinWarningModal();
@@ -662,7 +811,8 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
             toggle: toggleMenu,
             update: updateMenuData,
             openReport: openReportModal,
-            closeReport: closeReportModal
+            closeReport: closeReportModal,
+            chat: serverChatController
         };
     }
 }

@@ -214,6 +214,12 @@ export function setPublishPriceType(val: 'free' | 'paid') { publishPriceType = v
 export let publishEntryPricePbx: number = 0;
 export function setPublishEntryPricePbx(val: number) { publishEntryPricePbx = val; }
 
+export let publishChatEnabled: boolean = true;
+export function setPublishChatEnabled(val: boolean) { publishChatEnabled = val; }
+
+export let publishChatBannedWords: string = '';
+export function setPublishChatBannedWords(val: string) { publishChatBannedWords = val; }
+
 export let activeFeedbackGameId: string | null = null;
 export function setActiveFeedbackGameId(val: string | null) { activeFeedbackGameId = val; }
 
@@ -355,6 +361,8 @@ export const csState: any = {
     get publishAccess() { return publishAccess; }, set publishAccess(val: any) { publishAccess = val; },
     get publishPriceType() { return publishPriceType; }, set publishPriceType(val: any) { publishPriceType = val; },
     get publishEntryPricePbx() { return publishEntryPricePbx; }, set publishEntryPricePbx(val: any) { publishEntryPricePbx = val; },
+    get publishChatEnabled() { return publishChatEnabled; }, set publishChatEnabled(val: any) { publishChatEnabled = val; },
+    get publishChatBannedWords() { return publishChatBannedWords; }, set publishChatBannedWords(val: any) { publishChatBannedWords = val; },
     get activeFeedbackGameId() { return activeFeedbackGameId; }, set activeFeedbackGameId(val: any) { activeFeedbackGameId = val; },
     get studioToolMode() { return studioToolMode; }, set studioToolMode(val: any) { studioToolMode = val; },
     get moveGizmoGroup() { return moveGizmoGroup; }, set moveGizmoGroup(val: any) { moveGizmoGroup = val; },

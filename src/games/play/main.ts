@@ -14,6 +14,7 @@ import { checkGameplayTriggers } from './systems/scriptRunner';
 import { promptPurchase, setupPurchaseDialog } from './ui/purchaseDialog';
 import { setupInputListeners } from './systems/input';
 import { setupAdminReview } from './ui/adminReview';
+import { serverChatController } from '../../shared/serverChat';
 
 // Re-exports for backwards compatibility and test suites
 export {
@@ -133,6 +134,16 @@ async function initPlayer() {
                 icon: '🎮',
                 badgeText: playState.currentGame.category || 'Community Game',
                 badgeColor: '#00f2fe'
+            });
+
+            // Initialize or reconfigure server chat based on game settings
+            const gameChatEnabled = typeof playState.currentGame.chatEnabled === 'boolean'
+                ? playState.currentGame.chatEnabled
+                : (typeof playState.currentGame.sceneData?.chatEnabled === 'boolean' ? playState.currentGame.sceneData.chatEnabled : true);
+            const gameChatBanned = playState.currentGame.chatBannedWords || playState.currentGame.sceneData?.chatBannedWords || '';
+            serverChatController.init({
+                chatEnabled: gameChatEnabled,
+                bannedWords: gameChatBanned
             });
         } else {
             if (titleDisp) titleDisp.innerText = 'Game Not Found';

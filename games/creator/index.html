@@ -552,7 +552,7 @@
                 <button id="btn-toggle-ai" class="btn-studio roblox-studio-assistant-btn" title="Roblox Studio AI Assistant & Copilot" style="background: #2b2b2b; border: 1px solid #444; color: #38bdf8; font-weight: 700; font-size: 0.78rem; padding: 4px 10px; border-radius: 4px; display: flex; align-items: center; gap: 5px;">
                     <span style="font-size: 0.95rem;">🤖</span> <span>Assistant</span>
                 </button>
-                <button id="btn-submit-review" class="btn-studio btn-submit-review" style="padding: 4px 14px; font-size: 0.8rem; font-weight: 700; border-radius: 4px;">
+                <button id="btn-submit-review" class="btn-studio btn-submit-review" onclick="window.creatorStudio ? window.creatorStudio.openPublishModal() : null" style="padding: 4px 14px; font-size: 0.8rem; font-weight: 700; border-radius: 4px;">
                     <span>Publish a game</span>
                 </button>
             </div>
@@ -2260,6 +2260,46 @@
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <input type="number" id="publish-entry-price-pbx" value="50" min="5" max="10000" step="5" style="width: 80px; padding: 6px 10px; background: #0b111a; border: 1.5px solid #ffd32a; border-radius: 8px; color: #ffd32a; font-weight: 900; font-size: 0.95rem; text-align: center; outline: none;">
                             <span style="font-weight: 900; color: #ffd32a; font-size: 0.9rem;">PBX</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. Eraldi Chat Seaded (Chat ON / OFF & Keelatud sõnad) -->
+                <div id="publish-chat-section" style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(0, 242, 254, 0.45); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.95rem; color: #00f2fe;">
+                            <span style="font-size: 1.25rem;">💬</span>
+                            <span>Mängusisene Serveri Chat:</span>
+                        </div>
+                        <span id="publish-chat-status-badge" style="font-size: 0.74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71;">🟢 SEES (ON)</span>
+                    </div>
+
+                    <!-- Chat ON / OFF valik -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.88rem; color: #fff;">Luba mängusisene vestlus (Chat):</div>
+                            <div style="font-size: 0.74rem; color: #94a3b8; line-height: 1.35; max-width: 380px;">
+                                Kui on <strong>SEES</strong>, ilmub mängus vasakule P nupu kõrvale chatinupp, mis suhtleb <strong>AINULT SELLE SERVERIGA</strong>. Kui on <strong>VÄLJAS</strong>, siis nuppu ei ilmu.
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 6px; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 10px; border: 1.5px solid rgba(0,242,254,0.35);">
+                            <button type="button" id="btn-publish-chat-on" class="btn-studio active" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 800; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: 1px solid #34d399; cursor: pointer;">
+                                <span>🟢 ON</span>
+                            </button>
+                            <button type="button" id="btn-publish-chat-off" class="btn-studio" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 800; border-radius: 8px; background: transparent; color: #94a3b8; border: 1px solid transparent; cursor: pointer;">
+                                <span>🔴 OFF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Keelatud sõnad (Banned Words) -->
+                    <div id="publish-chat-banned-words-wrap" style="display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px; padding: 12px;">
+                        <label for="publish-chat-banned-words" style="display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; color: #f87171;">
+                            <span>🚫</span> <span>Keelatud sõnad (Chat filter):</span>
+                        </label>
+                        <input type="text" id="publish-chat-banned-words" placeholder="Sisesta keelatud sõnad komadega eraldatuna (nt: roppus, haavav, spam)..." style="width: 100%; box-sizing: border-box; padding: 9px 12px; background: #0b111a; border: 1.5px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #fff; font-size: 0.86rem; outline: none;">
+                        <div style="font-size: 0.72rem; color: #94a3b8;">
+                            ℹ️ Selles serveris tsenseeritakse need sõnad automaatselt tärnidega (****) või blokeeritakse sõnum.
                         </div>
                     </div>
                 </div>
