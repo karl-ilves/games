@@ -1458,7 +1458,7 @@ export function openOwnerNoticeModal(gameId: string = 'all', gameTitle: string =
         titleInput.value = 'Sorry. Update. Playard Game 2';
     }
     if (descInput) {
-        descInput.value = 'We are deleting all games this Sunday at 14:00 UTC (16:00 Estonian time). We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team';
+        descInput.value = 'We are deleting some games this Sunday at 14:00 UTC (16:00 Estonian time) – not all games will be removed, only selected ones. We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team';
     }
     if (repeatSelect) {
         repeatSelect.value = '0'; // every time
@@ -1920,7 +1920,7 @@ export function setupOwnerPanel() {
         const statusEl = document.getElementById('owner-notice-status');
 
         const title = titleInput?.value.trim() || 'Sorry. Update. Playard Game 2';
-        const desc = descInput?.value.trim() || 'We are deleting all games this Sunday at 14:00 UTC (16:00 Estonian time). We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team';
+        const desc = descInput?.value.trim() || 'We are deleting some games this Sunday at 14:00 UTC (16:00 Estonian time) – not all games will be removed, only selected ones. We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team';
         const repeatCount = parseInt(repeatSelect?.value || '0', 10);
         const targetGameId = hiddenGameId?.value || 'all';
 

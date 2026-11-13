@@ -33,7 +33,7 @@ export const DEFAULT_SUNDAY_UPDATE_NOTICE: GameCloseNoticeConfig = {
     gameId: 'all',
     gameTitle: 'All Games (Playard Game 2)',
     title: 'Sorry. Update. Playard Game 2',
-    description: 'We are deleting all games this Sunday at 14:00 UTC (16:00 Estonian time). We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team',
+    description: 'We are deleting some games this Sunday at 14:00 UTC (16:00 Estonian time) – not all games will be removed, only selected ones. We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team',
     repeatCount: 0, // every time a player joins
     active: true,
     createdAt: 1731427200000,
@@ -52,6 +52,17 @@ export function getGameCloseNotices(): GameCloseNoticeConfig[] {
         if (raw) {
             const list: GameCloseNoticeConfig[] = JSON.parse(raw);
             if (Array.isArray(list) && list.length > 0) {
+                // If the default notice still has the old text "deleting all games", update it to the new text
+                let updated = false;
+                list.forEach(item => {
+                    if (item.id === DEFAULT_SUNDAY_UPDATE_NOTICE.id && item.description.includes('deleting all games')) {
+                        item.description = DEFAULT_SUNDAY_UPDATE_NOTICE.description;
+                        updated = true;
+                    }
+                });
+                if (updated) {
+                    saveGameCloseNotices(list);
+                }
                 return list;
             }
         }

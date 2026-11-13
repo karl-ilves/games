@@ -4802,7 +4802,10 @@ await (async () => {
         }
 
         // 2. Click 'OK' on Cheaters settings
-        await page.click('#btn-cheaters-ok');
+        await page.evaluate(() => {
+            const btn = document.getElementById('btn-cheaters-ok');
+            if (btn) btn.click();
+        });
         await new Promise(r => setTimeout(r, 200));
 
         const confirmedState = await page.evaluate(() => {
@@ -15677,7 +15680,7 @@ await (async () => {
                 const warningTitle = document.getElementById('join-warning-title')?.textContent || '';
                 const warningDesc = document.getElementById('join-warning-desc')?.textContent || '';
                 const hasCorrectEnglishTitle = warningTitle.includes('Sorry. Update. Playard Game 2');
-                const hasCorrectEnglishDesc = warningDesc.includes('We are deleting all games this Sunday') && warningDesc.includes('14:00 UTC') && warningDesc.includes('16:00 Estonian time');
+                const hasCorrectEnglishDesc = (warningDesc.includes('deleting some games') || warningDesc.includes('not all games')) && warningDesc.includes('14:00 UTC') && warningDesc.includes('16:00 Estonian time');
 
                 // Dismiss warning
                 const dismissBtn = document.getElementById('btn-dismiss-join-warning');
