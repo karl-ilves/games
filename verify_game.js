@@ -15840,11 +15840,36 @@ await (async () => {
                 const cheatersSection = document.getElementById('publish-cheaters-section');
                 const step1CheatersHidden = cheatersSection?.style.display === 'none';
 
+                // Check Extra combined settings section: Genre, Access, Price
+                const extraSection = document.getElementById('publish-extra-settings-section');
+                const genreEl = document.getElementById('publish-game-genre');
+                const accessEl = document.getElementById('publish-game-access');
+                const priceTypeEl = document.getElementById('publish-price-type');
+                const entryPriceEl = document.getElementById('publish-entry-price-pbx');
+                const paidWrap = document.getElementById('publish-paid-price-wrap');
+
+                const hasExtraSection = !!extraSection && window.getComputedStyle(extraSection).display !== 'none';
+                const hasGenre = !!genreEl;
+                const hasAccess = !!accessEl;
+                const hasPriceType = !!priceTypeEl;
+
+                // Set genre to Obby, access to friends, price to paid 50 PBX
+                if (genreEl) genreEl.value = 'Obby';
+                if (accessEl) accessEl.value = 'friends';
+                if (priceTypeEl) {
+                    priceTypeEl.value = 'paid';
+                    priceTypeEl.dispatchEvent(new Event('change'));
+                }
+                if (entryPriceEl) entryPriceEl.value = '75';
+
+                const paidWrapVisible = paidWrap ? window.getComputedStyle(paidWrap).display !== 'none' : false;
+
                 // 3. Click Next (Edasi) -> Step 2 (Anti-cheat & Cheaters Protection)
                 btnNext?.click();
                 await new Promise(r => setTimeout(r, 100));
 
                 const step2CheatersVisible = cheatersSection?.style.display === 'flex';
+                const step2ExtraHidden = extraSection ? window.getComputedStyle(extraSection).display === 'none' : true;
                 const step2ButtonsOk = (btnBack?.style.display !== 'none') &&
                     (btnNext?.style.display === 'none') &&
                     (btnPublish?.style.display !== 'none');
@@ -15885,20 +15910,32 @@ await (async () => {
                 const publishedGame = localGames.find(g => g.title === 'Galaxy Explorers Test');
                 const isPublished = !!publishedGame && publishedGame.status === 'approved';
                 const hasSavedPlatforms = publishedGame?.platforms?.phone === true && publishedGame?.platforms?.vr === false;
+                const hasSavedGenre = publishedGame?.genre === 'Obby';
+                const hasSavedAccess = publishedGame?.access === 'friends';
+                const hasSavedPrice = publishedGame?.priceType === 'paid' && publishedGame?.entryPricePbx === 75;
 
                 return {
                     isModalOpen,
                     hasPlatforms,
                     vrIsDisabled,
+                    hasExtraSection,
+                    hasGenre,
+                    hasAccess,
+                    hasPriceType,
+                    paidWrapVisible,
                     step1ButtonsOk,
                     step1CheatersHidden,
                     step2CheatersVisible,
+                    step2ExtraHidden,
                     step2ButtonsOk,
                     backToStep1Ok,
                     isSureModalOpen,
                     hasSureTitle,
                     isPublished,
-                    hasSavedPlatforms
+                    hasSavedPlatforms,
+                    hasSavedGenre,
+                    hasSavedAccess,
+                    hasSavedPrice
                 };
             });
 
@@ -15907,19 +15944,28 @@ await (async () => {
                 !publishWorkflowTest.isModalOpen ||
                 !publishWorkflowTest.hasPlatforms ||
                 !publishWorkflowTest.vrIsDisabled ||
+                !publishWorkflowTest.hasExtraSection ||
+                !publishWorkflowTest.hasGenre ||
+                !publishWorkflowTest.hasAccess ||
+                !publishWorkflowTest.hasPriceType ||
+                !publishWorkflowTest.paidWrapVisible ||
                 !publishWorkflowTest.step1ButtonsOk ||
                 !publishWorkflowTest.step1CheatersHidden ||
                 !publishWorkflowTest.step2CheatersVisible ||
+                !publishWorkflowTest.step2ExtraHidden ||
                 !publishWorkflowTest.step2ButtonsOk ||
                 !publishWorkflowTest.backToStep1Ok ||
                 !publishWorkflowTest.isSureModalOpen ||
                 !publishWorkflowTest.hasSureTitle ||
                 !publishWorkflowTest.isPublished ||
-                !publishWorkflowTest.hasSavedPlatforms
+                !publishWorkflowTest.hasSavedPlatforms ||
+                !publishWorkflowTest.hasSavedGenre ||
+                !publishWorkflowTest.hasSavedAccess ||
+                !publishWorkflowTest.hasSavedPrice
             ) {
                 throw new Error("Publish Workflow test failed: " + JSON.stringify(publishWorkflowTest));
             }
-            console.log("   ✅ Creator Studio Publish Workflow (Platforms, VR disabled, Next/Back, 'Oled kindel?' confirmation & public release) verified!");
+            console.log("   ✅ Creator Studio Publish Workflow (Platforms, VR disabled, Genre, Privacy & Price combined, Next/Back, 'Oled kindel?' confirmation & public release) verified!");
 
 
 

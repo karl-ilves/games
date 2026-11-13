@@ -43,11 +43,27 @@ export async function renderCommunityGames() {
                </div>`
             : '';
 
+        // Genre, Access & Pricing Badges
+        const genreText = game.genre || game.sceneData?.genre || game.category || 'Adventure';
+        const accessType = game.access || game.sceneData?.access || 'public';
+        const isPaid = (game.priceType || game.sceneData?.priceType) === 'paid' && ((game.entryPricePbx || game.sceneData?.entryPricePbx || 0) > 0);
+        const priceText = isPaid ? `💎 ${game.entryPricePbx || game.sceneData?.entryPricePbx} PBX` : '🟢 Tasuta';
+        const accessBadge = accessType === 'friends' ? '👥 Sõbrad' : (accessType === 'private' ? '🔒 Privaatne' : '🌍 Avalik');
+
+        const metaTagsHtml = `
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+                <span style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">🏷️ ${genreText}</span>
+                <span style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">${accessBadge}</span>
+                <span style="background: ${isPaid ? 'rgba(255, 211, 42, 0.2)' : 'rgba(46, 204, 113, 0.15)'}; border: 1px solid ${isPaid ? '#ffd32a' : '#2ecc71'}; color: ${isPaid ? '#ffd32a' : '#2ecc71'}; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">${priceText}</span>
+            </div>
+        `;
+
         card.innerHTML = `
             <a href="./games/play/index.html?id=${game.id}" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; height: 100%;">
                 ${thumbHtml}
                 <h2>🎮 ${game.title}</h2>
                 <p>${game.description || 'Community created 3D game. Explore the world and have fun!'}</p>
+                ${metaTagsHtml}
                 ${platformsHtml}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
                     <div class="reward-tag">

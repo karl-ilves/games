@@ -470,6 +470,10 @@ export function serializeCurrentScene() {
         playDevices: Object.entries(csState.publishPlayPlatforms || { phone: true, controller: true, pc: true, vr: false })
             .filter(([_, enabled]) => enabled)
             .map(([dev]) => dev),
+        genre: csState.publishGenre || (document.getElementById('publish-game-genre') as HTMLSelectElement)?.value || catSelect?.value || 'Adventure',
+        access: csState.publishAccess || (document.getElementById('publish-game-access') as HTMLSelectElement)?.value || 'public',
+        priceType: csState.publishPriceType || (document.getElementById('publish-price-type') as HTMLSelectElement)?.value || 'free',
+        entryPricePbx: csState.publishEntryPricePbx || parseInt((document.getElementById('publish-entry-price-pbx') as HTMLInputElement)?.value || '0', 10) || 0,
         updatedAt: Date.now()
     };
 }
@@ -624,6 +628,7 @@ export function switchPublishStep(step: 'details' | 'security') {
     const descContainer = document.getElementById('publish-game-desc')?.parentElement as HTMLElement | null;
     const gridContainer = document.getElementById('publish-max-players')?.parentElement?.parentElement as HTMLElement | null;
     const platformsContainer = document.getElementById('publish-platforms-section');
+    const extraSettingsSection = document.getElementById('publish-extra-settings-section');
     const cheatersSection = document.getElementById('publish-cheaters-section');
     const adPromoSection = document.getElementById('publish-ad-promo-section');
 
@@ -638,6 +643,7 @@ export function switchPublishStep(step: 'details' | 'security') {
         if (descContainer) descContainer.style.display = 'block';
         if (gridContainer) gridContainer.style.display = 'grid';
         if (platformsContainer) platformsContainer.style.display = 'flex';
+        if (extraSettingsSection) extraSettingsSection.style.display = 'flex';
         if (adPromoSection) adPromoSection.style.display = 'flex';
 
         // Hide Step 2 Anti-Cheat
@@ -655,6 +661,7 @@ export function switchPublishStep(step: 'details' | 'security') {
         if (descContainer) descContainer.style.display = 'none';
         if (gridContainer) gridContainer.style.display = 'none';
         if (platformsContainer) platformsContainer.style.display = 'none';
+        if (extraSettingsSection) extraSettingsSection.style.display = 'none';
         if (adPromoSection) adPromoSection.style.display = 'none';
 
         // Show Step 2 Anti-Cheat
@@ -749,6 +756,34 @@ export function openPublishModal() {
     if (vrChk) {
         vrChk.checked = false;
         vrChk.disabled = true;
+    }
+
+    // Genre, Privacy & Monetization
+    const genreSelect = document.getElementById('publish-game-genre') as HTMLSelectElement | null;
+    const accessSelect = document.getElementById('publish-game-access') as HTMLSelectElement | null;
+    const priceTypeSelect = document.getElementById('publish-price-type') as HTMLSelectElement | null;
+    const entryPriceInput = document.getElementById('publish-entry-price-pbx') as HTMLInputElement | null;
+    const paidWrap = document.getElementById('publish-paid-price-wrap');
+
+    if (genreSelect) {
+        genreSelect.value = sceneData.genre || sceneData.category || 'Adventure';
+    }
+    if (accessSelect) {
+        accessSelect.value = sceneData.access || 'public';
+    }
+    if (priceTypeSelect) {
+        priceTypeSelect.value = sceneData.priceType || 'free';
+        if (paidWrap) {
+            paidWrap.style.display = (sceneData.priceType === 'paid') ? 'flex' : 'none';
+        }
+        priceTypeSelect.onchange = () => {
+            if (paidWrap) {
+                paidWrap.style.display = (priceTypeSelect.value === 'paid') ? 'flex' : 'none';
+            }
+        };
+    }
+    if (entryPriceInput) {
+        entryPriceInput.value = String(sceneData.entryPricePbx ?? 50);
     }
 
     if (sceneData.thumbnail) {
@@ -860,6 +895,21 @@ export async function confirmAndPublishGame() {
         confirmedAt: Date.now()
     };
 
+    const genreSelect = document.getElementById('publish-game-genre') as HTMLSelectElement | null;
+    const accessSelect = document.getElementById('publish-game-access') as HTMLSelectElement | null;
+    const priceTypeSelect = document.getElementById('publish-price-type') as HTMLSelectElement | null;
+    const entryPriceInput = document.getElementById('publish-entry-price-pbx') as HTMLInputElement | null;
+
+    const genre = genreSelect?.value || 'Adventure';
+    const access = (accessSelect?.value as 'public' | 'friends' | 'private') || 'public';
+    const priceType = (priceTypeSelect?.value as 'free' | 'paid') || 'free';
+    const entryPricePbx = priceType === 'paid' ? (parseInt(entryPriceInput?.value || '50', 10) || 50) : 0;
+
+    csState.publishGenre = genre;
+    csState.publishAccess = access;
+    csState.publishPriceType = priceType;
+    csState.publishEntryPricePbx = entryPricePbx;
+
     const sceneTitleInput = document.getElementById('game-title-input') as HTMLInputElement | null;
     if (sceneTitleInput) sceneTitleInput.value = gameTitle;
     const sceneDescInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
@@ -878,6 +928,10 @@ export async function confirmAndPublishGame() {
                 thumbnail: currentPublishThumbnail || undefined,
                 cheatersPolicy,
                 platforms,
+                genre,
+                access,
+                priceType,
+                entryPricePbx,
                 skipPrompt: true // already confirmed via "Oled kindel?" modal
             });
             resolve(!!result);
@@ -894,6 +948,10 @@ export async function publishCurrentGame(options?: {
     thumbnail?: string;
     cheatersPolicy?: any;
     platforms?: { phone: boolean; controller: boolean; pc: boolean; vr: boolean };
+    genre?: string;
+    access?: 'public' | 'friends' | 'private';
+    priceType?: 'free' | 'paid';
+    entryPricePbx?: number;
     skipPrompt?: boolean;
 }) {
     // Confirmation prompt ("are you shure")
@@ -909,7 +967,7 @@ export async function publishCurrentGame(options?: {
 
     const sceneData = serializeCurrentScene();
     const title = options?.title || sceneData.title || 'My 3D Adventure';
-    const category = sceneData.category || 'Adventure';
+    const category = options?.genre || sceneData.genre || sceneData.category || 'Adventure';
     const description = options?.description !== undefined ? options.description : (sceneData.description || '');
     const maxPlayers = options?.maxPlayers !== undefined ? options.maxPlayers : (sceneData.maxPlayers || currentGameMaxPlayers || 8);
     const minAge = options?.minAge !== undefined ? options.minAge : (sceneData.minAge ?? currentGameMinAge ?? 0);
@@ -919,6 +977,10 @@ export async function publishCurrentGame(options?: {
 
     const platforms = options?.platforms !== undefined ? options.platforms : (sceneData.platforms || { phone: true, controller: true, pc: true, vr: false });
     const playDevices = Object.entries(platforms).filter(([_, enabled]) => enabled).map(([dev]) => dev);
+    const genre = options?.genre !== undefined ? options.genre : (sceneData.genre || category);
+    const access = options?.access !== undefined ? options.access : (sceneData.access || 'public');
+    const priceType = options?.priceType !== undefined ? options.priceType : (sceneData.priceType || 'free');
+    const entryPricePbx = options?.entryPricePbx !== undefined ? options.entryPricePbx : (sceneData.entryPricePbx || 0);
 
     sceneData.title = title;
     sceneData.description = description;
@@ -927,6 +989,10 @@ export async function publishCurrentGame(options?: {
     sceneData.ageRating = ageRating;
     sceneData.platforms = platforms;
     sceneData.playDevices = playDevices;
+    sceneData.genre = genre;
+    sceneData.access = access;
+    sceneData.priceType = priceType;
+    sceneData.entryPricePbx = entryPricePbx;
     if (thumbnail) {
         sceneData.thumbnail = thumbnail;
     }
@@ -958,6 +1024,10 @@ export async function publishCurrentGame(options?: {
         ageRating,
         platforms,
         playDevices,
+        genre,
+        access,
+        priceType,
+        entryPricePbx,
         cheatersPolicy: cheatersPolicy || sceneData.cheatersPolicy
     });
 

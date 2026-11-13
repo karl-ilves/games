@@ -202,6 +202,18 @@ export function setPublishPlayPlatforms(val: { phone: boolean; controller: boole
     publishPlayPlatforms = val;
 }
 
+export let publishGenre: string = 'Adventure';
+export function setPublishGenre(val: string) { publishGenre = val; }
+
+export let publishAccess: 'public' | 'friends' | 'private' = 'public';
+export function setPublishAccess(val: 'public' | 'friends' | 'private') { publishAccess = val; }
+
+export let publishPriceType: 'free' | 'paid' = 'free';
+export function setPublishPriceType(val: 'free' | 'paid') { publishPriceType = val; }
+
+export let publishEntryPricePbx: number = 0;
+export function setPublishEntryPricePbx(val: number) { publishEntryPricePbx = val; }
+
 export let activeFeedbackGameId: string | null = null;
 export function setActiveFeedbackGameId(val: string | null) { activeFeedbackGameId = val; }
 
@@ -339,6 +351,10 @@ export const csState: any = {
     get isCheatersConfirmed() { return isCheatersConfirmed; }, set isCheatersConfirmed(val: any) { isCheatersConfirmed = val; },
     get publishCurrentStep() { return publishCurrentStep; }, set publishCurrentStep(val: any) { publishCurrentStep = val; },
     get publishPlayPlatforms() { return publishPlayPlatforms; }, set publishPlayPlatforms(val: any) { publishPlayPlatforms = val; },
+    get publishGenre() { return publishGenre; }, set publishGenre(val: any) { publishGenre = val; },
+    get publishAccess() { return publishAccess; }, set publishAccess(val: any) { publishAccess = val; },
+    get publishPriceType() { return publishPriceType; }, set publishPriceType(val: any) { publishPriceType = val; },
+    get publishEntryPricePbx() { return publishEntryPricePbx; }, set publishEntryPricePbx(val: any) { publishEntryPricePbx = val; },
     get activeFeedbackGameId() { return activeFeedbackGameId; }, set activeFeedbackGameId(val: any) { activeFeedbackGameId = val; },
     get studioToolMode() { return studioToolMode; }, set studioToolMode(val: any) { studioToolMode = val; },
     get moveGizmoGroup() { return moveGizmoGroup; }, set moveGizmoGroup(val: any) { moveGizmoGroup = val; },

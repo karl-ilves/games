@@ -2199,6 +2199,71 @@
                     </div>
                 </div>
 
+                <!-- 6. KOOS: Mängu Žanr, Privaatsus ja PlayBux Hind (Genre, Privacy & Monetization) -->
+                <div id="publish-extra-settings-section" style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(168, 85, 247, 0.45); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.95rem; color: #ffd32a;">
+                            <span style="font-size: 1.25rem;">🏷️🔒💎</span>
+                            <span>Mängu Žanr, Privaatsus ja Hind (Settings):</span>
+                        </div>
+                        <span style="font-size: 0.75rem; color: #a855f7; font-weight: 700;">Seaded koos</span>
+                    </div>
+
+                    <!-- 1. Mängu Žanr / Kategooria -->
+                    <div>
+                        <label for="publish-game-genre" style="display: block; font-weight: 800; font-size: 0.85rem; color: #38bdf8; margin-bottom: 6px;">
+                            🏷️ 1. Mängu Žanr (Genre / Tag):
+                        </label>
+                        <select id="publish-game-genre" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(56, 189, 248, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
+                            <option value="Adventure" selected>🧩 Mõistatus / Seiklus (Adventure)</option>
+                            <option value="Obby">🏃 Obby / Parkuur (Parkour)</option>
+                            <option value="Racing">🚗 Võidusõit / Autod (Racing)</option>
+                            <option value="PvP">⚔️ Võitlus / PvP (Combat)</option>
+                            <option value="Roleplay">🏡 Rollimäng / RP (Roleplay & City)</option>
+                            <option value="Horror">👻 Horror / Õudus (Horror)</option>
+                            <option value="Sandbox">🧱 Liivakast / Ehitamine (Sandbox)</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. Privaatsuse tase & 4. Hind koos ühes reas -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <!-- 3. Privaatsuse tase (Kes saavad mängida) -->
+                        <div>
+                            <label for="publish-game-access" style="display: block; font-weight: 800; font-size: 0.85rem; color: #34d399; margin-bottom: 6px;">
+                                🔒 3. Kes saavad mängida? (Privaatsus):
+                            </label>
+                            <select id="publish-game-access" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
+                                <option value="public" selected>🌍 Avalik (Kõik mängijad)</option>
+                                <option value="friends">👥 Ainult minu sõbrad</option>
+                                <option value="private">🔒 Privaatne (Ainult mina / Test)</option>
+                            </select>
+                        </div>
+
+                        <!-- 4. Hind / Monetiseerimine -->
+                        <div>
+                            <label for="publish-price-type" style="display: block; font-weight: 800; font-size: 0.85rem; color: #ffd32a; margin-bottom: 6px;">
+                                💎 4. Mängu Hind (PlayBux):
+                            </label>
+                            <select id="publish-price-type" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(255, 211, 42, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
+                                <option value="free" selected>🟢 Tasuta kõigile (Free)</option>
+                                <option value="paid">💎 Tasuline (Maksab PlayBux)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tasulise mängu PlayBux hinna sisend (avaneb kui valitud 'paid') -->
+                    <div id="publish-paid-price-wrap" style="display: none; background: rgba(0, 0, 0, 0.35); border: 1.5px solid #ffd32a; border-radius: 10px; padding: 10px 14px; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #ffd32a;">Sissepääsu hind mängijatele:</div>
+                            <div style="font-size: 0.74rem; color: #94a3b8;">Iga kord kui keegi ostab ligipääsu, teenid PlayBuxe!</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" id="publish-entry-price-pbx" value="50" min="5" max="10000" step="5" style="width: 80px; padding: 6px 10px; background: #0b111a; border: 1.5px solid #ffd32a; border-radius: 8px; color: #ffd32a; font-weight: 900; font-size: 0.95rem; text-align: center; outline: none;">
+                            <span style="font-weight: 900; color: #ffd32a; font-size: 0.9rem;">PBX</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 6. Cheaters Security & Anti-Cheat Section (Step 2 - Anti Cheat) -->
                 <div id="publish-cheaters-section" style="display: none; background: rgba(15, 23, 42, 0.85); border: 1.5px solid #a855f7; border-radius: 12px; padding: 12px 14px; flex-direction: column; gap: 10px; transition: all 0.25s ease;">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">

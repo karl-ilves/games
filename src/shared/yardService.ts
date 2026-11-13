@@ -84,6 +84,10 @@ export interface CreatedGame {
     };
     playDevices?: string[]; // e.g. ['phone', 'controller', 'pc']
     cheatersPolicy?: any;
+    genre?: string; // Obby / Parkuur, Võidusõit, Võitlus, Rollimäng, Horror, Mõistatus / Seiklus, Liivakast / Sandbox
+    access?: 'public' | 'friends' | 'private'; // Avalik, Ainult sõbrad, Privaatne
+    priceType?: 'free' | 'paid'; // Tasuta või Tasuline
+    entryPricePbx?: number; // Sissepääsu hind PlayBuxides (nt 50 PBX)
     createdAt: number;
     updatedAt: number;
 }

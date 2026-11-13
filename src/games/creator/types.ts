@@ -158,6 +158,10 @@ export interface SceneSnapshot {
         vr: boolean;
     };
     playDevices?: string[];
+    genre?: string;
+    access?: 'public' | 'friends' | 'private';
+    priceType?: 'free' | 'paid';
+    entryPricePbx?: number;
 }
 
 export interface PlayTestSnapshot {
