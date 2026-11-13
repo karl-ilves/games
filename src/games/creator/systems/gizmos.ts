@@ -772,6 +772,27 @@ export function spawnPartShape(shapeType: 'block' | 'sphere' | 'cylinder' | 'wed
 
     scene.add(group);
 
+    const partDims = shapeType === 'wedge'
+        ? { width: 2, height: 2, depth: 2 }
+        : (shapeType === 'sphere'
+            ? { width: 2, height: 2, depth: 2 }
+            : (shapeType === 'cylinder'
+                ? { width: 2, height: 2, depth: 2 }
+                : { width: 2, height: 2, depth: 2 }));
+
+    mesh.userData = {
+        ...mesh.userData,
+        shapeType: shapeType === 'block' ? 'box' : shapeType,
+        geometryType: shapeType === 'block' ? 'box' : shapeType,
+        type: shapeType === 'block' ? 'box' : shapeType,
+        dimensions: partDims,
+        material: 'Plastic',
+        transparency: 0,
+        anchored: true,
+        canCollide: true
+    };
+    group.userData = { ...group.userData, ...mesh.userData };
+
     const placed: PlacedObject = {
         id: 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         mesh: group,
@@ -787,7 +808,11 @@ export function spawnPartShape(shapeType: 'block' | 'sphere' | 'cylinder' | 'wed
         reflectance: 0,
         anchored: true,
         canCollide: true,
-        isPassable: false
+        isPassable: false,
+        shapeType: shapeType === 'block' ? 'box' : shapeType,
+        geometryType: shapeType === 'block' ? 'box' : shapeType,
+        type: shapeType === 'block' ? 'box' : shapeType,
+        dimensions: partDims
     };
 
     placedObjects.push(placed);

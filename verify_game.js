@@ -16107,9 +16107,166 @@ await (async () => {
                 sessionStorage.removeItem('playard_current_game_chat_disabled');
             });
 
-            console.log("   ✅ In-Game Server Chat (Chat button left of P, strict server isolation, banned words filter & Chat ON/OFF toggle) verified!");
+            // 37. Testing Published Game Object & Part Rendering in Community Play Player
+            console.log("37. Testing Published Game Object & Part Rendering in Community Play Player (/games/play/)...");
+            
+            // Create a test game with placed parts (block, sphere, cylinder, wedge, campfire, lava)
+            const testGameId = 'test_pub_game_' + Date.now();
+            await page.evaluate((gid) => {
+                const testSceneData = {
+                    title: 'Awesome Adventure 3D',
+                    category: 'Adventure',
+                    description: 'Testing placed objects rendering in Play mode',
+                    mapType: 'land',
+                    envMode: 'day',
+                    chatEnabled: true,
+                    objects: [
+                        {
+                            id: 'part_block_1',
+                            catalogId: 'part_block',
+                            name: 'Neon Cube',
+                            category: 'custom',
+                            shapeType: 'box',
+                            geometryType: 'box',
+                            type: 'box',
+                            dimensions: { width: 3, height: 3, depth: 3 },
+                            position: { x: 5, y: 0, z: 5 },
+                            rotation: { x: 0, y: 0, z: 0 },
+                            scale: { x: 1, y: 1, z: 1 },
+                            color: '#00f2fe',
+                            material: 'Plastic',
+                            anchored: true,
+                            canCollide: true
+                        },
+                        {
+                            id: 'part_sphere_1',
+                            catalogId: 'part_sphere',
+                            name: 'Golden Orb',
+                            category: 'custom',
+                            shapeType: 'sphere',
+                            geometryType: 'sphere',
+                            type: 'sphere',
+                            dimensions: { width: 2, height: 2, depth: 2 },
+                            position: { x: -5, y: 0, z: 5 },
+                            rotation: { x: 0, y: 0, z: 0 },
+                            scale: { x: 1, y: 1, z: 1 },
+                            color: '#ffd32a',
+                            material: 'Plastic',
+                            anchored: true,
+                            canCollide: true
+                        },
+                        {
+                            id: 'part_wedge_1',
+                            catalogId: 'part_wedge',
+                            name: 'Ramp',
+                            category: 'custom',
+                            shapeType: 'wedge',
+                            geometryType: 'wedge',
+                            type: 'wedge',
+                            dimensions: { width: 4, height: 2, depth: 6 },
+                            position: { x: 0, y: 0, z: 10 },
+                            rotation: { x: 0, y: 0, z: 0 },
+                            scale: { x: 1, y: 1, z: 1 },
+                            color: '#e74c3c',
+                            material: 'Plastic',
+                            anchored: true,
+                            canCollide: true
+                        },
+                        {
+                            id: 'part_campfire_1',
+                            catalogId: 'obj_nature_3_v1',
+                            name: 'Campfire #1',
+                            category: 'nature',
+                            geometryType: 'campfire',
+                            position: { x: 8, y: 0, z: -8 },
+                            rotation: { x: 0, y: 0, z: 0 },
+                            scale: { x: 1, y: 1, z: 1 },
+                            color: '#e67e22'
+                        },
+                        {
+                            id: 'part_lava_1',
+                            catalogId: 'obj_gameplay_1_v1',
+                            name: 'Lava Hazard Floor (-25 HP) #1',
+                            category: 'gameplay',
+                            isHazard: true,
+                            dealsDamage: true,
+                            damageAmount: 25,
+                            position: { x: -8, y: 0, z: -8 },
+                            rotation: { x: 0, y: 0, z: 0 },
+                            scale: { x: 1, y: 1, z: 1 },
+                            color: '#ff3b30'
+                        }
+                    ]
+                };
 
+                const gameRecord = {
+                    id: gid,
+                    creatorUsername: 'KarlTheCreator',
+                    title: 'Awesome Adventure 3D',
+                    description: 'Testing placed objects rendering in Play mode',
+                    category: 'Adventure',
+                    thumbnail: '',
+                    sceneData: testSceneData,
+                    status: 'approved',
+                    maxPlayers: 8,
+                    minAge: 0,
+                    ageRating: '0+',
+                    createdAt: Date.now(),
+                    chatEnabled: true,
+                    chatBannedWords: ''
+                };
 
+                const publishedGames = JSON.parse(localStorage.getItem('playard_user_created_games') || '[]');
+                publishedGames.unshift(gameRecord);
+                localStorage.setItem('playard_user_created_games', JSON.stringify(publishedGames));
+            }, testGameId);
+
+            // Navigate to Play player with testGameId
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/play/index.html?id=${testGameId}`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 1200));
+
+            const playRenderTest = await page.evaluate(() => {
+                const titleEl = document.getElementById('game-title-display');
+                const authorEl = document.getElementById('game-author-display');
+                const pBtn = document.getElementById('btn-playard-menu');
+                const sceneObjects = window.playState?.sceneObjects;
+                const objectsCount = Array.isArray(sceneObjects) ? sceneObjects.length : 0;
+                
+                // Verify all 5 objects are loaded into sceneObjects and have geometries
+                const hasCube = sceneObjects?.some((o) => o.userData?.name === 'Neon Cube' && o.children.length > 0);
+                const hasSphere = sceneObjects?.some((o) => o.userData?.name === 'Golden Orb' && o.children.length > 0);
+                const hasWedge = sceneObjects?.some((o) => o.userData?.name === 'Ramp' && o.children.length > 0);
+                const hasCampfire = sceneObjects?.some((o) => o.userData?.name === 'Campfire #1' && o.children.length > 0);
+                const hasLava = sceneObjects?.some((o) => o.userData?.isHazard && o.children.length > 0);
+
+                return {
+                    titleMatches: titleEl?.textContent?.includes('Awesome Adventure 3D'),
+                    authorMatches: authorEl?.textContent?.includes('KarlTheCreator'),
+                    hasPBtn: !!pBtn,
+                    objectsCount,
+                    hasCube,
+                    hasSphere,
+                    hasWedge,
+                    hasCampfire,
+                    hasLava
+                };
+            });
+
+            console.log("   Play Render Test Results:", playRenderTest);
+            if (
+                !playRenderTest.titleMatches ||
+                !playRenderTest.authorMatches ||
+                !playRenderTest.hasPBtn ||
+                playRenderTest.objectsCount < 5 ||
+                !playRenderTest.hasCube ||
+                !playRenderTest.hasSphere ||
+                !playRenderTest.hasWedge ||
+                !playRenderTest.hasCampfire ||
+                !playRenderTest.hasLava
+            ) {
+                throw new Error("Published game object rendering test failed: " + JSON.stringify(playRenderTest));
+            }
+            console.log("   ✅ Published Game Object & Part Rendering in Community Play Player verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);

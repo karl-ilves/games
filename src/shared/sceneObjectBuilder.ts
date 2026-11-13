@@ -7,6 +7,7 @@ export interface SceneObjectInput {
     category?: string;
     type?: string;
     shapeType?: string;
+    geometryType?: string;
     position?: { x: number; y: number; z: number } | [number, number, number];
     rotation?: { x: number; y: number; z: number } | [number, number, number];
     scale?: { x: number; y: number; z: number } | [number, number, number];
@@ -14,6 +15,9 @@ export interface SceneObjectInput {
     material?: string;
     opacity?: number;
     transparent?: boolean;
+    reflectance?: number;
+    anchored?: boolean;
+    canCollide?: boolean;
     dimensions?: { width?: number; height?: number; depth?: number };
     customModelData?: any;
     isPassable?: boolean;
@@ -21,6 +25,9 @@ export interface SceneObjectInput {
     isBoat?: boolean;
     isHazard?: boolean;
     isSpawnPoint?: boolean;
+    isInvisibleSpawn?: boolean;
+    isHoldable?: boolean;
+    inHandAtStart?: boolean;
     gameItemType?: string;
     textureUrl?: string;
 }
@@ -150,7 +157,12 @@ export function buildSceneObjectMesh(obj: SceneObjectInput): THREE.Group {
     const name = (obj.name || '').toLowerCase();
     const catalogId = (obj.catalogId || '').toLowerCase();
     const category = (obj.category || '').toLowerCase();
-    const type = (obj.type || obj.shapeType || '').toLowerCase();
+    let type = (obj.type || obj.shapeType || obj.geometryType || '').toLowerCase();
+    if (!type && catalogId.startsWith('part_')) {
+        const shapePart = catalogId.replace('part_', '');
+        type = shapePart === 'block' ? 'box' : shapePart;
+    }
+    if (type === 'block' || type === 'cube') type = 'box';
     const gameItemType = (obj.gameItemType || '').toLowerCase();
 
     const w = obj.dimensions?.width || 2;
@@ -295,6 +307,125 @@ export function buildSceneObjectMesh(obj: SceneObjectInput): THREE.Group {
     }
 
     // 7. Nature & Scenery
+    // Campfire with stone ring and glowing flame
+    if (/(campfire|lõke)/i.test(name) || /(campfire)/i.test(catalogId) || /(campfire)/i.test(type)) {
+        const campGroup = new THREE.Group();
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0x57606f, roughness: 0.9 });
+        const stoneRing = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.22, 8, 16), ringMat);
+        stoneRing.rotation.x = Math.PI / 2;
+        stoneRing.position.y = 0.12;
+        campGroup.add(stoneRing);
+        const logMat = new THREE.MeshStandardMaterial({ color: 0x4a2e12, roughness: 0.85 });
+        for (let a = 0; a < 4; a++) {
+            const log = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1.4, 8), logMat);
+            log.rotation.z = Math.PI / 3;
+            log.rotation.y = (a * Math.PI) / 2;
+            log.position.set(0, 0.22, 0);
+            campGroup.add(log);
+        }
+        const flame1 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.1, 7), new THREE.MeshStandardMaterial({ color: 0xff4757, emissive: 0xff6b81, emissiveIntensity: 1.5, roughness: 0.2 }));
+        flame1.position.y = 0.65;
+        campGroup.add(flame1);
+        const flame2 = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 6), new THREE.MeshStandardMaterial({ color: 0xffa502, emissive: 0xffa502, emissiveIntensity: 1.8 }));
+        flame2.position.y = 0.55;
+        campGroup.add(flame2);
+        return setupGroupTransforms(campGroup, obj);
+    }
+
+    // Alchemy Cauldron
+    if (/(cauldron|pada|katel)/i.test(name) || /(cauldron)/i.test(catalogId)) {
+        const cauldGroup = new THREE.Group();
+        const ironMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.7, metalness: 0.8 });
+        const pot = new THREE.Mesh(new THREE.SphereGeometry(0.8, 14, 12), ironMat);
+        pot.position.y = 0.8;
+        cauldGroup.add(pot);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.12, 8, 16), ironMat);
+        rim.rotation.x = Math.PI / 2;
+        rim.position.y = 1.15;
+        cauldGroup.add(rim);
+        const potionMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00cc66, emissiveIntensity: 1.6, roughness: 0.1 });
+        const liquid = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.1, 14), potionMat);
+        liquid.position.y = 1.1;
+        cauldGroup.add(liquid);
+        [-0.45, 0.45].forEach(lx => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.6, 6), ironMat);
+            leg.position.set(lx, 0.3, 0);
+            leg.rotation.z = lx * -0.4;
+            cauldGroup.add(leg);
+        });
+        return setupGroupTransforms(cauldGroup, obj);
+    }
+
+    // Magic Wand
+    if (/(wand|sau|võlusau)/i.test(name) || /(wand)/i.test(catalogId)) {
+        const wandGroup = new THREE.Group();
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2714, roughness: 0.6 });
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.2, 8), woodMat);
+        shaft.position.y = 0.6;
+        wandGroup.add(shaft);
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 2.0, roughness: 0.1 }));
+        gem.position.y = 1.3;
+        wandGroup.add(gem);
+        return setupGroupTransforms(wandGroup, obj);
+    }
+
+    // Ancient Rune Stone
+    if (/(rune|ruun)/i.test(name) || /(rune)/i.test(catalogId)) {
+        const runeGroup = new THREE.Group();
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
+        const monolith = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.8, 0.5), stoneMat);
+        monolith.position.y = 0.9;
+        runeGroup.add(monolith);
+        const glyphMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+        const glyphV = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.52), glyphMat);
+        glyphV.position.y = 1.0;
+        runeGroup.add(glyphV);
+        const glyphH = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.52), glyphMat);
+        glyphH.position.y = 1.1;
+        runeGroup.add(glyphH);
+        return setupGroupTransforms(runeGroup, obj);
+    }
+
+    // Ice Crystal
+    if (/(ice|jää)/i.test(name) || /(ice)/i.test(catalogId)) {
+        const iceGroup = new THREE.Group();
+        const iceMat = new THREE.MeshStandardMaterial({ color: 0xa5f3fc, emissive: 0x38bdf8, emissiveIntensity: 0.8, roughness: 0.1, transparent: true, opacity: 0.85 });
+        const crystal = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.6, 5), iceMat);
+        crystal.position.y = 0.8;
+        iceGroup.add(crystal);
+        const crystal2 = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.1, 5), iceMat);
+        crystal2.position.set(0.3, 0.55, 0.2);
+        crystal2.rotation.z = -0.3;
+        iceGroup.add(crystal2);
+        return setupGroupTransforms(iceGroup, obj);
+    }
+
+    // Poison Mushroom
+    if (/(mushroom|seen)/i.test(name) || /(mushroom)/i.test(catalogId)) {
+        const shroomGroup = new THREE.Group();
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 0.7, 8), new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.8 }));
+        stem.position.y = 0.35;
+        shroomGroup.add(stem);
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.65, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x9333ea, emissive: 0x581c87, emissiveIntensity: 0.9, roughness: 0.4 }));
+        cap.position.y = 0.7;
+        shroomGroup.add(cap);
+        [-0.25, 0.25].forEach(dx => {
+            const dot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
+            dot.position.set(dx, 0.85, 0.25);
+            shroomGroup.add(dot);
+        });
+        return setupGroupTransforms(shroomGroup, obj);
+    }
+
+    // Cut Wood Log
+    if (/(log|halg)/i.test(name) || /(log)/i.test(catalogId)) {
+        const woodLog = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0x6e4720, roughness: 0.8 }));
+        woodLog.rotation.z = Math.PI / 2;
+        woodLog.position.y = 0.22;
+        group.add(woodLog);
+        return setupGroupTransforms(group, obj);
+    }
+
     if (/(pine|mänd)/i.test(name) || /(pine)/i.test(catalogId)) {
         return setupGroupTransforms(createPineTreeMesh(material), obj);
     }

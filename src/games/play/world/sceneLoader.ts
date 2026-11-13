@@ -44,6 +44,17 @@ export function buildSceneFromData(sceneData: any, state: PlayState, scene: THRE
         scene.add(group);
     });
 
+    // Re-attach children to their parents in the Three.js scene graph
+    state.sceneObjects.forEach(childGroup => {
+        const parentId = childGroup.userData?.parentId;
+        if (parentId) {
+            const parentGroup = state.sceneObjects.find(p => p.userData?.id === parentId);
+            if (parentGroup) {
+                parentGroup.attach(childGroup);
+            }
+        }
+    });
+
     // Render 2D Screen Elements if present
     if (Array.isArray(sceneData.screenElements) && sceneData.screenElements.length > 0) {
         renderPlayScreenElements(sceneData.screenElements, state);

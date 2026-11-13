@@ -26,6 +26,9 @@ export const playSuperJump = (force = 22) => playState.playSuperJump(force);
 export const playSpeedBoost = (multiplier = 2.2, durationSec = 4.0) => playState.playSpeedBoost(multiplier, durationSec);
 export const damagePlayPlayer = (amount: number) => playState.damagePlayPlayer(amount);
 export const equipPlayItemInHand = (item: any) => playState.equipPlayItemInHand(item);
+if (typeof window !== 'undefined') {
+    (window as any).playState = playState;
+}
 
 console.log("Community Game Player Loading...");
 
