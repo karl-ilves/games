@@ -41,6 +41,67 @@ export const DEFAULT_SUNDAY_UPDATE_NOTICE: GameCloseNoticeConfig = {
 };
 
 /**
+ * Special Notice for Last Metro: stays exclusively on PC (computer).
+ */
+export const LAST_METRO_PC_ONLY_NOTICE: GameCloseNoticeConfig = {
+    id: 'notice_last_metro_pc_only',
+    gameId: 'metro',
+    gameTitle: '🚇 LAST METRO (Viimane Metroo)',
+    title: '💻 Last Metro · PC Only Notice',
+    description: 'Starting this Sunday with the Playard Game 2 update: LAST METRO will remain available exclusively on Computer (PC / Desktop). It will not be removed, but will be optimized specifically for PC keyboard and mouse gameplay! - Playard Game Team',
+    repeatCount: 0,
+    active: true,
+    createdAt: 1731513600000,
+    updatedAt: 1731513600000
+};
+
+/**
+ * Special Notice for Snake & 2D Breakout: moving exclusively to Phone / Mobile.
+ */
+export const MOBILE_ONLY_ARCADE_NOTICE: GameCloseNoticeConfig = {
+    id: 'notice_mobile_only_arcade',
+    gameId: 'snake_breakout',
+    gameTitle: '📱 Mobile Only Notice (Snake & 2D Breakout)',
+    title: '📱 Mobile Only · Phone Exclusive Notice',
+    description: 'Starting this Sunday with the Playard Game 2 update: This game (Snake / 2D Breakout) will remain available exclusively on Phone & Tablet! It will be fully upgraded with ultra-smooth touch controls for the best mobile arcade experience. - Playard Game Team',
+    repeatCount: 0,
+    active: true,
+    createdAt: 1731513600000,
+    updatedAt: 1731513600000
+};
+
+/**
+ * Deletion Warning for other games that will be removed on Sunday.
+ */
+export const OTHER_GAMES_DELETION_NOTICE: GameCloseNoticeConfig = {
+    id: 'notice_game_will_be_deleted',
+    gameId: 'other',
+    gameTitle: 'This Game Will Be Deleted',
+    title: '⚠️ Notice: This Game Will Be Deleted',
+    description: 'This game will be deleted this Sunday at 14:00 UTC (16:00 Estonian time). We are removing it to upgrade server performance and make mobile gaming much faster in Playard Game 2. We apologize for the inconvenience. - Playard Game Team',
+    repeatCount: 0,
+    active: true,
+    createdAt: 1731513600000,
+    updatedAt: 1731513600000
+};
+
+/**
+ * Determine the exact notice for a given game path or ID.
+ */
+export function resolveNoticeForGame(gamePathOrId: string): GameCloseNoticeConfig {
+    const clean = (gamePathOrId || '').toLowerCase();
+    if (clean.includes('/metro') || clean === 'metro' || clean.includes('last metro')) {
+        return LAST_METRO_PC_ONLY_NOTICE;
+    }
+    if (clean.includes('/snake') || clean === 'snake' || clean.includes('uss') ||
+        clean.includes('/breakout') || clean === 'breakout' || clean.includes('klots')) {
+        return MOBILE_ONLY_ARCADE_NOTICE;
+    }
+    // For all other games, show the specific deletion warning
+    return OTHER_GAMES_DELETION_NOTICE;
+}
+
+/**
  * Get all active notice configs. Initializes with default Sunday update notice if none exists.
  */
 export function getGameCloseNotices(): GameCloseNoticeConfig[] {
@@ -185,7 +246,13 @@ export function showGameJoinWarningModal(options?: {
         if (targetNotices.length === 0) targetNotices = [DEFAULT_SUNDAY_UPDATE_NOTICE];
     } else {
         const path = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
-        targetNotices = getPendingNoticesForGame(options?.gameId || path);
+        const pending = getPendingNoticesForGame(options?.gameId || path);
+        if (pending.length > 0) {
+            targetNotices = pending;
+        } else {
+            // Automatically resolve exact game status notice
+            targetNotices = [resolveNoticeForGame(options?.gameId || path)];
+        }
     }
 
     if (targetNotices.length === 0) return;
@@ -239,35 +306,50 @@ export function showGameJoinWarningModal(options?: {
         ? '<span style="background: rgba(255, 71, 87, 0.15); color: #ff6b81; border: 1px solid rgba(255,71,87,0.4); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">⚠️ Appears on Every Join</span>'
         : `<span style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.4); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">Notice (${seenTimes}/${notice.repeatCount})</span>`;
 
+    const isPcOnly = notice.id === LAST_METRO_PC_ONLY_NOTICE.id;
+    const isMobileOnly = notice.id === MOBILE_ONLY_ARCADE_NOTICE.id;
+    const isDeletion = notice.id === OTHER_GAMES_DELETION_NOTICE.id;
+
+    const accentColor = isPcOnly ? '#00f2fe' : (isMobileOnly ? '#2ed573' : '#ff4757');
+    const headerIcon = isPcOnly ? '💻🚇' : (isMobileOnly ? '📱🐍' : '⚠️🗑️');
+    const subNote = isPcOnly
+        ? '💻 <em>Optimized exclusively for PC keyboard & mouse gameplay!</em>'
+        : (isMobileOnly
+            ? '📱 <em>Designed exclusively for touch screen phone & tablet gaming!</em>'
+            : '⚡ <em>We are upgrading the mobile experience and making all games faster!</em>');
+
+    card.style.borderColor = accentColor;
+    card.style.boxShadow = `0 25px 70px rgba(0, 0, 0, 0.9), 0 0 40px ${accentColor}55`;
+
     card.innerHTML = `
-        <div style="font-size: 3rem; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(255, 71, 87, 0.6));">⚠️📢</div>
-        <div style="display: flex; justify-content: center; gap: 8px; align-items: center; margin-bottom: 10px;">
+        <div style="font-size: 3rem; margin-bottom: 12px; filter: drop-shadow(0 0 16px ${accentColor}88);">${headerIcon}</div>
+        <div style="display: flex; justify-content: center; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
             <span style="background: rgba(255, 211, 42, 0.15); color: #ffd32a; border: 1px solid rgba(255,211,42,0.4); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">👑 Playard Owner Official Notice</span>
             ${repeatBadge}
         </div>
-        <h2 id="join-warning-title" style="margin: 0 0 12px 0; color: #ff4757; font-size: 1.35rem; font-weight: 900; letter-spacing: 0.4px;">
+        <h2 id="join-warning-title" style="margin: 0 0 12px 0; color: ${accentColor}; font-size: 1.35rem; font-weight: 900; letter-spacing: 0.4px;">
             ${escapeHtml(notice.title)}
         </h2>
-        <div style="background: rgba(0, 0, 0, 0.4); border-left: 4px solid #ff4757; padding: 14px 16px; border-radius: 10px; margin-bottom: 20px; text-align: left;">
+        <div style="background: rgba(0, 0, 0, 0.4); border-left: 4px solid ${accentColor}; padding: 14px 16px; border-radius: 10px; margin-bottom: 20px; text-align: left;">
             <p id="join-warning-desc" style="color: #f1f2f6; font-size: 0.96rem; line-height: 1.55; margin: 0; font-weight: 500;">
                 ${escapeHtml(notice.description)}
             </p>
         </div>
         <div style="font-size: 0.82rem; color: #a4b0be; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-            <span>📱</span>
-            <em>We are upgrading the mobile experience and making all games faster!</em>
+            <span>ℹ️</span>
+            ${subNote}
         </div>
         <button type="button" id="btn-dismiss-join-warning" style="
             width: 100%;
             padding: 13px;
-            background: linear-gradient(135deg, #ff4757, #c0392b);
+            background: linear-gradient(135deg, ${accentColor}, #1e293b);
             color: #ffffff;
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 12px;
             font-size: 1rem;
             font-weight: 900;
             cursor: pointer;
-            box-shadow: 0 4px 16px rgba(255, 71, 87, 0.45);
+            box-shadow: 0 4px 16px ${accentColor}66;
             transition: all 0.15s ease;
         ">
             I Understand / Continue to Game
@@ -310,4 +392,5 @@ if (typeof window !== 'undefined') {
     (window as any).removeGameCloseNotice = removeGameCloseNotice;
     (window as any).showGameJoinWarningModal = showGameJoinWarningModal;
     (window as any).getPendingNoticesForGame = getPendingNoticesForGame;
+    (window as any).resolveNoticeForGame = resolveNoticeForGame;
 }

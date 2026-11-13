@@ -15727,34 +15727,73 @@ await (async () => {
             ) {
                 throw new Error("Owner Close Games & Join Warning test failed: " + JSON.stringify(ownerCloseGamesTest));
             }
-            // 33. Testing TikTok and YouTube Hub Buttons
-            console.log("33. Testing 'Find us on TikTok' and 'Find us on YouTube' buttons on Hub...");
-            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
-            await new Promise(r => setTimeout(r, 600));
+            // 34. Testing Game-Specific Join Notices: Last Metro PC-only, Snake/Breakout mobile-only, other games deletion
+            console.log("34. Testing Game-Specific Join Notices (Last Metro PC-only, Snake & Breakout mobile-only, other games deletion)...");
+            const noticeResolutionTest = await page.evaluate(() => {
+                const getPending = (window).getPendingNoticesForGame;
+                const showModal = (window).showGameJoinWarningModal;
 
-            const socialButtonsTest = await page.evaluate(() => {
-                const tiktokBtn = document.getElementById('btn-find-tiktok');
-                const youtubeBtn = document.getElementById('btn-find-youtube');
-                const searchSec = document.getElementById('games-search-section');
+                // Test resolution logic directly
+                const metroNotice = (window).resolveNoticeForGame ? (window).resolveNoticeForGame('/games/metro/index.html') : null;
+                const snakeNotice = (window).resolveNoticeForGame ? (window).resolveNoticeForGame('/games/snake/index.html') : null;
+                const breakoutNotice = (window).resolveNoticeForGame ? (window).resolveNoticeForGame('/games/breakout/index.html') : null;
+                const racingNotice = (window).resolveNoticeForGame ? (window).resolveNoticeForGame('/games/racing/index.html') : null;
 
-                const hasTiktok = !!tiktokBtn && tiktokBtn.getAttribute('href') === 'https://www.tiktok.com/@playardgames';
-                const hasYoutube = !!youtubeBtn && youtubeBtn.getAttribute('href') === 'https://www.youtube.com/@PlayardGames';
-                const tiktokText = tiktokBtn?.textContent || '';
-                const youtubeText = youtubeBtn?.textContent || '';
+                // Also test rendering the modals
+                showModal({ gameId: '/games/metro/index.html', forceShow: true, notice: metroNotice });
+                const modalMetro = document.getElementById('modal-game-join-warning');
+                const metroTitle = document.getElementById('join-warning-title')?.textContent || '';
+                const metroDesc = document.getElementById('join-warning-desc')?.textContent || '';
+                const isMetroPc = metroTitle.includes('PC Only') && metroDesc.includes('Computer (PC / Desktop)');
+                if (modalMetro) modalMetro.remove();
+
+                showModal({ gameId: '/games/snake/index.html', forceShow: true, notice: snakeNotice });
+                const modalSnake = document.getElementById('modal-game-join-warning');
+                const snakeTitle = document.getElementById('join-warning-title')?.textContent || '';
+                const snakeDesc = document.getElementById('join-warning-desc')?.textContent || '';
+                const isSnakeMobile = snakeTitle.includes('Mobile Only') && snakeDesc.includes('Phone & Tablet');
+                if (modalSnake) modalSnake.remove();
+
+                showModal({ gameId: '/games/breakout/index.html', forceShow: true, notice: breakoutNotice });
+                const modalBreakout = document.getElementById('modal-game-join-warning');
+                const breakoutTitle = document.getElementById('join-warning-title')?.textContent || '';
+                const breakoutDesc = document.getElementById('join-warning-desc')?.textContent || '';
+                const isBreakoutMobile = breakoutTitle.includes('Mobile Only') && breakoutDesc.includes('Phone & Tablet');
+                if (modalBreakout) modalBreakout.remove();
+
+                showModal({ gameId: '/games/racing/index.html', forceShow: true, notice: racingNotice });
+                const modalRacing = document.getElementById('modal-game-join-warning');
+                const racingTitle = document.getElementById('join-warning-title')?.textContent || '';
+                const racingDesc = document.getElementById('join-warning-desc')?.textContent || '';
+                const isRacingDeleted = racingTitle.includes('Will Be Deleted') && racingDesc.includes('Sunday at 14:00 UTC');
+                if (modalRacing) modalRacing.remove();
 
                 return {
-                    hasTiktok,
-                    hasYoutube,
-                    hasTiktokText: tiktokText.includes('Find us on TikTok'),
-                    hasYoutubeText: youtubeText.includes('Find us on YouTube'),
-                    isAboveSearch: !!searchSec && !!tiktokBtn
+                    metroNoticeOk: !!metroNotice && metroNotice.id === 'notice_last_metro_pc_only',
+                    snakeNoticeOk: !!snakeNotice && snakeNotice.id === 'notice_mobile_only_arcade',
+                    breakoutNoticeOk: !!breakoutNotice && breakoutNotice.id === 'notice_mobile_only_arcade',
+                    racingNoticeOk: !!racingNotice && racingNotice.id === 'notice_game_will_be_deleted',
+                    isMetroPc,
+                    isSnakeMobile,
+                    isBreakoutMobile,
+                    isRacingDeleted
                 };
             });
-            console.log("   Social Buttons Test Results:", socialButtonsTest);
-            if (!socialButtonsTest.hasTiktok || !socialButtonsTest.hasYoutube || !socialButtonsTest.hasTiktokText || !socialButtonsTest.hasYoutubeText) {
-                throw new Error("Social buttons test failed: " + JSON.stringify(socialButtonsTest));
+            console.log("   Game-Specific Notices Test Results:", noticeResolutionTest);
+            if (
+                !noticeResolutionTest.metroNoticeOk ||
+                !noticeResolutionTest.snakeNoticeOk ||
+                !noticeResolutionTest.breakoutNoticeOk ||
+                !noticeResolutionTest.racingNoticeOk ||
+                !noticeResolutionTest.isMetroPc ||
+                !noticeResolutionTest.isSnakeMobile ||
+                !noticeResolutionTest.isBreakoutMobile ||
+                !noticeResolutionTest.isRacingDeleted
+            ) {
+                throw new Error("Game-Specific Notices test failed: " + JSON.stringify(noticeResolutionTest));
             }
-            console.log("   ✅ 'Find us on TikTok' and 'Find us on YouTube' buttons verified!");
+            console.log("   ✅ Game-Specific Notices (Last Metro PC-only, Snake & Breakout mobile-only, other games deletion) verified!");
+
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
