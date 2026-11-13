@@ -466,6 +466,10 @@ export function serializeCurrentScene() {
             };
         }),
         screenElements: csState.screenElements ? JSON.parse(JSON.stringify(csState.screenElements)) : [],
+        platforms: csState.publishPlayPlatforms ? JSON.parse(JSON.stringify(csState.publishPlayPlatforms)) : { phone: true, controller: true, pc: true, vr: false },
+        playDevices: Object.entries(csState.publishPlayPlatforms || { phone: true, controller: true, pc: true, vr: false })
+            .filter(([_, enabled]) => enabled)
+            .map(([dev]) => dev),
         updatedAt: Date.now()
     };
 }
@@ -613,6 +617,96 @@ export function setCheatersConfirmed(confirmed: boolean) {
     }
 }
 
+export function switchPublishStep(step: 'details' | 'security') {
+    csState.publishCurrentStep = step;
+    const coverContainer = document.getElementById('publish-cover-hero-container');
+    const titleContainer = document.getElementById('publish-game-title')?.parentElement as HTMLElement | null;
+    const descContainer = document.getElementById('publish-game-desc')?.parentElement as HTMLElement | null;
+    const gridContainer = document.getElementById('publish-max-players')?.parentElement?.parentElement as HTMLElement | null;
+    const platformsContainer = document.getElementById('publish-platforms-section');
+    const cheatersSection = document.getElementById('publish-cheaters-section');
+    const adPromoSection = document.getElementById('publish-ad-promo-section');
+
+    const nextBtn = document.getElementById('btn-publish-next');
+    const backBtn = document.getElementById('btn-publish-back');
+    const confirmBtn = document.getElementById('btn-confirm-publish');
+
+    if (step === 'details') {
+        // Show Step 1 fields
+        if (coverContainer) coverContainer.style.display = 'flex';
+        if (titleContainer) titleContainer.style.display = 'block';
+        if (descContainer) descContainer.style.display = 'block';
+        if (gridContainer) gridContainer.style.display = 'grid';
+        if (platformsContainer) platformsContainer.style.display = 'flex';
+        if (adPromoSection) adPromoSection.style.display = 'flex';
+
+        // Hide Step 2 Anti-Cheat
+        if (cheatersSection) cheatersSection.style.display = 'none';
+
+        // Buttons
+        if (backBtn) backBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'inline-flex';
+        if (confirmBtn) confirmBtn.style.display = 'none';
+    } else {
+        // Step 2: Anti-Cheat & Cheaters Protection
+        // Hide Step 1 fields
+        if (coverContainer) coverContainer.style.display = 'none';
+        if (titleContainer) titleContainer.style.display = 'none';
+        if (descContainer) descContainer.style.display = 'none';
+        if (gridContainer) gridContainer.style.display = 'none';
+        if (platformsContainer) platformsContainer.style.display = 'none';
+        if (adPromoSection) adPromoSection.style.display = 'none';
+
+        // Show Step 2 Anti-Cheat
+        if (cheatersSection) {
+            cheatersSection.style.display = 'flex';
+            const panel = document.getElementById('cheaters-config-panel');
+            if (panel) panel.style.display = 'flex';
+        }
+
+        // Buttons: show Back and Publish
+        if (backBtn) backBtn.style.display = 'inline-flex';
+        if (nextBtn) nextBtn.style.display = 'none';
+        if (confirmBtn) confirmBtn.style.display = 'inline-flex';
+    }
+}
+
+export function openPublishConfirmSureModal(onYes: () => void) {
+    if (typeof window !== 'undefined' && (window as any).__dialogsSeen) {
+        (window as any).__dialogsSeen.push('Are you sure you want to publish this game?');
+    }
+    const modal = document.getElementById('modal-publish-confirm-sure');
+    if (!modal) {
+        // Fallback to window.confirm
+        const confirmed = confirm('Are you sure you want to publish this game? Oled kindel, et soovid mängu avalikustada?');
+        if (confirmed) onYes();
+        return;
+    }
+    modal.style.display = 'flex';
+
+    const yesBtn = document.getElementById('btn-publish-sure-yes');
+    const cancelBtn = document.getElementById('btn-publish-sure-cancel');
+
+    const handleCancel = () => {
+        modal.style.display = 'none';
+        cleanup();
+    };
+
+    const handleYes = () => {
+        modal.style.display = 'none';
+        cleanup();
+        onYes();
+    };
+
+    const cleanup = () => {
+        yesBtn?.removeEventListener('click', handleYes);
+        cancelBtn?.removeEventListener('click', handleCancel);
+    };
+
+    yesBtn?.addEventListener('click', handleYes);
+    cancelBtn?.addEventListener('click', handleCancel);
+}
+
 export function openPublishModal() {
     const modal = document.getElementById('publish-game-modal');
     if (!modal) return;
@@ -634,6 +728,27 @@ export function openPublishModal() {
     }
     if (ageSelect) {
         ageSelect.value = String(sceneData.minAge ?? currentGameMinAge ?? 0);
+    }
+
+    // Platforms checkboxes
+    const phoneChk = document.getElementById('platform-phone') as HTMLInputElement | null;
+    const controllerChk = document.getElementById('platform-controller') as HTMLInputElement | null;
+    const pcChk = document.getElementById('platform-pc') as HTMLInputElement | null;
+    const vrChk = document.getElementById('platform-vr') as HTMLInputElement | null;
+
+    if (sceneData.platforms) {
+        if (phoneChk) phoneChk.checked = sceneData.platforms.phone !== false;
+        if (controllerChk) controllerChk.checked = sceneData.platforms.controller !== false;
+        if (pcChk) pcChk.checked = sceneData.platforms.pc !== false;
+    } else {
+        if (phoneChk) phoneChk.checked = true;
+        if (controllerChk) controllerChk.checked = true;
+        if (pcChk) pcChk.checked = true;
+    }
+    // VR is strictly forbidden and disabled
+    if (vrChk) {
+        vrChk.checked = false;
+        vrChk.disabled = true;
     }
 
     if (sceneData.thumbnail) {
@@ -671,8 +786,9 @@ export function openPublishModal() {
     }
     const warnEl = document.getElementById('cheaters-tap-ok-warning');
     if (warnEl) warnEl.style.display = 'none';
-    const panelEl = document.getElementById('cheaters-config-panel');
-    if (panelEl) panelEl.style.display = 'none';
+
+    // Always start at Step 1 (Details & Platforms)
+    switchPublishStep('details');
 
     modal.style.display = 'flex';
 }
@@ -704,6 +820,18 @@ export async function confirmAndPublishGame() {
     const descInput = document.getElementById('publish-game-desc') as HTMLTextAreaElement | null;
     const playersSelect = document.getElementById('publish-max-players') as HTMLSelectElement | null;
     const ageSelect = document.getElementById('publish-age-rating') as HTMLSelectElement | null;
+
+    const phoneChk = document.getElementById('platform-phone') as HTMLInputElement | null;
+    const controllerChk = document.getElementById('platform-controller') as HTMLInputElement | null;
+    const pcChk = document.getElementById('platform-pc') as HTMLInputElement | null;
+
+    const platforms = {
+        phone: phoneChk ? phoneChk.checked : true,
+        controller: controllerChk ? controllerChk.checked : true,
+        pc: pcChk ? pcChk.checked : true,
+        vr: false // VR is strictly forbidden
+    };
+    csState.publishPlayPlatforms = platforms;
 
     const gameTitle = titleInput?.value.trim() || 'My 3D Adventure';
     const gameDesc = descInput?.value.trim() || '';
@@ -737,16 +865,23 @@ export async function confirmAndPublishGame() {
     const sceneDescInput = document.getElementById('game-desc-input') as HTMLInputElement | null;
     if (sceneDescInput) sceneDescInput.value = gameDesc;
 
-    closePublishModal();
+    return new Promise<boolean>((resolve) => {
+        openPublishConfirmSureModal(async () => {
+            closePublishModal();
 
-    return await publishCurrentGame({
-        title: gameTitle,
-        description: gameDesc,
-        maxPlayers,
-        minAge,
-        ageRating,
-        thumbnail: currentPublishThumbnail || undefined,
-        cheatersPolicy
+            const result = await publishCurrentGame({
+                title: gameTitle,
+                description: gameDesc,
+                maxPlayers,
+                minAge,
+                ageRating,
+                thumbnail: currentPublishThumbnail || undefined,
+                cheatersPolicy,
+                platforms,
+                skipPrompt: true // already confirmed via "Oled kindel?" modal
+            });
+            resolve(!!result);
+        });
     });
 }
 
@@ -758,6 +893,7 @@ export async function publishCurrentGame(options?: {
     ageRating?: string;
     thumbnail?: string;
     cheatersPolicy?: any;
+    platforms?: { phone: boolean; controller: boolean; pc: boolean; vr: boolean };
     skipPrompt?: boolean;
 }) {
     // Confirmation prompt ("are you shure")
@@ -781,11 +917,16 @@ export async function publishCurrentGame(options?: {
     const thumbnail = options?.thumbnail !== undefined ? options.thumbnail : (currentPublishThumbnail || sceneData.thumbnail || '');
     const cheatersPolicy = options?.cheatersPolicy !== undefined ? options.cheatersPolicy : sceneData.cheatersPolicy;
 
+    const platforms = options?.platforms !== undefined ? options.platforms : (sceneData.platforms || { phone: true, controller: true, pc: true, vr: false });
+    const playDevices = Object.entries(platforms).filter(([_, enabled]) => enabled).map(([dev]) => dev);
+
     sceneData.title = title;
     sceneData.description = description;
     sceneData.maxPlayers = maxPlayers;
     sceneData.minAge = minAge;
     sceneData.ageRating = ageRating;
+    sceneData.platforms = platforms;
+    sceneData.playDevices = playDevices;
     if (thumbnail) {
         sceneData.thumbnail = thumbnail;
     }
@@ -815,6 +956,8 @@ export async function publishCurrentGame(options?: {
         maxPlayers,
         minAge,
         ageRating,
+        platforms,
+        playDevices,
         cheatersPolicy: cheatersPolicy || sceneData.cheatersPolicy
     });
 
@@ -833,11 +976,9 @@ export async function publishCurrentGame(options?: {
         autoSaveDraft();
 
         // Finish a game notification and option to play now or stay in Studio
-        if (!options?.skipPrompt) {
-            const playNow = confirm(`🎉 Finish a game!\n\n"${title}" has been published and is now live and public for everyone to play!\n\nPress OK to play your game now, or Cancel to stay in Creator Studio.`);
-            if (playNow) {
-                window.location.href = `../play/index.html?id=${res.gameId}`;
-            }
+        const playNow = confirm(`🎉 Finish a game!\n\n"${title}" has been published and is now live and public for everyone to play!\n\nPress OK to play your game now, or Cancel to stay in Creator Studio.`);
+        if (playNow && !options?.skipPrompt) {
+            window.location.href = `../play/index.html?id=${res.gameId}`;
         }
         return true;
     } else {
@@ -2476,6 +2617,14 @@ export function setupStudioEvents() {
 
     document.getElementById('btn-confirm-publish')?.addEventListener('click', async () => {
         await confirmAndPublishGame();
+    });
+
+    document.getElementById('btn-publish-next')?.addEventListener('click', () => {
+        switchPublishStep('security');
+    });
+
+    document.getElementById('btn-publish-back')?.addEventListener('click', () => {
+        switchPublishStep('details');
     });
 
     const publishModal = document.getElementById('publish-game-modal');

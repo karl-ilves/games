@@ -2145,7 +2145,7 @@
 
                     <!-- Age Rating -->
                     <div>
-                        <label for="publish-age-rating" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Age Rating:</label>
+                        <label for="publish-age-rating" style="display: block; font-weight: 800; font-size: 0.88rem; color: #ffd32a; margin-bottom: 6px;">Age Rating / Vanus:</label>
                         <select id="publish-age-rating" style="width: 100%; box-sizing: border-box; padding: 10px 12px; background: #0b111a; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
                             <option value="0" selected>All Ages (0+)</option>
                             <option value="6">6+ Years</option>
@@ -2158,8 +2158,49 @@
                     </div>
                 </div>
 
-                <!-- 5. Cheaters Security & Anti-Cheat Section -->
-                <div id="publish-cheaters-section" style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid #a855f7; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; transition: all 0.25s ease;">
+                <!-- 5. Kus saab mängida (Playable Platforms & Devices) -->
+                <div id="publish-platforms-section" style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="font-weight: 800; font-size: 0.92rem; color: #ffd32a; display: flex; align-items: center; gap: 6px; margin: 0;">
+                            <span>🎮</span> <span>Kus saab mängida (Playable Devices):</span>
+                        </label>
+                        <span style="font-size: 0.76rem; color: #94a3b8;">Vali toetatud seadmed</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+                        <!-- Telefon -->
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.4); border: 1.5px solid rgba(46, 204, 113, 0.4); border-radius: 8px; padding: 8px 12px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="platform-phone" checked style="width: 17px; height: 17px; accent-color: #2ecc71; cursor: pointer;">
+                            <span style="font-size: 0.88rem; font-weight: 700; color: #fff;">📱 Telefon</span>
+                        </label>
+
+                        <!-- Controller -->
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.4); border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 8px; padding: 8px 12px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="platform-controller" checked style="width: 17px; height: 17px; accent-color: #00f2fe; cursor: pointer;">
+                            <span style="font-size: 0.88rem; font-weight: 700; color: #fff;">🎮 Controller</span>
+                        </label>
+
+                        <!-- Arvuti -->
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.4); border: 1.5px solid rgba(59, 130, 246, 0.4); border-radius: 8px; padding: 8px 12px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="platform-pc" checked style="width: 17px; height: 17px; accent-color: #3b82f6; cursor: pointer;">
+                            <span style="font-size: 0.88rem; font-weight: 700; color: #fff;">💻 Arvuti</span>
+                        </label>
+
+                        <!-- VR (Keelatud) -->
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(239, 68, 68, 0.1); border: 1.5px dashed rgba(239, 68, 68, 0.5); border-radius: 8px; padding: 8px 12px; cursor: not-allowed; opacity: 0.7;" title="VR on keelatud!">
+                            <input type="checkbox" id="platform-vr" disabled style="width: 17px; height: 17px; cursor: not-allowed;">
+                            <span style="font-size: 0.88rem; font-weight: 700; color: #f87171; text-decoration: line-through;">🥽 VR</span>
+                            <span style="background: rgba(239, 68, 68, 0.25); color: #f87171; font-size: 0.68rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: auto;">Keelatud 🚫</span>
+                        </label>
+                    </div>
+
+                    <div style="font-size: 0.74rem; color: #94a3b8; line-height: 1.4;">
+                        ℹ️ Märgi linnukesega seadmed, millel mängu saab mängida. VR prillide tugi on turvakaalutlustel keelatud (VR on keelatud).
+                    </div>
+                </div>
+
+                <!-- 6. Cheaters Security & Anti-Cheat Section (Step 2 - Anti Cheat) -->
+                <div id="publish-cheaters-section" style="display: none; background: rgba(15, 23, 42, 0.85); border: 1.5px solid #a855f7; border-radius: 12px; padding: 12px 14px; flex-direction: column; gap: 10px; transition: all 0.25s ease;">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 1.25rem;">🛡️</span>
@@ -2183,7 +2224,7 @@
                     </div>
 
                     <!-- Expandable Cheaters Settings Panel -->
-                    <div id="cheaters-config-panel" style="display: none; flex-direction: column; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(168, 85, 247, 0.3);">
+                    <div id="cheaters-config-panel" style="display: flex; flex-direction: column; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(168, 85, 247, 0.3);">
                         <!-- 1. How Auto-Detection Works -->
                         <div>
                             <label style="display: block; font-weight: 800; font-size: 0.82rem; color: #ffd32a; margin-bottom: 6px;">🔍 How Auto-Detection Works (Detection Methods):</label>
@@ -2273,7 +2314,7 @@
                     </div>
                 </div>
 
-                <!-- 6. Mängu Reklaam / Game Advertisement (10,000 PBX) -->
+                <!-- 7. Mängu Reklaam / Game Advertisement (10,000 PBX) -->
                 <div id="publish-ad-promo-section" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 159, 26, 0.06)); border: 1.5px solid rgba(255, 215, 0, 0.5); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.15);">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -2302,13 +2343,44 @@
                 </div>
             </div>
 
-            <!-- Footer Buttons -->
-            <div style="padding: 14px 22px; background: #1a2330; border-top: 1.5px solid rgba(0, 242, 254, 0.25); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
-                <button id="btn-cancel-publish" class="btn-studio" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: #cbd5e1; padding: 10px 20px;">
-                    <span>Cancel</span>
+            <!-- Footer Buttons (Cancel, Back, Next, Confirm Publish) -->
+            <div style="padding: 14px 22px; background: #1a2330; border-top: 1.5px solid rgba(0, 242, 254, 0.25); display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <div>
+                    <button id="btn-cancel-publish" class="btn-studio" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: #cbd5e1; padding: 10px 18px;">
+                        <span>Tühista (Cancel)</span>
+                    </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button id="btn-publish-back" class="btn-studio" style="display: none; background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); color: #ffffff; font-weight: 700; padding: 10px 20px;">
+                        <span>⬅️ Tagasi (Back)</span>
+                    </button>
+                    <button id="btn-publish-next" class="btn-studio" style="background: linear-gradient(135deg, #a855f7, #6366f1); border-color: #c084fc; color: #ffffff; font-weight: 800; padding: 10px 22px; box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4); display: flex; align-items: center; gap: 6px;">
+                        <span>Edasi (Next)</span> <span>➡️</span>
+                    </button>
+                    <button id="btn-confirm-publish" class="btn-studio btn-submit-review" style="display: none; background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; padding: 10px 24px; box-shadow: 0 4px 18px rgba(0,242,254,0.4);">
+                        <span>🚀 Avalikusta (Publish)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- "Oled kindel?" Confirmation Modal -->
+    <div id="modal-publish-confirm-sure" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); backdrop-filter: blur(12px); z-index: 2200; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: linear-gradient(180deg, #1b2432 0%, #0f1622 100%); border: 2px solid #00f2fe; border-radius: 18px; width: 100%; max-width: 460px; padding: 26px 24px; box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 35px rgba(0,242,254,0.35); text-align: center; color: #ffffff; font-family: 'Poppins', system-ui, sans-serif;">
+            <div style="font-size: 3rem; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(0,242,254,0.6));">🚀✨</div>
+            <h3 id="publish-confirm-sure-title" style="margin: 0 0 8px 0; font-size: 1.35rem; font-weight: 900; color: #00f2fe;">
+                Oled sa kindel? (Are you sure?)
+            </h3>
+            <p id="publish-confirm-sure-desc" style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.5; margin: 0 0 20px 0;">
+                Kas soovid mängu avalikustada? Kui vajutad "Jah", läheb mäng kõigile mängijatele kohe avalikuks ja nähtavaks Playardi avalehel!
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button type="button" id="btn-publish-sure-cancel" class="btn-studio" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.25); color: #cbd5e1; font-weight: 700; border-radius: 10px; cursor: pointer;">
+                    Ei / Tagasi
                 </button>
-                <button id="btn-confirm-publish" class="btn-studio btn-submit-review" style="background: linear-gradient(135deg, #00f2fe, #3b82f6); border-color: #38bdf8; color: #000; font-weight: 800; padding: 10px 24px; box-shadow: 0 4px 18px rgba(0,242,254,0.4);">
-                    <span>Publish Game</span>
+                <button type="button" id="btn-publish-sure-yes" class="btn-studio" style="flex: 1.2; padding: 12px; background: linear-gradient(135deg, #00f2fe, #2ecc71); border: none; color: #05141e; font-size: 1rem; font-weight: 900; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 18px rgba(0,242,254,0.45);">
+                    Jah, tee avalikuks! 🚀
                 </button>
             </div>
         </div>

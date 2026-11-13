@@ -4779,6 +4779,10 @@ await (async () => {
         }
         console.log("   Cheaters elements verified (Speedhack removed, all 16 intervals present):", cheatersElements.intervalOptions);
 
+        // Advance to Step 2 (Security & Cheaters anti-cheat) via Next button
+        await page.click('#btn-publish-next');
+        await new Promise(r => setTimeout(r, 200));
+
         // 1. Try to publish immediately WITHOUT clicking OK -> Must show "Tap OK" and open config panel
         await page.click('#btn-confirm-publish');
         await new Promise(r => setTimeout(r, 200));
@@ -4825,8 +4829,15 @@ await (async () => {
             throw new Error(`Expected 'Tap OK' warning to be hidden after clicking OK!`);
         }
 
-        // 3. Now click confirm publish inside the modal
+        // 3. Now click confirm publish inside the modal and confirm on "Oled sa kindel?" modal
         await page.click('#btn-confirm-publish');
+        await new Promise(r => setTimeout(r, 300));
+
+        // Click "Jah, tee avalikuks!" in the confirmation modal
+        const sureModalVisible = await page.$eval('#modal-publish-confirm-sure', el => window.getComputedStyle(el).display !== 'none');
+        if (sureModalVisible) {
+            await page.click('#btn-publish-sure-yes');
+        }
         await new Promise(r => setTimeout(r, 1200));
 
         const confirmCalls = await page.evaluate(() => window.__dialogsSeen || []);
@@ -15793,6 +15804,123 @@ await (async () => {
                 throw new Error("Game-Specific Notices test failed: " + JSON.stringify(noticeResolutionTest));
             }
             console.log("   ✅ Game-Specific Notices (Last Metro PC-only, Snake & Breakout mobile-only, other games deletion) verified!");
+
+            // 35. Testing Creator Studio Publish Game Modal (Platforms, VR disabled, Next/Back step navigation, 'Oled kindel?' confirmation)
+            console.log("35. Testing Creator Studio Publish Workflow (Platforms, VR disabled, Next/Back, 'Oled kindel?' modal)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/creator/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const publishWorkflowTest = await page.evaluate(async () => {
+                // Open publish modal
+                const publishBtn = document.getElementById('btn-submit-review');
+                publishBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+
+                const publishModal = document.getElementById('publish-game-modal');
+                const isModalOpen = publishModal?.style.display === 'flex';
+
+                // 1. Check Platform checkboxes
+                const chkPhone = document.getElementById('platform-phone');
+                const chkController = document.getElementById('platform-controller');
+                const chkPc = document.getElementById('platform-pc');
+                const chkVr = document.getElementById('platform-vr');
+
+                const hasPlatforms = !!chkPhone && !!chkController && !!chkPc && !!chkVr;
+                const vrIsDisabled = chkVr ? (chkVr.disabled && !chkVr.checked) : false;
+
+                // 2. Check initial Step 1 buttons: Next visible, Back hidden, Publish hidden
+                const btnNext = document.getElementById('btn-publish-next');
+                const btnBack = document.getElementById('btn-publish-back');
+                const btnPublish = document.getElementById('btn-confirm-publish');
+
+                const step1ButtonsOk = (btnNext?.style.display !== 'none') &&
+                    (btnBack?.style.display === 'none') &&
+                    (btnPublish?.style.display === 'none');
+
+                const cheatersSection = document.getElementById('publish-cheaters-section');
+                const step1CheatersHidden = cheatersSection?.style.display === 'none';
+
+                // 3. Click Next (Edasi) -> Step 2 (Anti-cheat & Cheaters Protection)
+                btnNext?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const step2CheatersVisible = cheatersSection?.style.display === 'flex';
+                const step2ButtonsOk = (btnBack?.style.display !== 'none') &&
+                    (btnNext?.style.display === 'none') &&
+                    (btnPublish?.style.display !== 'none');
+
+                // 4. Click Back (Tagasi) -> Step 1 again
+                btnBack?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const backToStep1Ok = (cheatersSection?.style.display === 'none') && (btnNext?.style.display !== 'none');
+
+                // Return to Step 2 to publish
+                btnNext?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                // Confirm anti-cheat OK button
+                const btnOk = document.getElementById('btn-cheaters-ok');
+                btnOk?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                // Set game title
+                const titleInput = document.getElementById('publish-game-title');
+                if (titleInput) titleInput.value = 'Galaxy Explorers Test';
+
+                // 5. Click Publish -> "Oled sa kindel?" confirmation modal appears
+                btnPublish?.click();
+                await new Promise(r => setTimeout(r, 150));
+
+                const confirmSureModal = document.getElementById('modal-publish-confirm-sure');
+                const isSureModalOpen = confirmSureModal?.style.display === 'flex';
+                const hasSureTitle = confirmSureModal?.textContent?.includes('Oled sa kindel');
+
+                // Click "Jah, tee avalikuks!" in confirmation modal
+                const btnYes = document.getElementById('btn-publish-sure-yes');
+                btnYes?.click();
+                await new Promise(r => setTimeout(r, 600));
+
+                // Verify game was published in localStorage (GAMES_STORAGE_KEY: playard_user_created_games)
+                const localGames = JSON.parse(localStorage.getItem('playard_user_created_games') || localStorage.getItem('playard_created_games') || '[]');
+                const publishedGame = localGames.find(g => g.title === 'Galaxy Explorers Test');
+                const isPublished = !!publishedGame && publishedGame.status === 'approved';
+                const hasSavedPlatforms = publishedGame?.platforms?.phone === true && publishedGame?.platforms?.vr === false;
+
+                return {
+                    isModalOpen,
+                    hasPlatforms,
+                    vrIsDisabled,
+                    step1ButtonsOk,
+                    step1CheatersHidden,
+                    step2CheatersVisible,
+                    step2ButtonsOk,
+                    backToStep1Ok,
+                    isSureModalOpen,
+                    hasSureTitle,
+                    isPublished,
+                    hasSavedPlatforms
+                };
+            });
+
+            console.log("   Publish Workflow Test Results:", publishWorkflowTest);
+            if (
+                !publishWorkflowTest.isModalOpen ||
+                !publishWorkflowTest.hasPlatforms ||
+                !publishWorkflowTest.vrIsDisabled ||
+                !publishWorkflowTest.step1ButtonsOk ||
+                !publishWorkflowTest.step1CheatersHidden ||
+                !publishWorkflowTest.step2CheatersVisible ||
+                !publishWorkflowTest.step2ButtonsOk ||
+                !publishWorkflowTest.backToStep1Ok ||
+                !publishWorkflowTest.isSureModalOpen ||
+                !publishWorkflowTest.hasSureTitle ||
+                !publishWorkflowTest.isPublished ||
+                !publishWorkflowTest.hasSavedPlatforms
+            ) {
+                throw new Error("Publish Workflow test failed: " + JSON.stringify(publishWorkflowTest));
+            }
+            console.log("   ✅ Creator Studio Publish Workflow (Platforms, VR disabled, Next/Back, 'Oled kindel?' confirmation & public release) verified!");
+
 
 
             console.log("✅ All Playard Platform tests passed successfully!");

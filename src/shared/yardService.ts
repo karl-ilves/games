@@ -76,6 +76,13 @@ export interface CreatedGame {
     maxPlayers?: number;
     minAge?: number;
     ageRating?: string;
+    platforms?: {
+        phone: boolean;
+        controller: boolean;
+        pc: boolean;
+        vr: boolean;
+    };
+    playDevices?: string[]; // e.g. ['phone', 'controller', 'pc']
     cheatersPolicy?: any;
     createdAt: number;
     updatedAt: number;

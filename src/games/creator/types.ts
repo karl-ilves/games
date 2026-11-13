@@ -151,6 +151,13 @@ export interface SceneSnapshot {
         customModelData?: any;
     }>;
     screenElements?: ScreenElement[];
+    platforms?: {
+        phone: boolean;
+        controller: boolean;
+        pc: boolean;
+        vr: boolean;
+    };
+    playDevices?: string[];
 }
 
 export interface PlayTestSnapshot {

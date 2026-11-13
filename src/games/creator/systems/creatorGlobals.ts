@@ -19,6 +19,7 @@ import {
     startNewEmptyGame, saveCurrentGame, publishCurrentGame,
     openPublishModal, closePublishModal, confirmAndPublishGame,
     setPublishModalThumbnail, clearPublishModalThumbnail,
+    switchPublishStep, openPublishConfirmSureModal,
     captureSceneSnapshot, processImageFile, setCheatersConfirmed,
     autoSaveDraft, serializeCurrentScene, loadSceneFromData,
     selectObject, spawnObjectIntoScene, renderCatalogUI, setObjectPassable
@@ -116,6 +117,8 @@ export function setupCreatorGlobals() {
         openPublishModal,
         closePublishModal,
         confirmAndPublishGame,
+        switchPublishStep,
+        openPublishConfirmSureModal,
         setPublishModalThumbnail,
         clearPublishModalThumbnail,
         captureSceneSnapshot,

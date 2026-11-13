@@ -33,11 +33,22 @@ export async function renderCommunityGames() {
         const thumbHtml = game.thumbnail
             ? `<div style="width: 100%; height: 140px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; background: #0b111a; border: 1px solid rgba(0, 242, 254, 0.2);"><img src="${game.thumbnail}" alt="${game.title}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></div>`
             : '';
+        const platformsList = [];
+        if (game.platforms?.phone || game.sceneData?.platforms?.phone) platformsList.push('📱 Telefon');
+        if (game.platforms?.controller || game.sceneData?.platforms?.controller) platformsList.push('🎮 Controller');
+        if (game.platforms?.pc || game.sceneData?.platforms?.pc) platformsList.push('💻 Arvuti');
+        const platformsHtml = platformsList.length > 0
+            ? `<div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+                ${platformsList.map(p => `<span style="background: rgba(0, 242, 254, 0.12); border: 1px solid rgba(0, 242, 254, 0.35); color: #00f2fe; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">${p}</span>`).join('')}
+               </div>`
+            : '';
+
         card.innerHTML = `
             <a href="./games/play/index.html?id=${game.id}" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; height: 100%;">
                 ${thumbHtml}
                 <h2>🎮 ${game.title}</h2>
                 <p>${game.description || 'Community created 3D game. Explore the world and have fun!'}</p>
+                ${platformsHtml}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
                     <div class="reward-tag">
                         <span>👤 By: <strong>${creatorFormatted}</strong></span>

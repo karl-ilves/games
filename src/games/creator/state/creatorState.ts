@@ -189,6 +189,19 @@ export function setCurrentPublishThumbnail(val: string | null) { currentPublishT
 export let isCheatersConfirmed = false;
 export function setIsCheatersConfirmed(val: boolean) { isCheatersConfirmed = val; }
 
+export let publishCurrentStep: 'details' | 'security' = 'details';
+export function setPublishCurrentStep(val: 'details' | 'security') { publishCurrentStep = val; }
+
+export let publishPlayPlatforms = {
+    phone: true,
+    controller: true,
+    pc: true,
+    vr: false
+};
+export function setPublishPlayPlatforms(val: { phone: boolean; controller: boolean; pc: boolean; vr: boolean }) {
+    publishPlayPlatforms = val;
+}
+
 export let activeFeedbackGameId: string | null = null;
 export function setActiveFeedbackGameId(val: string | null) { activeFeedbackGameId = val; }
 
@@ -324,6 +337,8 @@ export const csState: any = {
     get studioTestPlaybux() { return studioTestPlaybux; }, set studioTestPlaybux(val: any) { studioTestPlaybux = val; },
     get currentPublishThumbnail() { return currentPublishThumbnail; }, set currentPublishThumbnail(val: any) { currentPublishThumbnail = val; },
     get isCheatersConfirmed() { return isCheatersConfirmed; }, set isCheatersConfirmed(val: any) { isCheatersConfirmed = val; },
+    get publishCurrentStep() { return publishCurrentStep; }, set publishCurrentStep(val: any) { publishCurrentStep = val; },
+    get publishPlayPlatforms() { return publishPlayPlatforms; }, set publishPlayPlatforms(val: any) { publishPlayPlatforms = val; },
     get activeFeedbackGameId() { return activeFeedbackGameId; }, set activeFeedbackGameId(val: any) { activeFeedbackGameId = val; },
     get studioToolMode() { return studioToolMode; }, set studioToolMode(val: any) { studioToolMode = val; },
     get moveGizmoGroup() { return moveGizmoGroup; }, set moveGizmoGroup(val: any) { moveGizmoGroup = val; },
