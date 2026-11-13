@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playard Warning Video - Some Games Removal Notice</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+        canvas {
+            box-shadow: 0 0 50px rgba(255, 71, 87, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="warning-canvas" width="1080" height="1920"></canvas>
+    <audio id="bg-audio" src="/audio/last_metro.mp3" preload="auto"></audio>
+
+    <script>
+        const canvas = document.getElementById('warning-canvas');
+        const ctx = canvas.getContext('2d');
+        const audio = document.getElementById('bg-audio');
+
+        const W = canvas.width;
+        const H = canvas.height;
+
+        let startTime = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        window.__RECORDING_DONE__ = false;
+        window.__RECORDED_BASE64__ = null;
+
+        // Floating sparks and particles
+        const particles = [];
+        for (let i = 0; i < 75; i++) {
+            particles.push({
+                x: Math.random() * W,
+                y: Math.random() * H,
+                size: Math.random() * 5 + 2,
+                vx: (Math.random() - 0.5) * 1.8,
+                vy: -Math.random() * 2.5 - 1.2,
+                color: ['#ff4757', '#ff6b81', '#ffd32a', '#00f2fe', '#ffffff'][Math.floor(Math.random() * 5)],
+                alpha: Math.random() * 0.8 + 0.2
+            });
+        }
+
+        // 22-second storyline:
+        // 0.0s - 4.5s: "⚠️ OFFICIAL NOTICE: PLAYARD GAME 2 UPDATE"
+        // 4.5s - 10.5s: "SOME GAMES WILL BE REMOVED (NOT ALL GAMES!)"
+        // 10.5s - 16.5s: "WHY? MAKING MOBILE & PHONE GAMING 10X BETTER & FASTER!"
+        // 16.5s - 22.0s: "SUNDAY 14:00 UTC (16:00 EE) · PLAYARD GAMES CONTINUES!"
+
+        function drawScene(t) {
+            ctx.clearRect(0, 0, W, H);
+
+            // Dark alert gradient background with breathing red/dark-cyan glow
+            const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, 1150);
+            const pulse = Math.sin(t * 3.5) * 0.15 + 0.85;
+            bgGrad.addColorStop(0, `rgba(32, 14, 22, ${pulse})`);
+            bgGrad.addColorStop(0.5, '#0d0a14');
+            bgGrad.addColorStop(1, '#050308');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Hex/Cyber Grid Lines
+            ctx.strokeStyle = 'rgba(255, 71, 87, 0.08)';
+            ctx.lineWidth = 2;
+            const gridOffset = (t * 45) % 80;
+            for (let y = gridOffset; y < H; y += 80) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }
+            for (let x = 0; x < W; x += 80) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, H);
+                ctx.stroke();
+            }
+
+            // Draw floating glowing particles
+            particles.forEach(p => {
+                p.y += p.vy;
+                p.x += p.vx;
+                if (p.y < 0) p.y = H;
+                if (p.x < 0) p.x = W;
+                if (p.x > W) p.x = 0;
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(t * 4 + p.x));
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Header Banner: PLAYARD GAMES OFFICIAL
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.roundRect(W / 2 - 270, 90, 540, 76, 38);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 71, 87, 0.5)';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            ctx.font = '900 34px sans-serif';
+            ctx.fillStyle = '#ff4757';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#ff4757';
+            ctx.shadowBlur = 18;
+            ctx.fillText('👑 PLAYARD GAMES OFFICIAL 📢', W / 2, 142);
+            ctx.restore();
+
+            // Progress bar at bottom
+            const progress = Math.min(1, t / 22.0);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.fillRect(80, H - 90, W - 160, 16);
+            const barGrad = ctx.createLinearGradient(80, 0, W - 80, 0);
+            barGrad.addColorStop(0, '#ff4757');
+            barGrad.addColorStop(0.5, '#ffd32a');
+            barGrad.addColorStop(1, '#00f2fe');
+            ctx.fillStyle = barGrad;
+            ctx.fillRect(80, H - 90, (W - 160) * progress, 16);
+
+            // Timer display
+            ctx.font = '700 24px sans-serif';
+            ctx.fillStyle = '#8899a6';
+            ctx.textAlign = 'right';
+            const remaining = Math.max(0, 22 - t).toFixed(1);
+            ctx.fillText(`${remaining}s`, W - 80, H - 115);
+
+            // SCENES
+            if (t < 5.0) {
+                // SCENE 1: Official Alert Announcement
+                const st = t;
+                const scale = Math.min(1.12, 0.85 + st * 0.08);
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 100);
+                ctx.scale(scale, scale);
+
+                // Warning Icon
+                ctx.font = '130px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠️📢', 0, -170);
+
+                ctx.font = '900 64px sans-serif';
+                ctx.fillStyle = '#ffd32a';
+                ctx.shadowColor = '#ffd32a';
+                ctx.shadowBlur = 30;
+                ctx.fillText('IMPORTANT NOTICE', 0, -40);
+
+                ctx.font = '900 78px sans-serif';
+                const gradT = ctx.createLinearGradient(-350, 0, 350, 0);
+                gradT.addColorStop(0, '#ff4757');
+                gradT.addColorStop(0.5, '#ffffff');
+                gradT.addColorStop(1, '#ff4757');
+                ctx.fillStyle = gradT;
+                ctx.shadowColor = 'rgba(255, 71, 87, 0.9)';
+                ctx.shadowBlur = 25;
+                ctx.fillText('PLAYARD GAME 2', 0, 60);
+
+                ctx.font = '800 48px sans-serif';
+                ctx.fillStyle = '#00f2fe';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 20;
+                ctx.fillText('SUNDAY UPDATE 🚀', 0, 140);
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.roundRect(-380, 210, 760, 90, 24);
+                ctx.fill();
+                ctx.strokeStyle = '#ffd32a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.font = '700 32px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 0;
+                ctx.fillText('Please read carefully! 👇', 0, 268);
+                ctx.restore();
+
+            } else if (t < 11.0) {
+                // SCENE 2: Clarification - SOME GAMES WILL BE DELETED (NOT ALL!)
+                const st = t - 5.0;
+                const scale = Math.min(1.08, 0.88 + st * 0.06);
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 120);
+                ctx.scale(scale, scale);
+
+                ctx.font = '110px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🛡️🎮', 0, -180);
+
+                ctx.font = '900 68px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 25;
+                ctx.fillText('ONLY SOME GAMES', 0, -70);
+
+                ctx.font = '900 76px sans-serif';
+                ctx.fillStyle = '#ff4757';
+                ctx.shadowColor = '#ff4757';
+                ctx.shadowBlur = 35;
+                ctx.fillText('WILL BE REMOVED!', 0, 20);
+
+                // Huge Highlight Badge: NOT ALL GAMES
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+                ctx.roundRect(-420, 100, 840, 110, 28);
+                ctx.fill();
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+
+                ctx.font = '900 52px sans-serif';
+                ctx.fillStyle = '#2ecc71';
+                ctx.shadowColor = '#2ecc71';
+                ctx.shadowBlur = 25;
+                ctx.fillText('✅ NOT ALL GAMES! ✅', 0, 175);
+
+                ctx.font = '700 34px sans-serif';
+                ctx.fillStyle = '#e2e8f0';
+                ctx.shadowBlur = 0;
+                ctx.fillText('Only selected older games are deleted.', 0, 270);
+                ctx.fillText('Your favorites and main games stay! ✨', 0, 320);
+                ctx.restore();
+
+            } else if (t < 17.0) {
+                // SCENE 3: The Reason - MASSIVE MOBILE & PHONE UPGRADE
+                const st = t - 11.0;
+                const scale = Math.min(1.08, 0.88 + st * 0.06);
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 120);
+                ctx.scale(scale, scale);
+
+                ctx.font = '110px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('📱⚡', 0, -180);
+
+                ctx.font = '900 58px sans-serif';
+                ctx.fillStyle = '#00f2fe';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 25;
+                ctx.fillText('WHY THE UPDATE?', 0, -80);
+
+                ctx.font = '900 70px sans-serif';
+                ctx.fillStyle = '#ffd32a';
+                ctx.shadowColor = '#ffd32a';
+                ctx.shadowBlur = 30;
+                ctx.fillText('10X BETTER ON PHONE!', 0, 10);
+
+                // 3 Key Upgrades
+                const features = [
+                    '📱 Super Smooth Mobile Controls',
+                    '⚡ Faster Loading & 60 FPS Speed',
+                    '👑 Brand New Playard Game 2 Hub'
+                ];
+
+                features.forEach((feat, idx) => {
+                    const y = 90 + idx * 75;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+                    ctx.roundRect(-380, y, 760, 60, 18);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(0, 242, 254, 0.35)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    ctx.font = '800 28px sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(feat, 0, y + 42);
+                });
+
+                ctx.restore();
+
+            } else {
+                // SCENE 4: 17s - 22s -> Date & Call to Action
+                const st = t - 17.0;
+                const scale = Math.min(1.1, 0.9 + st * 0.08);
+                ctx.save();
+                ctx.translate(W / 2, H / 2 - 120);
+                ctx.scale(scale, scale);
+
+                ctx.font = '110px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⏰📅', 0, -180);
+
+                ctx.font = '900 62px sans-serif';
+                ctx.fillStyle = '#ff4757';
+                ctx.shadowColor = '#ff4757';
+                ctx.shadowBlur = 25;
+                ctx.fillText('THIS SUNDAY', 0, -80);
+
+                ctx.font = '900 54px sans-serif';
+                ctx.fillStyle = '#ffd32a';
+                ctx.shadowColor = '#ffd32a';
+                ctx.shadowBlur = 20;
+                ctx.fillText('14:00 UTC · 16:00 ESTONIA', 0, -10);
+
+                // Playard Games button
+                ctx.fillStyle = 'linear-gradient(135deg, #00f2fe, #4facfe)';
+                ctx.roundRect(-350, 70, 700, 100, 30);
+                ctx.fillStyle = '#00f2fe';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 30;
+                ctx.fill();
+
+                ctx.font = '900 44px sans-serif';
+                ctx.fillStyle = '#0a0d18';
+                ctx.shadowBlur = 0;
+                ctx.fillText('PLAY AT PLAYARD.GAMES 👑', 0, 136);
+
+                ctx.font = '800 36px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = 'rgba(0, 242, 254, 0.8)';
+                ctx.shadowBlur = 15;
+                ctx.fillText('Thank you for playing with us! ❤️', 0, 240);
+                ctx.fillText('- Playard Game Team', 0, 290);
+
+                ctx.restore();
+            }
+        }
+
+        // Start Recording Function
+        window.startWarningRecording = async function() {
+            console.log("Starting Warning Video Rendering & Recording...");
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContextClass();
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
+            const source = audioCtx.createMediaElementSource(audio);
+            const dest = audioCtx.createMediaStreamDestination();
+            source.connect(dest);
+            source.connect(audioCtx.destination);
+
+            const canvasStream = canvas.captureStream(60);
+            const combinedStream = new MediaStream([
+                ...canvasStream.getVideoTracks(),
+                ...dest.stream.getAudioTracks()
+            ]);
+
+            let mimeType = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/mp4';
+            }
+
+            mediaRecorder = new MediaRecorder(combinedStream, {
+                mimeType: mimeType,
+                videoBitsPerSecond: 2400000,
+                audioBitsPerSecond: 128000
+            });
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                console.log("Recording stopped, building blob...");
+                const blob = new Blob(recordedChunks, { type: mimeType });
+                console.log("Blob size:", blob.size);
+
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    window.__RECORDED_BASE64__ = reader.result;
+                    window.__RECORDING_DONE__ = true;
+                    console.log("Base64 ready! Length:", window.__RECORDED_BASE64__.length);
+                };
+                reader.readAsDataURL(blob);
+            };
+
+            try {
+                await audio.play();
+            } catch (err) {
+                console.warn("Audio play warning:", err);
+            }
+            mediaRecorder.start(100);
+            startTime = performance.now();
+            isRecording = true;
+
+            function loop() {
+                const now = performance.now();
+                const elapsed = (now - startTime) / 1000;
+
+                drawScene(elapsed);
+
+                if (elapsed >= 22.0) {
+                    isRecording = false;
+                    audio.pause();
+                    mediaRecorder.stop();
+                    console.log("Reached 22.0s, stopping recorder!");
+                    return;
+                }
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+        };
+    </script>
+</body>
+</html>
