@@ -1543,6 +1543,8 @@ await (async () => {
             // Close modals
             if (recModal) recModal.style.display = 'none';
             if (forgotModal) forgotModal.style.display = 'none';
+            const emailBanner = document.getElementById('playard-email-sent-banner');
+            if (emailBanner) emailBanner.remove();
 
             return {
                 hasForgotBtn,
