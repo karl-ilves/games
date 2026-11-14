@@ -80,5 +80,22 @@ export const VEHICLE_CATALOG: VehicleConfig[] = [
         primaryColor: 0x0a1118, // Must-valge
         secondaryColor: 0xffffff,
         dimensions: { length: 5.0, width: 1.95, height: 1.45 }
+    },
+    {
+        id: 'tesla_roadster',
+        name: 'Tesla Roadcoaster (SpaceX Thruster)',
+        category: 'Supercar',
+        description: 'Elektriline hüperauto SpaceX külmgaasi rakettmootoritega. Tühikuga lendab taevasse, Shift annab rakett-boosti ja õhus juhitav lennukina!',
+        icon: '🚀',
+        massKg: 1300,
+        enginePower: 1250,
+        topSpeedKmh: 100,
+        brakeForce: 42,
+        steerSpeed: 3.2,
+        stiffness: 0.65,
+        primaryColor: 0xe84118, // Tesla Midnight Cherry Red
+        secondaryColor: 0x1e272e,
+        dimensions: { length: 4.5, width: 2.0, height: 1.15 },
+        hasThrusters: true
     }
 ];

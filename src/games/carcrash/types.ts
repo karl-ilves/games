@@ -15,6 +15,7 @@ export interface VehicleConfig {
     primaryColor: number;
     secondaryColor: number;
     dimensions: { length: number; width: number; height: number };
+    hasThrusters?: boolean;
 }
 
 export interface CrashObstacle {

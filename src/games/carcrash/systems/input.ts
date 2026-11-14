@@ -3,6 +3,10 @@ export interface CrashInputs {
     steer: number;
     brake: boolean;
     handbrake: boolean;
+    jumpThruster: boolean;
+    boost: boolean;
+    pitch: number;
+    yaw: number;
     respawnRequested: boolean;
     slowMoToggled: boolean;
     cameraToggled: boolean;
@@ -20,7 +24,7 @@ export class CrashInputController {
         window.addEventListener('keydown', (e) => {
             const key = e.key.toLowerCase();
             this.keys[key] = true;
-            this.keys[e.code] = true;
+            this.keys[e.code.toLowerCase()] = true;
 
             if (key === 'r') this.respawnQueued = true;
             if (key === 't' || key === 'g') this.slowMoQueued = true;
@@ -30,7 +34,7 @@ export class CrashInputController {
         window.addEventListener('keyup', (e) => {
             const key = e.key.toLowerCase();
             this.keys[key] = false;
-            this.keys[e.code] = false;
+            this.keys[e.code.toLowerCase()] = false;
         });
     }
 
@@ -45,7 +49,17 @@ export class CrashInputController {
         if (this.keys['d'] || this.keys['arrowright']) steer -= 1;
 
         const brake = forward < 0; // reverse pedal acts as brake when moving forward
-        const handbrake = !!this.keys[' '] || !!this.keys['space'];
+        const handbrake = !!this.keys['b'];
+        const jumpThruster = !!this.keys[' '] || !!this.keys['space'];
+        const boost = !!this.keys['shift'] || !!this.keys['shiftleft'] || !!this.keys['shiftright'];
+
+        let pitch = 0;
+        if (this.keys['w'] || this.keys['arrowup']) pitch -= 1; // W: nina vajub alla
+        if (this.keys['s'] || this.keys['arrowdown']) pitch += 1; // S: nina ülesse
+
+        let yaw = 0;
+        if (this.keys['a'] || this.keys['arrowleft']) yaw += 1; // A: vasakule
+        if (this.keys['d'] || this.keys['arrowright']) yaw -= 1; // D: paremale
 
         const respawn = this.respawnQueued;
         const slowMo = this.slowMoQueued;
@@ -60,6 +74,10 @@ export class CrashInputController {
             steer,
             brake,
             handbrake,
+            jumpThruster,
+            boost,
+            pitch,
+            yaw,
             respawnRequested: respawn,
             slowMoToggled: slowMo,
             cameraToggled: camera

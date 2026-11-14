@@ -349,6 +349,7 @@ await (async () => {
                     const allUnderOrEqualTo100 = catalogTopSpeeds.every((s) => s <= 100);
                     const catalogPowers = window.carCrashCatalog?.map ? window.carCrashCatalog.map((c) => c.enginePower) : [500];
                     const allHighPower = catalogPowers.every((p) => p >= 250);
+                    const hasTeslaRoadster = !!window.carCrashCatalog?.find((c) => c.id === 'tesla_roadster');
 
                     return {
                         hasCanvas: !!canvas,
@@ -361,7 +362,8 @@ await (async () => {
                         slowMoActive,
                         slowMoInactive,
                         allUnderOrEqualTo100,
-                        allHighPower
+                        allHighPower,
+                        hasTeslaRoadster
                     };
                 });
 
@@ -376,7 +378,8 @@ await (async () => {
                     !carCrashPageTest.slowMoActive ||
                     !carCrashPageTest.slowMoInactive ||
                     !carCrashPageTest.allUnderOrEqualTo100 ||
-                    !carCrashPageTest.allHighPower
+                    !carCrashPageTest.allHighPower ||
+                    !carCrashPageTest.hasTeslaRoadster
                 ) {
                     throw new Error("Car Crash Simulator verification failed: " + JSON.stringify(carCrashPageTest));
                 }
@@ -16419,6 +16422,7 @@ await (async () => {
                 const allUnderOrEqualTo100 = catalogTopSpeeds.every((s) => s <= 100);
                 const catalogPowers = window.carCrashCatalog?.map ? window.carCrashCatalog.map((c) => c.enginePower) : [500];
                 const allHighPower = catalogPowers.every((p) => p >= 250);
+                const hasTeslaRoadster = !!window.carCrashCatalog?.find((c) => c.id === 'tesla_roadster');
 
                 return {
                     hasCanvas: !!canvas,
@@ -16431,7 +16435,8 @@ await (async () => {
                     slowMoActive,
                     slowMoInactive,
                     allUnderOrEqualTo100,
-                    allHighPower
+                    allHighPower,
+                    hasTeslaRoadster
                 };
             });
 
@@ -16446,7 +16451,8 @@ await (async () => {
                 !carCrashPageTest.slowMoActive ||
                 !carCrashPageTest.slowMoInactive ||
                 !carCrashPageTest.allUnderOrEqualTo100 ||
-                !carCrashPageTest.allHighPower
+                !carCrashPageTest.allHighPower ||
+                !carCrashPageTest.hasTeslaRoadster
             ) {
                 throw new Error("Car Crash Simulator verification failed: " + JSON.stringify(carCrashPageTest));
             }

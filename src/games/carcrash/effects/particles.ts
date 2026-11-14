@@ -126,6 +126,34 @@ export class CrashParticleSystem {
         }
     }
 
+    public emitThrusterJet(origin: THREE.Vector3, direction: THREE.Vector3, isBoost: boolean): void {
+        if (this.particles.length >= this.maxParticles) return;
+        const count = isBoost ? 4 : 2;
+        for (let i = 0; i < count; i++) {
+            const spread = new THREE.Vector3(
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 0.3
+            );
+            const speed = isBoost ? 18 + Math.random() * 10 : 12 + Math.random() * 6;
+            const vel = direction.clone().add(spread).normalize().multiplyScalar(speed);
+            const pColor = isBoost
+                ? (Math.random() > 0.5 ? new THREE.Color(0x00f2fe) : new THREE.Color(0xffffff))
+                : (Math.random() > 0.5 ? new THREE.Color(0x00d2d3) : new THREE.Color(0x54a0ff));
+
+            this.particles.push({
+                position: origin.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2)),
+                velocity: vel,
+                color: pColor,
+                size: isBoost ? 0.45 : 0.32,
+                alpha: 1.0,
+                life: 0,
+                maxLife: isBoost ? 0.35 : 0.25,
+                type: 'fire'
+            });
+        }
+    }
+
     public update(dt: number): void {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];

@@ -47,19 +47,35 @@ export class CrashPhysicsSystem {
         this.vehicle.root.rotation.copy(this.rotation);
     }
 
+    public isThrusterFiring = false;
+    public isBoostFiring = false;
+    public isAirborne = false;
+
     public update(
         dt: number,
-        inputs: { forward: number; steer: number; brake: boolean; handbrake: boolean },
+        inputs: {
+            forward: number;
+            steer: number;
+            brake: boolean;
+            handbrake: boolean;
+            jumpThruster?: boolean;
+            boost?: boolean;
+            pitch?: number;
+            yaw?: number;
+        },
         obstacles: CrashObstacle[],
         onImpact?: (impactG: number, contactPt: THREE.Vector3, impactSpeedKmh: number) => void
     ): void {
         const config = this.vehicle.config;
+        const groundY = config.dimensions.height * 0.35;
+        this.isAirborne = this.position.y > groundY + 0.15;
 
         // 1. Calculate heading orientation
         this.forward.set(0, 0, 1).applyEuler(this.rotation).normalize();
         const right = new THREE.Vector3(1, 0, 0).applyEuler(this.rotation).normalize();
+        const up = new THREE.Vector3(0, 1, 0).applyEuler(this.rotation).normalize();
 
-        // 2. Drive & Steering inputs
+        // 2. Drive & Steering inputs (Ground mode)
         const targetSteer = inputs.steer * 0.55;
         this.steerAngle = THREE.MathUtils.lerp(this.steerAngle, targetSteer, dt * config.steerSpeed * 4.0);
 
@@ -70,59 +86,99 @@ export class CrashPhysicsSystem {
         const maxSpeedMs = (config.topSpeedKmh * 1000) / 3600;
         const currentSpeedForward = this.velocity.dot(this.forward);
 
-        if (inputs.forward !== 0) {
-            // High responsive torque curve: rapid acceleration reaching 100 km/h quickly
-            const speedRatio = Math.min(1.0, Math.max(0, currentSpeedForward / maxSpeedMs));
-            const torqueMultiplier = THREE.MathUtils.lerp(3.2, 1.4, speedRatio);
-            const driveForce = inputs.forward * (config.enginePower * 30.0) * torqueMultiplier;
-            if (inputs.forward > 0 && currentSpeedForward < maxSpeedMs) {
-                this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * dt);
-            } else if (inputs.forward < 0 && currentSpeedForward > -18.0) {
-                this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * 0.9 * dt);
+        if (!this.isAirborne) {
+            // Ground drive
+            if (inputs.forward !== 0) {
+                const speedRatio = Math.min(1.0, Math.max(0, currentSpeedForward / maxSpeedMs));
+                const torqueMultiplier = THREE.MathUtils.lerp(3.2, 1.4, speedRatio);
+                const driveForce = inputs.forward * (config.enginePower * 30.0) * torqueMultiplier;
+                if (inputs.forward > 0 && currentSpeedForward < maxSpeedMs) {
+                    this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * dt);
+                } else if (inputs.forward < 0 && currentSpeedForward > -18.0) {
+                    this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * 0.9 * dt);
+                }
             }
+
+            // Steering rotation on ground
+            if (Math.abs(currentSpeedForward) > 0.2) {
+                const turnRate = (this.steerAngle * currentSpeedForward) / (config.dimensions.length * 0.8);
+                this.angularVelocity.y = turnRate;
+            } else {
+                this.angularVelocity.y *= 0.8;
+            }
+
+            // Ground stabilization
+            this.rotation.x *= 0.92;
+            this.rotation.z *= 0.92;
+        } else {
+            // AIRBORNE FLIGHT CONTROLS:
+            // "w nina vaiub alla, s nina ülesse, d paremale, a vasakule"
+            const pitchInput = inputs.pitch || 0;
+            const yawInput = inputs.yaw || 0;
+
+            if (pitchInput !== 0) {
+                this.rotation.x += pitchInput * 2.8 * dt; // W: nina alla (-), S: nina üles (+)
+            }
+            if (yawInput !== 0) {
+                this.rotation.y += yawInput * 2.8 * dt; // A: vasakule (+), D: paremale (-)
+                this.rotation.z += yawInput * 1.5 * dt; // Banking
+            } else {
+                this.rotation.z *= Math.pow(0.96, dt * 60);
+            }
+        }
+
+        // 3. SPACEX THRUSTERS & ROCKET BOOST:
+        // "tühikuga õhku, sift on boost"
+        this.isThrusterFiring = !!inputs.jumpThruster;
+        this.isBoostFiring = !!inputs.boost;
+
+        if (inputs.jumpThruster) {
+            if (!this.isAirborne) {
+                // Lift-off launch impulse
+                this.velocity.y = Math.max(this.velocity.y, 15.0);
+            } else {
+                // Sustained vertical thruster climb & hover
+                this.velocity.y += 32.0 * dt;
+            }
+        }
+
+        if (inputs.boost) {
+            // Rocket boost forward in car heading direction
+            this.velocity.addScaledVector(this.forward, 65.0 * dt);
         }
 
         // Braking & Rolling Friction
         this.isBraking = inputs.brake;
         this.isHandbraking = inputs.handbrake;
 
-        if (inputs.brake) {
+        if (inputs.brake && !this.isAirborne) {
             const brakeFriction = config.brakeForce * 2.5;
             this.velocity.x *= Math.max(0, 1 - brakeFriction * dt);
             this.velocity.z *= Math.max(0, 1 - brakeFriction * dt);
-        } else if (inputs.handbrake) {
+        } else if (inputs.handbrake && !this.isAirborne) {
             // Drift slip: reduce lateral grip
             this.velocity.x *= Math.max(0, 1 - 0.8 * dt);
             this.velocity.z *= Math.max(0, 1 - 0.8 * dt);
             this.angularVelocity.y += inputs.steer * 3.8 * dt;
-        } else {
+        } else if (!this.isAirborne) {
             // Rolling air resistance & ground drag
             this.velocity.multiplyScalar(Math.pow(0.992, dt * 60));
         }
 
-        // Lateral Tire Grip (prevents infinite slide unless handbraking)
-        const lateralVelocity = this.velocity.dot(right);
-        const gripFactor = inputs.handbrake ? 0.45 : 0.94;
-        this.velocity.addScaledVector(right, -lateralVelocity * gripFactor * Math.min(1.0, dt * 15.0));
-
-        // Steering rotation based on forward movement
-        if (Math.abs(currentSpeedForward) > 0.2) {
-            const turnRate = (this.steerAngle * currentSpeedForward) / (config.dimensions.length * 0.8);
-            this.angularVelocity.y = turnRate;
-        } else {
-            this.angularVelocity.y *= 0.8;
+        // Lateral Tire Grip on ground
+        if (!this.isAirborne) {
+            const lateralVelocity = this.velocity.dot(right);
+            const gripFactor = inputs.handbrake ? 0.45 : 0.94;
+            this.velocity.addScaledVector(right, -lateralVelocity * gripFactor * Math.min(1.0, dt * 15.0));
         }
 
         // Apply angular velocity to rotation
         this.rotation.y += this.angularVelocity.y * dt;
-        this.rotation.x *= 0.92;
-        this.rotation.z *= 0.92;
 
         // Gravity & Ground Plane (Y = 0)
         this.velocity.y -= 25.0 * dt; // Gravity
         this.position.addScaledVector(this.velocity, dt);
 
-        const groundY = config.dimensions.height * 0.35;
         if (this.position.y < groundY) {
             this.position.y = groundY;
             if (this.velocity.y < -2.0) {

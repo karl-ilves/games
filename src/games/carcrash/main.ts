@@ -169,6 +169,18 @@ function animate(currentTime: number): void {
     const engineWorldPos = activeVehicle.root.localToWorld(new THREE.Vector3(0, activeConfig.dimensions.height * 0.4, activeConfig.dimensions.length * 0.38));
     particles.emitContinuousDamageSmoke(engineWorldPos, carCrashState.getState().damagePercent);
 
+    // SpaceX Thruster plumes
+    if (physics.isThrusterFiring) {
+        const bottomPos = activeVehicle.root.localToWorld(new THREE.Vector3(0, 0.1, 0));
+        const downDir = new THREE.Vector3(0, -1, 0).applyEuler(physics.rotation);
+        particles.emitThrusterJet(bottomPos, downDir, false);
+    }
+    if (physics.isBoostFiring) {
+        const rearPos = activeVehicle.root.localToWorld(new THREE.Vector3(0, activeConfig.dimensions.height * 0.38, -activeConfig.dimensions.length * 0.52));
+        const rearDir = new THREE.Vector3(0, 0, -1).applyEuler(physics.rotation);
+        particles.emitThrusterJet(rearPos, rearDir, true);
+    }
+
     // Audio & Telemetry
     audio.updateEngine(physics.speedKmh, inputs.forward);
     if (inputs.handbrake && physics.speedKmh > 20) {

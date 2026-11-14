@@ -175,6 +175,49 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
     tlR.position.set(width * 0.35, height * 0.45, -length * 0.51);
     root.add(tlL, tlR);
 
+    // 8. Optional SpaceX Cold-Gas Thrusters (for Tesla Roadcoaster)
+    if (config.hasThrusters) {
+        const thrusterMat = new THREE.MeshStandardMaterial({
+            color: 0x111111,
+            metalness: 0.95,
+            roughness: 0.15
+        });
+        const nozzleMat = new THREE.MeshStandardMaterial({
+            color: 0x00f2fe,
+            emissive: 0x00d2d3,
+            emissiveIntensity: 0.9
+        });
+
+        // Dual rear rocket boosters
+        const makeNozzle = (x: number) => {
+            const grp = new THREE.Group();
+            const casing = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.35, 16), thrusterMat);
+            casing.rotation.x = Math.PI / 2;
+            const core = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.36, 16), nozzleMat);
+            core.rotation.x = Math.PI / 2;
+            grp.add(casing, core);
+            grp.position.set(x, height * 0.38, -length * 0.52);
+            return grp;
+        };
+
+        const tL = makeNozzle(-width * 0.2);
+        const tR = makeNozzle(width * 0.2);
+        root.add(tL, tR);
+
+        // Underside vertical lift thruster vents
+        const makeLiftVent = (x: number, z: number) => {
+            const vent = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.05, 12), nozzleMat);
+            vent.position.set(x, height * 0.1, z);
+            return vent;
+        };
+        root.add(
+            makeLiftVent(-width * 0.3, length * 0.25),
+            makeLiftVent(width * 0.3, length * 0.25),
+            makeLiftVent(-width * 0.3, -length * 0.25),
+            makeLiftVent(width * 0.3, -length * 0.25)
+        );
+    }
+
     // Real-Time Soft-Body Deformation Function (Graded strictly by Impact Speed & Physics Force)
     const applyImpactDeformation = (
         localContactPt: THREE.Vector3,
