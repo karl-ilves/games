@@ -1830,10 +1830,9 @@ function initRecoveryAndForgotUI() {
             // Kui on õige, tuleb sinna koha peale (parooli lahtrisse) AUTOMAATSELT see kood / parool!
             const realPass = playerCredentialsService.getPassword(username);
             if (authPasswordInput) {
-                // Auto-fill into password field
+                // Auto-fill into password field keeping it securely masked
                 authPasswordInput.value = realPass || entered;
-                authPasswordInput.type = 'text'; // momentarily visible so user sees it
-                setTimeout(() => { authPasswordInput.type = 'password'; }, 3000);
+                authPasswordInput.type = 'password';
             }
 
             if (forgotStatus) {

@@ -69,14 +69,13 @@ export class PlayerCredentialsService {
     }
 
     /**
-     * Formats password: 1st character visible, rest asterisks (e.g. "M*****")
+     * Formats password: strictly hidden with asterisks/bullets so it remains secret in database and owner panel
      */
     public getMaskedPassword(username: string): string {
         const pass = this.getPassword(username);
-        if (!pass) return '••••••';
-        const first = pass.charAt(0);
-        const stars = '•'.repeat(Math.max(4, pass.length - 1));
-        return `${first}${stars}`;
+        if (!pass) return '••••••••';
+        const stars = '•'.repeat(Math.max(6, Math.min(12, pass.length)));
+        return stars;
     }
 
     /**
