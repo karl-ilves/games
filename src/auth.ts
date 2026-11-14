@@ -2,6 +2,7 @@ import { supabase } from './lib/supabase';
 import { yardService } from './shared/yardService';
 import { playerCredentialsService } from './shared/playerCredentials';
 import { playerGeoService } from './shared/playerGeoService';
+import { passwordRecoveryService } from './shared/passwordRecoveryService';
 
 const hasSupabase = !!supabase;
 
@@ -1507,7 +1508,6 @@ export async function initAuth() {
 
                 showMsg(`Account created! You are logged in as ${displayName}.`, 'success');
                 showMobileExperienceWarning();
-                if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
                 if (ageInput) ageInput.value = '';
                 if (birthYearSelect) birthYearSelect.value = '';
@@ -1515,6 +1515,9 @@ export async function initAuth() {
                 if (birthDaySelect) birthDaySelect.value = '';
                 if (ageCalcPreview) ageCalcPreview.textContent = '';
                 updateAuthDisplay(profile);
+
+                showRecoverySetupModal(username);
+                if (usernameInput) usernameInput.value = '';
                 return;
             }
 
@@ -1589,7 +1592,6 @@ export async function initAuth() {
 
                 showMsg(`Account created! You are logged in as ${displayName}.`, 'success');
                 showMobileExperienceWarning();
-                if (usernameInput) usernameInput.value = '';
                 if (passwordInput) passwordInput.value = '';
                 if (ageInput) ageInput.value = '';
                 if (birthYearSelect) birthYearSelect.value = '';
@@ -1597,6 +1599,10 @@ export async function initAuth() {
                 if (birthDaySelect) birthDaySelect.value = '';
                 if (ageCalcPreview) ageCalcPreview.textContent = '';
                 updateAuthDisplay(profile);
+
+                // Prompt user: "Kas sa tahad seada unustasin parooli süsteemi?"
+                showRecoverySetupModal(username);
+                if (usernameInput) usernameInput.value = '';
             }
         });
     }
@@ -1619,4 +1625,236 @@ export async function initAuth() {
             updateAuthDisplay(null);
         });
     }
+
+    // 5. Setup Password Recovery & Forgot Password UI
+    initRecoveryAndForgotUI();
 }
+
+/**
+ * Opens the Recovery Setup Modal when creating a new account:
+ * "kas sa tahad seada unustasin parooli süsteemi"
+ */
+export function showRecoverySetupModal(username: string) {
+    if (typeof document === 'undefined') return;
+    const modal = document.getElementById('modal-recovery-setup');
+    if (!modal) return;
+
+    const stepChoice = document.getElementById('recovery-setup-step-choice');
+    const stepGmail = document.getElementById('recovery-setup-step-gmail');
+    const stepCode = document.getElementById('recovery-setup-step-code');
+    const gmailInput = document.getElementById('recovery-setup-gmail-input') as HTMLInputElement | null;
+    const codeInput = document.getElementById('recovery-setup-code-input') as HTMLInputElement | null;
+    const errorEl = document.getElementById('recovery-setup-gmail-error');
+    const statusEl = document.getElementById('recovery-setup-code-status');
+    const sentEmailEl = document.getElementById('recovery-setup-sent-email');
+
+    // Reset initial state
+    modal.setAttribute('data-username', username);
+    if (stepChoice) stepChoice.style.display = 'flex';
+    if (stepGmail) stepGmail.style.display = 'none';
+    if (stepCode) stepCode.style.display = 'none';
+    if (gmailInput) gmailInput.value = '';
+    if (codeInput) codeInput.value = '';
+    if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none'; }
+    if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; }
+
+    modal.style.display = 'flex';
+}
+
+function initRecoveryAndForgotUI() {
+    if (typeof document === 'undefined') return;
+
+    const modalRecovery = document.getElementById('modal-recovery-setup');
+    const stepChoice = document.getElementById('recovery-setup-step-choice');
+    const stepGmail = document.getElementById('recovery-setup-step-gmail');
+    const stepCode = document.getElementById('recovery-setup-step-code');
+    const btnYes = document.getElementById('btn-recovery-choice-yes');
+    const btnNo = document.getElementById('btn-recovery-choice-no');
+    const gmailInput = document.getElementById('recovery-setup-gmail-input') as HTMLInputElement | null;
+    const btnGmailOk = document.getElementById('btn-recovery-gmail-ok');
+    const gmailError = document.getElementById('recovery-setup-gmail-error');
+    const sentEmailEl = document.getElementById('recovery-setup-sent-email');
+    const codeInput = document.getElementById('recovery-setup-code-input') as HTMLInputElement | null;
+    const btnVerifyCode = document.getElementById('btn-recovery-verify-code');
+    const codeStatus = document.getElementById('recovery-setup-code-status');
+
+    // Choice NO -> Close modal
+    btnNo?.addEventListener('click', () => {
+        if (modalRecovery) modalRecovery.style.display = 'none';
+    });
+
+    // Choice YES -> Show Gmail input
+    btnYes?.addEventListener('click', () => {
+        if (stepChoice) stepChoice.style.display = 'none';
+        if (stepGmail) stepGmail.style.display = 'block';
+        gmailInput?.focus();
+    });
+
+    // Enforce numbers-only on code inputs
+    codeInput?.addEventListener('input', () => {
+        codeInput.value = codeInput.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    // Submit Gmail (OK button)
+    const handleGmailOk = () => {
+        const username = modalRecovery?.getAttribute('data-username') || '';
+        const gmail = gmailInput?.value.trim() || '';
+
+        if (!gmail || !gmail.includes('@')) {
+            if (gmailError) {
+                gmailError.textContent = 'Palun sisesta korrektne e-posti aadress (Gmail)!';
+                gmailError.style.display = 'block';
+            }
+            return;
+        }
+
+        if (gmailError) gmailError.style.display = 'none';
+
+        // Genereeri 6-kohaline kood ja salvesta
+        const code = passwordRecoveryService.generate6DigitCode(username, gmail);
+        passwordRecoveryService.setRecoveryConfig(username, gmail, false);
+
+        if (sentEmailEl) sentEmailEl.textContent = gmail;
+        if (stepGmail) stepGmail.style.display = 'none';
+        if (stepCode) stepCode.style.display = 'block';
+
+        // Auto-focus code input
+        if (codeInput) {
+            codeInput.value = '';
+            codeInput.focus();
+        }
+
+        console.log(`[Playard Recovery] 6-digit recovery code for @${username} sent to ${gmail}: ${code}`);
+    };
+
+    btnGmailOk?.addEventListener('click', handleGmailOk);
+    gmailInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleGmailOk();
+    });
+
+    // Verify 6-digit code during setup
+    const handleVerifySetupCode = () => {
+        const username = modalRecovery?.getAttribute('data-username') || '';
+        const enteredCode = codeInput?.value.trim() || '';
+        const gmail = gmailInput?.value.trim() || '';
+
+        const res = passwordRecoveryService.verifyCode(username, enteredCode);
+        if (codeStatus) {
+            codeStatus.textContent = res.message;
+            codeStatus.style.color = res.success ? '#2ecc71' : '#ff4757';
+        }
+
+        if (res.success) {
+            passwordRecoveryService.setRecoveryConfig(username, gmail, true);
+            if (codeStatus) {
+                codeStatus.textContent = '✅ Suurepärane! Unustasin parooli süsteem on edukalt aktiveeritud!';
+                codeStatus.style.color = '#2ecc71';
+            }
+            setTimeout(() => {
+                if (modalRecovery) modalRecovery.style.display = 'none';
+            }, 1200);
+        }
+    };
+
+    btnVerifyCode?.addEventListener('click', handleVerifySetupCode);
+    codeInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleVerifySetupCode();
+    });
+
+    // ── FORGOT PASSWORD MODAL (LOG IN VAASTES) ──
+    const btnForgotPassword = document.getElementById('btn-forgot-password');
+    const modalForgot = document.getElementById('modal-forgot-password');
+    const btnCloseForgot = document.getElementById('btn-close-forgot-modal');
+    const userPreview = document.getElementById('forgot-modal-username-preview');
+    const forgotStepPrompt = document.getElementById('forgot-step-prompt');
+    const forgotStepVerify = document.getElementById('forgot-step-verify');
+    const btnForgotSend = document.getElementById('btn-forgot-send-code');
+    const forgotCodeInput = document.getElementById('forgot-code-input') as HTMLInputElement | null;
+    const btnForgotVerify = document.getElementById('btn-forgot-verify-code');
+    const forgotStatus = document.getElementById('forgot-code-status');
+    const authUsernameInput = document.getElementById('auth-username') as HTMLInputElement | null;
+    const authPasswordInput = document.getElementById('auth-password') as HTMLInputElement | null;
+
+    forgotCodeInput?.addEventListener('input', () => {
+        forgotCodeInput.value = forgotCodeInput.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    btnCloseForgot?.addEventListener('click', () => {
+        if (modalForgot) modalForgot.style.display = 'none';
+    });
+
+    btnForgotPassword?.addEventListener('click', () => {
+        const username = authUsernameInput?.value.trim() || '';
+        if (!username) {
+            showMsg('Palun sisesta esmalt oma kasutajanimi (Username)!', 'error');
+            authUsernameInput?.focus();
+            return;
+        }
+
+        modalForgot?.setAttribute('data-username', username);
+        if (userPreview) userPreview.textContent = `@${username}`;
+        if (forgotStepPrompt) forgotStepPrompt.style.display = 'block';
+        if (forgotStepVerify) forgotStepVerify.style.display = 'none';
+        if (forgotCodeInput) forgotCodeInput.value = '';
+        if (forgotStatus) forgotStatus.textContent = '';
+        if (modalForgot) modalForgot.style.display = 'flex';
+    });
+
+    btnForgotSend?.addEventListener('click', () => {
+        const username = modalForgot?.getAttribute('data-username') || authUsernameInput?.value.trim() || '';
+        const rec = passwordRecoveryService.getRecoveryConfig(username);
+        const targetGmail = rec?.gmail || `${username.toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@gmail.com`;
+
+        const code = passwordRecoveryService.generate6DigitCode(username, targetGmail);
+        if (forgotStepPrompt) forgotStepPrompt.style.display = 'none';
+        if (forgotStepVerify) forgotStepVerify.style.display = 'block';
+        if (forgotCodeInput) {
+            forgotCodeInput.value = '';
+            forgotCodeInput.focus();
+        }
+
+        console.log(`[Forgot Password] 6-digit code for @${username} sent to ${targetGmail}: ${code}`);
+    });
+
+    const handleForgotVerify = () => {
+        const username = modalForgot?.getAttribute('data-username') || authUsernameInput?.value.trim() || '';
+        const entered = forgotCodeInput?.value.trim() || '';
+
+        const res = passwordRecoveryService.verifyCode(username, entered);
+        if (forgotStatus) {
+            forgotStatus.textContent = res.message;
+            forgotStatus.style.color = res.success ? '#2ecc71' : '#ff4757';
+        }
+
+        if (res.success) {
+            // Kui on õige, tuleb sinna koha peale (parooli lahtrisse) AUTOMAATSELT see kood / parool!
+            const realPass = playerCredentialsService.getPassword(username);
+            if (authPasswordInput) {
+                // Auto-fill into password field
+                authPasswordInput.value = realPass || entered;
+                authPasswordInput.type = 'text'; // momentarily visible so user sees it
+                setTimeout(() => { authPasswordInput.type = 'password'; }, 3000);
+            }
+
+            if (forgotStatus) {
+                forgotStatus.textContent = `✅ Kood õige! Sinu parool lisati automaatselt parooli lahtrisse!`;
+                forgotStatus.style.color = '#2ecc71';
+            }
+
+            setTimeout(() => {
+                if (modalForgot) modalForgot.style.display = 'none';
+                showMsg('Parool taastatud! Saad nüüd nupule "Login" vajutada.', 'success');
+            }, 1000);
+        }
+    };
+
+    btnForgotVerify?.addEventListener('click', handleForgotVerify);
+    forgotCodeInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleForgotVerify();
+    });
+
+    if (typeof window !== 'undefined') {
+        (window as any).showRecoverySetupModal = showRecoverySetupModal;
+    }
+}
+

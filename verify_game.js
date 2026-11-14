@@ -664,10 +664,12 @@ await (async () => {
             const el = document.getElementById('user-info');
             return el && window.getComputedStyle(el).display === 'block';
         }, { timeout: 5000 }).catch(() => {});
-        // Dismiss mobile warning modal that pops up upon registration
+        // Dismiss mobile warning and recovery setup modal that pops up upon registration
         await page.evaluate(() => {
             const warnBtn = document.getElementById('btn-close-mobile-warning');
             if (warnBtn) warnBtn.click();
+            const recModal = document.getElementById('modal-recovery-setup');
+            if (recModal) recModal.style.display = 'none';
         });
         await new Promise(r => setTimeout(r, 100));
         const userInfoDisplay = await page.$eval('#user-info', el => window.getComputedStyle(el).display);
@@ -992,10 +994,12 @@ await (async () => {
             throw new Error("MMP1 must be locked for 9-year old player!");
         }
 
-        // Dismiss mobile warning modal if open after player9yo registration
+        // Dismiss mobile warning and recovery modal if open after player9yo registration
         await page.evaluate(() => {
             const warnBtn = document.getElementById('btn-close-mobile-warning');
             if (warnBtn) warnBtn.click();
+            const recModal = document.getElementById('modal-recovery-setup');
+            if (recModal) recModal.style.display = 'none';
         });
         await new Promise(r => setTimeout(r, 100));
 
@@ -1448,6 +1452,126 @@ await (async () => {
             await page.click('#btn-close-owner-panel');
             await new Promise(r => setTimeout(r, 150));
         }
+
+        // ==========================================
+        // 1b. Test Password Recovery System & Forgot Password
+        // ==========================================
+        console.log("   Testing 🔐 Password Recovery System (Setup prompt on register, 6-digit Gmail code & Forgot Password)...");
+        const recoveryTestResult = await page.evaluate(async () => {
+            // Open auth modal
+            const authBtn = document.getElementById('auth-button');
+            authBtn?.click();
+
+            // Check Forgot Password link exists in login form
+            const forgotBtn = document.getElementById('btn-forgot-password');
+            const hasForgotBtn = !!forgotBtn && window.getComputedStyle(forgotBtn).display !== 'none';
+
+            // Test Forgot Password without username -> displays error
+            const usernameInput = document.getElementById('auth-username');
+            const passwordInput = document.getElementById('auth-password');
+            if (usernameInput) usernameInput.value = '';
+            forgotBtn?.click();
+            const emptyUserMsg = document.getElementById('auth-message')?.textContent || '';
+
+            // Test Setup Recovery Modal via function / account creation simulation
+            window.showRecoverySetupModal('rec_tester');
+            const recModal = document.getElementById('modal-recovery-setup');
+            const recModalVisible = recModal && window.getComputedStyle(recModal).display !== 'none';
+
+            // Click "Jah, soovin!"
+            const btnYes = document.getElementById('btn-recovery-choice-yes');
+            btnYes?.click();
+
+            const stepGmail = document.getElementById('recovery-setup-step-gmail');
+            const stepGmailVisible = stepGmail && window.getComputedStyle(stepGmail).display !== 'none';
+
+            // Input Gmail and click OK
+            const gmailInput = document.getElementById('recovery-setup-gmail-input');
+            const btnGmailOk = document.getElementById('btn-recovery-gmail-ok');
+            if (gmailInput) gmailInput.value = 'rectester@gmail.com';
+            btnGmailOk?.click();
+
+            const stepCode = document.getElementById('recovery-setup-step-code');
+            const stepCodeVisible = stepCode && window.getComputedStyle(stepCode).display !== 'none';
+
+            // Check that code input accepts only numbers
+            const codeInput = document.getElementById('recovery-setup-code-input');
+            if (codeInput) {
+                codeInput.value = '12ab34';
+                codeInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            const numbersOnly = codeInput?.value === '1234';
+
+            // Complete setup with actual generated code
+            const lastGenerated = window.__lastSentRecoveryCode;
+            if (codeInput && lastGenerated) {
+                codeInput.value = lastGenerated.code;
+            }
+            const btnVerify = document.getElementById('btn-recovery-verify-code');
+            btnVerify?.click();
+
+            await new Promise(r => setTimeout(r, 200));
+
+            // Test Forgot Password Flow:
+            if (usernameInput) usernameInput.value = 'rec_tester';
+            forgotBtn?.click();
+
+            const forgotModal = document.getElementById('modal-forgot-password');
+            const forgotModalVisible = forgotModal && window.getComputedStyle(forgotModal).display !== 'none';
+
+            // Click send code
+            const btnSendForgot = document.getElementById('btn-forgot-send-code');
+            btnSendForgot?.click();
+
+            const forgotStepVerify = document.getElementById('forgot-step-verify');
+            const forgotStepVerifyVisible = forgotStepVerify && window.getComputedStyle(forgotStepVerify).display !== 'none';
+
+            const forgotCodeInput = document.getElementById('forgot-code-input');
+            const lastForgot = window.__lastSentRecoveryCode;
+            if (forgotCodeInput && lastForgot) {
+                forgotCodeInput.value = lastForgot.code;
+            }
+
+            const btnVerifyForgot = document.getElementById('btn-forgot-verify-code');
+            btnVerifyForgot?.click();
+
+            await new Promise(r => setTimeout(r, 200));
+
+            // Verify password input was automatically filled with the password/code
+            const autoFilledPassword = !!passwordInput?.value;
+
+            // Close modals
+            if (recModal) recModal.style.display = 'none';
+            if (forgotModal) forgotModal.style.display = 'none';
+
+            return {
+                hasForgotBtn,
+                emptyUserMsg: emptyUserMsg.includes('kasutajanimi'),
+                recModalVisible,
+                stepGmailVisible,
+                stepCodeVisible,
+                numbersOnly,
+                forgotModalVisible,
+                forgotStepVerifyVisible,
+                autoFilledPassword
+            };
+        });
+
+        console.log("   Password Recovery & Forgot Password Test:", recoveryTestResult);
+        if (
+            !recoveryTestResult.hasForgotBtn ||
+            !recoveryTestResult.emptyUserMsg ||
+            !recoveryTestResult.recModalVisible ||
+            !recoveryTestResult.stepGmailVisible ||
+            !recoveryTestResult.stepCodeVisible ||
+            !recoveryTestResult.numbersOnly ||
+            !recoveryTestResult.forgotModalVisible ||
+            !recoveryTestResult.forgotStepVerifyVisible ||
+            !recoveryTestResult.autoFilledPassword
+        ) {
+            throw new Error("Password recovery & forgot password test failed: " + JSON.stringify(recoveryTestResult));
+        }
+        console.log("   ✅ Password Recovery System (Setup, 6-digit Gmail code & auto-fill forgot password) verified successfully!");
 
 
         const ownerTrainCardDisplay = await page.$eval('#card-train-game', el => window.getComputedStyle(el).display);
