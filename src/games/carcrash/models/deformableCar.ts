@@ -21,11 +21,17 @@ export interface DeformableVehicleBundle {
         windshield: THREE.Mesh;
         roof: THREE.Mesh;
         doors: THREE.Mesh[];
+        radiator: THREE.Mesh;
     };
     headlights: THREE.Mesh[];
     taillights: THREE.Mesh[];
     config: VehicleConfig;
-    applyImpactDeformation: (localContactPt: THREE.Vector3, impactForceVec: THREE.Vector3, stiffness: number) => { deformedCount: number; damagePercent: number };
+    applyImpactDeformation: (
+        localContactPt: THREE.Vector3,
+        impactForceVec: THREE.Vector3,
+        stiffness: number,
+        impactSpeedKmh?: number
+    ) => { deformedCount: number; damagePercent: number };
     resetToFactory: () => void;
 }
 
@@ -90,11 +96,28 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
         transparent: true,
         opacity: 0.75
     });
-    const windshield = new THREE.Mesh(new THREE.BoxGeometry(width * 0.85, height * 0.4, length * 0.45), glassMat);
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(width * 0.86, height * 0.42, length * 0.46), glassMat);
     windshield.position.set(0, height * 0.75, 0);
     root.add(windshield);
 
-    // 3. Detachable / Crumpling Bumpers
+    // 3. Separate Hood (Crumples, buckles up in inverted V, or flips on impact)
+    const hoodMat = new THREE.MeshStandardMaterial({
+        color: config.primaryColor,
+        roughness: 0.3,
+        metalness: 0.65
+    });
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(width * 0.92, height * 0.08, length * 0.35), hoodMat);
+    hood.position.set(0, height * 0.64, length * 0.28);
+    hood.castShadow = true;
+    root.add(hood);
+
+    // 4. Radiator / Engine Core (visible when bumper or hood crumples)
+    const radiatorMat = new THREE.MeshStandardMaterial({ color: 0x1f242d, metalness: 0.85, roughness: 0.5 });
+    const radiator = new THREE.Mesh(new THREE.BoxGeometry(width * 0.72, height * 0.32, 0.12), radiatorMat);
+    radiator.position.set(0, height * 0.36, length * 0.42);
+    root.add(radiator);
+
+    // 5. Detachable / Crumpling Bumpers
     const bumperMat = new THREE.MeshStandardMaterial({ color: config.secondaryColor, roughness: 0.5, metalness: 0.6 });
     const bumperFront = new THREE.Mesh(new THREE.BoxGeometry(width * 1.02, height * 0.25, 0.25), bumperMat);
     bumperFront.position.set(0, height * 0.28, length * 0.51);
@@ -104,7 +127,7 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
     bumperRear.position.set(0, height * 0.28, -length * 0.51);
     root.add(bumperRear);
 
-    // 4. Wheels
+    // 6. Wheels
     const wheelRadius = height * 0.32;
     const wheelWidth = 0.32;
     const wheelGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 24);
@@ -137,7 +160,7 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
     wheels.rr.position.set(halfW, wheelRadius, -halfL);
     root.add(wheels.fl, wheels.fr, wheels.rl, wheels.rr);
 
-    // 5. Lights
+    // 7. Lights
     const headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0xfffae0, emissiveIntensity: 0.8 });
     const hlL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.1), headlightMat);
     const hlR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.1), headlightMat);
@@ -152,14 +175,26 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
     tlR.position.set(width * 0.35, height * 0.45, -length * 0.51);
     root.add(tlL, tlR);
 
-    // Real-Time Soft-Body Deformation Function
-    const applyImpactDeformation = (localContactPt: THREE.Vector3, impactForceVec: THREE.Vector3, vehicleStiffness: number) => {
+    // Real-Time Soft-Body Deformation Function (Graded strictly by Impact Speed & Physics Force)
+    const applyImpactDeformation = (
+        localContactPt: THREE.Vector3,
+        impactForceVec: THREE.Vector3,
+        vehicleStiffness: number,
+        impactSpeedKmh: number = 50
+    ) => {
         const forceMagnitude = impactForceVec.length();
-        if (forceMagnitude < 1.0) return { deformedCount: 0, damagePercent: 0 };
+        if (forceMagnitude < 0.5) return { deformedCount: 0, damagePercent: 0 };
 
-        const radius = Math.min(2.5, 0.8 + (forceMagnitude / 50.0) * (1.2 / vehicleStiffness));
+        // Speed-dependent scaling factor:
+        // low speed (< 25 km/h): small scratch/minor dent
+        // medium speed (30-60 km/h): visible crumple & hood fold
+        // high speed (70-100 km/h): massive destruction, deep chassis cave-in
+        const speedRatio = Math.max(0.1, Math.min(2.0, impactSpeedKmh / 50.0));
+        const effectiveStiffness = Math.max(0.2, vehicleStiffness);
+
+        const radius = Math.min(3.4, (0.7 + speedRatio * 1.2) / Math.sqrt(effectiveStiffness));
         const impactDir = impactForceVec.clone().normalize();
-        const maxDisplacement = Math.min(1.4, (forceMagnitude / 35.0) * (1.0 / vehicleStiffness));
+        const maxDisplacement = Math.min(1.85, (0.08 + speedRatio * 0.95) / effectiveStiffness);
 
         let deformedNodes = 0;
         let totalDispMagnitude = 0;
@@ -169,13 +204,12 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
             const dist = v.current.distanceTo(localContactPt);
 
             if (dist < radius) {
-                // Bell curve falloff
                 const factor = Math.cos((dist / radius) * (Math.PI / 2));
                 const push = impactDir.clone().multiplyScalar(maxDisplacement * factor);
 
-                // Add slight chaotic crumple wrinkle
-                const noise = (Math.sin(v.original.x * 12.0) + Math.cos(v.original.z * 12.0)) * 0.08 * factor;
-                push.y += noise;
+                // Add realistic metal crinkle and accordion folds
+                const foldNoise = (Math.sin(v.original.x * 12.0) * Math.cos(v.original.z * 12.0)) * 0.1 * factor * speedRatio;
+                push.y += foldNoise;
 
                 v.current.add(push);
                 v.displacement.copy(v.current).sub(v.original);
@@ -190,17 +224,82 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
         posAttr.needsUpdate = true;
         baseGeo.computeVertexNormals();
 
-        // Also deform bumpers & windshield if hit nearby
-        if (localContactPt.z > length * 0.3) {
-            bumperFront.position.z -= Math.min(0.8, maxDisplacement * 0.7);
-            bumperFront.rotation.x += (Math.random() - 0.5) * 0.3;
-        } else if (localContactPt.z < -length * 0.3) {
-            bumperRear.position.z += Math.min(0.8, maxDisplacement * 0.7);
-            bumperRear.rotation.x += (Math.random() - 0.5) * 0.3;
+        // 1. FRONT COLLISION VISUAL EFFECTS
+        if (localContactPt.z > length * 0.15) {
+            // Front bumper deformation
+            if (impactSpeedKmh < 25) {
+                bumperFront.position.z -= 0.12 * speedRatio;
+            } else if (impactSpeedKmh < 60) {
+                bumperFront.position.z -= 0.38 * speedRatio;
+                bumperFront.rotation.x -= 0.28;
+                bumperFront.rotation.y += (Math.random() - 0.5) * 0.35;
+            } else {
+                // High speed violent crunch: bumper crushed deep into frame and hangs askew
+                bumperFront.position.z -= Math.min(0.95, 0.7 * speedRatio);
+                bumperFront.position.y -= 0.16;
+                bumperFront.rotation.z += (localContactPt.x < 0 ? 0.4 : -0.4);
+                bumperFront.rotation.x -= 0.55;
+            }
+
+            // Hood buckling (Inverted V fold upwards)
+            if (impactSpeedKmh >= 20) {
+                const buckleAngle = Math.min(0.9, (impactSpeedKmh / 100.0) * 1.05);
+                hood.rotation.x = -buckleAngle;
+                hood.position.y = height * 0.64 + buckleAngle * 0.52;
+                hood.position.z = length * 0.28 - buckleAngle * 0.32;
+            }
+
+            // Headlights smash out
+            if (impactSpeedKmh >= 28) {
+                const smashLeft = localContactPt.x <= 0.2 || impactSpeedKmh > 60;
+                const smashRight = localContactPt.x >= -0.2 || impactSpeedKmh > 60;
+                if (smashLeft && hlL.material instanceof THREE.MeshStandardMaterial) {
+                    hlL.material.color.set(0x222222);
+                    hlL.material.emissive.set(0x000000);
+                    hlL.rotation.y += 0.3;
+                }
+                if (smashRight && hlR.material instanceof THREE.MeshStandardMaterial) {
+                    hlR.material.color.set(0x222222);
+                    hlR.material.emissive.set(0x000000);
+                    hlR.rotation.y -= 0.3;
+                }
+            }
+
+            // Front wheels alignment knocked askew
+            if (impactSpeedKmh >= 45) {
+                if (localContactPt.x < 0) {
+                    wheels.fl.rotation.z = 0.35; // Camber tilt
+                } else {
+                    wheels.fr.rotation.z = -0.35;
+                }
+            }
         }
 
-        // Damage percentage relative to total lattice capacity
-        const damagePercent = Math.min(100, Math.round((totalDispMagnitude / (vertexCount * 0.25)) * 100));
+        // 2. REAR COLLISION VISUAL EFFECTS
+        if (localContactPt.z < -length * 0.15) {
+            bumperRear.position.z += Math.min(0.85, 0.45 * speedRatio);
+            bumperRear.rotation.x += (Math.random() - 0.5) * 0.4;
+            if (impactSpeedKmh > 30) {
+                tlL.material instanceof THREE.MeshStandardMaterial && tlL.material.emissive.set(0x000000);
+                tlR.material instanceof THREE.MeshStandardMaterial && tlR.material.emissive.set(0x000000);
+            }
+        }
+
+        // 3. WINDSHIELD GLASS SHATTERING VISUALS
+        if (impactSpeedKmh >= 35) {
+            glassMat.roughness = 0.75;
+            glassMat.color.set(0x88aacc);
+            glassMat.opacity = 0.88;
+        }
+        if (impactSpeedKmh >= 68) {
+            // Shattered safety spiderweb look
+            glassMat.roughness = 0.98;
+            glassMat.color.set(0xedf2f7);
+            glassMat.opacity = 0.96;
+        }
+
+        // Damage percentage
+        const damagePercent = Math.min(100, Math.round((totalDispMagnitude / (vertexCount * 0.18)) * 100));
 
         return { deformedCount: deformedNodes, damagePercent };
     };
@@ -215,10 +314,46 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
         posAttr.needsUpdate = true;
         baseGeo.computeVertexNormals();
 
+        // Reset Hood
+        hood.position.set(0, height * 0.64, length * 0.28);
+        hood.rotation.set(0, 0, 0);
+
+        // Reset Bumpers
         bumperFront.position.set(0, height * 0.28, length * 0.51);
         bumperFront.rotation.set(0, 0, 0);
         bumperRear.position.set(0, height * 0.28, -length * 0.51);
         bumperRear.rotation.set(0, 0, 0);
+
+        // Reset Glass
+        glassMat.roughness = 0.1;
+        glassMat.color.set(0x112233);
+        glassMat.opacity = 0.75;
+
+        // Reset Lights
+        if (hlL.material instanceof THREE.MeshStandardMaterial) {
+            hlL.material.color.set(0xffffee);
+            hlL.material.emissive.set(0xfffae0);
+            hlL.rotation.set(0, 0, 0);
+        }
+        if (hlR.material instanceof THREE.MeshStandardMaterial) {
+            hlR.material.color.set(0xffffee);
+            hlR.material.emissive.set(0xfffae0);
+            hlR.rotation.set(0, 0, 0);
+        }
+        if (tlL.material instanceof THREE.MeshStandardMaterial) {
+            tlL.material.color.set(0xff2222);
+            tlL.material.emissive.set(0xff0000);
+        }
+        if (tlR.material instanceof THREE.MeshStandardMaterial) {
+            tlR.material.color.set(0xff2222);
+            tlR.material.emissive.set(0xff0000);
+        }
+
+        // Reset Wheels alignment
+        wheels.fl.rotation.z = 0;
+        wheels.fr.rotation.z = 0;
+        wheels.rl.rotation.z = 0;
+        wheels.rr.rotation.z = 0;
     };
 
     return {
@@ -230,12 +365,13 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
         deformableVertices,
         wheels,
         parts: {
-            hood: bumperFront,
+            hood,
             bumperFront,
             bumperRear,
             windshield,
             roof: windshield,
-            doors: []
+            doors: [],
+            radiator
         },
         headlights: [hlL, hlR],
         taillights: [tlL, tlR],

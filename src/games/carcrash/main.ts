@@ -146,11 +146,11 @@ function animate(currentTime: number): void {
         effectiveDelta,
         inputs,
         world.obstacles,
-        (impactG, contactPt) => {
+        (impactG, contactPt, impactSpeedKmh) => {
             // Impact Event Callback
             const worldContact = activeVehicle.root.localToWorld(contactPt.clone());
-            particles.emitImpactBurst(worldContact, impactG);
-            audio.playMetalCrunch(Math.min(1.0, impactG / 15.0));
+            particles.emitImpactBurst(worldContact, impactG, impactSpeedKmh);
+            audio.playMetalCrunch(Math.min(1.0, Math.max(0.2, impactSpeedKmh / 50.0)));
 
             // Calculate current damaged state
             let totalDisp = 0;
@@ -160,10 +160,14 @@ function animate(currentTime: number): void {
                 if (len > 0.05) deformedNodes++;
                 totalDisp += len;
             }
-            const dmgPct = Math.min(100, Math.round((totalDisp / (activeVehicle.deformableVertices.length * 0.22)) * 100));
+            const dmgPct = Math.min(100, Math.round((totalDisp / (activeVehicle.deformableVertices.length * 0.18)) * 100));
             carCrashState.updateDamage(dmgPct, deformedNodes);
         }
     );
+
+    // Radiator smoke/fire when car is damaged
+    const engineWorldPos = activeVehicle.root.localToWorld(new THREE.Vector3(0, activeConfig.dimensions.height * 0.4, activeConfig.dimensions.length * 0.38));
+    particles.emitContinuousDamageSmoke(engineWorldPos, carCrashState.getState().damagePercent);
 
     // Audio & Telemetry
     audio.updateEngine(physics.speedKmh, inputs.forward);
@@ -172,7 +176,7 @@ function animate(currentTime: number): void {
     }
 
     let gear = 'N';
-    if (inputs.forward > 0) gear = physics.speedKmh > 180 ? '6' : (physics.speedKmh > 130 ? '5' : (physics.speedKmh > 80 ? '4' : (physics.speedKmh > 40 ? '3' : (physics.speedKmh > 10 ? '2' : '1'))));
+    if (inputs.forward > 0) gear = physics.speedKmh > 80 ? '4' : (physics.speedKmh > 50 ? '3' : (physics.speedKmh > 25 ? '2' : '1'));
     else if (inputs.forward < 0) gear = 'R';
 
     carCrashState.updateTelemetry(physics.speedKmh, gear, physics.lastAccelerationG);

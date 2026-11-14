@@ -347,6 +347,8 @@ await (async () => {
 
                     const catalogTopSpeeds = window.carCrashCatalog?.map ? window.carCrashCatalog.map((c) => c.topSpeedKmh) : [100];
                     const allUnderOrEqualTo100 = catalogTopSpeeds.every((s) => s <= 100);
+                    const catalogPowers = window.carCrashCatalog?.map ? window.carCrashCatalog.map((c) => c.enginePower) : [500];
+                    const allHighPower = catalogPowers.every((p) => p >= 250);
 
                     return {
                         hasCanvas: !!canvas,
@@ -358,7 +360,8 @@ await (async () => {
                         garageHiddenAfterClose,
                         slowMoActive,
                         slowMoInactive,
-                        allUnderOrEqualTo100
+                        allUnderOrEqualTo100,
+                        allHighPower
                     };
                 });
 
@@ -372,7 +375,8 @@ await (async () => {
                     !carCrashPageTest.garageHiddenAfterClose ||
                     !carCrashPageTest.slowMoActive ||
                     !carCrashPageTest.slowMoInactive ||
-                    !carCrashPageTest.allUnderOrEqualTo100
+                    !carCrashPageTest.allUnderOrEqualTo100 ||
+                    !carCrashPageTest.allHighPower
                 ) {
                     throw new Error("Car Crash Simulator verification failed: " + JSON.stringify(carCrashPageTest));
                 }
@@ -16413,6 +16417,8 @@ await (async () => {
                 // Test 100 km/h speed governor
                 const catalogTopSpeeds = window.carCrashCatalog?.map ? window.carCrashCatalog.map((c) => c.topSpeedKmh) : [100];
                 const allUnderOrEqualTo100 = catalogTopSpeeds.every((s) => s <= 100);
+                const catalogPowers = window.carCrashCatalog?.map ? window.carCrashCatalog.map((c) => c.enginePower) : [500];
+                const allHighPower = catalogPowers.every((p) => p >= 250);
 
                 return {
                     hasCanvas: !!canvas,
@@ -16424,7 +16430,8 @@ await (async () => {
                     garageHiddenAfterClose,
                     slowMoActive,
                     slowMoInactive,
-                    allUnderOrEqualTo100
+                    allUnderOrEqualTo100,
+                    allHighPower
                 };
             });
 
@@ -16438,7 +16445,8 @@ await (async () => {
                 !carCrashPageTest.garageHiddenAfterClose ||
                 !carCrashPageTest.slowMoActive ||
                 !carCrashPageTest.slowMoInactive ||
-                !carCrashPageTest.allUnderOrEqualTo100
+                !carCrashPageTest.allUnderOrEqualTo100 ||
+                !carCrashPageTest.allHighPower
             ) {
                 throw new Error("Car Crash Simulator verification failed: " + JSON.stringify(carCrashPageTest));
             }

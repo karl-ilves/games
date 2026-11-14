@@ -51,7 +51,7 @@ export class CrashPhysicsSystem {
         dt: number,
         inputs: { forward: number; steer: number; brake: boolean; handbrake: boolean },
         obstacles: CrashObstacle[],
-        onImpact?: (impactG: number, contactPt: THREE.Vector3) => void
+        onImpact?: (impactG: number, contactPt: THREE.Vector3, impactSpeedKmh: number) => void
     ): void {
         const config = this.vehicle.config;
 
@@ -66,16 +66,19 @@ export class CrashPhysicsSystem {
         this.vehicle.wheels.fl.rotation.y = this.steerAngle;
         this.vehicle.wheels.fr.rotation.y = this.steerAngle;
 
-        // Acceleration force
+        // Acceleration force (rapid launch off the line up to 100 km/h)
         const maxSpeedMs = (config.topSpeedKmh * 1000) / 3600;
         const currentSpeedForward = this.velocity.dot(this.forward);
 
         if (inputs.forward !== 0) {
-            const driveForce = inputs.forward * (config.enginePower * 14.0);
+            // High responsive torque curve: rapid acceleration reaching 100 km/h quickly
+            const speedRatio = Math.min(1.0, Math.max(0, currentSpeedForward / maxSpeedMs));
+            const torqueMultiplier = THREE.MathUtils.lerp(3.2, 1.4, speedRatio);
+            const driveForce = inputs.forward * (config.enginePower * 30.0) * torqueMultiplier;
             if (inputs.forward > 0 && currentSpeedForward < maxSpeedMs) {
                 this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * dt);
-            } else if (inputs.forward < 0 && currentSpeedForward > -15.0) {
-                this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * 0.6 * dt);
+            } else if (inputs.forward < 0 && currentSpeedForward > -18.0) {
+                this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * 0.9 * dt);
             }
         }
 
@@ -84,14 +87,14 @@ export class CrashPhysicsSystem {
         this.isHandbraking = inputs.handbrake;
 
         if (inputs.brake) {
-            const brakeFriction = config.brakeForce * 2.0;
+            const brakeFriction = config.brakeForce * 2.5;
             this.velocity.x *= Math.max(0, 1 - brakeFriction * dt);
             this.velocity.z *= Math.max(0, 1 - brakeFriction * dt);
         } else if (inputs.handbrake) {
             // Drift slip: reduce lateral grip
             this.velocity.x *= Math.max(0, 1 - 0.8 * dt);
             this.velocity.z *= Math.max(0, 1 - 0.8 * dt);
-            this.angularVelocity.y += inputs.steer * 3.5 * dt;
+            this.angularVelocity.y += inputs.steer * 3.8 * dt;
         } else {
             // Rolling air resistance & ground drag
             this.velocity.multiplyScalar(Math.pow(0.992, dt * 60));
@@ -126,7 +129,7 @@ export class CrashPhysicsSystem {
                 // Ground bump impact
                 const vertG = Math.abs(this.velocity.y) * 0.4;
                 if (vertG > 3.0 && onImpact) {
-                    onImpact(vertG, new THREE.Vector3(0, -0.2, 0));
+                    onImpact(vertG, new THREE.Vector3(0, -0.2, 0), vertG * 6.0);
                 }
             }
             this.velocity.y = 0;
@@ -164,38 +167,41 @@ export class CrashPhysicsSystem {
                 contactDir.normalize();
 
                 const preImpactSpeed = this.velocity.length();
-                if (preImpactSpeed > 1.5) {
-                    // Calculate Impact Force & G-Force
-                    const impactForce = preImpactSpeed * (config.massKg / 100.0) * obs.damageFactor;
-                    const impactG = (preImpactSpeed * preImpactSpeed) / 18.0;
+                const impactSpeedKmh = preImpactSpeed * 3.6;
+
+                if (preImpactSpeed > 1.2) {
+                    // Calculate Impact Force & G-Force strictly proportional to speed
+                    const impactG = (preImpactSpeed * preImpactSpeed) / 14.0;
                     this.lastAccelerationG = impactG;
 
                     // Convert contact point to vehicle local space
                     const localContactPt = new THREE.Vector3(0, 0.4, 0);
                     const headingDot = this.velocity.clone().normalize().dot(this.forward);
-                    if (headingDot > 0.4) {
+                    if (headingDot > 0.35) {
                         localContactPt.z = config.dimensions.length * 0.45; // Front crash
-                    } else if (headingDot < -0.4) {
+                    } else if (headingDot < -0.35) {
                         localContactPt.z = -config.dimensions.length * 0.45; // Rear crash
                     } else {
                         localContactPt.x = (contactDir.dot(right) > 0 ? 1 : -1) * config.dimensions.width * 0.45; // T-Bone Side crash
                     }
 
-                    // Push vector opposes incoming velocity
-                    const deformPush = this.velocity.clone().negate().multiplyScalar(0.4);
-                    // Apply soft-body vertex lattice displacement
-                    this.vehicle.applyImpactDeformation(localContactPt, deformPush, config.stiffness);
+                    // Push vector opposes incoming velocity with speed scaling
+                    const speedMultiplier = Math.min(2.5, Math.max(0.2, impactSpeedKmh / 40.0));
+                    const deformPush = this.velocity.clone().negate().multiplyScalar(0.45 * speedMultiplier);
 
-                    // Rebound physics impulse (Bounce & crunch)
-                    const restitution = 0.25; // low bounce for metal crumple
+                    // Apply soft-body vertex lattice displacement scaled by speed
+                    this.vehicle.applyImpactDeformation(localContactPt, deformPush, config.stiffness, impactSpeedKmh);
+
+                    // Rebound physics impulse (metal crunch absorbs energy, high speed = deeper stop)
+                    const restitution = impactSpeedKmh > 60 ? 0.12 : 0.28;
                     this.velocity.reflect(contactDir).multiplyScalar(restitution);
                     this.position.addScaledVector(contactDir, 0.35); // unstick
 
                     // Add spin torque from off-center hits
-                    this.angularVelocity.y += (Math.random() - 0.5) * 6.0;
+                    this.angularVelocity.y += (Math.random() - 0.5) * (impactSpeedKmh / 10.0);
 
                     if (onImpact) {
-                        onImpact(impactG, localContactPt);
+                        onImpact(impactG, localContactPt, impactSpeedKmh);
                     }
                 }
             }
