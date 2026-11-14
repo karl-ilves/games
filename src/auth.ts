@@ -1168,7 +1168,7 @@ export async function initAuth() {
 
             // --- ADMIN LOGIN FAST-PATH ---
             if (isAdmin) {
-                const isMasterPass = password === 'A380' || password === 'a380' || isTestMode(resolvedEmail);
+                const isMasterPass = password === '1337331' || isTestMode(resolvedEmail);
                 let adminSession = null;
 
                 if (hasSupabase && !isTestMode(resolvedEmail)) {
@@ -1179,7 +1179,7 @@ export async function initAuth() {
                         } else if (isMasterPass) {
                             const { data: upData } = await supabase.auth.signUp({
                                 email: resolvedEmail,
-                                password: 'A380',
+                                password: '1337331',
                                 options: { data: { username: getAdminUsername(resolvedEmail) } }
                             });
                             adminSession = upData?.session || null;

@@ -12,8 +12,8 @@ const DEFAULT_KNOWN_CREDENTIALS: Record<string, string> = {
     'mai girl': 'mai2026',
     'maigirl': 'mai2026',
     'twoserrmvp': 'mvp99',
-    'playard owner': 'A380',
-    'admin': 'A380'
+    'playard owner': '1337331',
+    'admin': '1337331'
 };
 
 export class PlayerCredentialsService {
