@@ -23,8 +23,7 @@ export default defineConfig({
         snake: resolve(__dirname, 'games/snake/index.html'),
         ai: resolve(__dirname, 'games/ai/index.html'),
         flight: resolve(__dirname, 'games/flight/index.html'),
-        waterpark: resolve(__dirname, 'games/waterpark/index.html'),
-        carcrash: resolve(__dirname, 'games/carcrash/index.html')
+        waterpark: resolve(__dirname, 'games/waterpark/index.html')
       }
     }
   }
