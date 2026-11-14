@@ -17,6 +17,9 @@ import { VehicleConfig } from './types';
 
 console.log('[CarCrashSimulator] 💥 Ultra Realistlik Car Crash Simulator initializing...');
 
+// Expose catalog globally for tests
+(window as any).carCrashCatalog = VEHICLE_CATALOG;
+
 // 1. Mandatory PC-Only Enforcement (Computer Only)
 const isBlockedOnMobile = enforceDesktopOnly('Ultra Realistlik Car Crash', 'Ultra Realistic Car Crash');
 if (!isBlockedOnMobile) {

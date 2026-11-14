@@ -143,8 +143,13 @@ export class CrashPhysicsSystem {
         this.vehicle.root.position.copy(this.position);
         this.vehicle.root.rotation.copy(this.rotation);
 
-        // Speed in KM/H
-        this.speedKmh = this.velocity.length() * 3.6;
+        // Speed in KM/H (strictly governed up to 100 km/h)
+        const currentSpeedMs = this.velocity.length();
+        const maxAllowedMs = (100.0 * 1000.0) / 3600.0; // 27.77 m/s = 100 km/h
+        if (currentSpeedMs > maxAllowedMs) {
+            this.velocity.multiplyScalar(maxAllowedMs / currentSpeedMs);
+        }
+        this.speedKmh = Math.min(100, Math.round(this.velocity.length() * 3.6));
 
         // 3. COLLISION DETECTION & SOFT-BODY DEFORMATION WITH OBSTACLES
         this.carBox.setFromObject(this.vehicle.root);

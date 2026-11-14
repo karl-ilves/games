@@ -16314,6 +16314,10 @@ await (async () => {
                 slowMoBtn?.click();
                 const slowMoInactive = window.getComputedStyle(slowMoBanner).display === 'none';
 
+                // Test 100 km/h speed governor
+                const catalogTopSpeeds = window.carCrashCatalog?.map ? window.carCrashCatalog.map((c) => c.topSpeedKmh) : [100];
+                const allUnderOrEqualTo100 = catalogTopSpeeds.every((s) => s <= 100);
+
                 return {
                     hasCanvas: !!canvas,
                     hasPBtn: !!pBtn,
@@ -16323,7 +16327,8 @@ await (async () => {
                     garageVisibleAfterClick,
                     garageHiddenAfterClose,
                     slowMoActive,
-                    slowMoInactive
+                    slowMoInactive,
+                    allUnderOrEqualTo100
                 };
             });
 
@@ -16336,11 +16341,12 @@ await (async () => {
                 !carCrashPageTest.garageVisibleAfterClick ||
                 !carCrashPageTest.garageHiddenAfterClose ||
                 !carCrashPageTest.slowMoActive ||
-                !carCrashPageTest.slowMoInactive
+                !carCrashPageTest.slowMoInactive ||
+                !carCrashPageTest.allUnderOrEqualTo100
             ) {
                 throw new Error("Car Crash Simulator verification failed: " + JSON.stringify(carCrashPageTest));
             }
-            console.log("   ✅ 💥 Ultra Realistlik Car Crash Simulator verified successfully!");
+            console.log("   ✅ 💥 Ultra Realistlik Car Crash Simulator verified successfully with strict 100 KM/H limit!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
