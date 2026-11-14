@@ -1,0 +1,129 @@
+/**
+ * Player Credentials & Secret Reveal Service
+ * Manages masked passwords (e.g. 1st letter visible, rest asterisks)
+ * and 10s temporary code reveal when secret button is pressed 5 times + code 6776abc is entered.
+ */
+
+const CREDENTIALS_STORAGE_KEY = 'playard_known_player_passwords';
+const REVEAL_DURATION_MS = 10000; // 10 seconds
+
+// Default known mock/community player credentials
+const DEFAULT_KNOWN_CREDENTIALS: Record<string, string> = {
+    'mai girl': 'mai2026',
+    'maigirl': 'mai2026',
+    'twoserrmvp': 'mvp99',
+    'playard owner': 'A380',
+    'admin': 'A380'
+};
+
+export class PlayerCredentialsService {
+    private secretClickCount = 0;
+    private revealActiveUntil = 0;
+    private revealTimer: any = null;
+
+    constructor() {
+        this.initDefaults();
+    }
+
+    private initDefaults() {
+        try {
+            const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
+            const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+            let changed = false;
+            for (const [uname, pass] of Object.entries(DEFAULT_KNOWN_CREDENTIALS)) {
+                if (!map[uname]) {
+                    map[uname] = pass;
+                    changed = true;
+                }
+            }
+            if (changed) {
+                localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(map));
+            }
+        } catch (e) {}
+    }
+
+    public recordPassword(username: string, pass: string) {
+        const clean = (username || '').toLowerCase().trim();
+        if (!clean || !pass) return;
+        try {
+            const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
+            const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+            map[clean] = pass;
+            localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(map));
+        } catch (e) {}
+    }
+
+    public getPassword(username: string): string {
+        const clean = (username || '').toLowerCase().trim();
+        try {
+            const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
+            if (raw) {
+                const map = JSON.parse(raw);
+                if (map && map[clean]) return map[clean];
+            }
+        } catch (e) {}
+        if (DEFAULT_KNOWN_CREDENTIALS[clean]) return DEFAULT_KNOWN_CREDENTIALS[clean];
+        // Generate a deterministic believable password for players without explicit password
+        const hash = clean.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        return `${clean.charAt(0).toUpperCase()}${clean.slice(1, 4)}${hash % 1000}`;
+    }
+
+    /**
+     * Formats password: 1st character visible, rest asterisks (e.g. "M*****")
+     */
+    public getMaskedPassword(username: string): string {
+        const pass = this.getPassword(username);
+        if (!pass) return '••••••';
+        const first = pass.charAt(0);
+        const stars = '•'.repeat(Math.max(4, pass.length - 1));
+        return `${first}${stars}`;
+    }
+
+    /**
+     * Deterministic player code (e.g. #7729)
+     */
+    public getPlayerCode(username: string): string {
+        const clean = (username || '').toLowerCase().trim();
+        let hash = 5381;
+        for (let i = 0; i < clean.length; i++) {
+            hash = (hash * 33) ^ clean.charCodeAt(i);
+        }
+        const num = Math.abs(hash % 9000) + 1000;
+        return `#${num}`;
+    }
+
+    public isRevealActive(): boolean {
+        return Date.now() < this.revealActiveUntil;
+    }
+
+    public getRemainingRevealSeconds(): number {
+        const remaining = Math.max(0, this.revealActiveUntil - Date.now());
+        return Math.ceil(remaining / 1000);
+    }
+
+    public registerSecretClick(): { clicks: number; readyForPrompt: boolean } {
+        this.secretClickCount++;
+        if (this.secretClickCount >= 5) {
+            this.secretClickCount = 0;
+            return { clicks: 5, readyForPrompt: true };
+        }
+        return { clicks: this.secretClickCount, readyForPrompt: false };
+    }
+
+    public activateRevealWithCode(enteredCode: string): { success: boolean; message: string } {
+        const clean = (enteredCode || '').trim().toLowerCase();
+        if (clean === '6776abc') {
+            this.revealActiveUntil = Date.now() + REVEAL_DURATION_MS;
+            if (this.revealTimer) clearTimeout(this.revealTimer);
+            this.revealTimer = setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('playard_reveal_expired'));
+            }, REVEAL_DURATION_MS);
+
+            window.dispatchEvent(new CustomEvent('playard_reveal_activated'));
+            return { success: true, message: '✅ Kood õige! Koodid ja paroolid on nähtavad 10 sekundit!' };
+        }
+        return { success: false, message: '❌ Vale kood!' };
+    }
+}
+
+export const playerCredentialsService = new PlayerCredentialsService();

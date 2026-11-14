@@ -1387,6 +1387,63 @@ await (async () => {
                 throw new Error("Playard Owner must be protected from being banned!");
             }
 
+            // Test Mängijad tab & country, masked password, secret 5-clicks trigger and 6776abc reveal
+            await page.click('#btn-owner-mode-players');
+            await new Promise(r => setTimeout(r, 200));
+
+            const playerModeTest = await page.evaluate(async () => {
+                const playersTabBtn = document.getElementById('btn-owner-mode-players');
+                const playersList = document.getElementById('owner-players-list')?.textContent || '';
+                const secretBtn = document.getElementById('btn-owner-secret-trigger');
+                const secretBox = document.getElementById('owner-secret-passcode-box');
+                const secretInput = document.getElementById('owner-secret-passcode-input');
+                const secretSubmit = document.getElementById('btn-owner-secret-submit');
+
+                // Check Mai Girl presence and country/flag
+                const hasMaiGirl = playersList.includes('Mai Girl');
+                const hasCountryFlag = playersList.includes('🇪🇪') && playersList.includes('Estonia');
+                const hasMaskedPassword = playersList.includes('🔑');
+
+                // Click secret button 5 times
+                for (let i = 0; i < 5; i++) {
+                    secretBtn?.click();
+                }
+
+                const secretBoxOpened = window.getComputedStyle(secretBox).display === 'block';
+
+                // Submit passcode 6776abc
+                if (secretInput) secretInput.value = '6776abc';
+                secretSubmit?.click();
+
+                await new Promise(r => setTimeout(r, 200));
+
+                const timerBadge = document.getElementById('owner-secret-reveal-timer-badge');
+                const timerVisible = window.getComputedStyle(timerBadge).display !== 'none';
+                const revealedList = document.getElementById('owner-players-list')?.textContent || '';
+                const hasRevealedCode = revealedList.includes('#') || revealedList.includes('A380') || revealedList.includes('mai2026');
+
+                return {
+                    hasMaiGirl,
+                    hasCountryFlag,
+                    hasMaskedPassword,
+                    secretBoxOpened,
+                    timerVisible,
+                    hasRevealedCode
+                };
+            });
+
+            console.log("   Playard Owner Mängijad & Secret Code Test:", playerModeTest);
+            if (
+                !playerModeTest.hasMaiGirl ||
+                !playerModeTest.hasCountryFlag ||
+                !playerModeTest.hasMaskedPassword ||
+                !playerModeTest.secretBoxOpened ||
+                !playerModeTest.timerVisible ||
+                !playerModeTest.hasRevealedCode
+            ) {
+                throw new Error("Owner Panel Mängijad & secret code 6776abc test failed: " + JSON.stringify(playerModeTest));
+            }
+
             await page.click('#btn-close-owner-panel');
             await new Promise(r => setTimeout(r, 150));
         }

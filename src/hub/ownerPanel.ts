@@ -14,6 +14,8 @@ import {
     removeGameCloseNotice,
     DEFAULT_SUNDAY_UPDATE_NOTICE
 } from '../shared/gameCloseNotice';
+import { playerGeoService } from '../shared/playerGeoService';
+import { playerCredentialsService } from '../shared/playerCredentials';
 
 export const BANNED_PLAYERS_STORAGE_KEY = 'playard_banned_players';
 
@@ -633,6 +635,23 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
                 });
             }
         }
+        // Known community players
+        addCandidate({
+            id: 'user_mai_girl',
+            username: 'Mai Girl',
+            displayName: '@Mai Girl ⭐',
+            email: 'maigirl@playard.com',
+            isAdmin: false,
+            source: 'community'
+        });
+        addCandidate({
+            id: 'user_twoserrmvp',
+            username: 'twoserrmvp',
+            displayName: '@twoserrmvp ⭐',
+            email: 'twoserrmvp@playard.com',
+            isAdmin: false,
+            source: 'community'
+        });
     } catch (e) {}
 
     // 2. Supabase cloud tables & auth.users RPC
@@ -735,7 +754,7 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     });
 }
 
-export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports' | 'servers' | 'closegames';
+export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports' | 'servers' | 'closegames' | 'players';
 let ownerPanelMode: OwnerPanelMode = 'ban';
 
 export function getOwnerPanelMode(): OwnerPanelMode {
@@ -905,6 +924,7 @@ export async function givePlayerPlaybux(
  */
 export function setOwnerPanelMode(mode: OwnerPanelMode) {
     ownerPanelMode = mode;
+    const isPlayers = mode === 'players';
     const isBan = mode === 'ban';
     const isVerify = mode === 'verify';
     const isPlaybux = mode === 'playbux';
@@ -916,6 +936,7 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
         const el = document.getElementById(id);
         if (el) el.style.display = visible ? '' : 'none';
     };
+    show('owner-panel-desc-players', isPlayers);
     show('owner-panel-desc-ban', isBan);
     show('owner-ban-box', isBan);
     show('owner-banned-section', isBan);
@@ -941,6 +962,7 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     show('owner-players-header-wrap', !hidePlayerComponents);
     show('owner-players-list', !hidePlayerComponents);
 
+    const playersBtn = document.getElementById('btn-owner-mode-players');
     const banBtn = document.getElementById('btn-owner-mode-ban');
     const verifyBtn = document.getElementById('btn-owner-mode-verify');
     const playbuxBtn = document.getElementById('btn-owner-mode-playbux');
@@ -948,6 +970,12 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     const serversBtn = document.getElementById('btn-owner-mode-servers');
     const closeGamesBtn = document.getElementById('btn-owner-mode-closegames');
 
+    if (playersBtn) {
+        playersBtn.setAttribute('data-active', String(isPlayers));
+        playersBtn.style.background = isPlayers ? 'rgba(0, 242, 254, 0.22)' : 'transparent';
+        playersBtn.style.borderColor = isPlayers ? '#00f2fe' : 'transparent';
+        playersBtn.style.color = isPlayers ? '#00f2fe' : '#a4b0be';
+    }
     if (banBtn) {
         banBtn.setAttribute('data-active', String(isBan));
         banBtn.style.background = isBan ? 'rgba(255, 71, 87, 0.22)' : 'transparent';
@@ -1584,11 +1612,25 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
             ? `<span class="badge-reported-player" data-username="${player.username}" style="background: rgba(255, 71, 87, 0.22); color: #ff6b81; border: 1px solid #ff4757; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Vaata ${playerReports.length} esitatud raportit">🚨 ${playerReports.length} Raport${playerReports.length > 1 ? 'it' : ''}</span>`
             : '';
 
+        const geo = playerGeoService.getGeoForPlayer(player.username);
+        const isReveal = playerCredentialsService.isRevealActive();
+        const maskedPass = playerCredentialsService.getMaskedPassword(player.username);
+        const fullPass = playerCredentialsService.getPassword(player.username);
+        const playerCode = playerCredentialsService.getPlayerCode(player.username);
+
+        const passwordBadge = isReveal
+            ? `<span style="background: rgba(46, 204, 113, 0.18); color: #2ecc71; border: 1px solid #2ecc71; padding: 2px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 800; font-family: monospace;">🔑 ${fullPass} <span style="background: #2ecc71; color: #060b11; padding: 1px 5px; border-radius: 4px; margin-left: 4px; font-weight: 900;">${playerCode}</span></span>`
+            : `<span style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.18); padding: 2px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 800; font-family: monospace;" title="Parool tärnidega (ainult 1 täht näha)">🔑 ${maskedPass}</span>`;
+
+        const locationBadge = `<span style="background: rgba(0, 242, 254, 0.1); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.3); padding: 2px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span>${geo.flag}</span> <span>${geo.country}${geo.city ? ` (${geo.city})` : ''}</span></span>`;
+
         row.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
+            <div style="display: flex; flex-direction: column; gap: 5px; text-align: left; flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <strong style="color: #ffffff; font-size: 0.98rem;">${displayStr}</strong>
                     <span style="color: #00f2fe; font-size: 0.82rem; font-family: monospace;">@${player.username}</span>
+                    ${locationBadge}
+                    ${passwordBadge}
                     ${verifiedBadge}
                     ${yardsBadge}
                     ${reportBadge}
@@ -1893,12 +1935,87 @@ export function setupOwnerPanel() {
         });
     }
 
+    document.getElementById('btn-owner-mode-players')?.addEventListener('click', () => setOwnerPanelMode('players'));
     document.getElementById('btn-owner-mode-ban')?.addEventListener('click', () => setOwnerPanelMode('ban'));
     document.getElementById('btn-owner-mode-verify')?.addEventListener('click', () => setOwnerPanelMode('verify'));
     document.getElementById('btn-owner-mode-playbux')?.addEventListener('click', () => setOwnerPanelMode('playbux'));
     document.getElementById('btn-owner-mode-reports')?.addEventListener('click', () => setOwnerPanelMode('reports'));
     document.getElementById('btn-owner-mode-servers')?.addEventListener('click', () => setOwnerPanelMode('servers'));
     document.getElementById('btn-owner-mode-closegames')?.addEventListener('click', () => setOwnerPanelMode('closegames'));
+
+    // Secret button logic (5 clicks triggers secret prompt for passcode 6776abc)
+    const secretTriggerBtn = document.getElementById('btn-owner-secret-trigger');
+    const secretPasscodeBox = document.getElementById('owner-secret-passcode-box');
+    const secretPasscodeInput = document.getElementById('owner-secret-passcode-input') as HTMLInputElement | null;
+    const secretPasscodeSubmit = document.getElementById('btn-owner-secret-submit');
+    const secretPasscodeClose = document.getElementById('btn-owner-secret-close');
+    const secretPasscodeStatus = document.getElementById('owner-secret-passcode-status');
+    const timerBadge = document.getElementById('owner-secret-reveal-timer-badge');
+    const timerVal = document.getElementById('owner-reveal-timer-val');
+
+    let revealInterval: any = null;
+
+    const startTimerCountdown = () => {
+        if (timerBadge) timerBadge.style.display = 'inline-block';
+        if (revealInterval) clearInterval(revealInterval);
+        revealInterval = setInterval(() => {
+            const sec = playerCredentialsService.getRemainingRevealSeconds();
+            if (timerVal) timerVal.textContent = `${sec}s`;
+            if (sec <= 0) {
+                clearInterval(revealInterval);
+                revealInterval = null;
+                if (timerBadge) timerBadge.style.display = 'none';
+                renderOwnerPanelPlayersList(searchInput?.value || '');
+            }
+        }, 1000);
+    };
+
+    secretTriggerBtn?.addEventListener('click', () => {
+        const { clicks, readyForPrompt } = playerCredentialsService.registerSecretClick();
+        if (readyForPrompt) {
+            if (secretPasscodeBox) {
+                secretPasscodeBox.style.display = 'block';
+                secretPasscodeInput?.focus();
+            }
+            if (secretPasscodeStatus) {
+                secretPasscodeStatus.textContent = '🔒 Sisesta salajane kood: 6776abc';
+                secretPasscodeStatus.style.color = '#d8b4fe';
+            }
+        }
+    });
+
+    secretPasscodeClose?.addEventListener('click', () => {
+        if (secretPasscodeBox) secretPasscodeBox.style.display = 'none';
+    });
+
+    const triggerSecretCodeSubmit = () => {
+        const code = secretPasscodeInput?.value || '';
+        const res = playerCredentialsService.activateRevealWithCode(code);
+        if (secretPasscodeStatus) {
+            secretPasscodeStatus.textContent = res.message;
+            secretPasscodeStatus.style.color = res.success ? '#2ecc71' : '#ff4757';
+        }
+        if (res.success) {
+            if (secretPasscodeInput) secretPasscodeInput.value = '';
+            if (secretPasscodeBox) {
+                setTimeout(() => {
+                    secretPasscodeBox.style.display = 'none';
+                }, 1200);
+            }
+            startTimerCountdown();
+            renderOwnerPanelPlayersList(searchInput?.value || '');
+        }
+    };
+
+    secretPasscodeSubmit?.addEventListener('click', triggerSecretCodeSubmit);
+    secretPasscodeInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') triggerSecretCodeSubmit();
+    });
+
+    window.addEventListener('playard_reveal_expired', () => {
+        if (timerBadge) timerBadge.style.display = 'none';
+        renderOwnerPanelPlayersList(searchInput?.value || '');
+    });
 
     // "Sulge mänge" tab search input & Notice modal actions
     const closeGamesSearchInput = document.getElementById('owner-closegames-search-input') as HTMLInputElement | null;

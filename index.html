@@ -2334,9 +2334,13 @@
             <p id="owner-panel-desc-closegames" style="display: none; color: #a4b0be; margin: 0 0 14px 0; font-size: 0.9rem;">
                 Logitud sisse kui <strong style="color: #ffd32a;">Playard Owner ✔</strong>. Siit näed <strong>kõiki mänge</strong> (ametlikud mängud, Playard Owneri loodud mängud ja kommuuni mängud). Saad mänge sulgeda/kustutada (<strong>🗑️ Kustuta</strong>) või saata mängijatele hüpikhoiatuse (<strong>📢 Teavita</strong>: seadista pealkiri, kirjeldus ja mitu korda mängijale ilmub).
             </p>
+            <p id="owner-panel-desc-players" style="display: none; color: #a4b0be; margin: 0 0 14px 0; font-size: 0.9rem;">
+                Logitud sisse kui <strong style="color: #ffd32a;">Playard Owner ✔</strong>. Siit näed <strong>kõiki registreerunud ja aktiivseid mängijaid</strong>: nende täpset asukohta (riik &amp; lipp), nime, kasutajanime ja turvalist parooli (tärnidega, näha vaid 1 täht).
+            </p>
 
-            <!-- Owner Panel Mode Switch (Bannimine / Ferty / PlayBux Give / Raportid / Serverid / Sulge mänge) -->
+            <!-- Owner Panel Mode Switch (Bannimine / Ferty / PlayBux Give / Raportid / Serverid / Sulge mänge / Mängijad) -->
             <div id="owner-panel-mode-switch" style="display: flex; gap: 8px; margin-bottom: 14px; background: #131920; padding: 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap;">
+                <button type="button" id="btn-owner-mode-players" data-active="false" style="flex: 1; min-width: 120px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">👥 Mängijad &amp; Asukohad</button>
                 <button type="button" id="btn-owner-mode-ban" data-active="true" style="flex: 1; min-width: 110px; padding: 9px 12px; border-radius: 8px; border: 1px solid #ff4757; background: rgba(255, 71, 87, 0.22); color: #ff4757; font-weight: 800; font-size: 0.86rem; cursor: pointer;">🔨 Bannimine</button>
                 <button type="button" id="btn-owner-mode-verify" data-active="false" style="flex: 1; min-width: 110px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">✔ Ferty</button>
                 <button type="button" id="btn-owner-mode-playbux" data-active="false" style="flex: 1; min-width: 110px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">💎 PlayBux Give</button>
@@ -2537,10 +2541,29 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <h3 style="color: #00f2fe; margin: 0; font-size: 1.05rem;">👥 Mängijad andmebaasis</h3>
                     <span id="owner-players-count-badge" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;">0 mängijat</span>
+                    <span id="owner-secret-reveal-timer-badge" style="display: none; background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 800;">🔓 Koodid nähtaval: <strong id="owner-reveal-timer-val">10s</strong></span>
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
+                    <!-- Secret button: click 5 times to trigger secret code modal/prompt -->
+                    <button type="button" id="btn-owner-secret-trigger" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); color: #64748b; border-radius: 8px; padding: 6px 10px; font-size: 0.78rem; cursor: pointer; transition: all 0.2s;" title="Salajane nupp">🔐</button>
                     <button type="button" id="btn-owner-refresh-players" style="background: rgba(0, 242, 254, 0.12); border: 1px solid rgba(0, 242, 254, 0.35); color: #00f2fe; border-radius: 8px; padding: 6px 12px; font-size: 0.82rem; font-weight: 700; cursor: pointer;">🔄 Värskenda</button>
                 </div>
+            </div>
+
+            <!-- Secret code entry prompt box (appears on 5th secret click) -->
+            <div id="owner-secret-passcode-box" style="display: none; background: #1f1a2e; border: 1.5px solid #a855f7; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(168, 85, 247, 0.35);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 800; font-size: 0.88rem; color: #d8b4fe; display: flex; align-items: center; gap: 6px;">
+                        <span>🔐</span>
+                        <span>Sisesta turvakood (6776abc) paroolide ja koodide avamiseks:</span>
+                    </div>
+                    <button type="button" id="btn-owner-secret-close" style="background: none; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer;">✕</button>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="owner-secret-passcode-input" placeholder="Sisesta kood..." autocomplete="off" style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.5); background: #131920; color: #ffffff; font-weight: bold; font-family: monospace; outline: none;">
+                    <button type="button" id="btn-owner-secret-submit" style="padding: 8px 16px; background: linear-gradient(135deg, #a855f7, #8e44ad); border: none; border-radius: 8px; color: #ffffff; font-weight: 800; font-size: 0.85rem; cursor: pointer;">Ava (10s)</button>
+                </div>
+                <div id="owner-secret-passcode-status" style="margin-top: 6px; font-size: 0.8rem; font-weight: bold;"></div>
             </div>
 
             <div id="owner-players-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; background: #131920; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 18px;">
