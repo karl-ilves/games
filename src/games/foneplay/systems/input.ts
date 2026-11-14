@@ -14,7 +14,7 @@ export class FoneInputSystem {
     private initControls() {
         this.mobileControls = new PlayardMobileControls({
             showJump: true,
-            jumpLabel: 'Hüppa',
+            jumpLabel: 'Jump',
             onMove: (v) => {
                 this.moveVector.x = v.x;
                 this.moveVector.y = v.y;

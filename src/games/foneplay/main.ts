@@ -4,7 +4,7 @@ import { FonePlayerAvatar } from './models/avatarController';
 import { FoneCameraSystem } from './systems/camera';
 import { FoneInputSystem } from './systems/input';
 import { FonePlayHUD } from './ui/hud';
-import { FoneVariant } from './types';
+import { FoneVariant, MotionStep } from './types';
 import { fonePlayState } from './state/foneState';
 import { isPhoneDevice } from '../../shared/mobileControls';
 
@@ -80,7 +80,7 @@ export class FonePlayGame {
         this.avatar.reset(new THREE.Vector3(0, 0, 0), 0);
 
         this.hud.hideVariantPicker();
-        this.hud.updateGameplayHUD(this.activeVariant, this.currentStepIndex, this.activeVariant.steps[0].durationSeconds);
+        this.hud.updateGameplayHUD(this.activeVariant, this.currentStepIndex, this.activeVariant.steps[0].durationSeconds, false);
     }
 
     public stopAndShowPicker() {
@@ -102,8 +102,32 @@ export class FonePlayGame {
             this.activeVariant = null;
             this.isRunningStep = false;
 
-            // Prompt user: Kas soovid hääletada?
+            // Prompt user: Do you want to vote?
             this.hud.showAskPollModal(finishedVariantId);
+        }
+    }
+
+    private isPlayerPerformingStep(step: MotionStep, moveVector: { x: number; y: number }, jumpTriggered: boolean): boolean {
+        // Only count timer when player is ACTUALLY manually moving/performing the required action!
+        const forwardMag = -moveVector.y; // > 0.15 is forward, < -0.15 is backward
+        const horizontalMag = moveVector.x; // < -0.15 is left, > 0.15 is right
+
+        switch (step.action) {
+            case 'forward':
+            case 'dash':
+                return forwardMag > 0.2;
+            case 'backward':
+                return forwardMag < -0.2;
+            case 'jump':
+                return jumpTriggered || !this.avatar.isGrounded;
+            case 'turn_left':
+                return horizontalMag < -0.2;
+            case 'turn_right':
+                return horizontalMag > 0.2;
+            case 'spin':
+                return Math.abs(horizontalMag) > 0.2;
+            default:
+                return Math.abs(forwardMag) > 0.1 || Math.abs(horizontalMag) > 0.1;
         }
     }
 
@@ -115,6 +139,7 @@ export class FonePlayGame {
         this.lastTime = now;
 
         const jumpTriggered = this.inputSystem.consumeJump();
+        // Fully manual movement - no automatic scripts driving the character!
         this.avatar.update(delta, this.inputSystem.moveVector, jumpTriggered);
         this.cameraSystem.update(this.avatar.position, this.avatar.characterYaw);
         this.world.update(now * 0.001);
@@ -123,12 +148,15 @@ export class FonePlayGame {
         if (this.isRunningStep && this.activeVariant) {
             const step = this.activeVariant.steps[this.currentStepIndex];
             if (step) {
-                this.stepElapsedSeconds += delta;
-                const remaining = Math.max(0, step.durationSeconds - this.stepElapsedSeconds);
-                this.hud.updateGameplayHUD(this.activeVariant, this.currentStepIndex, remaining);
+                const isPerforming = this.isPlayerPerformingStep(step, this.inputSystem.moveVector, jumpTriggered);
 
-                // Specific scripted assistance / visual guidance per action
-                this.applyScriptedActionAssistance(step.action, delta);
+                // ONLY advance the 2s timer while the player is actively moving/performing!
+                if (isPerforming) {
+                    this.stepElapsedSeconds += delta;
+                }
+
+                const remaining = Math.max(0, step.durationSeconds - this.stepElapsedSeconds);
+                this.hud.updateGameplayHUD(this.activeVariant, this.currentStepIndex, remaining, isPerforming);
 
                 if (this.stepElapsedSeconds >= step.durationSeconds) {
                     this.advanceStep();
@@ -138,22 +166,6 @@ export class FonePlayGame {
 
         this.renderer.render(this.scene, this.camera);
     };
-
-    private applyScriptedActionAssistance(action: string, delta: number) {
-        // Automatically support player motion during test steps to guarantee fun kinetic experience
-        if (action === 'spin') {
-            this.avatar.characterYaw += 3.8 * delta;
-        } else if (action === 'dash') {
-            const forwardX = Math.sin(this.avatar.characterYaw);
-            const forwardZ = Math.cos(this.avatar.characterYaw);
-            this.avatar.position.x += forwardX * 6.0 * delta;
-            this.avatar.position.z += forwardZ * 6.0 * delta;
-        } else if (action === 'turn_left') {
-            this.avatar.characterYaw += 1.8 * delta;
-        } else if (action === 'turn_right') {
-            this.avatar.characterYaw -= 1.8 * delta;
-        }
-    }
 }
 
 // Bootstrap

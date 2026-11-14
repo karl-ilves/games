@@ -314,13 +314,13 @@ await (async () => {
                     return {
                         hasCard: !!card,
                         isBelowSocial,
-                        hasPhoneExclusiveTag: card?.textContent?.includes('AINULT TELEFONIS'),
-                        hasLivePollTag: card?.textContent?.includes('LIVE HÄÄLETUS'),
+                        hasPhoneExclusiveTag: card?.textContent?.includes('PHONE EXCLUSIVE'),
+                        hasLivePollTag: card?.textContent?.includes('LIVE') && card?.textContent?.includes('POLL'),
                         hasHref: card?.getAttribute('href')?.includes('foneplay')
                     };
                 });
                 console.log("   Hub Fone Play Card Results:", hubFoneTest);
-                if (!hubFoneTest.hasCard || !hubFoneTest.isBelowSocial || !hubFoneTest.hasPhoneExclusiveTag || !hubFoneTest.hasHref) {
+                if (!hubFoneTest.hasCard || !hubFoneTest.isBelowSocial || !hubFoneTest.hasPhoneExclusiveTag || !hubFoneTest.hasLivePollTag || !hubFoneTest.hasHref) {
                     throw new Error("Hub Fone Play card verification failed: " + JSON.stringify(hubFoneTest));
                 }
 
@@ -349,7 +349,7 @@ await (async () => {
                     // Vote for Variant 1
                     document.getElementById('btn-poll-vote-1')?.click();
                     const vote1Text = document.getElementById('poll-votes-text-1')?.textContent;
-                    const hasVote1 = vote1Text?.includes('1 häält');
+                    const hasVote1 = vote1Text?.includes('1 vote');
 
                     // Close poll
                     document.getElementById('btn-close-poll-modal')?.click();
@@ -372,7 +372,7 @@ await (async () => {
                         hasVote1,
                         pollModalClosed,
                         gameplayVisible,
-                        variant1Started: activeVariantText?.includes('Valik 1'),
+                        variant1Started: activeVariantText?.includes('Option 1'),
                         step1Started: activeStepText?.includes('Move Forward')
                     };
                 });
@@ -16391,13 +16391,13 @@ await (async () => {
                 return {
                     hasCard: !!card,
                     isBelowSocial,
-                    hasPhoneExclusiveTag: card?.textContent?.includes('AINULT TELEFONIS'),
-                    hasLivePollTag: card?.textContent?.includes('LIVE HÄÄLETUS'),
+                    hasPhoneExclusiveTag: card?.textContent?.includes('PHONE EXCLUSIVE'),
+                    hasLivePollTag: card?.textContent?.includes('LIVE') && card?.textContent?.includes('POLL'),
                     hasHref: card?.getAttribute('href')?.includes('foneplay')
                 };
             });
             console.log("   Hub Fone Play Card Results:", hubFoneTest);
-            if (!hubFoneTest.hasCard || !hubFoneTest.isBelowSocial || !hubFoneTest.hasPhoneExclusiveTag || !hubFoneTest.hasHref) {
+            if (!hubFoneTest.hasCard || !hubFoneTest.isBelowSocial || !hubFoneTest.hasPhoneExclusiveTag || !hubFoneTest.hasLivePollTag || !hubFoneTest.hasHref) {
                 throw new Error("Hub Fone Play card verification failed: " + JSON.stringify(hubFoneTest));
             }
 
@@ -16426,7 +16426,7 @@ await (async () => {
                 // Vote for Variant 1
                 document.getElementById('btn-poll-vote-1')?.click();
                 const vote1Text = document.getElementById('poll-votes-text-1')?.textContent;
-                const hasVote1 = vote1Text?.includes('1 häält');
+                const hasVote1 = vote1Text?.includes('1 vote');
 
                 // Close poll
                 document.getElementById('btn-close-poll-modal')?.click();
@@ -16449,7 +16449,7 @@ await (async () => {
                     hasVote1,
                     pollModalClosed,
                     gameplayVisible,
-                    variant1Started: activeVariantText?.includes('Valik 1'),
+                    variant1Started: activeVariantText?.includes('Option 1'),
                     step1Started: activeStepText?.includes('Move Forward')
                 };
             });

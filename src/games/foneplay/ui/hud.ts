@@ -19,7 +19,7 @@ export class FonePlayHUD {
     }
 
     private initEvents() {
-        // Variant cards selection (valik 1, 2, 3)
+        // Variant cards selection (Option 1, 2, 3)
         const btnV1 = document.getElementById('btn-select-variant-1');
         const btnV2 = document.getElementById('btn-select-variant-2');
         const btnV3 = document.getElementById('btn-select-variant-3');
@@ -43,7 +43,7 @@ export class FonePlayHUD {
             this.onOpenPollCb();
         });
 
-        // Modal "Kas soovid hääletada?" buttons
+        // Modal "Do you want to vote?" buttons
         document.getElementById('btn-ask-poll-yes')?.addEventListener('click', () => {
             this.hideAskPollModal();
             this.onOpenPollCb();
@@ -104,7 +104,7 @@ export class FonePlayHUD {
         });
     }
 
-    public updateGameplayHUD(variant: FoneVariant, stepIndex: number, remainingSeconds: number) {
+    public updateGameplayHUD(variant: FoneVariant, stepIndex: number, remainingSeconds: number, isActivelyPerforming: boolean = false) {
         const step = variant.steps[stepIndex];
         if (!step) return;
 
@@ -112,6 +112,7 @@ export class FonePlayHUD {
         const stepNameEl = document.getElementById('active-step-name');
         const instructionEl = document.getElementById('active-step-instruction');
         const timerEl = document.getElementById('step-timer-val');
+        const statusEl = document.getElementById('step-active-status');
         const progressBar = document.getElementById('step-progress-fill');
 
         if (titleEl) {
@@ -127,6 +128,15 @@ export class FonePlayHUD {
         if (timerEl) {
             timerEl.textContent = remainingSeconds.toFixed(1) + 's';
         }
+        if (statusEl) {
+            if (isActivelyPerforming) {
+                statusEl.textContent = '⚡ Moving! Counting down...';
+                statusEl.style.color = '#2ecc71';
+            } else {
+                statusEl.textContent = '👉 Waiting for your movement to start 2s timer...';
+                statusEl.style.color = '#ffd32a';
+            }
+        }
         if (progressBar) {
             const total = step.durationSeconds;
             const pct = Math.max(0, Math.min(100, ((total - remainingSeconds) / total) * 100));
@@ -139,7 +149,7 @@ export class FonePlayHUD {
         const modal = document.getElementById('modal-ask-poll');
         const text = document.getElementById('ask-poll-variant-text');
         if (text) {
-            text.textContent = `Valik ${variantId} on edukalt läbitud! 🎉`;
+            text.textContent = `Option ${variantId} completed successfully! 🎉`;
         }
         if (modal) modal.style.display = 'flex';
     }
@@ -176,15 +186,15 @@ export class FonePlayHUD {
             const btn = document.getElementById(`btn-poll-vote-${num}`);
 
             if (fill) fill.style.width = `${pct}%`;
-            if (text) text.textContent = `${votes} häält (${pct}%)`;
+            if (text) text.textContent = `${votes} ${votes === 1 ? 'vote' : 'votes'} (${pct}%)`;
 
             if (btn) {
                 if (state.userVoted === num) {
                     btn.classList.add('voted-active');
-                    btn.textContent = 'Sinu Hääl ✔';
+                    btn.textContent = 'Your Vote ✔';
                 } else {
                     btn.classList.remove('voted-active');
-                    btn.textContent = 'Hääleta';
+                    btn.textContent = 'Vote';
                 }
             }
         };

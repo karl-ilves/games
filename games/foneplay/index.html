@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="et">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -251,24 +251,25 @@
     </style>
 </head>
 <body>
-    <div id="non-phone-warning-banner">📱 Mäng on optimeeritud telefonile! Puutetundlikud juhtnupud aktiivsed.</div>
+    <div id="non-phone-warning-banner">📱 Optimized for mobile phone! Touch joystick and buttons active.</div>
 
     <!-- Top HUD Bar -->
     <div id="top-hud-bar">
         <button id="btn-fone-back-menu" class="hud-btn">
-            <span>◀</span> <span>Valikud</span>
+            <span>◀</span> <span>Options</span>
         </button>
         <button id="btn-fone-open-poll" class="hud-btn" style="border-color: #a855f7; color: #d8b4fe;">
-            <span>📊</span> <span>Hääletus</span>
+            <span>📊</span> <span>Live Poll</span>
         </button>
     </div>
 
     <!-- Gameplay Motion HUD -->
     <div id="gameplay-hud-overlay">
         <div class="step-card">
-            <div id="active-variant-title" style="font-size: 0.85rem; font-weight: 800; color: #00f2fe; margin-bottom: 4px;">Valik 1</div>
+            <div id="active-variant-title" style="font-size: 0.85rem; font-weight: 800; color: #00f2fe; margin-bottom: 4px;">Option 1</div>
             <div id="active-step-name" style="font-size: 1.15rem; font-weight: 900; margin-bottom: 2px;">1. Move Forward</div>
-            <div id="active-step-instruction" style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;">Liigu edasi (2 sekundit)</div>
+            <div id="active-step-instruction" style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;">Push joystick UP to move forward (hold for 2.0s)</div>
+            <div id="step-active-status" style="font-size: 0.78rem; font-weight: 700; color: #ffd32a; margin-bottom: 6px;">👉 Waiting for your movement to start 2s timer...</div>
             <div id="step-timer-val" style="font-size: 1.25rem; font-weight: 900; color: #ffd32a;">2.0s</div>
             <div class="step-progress-track">
                 <div id="step-progress-fill" class="step-progress-fill"></div>
@@ -276,54 +277,54 @@
         </div>
     </div>
 
-    <!-- Variant Picker Overlay (3 Valikut) -->
+    <!-- Variant Picker Overlay (3 Options) -->
     <div id="variant-picker-overlay">
         <div class="picker-header">
             <div style="font-size: 2.2rem; margin-bottom: 4px;">📱⚡</div>
             <h1 class="picker-title">Test a New Fone Play</h1>
-            <p class="picker-subtitle">Vali test ja koge telefoni spetsiaalseid liigutusi</p>
+            <p class="picker-subtitle">Select an option to test responsive mobile phone touch mechanics</p>
         </div>
 
         <div class="variant-grid">
-            <!-- Valik 1 -->
+            <!-- Option 1 -->
             <div class="variant-card v1" id="btn-select-variant-1">
-                <span class="completed-badge" id="badge-variant-completed-1">Läbitud ✔</span>
-                <div style="font-size: 1.05rem; font-weight: 800; color: #00f2fe; margin-bottom: 2px;">Valik 1 · Klassikaline Manööver</div>
-                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">Edasi ➔ Taha ➔ Hüpe ➔ Pööre</div>
-                <div style="font-size: 0.72rem; color: #94a3b8;">Liigu 2s edasi, siis 2s tagasi, hüppa ja tee täispööre.</div>
+                <span class="completed-badge" id="badge-variant-completed-1">Completed ✔</span>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #00f2fe; margin-bottom: 2px;">Option 1 · Classic Maneuver</div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">Forward ➔ Backward ➔ Jump ➔ Turn</div>
+                <div style="font-size: 0.72rem; color: #94a3b8;">Move forward for 2s, backward for 2s, jump, and turn 360°.</div>
             </div>
 
-            <!-- Valik 2 -->
+            <!-- Option 2 -->
             <div class="variant-card v2" id="btn-select-variant-2">
-                <span class="completed-badge" id="badge-variant-completed-2">Läbitud ✔</span>
-                <div style="font-size: 1.05rem; font-weight: 800; color: #ff4757; margin-bottom: 2px;">Valik 2 · Turbo Slaalom</div>
-                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">Hüpped ➔ Pööre vasakule ➔ Pööre paremale ➔ Turbo sööst</div>
-                <div style="font-size: 0.72rem; color: #94a3b8;">Hüpped üle barjääride ja teravad pöörded turbo-sööstuga.</div>
+                <span class="completed-badge" id="badge-variant-completed-2">Completed ✔</span>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #ff4757; margin-bottom: 2px;">Option 2 · Turbo Slalom</div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">Jump ➔ Steer Left ➔ Steer Right ➔ Sprint Forward</div>
+                <div style="font-size: 0.72rem; color: #94a3b8;">Leap over obstacles and execute sharp turns with sprint.</div>
             </div>
 
-            <!-- Valik 3 -->
+            <!-- Option 3 -->
             <div class="variant-card v3" id="btn-select-variant-3">
-                <span class="completed-badge" id="badge-variant-completed-3">Läbitud ✔</span>
-                <div style="font-size: 1.05rem; font-weight: 800; color: #a855f7; margin-bottom: 2px;">Valik 3 · Akrobaatiline 360 Parkour</div>
-                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">360° Pööre ➔ Hüpe tagasi ➔ Sööst ➔ Superhüpe</div>
-                <div style="font-size: 0.72rem; color: #94a3b8;">Rütmiline akrobaatika ja superhüpe poodiumile.</div>
+                <span class="completed-badge" id="badge-variant-completed-3">Completed ✔</span>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #a855f7; margin-bottom: 2px;">Option 3 · Acrobatic Parkour</div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">Spin 360° ➔ Backstep Evade ➔ Forward Rush ➔ Apex Jump</div>
+                <div style="font-size: 0.72rem; color: #94a3b8;">Rhythmic agile parkour and apex platform jump.</div>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Kas sa tahad hääletada? -->
+    <!-- Modal: Do you want to vote? -->
     <div id="modal-ask-poll" class="modal-overlay">
         <div class="modal-card">
             <div style="font-size: 2.2rem; margin-bottom: 6px;">🎉🗳️</div>
-            <h3 style="margin: 0 0 6px 0; color: #00f2fe; font-size: 1.2rem;">Suurepärane!</h3>
-            <p id="ask-poll-variant-text" style="color: #cbd5e1; font-size: 0.88rem; margin: 0 0 16px 0;">Valik on edukalt läbitud!</p>
-            <h4 style="margin: 0 0 14px 0; font-size: 1.05rem;">Kas sa tahad hääletada?</h4>
+            <h3 style="margin: 0 0 6px 0; color: #00f2fe; font-size: 1.2rem;">Stage Complete!</h3>
+            <p id="ask-poll-variant-text" style="color: #cbd5e1; font-size: 0.88rem; margin: 0 0 16px 0;">Option completed successfully!</p>
+            <h4 style="margin: 0 0 14px 0; font-size: 1.05rem;">Do you want to vote now?</h4>
             <div style="display: flex; gap: 10px;">
                 <button id="btn-ask-poll-no" style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #cbd5e1; font-weight: 700; cursor: pointer;">
-                    Ei, vali teine
+                    Not now
                 </button>
                 <button id="btn-ask-poll-yes" style="flex: 1.2; padding: 10px; border-radius: 10px; border: none; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #060b11; font-weight: 900; cursor: pointer;">
-                    Jah, hääleta!
+                    Yes, Vote!
                 </button>
             </div>
         </div>
@@ -334,7 +335,7 @@
         <div class="modal-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 style="margin: 0; font-size: 1.15rem; color: #ffffff; display: flex; align-items: center; gap: 6px;">
-                    <span>📊</span> <span>Live Hääletus</span>
+                    <span>📊</span> <span>Live Community Poll</span>
                 </h3>
                 <button id="btn-close-poll-modal" style="background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">✕</button>
             </div>
@@ -342,43 +343,43 @@
             <!-- Online voters status -->
             <div style="background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 10px; padding: 6px 12px; margin-bottom: 14px; font-size: 0.8rem; color: #00f2fe; display: flex; align-items: center; justify-content: center; gap: 6px;">
                 <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 8px #2ecc71;"></span>
-                <span>Hääletajaid onlines: <strong id="poll-online-voters-count">1</strong> päris mängijat</span>
+                <span>Active voters online: <strong id="poll-online-voters-count">1</strong> real players</span>
             </div>
 
             <!-- Poll Option 1 -->
             <div class="poll-option-row">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="color: #00f2fe; font-size: 0.85rem;">Valik 1 · Klassikaline Manööver</strong>
-                    <button id="btn-poll-vote-1" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Hääleta</button>
+                    <strong style="color: #00f2fe; font-size: 0.85rem;">Option 1 · Classic Maneuver</strong>
+                    <button id="btn-poll-vote-1" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Vote</button>
                 </div>
                 <div class="poll-bar-container">
                     <div id="poll-bar-fill-1" class="poll-bar-fill" style="background: #00f2fe;"></div>
                 </div>
-                <div id="poll-votes-text-1" style="font-size: 0.72rem; color: #94a3b8;">0 häält (0%)</div>
+                <div id="poll-votes-text-1" style="font-size: 0.72rem; color: #94a3b8;">0 votes (0%)</div>
             </div>
 
             <!-- Poll Option 2 -->
             <div class="poll-option-row">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="color: #ff4757; font-size: 0.85rem;">Valik 2 · Turbo Slaalom</strong>
-                    <button id="btn-poll-vote-2" style="background: rgba(255, 71, 87, 0.2); border: 1px solid #ff4757; color: #ff4757; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Hääleta</button>
+                    <strong style="color: #ff4757; font-size: 0.85rem;">Option 2 · Turbo Slalom</strong>
+                    <button id="btn-poll-vote-2" style="background: rgba(255, 71, 87, 0.2); border: 1px solid #ff4757; color: #ff4757; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Vote</button>
                 </div>
                 <div class="poll-bar-container">
                     <div id="poll-bar-fill-2" class="poll-bar-fill" style="background: #ff4757;"></div>
                 </div>
-                <div id="poll-votes-text-2" style="font-size: 0.72rem; color: #94a3b8;">0 häält (0%)</div>
+                <div id="poll-votes-text-2" style="font-size: 0.72rem; color: #94a3b8;">0 votes (0%)</div>
             </div>
 
             <!-- Poll Option 3 -->
             <div class="poll-option-row">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="color: #a855f7; font-size: 0.85rem;">Valik 3 · Akrobaatiline 360</strong>
-                    <button id="btn-poll-vote-3" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #a855f7; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Hääleta</button>
+                    <strong style="color: #a855f7; font-size: 0.85rem;">Option 3 · Acrobatic Parkour</strong>
+                    <button id="btn-poll-vote-3" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #a855f7; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Vote</button>
                 </div>
                 <div class="poll-bar-container">
                     <div id="poll-bar-fill-3" class="poll-bar-fill" style="background: #a855f7;"></div>
                 </div>
-                <div id="poll-votes-text-3" style="font-size: 0.72rem; color: #94a3b8;">0 häält (0%)</div>
+                <div id="poll-votes-text-3" style="font-size: 0.72rem; color: #94a3b8;">0 votes (0%)</div>
             </div>
         </div>
     </div>
