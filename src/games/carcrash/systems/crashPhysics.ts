@@ -87,15 +87,32 @@ export class CrashPhysicsSystem {
         const currentSpeedForward = this.velocity.dot(this.forward);
 
         if (!this.isAirborne) {
-            // Ground drive
-            if (inputs.forward !== 0) {
-                const speedRatio = Math.min(1.0, Math.max(0, currentSpeedForward / maxSpeedMs));
-                const torqueMultiplier = THREE.MathUtils.lerp(3.2, 1.4, speedRatio);
-                const driveForce = inputs.forward * (config.enginePower * 30.0) * torqueMultiplier;
-                if (inputs.forward > 0 && currentSpeedForward < maxSpeedMs) {
+            // Ground drive & reverse logic
+            if (inputs.forward > 0) {
+                // Pressing W (Gas)
+                if (currentSpeedForward < -0.5) {
+                    // Car is rolling backward, apply active brake
+                    this.isBraking = true;
+                    const brakeFactor = Math.max(0, 1 - config.brakeForce * 2.5 * dt);
+                    this.velocity.multiplyScalar(brakeFactor);
+                } else if (currentSpeedForward < maxSpeedMs) {
+                    // Drive forward
+                    const speedRatio = Math.min(1.0, Math.max(0, currentSpeedForward / maxSpeedMs));
+                    const torqueMultiplier = THREE.MathUtils.lerp(3.2, 1.4, speedRatio);
+                    const driveForce = (config.enginePower * 30.0) * torqueMultiplier;
                     this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * dt);
-                } else if (inputs.forward < 0 && currentSpeedForward > -18.0) {
-                    this.velocity.addScaledVector(this.forward, (driveForce / config.massKg) * 0.9 * dt);
+                }
+            } else if (inputs.forward < 0) {
+                // Pressing S (Brake if moving forward, Reverse if stopped/backward)
+                if (currentSpeedForward > 0.6) {
+                    // Car is rolling forward: actively brake to a stop
+                    this.isBraking = true;
+                    const brakeFactor = Math.max(0, 1 - config.brakeForce * 2.5 * dt);
+                    this.velocity.multiplyScalar(brakeFactor);
+                } else if (currentSpeedForward > -18.0) {
+                    // Car is stopped or already in reverse: REVERSE BACKWARD!
+                    const reverseForce = (config.enginePower * 25.0) / config.massKg;
+                    this.velocity.addScaledVector(this.forward, -reverseForce * dt);
                 }
             }
 
@@ -147,21 +164,16 @@ export class CrashPhysicsSystem {
             this.velocity.addScaledVector(this.forward, 65.0 * dt);
         }
 
-        // Braking & Rolling Friction
-        this.isBraking = inputs.brake;
+        // Handbrake & Rolling Friction
         this.isHandbraking = inputs.handbrake;
 
-        if (inputs.brake && !this.isAirborne) {
-            const brakeFriction = config.brakeForce * 2.5;
-            this.velocity.x *= Math.max(0, 1 - brakeFriction * dt);
-            this.velocity.z *= Math.max(0, 1 - brakeFriction * dt);
-        } else if (inputs.handbrake && !this.isAirborne) {
+        if (inputs.handbrake && !this.isAirborne) {
             // Drift slip: reduce lateral grip
             this.velocity.x *= Math.max(0, 1 - 0.8 * dt);
             this.velocity.z *= Math.max(0, 1 - 0.8 * dt);
             this.angularVelocity.y += inputs.steer * 3.8 * dt;
-        } else if (!this.isAirborne) {
-            // Rolling air resistance & ground drag
+        } else if (!this.isAirborne && !this.isBraking && inputs.forward === 0) {
+            // Rolling air resistance & ground drag when coasting
             this.velocity.multiplyScalar(Math.pow(0.992, dt * 60));
         }
 

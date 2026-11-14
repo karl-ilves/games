@@ -188,8 +188,9 @@ function animate(currentTime: number): void {
     }
 
     let gear = 'N';
-    if (inputs.forward > 0) gear = physics.speedKmh > 80 ? '4' : (physics.speedKmh > 50 ? '3' : (physics.speedKmh > 25 ? '2' : '1'));
-    else if (inputs.forward < 0) gear = 'R';
+    const forwardSpeed = physics.velocity.dot(new THREE.Vector3(0, 0, 1).applyEuler(physics.rotation));
+    if (inputs.forward < 0 || forwardSpeed < -0.2) gear = 'R';
+    else if (inputs.forward > 0 || physics.speedKmh > 1) gear = physics.speedKmh > 80 ? '4' : (physics.speedKmh > 50 ? '3' : (physics.speedKmh > 25 ? '2' : '1'));
 
     carCrashState.updateTelemetry(physics.speedKmh, gear, physics.lastAccelerationG);
 

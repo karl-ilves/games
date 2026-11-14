@@ -48,7 +48,7 @@ export class CrashInputController {
         if (this.keys['a'] || this.keys['arrowleft']) steer += 1;
         if (this.keys['d'] || this.keys['arrowright']) steer -= 1;
 
-        const brake = forward < 0; // reverse pedal acts as brake when moving forward
+        const brake = false; // Physics handles braking when rolling forward vs reversing when stopped
         const handbrake = !!this.keys['b'];
         const jumpThruster = !!this.keys[' '] || !!this.keys['space'];
         const boost = !!this.keys['shift'] || !!this.keys['shiftleft'] || !!this.keys['shiftright'];
