@@ -56,6 +56,21 @@ export const LAST_METRO_PC_ONLY_NOTICE: GameCloseNoticeConfig = {
 };
 
 /**
+ * Special Notice for Test a New Fone Play: strictly Phone Only.
+ */
+export const FONEPLAY_PHONE_ONLY_NOTICE: GameCloseNoticeConfig = {
+    id: 'notice_foneplay_phone_only',
+    gameId: 'foneplay',
+    gameTitle: '📱 Test a New Fone Play',
+    title: '📱 Phone Only · Test a New Fone Play',
+    description: 'This game is strictly designed for Mobile Phones! Play with responsive touch controls, test unique movement patterns and cast your live vote. - Playard Game Team',
+    repeatCount: 0,
+    active: true,
+    createdAt: 1731513600000,
+    updatedAt: 1731513600000
+};
+
+/**
  * Special Notice for Snake & 2D Breakout: moving exclusively to Phone / Mobile.
  */
 export const MOBILE_ONLY_ARCADE_NOTICE: GameCloseNoticeConfig = {
@@ -90,6 +105,9 @@ export const OTHER_GAMES_DELETION_NOTICE: GameCloseNoticeConfig = {
  */
 export function resolveNoticeForGame(gamePathOrId: string): GameCloseNoticeConfig {
     const clean = (gamePathOrId || '').toLowerCase();
+    if (clean.includes('/foneplay') || clean === 'foneplay' || clean.includes('fone play')) {
+        return FONEPLAY_PHONE_ONLY_NOTICE;
+    }
     if (clean.includes('/metro') || clean === 'metro' || clean.includes('last metro')) {
         return LAST_METRO_PC_ONLY_NOTICE;
     }
@@ -248,7 +266,12 @@ export function showGameJoinWarningModal(options?: {
         const path = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
         const pending = getPendingNoticesForGame(options?.gameId || path);
         if (pending.length > 0) {
-            targetNotices = pending;
+            // Sort so specific gameId notices come before 'all'
+            targetNotices = [...pending].sort((a, b) => {
+                if (a.gameId && a.gameId !== 'all' && (!b.gameId || b.gameId === 'all')) return -1;
+                if (b.gameId && b.gameId !== 'all' && (!a.gameId || a.gameId === 'all')) return 1;
+                return 0;
+            });
         } else {
             // Automatically resolve exact game status notice
             targetNotices = [resolveNoticeForGame(options?.gameId || path)];

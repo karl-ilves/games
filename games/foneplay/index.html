@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Playard - 📱 Test a New Fone Play</title>
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #060b11;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 1;
+        }
+
+        /* Non-phone indicator banner (informative only) */
+        #non-phone-warning-banner {
+            display: none;
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(235, 77, 75, 0.92);
+            color: #ffffff;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            z-index: 9999;
+            box-shadow: 0 4px 15px rgba(235, 77, 75, 0.5);
+            pointer-events: none;
+        }
+
+        /* Top HUD Header */
+        #top-hud-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 54px;
+            padding: 0 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(180deg, rgba(6, 11, 17, 0.9) 0%, rgba(6, 11, 17, 0) 100%);
+            z-index: 100;
+            pointer-events: none;
+        }
+        .hud-btn {
+            pointer-events: auto;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 7px 12px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hud-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Gameplay Active HUD */
+        #gameplay-hud-overlay {
+            display: none;
+            position: fixed;
+            top: 60px;
+            left: 14px;
+            right: 14px;
+            z-index: 90;
+            pointer-events: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .step-card {
+            background: rgba(15, 23, 42, 0.88);
+            border: 1.5px solid rgba(0, 242, 254, 0.4);
+            border-radius: 16px;
+            padding: 12px 18px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        .step-progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .step-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #00f2fe;
+            transition: width 0.1s linear;
+        }
+
+        /* Variant Picker Overlay */
+        #variant-picker-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(6, 11, 17, 0.94);
+            backdrop-filter: blur(14px);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 16px;
+            overflow-y: auto;
+        }
+        .picker-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .picker-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 6px 0;
+        }
+        .picker-subtitle {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin: 0;
+        }
+
+        .variant-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 380px;
+        }
+        .variant-card {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+            position: relative;
+        }
+        .variant-card:active {
+            transform: scale(0.97);
+        }
+        .variant-card.v1 { border-color: rgba(0, 242, 254, 0.5); }
+        .variant-card.v2 { border-color: rgba(255, 71, 87, 0.5); }
+        .variant-card.v3 { border-color: rgba(168, 85, 247, 0.5); }
+
+        .completed-badge {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            border: 1px solid #2ecc71;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        /* Modal Ask Poll & Live Poll Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(12px);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-card {
+            background: #0f172a;
+            border: 1.5px solid rgba(0, 242, 254, 0.5);
+            border-radius: 18px;
+            padding: 20px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            text-align: center;
+        }
+        .poll-option-row {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .poll-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin: 6px 0;
+            overflow: hidden;
+        }
+        .poll-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00f2fe, #4facfe);
+            transition: width 0.3s ease;
+        }
+        .voted-active {
+            background: #2ecc71 !important;
+            border-color: #27ae60 !important;
+            color: #ffffff !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="non-phone-warning-banner">📱 Mäng on optimeeritud telefonile! Puutetundlikud juhtnupud aktiivsed.</div>
+
+    <!-- Top HUD Bar -->
+    <div id="top-hud-bar">
+        <button id="btn-fone-back-menu" class="hud-btn">
+            <span>◀</span> <span>Valikud</span>
+        </button>
+        <button id="btn-fone-open-poll" class="hud-btn" style="border-color: #a855f7; color: #d8b4fe;">
+            <span>📊</span> <span>Hääletus</span>
+        </button>
+    </div>
+
+    <!-- Gameplay Motion HUD -->
+    <div id="gameplay-hud-overlay">
+        <div class="step-card">
+            <div id="active-variant-title" style="font-size: 0.85rem; font-weight: 800; color: #00f2fe; margin-bottom: 4px;">Valik 1</div>
+            <div id="active-step-name" style="font-size: 1.15rem; font-weight: 900; margin-bottom: 2px;">1. Move Forward</div>
+            <div id="active-step-instruction" style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;">Liigu edasi (2 sekundit)</div>
+            <div id="step-timer-val" style="font-size: 1.25rem; font-weight: 900; color: #ffd32a;">2.0s</div>
+            <div class="step-progress-track">
+                <div id="step-progress-fill" class="step-progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Variant Picker Overlay (3 Valikut) -->
+    <div id="variant-picker-overlay">
+        <div class="picker-header">
+            <div style="font-size: 2.2rem; margin-bottom: 4px;">📱⚡</div>
+            <h1 class="picker-title">Test a New Fone Play</h1>
+            <p class="picker-subtitle">Vali test ja koge telefoni spetsiaalseid liigutusi</p>
+        </div>
+
+        <div class="variant-grid">
+            <!-- Valik 1 -->
+            <div class="variant-card v1" id="btn-select-variant-1">
+                <span class="completed-badge" id="badge-variant-completed-1">Läbitud ✔</span>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #00f2fe; margin-bottom: 2px;">Valik 1 · Klassikaline Manööver</div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">Edasi ➔ Taha ➔ Hüpe ➔ Pööre</div>
+                <div style="font-size: 0.72rem; color: #94a3b8;">Liigu 2s edasi, siis 2s tagasi, hüppa ja tee täispööre.</div>
+            </div>
+
+            <!-- Valik 2 -->
+            <div class="variant-card v2" id="btn-select-variant-2">
+                <span class="completed-badge" id="badge-variant-completed-2">Läbitud ✔</span>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #ff4757; margin-bottom: 2px;">Valik 2 · Turbo Slaalom</div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">Hüpped ➔ Pööre vasakule ➔ Pööre paremale ➔ Turbo sööst</div>
+                <div style="font-size: 0.72rem; color: #94a3b8;">Hüpped üle barjääride ja teravad pöörded turbo-sööstuga.</div>
+            </div>
+
+            <!-- Valik 3 -->
+            <div class="variant-card v3" id="btn-select-variant-3">
+                <span class="completed-badge" id="badge-variant-completed-3">Läbitud ✔</span>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #a855f7; margin-bottom: 2px;">Valik 3 · Akrobaatiline 360 Parkour</div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">360° Pööre ➔ Hüpe tagasi ➔ Sööst ➔ Superhüpe</div>
+                <div style="font-size: 0.72rem; color: #94a3b8;">Rütmiline akrobaatika ja superhüpe poodiumile.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Kas sa tahad hääletada? -->
+    <div id="modal-ask-poll" class="modal-overlay">
+        <div class="modal-card">
+            <div style="font-size: 2.2rem; margin-bottom: 6px;">🎉🗳️</div>
+            <h3 style="margin: 0 0 6px 0; color: #00f2fe; font-size: 1.2rem;">Suurepärane!</h3>
+            <p id="ask-poll-variant-text" style="color: #cbd5e1; font-size: 0.88rem; margin: 0 0 16px 0;">Valik on edukalt läbitud!</p>
+            <h4 style="margin: 0 0 14px 0; font-size: 1.05rem;">Kas sa tahad hääletada?</h4>
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-ask-poll-no" style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #cbd5e1; font-weight: 700; cursor: pointer;">
+                    Ei, vali teine
+                </button>
+                <button id="btn-ask-poll-yes" style="flex: 1.2; padding: 10px; border-radius: 10px; border: none; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #060b11; font-weight: 900; cursor: pointer;">
+                    Jah, hääleta!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Live Poll 1, 2, 3 -->
+    <div id="modal-live-poll" class="modal-overlay">
+        <div class="modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 1.15rem; color: #ffffff; display: flex; align-items: center; gap: 6px;">
+                    <span>📊</span> <span>Live Hääletus</span>
+                </h3>
+                <button id="btn-close-poll-modal" style="background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">✕</button>
+            </div>
+
+            <!-- Online voters status -->
+            <div style="background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 10px; padding: 6px 12px; margin-bottom: 14px; font-size: 0.8rem; color: #00f2fe; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 8px #2ecc71;"></span>
+                <span>Hääletajaid onlines: <strong id="poll-online-voters-count">1</strong> päris mängijat</span>
+            </div>
+
+            <!-- Poll Option 1 -->
+            <div class="poll-option-row">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="color: #00f2fe; font-size: 0.85rem;">Valik 1 · Klassikaline Manööver</strong>
+                    <button id="btn-poll-vote-1" style="background: rgba(0, 242, 254, 0.2); border: 1px solid #00f2fe; color: #00f2fe; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Hääleta</button>
+                </div>
+                <div class="poll-bar-container">
+                    <div id="poll-bar-fill-1" class="poll-bar-fill" style="background: #00f2fe;"></div>
+                </div>
+                <div id="poll-votes-text-1" style="font-size: 0.72rem; color: #94a3b8;">0 häält (0%)</div>
+            </div>
+
+            <!-- Poll Option 2 -->
+            <div class="poll-option-row">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="color: #ff4757; font-size: 0.85rem;">Valik 2 · Turbo Slaalom</strong>
+                    <button id="btn-poll-vote-2" style="background: rgba(255, 71, 87, 0.2); border: 1px solid #ff4757; color: #ff4757; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Hääleta</button>
+                </div>
+                <div class="poll-bar-container">
+                    <div id="poll-bar-fill-2" class="poll-bar-fill" style="background: #ff4757;"></div>
+                </div>
+                <div id="poll-votes-text-2" style="font-size: 0.72rem; color: #94a3b8;">0 häält (0%)</div>
+            </div>
+
+            <!-- Poll Option 3 -->
+            <div class="poll-option-row">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="color: #a855f7; font-size: 0.85rem;">Valik 3 · Akrobaatiline 360</strong>
+                    <button id="btn-poll-vote-3" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #a855f7; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">Hääleta</button>
+                </div>
+                <div class="poll-bar-container">
+                    <div id="poll-bar-fill-3" class="poll-bar-fill" style="background: #a855f7;"></div>
+                </div>
+                <div id="poll-votes-text-3" style="font-size: 0.72rem; color: #94a3b8;">0 häält (0%)</div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Scripts -->
+    <script type="module" src="/src/shared/inGameMenu.ts"></script>
+    <script type="module" src="/src/games/foneplay/main.ts"></script>
+</body>
+</html>

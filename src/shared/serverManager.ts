@@ -172,6 +172,15 @@ export const GAME_SERVER_RULES: Record<string, GameServerRule> = {
         category: 'creative',
         icon: '🎮',
         ruleDescription: 'Maksimaalselt 1 mängija / server (soolo)'
+    },
+    foneplay: {
+        gameId: 'foneplay',
+        gameTitle: 'Test a New Fone Play (Phone Only)',
+        gameUrl: '/games/foneplay/index.html',
+        maxPlayers: 10,
+        category: 'phone',
+        icon: '📱',
+        ruleDescription: 'Maksimaalselt 10 mängijat / server'
     }
 };
 
@@ -435,6 +444,7 @@ export class ServerManager {
         else if (path.includes('/ai/')) targetGameId = 'ai';
         else if (path.includes('/play/')) targetGameId = 'play';
         else if (path.includes('/creator/')) targetGameId = 'creator';
+        else if (path.includes('/foneplay/')) targetGameId = 'foneplay';
 
         this.loadServers();
 
@@ -570,6 +580,7 @@ export class ServerManager {
         else if (path.includes('/ai/')) targetGameId = 'ai';
         else if (path.includes('/play/')) targetGameId = 'play';
         else if (path.includes('/creator/')) targetGameId = 'creator';
+        else if (path.includes('/foneplay/')) targetGameId = 'foneplay';
 
         const rule = this.getGameRule(targetGameId);
         const gameServers = this.getServersByGame(targetGameId);

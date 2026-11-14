@@ -301,7 +301,102 @@ await (async () => {
     try {
         if (targetFilter) {
             console.log(`⚡ Running targeted test exclusively for '${targetFilter}'...`);
+            if (targetFilter.includes('fone') || targetFilter.includes('phone')) {
+                console.log("38. Testing 📱 Test a New Fone Play (Phone Exclusive, 3 Variants & Real Online Poll)...");
+                await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/`, { waitUntil: 'domcontentloaded' });
+                await new Promise(r => setTimeout(r, 600));
 
+                const hubFoneTest = await page.evaluate(() => {
+                    const card = document.getElementById('card-foneplay-game');
+                    const featured = document.getElementById('foneplay-featured-section');
+                    const social = document.getElementById('social-links-section');
+                    const isBelowSocial = !!(social && featured && (social.compareDocumentPosition(featured) & Node.DOCUMENT_POSITION_FOLLOWING));
+                    return {
+                        hasCard: !!card,
+                        isBelowSocial,
+                        hasPhoneExclusiveTag: card?.textContent?.includes('AINULT TELEFONIS'),
+                        hasLivePollTag: card?.textContent?.includes('LIVE HÄÄLETUS'),
+                        hasHref: card?.getAttribute('href')?.includes('foneplay')
+                    };
+                });
+                console.log("   Hub Fone Play Card Results:", hubFoneTest);
+                if (!hubFoneTest.hasCard || !hubFoneTest.isBelowSocial || !hubFoneTest.hasPhoneExclusiveTag || !hubFoneTest.hasHref) {
+                    throw new Error("Hub Fone Play card verification failed: " + JSON.stringify(hubFoneTest));
+                }
+
+                await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/foneplay/index.html?mobile=true`, { waitUntil: 'domcontentloaded' });
+                await new Promise(r => setTimeout(r, 1200));
+
+                const fonePlayPageTest = await page.evaluate(() => {
+                    const canvas = document.getElementById('game-canvas');
+                    const pBtn = document.getElementById('btn-playard-menu');
+                    const picker = document.getElementById('variant-picker-overlay');
+                    const btnV1 = document.getElementById('btn-select-variant-1');
+                    const btnV2 = document.getElementById('btn-select-variant-2');
+                    const btnV3 = document.getElementById('btn-select-variant-3');
+                    const pollBtn = document.getElementById('btn-fone-open-poll');
+                    const pollModal = document.getElementById('modal-live-poll');
+
+                    const pickerInitiallyVisible = window.getComputedStyle(picker).display === 'flex';
+                    const hasAll3Variants = !!(btnV1 && btnV2 && btnV3);
+
+                    // Test Live Poll Modal
+                    pollBtn?.click();
+                    const pollModalOpen = window.getComputedStyle(pollModal).display === 'flex';
+                    const onlineCountText = document.getElementById('poll-online-voters-count')?.textContent;
+                    const onlineVotersReal = parseInt(onlineCountText || '0', 10) >= 1;
+
+                    // Vote for Variant 1
+                    document.getElementById('btn-poll-vote-1')?.click();
+                    const vote1Text = document.getElementById('poll-votes-text-1')?.textContent;
+                    const hasVote1 = vote1Text?.includes('1 häält');
+
+                    // Close poll
+                    document.getElementById('btn-close-poll-modal')?.click();
+                    const pollModalClosed = window.getComputedStyle(pollModal).display === 'none';
+
+                    // Start Variant 1
+                    btnV1?.click();
+                    const gameplayHud = document.getElementById('gameplay-hud-overlay');
+                    const gameplayVisible = window.getComputedStyle(gameplayHud).display === 'flex';
+                    const activeVariantText = document.getElementById('active-variant-title')?.textContent;
+                    const activeStepText = document.getElementById('active-step-name')?.textContent;
+
+                    return {
+                        hasCanvas: !!canvas,
+                        hasPBtn: !!pBtn,
+                        pickerInitiallyVisible,
+                        hasAll3Variants,
+                        pollModalOpen,
+                        onlineVotersReal,
+                        hasVote1,
+                        pollModalClosed,
+                        gameplayVisible,
+                        variant1Started: activeVariantText?.includes('Valik 1'),
+                        step1Started: activeStepText?.includes('Move Forward')
+                    };
+                });
+
+                console.log("   Fone Play Gameplay & Live Poll Results:", fonePlayPageTest);
+                if (
+                    !fonePlayPageTest.hasCanvas ||
+                    !fonePlayPageTest.hasPBtn ||
+                    !fonePlayPageTest.pickerInitiallyVisible ||
+                    !fonePlayPageTest.hasAll3Variants ||
+                    !fonePlayPageTest.pollModalOpen ||
+                    !fonePlayPageTest.onlineVotersReal ||
+                    !fonePlayPageTest.hasVote1 ||
+                    !fonePlayPageTest.pollModalClosed ||
+                    !fonePlayPageTest.gameplayVisible ||
+                    !fonePlayPageTest.variant1Started ||
+                    !fonePlayPageTest.step1Started
+                ) {
+                    throw new Error("Fone Play verification failed: " + JSON.stringify(fonePlayPageTest));
+                }
+                console.log("   ✅ 📱 Test a New Fone Play (Phone Exclusive, 3 Variants & Real Online Poll) verified successfully!");
+                console.log("✅ Targeted test passed successfully in record time! (Other games skipped as requested)");
+                process.exit(0);
+            }
         }
 
         console.log("1. Checking Playard Hub Homepage...");
@@ -16284,7 +16379,98 @@ await (async () => {
             ) {
                 throw new Error("Published game object rendering test failed: " + JSON.stringify(playRenderTest));
             }
-            console.log("   ✅ Published Game Object & Part Rendering in Community Play Player verified successfully!");
+            console.log("38. Testing 📱 Test a New Fone Play (Phone Exclusive, 3 Variants & Real Online Poll)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const hubFoneTest = await page.evaluate(() => {
+                const card = document.getElementById('card-foneplay-game');
+                const featured = document.getElementById('foneplay-featured-section');
+                const social = document.getElementById('social-links-section');
+                const isBelowSocial = !!(social && featured && (social.compareDocumentPosition(featured) & Node.DOCUMENT_POSITION_FOLLOWING));
+                return {
+                    hasCard: !!card,
+                    isBelowSocial,
+                    hasPhoneExclusiveTag: card?.textContent?.includes('AINULT TELEFONIS'),
+                    hasLivePollTag: card?.textContent?.includes('LIVE HÄÄLETUS'),
+                    hasHref: card?.getAttribute('href')?.includes('foneplay')
+                };
+            });
+            console.log("   Hub Fone Play Card Results:", hubFoneTest);
+            if (!hubFoneTest.hasCard || !hubFoneTest.isBelowSocial || !hubFoneTest.hasPhoneExclusiveTag || !hubFoneTest.hasHref) {
+                throw new Error("Hub Fone Play card verification failed: " + JSON.stringify(hubFoneTest));
+            }
+
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/foneplay/index.html?mobile=true`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 1200));
+
+            const fonePlayPageTest = await page.evaluate(() => {
+                const canvas = document.getElementById('game-canvas');
+                const pBtn = document.getElementById('btn-playard-menu');
+                const picker = document.getElementById('variant-picker-overlay');
+                const btnV1 = document.getElementById('btn-select-variant-1');
+                const btnV2 = document.getElementById('btn-select-variant-2');
+                const btnV3 = document.getElementById('btn-select-variant-3');
+                const pollBtn = document.getElementById('btn-fone-open-poll');
+                const pollModal = document.getElementById('modal-live-poll');
+
+                const pickerInitiallyVisible = window.getComputedStyle(picker).display === 'flex';
+                const hasAll3Variants = !!(btnV1 && btnV2 && btnV3);
+
+                // Test Live Poll Modal
+                pollBtn?.click();
+                const pollModalOpen = window.getComputedStyle(pollModal).display === 'flex';
+                const onlineCountText = document.getElementById('poll-online-voters-count')?.textContent;
+                const onlineVotersReal = parseInt(onlineCountText || '0', 10) >= 1;
+
+                // Vote for Variant 1
+                document.getElementById('btn-poll-vote-1')?.click();
+                const vote1Text = document.getElementById('poll-votes-text-1')?.textContent;
+                const hasVote1 = vote1Text?.includes('1 häält');
+
+                // Close poll
+                document.getElementById('btn-close-poll-modal')?.click();
+                const pollModalClosed = window.getComputedStyle(pollModal).display === 'none';
+
+                // Start Variant 1
+                btnV1?.click();
+                const gameplayHud = document.getElementById('gameplay-hud-overlay');
+                const gameplayVisible = window.getComputedStyle(gameplayHud).display === 'flex';
+                const activeVariantText = document.getElementById('active-variant-title')?.textContent;
+                const activeStepText = document.getElementById('active-step-name')?.textContent;
+
+                return {
+                    hasCanvas: !!canvas,
+                    hasPBtn: !!pBtn,
+                    pickerInitiallyVisible,
+                    hasAll3Variants,
+                    pollModalOpen,
+                    onlineVotersReal,
+                    hasVote1,
+                    pollModalClosed,
+                    gameplayVisible,
+                    variant1Started: activeVariantText?.includes('Valik 1'),
+                    step1Started: activeStepText?.includes('Move Forward')
+                };
+            });
+
+            console.log("   Fone Play Gameplay & Live Poll Results:", fonePlayPageTest);
+            if (
+                !fonePlayPageTest.hasCanvas ||
+                !fonePlayPageTest.hasPBtn ||
+                !fonePlayPageTest.pickerInitiallyVisible ||
+                !fonePlayPageTest.hasAll3Variants ||
+                !fonePlayPageTest.pollModalOpen ||
+                !fonePlayPageTest.onlineVotersReal ||
+                !fonePlayPageTest.hasVote1 ||
+                !fonePlayPageTest.pollModalClosed ||
+                !fonePlayPageTest.gameplayVisible ||
+                !fonePlayPageTest.variant1Started ||
+                !fonePlayPageTest.step1Started
+            ) {
+                throw new Error("Fone Play verification failed: " + JSON.stringify(fonePlayPageTest));
+            }
+            console.log("   ✅ 📱 Test a New Fone Play (Phone Exclusive, 3 Variants & Real Online Poll) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
