@@ -113,14 +113,7 @@ export class PlayerCredentialsService {
     public activateRevealWithCode(enteredCode: string): { success: boolean; message: string } {
         const clean = (enteredCode || '').trim().toLowerCase();
         if (clean === '6776abc') {
-            this.revealActiveUntil = Date.now() + REVEAL_DURATION_MS;
-            if (this.revealTimer) clearTimeout(this.revealTimer);
-            this.revealTimer = setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('playard_reveal_expired'));
-            }, REVEAL_DURATION_MS);
-
-            window.dispatchEvent(new CustomEvent('playard_reveal_activated'));
-            return { success: true, message: '✅ Kood õige! Koodid ja paroolid on nähtavad 10 sekundit!' };
+            return { success: false, message: '🔒 Koodide ja paroolide kuvamine on turvakaalutlustel keelatud (koode ei saa vaadata).' };
         }
         return { success: false, message: '❌ Vale kood!' };
     }

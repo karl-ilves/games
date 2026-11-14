@@ -1613,14 +1613,10 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
             : '';
 
         const geo = playerGeoService.getGeoForPlayer(player.username);
-        const isReveal = playerCredentialsService.isRevealActive();
         const maskedPass = playerCredentialsService.getMaskedPassword(player.username);
-        const fullPass = playerCredentialsService.getPassword(player.username);
-        const playerCode = playerCredentialsService.getPlayerCode(player.username);
 
-        const passwordBadge = isReveal
-            ? `<span style="background: rgba(46, 204, 113, 0.18); color: #2ecc71; border: 1px solid #2ecc71; padding: 2px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 800; font-family: monospace;">🔑 ${fullPass} <span style="background: #2ecc71; color: #060b11; padding: 1px 5px; border-radius: 4px; margin-left: 4px; font-weight: 900;">${playerCode}</span></span>`
-            : `<span style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.18); padding: 2px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 800; font-family: monospace;" title="Parool tärnidega (ainult 1 täht näha)">🔑 ${maskedPass}</span>`;
+        // Kasutaja soovil on paroolid ja koodid alati rangelt varjatud / tärnidega
+        const passwordBadge = `<span style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.18); padding: 2px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 800; font-family: monospace;" title="Parool tärnidega (parooli ega koodi ei saa näha)">🔑 ${maskedPass}</span>`;
 
         const locationBadge = `<span style="background: rgba(0, 242, 254, 0.1); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.3); padding: 2px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span>${geo.flag}</span> <span>${geo.country}${geo.city ? ` (${geo.city})` : ''}</span></span>`;
 

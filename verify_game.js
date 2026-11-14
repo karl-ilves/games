@@ -1418,30 +1418,31 @@ await (async () => {
                 await new Promise(r => setTimeout(r, 200));
 
                 const timerBadge = document.getElementById('owner-secret-reveal-timer-badge');
-                const timerVisible = window.getComputedStyle(timerBadge).display !== 'none';
+                const timerHidden = !timerBadge || window.getComputedStyle(timerBadge).display === 'none';
                 const revealedList = document.getElementById('owner-players-list')?.textContent || '';
-                const hasRevealedCode = revealedList.includes('#') || revealedList.includes('A380') || revealedList.includes('mai2026');
+                // Koode ja paroole ei saa mitte kunagi näha – peavad jääma tärnide taha
+                const codesKeptHidden = !revealedList.includes('#') && !revealedList.includes('mai2026') && revealedList.includes('🔑');
 
                 return {
                     hasMaiGirl,
                     hasCountryFlag,
                     hasMaskedPassword,
                     secretBoxOpened,
-                    timerVisible,
-                    hasRevealedCode
+                    timerHidden,
+                    codesKeptHidden
                 };
             });
 
-            console.log("   Playard Owner Mängijad & Secret Code Test:", playerModeTest);
+            console.log("   Playard Owner Mängijad & Hidden Codes Test:", playerModeTest);
             if (
                 !playerModeTest.hasMaiGirl ||
                 !playerModeTest.hasCountryFlag ||
                 !playerModeTest.hasMaskedPassword ||
                 !playerModeTest.secretBoxOpened ||
-                !playerModeTest.timerVisible ||
-                !playerModeTest.hasRevealedCode
+                !playerModeTest.timerHidden ||
+                !playerModeTest.codesKeptHidden
             ) {
-                throw new Error("Owner Panel Mängijad & secret code 6776abc test failed: " + JSON.stringify(playerModeTest));
+                throw new Error("Owner Panel Mängijad & codes hidden test failed: " + JSON.stringify(playerModeTest));
             }
 
             await page.click('#btn-close-owner-panel');
