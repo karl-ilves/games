@@ -17,29 +17,38 @@ export class FonePlayerAvatar {
         scene.add(this.rig.rootGroup);
     }
 
-    public update(delta: number, moveVector: { x: number; y: number }, jumpTriggered: boolean) {
-        // moveVector.y: -1 = up/forward, 1 = down/backward
-        // moveVector.x: -1 = left, 1 = right
-        const forwardMag = -moveVector.y;
-        const turnMag = moveVector.x;
-
-        // Turn character with horizontal input
-        if (Math.abs(turnMag) > 0.05) {
-            this.characterYaw -= turnMag * 3.2 * delta;
+    public update(
+        delta: number,
+        keys: { forward: boolean; backward: boolean; left: boolean; right: boolean; jump: boolean }
+    ) {
+        // EXACT Creator Studio Play Test movement logic:
+        // Turn view with A / D or ArrowLeft / ArrowRight
+        const turnSpeed = 2.8;
+        if (keys.left) {
+            this.characterYaw += turnSpeed * delta;
+        }
+        if (keys.right) {
+            this.characterYaw -= turnSpeed * delta;
         }
 
-        const moveSpeed = 8.5;
-        const hasForwardMove = Math.abs(forwardMag) > 0.05;
-        this.isMoving = hasForwardMove || Math.abs(turnMag) > 0.05;
+        // Only W and S move the player! (W = forward in view direction, S = backward)
+        let moveMagnitude = 0;
+        if (keys.forward) moveMagnitude += 1;
+        if (keys.backward) moveMagnitude -= 1;
 
-        if (hasForwardMove) {
-            const forwardX = Math.sin(this.characterYaw);
-            const forwardZ = Math.cos(this.characterYaw);
-            this.position.x += forwardX * forwardMag * moveSpeed * delta;
-            this.position.z += forwardZ * forwardMag * moveSpeed * delta;
+        const forwardX = Math.sin(this.characterYaw);
+        const forwardZ = Math.cos(this.characterYaw);
+        const moveSpeed = 9.0;
+
+        const hasHoriMove = moveMagnitude !== 0;
+        this.isMoving = hasHoriMove || keys.left || keys.right;
+
+        if (hasHoriMove) {
+            this.position.x += forwardX * moveMagnitude * moveSpeed * delta;
+            this.position.z += forwardZ * moveMagnitude * moveSpeed * delta;
         }
 
-        // Clamp inside arena pad
+        // Clamp inside arena
         const distFromCenter = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
         if (distFromCenter > 22) {
             const ratio = 22 / distFromCenter;
@@ -47,13 +56,12 @@ export class FonePlayerAvatar {
             this.position.z *= ratio;
         }
 
-        // Jump handling
-        if (jumpTriggered && this.isGrounded) {
-            this.velocityY = 9.5;
+        // Jump & Gravity on Land (Exact Creator Studio physics: jump velocity = 9, gravity = 22)
+        if (keys.jump && this.isGrounded) {
+            this.velocityY = 9.0;
             this.isGrounded = false;
         }
 
-        // Vertical physics
         if (!this.isGrounded) {
             this.velocityY -= 22 * delta;
             this.position.y += this.velocityY * delta;
@@ -64,16 +72,16 @@ export class FonePlayerAvatar {
             }
         }
 
-        // Update Three.js transforms
+        // Smooth rotation to characterYaw (exact factor 0.25 from Creator Studio)
         this.rig.rootGroup.position.copy(this.position);
-        this.rig.rootGroup.rotation.y = this.characterYaw;
+        this.rig.rootGroup.rotation.y = THREE.MathUtils.lerp(this.rig.rootGroup.rotation.y, this.characterYaw, 0.25);
 
-        // Animate legs and arms
+        // Animate legs and arms matching Creator Studio play test
         const time = performance.now() * 0.001;
         let animState: 'idle' | 'walk' | 'run' | 'jump' = 'idle';
         if (!this.isGrounded) {
             animState = 'jump';
-        } else if (this.isMoving) {
+        } else if (hasHoriMove) {
             animState = 'run';
         }
         this.rig.updateAnimation(time, animState);

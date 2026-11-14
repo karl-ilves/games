@@ -107,27 +107,24 @@ export class FonePlayGame {
         }
     }
 
-    private isPlayerPerformingStep(step: MotionStep, moveVector: { x: number; y: number }, jumpTriggered: boolean): boolean {
+    private isPlayerPerformingStep(step: MotionStep, keys: { forward: boolean; backward: boolean; left: boolean; right: boolean; jump: boolean }): boolean {
         // Only count timer when player is ACTUALLY manually moving/performing the required action!
-        const forwardMag = -moveVector.y; // > 0.15 is forward, < -0.15 is backward
-        const horizontalMag = moveVector.x; // < -0.15 is left, > 0.15 is right
-
         switch (step.action) {
             case 'forward':
             case 'dash':
-                return forwardMag > 0.2;
+                return keys.forward;
             case 'backward':
-                return forwardMag < -0.2;
+                return keys.backward;
             case 'jump':
-                return jumpTriggered || !this.avatar.isGrounded;
+                return keys.jump || !this.avatar.isGrounded;
             case 'turn_left':
-                return horizontalMag < -0.2;
+                return keys.left;
             case 'turn_right':
-                return horizontalMag > 0.2;
+                return keys.right;
             case 'spin':
-                return Math.abs(horizontalMag) > 0.2;
+                return keys.left || keys.right;
             default:
-                return Math.abs(forwardMag) > 0.1 || Math.abs(horizontalMag) > 0.1;
+                return keys.forward || keys.backward || keys.left || keys.right || keys.jump;
         }
     }
 
@@ -138,9 +135,9 @@ export class FonePlayGame {
         const delta = Math.min(0.08, (now - this.lastTime) / 1000);
         this.lastTime = now;
 
-        const jumpTriggered = this.inputSystem.consumeJump();
-        // Fully manual movement - no automatic scripts driving the character!
-        this.avatar.update(delta, this.inputSystem.moveVector, jumpTriggered);
+        const keys = this.inputSystem.getKeys();
+        // Fully manual movement - exact Creator Studio Play Test mechanics
+        this.avatar.update(delta, keys);
         this.cameraSystem.update(this.avatar.position, this.avatar.characterYaw);
         this.world.update(now * 0.001);
 
@@ -148,7 +145,7 @@ export class FonePlayGame {
         if (this.isRunningStep && this.activeVariant) {
             const step = this.activeVariant.steps[this.currentStepIndex];
             if (step) {
-                const isPerforming = this.isPlayerPerformingStep(step, this.inputSystem.moveVector, jumpTriggered);
+                const isPerforming = this.isPlayerPerformingStep(step, keys);
 
                 // ONLY advance the 2s timer while the player is actively moving/performing!
                 if (isPerforming) {
