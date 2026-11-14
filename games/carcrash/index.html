@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Playard Games - 💥 ULTRA REALISTLIK CAR CRASH | BeamNG-Style Simulator</title>
+    <meta name="description" content="Ultra realistlik arvutile optimeeritud pehmekere avariisimulaator. Koge metalli deformatsiooni, auto purunemist, aegluup kordusi (Slow-Mo) ja ekstreemseid takistusradasid!">
+    <meta name="keywords" content="car crash, auto avarii, ultra realistlik, soft-body deformation, beamng, playard games">
+    <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #080c12;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            color: #f1f5f9;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 1;
+        }
+
+        /* Top HUD Bar */
+        #top-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(180deg, rgba(8, 12, 18, 0.95) 0%, rgba(8, 12, 18, 0.7) 80%, transparent 100%);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 100;
+            pointer-events: auto;
+            border-bottom: 1px solid rgba(255, 71, 87, 0.3);
+        }
+
+        .hud-left, .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-hub-back {
+            background: rgba(24, 12, 16, 0.85);
+            border: 1.5px solid rgba(255, 71, 87, 0.5);
+            color: #ffffff;
+            font-size: 0.88rem;
+            font-weight: 800;
+            padding: 7px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+        .btn-hub-back:hover {
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .title-badge {
+            background: rgba(18, 22, 30, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pc-badge {
+            background: rgba(255, 211, 42, 0.15);
+            border: 1px solid rgba(255, 211, 42, 0.6);
+            color: #ffd32a;
+            font-weight: 900;
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .hud-btn {
+            background: rgba(24, 30, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f1f5f9;
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 7px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .hud-btn:hover {
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.2);
+            transform: translateY(-1px);
+        }
+        .hud-btn.active {
+            background: linear-gradient(135deg, #ff4757, #ff6b81);
+            border-color: #ff4757;
+            color: white;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+        }
+
+        /* Speedometer & Damage Meter (Bottom Left) */
+        #cockpit-hud {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .telemetry-card {
+            background: rgba(10, 15, 22, 0.88);
+            border: 1.5px solid rgba(255, 71, 87, 0.4);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 16px 20px;
+            min-width: 240px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 71, 87, 0.15);
+        }
+
+        .speed-display {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: #ffffff;
+            font-family: 'Consolas', 'Courier New', monospace;
+            line-height: 1;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+        .speed-unit {
+            font-size: 1rem;
+            color: #ff4757;
+            font-weight: 800;
+        }
+
+        .gear-pill {
+            display: inline-block;
+            background: #ff4757;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 900;
+            margin-left: 8px;
+        }
+
+        .damage-bar-wrap {
+            margin-top: 10px;
+        }
+        .damage-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+        .damage-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .damage-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2ecc71 0%, #f1c40f 50%, #e74c3c 100%);
+            transition: width 0.1s ease;
+        }
+
+        /* Center Slow-Motion Banner */
+        #slowmo-banner {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 71, 87, 0.9);
+            color: white;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-weight: 900;
+            font-size: 0.95rem;
+            letter-spacing: 1.5px;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 0 25px rgba(255, 71, 87, 0.8);
+            animation: pulse-slowmo 1s infinite alternate;
+        }
+        @keyframes pulse-slowmo {
+            from { transform: translateX(-50%) scale(1); }
+            to { transform: translateX(-50%) scale(1.05); }
+        }
+
+        /* Controls Help Box (Bottom Right) */
+        #controls-help {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            z-index: 100;
+            background: rgba(10, 15, 22, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 14px;
+            padding: 14px 18px;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: auto;
+        }
+        .key-badge {
+            background: #2d3748;
+            color: #00f2fe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 800;
+            font-family: monospace;
+            border: 1px solid #4a5568;
+        }
+
+        /* Car Selection & Arena Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(14px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-card {
+            background: #0f172a;
+            border: 2px solid #ff4757;
+            border-radius: 20px;
+            max-width: 860px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 71, 87, 0.3);
+        }
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .selection-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .selection-card:hover {
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.15);
+            transform: translateY(-2px);
+        }
+        .selection-card.selected {
+            border-color: #ff4757;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
+            background: rgba(255, 71, 87, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top HUD Bar -->
+    <header id="top-hud">
+        <div class="hud-left">
+            <a href="../../index.html" class="btn-hub-back" id="btn-back-hub">
+                <span>🏠</span>
+                <span>Playard Hub</span>
+            </a>
+            <div class="title-badge">
+                <span style="font-size: 1.2rem;">💥</span>
+                <strong>ULTRA REALISTLIK CAR CRASH</strong>
+                <span class="pc-badge">💻 AINULT ARVUTI</span>
+            </div>
+        </div>
+
+        <div class="hud-right">
+            <button class="hud-btn" id="btn-open-garage">
+                <span>🚗</span>
+                <span>Vaheta Autot</span>
+            </button>
+            <button class="hud-btn" id="btn-toggle-slowmo">
+                <span>⏱️</span>
+                <span>Aegluup (Slow-Mo)</span>
+            </button>
+            <button class="hud-btn" id="btn-respawn-car" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border-color: #2ecc71;">
+                <span>🔧</span>
+                <span>Taasta Auto (R)</span>
+            </button>
+            <button class="hud-btn" id="btn-toggle-cam">
+                <span>🎥</span>
+                <span>Kaamera (C)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Slow-Mo active banner -->
+    <div id="slowmo-banner">⏱️ AEGLUUP (SLOW-MOTION 0.2X) AKTIIVNE</div>
+
+    <!-- Telemetry & Speedometer -->
+    <div id="cockpit-hud">
+        <div class="telemetry-card">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;" id="hud-car-name">
+                Muskelauto V8
+            </div>
+            <div class="speed-display">
+                <span id="speed-value">0</span>
+                <span class="speed-unit">KM/H</span>
+                <span class="gear-pill" id="gear-value">N</span>
+            </div>
+            <div class="damage-bar-wrap">
+                <div class="damage-bar-label">
+                    <span>Struktuurne Kahjustus</span>
+                    <span id="damage-percent-text" style="color: #2ecc71;">0% (Terve)</span>
+                </div>
+                <div class="damage-bar-bg">
+                    <div class="damage-bar-fill" id="damage-bar-fill"></div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.75rem; color: #94a3b8;">
+                <span>Kokkupõrke Jõud: <strong id="g-force-text" style="color: #ff4757;">0 G</strong></span>
+                <span>Deformeeritud punkte: <strong id="deform-nodes-text" style="color: #ffd32a;">0 / 48</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desktop Controls Box -->
+    <div id="controls-help">
+        <div style="font-weight: 800; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>⌨️</span> Juhtimine (Arvuti Klaviatuur & Hiir)
+        </div>
+        <div><span class="key-badge">W</span> / <span class="key-badge">↑</span> Gaas / Kiirendus</div>
+        <div><span class="key-badge">S</span> / <span class="key-badge">↓</span> Pidur / Tagurpidikäik</div>
+        <div><span class="key-badge">A</span> / <span class="key-badge">D</span> Roolimine</div>
+        <div><span class="key-badge">TÜHIK</span> Käsipidur (Drift)</div>
+        <div><span class="key-badge">R</span> Taasta / Remondi Auto koheselt</div>
+        <div><span class="key-badge">T</span> / <span class="key-badge">G</span> Aegluup (Slow-Mo) lüliti</div>
+        <div><span class="key-badge">C</span> Kaamera vaatenurk (Taga / Kapott / Bumper)</div>
+        <div><span class="key-badge">HIIRE LOHISTAMINE</span> Vaba 360° orbiitkaamera vaatlemine</div>
+    </div>
+
+    <!-- Car Garage / Vehicle Selection Modal -->
+    <div id="modal-garage" class="modal-overlay">
+        <div class="modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.8rem;">🚗💥</span>
+                    <div>
+                        <h2 style="margin: 0; color: #ff4757; font-size: 1.4rem;">Vali Crash-Test Masin</h2>
+                        <span style="font-size: 0.85rem; color: #94a3b8;">Erineva massi, pehmekere jäikuse ja tippkiirusega katsesõidukid</span>
+                    </div>
+                </div>
+                <button id="btn-close-garage" style="background: transparent; border: none; color: #cbd5e1; font-size: 1.6rem; cursor: pointer;">✕</button>
+            </div>
+
+            <div class="modal-grid" id="garage-vehicles-grid">
+                <!-- Populated dynamically by TypeScript catalog -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modular Main Bundle -->
+    <script type="module" src="/src/games/carcrash/main.ts"></script>
+</body>
+</html>

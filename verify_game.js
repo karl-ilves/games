@@ -16268,6 +16268,80 @@ await (async () => {
             }
             console.log("   ✅ Published Game Object & Part Rendering in Community Play Player verified successfully!");
 
+            // 38. Testing 💥 Ultra Realistlik Car Crash Simulator (PC-Only, Hub card, Soft-Body Deformation, Telemetry & Slow-Mo)
+            console.log("38. Testing 💥 Ultra Realistlik Car Crash Simulator (PC-Only, Soft-body deformation, Slow-Mo & Garage)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            const hubCarCrashTest = await page.evaluate(() => {
+                const card = document.getElementById('card-carcrash-game');
+                return {
+                    hasCard: !!card,
+                    isPcOnly: card?.textContent?.includes('AINULT ARVUTI'),
+                    hasHref: card?.getAttribute('href')?.includes('carcrash')
+                };
+            });
+            console.log("   Hub Car Crash Card Results:", hubCarCrashTest);
+            if (!hubCarCrashTest.hasCard || !hubCarCrashTest.isPcOnly || !hubCarCrashTest.hasHref) {
+                throw new Error("Hub Car Crash card verification failed: " + JSON.stringify(hubCarCrashTest));
+            }
+
+            // Navigate to Car Crash Simulator
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/carcrash/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 1200));
+
+            const carCrashPageTest = await page.evaluate(() => {
+                const canvas = document.getElementById('game-canvas');
+                const pBtn = document.getElementById('btn-playard-menu');
+                const speedEl = document.getElementById('speed-value');
+                const damageEl = document.getElementById('damage-percent-text');
+                const slowMoBtn = document.getElementById('btn-toggle-slowmo');
+                const respawnBtn = document.getElementById('btn-respawn-car');
+                const garageBtn = document.getElementById('btn-open-garage');
+                const garageModal = document.getElementById('modal-garage');
+
+                // Test garage open & close
+                const garageInitiallyHidden = window.getComputedStyle(garageModal).display === 'none';
+                garageBtn?.click();
+                const garageVisibleAfterClick = window.getComputedStyle(garageModal).display === 'flex';
+                document.getElementById('btn-close-garage')?.click();
+                const garageHiddenAfterClose = window.getComputedStyle(garageModal).display === 'none';
+
+                // Test Slow-Mo toggle
+                slowMoBtn?.click();
+                const slowMoBanner = document.getElementById('slowmo-banner');
+                const slowMoActive = window.getComputedStyle(slowMoBanner).display === 'block';
+                slowMoBtn?.click();
+                const slowMoInactive = window.getComputedStyle(slowMoBanner).display === 'none';
+
+                return {
+                    hasCanvas: !!canvas,
+                    hasPBtn: !!pBtn,
+                    hasSpeedometer: !!speedEl,
+                    hasDamageMeter: !!damageEl,
+                    garageInitiallyHidden,
+                    garageVisibleAfterClick,
+                    garageHiddenAfterClose,
+                    slowMoActive,
+                    slowMoInactive
+                };
+            });
+
+            console.log("   Car Crash Simulator Gameplay UI Results:", carCrashPageTest);
+            if (
+                !carCrashPageTest.hasCanvas ||
+                !carCrashPageTest.hasPBtn ||
+                !carCrashPageTest.hasSpeedometer ||
+                !carCrashPageTest.hasDamageMeter ||
+                !carCrashPageTest.garageVisibleAfterClick ||
+                !carCrashPageTest.garageHiddenAfterClose ||
+                !carCrashPageTest.slowMoActive ||
+                !carCrashPageTest.slowMoInactive
+            ) {
+                throw new Error("Car Crash Simulator verification failed: " + JSON.stringify(carCrashPageTest));
+            }
+            console.log("   ✅ 💥 Ultra Realistlik Car Crash Simulator verified successfully!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
         } catch(err) { console.error("Verification failed:", err ? (err.stack || err) : err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }

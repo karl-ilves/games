@@ -109,6 +109,11 @@ export function canAccessFlight(_profileOrEmail?: UserProfile | string | null, _
     return true;
 }
 
+export function canAccessCarCrash(_profileOrEmail?: UserProfile | string | null, _username?: string | null): boolean {
+    // 💥 3D Ultra Realistlik Car Crash Simulator on avalik ja optimeeritud ainult arvutile!
+    return true;
+}
+
 export function isUserAdmin(email?: string | null): boolean {
     if (!email) return false;
     return email.trim().toLowerCase() === 'grx@trenet.ee';

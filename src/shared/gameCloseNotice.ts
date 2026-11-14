@@ -56,6 +56,21 @@ export const LAST_METRO_PC_ONLY_NOTICE: GameCloseNoticeConfig = {
 };
 
 /**
+ * Special Notice for Ultra Realistic Car Crash Simulator: PC Only Exclusive.
+ */
+export const CAR_CRASH_PC_ONLY_NOTICE: GameCloseNoticeConfig = {
+    id: 'notice_carcrash_pc_only',
+    gameId: 'carcrash',
+    gameTitle: '💥 ULTRA REALISTLIK CAR CRASH',
+    title: '💻 Ultra Realistlik Car Crash · AINULT ARVUTIS',
+    description: '💥 See mäng on loodud spetsiaalselt arvutile (PC / Desktop). Reaalajas pehmekere deformatsioon, detailne füüsikamootor, aegluubis kordused ja avariid nõuavad võimsat arvutit ning klaviatuuri ja hiirt! - Playard Game Team',
+    repeatCount: 0,
+    active: true,
+    createdAt: 1731580000000,
+    updatedAt: 1731580000000
+};
+
+/**
  * Special Notice for Snake & 2D Breakout: moving exclusively to Phone / Mobile.
  */
 export const MOBILE_ONLY_ARCADE_NOTICE: GameCloseNoticeConfig = {
@@ -92,6 +107,9 @@ export function resolveNoticeForGame(gamePathOrId: string): GameCloseNoticeConfi
     const clean = (gamePathOrId || '').toLowerCase();
     if (clean.includes('/metro') || clean === 'metro' || clean.includes('last metro')) {
         return LAST_METRO_PC_ONLY_NOTICE;
+    }
+    if (clean.includes('/carcrash') || clean === 'carcrash' || clean.includes('car crash') || clean.includes('crash')) {
+        return CAR_CRASH_PC_ONLY_NOTICE;
     }
     if (clean.includes('/snake') || clean === 'snake' || clean.includes('uss') ||
         clean.includes('/breakout') || clean === 'breakout' || clean.includes('klots')) {
