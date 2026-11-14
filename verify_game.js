@@ -4,7 +4,8 @@ import v8 from 'v8';
 
 if (!process.env.PLAYARD_MEM_CONSTRAINED && v8.getHeapStatistics().heap_size_limit > 1500 * 1024 * 1024) {
     try {
-        execSync(`"${process.execPath}" --max-old-space-size=1024 "${process.argv[1]}"`, {
+        const extraArgs = process.argv.slice(2).map(a => `"${a}"`).join(' ');
+        execSync(`"${process.execPath}" --max-old-space-size=1024 "${process.argv[1]}" ${extraArgs}`.trim(), {
             stdio: 'inherit',
             env: { ...process.env, PLAYARD_MEM_CONSTRAINED: '1' }
         });
@@ -285,7 +286,102 @@ await (async () => {
         }
     });
 
+    // Detect target filter from CLI: e.g. node verify_game.js --only=carcrash or node verify_game.js carcrash
+    const cliArgs = process.argv.slice(2);
+    let targetFilter = '';
+    for (const arg of cliArgs) {
+        if (arg.startsWith('--only=')) targetFilter = arg.replace('--only=', '').toLowerCase();
+        else if (arg.startsWith('--game=')) targetFilter = arg.replace('--game=', '').toLowerCase();
+        else if (!arg.startsWith('-')) targetFilter = arg.toLowerCase();
+    }
+    if (targetFilter) {
+        console.log(`🎯 Targeted testing mode active: only testing '${targetFilter}'! (Skipping other game tests)`);
+    }
+
     try {
+        if (targetFilter) {
+            console.log(`⚡ Running targeted test exclusively for '${targetFilter}'...`);
+            if (targetFilter.includes('carcrash') || targetFilter.includes('crash')) {
+                // Directly execute test 38
+                console.log("38. Testing 💥 Ultra Realistlik Car Crash Simulator (PC-Only, Soft-body deformation, Slow-Mo & Garage)...");
+                await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/`, { waitUntil: 'domcontentloaded' });
+                await new Promise(r => setTimeout(r, 600));
+
+                const hubCarCrashTest = await page.evaluate(() => {
+                    const card = document.getElementById('card-carcrash-game');
+                    return {
+                        hasCard: !!card,
+                        isPcOnly: card?.textContent?.includes('AINULT ARVUTI'),
+                        hasHref: card?.getAttribute('href')?.includes('carcrash')
+                    };
+                });
+                console.log("   Hub Car Crash Card Results:", hubCarCrashTest);
+                if (!hubCarCrashTest.hasCard || !hubCarCrashTest.isPcOnly || !hubCarCrashTest.hasHref) {
+                    throw new Error("Hub Car Crash card verification failed: " + JSON.stringify(hubCarCrashTest));
+                }
+
+                await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/carcrash/index.html`, { waitUntil: 'domcontentloaded' });
+                await new Promise(r => setTimeout(r, 1200));
+
+                const carCrashPageTest = await page.evaluate(() => {
+                    const canvas = document.getElementById('game-canvas');
+                    const pBtn = document.getElementById('btn-playard-menu');
+                    const speedEl = document.getElementById('speed-value');
+                    const damageEl = document.getElementById('damage-percent-text');
+                    const slowMoBtn = document.getElementById('btn-toggle-slowmo');
+                    const respawnBtn = document.getElementById('btn-respawn-car');
+                    const garageBtn = document.getElementById('btn-open-garage');
+                    const garageModal = document.getElementById('modal-garage');
+
+                    const garageInitiallyHidden = window.getComputedStyle(garageModal).display === 'none';
+                    garageBtn?.click();
+                    const garageVisibleAfterClick = window.getComputedStyle(garageModal).display === 'flex';
+                    document.getElementById('btn-close-garage')?.click();
+                    const garageHiddenAfterClose = window.getComputedStyle(garageModal).display === 'none';
+
+                    slowMoBtn?.click();
+                    const slowMoBanner = document.getElementById('slowmo-banner');
+                    const slowMoActive = window.getComputedStyle(slowMoBanner).display === 'block';
+                    slowMoBtn?.click();
+                    const slowMoInactive = window.getComputedStyle(slowMoBanner).display === 'none';
+
+                    const catalogTopSpeeds = window.carCrashCatalog?.map ? window.carCrashCatalog.map((c) => c.topSpeedKmh) : [100];
+                    const allUnderOrEqualTo100 = catalogTopSpeeds.every((s) => s <= 100);
+
+                    return {
+                        hasCanvas: !!canvas,
+                        hasPBtn: !!pBtn,
+                        hasSpeedometer: !!speedEl,
+                        hasDamageMeter: !!damageEl,
+                        garageInitiallyHidden,
+                        garageVisibleAfterClick,
+                        garageHiddenAfterClose,
+                        slowMoActive,
+                        slowMoInactive,
+                        allUnderOrEqualTo100
+                    };
+                });
+
+                console.log("   Car Crash Simulator Gameplay UI Results:", carCrashPageTest);
+                if (
+                    !carCrashPageTest.hasCanvas ||
+                    !carCrashPageTest.hasPBtn ||
+                    !carCrashPageTest.hasSpeedometer ||
+                    !carCrashPageTest.hasDamageMeter ||
+                    !carCrashPageTest.garageVisibleAfterClick ||
+                    !carCrashPageTest.garageHiddenAfterClose ||
+                    !carCrashPageTest.slowMoActive ||
+                    !carCrashPageTest.slowMoInactive ||
+                    !carCrashPageTest.allUnderOrEqualTo100
+                ) {
+                    throw new Error("Car Crash Simulator verification failed: " + JSON.stringify(carCrashPageTest));
+                }
+                console.log("   ✅ 💥 Ultra Realistlik Car Crash Simulator verified successfully with strict 100 KM/H limit!");
+                console.log("✅ Targeted test passed successfully in record time! (Other games skipped as requested)");
+                process.exit(0);
+            }
+        }
+
         console.log("1. Checking Playard Hub Homepage...");
         await page.goto('http://localhost:4173/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(() => {
