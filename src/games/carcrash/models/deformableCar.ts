@@ -32,6 +32,7 @@ export interface DeformableVehicleBundle {
         stiffness: number,
         impactSpeedKmh?: number
     ) => { deformedCount: number; damagePercent: number };
+    charredBurnedState: () => void;
     resetToFactory: () => void;
 }
 
@@ -175,46 +176,67 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
     tlR.position.set(width * 0.35, height * 0.45, -length * 0.51);
     root.add(tlL, tlR);
 
-    // 8. Optional SpaceX Cold-Gas Thrusters (for Tesla Roadcoaster)
+    // 8. SpaceX Jet Rocket Thrusters (for Tesla Roadcoaster) - clearly visible pods!
     if (config.hasThrusters) {
-        const thrusterMat = new THREE.MeshStandardMaterial({
-            color: 0x111111,
-            metalness: 0.95,
-            roughness: 0.15
+        const jetTitaniumMat = new THREE.MeshStandardMaterial({
+            color: 0x1e272e,
+            metalness: 0.92,
+            roughness: 0.2
         });
-        const nozzleMat = new THREE.MeshStandardMaterial({
+        const jetRingMat = new THREE.MeshStandardMaterial({
+            color: 0x00d2d3,
+            metalness: 0.6,
+            roughness: 0.3
+        });
+        const jetNozzleMat = new THREE.MeshStandardMaterial({
             color: 0x00f2fe,
-            emissive: 0x00d2d3,
-            emissiveIntensity: 0.9
+            emissive: 0x00a8ff,
+            emissiveIntensity: 1.4
         });
 
-        // Dual rear rocket boosters
-        const makeNozzle = (x: number) => {
+        // 1. Dual Rear High-Output Rocket Jet Boosters (prominently protruding from rear bumper!)
+        const makeRearJet = (x: number) => {
             const grp = new THREE.Group();
-            const casing = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.35, 16), thrusterMat);
-            casing.rotation.x = Math.PI / 2;
-            const core = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.36, 16), nozzleMat);
-            core.rotation.x = Math.PI / 2;
-            grp.add(casing, core);
-            grp.position.set(x, height * 0.38, -length * 0.52);
+            // Outer jet turbine housing
+            const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 0.55, 20), jetTitaniumMat);
+            housing.rotation.x = Math.PI / 2;
+            // Turbine glowing ring
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.04, 12, 24), jetRingMat);
+            ring.position.set(0, 0, 0.2);
+            // Glowing core exhaust nozzle
+            const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.56, 16), jetNozzleMat);
+            nozzle.rotation.x = Math.PI / 2;
+
+            grp.add(housing, ring, nozzle);
+            grp.position.set(x, height * 0.42, -length * 0.54);
             return grp;
         };
+        root.add(makeRearJet(-width * 0.28), makeRearJet(width * 0.28));
 
-        const tL = makeNozzle(-width * 0.2);
-        const tR = makeNozzle(width * 0.2);
-        root.add(tL, tR);
+        // 2. Four External Aerodynamic Vertical Lift Jet Pods (Mounted visibly on the 4 corners/sides!)
+        const makeLiftJetPod = (x: number, z: number, angleZ: number) => {
+            const pod = new THREE.Group();
+            // Aerodynamic nacelle body
+            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.45, 8, 16), jetTitaniumMat);
+            body.rotation.z = angleZ;
+            // Downward angled thruster nozzle
+            const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.22, 16), jetNozzleMat);
+            nozzle.position.set(0, -0.22, 0);
+            // Intake fan / ring on top
+            const intake = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.1, 16), jetRingMat);
+            intake.position.set(0, 0.24, 0);
 
-        // Underside vertical lift thruster vents
-        const makeLiftVent = (x: number, z: number) => {
-            const vent = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.05, 12), nozzleMat);
-            vent.position.set(x, height * 0.1, z);
-            return vent;
+            pod.add(body, nozzle, intake);
+            pod.position.set(x, height * 0.45, z);
+            return pod;
         };
+
+        const sideOffset = width * 0.55;
         root.add(
-            makeLiftVent(-width * 0.3, length * 0.25),
-            makeLiftVent(width * 0.3, length * 0.25),
-            makeLiftVent(-width * 0.3, -length * 0.25),
-            makeLiftVent(width * 0.3, -length * 0.25)
+            makeLiftJetPod(-sideOffset, length * 0.25, 0.1),  // Front Left Lift Jet
+            makeLiftJetPod(sideOffset, length * 0.25, -0.1),  // Front Right Lift Jet
+            makeLiftJetPod(-sideOffset, -length * 0.25, 0.1), // Rear Left Lift Jet
+            makeLiftJetPod(sideOffset, -length * 0.25, -0.1)  // Rear Right Lift Jet
         );
     }
 
@@ -347,6 +369,52 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
         return { deformedCount: deformedNodes, damagePercent };
     };
 
+    const charredBurnedState = () => {
+        // Scorched blackened burned body, hood, and bumpers
+        bodyMat.color.set(0x141414);
+        bodyMat.roughness = 0.95;
+        bodyMat.metalness = 0.1;
+        hoodMat.color.set(0x101010);
+        hoodMat.roughness = 0.98;
+        bumperMat.color.set(0x0c0c0c);
+
+        // Blown out shattered black glass
+        glassMat.color.set(0x050505);
+        glassMat.opacity = 0.3;
+        glassMat.roughness = 1.0;
+
+        // Destroyed dead lights
+        if (hlL.material instanceof THREE.MeshStandardMaterial) {
+            hlL.material.color.set(0x000000);
+            hlL.material.emissive.set(0x000000);
+        }
+        if (hlR.material instanceof THREE.MeshStandardMaterial) {
+            hlR.material.color.set(0x000000);
+            hlR.material.emissive.set(0x000000);
+        }
+        if (tlL.material instanceof THREE.MeshStandardMaterial) {
+            tlL.material.color.set(0x000000);
+            tlL.material.emissive.set(0x000000);
+        }
+        if (tlR.material instanceof THREE.MeshStandardMaterial) {
+            tlR.material.color.set(0x000000);
+            tlR.material.emissive.set(0x000000);
+        }
+
+        // Blown open hood & detached bumpers
+        hood.rotation.x = -1.25;
+        hood.position.y = height * 0.85;
+        bumperFront.position.y -= 0.22;
+        bumperFront.rotation.x -= 0.65;
+        bumperRear.rotation.x += 0.5;
+
+        // Knock wheels out of alignment
+        wheels.fl.rotation.z = 0.55;
+        wheels.fr.rotation.z = -0.55;
+        wheels.rl.rotation.z = 0.35;
+        wheels.rr.rotation.z = -0.35;
+    };
+
     const resetToFactory = () => {
         for (let i = 0; i < vertexCount; i++) {
             const v = deformableVertices[i];
@@ -356,6 +424,15 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
         }
         posAttr.needsUpdate = true;
         baseGeo.computeVertexNormals();
+
+        // Reset Paint
+        bodyMat.color.set(config.primaryColor);
+        bodyMat.roughness = 0.25;
+        bodyMat.metalness = 0.7;
+        hoodMat.color.set(config.primaryColor);
+        hoodMat.roughness = 0.3;
+        hoodMat.metalness = 0.65;
+        bumperMat.color.set(config.secondaryColor);
 
         // Reset Hood
         hood.position.set(0, height * 0.64, length * 0.28);
@@ -420,6 +497,7 @@ export function buildDeformableVehicle(config: VehicleConfig): DeformableVehicle
         taillights: [tlL, tlR],
         config,
         applyImpactDeformation,
+        charredBurnedState,
         resetToFactory
     };
 }

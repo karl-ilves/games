@@ -31,8 +31,11 @@ export class CrashHUD {
         if (this.damageTextEl) {
             let label = 'Terve';
             let color = '#2ecc71';
-            if (state.damagePercent > 70) {
-                label = 'HÄVITATUD';
+            if (state.damagePercent >= 100) {
+                label = '💥 PLAHVATANUD & HÄVITATUD! VAJUTA "R"';
+                color = '#ff4757';
+            } else if (state.damagePercent > 70) {
+                label = 'Põleb / Kriitiline';
                 color = '#e74c3c';
             } else if (state.damagePercent > 35) {
                 label = 'Raskelt vigastatud';

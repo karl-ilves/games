@@ -155,4 +155,44 @@ export class CarCrashAudioSystem {
             osc.stop(now + 0.45);
         } catch (_) {}
     }
+
+    public playExplosion(): void {
+        if (!this.enabled || !this.ensureContext() || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            // 1. Sub-bass boom
+            const boomOsc = this.ctx.createOscillator();
+            const boomGain = this.ctx.createGain();
+            boomOsc.type = 'sawtooth';
+            boomOsc.frequency.setValueAtTime(120, now);
+            boomOsc.frequency.exponentialRampToValueAtTime(25, now + 0.8);
+            boomGain.gain.setValueAtTime(0.5, now);
+            boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+            boomOsc.connect(boomGain);
+            boomGain.connect(this.ctx.destination);
+            boomOsc.start(now);
+            boomOsc.stop(now + 0.95);
+
+            // 2. White noise blast
+            const bufferSize = Math.floor(this.ctx.sampleRate * 0.8);
+            const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.25));
+            }
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1800, now);
+            filter.frequency.exponentialRampToValueAtTime(100, now + 0.7);
+            const noiseGain = this.ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.4, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+            noise.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(this.ctx.destination);
+            noise.start(now);
+        } catch (_) {}
+    }
 }

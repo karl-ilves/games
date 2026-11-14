@@ -34,6 +34,19 @@ export class CrashPhysicsSystem {
         this.vehicle.root.rotation.copy(this.rotation);
     }
 
+    public isThrusterFiring = false;
+    public isBoostFiring = false;
+    public isAirborne = false;
+    public isDestroyed = false;
+
+    public explode(): void {
+        this.isDestroyed = true;
+        this.velocity.y += 7.5; // Explosion blast lift
+        this.velocity.x += (Math.random() - 0.5) * 7.0;
+        this.velocity.z += (Math.random() - 0.5) * 7.0;
+        this.angularVelocity.set((Math.random() - 0.5) * 5.0, (Math.random() - 0.5) * 7.0, (Math.random() - 0.5) * 5.0);
+    }
+
     public respawn(spawnPos = new THREE.Vector3(0, 0.5, 0)): void {
         this.position.copy(spawnPos);
         this.velocity.set(0, 0, 0);
@@ -42,14 +55,12 @@ export class CrashPhysicsSystem {
         this.steerAngle = 0;
         this.wheelSpin = 0;
         this.speedKmh = 0;
+        this.isDestroyed = false;
+        this.vehicle.bodyMesh.rotation.set(0, 0, 0);
         this.vehicle.resetToFactory();
         this.vehicle.root.position.copy(this.position);
         this.vehicle.root.rotation.copy(this.rotation);
     }
-
-    public isThrusterFiring = false;
-    public isBoostFiring = false;
-    public isAirborne = false;
 
     public update(
         dt: number,
@@ -66,9 +77,29 @@ export class CrashPhysicsSystem {
         obstacles: CrashObstacle[],
         onImpact?: (impactG: number, contactPt: THREE.Vector3, impactSpeedKmh: number) => void
     ): void {
+        // If car is destroyed/exploded, controls are completely disabled!
+        if (this.isDestroyed) {
+            inputs = {
+                forward: 0,
+                steer: 0,
+                brake: false,
+                handbrake: false,
+                jumpThruster: false,
+                boost: false,
+                pitch: 0,
+                yaw: 0
+            };
+        }
+
         const config = this.vehicle.config;
         const groundY = config.dimensions.height * 0.35;
         this.isAirborne = this.position.y > groundY + 0.15;
+
+        // Realistic dynamic body roll & squat/dive suspension physics
+        const bodyRoll = THREE.MathUtils.clamp(-this.angularVelocity.y * 0.08, -0.15, 0.15);
+        const bodyPitch = THREE.MathUtils.clamp((inputs.forward > 0 ? -0.05 : (inputs.forward < 0 ? 0.06 : 0)), -0.1, 0.1);
+        this.vehicle.bodyMesh.rotation.z = THREE.MathUtils.lerp(this.vehicle.bodyMesh.rotation.z, bodyRoll, dt * 12.0);
+        this.vehicle.bodyMesh.rotation.x = THREE.MathUtils.lerp(this.vehicle.bodyMesh.rotation.x, bodyPitch, dt * 12.0);
 
         // 1. Calculate heading orientation
         this.forward.set(0, 0, 1).applyEuler(this.rotation).normalize();

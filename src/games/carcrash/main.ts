@@ -161,7 +161,18 @@ function animate(currentTime: number): void {
                 totalDisp += len;
             }
             const dmgPct = Math.min(100, Math.round((totalDisp / (activeVehicle.deformableVertices.length * 0.18)) * 100));
-            carCrashState.updateDamage(dmgPct, deformedNodes);
+
+            // Explosion & engine destruction trigger on 100% damage or high-speed critical impact
+            const currState = carCrashState.getState();
+            if ((dmgPct >= 100 || (currState.damagePercent > 65 && impactSpeedKmh > 48)) && !physics.isDestroyed) {
+                physics.explode();
+                activeVehicle.charredBurnedState();
+                particles.emitExplosion(worldContact);
+                audio.playExplosion();
+                carCrashState.updateDamage(100, deformedNodes);
+            } else if (!physics.isDestroyed) {
+                carCrashState.updateDamage(dmgPct, deformedNodes);
+            }
         }
     );
 

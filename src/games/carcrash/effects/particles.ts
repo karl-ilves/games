@@ -154,6 +154,60 @@ export class CrashParticleSystem {
         }
     }
 
+    public emitExplosion(origin: THREE.Vector3): void {
+        const count = 280;
+        for (let i = 0; i < count; i++) {
+            if (this.particles.length >= this.maxParticles) break;
+
+            const rand = Math.random();
+            let type: CrashParticle['type'] = 'fire';
+            let pColor = new THREE.Color(0xff4400);
+            let size = 0.55;
+            let speed = 12 + Math.random() * 22;
+            let maxLife = 0.7 + Math.random() * 0.9;
+
+            if (rand < 0.45) {
+                // Expanding Fireball
+                type = 'fire';
+                pColor = new THREE.Color(Math.random() > 0.5 ? 0xff3300 : 0xffaa00);
+                speed = 10 + Math.random() * 18;
+                size = 0.65 + Math.random() * 0.4;
+                maxLife = 0.5 + Math.random() * 0.6;
+            } else if (rand < 0.75) {
+                // Burning Shrapnel chunks
+                type = 'debris';
+                pColor = new THREE.Color(Math.random() > 0.5 ? 0x222222 : 0xcc4400);
+                speed = 14 + Math.random() * 24;
+                size = 0.45;
+                maxLife = 0.9 + Math.random() * 1.0;
+            } else {
+                // Heavy black smoke plume
+                type = 'smoke';
+                pColor = new THREE.Color(0x111111);
+                speed = 5 + Math.random() * 8;
+                size = 0.85 + Math.random() * 0.5;
+                maxLife = 1.4 + Math.random() * 1.2;
+            }
+
+            const dir = new THREE.Vector3(
+                (Math.random() - 0.5) * 2,
+                Math.random() * 1.8 + 0.2,
+                (Math.random() - 0.5) * 2
+            ).normalize();
+
+            this.particles.push({
+                position: origin.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.2, 0.4 + Math.random() * 0.8, (Math.random() - 0.5) * 1.2)),
+                velocity: dir.multiplyScalar(speed),
+                color: pColor,
+                size,
+                alpha: 1.0,
+                life: 0,
+                maxLife,
+                type
+            });
+        }
+    }
+
     public update(dt: number): void {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
