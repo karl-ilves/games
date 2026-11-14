@@ -4,6 +4,8 @@
  * with fallback to browser timezone/locale.
  */
 
+import { supabase } from '../lib/supabase';
+
 export interface PlayerGeoInfo {
     country: string;
     countryCode: string;
@@ -112,15 +114,37 @@ export class PlayerGeoService {
         return geo;
     }
 
+    private async loadRemoteLocations() {
+        if (!supabase) return;
+        try {
+            // Read recorded geo metadata from Supabase user_created_games table
+            const { data } = await supabase
+                .from('user_created_games')
+                .select('creator_username, description')
+                .eq('category', 'player_geo_meta');
+            
+            if (Array.isArray(data)) {
+                const raw = localStorage.getItem(KNOWN_PLAYERS_GEO_KEY);
+                const map: Record<string, PlayerGeoInfo> = raw ? JSON.parse(raw) : {};
+                data.forEach((row: any) => {
+                    if (row.creator_username && row.description) {
+                        try {
+                            const parsed = JSON.parse(row.description);
+                            if (parsed && parsed.country) {
+                                map[row.creator_username.toLowerCase().trim()] = parsed;
+                            }
+                        } catch (e) {}
+                    }
+                });
+                localStorage.setItem(KNOWN_PLAYERS_GEO_KEY, JSON.stringify(map));
+            }
+        } catch (e) {}
+    }
+
     public getGeoForPlayer(username: string): PlayerGeoInfo {
         const clean = (username || '').toLowerCase().trim();
         
-        // 1. Check known specific defaults
-        if (DEFAULT_PLAYER_LOCATIONS[clean]) {
-            return DEFAULT_PLAYER_LOCATIONS[clean];
-        }
-
-        // 2. Check stored player locations
+        // 1. Check stored player locations (synced from real device IPs)
         try {
             const raw = localStorage.getItem(KNOWN_PLAYERS_GEO_KEY);
             if (raw) {
@@ -131,15 +155,20 @@ export class PlayerGeoService {
             }
         } catch (e) {}
 
-        // 3. Fallback to current player's geo or Estonia default
+        // 2. Check known specific defaults
+        if (DEFAULT_PLAYER_LOCATIONS[clean]) {
+            return DEFAULT_PLAYER_LOCATIONS[clean];
+        }
+
+        // 3. Fallback to current player's geo or international default
         if (this.currentGeo) {
             return this.currentGeo;
         }
 
-        return { country: 'Estonia', countryCode: 'EE', flag: '🇪🇪', city: 'Tallinn' };
+        return { country: 'United States', countryCode: 'US', flag: '🇺🇸', city: '' };
     }
 
-    public recordPlayerGeo(username: string, geo: PlayerGeoInfo) {
+    public async recordPlayerGeo(username: string, geo: PlayerGeoInfo) {
         const clean = (username || '').toLowerCase().trim();
         if (!clean) return;
         try {
@@ -148,11 +177,27 @@ export class PlayerGeoService {
             map[clean] = geo;
             localStorage.setItem(KNOWN_PLAYERS_GEO_KEY, JSON.stringify(map));
         } catch (e) {}
+
+        // Sync with Supabase cloud table so everyone and the Owner panel sees it across devices
+        if (supabase) {
+            try {
+                const geoId = `geo_${clean.replace(/[^a-z0-9]/g, '_')}`;
+                await supabase.from('user_created_games').upsert({
+                    id: geoId,
+                    creator_username: username,
+                    title: `Geo: ${geo.country}`,
+                    description: JSON.stringify(geo),
+                    category: 'player_geo_meta',
+                    updated_at: new Date().toISOString()
+                });
+            } catch (e) {}
+        }
     }
 }
 
 export const playerGeoService = new PlayerGeoService();
-// Auto trigger detection in background
+// Auto trigger detection and load cloud records in background
 if (typeof window !== 'undefined') {
     playerGeoService.detectCurrentLocation().catch(() => {});
+    (playerGeoService as any).loadRemoteLocations?.();
 }
