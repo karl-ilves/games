@@ -1427,6 +1427,7 @@ export async function initAuth() {
                 return showMsg('Please enter username and password.', 'error');
             }
 
+
             if (hasEmoji(username) || hasEmoji(password)) {
                 return showMsg('Emojis unavailable', 'error');
             }
