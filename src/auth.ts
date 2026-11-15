@@ -1795,6 +1795,13 @@ function initRecoveryAndForgotUI() {
 
         modalForgot?.setAttribute('data-username', username);
         if (userPreview) userPreview.textContent = `@${username}`;
+        const rec = passwordRecoveryService.getRecoveryConfig(username);
+        const forgotGmailInput = document.getElementById('forgot-gmail-input') as HTMLInputElement | null;
+        const forgotPromptError = document.getElementById('forgot-prompt-error');
+        if (forgotGmailInput) {
+            forgotGmailInput.value = rec?.gmail || '';
+        }
+        if (forgotPromptError) forgotPromptError.style.display = 'none';
         if (forgotStepPrompt) forgotStepPrompt.style.display = 'block';
         if (forgotStepVerify) forgotStepVerify.style.display = 'none';
         if (forgotCodeInput) forgotCodeInput.value = '';
@@ -1804,8 +1811,22 @@ function initRecoveryAndForgotUI() {
 
     btnForgotSend?.addEventListener('click', () => {
         const username = modalForgot?.getAttribute('data-username') || authUsernameInput?.value.trim() || '';
-        const rec = passwordRecoveryService.getRecoveryConfig(username);
-        const targetGmail = rec?.gmail || `${username.toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@gmail.com`;
+        const forgotGmailInput = document.getElementById('forgot-gmail-input') as HTMLInputElement | null;
+        const forgotPromptError = document.getElementById('forgot-prompt-error');
+        const enteredGmail = forgotGmailInput?.value.trim() || '';
+
+        if (!enteredGmail || !enteredGmail.includes('@')) {
+            if (forgotPromptError) {
+                forgotPromptError.textContent = 'Palun sisesta korrektne e-posti aadress (Gmail)!';
+                forgotPromptError.style.display = 'block';
+            }
+            return;
+        }
+        if (forgotPromptError) forgotPromptError.style.display = 'none';
+
+        // Asenda või uuenda mängija taastamise Gmail
+        const targetGmail = enteredGmail;
+        passwordRecoveryService.setRecoveryConfig(username, targetGmail, true);
 
         const code = passwordRecoveryService.generate6DigitCode(username, targetGmail);
         const forgotDisplayEl = document.getElementById('forgot-code-display');
