@@ -1653,10 +1653,12 @@ export function renderOwnerUpdatesView(): void {
         }
     }
 
-    // 3. Filter updates by search query
+    // 3. Filter updates: Kui paned "publish", siis see KAOB nimekirjast (nimekirjas kuvatakse ootel/draft uuendused)!
     const query = (searchInput?.value || '').trim().toLowerCase();
 
+    // Nimekirjas näidatakse ootel/staging uuendusi. Kui vajutatakse publish, kaob see nimekirjast ära!
     const filteredUpdates = allUpdates.filter(u => {
+        if (u.status !== 'draft') return false; // Avaldatud uuendused kaovad nimekirjast
         if (query) {
             const matchTitle = u.title.toLowerCase().includes(query);
             const matchDesc = u.description.toLowerCase().includes(query);
@@ -1671,7 +1673,7 @@ export function renderOwnerUpdatesView(): void {
     listContainer.innerHTML = '';
 
     if (filteredUpdates.length === 0) {
-        listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 24px; font-size: 0.9rem;">Ühtegi uuendust ei leitud. Vajuta Enter või lisa uus uuendus!</div>';
+        listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 24px; font-size: 0.9rem;">Kõik uuendused on avaldatud (nimekirjas ootel uuendusi pole)! Vajuta Enter uue lisamiseks.</div>';
         return;
     }
 
