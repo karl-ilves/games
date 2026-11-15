@@ -49,48 +49,17 @@ export function updateAdminControlsVisibility(userEmail?: string | null, usernam
     }
     
 
-    // Rongimäng on avaldatud KÕIKIDELE mängijatele
-    const trainGameCard = document.getElementById('card-train-game');
-    if (trainGameCard) trainGameCard.style.display = 'flex';
-
-    // Obby (Takistusrada) mäng on avaldatud KÕIKIDELE mängijatele!
-    const obbyGameCard = document.getElementById('card-obby-game');
-    if (obbyGameCard) {
-        obbyGameCard.style.display = 'flex';
-        const cooldownUntil = parseInt(localStorage.getItem('playard_obby_cooldown_until') || '0', 10);
-        const cooldownBadge = document.getElementById('card-obby-cooldown-badge');
-        if (cooldownUntil > Date.now()) {
-            const remaining = cooldownUntil - Date.now();
-            const hrs = Math.floor(remaining / (1000 * 60 * 60));
-            const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-            if (cooldownBadge) {
-                cooldownBadge.textContent = isEstonian ? `⏳ 24h Ooteaeg (${hrs}h ${mins}m)` : `⏳ 24h Cooldown (${hrs}h ${mins}m)`;
-                cooldownBadge.style.display = 'inline-block';
-            }
-        } else if (cooldownBadge) {
-            cooldownBadge.style.display = 'none';
-        }
-    }
-
-    // LAST METRO mäng on nähtav KÕIKIDELE mängijatele!
+    // Update 2.0: LAST METRO is visible for everyone
     const metroGameCard = document.getElementById('card-metro-game');
     if (metroGameCard) metroGameCard.style.display = 'flex';
 
-    // MMP1 (Murder Mystery) mäng on nähtav KÕIKIDELE mängijatele!
-    const mmp1GameCard = document.getElementById('card-mmp1-game');
-    if (mmp1GameCard) mmp1GameCard.style.display = 'flex';
+    // Update 2.0: 2D Breakout is visible for everyone
+    const breakoutGameCard = document.getElementById('card-breakout-game');
+    if (breakoutGameCard) breakoutGameCard.style.display = 'flex';
 
-    // ROCKET PLAYARD mäng on avaldatud KÕIKIDELE mängijatele!
-    const rocketGameCard = document.getElementById('card-rocket-game');
-    if (rocketGameCard) rocketGameCard.style.display = 'flex';
-
-    // CityCar avalik ja nähtav kõigile
-    const cityCarCard = document.getElementById('card-citycar-game');
-    if (cityCarCard) cityCarCard.style.display = 'flex';
-
-    // 2D Maa Kaitsja (Earth Defender) avalik ja nähtav kõigile
-    const defenderCard = document.getElementById('card-defender-game');
-    if (defenderCard) defenderCard.style.display = 'flex';
+    // Update 2.0: Snake is visible for everyone
+    const snakeGameCard = document.getElementById('card-snake-game');
+    if (snakeGameCard) snakeGameCard.style.display = 'flex';
 
     // Switch language: English for all users across Playard!
     setLanguage('en');
