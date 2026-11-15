@@ -10,6 +10,7 @@ export interface PlayardProject {
     title: string;
     category: string;
     description?: string;
+    isOpen?: boolean; // Ainult 1 projekt korraga saab olla avatud!
     createdAt: number;
 }
 
@@ -30,15 +31,15 @@ const PROJECTS_STORAGE_KEY = 'playard_owner_projects';
 const UPDATES_STORAGE_KEY = 'playard_owner_updates';
 
 export const DEFAULT_PLAYARD_PROJECTS: PlayardProject[] = [
-    { id: 'hub', title: 'Playard Hub & UI', category: 'Platform', createdAt: 1731600000000 },
-    { id: 'citycar', title: '3D City Car Simulator', category: 'Driving', createdAt: 1731600000000 },
-    { id: 'mmp1', title: 'MMP1 Multi-Player Combat', category: 'Action', createdAt: 1731600000000 },
-    { id: 'foneplay', title: 'Test a New Fone Play', category: 'Mobile', createdAt: 1731600000000 },
-    { id: 'crown', title: '👑 24K Crown Obby', category: 'Obby', createdAt: 1731600000000 },
-    { id: 'waterpark', title: 'Build a Water Park', category: 'Building', createdAt: 1731600000000 },
-    { id: 'train', title: 'Rongimäng (Train Simulator)', category: 'Simulation', createdAt: 1731600000000 },
-    { id: 'metro', title: 'Last Metro (PC Exclusive)', category: 'Story/Simulation', createdAt: 1731600000000 },
-    { id: 'creator', title: 'Game Creator Studio', category: 'Studio', createdAt: 1731600000000 }
+    { id: 'hub', title: 'Playard Hub & UI', category: 'Platform', isOpen: false, createdAt: 1731600000000 },
+    { id: 'citycar', title: '3D City Car Simulator', category: 'Driving', isOpen: false, createdAt: 1731600000000 },
+    { id: 'mmp1', title: 'MMP1 Multi-Player Combat', category: 'Action', isOpen: false, createdAt: 1731600000000 },
+    { id: 'foneplay', title: 'Test a New Fone Play', category: 'Mobile', isOpen: false, createdAt: 1731600000000 },
+    { id: 'crown', title: '👑 24K Crown Obby', category: 'Obby', isOpen: false, createdAt: 1731600000000 },
+    { id: 'waterpark', title: 'Build a Water Park', category: 'Building', isOpen: false, createdAt: 1731600000000 },
+    { id: 'train', title: 'Rongimäng (Train Simulator)', category: 'Simulation', isOpen: false, createdAt: 1731600000000 },
+    { id: 'metro', title: 'Last Metro (PC Exclusive)', category: 'Story/Simulation', isOpen: false, createdAt: 1731600000000 },
+    { id: 'creator', title: 'Game Creator Studio', category: 'Studio', isOpen: false, createdAt: 1731600000000 }
 ];
 
 export function getPlayardProjects(): PlayardProject[] {
@@ -86,6 +87,40 @@ export function deletePlayardProject(projectId: string): boolean {
     }
     return false;
 }
+
+/**
+ * Toggles a project between Avatud (Open) and Suletud (Closed).
+ * AINULT 1 projekt korraga saab olla avatud!
+ * Kui avatakse projekt, suletakse kõik teised automaatselt.
+ */
+export function toggleProjectOpen(projectId: string): { success: boolean; isOpen: boolean } {
+    const list = getPlayardProjects();
+    const target = list.find(p => p.id === projectId);
+    if (!target) return { success: false, isOpen: false };
+
+    const willBeOpen = !target.isOpen;
+
+    // Kui avatakse, siis teised kõik suletakse (AINULT 1 saab olla korraga avatud!)
+    list.forEach(p => {
+        if (p.id === projectId) {
+            p.isOpen = willBeOpen;
+        } else if (willBeOpen) {
+            p.isOpen = false;
+        }
+    });
+
+    savePlayardProjects(list);
+    return { success: true, isOpen: willBeOpen };
+}
+
+/**
+ * Tagastab hetkel avatud projekti (kui ükski pole avatud, tagastab null)
+ */
+export function getActiveOpenProject(): PlayardProject | null {
+    const list = getPlayardProjects();
+    return list.find(p => !!p.isOpen) || null;
+}
+
 
 export function getPlayardUpdates(): PlayardUpdateItem[] {
     if (typeof window === 'undefined' || !window.localStorage) return [];

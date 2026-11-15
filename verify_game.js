@@ -1499,6 +1499,21 @@ await (async () => {
                 const updatesList2 = window.getPlayardUpdates();
                 const hasLiveUpdate = updatesList2.some(u => u.id === liveUpdate.id && u.status === 'published');
 
+                // Test Avatud / Suletud Toggle (Ainult 1 saab korraga olla avatud!)
+                window.toggleProjectOpen(newProj.id);
+                const activeProj1 = window.getActiveOpenProject ? window.getActiveOpenProject() : null;
+                const newProjIsOpen = activeProj1 && activeProj1.id === newProj.id;
+
+                // Open another project to verify that previous project automatically closes
+                const hubProj = defaultProjects.find(p => p.id === 'hub') || defaultProjects[0];
+                window.toggleProjectOpen(hubProj.id);
+                const activeProj2 = window.getActiveOpenProject ? window.getActiveOpenProject() : null;
+                const hubIsOpen = activeProj2 && activeProj2.id === hubProj.id;
+                const newProjNowClosed = !window.getPlayardProjects().find(p => p.id === newProj.id)?.isOpen;
+
+                // Re-open newProj for testing
+                window.toggleProjectOpen(newProj.id);
+
                 // Publish the staging update
                 window.publishPlayardUpdate(stagingUpdate.id);
                 const updatesList3 = window.getPlayardUpdates();
@@ -1513,6 +1528,11 @@ await (async () => {
                 window.renderOwnerUpdatesView();
                 const countBadge = document.getElementById('owner-updates-count-badge')?.textContent;
 
+                // Check big publish buttons and toggle buttons rendered
+                const publishBtns = document.querySelectorAll('.btn-owner-project-publish');
+                const toggleBtns = document.querySelectorAll('.btn-owner-project-toggle-open');
+                const hasProjectButtons = publishBtns.length > 0 && toggleBtns.length > 0;
+
                 return {
                     hasTabBtn,
                     isBoxVisible,
@@ -1524,7 +1544,11 @@ await (async () => {
                     isOwnerMachine,
                     canOwnerAccessDraft,
                     guestCannotAccessDraft,
-                    countUpdated: parseInt(countBadge || '0', 10) >= 2
+                    countUpdated: parseInt(countBadge || '0', 10) >= 2,
+                    newProjIsOpen,
+                    hubIsOpen,
+                    newProjNowClosed,
+                    hasProjectButtons
                 };
             });
 
@@ -1540,7 +1564,11 @@ await (async () => {
                 !updatesModeTest.isOwnerMachine ||
                 !updatesModeTest.canOwnerAccessDraft ||
                 !updatesModeTest.guestCannotAccessDraft ||
-                !updatesModeTest.countUpdated
+                !updatesModeTest.countUpdated ||
+                !updatesModeTest.newProjIsOpen ||
+                !updatesModeTest.hubIsOpen ||
+                !updatesModeTest.newProjNowClosed ||
+                !updatesModeTest.hasProjectButtons
             ) {
                 throw new Error("Owner Panel Playard Updates test failed: " + JSON.stringify(updatesModeTest));
             }

@@ -22,6 +22,8 @@ import {
     getPlayardProjects,
     addPlayardProject,
     deletePlayardProject,
+    toggleProjectOpen,
+    getActiveOpenProject,
     getPlayardUpdates,
     addPlayardUpdate,
     publishPlayardUpdate,
@@ -1514,36 +1516,147 @@ export function renderOwnerUpdatesView(): void {
     if (draftBadge) draftBadge.textContent = `${draftCount} ootel (Staging)`;
     if (totalCountBadge) totalCountBadge.textContent = String(allUpdates.length);
 
-    // 1. Render Project Pills
+    // 1. Render Projects Cards / List with big Publish and Avatud/Suletud toggle button
     if (pillsContainer) {
         pillsContainer.innerHTML = '';
         allProjects.forEach(proj => {
-            const pill = document.createElement('span');
-            pill.style.cssText = 'background: rgba(0, 242, 254, 0.12); border: 1px solid rgba(0, 242, 254, 0.35); color: #00f2fe; padding: 4px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;';
-            pill.innerHTML = `<span>📁 ${proj.title}</span><span style="opacity: 0.6; font-size: 0.7rem;">(${proj.category})</span>`;
-            pillsContainer.appendChild(pill);
+            const card = document.createElement('div');
+            const isOpen = !!proj.isOpen;
+            const projectUpdates = allUpdates.filter(u => u.projectId === proj.id);
+            const draftCount = projectUpdates.filter(u => u.status === 'draft').length;
+
+            card.style.cssText = `
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 10px 14px;
+                background: ${isOpen ? 'rgba(0, 242, 254, 0.12)' : 'rgba(255, 255, 255, 0.03)'};
+                border: 1.5px solid ${isOpen ? '#00f2fe' : 'rgba(255, 255, 255, 0.1)'};
+                border-radius: 10px;
+                width: 100%;
+                box-sizing: border-box;
+                margin-bottom: 6px;
+                transition: all 0.2s ease;
+            `;
+
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px;">
+                    <span style="font-size: 1.2rem;">${isOpen ? '🟢' : '📁'}</span>
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.92rem; color: ${isOpen ? '#00f2fe' : '#ffffff'};">
+                            ${proj.title}
+                        </div>
+                        <div style="font-size: 0.76rem; color: #8899a6;">
+                            Kategooria: <span style="color: #cbd5e1;">${proj.category}</span> · Uuendusi: <strong style="color: #ffd32a;">${projectUpdates.length}</strong> (${draftCount} ootel)
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <!-- Big Publish Button for Project -->
+                    <button type="button" class="btn-owner-project-publish" data-id="${proj.id}" style="
+                        background: linear-gradient(135deg, #2ecc71, #27ae60);
+                        border: none;
+                        color: #0b1118;
+                        border-radius: 8px;
+                        padding: 8px 18px;
+                        font-size: 0.88rem;
+                        font-weight: 900;
+                        cursor: pointer;
+                        box-shadow: 0 4px 14px rgba(46, 204, 113, 0.35);
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    ">
+                        <span>🚀</span>
+                        <span>PUBLISH</span>
+                    </button>
+
+                    <!-- Avatud / Suletud Toggle Button (AINULT 1 saab korraga olla avatud!) -->
+                    <button type="button" class="btn-owner-project-toggle-open" data-id="${proj.id}" style="
+                        background: ${isOpen ? '#00f2fe' : 'rgba(255, 71, 87, 0.15)'};
+                        border: 1px solid ${isOpen ? '#00f2fe' : 'rgba(255, 71, 87, 0.4)'};
+                        color: ${isOpen ? '#0b1118' : '#ff6b81'};
+                        border-radius: 8px;
+                        padding: 8px 14px;
+                        font-size: 0.82rem;
+                        font-weight: 900;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    ">
+                        <span>${isOpen ? '🔓' : '🔒'}</span>
+                        <span>${isOpen ? 'AVATUD' : 'SULETUD'}</span>
+                    </button>
+                </div>
+            `;
+            pillsContainer.appendChild(card);
+        });
+
+        // Bind project toggle listeners
+        pillsContainer.querySelectorAll('.btn-owner-project-toggle-open').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                if (pid) {
+                    toggleProjectOpen(pid);
+                    renderOwnerUpdatesView();
+                }
+            });
+        });
+
+        // Bind project big publish button listeners
+        pillsContainer.querySelectorAll('.btn-owner-project-publish').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                if (pid) {
+                    const updates = getPlayardUpdates();
+                    let pubCount = 0;
+                    updates.forEach(u => {
+                        if (u.projectId === pid && u.status === 'draft') {
+                            u.status = 'published';
+                            u.publishedAt = Date.now();
+                            pubCount++;
+                        }
+                    });
+                    if (pubCount > 0) {
+                        savePlayardUpdates(updates);
+                    }
+                    const statusMsg = document.getElementById('owner-updates-status-msg');
+                    if (statusMsg) {
+                        statusMsg.textContent = `🚀 Projekti uuendused avaldati avalikuks (${pubCount} uut avaldatud)!`;
+                        statusMsg.style.color = '#2ecc71';
+                        setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3500);
+                    }
+                    renderOwnerUpdatesView();
+                }
+            });
         });
     }
 
     // 2. Populate Project Select Dropdown
     if (projectSelect) {
         const currentVal = projectSelect.value;
+        const activeOpen = getActiveOpenProject();
         projectSelect.innerHTML = '<option value="global">🌐 Üldine Playard (Kõik mängud / Platvorm)</option>';
         allProjects.forEach(proj => {
             const opt = document.createElement('option');
             opt.value = proj.id;
-            opt.textContent = `📁 ${proj.title} (${proj.category})`;
+            opt.textContent = `${proj.isOpen ? '🟢 [AVATUD] ' : ''}📁 ${proj.title} (${proj.category})`;
             projectSelect.appendChild(opt);
         });
-        if (currentVal) projectSelect.value = currentVal;
+        if (activeOpen) {
+            projectSelect.value = activeOpen.id;
+        } else if (currentVal) {
+            projectSelect.value = currentVal;
+        }
     }
 
-    // 3. Filter updates
+    // 3. Filter updates by search query
     const query = (searchInput?.value || '').trim().toLowerCase();
-    const filter = statusFilter?.value || 'all';
 
     const filteredUpdates = allUpdates.filter(u => {
-        if (filter !== 'all' && u.status !== filter) return false;
         if (query) {
             const matchTitle = u.title.toLowerCase().includes(query);
             const matchDesc = u.description.toLowerCase().includes(query);
@@ -1558,7 +1671,7 @@ export function renderOwnerUpdatesView(): void {
     listContainer.innerHTML = '';
 
     if (filteredUpdates.length === 0) {
-        listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 24px; font-size: 0.9rem;">Ühtegi uuendust ei leitud. Lisa uus uuendus ülalt nupust!</div>';
+        listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 24px; font-size: 0.9rem;">Ühtegi uuendust ei leitud. Vajuta Enter või lisa uus uuendus!</div>';
         return;
     }
 
@@ -2160,18 +2273,31 @@ export function setupOwnerPanel() {
         if (updTitleInput) updTitleInput.value = '';
         if (updDescInput) updDescInput.value = '';
     });
-    updSaveBtn?.addEventListener('click', () => {
+    const submitUpdateFromInputs = () => {
         const title = updTitleInput?.value.trim() || '';
         const desc = updDescInput?.value.trim() || '';
         const ver = updVersionInput?.value.trim() || 'v1.0';
-        const projId = updProjSelect?.value || 'global';
-        const projTitle = updProjSelect?.options[updProjSelect.selectedIndex]?.text || 'Üldine Playard';
-        const publishNow = updPublishNow ? updPublishNow.checked : true;
+        const activeOpen = getActiveOpenProject();
+
+        // Kui on kõik suletud, siis ei tee midagi
+        if (!activeOpen) {
+            const statusMsg = document.getElementById('owner-updates-status-msg');
+            if (statusMsg) {
+                statusMsg.textContent = '⚠️ Ükski projekt pole "AVATUD". Ava esmalt projekt, et sellele uuendus lisada!';
+                statusMsg.style.color = '#ff6b81';
+                setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3500);
+            }
+            return;
+        }
 
         if (!title) {
             alert('Palun sisesta uuenduse pealkiri!');
             return;
         }
+
+        const projId = activeOpen.id;
+        const projTitle = activeOpen.title;
+        const publishNow = updPublishNow ? updPublishNow.checked : true;
 
         addPlayardUpdate({
             projectId: projId,
@@ -2186,14 +2312,71 @@ export function setupOwnerPanel() {
         if (updTitleInput) updTitleInput.value = '';
         if (updDescInput) updDescInput.value = '';
         if (updFormWrap) updFormWrap.style.display = 'none';
+
+        const statusMsg = document.getElementById('owner-updates-status-msg');
+        if (statusMsg) {
+            statusMsg.textContent = `✨ Uuendus lisatud projektile "${projTitle}"!`;
+            statusMsg.style.color = '#2ecc71';
+            setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3000);
+        }
+
         renderOwnerUpdatesView();
+    };
+
+    updSaveBtn?.addEventListener('click', submitUpdateFromInputs);
+
+    // Enter vajutusel lisatakse uuendus avatud projektile
+    updTitleInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            submitUpdateFromInputs();
+        }
     });
 
-    // Search and filter listeners for updates
-    const updatesSearchInput = document.getElementById('owner-updates-search-input');
-    const updatesStatusFilter = document.getElementById('owner-updates-status-filter');
+    updDescInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || !e.shiftKey)) {
+            e.preventDefault();
+            submitUpdateFromInputs();
+        }
+    });
+
+    // Enter kiirlisamine otsinguribalt (kui sisestatakse midagi ja vajutatakse Enter)
+    const updatesSearchInput = document.getElementById('owner-updates-search-input') as HTMLInputElement | null;
+    updatesSearchInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            const val = updatesSearchInput.value.trim();
+            const activeOpen = getActiveOpenProject();
+            if (val && activeOpen) {
+                e.preventDefault();
+                addPlayardUpdate({
+                    projectId: activeOpen.id,
+                    projectTitle: activeOpen.title,
+                    title: val,
+                    description: `Kiiruuendus lisatud Enter klahviga projektile ${activeOpen.title}`,
+                    version: 'v1.0',
+                    publishNow: false, // Läheb drafti projektile
+                    author: 'Playard Owner'
+                });
+                updatesSearchInput.value = '';
+                const statusMsg = document.getElementById('owner-updates-status-msg');
+                if (statusMsg) {
+                    statusMsg.textContent = `✨ Kiiruuendus lisatud avatud projektile "${activeOpen.title}"!`;
+                    statusMsg.style.color = '#2ecc71';
+                    setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3000);
+                }
+                renderOwnerUpdatesView();
+            } else if (val && !activeOpen) {
+                // Kõik suletud -> ei tee midagi (vastavalt reeglile)
+                const statusMsg = document.getElementById('owner-updates-status-msg');
+                if (statusMsg) {
+                    statusMsg.textContent = '🔒 Kõik projektid on suletud. Ava projekt, et Enter lisaks uuenduse!';
+                    statusMsg.style.color = '#ffd32a';
+                    setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3000);
+                }
+            }
+        }
+    });
     updatesSearchInput?.addEventListener('input', () => renderOwnerUpdatesView());
-    updatesStatusFilter?.addEventListener('change', () => renderOwnerUpdatesView());
 
     // Secret button logic (5 clicks triggers secret prompt for passcode 6776abc)
     const secretTriggerBtn = document.getElementById('btn-owner-secret-trigger');
@@ -2498,6 +2681,8 @@ export function setupOwnerPanel() {
         (window as any).deletePlayardProject = deletePlayardProject;
         (window as any).getPlayardUpdates = getPlayardUpdates;
         (window as any).addPlayardUpdate = addPlayardUpdate;
+        (window as any).toggleProjectOpen = toggleProjectOpen;
+        (window as any).getActiveOpenProject = getActiveOpenProject;
         (window as any).publishPlayardUpdate = publishPlayardUpdate;
         (window as any).deletePlayardUpdate = deletePlayardUpdate;
         (window as any).canAccessUpdateFeature = canAccessUpdateFeature;
