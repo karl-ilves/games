@@ -1561,6 +1561,22 @@ await (async () => {
                 const toggleBtns = document.querySelectorAll('.btn-owner-project-toggle-open');
                 const hasProjectButtons = publishBtns.length > 0 && toggleBtns.length > 0;
 
+                // Test deleting a single project
+                const delProjOk = window.deletePlayardProject ? window.deletePlayardProject(secondProj.id) : false;
+                const projDeleted = !window.getPlayardProjects().some(p => p.id === secondProj.id);
+
+                // Check clear all buttons in DOM
+                const clearAllProjectsBtn = document.getElementById('btn-owner-clear-all-projects');
+                const clearAllUpdatesBtn = document.getElementById('btn-owner-clear-all-updates');
+                const hasClearAllBtns = !!clearAllProjectsBtn && !!clearAllUpdatesBtn;
+
+                // Test clearAllPlayardProjects and clearAllPlayardUpdates
+                window.clearAllPlayardProjects();
+                const allProjectsCleared = window.getPlayardProjects().length === 0;
+
+                window.clearAllPlayardUpdates();
+                const allUpdatesCleared = window.getPlayardUpdates().length === 0;
+
                 return {
                     hasTabBtn,
                     isBoxVisible,
@@ -1581,7 +1597,12 @@ await (async () => {
                     catDeleted,
                     hasTimeButtons,
                     hasScheduledTimestamp,
-                    scheduleCancelled
+                    scheduleCancelled,
+                    delProjOk,
+                    projDeleted,
+                    hasClearAllBtns,
+                    allProjectsCleared,
+                    allUpdatesCleared
                 };
             });
 
@@ -1606,7 +1627,12 @@ await (async () => {
                 !updatesModeTest.catDeleted ||
                 !updatesModeTest.hasTimeButtons ||
                 !updatesModeTest.hasScheduledTimestamp ||
-                !updatesModeTest.scheduleCancelled
+                !updatesModeTest.scheduleCancelled ||
+                !updatesModeTest.delProjOk ||
+                !updatesModeTest.projDeleted ||
+                !updatesModeTest.hasClearAllBtns ||
+                !updatesModeTest.allProjectsCleared ||
+                !updatesModeTest.allUpdatesCleared
             ) {
                 throw new Error("Owner Panel Playard Updates test failed: " + JSON.stringify(updatesModeTest));
             }

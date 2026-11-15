@@ -34,6 +34,8 @@ import {
     getPlayardCategories,
     addPlayardCategory,
     deletePlayardCategory,
+    clearAllPlayardProjects,
+    clearAllPlayardUpdates,
     canAccessUpdateFeature,
     isCurrentDeviceOwnerComputer
 } from '../shared/playardUpdatesService';
@@ -1553,7 +1555,7 @@ export function renderOwnerUpdatesView(): void {
     if (pillsContainer) {
         pillsContainer.innerHTML = '';
         if (allProjects.length === 0) {
-            pillsContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 20px; font-size: 0.85rem; font-style: italic; width: 100%; border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">Ühtegi projekti pole veel lisatud. Klõpsa "+ Lisa Uus Projekt", et luua oma esimene projekt!</div>';
+            pillsContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 20px; font-size: 0.85rem; font-style: italic; width: 100%; border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">Kõik olemasolevad projektid on eemaldatud. Klõpsa "+ Lisa Uus Projekt", et luua oma esimene projekt!</div>';
         } else {
         allProjects.forEach(proj => {
             const card = document.createElement('div');
@@ -1654,6 +1656,24 @@ export function renderOwnerUpdatesView(): void {
                             <span>${isOpen ? '🔓' : '🔒'}</span>
                             <span>${isOpen ? 'AVATUD' : 'SULETUD'}</span>
                         </button>
+
+                        <!-- Kustuta Projekt Nupp -->
+                        <button type="button" class="btn-owner-delete-project" data-id="${proj.id}" style="
+                            background: rgba(255, 71, 87, 0.15);
+                            border: 1px solid rgba(255, 71, 87, 0.35);
+                            color: #ff6b81;
+                            border-radius: 8px;
+                            padding: 8px 12px;
+                            font-size: 0.82rem;
+                            font-weight: 800;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 4px;
+                        " title="Kustuta see projekt">
+                            <span>🗑️</span>
+                            <span>Kustuta</span>
+                        </button>
                     </div>
                 `;
                 pillsContainer.appendChild(card);
@@ -1716,6 +1736,20 @@ export function renderOwnerUpdatesView(): void {
                     }
                 });
             });
+            // Bind delete project listeners
+            pillsContainer.querySelectorAll('.btn-owner-delete-project').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                    if (pid) {
+                        const targetProj = allProjects.find(p => p.id === pid);
+                        const projName = targetProj ? targetProj.title : 'selle projekti';
+                        if (confirm(`Kas soovid kindlasti projekti "${projName}" ja selle kirje eemaldada?`)) {
+                            deletePlayardProject(pid);
+                            renderOwnerUpdatesView();
+                        }
+                    }
+                });
+            });
             }
         }
 
@@ -1755,6 +1789,11 @@ export function renderOwnerUpdatesView(): void {
 
     if (!listContainer) return;
     listContainer.innerHTML = '';
+
+    if (allUpdates.length === 0) {
+        listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 24px; font-size: 0.9rem; border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">Kõik olemasolevad uuendused on eemaldatud! Klõpsa "+ Lisa Uuendus", et luua uus uuendus.</div>';
+        return;
+    }
 
     if (filteredUpdates.length === 0) {
         listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 24px; font-size: 0.9rem;">Kõik uuendused on avaldatud (nimekirjas ootel uuendusi pole)! Vajuta Enter uue lisamiseks.</div>';
@@ -2492,6 +2531,36 @@ export function setupOwnerPanel() {
         }
     });
     updatesSearchInput?.addEventListener('input', () => renderOwnerUpdatesView());
+
+    // Clear all projects binding
+    const clearAllProjsBtn = document.getElementById('btn-owner-clear-all-projects');
+    clearAllProjsBtn?.addEventListener('click', () => {
+        if (confirm('Oled kindel, et soovid KÕIK olemasolevad projektid eemaldada?')) {
+            clearAllPlayardProjects();
+            const statusMsg = document.getElementById('owner-updates-status-msg');
+            if (statusMsg) {
+                statusMsg.textContent = '🗑️ Kõik olemasolevad projektid eemaldati edukalt!';
+                statusMsg.style.color = '#ff6b81';
+                setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3000);
+            }
+            renderOwnerUpdatesView();
+        }
+    });
+
+    // Clear all updates binding
+    const clearAllUpdatesBtn = document.getElementById('btn-owner-clear-all-updates');
+    clearAllUpdatesBtn?.addEventListener('click', () => {
+        if (confirm('Oled kindel, et soovid KÕIK uuendused eemaldada?')) {
+            clearAllPlayardUpdates();
+            const statusMsg = document.getElementById('owner-updates-status-msg');
+            if (statusMsg) {
+                statusMsg.textContent = '🗑️ Kõik olemasolevad uuendused eemaldati edukalt!';
+                statusMsg.style.color = '#ff6b81';
+                setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3000);
+            }
+            renderOwnerUpdatesView();
+        }
+    });
 
     // ==========================================
     // OR TIME / SCHEDULE PUBLISH MODAL LOGIC

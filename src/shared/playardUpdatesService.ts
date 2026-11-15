@@ -33,6 +33,18 @@ export interface PlayardUpdateItem {
 const PROJECTS_STORAGE_KEY = 'playard_owner_projects';
 const UPDATES_STORAGE_KEY = 'playard_owner_updates';
 const CATEGORIES_STORAGE_KEY = 'playard_owner_custom_categories';
+const OWNER_DATA_WIPED_KEY = 'playard_owner_projects_and_updates_wiped_v2';
+
+// Ensure existing legacy projects and updates are emptied on load
+if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+        if (!localStorage.getItem(OWNER_DATA_WIPED_KEY)) {
+            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([]));
+            localStorage.setItem(UPDATES_STORAGE_KEY, JSON.stringify([]));
+            localStorage.setItem(OWNER_DATA_WIPED_KEY, 'true');
+        }
+    } catch (e) {}
+}
 
 export function getPlayardCategories(): string[] {
     if (typeof window === 'undefined' || !window.localStorage) {
@@ -119,6 +131,13 @@ export function deletePlayardProject(projectId: string): boolean {
         return true;
     }
     return false;
+}
+
+/**
+ * Wipes all projects from storage.
+ */
+export function clearAllPlayardProjects(): void {
+    savePlayardProjects([]);
 }
 
 /**
@@ -285,6 +304,13 @@ export function deletePlayardUpdate(updateId: string): boolean {
     return false;
 }
 
+/**
+ * Wipes all updates from storage.
+ */
+export function clearAllPlayardUpdates(): void {
+    savePlayardUpdates([]);
+}
+
 const OWNER_DEV_MACHINE_KEY = 'playard_owner_authorized_machine';
 
 /**
@@ -342,5 +368,31 @@ function isUserPlayardOwner(profile?: any): boolean {
     const cleanUser = (profile.username || '').toLowerCase().trim();
     const cleanEmail = (profile.email || '').toLowerCase().trim();
     return cleanUser === 'admin' || cleanUser === 'owner' || cleanUser === 'playard owner' || cleanEmail === '1karl.ilves@gmail.com';
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).getPlayardProjects = getPlayardProjects;
+    (window as any).savePlayardProjects = savePlayardProjects;
+    (window as any).addPlayardProject = addPlayardProject;
+    (window as any).deletePlayardProject = deletePlayardProject;
+    (window as any).clearAllPlayardProjects = clearAllPlayardProjects;
+    (window as any).toggleProjectOpen = toggleProjectOpen;
+    (window as any).getActiveOpenProject = getActiveOpenProject;
+    (window as any).getPlayardUpdates = getPlayardUpdates;
+    (window as any).savePlayardUpdates = savePlayardUpdates;
+    (window as any).addPlayardUpdate = addPlayardUpdate;
+    (window as any).deletePlayardUpdate = deletePlayardUpdate;
+    (window as any).clearAllPlayardUpdates = clearAllPlayardUpdates;
+    (window as any).publishPlayardUpdate = publishPlayardUpdate;
+    (window as any).publishPlayardProjectUpdates = publishPlayardProjectUpdates;
+    (window as any).scheduleProjectPublish = scheduleProjectPublish;
+    (window as any).cancelProjectSchedule = cancelProjectSchedule;
+    (window as any).checkAndExecuteScheduledPublishes = checkAndExecuteScheduledPublishes;
+    (window as any).canAccessUpdateFeature = canAccessUpdateFeature;
+    (window as any).isCurrentDeviceOwnerComputer = isCurrentDeviceOwnerComputer;
+    (window as any).getPlayardCategories = getPlayardCategories;
+    (window as any).savePlayardCategories = savePlayardCategories;
+    (window as any).addPlayardCategory = addPlayardCategory;
+    (window as any).deletePlayardCategory = deletePlayardCategory;
 }
 
