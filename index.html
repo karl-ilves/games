@@ -2347,6 +2347,7 @@
                 <button type="button" id="btn-owner-mode-reports" data-active="false" style="flex: 1; min-width: 110px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">🚨 Raportid (<span id="owner-reports-count-badge">0</span>)</button>
                 <button type="button" id="btn-owner-mode-servers" data-active="false" style="flex: 1; min-width: 110px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">🌐 Serverid (<span id="owner-servers-count-badge">0</span>)</button>
                 <button type="button" id="btn-owner-mode-closegames" data-active="false" style="flex: 1; min-width: 120px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">🛑 Sulge mänge</button>
+                <button type="button" id="btn-owner-mode-updates" data-active="false" style="flex: 1; min-width: 140px; padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #a4b0be; font-weight: 800; font-size: 0.86rem; cursor: pointer;">🚀 Playard Updates (<span id="owner-updates-count-badge">0</span>)</button>
             </div>
 
             <!-- Suur Otsinguriba (Otsib nime, kasutajanime, e-posti ja ID järgi) -->
@@ -2533,6 +2534,96 @@
                 <!-- Game Cards Container -->
                 <div id="owner-closegames-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
                     <div style="text-align: center; color: #718093; padding: 20px;">Laen mänge...</div>
+                </div>
+            </div>
+
+            <!-- Owner Playard Updates Box (Projects, Staging, Publishing & Release pipeline) -->
+            <div id="owner-updates-box" style="display: none; background: #0f1824; border: 1.5px solid rgba(0, 242, 254, 0.4); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <!-- Summary & Quick Stats -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.3rem;">🚀</span>
+                        <h3 style="color: #00f2fe; margin: 0; font-size: 1.1rem;">Playard Updates &amp; Projektid</h3>
+                        <span id="owner-updates-published-badge" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.3); padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;">0 avaldatud</span>
+                        <span id="owner-updates-draft-badge" style="background: rgba(255, 211, 42, 0.15); color: #ffd32a; border: 1px solid rgba(255,211,42,0.3); padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;">0 ootel (Staging)</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button type="button" id="btn-owner-open-add-project" style="background: rgba(0, 242, 254, 0.15); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; border-radius: 8px; padding: 7px 12px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <span>📁</span>
+                            <span>+ Lisa Uus Projekt</span>
+                        </button>
+                        <button type="button" id="btn-owner-open-add-update" style="background: linear-gradient(135deg, #00f2fe, #0984e3); border: none; color: #0b1118; border-radius: 8px; padding: 7px 14px; font-size: 0.82rem; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,242,254,0.3);">
+                            <span>✨</span>
+                            <span>+ Lisa Uuendus</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Note -->
+                <div style="background: rgba(0, 242, 254, 0.06); border-left: 3px solid #00f2fe; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 0.82rem; color: #cbd5e1; line-height: 1.45;">
+                    💡 <strong>Uuenduste juhtpaneel:</strong> Siin saad luua projekte ja määrata, millise projekti alla iga uus funktsioon kuulub. Uued asjad saab salvestada ootele (Staging) või avaldada kohe avalikuks (Publish).
+                </div>
+
+                <!-- Create Project Form (Hidden by default) -->
+                <div id="owner-add-project-form-wrap" style="display: none; background: #131c28; border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                    <div style="font-weight: 800; font-size: 0.92rem; color: #00f2fe; margin-bottom: 8px;">📁 Uue Projekti Lisamine:</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <input type="text" id="owner-new-project-title" placeholder="Projekti pealkiri (nt Super Mario 3D, Uus Helisüsteem)..." style="flex: 2; min-width: 180px; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.85rem; outline: none;">
+                        <input type="text" id="owner-new-project-category" placeholder="Kategooria (nt Platform, Audio, Graphics)..." style="flex: 1; min-width: 140px; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.85rem; outline: none;">
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button type="button" id="btn-owner-cancel-project" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">Tühista</button>
+                        <button type="button" id="btn-owner-save-project" style="background: #00f2fe; color: #0b1118; border: none; border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; font-weight: 900; cursor: pointer;">Salvesta Projekt</button>
+                    </div>
+                </div>
+
+                <!-- Create Update Form (Hidden by default) -->
+                <div id="owner-add-update-form-wrap" style="display: none; background: #131c28; border: 1px solid rgba(46, 204, 113, 0.35); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                    <div style="font-weight: 800; font-size: 0.92rem; color: #2ecc71; margin-bottom: 8px;">✨ Uue Uuenduse Lisamine:</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <select id="owner-update-project-select" style="flex: 1.5; min-width: 180px; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.85rem; outline: none;">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <input type="text" id="owner-update-title-input" placeholder="Uuenduse pealkiri..." style="flex: 2; min-width: 200px; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.85rem; outline: none;">
+                        <input type="text" id="owner-update-version-input" placeholder="Versioon (nt v1.2)" value="v1.0" style="width: 100px; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.85rem; outline: none;">
+                    </div>
+                    <textarea id="owner-update-desc-input" placeholder="Kirjuta uuenduse kirjeldus ja mida tehtud sai..." rows="2" style="width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.85rem; outline: none; margin-bottom: 8px; resize: vertical;"></textarea>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #ffd32a; font-weight: 700; cursor: pointer;">
+                            <input type="checkbox" id="owner-update-publish-now" checked style="accent-color: #2ecc71; width: 16px; height: 16px;">
+                            <span>🟢 Avalda kohe avalikuks (Publish immediately)</span>
+                        </label>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="btn-owner-cancel-update" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">Tühista</button>
+                            <button type="button" id="btn-owner-save-update" style="background: #2ecc71; color: #0b1118; border: none; border-radius: 6px; padding: 6px 16px; font-size: 0.8rem; font-weight: 900; cursor: pointer;">Salvesta Uuendus</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects horizontal tags -->
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 0.75rem; font-weight: 800; color: #8899a6; text-transform: uppercase; margin-bottom: 6px;">📂 Olemasolevad Projektid:</div>
+                    <div id="owner-projects-pills-list" style="display: flex; gap: 6px; flex-wrap: wrap; max-height: 90px; overflow-y: auto;">
+                        <!-- Project pills -->
+                    </div>
+                </div>
+
+                <!-- Filter & Search bar for updates -->
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="owner-updates-search-input" placeholder="Otsi uuendusi projekti, pealkirja või versiooni järgi..." style="flex: 1; min-width: 200px; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; background: #131920; color: white; font-size: 0.85rem; outline: none;">
+                    <select id="owner-updates-status-filter" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; background: #131920; color: white; font-size: 0.85rem; outline: none;">
+                        <option value="all">Kõik staatused</option>
+                        <option value="published">🟢 Avaldatud</option>
+                        <option value="draft">🟡 Ootel (Staging)</option>
+                    </select>
+                </div>
+
+                <div id="owner-updates-status-msg" style="margin-bottom: 8px; font-weight: bold; font-size: 0.85rem; text-align: center;"></div>
+
+                <!-- Updates List Container -->
+                <div id="owner-updates-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+                    <div style="text-align: center; color: #718093; padding: 20px;">Laen uuendusi...</div>
                 </div>
             </div>
 

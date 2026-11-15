@@ -1,0 +1,217 @@
+/**
+ * Playard Updates & Staging System
+ * 
+ * Allows Playard Owner to manage game updates, staging releases,
+ * target project/category assignments and view incoming updates.
+ */
+
+export interface PlayardProject {
+    id: string;
+    title: string;
+    category: string;
+    description?: string;
+    createdAt: number;
+}
+
+export interface PlayardUpdateItem {
+    id: string;
+    projectId: string; // Target project ID or 'global'
+    projectTitle: string;
+    title: string;
+    description: string;
+    version?: string;
+    status: 'draft' | 'published';
+    createdAt: number;
+    publishedAt?: number;
+    author: string;
+}
+
+const PROJECTS_STORAGE_KEY = 'playard_owner_projects';
+const UPDATES_STORAGE_KEY = 'playard_owner_updates';
+
+export const DEFAULT_PLAYARD_PROJECTS: PlayardProject[] = [
+    { id: 'hub', title: 'Playard Hub & UI', category: 'Platform', createdAt: 1731600000000 },
+    { id: 'citycar', title: '3D City Car Simulator', category: 'Driving', createdAt: 1731600000000 },
+    { id: 'mmp1', title: 'MMP1 Multi-Player Combat', category: 'Action', createdAt: 1731600000000 },
+    { id: 'foneplay', title: 'Test a New Fone Play', category: 'Mobile', createdAt: 1731600000000 },
+    { id: 'crown', title: '👑 24K Crown Obby', category: 'Obby', createdAt: 1731600000000 },
+    { id: 'waterpark', title: 'Build a Water Park', category: 'Building', createdAt: 1731600000000 },
+    { id: 'train', title: 'Rongimäng (Train Simulator)', category: 'Simulation', createdAt: 1731600000000 },
+    { id: 'metro', title: 'Last Metro (PC Exclusive)', category: 'Story/Simulation', createdAt: 1731600000000 },
+    { id: 'creator', title: 'Game Creator Studio', category: 'Studio', createdAt: 1731600000000 }
+];
+
+export function getPlayardProjects(): PlayardProject[] {
+    if (typeof window === 'undefined' || !window.localStorage) {
+        return DEFAULT_PLAYARD_PROJECTS;
+    }
+    try {
+        const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+        if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list) && list.length > 0) return list;
+        }
+    } catch (e) {}
+    return DEFAULT_PLAYARD_PROJECTS;
+}
+
+export function savePlayardProjects(projects: PlayardProject[]): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+    } catch (e) {}
+}
+
+export function addPlayardProject(title: string, category: string, description?: string): PlayardProject {
+    const list = getPlayardProjects();
+    const cleanId = 'proj_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+    const newProj: PlayardProject = {
+        id: cleanId,
+        title: title.trim(),
+        category: category.trim() || 'General',
+        description: description?.trim() || '',
+        createdAt: Date.now()
+    };
+    list.push(newProj);
+    savePlayardProjects(list);
+    return newProj;
+}
+
+export function deletePlayardProject(projectId: string): boolean {
+    const list = getPlayardProjects();
+    const filtered = list.filter(p => p.id !== projectId);
+    if (filtered.length !== list.length) {
+        savePlayardProjects(filtered);
+        return true;
+    }
+    return false;
+}
+
+export function getPlayardUpdates(): PlayardUpdateItem[] {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    try {
+        const raw = localStorage.getItem(UPDATES_STORAGE_KEY);
+        if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) return list;
+        }
+    } catch (e) {}
+    return [];
+}
+
+export function savePlayardUpdates(updates: PlayardUpdateItem[]): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        localStorage.setItem(UPDATES_STORAGE_KEY, JSON.stringify(updates));
+    } catch (e) {}
+}
+
+export function addPlayardUpdate(item: {
+    projectId: string;
+    projectTitle: string;
+    title: string;
+    description: string;
+    version?: string;
+    publishNow?: boolean;
+    author?: string;
+}): PlayardUpdateItem {
+    const list = getPlayardUpdates();
+    const isPub = item.publishNow !== false; // Vaikimisi kohe publishi või staging
+    const newUpdate: PlayardUpdateItem = {
+        id: 'update_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+        projectId: item.projectId || 'global',
+        projectTitle: item.projectTitle || 'Üldine Playard',
+        title: item.title.trim(),
+        description: item.description.trim(),
+        version: item.version?.trim() || 'v1.0',
+        status: isPub ? 'published' : 'draft',
+        createdAt: Date.now(),
+        publishedAt: isPub ? Date.now() : undefined,
+        author: item.author || 'Playard Owner'
+    };
+    list.unshift(newUpdate);
+    savePlayardUpdates(list);
+    return newUpdate;
+}
+
+export function publishPlayardUpdate(updateId: string): boolean {
+    const list = getPlayardUpdates();
+    const item = list.find(u => u.id === updateId);
+    if (item) {
+        item.status = 'published';
+        item.publishedAt = Date.now();
+        savePlayardUpdates(list);
+        return true;
+    }
+    return false;
+}
+
+export function deletePlayardUpdate(updateId: string): boolean {
+    const list = getPlayardUpdates();
+    const filtered = list.filter(u => u.id !== updateId);
+    if (filtered.length !== list.length) {
+        savePlayardUpdates(filtered);
+        return true;
+    }
+    return false;
+}
+
+const OWNER_DEV_MACHINE_KEY = 'playard_owner_authorized_machine';
+
+/**
+ * Check if the current browser/device is the authorized Owner computer
+ */
+export function isCurrentDeviceOwnerComputer(): boolean {
+    if (typeof window === 'undefined') return false;
+    // Mark this current machine as authorized on initialization
+    try {
+        if (!localStorage.getItem(OWNER_DEV_MACHINE_KEY)) {
+            localStorage.setItem(OWNER_DEV_MACHINE_KEY, 'playard_owner_machine_primary');
+        }
+        return localStorage.getItem(OWNER_DEV_MACHINE_KEY) === 'playard_owner_machine_primary';
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Strictly verifies whether an update/feature is accessible.
+ * If the update is NOT published (status === 'draft' / staging),
+ * it works ONLY for the Playard Owner AND ONLY on this specific computer!
+ */
+export function canAccessUpdateFeature(updateIdOrStatus: string | PlayardUpdateItem, userProfile?: any): boolean {
+    let update: PlayardUpdateItem | undefined;
+    if (typeof updateIdOrStatus === 'string') {
+        if (updateIdOrStatus === 'published') return true;
+        if (updateIdOrStatus === 'draft') {
+            return isCurrentDeviceOwnerComputer() && isUserPlayardOwner(userProfile);
+        }
+        const list = getPlayardUpdates();
+        update = list.find(u => u.id === updateIdOrStatus);
+    } else {
+        update = updateIdOrStatus;
+    }
+
+    if (!update) return true; // If no update restriction, allow
+    if (update.status === 'published') return true; // Everyone can access published updates
+
+    // Draft / Staging update: Works ONLY for Playard Owner AND ONLY on this specific computer!
+    const isOwner = isUserPlayardOwner(userProfile);
+    const isOwnerMachine = isCurrentDeviceOwnerComputer();
+
+    return isOwner && isOwnerMachine;
+}
+
+function isUserPlayardOwner(profile?: any): boolean {
+    if (!profile && typeof window !== 'undefined') {
+        try {
+            const raw = localStorage.getItem('playard_current_user_profile');
+            if (raw) profile = JSON.parse(raw);
+        } catch (e) {}
+    }
+    if (!profile) return false;
+    const cleanUser = (profile.username || '').toLowerCase().trim();
+    const cleanEmail = (profile.email || '').toLowerCase().trim();
+    return cleanUser === 'admin' || cleanUser === 'owner' || cleanUser === 'playard owner' || cleanEmail === '1karl.ilves@gmail.com';
+}
+

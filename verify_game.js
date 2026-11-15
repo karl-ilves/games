@@ -1449,6 +1449,103 @@ await (async () => {
                 throw new Error("Owner Panel Mängijad & codes hidden test failed: " + JSON.stringify(playerModeTest));
             }
 
+            // ==========================================
+            // Test Owner Panel 'Playard Updates' Mode
+            // ==========================================
+            console.log("   Testing 🚀 Owner Panel Playard Updates Mode (Projects, Staging & Publishing)...");
+            await page.click('#btn-open-owner-panel');
+            await new Promise(r => setTimeout(r, 150));
+
+            const updatesModeTest = await page.evaluate(async () => {
+                const updatesTabBtn = document.getElementById('btn-owner-mode-updates');
+                const hasTabBtn = !!updatesTabBtn;
+                updatesTabBtn?.click();
+
+                const updatesBox = document.getElementById('owner-updates-box');
+                const isBoxVisible = updatesBox && window.getComputedStyle(updatesBox).display !== 'none';
+
+                // Check default projects exist
+                const defaultProjects = window.getPlayardProjects ? window.getPlayardProjects() : [];
+                const hasDefaultProjects = Array.isArray(defaultProjects) && defaultProjects.length >= 5;
+
+                // Add a new project
+                const newProj = window.addPlayardProject('Test Adventure 3D', 'Adventure', 'Test project description');
+                const projectsAfterAdd = window.getPlayardProjects();
+                const projectAdded = projectsAfterAdd.some(p => p.id === newProj.id);
+
+                // Add an update (published = false -> draft / staging)
+                const stagingUpdate = window.addPlayardUpdate({
+                    projectId: newProj.id,
+                    projectTitle: newProj.title,
+                    title: 'Staging New Mechanics',
+                    description: 'Testing staging pipeline before release',
+                    version: 'v0.9-beta',
+                    publishNow: false,
+                    author: 'Playard Owner'
+                });
+                const updatesList1 = window.getPlayardUpdates();
+                const hasStagingUpdate = updatesList1.some(u => u.id === stagingUpdate.id && u.status === 'draft');
+
+                // Add an update (published = true -> published immediately)
+                const liveUpdate = window.addPlayardUpdate({
+                    projectId: newProj.id,
+                    projectTitle: newProj.title,
+                    title: 'Live Instant Release',
+                    description: 'Released immediately',
+                    version: 'v1.0',
+                    publishNow: true,
+                    author: 'Playard Owner'
+                });
+                const updatesList2 = window.getPlayardUpdates();
+                const hasLiveUpdate = updatesList2.some(u => u.id === liveUpdate.id && u.status === 'published');
+
+                // Publish the staging update
+                window.publishPlayardUpdate(stagingUpdate.id);
+                const updatesList3 = window.getPlayardUpdates();
+                const stagingNowPublished = updatesList3.some(u => u.id === stagingUpdate.id && u.status === 'published');
+
+                // Test staging device and owner-only access gating:
+                const isOwnerMachine = window.isCurrentDeviceOwnerComputer ? window.isCurrentDeviceOwnerComputer() : false;
+                const canOwnerAccessDraft = window.canAccessUpdateFeature ? window.canAccessUpdateFeature('draft', { username: 'playard owner' }) : false;
+                const guestCannotAccessDraft = window.canAccessUpdateFeature ? !window.canAccessUpdateFeature('draft', { username: 'random_guest_player' }) : false;
+
+                // Re-render view
+                window.renderOwnerUpdatesView();
+                const countBadge = document.getElementById('owner-updates-count-badge')?.textContent;
+
+                return {
+                    hasTabBtn,
+                    isBoxVisible,
+                    hasDefaultProjects,
+                    projectAdded,
+                    hasStagingUpdate,
+                    hasLiveUpdate,
+                    stagingNowPublished,
+                    isOwnerMachine,
+                    canOwnerAccessDraft,
+                    guestCannotAccessDraft,
+                    countUpdated: parseInt(countBadge || '0', 10) >= 2
+                };
+            });
+
+            console.log("   Playard Updates Mode Test Results:", updatesModeTest);
+            if (
+                !updatesModeTest.hasTabBtn ||
+                !updatesModeTest.isBoxVisible ||
+                !updatesModeTest.hasDefaultProjects ||
+                !updatesModeTest.projectAdded ||
+                !updatesModeTest.hasStagingUpdate ||
+                !updatesModeTest.hasLiveUpdate ||
+                !updatesModeTest.stagingNowPublished ||
+                !updatesModeTest.isOwnerMachine ||
+                !updatesModeTest.canOwnerAccessDraft ||
+                !updatesModeTest.guestCannotAccessDraft ||
+                !updatesModeTest.countUpdated
+            ) {
+                throw new Error("Owner Panel Playard Updates test failed: " + JSON.stringify(updatesModeTest));
+            }
+            console.log("   ✅ Playard Updates & Projects pipeline (Owner-only & Device-only Staging Gating) verified successfully!");
+
             await page.click('#btn-close-owner-panel');
             await new Promise(r => setTimeout(r, 150));
         }

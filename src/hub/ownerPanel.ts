@@ -16,6 +16,19 @@ import {
 } from '../shared/gameCloseNotice';
 import { playerGeoService } from '../shared/playerGeoService';
 import { playerCredentialsService } from '../shared/playerCredentials';
+import {
+    PlayardProject,
+    PlayardUpdateItem,
+    getPlayardProjects,
+    addPlayardProject,
+    deletePlayardProject,
+    getPlayardUpdates,
+    addPlayardUpdate,
+    publishPlayardUpdate,
+    deletePlayardUpdate,
+    canAccessUpdateFeature,
+    isCurrentDeviceOwnerComputer
+} from '../shared/playardUpdatesService';
 
 export const BANNED_PLAYERS_STORAGE_KEY = 'playard_banned_players';
 
@@ -754,7 +767,7 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     });
 }
 
-export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports' | 'servers' | 'closegames' | 'players';
+export type OwnerPanelMode = 'ban' | 'verify' | 'playbux' | 'reports' | 'servers' | 'closegames' | 'updates' | 'players';
 let ownerPanelMode: OwnerPanelMode = 'ban';
 
 export function getOwnerPanelMode(): OwnerPanelMode {
@@ -931,6 +944,7 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     const isReports = mode === 'reports';
     const isServers = mode === 'servers';
     const isCloseGames = mode === 'closegames';
+    const isUpdates = mode === 'updates';
 
     const show = (id: string, visible: boolean) => {
         const el = document.getElementById(id);
@@ -956,8 +970,10 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     show('owner-panel-desc-closegames', isCloseGames);
     show('owner-closegames-box', isCloseGames);
 
-    // Hide search bar, database player header, and player list when in servers or closegames mode
-    const hidePlayerComponents = isServers || isCloseGames;
+    show('owner-updates-box', isUpdates);
+
+    // Hide search bar, database player header, and player list when in servers, closegames, or updates mode
+    const hidePlayerComponents = isServers || isCloseGames || isUpdates;
     show('owner-search-bar-wrap', !hidePlayerComponents);
     show('owner-players-header-wrap', !hidePlayerComponents);
     show('owner-players-list', !hidePlayerComponents);
@@ -969,6 +985,7 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     const reportsBtn = document.getElementById('btn-owner-mode-reports');
     const serversBtn = document.getElementById('btn-owner-mode-servers');
     const closeGamesBtn = document.getElementById('btn-owner-mode-closegames');
+    const updatesBtn = document.getElementById('btn-owner-mode-updates');
 
     if (playersBtn) {
         playersBtn.setAttribute('data-active', String(isPlayers));
@@ -1012,6 +1029,12 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
         closeGamesBtn.style.borderColor = isCloseGames ? '#ff4757' : 'transparent';
         closeGamesBtn.style.color = isCloseGames ? '#ff6b81' : '#a4b0be';
     }
+    if (updatesBtn) {
+        updatesBtn.setAttribute('data-active', String(isUpdates));
+        updatesBtn.style.background = isUpdates ? 'rgba(0, 242, 254, 0.25)' : 'transparent';
+        updatesBtn.style.borderColor = isUpdates ? '#00f2fe' : 'transparent';
+        updatesBtn.style.color = isUpdates ? '#00f2fe' : '#a4b0be';
+    }
 
     if (isReports) {
         renderOwnerReportsList();
@@ -1021,6 +1044,9 @@ export function setOwnerPanelMode(mode: OwnerPanelMode) {
     }
     if (isCloseGames) {
         renderOwnerCloseGamesList();
+    }
+    if (isUpdates) {
+        renderOwnerUpdatesView();
     }
 
     if (!hidePlayerComponents) {
@@ -1466,6 +1492,148 @@ export async function renderOwnerCloseGamesList(searchQuery: string = '') {
 }
 
 /**
+ * Render Owner Playard Updates & Projects View
+ */
+export function renderOwnerUpdatesView(): void {
+    const listContainer = document.getElementById('owner-updates-list');
+    const pillsContainer = document.getElementById('owner-projects-pills-list');
+    const projectSelect = document.getElementById('owner-update-project-select') as HTMLSelectElement | null;
+    const publishedBadge = document.getElementById('owner-updates-published-badge');
+    const draftBadge = document.getElementById('owner-updates-draft-badge');
+    const totalCountBadge = document.getElementById('owner-updates-count-badge');
+    const searchInput = document.getElementById('owner-updates-search-input') as HTMLInputElement | null;
+    const statusFilter = document.getElementById('owner-updates-status-filter') as HTMLSelectElement | null;
+
+    const allProjects = getPlayardProjects();
+    const allUpdates = getPlayardUpdates();
+
+    const pubCount = allUpdates.filter(u => u.status === 'published').length;
+    const draftCount = allUpdates.filter(u => u.status === 'draft').length;
+
+    if (publishedBadge) publishedBadge.textContent = `${pubCount} avaldatud`;
+    if (draftBadge) draftBadge.textContent = `${draftCount} ootel (Staging)`;
+    if (totalCountBadge) totalCountBadge.textContent = String(allUpdates.length);
+
+    // 1. Render Project Pills
+    if (pillsContainer) {
+        pillsContainer.innerHTML = '';
+        allProjects.forEach(proj => {
+            const pill = document.createElement('span');
+            pill.style.cssText = 'background: rgba(0, 242, 254, 0.12); border: 1px solid rgba(0, 242, 254, 0.35); color: #00f2fe; padding: 4px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;';
+            pill.innerHTML = `<span>📁 ${proj.title}</span><span style="opacity: 0.6; font-size: 0.7rem;">(${proj.category})</span>`;
+            pillsContainer.appendChild(pill);
+        });
+    }
+
+    // 2. Populate Project Select Dropdown
+    if (projectSelect) {
+        const currentVal = projectSelect.value;
+        projectSelect.innerHTML = '<option value="global">🌐 Üldine Playard (Kõik mängud / Platvorm)</option>';
+        allProjects.forEach(proj => {
+            const opt = document.createElement('option');
+            opt.value = proj.id;
+            opt.textContent = `📁 ${proj.title} (${proj.category})`;
+            projectSelect.appendChild(opt);
+        });
+        if (currentVal) projectSelect.value = currentVal;
+    }
+
+    // 3. Filter updates
+    const query = (searchInput?.value || '').trim().toLowerCase();
+    const filter = statusFilter?.value || 'all';
+
+    const filteredUpdates = allUpdates.filter(u => {
+        if (filter !== 'all' && u.status !== filter) return false;
+        if (query) {
+            const matchTitle = u.title.toLowerCase().includes(query);
+            const matchDesc = u.description.toLowerCase().includes(query);
+            const matchProj = u.projectTitle.toLowerCase().includes(query);
+            const matchVer = (u.version || '').toLowerCase().includes(query);
+            if (!matchTitle && !matchDesc && !matchProj && !matchVer) return false;
+        }
+        return true;
+    });
+
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+
+    if (filteredUpdates.length === 0) {
+        listContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 24px; font-size: 0.9rem;">Ühtegi uuendust ei leitud. Lisa uus uuendus ülalt nupust!</div>';
+        return;
+    }
+
+    filteredUpdates.forEach(update => {
+        const card = document.createElement('div');
+        const isPub = update.status === 'published';
+        card.style.cssText = `
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid ${isPub ? 'rgba(46, 204, 113, 0.3)' : 'rgba(255, 211, 42, 0.35)'};
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        `;
+
+        const statusTag = isPub
+            ? '<span style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.35); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">🟢 Avaldatud (Live)</span>'
+            : '<span style="background: rgba(255, 211, 42, 0.15); color: #ffd32a; border: 1px solid rgba(255,211,42,0.35); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">🟡 Ootel (Staging)</span>';
+
+        const actionBtns = isPub
+            ? `<button type="button" class="btn-owner-delete-update" data-id="${update.id}" style="background: rgba(255,71,87,0.15); border: 1px solid rgba(255,71,87,0.35); color: #ff6b81; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">🗑️ Kustuta</button>`
+            : `
+                <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-owner-publish-update" data-id="${update.id}" style="background: #2ecc71; border: none; color: #0b1118; border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; font-weight: 900; cursor: pointer; box-shadow: 0 2px 8px rgba(46,204,113,0.3);">🚀 Avalda Nüüd</button>
+                    <button type="button" class="btn-owner-delete-update" data-id="${update.id}" style="background: rgba(255,71,87,0.15); border: 1px solid rgba(255,71,87,0.35); color: #ff6b81; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">🗑️</button>
+                </div>
+            `;
+
+        const dateStr = new Date(update.createdAt).toLocaleString();
+
+        card.innerHTML = `
+            <div style="flex: 1; min-width: 220px; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                    <strong style="color: #ffffff; font-size: 1rem;">${update.title}</strong>
+                    <span style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">${update.version || 'v1.0'}</span>
+                    ${statusTag}
+                </div>
+                <div style="font-size: 0.78rem; color: #8899a6; margin-bottom: 4px;">
+                    Projekt: <strong style="color: #00f2fe;">${update.projectTitle}</strong> · Autor: <span style="color: #ffd32a;">${update.author}</span> · Aeg: <span>${dateStr}</span>
+                </div>
+                <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4;">
+                    ${update.description || 'Kirjeldus puudub.'}
+                </div>
+            </div>
+            <div>${actionBtns}</div>
+        `;
+
+        listContainer.appendChild(card);
+    });
+
+    listContainer.querySelectorAll('.btn-owner-publish-update').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const uid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+            if (uid) {
+                publishPlayardUpdate(uid);
+                renderOwnerUpdatesView();
+            }
+        });
+    });
+
+    listContainer.querySelectorAll('.btn-owner-delete-update').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const uid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+            if (uid && confirm('Kas soovid selle uuenduse kirje kustutada?')) {
+                deletePlayardUpdate(uid);
+                renderOwnerUpdatesView();
+            }
+        });
+    });
+}
+
+/**
  * Open the Teavituse (Notice) Modal where Owner configures name, description and repeat count.
  */
 export function openOwnerNoticeModal(gameId: string = 'all', gameTitle: string = 'Kõik mängud') {
@@ -1831,6 +1999,7 @@ export function setupOwnerPanel() {
             modalOwner.style.display = 'flex';
             renderOwnerPanelPlayersList(searchInput?.value || '');
             renderOwnerBannedPlayersList();
+            renderOwnerUpdatesView();
         });
     }
 
@@ -1938,6 +2107,93 @@ export function setupOwnerPanel() {
     document.getElementById('btn-owner-mode-reports')?.addEventListener('click', () => setOwnerPanelMode('reports'));
     document.getElementById('btn-owner-mode-servers')?.addEventListener('click', () => setOwnerPanelMode('servers'));
     document.getElementById('btn-owner-mode-closegames')?.addEventListener('click', () => setOwnerPanelMode('closegames'));
+    document.getElementById('btn-owner-mode-updates')?.addEventListener('click', () => setOwnerPanelMode('updates'));
+
+    // Project creation bindings
+    const addProjBtn = document.getElementById('btn-owner-open-add-project');
+    const projFormWrap = document.getElementById('owner-add-project-form-wrap');
+    const projCancelBtn = document.getElementById('btn-owner-cancel-project');
+    const projSaveBtn = document.getElementById('btn-owner-save-project');
+    const projTitleInput = document.getElementById('owner-new-project-title') as HTMLInputElement | null;
+    const projCatInput = document.getElementById('owner-new-project-category') as HTMLInputElement | null;
+
+    addProjBtn?.addEventListener('click', () => {
+        if (projFormWrap) projFormWrap.style.display = 'block';
+        projTitleInput?.focus();
+    });
+    projCancelBtn?.addEventListener('click', () => {
+        if (projFormWrap) projFormWrap.style.display = 'none';
+        if (projTitleInput) projTitleInput.value = '';
+        if (projCatInput) projCatInput.value = '';
+    });
+    projSaveBtn?.addEventListener('click', () => {
+        const title = projTitleInput?.value.trim() || '';
+        const category = projCatInput?.value.trim() || 'General';
+        if (!title) {
+            alert('Palun sisesta projekti pealkiri!');
+            return;
+        }
+        addPlayardProject(title, category);
+        if (projTitleInput) projTitleInput.value = '';
+        if (projCatInput) projCatInput.value = '';
+        if (projFormWrap) projFormWrap.style.display = 'none';
+        renderOwnerUpdatesView();
+    });
+
+    // Update creation bindings
+    const addUpdBtn = document.getElementById('btn-owner-open-add-update');
+    const updFormWrap = document.getElementById('owner-add-update-form-wrap');
+    const updCancelBtn = document.getElementById('btn-owner-cancel-update');
+    const updSaveBtn = document.getElementById('btn-owner-save-update');
+    const updProjSelect = document.getElementById('owner-update-project-select') as HTMLSelectElement | null;
+    const updTitleInput = document.getElementById('owner-update-title-input') as HTMLInputElement | null;
+    const updVersionInput = document.getElementById('owner-update-version-input') as HTMLInputElement | null;
+    const updDescInput = document.getElementById('owner-update-desc-input') as HTMLTextAreaElement | null;
+    const updPublishNow = document.getElementById('owner-update-publish-now') as HTMLInputElement | null;
+
+    addUpdBtn?.addEventListener('click', () => {
+        if (updFormWrap) updFormWrap.style.display = 'block';
+        updTitleInput?.focus();
+    });
+    updCancelBtn?.addEventListener('click', () => {
+        if (updFormWrap) updFormWrap.style.display = 'none';
+        if (updTitleInput) updTitleInput.value = '';
+        if (updDescInput) updDescInput.value = '';
+    });
+    updSaveBtn?.addEventListener('click', () => {
+        const title = updTitleInput?.value.trim() || '';
+        const desc = updDescInput?.value.trim() || '';
+        const ver = updVersionInput?.value.trim() || 'v1.0';
+        const projId = updProjSelect?.value || 'global';
+        const projTitle = updProjSelect?.options[updProjSelect.selectedIndex]?.text || 'Üldine Playard';
+        const publishNow = updPublishNow ? updPublishNow.checked : true;
+
+        if (!title) {
+            alert('Palun sisesta uuenduse pealkiri!');
+            return;
+        }
+
+        addPlayardUpdate({
+            projectId: projId,
+            projectTitle: projTitle,
+            title,
+            description: desc,
+            version: ver,
+            publishNow,
+            author: 'Playard Owner'
+        });
+
+        if (updTitleInput) updTitleInput.value = '';
+        if (updDescInput) updDescInput.value = '';
+        if (updFormWrap) updFormWrap.style.display = 'none';
+        renderOwnerUpdatesView();
+    });
+
+    // Search and filter listeners for updates
+    const updatesSearchInput = document.getElementById('owner-updates-search-input');
+    const updatesStatusFilter = document.getElementById('owner-updates-status-filter');
+    updatesSearchInput?.addEventListener('input', () => renderOwnerUpdatesView());
+    updatesStatusFilter?.addEventListener('change', () => renderOwnerUpdatesView());
 
     // Secret button logic (5 clicks triggers secret prompt for passcode 6776abc)
     const secretTriggerBtn = document.getElementById('btn-owner-secret-trigger');
@@ -2236,5 +2492,15 @@ export function setupOwnerPanel() {
         (window as any).openOwnerNoticeModal = openOwnerNoticeModal;
         (window as any).closeOwnerNoticeModal = closeOwnerNoticeModal;
         (window as any).fetchAllClosableGames = fetchAllClosableGames;
+        (window as any).renderOwnerUpdatesView = renderOwnerUpdatesView;
+        (window as any).getPlayardProjects = getPlayardProjects;
+        (window as any).addPlayardProject = addPlayardProject;
+        (window as any).deletePlayardProject = deletePlayardProject;
+        (window as any).getPlayardUpdates = getPlayardUpdates;
+        (window as any).addPlayardUpdate = addPlayardUpdate;
+        (window as any).publishPlayardUpdate = publishPlayardUpdate;
+        (window as any).deletePlayardUpdate = deletePlayardUpdate;
+        (window as any).canAccessUpdateFeature = canAccessUpdateFeature;
+        (window as any).isCurrentDeviceOwnerComputer = isCurrentDeviceOwnerComputer;
     }
 }
