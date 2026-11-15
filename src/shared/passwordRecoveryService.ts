@@ -149,16 +149,16 @@ export class PasswordRecoveryService {
             banner.id = 'playard-email-sent-banner';
             banner.style.cssText = `
                 position: fixed;
-                top: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
-                border: 2px solid #38bdf8;
-                border-radius: 14px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.35);
+                top: 24px;
+                right: 24px;
+                background: linear-gradient(135deg, rgba(20, 29, 44, 0.98), rgba(12, 18, 28, 0.98));
+                border: 2px solid #00f2fe;
+                border-radius: 16px;
+                box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 242, 254, 0.4);
                 color: #ffffff;
-                padding: 14px 18px;
-                z-index: 1000;
-                max-width: 380px;
+                padding: 16px 20px;
+                z-index: 100020;
+                max-width: 400px;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 animation: slideInRight 0.3s ease-out;
                 pointer-events: auto;
