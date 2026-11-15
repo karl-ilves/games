@@ -1611,6 +1611,14 @@ export function renderOwnerUpdatesView(): void {
             btn.addEventListener('click', (e) => {
                 const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
                 if (pid) {
+                    const targetProj = allProjects.find(p => p.id === pid);
+                    const projName = targetProj ? targetProj.title : 'selle projekti';
+                    
+                    // Enne avaldamist küsib kinnitust: "Oled kindel?"
+                    if (!confirm(`Oled kindel, et soovid avaldada projekti "${projName}" uuendused avalikuks?`)) {
+                        return;
+                    }
+
                     const updates = getPlayardUpdates();
                     let pubCount = 0;
                     updates.forEach(u => {
@@ -1625,7 +1633,7 @@ export function renderOwnerUpdatesView(): void {
                     }
                     const statusMsg = document.getElementById('owner-updates-status-msg');
                     if (statusMsg) {
-                        statusMsg.textContent = `🚀 Projekti uuendused avaldati avalikuks (${pubCount} uut avaldatud)!`;
+                        statusMsg.textContent = `🚀 Projekti "${projName}" uuendused avaldati avalikuks (${pubCount} uut avaldatud)!`;
                         statusMsg.style.color = '#2ecc71';
                         setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3500);
                     }
@@ -1731,6 +1739,9 @@ export function renderOwnerUpdatesView(): void {
         btn.addEventListener('click', (e) => {
             const uid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
             if (uid) {
+                if (!confirm('Oled kindel, et soovid selle uuenduse avaldada?')) {
+                    return;
+                }
                 publishPlayardUpdate(uid);
                 renderOwnerUpdatesView();
             }
