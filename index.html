@@ -2601,10 +2601,24 @@
                     </div>
                 </div>
 
+                <!-- Custom Categories Manager (Owner saab ise lisada ja hallata kategooriaid) -->
+                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 242, 254, 0.25); border-radius: 10px; padding: 12px; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                        <span style="font-weight: 800; font-size: 0.85rem; color: #00f2fe; text-transform: uppercase;">🏷️ Sinu Loodud Kategooriad:</span>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <input type="text" id="owner-new-category-input" placeholder="Uue kategooria nimi..." style="padding: 6px 10px; border-radius: 6px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.82rem; outline: none; width: 170px;">
+                            <button type="button" id="btn-owner-add-category" style="background: #00f2fe; color: #0b1118; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: 900; cursor: pointer;">+ Lisa</button>
+                        </div>
+                    </div>
+                    <div id="owner-categories-pills-list" style="display: flex; gap: 6px; flex-wrap: wrap; min-height: 24px;">
+                        <!-- Custom category pills -->
+                    </div>
+                </div>
+
                 <!-- Projects horizontal tags -->
                 <div style="margin-bottom: 12px;">
                     <div style="font-size: 0.75rem; font-weight: 800; color: #8899a6; text-transform: uppercase; margin-bottom: 6px;">📂 Olemasolevad Projektid:</div>
-                    <div id="owner-projects-pills-list" style="display: flex; gap: 6px; flex-wrap: wrap; max-height: 90px; overflow-y: auto;">
+                    <div id="owner-projects-pills-list" style="display: flex; gap: 6px; flex-wrap: wrap; max-height: 180px; overflow-y: auto;">
                         <!-- Project pills -->
                     </div>
                 </div>

@@ -27,7 +27,9 @@ import {
     getPlayardUpdates,
     addPlayardUpdate,
     publishPlayardUpdate,
-    deletePlayardUpdate,
+    getPlayardCategories,
+    addPlayardCategory,
+    deletePlayardCategory,
     canAccessUpdateFeature,
     isCurrentDeviceOwnerComputer
 } from '../shared/playardUpdatesService';
@@ -1516,6 +1518,33 @@ export function renderOwnerUpdatesView(): void {
     if (draftBadge) draftBadge.textContent = `${draftCount} ootel (Staging)`;
     if (totalCountBadge) totalCountBadge.textContent = String(allUpdates.length);
 
+    // 0. Render Custom Categories Pills
+    const categoriesContainer = document.getElementById('owner-categories-pills-list');
+    const customCategories = getPlayardCategories();
+    if (categoriesContainer) {
+        categoriesContainer.innerHTML = '';
+        if (customCategories.length === 0) {
+            categoriesContainer.innerHTML = '<span style="font-size: 0.78rem; color: #718093; font-style: italic;">Sul pole veel ühtegi kategooriat lisatud. Sisesta nimi ja vajuta "+ Lisa"!</span>';
+        } else {
+            customCategories.forEach(cat => {
+                const catPill = document.createElement('span');
+                catPill.style.cssText = 'background: rgba(0, 242, 254, 0.12); border: 1px solid rgba(0, 242, 254, 0.35); color: #00f2fe; padding: 4px 10px; border-radius: 16px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;';
+                catPill.innerHTML = `<span>🏷️ ${cat}</span><button type="button" class="btn-owner-del-category" data-cat="${cat}" style="background: transparent; border: none; color: #ff6b81; font-weight: bold; cursor: pointer; padding: 0 2px; font-size: 0.8rem;">✕</button>`;
+                categoriesContainer.appendChild(catPill);
+            });
+
+            categoriesContainer.querySelectorAll('.btn-owner-del-category').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const cname = (e.currentTarget as HTMLElement).getAttribute('data-cat') || '';
+                    if (cname && confirm(`Kas soovid kindlasti kategooria "${cname}" kustutada?`)) {
+                        deletePlayardCategory(cname);
+                        renderOwnerUpdatesView();
+                    }
+                });
+            });
+        }
+    }
+
     // 1. Render Projects Cards / List with big Publish and Avatud/Suletud toggle button
     if (pillsContainer) {
         pillsContainer.innerHTML = '';
@@ -1540,6 +1569,8 @@ export function renderOwnerUpdatesView(): void {
                 transition: all 0.2s ease;
             `;
 
+            const catText = proj.category ? `Kategooria: <span style="color: #cbd5e1;">${proj.category}</span> · ` : '';
+
             card.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px;">
                     <span style="font-size: 1.2rem;">${isOpen ? '🟢' : '📁'}</span>
@@ -1548,7 +1579,7 @@ export function renderOwnerUpdatesView(): void {
                             ${proj.title}
                         </div>
                         <div style="font-size: 0.76rem; color: #8899a6;">
-                            Kategooria: <span style="color: #cbd5e1;">${proj.category}</span> · Uuendusi: <strong style="color: #ffd32a;">${projectUpdates.length}</strong> (${draftCount} ootel)
+                            ${catText}Uuendusi: <strong style="color: #ffd32a;">${projectUpdates.length}</strong> (${draftCount} ootel)
                         </div>
                     </div>
                 </div>
@@ -2235,6 +2266,29 @@ export function setupOwnerPanel() {
     document.getElementById('btn-owner-mode-closegames')?.addEventListener('click', () => setOwnerPanelMode('closegames'));
     document.getElementById('btn-owner-mode-updates')?.addEventListener('click', () => setOwnerPanelMode('updates'));
 
+    // Custom Category creation bindings
+    const addCatBtn = document.getElementById('btn-owner-add-category');
+    const newCatInput = document.getElementById('owner-new-category-input') as HTMLInputElement | null;
+
+    const handleAddCategory = () => {
+        const catName = newCatInput?.value.trim() || '';
+        if (!catName) {
+            alert('Palun sisesta kategooria nimi!');
+            return;
+        }
+        addPlayardCategory(catName);
+        if (newCatInput) newCatInput.value = '';
+        renderOwnerUpdatesView();
+    };
+
+    addCatBtn?.addEventListener('click', handleAddCategory);
+    newCatInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddCategory();
+        }
+    });
+
     // Project creation bindings
     const addProjBtn = document.getElementById('btn-owner-open-add-project');
     const projFormWrap = document.getElementById('owner-add-project-form-wrap');
@@ -2254,10 +2308,13 @@ export function setupOwnerPanel() {
     });
     projSaveBtn?.addEventListener('click', () => {
         const title = projTitleInput?.value.trim() || '';
-        const category = projCatInput?.value.trim() || 'General';
+        const category = projCatInput?.value.trim() || '';
         if (!title) {
             alert('Palun sisesta projekti pealkiri!');
             return;
+        }
+        if (category) {
+            addPlayardCategory(category);
         }
         addPlayardProject(title, category);
         if (projTitleInput) projTitleInput.value = '';
@@ -2697,7 +2754,9 @@ export function setupOwnerPanel() {
         (window as any).toggleProjectOpen = toggleProjectOpen;
         (window as any).getActiveOpenProject = getActiveOpenProject;
         (window as any).publishPlayardUpdate = publishPlayardUpdate;
-        (window as any).deletePlayardUpdate = deletePlayardUpdate;
+        (window as any).getPlayardCategories = getPlayardCategories;
+        (window as any).addPlayardCategory = addPlayardCategory;
+        (window as any).deletePlayardCategory = deletePlayardCategory;
         (window as any).canAccessUpdateFeature = canAccessUpdateFeature;
         (window as any).isCurrentDeviceOwnerComputer = isCurrentDeviceOwnerComputer;
     }

@@ -29,17 +29,57 @@ export interface PlayardUpdateItem {
 
 const PROJECTS_STORAGE_KEY = 'playard_owner_projects';
 const UPDATES_STORAGE_KEY = 'playard_owner_updates';
+const CATEGORIES_STORAGE_KEY = 'playard_owner_custom_categories';
+
+export function getPlayardCategories(): string[] {
+    if (typeof window === 'undefined' || !window.localStorage) {
+        return [];
+    }
+    try {
+        const raw = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+        if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) return list;
+        }
+    } catch (e) {}
+    return [];
+}
+
+export function savePlayardCategories(categories: string[]): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
+    } catch (e) {}
+}
+
+export function addPlayardCategory(name: string): string[] {
+    const clean = name.trim();
+    if (!clean) return getPlayardCategories();
+    const list = getPlayardCategories();
+    if (!list.some(c => c.toLowerCase() === clean.toLowerCase())) {
+        list.push(clean);
+        savePlayardCategories(list);
+    }
+    return list;
+}
+
+export function deletePlayardCategory(name: string): string[] {
+    const clean = name.trim().toLowerCase();
+    const list = getPlayardCategories().filter(c => c.toLowerCase() !== clean);
+    savePlayardCategories(list);
+    return list;
+}
 
 export const DEFAULT_PLAYARD_PROJECTS: PlayardProject[] = [
-    { id: 'hub', title: 'Playard Hub & UI', category: 'Platform', isOpen: false, createdAt: 1731600000000 },
-    { id: 'citycar', title: '3D City Car Simulator', category: 'Driving', isOpen: false, createdAt: 1731600000000 },
-    { id: 'mmp1', title: 'MMP1 Multi-Player Combat', category: 'Action', isOpen: false, createdAt: 1731600000000 },
-    { id: 'foneplay', title: 'Test a New Fone Play', category: 'Mobile', isOpen: false, createdAt: 1731600000000 },
-    { id: 'crown', title: '👑 24K Crown Obby', category: 'Obby', isOpen: false, createdAt: 1731600000000 },
-    { id: 'waterpark', title: 'Build a Water Park', category: 'Building', isOpen: false, createdAt: 1731600000000 },
-    { id: 'train', title: 'Rongimäng (Train Simulator)', category: 'Simulation', isOpen: false, createdAt: 1731600000000 },
-    { id: 'metro', title: 'Last Metro (PC Exclusive)', category: 'Story/Simulation', isOpen: false, createdAt: 1731600000000 },
-    { id: 'creator', title: 'Game Creator Studio', category: 'Studio', isOpen: false, createdAt: 1731600000000 }
+    { id: 'hub', title: 'Playard Hub & UI', category: '', isOpen: false, createdAt: 1731600000000 },
+    { id: 'citycar', title: '3D City Car Simulator', category: '', isOpen: false, createdAt: 1731600000000 },
+    { id: 'mmp1', title: 'MMP1 Multi-Player Combat', category: '', isOpen: false, createdAt: 1731600000000 },
+    { id: 'foneplay', title: 'Test a New Fone Play', category: '', isOpen: false, createdAt: 1731600000000 },
+    { id: 'crown', title: '👑 24K Crown Obby', category: '', isOpen: false, createdAt: 1731600000000 },
+    { id: 'waterpark', title: 'Build a Water Park', category: '', isOpen: false, createdAt: 1731600000000 },
+    { id: 'train', title: 'Rongimäng (Train Simulator)', category: '', isOpen: false, createdAt: 1731600000000 },
+    { id: 'metro', title: 'Last Metro (PC Exclusive)', category: '', isOpen: false, createdAt: 1731600000000 },
+    { id: 'creator', title: 'Game Creator Studio', category: '', isOpen: false, createdAt: 1731600000000 }
 ];
 
 export function getPlayardProjects(): PlayardProject[] {

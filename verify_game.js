@@ -1524,6 +1524,16 @@ await (async () => {
                 const canOwnerAccessDraft = window.canAccessUpdateFeature ? window.canAccessUpdateFeature('draft', { username: 'playard owner' }) : false;
                 const guestCannotAccessDraft = window.canAccessUpdateFeature ? !window.canAccessUpdateFeature('draft', { username: 'random_guest_player' }) : false;
 
+                // Test Custom Categories (Owner saab ise lisada kategooriaid)
+                window.addPlayardCategory('Minu Lemmikud');
+                window.addPlayardCategory('Eepilised Seiklused');
+                const catsAfterAdd = window.getPlayardCategories ? window.getPlayardCategories() : [];
+                const catAdded = catsAfterAdd.includes('Minu Lemmikud') && catsAfterAdd.includes('Eepilised Seiklused');
+
+                window.deletePlayardCategory('Eepilised Seiklused');
+                const catsAfterDel = window.getPlayardCategories ? window.getPlayardCategories() : [];
+                const catDeleted = !catsAfterDel.includes('Eepilised Seiklused') && catsAfterDel.includes('Minu Lemmikud');
+
                 // Re-render view
                 window.renderOwnerUpdatesView();
                 const countBadge = document.getElementById('owner-updates-count-badge')?.textContent;
@@ -1548,7 +1558,9 @@ await (async () => {
                     newProjIsOpen,
                     hubIsOpen,
                     newProjNowClosed,
-                    hasProjectButtons
+                    hasProjectButtons,
+                    catAdded,
+                    catDeleted
                 };
             });
 
@@ -1568,7 +1580,9 @@ await (async () => {
                 !updatesModeTest.newProjIsOpen ||
                 !updatesModeTest.hubIsOpen ||
                 !updatesModeTest.newProjNowClosed ||
-                !updatesModeTest.hasProjectButtons
+                !updatesModeTest.hasProjectButtons ||
+                !updatesModeTest.catAdded ||
+                !updatesModeTest.catDeleted
             ) {
                 throw new Error("Owner Panel Playard Updates test failed: " + JSON.stringify(updatesModeTest));
             }
