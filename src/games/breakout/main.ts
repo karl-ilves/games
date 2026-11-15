@@ -9,6 +9,7 @@ import { PhysicsSystem } from './systems/physics';
 import { BreakoutHud } from './ui/hud';
 import { createBreakoutLevel, LayoutPattern } from './world/levelGenerator';
 import { BreakoutRenderer } from './world/renderer';
+import { enforceDeviceGate } from '../../shared/gameCloseNotice';
 
 export class BreakoutGame {
     public canvas!: HTMLCanvasElement;
@@ -57,6 +58,9 @@ export class BreakoutGame {
             badgeText: '🟢 2D Retro Arcade',
             badgeColor: '#2ed573'
         });
+
+        // Check if device is phone / mobile
+        enforceDeviceGate({ gameId: 'breakout', mode: 'mobile-only', title: '2D Breakout (Klotsipurustaja)', icon: '🟢', accentColor: '#2ed573' });
 
         this.input = new InputManager(this.canvas);
         this.hud = new BreakoutHud(

@@ -1552,6 +1552,9 @@ export function renderOwnerUpdatesView(): void {
     // 1. Render Projects Cards / List with big Publish and Avatud/Suletud toggle button
     if (pillsContainer) {
         pillsContainer.innerHTML = '';
+        if (allProjects.length === 0) {
+            pillsContainer.innerHTML = '<div style="text-align: center; color: #718093; padding: 20px; font-size: 0.85rem; font-style: italic; width: 100%; border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">Ühtegi projekti pole veel lisatud. Klõpsa "+ Lisa Uus Projekt", et luua oma esimene projekt!</div>';
+        } else {
         allProjects.forEach(proj => {
             const card = document.createElement('div');
             const isOpen = !!proj.isOpen;
@@ -1713,6 +1716,7 @@ export function renderOwnerUpdatesView(): void {
                     }
                 });
             });
+            }
         }
 
     // 2. Populate Project Select Dropdown

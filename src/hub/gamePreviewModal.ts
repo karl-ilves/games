@@ -2,6 +2,7 @@ import { getCurrentUserProfile, isPlayardOwner, isOwnerUser, formatOwnerNametag 
 import { yardService } from '../shared/yardService';
 import { friendService } from '../shared/friends/friendService';
 import { supabase } from '../lib/supabase';
+import { isMobileOrTabletDevice } from '../shared/mobileControls';
 
 export interface GamePreviewInfo {
     id: string;
@@ -91,8 +92,8 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         description: 'Avasta pimedat metroojaama taskulambiga, leia võtmed ja põgene enne kui varjud sind kätte saavad!',
         url: './games/metro/index.html',
         icon: '🚇',
-        badgeText: '👻 Horror Survival',
-        badgeColor: '#ff4757',
+        badgeText: '💻 PC ONLY',
+        badgeColor: '#00f2fe',
         creatorName: 'Playard Games'
     },
     mmp1: {
@@ -141,7 +142,7 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         description: 'Liiguta alust, põrgata palli tagasi ja purusta kõik rohelised ruudud klassikalises arkaadmängus!',
         url: './games/breakout/index.html',
         icon: '🟢',
-        badgeText: '🟢 2D Retro Arcade',
+        badgeText: '📱 PHONE ONLY',
         badgeColor: '#2ed573',
         creatorName: 'Playard Games'
     },
@@ -151,7 +152,7 @@ export const OFFICIAL_GAMES_CATALOG: Record<string, GamePreviewInfo> = {
         description: 'Kogu õunu, kasvata ussi pikemaks ja püstita uus rekord!',
         url: './games/snake/index.html',
         icon: '🐍',
-        badgeText: '🐍 Retro Snake',
+        badgeText: '📱 PHONE ONLY',
         badgeColor: '#2ed573',
         creatorName: 'Playard Games'
     },
@@ -174,13 +175,13 @@ const BANNERS_THEME: Record<string, { bg1: string; bg2: string; accent: string; 
     cooking: { bg1: '#2b1406', bg2: '#592808', accent: '#ff9f43', subtitle: '3D RESTAURANT & KITCHEN RUSH', decor: '🍳🍔🍕' },
     train: { bg1: '#261408', bg2: '#4d260b', accent: '#ff793f', subtitle: 'ELRON 3D RAILWAY SIMULATOR', decor: '🚆🛤️🏔️' },
     obby: { bg1: '#092418', bg2: '#124a32', accent: '#0be881', subtitle: '3D PARKOUR OBSTACLE COURSE', decor: '🏃💎🔥' },
-    metro: { bg1: '#090b10', bg2: '#240b15', accent: '#ff4757', subtitle: 'UNDERGROUND SURVIVAL HORROR', decor: '🚇🔦👻' },
+    metro: { bg1: '#090b10', bg2: '#240b15', accent: '#00f2fe', subtitle: '💻 AINULT ARVUTIS • PC ONLY EXCLUSIVE', decor: '🚇🔦💻' },
     mmp1: { bg1: '#1f0b18', bg2: '#42122b', accent: '#ff4757', subtitle: 'MULTI-MAP 3D BATTLE ARENA', decor: '⚔️🛡️🎯' },
     rocket: { bg1: '#060c1f', bg2: '#15224d', accent: '#00f2fe', subtitle: 'BUILD & LAUNCH TO SPACE', decor: '🚀🌕⭐' },
     citycar: { bg1: '#081f24', bg2: '#103e47', accent: '#00d2d3', subtitle: 'OPEN WORLD 3D CITY DRIVING', decor: '🚓🏙️🚦' },
     defender: { bg1: '#180c29', bg2: '#311852', accent: '#a55eea', subtitle: '3D TACTICAL TOWER DEFENSE', decor: '🛡️🏰⚡' },
-    breakout: { bg1: '#071f12', bg2: '#104226', accent: '#2ed573', subtitle: 'CLASSIC 2D BRICK BREAKER', decor: '🟢🧱⚡' },
-    snake: { bg1: '#09210e', bg2: '#14451e', accent: '#2ed573', subtitle: 'RETRO ARCADE SNAKE', decor: '🐍🍎🏆' },
+    breakout: { bg1: '#071f12', bg2: '#104226', accent: '#2ed573', subtitle: '📱 AINULT TELEFONIS • PHONE ONLY', decor: '🟢🧱📱' },
+    snake: { bg1: '#09210e', bg2: '#14451e', accent: '#2ed573', subtitle: '📱 AINULT TELEFONIS • PHONE ONLY', decor: '🐍🍎📱' },
     play: { bg1: '#081c29', bg2: '#103952', accent: '#00f2fe', subtitle: 'COMMUNITY 3D WORLDS', decor: '🎮🌐✨' }
 };
 
@@ -197,7 +198,13 @@ export function generateLargeGameBannerDataUrl(game: GamePreviewInfo): string {
     };
     const safeTitle = (game.title || 'Playard Game').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const safeSub = theme.subtitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const safeBadge = (game.badgeText || 'Playard Official').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let rawBadge = game.badgeText || 'Playard Official';
+    if (game.id === 'snake' || game.id === 'breakout') {
+        rawBadge = '📱 AINULT TELEFONIS / PHONE ONLY';
+    } else if (game.id === 'metro') {
+        rawBadge = '💻 AINULT ARVUTIS / PC ONLY';
+    }
+    const safeBadge = rawBadge.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const safeCreator = (game.creatorName || 'Playard Games').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420">
@@ -237,8 +244,8 @@ export function generateLargeGameBannerDataUrl(game: GamePreviewInfo): string {
         <!-- Large Game Icon -->
         <text x="620" y="210" font-family="system-ui, -apple-system, sans-serif" font-size="110" text-anchor="middle">${game.icon || '🎮'}</text>
         <!-- Top Badge -->
-        <rect x="42" y="38" width="240" height="36" rx="18" fill="${theme.accent}" fill-opacity="0.18" stroke="${theme.accent}" stroke-opacity="0.6" stroke-width="1.5"/>
-        <text x="162" y="61" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="800" fill="${theme.accent}" text-anchor="middle" letter-spacing="1">${safeBadge}</text>
+        <rect x="42" y="38" width="300" height="36" rx="18" fill="${theme.accent}" fill-opacity="0.18" stroke="${theme.accent}" stroke-opacity="0.6" stroke-width="1.5"/>
+        <text x="192" y="61" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" fill="${theme.accent}" text-anchor="middle" letter-spacing="0.8">${safeBadge}</text>
         <!-- Game Title & Subtitle -->
         <text x="42" y="165" font-family="system-ui, -apple-system, sans-serif" font-size="40" font-weight="900" fill="#ffffff">${safeTitle}</text>
         <text x="44" y="205" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="800" fill="${theme.accent}" letter-spacing="2.5">${safeSub}</text>
@@ -825,9 +832,38 @@ export function openGamePreviewModal(game: GamePreviewInfo) {
         descEl.textContent = game.description;
     }
     if (badgeEl) {
-        badgeEl.textContent = game.badgeText || 'Playard 3D';
-        badgeEl.style.color = game.badgeColor || '#00f2fe';
-        badgeEl.style.borderColor = game.badgeColor || '#00f2fe';
+        if (game.id === 'snake' || game.id === 'breakout') {
+            badgeEl.textContent = '📱 AINULT TELEFONIS / PHONE ONLY';
+            badgeEl.style.color = '#2ed573';
+            badgeEl.style.borderColor = '#2ed573';
+        } else if (game.id === 'metro') {
+            badgeEl.textContent = '💻 AINULT ARVUTIS / PC ONLY';
+            badgeEl.style.color = '#00f2fe';
+            badgeEl.style.borderColor = '#00f2fe';
+        } else {
+            badgeEl.textContent = game.badgeText || 'Playard 3D';
+            badgeEl.style.color = game.badgeColor || '#00f2fe';
+            badgeEl.style.borderColor = game.badgeColor || '#00f2fe';
+        }
+    }
+
+    // Configure Play button appearance and device restrictions
+    const playBtn = document.getElementById('btn-game-preview-play');
+    const isMobile = isMobileOrTabletDevice();
+    if (playBtn) {
+        if ((game.id === 'snake' || game.id === 'breakout') && !isMobile) {
+            playBtn.innerHTML = '<span>📱</span><span>AINULT TELEFONIS / PHONE ONLY</span>';
+            playBtn.style.background = 'linear-gradient(135deg, #2ed573 0%, #10ac84 100%)';
+            playBtn.style.color = '#0b1d19';
+        } else if (game.id === 'metro' && isMobile) {
+            playBtn.innerHTML = '<span>💻</span><span>AINULT ARVUTIS / PC ONLY</span>';
+            playBtn.style.background = 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)';
+            playBtn.style.color = '#071018';
+        } else {
+            playBtn.innerHTML = '<span style="font-size: 1.35rem;">▶️</span><span>PLAY / MÄNGI</span>';
+            playBtn.style.background = 'linear-gradient(135deg, #0be881 0%, #00d2d3 100%)';
+            playBtn.style.color = '#071018';
+        }
     }
 
     refreshGamePreviewStatsUI(game.id);
@@ -939,6 +975,17 @@ export function setupGamePreviewModal() {
             if (!currentOpenedGame) return;
 
             const game = currentOpenedGame;
+
+            // Device requirement checks
+            const isMobile = isMobileOrTabletDevice();
+            if ((game.id === 'snake' || game.id === 'breakout') && !isMobile) {
+                alert('📱 Seda mängu saab mängida ainult telefonis või tahvlis! / This game is only playable on mobile phones & tablets!');
+                return;
+            }
+            if (game.id === 'metro' && isMobile) {
+                alert('💻 Last Metro mängu saab mängida ainult arvutis! / Last Metro is only playable on PC (computer)!');
+                return;
+            }
 
             // Check Crown Obby access control
             if (game.id === 'crown' || game.url.includes('/games/crown/')) {

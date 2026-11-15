@@ -13,6 +13,8 @@
  * 4. Whenever a player joins ANY game (or in Hub / in-game), the warning popup is automatically presented in English.
  */
 
+import { isMobileOrTabletDevice } from './mobileControls';
+
 export interface GameCloseNoticeConfig {
     id: string;
     gameId?: string; // specific game or 'all' for all games
@@ -31,9 +33,9 @@ export const PLAYER_NOTICE_SEEN_STORAGE_KEY = 'playard_player_notice_seen_counts
 export const DEFAULT_SUNDAY_UPDATE_NOTICE: GameCloseNoticeConfig = {
     id: 'notice_playard_game_2_update',
     gameId: 'all',
-    gameTitle: 'All Games (Playard Game 2)',
-    title: 'Sorry. Update. Playard Game 2',
-    description: 'We are deleting some games this Sunday at 14:00 UTC (16:00 Estonian time) – not all games will be removed, only selected ones. We are making playing on phone/mobile much better and updating everything. We apologize. - Playard Game Team',
+    gameTitle: 'All Games (Playard Update 2.0)',
+    title: 'Sorry. Update 2.0. Playard Game',
+    description: 'Update 2.0: Kõik teised mängud eemaldatakse! Alles jäävad ainult Ussimäng & 2D Breakout (ainult telefonis) ja Last Metro (ainult arvutis). Teeme mobiilikogemuse oluliselt kiiremaks ja mugavamaks. Vabandame ebameeldivuste pärast! - Playard Game Team',
     repeatCount: 0, // every time a player joins
     active: true,
     createdAt: 1731427200000,
@@ -47,8 +49,8 @@ export const LAST_METRO_PC_ONLY_NOTICE: GameCloseNoticeConfig = {
     id: 'notice_last_metro_pc_only',
     gameId: 'metro',
     gameTitle: '🚇 LAST METRO (Viimane Metroo)',
-    title: '💻 Last Metro · PC Only Notice',
-    description: 'Starting this Sunday with the Playard Game 2 update: LAST METRO will remain available exclusively on Computer (PC / Desktop). It will not be removed, but will be optimized specifically for PC keyboard and mouse gameplay! - Playard Game Team',
+    title: '💻 Last Metro · Ainult Arvutis / PC Only',
+    description: 'Update 2.0: Last Metro jääb alles AINULT ARVUTIS! This game is exclusively for Computer (PC / Desktop) with keyboard & mouse. Telefonis seda mängida ei saa. - Playard Game Team',
     repeatCount: 0,
     active: true,
     createdAt: 1731513600000,
@@ -76,9 +78,9 @@ export const FONEPLAY_PHONE_ONLY_NOTICE: GameCloseNoticeConfig = {
 export const MOBILE_ONLY_ARCADE_NOTICE: GameCloseNoticeConfig = {
     id: 'notice_mobile_only_arcade',
     gameId: 'snake_breakout',
-    gameTitle: '📱 Mobile Only Notice (Snake & 2D Breakout)',
-    title: '📱 Mobile Only · Phone Exclusive Notice',
-    description: 'Starting this Sunday with the Playard Game 2 update: This game (Snake / 2D Breakout) will remain available exclusively on Phone & Tablet! It will be fully upgraded with ultra-smooth touch controls for the best mobile arcade experience. - Playard Game Team',
+    gameTitle: '📱 Ainult Telefonis (Ussimäng & 2D Breakout)',
+    title: '📱 Ainult Telefonis / Mobile Only (Update 2.0)',
+    description: 'Update 2.0: Ussimäng ja 2D Breakout (Klotsipurustaja) jäävad alles ja neid saab mängida AINULT TELEFONIS! Exclusive to Phone & Tablet mobile devices with touch controls. Arvutis neid mängida ei saa. - Playard Game Team',
     repeatCount: 0,
     active: true,
     createdAt: 1731513600000,
@@ -131,11 +133,22 @@ export function getGameCloseNotices(): GameCloseNoticeConfig[] {
         if (raw) {
             const list: GameCloseNoticeConfig[] = JSON.parse(raw);
             if (Array.isArray(list) && list.length > 0) {
-                // If the default notice still has the old text "deleting all games", update it to the new text
                 let updated = false;
                 list.forEach(item => {
-                    if (item.id === DEFAULT_SUNDAY_UPDATE_NOTICE.id && item.description.includes('deleting all games')) {
+                    if (item.id === DEFAULT_SUNDAY_UPDATE_NOTICE.id) {
                         item.description = DEFAULT_SUNDAY_UPDATE_NOTICE.description;
+                        item.title = DEFAULT_SUNDAY_UPDATE_NOTICE.title;
+                        item.gameTitle = DEFAULT_SUNDAY_UPDATE_NOTICE.gameTitle;
+                        updated = true;
+                    }
+                    if (item.id === LAST_METRO_PC_ONLY_NOTICE.id) {
+                        item.description = LAST_METRO_PC_ONLY_NOTICE.description;
+                        item.title = LAST_METRO_PC_ONLY_NOTICE.title;
+                        updated = true;
+                    }
+                    if (item.id === MOBILE_ONLY_ARCADE_NOTICE.id) {
+                        item.description = MOBILE_ONLY_ARCADE_NOTICE.description;
+                        item.title = MOBILE_ONLY_ARCADE_NOTICE.title;
                         updated = true;
                     }
                 });
@@ -407,6 +420,71 @@ function escapeHtml(str: string): string {
         .replace(/'/g, '&#039;');
 }
 
+/**
+ * Enforce device-specific access gating (Update 2.0: snake & breakout are mobile-only, metro is pc-only).
+ */
+export function enforceDeviceGate(options: {
+    gameId: string;
+    mode: 'mobile-only' | 'pc-only';
+    title: string;
+    icon: string;
+    accentColor?: string;
+    hubUrl?: string;
+}): boolean {
+    if (typeof window === 'undefined') return true;
+    const isMobile = isMobileOrTabletDevice();
+    const hubUrl = options.hubUrl || '../../index.html';
+    const accent = options.accentColor || (options.mode === 'mobile-only' ? '#00e676' : '#38bdf8');
+
+    if (options.mode === 'mobile-only' && !isMobile) {
+        showGameJoinWarningModal({
+            gameId: options.gameId,
+            forceShow: true,
+            onDismiss: () => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(7,24,18,0.96);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;color:#ffffff;font-family:sans-serif;';
+                overlay.innerHTML = `
+                    <div style="font-size:3.5rem;margin-bottom:12px;">📱 ${options.icon}</div>
+                    <h2 style="color:${accent};font-size:1.6rem;margin-bottom:8px;">AINULT TELEFONIS / PHONE ONLY</h2>
+                    <p style="max-width:440px;color:#cbd5e1;line-height:1.5;margin-bottom:20px;font-size:0.95rem;">
+                        ${escapeHtml(options.title)} on kohandatud spetsiaalselt puuteekraaniga telefonidele ja tahvlitele! Ava see mäng oma mobiiltelefonis!
+                    </p>
+                    <a href="${hubUrl}" style="padding:12px 24px;background:${accent};color:#0b1d19;font-weight:900;border-radius:10px;text-decoration:none;">
+                        ⬅️ Tagasi Hubi / Back to Hub
+                    </a>
+                `;
+                document.body.appendChild(overlay);
+            }
+        });
+        return false;
+    }
+
+    if (options.mode === 'pc-only' && isMobile) {
+        showGameJoinWarningModal({
+            gameId: options.gameId,
+            forceShow: true,
+            onDismiss: () => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.96);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;color:#ffffff;font-family:sans-serif;';
+                overlay.innerHTML = `
+                    <div style="font-size:3.5rem;margin-bottom:12px;">💻 ${options.icon}</div>
+                    <h2 style="color:${accent};font-size:1.6rem;margin-bottom:8px;">AINULT ARVUTIS / PC ONLY</h2>
+                    <p style="max-width:440px;color:#cbd5e1;line-height:1.5;margin-bottom:20px;font-size:0.95rem;">
+                        ${escapeHtml(options.title)} vajab klaviatuuri ja hiirega juhtimist ning 3D graafikat. Ava see mäng oma arvutis!
+                    </p>
+                    <a href="${hubUrl}" style="padding:12px 24px;background:${accent};color:#0f172a;font-weight:900;border-radius:10px;text-decoration:none;">
+                        ⬅️ Tagasi Hubi / Back to Hub
+                    </a>
+                `;
+                document.body.appendChild(overlay);
+            }
+        });
+        return false;
+    }
+
+    return true;
+}
+
 // Global initialization helper for tests & devtools
 if (typeof window !== 'undefined') {
     (window as any).getGameCloseNotices = getGameCloseNotices;
@@ -416,4 +494,6 @@ if (typeof window !== 'undefined') {
     (window as any).showGameJoinWarningModal = showGameJoinWarningModal;
     (window as any).getPendingNoticesForGame = getPendingNoticesForGame;
     (window as any).resolveNoticeForGame = resolveNoticeForGame;
+    (window as any).enforceDeviceGate = enforceDeviceGate;
 }
+

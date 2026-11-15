@@ -3,6 +3,7 @@ import { getCurrentUserProfile, isPlayardOwner, isTestMode } from '../../../auth
 import { yardService } from '../../../shared/yardService';
 import { metroAudio } from '../audio';
 import { PlayardMobileControls, isMobileOrTabletDevice } from '../../../shared/mobileControls';
+import { enforceDeviceGate } from '../../../shared/gameCloseNotice';
 import { GameState, DirectionBranch, AnomalyEvent, AIPassenger, CarriageData, ShopItem, ClueItem } from '../types';
 import { GOLDEN_SHOP_ITEMS, CLUES_DATABASE } from '../catalog';
 
@@ -236,11 +237,8 @@ export class MetroBase {
         const userProf = getCurrentUserProfile();
         this.isOwner = isPlayardOwner(userProf?.email);
 
-        // Last Metro is now open and accessible to all players!
-        const vipOverlay = document.getElementById('vip-restricted-overlay');
-        if (vipOverlay) {
-            vipOverlay.style.display = 'none';
-        }
+        // Last Metro is strictly PC ONLY (Computer only)
+        enforceDeviceGate({ gameId: 'metro', mode: 'pc-only', title: 'Last Metro', icon: '🚇', accentColor: '#00f2fe' });
 
         // Language determination: Estonian for Owner, English for everyone else ("kõik inglisekeelseks väljaarvatud Playard owner")
         this.lang = this.isOwner ? 'et' : 'en';

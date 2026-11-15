@@ -104,6 +104,18 @@ export function renderRecentlyPlayed() {
                 gameTitle = '🛡️ 2D Earth Defender';
                 gameDesc = 'Space asteroid planetary defense mission for Playard Owner. Protect Earth from cosmic asteroid impacts!';
                 badgeText = '👑 Playard Owner Exclusive';
+            } else if (game.id === 'breakout') {
+                gameTitle = '🟢 2D Breakout';
+                gameDesc = 'Move the paddle, bounce the ball and smash all green bricks!';
+                badgeText = '📱 PHONE ONLY';
+            } else if (game.id === 'snake') {
+                gameTitle = '🐍 2D Neon Snake';
+                gameDesc = 'Classic neon snake arcade! Collect apples, catch stars and set high scores!';
+                badgeText = '📱 PHONE ONLY';
+            } else if (game.id === 'metro') {
+                gameTitle = '🚇 LAST METRO';
+                gameDesc = 'Explore the mysterious underground train with flashlight!';
+                badgeText = '💻 PC ONLY';
             }
         } else {
             if (game.id === 'racing') {
@@ -141,7 +153,15 @@ export function renderRecentlyPlayed() {
             } else if (game.id === 'breakout') {
                 gameTitle = '🟢 2D Breakout';
                 gameDesc = 'Liiguta alust _, põrgata palli ja purusta kõik rohelised ruudud!';
-                badgeText = '🟢 2D Retro Arcade';
+                badgeText = '📱 AINULT TELEFONIS';
+            } else if (game.id === 'snake') {
+                gameTitle = '🐍 Ussimäng';
+                gameDesc = 'Klassikaline neoon-ussimäng! Korja õunu, püüa boonuseid ja püstita rekord!';
+                badgeText = '📱 AINULT TELEFONIS';
+            } else if (game.id === 'metro') {
+                gameTitle = '🚇 LAST METRO';
+                gameDesc = 'Astuge metroosse, kus iga läbitud vagun muutub aeglaselt salapärasemaks...';
+                badgeText = '💻 AINULT ARVUTIS';
             }
         }
 
@@ -276,8 +296,26 @@ export function setupGameCardTracking() {
             description: 'Liiguta alust _, põrgata palli tagasi ja purusta kõik rohelised ruudud!',
             url: './games/breakout/index.html',
             icon: '🟢',
-            badgeText: '🟢 2D Retro Arcade',
+            badgeText: '📱 PHONE ONLY',
             badgeColor: '#2ed573'
+        },
+        './games/snake/index.html': {
+            id: 'snake',
+            title: '🐍 2D Ussimäng (Retro Arcade)',
+            description: 'Klassikaline ja kaasahaarav neoon-ussimäng! Korja õunu, püüa boonuseid ja väldi seinu.',
+            url: './games/snake/index.html',
+            icon: '🐍',
+            badgeText: '📱 PHONE ONLY',
+            badgeColor: '#2ed573'
+        },
+        './games/metro/index.html': {
+            id: 'metro',
+            title: '🚇 LAST METRO (Viimane Metroo)',
+            description: 'Astuge metroosse, kus iga läbitud vagun muutub salapärasemaks...',
+            url: './games/metro/index.html',
+            icon: '🚇',
+            badgeText: '💻 PC ONLY',
+            badgeColor: '#00f2fe'
         }
     };
 

@@ -10,6 +10,7 @@ import { StartScreenUI } from './ui/startScreen';
 import { FriendsModalUI } from './ui/friendsModal';
 import { DemoAiSystem } from './systems/demoAi';
 import { SnakeMultiplayerSystem } from './systems/multiplayer';
+import { enforceDeviceGate } from '../../shared/gameCloseNotice';
 import { Direction } from './types';
 
 export class SnakeGame {
@@ -55,6 +56,9 @@ export class SnakeGame {
             url: './games/snake/index.html', icon: '🐍',
             badgeText: '🐍 2D Neon Arcade', badgeColor: '#2ed573',
         });
+
+        // Check if device is phone / mobile
+        enforceDeviceGate({ gameId: 'snake', mode: 'mobile-only', title: 'Ussimäng (Snake 2D Arcade)', icon: '🐍' });
 
         this.demoAi = new DemoAiSystem(this.state.cols, this.state.rows);
         this.multiplayer = new SnakeMultiplayerSystem();

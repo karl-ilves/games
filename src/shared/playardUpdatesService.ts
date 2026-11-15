@@ -73,17 +73,7 @@ export function deletePlayardCategory(name: string): string[] {
     return list;
 }
 
-export const DEFAULT_PLAYARD_PROJECTS: PlayardProject[] = [
-    { id: 'hub', title: 'Playard Hub & UI', category: '', isOpen: false, createdAt: 1731600000000 },
-    { id: 'citycar', title: '3D City Car Simulator', category: '', isOpen: false, createdAt: 1731600000000 },
-    { id: 'mmp1', title: 'MMP1 Multi-Player Combat', category: '', isOpen: false, createdAt: 1731600000000 },
-    { id: 'foneplay', title: 'Test a New Fone Play', category: '', isOpen: false, createdAt: 1731600000000 },
-    { id: 'crown', title: '👑 24K Crown Obby', category: '', isOpen: false, createdAt: 1731600000000 },
-    { id: 'waterpark', title: 'Build a Water Park', category: '', isOpen: false, createdAt: 1731600000000 },
-    { id: 'train', title: 'Rongimäng (Train Simulator)', category: '', isOpen: false, createdAt: 1731600000000 },
-    { id: 'metro', title: 'Last Metro (PC Exclusive)', category: '', isOpen: false, createdAt: 1731600000000 },
-    { id: 'creator', title: 'Game Creator Studio', category: '', isOpen: false, createdAt: 1731600000000 }
-];
+export const DEFAULT_PLAYARD_PROJECTS: PlayardProject[] = [];
 
 export function getPlayardProjects(): PlayardProject[] {
     if (typeof window === 'undefined' || !window.localStorage) {
@@ -91,9 +81,9 @@ export function getPlayardProjects(): PlayardProject[] {
     }
     try {
         const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
-        if (raw) {
+        if (raw !== null) {
             const list = JSON.parse(raw);
-            if (Array.isArray(list) && list.length > 0) return list;
+            if (Array.isArray(list)) return list;
         }
     } catch (e) {}
     return DEFAULT_PLAYARD_PROJECTS;
