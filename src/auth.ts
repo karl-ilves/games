@@ -1715,6 +1715,8 @@ function initRecoveryAndForgotUI() {
         passwordRecoveryService.setRecoveryConfig(username, gmail, false);
 
         if (sentEmailEl) sentEmailEl.textContent = gmail;
+        const codeDisplayEl = document.getElementById('recovery-setup-code-display');
+        if (codeDisplayEl) codeDisplayEl.textContent = code;
         if (stepGmail) stepGmail.style.display = 'none';
         if (stepCode) stepCode.style.display = 'block';
 
@@ -1806,6 +1808,8 @@ function initRecoveryAndForgotUI() {
         const targetGmail = rec?.gmail || `${username.toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@gmail.com`;
 
         const code = passwordRecoveryService.generate6DigitCode(username, targetGmail);
+        const forgotDisplayEl = document.getElementById('forgot-code-display');
+        if (forgotDisplayEl) forgotDisplayEl.textContent = code;
         if (forgotStepPrompt) forgotStepPrompt.style.display = 'none';
         if (forgotStepVerify) forgotStepVerify.style.display = 'block';
         if (forgotCodeInput) {

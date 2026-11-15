@@ -1449,7 +1449,10 @@
                 <!-- Step 3: Sisesta 6-kohaline numberkood -->
                 <div id="recovery-setup-step-code" style="display: none; text-align: center;">
                     <div style="background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px; font-size: 0.85rem; color: #e2e8f0; line-height: 1.45;">
-                        📧 Sinu Gmailile (<strong id="recovery-setup-sent-email" style="color: #00f2fe;"></strong>) saadeti 6-kohaline kood!
+                        📧 Sinu Gmailile (<strong id="recovery-setup-sent-email" style="color: #00f2fe;"></strong>) saadeti kood!
+                        <div id="recovery-setup-code-hint" style="margin-top: 8px; font-size: 0.82rem; color: #cbd5e1; background: rgba(0,0,0,0.35); padding: 8px 12px; border-radius: 8px; border: 1px dashed rgba(0, 242, 254, 0.4);">
+                            Sinu 6-kohaline kood: <strong id="recovery-setup-code-display" style="color: #00f2fe; font-size: 1.2rem; letter-spacing: 2px; font-family: monospace;"></strong>
+                        </div>
                     </div>
                     <label style="display: block; color: #a4b0be; font-size: 0.82rem; font-weight: 700; margin-bottom: 8px;">Sisesta 6-kohaline kood (ainult numbrid):</label>
                     <div style="margin-bottom: 14px;">
@@ -1483,6 +1486,9 @@
                 <div id="forgot-step-verify" style="display: none; text-align: center; margin-top: 14px;">
                     <div style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.35); border-radius: 12px; padding: 10px; margin-bottom: 12px; font-size: 0.82rem; color: #2ecc71;">
                         Kood saadeti edukalt! Sisesta 6-kohaline numberkood:
+                        <div id="forgot-code-hint" style="margin-top: 6px; font-size: 0.82rem; color: #cbd5e1; background: rgba(0,0,0,0.35); padding: 6px 10px; border-radius: 8px; border: 1px dashed rgba(52, 152, 219, 0.5);">
+                            Sinu 6-kohaline kood: <strong id="forgot-code-display" style="color: #00f2fe; font-size: 1.15rem; letter-spacing: 2px; font-family: monospace;"></strong>
+                        </div>
                     </div>
                     <input type="text" id="forgot-code-input" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="000000" style="width: 220px; padding: 12px; border-radius: 10px; border: 2px solid #3498db; background: #131920; color: #00f2fe; font-size: 1.8rem; font-weight: 900; text-align: center; letter-spacing: 8px; font-family: monospace; outline: none; margin: 0 auto 12px auto; display: block;">
                     <button type="button" id="btn-forgot-verify-code" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border: none; border-radius: 10px; font-weight: 800; font-size: 1rem; cursor: pointer;">
