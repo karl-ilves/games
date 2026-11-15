@@ -171,11 +171,11 @@ export class PasswordRecoveryService {
                 <div style="font-size: 1.4rem;">📬</div>
                 <div style="flex: 1;">
                     <div style="font-weight: 800; font-size: 0.95rem; color: #38bdf8; margin-bottom: 2px;">
-                        Gmailile saadetud!
+                        🔑 Playard · Forgot password
                     </div>
                     <div style="font-size: 0.8rem; color: #cbd5e1; line-height: 1.4;">
                         Kood saadeti aadressile <strong>${gmail}</strong>.<br>
-                        Sinu 6-kohaline kinnituskood:
+                        Sinu 6-kohaline Forgot Password kood:
                     </div>
                     <div style="margin-top: 6px; display: inline-block; background: rgba(56, 189, 248, 0.15); border: 1px dashed #38bdf8; padding: 4px 12px; border-radius: 8px; font-size: 1.25rem; font-weight: 900; letter-spacing: 3px; color: #38bdf8;">
                         ${code}
