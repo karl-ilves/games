@@ -1534,6 +1534,21 @@ await (async () => {
                 const catsAfterDel = window.getPlayardCategories ? window.getPlayardCategories() : [];
                 const catDeleted = !catsAfterDel.includes('Eepilised Seiklused') && catsAfterDel.includes('Minu Lemmikud');
 
+                // Test OR TIME (Ajasta publish taimeriga või kellaajaga)
+                const timeBtns = document.querySelectorAll('.btn-owner-project-time');
+                const hasTimeButtons = timeBtns.length > 0;
+
+                // Test timer scheduling for 10 minutes
+                const tenMinsLater = Date.now() + 10 * 60 * 1000;
+                window.scheduleProjectPublish(newProj.id, tenMinsLater, 'timer', '10 min pärast');
+                const projScheduled = window.getPlayardProjects().find(p => p.id === newProj.id);
+                const hasScheduledTimestamp = projScheduled?.scheduledPublishAt === tenMinsLater;
+
+                // Test cancelling schedule
+                window.cancelProjectSchedule(newProj.id);
+                const projCancelled = window.getPlayardProjects().find(p => p.id === newProj.id);
+                const scheduleCancelled = !projCancelled?.scheduledPublishAt;
+
                 // Re-render view
                 window.renderOwnerUpdatesView();
                 const countBadge = document.getElementById('owner-updates-count-badge')?.textContent;
@@ -1560,7 +1575,10 @@ await (async () => {
                     newProjNowClosed,
                     hasProjectButtons,
                     catAdded,
-                    catDeleted
+                    catDeleted,
+                    hasTimeButtons,
+                    hasScheduledTimestamp,
+                    scheduleCancelled
                 };
             });
 
@@ -1582,7 +1600,10 @@ await (async () => {
                 !updatesModeTest.newProjNowClosed ||
                 !updatesModeTest.hasProjectButtons ||
                 !updatesModeTest.catAdded ||
-                !updatesModeTest.catDeleted
+                !updatesModeTest.catDeleted ||
+                !updatesModeTest.hasTimeButtons ||
+                !updatesModeTest.hasScheduledTimestamp ||
+                !updatesModeTest.scheduleCancelled
             ) {
                 throw new Error("Owner Panel Playard Updates test failed: " + JSON.stringify(updatesModeTest));
             }

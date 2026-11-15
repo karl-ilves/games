@@ -2634,6 +2634,61 @@
                 <div id="owner-updates-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
                     <div style="text-align: center; color: #718093; padding: 20px;">Laen uuendusi...</div>
                 </div>
+
+                <!-- Schedule Publish Timing Modal (Taimer või Kellaaeg) -->
+                <div id="modal-owner-schedule-publish" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: 99999; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">
+                    <div style="background: #111a24; border: 2px solid #00f2fe; border-radius: 14px; max-width: 440px; width: 100%; padding: 22px; box-shadow: 0 10px 40px rgba(0,242,254,0.3); color: white; text-align: left; position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.4rem;">⏱️</span>
+                                <h3 style="margin: 0; color: #00f2fe; font-size: 1.15rem;">Ajasta Publish (Taimer või Kellaaeg)</h3>
+                            </div>
+                            <button type="button" id="btn-owner-close-schedule-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; line-height: 1;">✕</button>
+                        </div>
+
+                        <div id="owner-schedule-project-name" style="font-size: 0.88rem; color: #cbd5e1; margin-bottom: 14px; font-weight: bold;">
+                            Projekt: <span style="color: #00f2fe;">—</span>
+                        </div>
+
+                        <!-- Mode selection: Taimer VS Kellaaeg -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                            <button type="button" id="btn-owner-mode-timer-select" style="flex: 1; padding: 9px; border-radius: 8px; border: 1.5px solid #00f2fe; background: rgba(0, 242, 254, 0.15); color: #00f2fe; font-weight: 800; font-size: 0.86rem; cursor: pointer;">
+                                ⏳ Taimer (nt 10 min)
+                            </button>
+                            <button type="button" id="btn-owner-mode-clock-select" style="flex: 1; padding: 9px; border-radius: 8px; border: 1.5px solid rgba(255, 255, 255, 0.15); background: transparent; color: #94a3b8; font-weight: 800; font-size: 0.86rem; cursor: pointer;">
+                                🕒 Kellaaeg (nt 18:30)
+                            </button>
+                        </div>
+
+                        <!-- Option A: Taimer (minutid või sekundid) -->
+                        <div id="owner-schedule-timer-view" style="display: block; margin-bottom: 16px;">
+                            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px; font-weight: 700;">Mitmendal minutil või tunnil avaldada:</label>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                                <button type="button" class="btn-owner-timer-preset" data-minutes="1" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; cursor: pointer;">1 min</button>
+                                <button type="button" class="btn-owner-timer-preset" data-minutes="5" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; cursor: pointer;">5 min</button>
+                                <button type="button" class="btn-owner-timer-preset" data-minutes="10" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; cursor: pointer;">10 min</button>
+                                <button type="button" class="btn-owner-timer-preset" data-minutes="30" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; cursor: pointer;">30 min</button>
+                                <button type="button" class="btn-owner-timer-preset" data-minutes="60" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; cursor: pointer;">1 tund</button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" id="owner-schedule-timer-input" placeholder="Minutit..." min="1" value="10" style="flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.88rem; outline: none;">
+                                <span style="font-size: 0.84rem; color: #94a3b8;">minutit pärast</span>
+                            </div>
+                        </div>
+
+                        <!-- Option B: Kellaaeg (nt 18:30) -->
+                        <div id="owner-schedule-clock-view" style="display: none; margin-bottom: 16px;">
+                            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px; font-weight: 700;">Täpne kellaaeg täna/homme (hh:mm):</label>
+                            <input type="time" id="owner-schedule-clock-input" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border-radius: 8px; border: 1px solid #334155; background: #0b1118; color: white; font-size: 0.95rem; outline: none;">
+                        </div>
+
+                        <!-- Actions -->
+                        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px;">
+                            <button type="button" id="btn-owner-cancel-schedule-modal" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; font-weight: 700; cursor: pointer;">Loobu</button>
+                            <button type="button" id="btn-owner-confirm-schedule" style="background: linear-gradient(135deg, #00f2fe, #0984e3); border: none; color: #0b1118; border-radius: 8px; padding: 8px 18px; font-size: 0.84rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 12px rgba(0,242,254,0.35);">Kinnita &amp; Ajasta</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Active Database Players List -->

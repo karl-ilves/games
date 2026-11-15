@@ -27,6 +27,10 @@ import {
     getPlayardUpdates,
     addPlayardUpdate,
     publishPlayardUpdate,
+    publishPlayardProjectUpdates,
+    scheduleProjectPublish,
+    cancelProjectSchedule,
+    checkAndExecuteScheduledPublishes,
     getPlayardCategories,
     addPlayardCategory,
     deletePlayardCategory,
@@ -1571,108 +1575,145 @@ export function renderOwnerUpdatesView(): void {
 
             const catText = proj.category ? `Kategooria: <span style="color: #cbd5e1;">${proj.category}</span> · ` : '';
 
-            card.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px;">
-                    <span style="font-size: 1.2rem;">${isOpen ? '🟢' : '📁'}</span>
-                    <div>
-                        <div style="font-weight: 800; font-size: 0.92rem; color: ${isOpen ? '#00f2fe' : '#ffffff'};">
-                            ${proj.title}
-                        </div>
-                        <div style="font-size: 0.76rem; color: #8899a6;">
-                            ${catText}Uuendusi: <strong style="color: #ffd32a;">${projectUpdates.length}</strong> (${draftCount} ootel)
+                // Kontrollime ajastuse olekut
+                const hasSchedule = proj.scheduledPublishAt && proj.scheduledPublishAt > Date.now();
+                const scheduleBadge = hasSchedule
+                    ? `<span style="background: rgba(255, 211, 42, 0.18); color: #ffd32a; border: 1px solid rgba(255,211,42,0.4); padding: 4px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">⏱️ Ajastatud: ${proj.scheduledPublishLabel || 'peagi'} <button type="button" class="btn-owner-cancel-time" data-id="${proj.id}" style="background: transparent; border: none; color: #ff6b81; cursor: pointer; padding: 0 2px; font-weight: bold;" title="Tühista ajastus">✕</button></span>`
+                    : '';
+
+                card.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px;">
+                        <span style="font-size: 1.2rem;">${isOpen ? '🟢' : '📁'}</span>
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.92rem; color: ${isOpen ? '#00f2fe' : '#ffffff'};">
+                                ${proj.title}
+                            </div>
+                            <div style="font-size: 0.76rem; color: #8899a6; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px;">
+                                ${catText}<span>Uuendusi: <strong style="color: #ffd32a;">${projectUpdates.length}</strong> (${draftCount} ootel)</span>
+                                ${scheduleBadge}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <!-- Big Publish Button for Project -->
-                    <button type="button" class="btn-owner-project-publish" data-id="${proj.id}" style="
-                        background: linear-gradient(135deg, #2ecc71, #27ae60);
-                        border: none;
-                        color: #0b1118;
-                        border-radius: 8px;
-                        padding: 8px 18px;
-                        font-size: 0.88rem;
-                        font-weight: 900;
-                        cursor: pointer;
-                        box-shadow: 0 4px 14px rgba(46, 204, 113, 0.35);
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                    ">
-                        <span>🚀</span>
-                        <span>PUBLISH</span>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <!-- Big Publish Button for Project -->
+                        <button type="button" class="btn-owner-project-publish" data-id="${proj.id}" style="
+                            background: linear-gradient(135deg, #2ecc71, #27ae60);
+                            border: none;
+                            color: #0b1118;
+                            border-radius: 8px;
+                            padding: 8px 18px;
+                            font-size: 0.88rem;
+                            font-weight: 900;
+                            cursor: pointer;
+                            box-shadow: 0 4px 14px rgba(46, 204, 113, 0.35);
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                        ">
+                            <span>🚀</span>
+                            <span>PUBLISH</span>
+                        </button>
 
-                    <!-- Avatud / Suletud Toggle Button (AINULT 1 saab korraga olla avatud!) -->
-                    <button type="button" class="btn-owner-project-toggle-open" data-id="${proj.id}" style="
-                        background: ${isOpen ? '#00f2fe' : 'rgba(255, 71, 87, 0.15)'};
-                        border: 1px solid ${isOpen ? '#00f2fe' : 'rgba(255, 71, 87, 0.4)'};
-                        color: ${isOpen ? '#0b1118' : '#ff6b81'};
-                        border-radius: 8px;
-                        padding: 8px 14px;
-                        font-size: 0.82rem;
-                        font-weight: 900;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                    ">
-                        <span>${isOpen ? '🔓' : '🔒'}</span>
-                        <span>${isOpen ? 'AVATUD' : 'SULETUD'}</span>
-                    </button>
-                </div>
-            `;
-            pillsContainer.appendChild(card);
-        });
+                        <!-- OR TIME Button (Taimer või Kellaaeg) -->
+                        <button type="button" class="btn-owner-project-time" data-id="${proj.id}" style="
+                            background: rgba(0, 242, 254, 0.12);
+                            border: 1.5px solid rgba(0, 242, 254, 0.45);
+                            color: #00f2fe;
+                            border-radius: 8px;
+                            padding: 8px 14px;
+                            font-size: 0.82rem;
+                            font-weight: 900;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            box-shadow: 0 2px 10px rgba(0,242,254,0.15);
+                        ">
+                            <span>⏱️</span>
+                            <span>OR TIME</span>
+                        </button>
 
-        // Bind project toggle listeners
-        pillsContainer.querySelectorAll('.btn-owner-project-toggle-open').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
-                if (pid) {
-                    toggleProjectOpen(pid);
-                    renderOwnerUpdatesView();
-                }
+                        <!-- Avatud / Suletud Toggle Button (AINULT 1 saab korraga olla avatud!) -->
+                        <button type="button" class="btn-owner-project-toggle-open" data-id="${proj.id}" style="
+                            background: ${isOpen ? '#00f2fe' : 'rgba(255, 71, 87, 0.15)'};
+                            border: 1px solid ${isOpen ? '#00f2fe' : 'rgba(255, 71, 87, 0.4)'};
+                            color: ${isOpen ? '#0b1118' : '#ff6b81'};
+                            border-radius: 8px;
+                            padding: 8px 14px;
+                            font-size: 0.82rem;
+                            font-weight: 900;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                        ">
+                            <span>${isOpen ? '🔓' : '🔒'}</span>
+                            <span>${isOpen ? 'AVATUD' : 'SULETUD'}</span>
+                        </button>
+                    </div>
+                `;
+                pillsContainer.appendChild(card);
             });
-        });
 
-        // Bind project big publish button listeners
-        pillsContainer.querySelectorAll('.btn-owner-project-publish').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
-                if (pid) {
-                    const targetProj = allProjects.find(p => p.id === pid);
-                    const projName = targetProj ? targetProj.title : 'selle projekti';
-                    
-                    // Enne avaldamist küsib kinnitust: "Oled kindel?"
-                    if (!confirm(`Oled kindel, et soovid avaldada projekti "${projName}" uuendused avalikuks?`)) {
-                        return;
+            // Bind project toggle listeners
+            pillsContainer.querySelectorAll('.btn-owner-project-toggle-open').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                    if (pid) {
+                        toggleProjectOpen(pid);
+                        renderOwnerUpdatesView();
                     }
+                });
+            });
 
-                    const updates = getPlayardUpdates();
-                    let pubCount = 0;
-                    updates.forEach(u => {
-                        if (u.projectId === pid && u.status === 'draft') {
-                            u.status = 'published';
-                            u.publishedAt = Date.now();
-                            pubCount++;
+            // Bind cancel scheduled time listeners
+            pillsContainer.querySelectorAll('.btn-owner-cancel-time').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                    if (pid) {
+                        cancelProjectSchedule(pid);
+                        renderOwnerUpdatesView();
+                    }
+                });
+            });
+
+            // Bind "OR TIME" button click -> opens schedule modal
+            pillsContainer.querySelectorAll('.btn-owner-project-time').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                    if (pid) {
+                        openScheduleModal(pid);
+                    }
+                });
+            });
+
+            // Bind project big publish button listeners
+            pillsContainer.querySelectorAll('.btn-owner-project-publish').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const pid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                    if (pid) {
+                        const targetProj = allProjects.find(p => p.id === pid);
+                        const projName = targetProj ? targetProj.title : 'selle projekti';
+                        
+                        // Enne avaldamist küsib kinnitust: "Oled kindel?"
+                        if (!confirm(`Oled kindel, et soovid avaldada projekti "${projName}" uuendused avalikuks?`)) {
+                            return;
                         }
-                    });
-                    if (pubCount > 0) {
-                        savePlayardUpdates(updates);
+
+                        const pubCount = publishPlayardProjectUpdates(pid);
+                        const statusMsg = document.getElementById('owner-updates-status-msg');
+                        if (statusMsg) {
+                            statusMsg.textContent = `🚀 Projekti "${projName}" uuendused avaldati avalikuks (${pubCount} uut avaldatud)!`;
+                            statusMsg.style.color = '#2ecc71';
+                            setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3500);
+                        }
+                        renderOwnerUpdatesView();
                     }
-                    const statusMsg = document.getElementById('owner-updates-status-msg');
-                    if (statusMsg) {
-                        statusMsg.textContent = `🚀 Projekti "${projName}" uuendused avaldati avalikuks (${pubCount} uut avaldatud)!`;
-                        statusMsg.style.color = '#2ecc71';
-                        setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3500);
-                    }
-                    renderOwnerUpdatesView();
-                }
+                });
             });
-        });
-    }
+        }
 
     // 2. Populate Project Select Dropdown
     if (projectSelect) {
@@ -2448,6 +2489,164 @@ export function setupOwnerPanel() {
     });
     updatesSearchInput?.addEventListener('input', () => renderOwnerUpdatesView());
 
+    // ==========================================
+    // OR TIME / SCHEDULE PUBLISH MODAL LOGIC
+    // ==========================================
+    let currentScheduleProjectId: string | null = null;
+    let currentScheduleMode: 'timer' | 'clock' = 'timer';
+
+    const scheduleModal = document.getElementById('modal-owner-schedule-publish');
+    const scheduleProjNameEl = document.getElementById('owner-schedule-project-name');
+    const modeTimerBtn = document.getElementById('btn-owner-mode-timer-select');
+    const modeClockBtn = document.getElementById('btn-owner-mode-clock-select');
+    const timerView = document.getElementById('owner-schedule-timer-view');
+    const clockView = document.getElementById('owner-schedule-clock-view');
+    const timerInput = document.getElementById('owner-schedule-timer-input') as HTMLInputElement | null;
+    const clockInput = document.getElementById('owner-schedule-clock-input') as HTMLInputElement | null;
+    const closeScheduleModalBtn = document.getElementById('btn-owner-close-schedule-modal');
+    const cancelScheduleModalBtn = document.getElementById('btn-owner-cancel-schedule-modal');
+    const confirmScheduleBtn = document.getElementById('btn-owner-confirm-schedule');
+
+    const openScheduleModal = (projectId: string) => {
+        currentScheduleProjectId = projectId;
+        const allProjects = getPlayardProjects();
+        const proj = allProjects.find(p => p.id === projectId);
+        if (!proj || !scheduleModal) return;
+
+        if (scheduleProjNameEl) {
+            scheduleProjNameEl.innerHTML = `Projekt: <span style="color: #00f2fe;">${proj.title}</span>`;
+        }
+
+        // Set default to timer
+        setScheduleMode('timer');
+        if (timerInput) timerInput.value = '10';
+        if (clockInput) {
+            // Default clock is 1 hour from now
+            const future = new Date(Date.now() + 60 * 60 * 1000);
+            const hh = String(future.getHours()).padStart(2, '0');
+            const mm = String(future.getMinutes()).padStart(2, '0');
+            clockInput.value = `${hh}:${mm}`;
+        }
+
+        scheduleModal.style.display = 'flex';
+    };
+
+    const closeScheduleModal = () => {
+        if (scheduleModal) scheduleModal.style.display = 'none';
+        currentScheduleProjectId = null;
+    };
+
+    const setScheduleMode = (mode: 'timer' | 'clock') => {
+        currentScheduleMode = mode;
+        if (mode === 'timer') {
+            if (timerView) timerView.style.display = 'block';
+            if (clockView) clockView.style.display = 'none';
+            if (modeTimerBtn) {
+                modeTimerBtn.style.borderColor = '#00f2fe';
+                modeTimerBtn.style.background = 'rgba(0, 242, 254, 0.15)';
+                modeTimerBtn.style.color = '#00f2fe';
+            }
+            if (modeClockBtn) {
+                modeClockBtn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                modeClockBtn.style.background = 'transparent';
+                modeClockBtn.style.color = '#94a3b8';
+            }
+        } else {
+            if (timerView) timerView.style.display = 'none';
+            if (clockView) clockView.style.display = 'block';
+            if (modeClockBtn) {
+                modeClockBtn.style.borderColor = '#00f2fe';
+                modeClockBtn.style.background = 'rgba(0, 242, 254, 0.15)';
+                modeClockBtn.style.color = '#00f2fe';
+            }
+            if (modeTimerBtn) {
+                modeTimerBtn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                modeTimerBtn.style.background = 'transparent';
+                modeTimerBtn.style.color = '#94a3b8';
+            }
+        }
+    };
+
+    modeTimerBtn?.addEventListener('click', () => setScheduleMode('timer'));
+    modeClockBtn?.addEventListener('click', () => setScheduleMode('clock'));
+    closeScheduleModalBtn?.addEventListener('click', closeScheduleModal);
+    cancelScheduleModalBtn?.addEventListener('click', closeScheduleModal);
+
+    // Preset minute buttons
+    document.querySelectorAll('.btn-owner-timer-preset').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const mins = (e.currentTarget as HTMLElement).getAttribute('data-minutes') || '10';
+            if (timerInput) {
+                timerInput.value = mins;
+                timerInput.focus();
+            }
+        });
+    });
+
+    // Confirm schedule
+    confirmScheduleBtn?.addEventListener('click', () => {
+        if (!currentScheduleProjectId) return;
+        const pid = currentScheduleProjectId;
+        const allProjects = getPlayardProjects();
+        const proj = allProjects.find(p => p.id === pid);
+        if (!proj) return;
+
+        let scheduledAt = 0;
+        let label = '';
+
+        if (currentScheduleMode === 'timer') {
+            const mins = parseFloat(timerInput?.value || '10');
+            if (isNaN(mins) || mins <= 0) {
+                alert('Palun sisesta korrektne minutite arv!');
+                return;
+            }
+            scheduledAt = Date.now() + Math.round(mins * 60 * 1000);
+            label = mins >= 60 ? `${Math.round(mins / 60)}h pärast` : `${mins} min pärast`;
+        } else {
+            const timeVal = clockInput?.value || '';
+            if (!timeVal || !timeVal.includes(':')) {
+                alert('Palun vali korrektne kellaaeg!');
+                return;
+            }
+            const [hours, minutes] = timeVal.split(':').map(Number);
+            const targetDate = new Date();
+            targetDate.setHours(hours, minutes, 0, 0);
+
+            // Kui kellaaeg on juba täna möödas, ajastame homseks
+            if (targetDate.getTime() <= Date.now()) {
+                targetDate.setDate(targetDate.getDate() + 1);
+            }
+            scheduledAt = targetDate.getTime();
+            label = `kell ${timeVal}`;
+        }
+
+        scheduleProjectPublish(pid, scheduledAt, currentScheduleMode, label);
+        closeScheduleModal();
+
+        const statusMsg = document.getElementById('owner-updates-status-msg');
+        if (statusMsg) {
+            statusMsg.textContent = `⏱️ Projekt "${proj.title}" on edukalt ajastatud (${label})!`;
+            statusMsg.style.color = '#ffd32a';
+            setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 3500);
+        }
+
+        renderOwnerUpdatesView();
+    });
+
+    // Perioodiline ajastatud publishide kontrollija (iga 3 sekundi tagant)
+    setInterval(() => {
+        const published = checkAndExecuteScheduledPublishes();
+        if (published.length > 0) {
+            const statusMsg = document.getElementById('owner-updates-status-msg');
+            if (statusMsg) {
+                statusMsg.textContent = `🚀 Ajastatud aeg saabus! Avaldati ${published.map(p => p.projectTitle).join(', ')}`;
+                statusMsg.style.color = '#2ecc71';
+                setTimeout(() => { if (statusMsg) statusMsg.textContent = ''; }, 4000);
+            }
+            renderOwnerUpdatesView();
+        }
+    }, 3000);
+
     // Secret button logic (5 clicks triggers secret prompt for passcode 6776abc)
     const secretTriggerBtn = document.getElementById('btn-owner-secret-trigger');
     const secretPasscodeBox = document.getElementById('owner-secret-passcode-box');
@@ -2757,6 +2956,10 @@ export function setupOwnerPanel() {
         (window as any).getPlayardCategories = getPlayardCategories;
         (window as any).addPlayardCategory = addPlayardCategory;
         (window as any).deletePlayardCategory = deletePlayardCategory;
+        (window as any).publishPlayardProjectUpdates = publishPlayardProjectUpdates;
+        (window as any).scheduleProjectPublish = scheduleProjectPublish;
+        (window as any).cancelProjectSchedule = cancelProjectSchedule;
+        (window as any).checkAndExecuteScheduledPublishes = checkAndExecuteScheduledPublishes;
         (window as any).canAccessUpdateFeature = canAccessUpdateFeature;
         (window as any).isCurrentDeviceOwnerComputer = isCurrentDeviceOwnerComputer;
     }

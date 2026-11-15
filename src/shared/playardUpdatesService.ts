@@ -11,6 +11,9 @@ export interface PlayardProject {
     category: string;
     description?: string;
     isOpen?: boolean; // Ainult 1 projekt korraga saab olla avatud!
+    scheduledPublishAt?: number; // Timestamp millal toimub automaatne publish
+    scheduledPublishMode?: 'timer' | 'clock'; // 'timer' (nt 10 min pärast) või 'clock' (kellaaeg nt 18:30)
+    scheduledPublishLabel?: string; // Inimloetav silt nt "10 min" või "18:30"
     createdAt: number;
 }
 
@@ -219,6 +222,67 @@ export function publishPlayardUpdate(updateId: string): boolean {
         return true;
     }
     return false;
+}
+
+export function publishPlayardProjectUpdates(projectId: string): number {
+    const updates = getPlayardUpdates();
+    let pubCount = 0;
+    updates.forEach(u => {
+        if (u.projectId === projectId && u.status === 'draft') {
+            u.status = 'published';
+            u.publishedAt = Date.now();
+            pubCount++;
+        }
+    });
+    if (pubCount > 0) {
+        savePlayardUpdates(updates);
+    }
+    // Eemaldame ajastuse kui publish tehakse
+    cancelProjectSchedule(projectId);
+    return pubCount;
+}
+
+export function scheduleProjectPublish(projectId: string, scheduledTimestamp: number, mode: 'timer' | 'clock', label: string): boolean {
+    const list = getPlayardProjects();
+    const proj = list.find(p => p.id === projectId);
+    if (!proj) return false;
+    proj.scheduledPublishAt = scheduledTimestamp;
+    proj.scheduledPublishMode = mode;
+    proj.scheduledPublishLabel = label;
+    savePlayardProjects(list);
+    return true;
+}
+
+export function cancelProjectSchedule(projectId: string): boolean {
+    const list = getPlayardProjects();
+    const proj = list.find(p => p.id === projectId);
+    if (!proj || !proj.scheduledPublishAt) return false;
+    delete proj.scheduledPublishAt;
+    delete proj.scheduledPublishMode;
+    delete proj.scheduledPublishLabel;
+    savePlayardProjects(list);
+    return true;
+}
+
+export function checkAndExecuteScheduledPublishes(): { projectId: string; projectTitle: string; pubCount: number }[] {
+    const now = Date.now();
+    const list = getPlayardProjects();
+    const published: { projectId: string; projectTitle: string; pubCount: number }[] = [];
+
+    list.forEach(proj => {
+        if (proj.scheduledPublishAt && now >= proj.scheduledPublishAt) {
+            const count = publishPlayardProjectUpdates(proj.id);
+            published.push({ projectId: proj.id, projectTitle: proj.title, pubCount: count });
+            delete proj.scheduledPublishAt;
+            delete proj.scheduledPublishMode;
+            delete proj.scheduledPublishLabel;
+        }
+    });
+
+    if (published.length > 0) {
+        savePlayardProjects(list);
+    }
+    return published;
 }
 
 export function deletePlayardUpdate(updateId: string): boolean {
