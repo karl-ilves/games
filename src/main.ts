@@ -1,4 +1,5 @@
 import { initAuth, getCurrentUserProfile } from './auth';
+import { applyPAdminModeIfNeeded } from './shared/padminMode';
 import { yardService } from './shared/yardService';
 import { AvatarWidget } from './components/AvatarWidget';
 import { AvatarShopEditorModal } from './components/AvatarShopEditorModal';
@@ -42,6 +43,7 @@ renderCommunityGames();
 
 const initialProf = getCurrentUserProfile();
 updateAdminControlsVisibility(initialProf?.email, initialProf?.username);
+applyPAdminModeIfNeeded(initialProf);
 
 yardService.subscribe(updateYardDisplay);
 setInterval(updateStreakTimerLive, 1000);
@@ -81,6 +83,7 @@ try {
 window.addEventListener('playard_auth_changed', (e: any) => {
     const profile = e.detail && 'profile' in e.detail ? e.detail.profile : e.detail;
     updateAdminControlsVisibility(profile ? profile.email : null, profile ? profile.username : null);
+    applyPAdminModeIfNeeded(profile);
     renderRecentlyPlayed();
     if (avatarWidget) avatarWidget.updateProfileUI();
 });

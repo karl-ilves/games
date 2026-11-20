@@ -135,7 +135,8 @@ export function isOwnerUser(profileOrName?: any): boolean {
 
 import { isPlayerVerified, getVerifiedPlayers, saveVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer, toggleVerifiedPlayer } from './shared/verifiedPlayers';
 import { getUserPlusTier, formatUsernameWithPlusPlain, formatUsernameWithPlusHtml, setUserPlusTier } from './shared/plusMembership';
-export { isPlayerVerified, getVerifiedPlayers, saveVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer, toggleVerifiedPlayer, getUserPlusTier, formatUsernameWithPlusPlain, formatUsernameWithPlusHtml, setUserPlusTier };
+import { applyPAdminModeIfNeeded, isPAdminUser } from './shared/padminMode';
+export { isPlayerVerified, getVerifiedPlayers, saveVerifiedPlayers, addVerifiedPlayer, removeVerifiedPlayer, toggleVerifiedPlayer, getUserPlusTier, formatUsernameWithPlusPlain, formatUsernameWithPlusHtml, setUserPlusTier, applyPAdminModeIfNeeded, isPAdminUser };
 
 export function formatOwnerNametag(name: string, isOwner?: boolean): string {
     if (!name) return '';
@@ -727,6 +728,7 @@ export function updateAuthDisplay(profile: UserProfile | null) {
         if (typeof (window as any).__updateGameAgeRestrictions === 'function') {
             (window as any).__updateGameAgeRestrictions();
         }
+        applyPAdminModeIfNeeded(profile);
     } else {
         if (loginForm) loginForm.style.display = 'block';
         if (userInfo) userInfo.style.display = 'none';
@@ -739,6 +741,7 @@ export function updateAuthDisplay(profile: UserProfile | null) {
         }
         window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: null }));
         ensureGlobalOwnerCheckmarkUI();
+        applyPAdminModeIfNeeded(null);
         if (typeof (window as any).__updateGameAgeRestrictions === 'function') {
             (window as any).__updateGameAgeRestrictions();
         }

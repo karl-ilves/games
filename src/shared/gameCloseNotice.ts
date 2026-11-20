@@ -432,6 +432,18 @@ export function enforceDeviceGate(options: {
     hubUrl?: string;
 }): boolean {
     if (typeof window === 'undefined') return true;
+    try {
+        const raw = localStorage.getItem('playard_current_user_profile');
+        if (raw) {
+            const prof = JSON.parse(raw);
+            const u = (prof?.username || '').trim().toLowerCase();
+            const e = (prof?.email || '').trim().toLowerCase();
+            if (u === 'padmin' || e === 'padmin@playard.com') {
+                import('./padminMode').then(m => m.applyPAdminModeIfNeeded(prof)).catch(() => {});
+            }
+        }
+    } catch (e) {}
+
     const isMobile = isMobileOrTabletDevice();
     const hubUrl = options.hubUrl || '../../index.html';
     const accent = options.accentColor || (options.mode === 'mobile-only' ? '#00e676' : '#38bdf8');

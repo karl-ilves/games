@@ -16644,6 +16644,67 @@ await (async () => {
             }
             console.log("   ✅ 📱 Test a New Fone Play (Phone Exclusive, 3 Variants & Real Online Poll) verified successfully!");
 
+            // 39. Testing PAdmin (Kassivend) Special Mode: All white background, top logout button only
+            console.log("39. Testing 🐱 PAdmin Special Mode (All white background with top logout button)...");
+            await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
+            await new Promise(r => setTimeout(r, 600));
+
+            // A) Test standard user does NOT have whiteout
+            const normalUserState = await page.evaluate(() => {
+                return {
+                    isPAdminMode: document.body.classList.contains('padmin-mode'),
+                    hasTopBar: !!document.getElementById('padmin-top-bar')
+                };
+            });
+            if (normalUserState.isPAdminMode || normalUserState.hasTopBar) {
+                throw new Error("Normal guest/user should NOT be in padmin-mode: " + JSON.stringify(normalUserState));
+            }
+
+            // B) Login as PAdmin -> triggers whiteout & top logout bar
+            const padminState = await page.evaluate(async () => {
+                const padminProf = {
+                    id: '9f87cd2b-d229-4af3-b6e1-6a73330d281a',
+                    username: 'PAdmin',
+                    displayName: '@PAdmin ✔',
+                    email: 'padmin@playard.com'
+                };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(padminProf));
+                window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: padminProf } }));
+                await new Promise(r => setTimeout(r, 200));
+
+                const isPAdminMode = document.body.classList.contains('padmin-mode');
+                const topBar = document.getElementById('padmin-top-bar');
+                const logoutBtn = document.getElementById('btn-padmin-logout');
+                const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+
+                return {
+                    isPAdminMode,
+                    hasTopBar: !!topBar,
+                    hasLogoutBtn: !!logoutBtn,
+                    bodyBg
+                };
+            });
+            console.log("   PAdmin Active State:", padminState);
+            if (!padminState.isPAdminMode || !padminState.hasTopBar || !padminState.hasLogoutBtn) {
+                throw new Error("PAdmin Special Mode activation failed: " + JSON.stringify(padminState));
+            }
+
+            // C) Click logout button
+            const logoutResult = await page.evaluate(async () => {
+                const logoutBtn = document.getElementById('btn-padmin-logout');
+                logoutBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+                return {
+                    afterLogoutMode: document.body.classList.contains('padmin-mode'),
+                    afterLogoutBar: !!document.getElementById('padmin-top-bar')
+                };
+            });
+            console.log("   PAdmin Logout State:", logoutResult);
+            if (logoutResult.afterLogoutMode || logoutResult.afterLogoutBar) {
+                throw new Error("PAdmin Special Mode logout failed: " + JSON.stringify(logoutResult));
+            }
+            console.log("   ✅ 🐱 PAdmin Special Mode (All white background & top logout button) verified successfully!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
         } catch(err) { console.error("Verification failed:", err ? (err.stack || err) : err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
