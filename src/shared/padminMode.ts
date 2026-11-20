@@ -51,53 +51,40 @@ export function applyPAdminModeIfNeeded(profile?: { username?: string | null; em
         document.documentElement.classList.add('padmin-mode');
         document.body.classList.add('padmin-mode');
 
-        // Create top floating logout bar
+        // Create top floating logout button (centered, nothing else)
         if (!barEl) {
             barEl = document.createElement('div');
             barEl.id = PADMIN_BAR_ID;
             barEl.style.cssText = `
                 position: fixed !important;
-                top: 0 !important;
+                top: 24px !important;
                 left: 0 !important;
                 right: 0 !important;
-                height: 70px !important;
                 display: flex !important;
                 align-items: center !important;
-                justify-content: space-between !important;
-                padding: 12px 24px !important;
-                background: #ffffff !important;
-                border-bottom: 2px solid #e2e8f0 !important;
+                justify-content: center !important;
+                background: transparent !important;
                 z-index: 2147483647 !important;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                pointer-events: none !important;
                 box-sizing: border-box !important;
             `;
 
             barEl.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.6rem;">🐱🐾</span>
-                    <div>
-                        <strong style="color: #0f172a; font-size: 1.1rem; font-weight: 900; letter-spacing: 0.5px;">PAdmin · Kassivend</strong>
-                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Playard Special Mode</div>
-                    </div>
-                </div>
                 <button id="btn-padmin-logout" style="
-                    padding: 10px 24px;
-                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                    pointer-events: auto;
+                    padding: 12px 32px;
+                    background: #111827;
                     color: #ffffff;
-                    border: none;
-                    border-radius: 10px;
+                    border: 2px solid #000000;
+                    border-radius: 9999px;
                     cursor: pointer;
-                    font-weight: 900;
-                    font-size: 0.95rem;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
-                    transition: transform 0.15s, box-shadow 0.15s;
+                    font-weight: 800;
+                    font-size: 1rem;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+                    transition: transform 0.15s, background-color 0.15s;
+                    font-family: inherit;
                 ">
-                    <span>🚪</span>
-                    <span>Log Out</span>
+                    Log Out
                 </button>
             `;
 
