@@ -15616,8 +15616,8 @@ await (async () => {
             }
             console.log("   ✅ Ad Player dynamically displays player's advertised game verified!");
 
-            // 31. Test Playard Plus 500 & Plus 2000 (Golden (P) and (2P00) tags & subscription)
-            console.log("31. Testing Playard Plus 500 & Plus 2000 (Golden (P) and (2P00) tags)...");
+            // 31. Test Playard Plus removed from purchase modal (User request: eemalda ostu alt playard plussid)
+            console.log("31. Testing Playard Plus removed from purchase modal...");
             await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/index.html`, { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 600));
 
@@ -15629,45 +15629,26 @@ await (async () => {
                 pbxBtn?.click();
                 await new Promise(r => setTimeout(r, 200));
 
-                const adRewardSection = document.getElementById('pbx-ad-reward-section');
                 const plusSection = document.getElementById('playard-plus-section');
                 const plus500Btn = document.querySelector('.btn-buy-plus-plan[data-tier="plus500"]');
                 const plus2000Btn = document.querySelector('.btn-buy-plus-plan[data-tier="plus2000"]');
 
-                const hasPlusSection = !!plusSection;
-                const hasPlus500Btn = !!plus500Btn;
-                const hasPlus2000Btn = !!plus2000Btn;
-
-                // Check that plusSection is placed below adRewardSection in DOM
-                const isBelowAd = !!adRewardSection && !!plusSection && (adRewardSection.compareDocumentPosition(plusSection) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-
-                // Click Plus 500 subscription
-                plus500Btn?.click();
-                await new Promise(r => setTimeout(r, 300));
-
-                const userEmailEl = document.getElementById('user-email');
-                const hasPlus500Tag = userEmailEl?.innerHTML.includes('(P)') && userEmailEl?.innerHTML.includes('#ffd32a');
-
-                // Click Plus 2000 subscription
-                plus2000Btn?.click();
-                await new Promise(r => setTimeout(r, 300));
-
-                const hasPlus2000Tag = userEmailEl?.innerHTML.includes('(2P00)') && userEmailEl?.innerHTML.includes('#ffd32a');
+                // Seed Playard Plus membership directly in storage for in-game test (31b)
+                const stored = { 'playard owner': 'plus2000' };
+                localStorage.setItem('playard_plus_memberships', JSON.stringify(stored));
 
                 return {
-                    hasPlusSection,
-                    isBelowAd,
-                    hasPlus500Btn,
-                    hasPlus2000Btn,
-                    hasPlus500Tag,
-                    hasPlus2000Tag
+                    hasPlusSection: !!plusSection,
+                    hasPlus500Btn: !!plus500Btn,
+                    hasPlus2000Btn: !!plus2000Btn,
+                    hasStoredPlus: localStorage.getItem('playard_plus_memberships')?.includes('plus2000')
                 };
             });
             console.log("   Playard Plus Test Results:", plusTestResults);
-            if (!plusTestResults.hasPlusSection || !plusTestResults.isBelowAd || !plusTestResults.hasPlus500Btn || !plusTestResults.hasPlus2000Btn || !plusTestResults.hasPlus500Tag || !plusTestResults.hasPlus2000Tag) {
-                throw new Error("Playard Plus tests failed: " + JSON.stringify(plusTestResults));
+            if (plusTestResults.hasPlusSection || plusTestResults.hasPlus500Btn || plusTestResults.hasPlus2000Btn || !plusTestResults.hasStoredPlus) {
+                throw new Error("Playard Plus removal from store modal failed: " + JSON.stringify(plusTestResults));
             }
-            console.log("   ✅ Playard Plus 500 (P) and Plus 2000 (2P00) golden tags & placement below ads verified!");
+            console.log("   ✅ Playard Plus removed from PBX purchase modal successfully!");
 
             // 31b. Test golden Plus tag is visible across games in In-Game Menu (P button)
             console.log("31b. Testing golden Plus tag in all games (In-Game Menu P button)...");
