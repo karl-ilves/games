@@ -16660,7 +16660,7 @@ await (async () => {
                 throw new Error("Normal guest/user should NOT be in padmin-mode: " + JSON.stringify(normalUserState));
             }
 
-            // B) Login as PAdmin -> triggers whiteout & top logout bar
+            // B) Login as PAdmin -> triggers whiteout & top logout button & center 10-day accounts table
             const padminState = await page.evaluate(async () => {
                 const padminProf = {
                     id: '9f87cd2b-d229-4af3-b6e1-6a73330d281a',
@@ -16670,22 +16670,33 @@ await (async () => {
                 };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(padminProf));
                 window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: padminProf } }));
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 400));
 
                 const isPAdminMode = document.body.classList.contains('padmin-mode');
-                const topBar = document.getElementById('padmin-top-bar');
                 const logoutBtn = document.getElementById('btn-padmin-logout');
+                const statsCard = document.getElementById('padmin-stats-card');
+                const svgGraph = document.getElementById('padmin-stats-svg');
+                const statsTable = document.getElementById('padmin-stats-table');
+                const filterBtns = Array.from(document.querySelectorAll('.padmin-filter-btn')).map(b => b.textContent?.trim());
                 const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+
+                // Click filter "1 kuu"
+                const monthBtn = document.querySelector('.padmin-filter-btn[data-period="month"]');
+                monthBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
 
                 return {
                     isPAdminMode,
-                    hasTopBar: !!topBar,
                     hasLogoutBtn: !!logoutBtn,
+                    hasStatsCard: !!statsCard,
+                    hasSvgGraph: !!svgGraph,
+                    hasStatsTable: !!statsTable,
+                    filterBtns,
                     bodyBg
                 };
             });
             console.log("   PAdmin Active State:", padminState);
-            if (!padminState.isPAdminMode || !padminState.hasTopBar || !padminState.hasLogoutBtn) {
+            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.hasStatsCard || !padminState.hasSvgGraph || !padminState.hasStatsTable) {
                 throw new Error("PAdmin Special Mode activation failed: " + JSON.stringify(padminState));
             }
 
@@ -16693,17 +16704,17 @@ await (async () => {
             const logoutResult = await page.evaluate(async () => {
                 const logoutBtn = document.getElementById('btn-padmin-logout');
                 logoutBtn?.click();
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 300));
                 return {
                     afterLogoutMode: document.body.classList.contains('padmin-mode'),
-                    afterLogoutBar: !!document.getElementById('padmin-top-bar')
+                    afterLogoutCard: !!document.getElementById('padmin-stats-card')
                 };
             });
             console.log("   PAdmin Logout State:", logoutResult);
-            if (logoutResult.afterLogoutMode || logoutResult.afterLogoutBar) {
+            if (logoutResult.afterLogoutMode || logoutResult.afterLogoutCard) {
                 throw new Error("PAdmin Special Mode logout failed: " + JSON.stringify(logoutResult));
             }
-            console.log("   ✅ 🐱 PAdmin Special Mode (All white background & top logout button) verified successfully!");
+            console.log("   ✅ 🐱 PAdmin Special Mode (All white background, top logout button & center 10-day accounts table with filters) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
