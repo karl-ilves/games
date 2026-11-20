@@ -1,11 +1,21 @@
 /**
  * PAdmin (Kassivend) Special View Mode
  * 
- * When user is logged in as 'PAdmin' (case-insensitive) or email 'padmin@playard.com',
- * the screen turns completely white (#ffffff) everywhere, hiding all normal UI/games/backgrounds.
- * Centered at the top: Logout button.
- * Centered in the middle: 10-day chart / table showing accounts created, with line graph + numbers,
- * and filter options: "Täna", "Eelmine nädal", "1 kuu".
+ * When user is logged in as 'PAdmin' (case-insensitive) or email 'padmin@playard.com':
+ * 1. Screen turns completely white (#ffffff) everywhere, hiding all normal UI/games/backgrounds.
+ * 2. Top centered: sleek "Log Out" button.
+ * 3. Middle center: side-by-side (or responsive wrap) charts for:
+ *    A) "Uued kontod" (Accounts Created):
+ *       - Period filters: "Täna" (1 punkt / tänane päev), "Nädal" (7 viimast päeva / 7 punkti), "Kuu" (30 viimast päeva / 30 punkti)
+ *       - Smooth SVG line graph with dots
+ *       - Hover tooltip near mouse showing:
+ *         * Total accounts created on that day
+ *         * 👦 Poisid: X, 👧 Tüdrukud: Y (või Määramata: Z)
+ *    B) "Uued mängud" (Games Created):
+ *       - Exactly same principle and filter period
+ *       - Hover tooltip near mouse showing:
+ *         * Total games created on that day
+ * 4. Lower table removed as requested.
  */
 
 import { getCurrentUserProfile } from '../auth';
@@ -13,6 +23,7 @@ import { supabase } from '../lib/supabase';
 
 const PADMIN_STYLE_ID = 'padmin-whiteout-style';
 const PADMIN_CONTAINER_ID = 'padmin-special-container';
+const PADMIN_TOOLTIP_ID = 'padmin-hover-tooltip';
 
 export function isPAdminUser(usernameOrEmail?: string | null): boolean {
     if (!usernameOrEmail) return false;
@@ -20,134 +31,274 @@ export function isPAdminUser(usernameOrEmail?: string | null): boolean {
     return clean === 'padmin' || clean === 'padmin@playard.com';
 }
 
-type FilterPeriod = 'today' | 'last_week' | 'month';
+export type FilterPeriod = 'today' | 'week' | 'month';
 
-interface DailyStat {
-    dateStr: string;   // e.g. "20. Nov"
-    isoDate: string;   // e.g. "2026-11-20"
-    count: number;
+export interface ProfileRecord {
+    createdAt: string;
+    gender?: string | null;
 }
 
-let cachedProfilesDates: string[] | null = null;
-let currentPeriod: FilterPeriod = 'today';
+export interface GameRecord {
+    createdAt: string;
+    title?: string;
+}
 
-async function fetchAccountCreationDates(): Promise<string[]> {
-    if (cachedProfilesDates) return cachedProfilesDates;
+export interface ChartDayPoint {
+    dateLabel: string; // e.g. "20. Nov"
+    isoDate: string;   // "2026-11-20"
+    count: number;
+    boysCount: number;
+    girlsCount: number;
+    otherCount: number;
+}
 
-    const dates: string[] = [];
+let cachedProfiles: ProfileRecord[] | null = null;
+let cachedGames: GameRecord[] | null = null;
+let activePeriod: FilterPeriod = 'week'; // Default to week (7 viimast päeva)
 
-    // 1. Try Supabase
+async function fetchAccountsData(): Promise<ProfileRecord[]> {
+    if (cachedProfiles) return cachedProfiles;
+    const list: ProfileRecord[] = [];
+
     if (supabase) {
         try {
-            const { data, error } = await supabase.from('profiles').select('created_at');
+            const { data, error } = await supabase.from('profiles').select('created_at, gender');
             if (!error && Array.isArray(data)) {
-                data.forEach((row: any) => {
-                    if (row?.created_at) dates.push(row.created_at);
+                data.forEach((r: any) => {
+                    if (r?.created_at) {
+                        list.push({
+                            createdAt: r.created_at,
+                            gender: r.gender
+                        });
+                    }
                 });
             }
         } catch (e) {
-            console.warn('PAdmin fetchAccountCreationDates supabase error:', e);
+            console.warn('PAdmin fetchAccountsData error:', e);
         }
     }
 
-    // 2. Also check local user profile if present
     try {
         const rawLocal = localStorage.getItem('playard_current_user_profile');
         if (rawLocal) {
-            const prof = JSON.parse(rawLocal);
-            if (prof?.created_at) dates.push(prof.created_at);
+            const p = JSON.parse(rawLocal);
+            if (p?.created_at) list.push({ createdAt: p.created_at, gender: p.gender });
         }
     } catch {}
 
-    cachedProfilesDates = dates;
-    return dates;
+    cachedProfiles = list;
+    return list;
 }
 
-function calculateDailyStats(dates: string[], period: FilterPeriod, numDays = 10): DailyStat[] {
-    const stats: DailyStat[] = [];
-    const now = new Date();
+async function fetchGamesData(): Promise<GameRecord[]> {
+    if (cachedGames) return cachedGames;
+    const list: GameRecord[] = [];
 
-    // Determine end date offset based on period
-    // 'today': ending today (last 10 days up to today)
-    // 'last_week': 10 days ending 7 days ago
-    // 'month': 10 samples across the past 30 days (or past 10 days of the month)
-    let endAnchor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    if (period === 'last_week') {
-        endAnchor.setDate(endAnchor.getDate() - 7);
+    if (supabase) {
+        try {
+            const { data, error } = await supabase.from('user_created_games').select('id, title, category, created_at').limit(500);
+            if (!error && Array.isArray(data)) {
+                data.forEach((r: any) => {
+                    if (!r.title) return;
+                    if (r.title.startsWith('GAME_STATS:')) return;
+                    if (r.title.startsWith('ACTIVE_GAME:')) return;
+                    if (r.category === 'friend_request' || r.category === 'friend_relation') return;
+                    if (r.created_at) {
+                        list.push({ createdAt: r.created_at, title: r.title });
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('PAdmin fetchGamesData error:', e);
+        }
     }
 
-    // Prepare date buckets
-    const countMap: { [key: string]: number } = {};
-    dates.forEach(d => {
+    // Local storage fallback / addition
+    try {
+        const rawLocal = localStorage.getItem('playard_user_created_games') || localStorage.getItem('playard_created_games');
+        if (rawLocal) {
+            const arr = JSON.parse(rawLocal);
+            if (Array.isArray(arr)) {
+                arr.forEach((g: any) => {
+                    const c = g.createdAt || g.created_at || (g.id && typeof g.id === 'string' && g.id.startsWith('game_') ? new Date(parseInt(g.id.split('_')[1], 10)).toISOString() : null);
+                    if (c) list.push({ createdAt: c, title: g.title });
+                });
+            }
+        }
+    } catch {}
+
+    cachedGames = list;
+    return list;
+}
+
+function buildDailyPoints(
+    items: { createdAt: string; gender?: string | null }[],
+    period: FilterPeriod
+): ChartDayPoint[] {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monthNames = ['Jaan', 'Veebr', 'Märts', 'Apr', 'Mai', 'Juuni', 'Juuli', 'Aug', 'Sept', 'Okt', 'Nov', 'Dets'];
+
+    let numDays = 7;
+    if (period === 'today') numDays = 1;
+    else if (period === 'week') numDays = 7;
+    else if (period === 'month') numDays = 30;
+
+    // Prepare date buckets map
+    const bucketMap: { [iso: string]: { count: number; boys: number; girls: number; other: number } } = {};
+
+    items.forEach(item => {
         try {
-            const iso = new Date(d).toISOString().slice(0, 10);
-            countMap[iso] = (countMap[iso] || 0) + 1;
+            const d = new Date(item.createdAt);
+            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (!bucketMap[iso]) bucketMap[iso] = { count: 0, boys: 0, girls: 0, other: 0 };
+            bucketMap[iso].count++;
+            const g = (item.gender || '').toLowerCase().trim();
+            if (g === 'boy' || g === 'poiss') bucketMap[iso].boys++;
+            else if (g === 'girl' || g === 'tüdruk') bucketMap[iso].girls++;
+            else bucketMap[iso].other++;
         } catch {}
     });
 
-    const monthNames = ['Jaan', 'Veebr', 'Märts', 'Apr', 'Mai', 'Juuni', 'Juuli', 'Aug', 'Sept', 'Okt', 'Nov', 'Dets'];
+    const points: ChartDayPoint[] = [];
 
     for (let i = numDays - 1; i >= 0; i--) {
-        const cur = new Date(endAnchor);
-        if (period === 'month') {
-            // Step back every 3 days across the month
-            cur.setDate(cur.getDate() - (i * 3));
-        } else {
-            cur.setDate(cur.getDate() - i);
-        }
-
+        const cur = new Date(end);
+        cur.setDate(cur.getDate() - i);
         const y = cur.getFullYear();
         const m = String(cur.getMonth() + 1).padStart(2, '0');
-        const day = String(cur.getDate()).padStart(2, '0');
-        const iso = `${y}-${m}-${day}`;
+        const d = String(cur.getDate()).padStart(2, '0');
+        const iso = `${y}-${m}-${d}`;
         const label = `${cur.getDate()}. ${monthNames[cur.getMonth()]}`;
 
-        let cnt = 0;
-        if (period === 'month') {
-            // count for the 3-day bucket
-            for (let b = 0; b < 3; b++) {
-                const sub = new Date(cur);
-                sub.setDate(sub.getDate() + b);
-                const subIso = sub.toISOString().slice(0, 10);
-                cnt += countMap[subIso] || 0;
-            }
-        } else {
-            cnt = countMap[iso] || 0;
-        }
-
-        stats.push({
-            dateStr: label,
+        const bucket = bucketMap[iso] || { count: 0, boys: 0, girls: 0, other: 0 };
+        points.push({
+            dateLabel: label,
             isoDate: iso,
-            count: cnt
+            count: bucket.count,
+            boysCount: bucket.boys,
+            girlsCount: bucket.girls,
+            otherCount: bucket.other
         });
     }
 
-    return stats;
+    return points;
 }
 
-function renderPAdminStatsCard(container: HTMLElement, stats: DailyStat[], period: FilterPeriod) {
-    const totalAccounts = stats.reduce((acc, cur) => acc + cur.count, 0);
-    const maxCount = Math.max(1, ...stats.map(s => s.count));
+function getOrCreateTooltip(): HTMLElement {
+    let tip = document.getElementById(PADMIN_TOOLTIP_ID);
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = PADMIN_TOOLTIP_ID;
+        tip.style.cssText = `
+            position: fixed;
+            display: none;
+            z-index: 2147483647;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            color: #ffffff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transform: translate(-50%, -120%);
+            white-space: nowrap;
+            transition: opacity 0.1s ease, transform 0.1s ease;
+        `;
+        document.body.appendChild(tip);
+    }
+    return tip;
+}
 
-    // SVG Line chart calculations
-    const svgWidth = 520;
-    const svgHeight = 140;
-    const paddingX = 30;
-    const paddingY = 25;
+function renderSingleChartSvg(
+    points: ChartDayPoint[],
+    chartType: 'accounts' | 'games',
+    primaryColor: string,
+    accentGrad: string
+): string {
+    const svgWidth = 460;
+    const svgHeight = 160;
+    const paddingX = 35;
+    const paddingY = 28;
     const plotWidth = svgWidth - paddingX * 2;
     const plotHeight = svgHeight - paddingY * 2;
 
-    const points = stats.map((stat, idx) => {
-        const x = paddingX + (idx / (stats.length - 1)) * plotWidth;
-        const y = svgHeight - paddingY - (stat.count / maxCount) * plotHeight;
-        return { x, y, count: stat.count, label: stat.dateStr };
+    const maxCount = Math.max(1, ...points.map(p => p.count));
+    const isSinglePoint = points.length === 1;
+
+    const svgPoints = points.map((p, idx) => {
+        const x = isSinglePoint ? svgWidth / 2 : paddingX + (idx / (points.length - 1)) * plotWidth;
+        const y = svgHeight - paddingY - (p.count / maxCount) * plotHeight;
+        return { ...p, x, y };
     });
 
-    const polylineStr = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-    const areaStr = `${points[0].x},${svgHeight - paddingY} ${polylineStr} ${points[points.length - 1].x},${svgHeight - paddingY}`;
+    const polylineStr = svgPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const areaStr = isSinglePoint
+        ? ''
+        : `${svgPoints[0].x},${svgHeight - paddingY} ${polylineStr} ${svgPoints[svgPoints.length - 1].x},${svgHeight - paddingY}`;
 
-    const cardHtml = `
+    // Point radius depends on number of points (30 points -> smaller radius)
+    const dotRadius = points.length > 20 ? 3.5 : 5.5;
+
+    return `
+        <svg class="padmin-chart-svg" data-chart="${chartType}" viewBox="0 0 ${svgWidth} ${svgHeight}" style="width: 100%; height: auto; overflow: visible; display: block;">
+            <defs>
+                <linearGradient id="grad_${chartType}" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.32" />
+                    <stop offset="100%" stop-color="${primaryColor}" stop-opacity="0.0" />
+                </linearGradient>
+            </defs>
+
+            <!-- Grid Lines -->
+            <line x1="${paddingX}" y1="${paddingY}" x2="${svgWidth - paddingX}" y2="${paddingY}" stroke="#e2e8f0" stroke-dasharray="4" />
+            <line x1="${paddingX}" y1="${svgHeight - paddingY}" x2="${svgWidth - paddingX}" y2="${svgHeight - paddingY}" stroke="#cbd5e1" stroke-width="1.5" />
+
+            ${!isSinglePoint ? `<polygon points="${areaStr}" fill="url(#grad_${chartType})" />` : ''}
+            ${!isSinglePoint ? `<polyline points="${polylineStr}" fill="none" stroke="${primaryColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />` : ''}
+
+            <!-- Dots (Täpid) & Interactive Hit Areas -->
+            ${svgPoints.map((p, idx) => `
+                <g class="padmin-chart-dot-group"
+                   data-chart="${chartType}"
+                   data-label="${p.dateLabel}"
+                   data-count="${p.count}"
+                   data-boys="${p.boysCount}"
+                   data-girls="${p.girlsCount}"
+                   data-other="${p.otherCount}"
+                   style="cursor: pointer;">
+                    <!-- Visible dot -->
+                    <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${dotRadius}" fill="#ffffff" stroke="${primaryColor}" stroke-width="${points.length > 20 ? 2 : 3}" />
+                    
+                    <!-- Label numbers on top (if fewer points or non-zero) -->
+                    ${(points.length <= 10 || p.count > 0) ? `
+                        <text x="${p.x.toFixed(1)}" y="${(p.y - (dotRadius + 5)).toFixed(1)}" font-size="${points.length > 10 ? 9 : 11}" font-weight="800" fill="#1e293b" text-anchor="middle">
+                            ${p.count}
+                        </text>
+                    ` : ''}
+
+                    <!-- Larger invisible hover target for easy mouseover -->
+                    <circle class="padmin-dot-hit" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="14" fill="transparent" />
+                </g>
+            `).join('')}
+        </svg>
+    `;
+}
+
+function renderPAdminDashboard(container: HTMLElement, accountPoints: ChartDayPoint[], gamePoints: ChartDayPoint[], period: FilterPeriod) {
+    const totalAccounts = accountPoints.reduce((sum, p) => sum + p.count, 0);
+    const totalGames = gamePoints.reduce((sum, p) => sum + p.count, 0);
+
+    const periodSubtitles: { [k in FilterPeriod]: string } = {
+        today: 'Tänane päev (1 punkt)',
+        week: '7 viimast päeva (7 punkti)',
+        month: '30 viimast päeva (30 punkti)'
+    };
+
+    const html = `
         <!-- Top Centered Logout Button -->
         <div style="
             position: fixed;
@@ -177,142 +328,141 @@ function renderPAdminStatsCard(container: HTMLElement, stats: DailyStat[], perio
             </button>
         </div>
 
-        <!-- Center 10-Day Account Stats Card -->
+        <!-- Center Container -->
         <div id="padmin-stats-card" style="
-            width: 620px;
+            width: 1060px;
             max-width: calc(100vw - 32px);
             background: #ffffff;
             border: 2px solid #e2e8f0;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-            padding: 24px;
+            border-radius: 24px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+            padding: 28px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 22px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             color: #0f172a;
         ">
-            <!-- Header & Filter Selector -->
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <!-- Filter Bar: Täna, Nädal, Kuu -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 18px;">
                 <div>
-                    <h2 style="margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: -0.3px; color: #0f172a;">
-                        Uute kontode statistika
-                    </h2>
-                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">
-                        10 päeva vaade · Kokku perioodil: <strong style="color: #2563eb;">${totalAccounts}</strong> kontot
+                    <h1 style="margin: 0; font-size: 1.4rem; font-weight: 900; letter-spacing: -0.4px; color: #0f172a;">
+                        Statistika ülevaade
+                    </h1>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 3px;">
+                        ${periodSubtitles[period]}
                     </div>
                 </div>
 
-                <!-- Filter Pills: Täna, Eelmine nädal, 1 kuu -->
-                <div id="padmin-filter-group" style="display: inline-flex; background: #f1f5f9; padding: 4px; border-radius: 12px; gap: 4px;">
+                <div id="padmin-filter-group" style="display: inline-flex; background: #f1f5f9; padding: 4px; border-radius: 14px; gap: 4px;">
                     <button class="padmin-filter-btn" data-period="today" style="
-                        padding: 6px 14px;
+                        padding: 8px 18px;
                         border: none;
-                        border-radius: 8px;
+                        border-radius: 10px;
                         cursor: pointer;
-                        font-size: 0.82rem;
+                        font-size: 0.85rem;
                         font-weight: 700;
                         transition: all 0.15s;
                         background: ${period === 'today' ? '#ffffff' : 'transparent'};
                         color: ${period === 'today' ? '#0f172a' : '#64748b'};
-                        box-shadow: ${period === 'today' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};
+                        box-shadow: ${period === 'today' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};
                     ">Täna</button>
-                    <button class="padmin-filter-btn" data-period="last_week" style="
-                        padding: 6px 14px;
+                    <button class="padmin-filter-btn" data-period="week" style="
+                        padding: 8px 18px;
                         border: none;
-                        border-radius: 8px;
+                        border-radius: 10px;
                         cursor: pointer;
-                        font-size: 0.82rem;
+                        font-size: 0.85rem;
                         font-weight: 700;
                         transition: all 0.15s;
-                        background: ${period === 'last_week' ? '#ffffff' : 'transparent'};
-                        color: ${period === 'last_week' ? '#0f172a' : '#64748b'};
-                        box-shadow: ${period === 'last_week' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};
-                    ">Eelmine nädal</button>
+                        background: ${period === 'week' ? '#ffffff' : 'transparent'};
+                        color: ${period === 'week' ? '#0f172a' : '#64748b'};
+                        box-shadow: ${period === 'week' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};
+                    ">Nädal</button>
                     <button class="padmin-filter-btn" data-period="month" style="
-                        padding: 6px 14px;
+                        padding: 8px 18px;
                         border: none;
-                        border-radius: 8px;
+                        border-radius: 10px;
                         cursor: pointer;
-                        font-size: 0.82rem;
+                        font-size: 0.85rem;
                         font-weight: 700;
                         transition: all 0.15s;
                         background: ${period === 'month' ? '#ffffff' : 'transparent'};
                         color: ${period === 'month' ? '#0f172a' : '#64748b'};
-                        box-shadow: ${period === 'month' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};
-                    ">1 kuu</button>
+                        box-shadow: ${period === 'month' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};
+                    ">Kuu</button>
                 </div>
             </div>
 
-            <!-- SVG Line Graph (Joon) -->
-            <div style="background: #f8fafc; border-radius: 14px; padding: 12px; border: 1px solid #e2e8f0;">
-                <svg id="padmin-stats-svg" viewBox="0 0 ${svgWidth} ${svgHeight}" style="width: 100%; height: auto; overflow: visible; display: block;">
-                    <defs>
-                        <linearGradient id="padminLineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3" />
-                            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
-                        </linearGradient>
-                    </defs>
+            <!-- Side-by-Side Charts (Kontod vs Mängud) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
+                <!-- Chart 1: Uued kontod -->
+                <div id="padmin-accounts-card" style="
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    padding: 18px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                <span>👤</span>
+                                <span>Uued kontod</span>
+                            </div>
+                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
+                                Liiguta hiir täpi kohale detailideks
+                            </div>
+                        </div>
+                        <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-weight: 900; font-size: 1.1rem; padding: 4px 14px; border-radius: 12px;">
+                            ${totalAccounts}
+                        </div>
+                    </div>
 
-                    <!-- Horizontal Grid lines -->
-                    <line x1="${paddingX}" y1="${paddingY}" x2="${svgWidth - paddingX}" y2="${paddingY}" stroke="#e2e8f0" stroke-dasharray="4" />
-                    <line x1="${paddingX}" y1="${svgHeight - paddingY}" x2="${svgWidth - paddingX}" y2="${svgHeight - paddingY}" stroke="#cbd5e1" stroke-width="1.5" />
+                    <div style="background: #ffffff; border-radius: 14px; padding: 10px; border: 1px solid #e2e8f0;">
+                        ${renderSingleChartSvg(accountPoints, 'accounts', '#2563eb', '#3b82f6')}
+                    </div>
+                </div>
 
-                    <!-- Area under curve -->
-                    <polygon points="${areaStr}" fill="url(#padminLineGrad)" />
+                <!-- Chart 2: Uued mängud -->
+                <div id="padmin-games-card" style="
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    padding: 18px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                <span>🎮</span>
+                                <span>Uued mängud</span>
+                            </div>
+                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
+                                Liiguta hiir täpi kohale detailideks
+                            </div>
+                        </div>
+                        <div style="background: #fdf2f8; border: 1px solid #fbcfe8; color: #be185d; font-weight: 900; font-size: 1.1rem; padding: 4px 14px; border-radius: 12px;">
+                            ${totalGames}
+                        </div>
+                    </div>
 
-                    <!-- Line (Joon) -->
-                    <polyline points="${polylineStr}" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-
-                    <!-- Data dots and value numbers -->
-                    ${points.map(p => `
-                        <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="#ffffff" stroke="#2563eb" stroke-width="2.5" />
-                        <text x="${p.x.toFixed(1)}" y="${(p.y - 9).toFixed(1)}" font-size="11" font-weight="800" fill="#1e293b" text-anchor="middle">
-                            ${p.count}
-                        </text>
-                    `).join('')}
-                </svg>
-            </div>
-
-            <!-- 10 Päeva Tabel (Kuupäev, Number & Graafikuriba) -->
-            <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
-                <table id="padmin-stats-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
-                    <thead>
-                        <tr style="background: #f1f5f9; color: #475569; position: sticky; top: 0; z-index: 2;">
-                            <th style="padding: 10px 14px; font-weight: 700;">Kuupäev</th>
-                            <th style="padding: 10px 14px; font-weight: 700; width: 80px; text-align: right;">Number</th>
-                            <th style="padding: 10px 14px; font-weight: 700; width: 140px;">Jaotus</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${stats.map((s, idx) => {
-                            const barPct = Math.round((s.count / maxCount) * 100);
-                            return `
-                                <tr style="border-top: 1px solid #f1f5f9; background: ${idx % 2 === 0 ? '#ffffff' : '#fafafa'};">
-                                    <td style="padding: 8px 14px; font-weight: 600; color: #1e293b;">
-                                        ${s.dateStr}
-                                    </td>
-                                    <td style="padding: 8px 14px; font-weight: 800; color: #2563eb; text-align: right;">
-                                        ${s.count}
-                                    </td>
-                                    <td style="padding: 8px 14px;">
-                                        <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                                            <div style="width: ${barPct}%; height: 100%; background: #2563eb; border-radius: 999px;"></div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
+                    <div style="background: #ffffff; border-radius: 14px; padding: 10px; border: 1px solid #e2e8f0;">
+                        ${renderSingleChartSvg(gamePoints, 'games', '#db2777', '#f472b6')}
+                    </div>
+                </div>
             </div>
         </div>
     `;
 
-    container.innerHTML = cardHtml;
+    container.innerHTML = html;
 
-    // Attach logout event
+    // Attach logout button
     const logoutBtn = container.querySelector('#btn-padmin-logout');
     logoutBtn?.addEventListener('click', () => {
         const originalLogout = document.getElementById('btn-logout');
@@ -329,13 +479,66 @@ function renderPAdminStatsCard(container: HTMLElement, stats: DailyStat[], perio
     filterBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
             const p = btn.getAttribute('data-period') as FilterPeriod;
-            if (p && p !== currentPeriod) {
-                currentPeriod = p;
-                const dates = await fetchAccountCreationDates();
-                const newStats = calculateDailyStats(dates, currentPeriod);
-                renderPAdminStatsCard(container, newStats, currentPeriod);
+            if (p && p !== activePeriod) {
+                activePeriod = p;
+                const accounts = await fetchAccountsData();
+                const games = await fetchGamesData();
+                const accPts = buildDailyPoints(accounts, activePeriod);
+                const gamePts = buildDailyPoints(games, activePeriod);
+                renderPAdminDashboard(container, accPts, gamePts, activePeriod);
             }
         });
+    });
+
+    // Tooltip logic for mouseover
+    const tooltip = getOrCreateTooltip();
+    const dotGroups = container.querySelectorAll('.padmin-chart-dot-group');
+
+    dotGroups.forEach(group => {
+        const showTip = (e: MouseEvent) => {
+            const chart = group.getAttribute('data-chart');
+            const label = group.getAttribute('data-label') || '';
+            const count = group.getAttribute('data-count') || '0';
+            const boys = group.getAttribute('data-boys') || '0';
+            const girls = group.getAttribute('data-girls') || '0';
+            const other = group.getAttribute('data-other') || '0';
+
+            if (chart === 'accounts') {
+                let genderLine = `👦 Poisid: <strong>${boys}</strong> &nbsp;|&nbsp; 👧 Tüdrukud: <strong>${girls}</strong>`;
+                if (parseInt(other, 10) > 0) {
+                    genderLine += ` &nbsp;|&nbsp; ❓ Määramata: <strong>${other}</strong>`;
+                }
+                tooltip.innerHTML = `
+                    <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; color: #93c5fd;">📅 ${label}</div>
+                    <div style="font-size: 0.82rem; margin-bottom: 3px;">👤 Tehtud kontosid: <strong style="color: #ffffff; font-size: 0.95rem;">${count}</strong></div>
+                    <div style="font-size: 0.76rem; color: #cbd5e1;">${genderLine}</div>
+                `;
+            } else {
+                tooltip.innerHTML = `
+                    <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; color: #f472b6;">📅 ${label}</div>
+                    <div style="font-size: 0.82rem;">🎮 Tehtud mänge: <strong style="color: #ffffff; font-size: 0.95rem;">${count}</strong></div>
+                `;
+            }
+
+            tooltip.style.left = `${e.clientX}px`;
+            tooltip.style.top = `${e.clientY - 10}px`;
+            tooltip.style.display = 'block';
+            tooltip.style.opacity = '1';
+        };
+
+        const moveTip = (e: MouseEvent) => {
+            tooltip.style.left = `${e.clientX}px`;
+            tooltip.style.top = `${e.clientY - 10}px`;
+        };
+
+        const hideTip = () => {
+            tooltip.style.display = 'none';
+            tooltip.style.opacity = '0';
+        };
+
+        group.addEventListener('mouseenter', showTip as any);
+        group.addEventListener('mousemove', moveTip as any);
+        group.addEventListener('mouseleave', hideTip as any);
     });
 }
 
@@ -349,7 +552,6 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
     let containerEl = document.getElementById(PADMIN_CONTAINER_ID);
 
     if (isPAdmin) {
-        // Inject whiteout style
         if (!styleEl) {
             styleEl = document.createElement('style');
             styleEl.id = PADMIN_STYLE_ID;
@@ -361,7 +563,7 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
                     color: #000000 !important;
                     overflow: auto !important;
                 }
-                body.padmin-mode > *:not(#${PADMIN_CONTAINER_ID}) {
+                body.padmin-mode > *:not(#${PADMIN_CONTAINER_ID}):not(#${PADMIN_TOOLTIP_ID}) {
                     display: none !important;
                     visibility: hidden !important;
                     opacity: 0 !important;
@@ -373,7 +575,6 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
         document.documentElement.classList.add('padmin-mode');
         document.body.classList.add('padmin-mode');
 
-        // Create main container
         if (!containerEl) {
             containerEl = document.createElement('div');
             containerEl.id = PADMIN_CONTAINER_ID;
@@ -394,19 +595,17 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
             containerEl.style.display = 'flex';
         }
 
-        // Fetch data and render
-        const dates = await fetchAccountCreationDates();
-        const stats = calculateDailyStats(dates, currentPeriod);
-        renderPAdminStatsCard(containerEl, stats, currentPeriod);
+        const accounts = await fetchAccountsData();
+        const games = await fetchGamesData();
+        const accPoints = buildDailyPoints(accounts, activePeriod);
+        const gamePoints = buildDailyPoints(games, activePeriod);
+        renderPAdminDashboard(containerEl, accPoints, gamePoints, activePeriod);
     } else {
-        // Remove whiteout style and container
         document.documentElement.classList.remove('padmin-mode');
         document.body.classList.remove('padmin-mode');
-        if (styleEl) {
-            styleEl.remove();
-        }
-        if (containerEl) {
-            containerEl.remove();
-        }
+        if (styleEl) styleEl.remove();
+        if (containerEl) containerEl.remove();
+        const tip = document.getElementById(PADMIN_TOOLTIP_ID);
+        if (tip) tip.remove();
     }
 }

@@ -16660,7 +16660,7 @@ await (async () => {
                 throw new Error("Normal guest/user should NOT be in padmin-mode: " + JSON.stringify(normalUserState));
             }
 
-            // B) Login as PAdmin -> triggers whiteout & top logout button & center 10-day accounts table
+            // B) Login as PAdmin -> triggers whiteout & top logout button & center stats charts (Kontod & Mängud)
             const padminState = await page.evaluate(async () => {
                 const padminProf = {
                     id: '9f87cd2b-d229-4af3-b6e1-6a73330d281a',
@@ -16675,28 +16675,50 @@ await (async () => {
                 const isPAdminMode = document.body.classList.contains('padmin-mode');
                 const logoutBtn = document.getElementById('btn-padmin-logout');
                 const statsCard = document.getElementById('padmin-stats-card');
-                const svgGraph = document.getElementById('padmin-stats-svg');
-                const statsTable = document.getElementById('padmin-stats-table');
+                const accountsCard = document.getElementById('padmin-accounts-card');
+                const gamesCard = document.getElementById('padmin-games-card');
                 const filterBtns = Array.from(document.querySelectorAll('.padmin-filter-btn')).map(b => b.textContent?.trim());
                 const bodyBg = window.getComputedStyle(document.body).backgroundColor;
 
-                // Click filter "1 kuu"
+                // Test week (default) dots count = 7
+                const weekDots = document.querySelectorAll('#padmin-accounts-card .padmin-chart-dot-group').length;
+
+                // Click filter "Täna" -> 1 dot
+                const todayBtn = document.querySelector('.padmin-filter-btn[data-period="today"]');
+                todayBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+                const todayDots = document.querySelectorAll('#padmin-accounts-card .padmin-chart-dot-group').length;
+
+                // Click filter "Kuu" -> 30 dots
                 const monthBtn = document.querySelector('.padmin-filter-btn[data-period="month"]');
                 monthBtn?.click();
                 await new Promise(r => setTimeout(r, 200));
+                const monthDots = document.querySelectorAll('#padmin-accounts-card .padmin-chart-dot-group').length;
+
+                // Test hover tooltip trigger
+                const firstDot = document.querySelector('.padmin-chart-dot-group');
+                if (firstDot) {
+                    firstDot.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 200, clientY: 200 }));
+                }
+                const tooltip = document.getElementById('padmin-hover-tooltip');
+                const tooltipVisible = tooltip && tooltip.style.display !== 'none' && tooltip.innerHTML.length > 0;
 
                 return {
                     isPAdminMode,
                     hasLogoutBtn: !!logoutBtn,
                     hasStatsCard: !!statsCard,
-                    hasSvgGraph: !!svgGraph,
-                    hasStatsTable: !!statsTable,
+                    hasAccountsCard: !!accountsCard,
+                    hasGamesCard: !!gamesCard,
                     filterBtns,
+                    weekDots,
+                    todayDots,
+                    monthDots,
+                    tooltipVisible,
                     bodyBg
                 };
             });
             console.log("   PAdmin Active State:", padminState);
-            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.hasStatsCard || !padminState.hasSvgGraph || !padminState.hasStatsTable) {
+            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.hasAccountsCard || !padminState.hasGamesCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible) {
                 throw new Error("PAdmin Special Mode activation failed: " + JSON.stringify(padminState));
             }
 
@@ -16714,7 +16736,7 @@ await (async () => {
             if (logoutResult.afterLogoutMode || logoutResult.afterLogoutCard) {
                 throw new Error("PAdmin Special Mode logout failed: " + JSON.stringify(logoutResult));
             }
-            console.log("   ✅ 🐱 PAdmin Special Mode (All white background, top logout button & center 10-day accounts table with filters) verified successfully!");
+            console.log("   ✅ 🐱 PAdmin Special Mode (All white background, top logout button, 1/7/30 dots, gender hover tooltips & games chart) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
